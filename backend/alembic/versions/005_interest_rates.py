@@ -39,13 +39,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("rate_type", "effective_from", name="uq_interest_rates_type_date"),
     )
     op.create_index("ix_interest_rates_type", "interest_rates", ["rate_type"])
-    op.create_index(
-        "ix_interest_rates_type_date",
-        "interest_rates",
-        ["rate_type", "effective_from"],
-    )
 
 
 def downgrade() -> None:

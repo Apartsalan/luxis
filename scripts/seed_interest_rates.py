@@ -41,12 +41,19 @@ Rate types relevant for Luxis incasso module:
 
 import asyncio
 import uuid
+from datetime import date as date_type
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import async_session
 from app.auth.service import hash_password
+
+
+def _parse_date(d: str) -> date_type:
+    """Parse 'YYYY-MM-DD' string to a Python date object (asyncpg requires this)."""
+    y, m, day = d.split("-")
+    return date_type(int(y), int(m), int(day))
 
 
 # =============================================================================
@@ -184,7 +191,7 @@ async def seed_interest_rates(db: AsyncSession) -> dict:
             {
                 "id": str(uuid.uuid4()),
                 "rate_type": "statutory",
-                "effective_from": effective_from,
+                "effective_from": _parse_date(effective_from),
                 "rate": rate,
                 "source": "rijksoverheid.nl / wettelijkerente.nl",
             },
@@ -202,7 +209,7 @@ async def seed_interest_rates(db: AsyncSession) -> dict:
             {
                 "id": str(uuid.uuid4()),
                 "rate_type": "commercial",
-                "effective_from": effective_from,
+                "effective_from": _parse_date(effective_from),
                 "rate": rate,
                 "source": "ECB refi rate + 8% / DNB",
             },
@@ -220,7 +227,7 @@ async def seed_interest_rates(db: AsyncSession) -> dict:
             {
                 "id": str(uuid.uuid4()),
                 "rate_type": "government",
-                "effective_from": effective_from,
+                "effective_from": _parse_date(effective_from),
                 "rate": rate,
                 "source": "ECB refi rate + 8% / DNB (same as 6:119a BW)",
             },

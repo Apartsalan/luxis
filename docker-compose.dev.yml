@@ -2,7 +2,11 @@
 services:
   backend:
     volumes:
-      - ./backend:/app
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - ./backend/tests:/app/tests
+      - ./templates:/app/templates
+      - ./scripts:/app/scripts
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -11,3 +15,4 @@ services:
       - ./frontend/public:/app/public
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+    command: npm run dev

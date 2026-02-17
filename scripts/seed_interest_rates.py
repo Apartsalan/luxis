@@ -45,8 +45,7 @@ import uuid
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import async_session, engine, Base
-from app.auth.models import Tenant, User
+from app.database import async_session
 from app.auth.service import hash_password
 
 
@@ -167,13 +166,72 @@ VOORWERK_II_TIERS = [
 ]
 
 
-async def seed():
-    """Seed the database with test tenant, test user, and reference interest rates.
+async def seed_interest_rates(db: AsyncSession) -> dict:
+    """Insert all interest rates into the interest_rates table.
 
-    Interest rate tables will be stored in the database when the collections module
-    is built. For now, the rates are defined here as Python constants that serve as
-    the single source of truth for the seed migration.
+    Returns a dict with counts of inserted rates per type.
     """
+    counts = {"statutory": 0, "commercial": 0, "government": 0}
+
+    # Statutory rates (art. 6:119 BW)
+    for effective_from, rate in STATUTORY_RATES:
+        await db.execute(
+            text("""
+                INSERT INTO interest_rates (id, rate_type, effective_from, rate, source, created_at, updated_at)
+                VALUES (:id, :rate_type, :effective_from, :rate, :source, now(), now())
+                ON CONFLICT DO NOTHING
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "rate_type": "statutory",
+                "effective_from": effective_from,
+                "rate": rate,
+                "source": "rijksoverheid.nl / wettelijkerente.nl",
+            },
+        )
+        counts["statutory"] += 1
+
+    # Commercial rates (art. 6:119a BW)
+    for effective_from, rate in COMMERCIAL_RATES:
+        await db.execute(
+            text("""
+                INSERT INTO interest_rates (id, rate_type, effective_from, rate, source, created_at, updated_at)
+                VALUES (:id, :rate_type, :effective_from, :rate, :source, now(), now())
+                ON CONFLICT DO NOTHING
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "rate_type": "commercial",
+                "effective_from": effective_from,
+                "rate": rate,
+                "source": "ECB refi rate + 8% / DNB",
+            },
+        )
+        counts["commercial"] += 1
+
+    # Government rates (art. 6:119b BW) — same rates as commercial
+    for effective_from, rate in COMMERCIAL_RATES:
+        await db.execute(
+            text("""
+                INSERT INTO interest_rates (id, rate_type, effective_from, rate, source, created_at, updated_at)
+                VALUES (:id, :rate_type, :effective_from, :rate, :source, now(), now())
+                ON CONFLICT DO NOTHING
+            """),
+            {
+                "id": str(uuid.uuid4()),
+                "rate_type": "government",
+                "effective_from": effective_from,
+                "rate": rate,
+                "source": "ECB refi rate + 8% / DNB (same as 6:119a BW)",
+            },
+        )
+        counts["government"] += 1
+
+    return counts
+
+
+async def seed():
+    """Seed the database with test tenant, test user, and reference interest rates."""
 
     async with async_session() as db:
         # Create test tenant: Kesting Legal
@@ -211,26 +269,29 @@ async def seed():
             },
         )
 
+        # Insert interest rates
+        rate_counts = await seed_interest_rates(db)
+
         await db.commit()
 
         print("=" * 60)
-        print("Luxis — Seed Data Report")
+        print("Luxis -- Seed Data Report")
         print("=" * 60)
         print()
         print("TENANT:")
         print(f"  Kesting Legal ({tenant_id})")
-        print(f"  KvK: 88601536")
+        print("  KvK: 88601536")
         print()
         print("USER:")
-        print(f"  lisanne@kestinglegal.nl")
-        print(f"  Password: luxis2026!")
-        print(f"  Role: admin")
+        print("  lisanne@kestinglegal.nl")
+        print("  Password: luxis2026!")
+        print("  Role: admin")
         print()
-        print("INTEREST RATES LOADED:")
-        print(f"  Wettelijke rente (art. 6:119 BW):      {len(STATUTORY_RATES)} periods")
-        print(f"  Wettelijke handelsrente (art. 6:119a):  {len(COMMERCIAL_RATES)} periods")
-        print(f"  Overheidshandelsrente (art. 6:119b):    Same as handelsrente")
-        print(f"  Contractuele rente:                     Per dossier (user-defined)")
+        print("INTEREST RATES INSERTED INTO DATABASE:")
+        print(f"  Wettelijke rente (art. 6:119 BW):      {rate_counts['statutory']} periods")
+        print(f"  Wettelijke handelsrente (art. 6:119a):  {rate_counts['commercial']} periods")
+        print(f"  Overheidshandelsrente (art. 6:119b):    {rate_counts['government']} periods")
+        print("  Contractuele rente:                     Per dossier (user-defined)")
         print()
         print("INCASSOKOSTEN:")
         print(f"  WIK-staffel (art. 6:96 BW):            {len(WIK_TIERS)} tiers")

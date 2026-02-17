@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import User
 from app.auth.schemas import LoginRequest, RefreshRequest, TokenResponse, UserResponse
 from app.auth.service import (
     authenticate_user,
@@ -14,7 +15,6 @@ from app.auth.service import (
 )
 from app.database import get_db
 from app.dependencies import get_current_user
-from app.auth.models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -46,7 +46,7 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
                 detail="Invalid token type",
             )
         user_id = payload.get("sub")
-        tenant_id = payload.get("tenant_id")
+        _tenant_id = payload.get("tenant_id")  # noqa: F841
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

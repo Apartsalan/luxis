@@ -9,10 +9,11 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.auth.models import Tenant, User
-from app.auth.service import hash_password
+from app.auth.service import create_access_token, hash_password
 from app.config import settings
 from app.database import Base, get_db
 from app.main import app
+from app.relations.models import Contact
 
 # Use a separate test database URL (append _test to the database name)
 TEST_DATABASE_URL = settings.database_url.replace("/luxis", "/luxis_test")
@@ -93,3 +94,50 @@ async def test_user(db: AsyncSession, test_tenant: Tenant) -> User:
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@pytest_asyncio.fixture
+async def auth_headers(test_user: User, test_tenant: Tenant) -> dict[str, str]:
+    """Provide Authorization headers with a valid access token."""
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def test_company(db: AsyncSession, test_tenant: Tenant) -> Contact:
+    """Create a test company contact."""
+    contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="company",
+        name="Acme B.V.",
+        email="info@acme.nl",
+        kvk_number="12345678",
+        btw_number="NL123456789B01",
+        visit_address="Herengracht 100",
+        visit_postcode="1015 BS",
+        visit_city="Amsterdam",
+    )
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+    return contact
+
+
+@pytest_asyncio.fixture
+async def test_person(db: AsyncSession, test_tenant: Tenant) -> Contact:
+    """Create a test person contact."""
+    contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="person",
+        name="Jan de Vries",
+        first_name="Jan",
+        last_name="de Vries",
+        email="jan@devries.nl",
+        phone="+31612345678",
+    )
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+    return contact

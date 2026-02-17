@@ -1,9 +1,9 @@
 """Authentication service — JWT creation, verification, and password hashing."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from jose import JWTError, jwt
+from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +23,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(user_id: str, tenant_id: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     payload = {
         "sub": user_id,
         "tenant_id": tenant_id,
@@ -34,7 +34,7 @@ def create_access_token(user_id: str, tenant_id: str) -> str:
 
 
 def create_refresh_token(user_id: str, tenant_id: str) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     payload = {
         "sub": user_id,
         "tenant_id": tenant_id,
@@ -51,7 +51,7 @@ def decode_token(token: str) -> dict:
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
     """Verify email + password and return the user if valid."""
-    result = await db.execute(select(User).where(User.email == email, User.is_active == True))
+    result = await db.execute(select(User).where(User.email == email, User.is_active.is_(True)))
     user = result.scalar_one_or_none()
     if user is None or not verify_password(password, user.hashed_password):
         return None

@@ -7,8 +7,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.router import router as auth_router
+from app.cases.router import router as cases_router
+from app.collections.router import rates_router
+from app.collections.router import router as collections_router
 from app.config import settings
+from app.dashboard.router import router as dashboard_router
+from app.documents.router import router as documents_router
 from app.middleware.logging import RequestLoggingMiddleware
+from app.relations.router import router as relations_router
 
 # Configure logging
 logging.basicConfig(
@@ -48,6 +54,12 @@ app.add_middleware(RequestLoggingMiddleware)
 
 # Routers
 app.include_router(auth_router)
+app.include_router(relations_router)
+app.include_router(cases_router)
+app.include_router(collections_router)
+app.include_router(rates_router)
+app.include_router(documents_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/health")

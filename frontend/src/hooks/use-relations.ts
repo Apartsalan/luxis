@@ -1,0 +1,159 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+export interface Contact {
+  id: string;
+  contact_type: "company" | "person";
+  name: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  kvk_number: string | null;
+  btw_number: string | null;
+  visit_address: string | null;
+  visit_postcode: string | null;
+  visit_city: string | null;
+  postal_address: string | null;
+  postal_postcode: string | null;
+  postal_city: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PaginatedContacts {
+  items: Contact[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+interface ContactCreateInput {
+  contact_type: "company" | "person";
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  kvk_number?: string;
+  btw_number?: string;
+  visit_address?: string;
+  visit_postcode?: string;
+  visit_city?: string;
+  postal_address?: string;
+  postal_postcode?: string;
+  postal_city?: string;
+  notes?: string;
+}
+
+export function useRelations(params?: {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  contact_type?: string;
+}) {
+  const page = params?.page ?? 1;
+  const per_page = params?.per_page ?? 20;
+  const search = params?.search ?? "";
+  const contact_type = params?.contact_type ?? "";
+
+  return useQuery<PaginatedContacts>({
+    queryKey: ["relations", { page, per_page, search, contact_type }],
+    queryFn: async () => {
+      const queryParams = new URLSearchParams({
+        page: String(page),
+        per_page: String(per_page),
+      });
+      if (search) queryParams.set("search", search);
+      if (contact_type) queryParams.set("contact_type", contact_type);
+
+      const res = await api(`/api/relations?${queryParams}`);
+      if (!res.ok) throw new Error("Failed to fetch relations");
+      return res.json();
+    },
+  });
+}
+
+export function useRelation(id: string | undefined) {
+  return useQuery<Contact>({
+    queryKey: ["relations", id],
+    queryFn: async () => {
+      const res = await api(`/api/relations/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch relation");
+      return res.json();
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateRelation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: ContactCreateInput) => {
+      const res = await api("/api/relations", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Failed to create relation");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["relations"] });
+    },
+  });
+}
+
+export function useUpdateRelation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<ContactCreateInput>;
+    }) => {
+      const res = await api(`/api/relations/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Failed to update relation");
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["relations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["relations", variables.id],
+      });
+    },
+  });
+}
+
+export function useDeleteRelation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api(`/api/relations/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete relation");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["relations"] });
+    },
+  });
+}

@@ -1,0 +1,200 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+export interface CaseSummary {
+  id: string;
+  case_number: string;
+  case_type: string;
+  status: string;
+  description: string | null;
+  reference: string | null;
+  interest_type: string;
+  date_opened: string;
+  date_closed: string | null;
+  total_principal: number;
+  total_paid: number;
+  client: { id: string; name: string } | null;
+  opposing_party: { id: string; name: string } | null;
+  created_at: string;
+}
+
+export interface CaseDetail extends CaseSummary {
+  contractual_rate: number | null;
+  contractual_compound: boolean;
+  assigned_to: { id: string; full_name: string } | null;
+  parties: {
+    id: string;
+    role: string;
+    contact: { id: string; name: string };
+  }[];
+  recent_activities: {
+    id: string;
+    activity_type: string;
+    title: string;
+    description: string | null;
+    created_at: string;
+  }[];
+}
+
+interface PaginatedCases {
+  items: CaseSummary[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+interface CaseCreateInput {
+  case_type: string;
+  description?: string;
+  reference?: string;
+  interest_type?: string;
+  contractual_rate?: number;
+  client_id: string;
+  opposing_party_id?: string;
+  date_opened: string;
+}
+
+export function useCases(params?: {
+  page?: number;
+  per_page?: number;
+  case_type?: string;
+  status?: string;
+  search?: string;
+}) {
+  const page = params?.page ?? 1;
+  const per_page = params?.per_page ?? 20;
+  const case_type = params?.case_type ?? "";
+  const status = params?.status ?? "";
+  const search = params?.search ?? "";
+
+  return useQuery<PaginatedCases>({
+    queryKey: ["cases", { page, per_page, case_type, status, search }],
+    queryFn: async () => {
+      const queryParams = new URLSearchParams({
+        page: String(page),
+        per_page: String(per_page),
+      });
+      if (case_type) queryParams.set("case_type", case_type);
+      if (status) queryParams.set("status", status);
+      if (search) queryParams.set("search", search);
+
+      const res = await api(`/api/cases?${queryParams}`);
+      if (!res.ok) throw new Error("Failed to fetch cases");
+      return res.json();
+    },
+  });
+}
+
+export function useCase(id: string | undefined) {
+  return useQuery<CaseDetail>({
+    queryKey: ["cases", id],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch case");
+      return res.json();
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateCase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CaseCreateInput) => {
+      const res = await api("/api/cases", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Failed to create case");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useUpdateCase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<CaseCreateInput>;
+    }) => {
+      const res = await api(`/api/cases/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Failed to update case");
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["cases", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useUpdateCaseStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      new_status,
+      note,
+    }: {
+      id: string;
+      new_status: string;
+      note?: string;
+    }) => {
+      const res = await api(`/api/cases/${id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ new_status, note }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Invalid status transition");
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["cases", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useDeleteCase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api(`/api/cases/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete case");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}

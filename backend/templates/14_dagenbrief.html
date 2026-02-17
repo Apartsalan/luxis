@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>14-dagenbrief - {{ zaak.zaaknummer }}</title>
+    <style>
+        body { font-family: 'Georgia', serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a; margin: 40px; }
+        .header { margin-bottom: 30px; }
+        .sender { font-weight: bold; margin-bottom: 20px; }
+        .recipient { margin-bottom: 30px; }
+        .date { margin-bottom: 20px; }
+        .subject { font-weight: bold; margin-bottom: 20px; }
+        .body p { margin-bottom: 10px; }
+        table { border-collapse: collapse; width: 100%; margin: 15px 0; }
+        th, td { border: 1px solid #ccc; padding: 8px 12px; text-align: left; }
+        th { background-color: #f5f5f5; }
+        td.amount { text-align: right; }
+        .total-row { font-weight: bold; background-color: #f5f5f5; }
+        .legal-notice { background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 20px 0; font-size: 10pt; }
+        .footer { margin-top: 40px; font-size: 10pt; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="sender">
+            {{ client.naam }}<br>
+            {% if client.adres %}{{ client.adres }}<br>{% endif %}
+            {% if client.postcode %}{{ client.postcode }} {{ client.stad }}{% endif %}
+        </div>
+    </div>
+
+    <div class="recipient">
+        <strong>{{ wederpartij.naam }}</strong><br>
+        {% if wederpartij.adres %}{{ wederpartij.adres }}<br>{% endif %}
+        {% if wederpartij.postcode %}{{ wederpartij.postcode }} {{ wederpartij.stad }}{% endif %}
+    </div>
+
+    <div class="date">
+        {{ vandaag | datum }}
+    </div>
+
+    <div class="subject">
+        Betreft: Ingebrekestelling en aanmaning tot betaling<br>
+        Ons kenmerk: {{ zaak.zaaknummer }}<br>
+        {% if zaak.referentie %}Uw kenmerk: {{ zaak.referentie }}{% endif %}
+    </div>
+
+    <div class="body">
+        <p>Geachte heer/mevrouw,</p>
+
+        <p>
+            Namens onze client, {{ client.naam }}, sommeer ik u hierbij tot betaling
+            van het hieronder gespecificeerde bedrag. Ondanks eerdere verzoeken is betaling
+            tot op heden uitgebleven.
+        </p>
+
+        <h3>Specificatie vordering(en)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Omschrijving</th>
+                    <th>Factuurnummer</th>
+                    <th>Verzuimdatum</th>
+                    <th style="text-align: right">Hoofdsom</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vorderingen %}
+                <tr>
+                    <td>{{ v.beschrijving }}</td>
+                    <td>{{ v.factuurnummer }}</td>
+                    <td>{{ v.verzuimdatum | datum }}</td>
+                    <td class="amount">{{ v.hoofdsom | currency }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <table>
+            <tr>
+                <td><strong>Totaal hoofdsom</strong></td>
+                <td class="amount"><strong>{{ financieel.total_principal | currency }}</strong></td>
+            </tr>
+            <tr>
+                <td>Wettelijke rente t/m {{ vandaag | datum }}</td>
+                <td class="amount">{{ financieel.total_interest | currency }}</td>
+            </tr>
+            <tr>
+                <td>Buitengerechtelijke incassokosten (BIK)</td>
+                <td class="amount">{{ bik.bik_exclusive | currency }}</td>
+            </tr>
+            {% if bik.btw_amount %}
+            <tr>
+                <td>BTW over BIK (21%)</td>
+                <td class="amount">{{ bik.btw_amount | currency }}</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td><strong>Totaal verschuldigd</strong></td>
+                <td class="amount"><strong>{{ financieel.grand_total | currency }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="legal-notice">
+            <strong>Wettelijke mededeling (art. 6:96 lid 6 BW)</strong><br><br>
+            Hierbij wordt u gesommeerd het verschuldigde bedrag van
+            <strong>{{ financieel.total_principal | currency }}</strong>
+            binnen <strong>veertien dagen</strong> na ontvangst van deze brief te voldoen
+            op het rekeningnummer van onze client.<br><br>
+            Indien betaling binnen deze termijn uitblijft, bent u naast de hoofdsom tevens
+            de buitengerechtelijke incassokosten verschuldigd ter hoogte van
+            <strong>{{ bik.bik_exclusive | currency }}</strong>
+            {% if bik.btw_amount %}(vermeerderd met {{ bik.btw_amount | currency }} BTW){% endif %},
+            alsmede de wettelijke rente vanaf de verzuimdatum.
+        </div>
+
+        <p>
+            Ik verzoek u het totaal verschuldigde bedrag van
+            <strong>{{ financieel.grand_total | currency }}</strong>
+            binnen veertien dagen na dagtekening van deze brief over te maken.
+        </p>
+
+        <p>
+            Bij gebreke van tijdige betaling zullen wij zonder nadere aankondiging
+            rechtsmaatregelen treffen, waarvan de kosten eveneens voor uw rekening komen.
+        </p>
+
+        <p>Hoogachtend,</p>
+        <br><br>
+        <p>
+            ________________________<br>
+            Namens {{ client.naam }}
+        </p>
+    </div>
+
+    <div class="footer">
+        <hr>
+        <p>
+            Zaaknummer: {{ zaak.zaaknummer }} |
+            Datum: {{ vandaag | datum }}
+        </p>
+    </div>
+</body>
+</html>

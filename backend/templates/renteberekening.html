@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Renteberekening - {{ zaak.zaaknummer }}</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; font-size: 10pt; line-height: 1.5; color: #1a1a1a; margin: 30px; }
+        h1 { font-size: 16pt; color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 8px; }
+        h2 { font-size: 13pt; color: #2d4a7a; margin-top: 25px; }
+        .meta { background-color: #f7f7f7; padding: 15px; margin-bottom: 20px; }
+        .meta table { border: none; }
+        .meta td { border: none; padding: 3px 15px 3px 0; }
+        .meta td.label { font-weight: bold; width: 200px; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 9pt; }
+        th { background-color: #1a365d; color: white; }
+        td.amount { text-align: right; font-family: 'Courier New', monospace; }
+        .total-row { font-weight: bold; background-color: #e8edf3; }
+        .summary-box { background-color: #e8f5e9; border: 2px solid #4caf50; padding: 15px; margin: 20px 0; }
+        .summary-box table { border: none; }
+        .summary-box td { border: none; padding: 4px 10px; }
+        .summary-box .grand-total { font-size: 14pt; font-weight: bold; color: #1a365d; }
+        .footer { margin-top: 30px; font-size: 9pt; color: #888; border-top: 1px solid #ddd; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Renteberekening</h1>
+
+    <div class="meta">
+        <table>
+            <tr>
+                <td class="label">Zaaknummer:</td>
+                <td>{{ zaak.zaaknummer }}</td>
+            </tr>
+            <tr>
+                <td class="label">Client:</td>
+                <td>{{ client.naam }}</td>
+            </tr>
+            <tr>
+                <td class="label">Wederpartij:</td>
+                <td>{{ wederpartij.naam }}</td>
+            </tr>
+            <tr>
+                <td class="label">Type rente:</td>
+                <td>
+                    {% if zaak.rente_type == 'statutory' %}Wettelijke rente (art. 6:119 BW)
+                    {% elif zaak.rente_type == 'commercial' %}Handelsrente (art. 6:119a BW)
+                    {% elif zaak.rente_type == 'government' %}Overheidsrente (art. 6:119b BW)
+                    {% elif zaak.rente_type == 'contractual' %}Contractuele rente
+                    {% else %}{{ zaak.rente_type }}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Berekend t/m:</td>
+                <td>{{ vandaag | datum }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <h2>Vorderingen</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Omschrijving</th>
+                <th>Factuurnummer</th>
+                <th>Verzuimdatum</th>
+                <th style="text-align: right">Hoofdsom</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in vorderingen %}
+            <tr>
+                <td>{{ v.beschrijving }}</td>
+                <td>{{ v.factuurnummer }}</td>
+                <td>{{ v.verzuimdatum | datum }}</td>
+                <td class="amount">{{ v.hoofdsom | currency }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="3"><strong>Totaal hoofdsom</strong></td>
+                <td class="amount"><strong>{{ financieel.total_principal | currency }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if financieel.interest_details and financieel.interest_details.claims %}
+    <h2>Renteberekening per vordering</h2>
+    {% for claim in financieel.interest_details.claims %}
+    <h3>{{ claim.description }} ({{ claim.principal_amount | currency }})</h3>
+    <p>Verzuimdatum: {{ claim.default_date | datum }}</p>
+
+    {% if claim.periods %}
+    <table>
+        <thead>
+            <tr>
+                <th>Van</th>
+                <th>Tot</th>
+                <th style="text-align: right">Dagen</th>
+                <th style="text-align: right">Tarief</th>
+                <th style="text-align: right">Hoofdsom</th>
+                <th style="text-align: right">Rente</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in claim.periods %}
+            <tr>
+                <td>{{ p.start | datum }}</td>
+                <td>{{ p.end | datum }}</td>
+                <td class="amount">{{ p.days }}</td>
+                <td class="amount">{{ p.rate }}%</td>
+                <td class="amount">{{ p.principal | currency }}</td>
+                <td class="amount">{{ p.interest | currency }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="5"><strong>Totaal rente deze vordering</strong></td>
+                <td class="amount"><strong>{{ claim.interest | currency }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    <h2>Buitengerechtelijke incassokosten (BIK)</h2>
+    <table>
+        {% for tier in bik.tiers %}
+        <tr>
+            <td>{{ tier.percentage }}% over {{ tier.base | currency }}</td>
+            <td class="amount">{{ tier.amount | currency }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="total-row">
+            <td><strong>BIK (excl. BTW)</strong></td>
+            <td class="amount"><strong>{{ bik.bik_exclusive | currency }}</strong></td>
+        </tr>
+        {% if bik.btw_amount %}
+        <tr>
+            <td>BTW (21%)</td>
+            <td class="amount">{{ bik.btw_amount | currency }}</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>BIK (incl. BTW)</strong></td>
+            <td class="amount"><strong>{{ bik.bik_inclusive | currency }}</strong></td>
+        </tr>
+        {% endif %}
+    </table>
+
+    {% if betalingen %}
+    <h2>Ontvangen betalingen</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Omschrijving</th>
+                <th style="text-align: right">Bedrag</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in betalingen %}
+            <tr>
+                <td>{{ b.datum | datum }}</td>
+                <td>{{ b.beschrijving }}</td>
+                <td class="amount">{{ b.bedrag | currency }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td colspan="2"><strong>Totaal ontvangen</strong></td>
+                <td class="amount"><strong>{{ financieel.total_paid | currency }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    {% endif %}
+
+    <div class="summary-box">
+        <h2 style="margin-top: 0;">Totaaloverzicht</h2>
+        <table>
+            <tr>
+                <td>Hoofdsom</td>
+                <td class="amount">{{ financieel.total_principal | currency }}</td>
+            </tr>
+            <tr>
+                <td>Rente t/m {{ vandaag | datum }}</td>
+                <td class="amount">{{ financieel.total_interest | currency }}</td>
+            </tr>
+            <tr>
+                <td>Buitengerechtelijke incassokosten</td>
+                <td class="amount">{{ financieel.total_bik | currency }}</td>
+            </tr>
+            <tr>
+                <td><strong>Subtotaal</strong></td>
+                <td class="amount"><strong>{{ financieel.grand_total | currency }}</strong></td>
+            </tr>
+            {% if financieel.total_paid %}
+            <tr>
+                <td>Af: ontvangen betalingen</td>
+                <td class="amount">-{{ financieel.total_paid | currency }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td class="grand-total">Totaal verschuldigd</td>
+                <td class="amount grand-total">{{ financieel.total_outstanding | currency }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <p>
+            Berekening gegenereerd door Luxis op {{ vandaag | datum }} |
+            Zaaknummer: {{ zaak.zaaknummer }}
+        </p>
+    </div>
+</body>
+</html>

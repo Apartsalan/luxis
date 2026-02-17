@@ -8,16 +8,35 @@ Sources used for verification (February 2026):
 IMPORTANT NOTES:
 - Wettelijke rente changes by Koninklijk Besluit (no fixed schedule, typically 1 Jan or 1 Jul)
 - Handelsrente changes semi-annually (1 Jan and 1 Jul) automatically: ECB refi rate + 8%
-- ALL three statutory interest types use COMPOUND interest (samengestelde rente / rente op rente)
-  per art. 6:119 lid 2, 6:119a lid 3, 6:119b lid 3 BW
 - "Vertragingsrente" and "procesrente" are NOT separate types — they are informal names
   for wettelijke rente under art. 6:119 BW
 
+COMPOUND vs SIMPLE INTEREST (samengestelde vs enkelvoudige rente):
+- Wettelijke rente (art. 6:119 lid 2 BW):      COMPOUND — annual compounding
+- Wettelijke handelsrente (art. 6:119a lid 3):  COMPOUND — annual compounding
+- Overheidshandelsrente (art. 6:119b lid 3):    COMPOUND — annual compounding
+- Contractuele rente:                            DEPENDS ON CONTRACT
+  → If the contract specifies "samengestelde rente": compound
+  → If the contract specifies "enkelvoudige rente": simple
+  → If the contract says nothing about compounding: SIMPLE (default)
+  → Art. 6:119 lid 2 only applies to the statutory rate, not contractual
+
+How compound interest works per the law:
+  "Telkens na afloop van een jaar" (at the end of each year) the accrued interest
+  is added to the principal. The next year's interest is calculated on this new,
+  higher total. This means:
+  - Year 1: interest on original principal
+  - Year 2: interest on (principal + year 1 interest)
+  - Year 3: interest on (principal + year 1 interest + year 2 interest)
+  - etc.
+  The "year" runs from the date interest starts accruing (verzuimdatum),
+  NOT from 1 January.
+
 Rate types relevant for Luxis incasso module:
-1. statutory     — Wettelijke rente (art. 6:119 BW) — consumers (B2C, C2C)
-2. commercial    — Wettelijke handelsrente (art. 6:119a BW) — B2B
-3. government    — Overheidshandelsrente (art. 6:119b BW) — government as debtor
-4. contractual   — Contractuele rente — freely agreed between parties (stored per case)
+1. statutory     — Wettelijke rente (art. 6:119 BW) — consumers (B2C, C2C) — COMPOUND
+2. commercial    — Wettelijke handelsrente (art. 6:119a BW) — B2B — COMPOUND
+3. government    — Overheidshandelsrente (art. 6:119b BW) — government debtor — COMPOUND
+4. contractual   — Contractuele rente — per contract — SIMPLE or COMPOUND (configurable per case)
 """
 
 import asyncio

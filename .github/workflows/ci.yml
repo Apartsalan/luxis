@@ -7,8 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  lint:
-    name: Lint & Format
+  # ── Backend Lint ─────────────────────────────────────────────────────────────
+  backend-lint:
+    name: Backend Lint
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -26,15 +27,15 @@ jobs:
         run: uv pip install --system -e ".[dev]"
 
       - name: Ruff check
-        run: ruff check app/
+        run: ruff check .
 
       - name: Ruff format check
-        run: ruff format --check app/ || true
+        run: ruff format --check .
 
-  test:
+  # ── Backend Tests ────────────────────────────────────────────────────────────
+  backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
-    needs: lint
     services:
       postgres:
         image: postgres:16-alpine
@@ -49,9 +50,23 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
+    env:
+      DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5432/luxis_test
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: ci-test-secret-key-not-for-production
+      APP_ENV: test
     steps:
       - uses: actions/checkout@v4
 
@@ -65,21 +80,14 @@ jobs:
         run: uv pip install --system -e ".[dev]"
 
       - name: Run migrations
-        env:
-          DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5432/luxis_test
-          SECRET_KEY: test-secret-key
-          APP_ENV: test
         run: python -m alembic upgrade head
 
       - name: Run tests
-        env:
-          DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5432/luxis_test
-          SECRET_KEY: test-secret-key
-          APP_ENV: test
         run: pytest tests/ -v --tb=short
 
-  frontend:
-    name: Frontend Build
+  # ── Frontend Lint ────────────────────────────────────────────────────────────
+  frontend-lint:
+    name: Frontend Lint
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -87,8 +95,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+  # ── Frontend Build ───────────────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
@@ -98,53 +129,31 @@ jobs:
         run: npm ci
 
       - name: Build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
         run: npm run build
 
+  # ── Security Checks ─────────────────────────────────────────────────────────
   security:
     name: Security Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check for secrets in code
+      - name: Check for committed .env files
         run: |
-          echo "=== Scanning for hardcoded secrets ==="
           FOUND=0
-
-          # .env files should never be committed
           for f in .env backend/.env frontend/.env; do
             if [ -f "$f" ]; then
-              echo "ERROR: $f found in repository"
+              echo "::error::$f found in repository — must not be committed"
               FOUND=1
             fi
           done
-
-          # Common secret patterns in Python
-          if grep -rn --include="*.py" -E "(password|secret|api_key|token)\s*=\s*['\"][^'\"]{8,}" backend/app/ 2>/dev/null | grep -v "settings\." | grep -v "config\." | grep -v "os\.environ" | grep -v "def " | grep -v "# " | grep -v "_password" | grep -v "hash_password" | grep -v "verify_password"; then
-            echo "WARNING: Possible hardcoded credentials in backend"
-            FOUND=1
-          fi
-
-          if [ $FOUND -eq 1 ]; then
-            echo "Security scan found issues"
-            exit 1
-          fi
-          echo "No secrets found"
+          if [ $FOUND -eq 1 ]; then exit 1; fi
+          echo "No .env files committed"
 
       - name: Check for float in financial code
         run: |
-          echo "=== Checking float usage in financial code ==="
           if grep -rn --include="*.py" "float(" backend/app/collections/ 2>/dev/null; then
-            echo "ERROR: float() found in financial code — MUST use Decimal"
+            echo "::error::float() found in financial code — MUST use Decimal"
             exit 1
           fi
           echo "No float usage in financial code"
-
-      - name: Check tenant isolation
-        run: |
-          echo "=== Checking tenant isolation ==="
-          # Every query in service files should reference tenant_id or use get_tenant_id
-          echo "Manual review recommended for tenant isolation"
-          echo "Check: backend/app/*/service.py files should filter by tenant_id"

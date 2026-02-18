@@ -18,6 +18,7 @@ from app.invoices.router import expenses_router
 from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
 from app.relations.router import router as relations_router
+from app.settings.router import router as settings_router
 from app.time_entries.router import router as time_entries_router
 from app.workflow.router import router as workflow_router
 from app.workflow.scheduler import start_scheduler, stop_scheduler
@@ -80,6 +81,7 @@ app.include_router(workflow_router)
 app.include_router(time_entries_router)
 app.include_router(invoices_router)
 app.include_router(expenses_router)
+app.include_router(settings_router)
 
 
 @app.get("/health")

@@ -124,12 +124,30 @@ async def update_profile(
 
 
 @router.put("/me/password", status_code=204)
+async def change_password_put(
+    data: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Change the current user's password (PUT)."""
+    await _change_password(data, db, current_user)
+
+
+@router.post("/change-password", status_code=204)
 async def change_password(
     data: ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Change the current user's password."""
+    await _change_password(data, db, current_user)
+
+
+async def _change_password(
+    data: ChangePasswordRequest,
+    db: AsyncSession,
+    current_user: User,
+) -> None:
     if not verify_password(data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

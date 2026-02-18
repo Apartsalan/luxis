@@ -1,6 +1,7 @@
 """Luxis — Practice Management System for Dutch Law Firms."""
 
 import logging
+from contextlib import asynccontextmanager
 
 import sentry_sdk
 from fastapi import FastAPI
@@ -16,6 +17,7 @@ from app.documents.router import router as documents_router
 from app.middleware.logging import RequestLoggingMiddleware
 from app.relations.router import router as relations_router
 from app.workflow.router import router as workflow_router
+from app.workflow.scheduler import start_scheduler, stop_scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -31,12 +33,24 @@ if settings.sentry_dsn:
         send_default_pii=False,  # Never send PII to Sentry
     )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown events."""
+    # Startup: start the workflow scheduler
+    start_scheduler()
+    yield
+    # Shutdown: stop the scheduler
+    stop_scheduler()
+
+
 app = FastAPI(
     title="Luxis API",
     description="Praktijkmanagementsysteem voor de Nederlandse Advocatuur",
     version="0.1.0",
     docs_url="/docs" if settings.app_env != "production" else None,
     redoc_url="/redoc" if settings.app_env != "production" else None,
+    lifespan=lifespan,
 )
 
 # CORS — allow frontend to talk to the API

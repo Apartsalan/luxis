@@ -1,4 +1,4 @@
-"""Dashboard module router — KPIs and recent activity endpoints."""
+"""Dashboard module router — KPIs, recent activity, and task endpoints."""
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +8,8 @@ from app.dashboard import service
 from app.dashboard.schemas import DashboardSummary, RecentActivityResponse
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.workflow.schemas import WorkflowTaskResponse
+from app.workflow.service import list_tasks as wf_list_tasks
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -31,3 +33,19 @@ async def get_recent_activity(
     return await service.get_recent_activity(
         db, user.tenant_id, limit
     )
+
+
+@router.get("/my-tasks", response_model=list[WorkflowTaskResponse])
+async def get_my_tasks(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get open tasks assigned to the current user (due + overdue first)."""
+    tasks = await wf_list_tasks(
+        db, user.tenant_id, assigned_to_id=user.id
+    )
+    # Filter to non-completed tasks and sort: overdue first, then due, then pending
+    status_order = {"overdue": 0, "due": 1, "pending": 2}
+    open_tasks = [t for t in tasks if t.status in ("pending", "due", "overdue")]
+    open_tasks.sort(key=lambda t: (status_order.get(t.status, 3), t.due_date))
+    return open_tasks

@@ -10,6 +10,11 @@ import {
   Users,
   Trash2,
   ChevronRight,
+  Euro,
+  FileText,
+  Plus,
+  Receipt,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -17,7 +22,19 @@ import {
   useUpdateCaseStatus,
   useDeleteCase,
 } from "@/hooks/use-cases";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import {
+  useClaims,
+  useCreateClaim,
+  useDeleteClaim,
+  usePayments,
+  useCreatePayment,
+  useCaseInterest,
+  useFinancialSummary,
+  useDerdengelden,
+  useDerdengeldenBalance,
+  useCreateDerdengelden,
+} from "@/hooks/use-collections";
+import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -139,6 +156,10 @@ export default function ZaakDetailPage() {
 
   const tabs = [
     { id: "overzicht", label: "Overzicht", icon: Briefcase },
+    { id: "vorderingen", label: "Vorderingen", icon: Euro },
+    { id: "betalingen", label: "Betalingen", icon: Receipt },
+    { id: "financieel", label: "Financieel", icon: Wallet },
+    { id: "derdengelden", label: "Derdengelden", icon: FileText },
     { id: "activiteiten", label: "Activiteiten", icon: Clock },
     { id: "partijen", label: "Partijen", icon: Users },
   ];
@@ -232,13 +253,13 @@ export default function ZaakDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border">
-        <nav className="flex gap-1">
+      <div className="border-b border-border overflow-x-auto">
+        <nav className="flex gap-1 min-w-max">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground"
@@ -252,191 +273,1036 @@ export default function ZaakDetailPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "overzicht" && (
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-6">
-            <h2 className="mb-4 text-base font-semibold text-foreground">
-              Zaakgegevens
-            </h2>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-xs text-muted-foreground">Beschrijving</dt>
-                <dd className="text-sm text-foreground">
-                  {zaak.description || "-"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Referentie</dt>
-                <dd className="text-sm text-foreground">
-                  {zaak.reference || "-"}
-                </dd>
-              </div>
-              {zaak.contractual_rate && (
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    Contractueel rentepercentage
-                  </dt>
-                  <dd className="text-sm text-foreground">
-                    {zaak.contractual_rate}%
-                    {zaak.contractual_compound
-                      ? " (samengesteld)"
-                      : " (enkelvoudig)"}
-                  </dd>
-                </div>
-              )}
-              {zaak.assigned_to && (
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    Toegewezen aan
-                  </dt>
-                  <dd className="text-sm text-foreground">
-                    {zaak.assigned_to.full_name}
-                  </dd>
-                </div>
-              )}
-              {zaak.date_closed && (
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    Datum gesloten
-                  </dt>
-                  <dd className="text-sm text-foreground">
-                    {formatDate(zaak.date_closed)}
-                  </dd>
-                </div>
-              )}
-            </dl>
-          </div>
+      {activeTab === "overzicht" && <OverzichtTab zaak={zaak} />}
+      {activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
+      {activeTab === "betalingen" && <BetalingenTab caseId={id} />}
+      {activeTab === "financieel" && <FinancieelTab caseId={id} />}
+      {activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
+      {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
+      {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
+    </div>
+  );
+}
 
-          <div className="rounded-xl border border-border bg-card p-6">
-            <h2 className="mb-4 text-base font-semibold text-foreground">
-              Recente activiteit
-            </h2>
-            {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-              <div className="space-y-2">
-                {zaak.recent_activities.slice(0, 5).map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start gap-3 rounded-lg p-2.5 -mx-1 hover:bg-muted/50 transition-colors"
+// ── Overzicht Tab ─────────────────────────────────────────────────────────────
+
+function OverzichtTab({ zaak }: { zaak: any }) {
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-4 text-base font-semibold text-foreground">
+          Zaakgegevens
+        </h2>
+        <dl className="space-y-3">
+          <div>
+            <dt className="text-xs text-muted-foreground">Beschrijving</dt>
+            <dd className="text-sm text-foreground">
+              {zaak.description || "-"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Referentie</dt>
+            <dd className="text-sm text-foreground">
+              {zaak.reference || "-"}
+            </dd>
+          </div>
+          {zaak.contractual_rate && (
+            <div>
+              <dt className="text-xs text-muted-foreground">
+                Contractueel rentepercentage
+              </dt>
+              <dd className="text-sm text-foreground">
+                {zaak.contractual_rate}%
+                {zaak.contractual_compound
+                  ? " (samengesteld)"
+                  : " (enkelvoudig)"}
+              </dd>
+            </div>
+          )}
+          {zaak.assigned_to && (
+            <div>
+              <dt className="text-xs text-muted-foreground">Toegewezen aan</dt>
+              <dd className="text-sm text-foreground">
+                {zaak.assigned_to.full_name}
+              </dd>
+            </div>
+          )}
+          {zaak.date_closed && (
+            <div>
+              <dt className="text-xs text-muted-foreground">Datum gesloten</dt>
+              <dd className="text-sm text-foreground">
+                {formatDate(zaak.date_closed)}
+              </dd>
+            </div>
+          )}
+        </dl>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-4 text-base font-semibold text-foreground">
+          Recente activiteit
+        </h2>
+        {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
+          <div className="space-y-2">
+            {zaak.recent_activities.slice(0, 5).map((activity: any) => (
+              <div
+                key={activity.id}
+                className="flex items-start gap-3 rounded-lg p-2.5 -mx-1"
+              >
+                <span className="mt-0.5 text-base">
+                  {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {activity.title}
+                  </p>
+                  {activity.description && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {activity.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {formatDate(activity.created_at)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Geen activiteiten</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Vorderingen Tab ───────────────────────────────────────────────────────────
+
+function VorderingenTab({ caseId }: { caseId: string }) {
+  const { data: claims, isLoading } = useClaims(caseId);
+  const { data: interest } = useCaseInterest(caseId);
+  const createClaim = useCreateClaim();
+  const deleteClaim = useDeleteClaim();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    description: "",
+    principal_amount: "",
+    default_date: "",
+    invoice_number: "",
+    invoice_date: "",
+  });
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createClaim.mutateAsync({
+        caseId,
+        data: {
+          description: form.description,
+          principal_amount: parseFloat(form.principal_amount),
+          default_date: form.default_date,
+          ...(form.invoice_number && { invoice_number: form.invoice_number }),
+          ...(form.invoice_date && { invoice_date: form.invoice_date }),
+        },
+      });
+      toast.success("Vordering toegevoegd");
+      setShowForm(false);
+      setForm({
+        description: "",
+        principal_amount: "",
+        default_date: "",
+        invoice_number: "",
+        invoice_date: "",
+      });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDelete = async (claimId: string) => {
+    if (!confirm("Vordering verwijderen?")) return;
+    try {
+      await deleteClaim.mutateAsync({ caseId, claimId });
+      toast.success("Vordering verwijderd");
+    } catch {
+      toast.error("Kon niet verwijderen");
+    }
+  };
+
+  const inputClass =
+    "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-foreground">
+          Vorderingen
+        </h2>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Vordering toevoegen
+        </button>
+      </div>
+
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3"
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Beschrijving *
+              </label>
+              <input
+                type="text"
+                required
+                value={form.description}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
+                className={inputClass}
+                placeholder="Factuur nr. 2025-001"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Hoofdsom *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={form.principal_amount}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, principal_amount: e.target.value }))
+                }
+                className={inputClass}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Verzuimdatum *
+              </label>
+              <input
+                type="date"
+                required
+                value={form.default_date}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, default_date: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Factuurnummer
+              </label>
+              <input
+                type="text"
+                value={form.invoice_number}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, invoice_number: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={createClaim.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {createClaim.isPending ? "Opslaan..." : "Opslaan"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-lg border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
+            >
+              Annuleren
+            </button>
+          </div>
+        </form>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 rounded-lg skeleton" />
+          ))}
+        </div>
+      ) : claims && claims.length > 0 ? (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Beschrijving
+                </th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Hoofdsom
+                </th>
+                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Verzuimdatum
+                </th>
+                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Rente
+                </th>
+                <th className="px-4 py-2.5 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {claims.map((claim) => {
+                const claimInterest = interest?.claims.find(
+                  (c) => c.claim_id === claim.id
+                );
+                return (
+                  <tr
+                    key={claim.id}
+                    className="hover:bg-muted/30 transition-colors"
                   >
-                    <span className="mt-0.5 text-base">
-                      {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
-                    </span>
-                    <div className="min-w-0 flex-1">
+                    <td className="px-4 py-3">
                       <p className="text-sm font-medium text-foreground">
-                        {activity.title}
+                        {claim.description}
                       </p>
-                      {activity.description && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {activity.description}
+                      {claim.invoice_number && (
+                        <p className="text-xs text-muted-foreground">
+                          Factuur: {claim.invoice_number}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(activity.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Geen activiteiten
-              </p>
+                    </td>
+                    <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                      {formatCurrency(claim.principal_amount)}
+                    </td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-sm text-muted-foreground">
+                      {formatDateShort(claim.default_date)}
+                    </td>
+                    <td className="hidden md:table-cell px-4 py-3 text-right text-sm text-accent font-medium">
+                      {claimInterest
+                        ? formatCurrency(claimInterest.total_interest)
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleDelete(claim.id)}
+                        className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {interest && (
+              <tfoot>
+                <tr className="border-t-2 border-border bg-muted/20">
+                  <td className="px-4 py-3 text-sm font-semibold text-foreground">
+                    Totaal
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm font-bold text-foreground">
+                    {formatCurrency(interest.total_principal)}
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3" />
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-sm font-bold text-accent">
+                    {formatCurrency(interest.total_interest)}
+                  </td>
+                  <td className="px-4 py-3" />
+                </tr>
+              </tfoot>
             )}
+          </table>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border py-12 text-center">
+          <Euro className="mx-auto h-10 w-10 text-muted-foreground/30" />
+          <p className="mt-3 text-sm text-muted-foreground">
+            Nog geen vorderingen
+          </p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="mt-2 text-sm text-primary hover:underline"
+          >
+            Voeg de eerste vordering toe
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Betalingen Tab ────────────────────────────────────────────────────────────
+
+function BetalingenTab({ caseId }: { caseId: string }) {
+  const { data: payments, isLoading } = usePayments(caseId);
+  const createPayment = useCreatePayment();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    amount: "",
+    payment_date: new Date().toISOString().split("T")[0],
+    description: "",
+    payment_method: "",
+  });
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createPayment.mutateAsync({
+        caseId,
+        data: {
+          amount: parseFloat(form.amount),
+          payment_date: form.payment_date,
+          ...(form.description && { description: form.description }),
+          ...(form.payment_method && { payment_method: form.payment_method }),
+        },
+      });
+      toast.success("Betaling geregistreerd");
+      setShowForm(false);
+      setForm({
+        amount: "",
+        payment_date: new Date().toISOString().split("T")[0],
+        description: "",
+        payment_method: "",
+      });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const inputClass =
+    "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-foreground">Betalingen</h2>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Betaling registreren
+        </button>
+      </div>
+
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3"
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Bedrag *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={form.amount}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, amount: e.target.value }))
+                }
+                className={inputClass}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Datum *
+              </label>
+              <input
+                type="date"
+                required
+                value={form.payment_date}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, payment_date: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Omschrijving
+              </label>
+              <input
+                type="text"
+                value={form.description}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Betaalwijze
+              </label>
+              <select
+                value={form.payment_method}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, payment_method: e.target.value }))
+                }
+                className={inputClass}
+              >
+                <option value="">-</option>
+                <option value="bank">Bankoverschrijving</option>
+                <option value="cash">Contant</option>
+                <option value="derdengelden">Via derdengelden</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={createPayment.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {createPayment.isPending ? "Opslaan..." : "Registreren"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-lg border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
+            >
+              Annuleren
+            </button>
+          </div>
+        </form>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 rounded-lg skeleton" />
+          ))}
+        </div>
+      ) : payments && payments.length > 0 ? (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Datum
+                </th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Bedrag
+                </th>
+                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Omschrijving
+                </th>
+                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Kosten
+                </th>
+                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Rente
+                </th>
+                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Hoofdsom
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {payments.map((payment) => (
+                <tr
+                  key={payment.id}
+                  className="hover:bg-muted/30 transition-colors"
+                >
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {formatDateShort(payment.payment_date)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm font-medium text-success">
+                    {formatCurrency(payment.amount)}
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-sm text-muted-foreground">
+                    {payment.description || "-"}
+                  </td>
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground">
+                    {formatCurrency(payment.allocated_to_costs)}
+                  </td>
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground">
+                    {formatCurrency(payment.allocated_to_interest)}
+                  </td>
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground">
+                    {formatCurrency(payment.allocated_to_principal)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="border-t border-border bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
+            Art. 6:44 BW — Betalingen worden automatisch verdeeld: eerst kosten, dan rente, dan hoofdsom
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border py-12 text-center">
+          <Receipt className="mx-auto h-10 w-10 text-muted-foreground/30" />
+          <p className="mt-3 text-sm text-muted-foreground">
+            Nog geen betalingen
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Financieel Tab ────────────────────────────────────────────────────────────
+
+function FinancieelTab({ caseId }: { caseId: string }) {
+  const { data: summary, isLoading } = useFinancialSummary(caseId);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-16 rounded-lg skeleton" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!summary) return null;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-base font-semibold text-foreground">
+        Financieel overzicht
+      </h2>
+
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Post
+              </th>
+              <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Totaal
+              </th>
+              <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Betaald
+              </th>
+              <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Openstaand
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            <tr>
+              <td className="px-5 py-3 text-sm text-foreground">Hoofdsom</td>
+              <td className="px-5 py-3 text-right text-sm font-medium">
+                {formatCurrency(summary.total_principal)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm text-success">
+                {formatCurrency(summary.total_paid_principal)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm font-medium">
+                {formatCurrency(summary.remaining_principal)}
+              </td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 text-sm text-foreground">Rente</td>
+              <td className="px-5 py-3 text-right text-sm font-medium">
+                {formatCurrency(summary.total_interest)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm text-success">
+                {formatCurrency(summary.total_paid_interest)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm font-medium">
+                {formatCurrency(summary.remaining_interest)}
+              </td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 text-sm text-foreground">
+                BIK (art. 6:96 BW)
+                {summary.bik_btw > 0 && (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    incl. BTW
+                  </span>
+                )}
+              </td>
+              <td className="px-5 py-3 text-right text-sm font-medium">
+                {formatCurrency(summary.total_bik)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm text-success">
+                {formatCurrency(summary.total_paid_costs)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm font-medium">
+                {formatCurrency(summary.remaining_costs)}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-border bg-muted/30">
+              <td className="px-5 py-3 text-sm font-bold text-foreground">
+                Totaal
+              </td>
+              <td className="px-5 py-3 text-right text-sm font-bold text-foreground">
+                {formatCurrency(summary.grand_total)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm font-bold text-success">
+                {formatCurrency(summary.total_paid)}
+              </td>
+              <td className="px-5 py-3 text-right text-sm font-bold text-primary">
+                {formatCurrency(summary.total_outstanding)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {summary.derdengelden_balance > 0 && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-foreground">Derdengelden saldo</p>
+            <p className="text-lg font-bold text-primary">
+              {formatCurrency(summary.derdengelden_balance)}
+            </p>
           </div>
         </div>
       )}
 
-      {activeTab === "activiteiten" && (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">
-            Alle activiteiten
+      <p className="text-xs text-muted-foreground">
+        Berekening op {formatDate(summary.calculation_date)}. Rente wordt
+        dagelijks bijgewerkt.
+      </p>
+    </div>
+  );
+}
+
+// ── Derdengelden Tab ──────────────────────────────────────────────────────────
+
+function DerdengeldenTab({ caseId }: { caseId: string }) {
+  const { data: transactions, isLoading } = useDerdengelden(caseId);
+  const { data: balance } = useDerdengeldenBalance(caseId);
+  const createTx = useCreateDerdengelden();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    transaction_type: "deposit" as "deposit" | "withdrawal",
+    amount: "",
+    transaction_date: new Date().toISOString().split("T")[0],
+    description: "",
+    counterparty: "",
+  });
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createTx.mutateAsync({
+        caseId,
+        data: {
+          transaction_type: form.transaction_type,
+          amount: parseFloat(form.amount),
+          transaction_date: form.transaction_date,
+          ...(form.description && { description: form.description }),
+          ...(form.counterparty && { counterparty: form.counterparty }),
+        },
+      });
+      toast.success("Transactie opgeslagen");
+      setShowForm(false);
+      setForm({
+        transaction_type: "deposit",
+        amount: "",
+        transaction_date: new Date().toISOString().split("T")[0],
+        description: "",
+        counterparty: "",
+      });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const inputClass =
+    "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">
+            Derdengelden
           </h2>
-          {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-            <div className="space-y-1">
-              {zaak.recent_activities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-start gap-3 border-b border-border pb-3 last:border-0 py-2.5"
-                >
-                  <span className="mt-0.5 text-base">
-                    {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {activity.title}
-                    </p>
-                    {activity.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {activity.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatDate(activity.created_at)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
+          {balance && (
             <p className="text-sm text-muted-foreground">
-              Geen activiteiten
+              Saldo:{" "}
+              <span className="font-semibold text-primary">
+                {formatCurrency(balance.balance)}
+              </span>
             </p>
           )}
         </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Transactie
+        </button>
+      </div>
+
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3"
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Type *
+              </label>
+              <select
+                value={form.transaction_type}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    transaction_type: e.target.value as "deposit" | "withdrawal",
+                  }))
+                }
+                className={inputClass}
+              >
+                <option value="deposit">Storting</option>
+                <option value="withdrawal">Uitbetaling</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Bedrag *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={form.amount}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, amount: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Datum *
+              </label>
+              <input
+                type="date"
+                required
+                value={form.transaction_date}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, transaction_date: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Wederpartij
+              </label>
+              <input
+                type="text"
+                value={form.counterparty}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, counterparty: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={createTx.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Opslaan
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-lg border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
+            >
+              Annuleren
+            </button>
+          </div>
+        </form>
       )}
 
-      {activeTab === "partijen" && (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">
-            Partijen
-          </h2>
-          <div className="space-y-2">
-            {zaak.client && (
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <Link
-                  href={`/relaties/${zaak.client.id}`}
-                  className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-                >
-                  {zaak.client.name}
-                </Link>
-                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                  Client
-                </span>
-              </div>
-            )}
-            {zaak.opposing_party && (
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <Link
-                  href={`/relaties/${zaak.opposing_party.id}`}
-                  className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-                >
-                  {zaak.opposing_party.name}
-                </Link>
-                <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
+      {isLoading ? (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-14 rounded-lg skeleton" />
+          ))}
+        </div>
+      ) : transactions && transactions.length > 0 ? (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Datum
+                </th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Type
+                </th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Bedrag
+                </th>
+                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Wederpartij
-                </span>
-              </div>
-            )}
-            {zaak.parties &&
-              zaak.parties.map((party) => (
-                <div
-                  key={party.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-3"
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {transactions.map((tx) => (
+                <tr
+                  key={tx.id}
+                  className="hover:bg-muted/30 transition-colors"
                 >
-                  <Link
-                    href={`/relaties/${party.contact.id}`}
-                    className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    {formatDateShort(tx.transaction_date)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                        tx.transaction_type === "deposit"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
+                    >
+                      {tx.transaction_type === "deposit"
+                        ? "Storting"
+                        : "Uitbetaling"}
+                    </span>
+                  </td>
+                  <td
+                    className={`px-4 py-3 text-right text-sm font-medium ${
+                      tx.transaction_type === "deposit"
+                        ? "text-success"
+                        : "text-warning"
+                    }`}
                   >
-                    {party.contact.name}
-                  </Link>
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                    {party.role}
-                  </span>
-                </div>
+                    {tx.transaction_type === "deposit" ? "+" : "-"}
+                    {formatCurrency(tx.amount)}
+                  </td>
+                  <td className="hidden sm:table-cell px-4 py-3 text-sm text-muted-foreground">
+                    {tx.counterparty || "-"}
+                  </td>
+                </tr>
               ))}
-          </div>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border py-12 text-center">
+          <FileText className="mx-auto h-10 w-10 text-muted-foreground/30" />
+          <p className="mt-3 text-sm text-muted-foreground">
+            Geen derdengelden transacties
+          </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Activiteiten Tab ──────────────────────────────────────────────────────────
+
+function ActiviteitenTab({ zaak }: { zaak: any }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-6">
+      <h2 className="mb-4 text-base font-semibold text-foreground">
+        Alle activiteiten
+      </h2>
+      {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
+        <div className="space-y-1">
+          {zaak.recent_activities.map((activity: any) => (
+            <div
+              key={activity.id}
+              className="flex items-start gap-3 border-b border-border pb-3 last:border-0 py-2.5"
+            >
+              <span className="mt-0.5 text-base">
+                {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">
+                  {activity.title}
+                </p>
+                {activity.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {activity.description}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatDate(activity.created_at)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Geen activiteiten</p>
+      )}
+    </div>
+  );
+}
+
+// ── Partijen Tab ──────────────────────────────────────────────────────────────
+
+function PartijenTab({ zaak }: { zaak: any }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-6">
+      <h2 className="mb-4 text-base font-semibold text-foreground">
+        Partijen
+      </h2>
+      <div className="space-y-2">
+        {zaak.client && (
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <Link
+              href={`/relaties/${zaak.client.id}`}
+              className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+            >
+              {zaak.client.name}
+            </Link>
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+              Client
+            </span>
+          </div>
+        )}
+        {zaak.opposing_party && (
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <Link
+              href={`/relaties/${zaak.opposing_party.id}`}
+              className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+            >
+              {zaak.opposing_party.name}
+            </Link>
+            <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
+              Wederpartij
+            </span>
+          </div>
+        )}
+        {zaak.parties &&
+          zaak.parties.map((party: any) => (
+            <div
+              key={party.id}
+              className="flex items-center justify-between rounded-lg border border-border p-3"
+            >
+              <Link
+                href={`/relaties/${party.contact.id}`}
+                className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+              >
+                {party.contact.name}
+              </Link>
+              <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                {party.role}
+              </span>
+            </div>
+          ))}
+      </div>
     </div>
   );
 }

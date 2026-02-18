@@ -18,6 +18,7 @@ WORKFLOW_PHASES = ("minnelijk", "regeling", "gerechtelijk", "executie", "afgeron
 TASK_TYPES = (
     "generate_document",
     "send_letter",
+    "send_email",
     "check_payment",
     "escalate_status",
     "manual_review",

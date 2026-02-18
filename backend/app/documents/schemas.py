@@ -115,3 +115,19 @@ class GeneratedDocumentDetail(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── Docx Generation Schemas ─────────────────────────────────────────────────
+
+
+class GenerateDocxRequest(BaseModel):
+    template_type: str = Field(
+        ...,
+        description="Template type: 14_dagenbrief, sommatie, renteoverzicht",
+    )
+
+
+class DocxTemplateInfo(BaseModel):
+    template_type: str
+    filename: str
+    available: bool

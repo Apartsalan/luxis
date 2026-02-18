@@ -3,22 +3,29 @@
 import uuid
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
+from app.cases.models import Case
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.documents import service
+from app.documents.docx_service import get_available_templates, render_docx
 from app.documents.schemas import (
+    DocxTemplateInfo,
     DocumentTemplateCreate,
     DocumentTemplateResponse,
     DocumentTemplateSummary,
     DocumentTemplateUpdate,
+    GenerateDocumentRequest,
+    GenerateDocxRequest,
     GeneratedDocumentDetail,
     GeneratedDocumentResponse,
     GeneratedDocumentSummary,
-    GenerateDocumentRequest,
 )
+from app.shared.exceptions import NotFoundError
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -151,4 +158,49 @@ async def delete_document(
     """Delete a generated document."""
     await service.delete_generated_document(
         db, user.tenant_id, document_id
+    )
+
+
+# ── Docx Template Endpoints ────────────────────────────────────────────────
+
+
+@router.get(
+    "/docx/templates",
+    response_model=list[DocxTemplateInfo],
+)
+async def list_docx_templates():
+    """List available .docx template types."""
+    return get_available_templates()
+
+
+@router.post("/docx/cases/{case_id}/generate")
+async def generate_docx(
+    case_id: uuid.UUID,
+    data: GenerateDocxRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Generate a .docx document from a template for a case.
+
+    Returns the Word document as a downloadable file.
+    """
+    # Get the case
+    result = await db.execute(
+        select(Case).where(
+            Case.id == case_id,
+            Case.tenant_id == user.tenant_id,
+        )
+    )
+    case = result.scalar_one_or_none()
+    if case is None:
+        raise NotFoundError("Zaak niet gevonden")
+
+    docx_bytes, filename = await render_docx(
+        db, user.tenant_id, case, data.template_type
+    )
+
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
@@ -12,7 +13,8 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -20,6 +22,13 @@ export default function DashboardLayout({
     const stored = localStorage.getItem("luxis_sidebar_collapsed");
     if (stored === "true") setSidebarCollapsed(true);
   }, []);
+
+  // Route guard — redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [loading, user, router]);
 
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -40,6 +49,9 @@ export default function DashboardLayout({
     );
   }
 
+  // Don't render dashboard if not authenticated
+  if (!user) return null;
+
   return (
     <div className="min-h-screen bg-background">
       <AppSidebar
@@ -51,10 +63,8 @@ export default function DashboardLayout({
       <div
         className={cn(
           "transition-all duration-200",
-          // Desktop: respect sidebar collapsed state
           "lg:pl-60",
           sidebarCollapsed && "lg:pl-16",
-          // Mobile: no padding (sidebar is overlay)
           "pl-0"
         )}
       >

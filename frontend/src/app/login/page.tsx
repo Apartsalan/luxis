@@ -1,39 +1,67 @@
 "use client";
 
 import { useState } from "react";
-import { Scale, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Scale, Eye, EyeOff, ArrowRight, Mail, ArrowLeft } from "lucide-react";
+
+type View = "login" | "forgot" | "forgot-sent";
 
 export default function LoginPage() {
+  const [view, setView] = useState<View>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/auth/login`, {
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        setError("Onjuist e-mailadres of wachtwoord");
+        const data = await response.json().catch(() => null);
+        setError(data?.detail || "Onjuist e-mailadres of wachtwoord");
         return;
       }
 
       const data = await response.json();
       localStorage.setItem("luxis_access_token", data.access_token);
-      localStorage.setItem("luxis_refresh_token", data.refresh_token);
+      if (data.refresh_token) {
+        localStorage.setItem("luxis_refresh_token", data.refresh_token);
+      }
       window.location.href = "/";
     } catch {
-      setError("Er ging iets mis. Probeer het opnieuw.");
+      setError("Kan geen verbinding maken met de server. Probeer het later opnieuw.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${apiUrl}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      // Always show success — don't leak whether email exists
+      setView("forgot-sent");
+    } catch {
+      setError("Kan geen verbinding maken met de server.");
     } finally {
       setLoading(false);
     }
@@ -67,23 +95,17 @@ export default function LoginPage() {
           <div className="flex gap-6 pt-4">
             <div>
               <p className="text-2xl font-bold text-white">100%</p>
-              <p className="text-xs text-white/40 mt-0.5">
-                Nederlands recht
-              </p>
+              <p className="text-xs text-white/40 mt-0.5">Nederlands recht</p>
             </div>
             <div className="w-px bg-white/10" />
             <div>
               <p className="text-2xl font-bold text-white">Art. 6:44</p>
-              <p className="text-xs text-white/40 mt-0.5">
-                BW betalingsverdeling
-              </p>
+              <p className="text-xs text-white/40 mt-0.5">BW betalingsverdeling</p>
             </div>
             <div className="w-px bg-white/10" />
             <div>
               <p className="text-2xl font-bold text-white">WIK/BIK</p>
-              <p className="text-xs text-white/40 mt-0.5">
-                Incassostaffel
-              </p>
+              <p className="text-xs text-white/40 mt-0.5">Incassostaffel</p>
             </div>
           </div>
         </div>
@@ -93,7 +115,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Right panel — login form */}
+      {/* Right panel — forms */}
       <div className="flex flex-1 items-center justify-center bg-background px-6 sm:px-8">
         <div className="w-full max-w-sm animate-fade-in">
           {/* Mobile logo */}
@@ -102,100 +124,183 @@ export default function LoginPage() {
               <Scale className="h-6 w-6 text-white" />
             </div>
             <h1 className="mt-4 text-2xl font-bold text-foreground">Luxis</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Praktijkmanagement
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Praktijkmanagement</p>
           </div>
 
-          {/* Desktop heading */}
-          <div className="hidden lg:block mb-8">
-            <h1 className="text-2xl font-bold text-foreground">
-              Welkom terug
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Log in op je Luxis account
-            </p>
-          </div>
+          {/* ─── Login form ─── */}
+          {view === "login" && (
+            <>
+              <div className="hidden lg:block mb-8">
+                <h1 className="text-2xl font-bold text-foreground">Welkom terug</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Log in op je Luxis account
+                </p>
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-foreground mb-1.5"
-              >
-                E-mailadres
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                autoFocus
-                className="w-full rounded-lg border border-input bg-card px-4 py-3 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-                placeholder="naam@kantoor.nl"
-              />
-            </div>
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
+                    E-mailadres
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    className="w-full rounded-lg border border-input bg-card px-4 py-3 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                    placeholder="naam@kantoor.nl"
+                  />
+                </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground mb-1.5"
-              >
-                Wachtwoord
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  className="w-full rounded-lg border border-input bg-card px-4 py-3 pr-11 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-                  placeholder="••••••••"
-                />
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="password" className="block text-sm font-medium text-foreground">
+                      Wachtwoord
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => { setError(""); setView("forgot"); }}
+                      className="text-xs text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Wachtwoord vergeten?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      className="w-full rounded-lg border border-input bg-card px-4 py-3 pr-11 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                    <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />
+                    {error}
+                  </div>
+                )}
+
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  tabIndex={-1}
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 transition-all group"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Bezig met inloggen...
+                    </span>
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <span className="flex items-center justify-center gap-2">
+                      Inloggen
+                      <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
                   )}
                 </button>
+              </form>
+            </>
+          )}
+
+          {/* ─── Forgot password form ─── */}
+          {view === "forgot" && (
+            <>
+              <div className="mb-8">
+                <button
+                  onClick={() => { setError(""); setView("login"); }}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Terug naar inloggen
+                </button>
+                <h1 className="text-2xl font-bold text-foreground">Wachtwoord vergeten</h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Voer je e-mailadres in en we sturen een herstellink.
+                </p>
               </div>
+
+              <form onSubmit={handleForgotPassword} className="space-y-5">
+                <div>
+                  <label htmlFor="forgot-email" className="block text-sm font-medium text-foreground mb-1.5">
+                    E-mailadres
+                  </label>
+                  <input
+                    id="forgot-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    className="w-full rounded-lg border border-input bg-card px-4 py-3 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                    placeholder="naam@kantoor.nl"
+                  />
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
+                    <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 transition-all group"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Verzenden...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      Herstelmail verzenden
+                      <Mail className="h-4 w-4" />
+                    </span>
+                  )}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* ─── Forgot password sent confirmation ─── */}
+          {view === "forgot-sent" && (
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 mb-6">
+                <Mail className="h-7 w-7 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">Controleer je inbox</h1>
+              <p className="mt-2 text-sm text-muted-foreground max-w-xs mx-auto">
+                Als er een account bestaat voor <strong className="text-foreground">{email}</strong>,
+                ontvang je binnen enkele minuten een e-mail met een herstellink.
+              </p>
+              <button
+                onClick={() => { setError(""); setView("login"); }}
+                className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Terug naar inloggen
+              </button>
             </div>
-
-            {error && (
-              <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-                <div className="h-1.5 w-1.5 rounded-full bg-destructive shrink-0" />
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 transition-all group"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Bezig met inloggen...
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  Inloggen
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                </span>
-              )}
-            </button>
-          </form>
+          )}
 
           <p className="mt-8 text-center text-xs text-muted-foreground/50">
             Luxis v0.1.0 · Praktijkmanagementsysteem

@@ -40,6 +40,10 @@ class Case(TenantBase):
         String(30), nullable=False, default="nieuw"
     )  # Status workflow (see docstring)
 
+    debtor_type: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="b2b"
+    )  # b2b or b2c — determines interest type and workflow rules
+
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     reference: Mapped[str | None] = mapped_column(
         String(100), nullable=True

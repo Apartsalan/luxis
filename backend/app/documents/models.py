@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import ForeignKey, String, Text, Uuid
+from sqlalchemy import ForeignKey, LargeBinary, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -53,12 +53,22 @@ class GeneratedDocument(TenantBase):
     document_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # Same types as template_type
+
+    # DOCX system fields
+    template_type: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # Which docx template was used (e.g. '14_dagenbrief', 'sommatie')
+    template_snapshot: Mapped[bytes | None] = mapped_column(
+        LargeBinary, nullable=True
+    )  # Copy of the .docx template at time of generation
+
+    # Legacy HTML system (deprecated — use docx templates instead)
     content_html: Mapped[str | None] = mapped_column(
         Text, nullable=True
-    )  # Rendered HTML content
+    )  # Rendered HTML content (deprecated)
     file_path: Mapped[str | None] = mapped_column(
         String(500), nullable=True
-    )  # Path to generated PDF
+    )  # Path to generated file
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     # Relationships

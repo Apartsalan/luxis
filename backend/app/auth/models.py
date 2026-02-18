@@ -19,6 +19,9 @@ class Tenant(Base, TimestampMixin):
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     postal_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
 
     users: Mapped[list["User"]] = relationship("User", back_populates="tenant")

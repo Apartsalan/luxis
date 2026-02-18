@@ -14,6 +14,7 @@ export default function NieuweZaakPage() {
 
   const [form, setForm] = useState({
     case_type: "incasso",
+    debtor_type: "", // auto-filled from opposing party contact_type
     description: "",
     reference: "",
     interest_type: "statutory",
@@ -55,6 +56,7 @@ export default function NieuweZaakPage() {
       date_opened: form.date_opened,
     };
 
+    if (form.debtor_type) data.debtor_type = form.debtor_type;
     if (form.description) data.description = form.description;
     if (form.reference) data.reference = form.reference;
     if (form.opposing_party_id) data.opposing_party_id = form.opposing_party_id;
@@ -97,7 +99,7 @@ export default function NieuweZaakPage() {
             Zaakgegevens
           </h2>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium text-foreground">
                 Zaaktype *
@@ -112,6 +114,23 @@ export default function NieuweZaakPage() {
                 <option value="advies">Advies</option>
                 <option value="overig">Overig</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Debiteurtype
+              </label>
+              <select
+                value={form.debtor_type}
+                onChange={(e) => updateField("debtor_type", e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Automatisch</option>
+                <option value="b2b">B2B (bedrijf)</option>
+                <option value="b2c">B2C (particulier)</option>
+              </select>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Wordt automatisch ingevuld bij selectie wederpartij
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
@@ -311,6 +330,13 @@ export default function NieuweZaakPage() {
                           onClick={() => {
                             updateField("opposing_party_id", contact.id);
                             setOpponentSearch(contact.name);
+                            // Auto-fill debtor_type from contact type
+                            if (!form.debtor_type) {
+                              updateField(
+                                "debtor_type",
+                                contact.contact_type === "company" ? "b2b" : "b2c"
+                              );
+                            }
                           }}
                           className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted transition-colors"
                         >

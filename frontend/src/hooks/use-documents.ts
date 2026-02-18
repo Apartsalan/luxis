@@ -45,15 +45,27 @@ export interface GeneratedDocumentDetail {
 
 const TEMPLATE_TYPE_LABELS: Record<string, string> = {
   "14_dagenbrief": "14-dagenbrief",
+  herinnering: "Herinnering",
+  aanmaning: "Aanmaning",
   sommatie: "Sommatie",
+  tweede_sommatie: "Tweede sommatie",
+  dagvaarding: "Dagvaarding",
   renteoverzicht: "Renteoverzicht",
 };
 
 const TEMPLATE_TYPE_DESCRIPTIONS: Record<string, string> = {
   "14_dagenbrief":
-    "Aanmaning op grond van art. 6:96 BW met BIK-berekening",
+    "Verplichte aanmaning voor B2C op grond van art. 6:96 BW met BIK-berekening",
+  herinnering:
+    "Eerste herinnering aan openstaande factuur — vriendelijke toon",
+  aanmaning:
+    "Formele aanmaning met betalingstermijn en renteberekening",
   sommatie:
-    "Tweede aanmaning met renteberekening en betalingstermijn",
+    "Tweede aanmaning met renteberekening en BIK-specificatie",
+  tweede_sommatie:
+    "Laatste sommatie voor dagvaarding met laatste termijn",
+  dagvaarding:
+    "Concept dagvaarding — moet worden afgerond door advocaat",
   renteoverzicht:
     "Gedetailleerd overzicht van rente per vordering en periode",
 };

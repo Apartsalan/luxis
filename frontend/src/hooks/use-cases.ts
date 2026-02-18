@@ -8,6 +8,7 @@ export interface CaseSummary {
   case_number: string;
   case_type: string;
   status: string;
+  debtor_type: string | null; // 'b2b' | 'b2c'
   description: string | null;
   reference: string | null;
   interest_type: string;
@@ -48,6 +49,7 @@ interface PaginatedCases {
 
 interface CaseCreateInput {
   case_type: string;
+  debtor_type?: string; // 'b2b' | 'b2c'
   description?: string;
   reference?: string;
   interest_type?: string;

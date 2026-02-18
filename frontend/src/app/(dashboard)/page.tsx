@@ -19,6 +19,12 @@ import { api } from "@/lib/api";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  useMyOpenTasks,
+  useCompleteTask,
+  TASK_TYPE_LABELS,
+  type WorkflowTask,
+} from "@/hooks/use-workflow";
 
 interface DashboardSummary {
   total_active_cases: number;
@@ -263,6 +269,9 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* My Tasks widget */}
+      <MyTasksWidget />
+
       {/* Two column: Action Needed + Recent Activity */}
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Left column */}
@@ -481,4 +490,120 @@ function KPICard({
     return <Link href={href}>{content}</Link>;
   }
   return content;
+}
+
+function MyTasksWidget() {
+  const { data, isLoading } = useMyOpenTasks(5);
+  const completeTask = useCompleteTask();
+
+  const tasks = data?.items ?? [];
+  const totalOpen = data?.total ?? 0;
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="h-5 w-32 rounded skeleton mb-4" />
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-14 rounded-lg skeleton" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (tasks.length === 0) return null;
+
+  const now = new Date();
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold text-card-foreground">
+            Mijn taken
+          </h2>
+          {totalOpen > 0 && (
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              {totalOpen}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="divide-y divide-border">
+        {tasks.map((task: WorkflowTask) => {
+          const dueDate = new Date(task.due_date);
+          const isOverdue = dueDate < now && task.status !== "completed";
+          const isDueSoon =
+            !isOverdue &&
+            dueDate.getTime() - now.getTime() < 24 * 60 * 60 * 1000;
+
+          return (
+            <div
+              key={task.id}
+              className={`flex items-center gap-3 px-5 py-3.5 ${
+                isOverdue ? "bg-red-50/50" : ""
+              }`}
+            >
+              <button
+                onClick={() => completeTask.mutate(task.id)}
+                disabled={completeTask.isPending}
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-muted-foreground/30 hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
+                title="Markeer als afgerond"
+              >
+                {completeTask.isPending && (
+                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                )}
+              </button>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-card-foreground truncate">
+                    {task.title}
+                  </p>
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
+                    {TASK_TYPE_LABELS[task.task_type] ?? task.task_type}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {task.case && (
+                    <Link
+                      href={`/zaken/${task.case_id}`}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {task.case.case_number}
+                    </Link>
+                  )}
+                  <span
+                    className={`text-xs ${
+                      isOverdue
+                        ? "text-red-600 font-medium"
+                        : isDueSoon
+                          ? "text-amber-600"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {isOverdue && "Verlopen: "}
+                    {formatDateShort(task.due_date)}
+                  </span>
+                </div>
+              </div>
+
+              {isOverdue && (
+                <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {totalOpen > 5 && (
+        <div className="px-5 py-3 border-t border-border text-center">
+          <span className="text-xs text-muted-foreground">
+            +{totalOpen - 5} meer taken openstaand
+          </span>
+        </div>
+      )}
+    </div>
+  );
 }

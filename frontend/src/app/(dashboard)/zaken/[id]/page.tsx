@@ -53,6 +53,21 @@ import {
   getTemplateDescription,
   triggerDownload,
 } from "@/hooks/use-documents";
+import {
+  useWorkflowStatuses,
+  useWorkflowTransitions,
+  useWorkflowTasks,
+  useCompleteTask,
+  useSkipTask,
+  useCreateTask,
+  groupStatusesByPhase,
+  getAvailableTransitions,
+  getPhaseForStatus,
+  PHASE_LABELS,
+  PHASE_ORDER,
+  TASK_TYPE_LABELS,
+  TASK_STATUS_LABELS,
+} from "@/hooks/use-workflow";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -121,6 +136,57 @@ const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
   payment: CreditCard,
 };
 
+function VerjaringBadge({
+  dateOpened,
+  status,
+}: {
+  dateOpened: string;
+  status: string;
+}) {
+  // Art. 3:307 BW — verjaringstermijn is 5 jaar
+  const VERJARING_YEARS = 5;
+  const terminalStatuses = ["betaald", "afgesloten"];
+  if (terminalStatuses.includes(status)) return null;
+
+  const opened = new Date(dateOpened);
+  const verjaringDate = new Date(opened);
+  verjaringDate.setFullYear(verjaringDate.getFullYear() + VERJARING_YEARS);
+
+  const now = new Date();
+  const daysLeft = Math.ceil(
+    (verjaringDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysLeft <= 0) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+        <AlertTriangle className="h-3 w-3" />
+        Verjaard
+      </span>
+    );
+  }
+
+  if (daysLeft <= 30) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+        <AlertTriangle className="h-3 w-3" />
+        Verjaring: {daysLeft}d
+      </span>
+    );
+  }
+
+  if (daysLeft <= 90) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+        <Clock className="h-3 w-3" />
+        Verjaring: {daysLeft}d
+      </span>
+    );
+  }
+
+  return null;
+}
+
 export default function ZaakDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -128,6 +194,8 @@ export default function ZaakDetailPage() {
   const { data: zaak, isLoading } = useCase(id);
   const updateStatus = useUpdateCaseStatus();
   const deleteCase = useDeleteCase();
+  const { data: workflowStatuses } = useWorkflowStatuses();
+  const { data: workflowTransitions } = useWorkflowTransitions();
   const [activeTab, setActiveTab] = useState("overzicht");
 
   const handleStatusChange = async (newStatus: string) => {
@@ -190,6 +258,7 @@ export default function ZaakDetailPage() {
 
   const tabs = [
     { id: "overzicht", label: "Overzicht", icon: Briefcase },
+    { id: "taken", label: "Taken", icon: CheckCircle2 },
     { id: "vorderingen", label: "Vorderingen", icon: Euro },
     { id: "betalingen", label: "Betalingen", icon: Receipt },
     { id: "financieel", label: "Financieel", icon: Wallet },
@@ -199,8 +268,27 @@ export default function ZaakDetailPage() {
     { id: "partijen", label: "Partijen", icon: Users },
   ];
 
-  const currentStepIndex = PIPELINE_STEPS.indexOf(zaak.status);
-  const isTerminal = zaak.status === "betaald" || zaak.status === "afgesloten";
+  // Determine current phase from workflow data or fallback
+  const currentPhase = workflowStatuses
+    ? getPhaseForStatus(workflowStatuses, zaak.status)
+    : null;
+  const currentPhaseIndex = currentPhase
+    ? PHASE_ORDER.indexOf(currentPhase)
+    : -1;
+  const isTerminal =
+    currentPhase === "afgerond" ||
+    zaak.status === "betaald" ||
+    zaak.status === "afgesloten";
+
+  // Available transitions from workflow data, with fallback to hardcoded
+  const availableNextStatuses = workflowStatuses && workflowTransitions
+    ? getAvailableTransitions(
+        workflowTransitions,
+        zaak.status,
+        zaak.debtor_type ?? "both",
+        workflowStatuses
+      )
+    : null;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -226,6 +314,18 @@ export default function ZaakDetailPage() {
               >
                 {STATUS_LABELS[zaak.status] ?? zaak.status}
               </span>
+              {zaak.debtor_type && (
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                    zaak.debtor_type === "b2b"
+                      ? "bg-indigo-50 text-indigo-700 ring-indigo-600/20"
+                      : "bg-pink-50 text-pink-700 ring-pink-600/20"
+                  }`}
+                >
+                  {zaak.debtor_type === "b2b" ? "B2B" : "B2C"}
+                </span>
+              )}
+              <VerjaringBadge dateOpened={zaak.date_opened} status={zaak.status} />
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
               {TYPE_LABELS[zaak.case_type]} · Geopend{" "}
@@ -245,126 +345,108 @@ export default function ZaakDetailPage() {
         </div>
       </div>
 
-      {/* Pipeline Stepper */}
-      {zaak.case_type === "incasso" && (
-        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
-            {PIPELINE_STEPS.map((step, index) => {
-              const isActive = step === zaak.status;
-              const isPast = currentStepIndex >= 0 && index < currentStepIndex;
-              const isFuture =
-                currentStepIndex >= 0 && index > currentStepIndex;
-              const canAdvanceTo =
-                NEXT_STATUSES[zaak.status]?.includes(step) && !isTerminal;
+      {/* Phase Pipeline Stepper */}
+      <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {PHASE_ORDER.map((phase, index) => {
+            const isActive = phase === currentPhase;
+            const isPast = currentPhaseIndex >= 0 && index < currentPhaseIndex;
+            const PHASE_ACTIVE_CLASSES: Record<string, string> = {
+              minnelijk: "bg-blue-500 text-white ring-4 ring-blue-500/20",
+              regeling: "bg-amber-500 text-white ring-4 ring-amber-500/20",
+              gerechtelijk: "bg-purple-500 text-white ring-4 ring-purple-500/20",
+              executie: "bg-red-500 text-white ring-4 ring-red-500/20",
+              afgerond: "bg-emerald-500 text-white ring-4 ring-emerald-500/20",
+            };
 
-              return (
-                <div key={step} className="flex items-center flex-1 min-w-0">
-                  <button
-                    onClick={() =>
-                      canAdvanceTo ? handleStatusChange(step) : undefined
-                    }
-                    disabled={!canAdvanceTo}
-                    className={`flex flex-col items-center gap-1.5 flex-1 min-w-0 group ${
-                      canAdvanceTo ? "cursor-pointer" : "cursor-default"
+            return (
+              <div key={phase} className="flex items-center flex-1 min-w-0">
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                      isActive
+                        ? PHASE_ACTIVE_CLASSES[phase] ?? "bg-slate-500 text-white"
+                        : isPast
+                          ? "bg-emerald-500 text-white"
+                          : "border-2 border-border text-muted-foreground"
                     }`}
-                    title={
-                      canAdvanceTo
-                        ? `Wijzig naar ${STATUS_LABELS[step]}`
-                        : STATUS_LABELS[step]
-                    }
                   >
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                        isActive
-                          ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                          : isPast
-                            ? "bg-emerald-500 text-white"
-                            : isTerminal && step === "betaald"
-                              ? "bg-emerald-500 text-white"
-                              : canAdvanceTo
-                                ? "border-2 border-primary/40 text-primary group-hover:bg-primary/10"
-                                : "border-2 border-border text-muted-foreground"
-                      }`}
-                    >
-                      {isPast ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-                    <span
-                      className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${
-                        isActive
-                          ? "text-primary"
-                          : isPast
-                            ? "text-emerald-600"
-                            : "text-muted-foreground"
-                      }`}
-                    >
-                      {STATUS_LABELS[step]}
-                    </span>
-                  </button>
-                  {index < PIPELINE_STEPS.length - 1 && (
-                    <div
-                      className={`hidden sm:block h-0.5 w-4 shrink-0 mx-0.5 ${
-                        isPast ? "bg-emerald-400" : "bg-border"
-                      }`}
-                    />
-                  )}
+                    {isPast ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      index + 1
+                    )}
+                  </div>
+                  <span
+                    className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${
+                      isActive
+                        ? "text-foreground font-semibold"
+                        : isPast
+                          ? "text-emerald-600"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {PHASE_LABELS[phase]}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-          {/* Status action buttons */}
-          {!isTerminal &&
-            NEXT_STATUSES[zaak.status] &&
-            NEXT_STATUSES[zaak.status].length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
-                <span className="text-xs text-muted-foreground self-center mr-1">
-                  Volgende stap:
-                </span>
-                {NEXT_STATUSES[zaak.status].map((nextStatus) => (
+                {index < PHASE_ORDER.length - 1 && (
+                  <div
+                    className={`hidden sm:block h-0.5 w-4 shrink-0 mx-0.5 ${
+                      isPast ? "bg-emerald-400" : "bg-border"
+                    }`}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Status transition buttons */}
+        {!isTerminal && (
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+            <span className="text-xs text-muted-foreground self-center mr-1">
+              Volgende stap:
+            </span>
+            {availableNextStatuses && availableNextStatuses.length > 0 ? (
+              availableNextStatuses.map((nextStatus) => {
+                const isTerminalStatus = nextStatus.is_terminal;
+                return (
                   <button
-                    key={nextStatus}
-                    onClick={() => handleStatusChange(nextStatus)}
+                    key={nextStatus.slug}
+                    onClick={() => handleStatusChange(nextStatus.slug)}
                     disabled={updateStatus.isPending}
                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                      nextStatus === "betaald" || nextStatus === "afgesloten"
+                      isTerminalStatus
                         ? "border border-border hover:bg-muted text-muted-foreground"
                         : "bg-primary/10 text-primary hover:bg-primary/20"
                     }`}
                   >
                     <ArrowRight className="h-3 w-3" />
-                    {STATUS_LABELS[nextStatus]}
+                    {nextStatus.label}
                   </button>
-                ))}
-              </div>
+                );
+              })
+            ) : (
+              /* Fallback to hardcoded transitions when workflow API not available */
+              NEXT_STATUSES[zaak.status]?.map((nextStatus) => (
+                <button
+                  key={nextStatus}
+                  onClick={() => handleStatusChange(nextStatus)}
+                  disabled={updateStatus.isPending}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    nextStatus === "betaald" || nextStatus === "afgesloten"
+                      ? "border border-border hover:bg-muted text-muted-foreground"
+                      : "bg-primary/10 text-primary hover:bg-primary/20"
+                  }`}
+                >
+                  <ArrowRight className="h-3 w-3" />
+                  {STATUS_LABELS[nextStatus]}
+                </button>
+              ))
             )}
-        </div>
-      )}
-
-      {/* Non-incasso: simple status actions */}
-      {zaak.case_type !== "incasso" &&
-        !isTerminal &&
-        NEXT_STATUSES[zaak.status] &&
-        NEXT_STATUSES[zaak.status].length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-muted-foreground self-center mr-1">
-              Status wijzigen:
-            </span>
-            {NEXT_STATUSES[zaak.status].map((nextStatus) => (
-              <button
-                key={nextStatus}
-                onClick={() => handleStatusChange(nextStatus)}
-                disabled={updateStatus.isPending}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-              >
-                <ChevronRight className="h-3 w-3" />
-                {STATUS_LABELS[nextStatus]}
-              </button>
-            ))}
           </div>
         )}
+      </div>
 
       {/* Quick Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -448,6 +530,7 @@ export default function ZaakDetailPage() {
 
       {/* Tab content */}
       {activeTab === "overzicht" && <OverzichtTab zaak={zaak} />}
+      {activeTab === "taken" && <TakenTab caseId={id} />}
       {activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
       {activeTab === "betalingen" && <BetalingenTab caseId={id} />}
       {activeTab === "financieel" && <FinancieelTab caseId={id} />}
@@ -1567,6 +1650,317 @@ function PartijenTab({ zaak }: { zaak: any }) {
             </Link>
           ))}
       </div>
+    </div>
+  );
+}
+
+// ── Taken Tab ────────────────────────────────────────────────────────────────
+
+const TASK_STATUS_BADGE: Record<string, string> = {
+  pending: "bg-slate-50 text-slate-600 ring-slate-500/20",
+  due: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  completed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  skipped: "bg-slate-50 text-slate-500 ring-slate-400/20",
+  overdue: "bg-red-50 text-red-700 ring-red-600/20",
+};
+
+function TakenTab({ caseId }: { caseId: string }) {
+  const { data: tasksData, isLoading } = useWorkflowTasks({ case_id: caseId });
+  const completeTask = useCompleteTask();
+  const skipTask = useSkipTask();
+  const createTask = useCreateTask();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    task_type: "custom",
+    due_date: new Date().toISOString().split("T")[0],
+    description: "",
+  });
+
+  const handleComplete = async (taskId: string) => {
+    try {
+      await completeTask.mutateAsync(taskId);
+      toast.success("Taak afgerond");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleSkip = async (taskId: string) => {
+    try {
+      await skipTask.mutateAsync(taskId);
+      toast.success("Taak overgeslagen");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createTask.mutateAsync({
+        case_id: caseId,
+        task_type: form.task_type,
+        title: form.title,
+        due_date: form.due_date,
+        ...(form.description && { description: form.description }),
+      });
+      toast.success("Taak aangemaakt");
+      setShowForm(false);
+      setForm({
+        title: "",
+        task_type: "custom",
+        due_date: new Date().toISOString().split("T")[0],
+        description: "",
+      });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const tasks = tasksData?.items ?? [];
+  const openTasks = tasks.filter(
+    (t) => t.status === "pending" || t.status === "due" || t.status === "overdue"
+  );
+  const completedTasks = tasks.filter(
+    (t) => t.status === "completed" || t.status === "skipped"
+  );
+
+  const inputClass =
+    "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Taken</h2>
+          <p className="text-sm text-muted-foreground">
+            {openTasks.length} openstaand
+            {completedTasks.length > 0 &&
+              ` · ${completedTasks.length} afgerond`}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Taak toevoegen
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3"
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-foreground">
+                Titel *
+              </label>
+              <input
+                type="text"
+                required
+                value={form.title}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, title: e.target.value }))
+                }
+                placeholder="Bijv. Bel debiteur voor betalingsherinnering"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Type
+              </label>
+              <select
+                value={form.task_type}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, task_type: e.target.value }))
+                }
+                className={inputClass}
+              >
+                {Object.entries(TASK_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Deadline *
+              </label>
+              <input
+                type="date"
+                required
+                value={form.due_date}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, due_date: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-foreground">
+                Omschrijving
+              </label>
+              <input
+                type="text"
+                value={form.description}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={createTask.isPending}
+              className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Aanmaken
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-lg border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
+            >
+              Annuleren
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Loading */}
+      {isLoading ? (
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 rounded-lg skeleton" />
+          ))}
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border py-12 text-center">
+          <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
+          <p className="mt-3 text-sm text-muted-foreground">
+            Geen taken voor deze zaak
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Taken worden automatisch aangemaakt bij statuswijzigingen
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Open tasks */}
+          {openTasks.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Openstaand
+              </h3>
+              {openTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${
+                    task.status === "overdue"
+                      ? "border-red-200 bg-red-50/50"
+                      : "border-border bg-card"
+                  }`}
+                >
+                  <button
+                    onClick={() => handleComplete(task.id)}
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-border hover:border-primary hover:bg-primary/10 transition-colors"
+                    title="Markeer als afgerond"
+                  >
+                    {completeTask.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    ) : null}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-foreground">
+                        {task.title}
+                      </p>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                          TASK_STATUS_BADGE[task.status] ??
+                          "bg-slate-50 text-slate-600 ring-slate-500/20"
+                        }`}
+                      >
+                        {TASK_STATUS_LABELS[task.status] ?? task.status}
+                      </span>
+                    </div>
+                    {task.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {task.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Deadline: {formatDateShort(task.due_date)}
+                      </span>
+                      <span>
+                        {TASK_TYPE_LABELS[task.task_type] ?? task.task_type}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleSkip(task.id)}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title="Overslaan"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Completed tasks */}
+          {completedTasks.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Afgerond
+              </h3>
+              {completedTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4 opacity-60"
+                >
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium text-foreground line-through">
+                        {task.title}
+                      </p>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                          TASK_STATUS_BADGE[task.status] ??
+                          "bg-slate-50 text-slate-600 ring-slate-500/20"
+                        }`}
+                      >
+                        {TASK_STATUS_LABELS[task.status] ?? task.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {task.completed_at
+                        ? formatDateShort(task.completed_at)
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

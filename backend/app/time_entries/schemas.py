@@ -1,8 +1,10 @@
 """Time entries module schemas — Pydantic models for time tracking CRUD."""
 
 import uuid
-from datetime import date, datetime
+from datetime import date as DateType
+from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,28 +25,28 @@ ACTIVITY_TYPE_LABELS = {
 
 class TimeEntryCreate(BaseModel):
     case_id: uuid.UUID
-    date: date
+    date: DateType
     duration_minutes: int = Field(..., gt=0, description="Duur in minuten")
-    description: str | None = None
+    description: Optional[str] = None
     activity_type: str = Field(
         default="other",
         pattern="^(correspondence|meeting|phone|research|court|travel|drafting|other)$",
     )
     billable: bool = True
-    hourly_rate: Decimal | None = Field(None, ge=0, decimal_places=2)
+    hourly_rate: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
 
 
 class TimeEntryUpdate(BaseModel):
-    case_id: uuid.UUID | None = None
-    date: date | None = None
-    duration_minutes: int | None = Field(None, gt=0)
-    description: str | None = None
-    activity_type: str | None = Field(
+    case_id: Optional[uuid.UUID] = None
+    date: Optional[DateType] = None
+    duration_minutes: Optional[int] = Field(None, gt=0)
+    description: Optional[str] = None
+    activity_type: Optional[str] = Field(
         None,
         pattern="^(correspondence|meeting|phone|research|court|travel|drafting|other)$",
     )
-    billable: bool | None = None
-    hourly_rate: Decimal | None = Field(None, ge=0, decimal_places=2)
+    billable: Optional[bool] = None
+    hourly_rate: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
 
 
 # ── Response ──────────────────────────────────────────────────────────────
@@ -68,12 +70,12 @@ class TimeEntryResponse(BaseModel):
     id: uuid.UUID
     user: UserBrief
     case: CaseBrief
-    date: date
+    date: DateType
     duration_minutes: int
-    description: str | None
+    description: Optional[str]
     activity_type: str
     billable: bool
-    hourly_rate: Decimal | None
+    hourly_rate: Optional[Decimal]
     created_at: datetime
     updated_at: datetime
 

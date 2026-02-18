@@ -1,160 +1,220 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   FileText,
-  Download,
-  Plus,
-  Search,
   File,
   FileCheck,
-  Clock,
+  Loader2,
+  Search,
+  ArrowRight,
+  Info,
 } from "lucide-react";
-
-// This page is a functional placeholder that will connect to the
-// document generation backend once it's ready. For now it shows
-// the templates available and a mock list of generated documents.
-
-const TEMPLATES = [
-  {
-    id: "14-dagenbrief",
-    name: "14-dagenbrief",
-    description: "Aanmaning op grond van art. 6:96 BW met BIK-berekening",
-    category: "incasso",
-  },
-  {
-    id: "sommatie",
-    name: "Sommatie",
-    description: "Tweede aanmaning met renteberekening en termijn",
-    category: "incasso",
-  },
-  {
-    id: "renteberekening",
-    name: "Renteberekening",
-    description: "Gedetailleerd overzicht van rente per periode",
-    category: "financieel",
-  },
-  {
-    id: "betalingsoverzicht",
-    name: "Betalingsoverzicht",
-    description: "Samenvatting van alle betalingen en verdeling art. 6:44 BW",
-    category: "financieel",
-  },
-];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  incasso: "Incasso",
-  financieel: "Financieel",
-};
+import {
+  useDocxTemplates,
+  getTemplateLabel,
+  getTemplateDescription,
+} from "@/hooks/use-documents";
+import { useDocumentTemplates } from "@/hooks/use-documents";
 
 export default function DocumentenPage() {
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"templates" | "gegenereerd">("templates");
-
-  const filteredTemplates = TEMPLATES.filter(
-    (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.description.toLowerCase().includes(search.toLowerCase())
-  );
+  const [tab, setTab] = useState<"docx" | "html">("docx");
+  const { data: docxTemplates, isLoading: docxLoading } = useDocxTemplates();
+  const { data: htmlTemplates, isLoading: htmlLoading } =
+    useDocumentTemplates();
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Documenten</h1>
-          <p className="text-sm text-muted-foreground">
-            Genereer documenten vanuit templates
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Documenten</h1>
+        <p className="text-sm text-muted-foreground">
+          Beheer templates en genereer documenten voor zaken
+        </p>
+      </div>
+
+      {/* Info banner */}
+      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <Info className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+        <p className="text-sm text-foreground">
+          Documenten worden gegenereerd vanuit het zaak-detail. Ga naar een zaak
+          en open het tabblad &quot;Documenten&quot; om een 14-dagenbrief,
+          sommatie of renteoverzicht te genereren als Word-bestand.
+        </p>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-border">
         <nav className="flex gap-1">
           <button
-            onClick={() => setTab("templates")}
+            onClick={() => setTab("docx")}
             className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === "templates"
+              tab === "docx"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <FileText className="h-4 w-4" />
-            Templates
+            Word Templates
           </button>
           <button
-            onClick={() => setTab("gegenereerd")}
+            onClick={() => setTab("html")}
             className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === "gegenereerd"
+              tab === "html"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <FileCheck className="h-4 w-4" />
-            Gegenereerd
+            HTML Sjablonen
           </button>
         </nav>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-          placeholder="Zoek documenten..."
-        />
-      </div>
-
-      {tab === "templates" ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredTemplates.map((template) => (
-            <div
-              key={template.id}
-              className="group rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-primary/20 transition-all"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <File className="h-5 w-5 text-primary" />
-                </div>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                  {CATEGORY_LABELS[template.category] ?? template.category}
-                </span>
-              </div>
-              <h3 className="mt-3 text-sm font-semibold text-foreground">
-                {template.name}
-              </h3>
-              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                {template.description}
-              </p>
-              <button
-                className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors group-hover:border-primary/30 group-hover:text-primary"
-                onClick={() =>
-                  alert(
-                    "Document generatie wordt gekoppeld zodra de backend klaar is. Ga naar een zaak en genereer het document vanuit het zaak-detail."
-                  )
-                }
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Genereer document
-              </button>
-            </div>
-          ))}
-        </div>
+      {tab === "docx" ? (
+        <DocxTemplatesView templates={docxTemplates} isLoading={docxLoading} />
       ) : (
-        <div className="rounded-xl border border-dashed border-border py-16 text-center">
-          <Clock className="mx-auto h-12 w-12 text-muted-foreground/30" />
-          <h3 className="mt-4 text-base font-semibold text-foreground">
-            Nog geen documenten gegenereerd
+        <HtmlTemplatesView
+          templates={htmlTemplates}
+          isLoading={htmlLoading}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Docx Templates View ─────────────────────────────────────────────────────
+
+function DocxTemplatesView({
+  templates,
+  isLoading,
+}: {
+  templates: any[] | undefined;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Templates laden...
+      </div>
+    );
+  }
+
+  if (!templates?.length) {
+    return (
+      <div className="rounded-xl border border-dashed border-border py-16 text-center">
+        <File className="mx-auto h-12 w-12 text-muted-foreground/30" />
+        <h3 className="mt-4 text-base font-semibold text-foreground">
+          Geen Word-templates beschikbaar
+        </h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Neem contact op met de beheerder om templates toe te voegen.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {templates.map((template) => (
+        <div
+          key={template.template_type}
+          className="group rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-primary/20 transition-all"
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                template.available
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {template.available ? "Beschikbaar" : "Niet beschikbaar"}
+            </span>
+          </div>
+          <h3 className="mt-3 text-sm font-semibold text-foreground">
+            {getTemplateLabel(template.template_type)}
           </h3>
-          <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
-            Gegenereerde documenten verschijnen hier. Ga naar een zaak om een
-            document te genereren vanuit een template.
+          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+            {getTemplateDescription(template.template_type)}
+          </p>
+          <p className="mt-2 text-[11px] text-muted-foreground/70">
+            {template.filename}
           </p>
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
+
+// ── HTML Templates View ─────────────────────────────────────────────────────
+
+function HtmlTemplatesView({
+  templates,
+  isLoading,
+}: {
+  templates: any[] | undefined;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Sjablonen laden...
+      </div>
+    );
+  }
+
+  if (!templates?.length) {
+    return (
+      <div className="rounded-xl border border-dashed border-border py-16 text-center">
+        <FileCheck className="mx-auto h-12 w-12 text-muted-foreground/30" />
+        <h3 className="mt-4 text-base font-semibold text-foreground">
+          Nog geen HTML-sjablonen aangemaakt
+        </h3>
+        <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
+          HTML-sjablonen worden gebruikt voor het genereren van documenten
+          binnen het systeem. Ze kunnen via de API worden aangemaakt.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {templates.map((template) => (
+        <div
+          key={template.id}
+          className="flex items-center justify-between rounded-lg border border-border bg-card p-4 hover:border-primary/20 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {template.name}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Type: {template.template_type}
+              </p>
+            </div>
+          </div>
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              template.is_active
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {template.is_active ? "Actief" : "Inactief"}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

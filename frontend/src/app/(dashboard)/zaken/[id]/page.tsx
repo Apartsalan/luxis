@@ -7,11 +7,14 @@ import {
   ArrowLeft,
   Briefcase,
   Clock,
+  Download,
+  File,
   Users,
   Trash2,
   ChevronRight,
   Euro,
   FileText,
+  Loader2,
   Plus,
   Receipt,
   Wallet,
@@ -34,6 +37,15 @@ import {
   useDerdengeldenBalance,
   useCreateDerdengelden,
 } from "@/hooks/use-collections";
+import {
+  useDocxTemplates,
+  useGenerateDocx,
+  useCaseDocuments,
+  useDeleteDocument,
+  getTemplateLabel,
+  getTemplateDescription,
+  triggerDownload,
+} from "@/hooks/use-documents";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -160,6 +172,7 @@ export default function ZaakDetailPage() {
     { id: "betalingen", label: "Betalingen", icon: Receipt },
     { id: "financieel", label: "Financieel", icon: Wallet },
     { id: "derdengelden", label: "Derdengelden", icon: FileText },
+    { id: "documenten", label: "Documenten", icon: File },
     { id: "activiteiten", label: "Activiteiten", icon: Clock },
     { id: "partijen", label: "Partijen", icon: Users },
   ];
@@ -278,6 +291,7 @@ export default function ZaakDetailPage() {
       {activeTab === "betalingen" && <BetalingenTab caseId={id} />}
       {activeTab === "financieel" && <FinancieelTab caseId={id} />}
       {activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
+      {activeTab === "documenten" && <DocumentenTab caseId={id} />}
       {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
       {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
     </div>
@@ -1302,6 +1316,138 @@ function PartijenTab({ zaak }: { zaak: any }) {
               </span>
             </div>
           ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Documenten Tab ──────────────────────────────────────────────────────────
+
+function DocumentenTab({ caseId }: { caseId: string }) {
+  const { data: templates, isLoading: templatesLoading } = useDocxTemplates();
+  const { data: documents, isLoading: docsLoading } = useCaseDocuments(caseId);
+  const generateDocx = useGenerateDocx(caseId);
+  const deleteDocument = useDeleteDocument(caseId);
+
+  const handleGenerate = async (templateType: string) => {
+    try {
+      const result = await generateDocx.mutateAsync(templateType);
+      triggerDownload(result.blob, result.filename);
+      toast.success(`${getTemplateLabel(templateType)} gegenereerd`);
+    } catch (err: any) {
+      toast.error(err.message || "Fout bij genereren document");
+    }
+  };
+
+  const handleDelete = async (docId: string) => {
+    try {
+      await deleteDocument.mutateAsync(docId);
+      toast.success("Document verwijderd");
+    } catch {
+      toast.error("Fout bij verwijderen document");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Generate from templates */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">
+          Document genereren
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Genereer een Word-document vanuit een template
+        </p>
+
+        {templatesLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Templates laden...
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {templates
+              ?.filter((t) => t.available)
+              .map((template) => (
+                <button
+                  key={template.template_type}
+                  onClick={() => handleGenerate(template.template_type)}
+                  disabled={generateDocx.isPending}
+                  className="flex flex-col items-start gap-2 rounded-lg border border-border p-4 text-left hover:border-primary/30 hover:bg-muted/50 transition-all disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">
+                      {getTemplateLabel(template.template_type)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {getTemplateDescription(template.template_type)}
+                  </p>
+                  <div className="mt-auto flex items-center gap-1 text-xs text-primary">
+                    <Download className="h-3 w-3" />
+                    {generateDocx.isPending ? "Genereren..." : "Download .docx"}
+                  </div>
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* Generated documents list */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">
+          Gegenereerde documenten
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Eerder gegenereerde documenten voor deze zaak
+        </p>
+
+        {docsLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Documenten laden...
+          </div>
+        ) : !documents?.length ? (
+          <div className="rounded-lg border border-dashed border-border py-8 text-center">
+            <File className="mx-auto h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Nog geen documenten gegenereerd voor deze zaak
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between rounded-lg border border-border p-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {doc.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateShort(doc.created_at)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDelete(doc.id)}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Verwijderen"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 """Shared FastAPI dependencies — auth, database, tenant context."""
 
+from collections.abc import Callable
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
@@ -53,3 +55,28 @@ async def get_current_user(
         )
 
     return user
+
+
+def require_role(*allowed_roles: str) -> Callable:
+    """Dependency factory that checks if the current user has one of the allowed roles.
+
+    Usage:
+        @router.post("/admin-only", dependencies=[Depends(require_role("admin"))])
+        async def admin_endpoint(...): ...
+
+        # Or inject user directly:
+        async def endpoint(user: User = Depends(require_role("admin", "advocaat"))): ...
+    """
+
+    async def role_checker(
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        if current_user.role not in allowed_roles:
+            roles_str = ", ".join(allowed_roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Onvoldoende rechten. Vereiste rol: {roles_str}",
+            )
+        return current_user
+
+    return role_checker

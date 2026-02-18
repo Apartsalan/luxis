@@ -40,7 +40,7 @@ export function useTenant() {
   return useQuery<TenantDetail>({
     queryKey: ["tenant"],
     queryFn: async () => {
-      const res = await api("/auth/tenant");
+      const res = await api("/api/auth/tenant");
       if (!res.ok) throw new Error("Fout bij ophalen kantoorgegevens");
       return res.json();
     },
@@ -53,7 +53,7 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: async (data: UpdateProfileData) => {
-      const res = await api("/auth/me", {
+      const res = await api("/api/auth/me", {
         method: "PUT",
         body: JSON.stringify(data),
       });
@@ -72,7 +72,7 @@ export function useUpdateProfile() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: async (data: ChangePasswordData) => {
-      const res = await api("/auth/me/password", {
+      const res = await api("/api/auth/me/password", {
         method: "PUT",
         body: JSON.stringify(data),
       });
@@ -89,7 +89,7 @@ export function useUpdateTenant() {
 
   return useMutation({
     mutationFn: async (data: UpdateTenantData) => {
-      const res = await api("/auth/tenant", {
+      const res = await api("/api/auth/tenant", {
         method: "PUT",
         body: JSON.stringify(data),
       });

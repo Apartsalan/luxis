@@ -1,11 +1,20 @@
 import uuid
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+ROLES = ("admin", "advocaat", "medewerker")
 
 
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(max_length=320)
+    password: str = Field(min_length=8)
+    full_name: str = Field(min_length=1, max_length=255)
+    role: str = Field(default="medewerker", description="admin, advocaat, or medewerker")
 
 
 class TokenResponse(BaseModel):

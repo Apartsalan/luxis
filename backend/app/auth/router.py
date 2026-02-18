@@ -1,16 +1,16 @@
-"""Auth endpoints — login, token refresh, and current user info."""
+"""Auth endpoints — login, registration, token refresh, and user management."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import User
-from app.auth.models import Tenant
+from app.auth.models import Tenant, User
 from app.auth.schemas import (
     ChangePasswordRequest,
     LoginRequest,
     RefreshRequest,
+    RegisterRequest,
     TenantDetailResponse,
     TenantUpdateRequest,
     TokenResponse,
@@ -21,15 +21,16 @@ from app.auth.service import (
     authenticate_user,
     create_access_token,
     create_refresh_token,
+    create_user,
     decode_token,
     get_user_by_id,
     hash_password,
     verify_password,
 )
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_role
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -46,6 +47,29 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     refresh_token = create_refresh_token(str(user.id), str(user.tenant_id))
 
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register(
+    data: RegisterRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_role("admin")),
+):
+    """Register a new user in the admin's tenant. Admin only."""
+    user = await create_user(
+        db,
+        tenant_id=admin.tenant_id,
+        email=data.email,
+        password=data.password,
+        full_name=data.full_name,
+        role=data.role,
+    )
+    await db.commit()
+    return user
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -135,13 +159,11 @@ async def get_tenant(
 async def update_tenant(
     data: TenantUpdateRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    admin: User = Depends(require_role("admin")),
 ):
     """Update the current user's tenant (office) details. Admin only."""
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Alleen admins kunnen kantoorgegevens wijzigen")
     result = await db.execute(
-        select(Tenant).where(Tenant.id == current_user.tenant_id)
+        select(Tenant).where(Tenant.id == admin.tenant_id)
     )
     tenant = result.scalar_one_or_none()
     if tenant is None:

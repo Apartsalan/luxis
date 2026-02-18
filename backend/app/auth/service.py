@@ -60,3 +60,39 @@ async def get_user_by_id(db: AsyncSession, user_id: str) -> User | None:
     """Fetch a user by their UUID."""
     result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     return result.scalar_one_or_none()
+
+
+async def create_user(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    email: str,
+    password: str,
+    full_name: str,
+    role: str = "medewerker",
+) -> User:
+    """Create a new user in the given tenant. Raises ConflictError on duplicate email."""
+    from app.shared.exceptions import BadRequestError, ConflictError
+
+    from app.auth.schemas import ROLES
+
+    if role not in ROLES:
+        raise BadRequestError(
+            f"Ongeldige rol: {role}. Kies uit: {', '.join(ROLES)}"
+        )
+
+    # Check for duplicate email
+    existing = await db.execute(select(User).where(User.email == email))
+    if existing.scalar_one_or_none() is not None:
+        raise ConflictError(f"E-mailadres '{email}' is al in gebruik")
+
+    user = User(
+        tenant_id=tenant_id,
+        email=email,
+        hashed_password=hash_password(password),
+        full_name=full_name,
+        role=role,
+    )
+    db.add(user)
+    await db.flush()
+    await db.refresh(user)
+    return user

@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy import ForeignKey, String, Uuid
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base, TimestampMixin
@@ -23,6 +24,12 @@ class Tenant(Base, TimestampMixin):
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
+    modules_enabled: Mapped[list[str]] = mapped_column(
+        ARRAY(String(50)),
+        nullable=False,
+        server_default="{}",
+        default=list,
+    )
 
     users: Mapped[list["User"]] = relationship("User", back_populates="tenant")
 

@@ -13,12 +13,14 @@ import {
   FileText,
   CreditCard,
   ArrowUpRight,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useAuth } from "@/hooks/use-auth";
+import { useModules } from "@/hooks/use-modules";
 import {
   useMyOpenTasks,
   useCompleteTask,
@@ -107,6 +109,7 @@ function getFirstName(fullName: string): string {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { hasModule } = useModules();
 
   const {
     data: summary,
@@ -190,7 +193,7 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* KPI Cards — 3 most important */}
+      {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KPICard
           icon={<Briefcase className="h-5 w-5" />}
@@ -201,25 +204,27 @@ export default function DashboardPage() {
           href="/zaken"
         />
         <KPICard
-          icon={<Euro className="h-5 w-5" />}
-          label="Openstaand"
-          value={formatCurrency(summary?.total_outstanding ?? 0)}
-          subtitle={`${summary?.total_contacts ?? 0} relaties`}
-          color="warning"
+          icon={<Users className="h-5 w-5" />}
+          label="Relaties"
+          value={summary?.total_contacts ?? 0}
+          subtitle={`${summary?.cases_closed_this_month ?? 0} zaken afgesloten deze maand`}
+          color="success"
           href="/relaties"
         />
-        <KPICard
-          icon={<TrendingUp className="h-5 w-5" />}
-          label="Ontvangen"
-          value={formatCurrency(summary?.total_paid ?? 0)}
-          subtitle={`${summary?.cases_closed_this_month ?? 0} afgesloten deze maand`}
-          color="success"
-          href="/zaken"
-        />
+        {hasModule("incasso") && (
+          <KPICard
+            icon={<Euro className="h-5 w-5" />}
+            label="Openstaand"
+            value={formatCurrency(summary?.total_outstanding ?? 0)}
+            subtitle={`${formatCurrency(summary?.total_paid ?? 0)} ontvangen`}
+            color="warning"
+            href="/zaken"
+          />
+        )}
       </div>
 
-      {/* Pipeline Bar */}
-      {summary?.cases_by_status && summary.cases_by_status.length > 0 && (
+      {/* Pipeline Bar — incasso only */}
+      {hasModule("incasso") && summary?.cases_by_status && summary.cases_by_status.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-card-foreground">
@@ -272,118 +277,120 @@ export default function DashboardPage() {
       {/* My Tasks widget */}
       <MyTasksWidget />
 
-      {/* Two column: Action Needed + Recent Activity */}
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* Left column */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Action Needed */}
-          <div className="rounded-xl border border-border bg-card">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <h2 className="text-sm font-semibold text-card-foreground">
-                  Actie nodig
-                </h2>
+      {/* Two column: Left (incasso widgets or full-width) + Right (Recent Activity) */}
+      <div className={`grid gap-6 ${hasModule("incasso") ? "lg:grid-cols-5" : "lg:grid-cols-1"}`}>
+        {/* Left column — incasso specific widgets */}
+        {hasModule("incasso") && (
+          <div className="lg:col-span-3 space-y-6">
+            {/* Action Needed */}
+            <div className="rounded-xl border border-border bg-card">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <h2 className="text-sm font-semibold text-card-foreground">
+                    Actie nodig
+                  </h2>
+                </div>
+              </div>
+              <div className="divide-y divide-border">
+                {summary?.cases_by_status?.some(
+                  (s) =>
+                    (s.status === "sommatie" ||
+                      s.status === "14_dagenbrief" ||
+                      s.status === "nieuw") &&
+                    s.count > 0
+                ) ? (
+                  summary.cases_by_status
+                    .filter(
+                      (s) =>
+                        (s.status === "sommatie" ||
+                          s.status === "14_dagenbrief" ||
+                          s.status === "nieuw") &&
+                        s.count > 0
+                    )
+                    .map((item) => (
+                      <Link
+                        key={item.status}
+                        href={`/zaken?status=${item.status}`}
+                        className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                              STATUS_BADGE_CLASSES[item.status] ??
+                              "bg-slate-50 text-slate-600"
+                            }`}
+                          >
+                            {STATUS_LABELS[item.status] ?? item.status}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {item.count} {item.count === 1 ? "zaak" : "zaken"}
+                          </span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                    ))
+                ) : (
+                  <div className="px-5 py-8 text-center">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Alles is bij — geen acties nodig
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="divide-y divide-border">
-              {summary?.cases_by_status?.some(
-                (s) =>
-                  (s.status === "sommatie" ||
-                    s.status === "14_dagenbrief" ||
-                    s.status === "nieuw") &&
-                  s.count > 0
-              ) ? (
-                summary.cases_by_status
-                  .filter(
-                    (s) =>
-                      (s.status === "sommatie" ||
-                        s.status === "14_dagenbrief" ||
-                        s.status === "nieuw") &&
-                      s.count > 0
-                  )
-                  .map((item) => (
-                    <Link
-                      key={item.status}
-                      href={`/zaken?status=${item.status}`}
-                      className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                            STATUS_BADGE_CLASSES[item.status] ??
-                            "bg-slate-50 text-slate-600"
-                          }`}
-                        >
-                          {STATUS_LABELS[item.status] ?? item.status}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          {item.count} {item.count === 1 ? "zaak" : "zaken"}
-                        </span>
+
+            {/* Cases by status (bars) */}
+            <div className="rounded-xl border border-border bg-card p-5">
+              <h2 className="text-sm font-semibold text-card-foreground mb-4">
+                Zaken per status
+              </h2>
+              {summary?.cases_by_status && summary.cases_by_status.length > 0 ? (
+                <div className="space-y-3">
+                  {summary.cases_by_status.map((item) => {
+                    const pct =
+                      totalPipelineCases > 0
+                        ? (item.count / totalPipelineCases) * 100
+                        : 0;
+                    return (
+                      <div key={item.status}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`h-2 w-2 rounded-full ${STATUS_COLORS[item.status] ?? "bg-slate-400"}`}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              {STATUS_LABELS[item.status] ?? item.status}
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold text-card-foreground tabular-nums">
+                            {item.count}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${
+                              STATUS_COLORS[item.status] ?? "bg-slate-400"
+                            } transition-all duration-500`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-                  ))
-              ) : (
-                <div className="px-5 py-8 text-center">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Alles is bij — geen acties nodig
-                  </p>
+                    );
+                  })}
                 </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Geen zaken gevonden
+                </p>
               )}
             </div>
           </div>
-
-          {/* Cases by status (bars) */}
-          <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="text-sm font-semibold text-card-foreground mb-4">
-              Zaken per status
-            </h2>
-            {summary?.cases_by_status && summary.cases_by_status.length > 0 ? (
-              <div className="space-y-3">
-                {summary.cases_by_status.map((item) => {
-                  const pct =
-                    totalPipelineCases > 0
-                      ? (item.count / totalPipelineCases) * 100
-                      : 0;
-                  return (
-                    <div key={item.status}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`h-2 w-2 rounded-full ${STATUS_COLORS[item.status] ?? "bg-slate-400"}`}
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            {STATUS_LABELS[item.status] ?? item.status}
-                          </span>
-                        </div>
-                        <span className="text-sm font-semibold text-card-foreground tabular-nums">
-                          {item.count}
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            STATUS_COLORS[item.status] ?? "bg-slate-400"
-                          } transition-all duration-500`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Geen zaken gevonden
-              </p>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Right column: Recent Activity */}
-        <div className="lg:col-span-2">
+        <div className={hasModule("incasso") ? "lg:col-span-2" : ""}>
           <div className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div className="flex items-center gap-2">

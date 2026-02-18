@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,43 +10,31 @@ import {
   FileText,
   Settings,
   Scale,
+  Clock,
+  Receipt,
   ChevronLeft,
   ChevronRight,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useModules, type LuxisModule } from "@/hooks/use-modules";
 
-const navigation = [
-  {
-    name: "Dashboard",
-    href: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Relaties",
-    href: "/relaties",
-    icon: Users,
-  },
-  {
-    name: "Zaken",
-    href: "/zaken",
-    icon: Briefcase,
-  },
-  {
-    name: "Documenten",
-    href: "/documenten",
-    icon: FileText,
-  },
-  {
-    name: "Tarieven",
-    href: "/tarieven",
-    icon: Scale,
-  },
-  {
-    name: "Instellingen",
-    href: "/instellingen",
-    icon: Settings,
-  },
+interface NavItem {
+  name: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  module?: LuxisModule;
+}
+
+const ALL_NAVIGATION: NavItem[] = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Relaties", href: "/relaties", icon: Users },
+  { name: "Zaken", href: "/zaken", icon: Briefcase },
+  { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
+  { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
+  { name: "Documenten", href: "/documenten", icon: FileText },
+  { name: "Tarieven", href: "/tarieven", icon: Scale, module: "incasso" },
+  { name: "Instellingen", href: "/instellingen", icon: Settings },
 ];
 
 interface AppSidebarProps {
@@ -62,6 +51,15 @@ export function AppSidebar({
   onMobileClose,
 }: AppSidebarProps) {
   const pathname = usePathname();
+  const { hasModule } = useModules();
+
+  const navigation = useMemo(
+    () =>
+      ALL_NAVIGATION.filter(
+        (item) => !item.module || hasModule(item.module)
+      ),
+    [hasModule]
+  );
 
   return (
     <>

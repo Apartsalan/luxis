@@ -22,6 +22,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useCases } from "@/hooks/use-cases";
+import { useModules } from "@/hooks/use-modules";
+import { useWorkflowStatuses } from "@/hooks/use-workflow";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { api } from "@/lib/api";
@@ -73,6 +75,22 @@ export default function ZakenPage() {
   const [bulkAction, setBulkAction] = useState<"" | "status" | "export">("");
   const [bulkStatus, setBulkStatus] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
+  const { hasModule } = useModules();
+  const { data: workflowStatuses } = useWorkflowStatuses();
+
+  // Build status labels from workflow API, fallback to hardcoded
+  const dynamicStatusLabels: Record<string, string> = workflowStatuses
+    ? Object.fromEntries(workflowStatuses.map((s) => [s.slug, s.label]))
+    : STATUS_LABELS;
+
+  const dynamicStatusBadge: Record<string, string> = workflowStatuses
+    ? Object.fromEntries(
+        workflowStatuses.map((s) => [
+          s.slug,
+          STATUS_BADGE[s.slug] ?? "bg-slate-50 text-slate-600 ring-slate-500/20",
+        ])
+      )
+    : STATUS_BADGE;
 
   const { data, isLoading, isError, error, refetch } = useCases({
     page,
@@ -217,7 +235,7 @@ export default function ZakenPage() {
             className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           >
             <option value="">Alle statussen</option>
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+            {Object.entries(dynamicStatusLabels).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
@@ -280,7 +298,7 @@ export default function ZakenPage() {
             className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             <option value="">Kies status...</option>
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+            {Object.entries(dynamicStatusLabels).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
@@ -365,9 +383,11 @@ export default function ZakenPage() {
                   <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Wederpartij
                   </th>
-                  <th className="hidden md:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Hoofdsom
-                  </th>
+                  {hasModule("incasso") && (
+                    <th className="hidden md:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Hoofdsom
+                    </th>
+                  )}
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Geopend
                   </th>
@@ -416,11 +436,11 @@ export default function ZakenPage() {
                     <td className="px-4 py-3.5">
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                          STATUS_BADGE[zaak.status] ??
+                          dynamicStatusBadge[zaak.status] ??
                           "bg-slate-50 text-slate-600 ring-slate-500/20"
                         }`}
                       >
-                        {STATUS_LABELS[zaak.status] ?? zaak.status}
+                        {dynamicStatusLabels[zaak.status] ?? zaak.status}
                       </span>
                     </td>
                     <td className="hidden md:table-cell px-4 py-3.5">
@@ -447,11 +467,13 @@ export default function ZakenPage() {
                         <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="hidden md:table-cell px-4 py-3.5 text-right">
-                      <span className="text-sm font-semibold text-foreground tabular-nums">
-                        {formatCurrency(zaak.total_principal)}
-                      </span>
-                    </td>
+                    {hasModule("incasso") && (
+                      <td className="hidden md:table-cell px-4 py-3.5 text-right">
+                        <span className="text-sm font-semibold text-foreground tabular-nums">
+                          {formatCurrency(zaak.total_principal)}
+                        </span>
+                      </td>
+                    )}
                     <td className="px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(zaak.date_opened)}
                     </td>

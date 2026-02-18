@@ -68,6 +68,7 @@ import {
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
 } from "@/hooks/use-workflow";
+import { useModules } from "@/hooks/use-modules";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -196,6 +197,7 @@ export default function ZaakDetailPage() {
   const deleteCase = useDeleteCase();
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: workflowTransitions } = useWorkflowTransitions();
+  const { hasModule } = useModules();
   const [activeTab, setActiveTab] = useState("overzicht");
 
   const handleStatusChange = async (newStatus: string) => {
@@ -256,13 +258,19 @@ export default function ZaakDetailPage() {
     );
   }
 
+  const isIncasso = hasModule("incasso");
+
   const tabs = [
     { id: "overzicht", label: "Overzicht", icon: Briefcase },
     { id: "taken", label: "Taken", icon: CheckCircle2 },
-    { id: "vorderingen", label: "Vorderingen", icon: Euro },
-    { id: "betalingen", label: "Betalingen", icon: Receipt },
-    { id: "financieel", label: "Financieel", icon: Wallet },
-    { id: "derdengelden", label: "Derdengelden", icon: FileText },
+    ...(isIncasso
+      ? [
+          { id: "vorderingen", label: "Vorderingen", icon: Euro },
+          { id: "betalingen", label: "Betalingen", icon: Receipt },
+          { id: "financieel", label: "Financieel", icon: Wallet },
+          { id: "derdengelden", label: "Derdengelden", icon: FileText },
+        ]
+      : []),
     { id: "documenten", label: "Documenten", icon: File },
     { id: "activiteiten", label: "Activiteiten", icon: Clock },
     { id: "partijen", label: "Partijen", icon: Users },
@@ -325,7 +333,7 @@ export default function ZaakDetailPage() {
                   {zaak.debtor_type === "b2b" ? "B2B" : "B2C"}
                 </span>
               )}
-              <VerjaringBadge dateOpened={zaak.date_opened} status={zaak.status} />
+              {isIncasso && <VerjaringBadge dateOpened={zaak.date_opened} status={zaak.status} />}
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
               {TYPE_LABELS[zaak.case_type]} · Geopend{" "}
@@ -449,40 +457,44 @@ export default function ZaakDetailPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
-              <Euro className="h-4 w-4 text-blue-600" />
+      <div className={`grid gap-4 sm:grid-cols-2 ${isIncasso ? "lg:grid-cols-4" : "lg:grid-cols-2"}`}>
+        {isIncasso && (
+          <>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+                  <Euro className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-xs text-muted-foreground">Hoofdsom</span>
+              </div>
+              <p className="text-xl font-bold text-foreground tabular-nums">
+                {formatCurrency(zaak.total_principal)}
+              </p>
             </div>
-            <span className="text-xs text-muted-foreground">Hoofdsom</span>
-          </div>
-          <p className="text-xl font-bold text-foreground tabular-nums">
-            {formatCurrency(zaak.total_principal)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
-              <CreditCard className="h-4 w-4 text-emerald-600" />
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
+                  <CreditCard className="h-4 w-4 text-emerald-600" />
+                </div>
+                <span className="text-xs text-muted-foreground">Betaald</span>
+              </div>
+              <p className="text-xl font-bold text-emerald-600 tabular-nums">
+                {formatCurrency(zaak.total_paid)}
+              </p>
             </div>
-            <span className="text-xs text-muted-foreground">Betaald</span>
-          </div>
-          <p className="text-xl font-bold text-emerald-600 tabular-nums">
-            {formatCurrency(zaak.total_paid)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
-              <CalendarDays className="h-4 w-4 text-amber-600" />
+            <div className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
+                  <CalendarDays className="h-4 w-4 text-amber-600" />
+                </div>
+                <span className="text-xs text-muted-foreground">Rente</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {INTEREST_LABELS[zaak.interest_type] ?? zaak.interest_type}
+              </p>
             </div>
-            <span className="text-xs text-muted-foreground">Rente</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-            {INTEREST_LABELS[zaak.interest_type] ?? zaak.interest_type}
-          </p>
-        </div>
+          </>
+        )}
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50">
@@ -531,10 +543,10 @@ export default function ZaakDetailPage() {
       {/* Tab content */}
       {activeTab === "overzicht" && <OverzichtTab zaak={zaak} />}
       {activeTab === "taken" && <TakenTab caseId={id} />}
-      {activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
-      {activeTab === "betalingen" && <BetalingenTab caseId={id} />}
-      {activeTab === "financieel" && <FinancieelTab caseId={id} />}
-      {activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
+      {isIncasso && activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
+      {isIncasso && activeTab === "betalingen" && <BetalingenTab caseId={id} />}
+      {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
+      {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
       {activeTab === "documenten" && <DocumentenTab caseId={id} />}
       {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
       {activeTab === "partijen" && <PartijenTab zaak={zaak} />}

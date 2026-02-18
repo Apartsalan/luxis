@@ -30,6 +30,8 @@ const QUICK_ACTIONS = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Zaken", href: "/zaken", icon: Briefcase },
   { label: "Relaties", href: "/relaties", icon: Users },
+  { label: "Uren", href: "/uren", icon: Scale },
+  { label: "Facturen", href: "/facturen", icon: Scale },
   { label: "Documenten", href: "/documenten", icon: FileText },
   { label: "Tarieven", href: "/tarieven", icon: Scale },
   { label: "Instellingen", href: "/instellingen", icon: Settings },

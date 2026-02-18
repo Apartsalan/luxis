@@ -14,6 +14,7 @@ export interface TenantDetail {
   address: string | null;
   postal_code: string | null;
   city: string | null;
+  modules_enabled: string[];
 }
 
 export interface UpdateProfileData {
@@ -32,6 +33,7 @@ export interface UpdateTenantData {
   address?: string | null;
   postal_code?: string | null;
   city?: string | null;
+  modules_enabled?: string[];
 }
 
 // ── Hooks ────────────────────────────────────────────────────────────────────

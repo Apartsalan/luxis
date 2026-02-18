@@ -66,6 +66,7 @@ class TenantUpdateRequest(BaseModel):
     iban: str | None = None
     phone: str | None = None
     email: str | None = None
+    modules_enabled: list[str] | None = None
 
 
 class TenantDetailResponse(BaseModel):
@@ -80,5 +81,6 @@ class TenantDetailResponse(BaseModel):
     iban: str | None = None
     phone: str | None = None
     email: str | None = None
+    modules_enabled: list[str] = []
 
     model_config = {"from_attributes": True}

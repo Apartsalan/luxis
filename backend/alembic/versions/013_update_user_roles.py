@@ -5,8 +5,8 @@ Role values: admin, advocaat, medewerker
 - advocaat: can manage cases and generate documents
 - medewerker: basic access to assigned cases
 
-Revision ID: 011
-Revises: 010
+Revision ID: 013
+Revises: 012
 Create Date: 2026-02-18
 """
 
@@ -15,8 +15,8 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = "011"
-down_revision: Union[str, None] = "010"
+revision: str = "013"
+down_revision: Union[str, None] = "012"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

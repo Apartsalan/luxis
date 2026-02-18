@@ -136,6 +136,32 @@ class DocxTemplateInfo(BaseModel):
 # ── Merge Fields Schemas ──────────────────────────────────────────────────
 
 
+# ── Send Document Schemas ─────────────────────────────────────────────────
+
+
+class SendDocumentRequest(BaseModel):
+    recipient_email: str = Field(
+        ...,
+        max_length=320,
+        description="E-mailadres van de ontvanger",
+    )
+    recipient_name: str | None = Field(
+        None,
+        max_length=255,
+        description="Naam van de ontvanger (voor aanhef in e-mail)",
+    )
+
+
+class SendDocumentResponse(BaseModel):
+    email_log_id: uuid.UUID
+    recipient: str
+    subject: str
+    status: str
+
+
+# ── Merge Fields Schemas ──────────────────────────────────────────────────
+
+
 class MergeFieldItem(BaseModel):
     key: str = Field(..., description="Merge field key, e.g. 'kantoor.naam'")
     label: str = Field(..., description="Nederlandse label, e.g. 'Kantoornaam'")

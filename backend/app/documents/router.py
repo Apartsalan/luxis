@@ -1,6 +1,8 @@
 """Documents module router — template management and document generation."""
 
+import logging
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
@@ -18,6 +20,7 @@ from app.documents.docx_service import (
     render_docx,
 )
 from app.documents.models import GeneratedDocument
+from app.documents.pdf_service import docx_to_pdf
 from app.documents.schemas import (
     DocxTemplateInfo,
     DocumentTemplateCreate,
@@ -30,8 +33,15 @@ from app.documents.schemas import (
     GeneratedDocumentResponse,
     GeneratedDocumentSummary,
     MergeFieldCategory,
+    SendDocumentRequest,
+    SendDocumentResponse,
 )
-from app.shared.exceptions import NotFoundError
+from app.email.models import EmailLog
+from app.email.service import send_email
+from app.email.templates import document_sent
+from app.shared.exceptions import BadRequestError, NotFoundError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
@@ -256,4 +266,105 @@ async def generate_docx(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ── Send Document Endpoint ────────────────────────────────────────────────
+
+
+@router.post(
+    "/{document_id}/send",
+    response_model=SendDocumentResponse,
+)
+async def send_document(
+    document_id: uuid.UUID,
+    data: SendDocumentRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Generate PDF from a document and send it via email.
+
+    Re-renders the DOCX template with current case data, converts to PDF,
+    and sends as email attachment. Logs the result in email_logs.
+    """
+    from app.documents.docx_service import _load_tenant, _tenant_ctx
+
+    # Load the generated document
+    doc = await service.get_generated_document(
+        db, user.tenant_id, document_id
+    )
+
+    if not doc.template_type:
+        raise BadRequestError(
+            "Document heeft geen sjabloontype — alleen DOCX-documenten kunnen worden verzonden"
+        )
+
+    # Load the case
+    result = await db.execute(
+        select(Case).where(
+            Case.id == doc.case_id,
+            Case.tenant_id == user.tenant_id,
+        )
+    )
+    case = result.scalar_one_or_none()
+    if case is None:
+        raise NotFoundError("Zaak niet gevonden")
+
+    # Re-render the DOCX with current case data
+    docx_bytes, filename, _, _ = await render_docx(
+        db, user.tenant_id, case, doc.template_type
+    )
+
+    # Convert to PDF
+    pdf_bytes = await docx_to_pdf(docx_bytes)
+    pdf_filename = filename.replace(".docx", ".pdf")
+
+    # Build email from template
+    tenant = await _load_tenant(db, user.tenant_id)
+    kantoor = _tenant_ctx(tenant)
+
+    subject, html_body = document_sent(
+        kantoor=kantoor,
+        recipient_name=data.recipient_name or "",
+        document_title=doc.title,
+        case_number=case.case_number,
+    )
+
+    # Send email
+    email_log = EmailLog(
+        tenant_id=user.tenant_id,
+        case_id=case.id,
+        document_id=doc.id,
+        template="document_sent",
+        recipient=data.recipient_email,
+        subject=subject,
+        status="sent",
+    )
+
+    try:
+        await send_email(
+            to=data.recipient_email,
+            subject=subject,
+            html_body=html_body,
+            attachments=[(pdf_filename, pdf_bytes, "pdf")],
+        )
+    except Exception as e:
+        email_log.status = "failed"
+        email_log.error_message = str(e)
+        logger.error(f"Email verzenden mislukt voor document {document_id}: {e}")
+
+    db.add(email_log)
+    await db.flush()
+    await db.refresh(email_log)
+
+    if email_log.status == "failed":
+        raise BadRequestError(
+            f"E-mail verzenden mislukt: {email_log.error_message}"
+        )
+
+    return SendDocumentResponse(
+        email_log_id=email_log.id,
+        recipient=email_log.recipient,
+        subject=email_log.subject,
+        status=email_log.status,
     )

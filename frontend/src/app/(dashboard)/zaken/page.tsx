@@ -24,7 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
   dagvaarding: "bg-red-100 text-red-700",
   vonnis: "bg-purple-100 text-purple-700",
   executie: "bg-red-200 text-red-800",
-  betaald: "bg-green-100 text-green-700",
+  betaald: "bg-emerald-100 text-emerald-700",
   afgesloten: "bg-gray-100 text-gray-600",
 };
 
@@ -49,17 +49,17 @@ export default function ZakenPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-navy-800">Zaken</h1>
+          <h1 className="text-2xl font-bold text-foreground">Zaken</h1>
           <p className="text-sm text-muted-foreground">
             Beheer je zaken en dossiers
           </p>
         </div>
         <Link
           href="/zaken/nieuw"
-          className="inline-flex items-center gap-2 rounded-md bg-navy-500 px-4 py-2 text-sm font-medium text-white hover:bg-navy-600 transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Nieuwe zaak
@@ -78,7 +78,7 @@ export default function ZakenPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-md border border-input bg-white pl-10 pr-4 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+            className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           />
         </div>
         <select
@@ -87,7 +87,7 @@ export default function ZakenPage() {
             setCaseType(e.target.value);
             setPage(1);
           }}
-          className="rounded-md border border-input bg-white px-3 py-2 text-sm"
+          className="rounded-lg border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
         >
           <option value="">Alle types</option>
           <option value="incasso">Incasso</option>
@@ -101,7 +101,7 @@ export default function ZakenPage() {
             setStatus(e.target.value);
             setPage(1);
           }}
-          className="rounded-md border border-input bg-white px-3 py-2 text-sm"
+          className="rounded-lg border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
         >
           <option value="">Alle statussen</option>
           {Object.entries(STATUS_LABELS).map(([value, label]) => (
@@ -114,34 +114,36 @@ export default function ZakenPage() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-navy-200 border-t-navy-500" />
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-14 rounded-lg skeleton" />
+          ))}
         </div>
       ) : data?.items && data.items.length > 0 ? (
         <>
-          <div className="overflow-hidden rounded-lg border border-border bg-white">
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Zaaknummer
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Status
                   </th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground md:table-cell">
+                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
                     Client
                   </th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground lg:table-cell">
+                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground lg:table-cell">
                     Wederpartij
                   </th>
-                  <th className="hidden px-4 py-3 text-right text-xs font-medium uppercase text-muted-foreground md:table-cell">
+                  <th className="hidden px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
                     Hoofdsom
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-muted-foreground">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Geopend
                   </th>
                 </tr>
@@ -155,7 +157,7 @@ export default function ZakenPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/zaken/${zaak.id}`}
-                        className="font-mono font-medium text-navy-700 hover:text-navy-500 hover:underline"
+                        className="font-mono text-sm font-medium text-foreground hover:text-primary hover:underline"
                       >
                         {zaak.case_number}
                       </Link>
@@ -166,7 +168,8 @@ export default function ZakenPage() {
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          STATUS_COLORS[zaak.status] ?? "bg-gray-100 text-gray-600"
+                          STATUS_COLORS[zaak.status] ??
+                          "bg-gray-100 text-gray-600"
                         }`}
                       >
                         {STATUS_LABELS[zaak.status] ?? zaak.status}
@@ -178,7 +181,7 @@ export default function ZakenPage() {
                     <td className="hidden px-4 py-3 text-sm text-muted-foreground lg:table-cell">
                       {zaak.opposing_party?.name ?? "-"}
                     </td>
-                    <td className="hidden px-4 py-3 text-right text-sm font-medium text-navy-700 md:table-cell">
+                    <td className="hidden px-4 py-3 text-right text-sm font-medium text-foreground md:table-cell">
                       {formatCurrency(zaak.total_principal)}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -200,7 +203,7 @@ export default function ZakenPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="rounded-md border border-border px-3 py-1 text-sm disabled:opacity-50"
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors"
                 >
                   Vorige
                 </button>
@@ -208,9 +211,11 @@ export default function ZakenPage() {
                   {page} / {data.pages}
                 </span>
                 <button
-                  onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
+                  onClick={() =>
+                    setPage((p) => Math.min(data.pages, p + 1))
+                  }
                   disabled={page === data.pages}
-                  className="rounded-md border border-border px-3 py-1 text-sm disabled:opacity-50"
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors"
                 >
                   Volgende
                 </button>
@@ -219,15 +224,16 @@ export default function ZakenPage() {
           )}
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-12">
-          <Briefcase className="h-12 w-12 text-muted-foreground/50" />
-          <p className="mt-4 text-sm text-muted-foreground">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
+          <Briefcase className="h-12 w-12 text-muted-foreground/30" />
+          <p className="mt-4 text-sm font-medium text-muted-foreground">
             Geen zaken gevonden
           </p>
           <Link
             href="/zaken/nieuw"
-            className="mt-2 text-sm font-medium text-navy-500 hover:underline"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
           >
+            <Plus className="h-3.5 w-3.5" />
             Maak je eerste zaak aan
           </Link>
         </div>

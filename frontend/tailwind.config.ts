@@ -6,34 +6,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Luxis brand palette — professional law firm aesthetic
-        navy: {
-          50: "#f0f3f9",
-          100: "#d9e0f0",
-          200: "#b3c1e1",
-          300: "#8da2d2",
-          400: "#6783c3",
-          500: "#1a365d",
-          600: "#162d4d",
-          700: "#12243d",
-          800: "#0e1b2e",
-          900: "#0a121e",
-        },
-        cream: {
-          50: "#fefdfb",
-          100: "#fdf9f3",
-          200: "#faf3e7",
-          300: "#f5e8d0",
-          400: "#f0dcb9",
-        },
-        gold: {
-          50: "#fdf8ef",
-          100: "#f9edcf",
-          200: "#f3db9f",
-          300: "#edc96f",
-          400: "#c9a84c",
-          500: "#a58738",
-        },
         // shadcn/ui CSS variable-based colors
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -68,11 +40,39 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        sidebar: {
+          bg: "hsl(var(--sidebar-bg))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          muted: "hsl(var(--sidebar-muted))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      keyframes: {
+        "fade-in": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "slide-in-right": {
+          "0%": { opacity: "0", transform: "translateX(16px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+      },
+      animation: {
+        "fade-in": "fade-in 0.3s ease-out",
+        "slide-in-right": "slide-in-right 0.2s ease-out",
       },
     },
   },

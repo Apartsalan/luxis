@@ -7,13 +7,17 @@ import {
   ArrowLeft,
   Briefcase,
   Clock,
-  Euro,
-  FileText,
   Users,
   Trash2,
+  ChevronRight,
 } from "lucide-react";
-import { useCase, useUpdateCaseStatus, useDeleteCase } from "@/hooks/use-cases";
-import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  useCase,
+  useUpdateCaseStatus,
+  useDeleteCase,
+} from "@/hooks/use-cases";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -33,7 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
   dagvaarding: "bg-red-100 text-red-700",
   vonnis: "bg-purple-100 text-purple-700",
   executie: "bg-red-200 text-red-800",
-  betaald: "bg-green-100 text-green-700",
+  betaald: "bg-emerald-100 text-emerald-700",
   afgesloten: "bg-gray-100 text-gray-600",
 };
 
@@ -88,8 +92,9 @@ export default function ZaakDetailPage() {
         new_status: newStatus,
         note: note || undefined,
       });
+      toast.success(`Status gewijzigd naar ${STATUS_LABELS[newStatus]}`);
     } catch (err: any) {
-      alert(err.message || "Statuswijziging mislukt");
+      toast.error(err.message || "Statuswijziging mislukt");
     }
   };
 
@@ -97,16 +102,23 @@ export default function ZaakDetailPage() {
     if (!confirm("Weet je zeker dat je deze zaak wilt verwijderen?")) return;
     try {
       await deleteCase.mutateAsync(id);
+      toast.success("Zaak verwijderd");
       router.push("/zaken");
     } catch {
-      alert("Kon de zaak niet verwijderen");
+      toast.error("Kon de zaak niet verwijderen");
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-navy-200 border-t-navy-500" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="h-8 w-48 rounded-md skeleton" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-20 rounded-lg skeleton" />
+          ))}
+        </div>
+        <div className="h-64 rounded-lg skeleton" />
       </div>
     );
   }
@@ -115,6 +127,12 @@ export default function ZaakDetailPage() {
     return (
       <div className="py-20 text-center">
         <p className="text-muted-foreground">Zaak niet gevonden</p>
+        <Link
+          href="/zaken"
+          className="mt-2 inline-block text-sm text-primary hover:underline"
+        >
+          Terug naar zaken
+        </Link>
       </div>
     );
   }
@@ -126,19 +144,19 @@ export default function ZaakDetailPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
             href="/zaken"
-            className="rounded-md p-2 hover:bg-muted transition-colors"
+            className="rounded-lg p-2 hover:bg-muted transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 text-navy-500" />
+            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-navy-800">
+              <h1 className="text-2xl font-bold text-foreground">
                 {zaak.case_number}
               </h1>
               <span
@@ -150,25 +168,26 @@ export default function ZaakDetailPage() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              {TYPE_LABELS[zaak.case_type]} &middot; Geopend {formatDate(zaak.date_opened)}
+              {TYPE_LABELS[zaak.case_type]} &middot; Geopend{" "}
+              {formatDate(zaak.date_opened)}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          {/* Status change buttons */}
+        <div className="flex items-center gap-2">
           {NEXT_STATUSES[zaak.status]?.map((nextStatus) => (
             <button
               key={nextStatus}
               onClick={() => handleStatusChange(nextStatus)}
               disabled={updateStatus.isPending}
-              className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
             >
-              &rarr; {STATUS_LABELS[nextStatus]}
+              <ChevronRight className="h-3 w-3" />
+              {STATUS_LABELS[nextStatus]}
             </button>
           ))}
           <button
             onClick={handleDelete}
-            className="rounded-md border border-red-200 p-2 text-red-600 hover:bg-red-50 transition-colors"
+            className="rounded-lg border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 transition-colors"
             title="Verwijderen"
           >
             <Trash2 className="h-4 w-4" />
@@ -178,33 +197,33 @@ export default function ZaakDetailPage() {
 
       {/* Quick stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-border bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Hoofdsom</p>
-          <p className="text-lg font-bold text-navy-800">
+          <p className="text-lg font-bold text-foreground">
             {formatCurrency(zaak.total_principal)}
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Betaald</p>
-          <p className="text-lg font-bold text-green-600">
+          <p className="text-lg font-bold text-success">
             {formatCurrency(zaak.total_paid)}
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Rente</p>
           <p className="text-xs text-muted-foreground mt-1">
             {INTEREST_LABELS[zaak.interest_type] ?? zaak.interest_type}
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-white p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Client</p>
-          <p className="text-sm font-medium text-navy-700">
+          <p className="text-sm font-medium text-foreground">
             {zaak.client?.name ?? "-"}
           </p>
           {zaak.opposing_party && (
             <>
               <p className="text-xs text-muted-foreground mt-2">Wederpartij</p>
-              <p className="text-sm font-medium text-navy-700">
+              <p className="text-sm font-medium text-foreground">
                 {zaak.opposing_party.name}
               </p>
             </>
@@ -214,15 +233,15 @@ export default function ZaakDetailPage() {
 
       {/* Tabs */}
       <div className="border-b border-border">
-        <nav className="flex gap-4">
+        <nav className="flex gap-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 border-b-2 px-1 py-3 text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? "border-navy-500 text-navy-800"
-                  : "border-transparent text-muted-foreground hover:text-navy-600"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -235,44 +254,52 @@ export default function ZaakDetailPage() {
       {/* Tab content */}
       {activeTab === "overzicht" && (
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-lg border border-border bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-navy-800">
+          <div className="rounded-xl border border-border bg-card p-6">
+            <h2 className="mb-4 text-base font-semibold text-foreground">
               Zaakgegevens
             </h2>
             <dl className="space-y-3">
               <div>
                 <dt className="text-xs text-muted-foreground">Beschrijving</dt>
-                <dd className="text-sm text-navy-700">
+                <dd className="text-sm text-foreground">
                   {zaak.description || "-"}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Referentie</dt>
-                <dd className="text-sm text-navy-700">{zaak.reference || "-"}</dd>
+                <dd className="text-sm text-foreground">
+                  {zaak.reference || "-"}
+                </dd>
               </div>
               {zaak.contractual_rate && (
                 <div>
                   <dt className="text-xs text-muted-foreground">
                     Contractueel rentepercentage
                   </dt>
-                  <dd className="text-sm text-navy-700">
+                  <dd className="text-sm text-foreground">
                     {zaak.contractual_rate}%
-                    {zaak.contractual_compound ? " (samengesteld)" : " (enkelvoudig)"}
+                    {zaak.contractual_compound
+                      ? " (samengesteld)"
+                      : " (enkelvoudig)"}
                   </dd>
                 </div>
               )}
               {zaak.assigned_to && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">Toegewezen aan</dt>
-                  <dd className="text-sm text-navy-700">
+                  <dt className="text-xs text-muted-foreground">
+                    Toegewezen aan
+                  </dt>
+                  <dd className="text-sm text-foreground">
                     {zaak.assigned_to.full_name}
                   </dd>
                 </div>
               )}
               {zaak.date_closed && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">Datum gesloten</dt>
-                  <dd className="text-sm text-navy-700">
+                  <dt className="text-xs text-muted-foreground">
+                    Datum gesloten
+                  </dt>
+                  <dd className="text-sm text-foreground">
                     {formatDate(zaak.date_closed)}
                   </dd>
                 </div>
@@ -280,23 +307,22 @@ export default function ZaakDetailPage() {
             </dl>
           </div>
 
-          {/* Quick activity */}
-          <div className="rounded-lg border border-border bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-navy-800">
+          <div className="rounded-xl border border-border bg-card p-6">
+            <h2 className="mb-4 text-base font-semibold text-foreground">
               Recente activiteit
             </h2>
             {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {zaak.recent_activities.slice(0, 5).map((activity) => (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-3 rounded-md border border-border p-3"
+                    className="flex items-start gap-3 rounded-lg p-2.5 -mx-1 hover:bg-muted/50 transition-colors"
                   >
-                    <span className="text-lg">
+                    <span className="mt-0.5 text-base">
                       {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-navy-800">
+                      <p className="text-sm font-medium text-foreground">
                         {activity.title}
                       </p>
                       {activity.description && (
@@ -312,29 +338,31 @@ export default function ZaakDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Geen activiteiten</p>
+              <p className="text-sm text-muted-foreground">
+                Geen activiteiten
+              </p>
             )}
           </div>
         </div>
       )}
 
       {activeTab === "activiteiten" && (
-        <div className="rounded-lg border border-border bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-navy-800">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">
             Alle activiteiten
           </h2>
           {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {zaak.recent_activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-start gap-3 border-b border-border pb-3 last:border-0"
+                  className="flex items-start gap-3 border-b border-border pb-3 last:border-0 py-2.5"
                 >
-                  <span className="text-lg">
+                  <span className="mt-0.5 text-base">
                     {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-navy-800">
+                    <p className="text-sm font-medium text-foreground">
                       {activity.title}
                     </p>
                     {activity.description && (
@@ -350,41 +378,41 @@ export default function ZaakDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Geen activiteiten</p>
+            <p className="text-sm text-muted-foreground">
+              Geen activiteiten
+            </p>
           )}
         </div>
       )}
 
       {activeTab === "partijen" && (
-        <div className="rounded-lg border border-border bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-navy-800">Partijen</h2>
-          <div className="space-y-3">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="mb-4 text-base font-semibold text-foreground">
+            Partijen
+          </h2>
+          <div className="space-y-2">
             {zaak.client && (
-              <div className="flex items-center justify-between rounded-md border border-border p-3">
-                <div>
-                  <Link
-                    href={`/relaties/${zaak.client.id}`}
-                    className="text-sm font-medium text-navy-700 hover:underline"
-                  >
-                    {zaak.client.name}
-                  </Link>
-                </div>
-                <span className="rounded-full bg-navy-100 px-2.5 py-0.5 text-xs font-medium text-navy-700">
+              <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                <Link
+                  href={`/relaties/${zaak.client.id}`}
+                  className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+                >
+                  {zaak.client.name}
+                </Link>
+                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                   Client
                 </span>
               </div>
             )}
             {zaak.opposing_party && (
-              <div className="flex items-center justify-between rounded-md border border-border p-3">
-                <div>
-                  <Link
-                    href={`/relaties/${zaak.opposing_party.id}`}
-                    className="text-sm font-medium text-navy-700 hover:underline"
-                  >
-                    {zaak.opposing_party.name}
-                  </Link>
-                </div>
-                <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+              <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                <Link
+                  href={`/relaties/${zaak.opposing_party.id}`}
+                  className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+                >
+                  {zaak.opposing_party.name}
+                </Link>
+                <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
                   Wederpartij
                 </span>
               </div>
@@ -393,17 +421,15 @@ export default function ZaakDetailPage() {
               zaak.parties.map((party) => (
                 <div
                   key={party.id}
-                  className="flex items-center justify-between rounded-md border border-border p-3"
+                  className="flex items-center justify-between rounded-lg border border-border p-3"
                 >
-                  <div>
-                    <Link
-                      href={`/relaties/${party.contact.id}`}
-                      className="text-sm font-medium text-navy-700 hover:underline"
-                    >
-                      {party.contact.name}
-                    </Link>
-                  </div>
-                  <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                  <Link
+                    href={`/relaties/${party.contact.id}`}
+                    className="text-sm font-medium text-foreground hover:text-primary hover:underline"
+                  >
+                    {party.contact.name}
+                  </Link>
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                     {party.role}
                   </span>
                 </div>

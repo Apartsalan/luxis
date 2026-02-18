@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Scale } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -38,55 +39,81 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-navy-500">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[hsl(224,30%,16%)] via-[hsl(224,30%,22%)] to-[hsl(224,30%,16%)]">
+      <div className="w-full max-w-sm animate-fade-in">
+        {/* Logo */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-navy-500">Luxis</h1>
-          <p className="mt-1 text-sm text-navy-300">Praktijkmanagement</p>
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/25">
+            <Scale className="h-6 w-6 text-white" />
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-white">Luxis</h1>
+          <p className="mt-1 text-sm text-white/50">Praktijkmanagement</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-navy-700">
-              E-mailadres
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-navy-200 px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
-              placeholder="naam@kantoor.nl"
-            />
-          </div>
+        {/* Card */}
+        <div className="rounded-xl bg-white p-8 shadow-2xl">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-foreground"
+              >
+                E-mailadres
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                placeholder="naam@kantoor.nl"
+              />
+            </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-navy-700">
-              Wachtwoord
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1 w-full rounded-md border border-navy-200 px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
-            />
-          </div>
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-foreground"
+              >
+                Wachtwoord
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              />
+            </div>
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+            {error && (
+              <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-navy-500 px-4 py-2 text-sm font-medium text-white hover:bg-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:opacity-50"
-          >
-            {loading ? "Bezig met inloggen..." : "Inloggen"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 transition-colors"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Bezig met inloggen...
+                </span>
+              ) : (
+                "Inloggen"
+              )}
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-6 text-center text-xs text-white/30">
+          Luxis v0.1.0
+        </p>
       </div>
     </div>
   );

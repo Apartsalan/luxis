@@ -4,13 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useCreateRelation } from "@/hooks/use-relations";
 
 export default function NieuweRelatiePage() {
   const router = useRouter();
   const createRelation = useCreateRelation();
 
-  const [contactType, setContactType] = useState<"company" | "person">("company");
+  const [contactType, setContactType] = useState<"company" | "person">(
+    "company"
+  );
   const [form, setForm] = useState({
     name: "",
     first_name: "",
@@ -32,8 +35,14 @@ export default function NieuweRelatiePage() {
 
     const data = {
       contact_type: contactType,
-      name: contactType === "person" ? `${form.first_name} ${form.last_name}`.trim() : form.name,
-      ...(contactType === "person" && { first_name: form.first_name, last_name: form.last_name }),
+      name:
+        contactType === "person"
+          ? `${form.first_name} ${form.last_name}`.trim()
+          : form.name,
+      ...(contactType === "person" && {
+        first_name: form.first_name,
+        last_name: form.last_name,
+      }),
       ...(form.email && { email: form.email }),
       ...(form.phone && { phone: form.phone }),
       ...(form.kvk_number && { kvk_number: form.kvk_number }),
@@ -46,6 +55,7 @@ export default function NieuweRelatiePage() {
 
     try {
       const result = await createRelation.mutateAsync(data);
+      toast.success("Relatie aangemaakt");
       router.push(`/relaties/${result.id}`);
     } catch (err: any) {
       setError(err.message || "Er ging iets mis");
@@ -56,17 +66,20 @@ export default function NieuweRelatiePage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const inputClass =
+    "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
         <Link
           href="/relaties"
-          className="rounded-md p-2 hover:bg-muted transition-colors"
+          className="rounded-lg p-2 hover:bg-muted transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-navy-500" />
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-navy-800">Nieuwe relatie</h1>
+          <h1 className="text-2xl font-bold text-foreground">Nieuwe relatie</h1>
           <p className="text-sm text-muted-foreground">
             Voeg een nieuw contact toe
           </p>
@@ -79,10 +92,10 @@ export default function NieuweRelatiePage() {
           <button
             type="button"
             onClick={() => setContactType("company")}
-            className={`flex-1 rounded-md border p-3 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-all ${
               contactType === "company"
-                ? "border-navy-500 bg-navy-50 text-navy-700"
-                : "border-border text-muted-foreground hover:border-navy-200"
+                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
+                : "border-border text-muted-foreground hover:border-primary/30"
             }`}
           >
             Bedrijf
@@ -90,20 +103,20 @@ export default function NieuweRelatiePage() {
           <button
             type="button"
             onClick={() => setContactType("person")}
-            className={`flex-1 rounded-md border p-3 text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-lg border p-3 text-sm font-medium transition-all ${
               contactType === "person"
-                ? "border-navy-500 bg-navy-50 text-navy-700"
-                : "border-border text-muted-foreground hover:border-navy-200"
+                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
+                : "border-border text-muted-foreground hover:border-primary/30"
             }`}
           >
             Persoon
           </button>
         </div>
 
-        <div className="rounded-lg border border-border bg-white p-6 space-y-4">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           {contactType === "company" ? (
             <div>
-              <label className="block text-sm font-medium text-navy-700">
+              <label className="block text-sm font-medium text-foreground">
                 Bedrijfsnaam *
               </label>
               <input
@@ -111,14 +124,14 @@ export default function NieuweRelatiePage() {
                 required
                 value={form.name}
                 onChange={(e) => updateField("name", e.target.value)}
-                className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                className={inputClass}
                 placeholder="Acme B.V."
               />
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-navy-700">
+                <label className="block text-sm font-medium text-foreground">
                   Voornaam *
                 </label>
                 <input
@@ -126,11 +139,11 @@ export default function NieuweRelatiePage() {
                   required
                   value={form.first_name}
                   onChange={(e) => updateField("first_name", e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700">
+                <label className="block text-sm font-medium text-foreground">
                   Achternaam *
                 </label>
                 <input
@@ -138,7 +151,7 @@ export default function NieuweRelatiePage() {
                   required
                   value={form.last_name}
                   onChange={(e) => updateField("last_name", e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                  className={inputClass}
                 />
               </div>
             </div>
@@ -146,21 +159,25 @@ export default function NieuweRelatiePage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-navy-700">E-mail</label>
+              <label className="block text-sm font-medium text-foreground">
+                E-mail
+              </label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => updateField("email", e.target.value)}
-                className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-navy-700">Telefoon</label>
+              <label className="block text-sm font-medium text-foreground">
+                Telefoon
+              </label>
               <input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
-                className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                className={inputClass}
               />
             </div>
           </div>
@@ -168,86 +185,100 @@ export default function NieuweRelatiePage() {
           {contactType === "company" && (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-navy-700">KvK-nummer</label>
+                <label className="block text-sm font-medium text-foreground">
+                  KvK-nummer
+                </label>
                 <input
                   type="text"
                   value={form.kvk_number}
                   onChange={(e) => updateField("kvk_number", e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                  className={inputClass}
                   maxLength={8}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-navy-700">BTW-nummer</label>
+                <label className="block text-sm font-medium text-foreground">
+                  BTW-nummer
+                </label>
                 <input
                   type="text"
                   value={form.btw_number}
                   onChange={(e) => updateField("btw_number", e.target.value)}
-                  className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                  className={inputClass}
                   placeholder="NL123456789B01"
                 />
               </div>
             </div>
           )}
 
-          <h3 className="pt-2 text-sm font-semibold text-navy-700">Adres</h3>
+          <h3 className="pt-2 text-sm font-semibold text-foreground">Adres</h3>
           <div>
-            <label className="block text-sm font-medium text-navy-700">Straat + huisnummer</label>
+            <label className="block text-sm font-medium text-foreground">
+              Straat + huisnummer
+            </label>
             <input
               type="text"
               value={form.visit_address}
               onChange={(e) => updateField("visit_address", e.target.value)}
-              className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+              className={inputClass}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-navy-700">Postcode</label>
+              <label className="block text-sm font-medium text-foreground">
+                Postcode
+              </label>
               <input
                 type="text"
                 value={form.visit_postcode}
                 onChange={(e) => updateField("visit_postcode", e.target.value)}
-                className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                className={inputClass}
                 placeholder="1234 AB"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-navy-700">Plaats</label>
+              <label className="block text-sm font-medium text-foreground">
+                Plaats
+              </label>
               <input
                 type="text"
                 value={form.visit_city}
                 onChange={(e) => updateField("visit_city", e.target.value)}
-                className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+                className={inputClass}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-navy-700">Notities</label>
+            <label className="block text-sm font-medium text-foreground">
+              Notities
+            </label>
             <textarea
               value={form.notes}
               onChange={(e) => updateField("notes", e.target.value)}
               rows={3}
-              className="mt-1 w-full rounded-md border border-input px-3 py-2 text-sm focus:border-navy-500 focus:outline-none focus:ring-1 focus:ring-navy-500"
+              className={inputClass}
             />
           </div>
         </div>
 
         {error && (
-          <p className="text-sm text-red-600">{error}</p>
+          <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
         )}
 
         <div className="flex gap-3">
           <button
             type="submit"
             disabled={createRelation.isPending}
-            className="rounded-md bg-navy-500 px-6 py-2 text-sm font-medium text-white hover:bg-navy-600 disabled:opacity-50 transition-colors"
+            className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
             {createRelation.isPending ? "Opslaan..." : "Opslaan"}
           </button>
           <Link
             href="/relaties"
-            className="rounded-md border border-border px-6 py-2 text-sm font-medium text-navy-600 hover:bg-muted transition-colors"
+            className="rounded-lg border border-border px-6 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
           >
             Annuleren
           </Link>

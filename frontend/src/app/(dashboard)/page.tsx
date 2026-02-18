@@ -14,6 +14,8 @@ import {
   CreditCard,
   ArrowUpRight,
   Users,
+  Receipt,
+  Timer,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -27,6 +29,8 @@ import {
   TASK_TYPE_LABELS,
   type WorkflowTask,
 } from "@/hooks/use-workflow";
+import { useMyTodayEntries, useTimeEntrySummary } from "@/hooks/use-time-entries";
+import { useInvoices, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hooks/use-invoices";
 
 interface DashboardSummary {
   total_active_cases: number;
@@ -194,7 +198,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           icon={<Briefcase className="h-5 w-5" />}
           label="Actieve zaken"
@@ -207,7 +211,7 @@ export default function DashboardPage() {
           icon={<Users className="h-5 w-5" />}
           label="Relaties"
           value={summary?.total_contacts ?? 0}
-          subtitle={`${summary?.cases_closed_this_month ?? 0} zaken afgesloten deze maand`}
+          subtitle={`${summary?.cases_closed_this_month ?? 0} zaken afgesloten`}
           color="success"
           href="/relaties"
         />
@@ -221,6 +225,8 @@ export default function DashboardPage() {
             href="/zaken"
           />
         )}
+        {hasModule("tijdschrijven") && <TodayHoursCard />}
+        {hasModule("facturatie") && <OpenInvoicesCard />}
       </div>
 
       {/* Pipeline Bar — incasso only */}
@@ -276,6 +282,14 @@ export default function DashboardPage() {
 
       {/* My Tasks widget */}
       <MyTasksWidget />
+
+      {/* Module widgets row: Uren + Facturen */}
+      {(hasModule("tijdschrijven") || hasModule("facturatie")) && (
+        <div className={`grid gap-6 ${hasModule("tijdschrijven") && hasModule("facturatie") ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}>
+          {hasModule("tijdschrijven") && <WeekSummaryWidget />}
+          {hasModule("facturatie") && <RecentInvoicesWidget />}
+        </div>
+      )}
 
       {/* Two column: Left (incasso widgets or full-width) + Right (Recent Activity) */}
       <div className={`grid gap-6 ${hasModule("incasso") ? "lg:grid-cols-5" : "lg:grid-cols-1"}`}>
@@ -497,6 +511,173 @@ function KPICard({
     return <Link href={href}>{content}</Link>;
   }
   return content;
+}
+
+function TodayHoursCard() {
+  const { data: todayEntries } = useMyTodayEntries();
+  const totalMinutes = todayEntries?.reduce((sum, e) => sum + e.duration_minutes, 0) ?? 0;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+
+  return (
+    <KPICard
+      icon={<Timer className="h-5 w-5" />}
+      label="Vandaag gewerkt"
+      value={`${hours}:${String(mins).padStart(2, "0")}`}
+      subtitle={`${todayEntries?.length ?? 0} registraties`}
+      color="primary"
+      href="/uren"
+    />
+  );
+}
+
+function OpenInvoicesCard() {
+  const { data } = useInvoices({ status: "sent" });
+  const totalOpen = data?.items?.reduce((sum, inv) => sum + (inv.total ?? 0), 0) ?? 0;
+
+  return (
+    <KPICard
+      icon={<Receipt className="h-5 w-5" />}
+      label="Open facturen"
+      value={formatCurrency(totalOpen)}
+      subtitle={`${data?.total ?? 0} verzonden`}
+      color="warning"
+      href="/facturen"
+    />
+  );
+}
+
+function WeekSummaryWidget() {
+  const today = new Date();
+  const day = today.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+
+  const dateFrom = monday.toISOString().split("T")[0];
+  const dateTo = friday.toISOString().split("T")[0];
+
+  const { data: summary } = useTimeEntrySummary({ date_from: dateFrom, date_to: dateTo });
+
+  const totalHours = summary ? Math.floor(summary.total_minutes / 60) : 0;
+  const totalMins = summary ? summary.total_minutes % 60 : 0;
+  const billableHours = summary ? Math.floor(summary.billable_minutes / 60) : 0;
+  const billableMins = summary ? summary.billable_minutes % 60 : 0;
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Timer className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-card-foreground">
+            Uren deze week
+          </h2>
+        </div>
+        <Link href="/uren" className="text-xs text-primary hover:underline">
+          Alle uren →
+        </Link>
+      </div>
+      <div className="p-5">
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p className="text-2xl font-bold text-foreground tabular-nums">
+              {totalHours}:{String(totalMins).padStart(2, "0")}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Totaal</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-emerald-600 tabular-nums">
+              {billableHours}:{String(billableMins).padStart(2, "0")}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Declarabel</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-foreground tabular-nums">
+              {summary ? formatCurrency(summary.total_amount) : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Bedrag</p>
+          </div>
+        </div>
+        {summary && summary.per_case.length > 0 && (
+          <div className="mt-4 space-y-2 border-t border-border pt-3">
+            {summary.per_case.slice(0, 4).map((cs) => (
+              <div key={cs.case_id} className="flex items-center justify-between">
+                <Link
+                  href={`/zaken/${cs.case_id}`}
+                  className="text-sm text-foreground hover:text-primary transition-colors truncate"
+                >
+                  {cs.case_number}
+                </Link>
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  {Math.floor(cs.total_minutes / 60)}:{String(cs.total_minutes % 60).padStart(2, "0")}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RecentInvoicesWidget() {
+  const { data } = useInvoices({ per_page: 5 });
+  const invoices = data?.items ?? [];
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Receipt className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-card-foreground">
+            Recente facturen
+          </h2>
+        </div>
+        <Link href="/facturen" className="text-xs text-primary hover:underline">
+          Alle facturen →
+        </Link>
+      </div>
+      <div className="divide-y divide-border">
+        {invoices.length > 0 ? (
+          invoices.map((inv) => (
+            <Link
+              key={inv.id}
+              href={`/facturen/${inv.id}`}
+              className="flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono font-medium text-foreground">
+                    {inv.invoice_number}
+                  </span>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                      INVOICE_STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {INVOICE_STATUS_LABELS[inv.status] ?? inv.status}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {inv.contact_name ?? "—"} · {formatDateShort(inv.invoice_date)}
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-foreground tabular-nums ml-4">
+                {formatCurrency(inv.total)}
+              </span>
+            </Link>
+          ))
+        ) : (
+          <div className="px-5 py-8 text-center">
+            <Receipt className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nog geen facturen</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function MyTasksWidget() {

@@ -227,48 +227,23 @@ async def update_case_status(
     user_id: uuid.UUID,
     data: CaseStatusUpdate,
 ) -> Case:
-    """Update the status of a case, following the allowed status workflow."""
+    """Update the status of a case using the database-driven workflow engine.
+
+    Validates transitions against WorkflowTransition table and enforces
+    legal constraints (14-dagenbrief, verjaring).
+    """
+    from app.workflow.service import evaluate_rules_for_transition, execute_transition
+
     case = await get_case(db, tenant_id, case_id)
 
-    # Validate new status
-    if data.new_status not in CASE_STATUSES:
-        raise BadRequestError(
-            f"Ongeldige status: {data.new_status}. "
-            f"Kies uit: {', '.join(CASE_STATUSES)}"
-        )
-
-    # Validate transition
-    allowed = STATUS_TRANSITIONS.get(case.status, [])
-    if data.new_status not in allowed:
-        raise ConflictError(
-            f"Status kan niet van '{case.status}' naar '{data.new_status}'. "
-            f"Toegestane overgangen: {', '.join(allowed) if allowed else 'geen (eindstatus)'}"
-        )
-
-    old_status = case.status
-    case.status = data.new_status
-
-    # Set date_closed if moving to terminal state
-    if data.new_status in ("betaald", "afgesloten"):
-        case.date_closed = date.today()
-
-    await db.flush()
-
-    # Log activity
-    activity = CaseActivity(
-        tenant_id=tenant_id,
-        case_id=case.id,
-        user_id=user_id,
-        activity_type="status_change",
-        title=f"Status gewijzigd: {old_status} → {data.new_status}",
-        description=data.note,
-        old_status=old_status,
-        new_status=data.new_status,
+    # Use the workflow engine for validation + execution
+    case, validation = await execute_transition(
+        db, tenant_id, case, data.new_status, user_id, note=data.note
     )
-    db.add(activity)
-    await db.flush()
 
-    await db.refresh(case)
+    # Evaluate workflow rules and create tasks
+    await evaluate_rules_for_transition(db, tenant_id, case, data.new_status)
+
     return case
 
 

@@ -36,3 +36,34 @@ class TenantResponse(BaseModel):
     kvk_number: str | None
 
     model_config = {"from_attributes": True}
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class TenantUpdateRequest(BaseModel):
+    name: str | None = None
+    kvk_number: str | None = None
+    btw_number: str | None = None
+    address: str | None = None
+    postal_code: str | None = None
+    city: str | None = None
+
+
+class TenantDetailResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    slug: str
+    kvk_number: str | None
+    btw_number: str | None = None
+    address: str | None = None
+    postal_code: str | None = None
+    city: str | None = None
+
+    model_config = {"from_attributes": True}

@@ -15,6 +15,10 @@ class Tenant(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     kvk_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    btw_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    postal_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
 
     users: Mapped[list["User"]] = relationship("User", back_populates="tenant")

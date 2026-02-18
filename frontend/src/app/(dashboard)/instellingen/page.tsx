@@ -2,16 +2,24 @@
 
 import { useState } from "react";
 import {
-  Settings,
   User,
   Building2,
   Palette,
   Bell,
   Shield,
   Save,
+  Loader2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  useTenant,
+  useUpdateProfile,
+  useChangePassword,
+  useUpdateTenant,
+} from "@/hooks/use-settings";
 
 const TABS = [
   { id: "profiel", label: "Profiel", icon: User },
@@ -67,13 +75,55 @@ export default function InstellingenPage() {
 // ── Profiel Tab ──────────────────────────────────────────────────────────────
 
 function ProfielTab({ user }: { user: any }) {
-  const [form, setForm] = useState({
-    full_name: user?.full_name || "",
-    email: user?.email || "",
-  });
+  const [fullName, setFullName] = useState(user?.full_name || "");
+  const updateProfile = useUpdateProfile();
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const changePassword = useChangePassword();
 
   const inputClass =
     "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
+  const handleSaveProfile = () => {
+    if (!fullName.trim()) {
+      toast.error("Naam mag niet leeg zijn");
+      return;
+    }
+    updateProfile.mutate(
+      { full_name: fullName.trim() },
+      {
+        onSuccess: () => toast.success("Profiel bijgewerkt"),
+        onError: (err) => toast.error(err.message),
+      }
+    );
+  };
+
+  const handleChangePassword = () => {
+    if (!currentPassword || !newPassword) {
+      toast.error("Vul beide velden in");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Nieuw wachtwoord moet minimaal 8 tekens zijn");
+      return;
+    }
+    changePassword.mutate(
+      { current_password: currentPassword, new_password: newPassword },
+      {
+        onSuccess: () => {
+          toast.success("Wachtwoord gewijzigd");
+          setCurrentPassword("");
+          setNewPassword("");
+          setShowPasswordForm(false);
+        },
+        onError: (err) => toast.error(err.message),
+      }
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -88,10 +138,8 @@ function ProfielTab({ user }: { user: any }) {
             </label>
             <input
               type="text"
-              value={form.full_name}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, full_name: e.target.value }))
-              }
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
               className={inputClass}
             />
           </div>
@@ -101,7 +149,7 @@ function ProfielTab({ user }: { user: any }) {
             </label>
             <input
               type="email"
-              value={form.email}
+              value={user?.email || ""}
               disabled
               className={`${inputClass} bg-muted/50 cursor-not-allowed`}
             />
@@ -110,10 +158,15 @@ function ProfielTab({ user }: { user: any }) {
             </p>
           </div>
           <button
-            onClick={() => toast.info("Profiel bijwerken wordt binnenkort toegevoegd")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            onClick={handleSaveProfile}
+            disabled={updateProfile.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            <Save className="h-4 w-4" />
+            {updateProfile.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Opslaan
           </button>
         </div>
@@ -126,15 +179,92 @@ function ProfielTab({ user }: { user: any }) {
         <p className="text-sm text-muted-foreground mb-4">
           Beheer je wachtwoord en beveiligingsinstellingen
         </p>
-        <button
-          onClick={() =>
-            toast.info("Wachtwoord wijzigen wordt binnenkort toegevoegd")
-          }
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-        >
-          <Shield className="h-4 w-4" />
-          Wachtwoord wijzigen
-        </button>
+
+        {!showPasswordForm ? (
+          <button
+            onClick={() => setShowPasswordForm(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Shield className="h-4 w-4" />
+            Wachtwoord wijzigen
+          </button>
+        ) : (
+          <div className="space-y-4 max-w-md">
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Huidig wachtwoord
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrent ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent(!showCurrent)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground mt-0.5"
+                >
+                  {showCurrent ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Nieuw wachtwoord
+              </label>
+              <div className="relative">
+                <input
+                  type={showNew ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Minimaal 8 tekens"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground mt-0.5"
+                >
+                  {showNew ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleChangePassword}
+                disabled={changePassword.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {changePassword.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Shield className="h-4 w-4" />
+                )}
+                Wachtwoord wijzigen
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Annuleren
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -143,8 +273,60 @@ function ProfielTab({ user }: { user: any }) {
 // ── Kantoor Tab ──────────────────────────────────────────────────────────────
 
 function KantoorTab() {
+  const { data: tenant, isLoading } = useTenant();
+  const updateTenant = useUpdateTenant();
+
+  const [form, setForm] = useState({
+    name: "",
+    kvk_number: "",
+    btw_number: "",
+    address: "",
+    postal_code: "",
+    city: "",
+  });
+  const [initialized, setInitialized] = useState(false);
+
+  // Initialize form when tenant data loads
+  if (tenant && !initialized) {
+    setForm({
+      name: tenant.name || "",
+      kvk_number: tenant.kvk_number || "",
+      btw_number: tenant.btw_number || "",
+      address: tenant.address || "",
+      postal_code: tenant.postal_code || "",
+      city: tenant.city || "",
+    });
+    setInitialized(true);
+  }
+
   const inputClass =
     "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
+  const handleSave = () => {
+    updateTenant.mutate(
+      {
+        name: form.name || undefined,
+        kvk_number: form.kvk_number || null,
+        btw_number: form.btw_number || null,
+        address: form.address || null,
+        postal_code: form.postal_code || null,
+        city: form.city || null,
+      },
+      {
+        onSuccess: () => toast.success("Kantoorgegevens bijgewerkt"),
+        onError: (err) => toast.error(err.message),
+      }
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Laden...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -159,7 +341,8 @@ function KantoorTab() {
             </label>
             <input
               type="text"
-              defaultValue="Kesting Legal"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               className={inputClass}
             />
           </div>
@@ -168,42 +351,80 @@ function KantoorTab() {
               <label className="block text-sm font-medium text-foreground">
                 KvK-nummer
               </label>
-              <input type="text" className={inputClass} />
+              <input
+                type="text"
+                value={form.kvk_number}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, kvk_number: e.target.value }))
+                }
+                className={inputClass}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 BTW-nummer
               </label>
-              <input type="text" className={inputClass} />
+              <input
+                type="text"
+                value={form.btw_number}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, btw_number: e.target.value }))
+                }
+                className={inputClass}
+              />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground">
               Adres
             </label>
-            <input type="text" className={inputClass} />
+            <input
+              type="text"
+              value={form.address}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, address: e.target.value }))
+              }
+              className={inputClass}
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-foreground">
                 Postcode
               </label>
-              <input type="text" className={inputClass} />
+              <input
+                type="text"
+                value={form.postal_code}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, postal_code: e.target.value }))
+                }
+                className={inputClass}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
                 Plaats
               </label>
-              <input type="text" defaultValue="Amsterdam" className={inputClass} />
+              <input
+                type="text"
+                value={form.city}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, city: e.target.value }))
+                }
+                className={inputClass}
+              />
             </div>
           </div>
           <button
-            onClick={() =>
-              toast.info("Kantoorinstellingen worden binnenkort toegevoegd")
-            }
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            onClick={handleSave}
+            disabled={updateTenant.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            <Save className="h-4 w-4" />
+            {updateTenant.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Opslaan
           </button>
         </div>
@@ -343,9 +564,9 @@ function WeergaveTab() {
           <div className="flex gap-3">
             {(
               [
-                { id: "light", label: "Licht", emoji: "☀️" },
-                { id: "dark", label: "Donker", emoji: "🌙" },
-                { id: "system", label: "Systeem", emoji: "💻" },
+                { id: "light", label: "Licht" },
+                { id: "dark", label: "Donker" },
+                { id: "system", label: "Systeem" },
               ] as const
             ).map((theme) => (
               <button
@@ -359,7 +580,6 @@ function WeergaveTab() {
                     : "border-border text-muted-foreground hover:border-primary/30"
                 }`}
               >
-                <span className="text-lg block mb-1">{theme.emoji}</span>
                 {theme.label}
               </button>
             ))}

@@ -258,7 +258,7 @@ export default function ZaakDetailPage() {
     );
   }
 
-  const isIncasso = hasModule("incasso");
+  const isIncasso = hasModule("incasso") && zaak.case_type === "incasso";
 
   const tabs = [
     { id: "overzicht", label: "Overzicht", icon: Briefcase },
@@ -353,108 +353,110 @@ export default function ZaakDetailPage() {
         </div>
       </div>
 
-      {/* Phase Pipeline Stepper */}
-      <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex items-center gap-1 overflow-x-auto pb-1">
-          {PHASE_ORDER.map((phase, index) => {
-            const isActive = phase === currentPhase;
-            const isPast = currentPhaseIndex >= 0 && index < currentPhaseIndex;
-            const PHASE_ACTIVE_CLASSES: Record<string, string> = {
-              minnelijk: "bg-blue-500 text-white ring-4 ring-blue-500/20",
-              regeling: "bg-amber-500 text-white ring-4 ring-amber-500/20",
-              gerechtelijk: "bg-purple-500 text-white ring-4 ring-purple-500/20",
-              executie: "bg-red-500 text-white ring-4 ring-red-500/20",
-              afgerond: "bg-emerald-500 text-white ring-4 ring-emerald-500/20",
-            };
+      {/* Phase Pipeline Stepper — only for incasso cases */}
+      {isIncasso && (
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {PHASE_ORDER.map((phase, index) => {
+              const isActive = phase === currentPhase;
+              const isPast = currentPhaseIndex >= 0 && index < currentPhaseIndex;
+              const PHASE_ACTIVE_CLASSES: Record<string, string> = {
+                minnelijk: "bg-blue-500 text-white ring-4 ring-blue-500/20",
+                regeling: "bg-amber-500 text-white ring-4 ring-amber-500/20",
+                gerechtelijk: "bg-purple-500 text-white ring-4 ring-purple-500/20",
+                executie: "bg-red-500 text-white ring-4 ring-red-500/20",
+                afgerond: "bg-emerald-500 text-white ring-4 ring-emerald-500/20",
+              };
 
-            return (
-              <div key={phase} className="flex items-center flex-1 min-w-0">
-                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                  <div
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                      isActive
-                        ? PHASE_ACTIVE_CLASSES[phase] ?? "bg-slate-500 text-white"
-                        : isPast
-                          ? "bg-emerald-500 text-white"
-                          : "border-2 border-border text-muted-foreground"
-                    }`}
-                  >
-                    {isPast ? (
-                      <CheckCircle2 className="h-4 w-4" />
-                    ) : (
-                      index + 1
-                    )}
+              return (
+                <div key={phase} className="flex items-center flex-1 min-w-0">
+                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                        isActive
+                          ? PHASE_ACTIVE_CLASSES[phase] ?? "bg-slate-500 text-white"
+                          : isPast
+                            ? "bg-emerald-500 text-white"
+                            : "border-2 border-border text-muted-foreground"
+                      }`}
+                    >
+                      {isPast ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    <span
+                      className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${
+                        isActive
+                          ? "text-foreground font-semibold"
+                          : isPast
+                            ? "text-emerald-600"
+                            : "text-muted-foreground"
+                      }`}
+                    >
+                      {PHASE_LABELS[phase]}
+                    </span>
                   </div>
-                  <span
-                    className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${
-                      isActive
-                        ? "text-foreground font-semibold"
-                        : isPast
-                          ? "text-emerald-600"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {PHASE_LABELS[phase]}
-                  </span>
+                  {index < PHASE_ORDER.length - 1 && (
+                    <div
+                      className={`hidden sm:block h-0.5 w-4 shrink-0 mx-0.5 ${
+                        isPast ? "bg-emerald-400" : "bg-border"
+                      }`}
+                    />
+                  )}
                 </div>
-                {index < PHASE_ORDER.length - 1 && (
-                  <div
-                    className={`hidden sm:block h-0.5 w-4 shrink-0 mx-0.5 ${
-                      isPast ? "bg-emerald-400" : "bg-border"
-                    }`}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        {/* Status transition buttons */}
-        {!isTerminal && (
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
-            <span className="text-xs text-muted-foreground self-center mr-1">
-              Volgende stap:
-            </span>
-            {availableNextStatuses && availableNextStatuses.length > 0 ? (
-              availableNextStatuses.map((nextStatus) => {
-                const isTerminalStatus = nextStatus.is_terminal;
-                return (
+          {/* Status transition buttons */}
+          {!isTerminal && (
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+              <span className="text-xs text-muted-foreground self-center mr-1">
+                Volgende stap:
+              </span>
+              {availableNextStatuses && availableNextStatuses.length > 0 ? (
+                availableNextStatuses.map((nextStatus) => {
+                  const isTerminalStatus = nextStatus.is_terminal;
+                  return (
+                    <button
+                      key={nextStatus.slug}
+                      onClick={() => handleStatusChange(nextStatus.slug)}
+                      disabled={updateStatus.isPending}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                        isTerminalStatus
+                          ? "border border-border hover:bg-muted text-muted-foreground"
+                          : "bg-primary/10 text-primary hover:bg-primary/20"
+                      }`}
+                    >
+                      <ArrowRight className="h-3 w-3" />
+                      {nextStatus.label}
+                    </button>
+                  );
+                })
+              ) : (
+                /* Fallback to hardcoded transitions when workflow API not available */
+                NEXT_STATUSES[zaak.status]?.map((nextStatus) => (
                   <button
-                    key={nextStatus.slug}
-                    onClick={() => handleStatusChange(nextStatus.slug)}
+                    key={nextStatus}
+                    onClick={() => handleStatusChange(nextStatus)}
                     disabled={updateStatus.isPending}
                     className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                      isTerminalStatus
+                      nextStatus === "betaald" || nextStatus === "afgesloten"
                         ? "border border-border hover:bg-muted text-muted-foreground"
                         : "bg-primary/10 text-primary hover:bg-primary/20"
                     }`}
                   >
                     <ArrowRight className="h-3 w-3" />
-                    {nextStatus.label}
+                    {STATUS_LABELS[nextStatus]}
                   </button>
-                );
-              })
-            ) : (
-              /* Fallback to hardcoded transitions when workflow API not available */
-              NEXT_STATUSES[zaak.status]?.map((nextStatus) => (
-                <button
-                  key={nextStatus}
-                  onClick={() => handleStatusChange(nextStatus)}
-                  disabled={updateStatus.isPending}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                    nextStatus === "betaald" || nextStatus === "afgesloten"
-                      ? "border border-border hover:bg-muted text-muted-foreground"
-                      : "bg-primary/10 text-primary hover:bg-primary/20"
-                  }`}
-                >
-                  <ArrowRight className="h-3 w-3" />
-                  {STATUS_LABELS[nextStatus]}
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className={`grid gap-4 sm:grid-cols-2 ${isIncasso ? "lg:grid-cols-4" : "lg:grid-cols-2"}`}>

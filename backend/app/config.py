@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     app_debug: bool = True
     cors_origins: str = "http://localhost:3000"
 
+    # SMTP (email)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_pass: str = ""
+    smtp_from: str = ""
+    smtp_use_tls: bool = True
+
     # Sentry
     sentry_dsn: str = ""
 

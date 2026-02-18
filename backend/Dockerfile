@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies for WeasyPrint and PostgreSQL
+# Install system dependencies for WeasyPrint, LibreOffice (PDF), and PostgreSQL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpango-1.0-0 \
@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     libcairo2 \
+    libreoffice-writer \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast dependency management

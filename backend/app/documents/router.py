@@ -12,7 +12,12 @@ from app.cases.models import Case
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.documents import service
-from app.documents.docx_service import get_available_templates, render_docx
+from app.documents.docx_service import (
+    get_available_templates,
+    get_merge_field_definitions,
+    render_docx,
+)
+from app.documents.models import GeneratedDocument
 from app.documents.schemas import (
     DocxTemplateInfo,
     DocumentTemplateCreate,
@@ -24,6 +29,7 @@ from app.documents.schemas import (
     GeneratedDocumentDetail,
     GeneratedDocumentResponse,
     GeneratedDocumentSummary,
+    MergeFieldCategory,
 )
 from app.shared.exceptions import NotFoundError
 
@@ -195,9 +201,22 @@ async def generate_docx(
     if case is None:
         raise NotFoundError("Zaak niet gevonden")
 
-    docx_bytes, filename = await render_docx(
+    docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
         db, user.tenant_id, case, data.template_type
     )
+
+    # Store GeneratedDocument with template_type and snapshot
+    doc = GeneratedDocument(
+        tenant_id=user.tenant_id,
+        case_id=case_id,
+        generated_by_id=user.id,
+        title=f"{tpl_type} - {case.case_number}",
+        document_type=tpl_type,
+        template_type=tpl_type,
+        template_snapshot=tpl_snapshot,
+    )
+    db.add(doc)
+    await db.flush()
 
     return Response(
         content=docx_bytes,

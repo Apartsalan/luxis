@@ -9,13 +9,15 @@ being passed to the template, so the templates contain no formatting logic.
 
 import io
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
 
 from docxtpl import DocxTemplate
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import Tenant
 from app.cases.models import Case
 from app.collections.service import (
     get_financial_summary,
@@ -40,6 +42,10 @@ TEMPLATE_FILES = {
     "14_dagenbrief": "14_dagenbrief.docx",
     "sommatie": "sommatie.docx",
     "renteoverzicht": "renteoverzicht.docx",
+    "herinnering": "herinnering.docx",
+    "aanmaning": "aanmaning.docx",
+    "tweede_sommatie": "tweede_sommatie.docx",
+    "dagvaarding": "dagvaarding.docx",
 }
 
 INTEREST_TYPE_LABELS = {
@@ -47,6 +53,103 @@ INTEREST_TYPE_LABELS = {
     "commercial": "Handelsrente (art. 6:119a BW)",
     "government": "Overheidsrente (art. 6:119b BW)",
     "contractual": "Contractuele rente",
+}
+
+DEBTOR_TYPE_LABELS = {
+    "b2b": "Zakelijk (B2B)",
+    "b2c": "Particulier (B2C)",
+}
+
+CASE_TYPE_LABELS = {
+    "incasso": "Incasso",
+    "insolventie": "Insolventie",
+    "advies": "Advies",
+    "overig": "Overig",
+}
+
+# Merge field definitions — used by the /merge-fields endpoint
+# Each category has a label and a list of (field_key, nl_label) tuples.
+MERGE_FIELD_DEFINITIONS: dict[str, dict] = {
+    "kantoor": {
+        "label": "Kantoor",
+        "fields": [
+            ("kantoor.naam", "Kantoornaam"),
+            ("kantoor.adres", "Adres"),
+            ("kantoor.postcode_stad", "Postcode + Stad"),
+            ("kantoor.kvk", "KVK-nummer"),
+            ("kantoor.btw", "BTW-nummer"),
+            ("kantoor.iban", "IBAN"),
+            ("kantoor.telefoon", "Telefoonnummer"),
+            ("kantoor.email", "E-mailadres"),
+        ],
+    },
+    "zaak": {
+        "label": "Zaak",
+        "fields": [
+            ("zaak.zaaknummer", "Zaaknummer"),
+            ("zaak.type", "Zaaktype"),
+            ("zaak.type_label", "Zaaktype (label)"),
+            ("zaak.status", "Status"),
+            ("zaak.debtor_type", "Debiteurtype (b2b/b2c)"),
+            ("zaak.debtor_type_label", "Debiteurtype (label)"),
+            ("zaak.referentie_regel", "Referentieregel"),
+            ("zaak.omschrijving", "Omschrijving"),
+            ("zaak.datum_geopend", "Datum geopend"),
+        ],
+    },
+    "client": {
+        "label": "Client (opdrachtgever)",
+        "fields": [
+            ("client.naam", "Naam"),
+            ("client.adres", "Adres"),
+            ("client.postcode_stad", "Postcode + Stad"),
+            ("client.email", "E-mailadres"),
+            ("client.telefoon", "Telefoonnummer"),
+            ("client.kvk", "KVK-nummer"),
+        ],
+    },
+    "wederpartij": {
+        "label": "Wederpartij (debiteur)",
+        "fields": [
+            ("wederpartij.naam", "Naam"),
+            ("wederpartij.adres", "Adres"),
+            ("wederpartij.postcode_stad", "Postcode + Stad"),
+            ("wederpartij.email", "E-mailadres"),
+            ("wederpartij.telefoon", "Telefoonnummer"),
+            ("wederpartij.kvk", "KVK-nummer"),
+        ],
+    },
+    "financieel": {
+        "label": "Financieel",
+        "fields": [
+            ("totaal_hoofdsom", "Totaal hoofdsom"),
+            ("totaal_rente", "Totaal rente"),
+            ("rente_type_label", "Type rente (label)"),
+            ("bik_bedrag", "BIK bedrag (excl. BTW)"),
+            ("btw_regel_label", "BTW-regel label"),
+            ("btw_regel_bedrag", "BTW-regel bedrag"),
+            ("totaal_bik", "Totaal BIK (incl. BTW)"),
+            ("totaal_verschuldigd", "Totaal verschuldigd"),
+            ("totaal_openstaand", "Totaal openstaand"),
+            ("subtotaal", "Subtotaal"),
+        ],
+    },
+    "datum": {
+        "label": "Datums",
+        "fields": [
+            ("vandaag", "Datum vandaag"),
+            ("termijn_14_dagen", "Termijn 14 dagen"),
+            ("termijn_30_dagen", "Termijn 30 dagen"),
+        ],
+    },
+    "lijsten": {
+        "label": "Lijsten (voor tabellen)",
+        "fields": [
+            ("vorderingen[]", "Vorderingen (beschrijving, factuurnummer, verzuimdatum, hoofdsom)"),
+            ("betalingen[]", "Betalingen (datum, beschrijving, bedrag)"),
+            ("rente_regels[]", "Renteperiodes (van, tot, dagen, tarief, hoofdsom, rente)"),
+        ],
+    },
 }
 
 
@@ -110,7 +213,43 @@ def _contact_ctx(contact: Contact | None) -> dict:
     }
 
 
+def _tenant_ctx(tenant: Tenant | None) -> dict:
+    """Build template context dict for the tenant (kantoor)."""
+    if tenant is None:
+        return {
+            "naam": "",
+            "adres": "",
+            "postcode_stad": "",
+            "kvk": "",
+            "btw": "",
+            "iban": "",
+            "telefoon": "",
+            "email": "",
+        }
+    postcode = tenant.postal_code or ""
+    stad = tenant.city or ""
+    postcode_stad = f"{postcode} {stad}".strip() if postcode or stad else ""
+    return {
+        "naam": tenant.name or "",
+        "adres": tenant.address or "",
+        "postcode_stad": postcode_stad,
+        "kvk": tenant.kvk_number or "",
+        "btw": tenant.btw_number or "",
+        "iban": tenant.iban or "",
+        "telefoon": tenant.phone or "",
+        "email": tenant.email or "",
+    }
+
+
 # ── Context builders per template type ─────────────────────────────────────
+
+
+async def _load_tenant(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant | None:
+    """Load the tenant for kantoor merge fields."""
+    result = await db.execute(
+        select(Tenant).where(Tenant.id == tenant_id)
+    )
+    return result.scalar_one_or_none()
 
 
 async def _build_base_context(
@@ -120,6 +259,10 @@ async def _build_base_context(
 ) -> dict:
     """Build the shared context used by all templates."""
     today = date.today()
+
+    # Load tenant for kantoor fields
+    tenant = await _load_tenant(db, tenant_id)
+
     claims = await list_claims(db, tenant_id, case.id)
     payments = await list_payments(db, tenant_id, case.id)
 
@@ -164,6 +307,11 @@ async def _build_base_context(
         f"Uw kenmerk: {case.reference}" if case.reference else ""
     )
 
+    # Interest type label (available in all templates)
+    rente_type_label = INTEREST_TYPE_LABELS.get(
+        case.interest_type, case.interest_type
+    )
+
     # BTW conditional fields
     has_btw = bik["btw_amount"] > 0
     btw_regel_label = "BTW over BIK (21%)" if has_btw else ""
@@ -184,15 +332,35 @@ async def _build_base_context(
     )
 
     return {
+        # Kantoor (tenant)
+        "kantoor": _tenant_ctx(tenant),
+        # Zaak — extended with type, status, debtor_type, datum_geopend
         "zaak": {
             "zaaknummer": case.case_number,
+            "type": case.case_type,
+            "type_label": CASE_TYPE_LABELS.get(case.case_type, case.case_type),
+            "status": case.status,
+            "debtor_type": getattr(case, "debtor_type", "b2b"),
+            "debtor_type_label": DEBTOR_TYPE_LABELS.get(
+                getattr(case, "debtor_type", "b2b"), "Zakelijk (B2B)"
+            ),
             "referentie_regel": ref_regel,
+            "omschrijving": case.description or "",
+            "datum_geopend": _fmt_date(case.date_opened),
         },
+        # Contacts
         "client": _contact_ctx(case.client),
         "wederpartij": _contact_ctx(case.opposing_party),
+        # Dates
         "vandaag": _fmt_date(today),
+        "termijn_14_dagen": _fmt_date(today + timedelta(days=14)),
+        "termijn_30_dagen": _fmt_date(today + timedelta(days=30)),
+        # Financial — interest type label now in base context
+        "rente_type_label": rente_type_label,
+        # Lists
         "vorderingen": vorderingen,
         "betalingen": betalingen_list,
+        # Financial totals
         "totaal_hoofdsom": _fmt_currency(financieel["total_principal"]),
         "totaal_rente": _fmt_currency(financieel["total_interest"]),
         "bik_bedrag": _fmt_currency(bik["bik_exclusive"]),
@@ -226,11 +394,6 @@ async def _build_renteoverzicht_context(
     base = await _build_base_context(db, tenant_id, case)
     financieel = base["_financieel"]
 
-    # Interest type label
-    rente_type_label = INTEREST_TYPE_LABELS.get(
-        case.interest_type, case.interest_type
-    )
-
     # Flatten interest periods across all claims into one list
     rente_regels = []
     interest_details = financieel.get("interest_details", {})
@@ -260,7 +423,6 @@ async def _build_renteoverzicht_context(
     )
 
     base.update({
-        "rente_type_label": rente_type_label,
         "rente_regels": rente_regels,
         "bik_incl_label": bik_incl_label,
         "bik_incl_bedrag": bik_incl_bedrag,
@@ -268,6 +430,17 @@ async def _build_renteoverzicht_context(
     })
 
     return base
+
+
+# ── Merge field definitions (for field picker endpoint) ───────────────────
+
+
+def get_merge_field_definitions() -> dict[str, dict]:
+    """Return all merge field definitions grouped by category with NL labels.
+
+    Used by the GET /api/documents/merge-fields endpoint.
+    """
+    return MERGE_FIELD_DEFINITIONS
 
 
 # ── Public API ─────────────────────────────────────────────────────────────
@@ -291,17 +464,17 @@ async def render_docx(
     tenant_id: uuid.UUID,
     case: Case,
     template_type: str,
-) -> tuple[bytes, str]:
+) -> tuple[bytes, str, str, bytes]:
     """Render a .docx template with case data.
 
     Args:
         db: Database session
         tenant_id: Current tenant
         case: The case to generate the document for
-        template_type: One of '14_dagenbrief', 'sommatie', 'renteoverzicht'
+        template_type: One of the keys in TEMPLATE_FILES
 
     Returns:
-        Tuple of (docx_bytes, filename)
+        Tuple of (docx_bytes, filename, template_type, template_snapshot)
 
     Raises:
         NotFoundError: Template type unknown or file missing
@@ -330,6 +503,9 @@ async def render_docx(
         k: v for k, v in context.items() if not k.startswith("_")
     }
 
+    # Read template snapshot before rendering
+    template_snapshot = template_path.read_bytes()
+
     # Render
     try:
         tpl = DocxTemplate(str(template_path))
@@ -345,4 +521,4 @@ async def render_docx(
     # Generate filename
     filename = f"{template_type}_{case.case_number}_{date.today().isoformat()}.docx"
 
-    return docx_bytes, filename
+    return docx_bytes, filename, template_type, template_snapshot

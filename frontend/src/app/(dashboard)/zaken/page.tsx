@@ -14,10 +14,18 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  CheckSquare,
+  Square,
+  Download,
+  ArrowRight,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useCases } from "@/hooks/use-cases";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -61,6 +69,10 @@ export default function ZakenPage() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<"" | "status" | "export">("");
+  const [bulkStatus, setBulkStatus] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useCases({
     page,
@@ -70,6 +82,80 @@ export default function ZakenPage() {
   });
 
   const activeFilters = [caseType, status].filter(Boolean).length;
+  const allIds = data?.items?.map((z) => z.id) ?? [];
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  };
+
+  const handleBulkStatusChange = async () => {
+    if (!bulkStatus || selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await api("/api/cases/bulk/status", {
+        method: "PUT",
+        body: JSON.stringify({
+          case_ids: Array.from(selectedIds),
+          status: bulkStatus,
+        }),
+      });
+      if (!res.ok) throw new Error("Statuswijziging mislukt");
+      const result = await res.json();
+      toast.success(`${result.updated ?? selectedIds.size} zaken bijgewerkt`);
+      setSelectedIds(new Set());
+      setBulkAction("");
+      setBulkStatus("");
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || "Er ging iets mis");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setBulkLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedIds.size > 0) {
+        params.set("ids", Array.from(selectedIds).join(","));
+      } else {
+        if (caseType) params.set("case_type", caseType);
+        if (status) params.set("status", status);
+        if (search) params.set("search", search);
+      }
+      const res = await api(`/api/cases/export?${params.toString()}`);
+      if (!res.ok) throw new Error("Export mislukt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `luxis-zaken-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Export gedownload");
+      setBulkAction("");
+    } catch (err: any) {
+      toast.error(err.message || "Export mislukt");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -153,6 +239,81 @@ export default function ZakenPage() {
         </div>
       </div>
 
+      {/* Bulk action toolbar */}
+      {someSelected && (
+        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+          <span className="text-sm font-medium text-primary">
+            {selectedIds.size} {selectedIds.size === 1 ? "zaak" : "zaken"} geselecteerd
+          </span>
+          <div className="h-4 w-px bg-primary/20" />
+          <button
+            onClick={() => setBulkAction(bulkAction === "status" ? "" : "status")}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            <ArrowRight className="h-3.5 w-3.5" />
+            Status wijzigen
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={bulkLoading}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+          >
+            {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Exporteren
+          </button>
+          <button
+            onClick={() => { setSelectedIds(new Set()); setBulkAction(""); }}
+            className="ml-auto rounded-md p-1 text-primary/60 hover:text-primary transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Bulk status change inline */}
+      {bulkAction === "status" && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+          <span className="text-sm text-muted-foreground">Nieuwe status:</span>
+          <select
+            value={bulkStatus}
+            onChange={(e) => setBulkStatus(e.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">Kies status...</option>
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleBulkStatusChange}
+            disabled={!bulkStatus || bulkLoading}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Toepassen"}
+          </button>
+          <button
+            onClick={() => setBulkAction("")}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Annuleren
+          </button>
+        </div>
+      )}
+
+      {/* Export all (when nothing selected) */}
+      {!someSelected && data?.items && data.items.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleExport}
+            disabled={bulkLoading}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Exporteer {data.total} zaken (CSV)
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       {isError ? (
         <QueryError
@@ -184,6 +345,11 @@ export default function ZakenPage() {
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="w-10 px-4 py-3.5">
+                    <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-foreground transition-colors">
+                      {allSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
+                    </button>
+                  </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Zaak
                   </th>
@@ -216,6 +382,14 @@ export default function ZakenPage() {
                     onMouseEnter={() => setHoveredRow(zaak.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
+                    <td className="w-10 px-4 py-3.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(zaak.id); }}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {selectedIds.has(zaak.id) ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
+                      </button>
+                    </td>
                     <td className="px-4 py-3.5">
                       <Link
                         href={`/zaken/${zaak.id}`}

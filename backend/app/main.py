@@ -16,6 +16,7 @@ from app.dashboard.router import router as dashboard_router
 from app.documents.router import router as documents_router
 from app.middleware.logging import RequestLoggingMiddleware
 from app.relations.router import router as relations_router
+from app.time_entries.router import router as time_entries_router
 from app.workflow.router import router as workflow_router
 from app.workflow.scheduler import start_scheduler, stop_scheduler
 
@@ -74,6 +75,7 @@ app.include_router(rates_router)
 app.include_router(documents_router)
 app.include_router(dashboard_router)
 app.include_router(workflow_router)
+app.include_router(time_entries_router)
 
 
 @app.get("/health")

@@ -231,18 +231,23 @@ async def update_case_status(
 
     Validates transitions against WorkflowTransition table and enforces
     legal constraints (14-dagenbrief, verjaring).
+    After transition, triggers automation hooks (task creation + audit trail).
     """
-    from app.workflow.service import evaluate_rules_for_transition, execute_transition
+    from app.workflow.hooks import on_status_change
+    from app.workflow.service import execute_transition
 
     case = await get_case(db, tenant_id, case_id)
+    old_status = case.status
 
     # Use the workflow engine for validation + execution
     case, validation = await execute_transition(
         db, tenant_id, case, data.new_status, user_id, note=data.note
     )
 
-    # Evaluate workflow rules and create tasks
-    await evaluate_rules_for_transition(db, tenant_id, case, data.new_status)
+    # Trigger automation hooks (task creation + audit trail)
+    await on_status_change(
+        db, tenant_id, case, old_status, data.new_status, user_id
+    )
 
     return case
 

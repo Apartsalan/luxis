@@ -184,7 +184,7 @@ async def create_payment(
     """Register a payment for a case."""
     await get_case(db, current_user.tenant_id, case_id)
     return await service.create_payment(
-        db, current_user.tenant_id, case_id, data
+        db, current_user.tenant_id, case_id, data, current_user.id
     )
 
 
@@ -300,7 +300,7 @@ async def create_derdengelden(
     """Register a derdengelden transaction."""
     await get_case(db, current_user.tenant_id, case_id)
     return await service.create_derdengelden(
-        db, current_user.tenant_id, case_id, data
+        db, current_user.tenant_id, case_id, data, current_user.id
     )
 
 

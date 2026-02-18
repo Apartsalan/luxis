@@ -132,8 +132,13 @@ async def create_payment(
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
     data: PaymentCreate,
+    user_id: uuid.UUID | None = None,
 ) -> Payment:
-    """Register a payment for a case."""
+    """Register a payment for a case.
+
+    After creating the payment, triggers the workflow payment hook
+    to check if the case is fully paid and should auto-transition to 'betaald'.
+    """
     payment = Payment(
         tenant_id=tenant_id,
         case_id=case_id,
@@ -145,6 +150,12 @@ async def create_payment(
     db.add(payment)
     await db.flush()
     await db.refresh(payment)
+
+    # Workflow hook: check if case is fully paid
+    from app.workflow.hooks import on_payment_received
+
+    await on_payment_received(db, tenant_id, case_id, data.amount, user_id)
+
     return payment
 
 
@@ -276,8 +287,12 @@ async def create_derdengelden(
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
     data: DerdengeldenCreate,
+    user_id: uuid.UUID | None = None,
 ) -> Derdengelden:
-    """Register a derdengelden transaction."""
+    """Register a derdengelden transaction.
+
+    Triggers audit trail logging for deposits.
+    """
     transaction = Derdengelden(
         tenant_id=tenant_id,
         case_id=case_id,
@@ -286,6 +301,15 @@ async def create_derdengelden(
     db.add(transaction)
     await db.flush()
     await db.refresh(transaction)
+
+    # Workflow hook: log deposit in audit trail
+    if data.transaction_type == "deposit":
+        from app.workflow.hooks import on_derdengelden_deposit
+
+        await on_derdengelden_deposit(
+            db, tenant_id, case_id, data.amount, user_id
+        )
+
     return transaction
 
 

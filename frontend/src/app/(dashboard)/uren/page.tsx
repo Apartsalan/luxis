@@ -267,7 +267,7 @@ export default function UrenPage() {
       </div>
 
       {/* Timer + Summary cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Timer card */}
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-3">
@@ -387,7 +387,7 @@ export default function UrenPage() {
       </div>
 
       {/* Week day bar */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         {week.days.slice(0, 5).map((day, i) => {
           const iso = toISO(day);
           const total = dayTotals.get(iso) || 0;
@@ -548,7 +548,8 @@ export default function UrenPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
+          <div className="min-w-[700px]">
           {/* Table header */}
           <div className="grid grid-cols-[100px_80px_1fr_120px_80px_60px_60px] gap-2 px-5 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
             <span>Datum</span>
@@ -657,6 +658,7 @@ export default function UrenPage() {
               </div>
             </div>
           ))}
+        </div>
         </div>
       )}
 

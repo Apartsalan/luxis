@@ -112,7 +112,7 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
         {onMobileMenuToggle && (
           <button
             onClick={onMobileMenuToggle}
-            className="lg:hidden rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="lg:hidden rounded-md p-2.5 -ml-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             aria-label="Menu openen"
           >
             <Menu className="h-5 w-5" />
@@ -154,7 +154,7 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
 
           {/* Notification dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-lg border border-border bg-white shadow-lg overflow-hidden z-50">
+            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-96 rounded-lg border border-border bg-white shadow-lg overflow-hidden z-50">
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Meldingen</h3>

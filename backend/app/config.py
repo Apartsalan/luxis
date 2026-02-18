@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     # App
     app_env: str = "development"
     app_debug: bool = True
+    cors_origins: str = "http://localhost:3000"
 
     # Sentry
     sentry_dsn: str = ""

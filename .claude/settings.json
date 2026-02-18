@@ -32,6 +32,8 @@
       "Bash(wc *)",
       "Bash(sort *)",
       "Bash(gh *)",
+      "Bash(MSYS_NO_PATHCONV=1 *)",
+      "Bash(curl *)",
       "Read",
       "Write",
       "Edit",
@@ -41,5 +43,29 @@
       "Task"
     ],
     "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[hook] File modified — remember to run tests before committing'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[hook] Session ending — did you run /session-end?'"
+          }
+        ]
+      }
+    ]
   }
 }

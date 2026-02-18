@@ -35,16 +35,20 @@ from app.shared.exceptions import NotFoundError
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
-# ── Template Endpoints ───────────────────────────────────────────────────────
+# ── HTML Template Endpoints (DEPRECATED — use /docx/ endpoints instead) ─────
 
 
-@router.get("/templates", response_model=list[DocumentTemplateSummary])
+@router.get(
+    "/templates",
+    response_model=list[DocumentTemplateSummary],
+    deprecated=True,
+)
 async def list_templates(
     template_type: str | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """List all document templates."""
+    """DEPRECATED: List HTML document templates. Use /docx/templates instead."""
     return await service.list_templates(
         db, user.tenant_id, template_type
     )
@@ -54,26 +58,28 @@ async def list_templates(
     "/templates",
     response_model=DocumentTemplateResponse,
     status_code=201,
+    deprecated=True,
 )
 async def create_template(
     data: DocumentTemplateCreate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Create a new document template."""
+    """DEPRECATED: Create HTML template. Use .docx templates instead."""
     return await service.create_template(db, user.tenant_id, data)
 
 
 @router.get(
     "/templates/{template_id}",
     response_model=DocumentTemplateResponse,
+    deprecated=True,
 )
 async def get_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Get a document template by ID."""
+    """DEPRECATED: Get HTML template by ID. Use /docx/templates instead."""
     return await service.get_template(
         db, user.tenant_id, template_id
     )
@@ -82,6 +88,7 @@ async def get_template(
 @router.put(
     "/templates/{template_id}",
     response_model=DocumentTemplateResponse,
+    deprecated=True,
 )
 async def update_template(
     template_id: uuid.UUID,
@@ -89,19 +96,19 @@ async def update_template(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Update a document template."""
+    """DEPRECATED: Update HTML template. Use .docx templates instead."""
     return await service.update_template(
         db, user.tenant_id, template_id, data
     )
 
 
-@router.delete("/templates/{template_id}", status_code=204)
+@router.delete("/templates/{template_id}", status_code=204, deprecated=True)
 async def delete_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Delete a document template."""
+    """DEPRECATED: Delete HTML template. Use .docx templates instead."""
     await service.delete_template(db, user.tenant_id, template_id)
 
 
@@ -127,6 +134,7 @@ async def list_case_documents(
     "/cases/{case_id}/generate",
     response_model=GeneratedDocumentResponse,
     status_code=201,
+    deprecated=True,
 )
 async def generate_document(
     case_id: uuid.UUID,
@@ -134,7 +142,7 @@ async def generate_document(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Generate a document from a template for a case."""
+    """DEPRECATED: Generate HTML document. Use /docx/cases/{case_id}/generate instead."""
     return await service.generate_document(
         db, user.tenant_id, case_id, user.id, data
     )

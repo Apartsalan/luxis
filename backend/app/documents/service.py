@@ -1,4 +1,12 @@
-"""Documents module service — template management and document generation."""
+"""Documents module service — HTML template management and document generation.
+
+DEPRECATED: This module uses the legacy HTML/Jinja2 template system.
+New document generation should use docx_service.py (DOCX templates) instead.
+
+The HTML template CRUD functions (list/get/create/update/delete) and the
+generate_document function are retained for backwards compatibility but
+should not be used for new features.
+"""
 
 import uuid
 from datetime import date
@@ -65,7 +73,7 @@ jinja_env.filters["currency"] = _format_currency
 jinja_env.filters["datum"] = _format_date_nl
 
 
-# ── Template CRUD ────────────────────────────────────────────────────────────
+# ── Template CRUD (DEPRECATED — use docx_service.py for new documents) ──────
 
 
 async def list_templates(
@@ -167,7 +175,7 @@ async def delete_template(
     await db.flush()
 
 
-# ── Document Generation ──────────────────────────────────────────────────────
+# ── Document Generation (DEPRECATED — use docx_service.render_docx) ─────────
 
 
 async def _build_template_context(
@@ -293,7 +301,9 @@ async def generate_document(
     user_id: uuid.UUID,
     data: GenerateDocumentRequest,
 ) -> GeneratedDocument:
-    """Generate a document from a template for a case.
+    """DEPRECATED: Generate an HTML document from a template for a case.
+
+    Use docx_service.render_docx() for new document generation instead.
 
     1. Loads the template
     2. Loads the case + related data

@@ -9,9 +9,11 @@ from app.shared.models import TenantBase
 
 
 class DocumentTemplate(TenantBase):
-    """A document template (e.g. 14-dagenbrief, sommatie, renteberekening).
+    """DEPRECATED: HTML/Jinja2 document template.
 
-    Templates use Jinja2 syntax and can be rendered with case/contact data.
+    This model is retained for backwards compatibility and existing data.
+    New document generation uses the DOCX template system in docx_service.py.
+    Do NOT create new HTML templates — use .docx templates instead.
     """
 
     __tablename__ = "document_templates"

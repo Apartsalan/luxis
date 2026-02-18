@@ -14,6 +14,9 @@ export interface TenantDetail {
   address: string | null;
   postal_code: string | null;
   city: string | null;
+  iban: string | null;
+  phone: string | null;
+  email: string | null;
   modules_enabled: string[];
 }
 
@@ -33,6 +36,9 @@ export interface UpdateTenantData {
   address?: string | null;
   postal_code?: string | null;
   city?: string | null;
+  iban?: string | null;
+  phone?: string | null;
+  email?: string | null;
   modules_enabled?: string[];
 }
 
@@ -42,7 +48,7 @@ export function useTenant() {
   return useQuery<TenantDetail>({
     queryKey: ["tenant"],
     queryFn: async () => {
-      const res = await api("/api/auth/tenant");
+      const res = await api("/api/settings/tenant");
       if (!res.ok) throw new Error("Fout bij ophalen kantoorgegevens");
       return res.json();
     },
@@ -74,8 +80,8 @@ export function useUpdateProfile() {
 export function useChangePassword() {
   return useMutation({
     mutationFn: async (data: ChangePasswordData) => {
-      const res = await api("/api/auth/me/password", {
-        method: "PUT",
+      const res = await api("/api/auth/change-password", {
+        method: "POST",
         body: JSON.stringify(data),
       });
       if (!res.ok) {
@@ -91,7 +97,7 @@ export function useUpdateTenant() {
 
   return useMutation({
     mutationFn: async (data: UpdateTenantData) => {
-      const res = await api("/api/auth/tenant", {
+      const res = await api("/api/settings/tenant", {
         method: "PUT",
         body: JSON.stringify(data),
       });

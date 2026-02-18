@@ -186,10 +186,12 @@ async def test_get_template_not_found(
 async def test_generate_document(
     client: AsyncClient,
     auth_headers: dict,
+    db: AsyncSession,
     test_company: Contact,
     test_person: Contact,
 ):
     """Generating a document from a template should render correctly."""
+    await _seed_interest_rates(db)
     # Create a case first
     case_payload = {
         "case_type": "incasso",
@@ -235,15 +237,19 @@ async def test_generate_document(
 async def test_list_case_documents(
     client: AsyncClient,
     auth_headers: dict,
+    db: AsyncSession,
     test_company: Contact,
+    test_person: Contact,
 ):
     """List documents for a case should work."""
+    await _seed_interest_rates(db)
     # Create case
     case_response = await client.post(
         "/api/cases",
         json={
             "case_type": "incasso",
             "client_id": str(test_company.id),
+            "opposing_party_id": str(test_person.id),
             "date_opened": "2026-02-17",
         },
         headers=auth_headers,
@@ -258,11 +264,12 @@ async def test_list_case_documents(
     )
     template_id = template_response.json()["id"]
 
-    await client.post(
+    gen_resp = await client.post(
         f"/api/documents/cases/{case_id}/generate",
         json={"template_id": template_id},
         headers=auth_headers,
     )
+    assert gen_resp.status_code == 201, f"Generate failed: {gen_resp.text}"
 
     # List documents
     response = await client.get(
@@ -278,15 +285,19 @@ async def test_list_case_documents(
 async def test_delete_generated_document(
     client: AsyncClient,
     auth_headers: dict,
+    db: AsyncSession,
     test_company: Contact,
+    test_person: Contact,
 ):
     """Deleting a generated document should soft-delete it."""
+    await _seed_interest_rates(db)
     # Create case
     case_response = await client.post(
         "/api/cases",
         json={
             "case_type": "incasso",
             "client_id": str(test_company.id),
+            "opposing_party_id": str(test_person.id),
             "date_opened": "2026-02-17",
         },
         headers=auth_headers,
@@ -306,6 +317,7 @@ async def test_delete_generated_document(
         json={"template_id": template_id},
         headers=auth_headers,
     )
+    assert gen_response.status_code == 201, f"Generate failed: {gen_response.text}"
     doc_id = gen_response.json()["id"]
 
     # Delete

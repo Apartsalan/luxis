@@ -62,9 +62,9 @@ async def test_list_contacts_search(
 
 @pytest.mark.asyncio
 async def test_list_contacts_unauthenticated(client: AsyncClient):
-    """Without auth header, should return 403."""
+    """Without auth header, should return 401."""
     response = await client.get("/api/relations")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 # ── Create Contact ────────────────────────────────────────────────────────────

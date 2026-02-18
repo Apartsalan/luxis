@@ -89,8 +89,10 @@ class ContactLink(TenantBase):
 
     # Relationships
     person: Mapped["Contact"] = relationship(
-        "Contact", foreign_keys=[person_id], back_populates="company_links"
+        "Contact", foreign_keys=[person_id], back_populates="company_links",
+        lazy="selectin",
     )
     company: Mapped["Contact"] = relationship(
-        "Contact", foreign_keys=[company_id], back_populates="person_links"
+        "Contact", foreign_keys=[company_id], back_populates="person_links",
+        lazy="selectin",
     )

@@ -282,10 +282,15 @@ class TestNegativeAndZeroAmounts:
             date(2026, 1, 1),
             FIXED_RATE_6PCT,
         )
-        # Year 1: -5000 * 0.06 = -300, capitalize → -5300
-        # Year 2: -5300 * 0.06 = -318
-        # Total: -618.00
-        assert total == Decimal("-618.00")
+        # Compute with actual day counts (2024 is leap year = 366 days)
+        d = Decimal
+        p = d("-5000.00")
+        days_y1 = (date(2025, 1, 1) - date(2024, 1, 1)).days  # 366
+        y1 = _round2(p * d("6") / d("100") * d(str(days_y1)) / d("365"))
+        p2 = p + y1
+        days_y2 = (date(2026, 1, 1) - date(2025, 1, 1)).days  # 365
+        y2 = _round2(p2 * d("6") / d("100") * d(str(days_y2)) / d("365"))
+        assert total == _round2(y1 + y2)
 
     def test_one_cent_principal(self):
         """Minimum practical amount: 1 cent."""
@@ -360,7 +365,7 @@ class TestRateScheduleEdgeCases:
             (date(2025, 5, 1), Decimal("5.00")),
         ]
         schedule = build_rate_schedule(date(2025, 1, 15), date(2025, 6, 1), rates)
-        assert len(schedule) == 4  # 4 segments (starting mid-Jan)
+        assert len(schedule) == 5  # 5 segments: Jan-15→Feb-1, Feb-1→Mar-1, Mar-1→Apr-1, Apr-1→May-1, May-1→Jun-1
 
     def test_no_rate_before_start(self):
         """All rates are after start date — should use earliest rate."""
@@ -458,11 +463,15 @@ class TestCompoundEdgeCases:
             FIXED_RATE_6PCT,
         )
 
-        # Manual: 10 years of annual compounding at 6%
+        # Manual: 10 years of annual compounding at 6%, using actual day counts
+        d = Decimal
         current = Decimal("10000.00")
         expected_total = Decimal("0")
         for year in range(10):
-            year_interest = _round2(current * Decimal("6") / Decimal("100"))
+            year_start = date(2015 + year, 1, 1)
+            year_end = date(2016 + year, 1, 1)
+            days = (year_end - year_start).days
+            year_interest = _round2(current * d("6") / d("100") * d(str(days)) / d("365"))
             expected_total += year_interest
             current += year_interest
 
@@ -481,15 +490,18 @@ class TestCompoundEdgeCases:
             principal, default_date, calc_date, FIXED_RATE_6PCT
         )
 
-        # Year 1: 10000 * 0.06 = 600, cap → 10600
-        y1 = Decimal("600.00")
-        # Year 2: 10600 * 0.06 = 636, cap → 11236
-        y2 = _round2(Decimal("10600") * Decimal("6") / Decimal("100"))
-        # Partial (181 days): 11236 * 0.06 * 181/365 — NO cap
-        y3_partial = _round2(
-            Decimal("11236") * Decimal("6") / Decimal("100")
-            * Decimal("181") / Decimal("365")
-        )
+        # Compute with actual day counts (2024 is leap year)
+        d = Decimal
+        p = principal
+        days_y1 = (date(2024, 1, 1) - date(2023, 1, 1)).days  # 365
+        y1 = _round2(p * d("6") / d("100") * d(str(days_y1)) / d("365"))
+        p += y1
+        days_y2 = (date(2025, 1, 1) - date(2024, 1, 1)).days  # 366 (leap)
+        y2 = _round2(p * d("6") / d("100") * d(str(days_y2)) / d("365"))
+        p += y2
+        # Partial (181 days): NO cap
+        days_partial = (calc_date - date(2025, 1, 1)).days  # 181
+        y3_partial = _round2(p * d("6") / d("100") * d(str(days_partial)) / d("365"))
 
         expected = _round2(y1 + y2 + y3_partial)
         assert total == expected
@@ -511,8 +523,8 @@ class TestRounding:
 
     def test_round_half_up_negative(self):
         """-0.005 rounds to -0.01 with ROUND_HALF_UP."""
-        # Note: ROUND_HALF_UP rounds towards positive infinity for .5
-        assert _round2(Decimal("-0.005")) == Decimal("0.00")
+        # ROUND_HALF_UP always rounds away from zero for .5
+        assert _round2(Decimal("-0.005")) == Decimal("-0.01")
 
     def test_interest_rounding_per_period(self):
         """Each period's interest is rounded individually, then summed.

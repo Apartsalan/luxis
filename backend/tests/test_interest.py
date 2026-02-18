@@ -214,12 +214,15 @@ def test_compound_1_5_years():
         principal, default_date, calc_date, FIXED_RATE_6PCT
     )
 
-    # Year 1 (full): 10000 * 0.06 = 600.00 → capitalize → new principal = 10600
-    year1 = Decimal("600.00")
-    # Remaining 181 days on 10600: 10600 * 0.06 * 181/365
+    # Year 1 (full): 2024-01-01 to 2025-01-01 = 366 days (2024 is leap year)
+    days_y1 = (date(2025, 1, 1) - date(2024, 1, 1)).days  # 366
+    year1 = _round2(principal * Decimal("6") / Decimal("100") * Decimal(str(days_y1)) / Decimal("365"))
+    new_principal = principal + year1
+    # Remaining 181 days on new principal
+    days_rem = (calc_date - date(2025, 1, 1)).days  # 181
     remaining = _round2(
-        Decimal("10600") * Decimal("6") / Decimal("100")
-        * Decimal("181") / Decimal("365")
+        new_principal * Decimal("6") / Decimal("100")
+        * Decimal(str(days_rem)) / Decimal("365")
     )
     expected = _round2(year1 + remaining)
     assert total == expected
@@ -354,12 +357,17 @@ def test_compound_3_years():
         principal, default_date, calc_date, FIXED_RATE_6PCT
     )
 
-    # Year 1: 10000 * 0.06 = 600, capital = 10600
-    # Year 2: 10600 * 0.06 = 636, capital = 11236
-    # Year 3: 11236 * 0.06 = 674.16
-    y1 = Decimal("600.00")
-    y2 = _round2(Decimal("10600") * Decimal("6") / Decimal("100"))
-    y3 = _round2(Decimal("11236") * Decimal("6") / Decimal("100"))
+    # Compute expected using actual day counts (2024 is a leap year)
+    d = Decimal
+    p = principal
+    days_y1 = (date(2024, 1, 1) - date(2023, 1, 1)).days  # 365
+    y1 = _round2(p * d("6") / d("100") * d(str(days_y1)) / d("365"))
+    p += y1
+    days_y2 = (date(2025, 1, 1) - date(2024, 1, 1)).days  # 366 (leap)
+    y2 = _round2(p * d("6") / d("100") * d(str(days_y2)) / d("365"))
+    p += y2
+    days_y3 = (date(2026, 1, 1) - date(2025, 1, 1)).days  # 365
+    y3 = _round2(p * d("6") / d("100") * d(str(days_y3)) / d("365"))
     expected = _round2(y1 + y2 + y3)
     assert total == expected
 

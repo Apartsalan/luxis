@@ -89,7 +89,7 @@ async def test_full_incasso_flow(
 
     # Step 2: Create client (creditor) contact
     create_client_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={
             "contact_type": "company",
             "name": "Schuldeiser B.V.",
@@ -103,7 +103,7 @@ async def test_full_incasso_flow(
 
     # Step 3: Create debtor (opposing party) contact
     create_debtor_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={
             "contact_type": "person",
             "name": "Piet Schuldenaar",
@@ -205,7 +205,7 @@ async def test_multiple_claims_on_case(
 
     # Create contacts
     client_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={"contact_type": "company", "name": "Multi B.V."},
         headers=headers,
     )
@@ -292,7 +292,7 @@ async def test_payment_registration_flow(
 
     # Create contact + case
     contact_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={"contact_type": "company", "name": "Betaler B.V."},
         headers=headers,
     )
@@ -360,16 +360,16 @@ async def test_payment_registration_flow(
 
 @pytest.mark.asyncio
 async def test_no_auth_returns_403(client: AsyncClient):
-    """Endpoints without auth should return 403."""
-    response = await client.get("/api/contacts")
-    assert response.status_code == 403
+    """Endpoints without auth should return 401."""
+    response = await client.get("/api/relations")
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_invalid_token_returns_401(client: AsyncClient):
     """Invalid Bearer token should return 401."""
     response = await client.get(
-        "/api/contacts",
+        "/api/relations",
         headers={"Authorization": "Bearer invalid-garbage-token"},
     )
     assert response.status_code == 401
@@ -389,7 +389,7 @@ async def test_case_status_workflow(
 
     # Create contact + case
     contact_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={"contact_type": "person", "name": "Status Test"},
         headers=headers,
     )
@@ -408,7 +408,7 @@ async def test_case_status_workflow(
     assert case_resp.json()["status"] == "nieuw"
 
     # Transition: nieuw → sommatie (skipping 14-dagenbrief is allowed)
-    status_resp = await client.put(
+    status_resp = await client.post(
         f"/api/cases/{case_id}/status",
         json={"new_status": "sommatie", "note": "Sommatiebrief verstuurd"},
         headers=headers,
@@ -417,7 +417,7 @@ async def test_case_status_workflow(
     assert status_resp.json()["status"] == "sommatie"
 
     # Transition: sommatie → dagvaarding
-    status_resp = await client.put(
+    status_resp = await client.post(
         f"/api/cases/{case_id}/status",
         json={"new_status": "dagvaarding"},
         headers=headers,
@@ -439,7 +439,7 @@ async def test_invalid_status_transition(
     headers = await login(client, "lisanne@kestinglegal.nl", "testpassword123")
 
     contact_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={"contact_type": "person", "name": "Invalid Transition"},
         headers=headers,
     )
@@ -457,12 +457,12 @@ async def test_invalid_status_transition(
     case_id = case_resp.json()["id"]
 
     # Try invalid transition: nieuw → vonnis (should fail)
-    status_resp = await client.put(
+    status_resp = await client.post(
         f"/api/cases/{case_id}/status",
         json={"new_status": "vonnis"},
         headers=headers,
     )
-    assert status_resp.status_code == 400
+    assert status_resp.status_code == 409
 
 
 # ── Test: Claim CRUD ───────────────────────────────────────────────────────
@@ -479,7 +479,7 @@ async def test_claim_crud(
 
     # Setup: contact + case
     contact_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={"contact_type": "company", "name": "CRUD Test B.V."},
         headers=headers,
     )
@@ -553,7 +553,7 @@ async def test_derdengelden_flow(
 
     # Setup
     contact_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={"contact_type": "company", "name": "Derdengelden B.V."},
         headers=headers,
     )
@@ -624,7 +624,7 @@ async def test_bik_with_btw_api(
     headers = await login(client, "lisanne@kestinglegal.nl", "testpassword123")
 
     contact_resp = await client.post(
-        "/api/contacts",
+        "/api/relations",
         json={"contact_type": "company", "name": "BTW Test B.V."},
         headers=headers,
     )

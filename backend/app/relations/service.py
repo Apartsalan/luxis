@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.relations.models import Contact, ContactLink
 from app.relations.schemas import ContactCreate, ContactLinkCreate, ContactUpdate
@@ -65,10 +66,16 @@ async def get_contact(
 ) -> Contact:
     """Get a single contact by ID. Raises NotFoundError if not found."""
     result = await db.execute(
-        select(Contact).where(
+        select(Contact)
+        .where(
             Contact.id == contact_id,
             Contact.tenant_id == tenant_id,
         )
+        .options(
+            selectinload(Contact.company_links).selectinload(ContactLink.company),
+            selectinload(Contact.person_links).selectinload(ContactLink.person),
+        )
+        .execution_options(populate_existing=True)
     )
     contact = result.scalar_one_or_none()
     if contact is None:

@@ -2,7 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Briefcase } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Briefcase,
+  ArrowUpRight,
+  Filter,
+  MoreHorizontal,
+  Eye,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useCases } from "@/hooks/use-cases";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
@@ -18,15 +30,15 @@ const STATUS_LABELS: Record<string, string> = {
   afgesloten: "Afgesloten",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  nieuw: "bg-blue-100 text-blue-700",
-  "14_dagenbrief": "bg-yellow-100 text-yellow-700",
-  sommatie: "bg-orange-100 text-orange-700",
-  dagvaarding: "bg-red-100 text-red-700",
-  vonnis: "bg-purple-100 text-purple-700",
-  executie: "bg-red-200 text-red-800",
-  betaald: "bg-emerald-100 text-emerald-700",
-  afgesloten: "bg-gray-100 text-gray-600",
+const STATUS_BADGE: Record<string, string> = {
+  nieuw: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  "14_dagenbrief": "bg-sky-50 text-sky-700 ring-sky-600/20",
+  sommatie: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  dagvaarding: "bg-red-50 text-red-700 ring-red-600/20",
+  vonnis: "bg-purple-50 text-purple-700 ring-purple-600/20",
+  executie: "bg-red-50 text-red-800 ring-red-700/20",
+  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -36,11 +48,19 @@ const TYPE_LABELS: Record<string, string> = {
   overig: "Overig",
 };
 
+const TYPE_BADGE: Record<string, string> = {
+  incasso: "bg-blue-50 text-blue-600",
+  insolventie: "bg-purple-50 text-purple-600",
+  advies: "bg-teal-50 text-teal-600",
+  overig: "bg-slate-50 text-slate-600",
+};
+
 export default function ZakenPage() {
   const [search, setSearch] = useState("");
   const [caseType, setCaseType] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useCases({
     page,
@@ -49,68 +69,88 @@ export default function ZakenPage() {
     search: search || undefined,
   });
 
+  const activeFilters = [caseType, status].filter(Boolean).length;
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Zaken</h1>
-          <p className="text-sm text-muted-foreground">
-            Beheer je zaken en dossiers
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {data?.total
+              ? `${data.total} ${data.total === 1 ? "zaak" : "zaken"}`
+              : "Beheer je zaken en dossiers"}
           </p>
         </div>
         <Link
           href="/zaken/nieuw"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Nieuwe zaak
+          <span className="hidden sm:inline">Nieuwe zaak</span>
         </Link>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Zoek op zaaknummer of beschrijving..."
+            placeholder="Zoek op zaaknummer, beschrijving of client..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+            className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           />
         </div>
-        <select
-          value={caseType}
-          onChange={(e) => {
-            setCaseType(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-        >
-          <option value="">Alle types</option>
-          <option value="incasso">Incasso</option>
-          <option value="insolventie">Insolventie</option>
-          <option value="advies">Advies</option>
-          <option value="overig">Overig</option>
-        </select>
-        <select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-        >
-          <option value="">Alle statussen</option>
-          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={caseType}
+            onChange={(e) => {
+              setCaseType(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+          >
+            <option value="">Alle types</option>
+            <option value="incasso">Incasso</option>
+            <option value="insolventie">Insolventie</option>
+            <option value="advies">Advies</option>
+            <option value="overig">Overig</option>
+          </select>
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
+            className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+          >
+            <option value="">Alle statussen</option>
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          {activeFilters > 0 && (
+            <button
+              onClick={() => {
+                setCaseType("");
+                setStatus("");
+                setSearch("");
+                setPage(1);
+              }}
+              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            >
+              Wis filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Table */}
@@ -120,78 +160,135 @@ export default function ZakenPage() {
           onRetry={() => refetch()}
         />
       ) : isLoading ? (
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-14 rounded-lg skeleton" />
-          ))}
+        <div className="rounded-xl border border-border bg-card">
+          <div className="p-1">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-4 px-4 py-3.5"
+              >
+                <div className="h-4 w-20 rounded skeleton" />
+                <div className="h-5 w-16 rounded-full skeleton" />
+                <div className="h-5 w-20 rounded-full skeleton" />
+                <div className="hidden md:block h-4 w-32 rounded skeleton" />
+                <div className="hidden lg:block h-4 w-24 rounded skeleton" />
+                <div className="hidden md:block h-4 w-16 rounded skeleton ml-auto" />
+                <div className="h-4 w-16 rounded skeleton" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : data?.items && data.items.length > 0 ? (
         <>
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-[700px]">
               <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Zaaknummer
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Zaak
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Status
                   </th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
+                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Client
                   </th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground lg:table-cell">
+                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Wederpartij
                   </th>
-                  <th className="hidden px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
+                  <th className="hidden md:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Hoofdsom
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Geopend
                   </th>
+                  <th className="px-4 py-3.5 w-10" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {data.items.map((zaak) => (
                   <tr
                     key={zaak.id}
-                    className="hover:bg-muted/30 transition-colors"
+                    className="group hover:bg-muted/40 transition-colors relative"
+                    onMouseEnter={() => setHoveredRow(zaak.id)}
+                    onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">
                       <Link
                         href={`/zaken/${zaak.id}`}
-                        className="font-mono text-sm font-medium text-foreground hover:text-primary hover:underline"
+                        className="font-mono text-sm font-semibold text-foreground hover:text-primary transition-colors"
                       >
                         {zaak.case_number}
                       </Link>
+                      {zaak.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[160px]">
+                          {zaak.description}
+                        </p>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {TYPE_LABELS[zaak.case_type] ?? zaak.case_type}
-                    </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          STATUS_COLORS[zaak.status] ??
-                          "bg-gray-100 text-gray-600"
+                        className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
+                          TYPE_BADGE[zaak.case_type] ??
+                          "bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        {TYPE_LABELS[zaak.case_type] ?? zaak.case_type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                          STATUS_BADGE[zaak.status] ??
+                          "bg-slate-50 text-slate-600 ring-slate-500/20"
                         }`}
                       >
                         {STATUS_LABELS[zaak.status] ?? zaak.status}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3 text-sm text-muted-foreground md:table-cell">
-                      {zaak.client?.name}
+                    <td className="hidden md:table-cell px-4 py-3.5">
+                      {zaak.client ? (
+                        <Link
+                          href={`/relaties/${zaak.client.id}`}
+                          className="text-sm text-foreground hover:text-primary transition-colors"
+                        >
+                          {zaak.client.name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
                     </td>
-                    <td className="hidden px-4 py-3 text-sm text-muted-foreground lg:table-cell">
-                      {zaak.opposing_party?.name ?? "-"}
+                    <td className="hidden lg:table-cell px-4 py-3.5">
+                      {zaak.opposing_party ? (
+                        <Link
+                          href={`/relaties/${zaak.opposing_party.id}`}
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          {zaak.opposing_party.name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
                     </td>
-                    <td className="hidden px-4 py-3 text-right text-sm font-medium text-foreground md:table-cell">
-                      {formatCurrency(zaak.total_principal)}
+                    <td className="hidden md:table-cell px-4 py-3.5 text-right">
+                      <span className="text-sm font-semibold text-foreground tabular-nums">
+                        {formatCurrency(zaak.total_principal)}
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(zaak.date_opened)}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <Link
+                        href={`/zaken/${zaak.id}`}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all"
+                        title="Bekijken"
+                      >
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -203,44 +300,71 @@ export default function ZakenPage() {
           {data.pages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {data.total} zaken
+                Pagina {page} van {data.pages} &middot; {data.total} zaken
               </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
                 >
-                  Vorige
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
-                <span className="flex items-center px-3 text-sm text-muted-foreground">
-                  {page} / {data.pages}
-                </span>
+                {Array.from({ length: Math.min(data.pages, 5) }, (_, i) => {
+                  const pageNum =
+                    data.pages <= 5
+                      ? i + 1
+                      : page <= 3
+                        ? i + 1
+                        : page >= data.pages - 2
+                          ? data.pages - 4 + i
+                          : page - 2 + i;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                        pageNum === page
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() =>
                     setPage((p) => Math.min(data.pages, p + 1))
                   }
                   disabled={page === data.pages}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
                 >
-                  Volgende
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
           )}
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
-          <Briefcase className="h-12 w-12 text-muted-foreground/30" />
-          <p className="mt-4 text-sm font-medium text-muted-foreground">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <Briefcase className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="mt-5 text-base font-medium text-foreground">
             Geen zaken gevonden
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {search || caseType || status
+              ? "Probeer andere zoektermen of filters"
+              : "Begin met het aanmaken van je eerste zaak"}
           </p>
           <Link
             href="/zaken/nieuw"
-            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Maak je eerste zaak aan
+            <Plus className="h-4 w-4" />
+            Nieuwe zaak aanmaken
           </Link>
         </div>
       )}

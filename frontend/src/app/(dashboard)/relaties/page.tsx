@@ -9,7 +9,12 @@ import {
   User,
   Mail,
   Phone,
+  MapPin,
   Users,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Briefcase,
 } from "lucide-react";
 import { useRelations } from "@/hooks/use-relations";
 import { formatDateShort } from "@/lib/utils";
@@ -28,24 +33,27 @@ export default function RelatiesPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Relaties</h1>
-          <p className="text-sm text-muted-foreground">
-            Beheer je contacten en bedrijven
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {data?.total
+              ? `${data.total} ${data.total === 1 ? "relatie" : "relaties"}`
+              : "Beheer je contacten en bedrijven"}
           </p>
         </div>
         <Link
           href="/relaties/nieuw"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Nieuwe relatie
+          <span className="hidden sm:inline">Nieuwe relatie</span>
         </Link>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -56,21 +64,52 @@ export default function RelatiesPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+            className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           />
         </div>
-        <select
-          value={contactType}
-          onChange={(e) => {
-            setContactType(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-input bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-        >
-          <option value="">Alle types</option>
-          <option value="company">Bedrijven</option>
-          <option value="person">Personen</option>
-        </select>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setContactType("");
+              setPage(1);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              contactType === ""
+                ? "bg-primary text-primary-foreground"
+                : "border border-input bg-card text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            Alle
+          </button>
+          <button
+            onClick={() => {
+              setContactType("company");
+              setPage(1);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              contactType === "company"
+                ? "bg-primary text-primary-foreground"
+                : "border border-input bg-card text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            Bedrijven
+          </button>
+          <button
+            onClick={() => {
+              setContactType("person");
+              setPage(1);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              contactType === "person"
+                ? "bg-primary text-primary-foreground"
+                : "border border-input bg-card text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <User className="h-3.5 w-3.5" />
+            Personen
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -80,79 +119,128 @@ export default function RelatiesPage() {
           onRetry={() => refetch()}
         />
       ) : isLoading ? (
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-14 rounded-lg skeleton" />
-          ))}
+        <div className="rounded-xl border border-border bg-card">
+          <div className="p-1">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-4 px-4 py-3.5"
+              >
+                <div className="h-9 w-9 rounded-full skeleton" />
+                <div className="h-4 w-32 rounded skeleton" />
+                <div className="hidden md:block h-4 w-40 rounded skeleton" />
+                <div className="hidden lg:block h-4 w-24 rounded skeleton" />
+                <div className="hidden lg:block h-4 w-20 rounded skeleton" />
+                <div className="h-4 w-16 rounded skeleton ml-auto" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : data?.items && data.items.length > 0 ? (
         <>
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full min-w-[500px]">
+            <table className="w-full min-w-[600px]">
               <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Type
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Relatie
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Naam
+                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Contact
                   </th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground md:table-cell">
-                    E-mail
-                  </th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground lg:table-cell">
-                    Telefoon
-                  </th>
-                  <th className="hidden px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground lg:table-cell">
+                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Plaats
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Aangemaakt
                   </th>
+                  <th className="px-4 py-3.5 w-10" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {data.items.map((contact) => (
                   <tr
                     key={contact.id}
-                    className="hover:bg-muted/30 transition-colors"
+                    className="group hover:bg-muted/40 transition-colors"
                   >
-                    <td className="px-4 py-3">
-                      {contact.contact_type === "company" ? (
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                            contact.contact_type === "company"
+                              ? "bg-blue-50 text-blue-600"
+                              : "bg-violet-50 text-violet-600"
+                          }`}
+                        >
+                          {contact.contact_type === "company" ? (
+                            <Building2 className="h-4 w-4" />
+                          ) : (
+                            <User className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <Link
+                            href={`/relaties/${contact.id}`}
+                            className="text-sm font-semibold text-foreground hover:text-primary transition-colors"
+                          >
+                            {contact.name}
+                          </Link>
+                          <p className="text-xs text-muted-foreground">
+                            {contact.contact_type === "company"
+                              ? "Bedrijf"
+                              : "Persoon"}
+                            {contact.kvk_number &&
+                              ` · KvK ${contact.kvk_number}`}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden md:table-cell px-4 py-3.5">
+                      <div className="space-y-1">
+                        {contact.email && (
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="truncate max-w-[200px]">
+                              {contact.email}
+                            </span>
+                          </div>
+                        )}
+                        {contact.phone && (
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            {contact.phone}
+                          </div>
+                        )}
+                        {!contact.email && !contact.phone && (
+                          <span className="text-sm text-muted-foreground/50">
+                            -
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="hidden lg:table-cell px-4 py-3.5">
+                      {contact.visit_city ? (
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          {contact.visit_city}
+                        </div>
                       ) : (
-                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground/50">
+                          -
+                        </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
+                      {formatDateShort(contact.created_at)}
+                    </td>
+                    <td className="px-4 py-3.5">
                       <Link
                         href={`/relaties/${contact.id}`}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all"
+                        title="Bekijken"
                       >
-                        {contact.name}
+                        <ArrowUpRight className="h-4 w-4" />
                       </Link>
-                    </td>
-                    <td className="hidden px-4 py-3 text-sm text-muted-foreground md:table-cell">
-                      {contact.email && (
-                        <span className="inline-flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {contact.email}
-                        </span>
-                      )}
-                    </td>
-                    <td className="hidden px-4 py-3 text-sm text-muted-foreground lg:table-cell">
-                      {contact.phone && (
-                        <span className="inline-flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {contact.phone}
-                        </span>
-                      )}
-                    </td>
-                    <td className="hidden px-4 py-3 text-sm text-muted-foreground lg:table-cell">
-                      {contact.visit_city}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {formatDateShort(contact.created_at)}
                     </td>
                   </tr>
                 ))}
@@ -164,44 +252,71 @@ export default function RelatiesPage() {
           {data.pages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                {data.total} resultaten
+                Pagina {page} van {data.pages} &middot; {data.total} relaties
               </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
                 >
-                  Vorige
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
-                <span className="flex items-center px-3 text-sm text-muted-foreground">
-                  {page} / {data.pages}
-                </span>
+                {Array.from({ length: Math.min(data.pages, 5) }, (_, i) => {
+                  const pageNum =
+                    data.pages <= 5
+                      ? i + 1
+                      : page <= 3
+                        ? i + 1
+                        : page >= data.pages - 2
+                          ? data.pages - 4 + i
+                          : page - 2 + i;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                        pageNum === page
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() =>
                     setPage((p) => Math.min(data.pages, p + 1))
                   }
                   disabled={page === data.pages}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
                 >
-                  Volgende
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
           )}
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16">
-          <Users className="h-12 w-12 text-muted-foreground/30" />
-          <p className="mt-4 text-sm font-medium text-muted-foreground">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <Users className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="mt-5 text-base font-medium text-foreground">
             Geen relaties gevonden
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {search || contactType
+              ? "Probeer andere zoektermen of filters"
+              : "Begin met het toevoegen van je eerste relatie"}
           </p>
           <Link
             href="/relaties/nieuw"
-            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
-            Voeg je eerste relatie toe
+            <Plus className="h-4 w-4" />
+            Nieuwe relatie toevoegen
           </Link>
         </div>
       )}

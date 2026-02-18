@@ -15,6 +15,8 @@ import {
   Briefcase,
   X,
   Check,
+  Euro,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,7 +25,7 @@ import {
   useDeleteRelation,
 } from "@/hooks/use-relations";
 import { useCases } from "@/hooks/use-cases";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency, formatDateShort } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -36,15 +38,15 @@ const STATUS_LABELS: Record<string, string> = {
   afgesloten: "Afgesloten",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  nieuw: "bg-blue-100 text-blue-700",
-  "14_dagenbrief": "bg-yellow-100 text-yellow-700",
-  sommatie: "bg-orange-100 text-orange-700",
-  dagvaarding: "bg-red-100 text-red-700",
-  vonnis: "bg-purple-100 text-purple-700",
-  executie: "bg-red-200 text-red-800",
-  betaald: "bg-emerald-100 text-emerald-700",
-  afgesloten: "bg-gray-100 text-gray-600",
+const STATUS_BADGE: Record<string, string> = {
+  nieuw: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  "14_dagenbrief": "bg-sky-50 text-sky-700 ring-sky-600/20",
+  sommatie: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  dagvaarding: "bg-red-50 text-red-700 ring-red-600/20",
+  vonnis: "bg-purple-50 text-purple-700 ring-purple-600/20",
+  executie: "bg-red-50 text-red-800 ring-red-700/20",
+  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
 };
 
 export default function RelatieDetailPage() {
@@ -58,7 +60,10 @@ export default function RelatieDetailPage() {
   const [editForm, setEditForm] = useState<Record<string, string>>({});
 
   // Fetch cases where this contact is client or opposing party
-  const { data: linkedCases } = useCases({ search: contact?.name, per_page: 50 });
+  const { data: linkedCases } = useCases({
+    search: contact?.name,
+    per_page: 50,
+  });
 
   const startEditing = () => {
     if (!contact) return;
@@ -123,13 +128,13 @@ export default function RelatieDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in">
         <div className="h-8 w-48 rounded-md skeleton" />
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="h-48 rounded-lg skeleton" />
-          <div className="h-48 rounded-lg skeleton" />
+        <div className="grid gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-3 h-48 rounded-xl skeleton" />
+          <div className="lg:col-span-2 h-48 rounded-xl skeleton" />
         </div>
-        <div className="h-32 rounded-lg skeleton" />
+        <div className="h-32 rounded-xl skeleton" />
       </div>
     );
   }
@@ -137,12 +142,15 @@ export default function RelatieDetailPage() {
   if (!contact) {
     return (
       <div className="py-20 text-center">
-        <p className="text-muted-foreground">Relatie niet gevonden</p>
+        <User className="mx-auto h-12 w-12 text-muted-foreground/30" />
+        <p className="mt-4 text-base font-medium text-foreground">
+          Relatie niet gevonden
+        </p>
         <Link
           href="/relaties"
           className="mt-2 inline-block text-sm text-primary hover:underline"
         >
-          Terug naar relaties
+          ← Terug naar relaties
         </Link>
       </div>
     );
@@ -154,25 +162,31 @@ export default function RelatieDetailPage() {
   );
 
   const inputClass =
-    "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+    "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
           <Link
             href="/relaties"
-            className="rounded-lg p-2 hover:bg-muted transition-colors"
+            className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-full ${
+                contact.contact_type === "company"
+                  ? "bg-blue-50 text-blue-600"
+                  : "bg-violet-50 text-violet-600"
+              }`}
+            >
               {contact.contact_type === "company" ? (
-                <Building2 className="h-5 w-5 text-primary" />
+                <Building2 className="h-5 w-5" />
               ) : (
-                <User className="h-5 w-5 text-primary" />
+                <User className="h-5 w-5" />
               )}
             </div>
             <div>
@@ -181,25 +195,26 @@ export default function RelatieDetailPage() {
               </h1>
               <p className="text-sm text-muted-foreground">
                 {contact.contact_type === "company" ? "Bedrijf" : "Persoon"}{" "}
-                &middot; Aangemaakt op {formatDate(contact.created_at)}
+                · Aangemaakt {formatDateShort(contact.created_at)}
+                {contact.kvk_number && ` · KvK ${contact.kvk_number}`}
               </p>
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {editing ? (
             <>
               <button
                 onClick={handleSave}
                 disabled={updateRelation.isPending}
-                className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 <Check className="h-4 w-4" />
                 {updateRelation.isPending ? "Opslaan..." : "Opslaan"}
               </button>
               <button
                 onClick={() => setEditing(false)}
-                className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted transition-colors"
               >
                 <X className="h-4 w-4" />
                 Annuleren
@@ -209,360 +224,363 @@ export default function RelatieDetailPage() {
             <>
               <button
                 onClick={startEditing}
-                className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted transition-colors"
               >
                 <Pencil className="h-4 w-4" />
                 Bewerken
               </button>
               <button
                 onClick={handleDelete}
-                className="inline-flex items-center gap-1 rounded-lg border border-destructive/20 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                className="rounded-lg border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 transition-colors"
+                title="Verwijderen"
               >
                 <Trash2 className="h-4 w-4" />
-                Verwijderen
               </button>
             </>
           )}
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Contact info */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">
-            Contactgegevens
-          </h2>
-          {editing ? (
-            <div className="space-y-3">
-              {contact.contact_type === "company" ? (
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Bedrijfsnaam
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={(e) => updateEdit("name", e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-              ) : (
-                <div className="grid gap-3 grid-cols-2">
+      {/* Two column layout */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Left column: Contact info */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="rounded-xl border border-border bg-card p-6">
+            <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+              Contactgegevens
+            </h2>
+            {editing ? (
+              <div className="space-y-4">
+                {contact.contact_type === "company" ? (
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      Voornaam
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Bedrijfsnaam
                     </label>
                     <input
                       type="text"
-                      value={editForm.first_name}
-                      onChange={(e) => updateEdit("first_name", e.target.value)}
+                      value={editForm.name}
+                      onChange={(e) => updateEdit("name", e.target.value)}
                       className={inputClass}
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      Achternaam
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.last_name}
-                      onChange={(e) => updateEdit("last_name", e.target.value)}
-                      className={inputClass}
-                    />
+                ) : (
+                  <div className="grid gap-4 grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Voornaam
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.first_name}
+                        onChange={(e) =>
+                          updateEdit("first_name", e.target.value)
+                        }
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Achternaam
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.last_name}
+                        onChange={(e) =>
+                          updateEdit("last_name", e.target.value)
+                        }
+                        className={inputClass}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  E-mail
-                </label>
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => updateEdit("email", e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Telefoon
-                </label>
-                <input
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) => updateEdit("phone", e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {contact.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {contact.email}
-                  </a>
-                </div>
-              )}
-              {contact.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a
-                    href={`tel:${contact.phone}`}
-                    className="text-sm text-foreground hover:underline"
-                  >
-                    {contact.phone}
-                  </a>
-                </div>
-              )}
-              {contact.visit_address && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div className="text-sm text-foreground">
-                    {contact.visit_address}
-                    <br />
-                    {contact.visit_postcode} {contact.visit_city}
-                  </div>
-                </div>
-              )}
-              {!contact.email && !contact.phone && !contact.visit_address && (
-                <p className="text-sm text-muted-foreground">
-                  Geen contactgegevens
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Business info / Address */}
-        <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-base font-semibold text-foreground">
-            {contact.contact_type === "company"
-              ? "Bedrijfsgegevens"
-              : "Details"}
-          </h2>
-          {editing ? (
-            <div className="space-y-3">
-              {contact.contact_type === "company" && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      KvK-nummer
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.kvk_number}
-                      onChange={(e) => updateEdit("kvk_number", e.target.value)}
-                      className={inputClass}
-                      maxLength={8}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
-                      BTW-nummer
-                    </label>
-                    <input
-                      type="text"
-                      value={editForm.btw_number}
-                      onChange={(e) => updateEdit("btw_number", e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
-                </>
-              )}
-              <h3 className="pt-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Adres
-              </h3>
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Straat + huisnummer
-                </label>
-                <input
-                  type="text"
-                  value={editForm.visit_address}
-                  onChange={(e) => updateEdit("visit_address", e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div className="grid gap-3 grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Postcode
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.visit_postcode}
-                    onChange={(e) =>
-                      updateEdit("visit_postcode", e.target.value)
-                    }
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Plaats
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.visit_city}
-                    onChange={(e) => updateEdit("visit_city", e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {contact.kvk_number && (
-                <div>
-                  <p className="text-xs text-muted-foreground">KvK-nummer</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {contact.kvk_number}
-                  </p>
-                </div>
-              )}
-              {contact.btw_number && (
-                <div>
-                  <p className="text-xs text-muted-foreground">BTW-nummer</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {contact.btw_number}
-                  </p>
-                </div>
-              )}
-              {contact.first_name && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Naam</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {contact.first_name} {contact.last_name}
-                  </p>
-                </div>
-              )}
-              {contact.visit_address && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Adres</p>
-                  <p className="text-sm text-foreground">
-                    {contact.visit_address}
-                    <br />
-                    {contact.visit_postcode} {contact.visit_city}
-                  </p>
-                </div>
-              )}
-              {!contact.kvk_number &&
-                !contact.btw_number &&
-                !contact.first_name &&
-                !contact.visit_address && (
-                  <p className="text-sm text-muted-foreground">
-                    Geen extra gegevens
-                  </p>
                 )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Notes */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-3 text-base font-semibold text-foreground">
-          Notities
-        </h2>
-        {editing ? (
-          <textarea
-            value={editForm.notes}
-            onChange={(e) => updateEdit("notes", e.target.value)}
-            rows={4}
-            className={`${inputClass} resize-none`}
-            placeholder="Voeg notities toe..."
-          />
-        ) : contact.notes ? (
-          <p className="text-sm text-foreground whitespace-pre-wrap">
-            {contact.notes}
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground">Geen notities</p>
-        )}
-      </div>
-
-      {/* Linked Cases */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-foreground">
-            Gekoppelde zaken
-          </h2>
-          <Link
-            href={`/zaken/nieuw`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Briefcase className="h-3.5 w-3.5" />
-            Nieuwe zaak
-          </Link>
-        </div>
-        {contactCases && contactCases.length > 0 ? (
-          <div className="space-y-2">
-            {contactCases.map((zaak) => (
-              <Link
-                key={zaak.id}
-                href={`/zaken/${zaak.id}`}
-                className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {zaak.case_number}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {zaak.description || zaak.case_type}
-                      {zaak.client?.id === id && zaak.opposing_party && (
-                        <span> &middot; vs. {zaak.opposing_party.name}</span>
-                      )}
-                      {zaak.opposing_party?.id === id && zaak.client && (
-                        <span> &middot; client: {zaak.client.name}</span>
-                      )}
-                    </p>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      E-mail
+                    </label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => updateEdit("email", e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Telefoon
+                    </label>
+                    <input
+                      type="tel"
+                      value={editForm.phone}
+                      onChange={(e) => updateEdit("phone", e.target.value)}
+                      className={inputClass}
+                    />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-foreground">
-                    {formatCurrency(zaak.total_principal)}
-                  </span>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      STATUS_COLORS[zaak.status] ?? "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {STATUS_LABELS[zaak.status] ?? zaak.status}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      zaak.client?.id === id
-                        ? "bg-primary/10 text-primary"
-                        : "bg-warning/10 text-warning"
-                    }`}
-                  >
-                    {zaak.client?.id === id ? "Client" : "Wederpartij"}
-                  </span>
+                {contact.contact_type === "company" && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        KvK-nummer
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.kvk_number}
+                        onChange={(e) =>
+                          updateEdit("kvk_number", e.target.value)
+                        }
+                        className={inputClass}
+                        maxLength={8}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        BTW-nummer
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.btw_number}
+                        onChange={(e) =>
+                          updateEdit("btw_number", e.target.value)
+                        }
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="pt-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Adres
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Straat + huisnummer
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.visit_address}
+                        onChange={(e) =>
+                          updateEdit("visit_address", e.target.value)
+                        }
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="grid gap-4 grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                          Postcode
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.visit_postcode}
+                          onChange={(e) =>
+                            updateEdit("visit_postcode", e.target.value)
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                          Plaats
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.visit_city}
+                          onChange={(e) =>
+                            updateEdit("visit_city", e.target.value)
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {contact.email && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {contact.email}
+                    </a>
+                  </div>
+                )}
+                {contact.phone && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <a
+                      href={`tel:${contact.phone}`}
+                      className="text-sm text-foreground hover:underline"
+                    >
+                      {contact.phone}
+                    </a>
+                  </div>
+                )}
+                {contact.visit_address && (
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted mt-0.5">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="text-sm text-foreground">
+                      {contact.visit_address}
+                      <br />
+                      {contact.visit_postcode} {contact.visit_city}
+                    </div>
+                  </div>
+                )}
+                {contact.kvk_number && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">KvK</p>
+                      <p className="text-sm font-mono text-foreground">
+                        {contact.kvk_number}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {contact.btw_number && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <Euro className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">BTW</p>
+                      <p className="text-sm font-mono text-foreground">
+                        {contact.btw_number}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {!contact.email &&
+                  !contact.phone &&
+                  !contact.visit_address &&
+                  !contact.kvk_number && (
+                    <p className="text-sm text-muted-foreground">
+                      Geen contactgegevens ingevuld
+                    </p>
+                  )}
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div className="rounded-xl border border-border bg-card p-6">
+            <h2 className="mb-3 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+              Notities
+            </h2>
+            {editing ? (
+              <textarea
+                value={editForm.notes}
+                onChange={(e) => updateEdit("notes", e.target.value)}
+                rows={4}
+                className={`${inputClass} resize-none`}
+                placeholder="Voeg notities toe..."
+              />
+            ) : contact.notes ? (
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                {contact.notes}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Geen notities</p>
+            )}
+          </div>
+        </div>
+
+        {/* Right column: Linked Cases */}
+        <div className="lg:col-span-2">
+          <div className="rounded-xl border border-border bg-card">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-card-foreground">
+                  Gekoppelde zaken
+                  {contactCases && contactCases.length > 0 && (
+                    <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                      {contactCases.length}
+                    </span>
+                  )}
+                </h2>
+              </div>
+              <Link
+                href="/zaken/nieuw"
+                className="text-xs text-primary hover:underline"
+              >
+                + Nieuwe zaak
               </Link>
-            ))}
+            </div>
+            {contactCases && contactCases.length > 0 ? (
+              <div className="divide-y divide-border">
+                {contactCases.map((zaak) => (
+                  <Link
+                    key={zaak.id}
+                    href={`/zaken/${zaak.id}`}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/40 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-mono font-semibold text-foreground">
+                          {zaak.case_number}
+                        </span>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${
+                            STATUS_BADGE[zaak.status] ??
+                            "bg-slate-50 text-slate-600 ring-slate-500/20"
+                          }`}
+                        >
+                          {STATUS_LABELS[zaak.status] ?? zaak.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {zaak.client?.id === id && zaak.opposing_party
+                          ? `vs. ${zaak.opposing_party.name}`
+                          : zaak.client?.name ?? zaak.description ?? ""}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="text-sm font-semibold text-foreground tabular-nums">
+                        {formatCurrency(zaak.total_principal)}
+                      </p>
+                      <span
+                        className={`text-[10px] font-medium ${
+                          zaak.client?.id === id
+                            ? "text-primary"
+                            : "text-amber-600"
+                        }`}
+                      >
+                        {zaak.client?.id === id ? "Client" : "Wederpartij"}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="px-5 py-8 text-center">
+                <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Nog geen gekoppelde zaken
+                </p>
+                <Link
+                  href="/zaken/nieuw"
+                  className="mt-1 inline-block text-sm text-primary hover:underline"
+                >
+                  Maak een nieuwe zaak aan
+                </Link>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-border py-8 text-center">
-            <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/30" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Nog geen gekoppelde zaken
-            </p>
-            <Link
-              href="/zaken/nieuw"
-              className="mt-1 inline-block text-sm text-primary hover:underline"
-            >
-              Maak een nieuwe zaak aan
-            </Link>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

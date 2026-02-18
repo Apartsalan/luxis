@@ -18,6 +18,13 @@ import {
   Plus,
   Receipt,
   Wallet,
+  CheckCircle2,
+  AlertTriangle,
+  Building2,
+  User,
+  CalendarDays,
+  ArrowRight,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -59,16 +66,26 @@ const STATUS_LABELS: Record<string, string> = {
   afgesloten: "Afgesloten",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  nieuw: "bg-blue-100 text-blue-700",
-  "14_dagenbrief": "bg-yellow-100 text-yellow-700",
-  sommatie: "bg-orange-100 text-orange-700",
-  dagvaarding: "bg-red-100 text-red-700",
-  vonnis: "bg-purple-100 text-purple-700",
-  executie: "bg-red-200 text-red-800",
-  betaald: "bg-emerald-100 text-emerald-700",
-  afgesloten: "bg-gray-100 text-gray-600",
+const STATUS_BADGE: Record<string, string> = {
+  nieuw: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  "14_dagenbrief": "bg-sky-50 text-sky-700 ring-sky-600/20",
+  sommatie: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  dagvaarding: "bg-red-50 text-red-700 ring-red-600/20",
+  vonnis: "bg-purple-50 text-purple-700 ring-purple-600/20",
+  executie: "bg-red-50 text-red-800 ring-red-700/20",
+  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
 };
+
+const PIPELINE_STEPS = [
+  "nieuw",
+  "14_dagenbrief",
+  "sommatie",
+  "dagvaarding",
+  "vonnis",
+  "executie",
+  "betaald",
+];
 
 const NEXT_STATUSES: Record<string, string[]> = {
   nieuw: ["14_dagenbrief", "afgesloten"],
@@ -95,13 +112,13 @@ const INTEREST_LABELS: Record<string, string> = {
   contractual: "Contractuele rente",
 };
 
-const ACTIVITY_ICONS: Record<string, string> = {
-  status_change: "📋",
-  note: "📝",
-  phone_call: "📞",
-  email: "📧",
-  document: "📄",
-  payment: "💰",
+const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
+  status_change: FileText,
+  note: FileText,
+  phone_call: FileText,
+  email: FileText,
+  document: FileText,
+  payment: CreditCard,
 };
 
 export default function ZaakDetailPage() {
@@ -142,12 +159,14 @@ export default function ZaakDetailPage() {
     return (
       <div className="space-y-6 animate-fade-in">
         <div className="h-8 w-48 rounded-md skeleton" />
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="h-14 rounded-xl skeleton" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-20 rounded-lg skeleton" />
+            <div key={i} className="h-24 rounded-xl skeleton" />
           ))}
         </div>
-        <div className="h-64 rounded-lg skeleton" />
+        <div className="h-10 rounded-lg skeleton" />
+        <div className="h-64 rounded-xl skeleton" />
       </div>
     );
   }
@@ -155,12 +174,15 @@ export default function ZaakDetailPage() {
   if (!zaak) {
     return (
       <div className="py-20 text-center">
-        <p className="text-muted-foreground">Zaak niet gevonden</p>
+        <Briefcase className="mx-auto h-12 w-12 text-muted-foreground/30" />
+        <p className="mt-4 text-base font-medium text-foreground">
+          Zaak niet gevonden
+        </p>
         <Link
           href="/zaken"
           className="mt-2 inline-block text-sm text-primary hover:underline"
         >
-          Terug naar zaken
+          ← Terug naar zaken
         </Link>
       </div>
     );
@@ -177,48 +199,42 @@ export default function ZaakDetailPage() {
     { id: "partijen", label: "Partijen", icon: Users },
   ];
 
+  const currentStepIndex = PIPELINE_STEPS.indexOf(zaak.status);
+  const isTerminal = zaak.status === "betaald" || zaak.status === "afgesloten";
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
           <Link
             href="/zaken"
-            className="rounded-lg p-2 hover:bg-muted transition-colors"
+            className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-foreground">
                 {zaak.case_number}
               </h1>
               <span
-                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  STATUS_COLORS[zaak.status] ?? "bg-gray-100 text-gray-600"
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                  STATUS_BADGE[zaak.status] ??
+                  "bg-slate-50 text-slate-600 ring-slate-500/20"
                 }`}
               >
                 {STATUS_LABELS[zaak.status] ?? zaak.status}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {TYPE_LABELS[zaak.case_type]} &middot; Geopend{" "}
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {TYPE_LABELS[zaak.case_type]} · Geopend{" "}
               {formatDate(zaak.date_opened)}
+              {zaak.assigned_to && ` · ${zaak.assigned_to.full_name}`}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {NEXT_STATUSES[zaak.status]?.map((nextStatus) => (
-            <button
-              key={nextStatus}
-              onClick={() => handleStatusChange(nextStatus)}
-              disabled={updateStatus.isPending}
-              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
-            >
-              <ChevronRight className="h-3 w-3" />
-              {STATUS_LABELS[nextStatus]}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleDelete}
             className="rounded-lg border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 transition-colors"
@@ -229,53 +245,198 @@ export default function ZaakDetailPage() {
         </div>
       </div>
 
-      {/* Quick stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Pipeline Stepper */}
+      {zaak.case_type === "incasso" && (
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+            {PIPELINE_STEPS.map((step, index) => {
+              const isActive = step === zaak.status;
+              const isPast = currentStepIndex >= 0 && index < currentStepIndex;
+              const isFuture =
+                currentStepIndex >= 0 && index > currentStepIndex;
+              const canAdvanceTo =
+                NEXT_STATUSES[zaak.status]?.includes(step) && !isTerminal;
+
+              return (
+                <div key={step} className="flex items-center flex-1 min-w-0">
+                  <button
+                    onClick={() =>
+                      canAdvanceTo ? handleStatusChange(step) : undefined
+                    }
+                    disabled={!canAdvanceTo}
+                    className={`flex flex-col items-center gap-1.5 flex-1 min-w-0 group ${
+                      canAdvanceTo ? "cursor-pointer" : "cursor-default"
+                    }`}
+                    title={
+                      canAdvanceTo
+                        ? `Wijzig naar ${STATUS_LABELS[step]}`
+                        : STATUS_LABELS[step]
+                    }
+                  >
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                        isActive
+                          ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                          : isPast
+                            ? "bg-emerald-500 text-white"
+                            : isTerminal && step === "betaald"
+                              ? "bg-emerald-500 text-white"
+                              : canAdvanceTo
+                                ? "border-2 border-primary/40 text-primary group-hover:bg-primary/10"
+                                : "border-2 border-border text-muted-foreground"
+                      }`}
+                    >
+                      {isPast ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    <span
+                      className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${
+                        isActive
+                          ? "text-primary"
+                          : isPast
+                            ? "text-emerald-600"
+                            : "text-muted-foreground"
+                      }`}
+                    >
+                      {STATUS_LABELS[step]}
+                    </span>
+                  </button>
+                  {index < PIPELINE_STEPS.length - 1 && (
+                    <div
+                      className={`hidden sm:block h-0.5 w-4 shrink-0 mx-0.5 ${
+                        isPast ? "bg-emerald-400" : "bg-border"
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Status action buttons */}
+          {!isTerminal &&
+            NEXT_STATUSES[zaak.status] &&
+            NEXT_STATUSES[zaak.status].length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+                <span className="text-xs text-muted-foreground self-center mr-1">
+                  Volgende stap:
+                </span>
+                {NEXT_STATUSES[zaak.status].map((nextStatus) => (
+                  <button
+                    key={nextStatus}
+                    onClick={() => handleStatusChange(nextStatus)}
+                    disabled={updateStatus.isPending}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                      nextStatus === "betaald" || nextStatus === "afgesloten"
+                        ? "border border-border hover:bg-muted text-muted-foreground"
+                        : "bg-primary/10 text-primary hover:bg-primary/20"
+                    }`}
+                  >
+                    <ArrowRight className="h-3 w-3" />
+                    {STATUS_LABELS[nextStatus]}
+                  </button>
+                ))}
+              </div>
+            )}
+        </div>
+      )}
+
+      {/* Non-incasso: simple status actions */}
+      {zaak.case_type !== "incasso" &&
+        !isTerminal &&
+        NEXT_STATUSES[zaak.status] &&
+        NEXT_STATUSES[zaak.status].length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs text-muted-foreground self-center mr-1">
+              Status wijzigen:
+            </span>
+            {NEXT_STATUSES[zaak.status].map((nextStatus) => (
+              <button
+                key={nextStatus}
+                onClick={() => handleStatusChange(nextStatus)}
+                disabled={updateStatus.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+              >
+                <ChevronRight className="h-3 w-3" />
+                {STATUS_LABELS[nextStatus]}
+              </button>
+            ))}
+          </div>
+        )}
+
+      {/* Quick Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Hoofdsom</p>
-          <p className="text-lg font-bold text-foreground">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
+              <Euro className="h-4 w-4 text-blue-600" />
+            </div>
+            <span className="text-xs text-muted-foreground">Hoofdsom</span>
+          </div>
+          <p className="text-xl font-bold text-foreground tabular-nums">
             {formatCurrency(zaak.total_principal)}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Betaald</p>
-          <p className="text-lg font-bold text-success">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
+              <CreditCard className="h-4 w-4 text-emerald-600" />
+            </div>
+            <span className="text-xs text-muted-foreground">Betaald</span>
+          </div>
+          <p className="text-xl font-bold text-emerald-600 tabular-nums">
             {formatCurrency(zaak.total_paid)}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Rente</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
+              <CalendarDays className="h-4 w-4 text-amber-600" />
+            </div>
+            <span className="text-xs text-muted-foreground">Rente</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
             {INTEREST_LABELS[zaak.interest_type] ?? zaak.interest_type}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">Client</p>
-          <p className="text-sm font-medium text-foreground">
-            {zaak.client?.name ?? "-"}
-          </p>
-          {zaak.opposing_party && (
-            <>
-              <p className="text-xs text-muted-foreground mt-2">Wederpartij</p>
-              <p className="text-sm font-medium text-foreground">
-                {zaak.opposing_party.name}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50">
+              <Users className="h-4 w-4 text-violet-600" />
+            </div>
+            <span className="text-xs text-muted-foreground">Partijen</span>
+          </div>
+          <div className="space-y-1">
+            {zaak.client && (
+              <Link
+                href={`/relaties/${zaak.client.id}`}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors block truncate"
+              >
+                {zaak.client.name}
+              </Link>
+            )}
+            {zaak.opposing_party && (
+              <p className="text-xs text-muted-foreground truncate">
+                vs. {zaak.opposing_party.name}
               </p>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-border overflow-x-auto">
-        <nav className="flex gap-1 min-w-max">
+        <nav className="flex gap-0.5 min-w-max">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -302,89 +463,156 @@ export default function ZaakDetailPage() {
 
 function OverzichtTab({ zaak }: { zaak: any }) {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-4 text-base font-semibold text-foreground">
-          Zaakgegevens
-        </h2>
-        <dl className="space-y-3">
-          <div>
-            <dt className="text-xs text-muted-foreground">Beschrijving</dt>
-            <dd className="text-sm text-foreground">
-              {zaak.description || "-"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Referentie</dt>
-            <dd className="text-sm text-foreground">
-              {zaak.reference || "-"}
-            </dd>
-          </div>
-          {zaak.contractual_rate && (
+    <div className="grid gap-6 lg:grid-cols-5">
+      {/* Left: Case details */}
+      <div className="lg:col-span-3 space-y-6">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+            Zaakgegevens
+          </h2>
+          <dl className="grid gap-4 sm:grid-cols-2">
             <div>
-              <dt className="text-xs text-muted-foreground">
-                Contractueel rentepercentage
+              <dt className="text-xs text-muted-foreground mb-1">
+                Beschrijving
               </dt>
               <dd className="text-sm text-foreground">
-                {zaak.contractual_rate}%
-                {zaak.contractual_compound
-                  ? " (samengesteld)"
-                  : " (enkelvoudig)"}
+                {zaak.description || "-"}
               </dd>
             </div>
-          )}
-          {zaak.assigned_to && (
             <div>
-              <dt className="text-xs text-muted-foreground">Toegewezen aan</dt>
-              <dd className="text-sm text-foreground">
-                {zaak.assigned_to.full_name}
+              <dt className="text-xs text-muted-foreground mb-1">
+                Referentie
+              </dt>
+              <dd className="text-sm text-foreground font-mono">
+                {zaak.reference || "-"}
               </dd>
             </div>
-          )}
-          {zaak.date_closed && (
-            <div>
-              <dt className="text-xs text-muted-foreground">Datum gesloten</dt>
-              <dd className="text-sm text-foreground">
-                {formatDate(zaak.date_closed)}
-              </dd>
-            </div>
-          )}
-        </dl>
+            {zaak.contractual_rate && (
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">
+                  Contractueel rentepercentage
+                </dt>
+                <dd className="text-sm text-foreground">
+                  {zaak.contractual_rate}%
+                  {zaak.contractual_compound
+                    ? " (samengesteld)"
+                    : " (enkelvoudig)"}
+                </dd>
+              </div>
+            )}
+            {zaak.assigned_to && (
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">
+                  Toegewezen aan
+                </dt>
+                <dd className="text-sm text-foreground">
+                  {zaak.assigned_to.full_name}
+                </dd>
+              </div>
+            )}
+            {zaak.date_closed && (
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">
+                  Datum gesloten
+                </dt>
+                <dd className="text-sm text-foreground">
+                  {formatDate(zaak.date_closed)}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+
+        {/* Partijen inline */}
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+            Partijen
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {zaak.client && (
+              <Link
+                href={`/relaties/${zaak.client.id}`}
+                className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-primary/30 hover:bg-muted/50 transition-all"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                  <Building2 className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {zaak.client.name}
+                  </p>
+                  <p className="text-xs text-primary">Client</p>
+                </div>
+              </Link>
+            )}
+            {zaak.opposing_party && (
+              <Link
+                href={`/relaties/${zaak.opposing_party.id}`}
+                className="flex items-center gap-3 rounded-lg border border-border p-3 hover:border-amber-300/50 hover:bg-muted/50 transition-all"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-50">
+                  <User className="h-4 w-4 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {zaak.opposing_party.name}
+                  </p>
+                  <p className="text-xs text-amber-600">Wederpartij</p>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-4 text-base font-semibold text-foreground">
-          Recente activiteit
-        </h2>
-        {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-          <div className="space-y-2">
-            {zaak.recent_activities.slice(0, 5).map((activity: any) => (
-              <div
-                key={activity.id}
-                className="flex items-start gap-3 rounded-lg p-2.5 -mx-1"
-              >
-                <span className="mt-0.5 text-base">
-                  {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {activity.title}
-                  </p>
-                  {activity.description && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {activity.description}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    {formatDate(activity.created_at)}
-                  </p>
-                </div>
-              </div>
-            ))}
+      {/* Right: Recent Activity */}
+      <div className="lg:col-span-2">
+        <div className="rounded-xl border border-border bg-card">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-card-foreground">
+              Recente activiteit
+            </h2>
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Geen activiteiten</p>
-        )}
+          {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
+            <div className="divide-y divide-border">
+              {zaak.recent_activities.slice(0, 6).map((activity: any) => {
+                const Icon =
+                  ACTIVITY_ICONS[activity.activity_type] ?? FileText;
+                return (
+                  <div
+                    key={activity.id}
+                    className="flex items-start gap-3 px-5 py-3.5"
+                  >
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {activity.title}
+                      </p>
+                      {activity.description && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {activity.description}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDateShort(activity.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="px-5 py-8 text-center">
+              <Clock className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Nog geen activiteiten
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -555,20 +783,20 @@ function VorderingenTab({ caseId }: { caseId: string }) {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Beschrijving
                 </th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Hoofdsom
                 </th>
-                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Verzuimdatum
                 </th>
-                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="hidden md:table-cell px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Rente
                 </th>
-                <th className="px-4 py-2.5 w-10" />
+                <th className="px-4 py-3 w-10" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -591,13 +819,13 @@ function VorderingenTab({ caseId }: { caseId: string }) {
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+                    <td className="px-4 py-3 text-right text-sm font-semibold text-foreground tabular-nums">
                       {formatCurrency(claim.principal_amount)}
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3 text-sm text-muted-foreground">
                       {formatDateShort(claim.default_date)}
                     </td>
-                    <td className="hidden md:table-cell px-4 py-3 text-right text-sm text-accent font-medium">
+                    <td className="hidden md:table-cell px-4 py-3 text-right text-sm text-accent font-medium tabular-nums">
                       {claimInterest
                         ? formatCurrency(claimInterest.total_interest)
                         : "-"}
@@ -617,14 +845,14 @@ function VorderingenTab({ caseId }: { caseId: string }) {
             {interest && (
               <tfoot>
                 <tr className="border-t-2 border-border bg-muted/20">
-                  <td className="px-4 py-3 text-sm font-semibold text-foreground">
+                  <td className="px-4 py-3 text-sm font-bold text-foreground">
                     Totaal
                   </td>
-                  <td className="px-4 py-3 text-right text-sm font-bold text-foreground">
+                  <td className="px-4 py-3 text-right text-sm font-bold text-foreground tabular-nums">
                     {formatCurrency(interest.total_principal)}
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3" />
-                  <td className="hidden md:table-cell px-4 py-3 text-right text-sm font-bold text-accent">
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-sm font-bold text-accent tabular-nums">
                     {formatCurrency(interest.total_interest)}
                   </td>
                   <td className="px-4 py-3" />
@@ -801,23 +1029,23 @@ function BetalingenTab({ caseId }: { caseId: string }) {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Datum
                 </th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Bedrag
                 </th>
-                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Omschrijving
                 </th>
-                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="hidden md:table-cell px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Kosten
                 </th>
-                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="hidden md:table-cell px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Rente
                 </th>
-                <th className="hidden md:table-cell px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="hidden md:table-cell px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Hoofdsom
                 </th>
               </tr>
@@ -831,19 +1059,19 @@ function BetalingenTab({ caseId }: { caseId: string }) {
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {formatDateShort(payment.payment_date)}
                   </td>
-                  <td className="px-4 py-3 text-right text-sm font-medium text-success">
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-emerald-600 tabular-nums">
                     {formatCurrency(payment.amount)}
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-sm text-muted-foreground">
                     {payment.description || "-"}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground">
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground tabular-nums">
                     {formatCurrency(payment.allocated_to_costs)}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground">
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground tabular-nums">
                     {formatCurrency(payment.allocated_to_interest)}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground">
+                  <td className="hidden md:table-cell px-4 py-3 text-right text-xs text-muted-foreground tabular-nums">
                     {formatCurrency(payment.allocated_to_principal)}
                   </td>
                 </tr>
@@ -851,7 +1079,8 @@ function BetalingenTab({ caseId }: { caseId: string }) {
             </tbody>
           </table>
           <div className="border-t border-border bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
-            Art. 6:44 BW — Betalingen worden automatisch verdeeld: eerst kosten, dan rente, dan hoofdsom
+            Art. 6:44 BW — Betalingen worden automatisch verdeeld: eerst kosten,
+            dan rente, dan hoofdsom
           </div>
         </div>
       ) : (
@@ -892,48 +1121,48 @@ function FinancieelTab({ caseId }: { caseId: string }) {
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            <tr className="border-b border-border">
+              <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Post
               </th>
-              <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Totaal
               </th>
-              <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Betaald
               </th>
-              <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Openstaand
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             <tr>
-              <td className="px-5 py-3 text-sm text-foreground">Hoofdsom</td>
-              <td className="px-5 py-3 text-right text-sm font-medium">
+              <td className="px-5 py-3.5 text-sm text-foreground">Hoofdsom</td>
+              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
                 {formatCurrency(summary.total_principal)}
               </td>
-              <td className="px-5 py-3 text-right text-sm text-success">
+              <td className="px-5 py-3.5 text-right text-sm text-emerald-600 tabular-nums">
                 {formatCurrency(summary.total_paid_principal)}
               </td>
-              <td className="px-5 py-3 text-right text-sm font-medium">
+              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
                 {formatCurrency(summary.remaining_principal)}
               </td>
             </tr>
             <tr>
-              <td className="px-5 py-3 text-sm text-foreground">Rente</td>
-              <td className="px-5 py-3 text-right text-sm font-medium">
+              <td className="px-5 py-3.5 text-sm text-foreground">Rente</td>
+              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
                 {formatCurrency(summary.total_interest)}
               </td>
-              <td className="px-5 py-3 text-right text-sm text-success">
+              <td className="px-5 py-3.5 text-right text-sm text-emerald-600 tabular-nums">
                 {formatCurrency(summary.total_paid_interest)}
               </td>
-              <td className="px-5 py-3 text-right text-sm font-medium">
+              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
                 {formatCurrency(summary.remaining_interest)}
               </td>
             </tr>
             <tr>
-              <td className="px-5 py-3 text-sm text-foreground">
+              <td className="px-5 py-3.5 text-sm text-foreground">
                 BIK (art. 6:96 BW)
                 {summary.bik_btw > 0 && (
                   <span className="ml-1 text-xs text-muted-foreground">
@@ -941,29 +1170,29 @@ function FinancieelTab({ caseId }: { caseId: string }) {
                   </span>
                 )}
               </td>
-              <td className="px-5 py-3 text-right text-sm font-medium">
+              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
                 {formatCurrency(summary.total_bik)}
               </td>
-              <td className="px-5 py-3 text-right text-sm text-success">
+              <td className="px-5 py-3.5 text-right text-sm text-emerald-600 tabular-nums">
                 {formatCurrency(summary.total_paid_costs)}
               </td>
-              <td className="px-5 py-3 text-right text-sm font-medium">
+              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
                 {formatCurrency(summary.remaining_costs)}
               </td>
             </tr>
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border bg-muted/30">
-              <td className="px-5 py-3 text-sm font-bold text-foreground">
+              <td className="px-5 py-3.5 text-sm font-bold text-foreground">
                 Totaal
               </td>
-              <td className="px-5 py-3 text-right text-sm font-bold text-foreground">
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-foreground tabular-nums">
                 {formatCurrency(summary.grand_total)}
               </td>
-              <td className="px-5 py-3 text-right text-sm font-bold text-success">
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-emerald-600 tabular-nums">
                 {formatCurrency(summary.total_paid)}
               </td>
-              <td className="px-5 py-3 text-right text-sm font-bold text-primary">
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-primary tabular-nums">
                 {formatCurrency(summary.total_outstanding)}
               </td>
             </tr>
@@ -975,7 +1204,7 @@ function FinancieelTab({ caseId }: { caseId: string }) {
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between">
             <p className="text-sm text-foreground">Derdengelden saldo</p>
-            <p className="text-lg font-bold text-primary">
+            <p className="text-lg font-bold text-primary tabular-nums">
               {formatCurrency(summary.derdengelden_balance)}
             </p>
           </div>
@@ -1045,7 +1274,7 @@ function DerdengeldenTab({ caseId }: { caseId: string }) {
           {balance && (
             <p className="text-sm text-muted-foreground">
               Saldo:{" "}
-              <span className="font-semibold text-primary">
+              <span className="font-semibold text-primary tabular-nums">
                 {formatCurrency(balance.balance)}
               </span>
             </p>
@@ -1156,17 +1385,17 @@ function DerdengeldenTab({ caseId }: { caseId: string }) {
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Datum
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Type
                 </th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Bedrag
                 </th>
-                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Wederpartij
                 </th>
               </tr>
@@ -1182,10 +1411,10 @@ function DerdengeldenTab({ caseId }: { caseId: string }) {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
                         tx.transaction_type === "deposit"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-orange-100 text-orange-700"
+                          ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                          : "bg-amber-50 text-amber-700 ring-amber-600/20"
                       }`}
                     >
                       {tx.transaction_type === "deposit"
@@ -1194,10 +1423,10 @@ function DerdengeldenTab({ caseId }: { caseId: string }) {
                     </span>
                   </td>
                   <td
-                    className={`px-4 py-3 text-right text-sm font-medium ${
+                    className={`px-4 py-3 text-right text-sm font-semibold tabular-nums ${
                       tx.transaction_type === "deposit"
-                        ? "text-success"
-                        : "text-warning"
+                        ? "text-emerald-600"
+                        : "text-amber-600"
                     }`}
                   >
                     {tx.transaction_type === "deposit" ? "+" : "-"}
@@ -1227,38 +1456,48 @@ function DerdengeldenTab({ caseId }: { caseId: string }) {
 
 function ActiviteitenTab({ zaak }: { zaak: any }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
-      <h2 className="mb-4 text-base font-semibold text-foreground">
-        Alle activiteiten
-      </h2>
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+        <Clock className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-card-foreground">
+          Alle activiteiten
+        </h2>
+      </div>
       {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-        <div className="space-y-1">
-          {zaak.recent_activities.map((activity: any) => (
-            <div
-              key={activity.id}
-              className="flex items-start gap-3 border-b border-border pb-3 last:border-0 py-2.5"
-            >
-              <span className="mt-0.5 text-base">
-                {ACTIVITY_ICONS[activity.activity_type] ?? "📌"}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground">
-                  {activity.title}
-                </p>
-                {activity.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {activity.description}
+        <div className="divide-y divide-border">
+          {zaak.recent_activities.map((activity: any) => {
+            const Icon =
+              ACTIVITY_ICONS[activity.activity_type] ?? FileText;
+            return (
+              <div
+                key={activity.id}
+                className="flex items-start gap-3 px-5 py-3.5"
+              >
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {activity.title}
                   </p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formatDate(activity.created_at)}
-                </p>
+                  {activity.description && (
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {activity.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDate(activity.created_at)}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Geen activiteiten</p>
+        <div className="px-5 py-8 text-center">
+          <Clock className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Geen activiteiten</p>
+        </div>
       )}
     </div>
   );
@@ -1269,52 +1508,63 @@ function ActiviteitenTab({ zaak }: { zaak: any }) {
 function PartijenTab({ zaak }: { zaak: any }) {
   return (
     <div className="rounded-xl border border-border bg-card p-6">
-      <h2 className="mb-4 text-base font-semibold text-foreground">
+      <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
         Partijen
       </h2>
-      <div className="space-y-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {zaak.client && (
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <Link
-              href={`/relaties/${zaak.client.id}`}
-              className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-            >
-              {zaak.client.name}
-            </Link>
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-              Client
-            </span>
-          </div>
+          <Link
+            href={`/relaties/${zaak.client.id}`}
+            className="flex items-center gap-3 rounded-lg border border-border p-4 hover:border-primary/30 hover:bg-muted/50 transition-all"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {zaak.client.name}
+              </p>
+              <span className="text-xs font-medium text-primary">Client</span>
+            </div>
+          </Link>
         )}
         {zaak.opposing_party && (
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <Link
-              href={`/relaties/${zaak.opposing_party.id}`}
-              className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-            >
-              {zaak.opposing_party.name}
-            </Link>
-            <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
-              Wederpartij
-            </span>
-          </div>
+          <Link
+            href={`/relaties/${zaak.opposing_party.id}`}
+            className="flex items-center gap-3 rounded-lg border border-border p-4 hover:border-amber-300/50 hover:bg-muted/50 transition-all"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50">
+              <User className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {zaak.opposing_party.name}
+              </p>
+              <span className="text-xs font-medium text-amber-600">
+                Wederpartij
+              </span>
+            </div>
+          </Link>
         )}
         {zaak.parties &&
           zaak.parties.map((party: any) => (
-            <div
+            <Link
               key={party.id}
-              className="flex items-center justify-between rounded-lg border border-border p-3"
+              href={`/relaties/${party.contact.id}`}
+              className="flex items-center gap-3 rounded-lg border border-border p-4 hover:bg-muted/50 transition-all"
             >
-              <Link
-                href={`/relaties/${party.contact.id}`}
-                className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-              >
-                {party.contact.name}
-              </Link>
-              <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                {party.role}
-              </span>
-            </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                <User className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {party.contact.name}
+                </p>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {party.role}
+                </span>
+              </div>
+            </Link>
           ))}
       </div>
     </div>
@@ -1422,7 +1672,7 @@ function DocumentenTab({ caseId }: { caseId: string }) {
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between rounded-lg border border-border p-3"
+                className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">

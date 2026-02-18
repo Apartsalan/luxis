@@ -13,13 +13,14 @@ import {
 } from "lucide-react";
 import { useRelations } from "@/hooks/use-relations";
 import { formatDateShort } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 export default function RelatiesPage() {
   const [search, setSearch] = useState("");
   const [contactType, setContactType] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useRelations({
+  const { data, isLoading, isError, error, refetch } = useRelations({
     page,
     search: search || undefined,
     contact_type: contactType || undefined,
@@ -73,7 +74,12 @@ export default function RelatiesPage() {
       </div>
 
       {/* Table */}
-      {isLoading ? (
+      {isError ? (
+        <QueryError
+          message={error?.message}
+          onRetry={() => refetch()}
+        />
+      ) : isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-14 rounded-lg skeleton" />

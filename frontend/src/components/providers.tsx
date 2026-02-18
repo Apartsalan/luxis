@@ -1,8 +1,8 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react-query";
 import { useState } from "react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -15,6 +15,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
             refetchOnWindowFocus: false,
           },
         },
+        mutationCache: new MutationCache({
+          onError: (error) => {
+            // Global mutation error toast — individual handlers can override
+            if (error instanceof Error) {
+              toast.error(error.message);
+            }
+          },
+        }),
       })
   );
 

@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 interface DashboardSummary {
   total_active_cases: number;
@@ -72,25 +73,39 @@ const ACTIVITY_ICONS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { data: summary, isLoading: summaryLoading } =
-    useQuery<DashboardSummary>({
-      queryKey: ["dashboard", "summary"],
-      queryFn: async () => {
-        const res = await api("/api/dashboard/summary");
-        if (!res.ok) throw new Error("Failed to fetch dashboard");
-        return res.json();
-      },
-    });
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    error: summaryErr,
+    refetch: refetchSummary,
+  } = useQuery<DashboardSummary>({
+    queryKey: ["dashboard", "summary"],
+    queryFn: async () => {
+      const res = await api("/api/dashboard/summary");
+      if (!res.ok) throw new Error("Fout bij laden dashboard");
+      return res.json();
+    },
+  });
 
   const { data: activity, isLoading: activityLoading } =
     useQuery<RecentActivity>({
       queryKey: ["dashboard", "recent-activity"],
       queryFn: async () => {
         const res = await api("/api/dashboard/recent-activity?limit=10");
-        if (!res.ok) throw new Error("Failed to fetch activity");
+        if (!res.ok) throw new Error("Fout bij laden activiteit");
         return res.json();
       },
     });
+
+  if (summaryError) {
+    return (
+      <QueryError
+        message={summaryErr?.message}
+        onRetry={() => refetchSummary()}
+      />
+    );
+  }
 
   if (summaryLoading) {
     return (

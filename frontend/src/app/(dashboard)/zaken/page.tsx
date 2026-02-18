@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, Search, Briefcase } from "lucide-react";
 import { useCases } from "@/hooks/use-cases";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -41,7 +42,7 @@ export default function ZakenPage() {
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useCases({
+  const { data, isLoading, isError, error, refetch } = useCases({
     page,
     case_type: caseType || undefined,
     status: status || undefined,
@@ -113,7 +114,12 @@ export default function ZakenPage() {
       </div>
 
       {/* Table */}
-      {isLoading ? (
+      {isError ? (
+        <QueryError
+          message={error?.message}
+          onRetry={() => refetch()}
+        />
+      ) : isLoading ? (
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="h-14 rounded-lg skeleton" />

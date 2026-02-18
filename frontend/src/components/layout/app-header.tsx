@@ -122,7 +122,10 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
       <div className="flex items-center gap-2">
         <button
           className="hidden sm:flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
-          onClick={() => {}}
+          onClick={() => {
+            // Trigger Ctrl+K to open command palette
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+          }}
         >
           <Search className="h-3.5 w-3.5" />
           <span>Zoeken...</span>

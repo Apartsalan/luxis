@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react
 import { useState } from "react";
 import { Toaster, toast } from "sonner";
 import { AuthContext, useAuthProvider } from "@/hooks/use-auth";
+import { CommandPalette } from "@/components/command-palette";
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuthProvider();
@@ -35,6 +36,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {children}
+        <CommandPalette />
         <Toaster
           position="bottom-right"
           richColors

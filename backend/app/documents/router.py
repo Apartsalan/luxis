@@ -167,6 +167,32 @@ async def delete_document(
     )
 
 
+# ── Merge Fields Endpoint ──────────────────────────────────────────────────
+
+
+@router.get(
+    "/merge-fields",
+    response_model=list[MergeFieldCategory],
+)
+async def list_merge_fields():
+    """Return all available merge fields grouped by category with NL labels.
+
+    Used by the template editor to show which fields can be inserted.
+    """
+    definitions = get_merge_field_definitions()
+    return [
+        {
+            "category": cat_key,
+            "label": cat_data["label"],
+            "fields": [
+                {"key": key, "label": label}
+                for key, label in cat_data["fields"]
+            ],
+        }
+        for cat_key, cat_data in definitions.items()
+    ]
+
+
 # ── Docx Template Endpoints ────────────────────────────────────────────────
 
 

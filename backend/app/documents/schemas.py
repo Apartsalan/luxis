@@ -131,3 +131,17 @@ class DocxTemplateInfo(BaseModel):
     template_type: str
     filename: str
     available: bool
+
+
+# ── Merge Fields Schemas ──────────────────────────────────────────────────
+
+
+class MergeFieldItem(BaseModel):
+    key: str = Field(..., description="Merge field key, e.g. 'kantoor.naam'")
+    label: str = Field(..., description="Nederlandse label, e.g. 'Kantoornaam'")
+
+
+class MergeFieldCategory(BaseModel):
+    category: str = Field(..., description="Category key, e.g. 'kantoor'")
+    label: str = Field(..., description="Nederlandse categorie label, e.g. 'Kantoor'")
+    fields: list[MergeFieldItem]

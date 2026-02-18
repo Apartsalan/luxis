@@ -54,6 +54,9 @@ class TenantUpdateRequest(BaseModel):
     address: str | None = None
     postal_code: str | None = None
     city: str | None = None
+    iban: str | None = None
+    phone: str | None = None
+    email: str | None = None
 
 
 class TenantDetailResponse(BaseModel):
@@ -65,5 +68,8 @@ class TenantDetailResponse(BaseModel):
     address: str | None = None
     postal_code: str | None = None
     city: str | None = None
+    iban: str | None = None
+    phone: str | None = None
+    email: str | None = None
 
     model_config = {"from_attributes": True}

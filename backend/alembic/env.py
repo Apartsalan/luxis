@@ -14,6 +14,7 @@ from app.relations.models import Contact, ContactLink  # noqa: F401
 from app.cases.models import Case, CaseActivity, CaseParty  # noqa: F401
 from app.collections.models import Claim, Derdengelden, InterestRate, Payment, PaymentArrangement  # noqa: F401,E501
 from app.documents.models import DocumentTemplate, GeneratedDocument  # noqa: F401
+from app.workflow.models import WorkflowStatus, WorkflowTransition, WorkflowTask, WorkflowRule  # noqa: F401,E501
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

@@ -35,8 +35,12 @@ STATUS_TRANSITIONS: dict[str, list[str]] = {
 # ── Request Schemas ──────────────────────────────────────────────────────────
 
 
+DEBTOR_TYPES = ("b2b", "b2c")
+
+
 class CaseCreate(BaseModel):
     case_type: str = Field(default="incasso", description="incasso, insolventie, advies, overig")
+    debtor_type: str = Field(default="b2b", description="b2b or b2c")
     description: str | None = None
     reference: str | None = None
     interest_type: str = Field(
@@ -52,6 +56,7 @@ class CaseCreate(BaseModel):
 
 
 class CaseUpdate(BaseModel):
+    debtor_type: str | None = None
     description: str | None = None
     reference: str | None = None
     interest_type: str | None = None
@@ -131,6 +136,7 @@ class CaseResponse(BaseModel):
     tenant_id: uuid.UUID
     case_number: str
     case_type: str
+    debtor_type: str
     status: str
     description: str | None
     reference: str | None
@@ -157,6 +163,7 @@ class CaseSummary(BaseModel):
     id: uuid.UUID
     case_number: str
     case_type: str
+    debtor_type: str
     status: str
     description: str | None
     client: ContactBrief

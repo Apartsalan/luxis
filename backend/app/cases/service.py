@@ -10,6 +10,7 @@ from app.cases.models import Case, CaseActivity, CaseParty
 from app.cases.schemas import (
     CASE_STATUSES,
     CASE_TYPES,
+    DEBTOR_TYPES,
     INTEREST_TYPES,
     STATUS_TRANSITIONS,
     CaseActivityCreate,
@@ -134,6 +135,13 @@ async def create_case(
             f"Kies uit: {', '.join(CASE_TYPES)}"
         )
 
+    # Validate debtor_type
+    if data.debtor_type not in DEBTOR_TYPES:
+        raise BadRequestError(
+            f"Ongeldig debiteurtype: {data.debtor_type}. "
+            f"Kies uit: {', '.join(DEBTOR_TYPES)}"
+        )
+
     # Validate interest_type
     if data.interest_type not in INTEREST_TYPES:
         raise BadRequestError(
@@ -154,6 +162,7 @@ async def create_case(
         tenant_id=tenant_id,
         case_number=case_number,
         case_type=data.case_type,
+        debtor_type=data.debtor_type,
         status="nieuw",
         description=data.description,
         reference=data.reference,

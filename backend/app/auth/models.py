@@ -42,7 +42,7 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(50), default="user")  # "admin" or "user"
+    role: Mapped[str] = mapped_column(String(50), default="medewerker")  # admin, advocaat, medewerker
     is_active: Mapped[bool] = mapped_column(default=True)
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="users")

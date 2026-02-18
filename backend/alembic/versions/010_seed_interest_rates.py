@@ -109,7 +109,13 @@ GOVERNMENT_RATES = COMMERCIAL_RATES  # Identical to commercial rates
 
 
 def upgrade() -> None:
-    """Seed all official Dutch interest rates."""
+    """Seed all official Dutch interest rates (skip if already seeded)."""
+    # Check if data already exists (may have been seeded via script)
+    conn = op.get_bind()
+    count = conn.execute(sa.text("SELECT COUNT(*) FROM interest_rates")).scalar()
+    if count > 0:
+        return  # Already seeded — skip
+
     interest_rates = sa.table(
         "interest_rates",
         sa.column("id", sa.Uuid),
@@ -127,8 +133,8 @@ def upgrade() -> None:
         rows.append({
             "id": str(uuid.uuid4()),
             "rate_type": "statutory",
-            "effective_from": effective_from_str,
-            "rate": rate_str,
+            "effective_from": date.fromisoformat(effective_from_str),
+            "rate": Decimal(rate_str),
             "source": source,
         })
 
@@ -136,8 +142,8 @@ def upgrade() -> None:
         rows.append({
             "id": str(uuid.uuid4()),
             "rate_type": "commercial",
-            "effective_from": effective_from_str,
-            "rate": rate_str,
+            "effective_from": date.fromisoformat(effective_from_str),
+            "rate": Decimal(rate_str),
             "source": source,
         })
 
@@ -145,8 +151,8 @@ def upgrade() -> None:
         rows.append({
             "id": str(uuid.uuid4()),
             "rate_type": "government",
-            "effective_from": effective_from_str,
-            "rate": rate_str,
+            "effective_from": date.fromisoformat(effective_from_str),
+            "rate": Decimal(rate_str),
             "source": source,
         })
 

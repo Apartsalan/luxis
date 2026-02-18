@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import {
   Clock,
   Plus,
@@ -568,9 +569,13 @@ export default function UrenPage() {
               <span className="text-sm text-foreground tabular-nums">
                 {new Date(entry.date).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
               </span>
-              <span className="text-sm font-medium text-foreground truncate" title={entry.case.case_number}>
+              <Link
+                href={`/zaken/${entry.case.id}`}
+                className="text-sm font-medium text-foreground truncate hover:text-primary transition-colors"
+                title={entry.case.case_number}
+              >
                 {entry.case.case_number}
-              </span>
+              </Link>
               {editId === entry.id ? (
                 <input
                   type="text"

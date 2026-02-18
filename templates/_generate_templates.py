@@ -118,10 +118,11 @@ def create_14_dagenbrief():
     doc = Document()
     _margins(doc)
 
-    # Sender
-    _p(doc, "{{ client.naam }}", bold=True)
-    _p(doc, "{{ client.adres }}")
-    _p(doc, "{{ client.postcode_stad }}")
+    # Kantoor header
+    _p(doc, "{{ kantoor.naam }}", bold=True)
+    _p(doc, "{{ kantoor.adres }}")
+    _p(doc, "{{ kantoor.postcode_stad }}")
+    _p(doc, "Tel: {{ kantoor.telefoon }}")
     _p(doc, "")
 
     # Recipient
@@ -199,9 +200,10 @@ def create_sommatie():
     doc = Document()
     _margins(doc)
 
-    _p(doc, "{{ client.naam }}", bold=True)
-    _p(doc, "{{ client.adres }}")
-    _p(doc, "{{ client.postcode_stad }}")
+    _p(doc, "{{ kantoor.naam }}", bold=True)
+    _p(doc, "{{ kantoor.adres }}")
+    _p(doc, "{{ kantoor.postcode_stad }}")
+    _p(doc, "Tel: {{ kantoor.telefoon }}")
     _p(doc, "")
 
     _p(doc, "AANGETEKEND", bold=True, size=Pt(12))
@@ -387,9 +389,304 @@ def create_renteoverzicht():
     print("  renteoverzicht.docx")
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# HERINNERING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def create_herinnering():
+    doc = Document()
+    _margins(doc)
+
+    # Kantoor header
+    _p(doc, "{{ kantoor.naam }}", bold=True)
+    _p(doc, "{{ kantoor.adres }}")
+    _p(doc, "{{ kantoor.postcode_stad }}")
+    _p(doc, "Tel: {{ kantoor.telefoon }}")
+    _p(doc, "")
+
+    # Recipient
+    _p(doc, "{{ wederpartij.naam }}", bold=True)
+    _p(doc, "{{ wederpartij.adres }}")
+    _p(doc, "{{ wederpartij.postcode_stad }}")
+    _p(doc, "")
+
+    _p(doc, "{{ vandaag }}")
+    _p(doc, "")
+
+    _p(doc, "Betreft: Herinnering openstaande vordering", bold=True)
+    _p(doc, "Ons kenmerk: {{ zaak.zaaknummer }}")
+    _p(doc, "{{ zaak.referentie_regel }}")
+    _p(doc, "")
+
+    _p(doc, "Geachte heer/mevrouw,")
+    _p(doc, "")
+    _p(doc,
+        "Wij constateren dat de onderstaande vordering(en) van onze "
+        "cli\u00ebnt {{ client.naam }} nog niet zijn voldaan. "
+        "Wij verzoeken u vriendelijk het openstaande bedrag "
+        "binnen 14 dagen te voldoen.")
+    _p(doc, "")
+
+    doc.add_heading("Specificatie", level=2)
+    _add_summary_2col(doc, [
+        ("Hoofdsom", "{{ totaal_hoofdsom }}", True),
+        ("Rente t/m {{ vandaag }}", "{{ totaal_rente }}", False),
+        ("Totaal openstaand", "{{ totaal_openstaand }}", True),
+    ])
+    _p(doc, "")
+
+    _p(doc,
+        "Wij verzoeken u het bedrag van {{ totaal_openstaand }} "
+        "voor {{ termijn_14_dagen }} over te maken op IBAN "
+        "{{ kantoor.iban }} t.n.v. {{ kantoor.naam }}, onder vermelding "
+        "van zaaknummer {{ zaak.zaaknummer }}.")
+    _p(doc, "")
+    _p(doc, "Met vriendelijke groet,")
+    _p(doc, "")
+    _p(doc, "{{ kantoor.naam }}")
+
+    doc.save(str(TEMPLATES_DIR / "herinnering.docx"))
+    print("  herinnering.docx")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AANMANING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def create_aanmaning():
+    doc = Document()
+    _margins(doc)
+
+    _p(doc, "{{ kantoor.naam }}", bold=True)
+    _p(doc, "{{ kantoor.adres }}")
+    _p(doc, "{{ kantoor.postcode_stad }}")
+    _p(doc, "Tel: {{ kantoor.telefoon }}")
+    _p(doc, "")
+
+    _p(doc, "{{ wederpartij.naam }}", bold=True)
+    _p(doc, "{{ wederpartij.adres }}")
+    _p(doc, "{{ wederpartij.postcode_stad }}")
+    _p(doc, "")
+
+    _p(doc, "{{ vandaag }}")
+    _p(doc, "")
+
+    _p(doc, "Betreft: Aanmaning tot betaling", bold=True)
+    _p(doc, "Ons kenmerk: {{ zaak.zaaknummer }}")
+    _p(doc, "{{ zaak.referentie_regel }}")
+    _p(doc, "")
+
+    _p(doc, "Geachte heer/mevrouw,")
+    _p(doc, "")
+    _p(doc,
+        "Ondanks onze eerdere herinnering constateren wij dat de "
+        "vordering(en) van onze cli\u00ebnt {{ client.naam }} nog steeds "
+        "niet zijn voldaan.")
+    _p(doc, "")
+
+    doc.add_heading("Specificatie", level=2)
+    _add_claims_table(doc)
+    _p(doc, "")
+
+    _add_summary_2col(doc, [
+        ("Hoofdsom", "{{ totaal_hoofdsom }}", True),
+        ("Rente t/m {{ vandaag }}", "{{ totaal_rente }}", False),
+        ("BIK", "{{ bik_bedrag }}", False),
+        ("{{ btw_regel_label }}", "{{ btw_regel_bedrag }}", False),
+        ("Totaal verschuldigd", "{{ totaal_verschuldigd }}", True),
+        ("{{ betalingen_aftrek_label }}", "{{ betalingen_aftrek_bedrag }}", False),
+        ("Totaal openstaand", "{{ totaal_openstaand }}", True),
+    ])
+    _p(doc, "")
+
+    _p(doc,
+        "Wij sommeren u het bedrag van {{ totaal_openstaand }} uiterlijk "
+        "{{ termijn_14_dagen }} te voldoen op IBAN {{ kantoor.iban }} "
+        "t.n.v. {{ kantoor.naam }}, onder vermelding van zaaknummer "
+        "{{ zaak.zaaknummer }}.")
+    _p(doc, "")
+    _p(doc,
+        "Bij gebreke van tijdige betaling zullen wij zonder nadere "
+        "aankondiging rechtsmaatregelen treffen.")
+    _p(doc, "")
+    _p(doc, "Hoogachtend,")
+    _p(doc, "")
+    _p(doc, "{{ kantoor.naam }}")
+
+    doc.save(str(TEMPLATES_DIR / "aanmaning.docx"))
+    print("  aanmaning.docx")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TWEEDE SOMMATIE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def create_tweede_sommatie():
+    doc = Document()
+    _margins(doc)
+
+    _p(doc, "{{ kantoor.naam }}", bold=True)
+    _p(doc, "{{ kantoor.adres }}")
+    _p(doc, "{{ kantoor.postcode_stad }}")
+    _p(doc, "Tel: {{ kantoor.telefoon }}")
+    _p(doc, "")
+
+    _p(doc, "AANGETEKEND", bold=True, size=Pt(12))
+    _p(doc, "")
+    _p(doc, "{{ wederpartij.naam }}", bold=True)
+    _p(doc, "{{ wederpartij.adres }}")
+    _p(doc, "{{ wederpartij.postcode_stad }}")
+    _p(doc, "")
+
+    _p(doc, "{{ vandaag }}")
+    _p(doc, "")
+
+    _p(doc, "Betreft: TWEEDE SOMMATIE \u2014 Laatste gelegenheid", bold=True)
+    _p(doc, "Ons kenmerk: {{ zaak.zaaknummer }}")
+    _p(doc, "{{ zaak.referentie_regel }}")
+    _p(doc, "")
+
+    _p(doc, "Geachte heer/mevrouw,")
+    _p(doc, "")
+    _p(doc,
+        "Ondanks onze eerdere sommatie heeft u nog steeds niet voldaan "
+        "aan de vordering(en) van onze cli\u00ebnt {{ client.naam }}. "
+        "Dit is uw laatste gelegenheid om vrijwillig te betalen.")
+    _p(doc, "")
+
+    doc.add_heading("Specificatie", level=2)
+    _add_summary_2col(doc, [
+        ("Hoofdsom", "{{ totaal_hoofdsom }}", True),
+        ("Rente t/m {{ vandaag }}", "{{ totaal_rente }}", False),
+        ("BIK", "{{ bik_bedrag }}", False),
+        ("{{ btw_regel_label }}", "{{ btw_regel_bedrag }}", False),
+        ("Totaal verschuldigd", "{{ totaal_verschuldigd }}", True),
+        ("{{ betalingen_aftrek_label }}", "{{ betalingen_aftrek_bedrag }}", False),
+        ("Totaal openstaand", "{{ totaal_openstaand }}", True),
+    ])
+    _p(doc, "")
+
+    _p(doc,
+        "Wij sommeren u \u2014 voor de laatste maal \u2014 het bedrag van "
+        "{{ totaal_openstaand }} uiterlijk {{ termijn_14_dagen }} te voldoen "
+        "op IBAN {{ kantoor.iban }} t.n.v. {{ kantoor.naam }}, onder vermelding "
+        "van zaaknummer {{ zaak.zaaknummer }}.")
+    _p(doc, "")
+    _p(doc,
+        "Bij gebreke van tijdige betaling zullen wij zonder nadere "
+        "aankondiging tot dagvaarding overgaan. De kosten hiervan "
+        "(griffierecht, deurwaarderskosten, proceskosten) komen "
+        "volledig voor uw rekening.")
+    _p(doc, "")
+    _p(doc, "Hoogachtend,")
+    _p(doc, "")
+    _p(doc, "{{ kantoor.naam }}")
+
+    doc.save(str(TEMPLATES_DIR / "tweede_sommatie.docx"))
+    print("  tweede_sommatie.docx")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DAGVAARDING (concept)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def create_dagvaarding():
+    doc = Document()
+    _margins(doc)
+
+    doc.add_heading("CONCEPT DAGVAARDING", level=1)
+    _p(doc, "")
+
+    _p(doc,
+        "Heden, {{ vandaag }}, ten verzoeke van {{ client.naam }}, "
+        "gevestigd/wonende te {{ client.postcode_stad }}, {{ client.adres }}, "
+        "te dezer zake domicilie kiezende ten kantore van {{ kantoor.naam }}, "
+        "{{ kantoor.adres }}, {{ kantoor.postcode_stad }},")
+    _p(doc, "")
+    _p(doc,
+        "heb ik, [NAAM DEURWAARDER], als gerechtsdeurwaarder, "
+        "ge\u00ebxploiteerd aan:")
+    _p(doc, "")
+    _p(doc,
+        "{{ wederpartij.naam }}, gevestigd/wonende te "
+        "{{ wederpartij.postcode_stad }}, {{ wederpartij.adres }},")
+    _p(doc, "")
+    _p(doc, "hierna te noemen: \"gedaagde\",")
+    _p(doc, "")
+
+    doc.add_heading("om", level=2)
+    _p(doc,
+        "op [DATUM ZITTING] om [TIJDSTIP] uur, niet in persoon doch "
+        "vertegenwoordigd door een advocaat, te verschijnen ter "
+        "terechtzitting van de Rechtbank [RECHTBANK], sector [SECTOR].")
+    _p(doc, "")
+
+    doc.add_heading("TENEINDE", level=2)
+    _p(doc, "")
+
+    doc.add_heading("I. Feiten", level=2)
+    _p(doc,
+        "Eiser heeft vordering(en) op gedaagde uit hoofde van: "
+        "{{ zaak.omschrijving }}")
+    _p(doc, "")
+
+    doc.add_heading("Vorderingen", level=3)
+    _add_claims_table(doc)
+    _p(doc, "")
+
+    doc.add_heading("II. Rente", level=2)
+    _p(doc,
+        "Over de hoofdsom is gedaagde {{ rente_type_label }} verschuldigd "
+        "ten bedrage van {{ totaal_rente }}.")
+    _p(doc, "")
+
+    doc.add_heading("III. Buitengerechtelijke kosten", level=2)
+    _p(doc,
+        "Eiser maakt aanspraak op buitengerechtelijke incassokosten "
+        "conform de staffel BIK (art. 6:96 BW) ten bedrage van "
+        "{{ bik_bedrag }}{{ btw_toelichting }}.")
+    _p(doc, "")
+
+    doc.add_heading("IV. Specificatie", level=2)
+    _add_summary_2col(doc, [
+        ("Hoofdsom", "{{ totaal_hoofdsom }}", True),
+        ("Rente t/m {{ vandaag }}", "{{ totaal_rente }}", False),
+        ("BIK", "{{ bik_bedrag }}", False),
+        ("{{ btw_regel_label }}", "{{ btw_regel_bedrag }}", False),
+        ("Totaal verschuldigd", "{{ totaal_verschuldigd }}", True),
+        ("{{ betalingen_aftrek_label }}", "{{ betalingen_aftrek_bedrag }}", False),
+        ("Totaal openstaand", "{{ totaal_openstaand }}", True),
+    ])
+    _p(doc, "")
+
+    doc.add_heading("MITSDIEN", level=2)
+    _p(doc, "het de Rechtbank behage, bij vonnis uitvoerbaar bij voorraad:")
+    _p(doc,
+        "gedaagde te veroordelen om aan eiser te betalen het bedrag van "
+        "{{ totaal_openstaand }}, te vermeerderen met de {{ rente_type_label }} "
+        "over de hoofdsom van {{ totaal_hoofdsom }} vanaf heden tot aan de "
+        "dag der algehele voldoening,")
+    _p(doc, "gedaagde te veroordelen in de kosten van dit geding.")
+    _p(doc, "")
+
+    _p(doc, "De kosten van dit exploot zijn: [KOSTEN]",
+       size=Pt(9), color=RGBColor(0x88, 0x88, 0x88))
+
+    doc.save(str(TEMPLATES_DIR / "dagvaarding.docx"))
+    print("  dagvaarding.docx")
+
+
 if __name__ == "__main__":
     print("Generating .docx templates...")
+    create_herinnering()
+    create_aanmaning()
     create_14_dagenbrief()
     create_sommatie()
+    create_tweede_sommatie()
+    create_dagvaarding()
     create_renteoverzicht()
     print("Done!")

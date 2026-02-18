@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, User, Bell, Search } from "lucide-react";
+import { LogOut, User, Bell, Search, Menu } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePathname } from "next/navigation";
 
@@ -15,7 +15,11 @@ const PAGE_TITLES: Record<string, string> = {
   "/instellingen": "Instellingen",
 };
 
-export function AppHeader() {
+interface AppHeaderProps {
+  onMobileMenuToggle?: () => void;
+}
+
+export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
 
@@ -26,9 +30,18 @@ export function AppHeader() {
     "Luxis";
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-white/80 backdrop-blur-sm px-6">
-      {/* Left: page title */}
-      <div>
+    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-white/80 backdrop-blur-sm px-4 sm:px-6">
+      {/* Left: hamburger (mobile) + page title */}
+      <div className="flex items-center gap-3">
+        {onMobileMenuToggle && (
+          <button
+            onClick={onMobileMenuToggle}
+            className="lg:hidden rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            aria-label="Menu openen"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
         <h2 className="text-sm font-semibold text-foreground">{pageTitle}</h2>
       </div>
 

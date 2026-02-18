@@ -87,8 +87,8 @@ export default function RelatiesPage() {
         </div>
       ) : data?.items && data.items.length > 0 ? (
         <>
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
-            <table className="w-full">
+          <div className="overflow-x-auto rounded-xl border border-border bg-card">
+            <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">

@@ -14,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const { loading } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("luxis_sidebar_collapsed");
@@ -41,15 +42,24 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <AppSidebar
+        collapsed={sidebarCollapsed}
+        onToggle={toggleSidebar}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+      />
       <div
         className={cn(
           "transition-all duration-200",
-          sidebarCollapsed ? "pl-16" : "pl-60"
+          // Desktop: respect sidebar collapsed state
+          "lg:pl-60",
+          sidebarCollapsed && "lg:pl-16",
+          // Mobile: no padding (sidebar is overlay)
+          "pl-0"
         )}
       >
-        <AppHeader />
-        <main className="p-6">
+        <AppHeader onMobileMenuToggle={() => setMobileMenuOpen(true)} />
+        <main className="p-4 sm:p-6">
           <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>

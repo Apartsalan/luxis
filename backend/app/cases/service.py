@@ -277,6 +277,58 @@ async def delete_case(
     await db.flush()
 
 
+# ── Conflict Check ───────────────────────────────────────────────────────
+
+
+async def conflict_check(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    contact_id: uuid.UUID,
+    role: str,
+) -> list[dict]:
+    """Check if a contact has conflicting roles in existing cases.
+
+    When adding a contact as 'client', check if they appear as opposing_party
+    in any active case (and vice versa). Returns a list of conflicting cases.
+
+    Args:
+        contact_id: The contact to check.
+        role: The intended role — 'client' or 'opposing_party'.
+    """
+    if role == "client":
+        # Contact is being added as client — check if they're opposing party somewhere
+        query = select(Case).where(
+            Case.tenant_id == tenant_id,
+            Case.is_active == True,  # noqa: E712
+            Case.opposing_party_id == contact_id,
+        )
+    elif role == "opposing_party":
+        # Contact is being added as opposing party — check if they're client somewhere
+        query = select(Case).where(
+            Case.tenant_id == tenant_id,
+            Case.is_active == True,  # noqa: E712
+            Case.client_id == contact_id,
+        )
+    else:
+        return []
+
+    result = await db.execute(query)
+    cases = list(result.scalars().all())
+
+    return [
+        {
+            "case_id": str(c.id),
+            "case_number": c.case_number,
+            "case_type": c.case_type,
+            "status": c.status,
+            "role_in_case": "wederpartij" if role == "client" else "client",
+            "client_name": c.client.name if c.client else None,
+            "opposing_party_name": c.opposing_party.name if c.opposing_party else None,
+        }
+        for c in cases
+    ]
+
+
 # ── Case Parties ─────────────────────────────────────────────────────────────
 
 

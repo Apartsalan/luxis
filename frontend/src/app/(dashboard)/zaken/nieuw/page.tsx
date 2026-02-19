@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateCase } from "@/hooks/use-cases";
+import { useCreateCase, useConflictCheck } from "@/hooks/use-cases";
 import { useRelations } from "@/hooks/use-relations";
+import { AlertTriangle } from "lucide-react";
 
 export default function NieuweZaakPage() {
   const router = useRouter();
@@ -35,6 +36,16 @@ export default function NieuweZaakPage() {
     search: opponentSearch || undefined,
     per_page: 5,
   });
+
+  // Conflict checks — runs when client or opposing party is selected
+  const { data: clientConflict } = useConflictCheck(
+    form.client_id || undefined,
+    "client"
+  );
+  const { data: opponentConflict } = useConflictCheck(
+    form.opposing_party_id || undefined,
+    "opposing_party"
+  );
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -284,6 +295,32 @@ export default function NieuweZaakPage() {
             )}
           </div>
 
+          {/* Client conflict warning */}
+          {clientConflict?.has_conflict && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">
+                    Conflict gedetecteerd
+                  </p>
+                  <p className="mt-0.5 text-xs text-amber-700">
+                    Deze cliënt is in {clientConflict.conflicts.length === 1 ? "een andere zaak" : `${clientConflict.conflicts.length} andere zaken`} wederpartij:
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {clientConflict.conflicts.map((c) => (
+                      <li key={c.case_id} className="text-xs text-amber-700">
+                        <span className="font-mono font-medium">{c.case_number}</span>
+                        {" — wederpartij van "}
+                        <span className="font-medium">{c.client_name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Opposing party selection */}
           <div>
             <label className="block text-sm font-medium text-foreground">
@@ -353,6 +390,34 @@ export default function NieuweZaakPage() {
               </div>
             )}
           </div>
+
+          {/* Opposing party conflict warning */}
+          {opponentConflict?.has_conflict && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">
+                    Conflict gedetecteerd
+                  </p>
+                  <p className="mt-0.5 text-xs text-amber-700">
+                    Deze wederpartij is in {opponentConflict.conflicts.length === 1 ? "een andere zaak" : `${opponentConflict.conflicts.length} andere zaken`} cliënt:
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {opponentConflict.conflicts.map((c) => (
+                      <li key={c.case_id} className="text-xs text-amber-700">
+                        <span className="font-mono font-medium">{c.case_number}</span>
+                        {" — cliënt"}
+                        {c.opposing_party_name && (
+                          <span> vs. {c.opposing_party_name}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (

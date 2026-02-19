@@ -64,6 +64,20 @@ async def list_cases(
     )
 
 
+@router.get("/conflict-check")
+async def conflict_check(
+    contact_id: uuid.UUID = Query(...),
+    role: str = Query(..., description="client or opposing_party"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Check if a contact has conflicting roles in existing cases."""
+    conflicts = await service.conflict_check(
+        db, current_user.tenant_id, contact_id, role
+    )
+    return {"conflicts": conflicts, "has_conflict": len(conflicts) > 0}
+
+
 @router.post("", response_model=CaseResponse, status_code=status.HTTP_201_CREATED)
 async def create_case(
     data: CaseCreate,

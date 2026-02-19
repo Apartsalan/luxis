@@ -93,6 +93,33 @@ export function useCases(params?: {
   });
 }
 
+export interface ConflictResult {
+  conflicts: {
+    case_id: string;
+    case_number: string;
+    case_type: string;
+    status: string;
+    role_in_case: string;
+    client_name: string | null;
+    opposing_party_name: string | null;
+  }[];
+  has_conflict: boolean;
+}
+
+export function useConflictCheck(contactId: string | undefined, role: string) {
+  return useQuery<ConflictResult>({
+    queryKey: ["conflict-check", contactId, role],
+    queryFn: async () => {
+      const res = await api(
+        `/api/cases/conflict-check?contact_id=${contactId}&role=${role}`
+      );
+      if (!res.ok) throw new Error("Conflict check failed");
+      return res.json();
+    },
+    enabled: !!contactId,
+  });
+}
+
 export function useCase(id: string | undefined) {
   return useQuery<CaseDetail>({
     queryKey: ["cases", id],

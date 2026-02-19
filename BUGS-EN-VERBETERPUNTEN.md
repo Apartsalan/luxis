@@ -109,6 +109,42 @@ Wrap regels 194-238 in `{form.case_type === "incasso" && ( ... )}`. Eén regel t
 
 ---
 
+### ROADMAP-6: Conflict check verbeteren — warning, niet blokkeren
+
+**Waar:** Zaak aanmaken + zaakdetailpagina (partijen)
+**Priority:** Midden (toevoegen aan UX-VERBETERPLAN)
+
+**Huidige situatie:**
+- Op het zaak-aanmaakformulier (`/zaken/nieuw`) zit al een conflict check via `useConflictCheck` hook
+- Als een cliënt in een andere zaak wederpartij is, toont het een amber warning box met details
+- De submit wordt NIET geblokkeerd — dit is goed, want soms is een conflict gewenst/te verantwoorden
+- Op de zaakdetailpagina (`/zaken/[id]`) is er GEEN conflict check bij het partijen-tab
+
+**Gewenst gedrag:**
+- **Aanmaakformulier:** Huidige warning behouden (werkt al). Eventueel: checkbox "Ik bevestig kennis van dit conflict" toevoegen zodat het bewust is.
+- **Zaakdetailpagina (Partijen tab):** Ook een conflict warning tonen als cliënt of wederpartij in andere zaken een tegengestelde rol heeft
+- **Visueel:** Warning sign (amber) — duidelijk zichtbaar maar niet blokkerend. De advocaat beslist zelf.
+- **Audit trail:** Optioneel voor later: als een zaak wordt aangemaakt ondanks conflict, dit loggen in de activiteiten
+
+**Bestanden:**
+- `frontend/src/hooks/use-cases.ts` — `useConflictCheck` hook bestaat al
+- `backend/app/cases/router.py` — `GET /conflict-check` endpoint bestaat al
+- `backend/app/cases/service.py` — `conflict_check()` logica bestaat al
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — regels 307-330: amber warning box (al werkend)
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — Partijen tab: GEEN conflict check (moet toegevoegd)
+
+**Wat er al werkt:**
+- Backend conflict detection is compleet
+- Frontend warning op aanmaakformulier is compleet
+- Formulier is al niet-blokkerend (submit gaat door ondanks conflict)
+
+**Wat er nog moet:**
+- Conflict warning toevoegen aan zaakdetail Partijen tab
+- Eventueel: bevestiging-checkbox bij aanmaken met conflict
+- Eventueel: conflict loggen in activiteiten als audit trail
+
+---
+
 ## Samenvatting
 
 | # | Issue | Ernst | Actie | Status |
@@ -118,3 +154,4 @@ Wrap regels 194-238 in `{form.case_type === "incasso" && ( ... )}`. Eén regel t
 | 3 | Rente per documentdatum | Hoog | Controleren + evt. fixen | Grotendeels al werkend, needs verification |
 | 4 | Handmatige taken aanmaken | Midden | Roadmap | Gedocumenteerd |
 | 5 | Agenda events aanmaken | Midden | Roadmap | Gedocumenteerd |
+| 6 | Conflict check verbeteren (warning, niet blokkeren) | Midden | Roadmap | Gedocumenteerd — aanmaken werkt al, zaakdetail mist het |

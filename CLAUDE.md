@@ -48,9 +48,56 @@ Luxis is een **PRODUCT**, geen intern tooltje. Ontwerp alsof het morgen op de ma
 - Voorkant/login: generiek "Praktijkmanagement voor de advocatuur", geen wetsartikelen of BW-referenties
 - Kernfeatures benoemen: dossierbeheer, tijdschrijven, facturatie, documentgeneratie, termijnbewaking
 
+## Werkwijze bij nieuwe features
+
+**Principe: onderzoek eerst, bouw daarna.** Elke feature moet eruitzien en werken alsof het door een professioneel productteam is ontworpen. Dat begint met onderzoek, niet met code.
+
+### Stap 1: Onderzoek (voordat je ook maar één regel code schrijft)
+
+Bij elke nieuwe feature of UI-wijziging:
+
+1. **Zoek op internet** hoe vergelijkbare software dit oplost:
+   - Concurrenten advocatuur: Clio, Basenet, Legalsense, Urios, PracticePanther, Smokeball
+   - Beste SaaS-apps buiten de advocatuur met dezelfde functie (facturatie → Stripe/Xero/Exact, CRM → HubSpot/Salesforce, etc.)
+   - UX/UI best practices voor die specifieke functie
+
+2. **Analyseer** wat je vindt:
+   - Wat doen ze goed? Wat doen ze slecht?
+   - Wat is de standaard workflow die gebruikers verwachten?
+   - Welke velden, knoppen, stappen zijn essentieel?
+   - Wat is de minimale hoeveelheid clicks om de taak af te ronden?
+
+3. **Denk vanuit de eindgebruiker** — een advocaat (Lisanne):
+   - Geen techneut. Zo min mogelijk clicks, zo min mogelijk nadenken.
+   - Als een advocaat dit voor het eerst ziet, begrijpt die dan meteen wat ze moet doen?
+   - Elke extra klik, elk onduidelijk label, elk scherm te veel is een ontwerpfout.
+
+### Stap 2: Plan presenteren (voordat je code schrijft)
+
+Laat zien:
+- Wat je gevonden hebt in je onderzoek (kort samengevat)
+- Hoe je het wilt bouwen op basis daarvan
+- Welke schermen/flows er komen
+- Screenshots van hoe concurrenten het doen (via Playwright/web search als beschikbaar)
+
+**Wacht op goedkeuring** voordat je gaat implementeren.
+
+### Stap 3: Bouwen
+
+Pas na goedkeuring implementeren.
+
+### Stap 4: Zelfcheck na implementatie
+
+Na het bouwen, voordat je deploy-commando geeft:
+- Klik zelf door de hele flow (via Playwright als beschikbaar)
+- Vergelijk met wat je in je onderzoek vond
+- Vraag jezelf af: zou ik hier als gebruiker tevreden mee zijn?
+- Zijn er edge cases die je niet hebt afgevangen?
+
 ## Working Agreements
 
 - Claude werkt **zelfstandig** — geen toestemming vragen (behalve aanschaffingen/destructieve acties)
+- **Nieuwe features volgen altijd de 4-stappen werkwijze hierboven** — onderzoek → plan → bouw → check
 - Bij twijfel over Nederlandse juridische regels: **flaggen, niet stoppen**
 - Bij elke afspraak of correctie: **CLAUDE.md updaten**
 - Conventional commits: `feat(module):`, `fix(module):`, `refactor(module):`, `test(module):`, `docs:`, `chore:`

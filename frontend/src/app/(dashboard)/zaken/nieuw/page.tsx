@@ -7,12 +7,14 @@ import { ArrowLeft, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateCase, useConflictCheck } from "@/hooks/use-cases";
 import { useRelations } from "@/hooks/use-relations";
+import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
 
 export default function NieuweZaakPage() {
   const router = useRouter();
   const createCase = useCreateCase();
+  const { hasModule } = useModules();
 
   const [form, setForm] = useState({
     case_type: "incasso",
@@ -48,9 +50,9 @@ export default function NieuweZaakPage() {
     "opposing_party"
   );
 
-  // KYC status check for selected client
+  // KYC status check for selected client (only when wwft module enabled)
   const { data: clientKycStatus } = useKycStatus(
-    form.client_id || undefined
+    hasModule("wwft") ? (form.client_id || undefined) : undefined
   );
 
   const updateField = (field: string, value: string) => {

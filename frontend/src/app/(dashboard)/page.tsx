@@ -284,7 +284,7 @@ export default function DashboardPage() {
       )}
 
       {/* KYC Compliance warnings */}
-      <KycWarningWidget />
+      {hasModule("wwft") && <KycWarningWidget />}
 
       {/* My Tasks widget */}
       <MyTasksWidget />

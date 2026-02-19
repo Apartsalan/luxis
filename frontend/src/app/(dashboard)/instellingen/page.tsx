@@ -535,6 +535,11 @@ const MODULE_INFO: Record<string, { label: string; description: string }> = {
     description:
       "Facturen aanmaken, versturen en bijhouden op basis van uren en kosten",
   },
+  wwft: {
+    label: "WWFT/KYC",
+    description:
+      "Cliëntidentificatie, UBO-registratie, PEP/sanctiecontrole en risicoclassificatie (WWFT-compliance)",
+  },
 };
 
 function ModulesTab() {

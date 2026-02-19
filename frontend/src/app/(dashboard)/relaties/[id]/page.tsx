@@ -32,6 +32,7 @@ import {
   useDeleteRelation,
 } from "@/hooks/use-relations";
 import { useCases } from "@/hooks/use-cases";
+import { useModules } from "@/hooks/use-modules";
 import { useKyc, useSaveKyc, useCompleteKyc } from "@/hooks/use-kyc";
 import { formatDate, formatCurrency, formatDateShort } from "@/lib/utils";
 
@@ -99,14 +100,15 @@ export default function RelatieDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { hasModule } = useModules();
   const { data: contact, isLoading } = useRelation(id);
   const updateRelation = useUpdateRelation();
   const deleteRelation = useDeleteRelation();
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
 
-  // KYC
-  const { data: kycData, isLoading: kycLoading } = useKyc(id);
+  // KYC (only when wwft module enabled)
+  const { data: kycData, isLoading: kycLoading } = useKyc(hasModule("wwft") ? id : undefined);
   const saveKyc = useSaveKyc();
   const completeKyc = useCompleteKyc();
   const [kycOpen, setKycOpen] = useState(false);
@@ -328,12 +330,14 @@ export default function RelatieDetailPage() {
                   {contact.name}
                 </h1>
                 {/* KYC badge in header */}
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${kycConfig.badge}`}
-                >
-                  <KycIcon className="h-3 w-3" />
-                  WWFT: {kycConfig.label}
-                </span>
+                {hasModule("wwft") && (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${kycConfig.badge}`}
+                  >
+                    <KycIcon className="h-3 w-3" />
+                    WWFT: {kycConfig.label}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">
                 {contact.contact_type === "company" ? "Bedrijf" : "Persoon"}{" "}
@@ -725,8 +729,8 @@ export default function RelatieDetailPage() {
         </div>
       </div>
 
-      {/* ── WWFT / KYC Section ─────────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {/* ── WWFT / KYC Section (only when wwft module enabled) ────────── */}
+      {hasModule("wwft") && <div className="rounded-xl border border-border bg-card overflow-hidden">
         {/* Collapsible header */}
         <button
           type="button"
@@ -1334,7 +1338,7 @@ export default function RelatieDetailPage() {
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Briefcase,
+  Building2,
   Euro,
   TrendingUp,
   AlertTriangle,
@@ -16,6 +17,7 @@ import {
   Users,
   Receipt,
   Timer,
+  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -31,6 +33,7 @@ import {
 } from "@/hooks/use-workflow";
 import { useMyTodayEntries, useTimeEntrySummary } from "@/hooks/use-time-entries";
 import { useInvoices, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hooks/use-invoices";
+import { useKycDashboard } from "@/hooks/use-kyc";
 
 interface DashboardSummary {
   total_active_cases: number;
@@ -279,6 +282,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* KYC Compliance warnings */}
+      <KycWarningWidget />
 
       {/* My Tasks widget */}
       <MyTasksWidget />
@@ -792,6 +798,97 @@ function MyTasksWidget() {
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+function KycWarningWidget() {
+  const { data: kyc, isLoading } = useKycDashboard();
+
+  if (isLoading || !kyc || kyc.total_issues === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50/50">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-red-200">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-red-500" />
+          <h2 className="text-sm font-semibold text-red-800">
+            WWFT Compliance
+          </h2>
+          <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+            {kyc.total_issues} {kyc.total_issues === 1 ? "issue" : "issues"}
+          </span>
+        </div>
+      </div>
+      <div className="divide-y divide-red-200">
+        {kyc.without_kyc.length > 0 && (
+          <div className="px-5 py-3">
+            <p className="text-xs font-medium text-red-700 mb-2">
+              Geen verificatie gestart ({kyc.without_kyc_count})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {kyc.without_kyc.slice(0, 5).map((item) => (
+                <Link
+                  key={item.contact_id}
+                  href={`/relaties/${item.contact_id}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs text-red-700 ring-1 ring-red-200 hover:bg-red-50 transition-colors"
+                >
+                  {item.contact_type === "company" ? (
+                    <Building2 className="h-3 w-3" />
+                  ) : (
+                    <Users className="h-3 w-3" />
+                  )}
+                  {item.contact_name}
+                </Link>
+              ))}
+              {kyc.without_kyc.length > 5 && (
+                <span className="text-xs text-red-600 self-center">
+                  +{kyc.without_kyc.length - 5} meer
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+        {kyc.incomplete.length > 0 && (
+          <div className="px-5 py-3">
+            <p className="text-xs font-medium text-amber-700 mb-2">
+              In behandeling ({kyc.incomplete_count})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {kyc.incomplete.slice(0, 5).map((item) => (
+                <Link
+                  key={item.contact_id}
+                  href={`/relaties/${item.contact_id}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs text-amber-700 ring-1 ring-amber-200 hover:bg-amber-50 transition-colors"
+                >
+                  {item.contact_name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+        {kyc.overdue.length > 0 && (
+          <div className="px-5 py-3">
+            <p className="text-xs font-medium text-red-700 mb-2">
+              Review verlopen ({kyc.overdue_count})
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {kyc.overdue.slice(0, 5).map((item) => (
+                <Link
+                  key={item.contact_id}
+                  href={`/relaties/${item.contact_id}`}
+                  className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs text-red-700 ring-1 ring-red-200 hover:bg-red-50 transition-colors"
+                >
+                  {item.contact_name}
+                  <span className="text-[10px] text-red-500">
+                    ({item.days_overdue}d)
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

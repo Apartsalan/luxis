@@ -17,6 +17,7 @@ from app.documents.router import router as documents_router
 from app.invoices.router import expenses_router
 from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
+from app.relations.kyc_router import router as kyc_router
 from app.relations.router import router as relations_router
 from app.settings.router import router as settings_router
 from app.time_entries.router import router as time_entries_router
@@ -82,6 +83,7 @@ app.include_router(time_entries_router)
 app.include_router(invoices_router)
 app.include_router(expenses_router)
 app.include_router(settings_router)
+app.include_router(kyc_router)
 
 
 @app.get("/health")

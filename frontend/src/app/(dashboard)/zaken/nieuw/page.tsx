@@ -7,7 +7,8 @@ import { ArrowLeft, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateCase, useConflictCheck } from "@/hooks/use-cases";
 import { useRelations } from "@/hooks/use-relations";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
+import { useKycStatus } from "@/hooks/use-kyc";
 
 export default function NieuweZaakPage() {
   const router = useRouter();
@@ -45,6 +46,11 @@ export default function NieuweZaakPage() {
   const { data: opponentConflict } = useConflictCheck(
     form.opposing_party_id || undefined,
     "opposing_party"
+  );
+
+  // KYC status check for selected client
+  const { data: clientKycStatus } = useKycStatus(
+    form.client_id || undefined
   );
 
   const updateField = (field: string, value: string) => {
@@ -316,6 +322,33 @@ export default function NieuweZaakPage() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Client KYC warning */}
+          {form.client_id && clientKycStatus && !clientKycStatus.is_compliant && (
+            <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3">
+              <div className="flex items-start gap-2">
+                <ShieldAlert className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-800">
+                    WWFT-verificatie niet voltooid
+                  </p>
+                  <p className="mt-0.5 text-xs text-red-700">
+                    {clientKycStatus.status === "niet_gestart"
+                      ? "Deze cliënt heeft nog geen WWFT/KYC verificatie. Dit is wettelijk verplicht voordat juridische diensten worden verleend."
+                      : clientKycStatus.is_overdue
+                      ? "De WWFT-verificatie van deze cliënt is verlopen en moet opnieuw worden beoordeeld."
+                      : "De WWFT-verificatie van deze cliënt is nog niet afgerond."}
+                  </p>
+                  <Link
+                    href={`/relaties/${form.client_id}`}
+                    className="mt-1.5 inline-block text-xs font-medium text-red-700 hover:text-red-900 underline"
+                  >
+                    Ga naar verificatie →
+                  </Link>
                 </div>
               </div>
             </div>

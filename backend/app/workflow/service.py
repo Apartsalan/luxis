@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
+from app.relations.kyc_models import KycVerification
 from app.shared.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.workflow.models import (
     WorkflowRule,
@@ -720,3 +721,101 @@ async def check_verjaring(
         })
 
     return warnings
+
+
+# ── Calendar aggregation ─────────────────────────────────────────────────
+
+
+# Color mapping for calendar events
+_TASK_COLORS = {
+    "overdue": "#ef4444",   # red
+    "due": "#f59e0b",       # amber
+    "pending": "#3b82f6",   # blue
+    "completed": "#10b981", # green
+}
+_KYC_COLOR = "#8b5cf6"  # purple
+
+
+async def get_calendar_events(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    date_from: date,
+    date_to: date,
+) -> list[dict]:
+    """Return calendar events (tasks + KYC reviews) for a date range.
+
+    Combines workflow tasks and KYC review deadlines into a single sorted list.
+    """
+    events: list[dict] = []
+
+    # ── 1. Workflow tasks ────────────────────────────────────────────────
+    task_query = (
+        select(WorkflowTask)
+        .where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.is_active.is_(True),
+            WorkflowTask.due_date >= date_from,
+            WorkflowTask.due_date <= date_to,
+            WorkflowTask.status.notin_(("completed", "skipped")),
+        )
+        .order_by(WorkflowTask.due_date)
+    )
+    result = await db.execute(task_query)
+    tasks = list(result.scalars().all())
+
+    for task in tasks:
+        case = task.case
+        assigned_to = task.assigned_to
+        events.append({
+            "id": str(task.id),
+            "title": task.title,
+            "date": task.due_date,
+            "event_type": "task",
+            "status": task.status,
+            "case_id": str(task.case_id),
+            "case_number": case.case_number if case else None,
+            "contact_id": None,
+            "contact_name": None,
+            "assigned_to_name": assigned_to.full_name if assigned_to else None,
+            "task_type": task.task_type,
+            "color": _TASK_COLORS.get(task.status, "#3b82f6"),
+        })
+
+    # ── 2. KYC review deadlines ──────────────────────────────────────────
+    kyc_query = (
+        select(KycVerification)
+        .where(
+            KycVerification.tenant_id == tenant_id,
+            KycVerification.next_review_date.isnot(None),
+            KycVerification.next_review_date >= date_from,
+            KycVerification.next_review_date <= date_to,
+        )
+        .order_by(KycVerification.next_review_date)
+    )
+    result = await db.execute(kyc_query)
+    kyc_records = list(result.scalars().all())
+
+    today = date.today()
+    for kyc in kyc_records:
+        contact = kyc.contact
+        review_date = kyc.next_review_date
+        kyc_status = "overdue" if review_date < today else "pending"
+        events.append({
+            "id": str(kyc.id),
+            "title": f"KYC review: {contact.name}" if contact else "KYC review",
+            "date": review_date,
+            "event_type": "kyc_review",
+            "status": kyc_status,
+            "case_id": None,
+            "case_number": None,
+            "contact_id": str(kyc.contact_id),
+            "contact_name": contact.name if contact else None,
+            "assigned_to_name": None,
+            "task_type": None,
+            "color": _KYC_COLOR,
+        })
+
+    # ── 3. Sort combined list by date ────────────────────────────────────
+    events.sort(key=lambda e: e["date"])
+
+    return events

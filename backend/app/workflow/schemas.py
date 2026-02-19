@@ -200,3 +200,25 @@ class TransitionValidationResult(BaseModel):
     allowed: bool
     warnings: list[str] = []
     errors: list[str] = []
+
+
+# ── Calendar ──────────────────────────────────────────────────────────────
+
+
+class CalendarEvent(BaseModel):
+    """A single calendar event — workflow task or KYC review deadline."""
+
+    id: str
+    title: str
+    date: date
+    event_type: str  # "task", "kyc_review"
+    status: str  # "pending", "due", "overdue", "completed"
+    case_id: str | None = None
+    case_number: str | None = None
+    contact_id: str | None = None
+    contact_name: str | None = None
+    assigned_to_name: str | None = None
+    task_type: str | None = None
+    color: str  # hex color for calendar display
+
+    model_config = {"from_attributes": True}

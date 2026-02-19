@@ -2,6 +2,7 @@
 
 import math
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from app.shared.pagination import PaginatedResponse
 from app.workflow import service
 from app.workflow.schemas import (
     AllowedTransitionResponse,
+    CalendarEvent,
     WorkflowRuleCreate,
     WorkflowRuleResponse,
     WorkflowRuleUpdate,
@@ -27,6 +29,23 @@ from app.workflow.schemas import (
 )
 
 router = APIRouter(prefix="/api/workflow", tags=["workflow"])
+
+
+# ── Calendar ────────────────────────────────────────────────────────────────
+
+
+@router.get("/calendar", response_model=list[CalendarEvent])
+async def get_calendar_events(
+    date_from: date = Query(..., description="Start of date range (inclusive)"),
+    date_to: date = Query(..., description="End of date range (inclusive)"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get calendar events (workflow tasks + KYC reviews) for a date range."""
+    rows = await service.get_calendar_events(
+        db, current_user.tenant_id, date_from, date_to
+    )
+    return [CalendarEvent(**row) for row in rows]
 
 
 # ── Statuses ────────────────────────────────────────────────────────────────

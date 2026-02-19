@@ -76,8 +76,8 @@ Wat er is:
 - ✅ Loading skeleton en error state
 - ✅ Statistieken in header: openstaand, te laat, vandaag
 
-Eventueel later verbeteren:
-- Taken aanmaken vanuit deze pagina (nu alleen via zaakdetail)
+**Nog bouwen (gepland):**
+- ❌ **Handmatige taken aanmaken** — "+ Taak" knop op zowel taken-overzicht als zaakdetail. Velden: titel, omschrijving (optioneel), deadline, gekoppelde zaak. Nu worden taken alleen door workflow-triggers aangemaakt, maar advocaten willen ook ad-hoc taken ("Bel cliënt terug", "Stuk nakijken"). Zie `BUGS-EN-VERBETERPUNTEN.md` #4.
 - Drag & drop prioritering
 
 ---
@@ -280,6 +280,38 @@ Wat bouwen:
 
 ---
 
+### D5. Agenda — events aanmaken 🟡 MIDDEN
+**Complexiteit:** Midden (nieuw backend model + CRUD + frontend)
+
+**Probleem:** De agenda is read-only. Je kunt geen afspraken, zittingen of herinneringen inplannen.
+
+Wat bouwen:
+- Klikken op datum/tijdslot opent formulier voor nieuw event
+- Velden: titel, datum/tijd, duur, zaak (optioneel), type (afspraak, zitting, herinnering, deadline)
+- Events verschijnen naast workflow-deadlines in de kalender
+- Bewerken en verwijderen van handmatige events
+
+Backend nodig:
+- Nieuw model: `CalendarEvent` (title, start, end, type, case_id, user_id, tenant_id)
+- CRUD endpoints: `GET/POST/PATCH/DELETE /api/calendar/events`
+- Alembic migratie
+
+Zie `BUGS-EN-VERBETERPUNTEN.md` #5.
+
+---
+
+## Bugs — Nu fixen (volgende sessie)
+
+> Zie `BUGS-EN-VERBETERPUNTEN.md` voor complete beschrijving met bestanden en fix-instructies.
+
+| # | Bug | Ernst | Fix-grootte |
+|---|-----|-------|-------------|
+| BUG-1 | Relatie niet automatisch gekoppeld bij nieuwe zaak | Hoog | Klein (URL params + form pre-fill) |
+| BUG-2 | Rente-velden zichtbaar bij niet-incasso zaaktypes | Midden | Klein (conditional render) |
+| BUG-3 | Renteberekening per documentdatum controleren | Hoog | Verificatie nodig (lijkt al te werken) |
+
+---
+
 ## Volgordesamenvatting
 
 | # | Feature | Fase | Type | Complexiteit |
@@ -300,6 +332,7 @@ Wat bouwen:
 | 14 | Gebruikersbeheer | D2 | Frontend + backend | Groot |
 | 15 | Navigatie-verbeteringen | D3 | Frontend only | Klein |
 | 16 | Empty/loading states | D4 | Frontend only | Klein |
+| 17 | Agenda events aanmaken | D5 | Frontend + backend | Midden |
 
 ### Apart traject (na B1)
 

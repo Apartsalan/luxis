@@ -46,6 +46,7 @@
 | `FEATURE-INVENTORY.md` | Complete feature-inventaris (alle 15 modules) | Referentie — de "wat zou kunnen" lijst |
 | `UX-REVIEW.md` | Kritische UX analyse per feature vs. concurrentie | Referentie — de "waar staan we" analyse |
 | `UX-VERBETERPLAN.md` | Geprioriteerde lijst van UX verbeteringen | **Actieve werklijst** |
+| `BUGS-EN-VERBETERPUNTEN.md` | Bugs uit handmatige test (19 feb 2026) + fix-instructies | **Actieve buglijst** — BUG-1/2/3 fixen, #4/#5 gedocumenteerd |
 | `PROMPT-TEMPLATES-IN-WORKFLOW.md` | Spec voor templates + email in workflow | Gepland (dependency: B1 zaakdetail tabs) |
 
 ### Op Bureaublad (`C:\Users\arsal\OneDrive\Bureaublad\Kesting Legal\Luxis\`)
@@ -155,6 +156,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | D2 | Gebruikersbeheer (rollen, rechten) | Groot | Niet gestart |
 | D3 | Navigatie-verbeteringen | Klein | Niet gestart |
 | D4 | Empty states en loading states | Klein | Niet gestart |
+| D5 | Agenda events aanmaken | Midden (nieuw model + CRUD) | Niet gestart |
 
 ### Apart traject: Templates in workflow (na B1)
 

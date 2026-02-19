@@ -11,6 +11,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Timer,
   Briefcase,
   X,
@@ -65,6 +66,115 @@ function toISO(d: Date): string {
 }
 
 const DAY_NAMES = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
+
+// ── Searchable Case Selector ─────────────────────────────────────────────
+
+function CaseSelector({
+  cases,
+  value,
+  onChange,
+  disabled,
+  placeholder = "Zoek zaak...",
+}: {
+  cases: CaseSummary[];
+  value: string;
+  onChange: (id: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedCase = cases.find((c) => c.id === value);
+
+  const filtered = cases.filter((c) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      c.case_number.toLowerCase().includes(q) ||
+      c.client?.name?.toLowerCase().includes(q) ||
+      c.opposing_party?.name?.toLowerCase().includes(q) ||
+      c.description?.toLowerCase().includes(q)
+    );
+  });
+
+  // Close on click outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen(!open)}
+        disabled={disabled}
+        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-left flex items-center justify-between gap-2 hover:bg-muted/50 transition-colors disabled:opacity-50"
+      >
+        <span className={selectedCase ? "text-foreground" : "text-muted-foreground"}>
+          {selectedCase
+            ? `${selectedCase.case_number}${selectedCase.client?.name ? ` — ${selectedCase.client.name}` : ""}`
+            : placeholder}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-card shadow-lg">
+          <div className="p-2 border-b border-border">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Zoek op nummer, cliënt, wederpartij..."
+              className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-60 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                Geen zaken gevonden
+              </p>
+            ) : (
+              filtered.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(c.id);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between ${
+                    c.id === value ? "bg-primary/5 text-primary" : "text-foreground"
+                  }`}
+                >
+                  <div>
+                    <span className="font-medium">{c.case_number}</span>
+                    {c.client?.name && (
+                      <span className="text-muted-foreground ml-2">— {c.client.name}</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                    {c.case_type}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Page component ───────────────────────────────────────────────────────
 
@@ -277,19 +387,15 @@ export default function UrenPage() {
           <div className="text-2xl font-mono font-bold text-foreground mb-3 tabular-nums">
             {timerDisplay}
           </div>
-          <select
-            value={timerCaseId}
-            onChange={(e) => setTimerCaseId(e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm mb-2"
-            disabled={timerRunning}
-          >
-            <option value="">Selecteer zaak...</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.case_number}
-              </option>
-            ))}
-          </select>
+          <div className="mb-2">
+            <CaseSelector
+              cases={cases}
+              value={timerCaseId}
+              onChange={setTimerCaseId}
+              disabled={timerRunning}
+              placeholder="Selecteer zaak..."
+            />
+          </div>
           {timerRunning ? (
             <button
               onClick={stopTimer}
@@ -364,16 +470,14 @@ export default function UrenPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <select
-            value={filterCaseId}
-            onChange={(e) => setFilterCaseId(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-          >
-            <option value="">Alle zaken</option>
-            {cases.map((c) => (
-              <option key={c.id} value={c.id}>{c.case_number}</option>
-            ))}
-          </select>
+          <div className="w-56">
+            <CaseSelector
+              cases={cases}
+              value={filterCaseId}
+              onChange={setFilterCaseId}
+              placeholder="Alle zaken"
+            />
+          </div>
           <select
             value={filterBillable}
             onChange={(e) => setFilterBillable(e.target.value)}
@@ -425,16 +529,12 @@ export default function UrenPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Zaak *</label>
-              <select
+              <CaseSelector
+                cases={cases}
                 value={formCaseId}
-                onChange={(e) => setFormCaseId(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">Selecteer zaak...</option>
-                {cases.map((c) => (
-                  <option key={c.id} value={c.id}>{c.case_number}</option>
-                ))}
-              </select>
+                onChange={setFormCaseId}
+                placeholder="Selecteer zaak..."
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>

@@ -792,11 +792,14 @@ function MyTasksWidget() {
         })}
       </div>
       {totalOpen > 5 && (
-        <div className="px-5 py-3 border-t border-border text-center">
-          <span className="text-xs text-muted-foreground">
-            +{totalOpen - 5} meer taken openstaand
+        <Link
+          href="/taken"
+          className="flex items-center justify-center gap-1 px-5 py-3 border-t border-border text-center hover:bg-muted/50 transition-colors"
+        >
+          <span className="text-xs text-primary font-medium">
+            Alle {totalOpen} taken bekijken →
           </span>
-        </div>
+        </Link>
       )}
     </div>
   );

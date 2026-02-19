@@ -29,6 +29,7 @@ import {
 import { useCases, type CaseSummary } from "@/hooks/use-cases";
 import { formatCurrency } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { useTimer } from "@/hooks/use-timer";
 import { toast } from "sonner";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -305,49 +306,33 @@ export default function UrenPage() {
   const updateMutation = useUpdateTimeEntry();
   const deleteMutation = useDeleteTimeEntry();
 
-  // ── Timer state ──────────────────────────────────────────────────────
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [timerCaseId, setTimerCaseId] = useState("");
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // ── Global Timer (from context — persists across pages) ─────────────
+  const {
+    timer,
+    startTimer: globalStartTimer,
+    stopTimer: globalStopTimer,
+    setTimerCase: globalSetTimerCase,
+    isExpanded: timerExpanded,
+    setIsExpanded: setTimerExpanded,
+  } = useTimer();
 
-  useEffect(() => {
-    if (timerRunning) {
-      timerRef.current = setInterval(() => setTimerSeconds((s) => s + 1), 1000);
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [timerRunning]);
+  // Aliases for backward compatibility with the timer card UI
+  const timerRunning = timer.running;
+  const timerSeconds = timer.seconds;
+  const timerCaseId = timer.caseId;
+  const setTimerCaseId = (id: string) => {
+    const c = cases.find((cs) => cs.id === id);
+    const label = c ? `${c.case_number}${c.client?.name ? ` — ${c.client.name}` : ""}` : "";
+    globalSetTimerCase(id, label);
+  };
 
   const startTimer = () => {
-    if (!timerCaseId) {
-      toast.error("Selecteer eerst een zaak");
-      return;
-    }
-    setTimerSeconds(0);
-    setTimerRunning(true);
+    const c = cases.find((cs) => cs.id === timerCaseId);
+    const label = c ? `${c.case_number}${c.client?.name ? ` — ${c.client.name}` : ""}` : "";
+    globalStartTimer(timerCaseId, label);
   };
 
-  const stopTimer = async () => {
-    setTimerRunning(false);
-    const minutes = Math.max(1, Math.round(timerSeconds / 60));
-    try {
-      await createMutation.mutateAsync({
-        case_id: timerCaseId,
-        date: toISO(new Date()),
-        duration_minutes: minutes,
-        activity_type: "other",
-        billable: true,
-      });
-      toast.success(`${fmtMinutes(minutes)} geregistreerd`);
-      setTimerSeconds(0);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
+  const stopTimer = globalStopTimer;
 
   // ── New entry form ───────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);

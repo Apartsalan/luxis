@@ -4,11 +4,22 @@ import { QueryClient, QueryClientProvider, MutationCache } from "@tanstack/react
 import { useState } from "react";
 import { Toaster, toast } from "sonner";
 import { AuthContext, useAuthProvider } from "@/hooks/use-auth";
+import { TimerContext, useTimerProvider } from "@/hooks/use-timer";
 import { CommandPalette } from "@/components/command-palette";
+import { FloatingTimer } from "@/components/floating-timer";
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuthProvider();
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+}
+
+function TimerProvider({ children }: { children: React.ReactNode }) {
+  const timerValue = useTimerProvider();
+  return (
+    <TimerContext.Provider value={timerValue}>
+      {children}
+    </TimerContext.Provider>
+  );
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -35,8 +46,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <TimerProvider>
         {children}
         <CommandPalette />
+        <FloatingTimer />
         <Toaster
           position="bottom-right"
           richColors
@@ -45,6 +58,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             duration: 4000,
           }}
         />
+        </TimerProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

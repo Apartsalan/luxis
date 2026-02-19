@@ -230,3 +230,75 @@ export function useDeleteCase() {
     },
   });
 }
+
+// ── Case Activities ──────────────────────────────────────────────────────────
+
+export interface CaseActivity {
+  id: string;
+  activity_type: string;
+  title: string;
+  description: string | null;
+  old_status: string | null;
+  new_status: string | null;
+  user: { id: string; full_name: string; email: string } | null;
+  created_at: string;
+}
+
+interface PaginatedActivities {
+  items: CaseActivity[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+/** Paginated activities for a case (newest first) */
+export function useCaseActivities(caseId: string | undefined, page = 1) {
+  return useQuery<PaginatedActivities>({
+    queryKey: ["cases", caseId, "activities", page],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: "20",
+      });
+      const res = await api(`/api/cases/${caseId}/activities?${params}`);
+      if (!res.ok) throw new Error("Fout bij ophalen activiteiten");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+/** Add a note/activity to a case */
+export function useAddCaseActivity() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      data,
+    }: {
+      caseId: string;
+      data: { activity_type: string; title: string; description?: string };
+    }) => {
+      const res = await api(`/api/cases/${caseId}/activities`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Activiteit toevoegen mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["cases", variables.caseId, "activities"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["cases", variables.caseId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}

@@ -1,5 +1,6 @@
 """Authentication service — JWT creation, verification, and password hashing."""
 
+import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -10,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def hash_password(password: str) -> str:
@@ -96,3 +99,49 @@ async def create_user(
     await db.flush()
     await db.refresh(user)
     return user
+
+
+async def create_password_reset_token(db: AsyncSession, email: str) -> str | None:
+    """Generate a password reset token for the given email.
+
+    Returns the token if the user exists, None otherwise.
+    Caller should NOT reveal whether the email exists.
+    """
+    result = await db.execute(
+        select(User).where(User.email == email, User.is_active.is_(True))
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        return None
+
+    token = str(uuid.uuid4())
+    user.password_reset_token = token
+    user.password_reset_expires = datetime.now(UTC) + timedelta(hours=1)
+    db.add(user)
+    await db.flush()
+    return token
+
+
+async def reset_password_with_token(
+    db: AsyncSession, token: str, new_password: str
+) -> bool:
+    """Reset a user's password using a valid reset token.
+
+    Returns True on success, False if token is invalid or expired.
+    """
+    result = await db.execute(
+        select(User).where(User.password_reset_token == token)
+    )
+    user = result.scalar_one_or_none()
+    if user is None:
+        return False
+
+    if user.password_reset_expires is None or user.password_reset_expires < datetime.now(UTC):
+        return False
+
+    user.hashed_password = hash_password(new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.add(user)
+    await db.flush()
+    return True

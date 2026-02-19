@@ -109,11 +109,19 @@ class ContactLinkResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LinkedContactInfo(BaseModel):
+    """Contact summary with link metadata (link_id, role)."""
+
+    link_id: uuid.UUID
+    role_at_company: str | None
+    contact: ContactSummary
+
+
 class ContactDetailResponse(ContactResponse):
     """Full contact detail, including linked companies/persons."""
 
-    linked_companies: list[ContactSummary] = []
-    linked_persons: list[ContactSummary] = []
+    linked_companies: list[LinkedContactInfo] = []
+    linked_persons: list[LinkedContactInfo] = []
 
 
 class ConflictCheckResult(BaseModel):

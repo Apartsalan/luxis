@@ -25,12 +25,21 @@ import {
   CalendarDays,
   ArrowRight,
   CreditCard,
+  Phone,
+  Mail,
+  MessageSquare,
+  Send,
+  ArrowUpDown,
+  ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCase,
   useUpdateCaseStatus,
   useDeleteCase,
+  useCaseActivities,
+  useAddCaseActivity,
+  type CaseActivity,
 } from "@/hooks/use-cases";
 import {
   useClaims,
@@ -69,7 +78,8 @@ import {
   TASK_STATUS_LABELS,
 } from "@/hooks/use-workflow";
 import { useModules } from "@/hooks/use-modules";
-import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
+import { useTimer } from "@/hooks/use-timer";
+import { formatCurrency, formatDate, formatDateShort, formatRelativeTime } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -129,12 +139,21 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
-  status_change: FileText,
-  note: FileText,
-  phone_call: FileText,
-  email: FileText,
+  status_change: ArrowUpDown,
+  note: MessageSquare,
+  phone_call: Phone,
+  email: Mail,
   document: FileText,
   payment: CreditCard,
+};
+
+const ACTIVITY_COLORS: Record<string, string> = {
+  status_change: "bg-blue-50 text-blue-600",
+  note: "bg-amber-50 text-amber-600",
+  phone_call: "bg-emerald-50 text-emerald-600",
+  email: "bg-violet-50 text-violet-600",
+  document: "bg-slate-100 text-slate-600",
+  payment: "bg-green-50 text-green-600",
 };
 
 function VerjaringBadge({
@@ -198,6 +217,7 @@ export default function ZaakDetailPage() {
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: workflowTransitions } = useWorkflowTransitions();
   const { hasModule } = useModules();
+  const { startTimer, timer } = useTimer();
   const [activeTab, setActiveTab] = useState("overzicht");
 
   const handleStatusChange = async (newStatus: string) => {
@@ -522,6 +542,55 @@ export default function ZaakDetailPage() {
         </div>
       </div>
 
+      {/* Quick Actions Bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => {
+            const label = `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}`;
+            startTimer(zaak.id, label);
+          }}
+          disabled={timer.running && timer.caseId === zaak.id}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Clock className="h-3.5 w-3.5 text-emerald-500" />
+          {timer.running && timer.caseId === zaak.id ? "Timer loopt..." : "Uren loggen"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("activiteiten")}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          <MessageSquare className="h-3.5 w-3.5 text-amber-500" />
+          Notitie
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("documenten")}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          <FileText className="h-3.5 w-3.5 text-blue-500" />
+          Document
+        </button>
+        <Link
+          href={`/facturen/nieuw?case_id=${zaak.id}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          <Receipt className="h-3.5 w-3.5 text-violet-500" />
+          Factuur
+        </Link>
+        {isIncasso && (
+          <button
+            type="button"
+            onClick={() => setActiveTab("financieel")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+          >
+            <Euro className="h-3.5 w-3.5 text-orange-500" />
+            Renteoverzicht
+          </button>
+        )}
+      </div>
+
       {/* Tabs */}
       <div className="border-b border-border overflow-x-auto">
         <nav className="flex gap-0.5 min-w-max">
@@ -672,17 +741,23 @@ function OverzichtTab({ zaak }: { zaak: any }) {
             </h2>
           </div>
           {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-            <div className="divide-y divide-border">
-              {zaak.recent_activities.slice(0, 6).map((activity: any) => {
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-[2.125rem] top-0 bottom-0 w-px bg-border" />
+              {zaak.recent_activities.slice(0, 6).map((activity: any, idx: number) => {
                 const Icon =
                   ACTIVITY_ICONS[activity.activity_type] ?? FileText;
+                const colorClass =
+                  ACTIVITY_COLORS[activity.activity_type] ?? "bg-muted text-muted-foreground";
                 return (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-3 px-5 py-3.5"
+                    className="relative flex items-start gap-3 px-5 py-3.5"
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div
+                      className={`relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${colorClass}`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-foreground">
@@ -693,8 +768,8 @@ function OverzichtTab({ zaak }: { zaak: any }) {
                           {activity.description}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDateShort(activity.created_at)}
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">
+                        {formatRelativeTime(activity.created_at)}
                       </p>
                     </div>
                   </div>
@@ -1551,51 +1626,225 @@ function DerdengeldenTab({ caseId }: { caseId: string }) {
 
 // ── Activiteiten Tab ──────────────────────────────────────────────────────────
 
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  status_change: "Statuswijziging",
+  note: "Notitie",
+  phone_call: "Telefoongesprek",
+  email: "E-mail",
+  document: "Document",
+  payment: "Betaling",
+};
+
 function ActiviteitenTab({ zaak }: { zaak: any }) {
+  const [page, setPage] = useState(1);
+  const [noteText, setNoteText] = useState("");
+  const [isAddingNote, setIsAddingNote] = useState(false);
+  const { data, isLoading } = useCaseActivities(zaak.id, page);
+  const addActivity = useAddCaseActivity();
+
+  const handleAddNote = async () => {
+    const text = noteText.trim();
+    if (!text) return;
+
+    try {
+      await addActivity.mutateAsync({
+        caseId: zaak.id,
+        data: {
+          activity_type: "note",
+          title: "Notitie toegevoegd",
+          description: text,
+        },
+      });
+      setNoteText("");
+      setIsAddingNote(false);
+      setPage(1);
+      toast.success("Notitie toegevoegd");
+    } catch {
+      toast.error("Kon notitie niet toevoegen");
+    }
+  };
+
+  const activities = data?.items ?? [];
+  const totalPages = data?.pages ?? 0;
+
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-        <Clock className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-sm font-semibold text-card-foreground">
-          Alle activiteiten
-        </h2>
-      </div>
-      {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
-        <div className="divide-y divide-border">
-          {zaak.recent_activities.map((activity: any) => {
-            const Icon =
-              ACTIVITY_ICONS[activity.activity_type] ?? FileText;
-            return (
-              <div
-                key={activity.id}
-                className="flex items-start gap-3 px-5 py-3.5"
+    <div className="space-y-4">
+      {/* Inline note input */}
+      <div className="rounded-xl border border-border bg-card">
+        {isAddingNote ? (
+          <div className="p-4 space-y-3">
+            <textarea
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Schrijf een notitie..."
+              autoFocus
+              rows={3}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors resize-none"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingNote(false);
+                  setNoteText("");
+                }}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted transition-colors"
               >
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {activity.title}
-                  </p>
-                  {activity.description && (
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {activity.description}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDate(activity.created_at)}
-                  </p>
+                Annuleren
+              </button>
+              <button
+                type="button"
+                onClick={handleAddNote}
+                disabled={!noteText.trim() || addActivity.isPending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {addActivity.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Send className="h-3 w-3" />
+                )}
+                Opslaan
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsAddingNote(true)}
+            className="flex w-full items-center gap-3 px-5 py-3.5 text-left hover:bg-muted/50 transition-colors rounded-xl"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+              <Plus className="h-4 w-4 text-primary" />
+            </div>
+            <span className="text-sm text-muted-foreground">
+              Notitie toevoegen...
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Activity timeline */}
+      <div className="rounded-xl border border-border bg-card">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-card-foreground">
+              Alle activiteiten
+            </h2>
+            {data && (
+              <span className="text-xs text-muted-foreground">
+                ({data.total})
+              </span>
+            )}
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="divide-y divide-border">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-start gap-3 px-5 py-4 animate-pulse">
+                <div className="h-8 w-8 rounded-full bg-muted shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-2/3 rounded bg-muted" />
+                  <div className="h-3 w-1/2 rounded bg-muted" />
                 </div>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="px-5 py-8 text-center">
-          <Clock className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Geen activiteiten</p>
-        </div>
-      )}
+            ))}
+          </div>
+        ) : activities.length > 0 ? (
+          <div className="relative">
+            {/* Timeline line */}
+            <div className="absolute left-[2.375rem] top-0 bottom-0 w-px bg-border" />
+
+            {activities.map((activity: CaseActivity) => {
+              const Icon =
+                ACTIVITY_ICONS[activity.activity_type] ?? FileText;
+              const colorClass =
+                ACTIVITY_COLORS[activity.activity_type] ??
+                "bg-muted text-muted-foreground";
+              const typeLabel =
+                ACTIVITY_TYPE_LABELS[activity.activity_type] ??
+                activity.activity_type;
+
+              return (
+                <div
+                  key={activity.id}
+                  className="relative flex items-start gap-3 px-5 py-4 hover:bg-muted/30 transition-colors"
+                >
+                  <div
+                    className={`relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${colorClass}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {activity.title}
+                        </p>
+                        {activity.description && (
+                          <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-wrap">
+                            {activity.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                        {typeLabel}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground/70">
+                      <span>{formatRelativeTime(activity.created_at)}</span>
+                      {activity.user && (
+                        <>
+                          <span>·</span>
+                          <span>{activity.user.full_name}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="px-5 py-12 text-center">
+            <Clock className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">
+              Geen activiteiten
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Voeg een notitie toe om de timeline te starten.
+            </p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border px-5 py-3">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Vorige
+            </button>
+            <span className="text-xs text-muted-foreground">
+              Pagina {page} van {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+            >
+              Volgende
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

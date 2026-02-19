@@ -69,6 +69,15 @@ class TenantUpdateRequest(BaseModel):
     modules_enabled: list[str] | None = None
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(max_length=320)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8)
+
+
 class TenantDetailResponse(BaseModel):
     id: uuid.UUID
     name: str

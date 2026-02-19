@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Uuid
+from sqlalchemy import DateTime, ForeignKey, String, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,5 +52,11 @@ class User(Base, TimestampMixin):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), default="medewerker")  # admin, advocaat, medewerker
     is_active: Mapped[bool] = mapped_column(default=True)
+    password_reset_token: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True, default=None
+    )
+    password_reset_expires: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="users")

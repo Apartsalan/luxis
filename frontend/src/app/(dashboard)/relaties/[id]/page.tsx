@@ -35,6 +35,7 @@ import { useCases } from "@/hooks/use-cases";
 import { useModules } from "@/hooks/use-modules";
 import { useKyc, useSaveKyc, useCompleteKyc } from "@/hooks/use-kyc";
 import { formatDate, formatCurrency, formatDateShort } from "@/lib/utils";
+import { ContactLinks } from "@/components/relations/contact-links";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -644,8 +645,19 @@ export default function RelatieDetailPage() {
           </div>
         </div>
 
-        {/* Right column: Linked Cases */}
-        <div className="lg:col-span-2">
+        {/* Right column: Links + Cases */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Contact Links (companies for persons, persons for companies) */}
+          <ContactLinks
+            contactId={id}
+            contactType={contact.contact_type}
+            links={
+              contact.contact_type === "person"
+                ? contact.linked_companies ?? []
+                : contact.linked_persons ?? []
+            }
+          />
+
           <div className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div className="flex items-center gap-2">

@@ -13,6 +13,7 @@ import {
   Clock,
   Receipt,
   Calendar,
+  CheckSquare,
   ChevronLeft,
   ChevronRight,
   X,
@@ -29,6 +30,7 @@ interface NavItem {
 
 const ALL_NAVIGATION: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Mijn Taken", href: "/taken", icon: CheckSquare },
   { name: "Relaties", href: "/relaties", icon: Users },
   { name: "Zaken", href: "/zaken", icon: Briefcase },
   { name: "Agenda", href: "/agenda", icon: Calendar },

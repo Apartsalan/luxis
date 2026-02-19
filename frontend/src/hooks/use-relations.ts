@@ -3,6 +3,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
+export interface ContactSummary {
+  id: string;
+  contact_type: "company" | "person";
+  name: string;
+  email: string | null;
+  phone: string | null;
+  kvk_number: string | null;
+  is_active: boolean;
+}
+
+export interface LinkedContactInfo {
+  link_id: string;
+  role_at_company: string | null;
+  contact: ContactSummary;
+}
+
 export interface Contact {
   id: string;
   contact_type: "company" | "person";
@@ -23,6 +39,8 @@ export interface Contact {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  linked_companies?: LinkedContactInfo[];
+  linked_persons?: LinkedContactInfo[];
 }
 
 interface PaginatedContacts {
@@ -151,6 +169,68 @@ export function useDeleteRelation() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete relation");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["relations"] });
+    },
+  });
+}
+
+// ── Contact Links ────────────────────────────────────────────────────────────
+
+export function useSearchRelations(search: string, contactType?: "company" | "person") {
+  return useQuery<PaginatedContacts>({
+    queryKey: ["relations", "search", { search, contactType }],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: "1",
+        per_page: "10",
+        search,
+      });
+      if (contactType) params.set("contact_type", contactType);
+
+      const res = await api(`/api/relations?${params}`);
+      if (!res.ok) throw new Error("Failed to search relations");
+      return res.json();
+    },
+    enabled: search.length >= 2,
+  });
+}
+
+export function useCreateContactLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      person_id: string;
+      company_id: string;
+      role_at_company?: string;
+    }) => {
+      const res = await api("/api/relations/links", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Koppeling aanmaken mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["relations"] });
+    },
+  });
+}
+
+export function useDeleteContactLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (linkId: string) => {
+      const res = await api(`/api/relations/links/${linkId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Koppeling verwijderen mislukt");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["relations"] });

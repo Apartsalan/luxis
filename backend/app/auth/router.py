@@ -1,5 +1,7 @@
 """Auth endpoints — login, registration, token refresh, and user management."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import JWTError
 from sqlalchemy import select
@@ -8,9 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import Tenant, User
 from app.auth.schemas import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordRequest,
     TenantDetailResponse,
     TenantUpdateRequest,
     TokenResponse,
@@ -20,15 +24,20 @@ from app.auth.schemas import (
 from app.auth.service import (
     authenticate_user,
     create_access_token,
+    create_password_reset_token,
     create_refresh_token,
     create_user,
     decode_token,
     get_user_by_id,
     hash_password,
+    reset_password_with_token,
     verify_password,
 )
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -101,6 +110,40 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
     new_refresh_token = create_refresh_token(str(user.id), str(user.tenant_id))
 
     return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
+
+
+@router.post("/forgot-password", status_code=200)
+async def forgot_password(
+    data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    """Request a password reset link. Always returns success to avoid leaking emails."""
+    token = await create_password_reset_token(db, data.email)
+
+    if token:
+        frontend_url = settings.cors_origins.split(",")[0].strip()
+        reset_url = f"{frontend_url}/reset-password?token={token}"
+
+        if settings.smtp_host:
+            # TODO: Send actual email when SMTP is configured
+            logger.info("Password reset requested for %s (email would be sent)", data.email)
+        else:
+            logger.info("Password reset URL for %s: %s", data.email, reset_url)
+
+    return {"detail": "Als het e-mailadres bekend is, ontvang je een herstellink."}
+
+
+@router.post("/reset-password", status_code=200)
+async def reset_password(
+    data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+):
+    """Reset password using a valid reset token."""
+    success = await reset_password_with_token(db, data.token, data.new_password)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ongeldige of verlopen herstellink. Vraag een nieuwe aan.",
+        )
+    return {"detail": "Wachtwoord succesvol gewijzigd."}
 
 
 @router.get("/me", response_model=UserResponse)

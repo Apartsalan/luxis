@@ -349,6 +349,18 @@ export function useMyOpenTasks(limit = 10) {
   });
 }
 
+/** All tasks assigned to current user — sorted: overdue → due → pending */
+export function useMyTasks() {
+  return useQuery<WorkflowTask[]>({
+    queryKey: ["workflow-tasks", "my-tasks"],
+    queryFn: async () => {
+      const res = await api("/api/dashboard/my-tasks");
+      if (!res.ok) throw new Error("Fout bij ophalen taken");
+      return res.json();
+    },
+  });
+}
+
 export function useCompleteTask() {
   const queryClient = useQueryClient();
   return useMutation({

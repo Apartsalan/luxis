@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   Clock,
@@ -67,14 +67,14 @@ function toISO(d: Date): string {
 
 const DAY_NAMES = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 
-// ── Searchable Case Selector ─────────────────────────────────────────────
+// ── Grouped Case Selector (Client → Cases) ─────────────────────────────
 
 function CaseSelector({
   cases,
   value,
   onChange,
   disabled,
-  placeholder = "Zoek zaak...",
+  placeholder = "Selecteer zaak...",
 }: {
   cases: CaseSummary[];
   value: string;
@@ -84,20 +84,75 @@ function CaseSelector({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
   const selectedCase = cases.find((c) => c.id === value);
 
-  const filtered = cases.filter((c) => {
-    if (!search) return true;
+  // Group cases by client
+  const grouped = useMemo(() => {
+    const map = new Map<string, { clientName: string; clientId: string; cases: CaseSummary[] }>();
+    for (const c of cases) {
+      const clientId = c.client?.id ?? "unknown";
+      const clientName = c.client?.name ?? "Onbekende cliënt";
+      if (!map.has(clientId)) {
+        map.set(clientId, { clientName, clientId, cases: [] });
+      }
+      map.get(clientId)!.cases.push(c);
+    }
+    // Sort groups by client name
+    return [...map.values()].sort((a, b) => a.clientName.localeCompare(b.clientName));
+  }, [cases]);
+
+  // Filter groups based on search
+  const filteredGroups = useMemo(() => {
+    if (!search) return grouped;
     const q = search.toLowerCase();
-    return (
-      c.case_number.toLowerCase().includes(q) ||
-      c.client?.name?.toLowerCase().includes(q) ||
-      c.opposing_party?.name?.toLowerCase().includes(q) ||
-      c.description?.toLowerCase().includes(q)
-    );
-  });
+    return grouped
+      .map((group) => ({
+        ...group,
+        cases: group.cases.filter(
+          (c) =>
+            c.case_number.toLowerCase().includes(q) ||
+            c.client?.name?.toLowerCase().includes(q) ||
+            c.opposing_party?.name?.toLowerCase().includes(q) ||
+            c.description?.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((group) => group.cases.length > 0);
+  }, [grouped, search]);
+
+  // Auto-expand all groups when searching, or when there's only one group
+  const effectiveExpanded = useMemo(() => {
+    if (search || filteredGroups.length === 1) {
+      return new Set(filteredGroups.map((g) => g.clientId));
+    }
+    return expandedClients;
+  }, [search, filteredGroups, expandedClients]);
+
+  const toggleClient = (clientId: string) => {
+    setExpandedClients((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
+  };
+
+  // Auto-expand the group of the selected case
+  useEffect(() => {
+    if (selectedCase?.client?.id) {
+      setExpandedClients((prev) => {
+        if (prev.has(selectedCase.client!.id)) return prev;
+        const next = new Set(prev);
+        next.add(selectedCase.client!.id);
+        return next;
+      });
+    }
+  }, [selectedCase]);
 
   // Close on click outside
   useEffect(() => {
@@ -118,7 +173,7 @@ function CaseSelector({
         disabled={disabled}
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-left flex items-center justify-between gap-2 hover:bg-muted/50 transition-colors disabled:opacity-50"
       >
-        <span className={selectedCase ? "text-foreground" : "text-muted-foreground"}>
+        <span className={selectedCase ? "text-foreground truncate" : "text-muted-foreground"}>
           {selectedCase
             ? `${selectedCase.case_number}${selectedCase.client?.name ? ` — ${selectedCase.client.name}` : ""}`
             : placeholder}
@@ -127,47 +182,80 @@ function CaseSelector({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-card shadow-lg">
+        <div className="absolute z-50 mt-1 w-full min-w-[320px] rounded-md border border-border bg-card shadow-lg">
           <div className="p-2 border-b border-border">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek op nummer, cliënt, wederpartij..."
+              placeholder="Zoek op cliënt, zaaknummer..."
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               autoFocus
             />
           </div>
-          <div className="max-h-60 overflow-y-auto">
-            {filtered.length === 0 ? (
+          <div className="max-h-72 overflow-y-auto">
+            {filteredGroups.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
                 Geen zaken gevonden
               </p>
             ) : (
-              filtered.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => {
-                    onChange(c.id);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between ${
-                    c.id === value ? "bg-primary/5 text-primary" : "text-foreground"
-                  }`}
-                >
-                  <div>
-                    <span className="font-medium">{c.case_number}</span>
-                    {c.client?.name && (
-                      <span className="text-muted-foreground ml-2">— {c.client.name}</span>
+              filteredGroups.map((group) => {
+                const isExpanded = effectiveExpanded.has(group.clientId);
+                return (
+                  <div key={group.clientId}>
+                    {/* Client header */}
+                    <button
+                      type="button"
+                      onClick={() => toggleClient(group.clientId)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-foreground bg-muted/30 hover:bg-muted/60 transition-colors sticky top-0"
+                    >
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform ${
+                          isExpanded ? "" : "-rotate-90"
+                        }`}
+                      />
+                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate">{group.clientName}</span>
+                      <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                        {group.cases.length} {group.cases.length === 1 ? "zaak" : "zaken"}
+                      </span>
+                    </button>
+                    {/* Cases under this client */}
+                    {isExpanded && (
+                      <div>
+                        {group.cases.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              onChange(c.id);
+                              setOpen(false);
+                              setSearch("");
+                            }}
+                            className={`w-full text-left pl-9 pr-3 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center justify-between ${
+                              c.id === value
+                                ? "bg-primary/5 text-primary"
+                                : "text-foreground"
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <span className="font-mono font-medium">{c.case_number}</span>
+                              {c.description && (
+                                <span className="text-muted-foreground ml-2 truncate">
+                                  — {c.description}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground shrink-0 ml-2 uppercase">
+                              {c.case_type}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                    {c.case_type}
-                  </span>
-                </button>
-              ))
+                );
+              })
             )}
           </div>
         </div>

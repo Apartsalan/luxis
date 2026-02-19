@@ -89,23 +89,23 @@ export default function LoginPage() {
             <span className="text-primary/80">voor de advocatuur</span>
           </h2>
           <p className="text-base text-white/50 max-w-md leading-relaxed">
-            Beheer zaken, vorderingen, relaties en documenten vanuit één
-            centraal systeem. Gebouwd voor de Nederlandse advocatuur.
+            Dossierbeheer, tijdschrijven, facturatie en documentgeneratie
+            in één overzichtelijk platform.
           </p>
           <div className="flex gap-6 pt-4">
             <div>
-              <p className="text-2xl font-bold text-white">100%</p>
-              <p className="text-xs text-white/40 mt-0.5">Nederlands recht</p>
+              <p className="text-2xl font-bold text-white">Dossiers</p>
+              <p className="text-xs text-white/40 mt-0.5">Centraal beheer</p>
             </div>
             <div className="w-px bg-white/10" />
             <div>
-              <p className="text-2xl font-bold text-white">Art. 6:44</p>
-              <p className="text-xs text-white/40 mt-0.5">BW betalingsverdeling</p>
+              <p className="text-2xl font-bold text-white">Uren</p>
+              <p className="text-xs text-white/40 mt-0.5">Tijdschrijven</p>
             </div>
             <div className="w-px bg-white/10" />
             <div>
-              <p className="text-2xl font-bold text-white">WIK/BIK</p>
-              <p className="text-xs text-white/40 mt-0.5">Incassostaffel</p>
+              <p className="text-2xl font-bold text-white">Facturen</p>
+              <p className="text-xs text-white/40 mt-0.5">Facturatie</p>
             </div>
           </div>
         </div>

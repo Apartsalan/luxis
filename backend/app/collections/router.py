@@ -181,10 +181,13 @@ async def create_payment(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Register a payment for a case."""
-    await get_case(db, current_user.tenant_id, case_id)
+    """Register a payment for a case (distributed per art. 6:44 BW)."""
+    case = await get_case(db, current_user.tenant_id, case_id)
     return await service.create_payment(
-        db, current_user.tenant_id, case_id, data, current_user.id
+        db, current_user.tenant_id, case_id, data, current_user.id,
+        interest_type=case.interest_type,
+        contractual_rate=case.contractual_rate,
+        contractual_compound=case.contractual_compound,
     )
 
 

@@ -24,6 +24,7 @@ from app.collections.schemas import (
     PaymentCreate,
     PaymentUpdate,
 )
+from app.collections.payment_distribution import distribute_payment
 from app.collections.wik import calculate_bik
 from app.shared.exceptions import NotFoundError
 
@@ -133,12 +134,72 @@ async def create_payment(
     case_id: uuid.UUID,
     data: PaymentCreate,
     user_id: uuid.UUID | None = None,
+    *,
+    interest_type: str = "statutory",
+    contractual_rate: Decimal | None = None,
+    contractual_compound: bool = False,
 ) -> Payment:
     """Register a payment for a case.
+
+    Distributes the payment per art. 6:44 BW (costs -> interest -> principal)
+    and stores the allocation on the payment record.
 
     After creating the payment, triggers the workflow payment hook
     to check if the case is fully paid and should auto-transition to 'betaald'.
     """
+    # ── Calculate outstanding amounts as of payment date ──────────────
+    claims = await list_claims(db, tenant_id, case_id)
+    total_principal = sum(
+        (c.principal_amount for c in claims), Decimal("0")
+    )
+
+    # Interest as of payment date
+    if claims:
+        claim_dicts = [
+            {
+                "id": str(c.id),
+                "description": c.description,
+                "principal_amount": c.principal_amount,
+                "default_date": c.default_date,
+            }
+            for c in claims
+        ]
+        interest_result = await calculate_case_interest(
+            db, str(case_id), interest_type, contractual_rate,
+            contractual_compound, claim_dicts, data.payment_date,
+        )
+        total_interest = interest_result["total_interest"]
+    else:
+        total_interest = Decimal("0")
+
+    # BIK costs
+    bik_result = calculate_bik(total_principal)
+    total_costs = bik_result["bik_inclusive"]
+
+    # Subtract previously allocated amounts from existing payments
+    existing_payments = await list_payments(db, tenant_id, case_id)
+    prev_costs = sum(
+        (p.allocated_to_costs for p in existing_payments), Decimal("0")
+    )
+    prev_interest = sum(
+        (p.allocated_to_interest for p in existing_payments), Decimal("0")
+    )
+    prev_principal = sum(
+        (p.allocated_to_principal for p in existing_payments), Decimal("0")
+    )
+
+    outstanding_costs = max(Decimal("0"), total_costs - prev_costs)
+    outstanding_interest = max(Decimal("0"), total_interest - prev_interest)
+    outstanding_principal = max(Decimal("0"), total_principal - prev_principal)
+
+    # ── Distribute per art. 6:44 BW ──────────────────────────────────
+    distribution = distribute_payment(
+        payment_amount=data.amount,
+        outstanding_costs=outstanding_costs,
+        outstanding_interest=outstanding_interest,
+        outstanding_principal=outstanding_principal,
+    )
+
     payment = Payment(
         tenant_id=tenant_id,
         case_id=case_id,
@@ -146,6 +207,9 @@ async def create_payment(
         payment_date=data.payment_date,
         description=data.description,
         payment_method=data.payment_method,
+        allocated_to_costs=distribution["to_costs"],
+        allocated_to_interest=distribution["to_interest"],
+        allocated_to_principal=distribution["to_principal"],
     )
     db.add(payment)
     await db.flush()

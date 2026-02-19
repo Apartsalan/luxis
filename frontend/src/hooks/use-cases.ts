@@ -65,15 +65,17 @@ export function useCases(params?: {
   case_type?: string;
   status?: string;
   search?: string;
+  client_id?: string;
 }) {
   const page = params?.page ?? 1;
   const per_page = params?.per_page ?? 20;
   const case_type = params?.case_type ?? "";
   const status = params?.status ?? "";
   const search = params?.search ?? "";
+  const client_id = params?.client_id ?? "";
 
   return useQuery<PaginatedCases>({
-    queryKey: ["cases", { page, per_page, case_type, status, search }],
+    queryKey: ["cases", { page, per_page, case_type, status, search, client_id }],
     queryFn: async () => {
       const queryParams = new URLSearchParams({
         page: String(page),
@@ -82,6 +84,7 @@ export function useCases(params?: {
       if (case_type) queryParams.set("case_type", case_type);
       if (status) queryParams.set("status", status);
       if (search) queryParams.set("search", search);
+      if (client_id) queryParams.set("client_id", client_id);
 
       const res = await api(`/api/cases?${queryParams}`);
       if (!res.ok) throw new Error("Failed to fetch cases");

@@ -62,9 +62,12 @@ async def list_cases(
     case_type: str | None = None,
     status: str | None = None,
     search: str | None = None,
+    client_id: uuid.UUID | None = None,
     is_active: bool = True,
 ) -> tuple[list[Case], int]:
     """List cases with optional filtering and pagination."""
+    from app.relations.models import Contact
+
     query = select(Case).where(
         Case.tenant_id == tenant_id,
         Case.is_active == is_active,  # noqa: E712
@@ -76,6 +79,15 @@ async def list_cases(
     if status:
         query = query.where(Case.status == status)
 
+    if client_id:
+        # Filter cases where this contact is either client or opposing party
+        query = query.where(
+            or_(
+                Case.client_id == client_id,
+                Case.opposing_party_id == client_id,
+            )
+        )
+
     if search:
         search_term = f"%{search}%"
         query = query.where(
@@ -83,6 +95,8 @@ async def list_cases(
                 Case.case_number.ilike(search_term),
                 Case.description.ilike(search_term),
                 Case.reference.ilike(search_term),
+                Case.client.has(Contact.name.ilike(search_term)),
+                Case.opposing_party.has(Contact.name.ilike(search_term)),
             )
         )
 

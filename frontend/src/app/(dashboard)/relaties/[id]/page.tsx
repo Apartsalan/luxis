@@ -61,7 +61,7 @@ export default function RelatieDetailPage() {
 
   // Fetch cases where this contact is client or opposing party
   const { data: linkedCases } = useCases({
-    search: contact?.name,
+    client_id: id,
     per_page: 50,
   });
 

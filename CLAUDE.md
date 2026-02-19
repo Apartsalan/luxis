@@ -34,7 +34,19 @@ docker compose exec backend python -m alembic revision --autogenerate -m "desc" 
 
 ## Design & UX
 
-Modern, levendig, professioneel (Gmail/HubSpot-stijl). Data-dense maar niet overweldigend. Sidebar met collapse. Kleuren: nog te bepalen, mag levendig zijn. UI taal: Nederlands.
+Modern, levendig, professioneel (Gmail/HubSpot-stijl). Data-dense maar niet overweldigend. Sidebar met collapse. UI taal: Nederlands.
+
+### Designprincipe — ALTIJD TOEPASSEN
+
+Luxis is een **PRODUCT**, geen intern tooltje. Ontwerp alsof het morgen op de markt komt:
+
+- **Clean, modern, professioneel** — geen rommel, geen overbodige informatie
+- **Geen technisch of juridisch jargon** op plekken waar het niet hoort
+- **Incasso-specifieke zaken ALLEEN zichtbaar binnen de incassomodule** — niet op login, dashboard, of generieke pagina's
+- **De generieke PMS-ervaring moet op zichzelf staan** en aantrekkelijk zijn voor elk type advocatenkantoor
+- Bij elk scherm afvragen: **zou een willekeurig advocatenkantoor dit willen gebruiken?**
+- Voorkant/login: generiek "Praktijkmanagement voor de advocatuur", geen wetsartikelen of BW-referenties
+- Kernfeatures benoemen: dossierbeheer, tijdschrijven, facturatie, documentgeneratie, termijnbewaking
 
 ## Working Agreements
 

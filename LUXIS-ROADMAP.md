@@ -224,8 +224,17 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 **Technisch fundament:** Microsoft Graph API (OAuth 2.0 koppeling met Lisanne's Outlook/365)
 
+**Prereq: Mail migratie BaseNet → Microsoft 365**
+- Lisanne's mail draait nu op BaseNet (MX: `mx1.basenet.nl`)
+- Microsoft 365 Business Basic aanschaffen (~€5,60/mnd)
+- Oude mails migreren via IMAP migratie tool (gratis van Microsoft)
+- MX records wijzigen bij domeinregistrar (kestinglegal.nl)
+- Outlook instellen op laptop/telefoon
+- **Moet samen met Lisanne** — zij moet inloggen, abonnement afsluiten, DNS goedkeuren
+
 | Fase | Feature | Wat het oplevert |
 |------|---------|-----------------|
+| M0 | Mail migratie BaseNet → Microsoft 365 | Lisanne's mail draait op M365, Graph API beschikbaar |
 | M1 | OAuth + Graph API koppeling | Lisanne authoriseert Luxis om haar Outlook te lezen/schrijven |
 | M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) |
 | M3 | Correspondentie tab (volledige inbox per dossier) | Alle in- + uitgaande mails per dossier, threads, zoeken |
@@ -233,7 +242,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) |
 | M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties |
 
-**Bouwvolgorde:** M1 → M2 → M3 → M4 → M5 → M6
+**Bouwvolgorde:** M0 (samen met Lisanne) → M1 → M2 → M3 → M4 → M5 → M6
 
 **Wat Lisanne ervaart na afronding:**
 - Template aanklikken → opent direct in Outlook met alles pre-filled

@@ -129,6 +129,9 @@ Na het bouwen, voordat je deploy-commando geeft:
 - Kijk verder dan alleen de huidige takenlijst. Als er meerdere terminals beschikbaar zijn, geef de andere terminals nuttig werk (bijv. onderzoek voor de volgende feature terwijl bugs worden gefixt).
 - Als je voorstelt om een 2e of 3e terminal in te zetten: geef meteen een kant-en-klare prompt die de gebruiker kan copy-pasten in die terminal. Inclusief alle context, bestandspaden, en specifieke instructies zodat die terminal direct zelfstandig aan de slag kan.
 
+**Deployment:**
+- Claude heeft GEEN SSH-toegang tot de VPS. Geef altijd het deploy-commando aan de gebruiker om zelf te draaien. Probeer NOOIT `ssh root@...` te runnen vanuit deze terminal.
+
 ## Known Quirks
 
 - Git Bash: `MSYS_NO_PATHCONV=1` prefix bij `docker exec`

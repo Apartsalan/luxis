@@ -131,6 +131,7 @@ Na het bouwen, voordat je deploy-commando geeft:
 
 **Deployment:**
 - Claude heeft GEEN SSH-toegang tot de VPS. Geef altijd het deploy-commando aan de gebruiker om zelf te draaien. Probeer NOOIT `ssh root@...` te runnen vanuit deze terminal.
+- **VERPLICHT: Na elke afgeronde feature die gecommit en gepusht is, geef ALTIJD het deploy-commando.** Vermeld of het alleen frontend is, of frontend+backend, en of er migraties nodig zijn. De gebruiker werkt met meerdere terminals en mist anders deployments. Voorbeeld: "🚀 Deploy (frontend only, geen migraties): `cd /opt/luxis && git pull && docker compose ... build --no-cache frontend && ... up -d frontend`"
 
 ## Known Quirks
 

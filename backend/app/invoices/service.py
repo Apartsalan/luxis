@@ -13,6 +13,7 @@ from app.time_entries.models import TimeEntry
 from app.invoices.schemas import (
     AgingBucket,
     ContactReceivable,
+    CreditNoteCreate,
     ExpenseCreate,
     ExpenseUpdate,
     InvoiceCreate,
@@ -30,6 +31,23 @@ async def _next_invoice_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
     """Generate the next invoice number: F{year}-{seq:05d}."""
     year = date.today().year
     prefix = f"F{year}-"
+
+    result = await db.execute(
+        select(func.count())
+        .select_from(Invoice)
+        .where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.invoice_number.like(f"{prefix}%"),
+        )
+    )
+    count = result.scalar_one()
+    return f"{prefix}{count + 1:05d}"
+
+
+async def _next_credit_note_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
+    """Generate the next credit note number: CN{year}-{seq:05d}."""
+    year = date.today().year
+    prefix = f"CN{year}-"
 
     result = await db.execute(
         select(func.count())
@@ -132,11 +150,14 @@ async def list_invoices(
         items.append({
             "id": inv.id,
             "invoice_number": inv.invoice_number,
+            "invoice_type": inv.invoice_type or "invoice",
             "status": inv.status,
             "contact_id": inv.contact_id,
             "contact_name": inv.contact.name if inv.contact else None,
             "case_id": inv.case_id,
             "case_number": inv.case.case_number if inv.case else None,
+            "linked_invoice_id": inv.linked_invoice_id,
+            "linked_invoice_number": inv.linked_invoice.invoice_number if inv.linked_invoice else None,
             "invoice_date": inv.invoice_date,
             "due_date": inv.due_date,
             "subtotal": inv.subtotal,
@@ -288,6 +309,77 @@ async def delete_invoice(
 
     invoice.is_active = False
     await db.flush()
+
+
+# ── Credit Notes ─────────────────────────────────────────────────────────────
+
+
+async def create_credit_note(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    data: CreditNoteCreate,
+) -> Invoice:
+    """Create a credit note linked to an existing invoice.
+
+    The linked invoice must be in a non-concept, non-cancelled status.
+    Credit note lines typically mirror the original invoice lines
+    (partial or full credit).
+    """
+    # Validate linked invoice
+    original = await get_invoice(db, tenant_id, data.linked_invoice_id)
+
+    if original.status in ("concept", "cancelled"):
+        raise BadRequestError(
+            "Credit nota's kunnen alleen worden aangemaakt voor "
+            "goedgekeurde, verzonden of betaalde facturen"
+        )
+
+    if original.invoice_type == "credit_note":
+        raise BadRequestError(
+            "Een credit nota kan niet worden aangemaakt voor een andere credit nota"
+        )
+
+    credit_note_number = await _next_credit_note_number(db, tenant_id)
+
+    credit_note = Invoice(
+        tenant_id=tenant_id,
+        invoice_number=credit_note_number,
+        invoice_type="credit_note",
+        status="concept",
+        linked_invoice_id=data.linked_invoice_id,
+        contact_id=original.contact_id,
+        case_id=original.case_id,
+        invoice_date=data.invoice_date,
+        due_date=data.due_date,
+        btw_percentage=data.btw_percentage,
+        reference=data.reference,
+        notes=data.notes,
+    )
+    db.add(credit_note)
+    await db.flush()
+
+    # Add lines
+    for i, line_data in enumerate(data.lines, start=1):
+        line_total = (line_data.quantity * line_data.unit_price).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        line = InvoiceLine(
+            tenant_id=tenant_id,
+            invoice_id=credit_note.id,
+            line_number=i,
+            description=line_data.description,
+            quantity=line_data.quantity,
+            unit_price=line_data.unit_price,
+            line_total=line_total,
+        )
+        db.add(line)
+
+    await db.flush()
+    await db.refresh(credit_note)
+    _recalculate_totals(credit_note)
+    await db.flush()
+    await db.refresh(credit_note)
+    return credit_note
 
 
 # ── Status Transitions ───────────────────────────────────────────────────────

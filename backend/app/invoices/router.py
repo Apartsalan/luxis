@@ -12,6 +12,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.invoices import service
 from app.invoices.schemas import (
+    CreditNoteCreate,
     ExpenseCreate,
     ExpenseResponse,
     ExpenseUpdate,
@@ -112,6 +113,23 @@ async def delete_invoice(
 ):
     """Soft-delete an invoice (concept/cancelled only)."""
     await service.delete_invoice(db, current_user.tenant_id, invoice_id)
+
+
+# ── Credit Notes ─────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/credit-note",
+    response_model=InvoiceResponse,
+    status_code=http_status.HTTP_201_CREATED,
+)
+async def create_credit_note(
+    data: CreditNoteCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a credit note linked to an existing invoice."""
+    return await service.create_credit_note(db, current_user.tenant_id, data)
 
 
 # ── Status Transitions ───────────────────────────────────────────────────────

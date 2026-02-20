@@ -62,6 +62,18 @@ class InvoiceCreate(BaseModel):
     lines: list[InvoiceLineCreate] = Field(default_factory=list)
 
 
+class CreditNoteCreate(BaseModel):
+    """Create a credit note linked to an existing invoice."""
+
+    linked_invoice_id: uuid.UUID
+    invoice_date: date
+    due_date: date
+    btw_percentage: Decimal = Field(default=Decimal("21.00"), ge=0)
+    reference: str | None = None
+    notes: str | None = None
+    lines: list["InvoiceLineCreate"] = Field(default_factory=list)
+
+
 class InvoiceUpdate(BaseModel):
     contact_id: uuid.UUID | None = None
     case_id: uuid.UUID | None = None
@@ -72,12 +84,26 @@ class InvoiceUpdate(BaseModel):
     notes: str | None = None
 
 
-class InvoiceResponse(BaseModel):
+class CreditNoteBrief(BaseModel):
+    """Lightweight credit note reference."""
+
     id: uuid.UUID
     invoice_number: str
     status: str
+    total: Decimal
+    invoice_date: date
+
+    model_config = {"from_attributes": True}
+
+
+class InvoiceResponse(BaseModel):
+    id: uuid.UUID
+    invoice_number: str
+    invoice_type: str = "invoice"
+    status: str
     contact_id: uuid.UUID
     case_id: uuid.UUID | None
+    linked_invoice_id: uuid.UUID | None = None
     invoice_date: date
     due_date: date
     paid_date: date | None
@@ -93,6 +119,7 @@ class InvoiceResponse(BaseModel):
     contact: ContactBrief | None = None
     case: CaseBrief | None = None
     lines: list[InvoiceLineResponse] = []
+    credit_notes: list[CreditNoteBrief] = []
 
     model_config = {"from_attributes": True}
 
@@ -102,11 +129,14 @@ class InvoiceSummary(BaseModel):
 
     id: uuid.UUID
     invoice_number: str
+    invoice_type: str = "invoice"
     status: str
     contact_id: uuid.UUID
     contact_name: str | None = None
     case_id: uuid.UUID | None
     case_number: str | None = None
+    linked_invoice_id: uuid.UUID | None = None
+    linked_invoice_number: str | None = None
     invoice_date: date
     due_date: date
     subtotal: Decimal

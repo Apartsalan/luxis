@@ -33,6 +33,8 @@ INVOICE_STATUSES = (
     "cancelled",
 )
 
+INVOICE_TYPES = ("invoice", "credit_note")
+
 PAYMENT_METHODS = ("bank", "ideal", "cash", "verrekening")
 
 
@@ -46,13 +48,23 @@ class Invoice(TenantBase):
 
     __tablename__ = "invoices"
 
-    # Auto-generated: F2026-00001
+    # Auto-generated: F2026-00001 for invoices, CN2026-00001 for credit notes
     invoice_number: Mapped[str] = mapped_column(
         String(20), nullable=False, unique=True
     )
 
+    # Type: "invoice" (default) or "credit_note"
+    invoice_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="invoice"
+    )
+
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="concept"
+    )
+
+    # Link to original invoice (for credit notes only)
+    linked_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("invoices.id"), nullable=True, index=True
     )
 
     # Related entities
@@ -94,6 +106,17 @@ class Invoice(TenantBase):
     )
     case: Mapped["Case | None"] = relationship(  # noqa: F821
         "Case", foreign_keys=[case_id], lazy="selectin"
+    )
+    linked_invoice: Mapped["Invoice | None"] = relationship(
+        "Invoice",
+        foreign_keys=[linked_invoice_id],
+        remote_side="Invoice.id",
+        lazy="selectin",
+    )
+    credit_notes: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        foreign_keys="Invoice.linked_invoice_id",
+        lazy="selectin",
     )
     lines: Mapped[list["InvoiceLine"]] = relationship(
         "InvoiceLine",

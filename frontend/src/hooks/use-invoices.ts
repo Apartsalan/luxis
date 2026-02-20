@@ -8,11 +8,14 @@ import { api } from "@/lib/api";
 export interface InvoiceSummary {
   id: string;
   invoice_number: string;
+  invoice_type: string; // "invoice" | "credit_note"
   status: string;
   contact_id: string;
   contact_name: string | null;
   case_id: string | null;
   case_number: string | null;
+  linked_invoice_id: string | null;
+  linked_invoice_number: string | null;
   invoice_date: string;
   due_date: string;
   subtotal: number;
@@ -33,12 +36,22 @@ export interface InvoiceLine {
   expense_id: string | null;
 }
 
-export interface InvoiceDetail {
+export interface CreditNoteBrief {
   id: string;
   invoice_number: string;
   status: string;
+  total: number;
+  invoice_date: string;
+}
+
+export interface InvoiceDetail {
+  id: string;
+  invoice_number: string;
+  invoice_type: string; // "invoice" | "credit_note"
+  status: string;
   contact_id: string;
   case_id: string | null;
+  linked_invoice_id: string | null;
   invoice_date: string;
   due_date: string;
   paid_date: string | null;
@@ -54,6 +67,7 @@ export interface InvoiceDetail {
   contact: { id: string; name: string } | null;
   case: { id: string; case_number: string } | null;
   lines: InvoiceLine[];
+  credit_notes: CreditNoteBrief[];
 }
 
 interface PaginatedInvoices {
@@ -213,6 +227,39 @@ export function useDeleteInvoice() {
     mutationFn: async (id: string) => {
       const res = await api(`/api/invoices/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Verwijderen mislukt");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+// ── Credit Notes ────────────────────────────────────────────────────────
+
+interface CreditNoteCreateInput {
+  linked_invoice_id: string;
+  invoice_date: string;
+  due_date: string;
+  btw_percentage?: number;
+  reference?: string;
+  notes?: string;
+  lines: InvoiceLineInput[];
+}
+
+export function useCreateCreditNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: CreditNoteCreateInput) => {
+      const res = await api("/api/invoices/credit-note", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Credit nota aanmaken mislukt");
+      }
+      return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });

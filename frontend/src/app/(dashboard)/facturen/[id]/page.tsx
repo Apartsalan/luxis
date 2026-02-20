@@ -21,6 +21,8 @@ import {
   CreditCard,
   Wallet,
   ArrowDownLeft,
+  ReceiptText,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -37,6 +39,7 @@ import {
   useInvoicePaymentSummary,
   useCreateInvoicePayment,
   useDeleteInvoicePayment,
+  useCreateCreditNote,
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
 } from "@/hooks/use-invoices";
@@ -92,6 +95,11 @@ export default function FactuurDetailPage() {
   const removeLineMutation = useRemoveInvoiceLine();
   const createPayment = useCreateInvoicePayment();
   const deletePayment = useDeleteInvoicePayment();
+  const createCreditNote = useCreateCreditNote();
+
+  // Credit note form
+  const [showCreditNoteForm, setShowCreditNoteForm] = useState(false);
+  const [cnLines, setCnLines] = useState<{ description: string; quantity: string; unit_price: string }[]>([]);
 
   // Edit mode (only for concept)
   const [editing, setEditing] = useState(false);
@@ -258,6 +266,62 @@ export default function FactuurDetailPage() {
     }
   };
 
+  // ── Credit note handlers ───────────────────────────────────────────
+
+  const startCreditNote = () => {
+    if (!factuur) return;
+    // Pre-fill lines from original invoice
+    setCnLines(
+      factuur.lines.map((l) => ({
+        description: l.description,
+        quantity: String(l.quantity),
+        unit_price: String(l.unit_price),
+      }))
+    );
+    setShowCreditNoteForm(true);
+  };
+
+  const handleCreateCreditNote = async () => {
+    if (!factuur) return;
+    const lines = cnLines
+      .filter((l) => l.description && l.unit_price)
+      .map((l) => ({
+        description: l.description,
+        quantity: parseFloat(l.quantity) || 1,
+        unit_price: parseFloat(l.unit_price),
+      }));
+    if (lines.length === 0) {
+      toast.error("Voeg minstens één regel toe");
+      return;
+    }
+    try {
+      const result = await createCreditNote.mutateAsync({
+        linked_invoice_id: factuur.id,
+        invoice_date: new Date().toISOString().split("T")[0],
+        due_date: new Date().toISOString().split("T")[0],
+        btw_percentage: factuur.btw_percentage,
+        lines,
+      });
+      toast.success("Credit nota aangemaakt");
+      setShowCreditNoteForm(false);
+      router.push(`/facturen/${result.id}`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const addCnLine = () => {
+    setCnLines([...cnLines, { description: "", quantity: "1", unit_price: "" }]);
+  };
+
+  const removeCnLine = (idx: number) => {
+    setCnLines(cnLines.filter((_, i) => i !== idx));
+  };
+
+  const updateCnLine = (idx: number, field: string, value: string) => {
+    setCnLines(cnLines.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
+  };
+
   // ── Loading / Error / Not found ────────────────────────────────────
 
   if (isLoading) {
@@ -304,6 +368,11 @@ export default function FactuurDetailPage() {
     cancelMutation.isPending;
   const canCancel = !["paid", "cancelled"].includes(factuur.status);
   const actions = STATUS_ACTIONS[factuur.status] ?? [];
+  const isCreditNote = factuur.invoice_type === "credit_note";
+  const canCreateCreditNote =
+    !isCreditNote &&
+    !["concept", "cancelled"].includes(factuur.status) &&
+    factuur.lines.length > 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -321,6 +390,12 @@ export default function FactuurDetailPage() {
               <h1 className="text-2xl font-bold text-foreground font-mono">
                 {factuur.invoice_number}
               </h1>
+              {isCreditNote && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700">
+                  <ReceiptText className="h-3 w-3" />
+                  Credit nota
+                </span>
+              )}
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                   INVOICE_STATUS_COLORS[factuur.status] ??
@@ -333,6 +408,17 @@ export default function FactuurDetailPage() {
             <p className="text-sm text-muted-foreground mt-0.5">
               Aangemaakt op {formatDate(factuur.created_at)}
               {factuur.paid_date && ` · Betaald op ${formatDate(factuur.paid_date)}`}
+              {isCreditNote && factuur.linked_invoice_id && (
+                <>
+                  {" · "}
+                  <Link
+                    href={`/facturen/${factuur.linked_invoice_id}`}
+                    className="text-primary hover:underline inline-flex items-center gap-0.5"
+                  >
+                    Originele factuur <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -380,7 +466,7 @@ export default function FactuurDetailPage() {
       </div>
 
       {/* Status action buttons */}
-      {(actions.length > 0 || canCancel) && !editing && (
+      {(actions.length > 0 || canCancel || canCreateCreditNote) && !editing && (
         <div className="flex items-center gap-2">
           {actions.map((action) => (
             <button
@@ -397,6 +483,15 @@ export default function FactuurDetailPage() {
               {action.label}
             </button>
           ))}
+          {canCreateCreditNote && (
+            <button
+              onClick={startCreditNote}
+              className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+            >
+              <ReceiptText className="h-4 w-4" />
+              Credit nota
+            </button>
+          )}
           {canCancel && (
             <button
               onClick={handleCancel}
@@ -756,6 +851,171 @@ export default function FactuurDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Credit note creation form */}
+      {showCreditNoteForm && (
+        <div className="rounded-xl border-2 border-purple-200 bg-purple-50/30 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-purple-200 bg-purple-50">
+            <div className="flex items-center gap-2">
+              <ReceiptText className="h-4 w-4 text-purple-600" />
+              <h3 className="text-sm font-semibold text-purple-900">
+                Credit nota aanmaken
+              </h3>
+            </div>
+            <button
+              onClick={() => setShowCreditNoteForm(false)}
+              className="rounded-lg p-1.5 text-purple-400 hover:bg-purple-100 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="px-5 py-4 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              De regels zijn overgenomen van de originele factuur. Pas bedragen aan indien nodig (bijv. voor een gedeeltelijke credit nota).
+            </p>
+
+            {/* Lines */}
+            <div className="space-y-2">
+              {cnLines.map((line, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-[1fr_80px_120px_auto] gap-2 items-end"
+                >
+                  <div>
+                    {idx === 0 && (
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        Omschrijving
+                      </label>
+                    )}
+                    <input
+                      type="text"
+                      value={line.description}
+                      onChange={(e) =>
+                        updateCnLine(idx, "description", e.target.value)
+                      }
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    {idx === 0 && (
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        Aantal
+                      </label>
+                    )}
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={line.quantity}
+                      onChange={(e) =>
+                        updateCnLine(idx, "quantity", e.target.value)
+                      }
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    {idx === 0 && (
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        Prijs
+                      </label>
+                    )}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.unit_price}
+                      onChange={(e) =>
+                        updateCnLine(idx, "unit_price", e.target.value)
+                      }
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeCnLine(idx)}
+                    className="rounded-md border border-border p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    title="Verwijderen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addCnLine}
+              className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Regel toevoegen
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 px-5 py-3 border-t border-purple-200 bg-purple-50/50">
+            <button
+              onClick={handleCreateCreditNote}
+              disabled={createCreditNote.isPending}
+              className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              {createCreditNote.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ReceiptText className="h-4 w-4" />
+              )}
+              Credit nota aanmaken
+            </button>
+            <button
+              onClick={() => setShowCreditNoteForm(false)}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Linked credit notes */}
+      {!isCreditNote && factuur.credit_notes && factuur.credit_notes.length > 0 && (
+        <div className="rounded-xl border border-purple-200 bg-card shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-purple-100 bg-purple-50/50">
+            <ReceiptText className="h-4 w-4 text-purple-600" />
+            <h3 className="text-sm font-semibold text-foreground">
+              Credit nota&apos;s ({factuur.credit_notes.length})
+            </h3>
+          </div>
+          <div className="divide-y divide-border">
+            {factuur.credit_notes.map((cn) => (
+              <Link
+                key={cn.id}
+                href={`/facturen/${cn.id}`}
+                className="flex items-center justify-between px-5 py-3 hover:bg-muted/40 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-mono font-semibold text-purple-700">
+                    {cn.invoice_number}
+                  </span>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      INVOICE_STATUS_COLORS[cn.status] ?? "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {INVOICE_STATUS_LABELS[cn.status] ?? cn.status}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDateShort(cn.invoice_date)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-red-600 tabular-nums">
+                    -{formatCurrency(cn.total)}
+                  </span>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Payment tracking section — only for sent/partially_paid/paid invoices */}
       {factuur && ["sent", "partially_paid", "paid"].includes(factuur.status) && (

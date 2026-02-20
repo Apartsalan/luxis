@@ -196,12 +196,28 @@ export default function FacturenPage() {
                         className="group hover:bg-muted/40 transition-colors"
                       >
                         <td className="px-4 py-3.5">
-                          <Link
-                            href={`/facturen/${factuur.id}`}
-                            className="font-mono text-sm font-semibold text-foreground hover:text-primary transition-colors"
-                          >
-                            {factuur.invoice_number}
-                          </Link>
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`/facturen/${factuur.id}`}
+                              className={`font-mono text-sm font-semibold hover:text-primary transition-colors ${
+                                factuur.invoice_type === "credit_note"
+                                  ? "text-purple-700"
+                                  : "text-foreground"
+                              }`}
+                            >
+                              {factuur.invoice_number}
+                            </Link>
+                            {factuur.invoice_type === "credit_note" && (
+                              <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-600">
+                                CN
+                              </span>
+                            )}
+                          </div>
+                          {factuur.invoice_type === "credit_note" && factuur.linked_invoice_number && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              bij {factuur.linked_invoice_number}
+                            </p>
+                          )}
                         </td>
                         <td className="px-4 py-3.5">
                           <span
@@ -227,7 +243,14 @@ export default function FacturenPage() {
                           {formatDateShort(factuur.due_date)}
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">
+                          <span
+                            className={`text-sm font-semibold tabular-nums ${
+                              factuur.invoice_type === "credit_note"
+                                ? "text-red-600"
+                                : "text-foreground"
+                            }`}
+                          >
+                            {factuur.invoice_type === "credit_note" ? "-" : ""}
                             {formatCurrency(factuur.total)}
                           </span>
                         </td>

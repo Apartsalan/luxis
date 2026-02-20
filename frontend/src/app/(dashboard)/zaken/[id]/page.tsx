@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -102,7 +102,7 @@ import {
   TASK_STATUS_LABELS,
 } from "@/hooks/use-workflow";
 import { useModules } from "@/hooks/use-modules";
-import { useTimer } from "@/hooks/use-timer";
+import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { formatCurrency, formatDate, formatDateShort, formatRelativeTime } from "@/lib/utils";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 
@@ -245,8 +245,56 @@ export default function ZaakDetailPage() {
   // Set breadcrumb label to case number
   useBreadcrumbs(zaak ? [{ segment: id, label: zaak.case_number }] : []);
   const { hasModule } = useModules();
-  const { startTimer, timer } = useTimer();
+  const { startTimer, stopTimer, discardTimer, timer } = useTimer();
+  const [autoTimerEnabled] = useAutoTimerPreference();
   const [activeTab, setActiveTab] = useState("overzicht");
+  const autoStartedRef = useRef<string | null>(null);
+
+  // Auto-start timer when opening a case (if enabled)
+  useEffect(() => {
+    if (!autoTimerEnabled || !zaak) return;
+
+    // Already auto-started for this case in this render cycle
+    if (autoStartedRef.current === zaak.id) return;
+
+    // Timer already running for THIS case — do nothing
+    if (timer.running && timer.caseId === zaak.id) {
+      autoStartedRef.current = zaak.id;
+      return;
+    }
+
+    // Timer running for ANOTHER case — save/discard + start new
+    if (timer.running && timer.caseId !== zaak.id) {
+      const prevName = timer.caseName;
+      const prevSeconds = timer.seconds;
+      if (prevSeconds >= AUTO_SAVE_MIN_SECONDS) {
+        // Save the previous timer (>= 1 min)
+        stopTimer().then(() => {
+          const m = Math.max(1, Math.round(prevSeconds / 60));
+          const h = Math.floor(m / 60);
+          const min = m % 60;
+          toast.info(
+            `${h}:${String(min).padStart(2, "0")} opgeslagen voor ${prevName}`
+          );
+        });
+      } else {
+        // Discard short timers (< 1 min)
+        discardTimer();
+      }
+    }
+
+    // Start timer for current case
+    const label = `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}`;
+    // Small delay to let stopTimer complete if needed
+    const timeout = timer.running && timer.caseId !== zaak.id ? 300 : 0;
+    const t = setTimeout(() => {
+      startTimer(zaak.id, label);
+      toast.info(`Timer gestart voor ${zaak.case_number}`, { duration: 2000 });
+    }, timeout);
+    autoStartedRef.current = zaak.id;
+
+    return () => clearTimeout(t);
+  }, [zaak?.id, autoTimerEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStatusChange = async (newStatus: string) => {
     const note = prompt("Notitie bij statuswijziging (optioneel):");

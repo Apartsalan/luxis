@@ -11,8 +11,13 @@ import {
   ChevronUp,
   Briefcase,
   Trash2,
+  Zap,
 } from "lucide-react";
-import { useTimer } from "@/hooks/use-timer";
+import {
+  useTimer,
+  useAutoTimerPreference,
+  ACTIVITY_TYPES,
+} from "@/hooks/use-timer";
 import { useAuth } from "@/hooks/use-auth";
 import { useCases, type CaseSummary } from "@/hooks/use-cases";
 
@@ -159,10 +164,12 @@ export function FloatingTimer() {
     discardTimer,
     setTimerCase,
     setTimerDescription,
+    setTimerActivityType,
     isExpanded,
     setIsExpanded,
   } = useTimer();
   const router = useRouter();
+  const [autoTimer, setAutoTimer] = useAutoTimerPreference();
 
   // Only fetch cases when user is logged in
   const { data: casesData } = useCases(
@@ -256,6 +263,23 @@ export function FloatingTimer() {
           </div>
         )}
 
+        {/* Activity type selector (when running) */}
+        {timer.running && (
+          <div className="px-3 pb-2">
+            <select
+              value={timer.activityType}
+              onChange={(e) => setTimerActivityType(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
+            >
+              {ACTIVITY_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Description field */}
         {timer.running && (
           <div className="px-3 pb-2">
@@ -297,6 +321,31 @@ export function FloatingTimer() {
               Start
             </button>
           )}
+        </div>
+
+        {/* Auto-timer toggle */}
+        <div className="px-3 pb-2 border-t border-border pt-2">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoTimer}
+              onClick={() => setAutoTimer(!autoTimer)}
+              className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors ${
+                autoTimer ? "bg-emerald-600" : "bg-muted-foreground/30"
+              }`}
+            >
+              <span
+                className={`inline-block h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${
+                  autoTimer ? "translate-x-3.5" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground group-hover:text-foreground transition-colors">
+              <Zap className="h-3 w-3" />
+              Auto-start bij dossier
+            </span>
+          </label>
         </div>
 
         {/* Link to uren page */}

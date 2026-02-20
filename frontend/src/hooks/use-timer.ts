@@ -11,6 +11,23 @@ import {
 import { useCreateTimeEntry } from "@/hooks/use-time-entries";
 import { toast } from "sonner";
 
+// ── Activity types ────────────────────────────────────────────────────────
+
+export const ACTIVITY_TYPES = [
+  { value: "correspondence", label: "Correspondentie" },
+  { value: "meeting", label: "Bespreking" },
+  { value: "phone", label: "Telefonisch" },
+  { value: "research", label: "Onderzoek" },
+  { value: "court", label: "Zitting" },
+  { value: "travel", label: "Reistijd" },
+  { value: "drafting", label: "Opstellen stukken" },
+  { value: "other", label: "Overig" },
+] as const;
+
+export const ACTIVITY_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  ACTIVITY_TYPES.map((t) => [t.value, t.label])
+);
+
 // ── Types ────────────────────────────────────────────────────────────────
 
 export interface TimerState {
@@ -19,6 +36,7 @@ export interface TimerState {
   caseId: string;
   caseName: string; // display label e.g. "2024-001 — Jansen B.V."
   description: string;
+  activityType: string; // activity_type for time entry (default: "other")
   startedAt: number | null; // timestamp when started (for persistence)
 }
 
@@ -29,11 +47,15 @@ interface TimerContextValue {
   discardTimer: () => void;
   setTimerCase: (caseId: string, caseName: string) => void;
   setTimerDescription: (desc: string) => void;
+  setTimerActivityType: (type: string) => void;
   isExpanded: boolean;
   setIsExpanded: (v: boolean) => void;
 }
 
 const STORAGE_KEY = "luxis_timer";
+const AUTO_TIMER_KEY = "luxis_auto_timer";
+const FORGOTTEN_THRESHOLD = 2 * 60 * 60; // 2 hours in seconds
+const AUTO_SAVE_MIN_SECONDS = 60; // minimum seconds to auto-save (1 min)
 
 // ── Default ──────────────────────────────────────────────────────────────
 
@@ -43,6 +65,7 @@ const defaultTimer: TimerState = {
   caseId: "",
   caseName: "",
   description: "",
+  activityType: "other",
   startedAt: null,
 };
 
@@ -55,12 +78,29 @@ export const TimerContext = createContext<TimerContextValue>({
   discardTimer: () => {},
   setTimerCase: () => {},
   setTimerDescription: () => {},
+  setTimerActivityType: () => {},
   isExpanded: false,
   setIsExpanded: () => {},
 });
 
 export function useTimer() {
   return useContext(TimerContext);
+}
+
+// ── Auto-timer preference hook ──────────────────────────────────────────
+
+export function useAutoTimerPreference(): [boolean, (v: boolean) => void] {
+  const [enabled, setEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(AUTO_TIMER_KEY) === "true";
+  });
+
+  const toggle = useCallback((value: boolean) => {
+    setEnabled(value);
+    localStorage.setItem(AUTO_TIMER_KEY, String(value));
+  }, []);
+
+  return [enabled, toggle];
 }
 
 // ── Provider hook ────────────────────────────────────────────────────────
@@ -71,6 +111,9 @@ function loadFromStorage(): TimerState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultTimer;
     const saved = JSON.parse(raw) as TimerState;
+
+    // Ensure activityType exists (backwards compat)
+    if (!saved.activityType) saved.activityType = "other";
 
     // If timer was running, recalculate elapsed seconds
     if (saved.running && saved.startedAt) {
@@ -105,6 +148,7 @@ export function useTimerProvider() {
   const [timer, setTimer] = useState<TimerState>(defaultTimer);
   const [isExpanded, setIsExpanded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasWarnedRef = useRef(false);
   const createMutation = useCreateTimeEntry();
 
   // Load persisted timer on mount
@@ -117,7 +161,33 @@ export function useTimerProvider() {
     }
   }, []);
 
-  // Tick interval
+  // Multi-tab sync: listen for storage changes from other tabs
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const updated = JSON.parse(e.newValue) as TimerState;
+          if (!updated.activityType) updated.activityType = "other";
+          // Recalculate seconds if running
+          if (updated.running && updated.startedAt) {
+            updated.seconds = Math.floor(
+              (Date.now() - updated.startedAt) / 1000
+            );
+          }
+          setTimer(updated);
+        } catch {
+          // ignore parse errors
+        }
+      } else if (e.key === STORAGE_KEY && !e.newValue) {
+        // Timer was cleared in another tab
+        setTimer(defaultTimer);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  // Tick interval + forgotten timer warning
   useEffect(() => {
     if (timer.running) {
       intervalRef.current = setInterval(() => {
@@ -127,12 +197,27 @@ export function useTimerProvider() {
           if (next.seconds % 10 === 0) {
             saveToStorage(next);
           }
+          // Forgotten timer warning (after 2 hours)
+          if (
+            next.seconds >= FORGOTTEN_THRESHOLD &&
+            !hasWarnedRef.current
+          ) {
+            hasWarnedRef.current = true;
+            const h = Math.floor(next.seconds / 3600);
+            toast.warning(
+              `Timer loopt al ${h} uur voor ${next.caseName}`,
+              { duration: 10000 }
+            );
+          }
           return next;
         });
       }, 1000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      hasWarnedRef.current = false;
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -150,6 +235,7 @@ export function useTimerProvider() {
       caseId,
       caseName,
       description: "",
+      activityType: "other",
       startedAt: Date.now(),
     };
     setTimer(newState);
@@ -165,7 +251,7 @@ export function useTimerProvider() {
         date: toISO(new Date()),
         duration_minutes: minutes,
         description: timer.description || undefined,
-        activity_type: "other",
+        activity_type: timer.activityType || "other",
         billable: true,
       });
       const h = Math.floor(minutes / 60);
@@ -176,7 +262,7 @@ export function useTimerProvider() {
     } catch (err: any) {
       toast.error(err.message || "Opslaan mislukt");
     }
-  }, [timer.seconds, timer.caseId, timer.description, createMutation]);
+  }, [timer.seconds, timer.caseId, timer.description, timer.activityType, createMutation]);
 
   const discardTimer = useCallback(() => {
     setTimer(defaultTimer);
@@ -198,6 +284,14 @@ export function useTimerProvider() {
     });
   }, []);
 
+  const setTimerActivityType = useCallback((activityType: string) => {
+    setTimer((prev) => {
+      const next = { ...prev, activityType };
+      if (prev.running) saveToStorage(next);
+      return next;
+    });
+  }, []);
+
   return {
     timer,
     startTimer,
@@ -205,7 +299,12 @@ export function useTimerProvider() {
     discardTimer,
     setTimerCase,
     setTimerDescription,
+    setTimerActivityType,
     isExpanded,
     setIsExpanded,
   };
 }
+
+// ── Export constants for external use ────────────────────────────────────
+
+export { AUTO_SAVE_MIN_SECONDS };

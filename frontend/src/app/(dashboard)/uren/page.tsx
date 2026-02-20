@@ -705,10 +705,10 @@ export default function UrenPage() {
         <div className="rounded-xl border border-border bg-card shadow-sm">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-5 py-3.5 border-b border-border last:border-0">
-              <div className="h-4 w-20 rounded bg-muted animate-pulse" />
-              <div className="h-4 w-16 rounded bg-muted animate-pulse" />
-              <div className="h-4 w-32 rounded bg-muted animate-pulse flex-1" />
-              <div className="h-4 w-14 rounded bg-muted animate-pulse" />
+              <div className="h-4 w-20 rounded skeleton" />
+              <div className="h-4 w-16 rounded skeleton" />
+              <div className="h-4 w-32 rounded skeleton flex-1" />
+              <div className="h-4 w-14 rounded skeleton" />
             </div>
           ))}
         </div>

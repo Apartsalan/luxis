@@ -6,7 +6,6 @@ import {
   FileText,
   File,
   FileCheck,
-  Loader2,
   Search,
   ArrowRight,
   Info,
@@ -94,9 +93,18 @@ function DocxTemplatesView({
 }) {
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Templates laden...
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="h-10 w-10 rounded-lg skeleton" />
+              <div className="h-5 w-20 rounded-full skeleton" />
+            </div>
+            <div className="h-4 w-32 rounded skeleton" />
+            <div className="h-3 w-full rounded skeleton" />
+            <div className="h-3 w-24 rounded skeleton" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -162,9 +170,17 @@ function HtmlTemplatesView({
 }) {
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Sjablonen laden...
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
+            <div className="h-9 w-9 rounded-lg skeleton" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-40 rounded skeleton" />
+              <div className="h-3 w-24 rounded skeleton" />
+            </div>
+            <div className="h-5 w-16 rounded-full skeleton" />
+          </div>
+        ))}
       </div>
     );
   }

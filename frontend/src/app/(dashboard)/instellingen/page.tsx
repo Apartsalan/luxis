@@ -366,9 +366,18 @@ function KantoorTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Laden...
+      <div className="space-y-6">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+          <div className="h-5 w-40 rounded skeleton" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 w-20 rounded skeleton" />
+                <div className="h-9 w-full rounded skeleton" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -550,9 +559,19 @@ function ModulesTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Laden...
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-lg skeleton" />
+              <div className="space-y-2">
+                <div className="h-4 w-32 rounded skeleton" />
+                <div className="h-3 w-48 rounded skeleton" />
+              </div>
+            </div>
+            <div className="h-6 w-11 rounded-full skeleton" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -689,9 +708,19 @@ function TeamTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Teamleden laden...
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full skeleton" />
+              <div className="space-y-2">
+                <div className="h-4 w-36 rounded skeleton" />
+                <div className="h-3 w-48 rounded skeleton" />
+              </div>
+            </div>
+            <div className="h-6 w-16 rounded-full skeleton" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -1075,9 +1104,20 @@ function WorkflowTab() {
 
   if (loadingStatuses || loadingTransitions || loadingRules) {
     return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Workflow configuratie laden...
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          <div className="h-9 w-36 rounded-lg skeleton" />
+          <div className="h-9 w-44 rounded-lg skeleton" />
+        </div>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card p-4">
+              <div className="h-4 w-4 rounded skeleton" />
+              <div className="h-4 w-32 rounded skeleton" />
+              <div className="h-5 w-20 rounded-full skeleton ml-auto" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

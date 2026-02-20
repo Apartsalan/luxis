@@ -307,7 +307,7 @@ export default function TakenPage() {
           {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="h-20 rounded-lg border bg-muted/30 animate-pulse"
+              className="h-20 rounded-lg border skeleton"
             />
           ))}
         </div>

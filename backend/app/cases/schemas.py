@@ -51,6 +51,7 @@ class CaseCreate(BaseModel):
     contractual_compound: bool = True
     client_id: uuid.UUID
     opposing_party_id: uuid.UUID | None = None
+    billing_contact_id: uuid.UUID | None = None
     assigned_to_id: uuid.UUID | None = None
     date_opened: date
 
@@ -64,6 +65,7 @@ class CaseUpdate(BaseModel):
     contractual_rate: float | None = None
     contractual_compound: bool | None = None
     opposing_party_id: uuid.UUID | None = None
+    billing_contact_id: uuid.UUID | None = None
     assigned_to_id: uuid.UUID | None = None
 
 
@@ -149,6 +151,7 @@ class CaseResponse(BaseModel):
     contractual_compound: bool
     client: ContactBrief
     opposing_party: ContactBrief | None
+    billing_contact: ContactBrief | None
     assigned_to: UserBrief | None
     date_opened: date
     date_closed: date | None

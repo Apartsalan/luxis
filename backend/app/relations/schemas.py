@@ -26,6 +26,10 @@ class ContactCreate(BaseModel):
     postal_address: str | None = None
     postal_postcode: str | None = None
     postal_city: str | None = None
+    default_hourly_rate: float | None = None
+    payment_term_days: int | None = None
+    billing_email: str | None = None
+    iban: str | None = None
     notes: str | None = None
 
 
@@ -44,6 +48,10 @@ class ContactUpdate(BaseModel):
     postal_address: str | None = None
     postal_postcode: str | None = None
     postal_city: str | None = None
+    default_hourly_rate: float | None = None
+    payment_term_days: int | None = None
+    billing_email: str | None = None
+    iban: str | None = None
     notes: str | None = None
 
 
@@ -79,6 +87,10 @@ class ContactResponse(BaseModel):
     postal_address: str | None
     postal_postcode: str | None
     postal_city: str | None
+    default_hourly_rate: float | None
+    payment_term_days: int | None
+    billing_email: str | None
+    iban: str | None
     notes: str | None
     is_active: bool
     created_at: datetime

@@ -36,6 +36,10 @@ export interface Contact {
   postal_address: string | null;
   postal_postcode: string | null;
   postal_city: string | null;
+  default_hourly_rate: number | null;
+  payment_term_days: number | null;
+  billing_email: string | null;
+  iban: string | null;
   notes: string | null;
   is_active: boolean;
   created_at: string;
@@ -68,6 +72,10 @@ interface ContactCreateInput {
   postal_address?: string;
   postal_postcode?: string;
   postal_city?: string;
+  default_hourly_rate?: number;
+  payment_term_days?: number;
+  billing_email?: string;
+  iban?: string;
   notes?: string;
 }
 

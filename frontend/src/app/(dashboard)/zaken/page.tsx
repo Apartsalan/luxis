@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useCases } from "@/hooks/use-cases";
 import { useModules } from "@/hooks/use-modules";
+import { useUsers } from "@/hooks/use-users";
 import { useWorkflowStatuses } from "@/hooks/use-workflow";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
@@ -69,6 +70,10 @@ export default function ZakenPage() {
   const [search, setSearch] = useState("");
   const [caseType, setCaseType] = useState("");
   const [status, setStatus] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -77,6 +82,7 @@ export default function ZakenPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const { hasModule } = useModules();
   const { data: workflowStatuses } = useWorkflowStatuses();
+  const { data: users } = useUsers();
 
   // Build status labels from workflow API, fallback to hardcoded
   const dynamicStatusLabels: Record<string, string> = workflowStatuses
@@ -97,9 +103,12 @@ export default function ZakenPage() {
     case_type: caseType || undefined,
     status: status || undefined,
     search: search || undefined,
+    assigned_to_id: assignedTo || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
   });
 
-  const activeFilters = [caseType, status].filter(Boolean).length;
+  const activeFilters = [caseType, status, assignedTo, dateFrom, dateTo].filter(Boolean).length;
   const allIds = data?.items?.map((z) => z.id) ?? [];
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
   const someSelected = selectedIds.size > 0;
@@ -241,21 +250,79 @@ export default function ZakenPage() {
               </option>
             ))}
           </select>
+          <button
+            onClick={() => setShowMoreFilters(!showMoreFilters)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
+              showMoreFilters || assignedTo || dateFrom || dateTo
+                ? "border-primary/30 bg-primary/5 text-primary"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Meer filters
+            {(assignedTo || dateFrom || dateTo) && (
+              <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                {[assignedTo, dateFrom, dateTo].filter(Boolean).length}
+              </span>
+            )}
+          </button>
           {activeFilters > 0 && (
             <button
               onClick={() => {
                 setCaseType("");
                 setStatus("");
                 setSearch("");
+                setAssignedTo("");
+                setDateFrom("");
+                setDateTo("");
+                setShowMoreFilters(false);
                 setPage(1);
               }}
               className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
             >
+              <X className="h-3 w-3" />
               Wis filters
             </button>
           )}
         </div>
       </div>
+
+      {/* Extended filters (F9) */}
+      {showMoreFilters && (
+        <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-card px-4 py-3 animate-fade-in">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Toegewezen aan</label>
+            <select
+              value={assignedTo}
+              onChange={(e) => { setAssignedTo(e.target.value); setPage(1); }}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 min-w-[160px]"
+            >
+              <option value="">Iedereen</option>
+              {users?.filter((u) => u.is_active).map((u) => (
+                <option key={u.id} value={u.id}>{u.full_name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Geopend vanaf</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Geopend t/m</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Bulk action toolbar */}
       {someSelected && (

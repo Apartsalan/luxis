@@ -2,6 +2,7 @@
 
 import math
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
@@ -41,6 +42,11 @@ async def list_cases(
     case_status: str | None = Query(default=None, alias="status"),
     search: str | None = Query(default=None),
     client_id: uuid.UUID | None = Query(default=None),
+    assigned_to_id: uuid.UUID | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    min_amount: float | None = Query(default=None, ge=0),
+    max_amount: float | None = Query(default=None, ge=0),
     is_active: bool = Query(default=True),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -55,6 +61,11 @@ async def list_cases(
         status=case_status,
         search=search,
         client_id=client_id,
+        assigned_to_id=assigned_to_id,
+        date_from=date_from,
+        date_to=date_to,
+        min_amount=min_amount,
+        max_amount=max_amount,
         is_active=is_active,
     )
 

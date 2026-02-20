@@ -3,7 +3,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import Boolean, Date, ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, Date, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -49,6 +49,12 @@ class Contact(TenantBase):
     postal_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     postal_postcode: Mapped[str | None] = mapped_column(String(10), nullable=True)
     postal_city: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Billing profile (F6)
+    default_hourly_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    payment_term_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # default: 14/30
+    billing_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
 
     # Other
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

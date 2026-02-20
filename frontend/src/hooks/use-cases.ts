@@ -25,6 +25,7 @@ export interface CaseDetail extends CaseSummary {
   court_case_number: string | null;
   contractual_rate: number | null;
   contractual_compound: boolean;
+  billing_contact: { id: string; name: string } | null;
   assigned_to: { id: string; full_name: string } | null;
   parties: {
     id: string;
@@ -71,6 +72,11 @@ export function useCases(params?: {
   status?: string;
   search?: string;
   client_id?: string;
+  assigned_to_id?: string;
+  date_from?: string;
+  date_to?: string;
+  min_amount?: number;
+  max_amount?: number;
 }) {
   const page = params?.page ?? 1;
   const per_page = params?.per_page ?? 20;
@@ -78,9 +84,14 @@ export function useCases(params?: {
   const status = params?.status ?? "";
   const search = params?.search ?? "";
   const client_id = params?.client_id ?? "";
+  const assigned_to_id = params?.assigned_to_id ?? "";
+  const date_from = params?.date_from ?? "";
+  const date_to = params?.date_to ?? "";
+  const min_amount = params?.min_amount;
+  const max_amount = params?.max_amount;
 
   return useQuery<PaginatedCases>({
-    queryKey: ["cases", { page, per_page, case_type, status, search, client_id }],
+    queryKey: ["cases", { page, per_page, case_type, status, search, client_id, assigned_to_id, date_from, date_to, min_amount, max_amount }],
     queryFn: async () => {
       const queryParams = new URLSearchParams({
         page: String(page),
@@ -90,6 +101,11 @@ export function useCases(params?: {
       if (status) queryParams.set("status", status);
       if (search) queryParams.set("search", search);
       if (client_id) queryParams.set("client_id", client_id);
+      if (assigned_to_id) queryParams.set("assigned_to_id", assigned_to_id);
+      if (date_from) queryParams.set("date_from", date_from);
+      if (date_to) queryParams.set("date_to", date_to);
+      if (min_amount !== undefined) queryParams.set("min_amount", String(min_amount));
+      if (max_amount !== undefined) queryParams.set("max_amount", String(max_amount));
 
       const res = await api(`/api/cases?${queryParams}`);
       if (!res.ok) throw new Error("Failed to fetch cases");

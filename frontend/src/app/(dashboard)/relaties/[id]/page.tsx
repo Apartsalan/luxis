@@ -143,6 +143,10 @@ export default function RelatieDetailPage() {
       postal_address: contact.postal_address || "",
       postal_postcode: contact.postal_postcode || "",
       postal_city: contact.postal_city || "",
+      default_hourly_rate: contact.default_hourly_rate?.toString() || "",
+      payment_term_days: contact.payment_term_days?.toString() || "",
+      billing_email: contact.billing_email || "",
+      iban: contact.iban || "",
       notes: contact.notes || "",
     });
     setEditing(true);
@@ -170,6 +174,10 @@ export default function RelatieDetailPage() {
       data.postal_address = editForm.postal_address || undefined;
       data.postal_postcode = editForm.postal_postcode || undefined;
       data.postal_city = editForm.postal_city || undefined;
+      data.default_hourly_rate = editForm.default_hourly_rate ? editForm.default_hourly_rate : undefined;
+      data.payment_term_days = editForm.payment_term_days ? editForm.payment_term_days : undefined;
+      data.billing_email = editForm.billing_email || undefined;
+      data.iban = editForm.iban || undefined;
       data.notes = editForm.notes || undefined;
 
       await updateRelation.mutateAsync({ id, data });
@@ -728,6 +736,87 @@ export default function RelatieDetailPage() {
                     </p>
                   )}
               </div>
+            )}
+          </div>
+
+          {/* Billing Profile (F6) */}
+          <div className="rounded-xl border border-border bg-card p-6">
+            <h2 className="mb-3 text-sm font-semibold text-card-foreground uppercase tracking-wider">
+              Facturatie
+            </h2>
+            {editing ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Standaard uurtarief (€)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editForm.default_hourly_rate}
+                    onChange={(e) => updateEdit("default_hourly_rate", e.target.value)}
+                    className={inputClass}
+                    placeholder="Bijv. 250.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Betalingstermijn (dagen)</label>
+                  <input
+                    type="number"
+                    value={editForm.payment_term_days}
+                    onChange={(e) => updateEdit("payment_term_days", e.target.value)}
+                    className={inputClass}
+                    placeholder="Bijv. 14"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Factuur e-mail</label>
+                  <input
+                    type="email"
+                    value={editForm.billing_email}
+                    onChange={(e) => updateEdit("billing_email", e.target.value)}
+                    className={inputClass}
+                    placeholder="facturen@bedrijf.nl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">IBAN</label>
+                  <input
+                    type="text"
+                    value={editForm.iban}
+                    onChange={(e) => updateEdit("iban", e.target.value)}
+                    className={inputClass}
+                    placeholder="NL00 BANK 0000 0000 00"
+                  />
+                </div>
+              </div>
+            ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban) ? (
+              <dl className="grid gap-3 sm:grid-cols-2">
+                {contact.default_hourly_rate && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Uurtarief</dt>
+                    <dd className="text-sm font-medium text-foreground">€ {contact.default_hourly_rate.toFixed(2)}</dd>
+                  </div>
+                )}
+                {contact.payment_term_days && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Betalingstermijn</dt>
+                    <dd className="text-sm font-medium text-foreground">{contact.payment_term_days} dagen</dd>
+                  </div>
+                )}
+                {contact.billing_email && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Factuur e-mail</dt>
+                    <dd className="text-sm text-foreground">{contact.billing_email}</dd>
+                  </div>
+                )}
+                {contact.iban && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">IBAN</dt>
+                    <dd className="text-sm font-mono text-foreground">{contact.iban}</dd>
+                  </div>
+                )}
+              </dl>
+            ) : (
+              <p className="text-sm text-muted-foreground">Geen facturatiegegevens ingesteld</p>
             )}
           </div>
 

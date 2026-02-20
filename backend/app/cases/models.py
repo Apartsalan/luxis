@@ -73,6 +73,9 @@ class Case(TenantBase):
     opposing_party_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("contacts.id"), nullable=True
     )
+    billing_contact_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("contacts.id"), nullable=True
+    )  # F7: alternate billing contact (if different from client)
 
     # Assigned to
     assigned_to_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -99,6 +102,9 @@ class Case(TenantBase):
     )
     opposing_party: Mapped["Contact | None"] = relationship(  # noqa: F821
         "Contact", foreign_keys=[opposing_party_id], lazy="selectin"
+    )
+    billing_contact: Mapped["Contact | None"] = relationship(  # noqa: F821
+        "Contact", foreign_keys=[billing_contact_id], lazy="selectin"
     )
     assigned_to: Mapped["User | None"] = relationship(  # noqa: F821
         "User", foreign_keys=[assigned_to_id], lazy="selectin"

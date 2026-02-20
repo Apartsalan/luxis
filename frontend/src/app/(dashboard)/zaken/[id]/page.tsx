@@ -256,6 +256,7 @@ export default function ZaakDetailPage() {
   const { startTimer, stopTimer, discardTimer, timer } = useTimer();
   const [autoTimerEnabled] = useAutoTimerPreference();
   const [activeTab, setActiveTab] = useState("overzicht");
+  const [phoneNoteText, setPhoneNoteText] = useState("");
   const autoStartedRef = useRef<string | null>(null);
 
   // T2: Workflow-suggestie banner state
@@ -703,6 +704,24 @@ export default function ZaakDetailPage() {
         </button>
         <button
           type="button"
+          onClick={() => {
+            const now = new Date();
+            const stamp = now.toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+            setPhoneNoteText(`📞 Telefoonnotitie ${stamp}\n\nGesprek met: \nOnderwerp: \n\n`);
+            setActiveTab("overzicht");
+            // Focus the textarea after state update
+            setTimeout(() => {
+              const ta = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="notitie"]');
+              if (ta) { ta.focus(); ta.setSelectionRange(ta.value.indexOf("Gesprek met: ") + 13, ta.value.indexOf("Gesprek met: ") + 13); }
+            }, 100);
+          }}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          <Phone className="h-3.5 w-3.5 text-emerald-500" />
+          Telefoonnotitie
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab("documenten")}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
@@ -749,7 +768,7 @@ export default function ZaakDetailPage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "overzicht" && <OverzichtTab zaak={zaak} />}
+      {activeTab === "overzicht" && <OverzichtTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />}
       {activeTab === "taken" && <TakenTab caseId={id} />}
       {isIncasso && activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
       {isIncasso && activeTab === "betalingen" && <BetalingenTab caseId={id} />}
@@ -766,9 +785,17 @@ export default function ZaakDetailPage() {
 
 // ── Overzicht Tab ─────────────────────────────────────────────────────────────
 
-function OverzichtTab({ zaak }: { zaak: any }) {
+function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any; initialNoteText?: string; onNoteTextConsumed?: () => void }) {
   const [noteText, setNoteText] = useState("");
   const addActivity = useAddCaseActivity();
+
+  // Apply phone note text from parent
+  useEffect(() => {
+    if (initialNoteText) {
+      setNoteText(initialNoteText);
+      onNoteTextConsumed?.();
+    }
+  }, [initialNoteText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddNote = async () => {
     const text = noteText.trim();

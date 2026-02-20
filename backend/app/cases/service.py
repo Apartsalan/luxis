@@ -63,6 +63,11 @@ async def list_cases(
     status: str | None = None,
     search: str | None = None,
     client_id: uuid.UUID | None = None,
+    assigned_to_id: uuid.UUID | None = None,
+    date_from: "date | None" = None,
+    date_to: "date | None" = None,
+    min_amount: float | None = None,
+    max_amount: float | None = None,
     is_active: bool = True,
 ) -> tuple[list[Case], int]:
     """List cases with optional filtering and pagination."""
@@ -87,6 +92,21 @@ async def list_cases(
                 Case.opposing_party_id == client_id,
             )
         )
+
+    if assigned_to_id:
+        query = query.where(Case.assigned_to_id == assigned_to_id)
+
+    if date_from:
+        query = query.where(Case.date_opened >= date_from)
+
+    if date_to:
+        query = query.where(Case.date_opened <= date_to)
+
+    if min_amount is not None:
+        query = query.where(Case.total_principal >= min_amount)
+
+    if max_amount is not None:
+        query = query.where(Case.total_principal <= max_amount)
 
     if search:
         search_term = f"%{search}%"

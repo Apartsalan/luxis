@@ -3,10 +3,10 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateCase, useConflictCheck } from "@/hooks/use-cases";
-import { useRelations } from "@/hooks/use-relations";
+import { useRelations, useCreateRelation } from "@/hooks/use-relations";
 import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
@@ -42,6 +42,43 @@ function NieuweZaakPage() {
   const [clientSearch, setClientSearch] = useState(prefillClientName);
   const [opponentSearch, setOpponentSearch] = useState("");
   const [error, setError] = useState("");
+  const createRelation = useCreateRelation();
+
+  // Inline contact creation forms
+  const [showNewClient, setShowNewClient] = useState(false);
+  const [newClient, setNewClient] = useState({ contact_type: "company" as "company" | "person", name: "", email: "" });
+  const [showNewOpponent, setShowNewOpponent] = useState(false);
+  const [newOpponent, setNewOpponent] = useState({ contact_type: "company" as "company" | "person", name: "", email: "" });
+
+  const handleCreateInlineContact = async (
+    role: "client" | "opponent",
+    data: { contact_type: "company" | "person"; name: string; email: string }
+  ) => {
+    try {
+      const result = await createRelation.mutateAsync({
+        contact_type: data.contact_type,
+        name: data.name,
+        ...(data.email && { email: data.email }),
+      });
+      if (role === "client") {
+        updateField("client_id", result.id);
+        setClientSearch(result.name);
+        setShowNewClient(false);
+        setNewClient({ contact_type: "company", name: "", email: "" });
+      } else {
+        updateField("opposing_party_id", result.id);
+        setOpponentSearch(result.name);
+        setShowNewOpponent(false);
+        setNewOpponent({ contact_type: "company", name: "", email: "" });
+        if (!form.debtor_type) {
+          updateField("debtor_type", data.contact_type === "company" ? "b2b" : "b2c");
+        }
+      }
+      toast.success(`${data.name} aangemaakt`);
+    } catch (err: any) {
+      toast.error(err.message || "Kon relatie niet aanmaken");
+    }
+  };
 
   const { data: clientResults } = useRelations({
     search: clientSearch || undefined,
@@ -311,6 +348,56 @@ function NieuweZaakPage() {
                       ))}
                     </div>
                   )}
+                {!showNewClient && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewClient(true); setNewClient(c => ({ ...c, name: clientSearch })); }}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Nieuwe relatie aanmaken
+                  </button>
+                )}
+                {showNewClient && (
+                  <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-primary">Nieuwe client aanmaken</span>
+                      <button type="button" onClick={() => setShowNewClient(false)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <select
+                        value={newClient.contact_type}
+                        onChange={(e) => setNewClient(c => ({ ...c, contact_type: e.target.value as any }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      >
+                        <option value="company">Bedrijf</option>
+                        <option value="person">Persoon</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Naam *"
+                        value={newClient.name}
+                        onChange={(e) => setNewClient(c => ({ ...c, name: e.target.value }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        type="email"
+                        placeholder="E-mail (optioneel)"
+                        value={newClient.email}
+                        onChange={(e) => setNewClient(c => ({ ...c, email: e.target.value }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!newClient.name.trim() || createRelation.isPending}
+                      onClick={() => handleCreateInlineContact("client", newClient)}
+                      className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      {createRelation.isPending ? "Aanmaken..." : "Aanmaken en selecteren"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -434,6 +521,56 @@ function NieuweZaakPage() {
                       ))}
                     </div>
                   )}
+                {!showNewOpponent && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewOpponent(true); setNewOpponent(c => ({ ...c, name: opponentSearch })); }}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Nieuwe relatie aanmaken
+                  </button>
+                )}
+                {showNewOpponent && (
+                  <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-primary">Nieuwe wederpartij aanmaken</span>
+                      <button type="button" onClick={() => setShowNewOpponent(false)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <select
+                        value={newOpponent.contact_type}
+                        onChange={(e) => setNewOpponent(c => ({ ...c, contact_type: e.target.value as any }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      >
+                        <option value="company">Bedrijf</option>
+                        <option value="person">Persoon</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Naam *"
+                        value={newOpponent.name}
+                        onChange={(e) => setNewOpponent(c => ({ ...c, name: e.target.value }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        type="email"
+                        placeholder="E-mail (optioneel)"
+                        value={newOpponent.email}
+                        onChange={(e) => setNewOpponent(c => ({ ...c, email: e.target.value }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!newOpponent.name.trim() || createRelation.isPending}
+                      onClick={() => handleCreateInlineContact("opponent", newOpponent)}
+                      className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      {createRelation.isPending ? "Aanmaken..." : "Aanmaken en selecteren"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

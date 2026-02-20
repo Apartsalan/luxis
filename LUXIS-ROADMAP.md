@@ -158,6 +158,21 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | D4 | Empty states en loading states | Klein | ✅ Gebouwd (skeleton loaders op alle dashboard pagina's) |
 | D5 | Agenda events aanmaken | Midden (nieuw model + CRUD) | Niet gestart |
 
+### Fase E: Verbeterpunten uit handmatige test (sessie 2, 20 feb)
+
+| # | Feature | Complexiteit | Prioriteit | Status |
+|---|---------|-------------|-----------|--------|
+| E1 | "Zaken" hernoemen naar "Dossiers" in hele frontend UI | Klein | 🔴 Hoog | Niet gestart — puur display, code blijft `case/cases` |
+| E2 | Tarieven vereenvoudigen: dropdown op dossierniveau i.p.v. aparte pagina | Klein | 🔴 Hoog | Niet gestart — rentetype als veld op dossier, niet als beheerpagina |
+| E3 | Facturen-tab op dossierdetail | Klein-Midden | 🔴 Hoog | Niet gestart — B1 tabs bestaan al, facturen-tab toevoegen |
+| E4 | Documenten uploaden in dossier | Groot (storage + nieuw model) | 🔴 Hoog | Niet gestart — huidige docs module doet alleen template-generatie |
+| E5 | Slimme facturatie-flow (onbefactureerde uren tonen, batch factureren) | Groot | 🔴 Hoog | Niet gestart — benchmark: Clio/Harvest "billable time ready to invoice" |
+| E6 | Debiteuren/crediteuren overzicht bij facturen | Midden | 🟡 Midden | Niet gestart — aging 30/60/90 dagen, gegroepeerd per cliënt |
+| E7 | Auto-timer bij openen dossier (handmatig + automatisch modus) | Midden | 🟡 Midden | Niet gestart — benchmark: Smokeball auto-tracking |
+| E8 | E-mail templates (onderwerp + body + merge fields) | Midden | 🟢 Later | Niet gestart — documenteren, bouwen bij T3 (SMTP) |
+
+**Voorgestelde bouwvolgorde:** E1 → E2 → E3 → E4 → E5 → E6 → E7 → E8
+
 ### Apart traject: Templates in workflow (na B1)
 
 | # | Feature | Complexiteit | Status |
@@ -167,6 +182,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | T3 | E-mail versturen vanuit Luxis (SMTP) | Groot | Niet gestart |
 
 > Detail: zie `PROMPT-TEMPLATES-IN-WORKFLOW.md`
+> E-mail templates (E8) wordt onderdeel van T3
 
 ---
 
@@ -185,12 +201,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 ## Volgorde van werken
 
-**Prioriteit 1 (nu):** A1 → A2 → A3 → A4 (quick wins, backend klaar)
-**Prioriteit 2:** C1 + B1/B2 parallel (dashboard + zaakdetail)
-**Prioriteit 3:** C2 + D1 (betalingstracking + wachtwoord vergeten)
-**Prioriteit 4:** A5-A7 + B3 + D3-D4 (polish)
-**Prioriteit 5:** T1 → T2 → T3 (templates in workflow, na B1)
-**Prioriteit 6:** C3 + D2 (credit nota's + gebruikersbeheer)
+**Prioriteit 1 (nu):** E1 (Zaken→Dossiers) → E2 (tarieven vereenvoudigen) → E3 (facturen-tab op dossier)
+**Prioriteit 2:** E4 (documenten uploaden) + E5 (slimme facturatie-flow)
+**Prioriteit 3:** E6 (debiteuren/crediteuren) + D5 (agenda events)
+**Prioriteit 4:** C3 (credit nota's) + D2 (gebruikersbeheer)
+**Prioriteit 5:** E7 (auto-timer) — na productie-feedback
+**Prioriteit 6:** T1 → T2 → T3 + E8 (templates + email)
 
 **Werkwijze per feature:**
 1. Onderzoek concurrenten

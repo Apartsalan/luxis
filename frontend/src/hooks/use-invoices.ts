@@ -455,3 +455,43 @@ export function useRemoveInvoiceLine() {
     },
   });
 }
+
+// ── Receivables / Aging ─────────────────────────────────────────────────
+
+export interface AgingBucket {
+  count: number;
+  total: number;
+}
+
+export interface ContactReceivable {
+  contact_id: string;
+  contact_name: string;
+  invoice_count: number;
+  total_outstanding: number;
+  current: AgingBucket;
+  days_31_60: AgingBucket;
+  days_61_90: AgingBucket;
+  days_90_plus: AgingBucket;
+  oldest_due_date: string;
+}
+
+export interface ReceivablesSummary {
+  total_outstanding: number;
+  total_overdue: number;
+  current: AgingBucket;
+  days_31_60: AgingBucket;
+  days_61_90: AgingBucket;
+  days_90_plus: AgingBucket;
+  contacts: ContactReceivable[];
+}
+
+export function useReceivables() {
+  return useQuery<ReceivablesSummary>({
+    queryKey: ["invoices", "receivables"],
+    queryFn: async () => {
+      const res = await api("/api/invoices/receivables");
+      if (!res.ok) throw new Error("Kan debiteurenoverzicht niet laden");
+      return res.json();
+    },
+  });
+}

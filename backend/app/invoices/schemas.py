@@ -172,6 +172,42 @@ class InvoicePaymentSummary(BaseModel):
     is_fully_paid: bool
 
 
+# ── Aging / Receivables Schemas ──────────────────────────────────────────────
+
+
+class AgingBucket(BaseModel):
+    """Outstanding invoices in a single aging bucket."""
+
+    count: int = 0
+    total: Decimal = Decimal("0")
+
+
+class ContactReceivable(BaseModel):
+    """Outstanding receivables grouped by contact."""
+
+    contact_id: uuid.UUID
+    contact_name: str
+    invoice_count: int
+    total_outstanding: Decimal
+    current: AgingBucket  # 0-30 days
+    days_31_60: AgingBucket
+    days_61_90: AgingBucket
+    days_90_plus: AgingBucket
+    oldest_due_date: date
+
+
+class ReceivablesSummary(BaseModel):
+    """Aggregated receivables overview (debiteurenoverzicht)."""
+
+    total_outstanding: Decimal
+    total_overdue: Decimal
+    current: AgingBucket
+    days_31_60: AgingBucket
+    days_61_90: AgingBucket
+    days_90_plus: AgingBucket
+    contacts: list[ContactReceivable]
+
+
 # ── Expense Schemas ──────────────────────────────────────────────────────────
 
 

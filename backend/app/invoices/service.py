@@ -11,12 +11,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.invoices.models import PAYMENT_METHODS, Expense, Invoice, InvoiceLine, InvoicePayment
 from app.time_entries.models import TimeEntry
 from app.invoices.schemas import (
+    AgingBucket,
+    ContactReceivable,
     ExpenseCreate,
     ExpenseUpdate,
     InvoiceCreate,
     InvoicePaymentCreate,
     InvoicePaymentSummary,
     InvoiceUpdate,
+    ReceivablesSummary,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
 
@@ -650,6 +653,136 @@ async def get_payment_summary(
         outstanding=outstanding,
         payment_count=payment_count,
         is_fully_paid=total_paid >= invoice.total,
+    )
+
+
+# ── Receivables / Aging ──────────────────────────────────────────────────────
+
+
+async def get_receivables(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> ReceivablesSummary:
+    """Build aging receivables overview grouped by contact.
+
+    Considers all active invoices in payable statuses (sent, overdue,
+    partially_paid) and calculates outstanding amounts using payment totals.
+    Groups into 0-30, 31-60, 61-90, 90+ day aging buckets based on due_date.
+    """
+    # Fetch all outstanding invoices
+    result = await db.execute(
+        select(Invoice)
+        .where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.is_active.is_(True),
+            Invoice.status.in_(("sent", "overdue", "partially_paid")),
+        )
+        .order_by(Invoice.due_date.asc())
+    )
+    invoices = list(result.scalars().all())
+
+    today = date.today()
+
+    # Per-invoice: calculate outstanding amount (total - payments)
+    contact_map: dict[uuid.UUID, dict] = {}
+
+    for inv in invoices:
+        # Sum payments for this invoice
+        pay_result = await db.execute(
+            select(
+                func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))
+            ).where(
+                InvoicePayment.tenant_id == tenant_id,
+                InvoicePayment.invoice_id == inv.id,
+            )
+        )
+        paid = pay_result.scalar_one()
+        outstanding = inv.total - paid
+        if outstanding <= Decimal("0"):
+            continue
+
+        # Determine aging bucket
+        days_past_due = (today - inv.due_date).days
+        if days_past_due <= 30:
+            bucket = "current"
+        elif days_past_due <= 60:
+            bucket = "days_31_60"
+        elif days_past_due <= 90:
+            bucket = "days_61_90"
+        else:
+            bucket = "days_90_plus"
+
+        cid = inv.contact_id
+        if cid not in contact_map:
+            contact_map[cid] = {
+                "contact_id": cid,
+                "contact_name": inv.contact.name if inv.contact else "Onbekend",
+                "invoice_count": 0,
+                "total_outstanding": Decimal("0"),
+                "current": {"count": 0, "total": Decimal("0")},
+                "days_31_60": {"count": 0, "total": Decimal("0")},
+                "days_61_90": {"count": 0, "total": Decimal("0")},
+                "days_90_plus": {"count": 0, "total": Decimal("0")},
+                "oldest_due_date": inv.due_date,
+            }
+
+        entry = contact_map[cid]
+        entry["invoice_count"] += 1
+        entry["total_outstanding"] += outstanding
+        entry[bucket]["count"] += 1
+        entry[bucket]["total"] += outstanding
+        if inv.due_date < entry["oldest_due_date"]:
+            entry["oldest_due_date"] = inv.due_date
+
+    # Build summary totals
+    total_outstanding = Decimal("0")
+    total_overdue = Decimal("0")
+    sum_current = AgingBucket()
+    sum_31_60 = AgingBucket()
+    sum_61_90 = AgingBucket()
+    sum_90_plus = AgingBucket()
+
+    contacts: list[ContactReceivable] = []
+    for data in sorted(
+        contact_map.values(), key=lambda x: x["total_outstanding"], reverse=True
+    ):
+        total_outstanding += data["total_outstanding"]
+        total_overdue += (
+            data["days_31_60"]["total"]
+            + data["days_61_90"]["total"]
+            + data["days_90_plus"]["total"]
+        )
+
+        cr = ContactReceivable(
+            contact_id=data["contact_id"],
+            contact_name=data["contact_name"],
+            invoice_count=data["invoice_count"],
+            total_outstanding=data["total_outstanding"],
+            current=AgingBucket(**data["current"]),
+            days_31_60=AgingBucket(**data["days_31_60"]),
+            days_61_90=AgingBucket(**data["days_61_90"]),
+            days_90_plus=AgingBucket(**data["days_90_plus"]),
+            oldest_due_date=data["oldest_due_date"],
+        )
+        contacts.append(cr)
+
+        sum_current.count += data["current"]["count"]
+        sum_current.total += data["current"]["total"]
+        sum_31_60.count += data["days_31_60"]["count"]
+        sum_31_60.total += data["days_31_60"]["total"]
+        sum_61_90.count += data["days_61_90"]["count"]
+        sum_61_90.total += data["days_61_90"]["total"]
+        sum_90_plus.count += data["days_90_plus"]["count"]
+        sum_90_plus.total += data["days_90_plus"]["total"]
+
+    return ReceivablesSummary(
+        total_outstanding=total_outstanding,
+        total_overdue=total_overdue,
+        current=sum_current,
+        days_31_60=sum_31_60,
+        days_61_90=sum_61_90,
+        days_90_plus=sum_90_plus,
+        contacts=contacts,
     )
 
 

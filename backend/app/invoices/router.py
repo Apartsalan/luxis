@@ -24,6 +24,7 @@ from app.invoices.schemas import (
     InvoiceResponse,
     InvoiceUpdate,
     PaginatedInvoices,
+    ReceivablesSummary,
 )
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
@@ -52,6 +53,15 @@ async def list_invoices(
         search=search,
         case_id=case_id,
     )
+
+
+@router.get("/receivables", response_model=ReceivablesSummary)
+async def get_receivables(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get aging receivables overview (debiteurenoverzicht)."""
+    return await service.get_receivables(db, current_user.tenant_id)
 
 
 @router.post(

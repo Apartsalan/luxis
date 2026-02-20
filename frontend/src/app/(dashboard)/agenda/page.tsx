@@ -8,10 +8,33 @@ import {
   ChevronRight,
   Briefcase,
   ShieldCheck,
+  Plus,
+  X,
+  Clock,
+  MapPin,
+  Pencil,
+  Trash2,
+  Phone,
+  Users,
+  AlertTriangle,
+  Bell,
+  Gavel,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCalendarEvents, type CalendarEvent } from "@/hooks/use-calendar";
+import {
+  useCreateCalendarEvent,
+  useUpdateCalendarEvent,
+  useDeleteCalendarEvent,
+  EVENT_TYPES,
+  EVENT_TYPE_LABELS,
+  type CalendarEventCreateInput,
+  type CalendarEventUpdateInput,
+} from "@/hooks/use-calendar-events";
 import { TASK_TYPE_LABELS } from "@/hooks/use-workflow";
+import { useCases } from "@/hooks/use-cases";
+import { useRelations } from "@/hooks/use-relations";
 import { QueryError } from "@/components/query-error";
 
 // ── Dutch day names (week starts Monday) ──────────────────────────────────────
@@ -108,15 +131,34 @@ function formatFullDate(date: Date): string {
   });
 }
 
-// ── Event type config ─────────────────────────────────────────────────────────
+/** Format time string HH:MM from ISO datetime */
+function formatTime(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+}
 
-const EVENT_TYPE_CONFIG: Record<
-  string,
-  { label: string; icon: typeof Briefcase }
-> = {
-  task: { label: "Taak", icon: Briefcase },
-  kyc_review: { label: "KYC Review", icon: ShieldCheck },
+// ── Event type icon mapping ──────────────────────────────────────────────────
+
+const EVENT_TYPE_ICONS: Record<string, typeof Briefcase> = {
+  task: Briefcase,
+  kyc_review: ShieldCheck,
+  appointment: Calendar,
+  hearing: Gavel,
+  deadline: AlertTriangle,
+  reminder: Bell,
+  meeting: Users,
+  call: Phone,
+  other: MoreHorizontal,
 };
+
+function getEventIcon(eventType: string) {
+  return EVENT_TYPE_ICONS[eventType] ?? Calendar;
+}
+
+function getEventLabel(eventType: string) {
+  return EVENT_TYPE_LABELS[eventType] ?? eventType;
+}
 
 // ── Main Page Component ───────────────────────────────────────────────────────
 
@@ -127,6 +169,9 @@ export default function AgendaPage() {
   const [currentDate, setCurrentDate] = useState<Date>(today);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [prefillDate, setPrefillDate] = useState<string | null>(null);
 
   // Compute date range for API call
   const { dateFrom, dateTo, gridDates } = useMemo(() => {
@@ -205,6 +250,24 @@ export default function AgendaPage() {
     );
   }
 
+  function handleAddEvent(date?: Date) {
+    setEditingEvent(null);
+    setPrefillDate(date ? toDateString(date) : null);
+    setDialogOpen(true);
+  }
+
+  function handleEditEvent(event: CalendarEvent) {
+    setEditingEvent(event);
+    setPrefillDate(null);
+    setDialogOpen(true);
+  }
+
+  function handleDialogClose() {
+    setDialogOpen(false);
+    setEditingEvent(null);
+    setPrefillDate(null);
+  }
+
   // Events for selected day
   const selectedDayEvents = selectedDate
     ? eventsByDate[toDateString(selectedDate)] ?? []
@@ -220,11 +283,20 @@ export default function AgendaPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Overzicht van taken en afspraken
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Overzicht van taken en afspraken
+          </p>
+        </div>
+        <button
+          onClick={() => handleAddEvent()}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Nieuw event
+        </button>
       </div>
 
       {/* Calendar card */}
@@ -327,6 +399,8 @@ export default function AgendaPage() {
           date={selectedDate}
           events={selectedDayEvents}
           onClose={() => setSelectedDate(null)}
+          onAddEvent={() => handleAddEvent(selectedDate)}
+          onEditEvent={handleEditEvent}
         />
       )}
 
@@ -341,6 +415,378 @@ export default function AgendaPage() {
           />
         </div>
       )}
+
+      {/* Event dialog */}
+      {dialogOpen && (
+        <EventDialog
+          event={editingEvent}
+          prefillDate={prefillDate}
+          onClose={handleDialogClose}
+          onSaved={() => {
+            handleDialogClose();
+            refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Event Dialog (Create / Edit) ─────────────────────────────────────────────
+
+function EventDialog({
+  event,
+  prefillDate,
+  onClose,
+  onSaved,
+}: {
+  event: CalendarEvent | null;
+  prefillDate: string | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const isEdit = !!event;
+  const createMutation = useCreateCalendarEvent();
+  const updateMutation = useUpdateCalendarEvent();
+  const deleteMutation = useDeleteCalendarEvent();
+
+  const { data: cases } = useCases({ per_page: 200 });
+  const { data: relations } = useRelations({ per_page: 200 });
+
+  // Default times
+  const defaultDate = prefillDate || toDateString(new Date());
+  const defaultStart = event?.start_time
+    ? event.start_time.slice(0, 16)
+    : `${defaultDate}T09:00`;
+  const defaultEnd = event?.end_time
+    ? event.end_time.slice(0, 16)
+    : `${defaultDate}T10:00`;
+
+  const [title, setTitle] = useState(event?.title ?? "");
+  const [eventType, setEventType] = useState(
+    event?.event_type ?? "appointment"
+  );
+  const [startTime, setStartTime] = useState(defaultStart);
+  const [endTime, setEndTime] = useState(defaultEnd);
+  const [allDay, setAllDay] = useState(event?.all_day ?? false);
+  const [location, setLocation] = useState(event?.location ?? "");
+  const [description, setDescription] = useState(event?.description ?? "");
+  const [caseId, setCaseId] = useState(event?.case_id ?? "");
+  const [contactId, setContactId] = useState(event?.contact_id ?? "");
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(30);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const isSaving =
+    createMutation.isPending || updateMutation.isPending;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    const start = allDay ? `${startTime.slice(0, 10)}T00:00:00` : `${startTime}:00`;
+    const end = allDay ? `${endTime.slice(0, 10)}T23:59:59` : `${endTime}:00`;
+
+    if (isEdit && event?.user_event_id) {
+      const data: CalendarEventUpdateInput = {
+        title: title.trim(),
+        event_type: eventType,
+        start_time: start,
+        end_time: end,
+        all_day: allDay,
+        location: location.trim() || null,
+        description: description.trim() || null,
+        case_id: caseId || null,
+        contact_id: contactId || null,
+        reminder_minutes: reminderMinutes,
+      };
+      await updateMutation.mutateAsync({
+        id: event.user_event_id,
+        data,
+      });
+    } else {
+      const data: CalendarEventCreateInput = {
+        title: title.trim(),
+        event_type: eventType,
+        start_time: start,
+        end_time: end,
+        all_day: allDay,
+        location: location.trim() || undefined,
+        description: description.trim() || undefined,
+        case_id: caseId || undefined,
+        contact_id: contactId || undefined,
+        reminder_minutes: reminderMinutes,
+      };
+      await createMutation.mutateAsync(data);
+    }
+    onSaved();
+  }
+
+  async function handleDelete() {
+    if (!event?.user_event_id) return;
+    await deleteMutation.mutateAsync(event.user_event_id);
+    onSaved();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+      <div
+        className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-base font-semibold text-card-foreground">
+            {isEdit ? "Event bewerken" : "Nieuw event"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted/50 transition-colors"
+          >
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Titel *
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Bijv. Overleg met cliënt"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              required
+              autoFocus
+            />
+          </div>
+
+          {/* Event type grid */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Type
+            </label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {EVENT_TYPES.map((t) => {
+                const Icon = getEventIcon(t.value);
+                const isActive = eventType === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setEventType(t.value)}
+                    className={cn(
+                      "flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[10px] font-medium transition-colors border",
+                      isActive
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon
+                      className="h-3.5 w-3.5"
+                      style={{ color: isActive ? t.color : undefined }}
+                    />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* All day toggle */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allDay}
+              onChange={(e) => setAllDay(e.target.checked)}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+            />
+            <span className="text-sm text-foreground">Hele dag</span>
+          </label>
+
+          {/* Date / Time */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                {allDay ? "Startdatum" : "Start"}
+              </label>
+              <input
+                type={allDay ? "date" : "datetime-local"}
+                value={allDay ? startTime.slice(0, 10) : startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                {allDay ? "Einddatum" : "Einde"}
+              </label>
+              <input
+                type={allDay ? "date" : "datetime-local"}
+                value={allDay ? endTime.slice(0, 10) : endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Locatie
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Bijv. Kantoor, Rechtbank Amsterdam"
+                className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          </div>
+
+          {/* Case & Contact pickers */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                Zaak
+              </label>
+              <select
+                value={caseId}
+                onChange={(e) => setCaseId(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Geen zaak</option>
+                {(cases?.items ?? []).map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.case_number} — {c.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                Relatie
+              </label>
+              <select
+                value={contactId}
+                onChange={(e) => setContactId(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Geen relatie</option>
+                {(relations?.items ?? []).map((r: any) => (
+                  <option key={r.id} value={r.id}>
+                    {r.display_name || r.company_name || `${r.first_name} ${r.last_name}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Reminder */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Herinnering
+            </label>
+            <select
+              value={reminderMinutes ?? ""}
+              onChange={(e) =>
+                setReminderMinutes(
+                  e.target.value === "" ? null : Number(e.target.value)
+                )
+              }
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">Geen herinnering</option>
+              <option value="5">5 minuten van tevoren</option>
+              <option value="15">15 minuten van tevoren</option>
+              <option value="30">30 minuten van tevoren</option>
+              <option value="60">1 uur van tevoren</option>
+              <option value="1440">1 dag van tevoren</option>
+            </select>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Omschrijving
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Eventuele notities..."
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            {isEdit && event?.user_event_id ? (
+              <div>
+                {showDeleteConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-destructive">Weet je het zeker?</span>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={deleteMutation.isPending}
+                      className="inline-flex items-center gap-1 rounded-md bg-destructive px-2.5 py-1.5 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Verwijderen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Annuleren
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Verwijderen
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+              >
+                Annuleren
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving || !title.trim()}
+                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {isSaving
+                  ? "Opslaan..."
+                  : isEdit
+                    ? "Bijwerken"
+                    : "Aanmaken"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -427,7 +873,9 @@ function MonthView({
                       style={{ backgroundColor: event.color || "#6b7280" }}
                     />
                     <span className="text-[10px] leading-tight text-foreground truncate">
-                      {event.title}
+                      {event.source === "user" && event.start_time && !event.all_day
+                        ? `${formatTime(event.start_time)} ${event.title}`
+                        : event.title}
                     </span>
                   </div>
                 ))}
@@ -573,6 +1021,11 @@ function WeekView({
 // ── Event Chip (compact, for week view grid cells) ────────────────────────────
 
 function EventChip({ event }: { event: CalendarEvent }) {
+  const timeStr =
+    event.source === "user" && event.start_time && !event.all_day
+      ? formatTime(event.start_time)
+      : null;
+
   return (
     <div
       className="rounded-md px-2 py-1 text-[10px] leading-tight truncate w-full"
@@ -583,7 +1036,7 @@ function EventChip({ event }: { event: CalendarEvent }) {
       title={event.title}
     >
       <span className="font-medium text-foreground truncate block">
-        {event.title}
+        {timeStr ? `${timeStr} ${event.title}` : event.title}
       </span>
       {event.case_number && (
         <span className="text-muted-foreground">{event.case_number}</span>
@@ -595,14 +1048,18 @@ function EventChip({ event }: { event: CalendarEvent }) {
 // ── Mobile Event Card ─────────────────────────────────────────────────────────
 
 function MobileEventCard({ event }: { event: CalendarEvent }) {
-  const config = EVENT_TYPE_CONFIG[event.event_type] ?? EVENT_TYPE_CONFIG.task;
-  const Icon = config.icon;
+  const Icon = getEventIcon(event.event_type);
   const href =
     event.event_type === "kyc_review" && event.contact_id
       ? `/relaties/${event.contact_id}`
       : event.case_id
         ? `/zaken/${event.case_id}`
         : null;
+
+  const timeStr =
+    event.source === "user" && event.start_time && !event.all_day
+      ? `${formatTime(event.start_time)} - ${formatTime(event.end_time)}`
+      : null;
 
   const content = (
     <div
@@ -623,6 +1080,12 @@ function MobileEventCard({ event }: { event: CalendarEvent }) {
           {event.title}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5">
+          {timeStr && (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5" />
+              {timeStr}
+            </span>
+          )}
           {event.case_number && (
             <span className="text-[10px] text-primary font-medium">
               {event.case_number}
@@ -715,9 +1178,7 @@ function MobileEventList({
             </button>
             <div className="divide-y divide-border">
               {dayEvents.map((event) => {
-                const config =
-                  EVENT_TYPE_CONFIG[event.event_type] ?? EVENT_TYPE_CONFIG.task;
-                const Icon = config.icon;
+                const Icon = getEventIcon(event.event_type);
                 const href =
                   event.event_type === "kyc_review" && event.contact_id
                     ? `/relaties/${event.contact_id}`
@@ -778,10 +1239,14 @@ function DayDetailPanel({
   date,
   events,
   onClose,
+  onAddEvent,
+  onEditEvent,
 }: {
   date: Date;
   events: CalendarEvent[];
   onClose: () => void;
+  onAddEvent: () => void;
+  onEditEvent: (event: CalendarEvent) => void;
 }) {
   return (
     <div className="rounded-xl border border-border bg-card animate-fade-in">
@@ -797,18 +1262,31 @@ function DayDetailPanel({
             </span>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Sluiten
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onAddEvent}
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3 w-3" />
+            Event
+          </button>
+          <button
+            onClick={onClose}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Sluiten
+          </button>
+        </div>
       </div>
 
       {events.length > 0 ? (
         <div className="divide-y divide-border">
           {events.map((event) => (
-            <DayDetailEvent key={event.id} event={event} />
+            <DayDetailEvent
+              key={event.id}
+              event={event}
+              onEdit={() => onEditEvent(event)}
+            />
           ))}
         </div>
       ) : (
@@ -823,9 +1301,14 @@ function DayDetailPanel({
   );
 }
 
-function DayDetailEvent({ event }: { event: CalendarEvent }) {
-  const config = EVENT_TYPE_CONFIG[event.event_type] ?? EVENT_TYPE_CONFIG.task;
-  const Icon = config.icon;
+function DayDetailEvent({
+  event,
+  onEdit,
+}: {
+  event: CalendarEvent;
+  onEdit: () => void;
+}) {
+  const Icon = getEventIcon(event.event_type);
 
   const taskTypeLabel = event.task_type
     ? TASK_TYPE_LABELS[event.task_type] ?? event.task_type
@@ -837,6 +1320,11 @@ function DayDetailEvent({ event }: { event: CalendarEvent }) {
       : event.case_id
         ? `/zaken/${event.case_id}`
         : null;
+
+  const timeStr =
+    event.source === "user" && event.start_time && !event.all_day
+      ? `${formatTime(event.start_time)} - ${formatTime(event.end_time)}`
+      : null;
 
   return (
     <div
@@ -871,6 +1359,22 @@ function DayDetailEvent({ event }: { event: CalendarEvent }) {
         </div>
 
         <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+          {/* Time display */}
+          {timeStr && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {timeStr}
+            </span>
+          )}
+
+          {/* Location */}
+          {event.location && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              {event.location}
+            </span>
+          )}
+
           {/* Case link */}
           {event.case_number && event.case_id && (
             <Link
@@ -888,7 +1392,7 @@ function DayDetailEvent({ event }: { event: CalendarEvent }) {
               href={`/relaties/${event.contact_id}`}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              <ShieldCheck className="h-3 w-3" />
+              <Users className="h-3 w-3" />
               {event.contact_name}
             </Link>
           )}
@@ -902,20 +1406,38 @@ function DayDetailEvent({ event }: { event: CalendarEvent }) {
 
           {/* Event type label */}
           <span className="text-xs text-muted-foreground">
-            {config.label}
+            {getEventLabel(event.event_type)}
           </span>
         </div>
+
+        {/* Description */}
+        {event.description && (
+          <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+            {event.description}
+          </p>
+        )}
       </div>
 
-      {/* Action link */}
-      {href && (
-        <Link
-          href={href}
-          className="shrink-0 inline-flex items-center rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
-        >
-          Openen
-        </Link>
-      )}
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {event.source === "user" && (
+          <button
+            onClick={onEdit}
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-border hover:bg-muted/50 transition-colors"
+            title="Bewerken"
+          >
+            <Pencil className="h-3 w-3 text-muted-foreground" />
+          </button>
+        )}
+        {href && (
+          <Link
+            href={href}
+            className="shrink-0 inline-flex items-center rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
+          >
+            Openen
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

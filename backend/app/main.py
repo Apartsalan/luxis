@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.router import router as auth_router
+from app.calendar.router import router as calendar_router
 from app.cases.router import router as cases_router
 from app.collections.router import rates_router
 from app.collections.router import router as collections_router
@@ -86,6 +87,7 @@ app.include_router(expenses_router)
 app.include_router(settings_router)
 app.include_router(trust_funds_router)
 app.include_router(kyc_router)
+app.include_router(calendar_router)
 
 
 @app.get("/health")

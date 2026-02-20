@@ -88,21 +88,44 @@ export interface FinancialSummary {
   derdengelden_balance: number;
 }
 
+export interface TrustTransactionUser {
+  id: string;
+  full_name: string;
+  email: string;
+}
+
 export interface DerdengeldenTransaction {
   id: string;
+  tenant_id: string;
   case_id: string;
-  transaction_type: "deposit" | "withdrawal";
+  contact_id: string;
+  transaction_type: "deposit" | "disbursement";
   amount: number;
-  transaction_date: string;
-  description: string | null;
-  counterparty: string | null;
+  description: string;
+  payment_method: string | null;
+  reference: string | null;
+  beneficiary_name: string | null;
+  beneficiary_iban: string | null;
+  status: "pending_approval" | "approved" | "rejected";
+  approved_by_1: string | null;
+  approved_at_1: string | null;
+  approved_by_2: string | null;
+  approved_at_2: string | null;
+  created_by: string;
   created_at: string;
+  updated_at: string;
+  creator: TrustTransactionUser;
+  approver_1: TrustTransactionUser | null;
+  approver_2: TrustTransactionUser | null;
 }
 
 export interface DerdengeldenBalance {
+  case_id: string;
   total_deposits: number;
-  total_withdrawals: number;
-  balance: number;
+  total_disbursements: number;
+  total_balance: number;
+  pending_disbursements: number;
+  available: number;
 }
 
 // ── Claims ───────────────────────────────────────────────────────────────────
@@ -266,10 +289,10 @@ export function useFinancialSummary(caseId: string | undefined) {
 // ── Derdengelden ─────────────────────────────────────────────────────────────
 
 export function useDerdengelden(caseId: string | undefined) {
-  return useQuery<DerdengeldenTransaction[]>({
-    queryKey: ["cases", caseId, "derdengelden"],
+  return useQuery<{ items: DerdengeldenTransaction[]; total: number }>({
+    queryKey: ["trust-funds", caseId, "transactions"],
     queryFn: async () => {
-      const res = await api(`/api/cases/${caseId}/derdengelden`);
+      const res = await api(`/api/trust-funds/cases/${caseId}/transactions?per_page=100`);
       if (!res.ok) throw new Error("Failed to fetch derdengelden");
       return res.json();
     },
@@ -279,9 +302,9 @@ export function useDerdengelden(caseId: string | undefined) {
 
 export function useDerdengeldenBalance(caseId: string | undefined) {
   return useQuery<DerdengeldenBalance>({
-    queryKey: ["cases", caseId, "derdengelden", "balance"],
+    queryKey: ["trust-funds", caseId, "balance"],
     queryFn: async () => {
-      const res = await api(`/api/cases/${caseId}/derdengelden/balance`);
+      const res = await api(`/api/trust-funds/cases/${caseId}/balance`);
       if (!res.ok) throw new Error("Failed to fetch balance");
       return res.json();
     },
@@ -298,14 +321,16 @@ export function useCreateDerdengelden() {
     }: {
       caseId: string;
       data: {
-        transaction_type: "deposit" | "withdrawal";
+        transaction_type: "deposit" | "disbursement";
         amount: number;
-        transaction_date: string;
-        description?: string;
-        counterparty?: string;
+        description: string;
+        payment_method?: string;
+        reference?: string;
+        beneficiary_name?: string;
+        beneficiary_iban?: string;
       };
     }) => {
-      const res = await api(`/api/cases/${caseId}/derdengelden`, {
+      const res = await api(`/api/trust-funds/cases/${caseId}/transactions`, {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -316,7 +341,45 @@ export function useCreateDerdengelden() {
       return res.json();
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
+    },
+  });
+}
+
+export function useApproveTrustTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ transactionId }: { transactionId: string; caseId: string }) => {
+      const res = await api(`/api/trust-funds/transactions/${transactionId}/approve`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Goedkeuring mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
+    },
+  });
+}
+
+export function useRejectTrustTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ transactionId }: { transactionId: string; caseId: string }) => {
+      const res = await api(`/api/trust-funds/transactions/${transactionId}/reject`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Afwijzing mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
     },
   });
 }

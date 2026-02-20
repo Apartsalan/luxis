@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
+import { BreadcrumbProvider } from "@/components/layout/breadcrumb-context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { cn } from "@/lib/utils";
 
@@ -53,26 +54,28 @@ export default function DashboardLayout({
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <AppSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={toggleSidebar}
-        mobileOpen={mobileMenuOpen}
-        onMobileClose={() => setMobileMenuOpen(false)}
-      />
-      <div
-        className={cn(
-          "transition-all duration-200",
-          "lg:pl-60",
-          sidebarCollapsed && "lg:pl-16",
-          "pl-0"
-        )}
-      >
-        <AppHeader onMobileMenuToggle={() => setMobileMenuOpen(true)} />
-        <main className="p-4 sm:p-6">
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </main>
+    <BreadcrumbProvider>
+      <div className="min-h-screen bg-background">
+        <AppSidebar
+          collapsed={sidebarCollapsed}
+          onToggle={toggleSidebar}
+          mobileOpen={mobileMenuOpen}
+          onMobileClose={() => setMobileMenuOpen(false)}
+        />
+        <div
+          className={cn(
+            "transition-all duration-200",
+            "lg:pl-60",
+            sidebarCollapsed && "lg:pl-16",
+            "pl-0"
+          )}
+        >
+          <AppHeader onMobileMenuToggle={() => setMobileMenuOpen(true)} />
+          <main className="p-4 sm:p-6">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </main>
+        </div>
       </div>
-    </div>
+    </BreadcrumbProvider>
   );
 }

@@ -35,6 +35,7 @@ import {
 } from "@/hooks/use-invoices";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 
 // ── Status transition map ────────────────────────────────────────────────
 
@@ -95,6 +96,9 @@ export default function FactuurDetailPage() {
   const [editBtw, setEditBtw] = useState("");
   const [editReference, setEditReference] = useState("");
   const [editNotes, setEditNotes] = useState("");
+
+  // Set breadcrumb label to invoice number
+  useBreadcrumbs(factuur ? [{ segment: id, label: factuur.invoice_number }] : []);
 
   // New line form
   const [showLineForm, setShowLineForm] = useState(false);

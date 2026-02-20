@@ -15,6 +15,8 @@ import {
   type Notification,
   type NotificationType,
 } from "@/hooks/use-notifications";
+import { Breadcrumbs } from "@/components/layout/breadcrumbs";
+import { useBreadcrumbContext } from "@/components/layout/breadcrumb-context";
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -23,10 +25,12 @@ const PAGE_TITLES: Record<string, string> = {
   "/zaken": "Zaken",
   "/zaken/nieuw": "Nieuwe zaak",
   "/uren": "Uren",
+  "/taken": "Mijn Taken",
   "/facturen": "Facturen",
   "/facturen/nieuw": "Nieuwe factuur",
   "/documenten": "Documenten",
   "/tarieven": "Tarieven",
+  "/agenda": "Agenda",
   "/instellingen": "Instellingen",
 };
 
@@ -57,6 +61,7 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
+  const { overrides: breadcrumbOverrides } = useBreadcrumbContext();
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -80,11 +85,8 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
     }
   }, [showNotifications]);
 
-  const pageTitle =
-    PAGE_TITLES[pathname] ||
-    (pathname.startsWith("/relaties/") ? "Relatiedetail" : null) ||
-    (pathname.startsWith("/zaken/") ? "Zaakdetail" : null) ||
-    "Luxis";
+  const pageTitle = PAGE_TITLES[pathname] || null;
+  const isNestedPage = !pageTitle && pathname !== "/";
 
   function handleNotificationClick(n: Notification) {
     if (!n.is_read) {
@@ -118,7 +120,11 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
             <Menu className="h-5 w-5" />
           </button>
         )}
-        <h2 className="text-sm font-semibold text-foreground">{pageTitle}</h2>
+        {isNestedPage ? (
+          <Breadcrumbs overrides={breadcrumbOverrides} />
+        ) : (
+          <h2 className="text-sm font-semibold text-foreground">{pageTitle ?? "Luxis"}</h2>
+        )}
       </div>
 
       {/* Right: search + notifications + user menu */}

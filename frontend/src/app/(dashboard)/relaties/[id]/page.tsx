@@ -36,6 +36,7 @@ import { useModules } from "@/hooks/use-modules";
 import { useKyc, useSaveKyc, useCompleteKyc } from "@/hooks/use-kyc";
 import { formatDate, formatCurrency, formatDateShort } from "@/lib/utils";
 import { ContactLinks } from "@/components/relations/contact-links";
+import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -115,6 +116,9 @@ export default function RelatieDetailPage() {
   const [kycOpen, setKycOpen] = useState(false);
   const [kycEditing, setKycEditing] = useState(false);
   const [kycForm, setKycForm] = useState<Record<string, any>>({});
+
+  // Set breadcrumb label to contact name
+  useBreadcrumbs(contact ? [{ segment: id, label: contact.name }] : []);
 
   // Fetch cases where this contact is client or opposing party
   const { data: linkedCases } = useCases({

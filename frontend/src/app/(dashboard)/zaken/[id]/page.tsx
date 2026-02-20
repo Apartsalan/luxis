@@ -37,6 +37,8 @@ import {
   XCircle,
   Ban,
   Upload,
+  Star,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -70,6 +72,7 @@ import {
   useSendDocument,
   getTemplateLabel,
   getTemplateDescription,
+  getTemplatesForStatus,
   triggerDownload,
   useEmailLogs,
   type EmailLogEntry,
@@ -255,6 +258,9 @@ export default function ZaakDetailPage() {
   const [activeTab, setActiveTab] = useState("overzicht");
   const autoStartedRef = useRef<string | null>(null);
 
+  // T2: Workflow-suggestie banner state
+  const [statusSuggestion, setStatusSuggestion] = useState<{ status: string; templates: string[] } | null>(null);
+
   // Auto-start timer when opening a case (if enabled)
   useEffect(() => {
     if (!autoTimerEnabled || !zaak) return;
@@ -310,6 +316,14 @@ export default function ZaakDetailPage() {
         note: note || undefined,
       });
       toast.success(`Status gewijzigd naar ${STATUS_LABELS[newStatus]}`);
+
+      // T2: Toon suggestie-banner als er aanbevolen templates zijn
+      const nextTemplates = getTemplatesForStatus(newStatus, zaak?.debtor_type);
+      if (nextTemplates.recommended.length > 0) {
+        setStatusSuggestion({ status: newStatus, templates: nextTemplates.recommended });
+        // Auto-dismiss na 30 seconden
+        setTimeout(() => setStatusSuggestion(null), 30000);
+      }
     } catch (err: any) {
       toast.error(err.message || "Statuswijziging mislukt");
     }
@@ -561,6 +575,46 @@ export default function ZaakDetailPage() {
         </div>
       )}
 
+      {/* T2: Workflow-suggestie banner */}
+      {statusSuggestion && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 flex items-center justify-between gap-4 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
+              <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Status gewijzigd naar {STATUS_LABELS[statusSuggestion.status] ?? statusSuggestion.status}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {statusSuggestion.templates.length === 1
+                  ? `${getTemplateLabel(statusSuggestion.templates[0])} klaarzetten?`
+                  : `${statusSuggestion.templates.map(getTemplateLabel).join(" of ")} klaarzetten?`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setActiveTab("documenten");
+                setStatusSuggestion(null);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <FileText className="h-3 w-3" />
+              Ga naar documenten
+            </button>
+            <button
+              onClick={() => setStatusSuggestion(null)}
+              className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Later"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Quick Stats */}
       <div className={`grid gap-4 sm:grid-cols-2 ${isIncasso ? "lg:grid-cols-4" : "lg:grid-cols-2"}`}>
         {isIncasso && (
@@ -702,7 +756,7 @@ export default function ZaakDetailPage() {
       {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
       {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
       {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
-      {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} opposingPartyName={zaak?.opposing_party?.name} />}
+      {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />}
       {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} />}
       {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
       {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
@@ -3076,7 +3130,7 @@ function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: string }
   );
 }
 
-function DocumentenTab({ caseId, caseNumber, opposingPartyName }: { caseId: string; caseNumber?: string; opposingPartyName?: string }) {
+function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, opposingPartyName }: { caseId: string; caseNumber?: string; caseStatus?: string; debtorType?: string | null; opposingPartyName?: string }) {
   const { data: templates, isLoading: templatesLoading } = useDocxTemplates();
   const { data: documents, isLoading: docsLoading } = useCaseDocuments(caseId);
   const generateDocx = useGenerateDocx(caseId);
@@ -3086,6 +3140,10 @@ function DocumentenTab({ caseId, caseNumber, opposingPartyName }: { caseId: stri
   // Email compose dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailDoc, setEmailDoc] = useState<GeneratedDocumentSummary | null>(null);
+
+  // Template filtering by status (T1)
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
+  const statusTemplates = getTemplatesForStatus(caseStatus ?? "", debtorType);
 
   // File uploads (E4)
   const { data: caseFiles, isLoading: filesLoading } = useCaseFiles(caseId);
@@ -3157,7 +3215,7 @@ function DocumentenTab({ caseId, caseNumber, opposingPartyName }: { caseId: stri
 
   return (
     <div className="space-y-6">
-      {/* Generate from templates */}
+      {/* Generate from templates (T1: status-filtered) */}
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-1 text-base font-semibold text-foreground">
           Document genereren
@@ -3171,36 +3229,136 @@ function DocumentenTab({ caseId, caseNumber, opposingPartyName }: { caseId: stri
             <Loader2 className="h-4 w-4 animate-spin" />
             Templates laden...
           </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {templates
-              ?.filter((t) => t.available)
-              .map((template) => (
-                <button
-                  key={template.template_type}
-                  onClick={() => handleGenerate(template.template_type)}
-                  disabled={generateDocx.isPending}
-                  className="flex flex-col items-start gap-2 rounded-lg border border-border p-4 text-left hover:border-primary/30 hover:bg-muted/50 transition-all disabled:opacity-50"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                      <FileText className="h-4 w-4 text-primary" />
+        ) : (() => {
+          const allAvailable = templates?.filter((t) => t.available) ?? [];
+          const recommendedTypes = new Set(statusTemplates.recommended);
+          const availableTypes = new Set(statusTemplates.available);
+          const recommended = allAvailable.filter((t) => recommendedTypes.has(t.template_type));
+          const other = allAvailable.filter((t) => !recommendedTypes.has(t.template_type) && availableTypes.has(t.template_type));
+          const hidden = allAvailable.filter((t) => !recommendedTypes.has(t.template_type) && !availableTypes.has(t.template_type));
+
+          return (
+            <div className="space-y-4">
+              {/* Aanbevolen templates */}
+              {recommended.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Star className="h-3.5 w-3.5 text-amber-500" />
+                    <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Aanbevolen voor huidige status</span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {recommended.map((template) => (
+                      <button
+                        key={template.template_type}
+                        onClick={() => handleGenerate(template.template_type)}
+                        disabled={generateDocx.isPending}
+                        className="flex flex-col items-start gap-2 rounded-lg border-2 border-primary/30 bg-primary/5 p-4 text-left hover:border-primary/50 hover:bg-primary/10 transition-all disabled:opacity-50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="text-sm font-medium text-foreground">
+                            {getTemplateLabel(template.template_type)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {getTemplateDescription(template.template_type)}
+                        </p>
+                        <div className="mt-auto flex items-center gap-1 text-xs text-primary font-medium">
+                          <Download className="h-3 w-3" />
+                          {generateDocx.isPending ? "Genereren..." : "Download .docx"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Overige beschikbare templates */}
+              {other.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {other.map((template) => (
+                    <button
+                      key={template.template_type}
+                      onClick={() => handleGenerate(template.template_type)}
+                      disabled={generateDocx.isPending}
+                      className="flex flex-col items-start gap-2 rounded-lg border border-border p-4 text-left hover:border-primary/30 hover:bg-muted/50 transition-all disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-medium text-foreground">
+                          {getTemplateLabel(template.template_type)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {getTemplateDescription(template.template_type)}
+                      </p>
+                      <div className="mt-auto flex items-center gap-1 text-xs text-primary">
+                        <Download className="h-3 w-3" />
+                        {generateDocx.isPending ? "Genereren..." : "Download .docx"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Verborgen templates (Toon alle) */}
+              {hidden.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTemplates(!showAllTemplates)}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAllTemplates ? "rotate-180" : ""}`} />
+                    {showAllTemplates ? "Verberg" : `Toon alle templates (${hidden.length} meer)`}
+                  </button>
+                  {showAllTemplates && (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-3">
+                      {hidden.map((template) => (
+                        <button
+                          key={template.template_type}
+                          onClick={() => handleGenerate(template.template_type)}
+                          disabled={generateDocx.isPending}
+                          className="flex flex-col items-start gap-2 rounded-lg border border-dashed border-border p-4 text-left hover:border-primary/30 hover:bg-muted/50 transition-all disabled:opacity-50 opacity-70"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <span className="text-sm font-medium text-foreground">
+                              {getTemplateLabel(template.template_type)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {getTemplateDescription(template.template_type)}
+                          </p>
+                          <div className="mt-auto flex items-center gap-1 text-xs text-muted-foreground">
+                            <Download className="h-3 w-3" />
+                            {generateDocx.isPending ? "Genereren..." : "Download .docx"}
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                    <span className="text-sm font-medium text-foreground">
-                      {getTemplateLabel(template.template_type)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {getTemplateDescription(template.template_type)}
+                  )}
+                </div>
+              )}
+
+              {/* Fallback als er geen templates zijn */}
+              {recommended.length === 0 && other.length === 0 && hidden.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border py-6 text-center">
+                  <FileText className="mx-auto h-6 w-6 text-muted-foreground/30" />
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    Geen templates beschikbaar
                   </p>
-                  <div className="mt-auto flex items-center gap-1 text-xs text-primary">
-                    <Download className="h-3 w-3" />
-                    {generateDocx.isPending ? "Genereren..." : "Download .docx"}
-                  </div>
-                </button>
-              ))}
-          </div>
-        )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* File uploads (E4) */}

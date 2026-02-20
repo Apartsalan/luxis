@@ -78,6 +78,58 @@ export function getTemplateDescription(type: string): string {
   return TEMPLATE_TYPE_DESCRIPTIONS[type] ?? "";
 }
 
+// ── Status → Template Mapping (T1) ─────────────────────────────────────────
+
+interface TemplateSet {
+  recommended: string[];
+  available: string[];
+}
+
+const STATUS_TEMPLATE_MAP: Record<string, TemplateSet> = {
+  nieuw:            { recommended: ["herinnering"],                  available: ["herinnering", "renteoverzicht"] },
+  herinnering:      { recommended: ["aanmaning"],                   available: ["aanmaning", "renteoverzicht"] },
+  aanmaning:        { recommended: ["14_dagenbrief", "sommatie"],   available: ["14_dagenbrief", "sommatie", "renteoverzicht"] },
+  "14_dagenbrief":  { recommended: ["sommatie", "tweede_sommatie"], available: ["sommatie", "tweede_sommatie", "renteoverzicht"] },
+  sommatie:         { recommended: ["tweede_sommatie"],             available: ["tweede_sommatie", "dagvaarding", "renteoverzicht"] },
+  tweede_sommatie:  { recommended: ["dagvaarding"],                 available: ["dagvaarding", "renteoverzicht"] },
+  dagvaarding:      { recommended: ["renteoverzicht"],              available: ["renteoverzicht"] },
+  vonnis:           { recommended: ["renteoverzicht"],              available: ["renteoverzicht"] },
+  executie:         { recommended: ["renteoverzicht"],              available: ["renteoverzicht"] },
+};
+
+/**
+ * Get recommended and available templates for a given case status + debtor type.
+ * B2C: 14_dagenbrief is relevant, sommatie comes after.
+ * B2B: sommatie is first, 14_dagenbrief is filtered out.
+ */
+export function getTemplatesForStatus(
+  status: string,
+  debtorType?: string | null
+): { recommended: string[]; available: string[] } {
+  const mapping = STATUS_TEMPLATE_MAP[status];
+  if (!mapping) {
+    // Fallback: all templates available, none recommended
+    return { recommended: [], available: Object.keys(TEMPLATE_TYPE_LABELS) };
+  }
+
+  const filterByDebtor = (types: string[]) => {
+    if (debtorType === "b2b") {
+      // B2B: verwijder 14_dagenbrief
+      return types.filter((t) => t !== "14_dagenbrief");
+    }
+    if (debtorType === "b2c") {
+      // B2C: bij aanmaning-status, 14_dagenbrief als eerste aanbevolen
+      return types;
+    }
+    return types;
+  };
+
+  return {
+    recommended: filterByDebtor(mapping.recommended),
+    available: filterByDebtor(mapping.available),
+  };
+}
+
 // ── Hooks: Docx Templates ───────────────────────────────────────────────────
 
 export function useDocxTemplates() {

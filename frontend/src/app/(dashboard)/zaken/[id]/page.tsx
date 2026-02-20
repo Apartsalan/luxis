@@ -39,6 +39,7 @@ import {
   useDeleteCase,
   useCaseActivities,
   useAddCaseActivity,
+  useConflictCheck,
   type CaseActivity,
 } from "@/hooks/use-cases";
 import {
@@ -1852,6 +1853,15 @@ function ActiviteitenTab({ zaak }: { zaak: any }) {
 // ── Partijen Tab ──────────────────────────────────────────────────────────────
 
 function PartijenTab({ zaak }: { zaak: any }) {
+  const { data: clientConflict } = useConflictCheck(
+    zaak.client?.id || undefined,
+    "client"
+  );
+  const { data: opponentConflict } = useConflictCheck(
+    zaak.opposing_party?.id || undefined,
+    "opposing_party"
+  );
+
   return (
     <div className="rounded-xl border border-border bg-card p-6">
       <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
@@ -1913,6 +1923,58 @@ function PartijenTab({ zaak }: { zaak: any }) {
             </Link>
           ))}
       </div>
+
+      {/* Conflict warnings */}
+      {clientConflict?.has_conflict && (
+        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                Conflict gedetecteerd — client
+              </p>
+              <p className="mt-0.5 text-xs text-amber-700">
+                {zaak.client.name} is in {clientConflict.conflicts.length === 1 ? "een andere zaak" : `${clientConflict.conflicts.length} andere zaken`} wederpartij:
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {clientConflict.conflicts.map((c) => (
+                  <li key={c.case_id} className="text-xs text-amber-700">
+                    <span className="font-mono font-medium">{c.case_number}</span>
+                    {" — wederpartij van "}
+                    <span className="font-medium">{c.client_name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+      {opponentConflict?.has_conflict && (
+        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                Conflict gedetecteerd — wederpartij
+              </p>
+              <p className="mt-0.5 text-xs text-amber-700">
+                {zaak.opposing_party.name} is in {opponentConflict.conflicts.length === 1 ? "een andere zaak" : `${opponentConflict.conflicts.length} andere zaken`} client:
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {opponentConflict.conflicts.map((c) => (
+                  <li key={c.case_id} className="text-xs text-amber-700">
+                    <span className="font-mono font-medium">{c.case_number}</span>
+                    {" — cliënt"}
+                    {c.opposing_party_name && (
+                      <span> vs. {c.opposing_party_name}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

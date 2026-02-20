@@ -169,7 +169,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | E5 | Slimme facturatie-flow (onbefactureerde uren tonen, batch factureren) | Groot | 🔴 Hoog | ✅ Gebouwd (20 feb) — invoiced tracking op TimeEntry, batch import met checkboxes, Quick Bill vanuit dossierdetail |
 | E6 | Debiteuren/crediteuren overzicht bij facturen | Midden | 🟡 Midden | ✅ Gebouwd (20 feb) — aging 0-30/31-60/61-90/90+ dagen, KPI-kaarten, per-relatie tabel met AgingBar, tab op facturenpagina |
 | E7 | Auto-timer bij openen dossier (handmatig + automatisch modus) | Midden | 🟡 Midden | ✅ Gebouwd (20 feb) — opt-in auto-start, dossierwisseling auto-save, activity type dropdown, vergeten-timer-waarschuwing 2u, multi-tab sync |
-| E8 | E-mail templates (onderwerp + body + merge fields) | Midden | 🟢 Later | Niet gestart — documenteren, bouwen bij T3 (SMTP) |
+| E8 | E-mail templates (onderwerp + body + merge fields) | Midden | 🟢 Later | ✅ Gebouwd (20 feb) — onderdeel van T3 |
 
 **Voorgestelde bouwvolgorde:** E1 → E2 → E3 → E4 → E5 → E6 → E7 → E8
 
@@ -179,7 +179,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 |---|---------|-------------|--------|
 | T1 | Templates op zaakdetail (status-filtered) | Midden | Niet gestart |
 | T2 | Workflow-suggesties bij statuswijziging | Klein-Midden | Niet gestart |
-| T3 | E-mail versturen vanuit Luxis (SMTP) | Groot | Niet gestart |
+| T3 | E-mail versturen vanuit Luxis (SMTP) | Groot | ✅ Gebouwd (20 feb) — compose dialog, send knop, correspondentie tab, email logs, test email, instellingen tab. **SMTP env vars nog niet geconfigureerd op VPS — wacht op Lisanne's app-wachtwoord** |
 
 > Detail: zie `PROMPT-TEMPLATES-IN-WORKFLOW.md`
 > E-mail templates (E8) wordt onderdeel van T3
@@ -201,10 +201,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 ## Volgorde van werken
 
-**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E7, alle bugs
+**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T3, alle bugs
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
-**Prioriteit 1 (nu):** T3 + E8 (e-mail vanuit Luxis + email templates) — meest impactvolle Basenet-vervanger
-**Prioriteit 2:** T1 (templates op zaakdetail) + T2 (workflow-suggesties)
+**TODO:** SMTP env vars configureren op VPS (wacht op Lisanne's Outlook app-wachtwoord — zie SESSION-LOG-20FEB-SESSIE3.md)
+**Prioriteit 1 (nu):** T1 (templates op zaakdetail) + T2 (workflow-suggesties)
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

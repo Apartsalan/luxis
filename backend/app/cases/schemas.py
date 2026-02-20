@@ -180,3 +180,47 @@ class CaseDetailResponse(CaseResponse):
 
     parties: list[CasePartyResponse] = []
     recent_activities: list[CaseActivityResponse] = []
+
+
+# ── CaseFile Schemas (E4: Document uploads) ─────────────────────────────────
+
+ALLOWED_FILE_TYPES = {
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "text/plain",
+    "message/rfc822",  # .eml
+    "application/vnd.ms-outlook",  # .msg
+}
+
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx",
+    ".jpg", ".jpeg", ".png", ".gif",
+    ".txt", ".eml", ".msg",
+}
+
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
+
+DOCUMENT_DIRECTIONS = ("inkomend", "uitgaand")
+
+
+class CaseFileResponse(BaseModel):
+    """Response schema for an uploaded case file."""
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    original_filename: str
+    file_size: int
+    content_type: str
+    document_direction: str | None
+    description: str | None
+    uploaded_by: uuid.UUID
+    uploader_name: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

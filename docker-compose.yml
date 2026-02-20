@@ -59,6 +59,7 @@ services:
       - ./backend/alembic:/app/alembic
       - ./templates:/app/templates
       - generated_docs:/app/generated_docs
+      - uploads:/app/uploads
 
   frontend:
     build:
@@ -75,3 +76,4 @@ services:
 volumes:
   postgres_data:
   generated_docs:
+  uploads:

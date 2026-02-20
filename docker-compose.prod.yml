@@ -38,6 +38,7 @@ services:
       - "8000"
     volumes:
       - generated_docs:/app/generated_docs
+      - uploads:/app/uploads
       - ./templates:/app/templates:ro
     restart: unless-stopped
 
@@ -73,5 +74,6 @@ services:
 volumes:
   postgres_data:
   generated_docs:
+  uploads:
   caddy_data:
   caddy_config:

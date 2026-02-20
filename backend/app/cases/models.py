@@ -1,4 +1,4 @@
-"""Cases module models — Case, CaseParty, and CaseActivity."""
+"""Cases module models — Case, CaseParty, CaseActivity, and CaseFile."""
 
 import uuid
 from datetime import date
@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     ForeignKey,
+    Integer,
     Numeric,
     String,
     Text,
@@ -155,3 +156,29 @@ class CaseActivity(TenantBase):
     # Relationships
     case: Mapped["Case"] = relationship("Case", back_populates="activities")
     user: Mapped["User | None"] = relationship("User", lazy="selectin")  # noqa: F821
+
+
+class CaseFile(TenantBase):
+    """Uploaded file attached to a case (e.g. contracts, court decisions, evidence)."""
+
+    __tablename__ = "case_files"
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("cases.id"), nullable=False, index=True
+    )
+    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    stored_filename: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    document_direction: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # inkomend / uitgaand
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Relationships
+    case: Mapped["Case"] = relationship("Case", lazy="selectin")
+    uploader: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821

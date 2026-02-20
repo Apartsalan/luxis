@@ -1,18 +1,21 @@
-"""Cases module endpoints — CRUD for cases, parties, and activities."""
+"""Cases module endpoints — CRUD for cases, parties, activities, and file uploads."""
 
 import math
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.cases import service
+from app.cases import files_service
 from app.cases.schemas import (
     CaseActivityCreate,
     CaseActivityResponse,
     CaseCreate,
     CaseDetailResponse,
+    CaseFileResponse,
     CasePartyCreate,
     CasePartyResponse,
     CaseResponse,
@@ -225,3 +228,90 @@ async def add_activity(
         db, current_user.tenant_id, case_id, current_user.id, data
     )
     return activity
+
+
+# ── Case Files (E4: Document uploads) ───────────────────────────────────────
+
+
+@router.get("/{case_id}/files", response_model=list[CaseFileResponse])
+async def list_files(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all uploaded files for a case."""
+    case_files = await files_service.list_case_files(
+        db, current_user.tenant_id, case_id
+    )
+    return [files_service.to_response(f) for f in case_files]
+
+
+@router.post(
+    "/{case_id}/files",
+    response_model=CaseFileResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_file(
+    case_id: uuid.UUID,
+    file: UploadFile = File(...),
+    description: str | None = Form(default=None),
+    document_direction: str | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload a file to a case."""
+    try:
+        case_file = await files_service.upload_case_file(
+            db,
+            tenant_id=current_user.tenant_id,
+            case_id=case_id,
+            user_id=current_user.id,
+            file=file,
+            description=description,
+            document_direction=document_direction,
+        )
+        return files_service.to_response(case_file)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/{case_id}/files/{file_id}/download")
+async def download_file(
+    case_id: uuid.UUID,
+    file_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download a case file."""
+    case_file = await files_service.get_case_file(
+        db, current_user.tenant_id, case_id, file_id
+    )
+    if not case_file:
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden")
+
+    file_path = files_service.get_file_path(case_file)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden op schijf")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=case_file.original_filename,
+        media_type=case_file.content_type,
+    )
+
+
+@router.delete("/{case_id}/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_file(
+    case_id: uuid.UUID,
+    file_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete a case file."""
+    case_file = await files_service.get_case_file(
+        db, current_user.tenant_id, case_id, file_id
+    )
+    if not case_file:
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden")
+
+    await files_service.delete_case_file(db, case_file)

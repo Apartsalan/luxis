@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   XCircle,
   Ban,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -75,6 +76,14 @@ import {
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
 } from "@/hooks/use-invoices";
+import {
+  useCaseFiles,
+  useUploadCaseFile,
+  useDeleteCaseFile,
+  downloadCaseFile,
+  formatFileSize,
+  getFileIcon,
+} from "@/hooks/use-case-files";
 import {
   useWorkflowStatuses,
   useWorkflowTransitions,
@@ -2722,6 +2731,12 @@ function DocumentenTab({ caseId }: { caseId: string }) {
   const generateDocx = useGenerateDocx(caseId);
   const deleteDocument = useDeleteDocument(caseId);
 
+  // File uploads (E4)
+  const { data: caseFiles, isLoading: filesLoading } = useCaseFiles(caseId);
+  const uploadFile = useUploadCaseFile(caseId);
+  const deleteCaseFile = useDeleteCaseFile(caseId);
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const handleGenerate = async (templateType: string) => {
     try {
       const result = await generateDocx.mutateAsync(templateType);
@@ -2739,6 +2754,23 @@ function DocumentenTab({ caseId }: { caseId: string }) {
     } catch {
       toast.error("Fout bij verwijderen document");
     }
+  };
+
+  const handleFiles = (files: FileList | File[]) => {
+    Array.from(files).forEach((file) => {
+      uploadFile.mutate({ file });
+    });
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
   };
 
   return (
@@ -2785,6 +2817,124 @@ function DocumentenTab({ caseId }: { caseId: string }) {
                   </div>
                 </button>
               ))}
+          </div>
+        )}
+      </div>
+
+      {/* File uploads (E4) */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Bestanden</h2>
+            <p className="text-sm text-muted-foreground">
+              Upload documenten zoals contracten, vonnissen en correspondentie
+            </p>
+          </div>
+          {uploadFile.isPending && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Uploaden...
+            </div>
+          )}
+        </div>
+
+        {/* Drag & drop zone */}
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={() => setIsDragOver(false)}
+          className={`relative mb-4 rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
+            isDragOver
+              ? "border-primary bg-primary/5"
+              : "border-border hover:border-primary/30 hover:bg-muted/30"
+          }`}
+          onClick={() => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.multiple = true;
+            input.accept = ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.eml,.msg";
+            input.onchange = (e) => {
+              const files = (e.target as HTMLInputElement).files;
+              if (files) handleFiles(files);
+            };
+            input.click();
+          }}
+        >
+          <Upload className={`mx-auto h-8 w-8 ${isDragOver ? "text-primary" : "text-muted-foreground/40"}`} />
+          <p className="mt-2 text-sm text-muted-foreground">
+            {isDragOver ? (
+              <span className="text-primary font-medium">Laat los om te uploaden</span>
+            ) : (
+              <>Sleep bestanden hierheen of <span className="text-primary font-medium">klik om te uploaden</span></>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground/60">
+            PDF, Word, Excel, afbeeldingen, e-mail · max. 50 MB
+          </p>
+        </div>
+
+        {/* File list */}
+        {filesLoading ? (
+          <div className="space-y-2">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between rounded-lg border border-border p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg skeleton" />
+                  <div className="space-y-2">
+                    <div className="h-4 w-32 rounded skeleton" />
+                    <div className="h-3 w-20 rounded skeleton" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !caseFiles?.length ? (
+          <div className="rounded-lg border border-dashed border-border py-6 text-center">
+            <File className="mx-auto h-6 w-6 text-muted-foreground/30" />
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Nog geen bestanden geüpload
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {caseFiles.map((f) => {
+              const icon = getFileIcon(f.content_type);
+              return (
+                <div
+                  key={f.id}
+                  className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors group"
+                >
+                  <button
+                    onClick={() => downloadCaseFile(caseId, f.id, f.original_filename)}
+                    className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                  >
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${icon.color}`}>
+                      <span className="text-[10px] font-bold">{icon.label}</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                        {f.original_filename}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(f.file_size)} · {formatDateShort(f.created_at)}
+                        {f.document_direction && (
+                          <span className="ml-1.5">
+                            · {f.document_direction === "inkomend" ? "↙ Inkomend" : "↗ Uitgaand"}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => deleteCaseFile.mutate(f.id)}
+                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Verwijderen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

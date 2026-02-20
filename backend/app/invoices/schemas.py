@@ -1,4 +1,4 @@
-"""Invoices module schemas — Pydantic models for invoices, lines, and expenses."""
+"""Invoices module schemas — Pydantic models for invoices, lines, payments, and expenses."""
 
 import uuid
 from datetime import date, datetime
@@ -121,6 +121,55 @@ class PaginatedInvoices(BaseModel):
     page: int
     per_page: int
     pages: int
+
+
+# ── Invoice Payment Schemas ───────────────────────────────────────────────────
+
+
+class UserBrief(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    email: str
+
+    model_config = {"from_attributes": True}
+
+
+class InvoicePaymentCreate(BaseModel):
+    amount: Decimal = Field(..., gt=Decimal("0"), decimal_places=2)
+    payment_date: date
+    payment_method: str = Field(
+        ..., description="bank, ideal, cash, verrekening"
+    )
+    reference: str | None = None
+    description: str | None = None
+
+
+class InvoicePaymentRead(BaseModel):
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    invoice_id: uuid.UUID
+    amount: Decimal
+    payment_date: date
+    payment_method: str
+    reference: str | None
+    description: str | None
+    created_by: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    creator: UserBrief
+
+    model_config = {"from_attributes": True}
+
+
+class InvoicePaymentSummary(BaseModel):
+    """Payment summary for an invoice: total paid, outstanding amount."""
+
+    invoice_id: uuid.UUID
+    invoice_total: Decimal
+    total_paid: Decimal
+    outstanding: Decimal
+    payment_count: int
+    is_fully_paid: bool
 
 
 # ── Expense Schemas ──────────────────────────────────────────────────────────

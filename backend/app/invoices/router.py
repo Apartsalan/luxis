@@ -1,4 +1,4 @@
-"""Invoices module endpoints — Invoices, Lines, and Expenses."""
+"""Invoices module endpoints — Invoices, Lines, Payments, and Expenses."""
 
 import uuid
 from datetime import date
@@ -18,6 +18,9 @@ from app.invoices.schemas import (
     InvoiceCreate,
     InvoiceLineCreate,
     InvoiceLineResponse,
+    InvoicePaymentCreate,
+    InvoicePaymentRead,
+    InvoicePaymentSummary,
     InvoiceResponse,
     InvoiceUpdate,
     PaginatedInvoices,
@@ -185,6 +188,72 @@ async def remove_line(
     """Remove a line from a concept invoice."""
     await service.remove_line(
         db, current_user.tenant_id, invoice_id, line_id
+    )
+
+
+# ── Invoice Payments ─────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/{invoice_id}/payments",
+    response_model=InvoicePaymentRead,
+    status_code=http_status.HTTP_201_CREATED,
+)
+async def create_payment(
+    invoice_id: uuid.UUID,
+    data: InvoicePaymentCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record a payment against an invoice."""
+    return await service.create_invoice_payment(
+        db, current_user.tenant_id, invoice_id, current_user.id, data
+    )
+
+
+@router.get(
+    "/{invoice_id}/payments",
+    response_model=list[InvoicePaymentRead],
+)
+async def list_payments(
+    invoice_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all payments for an invoice."""
+    return await service.list_invoice_payments(
+        db, current_user.tenant_id, invoice_id
+    )
+
+
+@router.delete(
+    "/{invoice_id}/payments/{payment_id}",
+    status_code=http_status.HTTP_204_NO_CONTENT,
+)
+async def delete_payment(
+    invoice_id: uuid.UUID,
+    payment_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a payment from an invoice."""
+    await service.delete_invoice_payment(
+        db, current_user.tenant_id, invoice_id, payment_id
+    )
+
+
+@router.get(
+    "/{invoice_id}/payment-summary",
+    response_model=InvoicePaymentSummary,
+)
+async def get_payment_summary(
+    invoice_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get payment summary for an invoice (total paid, outstanding)."""
+    return await service.get_payment_summary(
+        db, current_user.tenant_id, invoice_id
     )
 
 

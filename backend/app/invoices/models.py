@@ -1,4 +1,4 @@
-"""Invoices module models — Invoice, InvoiceLine, Expense.
+"""Invoices module models — Invoice, InvoiceLine, InvoicePayment, Expense.
 
 Facturatiemodule for Dutch law firms. Invoice numbering follows
 the format F{year}-{sequence:05d} (e.g. F2026-00001).
@@ -27,10 +27,13 @@ INVOICE_STATUSES = (
     "concept",
     "approved",
     "sent",
+    "partially_paid",
     "paid",
     "overdue",
     "cancelled",
 )
+
+PAYMENT_METHODS = ("bank", "ideal", "cash", "verrekening")
 
 
 class Invoice(TenantBase):
@@ -98,6 +101,12 @@ class Invoice(TenantBase):
         lazy="selectin",
         order_by="InvoiceLine.line_number",
     )
+    payments: Mapped[list["InvoicePayment"]] = relationship(
+        "InvoicePayment",
+        back_populates="invoice",
+        lazy="selectin",
+        order_by="InvoicePayment.payment_date.desc()",
+    )
 
 
 class InvoiceLine(TenantBase):
@@ -143,6 +152,51 @@ class InvoiceLine(TenantBase):
     )
     expense: Mapped["Expense | None"] = relationship(  # noqa: F821
         "Expense", foreign_keys=[expense_id], lazy="selectin"
+    )
+
+
+class InvoicePayment(TenantBase):
+    """A payment (deelbetaling) recorded against an invoice.
+
+    When total payments reach the invoice total, the invoice status
+    is automatically set to 'paid'. Partial payments set it to
+    'partially_paid'.
+    """
+
+    __tablename__ = "invoice_payments"
+
+    invoice_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("invoices.id"), nullable=False, index=True
+    )
+
+    amount: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), nullable=False
+    )
+
+    payment_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    payment_method: Mapped[str] = mapped_column(
+        String(30), nullable=False
+    )  # bank, ideal, cash, verrekening
+
+    reference: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
+
+    created_by: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+
+    # Relationships
+    invoice: Mapped["Invoice"] = relationship(
+        "Invoice", back_populates="payments"
+    )
+    creator: Mapped["User"] = relationship(  # noqa: F821
+        "User", foreign_keys=[created_by], lazy="selectin"
     )
 
 

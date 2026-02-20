@@ -39,10 +39,13 @@ import {
   Upload,
   Star,
   ChevronDown,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCase,
+  useUpdateCase,
   useUpdateCaseStatus,
   useDeleteCase,
   useCaseActivities,
@@ -788,6 +791,15 @@ export default function ZaakDetailPage() {
 function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any; initialNoteText?: string; onNoteTextConsumed?: () => void }) {
   const [noteText, setNoteText] = useState("");
   const addActivity = useAddCaseActivity();
+  const updateCase = useUpdateCase();
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    description: zaak.description || "",
+    reference: zaak.reference || "",
+    court_case_number: zaak.court_case_number || "",
+  });
 
   // Apply phone note text from parent
   useEffect(() => {
@@ -816,14 +828,112 @@ function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any
     }
   };
 
+  const handleSaveDetails = async () => {
+    try {
+      await updateCase.mutateAsync({
+        id: zaak.id,
+        data: {
+          description: editForm.description || undefined,
+          reference: editForm.reference || undefined,
+          court_case_number: editForm.court_case_number || undefined,
+        },
+      });
+      setIsEditing(false);
+      toast.success("Dossiergegevens opgeslagen");
+    } catch (err: any) {
+      toast.error(err.message || "Opslaan mislukt");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditForm({
+      description: zaak.description || "",
+      reference: zaak.reference || "",
+      court_case_number: zaak.court_case_number || "",
+    });
+    setIsEditing(false);
+  };
+
+  const editInputClass =
+    "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
   return (
     <div className="grid gap-6 lg:grid-cols-5">
       {/* Left: Case details */}
       <div className="lg:col-span-3 space-y-6">
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
-            Dossiergegevens
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-card-foreground uppercase tracking-wider">
+              Dossiergegevens
+            </h2>
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Bewerken
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCancelEdit}
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  Annuleren
+                </button>
+                <button
+                  onClick={handleSaveDetails}
+                  disabled={updateCase.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  {updateCase.isPending ? "Opslaan..." : "Opslaan"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {isEditing ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Beschrijving
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  className={editInputClass}
+                  placeholder="Korte omschrijving van het dossier..."
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Referentie (klantreferentie)
+                </label>
+                <input
+                  type="text"
+                  value={editForm.reference}
+                  onChange={(e) => setEditForm(f => ({ ...f, reference: e.target.value }))}
+                  className={editInputClass}
+                  placeholder="Bijv. INV-2024-001"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Zaaknummer rechtbank
+                </label>
+                <input
+                  type="text"
+                  value={editForm.court_case_number}
+                  onChange={(e) => setEditForm(f => ({ ...f, court_case_number: e.target.value }))}
+                  className={editInputClass}
+                  placeholder="Bijv. C/13/123456 / HA ZA 24-789"
+                />
+              </div>
+            </div>
+          ) : (
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-xs text-muted-foreground mb-1">
@@ -841,16 +951,14 @@ function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any
                 {zaak.reference || "-"}
               </dd>
             </div>
-            {zaak.court_case_number && (
-              <div>
-                <dt className="text-xs text-muted-foreground mb-1">
-                  Zaaknummer rechtbank
-                </dt>
-                <dd className="text-sm text-foreground font-mono">
-                  {zaak.court_case_number}
-                </dd>
-              </div>
-            )}
+            <div>
+              <dt className="text-xs text-muted-foreground mb-1">
+                Zaaknummer rechtbank
+              </dt>
+              <dd className="text-sm text-foreground font-mono">
+                {zaak.court_case_number || "-"}
+              </dd>
+            </div>
             {zaak.contractual_rate && (
               <div>
                 <dt className="text-xs text-muted-foreground mb-1">
@@ -885,6 +993,7 @@ function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any
               </div>
             )}
           </dl>
+          )}
         </div>
 
         {/* Partijen inline */}

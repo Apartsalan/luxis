@@ -24,9 +24,9 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~70% | 110+ endpoints, 13 routers, solide CRUD en business logic, correcte financial calculations. Mist: date_of_birth, billing_email, payment_terms, court_case_number, external_reference op CaseParty, /api/search endpoint |
-| Frontend (Next.js) | ~40% | Features tonen data maar missen workflow-optimalisatie en UX polish. Postadres niet getoond (backend heeft het al), zoekfunctie broken (404), rechtbank-UI ontbreekt |
-| Infra/DevOps | ~80% | Docker Compose, VPS deployment, CI pipeline werkend |
+| Backend (FastAPI) | ~80% | 110+ endpoints, 14 routers, solide CRUD en business logic, correcte financial calculations. `/api/search` gebouwd. Billing profile (F6), billing_contact_id (F7), extended filters (F9) toegevoegd. |
+| Frontend (Next.js) | ~60% | Alle Fase A-E + T1-T3 + F1-F10 features gebouwd. Status-filtered templates, workflow-suggesties, inline contact creation, telefoonnotitie, facturatieprofiel UI. |
+| Infra/DevOps | ~70% | Docker Compose, VPS deployment werkend. **MAAR:** VPS login broken — CORS + NEXT_PUBLIC_API_URL niet correct ingesteld. Draait op dev compose i.p.v. prod. |
 
 **Rode draad:** De backend is vaak verder dan de frontend. ~40% van de verbeteringen vereist geen backend-werk.
 
@@ -125,7 +125,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | # | Feature | API klaar? | Complexiteit | Status |
 |---|---------|-----------|-------------|--------|
 | A1 | Timer voor tijdschrijven | ✅ `/my/today` | Klein | ✅ Gebouwd (floating timer, persistent via localStorage, globale context) |
-| A2 | Global search (Ctrl+K) | ❌ **`/api/search` endpoint bestaat NIET** — frontend roept 404 aan | Klein-Midden | ⚠️ Frontend gebouwd maar **backend ontbreekt** — zoekfunctie is broken |
+| A2 | Global search (Ctrl+K) | ✅ `/api/search` endpoint gebouwd (F1, commit `97e9d22`) | Klein-Midden | ✅ Gebouwd (backend search router + frontend werkt) |
 | A3 | "Mijn Taken" pagina | ✅ `/dashboard/my-tasks` | Klein | ✅ Gebouwd (dedicated pagina, groepering op datum, filter, complete/skip met 1 klik) |
 | A4 | Activity timeline op zaakdetail | ✅ `/cases/{id}/activities` | Klein-Midden | ✅ Gebouwd (timeline met gekleurde iconen, relatieve tijden, inline notitie, paginatie, user info) |
 | A5 | Contact-bedrijf koppelingen UI | ✅ `/relations/links` | Klein | ✅ Gebouwd (ContactLinks component, zoek-dropdown, rol selectie, CRUD) |
@@ -196,16 +196,19 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | BUG-2 | Rente-velden zichtbaar bij niet-incasso zaaktypes | Midden | Klein (conditional render) | ✅ Gefixt (20 feb) |
 | BUG-3 | Renteberekening per documentdatum controleren | Hoog | Verificatie nodig | ✅ Geverifieerd — werkt correct (20 feb) |
 | BUG-6 | Conflict check mist op zaakdetail Partijen tab (warning, niet blokkeren) | Midden | Klein | ✅ Gefixt (20 feb) |
+| BUG-7 | Dossiergegevens niet bewerkbaar op detailpagina — `court_case_number` (F5) toont alleen als gevuld maar kan nergens ingevuld worden. Dossierdetail mist edit-modus voor alle velden (beschrijving, referentie, zaaknummer, etc.) | Hoog | Midden | ✅ Gefixt (21 feb) — Bewerken-knop + inline edit met Opslaan/Annuleren, zaaknummer altijd zichtbaar |
+| BUG-8 | `court_case_number` veld ontbreekt op "Nieuw dossier" formulier — kan alleen via (niet-bestaande) edit-modus op detailpagina | Midden | Klein | ✅ Gefixt (21 feb) — veld toegevoegd aan formulier + backend CaseCreate schema |
 
 ---
 
 ## Volgorde van werken
 
-**✅ Afgerond:** A1, A3-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, alle bugs
-**⚠️ Broken:** A2 (zoekfunctie — backend endpoint ontbreekt, frontend roept 404 aan)
+**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, F1-F10, alle bugs t/m BUG-6
+**✅ VPS login gefixt** (21 feb) — DB wachtwoord mismatch opgelost, frontend herbouwd met correcte NEXT_PUBLIC_API_URL
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
-**TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op app-wachtwoord)
-**Volgende prioriteit:** Fase F (bevindingen praktijktest Lisanne) — zie hieronder
+**TODO:** BUG-7 (dossiergegevens edit-modus) + BUG-8 (zaaknummer op nieuw dossier form)
+**TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op M365 migratie)
+**Volgende prioriteit:** BUG-7/BUG-8 → F11 (e-mail naar partij vanuit dossier)
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 
@@ -218,27 +221,27 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 **Kernprobleem:** Het dossier is niet compleet als werkhub. Bij BaseNet/Clio/Kleos doe je ALLES vanuit het dossier. Luxis mist kritieke velden en acties.
 
-### F-Sprint 1: P0 Quick Wins (3-4 dagen)
+### F-Sprint 1: P0 Quick Wins — ✅ GEDAAN (commit `97e9d22`, 20 feb 2026)
 
-| # | Bevinding | Backend? | Wat nodig | Complexiteit | Status |
-|---|-----------|----------|-----------|-------------|--------|
-| F1 | **🔴 Zoekfunctie fixen** (A2) — `/api/search` endpoint bouwen | ❌ Endpoint bestaat niet | Backend: global search router + frontend werkt al | M (8-10u) | ❌ TODO |
-| F2 | **Postadres tonen** bij relaties | ✅ Backend heeft velden al | Frontend: edit form + view mode uitbreiden | XS (2-4u) | ❌ TODO |
-| F3 | **Geboortedatum** bij personen | ❌ Ontbreekt | Migration + schema + frontend veld | S (4-6u) | ❌ TODO |
-| F4 | **Referentienummer partij** op CaseParty | ❌ Ontbreekt | Migration + schema + frontend veld | S (4-6u) | ❌ TODO |
-| F5 | **Rechtbank/rolnummer UI** — procesgegevens sectie | ✅ CaseParty model (deels) | Migration court_case_number + frontend sectie | S (6-8u) | ❌ TODO |
+| # | Bevinding | Status |
+|---|-----------|--------|
+| F1 | **Zoekfunctie** — `/api/search` endpoint gebouwd (global search over zaken, relaties, documenten) | ✅ Gedaan |
+| F2 | **Postadres tonen** bij relaties | ✅ Gedaan |
+| F3 | **Geboortedatum** bij personen | ✅ Gedaan (migration 022) |
+| F4 | **Referentienummer partij** (`external_reference` op case_parties) | ✅ Gedaan (migration 022 + UI in PartijenTab) |
+| F5 | **Rechtbank/rolnummer** (`court_case_number` op cases) | ✅ Gedaan (migration 022 + UI in Dossiergegevens) |
 
-### F-Sprint 2: P1 Uitbreidingen (5-7 dagen)
+### F-Sprint 2: P1 Uitbreidingen — ✅ GEDAAN (commits `c55846b` + `821e281`, 20 feb 2026)
 
-| # | Bevinding | Backend? | Wat nodig | Complexiteit | Status |
-|---|-----------|----------|-----------|-------------|--------|
-| F6 | **Facturatieprofiel** bij relaties | ❌ Deels (KvK/BTW ja) | Migration billing_email/payment_terms + frontend sectie | M (8-12u) | ❌ TODO |
-| F7 | **Afwijkende factuurrelatie** per dossier | ❌ Ontbreekt | Migration billing_contact_id op cases + frontend dropdown | M (8-12u) | ❌ TODO |
-| F8 | **Inline contact aanmaken** (modal) | ✅ Backend endpoints bestaan | Frontend: herbruikbare create-contact modal | S (4-6u) | ❌ TODO |
-| F9 | **Uitgebreide filters** dossier-overzicht | ✅ Deels (type+status) | Backend: assigned_to + date range filters, Frontend: uitgebreide filterbalk + localStorage persistentie | M (10-14u) | ❌ TODO |
-| F10 | **Telefoonnotitie** als activiteittype | ✅ Backend activity model | Frontend: telefoonnotitie optie in quick-actions | XS (1-2u) | ❌ TODO |
+| # | Bevinding | Status |
+|---|-----------|--------|
+| F6 | **Facturatieprofiel** bij relaties (`default_hourly_rate`, `payment_term_days`, `billing_email`, `iban`) | ✅ Gedaan (migration 023 + Facturatie-sectie op relatiedetail) |
+| F7 | **Afwijkende factuurrelatie** per dossier (`billing_contact_id` FK op cases) | ✅ Gedaan (migration 023) |
+| F8 | **Inline contact aanmaken** bij dossier-aanmaak ("+ Nieuwe relatie" knop) | ✅ Gedaan (frontend modal op nieuw-dossier pagina) |
+| F9 | **Uitgebreide filters** dossier-overzicht (assigned_to, date_from, date_to, bedrag) | ✅ Gedaan (backend + "Meer filters" panel) |
+| F10 | **Telefoonnotitie-knop** met auto-timestamp template | ✅ Gedaan (quick-action knop op zaakdetail) |
 
-### F-Sprint 3: P2 (afhankelijk M365)
+### F-Sprint 3: P2 — NOG TE DOEN
 
 | # | Bevinding | Complexiteit | Status |
 |---|-----------|-------------|--------|

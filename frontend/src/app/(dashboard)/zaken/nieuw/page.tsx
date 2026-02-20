@@ -33,6 +33,7 @@ function NieuweZaakPage() {
     debtor_type: "", // auto-filled from opposing party contact_type
     description: "",
     reference: "",
+    court_case_number: "",
     interest_type: "statutory",
     contractual_rate: "",
     client_id: prefillClientId,
@@ -127,6 +128,7 @@ function NieuweZaakPage() {
     if (form.debtor_type) data.debtor_type = form.debtor_type;
     if (form.description) data.description = form.description;
     if (form.reference) data.reference = form.reference;
+    if (form.court_case_number) data.court_case_number = form.court_case_number;
     if (form.opposing_party_id) data.opposing_party_id = form.opposing_party_id;
     if (form.interest_type === "contractual" && form.contractual_rate) {
       data.contractual_rate = parseFloat(form.contractual_rate);
@@ -227,16 +229,30 @@ function NieuweZaakPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground">
-              Referentie (klantreferentie)
-            </label>
-            <input
-              type="text"
-              value={form.reference}
-              onChange={(e) => updateField("reference", e.target.value)}
-              className={inputClass}
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Referentie (klantreferentie)
+              </label>
+              <input
+                type="text"
+                value={form.reference}
+                onChange={(e) => updateField("reference", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Zaaknummer rechtbank
+              </label>
+              <input
+                type="text"
+                value={form.court_case_number}
+                onChange={(e) => updateField("court_case_number", e.target.value)}
+                className={inputClass}
+                placeholder="Bijv. C/13/123456 / HA ZA 24-789"
+              />
+            </div>
           </div>
         </div>
 

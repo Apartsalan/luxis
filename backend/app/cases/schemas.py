@@ -43,6 +43,7 @@ class CaseCreate(BaseModel):
     debtor_type: str = Field(default="b2b", description="b2b or b2c")
     description: str | None = None
     reference: str | None = None
+    court_case_number: str | None = None
     interest_type: str = Field(
         default="statutory",
         description="statutory, commercial, government, contractual",

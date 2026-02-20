@@ -37,7 +37,6 @@ const ALL_NAVIGATION: NavItem[] = [
   { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
   { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
   { name: "Documenten", href: "/documenten", icon: FileText },
-  { name: "Tarieven", href: "/tarieven", icon: Scale, module: "incasso" },
   { name: "Instellingen", href: "/instellingen", icon: Settings },
 ];
 

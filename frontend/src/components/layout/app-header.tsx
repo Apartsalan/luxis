@@ -29,7 +29,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/facturen": "Facturen",
   "/facturen/nieuw": "Nieuwe factuur",
   "/documenten": "Documenten",
-  "/tarieven": "Tarieven",
   "/agenda": "Agenda",
   "/instellingen": "Instellingen",
 };

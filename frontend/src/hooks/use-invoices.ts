@@ -99,6 +99,7 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
   concept: "Concept",
   approved: "Goedgekeurd",
   sent: "Verzonden",
+  partially_paid: "Deels betaald",
   paid: "Betaald",
   overdue: "Achterstallig",
   cancelled: "Geannuleerd",
@@ -108,6 +109,7 @@ export const INVOICE_STATUS_COLORS: Record<string, string> = {
   concept: "bg-gray-100 text-gray-700",
   approved: "bg-blue-100 text-blue-700",
   sent: "bg-amber-100 text-amber-700",
+  partially_paid: "bg-cyan-100 text-cyan-700",
   paid: "bg-green-100 text-green-700",
   overdue: "bg-red-100 text-red-700",
   cancelled: "bg-gray-100 text-gray-400",
@@ -318,6 +320,114 @@ export function useAddInvoiceLine() {
     },
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["invoices", variables.invoiceId] });
+    },
+  });
+}
+
+// ── Invoice Payments ────────────────────────────────────────────────────
+
+export interface InvoicePayment {
+  id: string;
+  invoice_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: string;
+  reference: string | null;
+  description: string | null;
+  created_by: string;
+  created_at: string;
+  creator: { id: string; full_name: string; email: string };
+}
+
+export interface InvoicePaymentSummary {
+  invoice_id: string;
+  invoice_total: number;
+  total_paid: number;
+  outstanding: number;
+  payment_count: number;
+  is_fully_paid: boolean;
+}
+
+export function useInvoicePayments(invoiceId: string | undefined) {
+  return useQuery<InvoicePayment[]>({
+    queryKey: ["invoices", invoiceId, "payments"],
+    queryFn: async () => {
+      const res = await api(`/api/invoices/${invoiceId}/payments`);
+      if (!res.ok) throw new Error("Kan betalingen niet laden");
+      return res.json();
+    },
+    enabled: !!invoiceId,
+  });
+}
+
+export function useInvoicePaymentSummary(invoiceId: string | undefined) {
+  return useQuery<InvoicePaymentSummary>({
+    queryKey: ["invoices", invoiceId, "payment-summary"],
+    queryFn: async () => {
+      const res = await api(`/api/invoices/${invoiceId}/payment-summary`);
+      if (!res.ok) throw new Error("Kan betalingsoverzicht niet laden");
+      return res.json();
+    },
+    enabled: !!invoiceId,
+  });
+}
+
+export function useCreateInvoicePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      invoiceId,
+      data,
+    }: {
+      invoiceId: string;
+      data: {
+        amount: number;
+        payment_date: string;
+        payment_method: string;
+        reference?: string;
+        description?: string;
+      };
+    }) => {
+      const res = await api(`/api/invoices/${invoiceId}/payments`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Betaling registreren mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["invoices", variables.invoiceId] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useDeleteInvoicePayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      invoiceId,
+      paymentId,
+    }: {
+      invoiceId: string;
+      paymentId: string;
+    }) => {
+      const res = await api(`/api/invoices/${invoiceId}/payments/${paymentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Betaling verwijderen mislukt");
+      }
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["invoices", variables.invoiceId] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

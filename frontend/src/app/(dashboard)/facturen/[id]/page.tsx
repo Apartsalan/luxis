@@ -18,6 +18,9 @@ import {
   X,
   Briefcase,
   User,
+  CreditCard,
+  Wallet,
+  ArrowDownLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -30,6 +33,10 @@ import {
   useCancelInvoice,
   useAddInvoiceLine,
   useRemoveInvoiceLine,
+  useInvoicePayments,
+  useInvoicePaymentSummary,
+  useCreateInvoicePayment,
+  useDeleteInvoicePayment,
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
 } from "@/hooks/use-invoices";
@@ -61,15 +68,8 @@ const STATUS_ACTIONS: Record<
         "bg-amber-600 text-white hover:bg-amber-700",
     },
   ],
-  sent: [
-    {
-      label: "Betaald markeren",
-      next: "paid",
-      icon: Euro,
-      color:
-        "bg-emerald-600 text-white hover:bg-emerald-700",
-    },
-  ],
+  sent: [],
+  partially_paid: [],
 };
 
 export default function FactuurDetailPage() {
@@ -78,6 +78,8 @@ export default function FactuurDetailPage() {
   const id = params.id as string;
 
   const { data: factuur, isLoading, isError, error, refetch } = useInvoice(id);
+  const { data: payments } = useInvoicePayments(id);
+  const { data: paymentSummary } = useInvoicePaymentSummary(id);
 
   // Mutations
   const updateInvoice = useUpdateInvoice();
@@ -88,6 +90,8 @@ export default function FactuurDetailPage() {
   const cancelMutation = useCancelInvoice();
   const addLineMutation = useAddInvoiceLine();
   const removeLineMutation = useRemoveInvoiceLine();
+  const createPayment = useCreateInvoicePayment();
+  const deletePayment = useDeleteInvoicePayment();
 
   // Edit mode (only for concept)
   const [editing, setEditing] = useState(false);
@@ -105,6 +109,14 @@ export default function FactuurDetailPage() {
   const [lineDescription, setLineDescription] = useState("");
   const [lineQuantity, setLineQuantity] = useState("1");
   const [lineUnitPrice, setLineUnitPrice] = useState("");
+
+  // Payment form
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payDate, setPayDate] = useState(new Date().toISOString().split("T")[0]);
+  const [payMethod, setPayMethod] = useState("bank");
+  const [payReference, setPayReference] = useState("");
+  const [payDescription, setPayDescription] = useState("");
 
   // ── Handlers ─────────────────────────────────────────────────────────
 
@@ -203,6 +215,44 @@ export default function FactuurDetailPage() {
     try {
       await removeLineMutation.mutateAsync({ invoiceId: id, lineId });
       toast.success("Regel verwijderd");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleAddPayment = async () => {
+    if (!payAmount || parseFloat(payAmount) <= 0) {
+      toast.error("Vul een geldig bedrag in");
+      return;
+    }
+    try {
+      await createPayment.mutateAsync({
+        invoiceId: id,
+        data: {
+          amount: parseFloat(payAmount),
+          payment_date: payDate,
+          payment_method: payMethod,
+          ...(payReference && { reference: payReference }),
+          ...(payDescription && { description: payDescription }),
+        },
+      });
+      toast.success("Betaling geregistreerd");
+      setShowPaymentForm(false);
+      setPayAmount("");
+      setPayDate(new Date().toISOString().split("T")[0]);
+      setPayMethod("bank");
+      setPayReference("");
+      setPayDescription("");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm("Weet je zeker dat je deze betaling wilt verwijderen?")) return;
+    try {
+      await deletePayment.mutateAsync({ invoiceId: id, paymentId });
+      toast.success("Betaling verwijderd");
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -706,6 +756,197 @@ export default function FactuurDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Payment tracking section — only for sent/partially_paid/paid invoices */}
+      {factuur && ["sent", "partially_paid", "paid"].includes(factuur.status) && (
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">
+                Betalingen
+              </h3>
+              {paymentSummary && (
+                <span className="text-xs text-muted-foreground">
+                  ({paymentSummary.payment_count} betaling{paymentSummary.payment_count !== 1 ? "en" : ""})
+                </span>
+              )}
+            </div>
+            {!paymentSummary?.is_fully_paid && (
+              <button
+                onClick={() => setShowPaymentForm(!showPaymentForm)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+              >
+                <ArrowDownLeft className="h-3.5 w-3.5" />
+                Betaling registreren
+              </button>
+            )}
+          </div>
+
+          {/* Payment summary bar */}
+          {paymentSummary && (
+            <div className="px-5 py-3 border-b border-border bg-muted/20">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-muted-foreground">
+                  {paymentSummary.is_fully_paid ? "Volledig betaald" : "Betalingsvoortgang"}
+                </span>
+                <span className="text-xs font-semibold text-foreground tabular-nums">
+                  {formatCurrency(paymentSummary.total_paid)} / {formatCurrency(paymentSummary.invoice_total)}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    paymentSummary.is_fully_paid ? "bg-emerald-500" : "bg-amber-500"
+                  }`}
+                  style={{ width: `${Math.min(100, paymentSummary.invoice_total > 0 ? (paymentSummary.total_paid / paymentSummary.invoice_total) * 100 : 0)}%` }}
+                />
+              </div>
+              {paymentSummary.outstanding > 0 && (
+                <p className="text-xs text-amber-600 mt-1 tabular-nums">
+                  Nog openstaand: {formatCurrency(paymentSummary.outstanding)}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Payment form */}
+          {showPaymentForm && (
+            <div className="border-b border-border bg-emerald-50/50 px-5 py-4">
+              <h4 className="text-sm font-semibold text-foreground mb-3">Betaling registreren</h4>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Bedrag *</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      placeholder={paymentSummary ? String(paymentSummary.outstanding) : "0,00"}
+                      className="w-full rounded-md border border-input bg-background pl-7 pr-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Datum *</label>
+                  <input
+                    type="date"
+                    value={payDate}
+                    onChange={(e) => setPayDate(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Methode *</label>
+                  <select
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="bank">Bankoverschrijving</option>
+                    <option value="ideal">iDEAL</option>
+                    <option value="cash">Contant</option>
+                    <option value="verrekening">Verrekening</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-foreground mb-1">Referentie</label>
+                  <input
+                    type="text"
+                    value={payReference}
+                    onChange={(e) => setPayReference(e.target.value)}
+                    placeholder="Bankreferentie"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div className="sm:col-span-2 lg:col-span-2">
+                  <label className="block text-xs font-medium text-foreground mb-1">Omschrijving</label>
+                  <input
+                    type="text"
+                    value={payDescription}
+                    onChange={(e) => setPayDescription(e.target.value)}
+                    placeholder="Optioneel"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={handleAddPayment}
+                  disabled={createPayment.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                >
+                  {createPayment.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ArrowDownLeft className="h-3.5 w-3.5" />
+                  )}
+                  Betaling registreren
+                </button>
+                <button
+                  onClick={() => setShowPaymentForm(false)}
+                  className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  Annuleren
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Payment list */}
+          {payments && payments.length > 0 ? (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-muted-foreground">Datum</th>
+                  <th className="px-5 py-2.5 text-right text-xs font-medium text-muted-foreground">Bedrag</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-medium text-muted-foreground">Methode</th>
+                  <th className="hidden sm:table-cell px-5 py-2.5 text-left text-xs font-medium text-muted-foreground">Referentie</th>
+                  <th className="px-5 py-2.5 w-10" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {payments.map((payment) => (
+                  <tr key={payment.id} className="group hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3 text-sm text-muted-foreground">
+                      {formatDateShort(payment.payment_date)}
+                    </td>
+                    <td className="px-5 py-3 text-right text-sm font-semibold text-emerald-600 tabular-nums">
+                      +{formatCurrency(payment.amount)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {{ bank: "Bank", ideal: "iDEAL", cash: "Contant", verrekening: "Verrekening" }[payment.payment_method] || payment.payment_method}
+                      </span>
+                    </td>
+                    <td className="hidden sm:table-cell px-5 py-3 text-sm text-muted-foreground">
+                      {payment.reference || "-"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => handleDeletePayment(payment.id)}
+                        disabled={deletePayment.isPending}
+                        className="rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50"
+                        title="Verwijderen"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="px-5 py-8 text-center">
+              <Wallet className="mx-auto h-8 w-8 text-muted-foreground/30" />
+              <p className="mt-2 text-sm text-muted-foreground">Nog geen betalingen geregistreerd</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

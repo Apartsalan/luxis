@@ -218,17 +218,63 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 ---
 
-## Toekomstige modules (niet gepland, zie FEATURE-INVENTORY.md)
+## Volgende grote module: Microsoft 365 Email Integratie
 
-Deze staan in de feature-inventaris maar zijn nog niet ingepland:
+**Doel:** "Best of breed" email — het beste van BaseNet, Kleos, Hammock, Smokeball en Clio combineren. Lisanne werkt in Outlook, Luxis regelt de rest automatisch op de achtergrond.
+
+**Technisch fundament:** Microsoft Graph API (OAuth 2.0 koppeling met Lisanne's Outlook/365)
+
+| Fase | Feature | Wat het oplevert |
+|------|---------|-----------------|
+| M1 | OAuth + Graph API koppeling | Lisanne authoriseert Luxis om haar Outlook te lezen/schrijven |
+| M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) |
+| M3 | Correspondentie tab (volledige inbox per dossier) | Alle in- + uitgaande mails per dossier, threads, zoeken |
+| M4 | Template → Outlook draft | Klik "Herinnering" in Luxis → Outlook opent met alles pre-filled (aan, onderwerp, body, bijlage) |
+| M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) |
+| M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties |
+
+**Bouwvolgorde:** M1 → M2 → M3 → M4 → M5 → M6
+
+**Wat Lisanne ervaart na afronding:**
+- Template aanklikken → opent direct in Outlook met alles pre-filled
+- Inkomende mails worden automatisch aan het juiste dossier gekoppeld
+- Op elk dossier: volledige correspondentie (in + uit) zichtbaar
+- Tijdschrijven op email-activiteit gaat automatisch
+- Ze hoeft Outlook niet te verlaten, maar alles staat ook in Luxis
+
+---
+
+## Toekomstige module: AI Incasso Agent
+
+**Doel:** Een AI agent die repetitief incassowerk zelfstandig oppakt — het meeste incassowerk volgt vaste patronen met vaste templates en voorspelbare antwoorden.
+
+**Wat de agent kan doen:**
+- **Dossier aanmaken**: cliënt stuurt factuur + gegevens → agent maakt dossier aan, vult alle velden in
+- **Workflow volgen**: herinnering → aanmaning → 14-dagenbrief → sommatie automatisch versturen op de juiste momenten
+- **Reacties verwerken**: standaard-antwoorden herkennen ("ik betaal volgende week", "ik betwist de factuur", "ik heb al betaald") en juiste vervolgactie voorstellen
+- **Betalingen matchen**: binnenkomende betalingen automatisch aan dossiers koppelen, restant berekenen, volgende stap bepalen
+- **Rente berekenen**: automatisch bijwerken bij elke actie
+- **Escaleren**: complexe situaties of onbekende reacties doorsturen naar Lisanne met context
+
+**Hoe het werkt:**
+1. Agent leert van Lisanne's bestaande dossiers (patronen, beslissingen, timing)
+2. Nieuwe dossiers worden door de agent opgestart en gevolgd
+3. Lisanne reviewt alleen: escalaties, onbekende situaties, dagvaardingen
+4. Dashboard toont wat de agent heeft gedaan en wat Lisanne's aandacht nodig heeft
+
+**Dependency:** Microsoft 365 Email Integratie (M1-M6) moet eerst af — de agent heeft email nodig om te functioneren.
+
+**Technisch:** Claude API / Anthropic API + tool use, getraind op Lisanne's dossierpatronen en templates.
+
+---
+
+## Overige toekomstige modules (niet gepland, zie FEATURE-INVENTORY.md)
 
 - Insolventiemodule (faillissement, WSNP, Recofa)
 - Cliëntportaal
-- Outlook/365 integratie (fase 2 van email)
 - Boekhoudkoppeling (Exact Online)
 - Bulk operaties
 - Management rapportages
-- AI features (documentsamenvatting, suggesties)
 - Mobiele app
 - E-signing
 - KvK API integratie

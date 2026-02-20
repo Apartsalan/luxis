@@ -154,8 +154,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 |---|---------|-------------|--------|
 | D1 | Wachtwoord vergeten flow | Klein-Midden | ✅ Gebouwd (forgot-password op login, reset-password pagina met token, 3-staps flow) |
 | D2 | Gebruikersbeheer (rollen, rechten) | Groot | Niet gestart |
-| D3 | Navigatie-verbeteringen | Klein | Niet gestart |
-| D4 | Empty states en loading states | Klein | Niet gestart |
+| D3 | Navigatie-verbeteringen | Klein | ✅ Gebouwd (breadcrumbs met dynamische labels, nested routes) |
+| D4 | Empty states en loading states | Klein | ✅ Gebouwd (skeleton loaders op alle dashboard pagina's) |
 | D5 | Agenda events aanmaken | Midden (nieuw model + CRUD) | Niet gestart |
 
 ### Apart traject: Templates in workflow (na B1)

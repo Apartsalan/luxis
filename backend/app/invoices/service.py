@@ -87,6 +87,7 @@ async def list_invoices(
     per_page: int = 20,
     status: str | None = None,
     search: str | None = None,
+    case_id: uuid.UUID | None = None,
 ) -> dict:
     """List invoices with pagination, optional status filter and search."""
     query = (
@@ -100,6 +101,10 @@ async def list_invoices(
         .select_from(Invoice)
         .where(Invoice.tenant_id == tenant_id, Invoice.is_active.is_(True))
     )
+
+    if case_id:
+        query = query.where(Invoice.case_id == case_id)
+        count_query = count_query.where(Invoice.case_id == case_id)
 
     if status:
         query = query.where(Invoice.status == status)

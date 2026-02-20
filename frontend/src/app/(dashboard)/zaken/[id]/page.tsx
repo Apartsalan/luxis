@@ -71,6 +71,11 @@ import {
   triggerDownload,
 } from "@/hooks/use-documents";
 import {
+  useInvoices,
+  INVOICE_STATUS_LABELS,
+  INVOICE_STATUS_COLORS,
+} from "@/hooks/use-invoices";
+import {
   useWorkflowStatuses,
   useWorkflowTransitions,
   useWorkflowTasks,
@@ -303,6 +308,7 @@ export default function ZaakDetailPage() {
           { id: "derdengelden", label: "Derdengelden", icon: FileText },
         ]
       : []),
+    { id: "facturen", label: "Facturen", icon: CreditCard },
     { id: "documenten", label: "Documenten", icon: File },
     { id: "activiteiten", label: "Activiteiten", icon: Clock },
     { id: "partijen", label: "Partijen", icon: Users },
@@ -630,6 +636,7 @@ export default function ZaakDetailPage() {
       {isIncasso && activeTab === "betalingen" && <BetalingenTab caseId={id} />}
       {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
       {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
+      {activeTab === "facturen" && <FacturenTab caseId={id} />}
       {activeTab === "documenten" && <DocumentenTab caseId={id} />}
       {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
       {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
@@ -2601,6 +2608,113 @@ function TakenTab({ caseId }: { caseId: string }) {
 }
 
 // ── Documenten Tab ──────────────────────────────────────────────────────────
+
+function FacturenTab({ caseId }: { caseId: string }) {
+  const { data, isLoading } = useInvoices({ case_id: caseId, per_page: 100 });
+  const invoices = data?.items ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Facturen</h2>
+            <p className="text-sm text-muted-foreground">
+              Alle facturen gekoppeld aan dit dossier
+            </p>
+          </div>
+          <Link
+            href={`/facturen/nieuw?case_id=${caseId}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nieuwe factuur
+          </Link>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-lg skeleton" />
+                  <div className="space-y-2">
+                    <div className="h-4 w-28 rounded skeleton" />
+                    <div className="h-3 w-20 rounded skeleton" />
+                  </div>
+                </div>
+                <div className="h-4 w-20 rounded skeleton" />
+              </div>
+            ))}
+          </div>
+        ) : !invoices.length ? (
+          <div className="rounded-lg border border-dashed border-border py-8 text-center">
+            <CreditCard className="mx-auto h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Nog geen facturen voor dit dossier
+            </p>
+            <Link
+              href={`/facturen/nieuw?case_id=${caseId}`}
+              className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Eerste factuur aanmaken
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {invoices.map((inv) => (
+              <Link
+                key={inv.id}
+                href={`/facturen/${inv.id}`}
+                className="flex items-center justify-between rounded-lg border border-border p-4 hover:border-primary/30 hover:bg-muted/30 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                    <CreditCard className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                      {inv.invoice_number}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateShort(inv.invoice_date)}
+                      {inv.contact_name && ` · ${inv.contact_name}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      INVOICE_STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {INVOICE_STATUS_LABELS[inv.status] ?? inv.status}
+                  </span>
+                  <span className="text-sm font-semibold text-foreground tabular-nums">
+                    {formatCurrency(inv.total)}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {invoices.length > 0 && (
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+            <p className="text-sm text-muted-foreground">
+              {invoices.length} factuur{invoices.length !== 1 ? "en" : ""}
+            </p>
+            <p className="text-sm font-semibold text-foreground tabular-nums">
+              Totaal: {formatCurrency(invoices.reduce((sum, inv) => sum + inv.total, 0))}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function DocumentenTab({ caseId }: { caseId: string }) {
   const { data: templates, isLoading: templatesLoading } = useDocxTemplates();

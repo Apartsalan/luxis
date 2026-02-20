@@ -122,14 +122,16 @@ export function useInvoices(params?: {
   per_page?: number;
   status?: string;
   search?: string;
+  case_id?: string;
 }) {
   const page = params?.page ?? 1;
   const per_page = params?.per_page ?? 20;
   const status = params?.status ?? "";
   const search = params?.search ?? "";
+  const case_id = params?.case_id ?? "";
 
   return useQuery<PaginatedInvoices>({
-    queryKey: ["invoices", { page, per_page, status, search }],
+    queryKey: ["invoices", { page, per_page, status, search, case_id }],
     queryFn: async () => {
       const qp = new URLSearchParams({
         page: String(page),
@@ -137,6 +139,7 @@ export function useInvoices(params?: {
       });
       if (status) qp.set("status", status);
       if (search) qp.set("search", search);
+      if (case_id) qp.set("case_id", case_id);
       const res = await api(`/api/invoices?${qp}`);
       if (!res.ok) throw new Error("Kan facturen niet laden");
       return res.json();

@@ -1343,118 +1343,151 @@ function FinancieelTab({ caseId }: { caseId: string }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 rounded-lg skeleton" />
-        ))}
+      <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-28 rounded-xl skeleton" />
+          ))}
+        </div>
+        <div className="h-6 rounded-lg skeleton" />
+        <div className="h-48 rounded-xl skeleton" />
       </div>
     );
   }
 
   if (!summary) return null;
 
+  const paidPercent = summary.grand_total > 0
+    ? Math.min(100, Math.round((summary.total_paid / summary.grand_total) * 100))
+    : 0;
+
+  const rows = [
+    { label: "Hoofdsom", total: summary.total_principal, paid: summary.total_paid_principal, open: summary.remaining_principal },
+    { label: "Rente", total: summary.total_interest, paid: summary.total_paid_interest, open: summary.remaining_interest },
+    {
+      label: summary.bik_btw > 0 ? "BIK incl. BTW" : "BIK (art. 6:96 BW)",
+      total: summary.total_bik,
+      paid: summary.total_paid_costs,
+      open: summary.remaining_costs,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <h2 className="text-base font-semibold text-foreground">
-        Financieel overzicht
-      </h2>
+      {/* KPI cards */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+            <Receipt className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Totale vordering</span>
+          </div>
+          <p className="text-2xl font-bold tabular-nums text-foreground">
+            {formatCurrency(summary.grand_total)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Hoofdsom + rente + kosten
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-emerald-600 mb-1">
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Betaald</span>
+          </div>
+          <p className="text-2xl font-bold tabular-nums text-emerald-600">
+            {formatCurrency(summary.total_paid)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {paidPercent}% van totaal
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center gap-2 text-amber-600 mb-1">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Openstaand</span>
+          </div>
+          <p className="text-2xl font-bold tabular-nums text-amber-600">
+            {formatCurrency(summary.total_outstanding)}
+          </p>
+          {summary.derdengelden_balance > 0 && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Derdengelden: {formatCurrency(summary.derdengelden_balance)}
+            </p>
+          )}
+        </div>
+      </div>
 
+      {/* Progress bar */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-muted-foreground">Betalingsvoortgang</span>
+          <span className="text-xs font-semibold text-foreground tabular-nums">{paidPercent}%</span>
+        </div>
+        <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${
+              paidPercent >= 100 ? "bg-emerald-500" : paidPercent >= 50 ? "bg-emerald-500" : "bg-amber-500"
+            }`}
+            style={{ width: `${paidPercent}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1.5">
+          <span className="text-[10px] text-emerald-600 tabular-nums">{formatCurrency(summary.total_paid)} betaald</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(summary.grand_total)} totaal</span>
+        </div>
+      </div>
+
+      {/* Breakdown table */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border bg-muted/30">
+          <Euro className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Specificatie</h3>
+        </div>
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Post
-              </th>
-              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Totaal
-              </th>
-              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Betaald
-              </th>
-              <th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Openstaand
-              </th>
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Post</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Totaal</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Betaald</th>
+              <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Openstaand</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            <tr>
-              <td className="px-5 py-3.5 text-sm text-foreground">Hoofdsom</td>
-              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
-                {formatCurrency(summary.total_principal)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm text-emerald-600 tabular-nums">
-                {formatCurrency(summary.total_paid_principal)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
-                {formatCurrency(summary.remaining_principal)}
-              </td>
-            </tr>
-            <tr>
-              <td className="px-5 py-3.5 text-sm text-foreground">Rente</td>
-              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
-                {formatCurrency(summary.total_interest)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm text-emerald-600 tabular-nums">
-                {formatCurrency(summary.total_paid_interest)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
-                {formatCurrency(summary.remaining_interest)}
-              </td>
-            </tr>
-            <tr>
-              <td className="px-5 py-3.5 text-sm text-foreground">
-                BIK (art. 6:96 BW)
-                {summary.bik_btw > 0 && (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    incl. BTW
-                  </span>
-                )}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
-                {formatCurrency(summary.total_bik)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm text-emerald-600 tabular-nums">
-                {formatCurrency(summary.total_paid_costs)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
-                {formatCurrency(summary.remaining_costs)}
-              </td>
-            </tr>
+            {rows.map((row) => {
+              const rowPaid = row.total > 0 ? Math.round((row.paid / row.total) * 100) : 0;
+              return (
+                <tr key={row.label} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-5 py-3.5">
+                    <p className="text-sm text-foreground">{row.label}</p>
+                    <div className="mt-1 h-1 w-20 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${rowPaid}%` }} />
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">{formatCurrency(row.total)}</td>
+                  <td className="px-5 py-3.5 text-right text-sm text-emerald-600 tabular-nums">{formatCurrency(row.paid)}</td>
+                  <td className="px-5 py-3.5 text-right text-sm font-medium tabular-nums">
+                    {row.open > 0 ? (
+                      <span className="text-amber-600">{formatCurrency(row.open)}</span>
+                    ) : (
+                      <span className="text-emerald-600">{formatCurrency(0)}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-border bg-muted/30">
-              <td className="px-5 py-3.5 text-sm font-bold text-foreground">
-                Totaal
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm font-bold text-foreground tabular-nums">
-                {formatCurrency(summary.grand_total)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm font-bold text-emerald-600 tabular-nums">
-                {formatCurrency(summary.total_paid)}
-              </td>
-              <td className="px-5 py-3.5 text-right text-sm font-bold text-primary tabular-nums">
-                {formatCurrency(summary.total_outstanding)}
-              </td>
+              <td className="px-5 py-3.5 text-sm font-bold text-foreground">Totaal</td>
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-foreground tabular-nums">{formatCurrency(summary.grand_total)}</td>
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-emerald-600 tabular-nums">{formatCurrency(summary.total_paid)}</td>
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-amber-600 tabular-nums">{formatCurrency(summary.total_outstanding)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
-      {summary.derdengelden_balance > 0 && (
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-foreground">Derdengelden saldo</p>
-            <p className="text-lg font-bold text-primary tabular-nums">
-              {formatCurrency(summary.derdengelden_balance)}
-            </p>
-          </div>
-        </div>
-      )}
-
       <p className="text-xs text-muted-foreground">
-        Berekening op {formatDate(summary.calculation_date)}. Rente wordt
-        dagelijks bijgewerkt.
+        Berekening op {formatDate(summary.calculation_date)}. Rente wordt dagelijks bijgewerkt.
       </p>
     </div>
   );

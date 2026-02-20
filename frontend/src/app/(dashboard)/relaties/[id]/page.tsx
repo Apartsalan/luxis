@@ -132,6 +132,7 @@ export default function RelatieDetailPage() {
       name: contact.name || "",
       first_name: contact.first_name || "",
       last_name: contact.last_name || "",
+      date_of_birth: contact.date_of_birth || "",
       email: contact.email || "",
       phone: contact.phone || "",
       kvk_number: contact.kvk_number || "",
@@ -139,6 +140,9 @@ export default function RelatieDetailPage() {
       visit_address: contact.visit_address || "",
       visit_postcode: contact.visit_postcode || "",
       visit_city: contact.visit_city || "",
+      postal_address: contact.postal_address || "",
+      postal_postcode: contact.postal_postcode || "",
+      postal_city: contact.postal_city || "",
       notes: contact.notes || "",
     });
     setEditing(true);
@@ -154,6 +158,7 @@ export default function RelatieDetailPage() {
         data.first_name = editForm.first_name;
         data.last_name = editForm.last_name;
         data.name = `${editForm.first_name} ${editForm.last_name}`.trim();
+        data.date_of_birth = editForm.date_of_birth || undefined;
       }
       data.email = editForm.email || undefined;
       data.phone = editForm.phone || undefined;
@@ -162,6 +167,9 @@ export default function RelatieDetailPage() {
       data.visit_address = editForm.visit_address || undefined;
       data.visit_postcode = editForm.visit_postcode || undefined;
       data.visit_city = editForm.visit_city || undefined;
+      data.postal_address = editForm.postal_address || undefined;
+      data.postal_postcode = editForm.postal_postcode || undefined;
+      data.postal_city = editForm.postal_city || undefined;
       data.notes = editForm.notes || undefined;
 
       await updateRelation.mutateAsync({ id, data });
@@ -444,6 +452,21 @@ export default function RelatieDetailPage() {
                     </div>
                   </div>
                 )}
+                {contact.contact_type === "person" && (
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Geboortedatum
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.date_of_birth}
+                      onChange={(e) =>
+                        updateEdit("date_of_birth", e.target.value)
+                      }
+                      className={inputClass}
+                    />
+                  </div>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -501,7 +524,7 @@ export default function RelatieDetailPage() {
                 )}
                 <div className="pt-2">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    Adres
+                    Bezoekadres
                   </h3>
                   <div className="space-y-4">
                     <div>
@@ -547,6 +570,55 @@ export default function RelatieDetailPage() {
                     </div>
                   </div>
                 </div>
+                <div className="pt-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Postadres <span className="font-normal normal-case">(optioneel, indien afwijkend)</span>
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Postbus / straat
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.postal_address}
+                        onChange={(e) =>
+                          updateEdit("postal_address", e.target.value)
+                        }
+                        className={inputClass}
+                        placeholder="bijv. Postbus 123"
+                      />
+                    </div>
+                    <div className="grid gap-4 grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                          Postcode
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.postal_postcode}
+                          onChange={(e) =>
+                            updateEdit("postal_postcode", e.target.value)
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                          Plaats
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.postal_city}
+                          onChange={(e) =>
+                            updateEdit("postal_city", e.target.value)
+                          }
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -576,15 +648,48 @@ export default function RelatieDetailPage() {
                     </a>
                   </div>
                 )}
+                {contact.contact_type === "person" && contact.date_of_birth && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Geboortedatum</p>
+                      <p className="text-sm text-foreground">
+                        {formatDate(contact.date_of_birth)}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {contact.visit_address && (
                   <div className="flex items-start gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted mt-0.5">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div className="text-sm text-foreground">
-                      {contact.visit_address}
-                      <br />
-                      {contact.visit_postcode} {contact.visit_city}
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        {contact.postal_address ? "Bezoekadres" : "Adres"}
+                      </p>
+                      <p className="text-sm text-foreground">
+                        {contact.visit_address}
+                        <br />
+                        {contact.visit_postcode} {contact.visit_city}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {contact.postal_address && (
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted mt-0.5">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Postadres</p>
+                      <p className="text-sm text-foreground">
+                        {contact.postal_address}
+                        <br />
+                        {contact.postal_postcode} {contact.postal_city}
+                      </p>
                     </div>
                   </div>
                 )}

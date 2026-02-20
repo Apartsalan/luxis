@@ -49,6 +49,9 @@ class Case(TenantBase):
     reference: Mapped[str | None] = mapped_column(
         String(100), nullable=True
     )  # Client's reference number
+    court_case_number: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )  # Rolnummer/zaaknummer bij de rechtbank
 
     # Interest settings (at case level, not per claim)
     interest_type: Mapped[str] = mapped_column(
@@ -125,6 +128,10 @@ class CaseParty(TenantBase):
     role: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # deurwaarder, rechtbank, mede-debiteur, advocaat_wederpartij, etc.
+
+    external_reference: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )  # The other party's reference number for this case
 
     # Relationships
     case: Mapped["Case"] = relationship("Case", back_populates="parties")

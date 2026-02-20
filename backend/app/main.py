@@ -21,6 +21,7 @@ from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
 from app.relations.kyc_router import router as kyc_router
 from app.relations.router import router as relations_router
+from app.search.router import router as search_router
 from app.settings.router import router as settings_router
 from app.time_entries.router import router as time_entries_router
 from app.trust_funds.router import router as trust_funds_router
@@ -90,6 +91,7 @@ app.include_router(trust_funds_router)
 app.include_router(kyc_router)
 app.include_router(calendar_router)
 app.include_router(email_router)
+app.include_router(search_router)
 
 
 @app.get("/health")

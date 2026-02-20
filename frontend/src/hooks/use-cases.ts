@@ -22,13 +22,15 @@ export interface CaseSummary {
 }
 
 export interface CaseDetail extends CaseSummary {
+  court_case_number: string | null;
   contractual_rate: number | null;
   contractual_compound: boolean;
   assigned_to: { id: string; full_name: string } | null;
   parties: {
     id: string;
     role: string;
-    contact: { id: string; name: string };
+    external_reference: string | null;
+    contact: { id: string; name: string; email?: string | null };
   }[];
   recent_activities: {
     id: string;
@@ -54,8 +56,11 @@ interface CaseCreateInput {
   reference?: string;
   interest_type?: string;
   contractual_rate?: number;
+  contractual_compound?: boolean;
+  court_case_number?: string;
   client_id: string;
   opposing_party_id?: string;
+  assigned_to_id?: string;
   date_opened: string;
 }
 

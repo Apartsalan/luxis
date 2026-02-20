@@ -1,7 +1,7 @@
 """Relations module schemas — Pydantic models for request/response validation."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,7 @@ class ContactCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     first_name: str | None = None
     last_name: str | None = None
+    date_of_birth: date | None = None
     email: str | None = None
     phone: str | None = None
     kvk_number: str | None = None
@@ -32,6 +33,7 @@ class ContactUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     first_name: str | None = None
     last_name: str | None = None
+    date_of_birth: date | None = None
     email: str | None = None
     phone: str | None = None
     kvk_number: str | None = None
@@ -66,6 +68,7 @@ class ContactResponse(BaseModel):
     name: str
     first_name: str | None
     last_name: str | None
+    date_of_birth: date | None
     email: str | None
     phone: str | None
     kvk_number: str | None

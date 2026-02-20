@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 20 februari 2026
+**Laatst bijgewerkt:** 21 februari 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -24,8 +24,8 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~70% | 110+ endpoints, 13 routers, solide CRUD en business logic, correcte financial calculations |
-| Frontend (Next.js) | ~40% | Features tonen data maar missen workflow-optimalisatie en UX polish |
+| Backend (FastAPI) | ~70% | 110+ endpoints, 13 routers, solide CRUD en business logic, correcte financial calculations. Mist: date_of_birth, billing_email, payment_terms, court_case_number, external_reference op CaseParty, /api/search endpoint |
+| Frontend (Next.js) | ~40% | Features tonen data maar missen workflow-optimalisatie en UX polish. Postadres niet getoond (backend heeft het al), zoekfunctie broken (404), rechtbank-UI ontbreekt |
 | Infra/DevOps | ~80% | Docker Compose, VPS deployment, CI pipeline werkend |
 
 **Rode draad:** De backend is vaak verder dan de frontend. ~40% van de verbeteringen vereist geen backend-werk.
@@ -125,7 +125,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | # | Feature | API klaar? | Complexiteit | Status |
 |---|---------|-----------|-------------|--------|
 | A1 | Timer voor tijdschrijven | ✅ `/my/today` | Klein | ✅ Gebouwd (floating timer, persistent via localStorage, globale context) |
-| A2 | Global search (Ctrl+K) | ✅ `/api/search` + command-palette.tsx | Klein-Midden | ✅ Gebouwd (Ctrl+K, zoek+quick actions) |
+| A2 | Global search (Ctrl+K) | ❌ **`/api/search` endpoint bestaat NIET** — frontend roept 404 aan | Klein-Midden | ⚠️ Frontend gebouwd maar **backend ontbreekt** — zoekfunctie is broken |
 | A3 | "Mijn Taken" pagina | ✅ `/dashboard/my-tasks` | Klein | ✅ Gebouwd (dedicated pagina, groepering op datum, filter, complete/skip met 1 klik) |
 | A4 | Activity timeline op zaakdetail | ✅ `/cases/{id}/activities` | Klein-Midden | ✅ Gebouwd (timeline met gekleurde iconen, relatieve tijden, inline notitie, paginatie, user info) |
 | A5 | Contact-bedrijf koppelingen UI | ✅ `/relations/links` | Klein | ✅ Gebouwd (ContactLinks component, zoek-dropdown, rol selectie, CRUD) |
@@ -201,12 +201,50 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 ## Volgorde van werken
 
-**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, alle bugs
+**✅ Afgerond:** A1, A3-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, alle bugs
+**⚠️ Broken:** A2 (zoekfunctie — backend endpoint ontbreekt, frontend roept 404 aan)
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
 **TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op app-wachtwoord)
-**Alles afgerond!** Alle geplande features en bugs zijn gebouwd en gedeployed. Volgende stap: SMTP configureren + eventueel toekomstige modules uit FEATURE-INVENTORY.md oppakken.
+**Volgende prioriteit:** Fase F (bevindingen praktijktest Lisanne) — zie hieronder
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
+
+---
+
+## Fase F: Bevindingen Praktijktest Lisanne (21 feb 2026)
+
+> Bron: `PROMPT-BEVINDINGEN-LISANNE.md` — 10 bevindingen uit 10 min testen
+> Analyse: `BEVINDINGEN-ANALYSE.md` — volledige gap-analyse met concurrent-research
+
+**Kernprobleem:** Het dossier is niet compleet als werkhub. Bij BaseNet/Clio/Kleos doe je ALLES vanuit het dossier. Luxis mist kritieke velden en acties.
+
+### F-Sprint 1: P0 Quick Wins (3-4 dagen)
+
+| # | Bevinding | Backend? | Wat nodig | Complexiteit | Status |
+|---|-----------|----------|-----------|-------------|--------|
+| F1 | **🔴 Zoekfunctie fixen** (A2) — `/api/search` endpoint bouwen | ❌ Endpoint bestaat niet | Backend: global search router + frontend werkt al | M (8-10u) | ❌ TODO |
+| F2 | **Postadres tonen** bij relaties | ✅ Backend heeft velden al | Frontend: edit form + view mode uitbreiden | XS (2-4u) | ❌ TODO |
+| F3 | **Geboortedatum** bij personen | ❌ Ontbreekt | Migration + schema + frontend veld | S (4-6u) | ❌ TODO |
+| F4 | **Referentienummer partij** op CaseParty | ❌ Ontbreekt | Migration + schema + frontend veld | S (4-6u) | ❌ TODO |
+| F5 | **Rechtbank/rolnummer UI** — procesgegevens sectie | ✅ CaseParty model (deels) | Migration court_case_number + frontend sectie | S (6-8u) | ❌ TODO |
+
+### F-Sprint 2: P1 Uitbreidingen (5-7 dagen)
+
+| # | Bevinding | Backend? | Wat nodig | Complexiteit | Status |
+|---|-----------|----------|-----------|-------------|--------|
+| F6 | **Facturatieprofiel** bij relaties | ❌ Deels (KvK/BTW ja) | Migration billing_email/payment_terms + frontend sectie | M (8-12u) | ❌ TODO |
+| F7 | **Afwijkende factuurrelatie** per dossier | ❌ Ontbreekt | Migration billing_contact_id op cases + frontend dropdown | M (8-12u) | ❌ TODO |
+| F8 | **Inline contact aanmaken** (modal) | ✅ Backend endpoints bestaan | Frontend: herbruikbare create-contact modal | S (4-6u) | ❌ TODO |
+| F9 | **Uitgebreide filters** dossier-overzicht | ✅ Deels (type+status) | Backend: assigned_to + date range filters, Frontend: uitgebreide filterbalk + localStorage persistentie | M (10-14u) | ❌ TODO |
+| F10 | **Telefoonnotitie** als activiteittype | ✅ Backend activity model | Frontend: telefoonnotitie optie in quick-actions | XS (1-2u) | ❌ TODO |
+
+### F-Sprint 3: P2 (afhankelijk M365)
+
+| # | Bevinding | Complexiteit | Status |
+|---|-----------|-------------|--------|
+| F11 | **E-mail naar elke partij vanuit dossier** | L (eerst M365) of M (SMTP basis) | ❌ TODO |
+
+> Detail per bevinding + concurrent-analyse + zelfkritiek: zie `BEVINDINGEN-ANALYSE.md`
 
 **Werkwijze per feature:**
 1. Onderzoek concurrenten

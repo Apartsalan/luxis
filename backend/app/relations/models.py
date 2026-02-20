@@ -1,8 +1,9 @@
 """Relations module models — Contacts (companies & persons) and their links."""
 
 import uuid
+from datetime import date
 
-from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Boolean, Date, ForeignKey, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -29,6 +30,7 @@ class Contact(TenantBase):
     # Person-specific fields
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Contact info
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)

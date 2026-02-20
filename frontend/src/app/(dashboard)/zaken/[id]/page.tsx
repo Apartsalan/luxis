@@ -814,6 +814,16 @@ function OverzichtTab({ zaak }: { zaak: any }) {
                 {zaak.reference || "-"}
               </dd>
             </div>
+            {zaak.court_case_number && (
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">
+                  Zaaknummer rechtbank
+                </dt>
+                <dd className="text-sm text-foreground font-mono">
+                  {zaak.court_case_number}
+                </dd>
+              </div>
+            )}
             {zaak.contractual_rate && (
               <div>
                 <dt className="text-xs text-muted-foreground mb-1">
@@ -2356,6 +2366,11 @@ function PartijenTab({ zaak }: { zaak: any }) {
                 <span className="text-xs font-medium text-muted-foreground">
                   {party.role}
                 </span>
+                {party.external_reference && (
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                    Ref: {party.external_reference}
+                  </p>
+                )}
               </div>
             </Link>
           ))}

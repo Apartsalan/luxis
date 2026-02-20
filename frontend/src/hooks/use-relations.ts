@@ -25,6 +25,7 @@ export interface Contact {
   name: string;
   first_name: string | null;
   last_name: string | null;
+  date_of_birth: string | null;
   email: string | null;
   phone: string | null;
   kvk_number: string | null;
@@ -56,6 +57,7 @@ interface ContactCreateInput {
   name: string;
   first_name?: string;
   last_name?: string;
+  date_of_birth?: string;
   email?: string;
   phone?: string;
   kvk_number?: string;

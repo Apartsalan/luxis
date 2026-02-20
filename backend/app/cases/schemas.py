@@ -59,6 +59,7 @@ class CaseUpdate(BaseModel):
     debtor_type: str | None = None
     description: str | None = None
     reference: str | None = None
+    court_case_number: str | None = None
     interest_type: str | None = None
     contractual_rate: float | None = None
     contractual_compound: bool | None = None
@@ -74,6 +75,7 @@ class CaseStatusUpdate(BaseModel):
 class CasePartyCreate(BaseModel):
     contact_id: uuid.UUID
     role: str = Field(..., min_length=1, max_length=50)
+    external_reference: str | None = None
 
 
 class CaseActivityCreate(BaseModel):
@@ -112,6 +114,7 @@ class CasePartyResponse(BaseModel):
     id: uuid.UUID
     contact_id: uuid.UUID
     role: str
+    external_reference: str | None
     contact: ContactBrief
     created_at: datetime
 
@@ -140,6 +143,7 @@ class CaseResponse(BaseModel):
     status: str
     description: str | None
     reference: str | None
+    court_case_number: str | None
     interest_type: str
     contractual_rate: float | None
     contractual_compound: bool
@@ -166,6 +170,7 @@ class CaseSummary(BaseModel):
     debtor_type: str
     status: str
     description: str | None
+    reference: str | None
     client: ContactBrief
     opposing_party: ContactBrief | None
     date_opened: date

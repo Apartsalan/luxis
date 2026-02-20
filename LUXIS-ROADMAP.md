@@ -166,7 +166,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | E2 | Tarieven vereenvoudigen: dropdown op dossierniveau i.p.v. aparte pagina | Klein | 🔴 Hoog | ✅ Gebouwd (20 feb) — tarieven-pagina verwijderd, rentetype blijft op dossierniveau |
 | E3 | Facturen-tab op dossierdetail | Klein-Midden | 🔴 Hoog | ✅ Gebouwd (case_id filter op backend, FacturenTab met lijst/status/bedragen/empty state) |
 | E4 | Documenten uploaden in dossier | Groot (storage + nieuw model) | 🔴 Hoog | ✅ Gebouwd (20 feb) — CaseFile model, drag & drop upload, download, soft-delete, Docker volume |
-| E5 | Slimme facturatie-flow (onbefactureerde uren tonen, batch factureren) | Groot | 🔴 Hoog | Niet gestart — benchmark: Clio/Harvest "billable time ready to invoice" |
+| E5 | Slimme facturatie-flow (onbefactureerde uren tonen, batch factureren) | Groot | 🔴 Hoog | ✅ Gebouwd (20 feb) — invoiced tracking op TimeEntry, batch import met checkboxes, Quick Bill vanuit dossierdetail |
 | E6 | Debiteuren/crediteuren overzicht bij facturen | Midden | 🟡 Midden | Niet gestart — aging 30/60/90 dagen, gegroepeerd per cliënt |
 | E7 | Auto-timer bij openen dossier (handmatig + automatisch modus) | Midden | 🟡 Midden | Niet gestart — benchmark: Smokeball auto-tracking |
 | E8 | E-mail templates (onderwerp + body + merge fields) | Midden | 🟢 Later | Niet gestart — documenteren, bouwen bij T3 (SMTP) |

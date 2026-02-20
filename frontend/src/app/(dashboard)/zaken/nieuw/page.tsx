@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Search, Plus, X } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateCase, useConflictCheck } from "@/hooks/use-cases";
+import { useCreateCase, useConflictCheck, useAddCaseParty } from "@/hooks/use-cases";
 import { useRelations, useCreateRelation } from "@/hooks/use-relations";
 import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
@@ -42,8 +42,11 @@ function NieuweZaakPage() {
   });
   const [clientSearch, setClientSearch] = useState(prefillClientName);
   const [opponentSearch, setOpponentSearch] = useState("");
+  const [lawyerSearch, setLawyerSearch] = useState("");
+  const [selectedLawyer, setSelectedLawyer] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState("");
   const createRelation = useCreateRelation();
+  const addParty = useAddCaseParty();
 
   // Inline contact creation forms
   const [showNewClient, setShowNewClient] = useState(false);
@@ -87,6 +90,10 @@ function NieuweZaakPage() {
   });
   const { data: opponentResults } = useRelations({
     search: opponentSearch || undefined,
+    per_page: 5,
+  });
+  const { data: lawyerResults } = useRelations({
+    search: lawyerSearch || undefined,
     per_page: 5,
   });
 
@@ -136,6 +143,18 @@ function NieuweZaakPage() {
 
     try {
       const result = await createCase.mutateAsync(data);
+      // Add advocaat wederpartij as party if selected
+      if (selectedLawyer) {
+        try {
+          await addParty.mutateAsync({
+            caseId: result.id,
+            data: { contact_id: selectedLawyer.id, role: "advocaat_wederpartij" },
+          });
+        } catch {
+          // Non-blocking: case is created, party addition failed
+          toast.error("Dossier aangemaakt, maar advocaat wederpartij kon niet worden toegevoegd");
+        }
+      }
       toast.success("Dossier aangemaakt");
       router.push(`/zaken/${result.id}`);
     } catch (err: any) {
@@ -618,6 +637,67 @@ function NieuweZaakPage() {
               </div>
             </div>
           )}
+
+          {/* Advocaat wederpartij selection */}
+          <div>
+            <label className="block text-sm font-medium text-foreground">
+              Advocaat wederpartij
+            </label>
+            {selectedLawyer ? (
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm text-violet-700 font-medium">
+                  {selectedLawyer.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLawyer(null);
+                    setLawyerSearch("");
+                  }}
+                  className="text-xs text-destructive hover:underline"
+                >
+                  Wijzigen
+                </button>
+              </div>
+            ) : (
+              <div className="mt-1.5">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={lawyerSearch}
+                    onChange={(e) => setLawyerSearch(e.target.value)}
+                    className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                    placeholder="Zoek advocaat wederpartij..."
+                  />
+                </div>
+                {lawyerSearch &&
+                  lawyerResults?.items &&
+                  lawyerResults.items.length > 0 && (
+                    <div className="mt-1 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
+                      {lawyerResults.items.map((contact) => (
+                        <button
+                          key={contact.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedLawyer({ id: contact.id, name: contact.name });
+                            setLawyerSearch(contact.name);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted transition-colors"
+                        >
+                          {contact.name}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {contact.contact_type === "company"
+                              ? "Bedrijf"
+                              : "Persoon"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </div>
+            )}
+          </div>
         </div>
 
         {error && (

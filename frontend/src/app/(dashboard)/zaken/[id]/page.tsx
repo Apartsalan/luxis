@@ -41,6 +41,7 @@ import {
   ChevronDown,
   Pencil,
   Save,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -51,6 +52,8 @@ import {
   useCaseActivities,
   useAddCaseActivity,
   useConflictCheck,
+  useAddCaseParty,
+  useRemoveCaseParty,
   type CaseActivity,
 } from "@/hooks/use-cases";
 import {
@@ -115,6 +118,7 @@ import {
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { formatCurrency, formatDate, formatDateShort, formatRelativeTime } from "@/lib/utils";
+import { useRelations } from "@/hooks/use-relations";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -792,6 +796,16 @@ function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any
   const [noteText, setNoteText] = useState("");
   const addActivity = useAddCaseActivity();
   const updateCase = useUpdateCase();
+  const addParty = useAddCaseParty();
+  const removeParty = useRemoveCaseParty();
+
+  // Advocaat wederpartij search state
+  const [lawyerSearch, setLawyerSearch] = useState("");
+  const { data: lawyerResults } = useRelations({
+    search: lawyerSearch || undefined,
+    per_page: 5,
+  });
+  const currentLawyer = zaak.parties?.find((p: any) => p.role === "advocaat_wederpartij");
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -932,6 +946,73 @@ function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any
                   placeholder="Bijv. C/13/123456 / HA ZA 24-789"
                 />
               </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Advocaat wederpartij
+                </label>
+                {currentLawyer ? (
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm text-violet-700 font-medium">
+                      {currentLawyer.contact.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await removeParty.mutateAsync({ caseId: zaak.id, partyId: currentLawyer.id });
+                          toast.success("Advocaat wederpartij verwijderd");
+                        } catch {
+                          toast.error("Kon advocaat niet verwijderen");
+                        }
+                      }}
+                      className="text-xs text-destructive hover:underline"
+                    >
+                      Verwijderen
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={lawyerSearch}
+                        onChange={(e) => setLawyerSearch(e.target.value)}
+                        className="w-full rounded-lg border border-input bg-background pl-9 pr-4 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                        placeholder="Zoek advocaat wederpartij..."
+                      />
+                    </div>
+                    {lawyerSearch && lawyerResults?.items && lawyerResults.items.length > 0 && (
+                      <div className="mt-1 rounded-lg border border-border bg-card shadow-lg overflow-hidden max-h-40 overflow-y-auto">
+                        {lawyerResults.items.map((contact) => (
+                          <button
+                            key={contact.id}
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await addParty.mutateAsync({
+                                  caseId: zaak.id,
+                                  data: { contact_id: contact.id, role: "advocaat_wederpartij" },
+                                });
+                                setLawyerSearch("");
+                                toast.success(`${contact.name} toegevoegd als advocaat wederpartij`);
+                              } catch (err: any) {
+                                toast.error(err.message || "Kon advocaat niet toevoegen");
+                              }
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                          >
+                            {contact.name}
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {contact.contact_type === "company" ? "Bedrijf" : "Persoon"}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
           <dl className="grid gap-4 sm:grid-cols-2">
@@ -957,6 +1038,23 @@ function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any
               </dt>
               <dd className="text-sm text-foreground font-mono">
                 {zaak.court_case_number || "-"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground mb-1">
+                Advocaat wederpartij
+              </dt>
+              <dd className="text-sm text-foreground">
+                {currentLawyer ? (
+                  <Link
+                    href={`/relaties/${currentLawyer.contact.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {currentLawyer.contact.name}
+                  </Link>
+                ) : (
+                  <span className="text-muted-foreground">-</span>
+                )}
               </dd>
             </div>
             {zaak.contractual_rate && (

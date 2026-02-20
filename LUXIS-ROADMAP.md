@@ -198,17 +198,18 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | BUG-6 | Conflict check mist op zaakdetail Partijen tab (warning, niet blokkeren) | Midden | Klein | ✅ Gefixt (20 feb) |
 | BUG-7 | Dossiergegevens niet bewerkbaar op detailpagina — `court_case_number` (F5) toont alleen als gevuld maar kan nergens ingevuld worden. Dossierdetail mist edit-modus voor alle velden (beschrijving, referentie, zaaknummer, etc.) | Hoog | Midden | ✅ Gefixt (21 feb) — Bewerken-knop + inline edit met Opslaan/Annuleren, zaaknummer altijd zichtbaar |
 | BUG-8 | `court_case_number` veld ontbreekt op "Nieuw dossier" formulier — kan alleen via (niet-bestaande) edit-modus op detailpagina | Midden | Klein | ✅ Gefixt (21 feb) — veld toegevoegd aan formulier + backend CaseCreate schema |
+| BUG-9 | Advocaat wederpartij niet zichtbaar/toevoegbaar in dossier — gebruiker kan niet in één oogopslag zien wie de belangrijkste contactpersonen zijn | Hoog | Midden | ✅ Gefixt (21 feb) — zoekfield toegevoegd in Dossiergegevens (view+edit) + Nieuw dossier form |
 
 ---
 
 ## Volgorde van werken
 
-**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, F1-F10, alle bugs t/m BUG-6
+**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, F1-F10, alle bugs t/m BUG-9
 **✅ VPS login gefixt** (21 feb) — DB wachtwoord mismatch opgelost, frontend herbouwd met correcte NEXT_PUBLIC_API_URL
+**✅ BUG-7/8/9 gefixt** (21 feb) — edit-modus, zaaknummer op form, advocaat wederpartij
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
-**TODO:** BUG-7 (dossiergegevens edit-modus) + BUG-8 (zaaknummer op nieuw dossier form)
 **TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op M365 migratie)
-**Volgende prioriteit:** BUG-7/BUG-8 → F11 (e-mail naar partij vanuit dossier)
+**Volgende prioriteit:** F11 (e-mail naar partij vanuit dossier)
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

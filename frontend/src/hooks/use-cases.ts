@@ -252,6 +252,57 @@ export function useDeleteCase() {
   });
 }
 
+// ── Case Parties ────────────────────────────────────────────────────────────
+
+export function useAddCaseParty() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      data,
+    }: {
+      caseId: string;
+      data: { contact_id: string; role: string; external_reference?: string };
+    }) => {
+      const res = await api(`/api/cases/${caseId}/parties`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || "Partij toevoegen mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["cases", variables.caseId] });
+    },
+  });
+}
+
+export function useRemoveCaseParty() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      partyId,
+    }: {
+      caseId: string;
+      partyId: string;
+    }) => {
+      const res = await api(`/api/cases/${caseId}/parties/${partyId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Partij verwijderen mislukt");
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["cases", variables.caseId] });
+    },
+  });
+}
+
 // ── Case Activities ──────────────────────────────────────────────────────────
 
 export interface CaseActivity {

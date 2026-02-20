@@ -39,6 +39,7 @@ class TimeEntry(TenantBase):
         String(30), nullable=False, default="other"
     )
     billable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    invoiced: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     hourly_rate: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2), nullable=True
     )

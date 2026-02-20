@@ -14,6 +14,7 @@ export interface TimeEntry {
   description: string | null;
   activity_type: string;
   billable: boolean;
+  invoiced: boolean;
   hourly_rate: number | null;
   created_at: string;
   updated_at: string;
@@ -178,6 +179,20 @@ export function useTimeEntrySummary(params?: {
       if (!res.ok) throw new Error("Kan samenvatting niet laden");
       return res.json();
     },
+  });
+}
+
+export function useUnbilledTimeEntries(caseId?: string) {
+  return useQuery<TimeEntry[]>({
+    queryKey: ["time-entries", "unbilled", caseId ?? ""],
+    queryFn: async () => {
+      const qp = new URLSearchParams();
+      if (caseId) qp.set("case_id", caseId);
+      const res = await api(`/api/time-entries/unbilled?${qp}`);
+      if (!res.ok) throw new Error("Kan onbefactureerde uren niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
   });
 }
 

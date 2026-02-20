@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateInvoice } from "@/hooks/use-invoices";
 import { useRelations } from "@/hooks/use-relations";
 import { useCases } from "@/hooks/use-cases";
-import { useTimeEntries } from "@/hooks/use-time-entries";
+import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries";
 import { useExpenses } from "@/hooks/use-expenses";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDateShort } from "@/lib/utils";
 
 interface LineItem {
   description: string;
@@ -22,11 +22,13 @@ interface LineItem {
 
 export default function NieuweFactuurPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedCaseId = searchParams.get("case_id") || "";
   const createInvoice = useCreateInvoice();
 
   const [form, setForm] = useState({
     contact_id: "",
-    case_id: "",
+    case_id: preselectedCaseId,
     invoice_date: new Date().toISOString().split("T")[0],
     due_date: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
     btw_percentage: "21.00",
@@ -46,6 +48,7 @@ export default function NieuweFactuurPage() {
   const [selectedCaseNumber, setSelectedCaseNumber] = useState("");
   const [showTimeEntries, setShowTimeEntries] = useState(false);
   const [showExpenses, setShowExpenses] = useState(false);
+  const [selectedTimeEntryIds, setSelectedTimeEntryIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
 
   const { data: contactResults } = useRelations({
@@ -57,11 +60,18 @@ export default function NieuweFactuurPage() {
     per_page: 5,
   });
 
-  // Time entries for import (only billable, for selected case)
-  const { data: timeEntries } = useTimeEntries({
-    case_id: form.case_id || undefined,
-    billable: true,
-  });
+  // Unbilled time entries for import (only billable + uninvoiced)
+  const { data: unbilledEntries } = useUnbilledTimeEntries(
+    form.case_id || undefined
+  );
+
+  // Filter out entries already imported as lines
+  const importedTimeEntryIds = new Set(
+    lines.filter((l) => l.time_entry_id).map((l) => l.time_entry_id!)
+  );
+  const availableEntries = (unbilledEntries ?? []).filter(
+    (e) => !importedTimeEntryIds.has(e.id)
+  );
 
   // Uninvoiced expenses for import
   const { data: expenses } = useExpenses({
@@ -93,24 +103,50 @@ export default function NieuweFactuurPage() {
     setLines((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const importTimeEntry = (entry: {
-    id: string;
-    description: string | null;
-    duration_minutes: number;
-    hourly_rate: number | null;
-  }) => {
-    const hours = entry.duration_minutes / 60;
-    const rate = entry.hourly_rate ?? 0;
-    setLines((prev) => [
-      ...prev,
-      {
+  // Toggle time entry selection
+  const toggleTimeEntry = (entryId: string) => {
+    setSelectedTimeEntryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  };
+
+  // Select/deselect all
+  const toggleAllTimeEntries = () => {
+    if (selectedTimeEntryIds.size === availableEntries.length) {
+      setSelectedTimeEntryIds(new Set());
+    } else {
+      setSelectedTimeEntryIds(new Set(availableEntries.map((e) => e.id)));
+    }
+  };
+
+  // Batch import selected time entries
+  const importSelectedTimeEntries = () => {
+    const selected = availableEntries.filter((e) =>
+      selectedTimeEntryIds.has(e.id)
+    );
+    if (selected.length === 0) return;
+
+    const newLines: LineItem[] = selected.map((entry) => {
+      const hours = entry.duration_minutes / 60;
+      const rate = entry.hourly_rate ?? 0;
+      return {
         description: entry.description || "Juridische werkzaamheden",
         quantity: hours.toFixed(2),
         unit_price: rate.toFixed(2),
         time_entry_id: entry.id,
-      },
-    ]);
+      };
+    });
+
+    setLines((prev) => [...prev, ...newLines]);
+    setSelectedTimeEntryIds(new Set());
     setShowTimeEntries(false);
+    toast.success(`${selected.length} uur${selected.length > 1 ? " " : ""}registratie${selected.length > 1 ? "s" : ""} geimporteerd`);
   };
 
   const importExpense = (expense: {
@@ -139,6 +175,14 @@ export default function NieuweFactuurPage() {
   const btwPercentage = parseFloat(form.btw_percentage) || 0;
   const btwAmount = subtotal * (btwPercentage / 100);
   const total = subtotal + btwAmount;
+
+  // Calculate selected time entries total for preview
+  const selectedTotal = availableEntries
+    .filter((e) => selectedTimeEntryIds.has(e.id))
+    .reduce((sum, e) => {
+      const hours = e.duration_minutes / 60;
+      return sum + hours * (e.hourly_rate ?? 0);
+    }, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -389,16 +433,36 @@ export default function NieuweFactuurPage() {
                 <>
                   <button
                     type="button"
-                    onClick={() => setShowTimeEntries(!showTimeEntries)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setShowTimeEntries(!showTimeEntries);
+                      setShowExpenses(false);
+                      setSelectedTimeEntryIds(new Set());
+                    }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      showTimeEntries
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <Clock className="h-3.5 w-3.5" />
                     Importeer uren
+                    {availableEntries.length > 0 && (
+                      <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary/10 px-1 text-[10px] font-semibold text-primary">
+                        {availableEntries.length}
+                      </span>
+                    )}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowExpenses(!showExpenses)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                    onClick={() => {
+                      setShowExpenses(!showExpenses);
+                      setShowTimeEntries(false);
+                    }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      showExpenses
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Importeer verschotten
@@ -408,32 +472,104 @@ export default function NieuweFactuurPage() {
             </div>
           </div>
 
-          {/* Time entries import panel */}
-          {showTimeEntries && timeEntries && timeEntries.length > 0 && (
-            <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Declarabele uren
-              </p>
-              {timeEntries.map((entry: any) => (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => importTimeEntry(entry)}
-                  className="flex w-full items-center justify-between rounded-md px-3 py-2 text-sm hover:bg-muted transition-colors"
-                >
-                  <span className="truncate">
-                    {entry.description || "Werkzaamheden"} &middot;{" "}
-                    {(entry.duration_minutes / 60).toFixed(1)}u
-                  </span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {entry.hourly_rate
-                      ? formatCurrency(
-                          (entry.duration_minutes / 60) * entry.hourly_rate
-                        )
-                      : "-"}
-                  </span>
-                </button>
-              ))}
+          {/* Time entries import panel — batch with checkboxes */}
+          {showTimeEntries && (
+            <div className="rounded-lg border border-primary/20 bg-primary/[0.02] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Onbefactureerde uren
+                </p>
+                {availableEntries.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleAllTimeEntries}
+                    className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    {selectedTimeEntryIds.size === availableEntries.length
+                      ? "Deselecteer alles"
+                      : "Alles selecteren"}
+                  </button>
+                )}
+              </div>
+
+              {availableEntries.length === 0 ? (
+                <div className="rounded-md border border-dashed border-border py-6 text-center">
+                  <Clock className="mx-auto h-6 w-6 text-muted-foreground/30" />
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    Geen onbefactureerde uren voor dit dossier
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    {availableEntries.map((entry) => {
+                      const hours = entry.duration_minutes / 60;
+                      const amount = hours * (entry.hourly_rate ?? 0);
+                      const isSelected = selectedTimeEntryIds.has(entry.id);
+
+                      return (
+                        <label
+                          key={entry.id}
+                          className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
+                            isSelected
+                              ? "bg-primary/5 ring-1 ring-primary/20"
+                              : "hover:bg-muted"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleTimeEntry(entry.id)}
+                            className="h-4 w-4 rounded border-input text-primary focus:ring-primary/20"
+                          />
+                          <div className="flex flex-1 items-center justify-between min-w-0">
+                            <div className="min-w-0 flex-1">
+                              <span className="truncate block">
+                                {entry.description || "Werkzaamheden"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDateShort(entry.date)} · {hours.toFixed(1)}u
+                                {entry.user?.full_name && ` · ${entry.user.full_name}`}
+                              </span>
+                            </div>
+                            <span className="ml-3 font-medium tabular-nums text-foreground">
+                              {entry.hourly_rate ? formatCurrency(amount) : "-"}
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {/* Batch import footer */}
+                  <div className="flex items-center justify-between border-t border-border pt-3">
+                    <div className="text-sm text-muted-foreground">
+                      {selectedTimeEntryIds.size > 0 ? (
+                        <>
+                          <span className="font-medium text-foreground">
+                            {selectedTimeEntryIds.size}
+                          </span>{" "}
+                          geselecteerd · subtotaal{" "}
+                          <span className="font-medium text-foreground tabular-nums">
+                            {formatCurrency(selectedTotal)}
+                          </span>
+                        </>
+                      ) : (
+                        "Selecteer uren om te importeren"
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={importSelectedTimeEntries}
+                      disabled={selectedTimeEntryIds.size === 0}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Importeer ({selectedTimeEntryIds.size})
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -441,7 +577,7 @@ export default function NieuweFactuurPage() {
           {showExpenses && expenses && expenses.length > 0 && (
             <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Ongedefactureerde verschotten
+                Onbefactureerde verschotten
               </p>
               {expenses.map((expense: any) => (
                 <button
@@ -456,6 +592,14 @@ export default function NieuweFactuurPage() {
                   </span>
                 </button>
               ))}
+            </div>
+          )}
+
+          {showExpenses && (!expenses || expenses.length === 0) && (
+            <div className="rounded-lg border border-dashed border-border py-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Geen onbefactureerde verschotten voor dit dossier
+              </p>
             </div>
           )}
 

@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.invoices.models import PAYMENT_METHODS, Expense, Invoice, InvoiceLine, InvoicePayment
+from app.time_entries.models import TimeEntry
 from app.invoices.schemas import (
     ExpenseCreate,
     ExpenseUpdate,
@@ -226,6 +227,19 @@ async def create_invoice(
             if expense:
                 expense.invoiced = True
 
+    # Mark linked time entries as invoiced (E5)
+    for line_data in data.lines:
+        if line_data.time_entry_id:
+            te_result = await db.execute(
+                select(TimeEntry).where(
+                    TimeEntry.id == line_data.time_entry_id,
+                    TimeEntry.tenant_id == tenant_id,
+                )
+            )
+            time_entry = te_result.scalar_one_or_none()
+            if time_entry:
+                time_entry.invoiced = True
+
     _recalculate_totals(invoice)
     await db.flush()
     await db.refresh(invoice)
@@ -431,6 +445,18 @@ async def remove_line(
         expense = exp_result.scalar_one_or_none()
         if expense:
             expense.invoiced = False
+
+    # Un-mark time entry if linked (E5)
+    if line.time_entry_id:
+        te_result = await db.execute(
+            select(TimeEntry).where(
+                TimeEntry.id == line.time_entry_id,
+                TimeEntry.tenant_id == tenant_id,
+            )
+        )
+        time_entry = te_result.scalar_one_or_none()
+        if time_entry:
+            time_entry.invoiced = False
 
     await db.delete(line)
     await db.flush()

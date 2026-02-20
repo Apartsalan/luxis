@@ -73,9 +73,11 @@ import {
 } from "@/hooks/use-documents";
 import {
   useInvoices,
+  useCreateInvoice,
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
 } from "@/hooks/use-invoices";
+import { useUnbilledTimeEntries } from "@/hooks/use-time-entries";
 import {
   useCaseFiles,
   useUploadCaseFile,
@@ -645,7 +647,7 @@ export default function ZaakDetailPage() {
       {isIncasso && activeTab === "betalingen" && <BetalingenTab caseId={id} />}
       {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
       {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
-      {activeTab === "facturen" && <FacturenTab caseId={id} />}
+      {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
       {activeTab === "documenten" && <DocumentenTab caseId={id} />}
       {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
       {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
@@ -2618,12 +2620,290 @@ function TakenTab({ caseId }: { caseId: string }) {
 
 // ── Documenten Tab ──────────────────────────────────────────────────────────
 
-function FacturenTab({ caseId }: { caseId: string }) {
+function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: string }) {
+  const router = useRouter();
   const { data, isLoading } = useInvoices({ case_id: caseId, per_page: 100 });
   const invoices = data?.items ?? [];
+  const createInvoice = useCreateInvoice();
+
+  // Quick Bill state
+  const [showQuickBill, setShowQuickBill] = useState(false);
+  const [quickBillStep, setQuickBillStep] = useState<"select" | "preview">("select");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { data: unbilledEntries, isLoading: entriesLoading } = useUnbilledTimeEntries(caseId);
+  const available = unbilledEntries ?? [];
+
+  const toggleEntry = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === available.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(available.map((e) => e.id)));
+    }
+  };
+
+  const selectedEntries = available.filter((e) => selectedIds.has(e.id));
+  const selectedSubtotal = selectedEntries.reduce((sum, e) => {
+    const hours = e.duration_minutes / 60;
+    return sum + hours * (e.hourly_rate ?? 0);
+  }, 0);
+  const btwAmount = selectedSubtotal * 0.21;
+  const selectedTotal = selectedSubtotal + btwAmount;
+
+  const handleQuickBill = async () => {
+    if (!clientId || selectedEntries.length === 0) return;
+    try {
+      const result = await createInvoice.mutateAsync({
+        contact_id: clientId,
+        case_id: caseId,
+        invoice_date: new Date().toISOString().split("T")[0],
+        due_date: new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+        btw_percentage: 21,
+        lines: selectedEntries.map((e) => ({
+          description: e.description || "Juridische werkzaamheden",
+          quantity: +(e.duration_minutes / 60).toFixed(2),
+          unit_price: e.hourly_rate ?? 0,
+          time_entry_id: e.id,
+        })),
+      });
+      toast.success("Factuur aangemaakt");
+      setShowQuickBill(false);
+      setSelectedIds(new Set());
+      setQuickBillStep("select");
+      router.push(`/facturen/${result.id}`);
+    } catch (err: any) {
+      toast.error(err.message || "Factuur aanmaken mislukt");
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Quick Bill Dialog */}
+      {showQuickBill && (
+        <div className="rounded-xl border-2 border-primary/30 bg-card p-6 space-y-4">
+          {quickBillStep === "select" ? (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">
+                    Factureer uren
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Selecteer onbefactureerde uren om te factureren
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQuickBill(false);
+                    setSelectedIds(new Set());
+                  }}
+                  className="rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              {entriesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : available.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border py-8 text-center">
+                  <Clock className="mx-auto h-8 w-8 text-muted-foreground/30" />
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Geen onbefactureerde uren voor dit dossier
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={toggleAll}
+                      className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                    >
+                      {selectedIds.size === available.length ? "Deselecteer alles" : "Alles selecteren"}
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      {available.length} uur{available.length !== 1 ? "" : ""} beschikbaar
+                    </span>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto space-y-1 rounded-lg border border-border p-2">
+                    {available.map((entry) => {
+                      const hours = entry.duration_minutes / 60;
+                      const amount = hours * (entry.hourly_rate ?? 0);
+                      const isSelected = selectedIds.has(entry.id);
+
+                      return (
+                        <label
+                          key={entry.id}
+                          className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors ${
+                            isSelected ? "bg-primary/5 ring-1 ring-primary/20" : "hover:bg-muted"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleEntry(entry.id)}
+                            className="h-4 w-4 rounded border-input text-primary focus:ring-primary/20"
+                          />
+                          <div className="flex flex-1 items-center justify-between min-w-0">
+                            <div className="min-w-0 flex-1">
+                              <span className="truncate block font-medium">
+                                {entry.description || "Werkzaamheden"}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDateShort(entry.date)} · {hours.toFixed(1)}u
+                                {entry.user?.full_name && ` · ${entry.user.full_name}`}
+                              </span>
+                            </div>
+                            <span className="ml-3 font-medium tabular-nums">
+                              {entry.hourly_rate ? formatCurrency(amount) : "-"}
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-border pt-3">
+                    <div className="text-sm text-muted-foreground">
+                      {selectedIds.size > 0 ? (
+                        <>
+                          <span className="font-medium text-foreground">{selectedIds.size}</span>{" "}
+                          geselecteerd · subtotaal{" "}
+                          <span className="font-medium text-foreground tabular-nums">
+                            {formatCurrency(selectedSubtotal)}
+                          </span>
+                        </>
+                      ) : (
+                        "Selecteer uren om te factureren"
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickBillStep("preview")}
+                      disabled={selectedIds.size === 0}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Bekijk factuur
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            /* Preview step */
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">
+                    Factuur preview
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Controleer de factuur voor aanmaak
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQuickBillStep("select")}
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Terug
+                </button>
+              </div>
+
+              <div className="rounded-lg border border-border divide-y divide-border">
+                <div className="grid grid-cols-12 gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="col-span-5">Omschrijving</div>
+                  <div className="col-span-2">Datum</div>
+                  <div className="col-span-2 text-right">Uren</div>
+                  <div className="col-span-3 text-right">Bedrag</div>
+                </div>
+                {selectedEntries.map((entry) => {
+                  const hours = entry.duration_minutes / 60;
+                  const amount = hours * (entry.hourly_rate ?? 0);
+                  return (
+                    <div key={entry.id} className="grid grid-cols-12 gap-2 px-4 py-2.5 text-sm">
+                      <div className="col-span-5 truncate">
+                        {entry.description || "Juridische werkzaamheden"}
+                      </div>
+                      <div className="col-span-2 text-muted-foreground">
+                        {formatDateShort(entry.date)}
+                      </div>
+                      <div className="col-span-2 text-right tabular-nums">
+                        {hours.toFixed(2)}
+                      </div>
+                      <div className="col-span-3 text-right font-medium tabular-nums">
+                        {formatCurrency(amount)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotaal</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(selectedSubtotal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">BTW (21%)</span>
+                  <span className="font-medium tabular-nums">{formatCurrency(btwAmount)}</span>
+                </div>
+                <div className="flex justify-between text-base font-semibold border-t border-border pt-2">
+                  <span>Totaal</span>
+                  <span className="tabular-nums">{formatCurrency(selectedTotal)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQuickBill(false);
+                    setSelectedIds(new Set());
+                    setQuickBillStep("select");
+                  }}
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuickBill}
+                  disabled={createInvoice.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {createInvoice.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Aanmaken...
+                    </>
+                  ) : (
+                    <>
+                      <Receipt className="h-4 w-4" />
+                      Factuur aanmaken
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -2632,13 +2912,29 @@ function FacturenTab({ caseId }: { caseId: string }) {
               Alle facturen gekoppeld aan dit dossier
             </p>
           </div>
-          <Link
-            href={`/facturen/nieuw?case_id=${caseId}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Nieuwe factuur
-          </Link>
+          <div className="flex items-center gap-2">
+            {clientId && !showQuickBill && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuickBill(true);
+                  setQuickBillStep("select");
+                  setSelectedIds(new Set());
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Clock className="h-4 w-4" />
+                Factureer uren
+              </button>
+            )}
+            <Link
+              href={`/facturen/nieuw?case_id=${caseId}`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Nieuwe factuur
+            </Link>
+          </div>
         </div>
 
         {isLoading ? (

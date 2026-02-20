@@ -24,6 +24,7 @@ async def list_time_entries(
     date_from: date | None = None,
     date_to: date | None = None,
     billable: bool | None = None,
+    invoiced: bool | None = None,
 ) -> list[TimeEntry]:
     """List time entries with optional filters."""
     query = select(TimeEntry).where(
@@ -39,10 +40,27 @@ async def list_time_entries(
         query = query.where(TimeEntry.date <= date_to)
     if billable is not None:
         query = query.where(TimeEntry.billable.is_(billable))
+    if invoiced is not None:
+        query = query.where(TimeEntry.invoiced.is_(invoiced))
 
     query = query.order_by(TimeEntry.date.desc(), TimeEntry.created_at.desc())
     result = await db.execute(query)
     return list(result.scalars().all())
+
+
+async def list_unbilled_time_entries(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    case_id: uuid.UUID | None = None,
+) -> list[TimeEntry]:
+    """Get all billable, uninvoiced time entries (ready to be billed)."""
+    return await list_time_entries(
+        db, tenant_id,
+        case_id=case_id,
+        billable=True,
+        invoiced=False,
+    )
 
 
 async def get_time_entry(

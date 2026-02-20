@@ -87,6 +87,20 @@ async def delete_time_entry(
     )
 
 
+@router.get("/unbilled", response_model=list[TimeEntryResponse])
+async def list_unbilled(
+    case_id: uuid.UUID | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all billable, uninvoiced time entries (ready to be billed)."""
+    return await service.list_unbilled_time_entries(
+        db,
+        current_user.tenant_id,
+        case_id=case_id,
+    )
+
+
 @router.get("/summary", response_model=TimeEntrySummary)
 async def get_summary(
     case_id: uuid.UUID | None = Query(default=None),

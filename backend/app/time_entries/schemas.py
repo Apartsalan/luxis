@@ -75,6 +75,7 @@ class TimeEntryResponse(BaseModel):
     description: Optional[str]
     activity_type: str
     billable: bool
+    invoiced: bool
     hourly_rate: Optional[Decimal]
     created_at: datetime
     updated_at: datetime

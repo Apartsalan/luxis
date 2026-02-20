@@ -4,6 +4,7 @@ Each template function returns (subject, html_body) for use with email.service.s
 Templates are defined as Jinja2 strings rendered with case/document context.
 """
 
+from markupsafe import Markup
 from jinja2 import Environment, StrictUndefined
 
 _env = Environment(undefined=StrictUndefined, autoescape=True)
@@ -38,7 +39,7 @@ def _render_base(kantoor: dict, content_html: str) -> str:
         kantoor_naam=kantoor.get("naam", ""),
         kantoor_adres=kantoor.get("adres", ""),
         kantoor_postcode_stad=kantoor.get("postcode_stad", ""),
-        content=content_html,
+        content=Markup(content_html),
     )
 
 

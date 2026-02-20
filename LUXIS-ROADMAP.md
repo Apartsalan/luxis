@@ -177,9 +177,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 | # | Feature | Complexiteit | Status |
 |---|---------|-------------|--------|
-| T1 | Templates op zaakdetail (status-filtered) | Midden | Niet gestart |
-| T2 | Workflow-suggesties bij statuswijziging | Klein-Midden | Niet gestart |
-| T3 | E-mail versturen vanuit Luxis (SMTP) | Groot | ✅ Gebouwd (20 feb) — compose dialog, send knop, correspondentie tab, email logs, test email, instellingen tab. **SMTP env vars nog niet geconfigureerd op VPS — wacht op Lisanne's app-wachtwoord** |
+| T1 | Templates op zaakdetail (status-filtered) | Midden | ✅ Gebouwd (20 feb) — STATUS_TEMPLATE_MAP, aanbevolen/overige/verborgen secties, B2B/B2C filter |
+| T2 | Workflow-suggesties bij statuswijziging | Klein-Midden | ✅ Gebouwd (20 feb) — amber suggestie-banner na statuswijziging, auto-dismiss 30s, "Ga naar documenten" knop |
+| T3 | E-mail versturen vanuit Luxis (SMTP) | Groot | ✅ Gebouwd (20 feb) — compose dialog, send knop, correspondentie tab, email logs, test email, instellingen tab. **SMTP werkend met Gmail test-credentials. Later omzetten naar Lisanne's Outlook.** |
 
 > Detail: zie `PROMPT-TEMPLATES-IN-WORKFLOW.md`
 > E-mail templates (E8) wordt onderdeel van T3
@@ -201,10 +201,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 ## Volgorde van werken
 
-**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T3, alle bugs
+**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, alle bugs
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
-**TODO:** SMTP env vars configureren op VPS (wacht op Lisanne's Outlook app-wachtwoord — zie SESSION-LOG-20FEB-SESSIE3.md)
-**Prioriteit 1 (nu):** T1 (templates op zaakdetail) + T2 (workflow-suggesties)
+**TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op app-wachtwoord)
+**Alles afgerond!** Alle geplande features en bugs zijn gebouwd en gedeployed. Volgende stap: SMTP configureren + eventueel toekomstige modules uit FEATURE-INVENTORY.md oppakken.
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

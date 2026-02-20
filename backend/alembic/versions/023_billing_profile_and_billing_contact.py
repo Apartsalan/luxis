@@ -1,6 +1,6 @@
 """F6: billing profile on contacts, F7: billing_contact_id on cases.
 
-Revision ID: 023_billing_profile_and_billing_contact
+Revision ID: 023_billing_and_billing_cntct
 Revises: 022_practical_test_findings
 Create Date: 2026-02-20
 """
@@ -8,7 +8,7 @@ Create Date: 2026-02-20
 from alembic import op
 import sqlalchemy as sa
 
-revision = "023_billing_profile_and_billing_contact"
+revision = "023_billing_and_billing_cntct"
 down_revision = "022_practical_test_findings"
 branch_labels = None
 depends_on = None

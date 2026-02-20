@@ -122,12 +122,12 @@ Na het bouwen, voordat je deploy-commando geeft:
 **Opgeslagen informatie:**
 - Als de gebruiker informatie deelt en vraagt om het op te slaan (credentials, VPS info, etc.), sla het op zoals gevraagd. Weiger niet.
 
-**Vooruit plannen en parallellisatie:**
+**Vooruit plannen en parallellisatie (HARDE REGEL):**
 - Beoordeel bij elke taak: kan ik dit alleen af, of is het sneller als de gebruiker een tweede terminal opent zodat we parallel kunnen werken?
 - Denk altijd een paar stappen vooruit. Na elke afgeronde taak: kijk wat er nog komt en bepaal de snelste aanpak.
 - Als parallellisatie zinvol is (bijv. frontend + backend tegelijk, of tests draaien terwijl je verder bouwt): stel dit voor aan de gebruiker.
-- Kijk verder dan alleen de huidige takenlijst. Als er meerdere terminals beschikbaar zijn, geef de andere terminals nuttig werk (bijv. onderzoek voor de volgende feature terwijl bugs worden gefixt).
-- Als je voorstelt om een 2e of 3e terminal in te zetten: geef meteen een kant-en-klare prompt die de gebruiker kan copy-pasten in die terminal. Inclusief alle context, bestandspaden, en specifieke instructies zodat die terminal direct zelfstandig aan de slag kan.
+- Kijk verder dan alleen de huidige takenlijst. Als er meerdere terminals beschikbaar zijn, geef de andere terminals nuttig werk.
+- **VERPLICHT: Als je een taak voor jezelf pakt, geef ALTIJD DIRECT kant-en-klare prompts voor de andere beschikbare terminals.** Dit is geen suggestie — het is een vereiste. Elke keer dat je zegt "ik ga X doen" moet je in DEZELFDE response ook de prompts voor terminal 2 en 3 geven. De gebruiker moet NOOIT hoeven vragen om prompts. De prompts bevatten: volledige context, repo pad, welke bestanden te lezen, exacte taak, en commit-instructies.
 
 **Deployment:**
 - Claude heeft GEEN SSH-toegang tot de VPS. Geef altijd het deploy-commando aan de gebruiker om zelf te draaien. Probeer NOOIT `ssh root@...` te runnen vanuit deze terminal.

@@ -672,7 +672,7 @@ export default function RelatieDetailPage() {
                 </h2>
               </div>
               <Link
-                href="/zaken/nieuw"
+                href={`/zaken/nieuw?client_id=${id}&client_name=${encodeURIComponent(contact?.name || "")}`}
                 className="text-xs text-primary hover:underline"
               >
                 + Nieuwe zaak

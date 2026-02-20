@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -11,10 +11,22 @@ import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
 
-export default function NieuweZaakPage() {
+export default function NieuweZaakPageWrapper() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-2xl py-12 text-center text-muted-foreground">Laden...</div>}>
+      <NieuweZaakPage />
+    </Suspense>
+  );
+}
+
+function NieuweZaakPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const createCase = useCreateCase();
   const { hasModule } = useModules();
+
+  const prefillClientId = searchParams.get("client_id") || "";
+  const prefillClientName = searchParams.get("client_name") || "";
 
   const [form, setForm] = useState({
     case_type: "incasso",
@@ -23,11 +35,11 @@ export default function NieuweZaakPage() {
     reference: "",
     interest_type: "statutory",
     contractual_rate: "",
-    client_id: "",
+    client_id: prefillClientId,
     opposing_party_id: "",
     date_opened: new Date().toISOString().split("T")[0],
   });
-  const [clientSearch, setClientSearch] = useState("");
+  const [clientSearch, setClientSearch] = useState(prefillClientName);
   const [opponentSearch, setOpponentSearch] = useState("");
   const [error, setError] = useState("");
 
@@ -191,8 +203,8 @@ export default function NieuweZaakPage() {
           </div>
         </div>
 
-        {/* Interest settings */}
-        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        {/* Interest settings — only for incasso cases */}
+        {form.case_type === "incasso" && <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <h2 className="text-base font-semibold text-foreground">
             Rente-instellingen
           </h2>
@@ -235,7 +247,7 @@ export default function NieuweZaakPage() {
               />
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Parties */}
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
@@ -250,7 +262,7 @@ export default function NieuweZaakPage() {
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="rounded-lg bg-primary/10 px-3 py-1.5 text-sm text-primary font-medium">
                   {clientResults?.items.find((c) => c.id === form.client_id)
-                    ?.name || "Geselecteerd"}
+                    ?.name || prefillClientName || "Geselecteerd"}
                 </span>
                 <button
                   type="button"

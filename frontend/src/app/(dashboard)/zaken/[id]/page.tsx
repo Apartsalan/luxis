@@ -81,6 +81,7 @@ import {
 import { useModules } from "@/hooks/use-modules";
 import { useTimer } from "@/hooks/use-timer";
 import { formatCurrency, formatDate, formatDateShort, formatRelativeTime } from "@/lib/utils";
+import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 
 const STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
@@ -217,6 +218,9 @@ export default function ZaakDetailPage() {
   const deleteCase = useDeleteCase();
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: workflowTransitions } = useWorkflowTransitions();
+
+  // Set breadcrumb label to case number
+  useBreadcrumbs(zaak ? [{ segment: id, label: zaak.case_number }] : []);
   const { hasModule } = useModules();
   const { startTimer, timer } = useTimer();
   const [activeTab, setActiveTab] = useState("overzicht");
@@ -629,6 +633,28 @@ export default function ZaakDetailPage() {
 // ── Overzicht Tab ─────────────────────────────────────────────────────────────
 
 function OverzichtTab({ zaak }: { zaak: any }) {
+  const [noteText, setNoteText] = useState("");
+  const addActivity = useAddCaseActivity();
+
+  const handleAddNote = async () => {
+    const text = noteText.trim();
+    if (!text) return;
+    try {
+      await addActivity.mutateAsync({
+        caseId: zaak.id,
+        data: {
+          activity_type: "note",
+          title: "Notitie toegevoegd",
+          description: text,
+        },
+      });
+      setNoteText("");
+      toast.success("Notitie toegevoegd");
+    } catch {
+      toast.error("Kon notitie niet toevoegen");
+    }
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-5">
       {/* Left: Case details */}
@@ -732,8 +758,43 @@ function OverzichtTab({ zaak }: { zaak: any }) {
         </div>
       </div>
 
-      {/* Right: Recent Activity */}
-      <div className="lg:col-span-2">
+      {/* Right: Note + Recent Activity */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Quick note input — always visible */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-card-foreground">
+              Notitie
+            </h2>
+          </div>
+          <textarea
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Schrijf een notitie..."
+            rows={3}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors resize-none"
+          />
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[10px] text-muted-foreground">
+              **vet**, *cursief*, - opsomming
+            </p>
+            <button
+              type="button"
+              onClick={handleAddNote}
+              disabled={!noteText.trim() || addActivity.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {addActivity.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Send className="h-3 w-3" />
+              )}
+              Opslaan
+            </button>
+          </div>
+        </div>
+
         <div className="rounded-xl border border-border bg-card">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -1625,6 +1686,39 @@ function DerdengeldenTab({ caseId }: { caseId: string }) {
   );
 }
 
+// ── Simple markdown renderer for notes ───────────────────────────────────────
+
+function renderSimpleMarkdown(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, i) => {
+    // Bullet points
+    const isBullet = /^[-*]\s+/.test(line);
+    const content = isBullet ? line.replace(/^[-*]\s+/, "") : line;
+
+    // Bold and italic inline formatting
+    const parts = content.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+    const formatted = parts.map((part, j) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return <strong key={j}>{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith("*") && part.endsWith("*")) {
+        return <em key={j}>{part.slice(1, -1)}</em>;
+      }
+      return part;
+    });
+
+    if (isBullet) {
+      return (
+        <div key={i} className="flex items-start gap-1.5">
+          <span className="mt-1.5 h-1 w-1 rounded-full bg-current shrink-0" />
+          <span>{formatted}</span>
+        </div>
+      );
+    }
+    return <div key={i}>{formatted.length > 0 ? formatted : "\u00A0"}</div>;
+  });
+}
+
 // ── Activiteiten Tab ──────────────────────────────────────────────────────────
 
 const ACTIVITY_TYPE_LABELS: Record<string, string> = {
@@ -1784,9 +1878,12 @@ function ActiviteitenTab({ zaak }: { zaak: any }) {
                           {activity.title}
                         </p>
                         {activity.description && (
-                          <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-wrap">
-                            {activity.description}
-                          </p>
+                          <div className="text-sm text-muted-foreground mt-0.5">
+                            {activity.activity_type === "note"
+                              ? renderSimpleMarkdown(activity.description)
+                              : <p className="whitespace-pre-wrap">{activity.description}</p>
+                            }
+                          </div>
                         )}
                       </div>
                       <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">

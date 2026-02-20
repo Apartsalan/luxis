@@ -45,6 +45,7 @@ import {
   useChangePassword,
   useUpdateTenant,
 } from "@/hooks/use-settings";
+import { useTestEmail } from "@/hooks/use-documents";
 import {
   useWorkflowStatuses,
   useWorkflowTransitions,
@@ -66,6 +67,7 @@ const TABS = [
   { id: "modules", label: "Modules", icon: Puzzle },
   { id: "team", label: "Team", icon: Users },
   { id: "workflow", label: "Workflow", icon: GitBranch },
+  { id: "email", label: "E-mail", icon: Mail },
   { id: "meldingen", label: "Meldingen", icon: Bell },
   { id: "weergave", label: "Weergave", icon: Palette },
 ];
@@ -109,6 +111,7 @@ export default function InstellingenPage() {
           {activeTab === "modules" && <ModulesTab />}
           {activeTab === "team" && <TeamTab />}
           {activeTab === "workflow" && <WorkflowTab />}
+          {activeTab === "email" && <EmailTab />}
           {activeTab === "meldingen" && <MeldingenTab />}
           {activeTab === "weergave" && <WeergaveTab />}
         </div>
@@ -1428,6 +1431,88 @@ function RulesSection({
               ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── E-mail Tab ────────────────────────────────────────────────────────────────
+
+function EmailTab() {
+  const [testAddress, setTestAddress] = useState("");
+  const testEmail = useTestEmail();
+
+  const handleTestEmail = async () => {
+    const email = testAddress.trim();
+    if (!email) {
+      toast.error("Vul een e-mailadres in");
+      return;
+    }
+    try {
+      await testEmail.mutateAsync({ email });
+      toast.success("Test e-mail verzonden naar " + email);
+      setTestAddress("");
+    } catch (err: any) {
+      toast.error(err.message ?? "Test e-mail verzenden mislukt");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* SMTP status info */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-base font-semibold text-foreground mb-2">
+          E-mailconfiguratie
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          E-mail wordt verstuurd via de SMTP-server die door de beheerder is
+          geconfigureerd. Neem contact op met de beheerder om de
+          SMTP-instellingen te wijzigen.
+        </p>
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Mail className="h-4 w-4" />
+            <span>
+              SMTP-instellingen worden beheerd via omgevingsvariabelen op de
+              server.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Test email */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-base font-semibold text-foreground mb-2">
+          Test e-mail
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Verstuur een test e-mail om te controleren of de SMTP-configuratie
+          correct werkt.
+        </p>
+        <div className="flex gap-3">
+          <input
+            type="email"
+            value={testAddress}
+            onChange={(e) => setTestAddress(e.target.value)}
+            placeholder="naam@voorbeeld.nl"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleTestEmail();
+            }}
+          />
+          <button
+            onClick={handleTestEmail}
+            disabled={testEmail.isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {testEmail.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="h-4 w-4" />
+            )}
+            Verstuur test
+          </button>
+        </div>
       </div>
     </div>
   );

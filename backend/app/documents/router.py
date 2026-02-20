@@ -2,7 +2,6 @@
 
 import logging
 import uuid
-from datetime import date
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
@@ -22,23 +21,24 @@ from app.documents.docx_service import (
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
 from app.documents.schemas import (
-    DocxTemplateInfo,
     DocumentTemplateCreate,
     DocumentTemplateResponse,
     DocumentTemplateSummary,
     DocumentTemplateUpdate,
-    GenerateDocumentRequest,
-    GenerateDocxRequest,
+    DocxTemplateInfo,
+    EmailLogResponse,
     GeneratedDocumentDetail,
     GeneratedDocumentResponse,
     GeneratedDocumentSummary,
+    GenerateDocumentRequest,
+    GenerateDocxRequest,
     MergeFieldCategory,
     SendDocumentRequest,
     SendDocumentResponse,
 )
 from app.email.models import EmailLog
 from app.email.service import send_email
-from app.email.templates import document_sent
+from app.email.templates import _render_base, document_sent
 from app.shared.exceptions import BadRequestError, NotFoundError
 
 logger = logging.getLogger(__name__)
@@ -319,23 +319,40 @@ async def send_document(
     pdf_bytes = await docx_to_pdf(docx_bytes)
     pdf_filename = filename.replace(".docx", ".pdf")
 
-    # Build email from template
+    # Build email from template or custom content
     tenant = await _load_tenant(db, user.tenant_id)
     kantoor = _tenant_ctx(tenant)
 
-    subject, html_body = document_sent(
-        kantoor=kantoor,
-        recipient_name=data.recipient_name or "",
-        document_title=doc.title,
-        case_number=case.case_number,
-    )
+    if data.custom_subject or data.custom_body:
+        # Use custom subject/body from the frontend compose dialog
+        subject = data.custom_subject or f"{doc.title} — {case.case_number}"
+        if data.custom_body:
+            # Wrap custom body text in base HTML layout (convert newlines to <br>)
+            body_html = data.custom_body.replace("\n", "<br>")
+            html_body = _render_base(kantoor, body_html)
+        else:
+            _, html_body = document_sent(
+                kantoor=kantoor,
+                recipient_name=data.recipient_name or "",
+                document_title=doc.title,
+                case_number=case.case_number,
+            )
+        template_name = "custom"
+    else:
+        subject, html_body = document_sent(
+            kantoor=kantoor,
+            recipient_name=data.recipient_name or "",
+            document_title=doc.title,
+            case_number=case.case_number,
+        )
+        template_name = "document_sent"
 
     # Send email
     email_log = EmailLog(
         tenant_id=user.tenant_id,
         case_id=case.id,
         document_id=doc.id,
-        template="document_sent",
+        template=template_name,
         recipient=data.recipient_email,
         subject=subject,
         status="sent",
@@ -346,6 +363,7 @@ async def send_document(
             to=data.recipient_email,
             subject=subject,
             html_body=html_body,
+            cc=data.cc,
             attachments=[(pdf_filename, pdf_bytes, "pdf")],
         )
     except Exception as e:
@@ -368,3 +386,27 @@ async def send_document(
         subject=email_log.subject,
         status=email_log.status,
     )
+
+
+# ── Email Logs ───────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/cases/{case_id}/email-logs",
+    response_model=list[EmailLogResponse],
+)
+async def list_email_logs(
+    case_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all email logs for a case, newest first."""
+    result = await db.execute(
+        select(EmailLog)
+        .where(
+            EmailLog.tenant_id == user.tenant_id,
+            EmailLog.case_id == case_id,
+        )
+        .order_by(EmailLog.sent_at.desc())
+    )
+    return list(result.scalars().all())

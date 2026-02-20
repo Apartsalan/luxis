@@ -179,6 +179,91 @@ export function useDocumentTemplates(templateType?: string) {
   });
 }
 
+// ── Types: Send Document ────────────────────────────────────────────────────
+
+export interface SendDocumentInput {
+  recipient_email: string;
+  recipient_name?: string;
+  cc?: string[];
+  custom_subject?: string;
+  custom_body?: string;
+}
+
+export interface SendDocumentResponse {
+  email_log_id: string;
+  recipient: string;
+  subject: string;
+  status: string;
+}
+
+// ── Hook: Send Document via Email ──────────────────────────────────────────
+
+export function useSendDocument(caseId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<SendDocumentResponse, Error, { documentId: string; data: SendDocumentInput }>({
+    mutationFn: async ({ documentId, data }) => {
+      const res = await api(`/api/documents/${documentId}/send`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Fout bij verzenden e-mail");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["case-documents", caseId] });
+      queryClient.invalidateQueries({ queryKey: ["email-logs", caseId] });
+    },
+  });
+}
+
+// ── Types: Email Logs ──────────────────────────────────────────────────────
+
+export interface EmailLogEntry {
+  id: string;
+  recipient: string;
+  subject: string;
+  status: string;
+  sent_at: string;
+  document_id: string | null;
+  template: string | null;
+}
+
+// ── Hook: Email Logs per Case ─────────────────────────────────────────────
+
+export function useEmailLogs(caseId: string | undefined) {
+  return useQuery<EmailLogEntry[]>({
+    queryKey: ["email-logs", caseId ?? ""],
+    queryFn: async () => {
+      const res = await api(`/api/documents/cases/${caseId}/email-logs`);
+      if (!res.ok) throw new Error("Kan e-maillogboek niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+// ── Hook: Test Email ──────────────────────────────────────────────────────
+
+export function useTestEmail() {
+  return useMutation<{ message: string }, Error, { email: string }>({
+    mutationFn: async ({ email }) => {
+      const res = await api("/api/email/test", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Test e-mail verzenden mislukt");
+      }
+      return res.json();
+    },
+  });
+}
+
 // ── Helper: trigger download ────────────────────────────────────────────────
 
 export function triggerDownload(blob: Blob, filename: string) {

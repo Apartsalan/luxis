@@ -153,7 +153,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | # | Feature | Complexiteit | Status |
 |---|---------|-------------|--------|
 | D1 | Wachtwoord vergeten flow | Klein-Midden | ✅ Gebouwd (forgot-password op login, reset-password pagina met token, 3-staps flow) |
-| D2 | Gebruikersbeheer (rollen, rechten) | Groot | Niet gestart |
+| D2 | Gebruikersbeheer (rollen, rechten) | Groot | ❌ Niet relevant (Lisanne is enige gebruiker) |
 | D3 | Navigatie-verbeteringen | Klein | ✅ Gebouwd (breadcrumbs met dynamische labels, nested routes) |
 | D4 | Empty states en loading states | Klein | ✅ Gebouwd (skeleton loaders op alle dashboard pagina's) |
 | D5 | Agenda events aanmaken | Midden (nieuw model + CRUD) | ✅ Gebouwd (20 feb) — CalendarEvent model met 7 typen, CRUD endpoints, EventDialog create/edit/delete, unifide calendar hook, case/contact pickers |
@@ -201,12 +201,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 ## Volgorde van werken
 
-**Prioriteit 1 (nu):** E1 (Zaken→Dossiers) → E2 (tarieven vereenvoudigen) → E3 (facturen-tab op dossier)
-**Prioriteit 2:** E4 (documenten uploaden) + E5 (slimme facturatie-flow)
-**Prioriteit 3:** E6 (debiteuren/crediteuren) + D5 (agenda events)
-**Prioriteit 4:** C3 (credit nota's) + D2 (gebruikersbeheer)
-**Prioriteit 5:** E7 (auto-timer) — na productie-feedback
-**Prioriteit 6:** T1 → T2 → T3 + E8 (templates + email)
+**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E7, alle bugs
+**❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
+**Prioriteit 1 (nu):** T3 + E8 (e-mail vanuit Luxis + email templates) — meest impactvolle Basenet-vervanger
+**Prioriteit 2:** T1 (templates op zaakdetail) + T2 (workflow-suggesties)
+
+> **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 
 **Werkwijze per feature:**
 1. Onderzoek concurrenten

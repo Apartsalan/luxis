@@ -67,10 +67,15 @@ import {
   useGenerateDocx,
   useCaseDocuments,
   useDeleteDocument,
+  useSendDocument,
   getTemplateLabel,
   getTemplateDescription,
   triggerDownload,
+  useEmailLogs,
+  type EmailLogEntry,
+  type GeneratedDocumentSummary,
 } from "@/hooks/use-documents";
+import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
 import {
   useInvoices,
   useCreateInvoice,
@@ -369,6 +374,7 @@ export default function ZaakDetailPage() {
       : []),
     { id: "facturen", label: "Facturen", icon: CreditCard },
     { id: "documenten", label: "Documenten", icon: File },
+    { id: "correspondentie", label: "Correspondentie", icon: Mail },
     { id: "activiteiten", label: "Activiteiten", icon: Clock },
     { id: "partijen", label: "Partijen", icon: Users },
   ];
@@ -696,7 +702,8 @@ export default function ZaakDetailPage() {
       {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
       {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
       {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
-      {activeTab === "documenten" && <DocumentenTab caseId={id} />}
+      {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} opposingPartyName={zaak?.opposing_party?.name} />}
+      {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} />}
       {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
       {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
     </div>
@@ -3069,11 +3076,16 @@ function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: string }
   );
 }
 
-function DocumentenTab({ caseId }: { caseId: string }) {
+function DocumentenTab({ caseId, caseNumber, opposingPartyName }: { caseId: string; caseNumber?: string; opposingPartyName?: string }) {
   const { data: templates, isLoading: templatesLoading } = useDocxTemplates();
   const { data: documents, isLoading: docsLoading } = useCaseDocuments(caseId);
   const generateDocx = useGenerateDocx(caseId);
   const deleteDocument = useDeleteDocument(caseId);
+  const sendDocument = useSendDocument(caseId);
+
+  // Email compose dialog state
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailDoc, setEmailDoc] = useState<GeneratedDocumentSummary | null>(null);
 
   // File uploads (E4)
   const { data: caseFiles, isLoading: filesLoading } = useCaseFiles(caseId);
@@ -3097,6 +3109,32 @@ function DocumentenTab({ caseId }: { caseId: string }) {
       toast.success("Document verwijderd");
     } catch {
       toast.error("Fout bij verwijderen document");
+    }
+  };
+
+  const handleOpenEmailDialog = (doc: GeneratedDocumentSummary) => {
+    setEmailDoc(doc);
+    setEmailDialogOpen(true);
+  };
+
+  const handleSendEmail = async (data: EmailComposeData) => {
+    if (!emailDoc) return;
+    try {
+      await sendDocument.mutateAsync({
+        documentId: emailDoc.id,
+        data: {
+          recipient_email: data.recipient_email,
+          recipient_name: data.recipient_name,
+          cc: data.cc,
+          custom_subject: data.custom_subject,
+          custom_body: data.custom_body,
+        },
+      });
+      toast.success("E-mail verzonden");
+      setEmailDialogOpen(false);
+      setEmailDoc(null);
+    } catch (err: any) {
+      toast.error(err.message || "Fout bij verzenden e-mail");
     }
   };
 
@@ -3309,7 +3347,7 @@ function DocumentenTab({ caseId }: { caseId: string }) {
             {documents.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors"
+                className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors group"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
@@ -3324,18 +3362,107 @@ function DocumentenTab({ caseId }: { caseId: string }) {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(doc.id)}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  title="Verwijderen"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleOpenEmailDialog(doc)}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Verstuur per e-mail"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(doc.id)}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Verwijderen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Email compose dialog */}
+      <EmailComposeDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        onSend={handleSendEmail}
+        isSending={sendDocument.isPending}
+        defaultSubject={emailDoc ? `${emailDoc.title}${caseNumber ? ` — ${caseNumber}` : ""}` : ""}
+        defaultBody={emailDoc ? `Geachte heer/mevrouw,\n\nBijgaand treft u het document "${emailDoc.title}" aan${caseNumber ? ` inzake zaak ${caseNumber}` : ""}.\n\nHet document is als bijlage bij deze e-mail gevoegd.\n\nMet vriendelijke groet` : ""}
+        defaultToName={opposingPartyName || ""}
+        attachmentName={emailDoc ? `${emailDoc.title}.pdf` : undefined}
+      />
+    </div>
+  );
+}
+
+// ── Correspondentie Tab ──────────────────────────────────────────────────────
+
+function CorrespondentieTab({ caseId }: { caseId: string }) {
+  const { data: logs, isLoading } = useEmailLogs(caseId);
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6">
+      <h2 className="mb-1 text-base font-semibold text-foreground">
+        Verzonden e-mails
+      </h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Overzicht van alle e-mails verstuurd vanuit dit dossier
+      </p>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          E-mails laden...
+        </div>
+      ) : !logs?.length ? (
+        <div className="rounded-lg border border-dashed border-border py-8 text-center">
+          <Mail className="mx-auto h-8 w-8 text-muted-foreground/30" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            Nog geen e-mails verstuurd voor dit dossier
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="pb-3 pr-4">Datum</th>
+                <th className="pb-3 pr-4">Ontvanger</th>
+                <th className="pb-3 pr-4">Onderwerp</th>
+                <th className="pb-3 pr-4">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {logs.map((log: EmailLogEntry) => (
+                <tr key={log.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground">
+                    {formatDateShort(log.sent_at)}
+                  </td>
+                  <td className="py-3 pr-4">{log.recipient}</td>
+                  <td className="py-3 pr-4">{log.subject}</td>
+                  <td className="py-3 pr-4">
+                    {log.status === "sent" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Verzonden
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600">
+                        <XCircle className="h-3 w-3" />
+                        Mislukt
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

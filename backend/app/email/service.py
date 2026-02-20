@@ -6,7 +6,6 @@ Configuration via SMTP_* environment variables in config.py.
 
 import logging
 from email.message import EmailMessage
-from pathlib import PurePosixPath
 
 import aiosmtplib
 
@@ -25,6 +24,7 @@ async def send_email(
     to: str,
     subject: str,
     html_body: str,
+    cc: list[str] | None = None,
     attachments: list[tuple[str, bytes, str]] | None = None,
 ) -> None:
     """Send an email via SMTP.
@@ -33,6 +33,7 @@ async def send_email(
         to: Recipient email address.
         subject: Email subject line.
         html_body: HTML content of the email body.
+        cc: Optional list of CC email addresses.
         attachments: List of (filename, data, mime_subtype) tuples.
             Example: [("document.pdf", pdf_bytes, "pdf")]
 
@@ -48,6 +49,8 @@ async def send_email(
     msg = EmailMessage()
     msg["From"] = settings.smtp_from
     msg["To"] = to
+    if cc:
+        msg["Cc"] = ", ".join(cc)
     msg["Subject"] = subject
     msg.set_content("Uw e-mailclient ondersteunt geen HTML.", subtype="plain")
     msg.add_alternative(html_body, subtype="html")

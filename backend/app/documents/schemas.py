@@ -150,6 +150,19 @@ class SendDocumentRequest(BaseModel):
         max_length=255,
         description="Naam van de ontvanger (voor aanhef in e-mail)",
     )
+    cc: list[str] | None = Field(
+        None,
+        description="CC e-mailadressen",
+    )
+    custom_subject: str | None = Field(
+        None,
+        max_length=500,
+        description="Eigen onderwerp (vervangt standaard template onderwerp)",
+    )
+    custom_body: str | None = Field(
+        None,
+        description="Eigen e-mail body tekst (wordt gewrapt in de standaard HTML layout)",
+    )
 
 
 class SendDocumentResponse(BaseModel):
@@ -157,6 +170,20 @@ class SendDocumentResponse(BaseModel):
     recipient: str
     subject: str
     status: str
+
+
+class EmailLogResponse(BaseModel):
+    id: uuid.UUID
+    recipient: str
+    subject: str
+    status: str
+    error_message: str | None
+    sent_at: datetime
+    document_id: uuid.UUID | None
+    template: str
+    case_id: uuid.UUID | None
+
+    model_config = {"from_attributes": True}
 
 
 # ── Merge Fields Schemas ──────────────────────────────────────────────────

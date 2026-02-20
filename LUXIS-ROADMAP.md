@@ -38,15 +38,15 @@
 
 | Document | Doel | Status |
 |----------|------|--------|
-| `LUXIS-ROADMAP.md` | **Dit document** — overzicht van alles | **Source of truth** |
+| `LUXIS-ROADMAP.md` | **Dit document** — overzicht van alles. Status, prioriteit, bugs, features | **ENIGE source of truth** — alle andere docs verwijzen hiernaar |
 | `CLAUDE.md` | AI development guide, architectuurregels, werkwijze | Actief, bijwerken bij nieuwe afspraken |
 | `backend/CLAUDE.md` | Backend-specifieke conventies | Actief |
 | `frontend/CLAUDE.md` | Frontend-specifieke conventies | Actief |
 | `DECISIONS.md` | Tech stack keuzes + onderbouwing | Definitief (niet wijzigen tenzij stack verandert) |
 | `FEATURE-INVENTORY.md` | Complete feature-inventaris (alle 15 modules) | Referentie — de "wat zou kunnen" lijst |
 | `UX-REVIEW.md` | Kritische UX analyse per feature vs. concurrentie | Referentie — de "waar staan we" analyse |
-| `UX-VERBETERPLAN.md` | Geprioriteerde lijst van UX verbeteringen | **Actieve werklijst** |
-| `BUGS-EN-VERBETERPUNTEN.md` | Bugs uit handmatige test (19 feb 2026) + fix-instructies | **Actieve buglijst** — BUG-1/2/3 fixen, #4/#5 gedocumenteerd |
+| `UX-VERBETERPLAN.md` | Gedetailleerde bouw-instructies per UX feature | Detail-doc — status/prioriteit staat hier in roadmap |
+| `BUGS-EN-VERBETERPUNTEN.md` | Gedetailleerde bug-beschrijvingen met bestanden, regelnummers en fix-instructies | Detail-doc — status/prioriteit staat hier in roadmap |
 | `PROMPT-TEMPLATES-IN-WORKFLOW.md` | Spec voor templates + email in workflow | Gepland (dependency: B1 zaakdetail tabs) |
 
 ### Op Bureaublad (`C:\Users\arsal\OneDrive\Bureaublad\Kesting Legal\Luxis\`)
@@ -170,6 +170,19 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 ---
 
+## Bugs — Volgende sessie fixen
+
+> Detail + bestanden + fix-instructies: zie `BUGS-EN-VERBETERPUNTEN.md`
+
+| # | Bug | Ernst | Fix-grootte | Status |
+|---|-----|-------|-------------|--------|
+| BUG-1 | Relatie niet automatisch gekoppeld bij nieuwe zaak vanuit relatiedetail | Hoog | Klein (URL params + form pre-fill) | Klaar voor implementatie |
+| BUG-2 | Rente-velden zichtbaar bij niet-incasso zaaktypes | Midden | Klein (conditional render) | Klaar voor implementatie |
+| BUG-3 | Renteberekening per documentdatum controleren | Hoog | Verificatie nodig | Grotendeels al werkend |
+| BUG-6 | Conflict check mist op zaakdetail Partijen tab (warning, niet blokkeren) | Midden | Klein | Aanmaken werkt al, detail mist het |
+
+---
+
 ## Volgorde van werken
 
 **Prioriteit 1 (nu):** A1 → A2 → A3 → A4 (quick wins, backend klaar)
@@ -217,4 +230,4 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.
 
 ---
 
-*Dit document is de centrale roadmap. Detailspecificaties staan in de gelinkte documenten.*
+*Dit document is de enige source of truth. Alle andere .md bestanden verwijzen hiernaar voor status en prioriteit.*

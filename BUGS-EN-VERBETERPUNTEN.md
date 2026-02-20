@@ -1,5 +1,7 @@
 # Bugs en Verbeterpunten — Handmatige Test (19 feb 2026)
 
+> **⚠️ `LUXIS-ROADMAP.md` is de enige source of truth.** Dit document bevat alleen gedetailleerde bug-beschrijvingen met bestanden, regelnummers en fix-instructies. Voor status en prioriteit: zie de roadmap.
+
 Gevonden tijdens handmatige doorloop van Luxis productie.
 
 ---

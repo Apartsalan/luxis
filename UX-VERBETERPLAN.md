@@ -1,5 +1,7 @@
 # UX Verbeterplan — Luxis Practice Management System
 
+> **⚠️ `LUXIS-ROADMAP.md` is de enige source of truth.** Dit document bevat alleen gedetailleerde bouw-instructies per feature. Voor status, prioriteit en het totaaloverzicht: zie de roadmap.
+
 **Gebaseerd op:** UX-REVIEW.md (19 februari 2026)
 **Werkwijze:** Features één of twee tegelijk, onderzoek → plan → bouw → check → commit
 

@@ -51,9 +51,10 @@ export function useUploadCaseFile(caseId: string) {
       if (description) formData.append("description", description);
       if (documentDirection) formData.append("document_direction", documentDirection);
 
-      const token = localStorage.getItem("access_token");
+      const token = localStorage.getItem("luxis_access_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/files`,
+        `${apiUrl}/api/cases/${caseId}/files`,
         {
           method: "POST",
           headers: {
@@ -117,8 +118,9 @@ export function getFileIcon(contentType: string): { color: string; label: string
 }
 
 export function downloadCaseFile(caseId: string, fileId: string, filename: string) {
-  const token = localStorage.getItem("access_token");
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/cases/${caseId}/files/${fileId}/download`, {
+  const token = localStorage.getItem("luxis_access_token");
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  fetch(`${apiUrl}/api/cases/${caseId}/files/${fileId}/download`, {
     headers: { Authorization: `Bearer ${token}` },
   })
     .then((res) => {

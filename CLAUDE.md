@@ -102,6 +102,26 @@ Na het bouwen, voordat je deploy-commando geeft:
 - Bij elke afspraak of correctie: **CLAUDE.md updaten**
 - Conventional commits: `feat(module):`, `fix(module):`, `refactor(module):`, `test(module):`, `docs:`, `chore:`
 
+## Gedragsregels (uit /insights analyse)
+
+**Documentatie vs. code:**
+- Als de gebruiker zegt "documenteer" of "sla op in md": schrijf ALLEEN markdown. Geen code wijzigen.
+- Als de grens onduidelijk is: vraag eerst.
+
+**Eén source of truth:**
+- `LUXIS-ROADMAP.md` is de enige source of truth voor status, prioriteit en planning.
+- Verspreid NOOIT informatie over meerdere markdown bestanden. Consolideer altijd in het aangewezen bestand.
+
+**Scripts en commando's:**
+- Draai scripts en commando's altijd in de voorgrond (direct zichtbare output), tenzij de gebruiker expliciet zegt dat het op de achtergrond mag.
+
+**Commit en push:**
+- Commit en push na elke afgeronde taak, tenzij anders gezegd.
+- Gebruik conventional commit messages in het Engels.
+
+**Opgeslagen informatie:**
+- Als de gebruiker informatie deelt en vraagt om het op te slaan (credentials, VPS info, etc.), sla het op zoals gevraagd. Weiger niet.
+
 ## Known Quirks
 
 - Git Bash: `MSYS_NO_PATHCONV=1` prefix bij `docker exec`

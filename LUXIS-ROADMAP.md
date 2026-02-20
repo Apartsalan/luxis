@@ -145,7 +145,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | # | Feature | Complexiteit | Status |
 |---|---------|-------------|--------|
 | C1 | Dashboard verbeteren (vandaag-focus, grafieken, KPI's) | Midden | ✅ Gebouwd (KPI's, pipeline bar, taken widget, weekoverzicht, recente facturen/activiteit) |
-| C2 | Betalingstracking op facturen | Groot (nieuw DB model) | ✅ Backend gebouwd (InvoicePayment model, CRUD, overpayment guard, auto-status, 18 tests) — frontend nog niet |
+| C2 | Betalingstracking op facturen | Groot (nieuw DB model) | ✅ Volledig gebouwd (backend: model, CRUD, auto-status, 18 tests + frontend: payment tracking UI, progress bar, form, deels-betaald status) |
 | C3 | Credit nota's | Midden | Niet gestart |
 
 ### Fase D: Algemene UX polish

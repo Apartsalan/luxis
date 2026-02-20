@@ -156,7 +156,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | D2 | Gebruikersbeheer (rollen, rechten) | Groot | Niet gestart |
 | D3 | Navigatie-verbeteringen | Klein | ✅ Gebouwd (breadcrumbs met dynamische labels, nested routes) |
 | D4 | Empty states en loading states | Klein | ✅ Gebouwd (skeleton loaders op alle dashboard pagina's) |
-| D5 | Agenda events aanmaken | Midden (nieuw model + CRUD) | Niet gestart |
+| D5 | Agenda events aanmaken | Midden (nieuw model + CRUD) | ✅ Gebouwd (20 feb) — CalendarEvent model met 7 typen, CRUD endpoints, EventDialog create/edit/delete, unifide calendar hook, case/contact pickers |
 
 ### Fase E: Verbeterpunten uit handmatige test (sessie 2, 20 feb)
 

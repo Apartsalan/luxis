@@ -305,7 +305,7 @@ export function useTestEmail() {
     mutationFn: async ({ email }) => {
       const res = await api("/api/email/test", {
         method: "POST",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ recipient_email: email }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);

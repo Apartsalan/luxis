@@ -141,7 +141,7 @@ export function useTimerProvider() {
 
   const startTimer = useCallback((caseId: string, caseName: string) => {
     if (!caseId) {
-      toast.error("Selecteer eerst een zaak");
+      toast.error("Selecteer eerst een dossier");
       return;
     }
     const newState: TimerState = {

@@ -121,6 +121,6 @@ export function useReactivateUser() {
 // ─── Constants ────────────────────────────────────────────────────
 export const ROLE_OPTIONS = [
   { value: "admin", label: "Beheerder", description: "Volledige toegang tot alle functies en instellingen" },
-  { value: "advocaat", label: "Advocaat", description: "Zaken beheren, documenten genereren, relaties bekijken" },
-  { value: "medewerker", label: "Medewerker", description: "Zaken bekijken, taken uitvoeren, beperkte toegang" },
+  { value: "advocaat", label: "Advocaat", description: "Dossiers beheren, documenten genereren, relaties bekijken" },
+  { value: "medewerker", label: "Medewerker", description: "Dossiers bekijken, taken uitvoeren, beperkte toegang" },
 ] as const;

@@ -261,13 +261,13 @@ export default function NieuweFactuurPage() {
           {/* Case search (optional) */}
           <div className="relative">
             <label className="block text-sm font-medium text-foreground">
-              Zaak (optioneel)
+              Dossier (optioneel)
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground mt-0.75" />
               <input
                 type="text"
-                placeholder="Zoek zaak..."
+                placeholder="Zoek dossier..."
                 value={selectedCaseNumber || caseSearch}
                 onChange={(e) => {
                   setCaseSearch(e.target.value);

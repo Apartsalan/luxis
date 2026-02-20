@@ -489,7 +489,7 @@ function KantoorTab() {
           Standaard rente-instellingen
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Standaard instellingen voor nieuwe zaken
+          Standaard instellingen voor nieuwe dossiers
         </p>
         <div className="max-w-md space-y-4">
           <div>
@@ -933,7 +933,7 @@ function MeldingenTab() {
     {
       id: "status_change",
       label: "Statuswijzigingen",
-      description: "Melding bij wijziging van zaakstatus",
+      description: "Melding bij wijziging van dossierstatus",
       enabled: true,
     },
     {

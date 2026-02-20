@@ -132,7 +132,7 @@ export default function FacturenPage() {
                     Relatie
                   </th>
                   <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Zaak
+                    Dossier
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Datum

@@ -25,10 +25,10 @@ interface SearchResult {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Nieuwe zaak", href: "/zaken/nieuw", icon: Briefcase },
+  { label: "Nieuw dossier", href: "/zaken/nieuw", icon: Briefcase },
   { label: "Nieuwe relatie", href: "/relaties/nieuw", icon: Users },
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Zaken", href: "/zaken", icon: Briefcase },
+  { label: "Dossiers", href: "/zaken", icon: Briefcase },
   { label: "Relaties", href: "/relaties", icon: Users },
   { label: "Uren", href: "/uren", icon: Scale },
   { label: "Facturen", href: "/facturen", icon: Scale },
@@ -44,7 +44,7 @@ const TYPE_ICONS = {
 };
 
 const TYPE_LABELS = {
-  case: "Zaak",
+  case: "Dossier",
   contact: "Relatie",
   document: "Document",
 };
@@ -177,7 +177,7 @@ export function CommandPalette() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Zoek zaken, relaties, documenten..."
+              placeholder="Zoek dossiers, relaties, documenten..."
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             />
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}

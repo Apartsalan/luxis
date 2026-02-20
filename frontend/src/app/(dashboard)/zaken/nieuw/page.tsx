@@ -97,7 +97,7 @@ function NieuweZaakPage() {
 
     try {
       const result = await createCase.mutateAsync(data);
-      toast.success("Zaak aangemaakt");
+      toast.success("Dossier aangemaakt");
       router.push(`/zaken/${result.id}`);
     } catch (err: any) {
       setError(err.message || "Er ging iets mis");
@@ -117,7 +117,7 @@ function NieuweZaakPage() {
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Nieuwe zaak</h1>
+          <h1 className="text-2xl font-bold text-foreground">Nieuw dossier</h1>
           <p className="text-sm text-muted-foreground">
             Maak een nieuw dossier aan
           </p>
@@ -127,13 +127,13 @@ function NieuweZaakPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <h2 className="text-base font-semibold text-foreground">
-            Zaakgegevens
+            Dossiergegevens
           </h2>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium text-foreground">
-                Zaaktype *
+                Dossiertype *
               </label>
               <select
                 value={form.case_type}
@@ -186,7 +186,7 @@ function NieuweZaakPage() {
               onChange={(e) => updateField("description", e.target.value)}
               rows={2}
               className={inputClass}
-              placeholder="Korte omschrijving van de zaak..."
+              placeholder="Korte omschrijving van het dossier..."
             />
           </div>
 
@@ -325,7 +325,7 @@ function NieuweZaakPage() {
                     Conflict gedetecteerd
                   </p>
                   <p className="mt-0.5 text-xs text-amber-700">
-                    Deze cliënt is in {clientConflict.conflicts.length === 1 ? "een andere zaak" : `${clientConflict.conflicts.length} andere zaken`} wederpartij:
+                    Deze cliënt is in {clientConflict.conflicts.length === 1 ? "een ander dossier" : `${clientConflict.conflicts.length} andere dossiers`} wederpartij:
                   </p>
                   <ul className="mt-1 space-y-0.5">
                     {clientConflict.conflicts.map((c) => (
@@ -448,7 +448,7 @@ function NieuweZaakPage() {
                     Conflict gedetecteerd
                   </p>
                   <p className="mt-0.5 text-xs text-amber-700">
-                    Deze wederpartij is in {opponentConflict.conflicts.length === 1 ? "een andere zaak" : `${opponentConflict.conflicts.length} andere zaken`} cliënt:
+                    Deze wederpartij is in {opponentConflict.conflicts.length === 1 ? "een ander dossier" : `${opponentConflict.conflicts.length} andere dossiers`} cliënt:
                   </p>
                   <ul className="mt-1 space-y-0.5">
                     {opponentConflict.conflicts.map((c) => (
@@ -479,7 +479,7 @@ function NieuweZaakPage() {
             disabled={createCase.isPending}
             className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {createCase.isPending ? "Aanmaken..." : "Zaak aanmaken"}
+            {createCase.isPending ? "Aanmaken..." : "Dossier aanmaken"}
           </button>
           <Link
             href="/zaken"

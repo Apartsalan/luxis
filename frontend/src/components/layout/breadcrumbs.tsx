@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  */
 const SEGMENT_LABELS: Record<string, string> = {
   relaties: "Relaties",
-  zaken: "Zaken",
+  zaken: "Dossiers",
   taken: "Mijn Taken",
   uren: "Uren",
   facturen: "Facturen",

@@ -434,7 +434,7 @@ export default function FactuurDetailPage() {
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
             <Briefcase className="h-4 w-4" />
-            Zaak
+            Dossier
           </div>
           {factuur.case ? (
             <Link

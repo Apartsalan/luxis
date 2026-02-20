@@ -88,7 +88,7 @@ function CompactCasePicker({
         >
           {selected
             ? `${selected.case_number}${selected.client?.name ? ` — ${selected.client.name}` : ""}`
-            : "Selecteer zaak..."}
+            : "Selecteer dossier..."}
         </span>
         <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
       </button>
@@ -100,7 +100,7 @@ function CompactCasePicker({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek zaak..."
+              placeholder="Zoek dossier..."
               className="w-full rounded border border-input bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
               autoFocus
             />
@@ -108,7 +108,7 @@ function CompactCasePicker({
           <div className="max-h-48 overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                Geen zaken gevonden
+                Geen dossiers gevonden
               </p>
             ) : (
               filtered.map((c) => (

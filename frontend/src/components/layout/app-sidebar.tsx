@@ -32,7 +32,7 @@ const ALL_NAVIGATION: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Mijn Taken", href: "/taken", icon: CheckSquare },
   { name: "Relaties", href: "/relaties", icon: Users },
-  { name: "Zaken", href: "/zaken", icon: Briefcase },
+  { name: "Dossiers", href: "/zaken", icon: Briefcase },
   { name: "Agenda", href: "/agenda", icon: Calendar },
   { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
   { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },

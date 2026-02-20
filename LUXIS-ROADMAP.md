@@ -162,7 +162,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 | # | Feature | Complexiteit | Prioriteit | Status |
 |---|---------|-------------|-----------|--------|
-| E1 | "Zaken" hernoemen naar "Dossiers" in hele frontend UI | Klein | 🔴 Hoog | Niet gestart — puur display, code blijft `case/cases` |
+| E1 | "Zaken" hernoemen naar "Dossiers" in hele frontend UI | Klein | 🔴 Hoog | ✅ Gebouwd (20 feb) — puur display, code blijft `case/cases` |
 | E2 | Tarieven vereenvoudigen: dropdown op dossierniveau i.p.v. aparte pagina | Klein | 🔴 Hoog | Niet gestart — rentetype als veld op dossier, niet als beheerpagina |
 | E3 | Facturen-tab op dossierdetail | Klein-Midden | 🔴 Hoog | Niet gestart — B1 tabs bestaan al, facturen-tab toevoegen |
 | E4 | Documenten uploaden in dossier | Groot (storage + nieuw model) | 🔴 Hoog | Niet gestart — huidige docs module doet alleen template-generatie |

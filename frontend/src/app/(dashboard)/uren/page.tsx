@@ -75,7 +75,7 @@ function CaseSelector({
   value,
   onChange,
   disabled,
-  placeholder = "Selecteer zaak...",
+  placeholder = "Selecteer dossier...",
 }: {
   cases: CaseSummary[];
   value: string;
@@ -189,7 +189,7 @@ function CaseSelector({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek op cliënt, zaaknummer..."
+              placeholder="Zoek op cliënt, dossiernummer..."
               className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               autoFocus
             />
@@ -197,7 +197,7 @@ function CaseSelector({
           <div className="max-h-72 overflow-y-auto">
             {filteredGroups.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                Geen zaken gevonden
+                Geen dossiers gevonden
               </p>
             ) : (
               filteredGroups.map((group) => {
@@ -218,7 +218,7 @@ function CaseSelector({
                       <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <span className="truncate">{group.clientName}</span>
                       <span className="ml-auto text-xs text-muted-foreground shrink-0">
-                        {group.cases.length} {group.cases.length === 1 ? "zaak" : "zaken"}
+                        {group.cases.length} {group.cases.length === 1 ? "dossier" : "dossiers"}
                       </span>
                     </button>
                     {/* Cases under this client */}
@@ -359,7 +359,7 @@ export default function UrenPage() {
   const submitEntry = async () => {
     const totalMinutes = (parseInt(formHours || "0") * 60) + parseInt(formMinutes || "0");
     if (!formCaseId || totalMinutes <= 0) {
-      toast.error("Selecteer een zaak en voer een geldige duur in");
+      toast.error("Selecteer een dossier en voer een geldige duur in");
       return;
     }
     try {
@@ -466,7 +466,7 @@ export default function UrenPage() {
               value={timerCaseId}
               onChange={setTimerCaseId}
               disabled={timerRunning}
-              placeholder="Selecteer zaak..."
+              placeholder="Selecteer dossier..."
             />
           </div>
           {timerRunning ? (
@@ -548,7 +548,7 @@ export default function UrenPage() {
               cases={cases}
               value={filterCaseId}
               onChange={setFilterCaseId}
-              placeholder="Alle zaken"
+              placeholder="Alle dossiers"
             />
           </div>
           <select
@@ -601,12 +601,12 @@ export default function UrenPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Zaak *</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Dossier *</label>
               <CaseSelector
                 cases={cases}
                 value={formCaseId}
                 onChange={setFormCaseId}
-                placeholder="Selecteer zaak..."
+                placeholder="Selecteer dossier..."
               />
             </div>
             <div>
@@ -726,7 +726,7 @@ export default function UrenPage() {
           {/* Table header */}
           <div className="grid grid-cols-[100px_80px_1fr_120px_80px_60px_60px] gap-2 px-5 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
             <span>Datum</span>
-            <span>Zaak</span>
+            <span>Dossier</span>
             <span>Omschrijving</span>
             <span>Activiteit</span>
             <span className="text-right">Duur</span>
@@ -838,7 +838,7 @@ export default function UrenPage() {
       {/* Per-case breakdown */}
       {summary && summary.per_case.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Overzicht per zaak</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Overzicht per dossier</h3>
           <div className="space-y-2">
             {summary.per_case.map((cs) => (
               <div key={cs.case_id} className="flex items-center justify-between py-1.5">

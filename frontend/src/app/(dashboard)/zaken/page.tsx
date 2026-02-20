@@ -134,7 +134,7 @@ export default function ZakenPage() {
       });
       if (!res.ok) throw new Error("Statuswijziging mislukt");
       const result = await res.json();
-      toast.success(`${result.updated ?? selectedIds.size} zaken bijgewerkt`);
+      toast.success(`${result.updated ?? selectedIds.size} dossiers bijgewerkt`);
       setSelectedIds(new Set());
       setBulkAction("");
       setBulkStatus("");
@@ -163,7 +163,7 @@ export default function ZakenPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `luxis-zaken-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `luxis-dossiers-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Export gedownload");
@@ -180,11 +180,11 @@ export default function ZakenPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Zaken</h1>
+          <h1 className="text-2xl font-bold text-foreground">Dossiers</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {data?.total
-              ? `${data.total} ${data.total === 1 ? "zaak" : "zaken"}`
-              : "Beheer je zaken en dossiers"}
+              ? `${data.total} ${data.total === 1 ? "dossier" : "dossiers"}`
+              : "Beheer je dossiers"}
           </p>
         </div>
         <Link
@@ -192,7 +192,7 @@ export default function ZakenPage() {
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nieuwe zaak</span>
+          <span className="hidden sm:inline">Nieuw dossier</span>
         </Link>
       </div>
 
@@ -202,7 +202,7 @@ export default function ZakenPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Zoek op zaaknummer, beschrijving of client..."
+            placeholder="Zoek op dossiernummer, beschrijving of client..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -261,7 +261,7 @@ export default function ZakenPage() {
       {someSelected && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
           <span className="text-sm font-medium text-primary">
-            {selectedIds.size} {selectedIds.size === 1 ? "zaak" : "zaken"} geselecteerd
+            {selectedIds.size} {selectedIds.size === 1 ? "dossier" : "dossiers"} geselecteerd
           </span>
           <div className="h-4 w-px bg-primary/20" />
           <button
@@ -327,7 +327,7 @@ export default function ZakenPage() {
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
           >
             {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            Exporteer {data.total} zaken (CSV)
+            Exporteer {data.total} dossiers (CSV)
           </button>
         </div>
       )}
@@ -369,7 +369,7 @@ export default function ZakenPage() {
                     </button>
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Zaak
+                    Dossier
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Type
@@ -496,7 +496,7 @@ export default function ZakenPage() {
           {data.pages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Pagina {page} van {data.pages} &middot; {data.total} zaken
+                Pagina {page} van {data.pages} &middot; {data.total} dossiers
               </p>
               <div className="flex items-center gap-1">
                 <button
@@ -548,19 +548,19 @@ export default function ZakenPage() {
             <Briefcase className="h-8 w-8 text-muted-foreground/50" />
           </div>
           <p className="mt-5 text-base font-medium text-foreground">
-            Geen zaken gevonden
+            Geen dossiers gevonden
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {search || caseType || status
               ? "Probeer andere zoektermen of filters"
-              : "Begin met het aanmaken van je eerste zaak"}
+              : "Begin met het aanmaken van je eerste dossier"}
           </p>
           <Link
             href="/zaken/nieuw"
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            Nieuwe zaak aanmaken
+            Nieuw dossier aanmaken
           </Link>
         </div>
       )}

@@ -667,7 +667,7 @@ export default function RelatieDetailPage() {
               <div className="flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                 <h2 className="text-sm font-semibold text-card-foreground">
-                  Gekoppelde zaken
+                  Gekoppelde dossiers
                   {contactCases && contactCases.length > 0 && (
                     <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
                       {contactCases.length}
@@ -679,7 +679,7 @@ export default function RelatieDetailPage() {
                 href={`/zaken/nieuw?client_id=${id}&client_name=${encodeURIComponent(contact?.name || "")}`}
                 className="text-xs text-primary hover:underline"
               >
-                + Nieuwe zaak
+                + Nieuw dossier
               </Link>
             </div>
             {contactCases && contactCases.length > 0 ? (
@@ -731,13 +731,13 @@ export default function RelatieDetailPage() {
               <div className="px-5 py-8 text-center">
                 <Briefcase className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Nog geen gekoppelde zaken
+                  Nog geen gekoppelde dossiers
                 </p>
                 <Link
                   href="/zaken/nieuw"
                   className="mt-1 inline-block text-sm text-primary hover:underline"
                 >
-                  Maak een nieuwe zaak aan
+                  Maak een nieuw dossier aan
                 </Link>
               </div>
             )}

@@ -195,7 +195,7 @@ export default function DashboardPage() {
           href="/zaken/nieuw"
           className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
         >
-          Nieuwe zaak
+          Nieuw dossier
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           icon={<Briefcase className="h-5 w-5" />}
-          label="Actieve zaken"
+          label="Actieve dossiers"
           value={summary?.total_active_cases ?? 0}
           subtitle={`${summary?.cases_this_month ?? 0} nieuw deze maand`}
           color="primary"
@@ -214,7 +214,7 @@ export default function DashboardPage() {
           icon={<Users className="h-5 w-5" />}
           label="Relaties"
           value={summary?.total_contacts ?? 0}
-          subtitle={`${summary?.cases_closed_this_month ?? 0} zaken afgesloten`}
+          subtitle={`${summary?.cases_closed_this_month ?? 0} dossiers afgesloten`}
           color="success"
           href="/relaties"
         />
@@ -243,7 +243,7 @@ export default function DashboardPage() {
               href="/zaken"
               className="text-xs text-primary hover:underline"
             >
-              Alle zaken →
+              Alle dossiers →
             </Link>
           </div>
           {/* Stacked bar */}
@@ -344,7 +344,7 @@ export default function DashboardPage() {
                             {STATUS_LABELS[item.status] ?? item.status}
                           </span>
                           <span className="text-sm text-muted-foreground">
-                            {item.count} {item.count === 1 ? "zaak" : "zaken"}
+                            {item.count} {item.count === 1 ? "dossier" : "dossiers"}
                           </span>
                         </div>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -364,7 +364,7 @@ export default function DashboardPage() {
             {/* Cases by status (bars) */}
             <div className="rounded-xl border border-border bg-card p-5">
               <h2 className="text-sm font-semibold text-card-foreground mb-4">
-                Zaken per status
+                Dossiers per status
               </h2>
               {summary?.cases_by_status && summary.cases_by_status.length > 0 ? (
                 <div className="space-y-3">
@@ -402,7 +402,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Geen zaken gevonden
+                  Geen dossiers gevonden
                 </p>
               )}
             </div>

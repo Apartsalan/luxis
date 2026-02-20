@@ -247,13 +247,13 @@ export default function ZaakDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Weet je zeker dat je deze zaak wilt verwijderen?")) return;
+    if (!confirm("Weet je zeker dat je dit dossier wilt verwijderen?")) return;
     try {
       await deleteCase.mutateAsync(id);
-      toast.success("Zaak verwijderd");
+      toast.success("Dossier verwijderd");
       router.push("/zaken");
     } catch {
-      toast.error("Kon de zaak niet verwijderen");
+      toast.error("Kon het dossier niet verwijderen");
     }
   };
 
@@ -278,13 +278,13 @@ export default function ZaakDetailPage() {
       <div className="py-20 text-center">
         <Briefcase className="mx-auto h-12 w-12 text-muted-foreground/30" />
         <p className="mt-4 text-base font-medium text-foreground">
-          Zaak niet gevonden
+          Dossier niet gevonden
         </p>
         <Link
           href="/zaken"
           className="mt-2 inline-block text-sm text-primary hover:underline"
         >
-          ← Terug naar zaken
+          ← Terug naar dossiers
         </Link>
       </div>
     );
@@ -668,7 +668,7 @@ function OverzichtTab({ zaak }: { zaak: any }) {
       <div className="lg:col-span-3 space-y-6">
         <div className="rounded-xl border border-border bg-card p-6">
           <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
-            Zaakgegevens
+            Dossiergegevens
           </h2>
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -2244,7 +2244,7 @@ function PartijenTab({ zaak }: { zaak: any }) {
                 Conflict gedetecteerd — client
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                {zaak.client.name} is in {clientConflict.conflicts.length === 1 ? "een andere zaak" : `${clientConflict.conflicts.length} andere zaken`} wederpartij:
+                {zaak.client.name} is in {clientConflict.conflicts.length === 1 ? "een ander dossier" : `${clientConflict.conflicts.length} andere dossiers`} wederpartij:
               </p>
               <ul className="mt-1 space-y-0.5">
                 {clientConflict.conflicts.map((c) => (
@@ -2268,7 +2268,7 @@ function PartijenTab({ zaak }: { zaak: any }) {
                 Conflict gedetecteerd — wederpartij
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                {zaak.opposing_party.name} is in {opponentConflict.conflicts.length === 1 ? "een andere zaak" : `${opponentConflict.conflicts.length} andere zaken`} client:
+                {zaak.opposing_party.name} is in {opponentConflict.conflicts.length === 1 ? "een ander dossier" : `${opponentConflict.conflicts.length} andere dossiers`} client:
               </p>
               <ul className="mt-1 space-y-0.5">
                 {opponentConflict.conflicts.map((c) => (
@@ -2483,7 +2483,7 @@ function TakenTab({ caseId }: { caseId: string }) {
         <div className="rounded-xl border border-dashed border-border py-12 text-center">
           <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
           <p className="mt-3 text-sm text-muted-foreground">
-            Geen taken voor deze zaak
+            Geen taken voor dit dossier
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Taken worden automatisch aangemaakt bij statuswijzigingen
@@ -2681,7 +2681,7 @@ function DocumentenTab({ caseId }: { caseId: string }) {
           Gegenereerde documenten
         </h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          Eerder gegenereerde documenten voor deze zaak
+          Eerder gegenereerde documenten voor dit dossier
         </p>
 
         {docsLoading ? (
@@ -2693,7 +2693,7 @@ function DocumentenTab({ caseId }: { caseId: string }) {
           <div className="rounded-lg border border-dashed border-border py-8 text-center">
             <File className="mx-auto h-8 w-8 text-muted-foreground/30" />
             <p className="mt-2 text-sm text-muted-foreground">
-              Nog geen documenten gegenereerd voor deze zaak
+              Nog geen documenten gegenereerd voor dit dossier
             </p>
           </div>
         ) : (

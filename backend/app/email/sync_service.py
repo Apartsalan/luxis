@@ -14,6 +14,7 @@ import logging
 import re
 import uuid
 from datetime import UTC, datetime
+from html import unescape as html_unescape
 from pathlib import Path
 
 from dateutil import parser as dateparser
@@ -35,6 +36,40 @@ logger = logging.getLogger(__name__)
 
 # Regex: matches case numbers like "2024-00001", "2026-12345"
 CASE_NUMBER_RE = re.compile(r"\b(20\d{2}-\d{4,6})\b")
+
+# Simple HTML tag stripper — faster than BeautifulSoup for our needs
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_html(html: str) -> str:
+    """Strip HTML tags and decode entities to plain text."""
+    if not html:
+        return ""
+    text = _HTML_TAG_RE.sub(" ", html)
+    text = html_unescape(text)
+    # Collapse whitespace
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _build_searchable_text(
+    subject: str | None,
+    body_text: str | None,
+    body_html: str | None,
+    snippet: str | None,
+) -> str:
+    """Build full searchable text from email fields.
+
+    Many emails only have HTML body (no text/plain part), so we strip
+    HTML tags to get searchable plain text from body_html as well.
+    """
+    parts = [subject or ""]
+    if body_text:
+        parts.append(body_text)
+    if body_html:
+        parts.append(_strip_html(body_html))
+    if snippet:
+        parts.append(snippet)
+    return " ".join(parts)
 
 
 async def _find_case_by_case_number(
@@ -376,7 +411,9 @@ async def sync_emails_for_account(
                 link_to = force_case_id
                 if not link_to:
                     # Try case number matching on this already-synced email
-                    searchable = f"{msg.subject} {msg.body_text} {msg.snippet}"
+                    searchable = _build_searchable_text(
+                        msg.subject, msg.body_text, msg.body_html, msg.snippet
+                    )
                     link_to = await _find_case_by_case_number(
                         db, account.tenant_id, searchable
                     )
@@ -412,8 +449,10 @@ async def sync_emails_for_account(
         if force_case_id:
             case_id = force_case_id
         else:
-            # First try: match case number or client reference in subject + body
-            searchable_text = f"{msg.subject} {msg.body_text} {msg.snippet}"
+            # First try: match case number or client reference in subject + body + html
+            searchable_text = _build_searchable_text(
+                msg.subject, msg.body_text, msg.body_html, msg.snippet
+            )
             case_id = await _find_case_by_case_number(
                 db, account.tenant_id, searchable_text
             )
@@ -510,7 +549,9 @@ async def _rematch_unlinked_emails(
     linked_count = 0
     for email in unlinked:
         # Try case number / reference matching
-        searchable_text = f"{email.subject} {email.body_text} {email.snippet}"
+        searchable_text = _build_searchable_text(
+            email.subject, email.body_text, email.body_html, email.snippet
+        )
         case_id = await _find_case_by_case_number(db, tenant_id, searchable_text)
 
         # If no case number match, try email address matching

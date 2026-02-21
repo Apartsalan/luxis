@@ -351,17 +351,21 @@ async def sync_emails_for_account(
         )
         existing_row = existing.first()
         if existing_row is not None:
-            # If already synced but unlinked, and we're in dossier context → link it
-            if force_case_id and existing_row[1] is None:
-                await db.execute(
-                    select(SyncedEmail)
-                    .where(SyncedEmail.id == existing_row[0])
-                )
-                synced_email = (await db.execute(
-                    select(SyncedEmail).where(SyncedEmail.id == existing_row[0])
-                )).scalar_one()
-                synced_email.case_id = force_case_id
-                stats["linked"] += 1
+            # If already synced but unlinked → try to link it
+            if existing_row[1] is None:
+                link_to = force_case_id
+                if not link_to:
+                    # Try case number matching on this already-synced email
+                    searchable = f"{msg.subject} {msg.body_text} {msg.snippet}"
+                    link_to = await _find_case_by_case_number(
+                        db, account.tenant_id, searchable
+                    )
+                if link_to:
+                    synced_email = (await db.execute(
+                        select(SyncedEmail).where(SyncedEmail.id == existing_row[0])
+                    )).scalar_one()
+                    synced_email.case_id = link_to
+                    stats["linked"] += 1
             stats["skipped"] += 1
             continue
 
@@ -446,6 +450,13 @@ async def sync_emails_for_account(
     if attachments_downloaded:
         await db.flush()
 
+    # Re-match unlinked emails on case number / reference
+    # This catches emails that were synced before the matching was implemented,
+    # or where a case/reference was added after the email was synced.
+    if not force_case_id:
+        re_linked = await _rematch_unlinked_emails(db, account.tenant_id)
+        stats["linked"] += re_linked
+
     logger.info(
         f"Sync klaar voor {account.email_address}: "
         f"{stats['fetched']} opgehaald, {stats['new']} nieuw, "
@@ -453,6 +464,71 @@ async def sync_emails_for_account(
         f"{attachments_downloaded} bijlagen"
     )
     return stats
+
+
+async def _rematch_unlinked_emails(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> int:
+    """Re-scan all unlinked synced emails and try to match them to a case.
+
+    Uses case number + reference matching on subject/body/snippet,
+    and email address → contact → case matching.
+
+    Returns the number of emails that were newly linked.
+    """
+    result = await db.execute(
+        select(SyncedEmail).where(
+            SyncedEmail.tenant_id == tenant_id,
+            SyncedEmail.case_id == None,  # noqa: E711
+        )
+    )
+    unlinked = list(result.scalars().all())
+    if not unlinked:
+        return 0
+
+    linked_count = 0
+    for email in unlinked:
+        # Try case number / reference matching
+        searchable_text = f"{email.subject} {email.body_text} {email.snippet}"
+        case_id = await _find_case_by_case_number(db, tenant_id, searchable_text)
+
+        # If no case number match, try email address matching
+        if not case_id:
+            all_addresses = []
+            if email.from_email:
+                all_addresses.append(email.from_email.lower())
+            try:
+                to_emails = json.loads(email.to_emails) if email.to_emails else []
+            except (json.JSONDecodeError, TypeError):
+                to_emails = []
+            for addr in to_emails:
+                a = addr.strip()
+                if "<" in a:
+                    a = a[a.index("<") + 1 : a.index(">")]
+                all_addresses.append(a.lower())
+
+            # Get account email to exclude
+            if email.email_account:
+                all_addresses = [
+                    a for a in all_addresses
+                    if a != email.email_account.email_address.lower()
+                ]
+
+            case_id = await _find_case_for_email(db, tenant_id, all_addresses)
+
+        if case_id:
+            email.case_id = case_id
+            linked_count += 1
+            logger.info(
+                f"Re-match: email '{email.subject}' gekoppeld aan case {case_id}"
+            )
+
+    if linked_count:
+        await db.flush()
+        logger.info(f"Re-match: {linked_count} ongelinkte emails alsnog gekoppeld")
+
+    return linked_count
 
 
 async def get_case_emails(

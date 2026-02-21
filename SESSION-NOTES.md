@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 feb 2026 (sessie 3 — dossier edit bugfix)
-**Laatste feature/fix:** Fix: legen van velden in dossier edit formulier werkte niet
+**Laatst bijgewerkt:** 21 feb 2026 (sessie 3 — dossier edit bugfix + email matching uitgebreid)
+**Laatste feature/fix:** Email matching op zaaknummer rechtbank + klantreferentie
 
 ## Wat er gedaan is (sessie 3 — 21 feb, avond)
 
@@ -10,6 +10,13 @@
 - **Oorzaak:** In `handleSaveDetails` werden lege strings via `|| undefined` omgezet naar `undefined`. `JSON.stringify()` verwijdert `undefined` waarden → backend ontvangt het veld niet → `exclude_unset=True` slaat het over → oude waarde blijft staan.
 - **Fix:** `|| undefined` vervangen door `.trim() || null`. Lege strings worden nu als `null` meegestuurd → Pydantic ziet het als "set" → `exclude_unset=True` neemt het mee → database waarde wordt `NULL`.
 - **Bestanden:** `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` (handleSaveDetails), `frontend/src/hooks/use-cases.ts` (type fix)
+
+### Fix: Email matching op zaaknummer rechtbank (court_case_number)
+- **Probleem:** Emails met een zaaknummer rechtbank of klantreferentie in de tekst werden niet herkend en niet aan het juiste dossier gekoppeld.
+- **Oorzaak:** `_find_case_by_case_number()` scande alleen op `Case.case_number` (regex) en `Case.reference`. Het veld `Case.court_case_number` werd niet meegenomen.
+- **Fix:** Method 3 toegevoegd: alle actieve cases met een `court_case_number` worden opgehaald en vergeleken met de email tekst (case-insensitive, min. 3 tekens).
+- **Matching prioriteit nu:** dossiernummer regex → klantreferentie → zaaknummer rechtbank → email-contact
+- **Bestand:** `backend/app/email/sync_service.py` (`_find_case_by_case_number`)
 
 ---
 

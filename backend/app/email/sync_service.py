@@ -2,10 +2,11 @@
 
 Matching logic (in priority order):
   1. Case number match: scan subject + body for patterns like "2026-00012"
-  2. Client reference match: scan subject + body for known case references
-  3. Contact email match: look up email addresses → Contact → Case
-  4. If exactly one case matches (from any method), auto-link
-  5. If multiple cases match, leave unlinked (user assigns via M6 "ongesorteerd" queue)
+  2. Client reference match: scan subject + body for known Case.reference values
+  3. Court case number match: scan subject + body for known Case.court_case_number values
+  4. Contact email match: look up email addresses → Contact → Case
+  5. If exactly one case matches (from any method), auto-link
+  6. If multiple cases match, leave unlinked (user assigns via M6 "ongesorteerd" queue)
 """
 
 import json
@@ -41,15 +42,20 @@ async def _find_case_by_case_number(
     tenant_id: uuid.UUID,
     text: str,
 ) -> uuid.UUID | None:
-    """Scan text for case numbers (e.g. 2026-00012) and match to a dossier.
+    """Scan text for case numbers, client references, and court case numbers.
 
-    Also scans for known client references (Case.reference field).
+    Matching methods (all run, results merged):
+      1. Case number regex: "2026-00012" → Case.case_number
+      2. Client reference: known Case.reference values found in text
+      3. Court case number: known Case.court_case_number values found in text
+
     Returns case_id if exactly one active case matches, otherwise None.
     """
     if not text:
         return None
 
     case_ids = set()
+    text_lower = text.lower()
 
     # --- Method 1: Case number regex ---
     matches = CASE_NUMBER_RE.findall(text)
@@ -75,10 +81,24 @@ async def _find_case_by_case_number(
             Case.reference != "",
         )
     )
-    text_lower = text.lower()
     for row in ref_result.all():
         ref = row[1].strip()
         if len(ref) >= 3 and ref.lower() in text_lower:
+            case_ids.add(row[0])
+
+    # --- Method 3: Court case number match (zaaknummer rechtbank) ---
+    # Get all active cases with a court_case_number, check if it appears in text
+    court_result = await db.execute(
+        select(Case.id, Case.court_case_number).where(
+            Case.tenant_id == tenant_id,
+            Case.is_active == True,  # noqa: E712
+            Case.court_case_number.isnot(None),
+            Case.court_case_number != "",
+        )
+    )
+    for row in court_result.all():
+        court_num = row[1].strip()
+        if len(court_num) >= 3 and court_num.lower() in text_lower:
             case_ids.add(row[0])
 
     if len(case_ids) == 1:
@@ -86,7 +106,7 @@ async def _find_case_by_case_number(
 
     if len(case_ids) > 1:
         logger.info(
-            f"Meerdere dossiers ({len(case_ids)}) gematcht op nummer/referentie — niet auto-gekoppeld"
+            f"Meerdere dossiers ({len(case_ids)}) gematcht op nummer/referentie/zaaknummer — niet auto-gekoppeld"
         )
 
     return None

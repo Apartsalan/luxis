@@ -92,10 +92,14 @@ async def _find_case_by_case_number(
     case_ids = set()
     text_lower = text.lower()
 
+    logger.info(
+        f"[MATCH-DEBUG] Searching text ({len(text)} chars): {text[:300]!r}"
+    )
+
     # --- Method 1: Case number regex ---
     matches = CASE_NUMBER_RE.findall(text)
     if matches:
-        # Look up each potential case number
+        logger.info(f"[MATCH-DEBUG] Method 1: regex found case numbers: {matches}")
         result = await db.execute(
             select(Case.id).where(
                 Case.tenant_id == tenant_id,
@@ -105,9 +109,9 @@ async def _find_case_by_case_number(
         )
         for row in result.all():
             case_ids.add(row[0])
+            logger.info(f"[MATCH-DEBUG] Method 1: matched case {row[0]}")
 
     # --- Method 2: Client reference match ---
-    # Get all active cases with a reference set, check if it appears in the text
     ref_result = await db.execute(
         select(Case.id, Case.reference).where(
             Case.tenant_id == tenant_id,
@@ -116,13 +120,21 @@ async def _find_case_by_case_number(
             Case.reference != "",
         )
     )
-    for row in ref_result.all():
+    ref_rows = ref_result.all()
+    logger.info(
+        f"[MATCH-DEBUG] Method 2: found {len(ref_rows)} cases with reference: "
+        f"{[(str(r[0])[:8], r[1]) for r in ref_rows]}"
+    )
+    for row in ref_rows:
         ref = row[1].strip()
-        if len(ref) >= 3 and ref.lower() in text_lower:
+        found = len(ref) >= 3 and ref.lower() in text_lower
+        logger.info(
+            f"[MATCH-DEBUG] Method 2: ref={ref!r} len={len(ref)} in_text={found}"
+        )
+        if found:
             case_ids.add(row[0])
 
     # --- Method 3: Court case number match (zaaknummer rechtbank) ---
-    # Get all active cases with a court_case_number, check if it appears in text
     court_result = await db.execute(
         select(Case.id, Case.court_case_number).where(
             Case.tenant_id == tenant_id,
@@ -131,13 +143,26 @@ async def _find_case_by_case_number(
             Case.court_case_number != "",
         )
     )
-    for row in court_result.all():
+    court_rows = court_result.all()
+    logger.info(
+        f"[MATCH-DEBUG] Method 3: found {len(court_rows)} cases with court_case_number: "
+        f"{[(str(r[0])[:8], r[1]) for r in court_rows]}"
+    )
+    for row in court_rows:
         court_num = row[1].strip()
-        if len(court_num) >= 3 and court_num.lower() in text_lower:
+        found = len(court_num) >= 3 and court_num.lower() in text_lower
+        logger.info(
+            f"[MATCH-DEBUG] Method 3: court={court_num!r} len={len(court_num)} in_text={found}"
+        )
+        if found:
             case_ids.add(row[0])
 
+    logger.info(f"[MATCH-DEBUG] Total matched case_ids: {len(case_ids)}")
+
     if len(case_ids) == 1:
-        return case_ids.pop()
+        matched = case_ids.pop()
+        logger.info(f"[MATCH-DEBUG] → Returning single match: {matched}")
+        return matched
 
     if len(case_ids) > 1:
         logger.info(

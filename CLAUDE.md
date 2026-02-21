@@ -152,6 +152,17 @@ Na het bouwen, voordat je deploy-commando geeft:
 - Bij nieuwe TODO's: voeg toe aan de juiste sectie met status ❌ TODO.
 - Bij VPS/infra wijzigingen: update de status-tabel bovenin.
 
+## Context Management
+
+**Doel: sessies zo lang mogelijk effectief houden.**
+
+- **Gebruik subagents voor onderzoek.** Lees niet zelf 20 bestanden — delegeer naar een Task agent die een samenvatting teruggeeft.
+- **Lees alleen bestanden die je NODIG hebt** voor de huidige taak. Niet de hele codebase scannen.
+- **Commit + update SESSION-NOTES.md na elke afgeronde feature.** Zo kun je altijd stoppen zonder verlies.
+- **Bij sessie-start:** lees `SESSION-NOTES.md` + `CLAUDE.md` + `LUXIS-ROADMAP.md`. Niet meer.
+- **Bij sessie-einde:** draai `/sessie-einde` — dit doet lint/test/commit/push + update SESSION-NOTES.md.
+- **Slash commands:** `/sessie-start` en `/sessie-einde` zijn beschikbaar. Gebruik ze.
+
 ## Known Quirks
 
 - Git Bash: `MSYS_NO_PATHCONV=1` prefix bij `docker exec`

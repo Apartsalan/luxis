@@ -209,7 +209,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ BUG-7/8/9 gefixt** (21 feb) — edit-modus, zaaknummer op form, advocaat wederpartij
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
 **TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op M365 migratie)
-**Volgende prioriteit:** F11 (e-mail naar partij vanuit dossier)
+**✅ F11 geïmplementeerd** (21 feb) — freestanding e-mail vanuit dossier met recipient quick-select chips
+**Volgende prioriteit:** Dossier workspace verbeteringen (G3-G15 uit DOSSIER-WERKPLEK-RESEARCH.md)
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 
@@ -246,7 +247,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 | # | Bevinding | Complexiteit | Status |
 |---|-----------|-------------|--------|
-| F11 | **E-mail naar elke partij vanuit dossier** | L (eerst M365) of M (SMTP basis) | ❌ TODO |
+| F11 | **E-mail naar elke partij vanuit dossier** | L (eerst M365) of M (SMTP basis) | ✅ DONE (21 feb) |
 
 > Detail per bevinding + concurrent-analyse + zelfkritiek: zie `BEVINDINGEN-ANALYSE.md`
 

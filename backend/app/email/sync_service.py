@@ -537,9 +537,9 @@ async def sync_emails_for_account(
     # Re-match unlinked emails on case number / reference
     # This catches emails that were synced before the matching was implemented,
     # or where a case/reference was added after the email was synced.
-    if not force_case_id:
-        re_linked = await _rematch_unlinked_emails(db, account.tenant_id)
-        stats["linked"] += re_linked
+    # Always run — also when syncing from a dossier context (force_case_id).
+    re_linked = await _rematch_unlinked_emails(db, account.tenant_id)
+    stats["linked"] += re_linked
 
     logger.info(
         f"Sync klaar voor {account.email_address}: "

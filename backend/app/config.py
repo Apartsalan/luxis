@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     smtp_from: str = ""
     smtp_use_tls: bool = True
 
+    # Google OAuth (Gmail API)
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/api/email/oauth/callback"
+
     # Sentry
     sentry_dsn: str = ""
 

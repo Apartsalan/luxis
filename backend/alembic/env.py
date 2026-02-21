@@ -19,6 +19,8 @@ from app.relations.kyc_models import KycVerification  # noqa: F401
 from app.time_entries.models import TimeEntry  # noqa: F401
 from app.trust_funds.models import TrustTransaction  # noqa: F401
 from app.workflow.models import WorkflowStatus, WorkflowTransition, WorkflowTask, WorkflowRule  # noqa: F401,E501
+from app.email.oauth_models import EmailAccount  # noqa: F401
+from app.email.synced_email_models import SyncedEmail  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   User,
   Users,
@@ -27,6 +27,10 @@ import {
   Mail,
   X,
   Puzzle,
+  Link,
+  Unlink,
+  CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, ROLE_LABELS } from "@/hooks/use-auth";
@@ -46,6 +50,11 @@ import {
   useUpdateTenant,
 } from "@/hooks/use-settings";
 import { useTestEmail } from "@/hooks/use-documents";
+import {
+  useEmailOAuthStatus,
+  useEmailOAuthAuthorize,
+  useEmailOAuthDisconnect,
+} from "@/hooks/use-email-oauth";
 import {
   useWorkflowStatuses,
   useWorkflowTransitions,
@@ -1441,6 +1450,54 @@ function RulesSection({
 function EmailTab() {
   const [testAddress, setTestAddress] = useState("");
   const testEmail = useTestEmail();
+  const oauthStatus = useEmailOAuthStatus();
+  const authorize = useEmailOAuthAuthorize();
+  const disconnect = useEmailOAuthDisconnect();
+
+  // Listen for OAuth popup success message
+  const handleOAuthMessage = useCallback(
+    (event: MessageEvent) => {
+      if (event.data?.type === "LUXIS_EMAIL_OAUTH_SUCCESS") {
+        toast.success(`E-mail verbonden: ${event.data.email}`);
+        oauthStatus.refetch();
+      } else if (event.data?.type === "LUXIS_EMAIL_OAUTH_ERROR") {
+        toast.error(`Verbinding mislukt: ${event.data.error}`);
+      }
+    },
+    [oauthStatus]
+  );
+
+  useEffect(() => {
+    window.addEventListener("message", handleOAuthMessage);
+    return () => window.removeEventListener("message", handleOAuthMessage);
+  }, [handleOAuthMessage]);
+
+  const handleConnect = async () => {
+    try {
+      const result = await authorize.mutateAsync({ provider: "gmail" });
+      // Open OAuth in popup window
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      window.open(
+        result.authorize_url,
+        "luxis-email-oauth",
+        `width=${width},height=${height},left=${left},top=${top},popup=yes`
+      );
+    } catch (err: any) {
+      toast.error(err.message ?? "Kon OAuth niet starten");
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await disconnect.mutateAsync();
+      toast.success("E-mailaccount ontkoppeld");
+    } catch (err: any) {
+      toast.error(err.message ?? "Ontkoppelen mislukt");
+    }
+  };
 
   const handleTestEmail = async () => {
     const email = testAddress.trim();
@@ -1457,17 +1514,103 @@ function EmailTab() {
     }
   };
 
+  const account = oauthStatus.data;
+
   return (
     <div className="space-y-6">
+      {/* Email OAuth Connection */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-base font-semibold text-foreground mb-2">
+          E-mail integratie
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Verbind je e-mailaccount om e-mails te lezen, versturen en automatisch
+          aan dossiers te koppelen.
+        </p>
+
+        {oauthStatus.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Status ophalen...</span>
+          </div>
+        ) : account?.connected ? (
+          /* Connected state */
+          <div className="space-y-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {account.email_address}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Verbonden via{" "}
+                      {account.provider === "gmail" ? "Gmail" : "Outlook"}{" "}
+                      {account.connected_at &&
+                        `op ${new Date(account.connected_at).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDisconnect}
+                  disabled={disconnect.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground hover:text-destructive hover:border-destructive/50 transition-colors"
+                >
+                  {disconnect.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Unlink className="h-4 w-4" />
+                  )}
+                  Ontkoppelen
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Not connected state */
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-muted/30 p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Geen e-mailaccount verbonden
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Verbind Gmail of Outlook om e-mail integratie te activeren
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleConnect}
+                disabled={authorize.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {authorize.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Link className="h-4 w-4" />
+                )}
+                Verbind met Gmail
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* SMTP status info */}
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="text-base font-semibold text-foreground mb-2">
-          E-mailconfiguratie
+          SMTP-configuratie
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          E-mail wordt verstuurd via de SMTP-server die door de beheerder is
-          geconfigureerd. Neem contact op met de beheerder om de
-          SMTP-instellingen te wijzigen.
+          Naast de e-mail integratie hierboven worden systeemmeldingen verstuurd
+          via SMTP.
         </p>
         <div className="rounded-lg border border-border bg-muted/30 p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">

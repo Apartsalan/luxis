@@ -34,6 +34,15 @@ dependencies = [
     "aiosmtplib>=3.0.0",
     "jinja2>=3.1.0",
 
+    # HTTP client (for OAuth token exchange and Gmail API)
+    "httpx>=0.28.0",
+
+    # Encryption (for storing OAuth tokens at rest)
+    "cryptography>=44.0.0",
+
+    # Date parsing (for email date headers)
+    "python-dateutil>=2.9.0",
+
     # Scheduler
     "apscheduler>=3.10.0,<4.0.0",
 

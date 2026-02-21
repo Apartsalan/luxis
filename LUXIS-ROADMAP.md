@@ -283,17 +283,17 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 - Outlook instellen op laptop/telefoon
 - **Moet samen met Lisanne** — zij moet inloggen, abonnement afsluiten, DNS goedkeuren
 
-| Fase | Feature | Wat het oplevert |
-|------|---------|-----------------|
-| M0 | Mail migratie BaseNet → Microsoft 365 | Lisanne's mail draait op M365, Graph API beschikbaar |
-| M1 | OAuth + Graph API koppeling | Lisanne authoriseert Luxis om haar Outlook te lezen/schrijven |
-| M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) |
-| M3 | Correspondentie tab (volledige inbox per dossier) | Alle in- + uitgaande mails per dossier, threads, zoeken |
-| M4 | Template → Outlook draft | Klik "Herinnering" in Luxis → Outlook opent met alles pre-filled (aan, onderwerp, body, bijlage) |
-| M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) |
-| M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties |
+| Fase | Feature | Wat het oplevert | Status |
+|------|---------|-----------------|--------|
+| M0 | Mail migratie BaseNet → Microsoft 365 | Lisanne's mail draait op M365, Graph API beschikbaar | Wacht op Lisanne |
+| M1 | OAuth + abstractielaag | EmailProvider interface, GmailProvider, OAuth flow, token opslag | ✅ Gebouwd (21 feb) |
+| M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) | ✅ Gebouwd (21 feb) |
+| M3 | Correspondentie tab (unified view) | Alle in- + uitgaande mails per dossier, split-view met detail panel | ✅ Gebouwd (21 feb) |
+| M4 | Compose via provider | Send via Gmail API (verschijnt in Verzonden), fallback naar SMTP | ✅ Gebouwd (21 feb) |
+| M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) | TODO |
+| M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties | Deels (endpoint klaar) |
 
-**Bouwvolgorde:** M0 (samen met Lisanne) → M1 → M2 → M3 → M4 → M5 → M6
+**Bouwvolgorde:** M0 (samen met Lisanne) → ~~M1 → M2 → M3 → M4~~ → M5 → M6
 
 **Wat Lisanne ervaart na afronding:**
 - Template aanklikken → opent direct in Outlook met alles pre-filled

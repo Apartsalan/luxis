@@ -267,10 +267,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 **Email strategie (beslissing 21 feb 2026):**
 - **F11 (SMTP vanuit Luxis)** is een **tijdelijke brug** — werkt nu, maar emails verschijnen niet in Outlook's Verzonden map
-- **M1-M6 (Outlook integratie)** is de **eindoplossing** — Outlook wordt de email-app, Luxis het dossiersysteem
+- **M1-M6 (Outlook integratie)** is de **eindoplossing** en wordt nu **prioriteit**
+- **Test-aanpak:** Arsalan's gratis Outlook.com account als dev/test → alles bouwen → daarna Lisanne overzetten (geen impact op haar werk)
+- **Geen M365 abonnement nodig voor dev:** Gratis Outlook.com + Microsoft Graph API (Mail.Read, Mail.Send, offline_access)
 - **Overgangspad:** F11 blijft werken totdat M4 live is → dan vervangt "Open in Outlook" de Luxis compose dialog
-- **G1 (Unified Correspondentie Tab):** wordt gebouwd met abstractielaag (`source: 'smtp' | 'outlook'`) zodat het werkt met huidige SMTP-data EN later naadloos overgaat op Outlook sync
-- **Geen dubbel werk:** de correspondentie tab hoeft maar 1x gebouwd te worden
 
 **Technisch fundament:** Microsoft Graph API (OAuth 2.0 koppeling met Lisanne's Outlook/365)
 

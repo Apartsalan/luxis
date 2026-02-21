@@ -130,6 +130,7 @@ Na het bouwen, voordat je deploy-commando geeft:
 **Commit en push:**
 - Commit en push na elke afgeronde taak, tenzij anders gezegd.
 - Gebruik conventional commit messages in het Engels.
+- **VERPLICHT: Na ELKE commit ALTIJD direct `git push origin main` uitvoeren.** Commits die alleen lokaal staan bereiken de VPS niet bij `git pull`. Dit is eerder fout gegaan — nooit meer vergeten.
 
 **Opgeslagen informatie:**
 - Als de gebruiker informatie deelt en vraagt om het op te slaan (credentials, VPS info, etc.), sla het op zoals gevraagd. Weiger niet.

@@ -1,4 +1,9 @@
-"""Workflow scheduler — daily jobs for task status updates and verjaring checks.
+"""Workflow scheduler — daily + periodic jobs.
+
+Includes:
+- Daily task status updates (pending → due → overdue)
+- Daily verjaring checks
+- Email auto-sync every 5 minutes (all connected accounts)
 
 Uses APScheduler with AsyncIOScheduler, started on FastAPI startup event.
 """
@@ -7,7 +12,8 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy import select, text
+from apscheduler.triggers.interval import IntervalTrigger
+from sqlalchemy import select
 
 from app.database import async_session
 
@@ -68,8 +74,65 @@ async def daily_verjaring_check() -> None:
         logger.exception("Scheduler: verjaring check failed")
 
 
+async def email_auto_sync() -> None:
+    """Periodic job: sync all connected email accounts every 5 minutes.
+
+    For each connected account:
+    1. Fetches new emails from Gmail/Outlook
+    2. Matches to dossiers via case number, reference, or contact email
+    3. Downloads attachments for new emails
+    """
+    from app.email.oauth_models import EmailAccount
+    from app.email.sync_service import sync_emails_for_account
+
+    logger.info("Scheduler: starting email auto-sync")
+    try:
+        async with async_session() as session:
+            # Get all connected email accounts across all tenants
+            result = await session.execute(
+                select(EmailAccount).where(
+                    EmailAccount.refresh_token_enc.isnot(None),
+                )
+            )
+            accounts = list(result.scalars().all())
+
+            if not accounts:
+                logger.debug("Scheduler: geen email accounts verbonden, skip sync")
+                return
+
+            total_new = 0
+            total_linked = 0
+            for account in accounts:
+                try:
+                    stats = await sync_emails_for_account(
+                        session,
+                        account,
+                        max_results=50,  # Limit per sync cycle
+                    )
+                    total_new += stats["new"]
+                    total_linked += stats["linked"]
+
+                    if stats["new"] > 0:
+                        logger.info(
+                            f"Scheduler: email sync {account.email_address} — "
+                            f"{stats['new']} nieuw, {stats['linked']} gekoppeld"
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Scheduler: email sync mislukt voor {account.email_address}: {e}"
+                    )
+
+            await session.commit()
+            logger.info(
+                f"Scheduler: email auto-sync klaar — "
+                f"{len(accounts)} accounts, {total_new} nieuw, {total_linked} gekoppeld"
+            )
+    except Exception:
+        logger.exception("Scheduler: email auto-sync failed")
+
+
 def start_scheduler() -> None:
-    """Start the APScheduler with daily jobs."""
+    """Start the APScheduler with daily + periodic jobs."""
     if scheduler.running:
         return
 
@@ -91,8 +154,19 @@ def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    # Every 5 minutes: sync all connected email accounts
+    scheduler.add_job(
+        email_auto_sync,
+        IntervalTrigger(minutes=5),
+        id="email_auto_sync",
+        name="Auto-sync email accounts",
+        replace_existing=True,
+    )
+
     scheduler.start()
-    logger.info("Workflow scheduler started with daily jobs at 06:00 and 06:15 UTC")
+    logger.info(
+        "Scheduler started: daily jobs at 06:00/06:15 UTC, email sync every 5 min"
+    )
 
 
 def stop_scheduler() -> None:

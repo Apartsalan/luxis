@@ -4190,6 +4190,34 @@ function EmailDetailPanel({ emailId, onClose }: { emailId: string; onClose: () =
           </div>
         </div>
       </div>
+      {/* Attachments */}
+      {email.attachments && email.attachments.length > 0 && (
+        <div className="border-b border-border px-4 py-3">
+          <p className="text-xs font-medium text-muted-foreground mb-2">
+            📎 {email.attachments.length} bijlage{email.attachments.length > 1 ? "n" : ""}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {email.attachments.map((att: any) => (
+              <a
+                key={att.id}
+                href={`/api/email/attachments/${att.id}/download`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors"
+              >
+                <File className="h-3 w-3 text-muted-foreground" />
+                <span className="max-w-[150px] truncate">{att.filename}</span>
+                <span className="text-muted-foreground">
+                  ({att.file_size > 1048576
+                    ? `${(att.file_size / 1048576).toFixed(1)} MB`
+                    : `${Math.round(att.file_size / 1024)} KB`})
+                </span>
+                <Download className="h-3 w-3 text-muted-foreground" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Body */}
       <div className="p-4 overflow-auto max-h-[600px]">
         {email.body_html ? (

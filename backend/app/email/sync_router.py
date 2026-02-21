@@ -6,13 +6,17 @@ Endpoints:
 - GET  /api/email/unlinked           — Get emails not linked to any case
 - POST /api/email/link               — Manually link an email to a case
 - GET  /api/email/messages/{id}      — Get a single synced email with full body
+- GET  /api/email/messages/{id}/attachments — List attachments for an email
+- GET  /api/email/attachments/{id}/download — Download an attachment file
 """
 
 import json
 import logging
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +24,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.email.attachment_models import EmailAttachment
 from app.email.oauth_service import get_email_account
 from app.email.sync_service import (
+    EMAIL_ATTACHMENTS_BASE,
     get_case_emails,
     get_unlinked_emails,
     link_email_to_case,
@@ -55,8 +61,16 @@ class SyncedEmailSummary(BaseModel):
     direction: str
     is_read: bool
     has_attachments: bool
+    attachment_count: int = 0
     email_date: str
     case_id: str | None
+
+
+class AttachmentInfo(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    file_size: int
 
 
 class SyncedEmailDetail(BaseModel):
@@ -72,6 +86,7 @@ class SyncedEmailDetail(BaseModel):
     direction: str
     is_read: bool
     has_attachments: bool
+    attachments: list[AttachmentInfo] = []
     email_date: str
     case_id: str | None
     provider_thread_id: str | None
@@ -113,6 +128,7 @@ def _email_to_summary(email: SyncedEmail) -> SyncedEmailSummary:
         direction=email.direction,
         is_read=email.is_read,
         has_attachments=email.has_attachments,
+        attachment_count=len(email.attachments) if email.attachments else 0,
         email_date=email.email_date.isoformat(),
         case_id=str(email.case_id) if email.case_id else None,
     )
@@ -129,6 +145,16 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
     except (json.JSONDecodeError, TypeError):
         cc_emails = []
 
+    attachment_list = []
+    if email.attachments:
+        for a in email.attachments:
+            attachment_list.append(AttachmentInfo(
+                id=str(a.id),
+                filename=a.filename,
+                content_type=a.content_type,
+                file_size=a.file_size,
+            ))
+
     return SyncedEmailDetail(
         id=str(email.id),
         subject=email.subject,
@@ -142,6 +168,7 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
         direction=email.direction,
         is_read=email.is_read,
         has_attachments=email.has_attachments,
+        attachments=attachment_list,
         email_date=email.email_date.isoformat(),
         case_id=str(email.case_id) if email.case_id else None,
         provider_thread_id=email.provider_thread_id,
@@ -251,4 +278,93 @@ async def link_email(
         success=True,
         email_id=data.email_id,
         case_id=data.case_id,
+    )
+
+
+# ── Attachment schemas ──────────────────────────────────────────────────────
+
+
+class AttachmentSummary(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    file_size: int
+
+
+class AttachmentListResponse(BaseModel):
+    attachments: list[AttachmentSummary]
+
+
+# ── Attachment endpoints ────────────────────────────────────────────────────
+
+
+@router.get("/messages/{email_id}/attachments", response_model=AttachmentListResponse)
+async def list_attachments(
+    email_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all attachments for a synced email."""
+    # Verify email belongs to tenant
+    email_result = await db.execute(
+        select(SyncedEmail.id).where(
+            SyncedEmail.id == email_id,
+            SyncedEmail.tenant_id == user.tenant_id,
+        )
+    )
+    if not email_result.scalar_one_or_none():
+        raise NotFoundError("E-mail niet gevonden")
+
+    result = await db.execute(
+        select(EmailAttachment).where(
+            EmailAttachment.synced_email_id == email_id,
+            EmailAttachment.tenant_id == user.tenant_id,
+        )
+    )
+    attachments = list(result.scalars().all())
+
+    return AttachmentListResponse(
+        attachments=[
+            AttachmentSummary(
+                id=str(a.id),
+                filename=a.filename,
+                content_type=a.content_type,
+                file_size=a.file_size,
+            )
+            for a in attachments
+        ]
+    )
+
+
+@router.get("/attachments/{attachment_id}/download")
+async def download_attachment(
+    attachment_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download an email attachment file."""
+    result = await db.execute(
+        select(EmailAttachment).where(
+            EmailAttachment.id == attachment_id,
+            EmailAttachment.tenant_id == user.tenant_id,
+        )
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise NotFoundError("Bijlage niet gevonden")
+
+    file_path = (
+        EMAIL_ATTACHMENTS_BASE
+        / str(attachment.tenant_id)
+        / str(attachment.synced_email_id)
+        / attachment.stored_filename
+    )
+
+    if not file_path.exists():
+        raise NotFoundError("Bijlagebestand niet gevonden op schijf")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=attachment.filename,
+        media_type=attachment.content_type,
     )

@@ -5,6 +5,13 @@ import { api } from "@/lib/api";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export interface EmailAttachmentInfo {
+  id: string;
+  filename: string;
+  content_type: string;
+  file_size: number;
+}
+
 export interface SyncedEmailSummary {
   id: string;
   subject: string;
@@ -15,6 +22,7 @@ export interface SyncedEmailSummary {
   direction: "inbound" | "outbound";
   is_read: boolean;
   has_attachments: boolean;
+  attachment_count: number;
   email_date: string;
   case_id: string | null;
 }
@@ -23,6 +31,7 @@ export interface SyncedEmailDetail extends SyncedEmailSummary {
   cc_emails: string[];
   body_html: string;
   body_text: string;
+  attachments: EmailAttachmentInfo[];
   provider_thread_id: string | null;
 }
 

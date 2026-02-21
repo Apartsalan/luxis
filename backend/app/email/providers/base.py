@@ -9,6 +9,17 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class AttachmentInfo:
+    """Metadata for an email attachment."""
+
+    attachment_id: str  # Provider-specific ID (Gmail: attachmentId)
+    filename: str
+    content_type: str
+    size: int = 0
+    part_id: str = ""  # Gmail part ID (e.g. "0", "1")
+
+
+@dataclass
 class EmailMessage:
     """A single email message (incoming or outgoing)."""
 
@@ -26,6 +37,7 @@ class EmailMessage:
     is_read: bool = True
     labels: list[str] = field(default_factory=list)
     has_attachments: bool = False
+    attachments: list[AttachmentInfo] = field(default_factory=list)
 
 
 @dataclass
@@ -175,5 +187,24 @@ class EmailProvider(ABC):
 
         Returns:
             The provider draft ID.
+        """
+        ...
+
+    @abstractmethod
+    async def get_attachment(
+        self,
+        access_token: str,
+        message_id: str,
+        attachment_id: str,
+    ) -> bytes:
+        """Download an attachment's raw bytes from the provider.
+
+        Args:
+            access_token: Valid OAuth access token.
+            message_id: The provider message ID containing the attachment.
+            attachment_id: The provider-specific attachment ID.
+
+        Returns:
+            Raw bytes of the attachment file.
         """
         ...

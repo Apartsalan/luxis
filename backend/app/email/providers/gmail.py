@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 import httpx
 
 from app.config import settings
-from app.email.providers.base import EmailMessage, EmailProvider, OAuthTokens
+from app.email.providers.base import AttachmentInfo, EmailMessage, EmailProvider, OAuthTokens
 
 logger = logging.getLogger(__name__)
 
@@ -56,17 +56,29 @@ def _parse_gmail_message(data: dict) -> EmailMessage:
 
     _extract_body(payload)
 
-    # Check for attachments
+    # Check for attachments and collect attachment info
     has_attachments = False
+    attachments: list[AttachmentInfo] = []
 
-    def _check_attachments(part: dict) -> None:
+    def _collect_attachments(part: dict) -> None:
         nonlocal has_attachments
-        if part.get("filename"):
+        filename = part.get("filename", "")
+        if filename:
             has_attachments = True
+            body = part.get("body", {})
+            attachment_id = body.get("attachmentId", "")
+            if attachment_id:
+                attachments.append(AttachmentInfo(
+                    attachment_id=attachment_id,
+                    filename=filename,
+                    content_type=part.get("mimeType", "application/octet-stream"),
+                    size=body.get("size", 0),
+                    part_id=part.get("partId", ""),
+                ))
         for sub in part.get("parts", []):
-            _check_attachments(sub)
+            _collect_attachments(sub)
 
-    _check_attachments(payload)
+    _collect_attachments(payload)
 
     # Parse from header: "Name <email>" → name, email
     from_header = headers.get("from", "")
@@ -99,6 +111,7 @@ def _parse_gmail_message(data: dict) -> EmailMessage:
         is_read="UNREAD" not in label_ids,
         labels=label_ids,
         has_attachments=has_attachments,
+        attachments=attachments,
     )
 
 
@@ -280,6 +293,22 @@ class GmailProvider(EmailProvider):
             )
             resp.raise_for_status()
             return resp.json()["id"]
+
+    async def get_attachment(
+        self,
+        access_token: str,
+        message_id: str,
+        attachment_id: str,
+    ) -> bytes:
+        """Download attachment bytes from Gmail API."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{GMAIL_API_BASE}/users/me/messages/{message_id}/attachments/{attachment_id}",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            resp.raise_for_status()
+            data = resp.json().get("data", "")
+            return base64.urlsafe_b64decode(data)
 
     async def create_draft(
         self,

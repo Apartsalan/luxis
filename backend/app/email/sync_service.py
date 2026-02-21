@@ -1,30 +1,95 @@
 """Email sync service — fetches emails from provider, matches to dossiers.
 
-Matching logic:
-  1. Extract all email addresses from the message (from, to, cc)
-  2. Look up each address in the contacts table
-  3. If a contact is found, find cases where that contact is client, opposing party, or case party
-  4. If exactly one case matches, auto-link the email
+Matching logic (in priority order):
+  1. Case number match: scan subject + body for patterns like "2026-00012"
+  2. Client reference match: scan subject + body for known case references
+  3. Contact email match: look up email addresses → Contact → Case
+  4. If exactly one case matches (from any method), auto-link
   5. If multiple cases match, leave unlinked (user assigns via M6 "ongesorteerd" queue)
 """
 
 import json
 import logging
+import re
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 
 from dateutil import parser as dateparser
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseParty
+from app.email.attachment_models import EmailAttachment
 from app.email.oauth_models import EmailAccount
 from app.email.oauth_service import get_provider, get_valid_access_token
 from app.email.providers.base import EmailMessage
 from app.email.synced_email_models import SyncedEmail
 from app.relations.models import Contact
 
+# Base directory for email attachment storage
+EMAIL_ATTACHMENTS_BASE = Path("/app/uploads/email_attachments")
+
 logger = logging.getLogger(__name__)
+
+# Regex: matches case numbers like "2024-00001", "2026-12345"
+CASE_NUMBER_RE = re.compile(r"\b(20\d{2}-\d{4,6})\b")
+
+
+async def _find_case_by_case_number(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    text: str,
+) -> uuid.UUID | None:
+    """Scan text for case numbers (e.g. 2026-00012) and match to a dossier.
+
+    Also scans for known client references (Case.reference field).
+    Returns case_id if exactly one active case matches, otherwise None.
+    """
+    if not text:
+        return None
+
+    case_ids = set()
+
+    # --- Method 1: Case number regex ---
+    matches = CASE_NUMBER_RE.findall(text)
+    if matches:
+        # Look up each potential case number
+        result = await db.execute(
+            select(Case.id).where(
+                Case.tenant_id == tenant_id,
+                Case.is_active == True,  # noqa: E712
+                Case.case_number.in_(matches),
+            )
+        )
+        for row in result.all():
+            case_ids.add(row[0])
+
+    # --- Method 2: Client reference match ---
+    # Get all active cases with a reference set, check if it appears in the text
+    ref_result = await db.execute(
+        select(Case.id, Case.reference).where(
+            Case.tenant_id == tenant_id,
+            Case.is_active == True,  # noqa: E712
+            Case.reference.isnot(None),
+            Case.reference != "",
+        )
+    )
+    text_lower = text.lower()
+    for row in ref_result.all():
+        ref = row[1].strip()
+        if len(ref) >= 3 and ref.lower() in text_lower:
+            case_ids.add(row[0])
+
+    if len(case_ids) == 1:
+        return case_ids.pop()
+
+    if len(case_ids) > 1:
+        logger.info(
+            f"Meerdere dossiers ({len(case_ids)}) gematcht op nummer/referentie — niet auto-gekoppeld"
+        )
+
+    return None
 
 
 async def _find_case_for_email(
@@ -165,6 +230,64 @@ async def _get_case_contact_emails(
     return emails
 
 
+async def _download_attachments(
+    db: AsyncSession,
+    provider,
+    access_token: str,
+    tenant_id: uuid.UUID,
+    synced_email_id: uuid.UUID,
+    msg: EmailMessage,
+) -> int:
+    """Download all attachments for an email and store them on disk + DB.
+
+    Returns the number of attachments successfully downloaded.
+    """
+    if not msg.attachments:
+        return 0
+
+    # Create storage directory
+    storage_dir = EMAIL_ATTACHMENTS_BASE / str(tenant_id) / str(synced_email_id)
+    storage_dir.mkdir(parents=True, exist_ok=True)
+
+    downloaded = 0
+    for att in msg.attachments:
+        try:
+            # Download from provider
+            file_bytes = await provider.get_attachment(
+                access_token, msg.provider_message_id, att.attachment_id
+            )
+
+            # Generate stored filename
+            import os
+            ext = os.path.splitext(att.filename)[1] if att.filename else ""
+            stored_filename = f"{uuid.uuid4()}{ext}"
+            file_path = storage_dir / stored_filename
+
+            # Write to disk
+            file_path.write_bytes(file_bytes)
+
+            # Create DB record
+            attachment = EmailAttachment(
+                tenant_id=tenant_id,
+                synced_email_id=synced_email_id,
+                provider_attachment_id=att.attachment_id,
+                filename=att.filename,
+                stored_filename=stored_filename,
+                content_type=att.content_type,
+                file_size=len(file_bytes),
+                downloaded_at=datetime.now(UTC),
+            )
+            db.add(attachment)
+            downloaded += 1
+
+        except Exception as e:
+            logger.error(
+                f"Bijlage '{att.filename}' downloaden mislukt: {e}"
+            )
+
+    return downloaded
+
+
 async def sync_emails_for_account(
     db: AsyncSession,
     account: EmailAccount,
@@ -216,6 +339,7 @@ async def sync_emails_for_account(
     )
 
     stats = {"fetched": len(messages), "new": 0, "linked": 0, "skipped": 0}
+    new_emails_with_attachments: list[tuple[EmailMessage, uuid.UUID]] = []
 
     for msg in messages:
         # Check if already synced (dedup by provider_message_id)
@@ -260,11 +384,18 @@ async def sync_emails_for_account(
         # Remove the account's own email from matching
         all_addresses = [a for a in all_addresses if a != account.email_address.lower()]
 
-        # Try to match to a case — force_case_id takes precedence
+        # Try to match to a case — priority: force_case_id > case number > email address
         if force_case_id:
             case_id = force_case_id
         else:
-            case_id = await _find_case_for_email(db, account.tenant_id, all_addresses)
+            # First try: match case number or client reference in subject + body
+            searchable_text = f"{msg.subject} {msg.body_text} {msg.snippet}"
+            case_id = await _find_case_by_case_number(
+                db, account.tenant_id, searchable_text
+            )
+            # Second try: match email addresses to contacts → cases
+            if not case_id:
+                case_id = await _find_case_for_email(db, account.tenant_id, all_addresses)
 
         direction = _determine_direction(msg, account.email_address)
         email_date = _parse_email_date(msg.date)
@@ -290,18 +421,36 @@ async def sync_emails_for_account(
             synced_at=datetime.now(UTC),
         )
         db.add(synced)
+        await db.flush()  # Flush to get synced.id for attachments
         stats["new"] += 1
         if case_id:
             stats["linked"] += 1
+        if msg.has_attachments and msg.attachments:
+            new_emails_with_attachments.append((msg, synced.id))
 
     # Update last sync timestamp
     account.last_sync_at = datetime.now(UTC)
     await db.flush()
 
+    # Download attachments for new emails
+    attachments_downloaded = 0
+    for msg, synced_id in new_emails_with_attachments:
+        try:
+            downloaded = await _download_attachments(
+                db, provider, access_token, account.tenant_id, synced_id, msg
+            )
+            attachments_downloaded += downloaded
+        except Exception as e:
+            logger.error(f"Bijlagen downloaden mislukt voor {msg.provider_message_id}: {e}")
+
+    if attachments_downloaded:
+        await db.flush()
+
     logger.info(
         f"Sync klaar voor {account.email_address}: "
         f"{stats['fetched']} opgehaald, {stats['new']} nieuw, "
-        f"{stats['linked']} gekoppeld, {stats['skipped']} overgeslagen"
+        f"{stats['linked']} gekoppeld, {stats['skipped']} overgeslagen, "
+        f"{attachments_downloaded} bijlagen"
     )
     return stats
 

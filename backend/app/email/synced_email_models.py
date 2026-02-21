@@ -65,3 +65,6 @@ class SyncedEmail(TenantBase):
         "EmailAccount", lazy="selectin"
     )
     case: Mapped["Case | None"] = relationship("Case", lazy="selectin")  # noqa: F821
+    attachments: Mapped[list["EmailAttachment"]] = relationship(  # noqa: F821
+        "EmailAttachment", back_populates="synced_email", lazy="selectin"
+    )

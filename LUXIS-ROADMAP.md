@@ -288,7 +288,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | M0 | Mail migratie BaseNet → Microsoft 365 | Lisanne's mail draait op M365, Graph API beschikbaar | Wacht op Lisanne |
 | M1 | OAuth + abstractielaag | EmailProvider interface, GmailProvider, OAuth flow, token opslag | ✅ Gebouwd (21 feb) |
 | M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) | ✅ Gebouwd (21 feb) |
-| M3 | Correspondentie tab (unified view) | Alle in- + uitgaande mails per dossier, split-view met detail panel | ✅ Gebouwd (21 feb) |
+| M2+ | Dossiernummer-matching | Emails met "2026-00003" in onderwerp/body → automatisch aan juiste dossier | ✅ Gebouwd (21 feb) |
+| M2+ | Klantreferentie-matching | Emails met bekende Case.reference → automatisch aan dossier | ✅ Gebouwd (21 feb) |
+| M2+ | Bijlagen sync | Attachments downloaden van Gmail, opslaan, tonen in detail panel + download | ✅ Gebouwd (21 feb) |
+| M2+ | Auto-sync (5 min) | APScheduler synct alle verbonden accounts elke 5 minuten automatisch | ✅ Gebouwd (21 feb) |
+| M2+ | Re-match ongelinkte emails | Bestaande ongelinkte emails worden bij elke sync opnieuw gematcht | ✅ Gebouwd (21 feb) |
+| M3 | Correspondentie tab (unified view) | Alle in- + uitgaande mails per dossier, split-view met detail panel + bijlagen | ✅ Gebouwd (21 feb) |
 | M4 | Compose via provider | Send via Gmail API (verschijnt in Verzonden), fallback naar SMTP | ✅ Gebouwd (21 feb) |
 | M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) | TODO |
 | M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties | Deels (endpoint klaar) |
@@ -297,8 +302,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 
 **Wat Lisanne ervaart na afronding:**
 - Template aanklikken → opent direct in Outlook met alles pre-filled
-- Inkomende mails worden automatisch aan het juiste dossier gekoppeld
-- Op elk dossier: volledige correspondentie (in + uit) zichtbaar
+- Inkomende mails worden automatisch aan het juiste dossier gekoppeld (op dossiernummer, referentie, of contactpersoon)
+- Bijlagen worden automatisch meegesynced en zijn downloadbaar vanuit Luxis
+- Op elk dossier: volledige correspondentie (in + uit) met bijlagen zichtbaar
+- Email sync draait automatisch elke 5 minuten — geen handmatige actie nodig
 - Tijdschrijven op email-activiteit gaat automatisch
 - Ze hoeft Outlook niet te verlaten, maar alles staat ook in Luxis
 

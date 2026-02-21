@@ -1,12 +1,69 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 feb 2026
-**Laatste feature/fix:** M1-M4 Email integratie via Gmail API gebouwd
+**Laatst bijgewerkt:** 21 feb 2026 (sessie 2 — email sync verbeteringen)
+**Laatste feature/fix:** Dossiernummer-matching, bijlagen sync, auto-sync, re-match fix
 
-## Wat er gedaan is (deze sessie)
+## Wat er gedaan is (sessie 2 — 21 feb, namiddag)
+
+### Fix: Google OAuth env vars niet doorgegeven aan Docker
+- `docker-compose.prod.yml` miste `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` in de backend environment block
+- Ook `SMTP_*` variabelen ontbraken in de prod override
+- **Commit:** `57326c8`
+
+### Fix: Dossier-context sync ("Sync inbox" vanuit dossier)
+- Probleem: "Sync inbox" haalde de hele inbox op, matching was te streng, emails bleven ongesorteerd
+- Fix: Als je vanuit een dossier synct, worden automatisch de emailadressen van alle contacten (client, wederpartij, case parties) opgezocht
+- Gmail query wordt gebouwd: `from:contact@email.com OR to:contact@email.com`
+- Alle gevonden emails worden automatisch aan dat dossier gelinkt
+- Eerder gesynced maar ongelinkte emails worden ook alsnog gekoppeld
+- Frontend stuurt nu `caseId` mee bij sync vanuit correspondentie tab
+- **Commit:** `a2e66d6`
+
+### Feature: Dossiernummer + klantreferentie matching
+- Elke email wordt gescand op dossiernummers (regex: `\b(20\d{2}-\d{4,6})\b`)
+- Matcht "2026-00003" in onderwerp/body automatisch aan dossier 2026-00003
+- Scant ook op bekende klantreferenties (Case.reference veld, min. 3 tekens)
+- **Prioriteit matching:** dossiernummer > klantreferentie > email-contact matching
+
+### Feature: Bijlagen (attachments) downloaden en tonen
+- `EmailAttachment` model (tenant_id, synced_email_id, filename, stored_filename, content_type, file_size)
+- Alembic migration 026 (email_attachments tabel)
+- Gmail provider: `get_attachment()` methode — download attachment bytes via Gmail API
+- `AttachmentInfo` dataclass op `EmailMessage` — parsed uit Gmail payload parts
+- Opslag: `/app/uploads/email_attachments/{tenant_id}/{synced_email_id}/{uuid}{ext}`
+- API endpoints:
+  - `GET /api/email/messages/{id}/attachments` — lijst bijlagen per email
+  - `GET /api/email/attachments/{id}/download` — download bijlage (FileResponse)
+- Frontend: bijlagen zichtbaar in email detail panel met bestandsnaam, grootte en download-knop
+- `SyncedEmailDetail.attachments[]` en `SyncedEmailSummary.attachment_count` toegevoegd
+
+### Feature: Auto-sync elke 5 minuten
+- APScheduler `IntervalTrigger(minutes=5)` toegevoegd aan workflow scheduler
+- `email_auto_sync()` job: synct alle verbonden email accounts automatisch
+- Per account: max 50 emails per cycle, matching + bijlagen download
+- Logs naar stdout: "Scheduler: email auto-sync klaar — X accounts, Y nieuw, Z gekoppeld"
+
+### Fix: Re-match ongelinkte emails bij elke sync
+- Probleem: emails gesynced voor de dossiernummer-matching feature werden nooit opnieuw gescand
+- Fix 1: Bij skip van bestaande ongelinkte email → alsnog case number matching draaien
+- Fix 2: `_rematch_unlinked_emails()` na elke sync — scant ALLE ongelinkte emails opnieuw
+- Matching: dossiernummer → klantreferentie → email-contact → case
+
+### Commits sessie 2
+
+| Hash | Beschrijving |
+|------|-------------|
+| `57326c8` | fix(deploy): add Google OAuth + SMTP env vars to prod compose |
+| `a2e66d6` | fix(email): smart dossier-context sync met auto-linking |
+| `fa1a979` | feat(email): dossiernummer-matching, bijlagen sync, auto-sync elke 5 min |
+| `2684272` | fix(email): re-match ongelinkte emails op dossiernummer bij elke sync |
+
+---
+
+## Wat er gedaan is (sessie 1 — 21 feb, ochtend)
 
 ### M1: OAuth + EmailProvider abstractielaag
-- `EmailProvider` abstract class met volledige interface (authorize, exchange, refresh, list, get, send, draft)
+- `EmailProvider` abstract class met volledige interface (authorize, exchange, refresh, list, get, send, draft, get_attachment)
 - `GmailProvider` implementatie (Gmail REST API v1, alle methoden)
 - `EmailAccount` model met encrypted token opslag (Fernet via SECRET_KEY)
 - OAuth flow: authorize URL → Google consent → callback → token opslag
@@ -30,7 +87,7 @@
 - Filter tabs: Alles / Ontvangen / Verzonden
 - Split-view: email lijst links, detail panel rechts
 - Direction icons (blauw = ontvangen, groen = verzonden)
-- Email detail panel met Van/Aan/CC/Datum headers + HTML body rendering
+- Email detail panel met Van/Aan/CC/Datum headers + HTML body rendering + bijlagen
 - Sync inbox knop direct op de tab
 
 ### M4: Compose via Gmail
@@ -40,59 +97,50 @@
 - Verzonden emails worden direct opgeslagen als SyncedEmail (verschijnen meteen in correspondentie tab)
 - Activity logging op het dossier
 
-## Wat de volgende stap is
+---
 
-### Testen (handmatig)
-1. `docker compose up` lokaal
-2. Alembic migraties draaien (024 + 025)
-3. Ga naar Instellingen → E-mail → "Verbind met Gmail"
-4. Google OAuth consent doorlopen
-5. Open een dossier → Correspondentie tab → "Sync inbox"
-6. Stuur een test email vanuit het dossier
-
-### Later bouwen
-- **M5:** AutoTime op emails (automatische tijdregistratie bij mail-activiteit)
-- **M6:** "Ongesorteerd" wachtrij UI (endpoint is al klaar: GET /api/email/unlinked)
-- **OutlookProvider** toevoegen wanneer Lisanne naar M365 migreert
-
-## Bestanden die zijn aangemaakt/aangepast (deze sessie)
+## Alle bestanden aangemaakt/aangepast (beide sessies)
 
 ### Nieuw aangemaakt (backend)
 - `backend/app/email/providers/__init__.py` — provider exports
-- `backend/app/email/providers/base.py` — EmailProvider abstract class
+- `backend/app/email/providers/base.py` — EmailProvider abstract class + AttachmentInfo
 - `backend/app/email/providers/gmail.py` — GmailProvider (Gmail REST API)
 - `backend/app/email/oauth_models.py` — EmailAccount model
 - `backend/app/email/oauth_service.py` — OAuth business logic (state, tokens, refresh)
 - `backend/app/email/oauth_router.py` — OAuth endpoints (/authorize, /callback, /status, /disconnect)
 - `backend/app/email/token_encryption.py` — Fernet encryption voor tokens
-- `backend/app/email/synced_email_models.py` — SyncedEmail model
-- `backend/app/email/sync_service.py` — Sync + matching business logic
-- `backend/app/email/sync_router.py` — Sync + inbox endpoints
+- `backend/app/email/synced_email_models.py` — SyncedEmail model + attachments relationship
+- `backend/app/email/sync_service.py` — Sync + matching + re-match + bijlagen download
+- `backend/app/email/sync_router.py` — Sync + inbox + attachment endpoints
 - `backend/app/email/compose_router.py` — Send/draft via provider
+- `backend/app/email/attachment_models.py` — EmailAttachment model
 - `backend/alembic/versions/024_email_accounts.py` — Migration
 - `backend/alembic/versions/025_synced_emails.py` — Migration
+- `backend/alembic/versions/026_email_attachments.py` — Migration
 
 ### Nieuw aangemaakt (frontend)
 - `frontend/src/hooks/use-email-oauth.ts` — OAuth status/connect/disconnect hooks
-- `frontend/src/hooks/use-email-sync.ts` — Sync/inbox/compose hooks
+- `frontend/src/hooks/use-email-sync.ts` — Sync/inbox/compose hooks + attachment types
 
 ### Aangepast
 - `backend/app/config.py` — Google OAuth settings toegevoegd
 - `backend/app/main.py` — 3 nieuwe routers geregistreerd
 - `backend/pyproject.toml` — httpx, cryptography, python-dateutil dependencies
-- `backend/alembic/env.py` — EmailAccount + SyncedEmail model imports
+- `backend/alembic/env.py` — EmailAccount + SyncedEmail + EmailAttachment model imports
+- `backend/app/workflow/scheduler.py` — email_auto_sync() elke 5 min
+- `docker-compose.prod.yml` — Google OAuth + SMTP env vars
 - `frontend/src/app/(dashboard)/instellingen/page.tsx` — EmailTab herschreven met OAuth UI
-- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — CorrespondentieTab unified view + provider compose
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — CorrespondentieTab unified view + bijlagen + provider compose
 - `.env` — Google OAuth credentials ingevuld
 - `.env.example` — Google OAuth velden toegevoegd
-- `LUXIS-ROADMAP.md` — M1-M4 status bijgewerkt
-- `SESSION-NOTES.md` — deze update
+
+---
 
 ## Architectuur
 
 ```
 EmailProvider (abstract interface)
-  ├── GmailProvider    ✅ Gebouwd (Arsalan's test account)
+  ├── GmailProvider    ✅ Gebouwd + bijlagen + auto-sync
   └── OutlookProvider  TODO (Lisanne's M365, zelfde interface)
 
 OAuth Flow:
@@ -100,11 +148,27 @@ OAuth Flow:
   → Google redirects to /callback → exchange code → encrypt + store tokens
   → postMessage naar opener → frontend toont "Verbonden"
 
-Email Sync:
-  POST /sync → GmailProvider.list_messages() → voor elke email:
-    1. Dedup check (provider_message_id)
-    2. Email adressen → Contact lookup → Case match
-    3. Opslaan als SyncedEmail (met case_id als 1 match)
+Email Sync Matching (prioriteit):
+  1. Dossiernummer regex: "2026-00003" in subject/body → Case.case_number match
+  2. Klantreferentie: Case.reference in subject/body (min 3 chars)
+  3. Contact email: from/to/cc → Contact.email → Case (client/wederpartij/party)
+  4. Re-match: elke sync scant ook bestaande ongelinkte emails opnieuw
+
+Dossier-context sync:
+  "Sync inbox" vanuit dossier → haalt contactemails op → bouwt Gmail query
+  → filtert op from/to van contacten → linkt alles aan dat dossier
+
+Bijlagen:
+  Gmail API → get_attachment(message_id, attachment_id) → bytes
+  → /app/uploads/email_attachments/{tenant}/{email_id}/{uuid}.ext
+  → EmailAttachment record in DB
+  → Frontend toont in detail panel met download link
+
+Auto-sync:
+  APScheduler IntervalTrigger(minutes=5)
+  → email_auto_sync() → alle connected EmailAccounts
+  → sync_emails_for_account(max_results=50) per account
+  → matching + bijlagen + re-match ongelinkte emails
 
 Compose via Provider:
   Frontend stuurt naar /api/email/compose/cases/{id}
@@ -113,23 +177,22 @@ Compose via Provider:
 ```
 
 ## Openstaande issues
-- Migraties 024 + 025 moeten nog gedraaid worden (lokaal + productie)
-- pip install nodig voor httpx, cryptography, python-dateutil
+- Migration 026 moet gedraaid worden op VPS
+- Dossier detail page is nu 55K+ regels — refactoring wenselijk
 - Google OAuth test: arsalanseidony@gmail.nl moet als test user staan in Google Cloud Console
-- Dossier detail page is nu 50K+ regels — refactoring wenselijk
+- Auto-sync zal bij grote inboxen de eerste keer langzaam zijn (max 50 per cycle)
 
-## Beslissingen genomen
-- OAuth tokens encrypted at rest (Fernet via SECRET_KEY)
-- Popup OAuth flow (niet redirect) zodat gebruiker op settings pagina blijft
-- Auto-matching: alleen als precies 1 case matcht, anders "ongesorteerd"
-- SMTP fallback: als geen provider verbonden, bestaande SMTP flow blijft werken
-- Sent emails via provider worden direct opgeslagen als SyncedEmail (geen re-sync nodig)
+## Wat de volgende stap is
+
+### Later bouwen
+- **M5:** AutoTime op emails (automatische tijdregistratie bij mail-activiteit)
+- **M6:** "Ongesorteerd" wachtrij UI (endpoint is al klaar: GET /api/email/unlinked)
+- **OutlookProvider** toevoegen wanneer Lisanne naar M365 migreert
 
 ## Deploy commando (copy-paste ready)
 ```bash
 cd /opt/luxis && git pull && \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production build --no-cache frontend backend && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d frontend backend
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d frontend backend && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production exec backend alembic upgrade head
 ```
-
-Vergeet niet: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` toevoegen aan `.env.production` op de VPS.

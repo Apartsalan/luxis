@@ -26,7 +26,7 @@
 |------|--------------|-------------|
 | Backend (FastAPI) | ~80% | 110+ endpoints, 14 routers, solide CRUD en business logic, correcte financial calculations. `/api/search` gebouwd. Billing profile (F6), billing_contact_id (F7), extended filters (F9) toegevoegd. |
 | Frontend (Next.js) | ~60% | Alle Fase A-E + T1-T3 + F1-F10 features gebouwd. Status-filtered templates, workflow-suggesties, inline contact creation, telefoonnotitie, facturatieprofiel UI. |
-| Infra/DevOps | ~70% | Docker Compose, VPS deployment werkend. **MAAR:** VPS login broken — CORS + NEXT_PUBLIC_API_URL niet correct ingesteld. Draait op dev compose i.p.v. prod. |
+| Infra/DevOps | ~80% | Docker Compose + Caddy reverse proxy op Hetzner VPS. Productie draait op `docker-compose.prod.yml` met `--env-file .env.production`. SSL via Caddy auto-TLS. |
 
 **Rode draad:** De backend is vaak verder dan de frontend. ~40% van de verbeteringen vereist geen backend-werk.
 
@@ -264,6 +264,13 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 ## Volgende grote module: Microsoft 365 Email Integratie
 
 **Doel:** "Best of breed" email — het beste van BaseNet, Kleos, Hammock, Smokeball en Clio combineren. Lisanne werkt in Outlook, Luxis regelt de rest automatisch op de achtergrond.
+
+**Email strategie (beslissing 21 feb 2026):**
+- **F11 (SMTP vanuit Luxis)** is een **tijdelijke brug** — werkt nu, maar emails verschijnen niet in Outlook's Verzonden map
+- **M1-M6 (Outlook integratie)** is de **eindoplossing** — Outlook wordt de email-app, Luxis het dossiersysteem
+- **Overgangspad:** F11 blijft werken totdat M4 live is → dan vervangt "Open in Outlook" de Luxis compose dialog
+- **G1 (Unified Correspondentie Tab):** wordt gebouwd met abstractielaag (`source: 'smtp' | 'outlook'`) zodat het werkt met huidige SMTP-data EN later naadloos overgaat op Outlook sync
+- **Geen dubbel werk:** de correspondentie tab hoeft maar 1x gebouwd te worden
 
 **Technisch fundament:** Microsoft Graph API (OAuth 2.0 koppeling met Lisanne's Outlook/365)
 

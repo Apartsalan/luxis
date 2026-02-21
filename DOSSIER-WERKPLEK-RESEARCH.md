@@ -405,10 +405,12 @@ Geen enkele juridische software doet dit goed. Luxis kan hier differentiëren:
 
 ### Fase 1: Correspondentie & E-mail (P0)
 
+**Email strategie (beslissing 21 feb 2026):** F11 (SMTP) is tijdelijke brug → M1-M6 (Outlook) is eindoplossing. G1 wordt gebouwd met abstractielaag (`source: 'smtp' | 'outlook'`) zodat het werkt met huidige SMTP-data EN later naadloos overgaat op Outlook sync. Zie LUXIS-ROADMAP.md voor details.
+
 | # | Wat | Complexiteit | Waarom eerst |
 |---|-----|-------------|-------------|
-| G2 | E-mail naar elke partij vanuit dossier (F11) | M | = table stakes. Alle concurrenten hebben dit. Grootste gap |
-| G1 | Correspondentie tab (unified view) | M | Emails + notities + telefoonnotities in één timeline. Maakt dossier echt een command center |
+| G2 | E-mail naar elke partij vanuit dossier (F11) | M | ✅ DONE (21 feb) — SMTP compose dialog met recipient picker |
+| G1 | Correspondentie tab (unified view) | M | Emails + notities + telefoonnotities in één timeline. Maakt dossier echt een command center. **Bouw met abstractielaag voor SMTP→Outlook transitie.** |
 
 ### Fase 2: Dossier-werkplek polish (P1)
 

@@ -1,22 +1,50 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 feb 2026 (sessie 3 — dossier edit bugfix + email matching uitgebreid)
-**Laatste feature/fix:** Email matching op zaaknummer rechtbank + klantreferentie
+**Laatst bijgewerkt:** 21 feb 2026 (sessie 3 — bugfixes + email matching verbeterd)
+**Laatste feature/fix:** Alle email matching + dossier edit fixes bevestigd werkend
 
 ## Wat er gedaan is (sessie 3 — 21 feb, avond)
 
-### Fix: Dossier edit — velden wissen werkte niet
-- **Probleem:** Als je een veld (Beschrijving, Referentie, Zaaknummer rechtbank) leegmaakte en opsloeg, bleef de oude waarde staan. Nieuwe tekst toevoegen werkte wel.
-- **Oorzaak:** In `handleSaveDetails` werden lege strings via `|| undefined` omgezet naar `undefined`. `JSON.stringify()` verwijdert `undefined` waarden → backend ontvangt het veld niet → `exclude_unset=True` slaat het over → oude waarde blijft staan.
-- **Fix:** `|| undefined` vervangen door `.trim() || null`. Lege strings worden nu als `null` meegestuurd → Pydantic ziet het als "set" → `exclude_unset=True` neemt het mee → database waarde wordt `NULL`.
-- **Bestanden:** `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` (handleSaveDetails), `frontend/src/hooks/use-cases.ts` (type fix)
+### Fix: Dossier edit — velden wissen werkte niet ✅ BEVESTIGD WERKEND
+- **Probleem:** Als je een veld (Beschrijving, Referentie, Zaaknummer rechtbank) leegmaakte en opsloeg, bleef de oude waarde staan.
+- **Oorzaak:** `handleSaveDetails` gebruikte `|| undefined` → `JSON.stringify` dropte het → backend sloeg het over.
+- **Fix:** `|| undefined` → `.trim() || null`. Lege strings worden als `null` meegestuurd.
+- **Bestanden:** `frontend/src/app/(dashboard)/zaken/[id]/page.tsx`, `frontend/src/hooks/use-cases.ts`
+- **Commit:** `58c5cc0`
 
-### Fix: Email matching op zaaknummer rechtbank (court_case_number)
-- **Probleem:** Emails met een zaaknummer rechtbank of klantreferentie in de tekst werden niet herkend en niet aan het juiste dossier gekoppeld.
-- **Oorzaak:** `_find_case_by_case_number()` scande alleen op `Case.case_number` (regex) en `Case.reference`. Het veld `Case.court_case_number` werd niet meegenomen.
-- **Fix:** Method 3 toegevoegd: alle actieve cases met een `court_case_number` worden opgehaald en vergeleken met de email tekst (case-insensitive, min. 3 tekens).
-- **Matching prioriteit nu:** dossiernummer regex → klantreferentie → zaaknummer rechtbank → email-contact
-- **Bestand:** `backend/app/email/sync_service.py` (`_find_case_by_case_number`)
+### Fix: Email matching op zaaknummer rechtbank (court_case_number) ✅
+- **Probleem:** `_find_case_by_case_number()` scande niet op `Case.court_case_number`.
+- **Fix:** Method 3 toegevoegd — zoekt `court_case_number` in email tekst.
+- **Bestand:** `backend/app/email/sync_service.py`
+- **Commit:** `9c94585`
+
+### Fix: body_html doorzoeken bij email matching ✅
+- **Probleem:** Veel emails (Gmail, Outlook) sturen alleen HTML, geen text/plain. De matching zocht alleen in `body_text` → HTML-only emails werden gemist.
+- **Fix:** `_build_searchable_text()` functie: stript HTML tags, doorzoekt body_html + body_text + subject + snippet.
+- **Bestand:** `backend/app/email/sync_service.py`
+- **Commit:** `896d48f`
+
+### Fix: Rematch altijd uitvoeren, ook bij dossier-context sync ✅
+- **Probleem:** `_rematch_unlinked_emails()` werd overgeslagen als `force_case_id` was gezet (sync vanuit dossier). Oude ongelinkte emails werden nooit herscand.
+- **Fix:** `if not force_case_id:` guard verwijderd — rematch draait nu altijd.
+- **Bestand:** `backend/app/email/sync_service.py`
+- **Commit:** `d995dea`
+
+### Regel toegevoegd aan CLAUDE.md ✅
+- **VERPLICHT: Na ELKE commit ALTIJD direct `git push origin main` uitvoeren.** Eerder waren commits lokaal blijven staan waardoor VPS stale code pulde.
+- **Commit:** `c4953cd`
+
+### Commits sessie 3
+
+| Hash | Beschrijving |
+|------|-------------|
+| `58c5cc0` | fix(cases): clearing dossier edit fields now persists on save |
+| `9c94585` | fix(email): add court_case_number matching to email sync |
+| `c4953cd` | docs: enforce git push after every commit in CLAUDE.md |
+| `896d48f` | fix(email): search body_html for reference matching |
+| `0ff70cb` | debug(email): add match-debug logging (tijdelijk) |
+| `d995dea` | fix(email): always run rematch on unlinked emails |
+| `e92ab50` | chore(email): remove debug logging from email matching |
 
 ---
 
@@ -116,43 +144,6 @@
 
 ---
 
-## Alle bestanden aangemaakt/aangepast (beide sessies)
-
-### Nieuw aangemaakt (backend)
-- `backend/app/email/providers/__init__.py` — provider exports
-- `backend/app/email/providers/base.py` — EmailProvider abstract class + AttachmentInfo
-- `backend/app/email/providers/gmail.py` — GmailProvider (Gmail REST API)
-- `backend/app/email/oauth_models.py` — EmailAccount model
-- `backend/app/email/oauth_service.py` — OAuth business logic (state, tokens, refresh)
-- `backend/app/email/oauth_router.py` — OAuth endpoints (/authorize, /callback, /status, /disconnect)
-- `backend/app/email/token_encryption.py` — Fernet encryption voor tokens
-- `backend/app/email/synced_email_models.py` — SyncedEmail model + attachments relationship
-- `backend/app/email/sync_service.py` — Sync + matching + re-match + bijlagen download
-- `backend/app/email/sync_router.py` — Sync + inbox + attachment endpoints
-- `backend/app/email/compose_router.py` — Send/draft via provider
-- `backend/app/email/attachment_models.py` — EmailAttachment model
-- `backend/alembic/versions/024_email_accounts.py` — Migration
-- `backend/alembic/versions/025_synced_emails.py` — Migration
-- `backend/alembic/versions/026_email_attachments.py` — Migration
-
-### Nieuw aangemaakt (frontend)
-- `frontend/src/hooks/use-email-oauth.ts` — OAuth status/connect/disconnect hooks
-- `frontend/src/hooks/use-email-sync.ts` — Sync/inbox/compose hooks + attachment types
-
-### Aangepast
-- `backend/app/config.py` — Google OAuth settings toegevoegd
-- `backend/app/main.py` — 3 nieuwe routers geregistreerd
-- `backend/pyproject.toml` — httpx, cryptography, python-dateutil dependencies
-- `backend/alembic/env.py` — EmailAccount + SyncedEmail + EmailAttachment model imports
-- `backend/app/workflow/scheduler.py` — email_auto_sync() elke 5 min
-- `docker-compose.prod.yml` — Google OAuth + SMTP env vars
-- `frontend/src/app/(dashboard)/instellingen/page.tsx` — EmailTab herschreven met OAuth UI
-- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — CorrespondentieTab unified view + bijlagen + provider compose
-- `.env` — Google OAuth credentials ingevuld
-- `.env.example` — Google OAuth velden toegevoegd
-
----
-
 ## Architectuur
 
 ```
@@ -167,9 +158,14 @@ OAuth Flow:
 
 Email Sync Matching (prioriteit):
   1. Dossiernummer regex: "2026-00003" in subject/body → Case.case_number match
-  2. Klantreferentie: Case.reference in subject/body (min 3 chars)
-  3. Contact email: from/to/cc → Contact.email → Case (client/wederpartij/party)
-  4. Re-match: elke sync scant ook bestaande ongelinkte emails opnieuw
+  2. Klantreferentie: Case.reference in subject/body/html (min 3 chars)
+  3. Zaaknummer rechtbank: Case.court_case_number in subject/body/html (min 3 chars)
+  4. Contact email: from/to/cc → Contact.email → Case (client/wederpartij/party)
+  5. Re-match: elke sync scant ook bestaande ongelinkte emails opnieuw (altijd, ook vanuit dossier-context)
+
+Searchable text wordt opgebouwd via _build_searchable_text():
+  subject + body_text + _strip_html(body_html) + snippet
+  → Dit vangt HTML-only emails op (Gmail, Outlook sturen vaak alleen HTML)
 
 Dossier-context sync:
   "Sync inbox" vanuit dossier → haalt contactemails op → bouwt Gmail query
@@ -193,8 +189,46 @@ Compose via Provider:
   → EmailLog + SyncedEmail + CaseActivity aangemaakt
 ```
 
+## Alle bestanden aangemaakt/aangepast (alle sessies)
+
+### Nieuw aangemaakt (backend)
+- `backend/app/email/providers/__init__.py` — provider exports
+- `backend/app/email/providers/base.py` — EmailProvider abstract class + AttachmentInfo
+- `backend/app/email/providers/gmail.py` — GmailProvider (Gmail REST API)
+- `backend/app/email/oauth_models.py` — EmailAccount model
+- `backend/app/email/oauth_service.py` — OAuth business logic (state, tokens, refresh)
+- `backend/app/email/oauth_router.py` — OAuth endpoints (/authorize, /callback, /status, /disconnect)
+- `backend/app/email/token_encryption.py` — Fernet encryption voor tokens
+- `backend/app/email/synced_email_models.py` — SyncedEmail model + attachments relationship
+- `backend/app/email/sync_service.py` — Sync + matching + re-match + bijlagen download + _build_searchable_text
+- `backend/app/email/sync_router.py` — Sync + inbox + attachment endpoints
+- `backend/app/email/compose_router.py` — Send/draft via provider
+- `backend/app/email/attachment_models.py` — EmailAttachment model
+- `backend/alembic/versions/024_email_accounts.py` — Migration
+- `backend/alembic/versions/025_synced_emails.py` — Migration
+- `backend/alembic/versions/026_email_attachments.py` — Migration
+
+### Nieuw aangemaakt (frontend)
+- `frontend/src/hooks/use-email-oauth.ts` — OAuth status/connect/disconnect hooks
+- `frontend/src/hooks/use-email-sync.ts` — Sync/inbox/compose hooks + attachment types
+
+### Aangepast
+- `backend/app/config.py` — Google OAuth settings toegevoegd
+- `backend/app/main.py` — 3 nieuwe routers geregistreerd
+- `backend/pyproject.toml` — httpx, cryptography, python-dateutil dependencies
+- `backend/alembic/env.py` — EmailAccount + SyncedEmail + EmailAttachment model imports
+- `backend/app/workflow/scheduler.py` — email_auto_sync() elke 5 min
+- `docker-compose.prod.yml` — Google OAuth + SMTP env vars
+- `frontend/src/app/(dashboard)/instellingen/page.tsx` — EmailTab herschreven met OAuth UI
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — CorrespondentieTab unified view + bijlagen + provider compose + edit form fix
+- `frontend/src/hooks/use-cases.ts` — useUpdateCase type fix (Record<string, unknown>)
+- `.env` — Google OAuth credentials ingevuld
+- `.env.example` — Google OAuth velden toegevoegd
+- `CLAUDE.md` — git push regel toegevoegd
+
+---
+
 ## Openstaande issues
-- Migration 026 moet gedraaid worden op VPS
 - Dossier detail page is nu 55K+ regels — refactoring wenselijk
 - Google OAuth test: arsalanseidony@gmail.nl moet als test user staan in Google Cloud Console
 - Auto-sync zal bij grote inboxen de eerste keer langzaam zijn (max 50 per cycle)

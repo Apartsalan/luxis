@@ -16,8 +16,8 @@ export interface CaseSummary {
   date_closed: string | null;
   total_principal: number;
   total_paid: number;
-  client: { id: string; name: string } | null;
-  opposing_party: { id: string; name: string } | null;
+  client: { id: string; name: string; email?: string | null } | null;
+  opposing_party: { id: string; name: string; email?: string | null } | null;
   created_at: string;
 }
 

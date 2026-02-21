@@ -81,10 +81,11 @@ import {
   getTemplatesForStatus,
   triggerDownload,
   useEmailLogs,
+  useSendCaseEmail,
   type EmailLogEntry,
   type GeneratedDocumentSummary,
 } from "@/hooks/use-documents";
-import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
+import { EmailComposeDialog, type EmailComposeData, type EmailRecipient } from "@/components/email-compose-dialog";
 import {
   useInvoices,
   useCreateInvoice,
@@ -345,6 +346,46 @@ export default function ZaakDetailPage() {
       router.push("/zaken");
     } catch {
       toast.error("Kon het dossier niet verwijderen");
+    }
+  };
+
+  // ── Freestanding email compose (F11) ────────────────────────────────────
+  const [caseEmailOpen, setCaseEmailOpen] = useState(false);
+  const sendCaseEmail = useSendCaseEmail(id);
+
+  /** Build recipient list from case parties for quick-select chips */
+  function buildDossierRecipients(z: typeof zaak): EmailRecipient[] {
+    if (!z) return [];
+    const recipients: EmailRecipient[] = [];
+    if (z.client?.email) {
+      recipients.push({ name: z.client.name, email: z.client.email, role: "client" });
+    }
+    if (z.opposing_party?.email) {
+      recipients.push({ name: z.opposing_party.name, email: z.opposing_party.email, role: "opposing_party" });
+    }
+    if (z.parties) {
+      for (const p of z.parties) {
+        if (p.contact?.email && !recipients.some((r) => r.email === p.contact.email)) {
+          recipients.push({ name: p.contact.name, email: p.contact.email, role: p.role });
+        }
+      }
+    }
+    return recipients;
+  }
+
+  const handleSendCaseEmail = async (data: EmailComposeData) => {
+    try {
+      await sendCaseEmail.mutateAsync({
+        recipient_email: data.recipient_email,
+        recipient_name: data.recipient_name,
+        cc: data.cc,
+        subject: data.custom_subject || `${zaak?.case_number || ""}`,
+        body: data.custom_body || "",
+      });
+      toast.success("E-mail verzonden");
+      setCaseEmailOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "E-mail verzenden mislukt");
     }
   };
 
@@ -742,6 +783,14 @@ export default function ZaakDetailPage() {
           <Receipt className="h-3.5 w-3.5 text-violet-500" />
           Factuur
         </Link>
+        <button
+          type="button"
+          onClick={() => setCaseEmailOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        >
+          <Mail className="h-3.5 w-3.5 text-blue-500" />
+          E-mail
+        </button>
         {isIncasso && (
           <button
             type="button"
@@ -783,9 +832,20 @@ export default function ZaakDetailPage() {
       {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
       {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
       {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />}
-      {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} />}
+      {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />}
       {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
       {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
+
+      {/* Freestanding email compose dialog (F11) */}
+      <EmailComposeDialog
+        open={caseEmailOpen}
+        onOpenChange={setCaseEmailOpen}
+        onSend={handleSendCaseEmail}
+        isSending={sendCaseEmail.isPending}
+        title="E-mail versturen"
+        defaultSubject={zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""}
+        recipients={zaak ? buildDossierRecipients(zaak) : []}
+      />
     </div>
   );
 }
@@ -3808,17 +3868,31 @@ function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, opposingPar
 
 // ── Correspondentie Tab ──────────────────────────────────────────────────────
 
-function CorrespondentieTab({ caseId }: { caseId: string }) {
+function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?: () => void }) {
   const { data: logs, isLoading } = useEmailLogs(caseId);
 
   return (
     <div className="rounded-xl border border-border bg-card p-6">
-      <h2 className="mb-1 text-base font-semibold text-foreground">
-        Verzonden e-mails
-      </h2>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Overzicht van alle e-mails verstuurd vanuit dit dossier
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="mb-1 text-base font-semibold text-foreground">
+            Verzonden e-mails
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Overzicht van alle e-mails verstuurd vanuit dit dossier
+          </p>
+        </div>
+        {onCompose && (
+          <button
+            type="button"
+            onClick={onCompose}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nieuwe e-mail
+          </button>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Paperclip, Send, Loader2, X, Plus } from "lucide-react";
+import { Mail, Paperclip, Send, Loader2, X, Plus, User } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,32 @@ export interface EmailComposeData {
   cc?: string[];
   custom_subject?: string;
   custom_body?: string;
+}
+
+/** A known recipient from the case (client, opposing party, etc.) */
+export interface EmailRecipient {
+  name: string;
+  email: string;
+  role: string;
+}
+
+// ── Dutch role labels ───────────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+  client: "Client",
+  opposing_party: "Wederpartij",
+  advocaat_wederpartij: "Advocaat wederpartij",
+  deurwaarder: "Deurwaarder",
+  rechtbank: "Rechtbank",
+  mediator: "Mediator",
+  deskundige: "Deskundige",
+  getuige: "Getuige",
+  notaris: "Notaris",
+  overig: "Overig",
+};
+
+function getRoleLabel(role: string): string {
+  return ROLE_LABELS[role] ?? role;
 }
 
 export interface EmailComposeDialogProps {
@@ -42,6 +69,8 @@ export interface EmailComposeDialogProps {
   attachmentName?: string;
   /** Dialog title override */
   title?: string;
+  /** Known recipients from the case for quick-select chips */
+  recipients?: EmailRecipient[];
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -57,6 +86,7 @@ export function EmailComposeDialog({
   defaultBody = "",
   attachmentName,
   title = "E-mail versturen",
+  recipients,
 }: EmailComposeDialogProps) {
   const [to, setTo] = useState(defaultTo);
   const [toName, setToName] = useState(defaultToName);
@@ -65,6 +95,7 @@ export function EmailComposeDialog({
   const [showCc, setShowCc] = useState(false);
   const [subject, setSubject] = useState(defaultSubject);
   const [body, setBody] = useState(defaultBody);
+  const [selectedRecipientEmail, setSelectedRecipientEmail] = useState<string | null>(null);
 
   // Reset form when dialog opens with new defaults
   const handleOpenChange = (nextOpen: boolean) => {
@@ -76,8 +107,22 @@ export function EmailComposeDialog({
       setShowCc(false);
       setSubject(defaultSubject);
       setBody(defaultBody);
+      setSelectedRecipientEmail(null);
     }
     onOpenChange(nextOpen);
+  };
+
+  const selectRecipient = (recipient: EmailRecipient) => {
+    if (selectedRecipientEmail === recipient.email) {
+      // Deselect
+      setTo("");
+      setToName("");
+      setSelectedRecipientEmail(null);
+    } else {
+      setTo(recipient.email);
+      setToName(recipient.name);
+      setSelectedRecipientEmail(recipient.email);
+    }
   };
 
   const addCc = () => {
@@ -112,6 +157,8 @@ export function EmailComposeDialog({
     });
   };
 
+  const validRecipients = recipients?.filter((r) => r.email) ?? [];
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
@@ -126,6 +173,35 @@ export function EmailComposeDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Recipient quick-select chips */}
+          {validRecipients.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Snelkeuze ontvanger</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {validRecipients.map((r) => (
+                  <button
+                    key={r.email}
+                    type="button"
+                    onClick={() => selectRecipient(r)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                      "border cursor-pointer",
+                      selectedRecipientEmail === r.email
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border hover:bg-muted"
+                    )}
+                  >
+                    <User className="h-3 w-3" />
+                    <span>{r.name}</span>
+                    <span className="text-[10px] opacity-70">
+                      {getRoleLabel(r.role)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Aan */}
           <div className="space-y-1.5">
             <Label htmlFor="email-to">Aan *</Label>
@@ -135,7 +211,13 @@ export function EmailComposeDialog({
                 type="email"
                 placeholder="email@voorbeeld.nl"
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
+                onChange={(e) => {
+                  setTo(e.target.value);
+                  // Clear chip selection if user manually types
+                  if (selectedRecipientEmail && e.target.value !== selectedRecipientEmail) {
+                    setSelectedRecipientEmail(null);
+                  }
+                }}
                 required
                 className="flex-1"
               />

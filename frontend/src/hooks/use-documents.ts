@@ -298,6 +298,47 @@ export function useEmailLogs(caseId: string | undefined) {
   });
 }
 
+// ── Types: Send Case Email (freestanding) ────────────────────────────────
+
+export interface SendCaseEmailInput {
+  recipient_email: string;
+  recipient_name?: string;
+  cc?: string[];
+  subject: string;
+  body: string;
+}
+
+export interface SendCaseEmailResponse {
+  email_log_id: string;
+  recipient: string;
+  subject: string;
+  status: string;
+}
+
+// ── Hook: Send Freestanding Email from Case ─────────────────────────────
+
+export function useSendCaseEmail(caseId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<SendCaseEmailResponse, Error, SendCaseEmailInput>({
+    mutationFn: async (data) => {
+      const res = await api(`/api/email/cases/${caseId}/send`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Fout bij verzenden e-mail");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["email-logs", caseId] });
+      queryClient.invalidateQueries({ queryKey: ["case-detail", caseId] });
+    },
+  });
+}
+
 // ── Hook: Test Email ──────────────────────────────────────────────────────
 
 export function useTestEmail() {

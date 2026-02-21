@@ -102,6 +102,18 @@ Na het bouwen, voordat je deploy-commando geeft:
 - Bij elke afspraak of correctie: **CLAUDE.md updaten**
 - Conventional commits: `feat(module):`, `fix(module):`, `refactor(module):`, `test(module):`, `docs:`, `chore:`
 
+**Plan Mode (HARDE REGEL):**
+- **Gebruik ALTIJD Plan Mode (`EnterPlanMode`) bij niet-triviale implementatietaken.** Dit geldt voor:
+  - Nieuwe features (alles groter dan een simpele bugfix)
+  - Multi-file wijzigingen
+  - Taken met meerdere mogelijke aanpakken
+  - Architectuurkeuzes
+  - UI/UX wijzigingen aan bestaande schermen
+- In Plan Mode: verken eerst de codebase, ontwerp de aanpak, presenteer het plan aan de gebruiker
+- Pas NA goedkeuring van het plan beginnen met bouwen
+- Dit voorkomt verspilde tijd en zorgt voor alignment voordat er code geschreven wordt
+- **Uitzondering:** triviale fixes (typos, 1-regelige bugfixes, kleine tekstaanpassingen) mogen direct
+
 ## Gedragsregels (uit /insights analyse)
 
 **Documentatie vs. code:**

@@ -155,15 +155,24 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
 async def trigger_sync(
     max_results: int = Query(default=100, le=500, description="Max emails op te halen"),
     query: str | None = Query(default=None, description="Gmail search query"),
+    case_id: uuid.UUID | None = Query(default=None, description="Dossier ID — filtert en linkt emails automatisch"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Trigger an inbox sync for the current user's connected email account."""
+    """Trigger an inbox sync for the current user's connected email account.
+
+    If case_id is provided, the sync will:
+    1. Build a Gmail query from the case's contact email addresses
+    2. Auto-link all matching emails to the case
+    3. Re-link previously unlinked emails that match
+    """
     account = await get_email_account(db, user.id, user.tenant_id)
     if not account:
         raise BadRequestError("Geen e-mailaccount verbonden. Ga naar Instellingen → E-mail.")
 
-    stats = await sync_emails_for_account(db, account, max_results=max_results, query=query)
+    stats = await sync_emails_for_account(
+        db, account, max_results=max_results, query=query, force_case_id=case_id
+    )
     return SyncResponse(**stats)
 
 

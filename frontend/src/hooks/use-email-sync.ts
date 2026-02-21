@@ -46,11 +46,12 @@ interface SyncResponse {
 export function useSyncEmails() {
   const queryClient = useQueryClient();
 
-  return useMutation<SyncResponse, Error, { maxResults?: number; query?: string }>({
-    mutationFn: async ({ maxResults = 100, query } = {}) => {
+  return useMutation<SyncResponse, Error, { maxResults?: number; query?: string; caseId?: string }>({
+    mutationFn: async ({ maxResults = 100, query, caseId } = {}) => {
       const params = new URLSearchParams();
       if (maxResults) params.set("max_results", String(maxResults));
       if (query) params.set("query", query);
+      if (caseId) params.set("case_id", caseId);
 
       const res = await api(`/api/email/sync?${params.toString()}`, {
         method: "POST",

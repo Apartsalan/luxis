@@ -3964,7 +3964,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
 
   const handleSync = async () => {
     try {
-      const stats = await syncEmails.mutateAsync({});
+      const stats = await syncEmails.mutateAsync({ caseId });
       toast.success(
         `Sync klaar: ${stats.new} nieuw, ${stats.linked} gekoppeld`
       );

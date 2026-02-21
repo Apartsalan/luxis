@@ -108,19 +108,105 @@ def _determine_direction(email_msg: EmailMessage, account_email: str) -> str:
     return "inbound"
 
 
+async def _get_case_contact_emails(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> list[str]:
+    """Get all email addresses of contacts linked to a case.
+
+    Collects emails from: client, opposing_party, billing_contact, and case parties.
+    """
+    emails = []
+
+    # Get the case with its relationships
+    result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = result.scalar_one_or_none()
+    if not case:
+        return emails
+
+    # Collect contact IDs from the case
+    contact_ids = set()
+    if case.client_id:
+        contact_ids.add(case.client_id)
+    if case.opposing_party_id:
+        contact_ids.add(case.opposing_party_id)
+    if hasattr(case, "billing_contact_id") and case.billing_contact_id:
+        contact_ids.add(case.billing_contact_id)
+
+    # Add case party contacts
+    party_result = await db.execute(
+        select(CaseParty.contact_id).where(
+            CaseParty.case_id == case_id,
+            CaseParty.tenant_id == tenant_id,
+        )
+    )
+    for row in party_result.all():
+        if row[0]:
+            contact_ids.add(row[0])
+
+    if not contact_ids:
+        return emails
+
+    # Get email addresses for all contacts
+    contact_result = await db.execute(
+        select(Contact.email).where(
+            Contact.id.in_(contact_ids),
+            Contact.email.isnot(None),
+            Contact.email != "",
+        )
+    )
+    for row in contact_result.all():
+        if row[0]:
+            emails.append(row[0].lower().strip())
+
+    return emails
+
+
 async def sync_emails_for_account(
     db: AsyncSession,
     account: EmailAccount,
     *,
     max_results: int = 100,
     query: str | None = None,
+    force_case_id: uuid.UUID | None = None,
 ) -> dict:
     """Sync emails from the provider into the synced_emails table.
+
+    Args:
+        db: Database session
+        account: The email account to sync
+        max_results: Maximum emails to fetch
+        query: Gmail search query filter
+        force_case_id: If provided, builds a Gmail query from the case's
+            contact emails and auto-links all results to this case.
 
     Returns a summary dict with counts.
     """
     provider = get_provider(account.provider)
     access_token = await get_valid_access_token(db, account)
+
+    # If syncing from a dossier context, build a Gmail query from the case contacts
+    if force_case_id and not query:
+        contact_emails = await _get_case_contact_emails(
+            db, account.tenant_id, force_case_id
+        )
+        if contact_emails:
+            # Build Gmail query: emails from OR to any contact
+            email_parts = []
+            for email in contact_emails:
+                email_parts.append(f"from:{email}")
+                email_parts.append(f"to:{email}")
+            query = " OR ".join(email_parts)
+            logger.info(
+                f"Dossier-sync query voor case {force_case_id}: {query}"
+            )
+        else:
+            logger.warning(
+                f"Geen contact-emailadressen gevonden voor case {force_case_id}"
+            )
 
     # Fetch messages from provider
     messages, next_page = await provider.list_messages(
@@ -134,12 +220,24 @@ async def sync_emails_for_account(
     for msg in messages:
         # Check if already synced (dedup by provider_message_id)
         existing = await db.execute(
-            select(SyncedEmail.id).where(
+            select(SyncedEmail.id, SyncedEmail.case_id).where(
                 SyncedEmail.email_account_id == account.id,
                 SyncedEmail.provider_message_id == msg.provider_message_id,
             )
         )
-        if existing.scalar_one_or_none() is not None:
+        existing_row = existing.first()
+        if existing_row is not None:
+            # If already synced but unlinked, and we're in dossier context → link it
+            if force_case_id and existing_row[1] is None:
+                await db.execute(
+                    select(SyncedEmail)
+                    .where(SyncedEmail.id == existing_row[0])
+                )
+                synced_email = (await db.execute(
+                    select(SyncedEmail).where(SyncedEmail.id == existing_row[0])
+                )).scalar_one()
+                synced_email.case_id = force_case_id
+                stats["linked"] += 1
             stats["skipped"] += 1
             continue
 
@@ -162,8 +260,11 @@ async def sync_emails_for_account(
         # Remove the account's own email from matching
         all_addresses = [a for a in all_addresses if a != account.email_address.lower()]
 
-        # Try to match to a case
-        case_id = await _find_case_for_email(db, account.tenant_id, all_addresses)
+        # Try to match to a case — force_case_id takes precedence
+        if force_case_id:
+            case_id = force_case_id
+        else:
+            case_id = await _find_case_for_email(db, account.tenant_id, all_addresses)
 
         direction = _determine_direction(msg, account.email_address)
         email_date = _parse_email_date(msg.date)

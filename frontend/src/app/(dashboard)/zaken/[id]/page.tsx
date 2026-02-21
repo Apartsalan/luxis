@@ -925,9 +925,9 @@ function OverzichtTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any
       await updateCase.mutateAsync({
         id: zaak.id,
         data: {
-          description: editForm.description || undefined,
-          reference: editForm.reference || undefined,
-          court_case_number: editForm.court_case_number || undefined,
+          description: editForm.description.trim() || null,
+          reference: editForm.reference.trim() || null,
+          court_case_number: editForm.court_case_number.trim() || null,
         },
       });
       setIsEditing(false);

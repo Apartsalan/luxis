@@ -184,7 +184,7 @@ export function useUpdateCase() {
       data,
     }: {
       id: string;
-      data: Partial<CaseCreateInput>;
+      data: Record<string, unknown>;
     }) => {
       const res = await api(`/api/cases/${id}`, {
         method: "PUT",

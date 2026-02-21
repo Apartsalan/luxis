@@ -1,7 +1,17 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 feb 2026 (sessie 2 — email sync verbeteringen)
-**Laatste feature/fix:** Dossiernummer-matching, bijlagen sync, auto-sync, re-match fix
+**Laatst bijgewerkt:** 21 feb 2026 (sessie 3 — dossier edit bugfix)
+**Laatste feature/fix:** Fix: legen van velden in dossier edit formulier werkte niet
+
+## Wat er gedaan is (sessie 3 — 21 feb, avond)
+
+### Fix: Dossier edit — velden wissen werkte niet
+- **Probleem:** Als je een veld (Beschrijving, Referentie, Zaaknummer rechtbank) leegmaakte en opsloeg, bleef de oude waarde staan. Nieuwe tekst toevoegen werkte wel.
+- **Oorzaak:** In `handleSaveDetails` werden lege strings via `|| undefined` omgezet naar `undefined`. `JSON.stringify()` verwijdert `undefined` waarden → backend ontvangt het veld niet → `exclude_unset=True` slaat het over → oude waarde blijft staan.
+- **Fix:** `|| undefined` vervangen door `.trim() || null`. Lege strings worden nu als `null` meegestuurd → Pydantic ziet het als "set" → `exclude_unset=True` neemt het mee → database waarde wordt `NULL`.
+- **Bestanden:** `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` (handleSaveDetails), `frontend/src/hooks/use-cases.ts` (type fix)
+
+---
 
 ## Wat er gedaan is (sessie 2 — 21 feb, namiddag)
 

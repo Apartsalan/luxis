@@ -48,6 +48,7 @@ import { FacturenTab, DocumentenTab } from "./components/DocumentenTab";
 import CorrespondentieTab from "./components/CorrespondentieTab";
 import ActiviteitenTab from "./components/ActiviteitenTab";
 import PartijenTab from "./components/PartijenTab";
+import DossierSidebar from "./components/DossierSidebar";
 
 export default function ZaakDetailPage() {
   const params = useParams();
@@ -337,38 +338,48 @@ export default function ZaakDetailPage() {
         setPhoneNoteText={setPhoneNoteText}
       />
 
-      {/* Tabs */}
-      <div className="border-b border-border overflow-x-auto">
-        <nav className="flex gap-0.5 min-w-max">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+      {/* Main content + sidebar */}
+      <div className="flex gap-6">
+        <div className="min-w-0 flex-1">
+          {/* Tabs */}
+          <div className="border-b border-border overflow-x-auto">
+            <nav className="flex gap-0.5 min-w-max">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  }`}
+                >
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-      {/* Tab content */}
-      {activeTab === "overzicht" && <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />}
-      {activeTab === "taken" && <TijdregistratieTab caseId={id} />}
-      {isIncasso && activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
-      {isIncasso && activeTab === "betalingen" && <BetalingenTab caseId={id} />}
-      {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
-      {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
-      {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
-      {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />}
-      {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />}
-      {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
-      {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
+          {/* Tab content */}
+          <div className="mt-6">
+            {activeTab === "overzicht" && <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />}
+            {activeTab === "taken" && <TijdregistratieTab caseId={id} />}
+            {isIncasso && activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
+            {isIncasso && activeTab === "betalingen" && <BetalingenTab caseId={id} />}
+            {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
+            {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
+            {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
+            {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />}
+            {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />}
+            {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
+            {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
+          </div>
+        </div>
+
+        {/* G14: Properties sidebar */}
+        <DossierSidebar zaak={zaak} isIncasso={isIncasso} />
+      </div>
 
       {/* Freestanding email compose dialog (F11) */}
       <EmailComposeDialog

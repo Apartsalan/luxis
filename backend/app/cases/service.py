@@ -1,12 +1,13 @@
 """Cases module service — Business logic for cases, parties, and activities."""
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity, CaseParty
+from app.workflow.models import WorkflowTask
 from app.cases.schemas import (
     CASE_STATUSES,
     CASE_TYPES,
@@ -48,6 +49,95 @@ async def generate_case_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
         seq = 1
 
     return f"{prefix}{seq:05d}"
+
+
+# ── Task Templates per Case Type (G10) ────────────────────────────────────────
+
+INCASSO_TASKS = [
+    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
+     "description": "Controleer of alle gegevens compleet zijn: facturen, contactgegevens wederpartij, renteberekening."},
+    {"title": "Herinnering versturen", "task_type": "send_letter", "days": 3,
+     "description": "Stuur een herinnering naar de debiteur."},
+    {"title": "14-dagenbrief versturen (B2C)", "task_type": "send_letter", "days": 7,
+     "description": "Wettelijk verplichte 14-dagenbrief voor consumenten (B2C)."},
+    {"title": "Controleer betaling na herinnering", "task_type": "check_payment", "days": 14,
+     "description": "Controleer of er een betaling is ontvangen na de herinnering."},
+    {"title": "Sommatie versturen", "task_type": "send_letter", "days": 21,
+     "description": "Stuur een aanmaning/sommatie naar de debiteur."},
+    {"title": "Controleer betaling na sommatie", "task_type": "check_payment", "days": 35,
+     "description": "Controleer of er een betaling is ontvangen na de sommatie."},
+    {"title": "Beoordeel dagvaarding", "task_type": "manual_review", "days": 42,
+     "description": "Beoordeel of dagvaarding nodig is. Neem contact op met de client."},
+    {"title": "Verjaringstermijn controleren", "task_type": "set_deadline", "days": 180,
+     "description": "Controleer de verjaringstermijn en onderneem actie indien nodig."},
+]
+
+ADVIES_TASKS = [
+    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
+     "description": "Controleer of alle stukken en gegevens compleet zijn."},
+    {"title": "Juridisch onderzoek", "task_type": "manual_review", "days": 7,
+     "description": "Voer juridisch onderzoek uit en bereid advies voor."},
+    {"title": "Concept advies opstellen", "task_type": "generate_document", "days": 14,
+     "description": "Stel een concept adviesbrief op voor de client."},
+    {"title": "Advies versturen aan client", "task_type": "send_letter", "days": 21,
+     "description": "Verstuur het definitieve advies naar de client."},
+]
+
+INSOLVENTIE_TASKS = [
+    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
+     "description": "Controleer of alle stukken compleet zijn: jaarrekeningen, crediteurenlijst, etc."},
+    {"title": "Beoordeel faillissementsaanvraag of surseance", "task_type": "manual_review", "days": 3,
+     "description": "Beoordeel welke procedure het meest geschikt is."},
+    {"title": "Verzoekschrift opstellen", "task_type": "generate_document", "days": 14,
+     "description": "Stel het verzoekschrift op voor de rechtbank."},
+    {"title": "Indienen bij rechtbank", "task_type": "manual_review", "days": 21,
+     "description": "Dien het verzoekschrift in bij de bevoegde rechtbank."},
+]
+
+OVERIG_TASKS = [
+    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
+     "description": "Controleer of alle gegevens en stukken compleet zijn."},
+    {"title": "Plan van aanpak bepalen", "task_type": "manual_review", "days": 3,
+     "description": "Bepaal de strategie en het plan van aanpak voor deze zaak."},
+]
+
+TASK_TEMPLATES: dict[str, list[dict]] = {
+    "incasso": INCASSO_TASKS,
+    "advies": ADVIES_TASKS,
+    "insolventie": INSOLVENTIE_TASKS,
+    "overig": OVERIG_TASKS,
+}
+
+
+async def _create_initial_tasks(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+    user_id: uuid.UUID,
+) -> list[WorkflowTask]:
+    """Create initial task templates for a newly created case based on case_type."""
+    templates = TASK_TEMPLATES.get(case.case_type, OVERIG_TASKS)
+    created: list[WorkflowTask] = []
+
+    for tpl in templates:
+        task = WorkflowTask(
+            tenant_id=tenant_id,
+            case_id=case.id,
+            assigned_to_id=case.assigned_to_id or user_id,
+            task_type=tpl["task_type"],
+            title=tpl["title"],
+            description=tpl["description"],
+            due_date=case.date_opened + timedelta(days=tpl["days"]),
+            status="pending",
+            auto_execute=False,
+        )
+        db.add(task)
+        created.append(task)
+
+    if created:
+        await db.flush()
+
+    return created
 
 
 # ── Case CRUD ────────────────────────────────────────────────────────────────
@@ -224,6 +314,9 @@ async def create_case(
     )
     db.add(activity)
     await db.flush()
+
+    # G10: Create initial task templates based on case type
+    await _create_initial_tasks(db, tenant_id, case, user_id)
 
     return case
 

@@ -142,6 +142,16 @@ Na het bouwen, voordat je deploy-commando geeft:
 - Kijk verder dan alleen de huidige takenlijst. Als er meerdere terminals beschikbaar zijn, geef de andere terminals nuttig werk.
 - **VERPLICHT: Als je een taak voor jezelf pakt, geef ALTIJD DIRECT kant-en-klare prompts voor de andere beschikbare terminals.** Dit is geen suggestie — het is een vereiste. Elke keer dat je zegt "ik ga X doen" moet je in DEZELFDE response ook de prompts voor terminal 2 en 3 geven. De gebruiker moet NOOIT hoeven vragen om prompts. De prompts bevatten: volledige context, repo pad, welke bestanden te lezen, exacte taak, en commit-instructies.
 
+**Sessie-prompt genereren (HARDE REGEL):**
+- **VERPLICHT: Als de gebruiker vraagt om een prompt voor de volgende sessie, geef ALTIJD een COMPLETE prompt die ALLES bevat wat de volgende Claude nodig heeft.** De gebruiker mag NOOIT hoeven corrigeren of aanvullen. Een complete prompt bevat:
+  1. **Repo pad:** `C:\Users\arsal\Documents\luxis`
+  2. **Bestanden lezen bij start:** `CLAUDE.md`, `SESSION-NOTES.md`, `LUXIS-ROADMAP.md`
+  3. **Exacte taak:** wat er gebouwd/gefixt moet worden
+  4. **Welke bestanden betrokken zijn** (met paden)
+  5. **Verificatie:** hoe te checken (`npm run build`, `pytest`, etc.)
+  6. **Commit-instructies:** commit + push als het werkt
+- De gebruiker is geen developer. Hij kopieert de prompt en plakt het in een nieuwe sessie. Het moet foutloos werken zonder extra context.
+
 **Deployment:**
 - Claude heeft GEEN SSH-toegang tot de VPS. Geef altijd het deploy-commando aan de gebruiker om zelf te draaien. Probeer NOOIT `ssh root@...` te runnen vanuit deze terminal.
 - **VERPLICHT: Na elke afgeronde feature die gecommit en gepusht is, geef ALTIJD het deploy-commando.** Vermeld of het alleen frontend is, of frontend+backend, en of er migraties nodig zijn. De gebruiker werkt met meerdere terminals en mist anders deployments. Voorbeeld: "🚀 Deploy (frontend only, geen migraties): `cd /opt/luxis && git pull && docker compose ... build --no-cache frontend && ... up -d frontend`"

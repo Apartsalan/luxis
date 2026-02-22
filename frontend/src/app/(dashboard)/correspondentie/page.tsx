@@ -76,6 +76,7 @@ export default function CorrespondentiePage() {
   // UI state
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [emailFilter, setEmailFilter] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
   const debouncedSearch = useDebounce(caseSearch, 300);
 
@@ -95,15 +96,29 @@ export default function CorrespondentiePage() {
     selectedEmailId ?? undefined
   );
 
-  const emails = unlinkedData?.emails ?? [];
+  const allEmails = unlinkedData?.emails ?? [];
   const total = countData?.count ?? unlinkedData?.total ?? 0;
+
+  // Client-side filter on subject, sender, snippet
+  const emails = useMemo(() => {
+    if (!emailFilter.trim()) return allEmails;
+    const q = emailFilter.toLowerCase();
+    return allEmails.filter(
+      (e) =>
+        e.subject.toLowerCase().includes(q) ||
+        e.from_email.toLowerCase().includes(q) ||
+        e.from_name.toLowerCase().includes(q) ||
+        e.snippet.toLowerCase().includes(q) ||
+        e.to_emails.some((t) => t.toLowerCase().includes(q))
+    );
+  }, [allEmails, emailFilter]);
 
   // Clear selection when emails change
   useEffect(() => {
-    if (selectedEmailId && !emails.find((e) => e.id === selectedEmailId)) {
+    if (selectedEmailId && !allEmails.find((e) => e.id === selectedEmailId)) {
       setSelectedEmailId(null);
     }
-  }, [emails, selectedEmailId]);
+  }, [allEmails, selectedEmailId]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -201,17 +216,36 @@ export default function CorrespondentiePage() {
               : `${total} ongesorteerde e-mail${total !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={syncEmails.isPending}
-        >
-          <RefreshCw
-            className={`h-4 w-4 mr-2 ${syncEmails.isPending ? "animate-spin" : ""}`}
-          />
-          Sync inbox
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Zoek op afzender, onderwerp..."
+              className="pl-9 h-9 text-sm w-64"
+              value={emailFilter}
+              onChange={(e) => setEmailFilter(e.target.value)}
+            />
+            {emailFilter && (
+              <button
+                onClick={() => setEmailFilter("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <XCircle className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSync}
+            disabled={syncEmails.isPending}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${syncEmails.isPending ? "animate-spin" : ""}`}
+            />
+            Sync inbox
+          </Button>
+        </div>
       </div>
 
       {/* Bulk actions bar */}
@@ -274,7 +308,9 @@ export default function CorrespondentiePage() {
                   : "Selecteer alles"}
               </button>
               <span className="text-xs text-muted-foreground">
-                {emails.length} e-mails
+                {emailFilter
+                  ? `${emails.length} van ${allEmails.length} e-mails`
+                  : `${emails.length} e-mails`}
               </span>
             </div>
 

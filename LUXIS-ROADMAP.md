@@ -212,7 +212,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op M365 migratie)
 **✅ F11 geïmplementeerd** (21 feb) — freestanding e-mail vanuit dossier met recipient quick-select chips
 **✅ M6 gebouwd** (22 feb) — Ongesorteerde email wachtrij met split-view, suggesties, bulk link/dismiss, sidebar badge
-**Volgende prioriteit:** Dossier workspace verbeteringen (G3-G15 uit DOSSIER-WERKPLEK-RESEARCH.md)
+**Volgende prioriteit (sessie 5):** Dossier detail refactoring — `zaken/[id]/page.tsx` (4236 regels) opsplitsen in ~10 componenten (DossierHeader, DetailsTab, CorrespondentieTab, DocumentenTab, etc.). Puur code-organisatie, geen functionaliteitswijzigingen.
+**Daarna:** Dossier workspace verbeteringen (G3-G15 uit DOSSIER-WERKPLEK-RESEARCH.md)
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

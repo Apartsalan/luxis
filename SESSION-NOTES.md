@@ -1,7 +1,46 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 feb 2026 (sessie 3 — bugfixes + email matching verbeterd)
-**Laatste feature/fix:** Alle email matching + dossier edit fixes bevestigd werkend
+**Laatst bijgewerkt:** 22 feb 2026 (sessie 4 — M6 ongesorteerd email wachtrij)
+**Laatste feature/fix:** M6 correspondentie pagina + zoekbalk gebouwd
+
+## Wat er gedaan is (sessie 4 — 22 feb)
+
+### Feature: M6 — Ongesorteerde email wachtrij ✅
+- **Nieuwe pagina `/correspondentie`** met split-view: email lijst + detail + koppel-panel
+- **Dossier-suggesties** per email op basis van contact-match, dossiernummer, referentie, zaaknummer rechtbank
+- **1-click koppelen** aan voorgesteld dossier of handmatig zoeken
+- **Negeer-functie** (`is_dismissed` boolean) — email uit wachtrij, niet verwijderd
+- **Bulk acties** — checkboxes, selecteer alles, bulk koppelen/negeren
+- **Sidebar badge** — rode counter met aantal ongesorteerde emails (auto-refresh 5 min)
+- **Zoekbalk** — client-side filter op afzender, onderwerp, snippet, ontvanger
+- **Empty state** als alles gesorteerd is
+
+### Backend wijzigingen
+- `is_dismissed` boolean op `SyncedEmail` model
+- Alembic migratie `027_email_dismissed` (kolom + partial index)
+- `POST /api/email/dismiss` — bulk dismiss
+- `POST /api/email/bulk-link` — bulk link meerdere emails aan 1 dossier
+- `GET /api/email/suggest-cases/{id}` — dossier-suggesties
+- `GET /api/email/unlinked/count` — lichtgewicht count voor sidebar badge
+- `get_unlinked_emails` filtert nu `is_dismissed = False`
+
+### Frontend wijzigingen
+- `frontend/src/app/(dashboard)/correspondentie/page.tsx` — volledige pagina (~720 regels)
+- `frontend/src/hooks/use-email-sync.ts` — 5 nieuwe hooks (useUnlinkedCount, useBulkLinkEmails, useDismissEmails, useSuggestCases, CaseSuggestion type)
+- `frontend/src/components/layout/app-sidebar.tsx` — Correspondentie nav item + badge
+
+### Roadmap update
+- M5 (AutoTime) → backlog (bestaande timer dekt dit)
+- M6 → ✅ gebouwd
+
+### Commits sessie 4
+
+| Hash | Beschrijving |
+|------|-------------|
+| `ffdc9d1` | feat(email): M6 ongesorteerd email wachtrij — triage pagina + backend |
+| `8a44800` | feat(email): add search filter to ongesorteerd email queue |
+
+---
 
 ## Wat er gedaan is (sessie 3 — 21 feb, avond)
 

@@ -268,15 +268,28 @@ Compose via Provider:
 ---
 
 ## Openstaande issues
-- Dossier detail page is nu 55K+ regels — refactoring wenselijk
+- Dossier detail page is nu 4236 regels in één bestand — refactoring naar aparte tab-componenten is de eerstvolgende taak
 - Google OAuth test: arsalanseidony@gmail.nl moet als test user staan in Google Cloud Console
 - Auto-sync zal bij grote inboxen de eerste keer langzaam zijn (max 50 per cycle)
+- M6 + migratie 027 moeten nog gedeployed worden op de VPS (deploy commando staat hieronder)
 
 ## Wat de volgende stap is
 
+### Sessie 5 — Eerste prioriteit
+- **Dossier detail refactoring:** `zaken/[id]/page.tsx` (4236 regels) opsplitsen in:
+  - `zaken/[id]/components/DossierHeader.tsx`
+  - `zaken/[id]/components/DetailsTab.tsx`
+  - `zaken/[id]/components/CorrespondentieTab.tsx`
+  - `zaken/[id]/components/DocumentenTab.tsx`
+  - `zaken/[id]/components/TijdregistratieTab.tsx`
+  - `zaken/[id]/components/IncassoTab.tsx`
+  - `zaken/[id]/components/PartijenTab.tsx`
+  - `zaken/[id]/components/ActiviteitenTab.tsx`
+  - `zaken/[id]/types.ts` (gedeelde types)
+  - Hoofdpagina wordt ~200 regels (case data laden + tabs renderen)
+
 ### Later bouwen
-- **M5:** AutoTime op emails (automatische tijdregistratie bij mail-activiteit)
-- **M6:** "Ongesorteerd" wachtrij UI (endpoint is al klaar: GET /api/email/unlinked)
+- **M5:** AutoTime op emails (backlog — bestaande timer dekt dit grotendeels)
 - **OutlookProvider** toevoegen wanneer Lisanne naar M365 migreert
 
 ## Deploy commando (copy-paste ready)

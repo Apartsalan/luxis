@@ -13,6 +13,9 @@ import {
   CalendarDays,
   CheckSquare,
   Inbox,
+  Plus,
+  Loader2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,10 +24,13 @@ import {
   useMyTasks,
   useCompleteTask,
   useSkipTask,
+  useCreateTask,
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
   type WorkflowTask,
 } from "@/hooks/use-workflow";
+import { useAuth } from "@/hooks/use-auth";
+import { useCases } from "@/hooks/use-cases";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -243,9 +249,52 @@ function TaskRow({
 
 export default function TakenPage() {
   const [filter, setFilter] = useState<TaskFilter>("open");
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    case_id: "",
+    title: "",
+    task_type: "custom",
+    due_date: new Date().toISOString().split("T")[0],
+    description: "",
+  });
+
+  const { user } = useAuth();
   const { data: tasks, isLoading, error } = useMyTasks();
+  const { data: casesData } = useCases({ per_page: 100, status: "" });
   const completeTask = useCompleteTask();
   const skipTask = useSkipTask();
+  const createTask = useCreateTask();
+
+  const cases = casesData?.items ?? [];
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.case_id) {
+      toast.error("Selecteer een dossier");
+      return;
+    }
+    try {
+      await createTask.mutateAsync({
+        case_id: form.case_id,
+        task_type: form.task_type,
+        title: form.title,
+        due_date: form.due_date,
+        ...(form.description && { description: form.description }),
+        ...(user?.id && { assigned_to_id: user.id }),
+      });
+      toast.success("Taak aangemaakt");
+      setShowForm(false);
+      setForm({
+        case_id: "",
+        title: "",
+        task_type: "custom",
+        due_date: new Date().toISOString().split("T")[0],
+        description: "",
+      });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const handleComplete = (id: string) => {
     completeTask.mutate(id, {
@@ -345,6 +394,15 @@ export default function TakenPage() {
           </p>
         </div>
 
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nieuwe taak
+          </button>
+
         {/* Filter buttons */}
         <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1">
           {(
@@ -368,7 +426,116 @@ export default function TakenPage() {
             </button>
           ))}
         </div>
+        </div>
       </div>
+
+      {/* Create task form */}
+      {showForm && (
+        <form
+          onSubmit={handleCreate}
+          className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3"
+        >
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-semibold text-foreground">Nieuwe taak</h3>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-md p-1 hover:bg-muted transition-colors"
+            >
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-foreground">
+                Dossier *
+              </label>
+              <select
+                required
+                value={form.case_id}
+                onChange={(e) => setForm((f) => ({ ...f, case_id: e.target.value }))}
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              >
+                <option value="">Selecteer een dossier...</option>
+                {cases.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.case_number} — {c.client?.name ?? "Geen cliënt"}{c.description ? ` · ${c.description}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-foreground">
+                Titel *
+              </label>
+              <input
+                type="text"
+                required
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Bijv. Bel debiteur voor betalingsherinnering"
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Type
+              </label>
+              <select
+                value={form.task_type}
+                onChange={(e) => setForm((f) => ({ ...f, task_type: e.target.value }))}
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              >
+                {Object.entries(TASK_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Deadline *
+              </label>
+              <input
+                type="date"
+                required
+                value={form.due_date}
+                onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-foreground">
+                Omschrijving
+              </label>
+              <input
+                type="text"
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={createTask.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {createTask.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
+              Aanmaken
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="rounded-lg border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
+            >
+              Annuleren
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Task groups */}
       {groups.length === 0 ? (

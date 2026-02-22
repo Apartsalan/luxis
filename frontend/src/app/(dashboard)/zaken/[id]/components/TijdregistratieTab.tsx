@@ -17,10 +17,12 @@ import {
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
 } from "@/hooks/use-workflow";
+import { useAuth } from "@/hooks/use-auth";
 import { formatDateShort } from "@/lib/utils";
 import { TASK_STATUS_BADGE } from "../types";
 
 export default function TijdregistratieTab({ caseId }: { caseId: string }) {
+  const { user } = useAuth();
   const { data: tasksData, isLoading } = useWorkflowTasks({ case_id: caseId });
   const completeTask = useCompleteTask();
   const skipTask = useSkipTask();
@@ -60,6 +62,7 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
         title: form.title,
         due_date: form.due_date,
         ...(form.description && { description: form.description }),
+        ...(user?.id && { assigned_to_id: user.id }),
       });
       toast.success("Taak aangemaakt");
       setShowForm(false);
@@ -74,7 +77,7 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
     }
   };
 
-  const tasks = tasksData?.items ?? [];
+  const tasks = tasksData ?? [];
   const openTasks = tasks.filter(
     (t) => t.status === "pending" || t.status === "due" || t.status === "overdue"
   );

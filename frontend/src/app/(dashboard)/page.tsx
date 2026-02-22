@@ -690,8 +690,8 @@ function MyTasksWidget() {
   const { data, isLoading } = useMyOpenTasks(5);
   const completeTask = useCompleteTask();
 
-  const tasks = data?.items ?? [];
-  const totalOpen = data?.total ?? 0;
+  const tasks = data ?? [];
+  const totalOpen = tasks.length;
 
   if (isLoading) {
     return (

@@ -310,25 +310,19 @@ export function useDeleteWorkflowTransition() {
 export function useWorkflowTasks(params?: {
   case_id?: string;
   status?: string;
-  page?: number;
-  per_page?: number;
 }) {
   const case_id = params?.case_id ?? "";
   const status = params?.status ?? "";
-  const page = params?.page ?? 1;
-  const per_page = params?.per_page ?? 20;
 
-  return useQuery<PaginatedTasks>({
-    queryKey: ["workflow-tasks", { case_id, status, page, per_page }],
+  return useQuery<WorkflowTask[]>({
+    queryKey: ["workflow-tasks", { case_id, status }],
     queryFn: async () => {
-      const queryParams = new URLSearchParams({
-        page: String(page),
-        per_page: String(per_page),
-      });
+      const queryParams = new URLSearchParams();
       if (case_id) queryParams.set("case_id", case_id);
       if (status) queryParams.set("status", status);
 
-      const res = await api(`/api/workflow/tasks?${queryParams}`);
+      const qs = queryParams.toString();
+      const res = await api(`/api/workflow/tasks${qs ? `?${qs}` : ""}`);
       if (!res.ok) throw new Error("Fout bij ophalen taken");
       return res.json();
     },
@@ -337,14 +331,13 @@ export function useWorkflowTasks(params?: {
 
 /** All open tasks for current user (dashboard widget) */
 export function useMyOpenTasks(limit = 10) {
-  return useQuery<PaginatedTasks>({
+  return useQuery<WorkflowTask[]>({
     queryKey: ["workflow-tasks", "my-open", limit],
     queryFn: async () => {
-      const res = await api(
-        `/api/workflow/tasks?status=due&per_page=${limit}`
-      );
+      const res = await api(`/api/workflow/tasks?status=due`);
       if (!res.ok) throw new Error("Fout bij ophalen taken");
-      return res.json();
+      const tasks: WorkflowTask[] = await res.json();
+      return tasks.slice(0, limit);
     },
   });
 }

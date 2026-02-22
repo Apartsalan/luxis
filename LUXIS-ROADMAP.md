@@ -211,6 +211,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
 **TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op M365 migratie)
 **✅ F11 geïmplementeerd** (21 feb) — freestanding e-mail vanuit dossier met recipient quick-select chips
+**✅ M6 gebouwd** (22 feb) — Ongesorteerde email wachtrij met split-view, suggesties, bulk link/dismiss, sidebar badge
 **Volgende prioriteit:** Dossier workspace verbeteringen (G3-G15 uit DOSSIER-WERKPLEK-RESEARCH.md)
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
@@ -298,10 +299,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 | M2+ | Re-match ongelinkte emails | Bestaande ongelinkte emails worden bij elke sync opnieuw gematcht (altijd, ook vanuit dossier-context) | ✅ Gebouwd + gefixt (21 feb) |
 | M3 | Correspondentie tab (unified view) | Alle in- + uitgaande mails per dossier, split-view met detail panel + bijlagen | ✅ Gebouwd (21 feb) |
 | M4 | Compose via provider | Send via Gmail API (verschijnt in Verzonden), fallback naar SMTP | ✅ Gebouwd (21 feb) |
-| M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) | TODO |
-| M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties | Deels (endpoint klaar) |
+| M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) | 🔵 Backlog (bestaande timer dekt dit grotendeels) |
+| M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties | ✅ Gebouwd (22 feb) |
 
-**Bouwvolgorde:** M0 (samen met Lisanne) → ~~M1 → M2 → M3 → M4~~ → M5 → M6
+**Bouwvolgorde:** M0 (samen met Lisanne) → ~~M1 → M2 → M3 → M4 → M6~~ (M5 op backlog)
 
 **Wat Lisanne ervaart na afronding:**
 - Template aanklikken → opent direct in Outlook met alles pre-filled

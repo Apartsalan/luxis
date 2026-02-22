@@ -35,9 +35,18 @@ export interface SyncedEmailDetail extends SyncedEmailSummary {
   provider_thread_id: string | null;
 }
 
-interface CaseEmailsResponse {
+export interface CaseEmailsResponse {
   emails: SyncedEmailSummary[];
   total: number;
+}
+
+export interface CaseSuggestion {
+  case_id: string;
+  case_number: string;
+  description: string | null;
+  client_name: string;
+  match_reason: string;
+  confidence: "high" | "medium";
 }
 
 interface SyncResponse {
@@ -75,6 +84,7 @@ export function useSyncEmails() {
       // Invalidate all email-related queries after sync
       queryClient.invalidateQueries({ queryKey: ["case-emails"] });
       queryClient.invalidateQueries({ queryKey: ["unlinked-emails"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-count"] });
     },
   });
 }
@@ -214,6 +224,96 @@ export function useLinkEmail() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["case-emails", data.case_id] });
       queryClient.invalidateQueries({ queryKey: ["unlinked-emails"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-count"] });
     },
+  });
+}
+
+/**
+ * Get count of unlinked non-dismissed emails (for sidebar badge).
+ */
+export function useUnlinkedCount() {
+  return useQuery<{ count: number }>({
+    queryKey: ["unlinked-count"],
+    queryFn: async () => {
+      const res = await api("/api/email/unlinked/count");
+      if (!res.ok) return { count: 0 };
+      return res.json();
+    },
+    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes (matches auto-sync)
+  });
+}
+
+/**
+ * Bulk link multiple emails to the same case.
+ */
+export function useBulkLinkEmails() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { success: boolean; linked_count: number },
+    Error,
+    { emailIds: string[]; caseId: string }
+  >({
+    mutationFn: async ({ emailIds, caseId }) => {
+      const res = await api("/api/email/bulk-link", {
+        method: "POST",
+        body: JSON.stringify({ email_ids: emailIds, case_id: caseId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Bulk koppelen mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["unlinked-emails"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-count"] });
+      queryClient.invalidateQueries({ queryKey: ["case-emails"] });
+    },
+  });
+}
+
+/**
+ * Dismiss emails from the ongesorteerd queue.
+ */
+export function useDismissEmails() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { success: boolean; dismissed_count: number },
+    Error,
+    { emailIds: string[] }
+  >({
+    mutationFn: async ({ emailIds }) => {
+      const res = await api("/api/email/dismiss", {
+        method: "POST",
+        body: JSON.stringify({ email_ids: emailIds }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Negeren mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["unlinked-emails"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-count"] });
+    },
+  });
+}
+
+/**
+ * Suggest cases for an unlinked email based on contact + reference matching.
+ */
+export function useSuggestCases(emailId: string | undefined) {
+  return useQuery<{ suggestions: CaseSuggestion[] }>({
+    queryKey: ["suggest-cases", emailId],
+    queryFn: async () => {
+      const res = await api(`/api/email/suggest-cases/${emailId}`);
+      if (!res.ok) return { suggestions: [] };
+      return res.json();
+    },
+    enabled: !!emailId,
   });
 }

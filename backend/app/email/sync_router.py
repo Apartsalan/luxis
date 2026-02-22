@@ -1,11 +1,15 @@
 """Email sync router — endpoints for syncing inbox and reading emails per dossier.
 
 Endpoints:
-- POST /api/email/sync              — Trigger inbox sync for current user
-- GET  /api/email/cases/{id}/emails  — Get synced emails for a case
-- GET  /api/email/unlinked           — Get emails not linked to any case
-- POST /api/email/link               — Manually link an email to a case
-- GET  /api/email/messages/{id}      — Get a single synced email with full body
+- POST /api/email/sync                     — Trigger inbox sync for current user
+- GET  /api/email/cases/{id}/emails        — Get synced emails for a case
+- GET  /api/email/unlinked                 — Get emails not linked to any case
+- GET  /api/email/unlinked/count           — Get count of unlinked emails (sidebar badge)
+- POST /api/email/link                     — Manually link an email to a case
+- POST /api/email/bulk-link                — Link multiple emails to the same case
+- POST /api/email/dismiss                  — Dismiss emails from ongesorteerd queue
+- GET  /api/email/suggest-cases/{id}       — Suggest cases for an unlinked email
+- GET  /api/email/messages/{id}            — Get a single synced email with full body
 - GET  /api/email/messages/{id}/attachments — List attachments for an email
 - GET  /api/email/attachments/{id}/download — Download an attachment file
 """
@@ -28,9 +32,13 @@ from app.email.attachment_models import EmailAttachment
 from app.email.oauth_service import get_email_account
 from app.email.sync_service import (
     EMAIL_ATTACHMENTS_BASE,
+    bulk_link_emails,
+    dismiss_emails,
     get_case_emails,
+    get_unlinked_count,
     get_unlinked_emails,
     link_email_to_case,
+    suggest_cases_for_email,
     sync_emails_for_account,
 )
 from app.email.synced_email_models import SyncedEmail
@@ -106,6 +114,42 @@ class LinkEmailResponse(BaseModel):
     success: bool
     email_id: str
     case_id: str
+
+
+class BulkLinkRequest(BaseModel):
+    email_ids: list[str]
+    case_id: str
+
+
+class BulkLinkResponse(BaseModel):
+    success: bool
+    linked_count: int
+
+
+class DismissEmailRequest(BaseModel):
+    email_ids: list[str]
+
+
+class DismissEmailResponse(BaseModel):
+    success: bool
+    dismissed_count: int
+
+
+class UnlinkedCountResponse(BaseModel):
+    count: int
+
+
+class CaseSuggestion(BaseModel):
+    case_id: str
+    case_number: str
+    description: str | None
+    client_name: str
+    match_reason: str
+    confidence: str
+
+
+class SuggestCasesResponse(BaseModel):
+    suggestions: list[CaseSuggestion]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -278,6 +322,55 @@ async def link_email(
         success=True,
         email_id=data.email_id,
         case_id=data.case_id,
+    )
+
+
+@router.post("/bulk-link", response_model=BulkLinkResponse)
+async def bulk_link(
+    data: BulkLinkRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Link multiple emails to the same case in one request."""
+    email_uuids = [uuid.UUID(eid) for eid in data.email_ids]
+    count = await bulk_link_emails(
+        db, user.tenant_id, email_uuids, uuid.UUID(data.case_id)
+    )
+    return BulkLinkResponse(success=True, linked_count=count)
+
+
+@router.post("/dismiss", response_model=DismissEmailResponse)
+async def dismiss(
+    data: DismissEmailRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Dismiss emails from the ongesorteerd queue."""
+    email_uuids = [uuid.UUID(eid) for eid in data.email_ids]
+    count = await dismiss_emails(db, user.tenant_id, email_uuids)
+    return DismissEmailResponse(success=True, dismissed_count=count)
+
+
+@router.get("/unlinked/count", response_model=UnlinkedCountResponse)
+async def unlinked_count(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get count of unlinked non-dismissed emails (for sidebar badge)."""
+    count = await get_unlinked_count(db, user.tenant_id)
+    return UnlinkedCountResponse(count=count)
+
+
+@router.get("/suggest-cases/{email_id}", response_model=SuggestCasesResponse)
+async def suggest_cases(
+    email_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Suggest cases for an unlinked email based on contact + reference matching."""
+    suggestions = await suggest_cases_for_email(db, user.tenant_id, email_id)
+    return SuggestCasesResponse(
+        suggestions=[CaseSuggestion(**s) for s in suggestions]
     )
 
 

@@ -50,6 +50,7 @@ class SyncedEmail(TenantBase):
 
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     has_attachments: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_dismissed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     email_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False

@@ -635,6 +635,7 @@ async def get_unlinked_emails(
         select(SyncedEmail.id).where(
             SyncedEmail.tenant_id == tenant_id,
             SyncedEmail.case_id == None,  # noqa: E711
+            SyncedEmail.is_dismissed == False,  # noqa: E712
         )
     )
     total = len(count_result.all())
@@ -644,6 +645,7 @@ async def get_unlinked_emails(
         .where(
             SyncedEmail.tenant_id == tenant_id,
             SyncedEmail.case_id == None,  # noqa: E711
+            SyncedEmail.is_dismissed == False,  # noqa: E712
         )
         .order_by(SyncedEmail.email_date.desc())
         .limit(limit)
@@ -675,3 +677,270 @@ async def link_email_to_case(
     await db.flush()
     await db.refresh(email)
     return email
+
+
+async def get_unlinked_count(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> int:
+    """Get count of unlinked non-dismissed emails (for sidebar badge)."""
+    result = await db.execute(
+        select(SyncedEmail.id).where(
+            SyncedEmail.tenant_id == tenant_id,
+            SyncedEmail.case_id == None,  # noqa: E711
+            SyncedEmail.is_dismissed == False,  # noqa: E712
+        )
+    )
+    return len(result.all())
+
+
+async def dismiss_emails(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    email_ids: list[uuid.UUID],
+) -> int:
+    """Dismiss emails from the ongesorteerd queue (bulk)."""
+    result = await db.execute(
+        select(SyncedEmail).where(
+            SyncedEmail.tenant_id == tenant_id,
+            SyncedEmail.id.in_(email_ids),
+        )
+    )
+    emails = list(result.scalars().all())
+    count = 0
+    for email in emails:
+        email.is_dismissed = True
+        count += 1
+    await db.flush()
+    return count
+
+
+async def bulk_link_emails(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    email_ids: list[uuid.UUID],
+    case_id: uuid.UUID,
+) -> int:
+    """Link multiple emails to the same case (bulk)."""
+    result = await db.execute(
+        select(SyncedEmail).where(
+            SyncedEmail.tenant_id == tenant_id,
+            SyncedEmail.id.in_(email_ids),
+        )
+    )
+    emails = list(result.scalars().all())
+    count = 0
+    for email in emails:
+        email.case_id = case_id
+        email.is_dismissed = False  # Un-dismiss if previously dismissed
+        count += 1
+    await db.flush()
+    return count
+
+
+async def suggest_cases_for_email(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    email_id: uuid.UUID,
+) -> list[dict]:
+    """Suggest cases for an unlinked email based on contact + case number matching.
+
+    Returns list of dicts with case_id, case_number, description, client_name, match_reason.
+    """
+    result = await db.execute(
+        select(SyncedEmail).where(
+            SyncedEmail.id == email_id,
+            SyncedEmail.tenant_id == tenant_id,
+        )
+    )
+    email = result.scalar_one_or_none()
+    if not email:
+        return []
+
+    suggestions: dict[uuid.UUID, dict] = {}  # case_id -> suggestion dict
+
+    # --- Method 1: Case number / reference / court number matching ---
+    searchable = _build_searchable_text(
+        email.subject, email.body_text, email.body_html, email.snippet
+    )
+    if searchable:
+        text_lower = searchable.lower()
+
+        # Case number regex
+        matches = CASE_NUMBER_RE.findall(searchable)
+        if matches:
+            cn_result = await db.execute(
+                select(Case.id, Case.case_number, Case.description).where(
+                    Case.tenant_id == tenant_id,
+                    Case.is_active == True,  # noqa: E712
+                    Case.case_number.in_(matches),
+                )
+            )
+            for row in cn_result.all():
+                suggestions[row[0]] = {
+                    "case_id": str(row[0]),
+                    "case_number": row[1],
+                    "description": row[2],
+                    "match_reason": "dossiernummer",
+                    "confidence": "high",
+                }
+
+        # Client reference
+        ref_result = await db.execute(
+            select(Case.id, Case.case_number, Case.description, Case.reference).where(
+                Case.tenant_id == tenant_id,
+                Case.is_active == True,  # noqa: E712
+                Case.reference.isnot(None),
+                Case.reference != "",
+            )
+        )
+        for row in ref_result.all():
+            ref = row[3].strip()
+            if len(ref) >= 3 and ref.lower() in text_lower and row[0] not in suggestions:
+                suggestions[row[0]] = {
+                    "case_id": str(row[0]),
+                    "case_number": row[1],
+                    "description": row[2],
+                    "match_reason": "klantreferentie",
+                    "confidence": "high",
+                }
+
+        # Court case number
+        court_result = await db.execute(
+            select(Case.id, Case.case_number, Case.description, Case.court_case_number).where(
+                Case.tenant_id == tenant_id,
+                Case.is_active == True,  # noqa: E712
+                Case.court_case_number.isnot(None),
+                Case.court_case_number != "",
+            )
+        )
+        for row in court_result.all():
+            court_num = row[3].strip()
+            if len(court_num) >= 3 and court_num.lower() in text_lower and row[0] not in suggestions:
+                suggestions[row[0]] = {
+                    "case_id": str(row[0]),
+                    "case_number": row[1],
+                    "description": row[2],
+                    "match_reason": "zaaknummer rechtbank",
+                    "confidence": "high",
+                }
+
+    # --- Method 2: Contact email matching ---
+    all_addresses = []
+    if email.from_email:
+        all_addresses.append(email.from_email.lower())
+    try:
+        to_list = json.loads(email.to_emails) if email.to_emails else []
+        for addr in to_list:
+            addr = addr.strip()
+            if "<" in addr:
+                addr = addr[addr.index("<") + 1 : addr.index(">")]
+            all_addresses.append(addr.lower())
+    except (json.JSONDecodeError, TypeError):
+        pass
+    try:
+        cc_list = json.loads(email.cc_emails) if email.cc_emails else []
+        for addr in cc_list:
+            addr = addr.strip()
+            if "<" in addr:
+                addr = addr[addr.index("<") + 1 : addr.index(">")]
+            all_addresses.append(addr.lower())
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    if all_addresses:
+        contact_result = await db.execute(
+            select(Contact.id, Contact.email).where(
+                Contact.tenant_id == tenant_id,
+                Contact.email.in_(all_addresses),
+                Contact.is_active == True,  # noqa: E712
+            )
+        )
+        contact_rows = contact_result.all()
+        contact_ids = [row[0] for row in contact_rows]
+        contact_email_map = {row[0]: row[1] for row in contact_rows}
+
+        if contact_ids:
+            # Cases where contact is client or opposing party
+            case_result = await db.execute(
+                select(Case.id, Case.case_number, Case.description, Case.client_id, Case.opposing_party_id).where(
+                    Case.tenant_id == tenant_id,
+                    Case.is_active == True,  # noqa: E712
+                    or_(
+                        Case.client_id.in_(contact_ids),
+                        Case.opposing_party_id.in_(contact_ids),
+                    ),
+                )
+            )
+            for row in case_result.all():
+                if row[0] not in suggestions:
+                    matched_contact_id = None
+                    role = "contact"
+                    if row[3] in contact_ids:
+                        matched_contact_id = row[3]
+                        role = "cliënt"
+                    elif row[4] in contact_ids:
+                        matched_contact_id = row[4]
+                        role = "wederpartij"
+                    matched_email = contact_email_map.get(matched_contact_id, "")
+                    suggestions[row[0]] = {
+                        "case_id": str(row[0]),
+                        "case_number": row[1],
+                        "description": row[2],
+                        "match_reason": f"{role} ({matched_email})",
+                        "confidence": "high" if role == "cliënt" else "medium",
+                    }
+
+            # Cases via case parties
+            party_result = await db.execute(
+                select(CaseParty.case_id, CaseParty.contact_id).where(
+                    CaseParty.tenant_id == tenant_id,
+                    CaseParty.contact_id.in_(contact_ids),
+                )
+            )
+            party_case_ids = []
+            party_contact_map = {}
+            for row in party_result.all():
+                party_case_ids.append(row[0])
+                party_contact_map[row[0]] = row[1]
+
+            if party_case_ids:
+                pcase_result = await db.execute(
+                    select(Case.id, Case.case_number, Case.description).where(
+                        Case.tenant_id == tenant_id,
+                        Case.is_active == True,  # noqa: E712
+                        Case.id.in_(party_case_ids),
+                    )
+                )
+                for row in pcase_result.all():
+                    if row[0] not in suggestions:
+                        matched_contact_id = party_contact_map.get(row[0])
+                        matched_email = contact_email_map.get(matched_contact_id, "")
+                        suggestions[row[0]] = {
+                            "case_id": str(row[0]),
+                            "case_number": row[1],
+                            "description": row[2],
+                            "match_reason": f"partij ({matched_email})",
+                            "confidence": "medium",
+                        }
+
+    # Fetch client names for all suggestions
+    suggestion_list = list(suggestions.values())
+    case_ids_to_fetch = [uuid.UUID(s["case_id"]) for s in suggestion_list]
+    client_names: dict[str, str] = {}
+    if case_ids_to_fetch:
+        cn_result = await db.execute(
+            select(Case.id, Contact.display_name).join(
+                Contact, Case.client_id == Contact.id, isouter=True
+            ).where(Case.id.in_(case_ids_to_fetch))
+        )
+        for row in cn_result.all():
+            client_names[str(row[0])] = row[1] or ""
+
+    for s in suggestion_list:
+        s["client_name"] = client_names.get(s["case_id"], "")
+
+    # Sort: high confidence first, then by case_number
+    suggestion_list.sort(key=lambda s: (0 if s["confidence"] == "high" else 1, s["case_number"]))
+
+    return suggestion_list[:5]

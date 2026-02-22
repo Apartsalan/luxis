@@ -16,16 +16,19 @@ import {
   CheckSquare,
   ChevronLeft,
   ChevronRight,
+  Mail,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useModules, type LuxisModule } from "@/hooks/use-modules";
+import { useUnlinkedCount } from "@/hooks/use-email-sync";
 
 interface NavItem {
   name: string;
   href: string;
   icon: typeof LayoutDashboard;
   module?: LuxisModule;
+  badge?: "unlinked-count";
 }
 
 const ALL_NAVIGATION: NavItem[] = [
@@ -33,6 +36,7 @@ const ALL_NAVIGATION: NavItem[] = [
   { name: "Mijn Taken", href: "/taken", icon: CheckSquare },
   { name: "Relaties", href: "/relaties", icon: Users },
   { name: "Dossiers", href: "/zaken", icon: Briefcase },
+  { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
   { name: "Agenda", href: "/agenda", icon: Calendar },
   { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
   { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
@@ -55,6 +59,8 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const { hasModule } = useModules();
+  const { data: unlinkedCountData } = useUnlinkedCount();
+  const unlinkedCount = unlinkedCountData?.count ?? 0;
 
   const navigation = useMemo(
     () =>
@@ -130,6 +136,8 @@ export function AppSidebar({
               pathname === item.href ||
               (item.href !== "/" && pathname.startsWith(item.href));
 
+            const badgeCount = item.badge === "unlinked-count" ? unlinkedCount : 0;
+
             return (
               <Link
                 key={item.name}
@@ -146,13 +154,27 @@ export function AppSidebar({
                     : "text-sidebar-foreground/70 hover:bg-sidebar-muted hover:text-sidebar-foreground"
                 )}
               >
-                <item.icon
-                  className={cn(
-                    "shrink-0",
-                    collapsed && !mobileOpen ? "h-5 w-5" : "h-[18px] w-[18px]"
+                <div className="relative shrink-0">
+                  <item.icon
+                    className={cn(
+                      collapsed && !mobileOpen ? "h-5 w-5" : "h-[18px] w-[18px]"
+                    )}
+                  />
+                  {/* Badge dot on collapsed icon */}
+                  {collapsed && !mobileOpen && badgeCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
                   )}
-                />
-                {(!collapsed || mobileOpen) && item.name}
+                </div>
+                {(!collapsed || mobileOpen) && (
+                  <>
+                    <span className="flex-1">{item.name}</span>
+                    {badgeCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[10px] font-semibold text-red-400">
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </span>
+                    )}
+                  </>
+                )}
               </Link>
             );
           })}

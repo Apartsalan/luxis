@@ -1,7 +1,69 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 feb 2026 (sessie 8 — task visibility fix + Mijn Taken create)
+**Laatst bijgewerkt:** 22 feb 2026 (sessie 8 — task fixes + incasso batch plan)
 **Laatste feature/fix:** Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
+**Volgende sessie (9):** Incasso Batch Werkstroom bouwen (zie plan hieronder)
+
+## Plan voor sessie 9 — Incasso Batch Werkstroom
+
+### Wat het is
+Een nieuw scherm "Incasso" in de sidebar waarmee Lisanne batch-acties kan uitvoeren op meerdere incasso-dossiers tegelijk (brieven sturen, status wijzigen, rente herberekenen). Plus een pipeline editor om de incasso-stappen zelf te configureren.
+
+### Waarom
+In BaseNet heet dit "Workflow" — je stuurt bijv. 15 dossiers tegelijk een 2e sommatie. Maar BaseNet's aanpak werkt niet optimaal: geen preview, geen self-service configuratie, geen compliance-handhaving. Luxis kan dit beter.
+
+### Navigatie
+Eén sidebar-item **"Incasso"** (`/incasso`) met twee views:
+1. **Werkstroom** (default) — pipeline-overzicht van alle incasso-dossiers per status-kolom
+2. **Stappen beheren** — pipeline editor (naam, volgorde, wachtdagen, template)
+
+### Feature-details
+
+#### A. Pipeline Editor (Stappen beheren)
+- Lijst van incasso-stappen: naam, volgorde, minimum wachtdagen, gekoppelde documenttemplate
+- Stappen toevoegen, verwijderen, herordenen (drag-and-drop of up/down knoppen)
+- Default stappen: Aanmaning → Sommatie (14d) → 2e Sommatie → Ingebrekestelling → Dagvaarding → Executie
+- Per stap: wachtperiode instellen, template koppelen
+- Backend: nieuw model `IncassoPipelineStep` (tenant_id, name, sort_order, min_wait_days, template_id, is_active)
+
+#### B. Batch Werkstroom (hoofdscherm)
+- Tabel met alle incasso-dossiers, gegroepeerd per huidige incasso-status
+- Kolommen: checkbox, dossiernummer, cliënt, wederpartij, hoofdsom, openstaand, dagen in huidige stap, laatst verzonden brief
+- Checkboxes voor selectie + "Selecteer alle X in dit stadium"
+- Floating action bar bij selectie: "Verstuur brief", "Wijzig status", "Herbereken rente"
+- **Pre-flight wizard** bij batch-actie:
+  - Toont hoeveel dossiers worden bewerkt
+  - Toont welke dossiers eerst een statuswijziging nodig hebben (en biedt aan dit automatisch te doen)
+  - Toont welke dossiers blockers hebben (betalingsregeling actief, adres onbekend)
+  - Preview van de actie → bevestig → uitvoer
+
+#### C. Smart Work Queues (later, P2)
+- Voorgedefinieerde filters als tabs: "Klaar voor sommatie", "14 dagen verlopen", "Klaar voor escalatie"
+- Badge-tellingen in de sidebar
+
+### Backend-werk nodig
+1. Nieuw model `IncassoPipelineStep` + CRUD endpoints
+2. Nieuw veld op cases: `incasso_step_id` (FK naar huidige stap in de pipeline)
+3. Endpoint: `GET /api/incasso/pipeline` — alle dossiers gegroepeerd per stap
+4. Endpoint: `POST /api/incasso/batch` — batch-actie uitvoeren (status wijzigen, brief genereren)
+5. Pre-flight endpoint: `POST /api/incasso/batch/preview` — preview zonder uitvoering
+
+### Frontend-werk nodig
+1. Sidebar-item "Incasso" toevoegen
+2. `/incasso` pagina met twee tabs (Werkstroom + Stappen)
+3. Pipeline editor component
+4. Batch tabel met checkboxes + floating action bar
+5. Pre-flight wizard dialog
+
+### Research gedaan
+Grondig onderzoek naar BaseNet, CreditDevice, Onguard, TAGOR, iFlow, Aryza, Buckaroo, Straetus. Plus UX-patronen van Stripe Workflows, Linear, Jira bulk wizard, HubSpot. Conclusie: combineer CreditDevice's dagelijkse automatisering met Linear/Jira's batch-selectie UX, plus compliance-handhaving die geen concurrent goed doet.
+
+### Commits sessie 8
+
+| Hash | Beschrijving |
+|------|-------------|
+| `01741b5` | fix: task visibility and add create task to Mijn Taken page |
+| `7cad57b` | docs: update session notes and roadmap for session 8 (BUG-11, BUG-12) |
 
 ## Wat er gedaan is (sessie 8 — 22 feb)
 

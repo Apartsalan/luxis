@@ -220,7 +220,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ G14 Dossier sidebar** (sessie 7, 22 feb) — Collapsible properties sidebar met dossierinfo, client, wederpartij, advocaat, financieel snapshot (OHW + incasso/non-incasso)
 **✅ G10 Task templates** (sessie 7, 22 feb) — Automatische taak-templates bij case creation: incasso 8 taken, advies 4, insolventie 4, overig 2
 **✅ BUG-11/12 gefixt** (sessie 8, 22 feb) — Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
-**Volgende prioriteit (sessie 8):** G4 dossiertypes, overige G-features uit DOSSIER-WERKPLEK-RESEARCH.md
+**Volgende prioriteit (sessie 9):** Incasso Batch Werkstroom — nieuw sidebar-item "Incasso" met pipeline editor + batch-acties op meerdere dossiers. Zie SESSION-NOTES.md voor volledig plan.
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

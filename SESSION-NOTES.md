@@ -1,7 +1,34 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 feb 2026 (sessie 7 — G14 sidebar + G10 task templates)
-**Laatste feature/fix:** Dossier sidebar + automatische taaktemplates bij aanmaken dossier
+**Laatst bijgewerkt:** 22 feb 2026 (sessie 8 — task visibility fix + Mijn Taken create)
+**Laatste feature/fix:** Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
+
+## Wat er gedaan is (sessie 8 — 22 feb)
+
+### BUG-FIX: Taken niet zichtbaar na aanmaken in dossier ✅
+- **Oorzaak:** `useWorkflowTasks` hook verwachtte `PaginatedTasks` object (`{ items, total, ... }`) maar backend `GET /api/workflow/tasks` retourneert een plain `WorkflowTask[]` array. Daardoor was `tasksData?.items` altijd `undefined` → lege takenlijst.
+- **Fix `use-workflow.ts`:** `useWorkflowTasks` return type van `PaginatedTasks` → `WorkflowTask[]`, pagination params verwijderd (backend ondersteunt het niet)
+- **Fix `use-workflow.ts`:** `useMyOpenTasks` zelfde probleem — return type van `PaginatedTasks` → `WorkflowTask[]`, `.slice(0, limit)` in de hook
+- **Fix `TijdregistratieTab.tsx`:** `tasksData?.items ?? []` → `tasksData ?? []`
+- **Fix `page.tsx` (dashboard):** `data?.items ?? []` → `data ?? []`, `data?.total` → `tasks.length`
+
+### BUG-FIX: Taken verschijnen niet bij "Mijn Taken" na handmatig aanmaken ✅
+- **Oorzaak:** `TijdregistratieTab` stuurde geen `assigned_to_id` mee bij aanmaken → taak werd niet aan gebruiker toegewezen → `/api/dashboard/my-tasks` (filtert op `assigned_to_id = user.id`) toonde ze niet
+- **Fix:** `useAuth()` toegevoegd + `assigned_to_id: user.id` meegeven bij `createTask.mutateAsync()`
+
+### Feature: "Nieuwe taak" knop op Mijn Taken pagina ✅
+- **Knop:** "Nieuwe taak" naast de filter-knoppen in de header
+- **Formulier:** Dossier dropdown (alle actieve dossiers), titel, type, deadline, omschrijving
+- **Auto-assign:** Taak wordt automatisch aan de ingelogde gebruiker toegewezen
+- **Imports:** `useCreateTask`, `useAuth`, `useCases` hooks + `Plus`, `Loader2`, `X` icons
+
+### Commits sessie 8
+
+| Hash | Beschrijving |
+|------|-------------|
+| `01741b5` | fix: task visibility and add create task to Mijn Taken page |
+
+---
 
 ## Wat er gedaan is (sessie 7 — 22 feb)
 

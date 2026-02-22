@@ -1,7 +1,34 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 feb 2026 (sessie 4 — M6 ongesorteerd email wachtrij)
-**Laatste feature/fix:** M6 correspondentie pagina + zoekbalk gebouwd
+**Laatst bijgewerkt:** 22 feb 2026 (sessie 5 — dossier detail refactoring)
+**Laatste feature/fix:** Dossier detail page.tsx opgesplitst van 4236 → ~236 regels
+
+## Wat er gedaan is (sessie 5 — 22 feb)
+
+### Refactoring: Dossier detail page.tsx opsplitsen ✅
+- **Probleem:** `zaken/[id]/page.tsx` was 4236 regels — alles in één bestand
+- **Oplossing:** Opgesplitst in 8 componentbestanden + 1 shared types bestand
+- **Resultaat:** `page.tsx` is nu ~236 regels (data loading + tabs + state als props)
+- **Geen functionaliteitswijzigingen** — puur code-organisatie
+
+### Nieuwe bestanden
+- `zaken/[id]/types.tsx` — gedeelde constanten (STATUS_LABELS, STATUS_BADGE, PIPELINE_STEPS, etc.), activity/task constanten, renderSimpleMarkdown helper
+- `zaken/[id]/components/DossierHeader.tsx` — header, pipeline stepper, workflow-suggestie banner, quick stats, quick actions bar
+- `zaken/[id]/components/DetailsTab.tsx` — OverzichtTab (dossiergegevens, bewerkformulier, partijen inline, notitie-invoer, recente activiteit)
+- `zaken/[id]/components/IncassoTab.tsx` — 4 named exports: VorderingenTab, BetalingenTab, FinancieelTab, DerdengeldenTab
+- `zaken/[id]/components/DocumentenTab.tsx` — 2 named exports: DocumentenTab (template generatie + bestandsuploads) + FacturenTab
+- `zaken/[id]/components/CorrespondentieTab.tsx` — email correspondentie + EmailDetailPanel
+- `zaken/[id]/components/TijdregistratieTab.tsx` — workflow taakbeheer (was TakenTab)
+- `zaken/[id]/components/PartijenTab.tsx` — partijenoverzicht met conflict detectie
+- `zaken/[id]/components/ActiviteitenTab.tsx` — activiteitentijdlijn met paginatie
+
+### Commits sessie 5
+
+| Hash | Beschrijving |
+|------|-------------|
+| `0914e37` | refactor(zaken): split dossier detail page into 8 tab components |
+
+---
 
 ## Wat er gedaan is (sessie 4 — 22 feb)
 
@@ -268,25 +295,16 @@ Compose via Provider:
 ---
 
 ## Openstaande issues
-- Dossier detail page is nu 4236 regels in één bestand — refactoring naar aparte tab-componenten is de eerstvolgende taak
+- ~~Dossier detail page is nu 4236 regels in één bestand~~ ✅ Opgesplitst in sessie 5
 - Google OAuth test: arsalanseidony@gmail.nl moet als test user staan in Google Cloud Console
 - Auto-sync zal bij grote inboxen de eerste keer langzaam zijn (max 50 per cycle)
 - M6 + migratie 027 moeten nog gedeployed worden op de VPS (deploy commando staat hieronder)
 
 ## Wat de volgende stap is
 
-### Sessie 5 — Eerste prioriteit
-- **Dossier detail refactoring:** `zaken/[id]/page.tsx` (4236 regels) opsplitsen in:
-  - `zaken/[id]/components/DossierHeader.tsx`
-  - `zaken/[id]/components/DetailsTab.tsx`
-  - `zaken/[id]/components/CorrespondentieTab.tsx`
-  - `zaken/[id]/components/DocumentenTab.tsx`
-  - `zaken/[id]/components/TijdregistratieTab.tsx`
-  - `zaken/[id]/components/IncassoTab.tsx`
-  - `zaken/[id]/components/PartijenTab.tsx`
-  - `zaken/[id]/components/ActiviteitenTab.tsx`
-  - `zaken/[id]/types.ts` (gedeelde types)
-  - Hoofdpagina wordt ~200 regels (case data laden + tabs renderen)
+### Sessie 6 — Volgende prioriteit
+- **Dossier workspace verbeteringen** (G3-G15 uit DOSSIER-WERKPLEK-RESEARCH.md)
+- Of andere features uit UX-RESEARCH-A6-A7.md
 
 ### Later bouwen
 - **M5:** AutoTime op emails (backlog — bestaande timer dekt dit grotendeels)

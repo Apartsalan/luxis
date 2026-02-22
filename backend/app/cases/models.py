@@ -53,6 +53,23 @@ class Case(TenantBase):
         String(100), nullable=True
     )  # Rolnummer/zaaknummer bij de rechtbank
 
+    # G3: Procesgegevens
+    court_name: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )  # Naam rechtbank (bijv. "Rechtbank Amsterdam")
+    judge_name: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )  # Behandelend rechter
+    chamber: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # Kamer (bijv. "Handelskamer")
+    procedure_type: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # Type procedure (dagvaarding, verzoekschrift, kort geding, etc.)
+    procedure_phase: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # Procesfase (aangebracht, conclusies, comparitie, vonnis, hoger beroep, etc.)
+
     # Interest settings (at case level, not per claim)
     interest_type: Mapped[str] = mapped_column(
         String(30), nullable=False, default="statutory"

@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Building2,
+  ChevronDown,
   Clock,
   FileText,
+  Gavel,
   Loader2,
   MessageSquare,
   Pencil,
@@ -19,6 +21,52 @@ import { useUpdateCase, useAddCaseActivity, useAddCaseParty, useRemoveCaseParty 
 import { useRelations } from "@/hooks/use-relations";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { ACTIVITY_ICONS, ACTIVITY_COLORS } from "../types";
+
+const DUTCH_COURTS = [
+  "Rechtbank Amsterdam",
+  "Rechtbank Den Haag",
+  "Rechtbank Gelderland",
+  "Rechtbank Limburg",
+  "Rechtbank Midden-Nederland",
+  "Rechtbank Noord-Holland",
+  "Rechtbank Noord-Nederland",
+  "Rechtbank Oost-Brabant",
+  "Rechtbank Overijssel",
+  "Rechtbank Rotterdam",
+  "Rechtbank Zeeland-West-Brabant",
+  "Gerechtshof Amsterdam",
+  "Gerechtshof Arnhem-Leeuwarden",
+  "Gerechtshof Den Haag",
+  "Gerechtshof 's-Hertogenbosch",
+  "Hoge Raad der Nederlanden",
+];
+
+const PROCEDURE_TYPES = [
+  "Dagvaarding",
+  "Verzoekschrift",
+  "Kort geding",
+  "Kantonzaak",
+  "Handelszaak",
+  "Hoger beroep",
+  "Cassatie",
+  "Incidenteel appel",
+  "Verzet",
+];
+
+const PROCEDURE_PHASES = [
+  "Aangebracht",
+  "Dagvaarding uitgebracht",
+  "Conclusie van antwoord",
+  "Conclusie van repliek",
+  "Conclusie van dupliek",
+  "Comparitie van partijen",
+  "Pleidooi",
+  "Vonnis bepaald",
+  "Vonnis gewezen",
+  "Hoger beroep ingesteld",
+  "Executie",
+  "Afgerond",
+];
 
 export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any; initialNoteText?: string; onNoteTextConsumed?: () => void }) {
   const [noteText, setNoteText] = useState("");
@@ -41,6 +89,11 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     description: zaak.description || "",
     reference: zaak.reference || "",
     court_case_number: zaak.court_case_number || "",
+    court_name: zaak.court_name || "",
+    judge_name: zaak.judge_name || "",
+    chamber: zaak.chamber || "",
+    procedure_type: zaak.procedure_type || "",
+    procedure_phase: zaak.procedure_phase || "",
   });
 
   // Apply phone note text from parent
@@ -78,6 +131,11 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
           description: editForm.description.trim() || null,
           reference: editForm.reference.trim() || null,
           court_case_number: editForm.court_case_number.trim() || null,
+          court_name: editForm.court_name.trim() || null,
+          judge_name: editForm.judge_name.trim() || null,
+          chamber: editForm.chamber.trim() || null,
+          procedure_type: editForm.procedure_type.trim() || null,
+          procedure_phase: editForm.procedure_phase.trim() || null,
         },
       });
       setIsEditing(false);
@@ -92,6 +150,11 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       description: zaak.description || "",
       reference: zaak.reference || "",
       court_case_number: zaak.court_case_number || "",
+      court_name: zaak.court_name || "",
+      judge_name: zaak.judge_name || "",
+      chamber: zaak.chamber || "",
+      procedure_type: zaak.procedure_type || "",
+      procedure_phase: zaak.procedure_phase || "",
     });
     setIsEditing(false);
   };
@@ -319,6 +382,124 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
               </div>
             )}
           </dl>
+          )}
+        </div>
+
+        {/* Procesgegevens */}
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Gavel className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-card-foreground uppercase tracking-wider">
+                Procesgegevens
+              </h2>
+            </div>
+          </div>
+
+          {isEditing ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Rechtbank
+                </label>
+                <div className="relative">
+                  <select
+                    value={editForm.court_name}
+                    onChange={(e) => setEditForm(f => ({ ...f, court_name: e.target.value }))}
+                    className={`${editInputClass} appearance-none pr-8`}
+                  >
+                    <option value="">Selecteer rechtbank...</option>
+                    {DUTCH_COURTS.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Rechter
+                </label>
+                <input
+                  type="text"
+                  value={editForm.judge_name}
+                  onChange={(e) => setEditForm(f => ({ ...f, judge_name: e.target.value }))}
+                  className={editInputClass}
+                  placeholder="Naam behandelend rechter"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Kamer
+                </label>
+                <input
+                  type="text"
+                  value={editForm.chamber}
+                  onChange={(e) => setEditForm(f => ({ ...f, chamber: e.target.value }))}
+                  className={editInputClass}
+                  placeholder="Bijv. Handelskamer"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Type procedure
+                </label>
+                <div className="relative">
+                  <select
+                    value={editForm.procedure_type}
+                    onChange={(e) => setEditForm(f => ({ ...f, procedure_type: e.target.value }))}
+                    className={`${editInputClass} appearance-none pr-8`}
+                  >
+                    <option value="">Selecteer type...</option>
+                    {PROCEDURE_TYPES.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Procesfase
+                </label>
+                <div className="relative">
+                  <select
+                    value={editForm.procedure_phase}
+                    onChange={(e) => setEditForm(f => ({ ...f, procedure_phase: e.target.value }))}
+                    className={`${editInputClass} appearance-none pr-8`}
+                  >
+                    <option value="">Selecteer fase...</option>
+                    {PROCEDURE_PHASES.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">Rechtbank</dt>
+                <dd className="text-sm text-foreground">{zaak.court_name || "-"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">Rechter</dt>
+                <dd className="text-sm text-foreground">{zaak.judge_name || "-"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">Kamer</dt>
+                <dd className="text-sm text-foreground">{zaak.chamber || "-"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">Type procedure</dt>
+                <dd className="text-sm text-foreground">{zaak.procedure_type || "-"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground mb-1">Procesfase</dt>
+                <dd className="text-sm text-foreground">{zaak.procedure_phase || "-"}</dd>
+              </div>
+            </dl>
           )}
         </div>
 

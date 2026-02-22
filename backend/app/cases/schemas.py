@@ -44,6 +44,11 @@ class CaseCreate(BaseModel):
     description: str | None = None
     reference: str | None = None
     court_case_number: str | None = None
+    court_name: str | None = None
+    judge_name: str | None = None
+    chamber: str | None = None
+    procedure_type: str | None = None
+    procedure_phase: str | None = None
     interest_type: str = Field(
         default="statutory",
         description="statutory, commercial, government, contractual",
@@ -62,6 +67,11 @@ class CaseUpdate(BaseModel):
     description: str | None = None
     reference: str | None = None
     court_case_number: str | None = None
+    court_name: str | None = None
+    judge_name: str | None = None
+    chamber: str | None = None
+    procedure_type: str | None = None
+    procedure_phase: str | None = None
     interest_type: str | None = None
     contractual_rate: float | None = None
     contractual_compound: bool | None = None
@@ -147,6 +157,11 @@ class CaseResponse(BaseModel):
     description: str | None
     reference: str | None
     court_case_number: str | None
+    court_name: str | None
+    judge_name: str | None
+    chamber: str | None
+    procedure_type: str | None
+    procedure_phase: str | None
     interest_type: str
     contractual_rate: float | None
     contractual_compound: bool

@@ -23,6 +23,11 @@ export interface CaseSummary {
 
 export interface CaseDetail extends CaseSummary {
   court_case_number: string | null;
+  court_name: string | null;
+  judge_name: string | null;
+  chamber: string | null;
+  procedure_type: string | null;
+  procedure_phase: string | null;
   contractual_rate: number | null;
   contractual_compound: boolean;
   billing_contact: { id: string; name: string } | null;

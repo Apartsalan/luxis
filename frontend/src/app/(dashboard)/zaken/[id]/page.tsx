@@ -200,6 +200,72 @@ export default function ZaakDetailPage() {
     }
   };
 
+  // G5: Keyboard shortcuts (Linear-style)
+  // Tab IDs for numeric shortcuts — order matches the tab bar
+  const isIncasso = hasModule("incasso") && zaak?.case_type === "incasso";
+  const tabIds = [
+    "overzicht", "taken",
+    ...(isIncasso ? ["vorderingen", "betalingen", "financieel", "derdengelden"] : []),
+    "facturen", "documenten", "correspondentie", "activiteiten", "partijen",
+  ];
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in inputs/textareas or when modifier keys are held
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement).isContentEditable) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      switch (e.key.toLowerCase()) {
+        case "t":
+          e.preventDefault();
+          if (timer.running && timer.caseId === id) {
+            stopTimer();
+            toast.info("Timer gestopt");
+          } else if (zaak) {
+            const label = `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}`;
+            startTimer(zaak.id, label);
+            toast.info("Timer gestart");
+          }
+          break;
+        case "n":
+          e.preventDefault();
+          setActiveTab("overzicht");
+          // Focus the note textarea after tab switch
+          setTimeout(() => {
+            const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder="Schrijf een notitie..."]');
+            textarea?.focus();
+          }, 100);
+          break;
+        case "d":
+          e.preventDefault();
+          setActiveTab("documenten");
+          break;
+        case "e":
+          e.preventDefault();
+          setCaseEmailOpen(true);
+          break;
+        case "f":
+          e.preventDefault();
+          setActiveTab("facturen");
+          break;
+        default:
+          // 1-9: switch tabs
+          if (e.key >= "1" && e.key <= "9") {
+            const idx = parseInt(e.key) - 1;
+            if (idx < tabIds.length) {
+              e.preventDefault();
+              setActiveTab(tabIds[idx]);
+            }
+          }
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [timer.running, timer.caseId, id, zaak, tabIds.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -232,8 +298,6 @@ export default function ZaakDetailPage() {
       </div>
     );
   }
-
-  const isIncasso = hasModule("incasso") && zaak.case_type === "incasso";
 
   const tabs = [
     { id: "overzicht", label: "Overzicht", icon: Briefcase },

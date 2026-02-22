@@ -213,7 +213,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ F11 geïmplementeerd** (21 feb) — freestanding e-mail vanuit dossier met recipient quick-select chips
 **✅ M6 gebouwd** (22 feb) — Ongesorteerde email wachtrij met split-view, suggesties, bulk link/dismiss, sidebar badge
 **✅ Dossier detail refactoring** (sessie 5, 22 feb) — `zaken/[id]/page.tsx` van 4236 → ~236 regels, opgesplitst in 8 componentbestanden + types.tsx
-**Volgende prioriteit (sessie 6):** Dossier workspace verbeteringen (G3-G15 uit DOSSIER-WERKPLEK-RESEARCH.md)
+**✅ G3 Procesgegevens** (sessie 6, 22 feb) — 5 nieuwe velden (court_name, judge_name, chamber, procedure_type, procedure_phase) + backend migration 028 + DetailsTab Procesgegevens card met NL rechtbank dropdown
+**✅ G5 Keyboard shortcuts** (sessie 6, 22 feb) — T=timer, N=notitie, D=documenten, E=email, F=facturen, 1-9=tabs
+**Volgende prioriteit (sessie 7):** Dossier workspace verbeteringen (G14 sidebar, G10 task templates, G4 dossiertypes uit DOSSIER-WERKPLEK-RESEARCH.md)
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

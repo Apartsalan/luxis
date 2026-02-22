@@ -1,7 +1,32 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 feb 2026 (sessie 5 — dossier detail refactoring)
-**Laatste feature/fix:** Dossier detail page.tsx opgesplitst van 4236 → ~236 regels
+**Laatst bijgewerkt:** 22 feb 2026 (sessie 6 — G3 procesgegevens + G5 keyboard shortcuts)
+**Laatste feature/fix:** Procesgegevens sectie op dossierdetail + keyboard shortcuts
+
+## Wat er gedaan is (sessie 6 — 22 feb)
+
+### G3: Procesgegevens sectie op dossierdetail ✅
+- **Backend:** 5 nieuwe velden op Case model: `court_name`, `judge_name`, `chamber`, `procedure_type`, `procedure_phase`
+- **Migration:** `028_procesgegevens` — alle kolommen nullable
+- **Schemas:** Velden toegevoegd aan CaseCreate, CaseUpdate, CaseResponse
+- **Frontend CaseDetail interface:** 5 velden toegevoegd
+- **DetailsTab:** Nieuwe "Procesgegevens" card met Gavel-icoon
+  - **View mode:** 5 velden in 2-koloms grid
+  - **Edit mode:** Rechtbank dropdown (alle 16 NL rechtbanken + gerechtshoven + Hoge Raad), rechter tekstveld, kamer tekstveld, type procedure dropdown (9 opties), procesfase dropdown (12 opties)
+  - Edit/save deelt dezelfde state als Dossiergegevens card (1 Bewerken-knop voor alles)
+
+### G5: Keyboard shortcuts ✅
+- **Locatie:** `zaken/[id]/page.tsx` — useEffect met keydown listener
+- **Shortcuts:** T=timer start/stop, N=notitie (switch naar overzicht + focus textarea), D=documenten tab, E=email compose dialog, F=facturen tab, 1-9=tab switching
+- **Guards:** Niet actief bij typing in input/textarea/select/contenteditable, niet bij Ctrl/Meta/Alt modifiers
+
+### Commits sessie 6
+
+| Hash | Beschrijving |
+|------|-------------|
+| `fb70487` | feat: add procesgegevens section and keyboard shortcuts (G3, G5) |
+
+---
 
 ## Wat er gedaan is (sessie 5 — 22 feb)
 
@@ -298,7 +323,7 @@ Compose via Provider:
 - ~~Dossier detail page is nu 4236 regels in één bestand~~ ✅ Opgesplitst in sessie 5
 - Google OAuth test: arsalanseidony@gmail.nl moet als test user staan in Google Cloud Console
 - Auto-sync zal bij grote inboxen de eerste keer langzaam zijn (max 50 per cycle)
-- M6 + migratie 027 moeten nog gedeployed worden op de VPS (deploy commando staat hieronder)
+- M6 + migratie 027 + G3 migratie 028 moeten nog gedeployed worden op de VPS (deploy commando staat hieronder)
 
 ## Wat de volgende stap is
 

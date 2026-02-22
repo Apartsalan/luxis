@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 21 februari 2026
+**Laatst bijgewerkt:** 22 februari 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -215,7 +215,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ Dossier detail refactoring** (sessie 5, 22 feb) — `zaken/[id]/page.tsx` van 4236 → ~236 regels, opgesplitst in 8 componentbestanden + types.tsx
 **✅ G3 Procesgegevens** (sessie 6, 22 feb) — 5 nieuwe velden (court_name, judge_name, chamber, procedure_type, procedure_phase) + backend migration 028 + DetailsTab Procesgegevens card met NL rechtbank dropdown
 **✅ G5 Keyboard shortcuts** (sessie 6, 22 feb) — T=timer, N=notitie, D=documenten, E=email, F=facturen, 1-9=tabs
-**Volgende prioriteit (sessie 7):** Dossier workspace verbeteringen (G14 sidebar, G10 task templates, G4 dossiertypes uit DOSSIER-WERKPLEK-RESEARCH.md)
+**✅ G14 Dossier sidebar** (sessie 7, 22 feb) — Collapsible properties sidebar met dossierinfo, client, wederpartij, advocaat, financieel snapshot (OHW + incasso/non-incasso)
+**✅ G10 Task templates** (sessie 7, 22 feb) — Automatische taak-templates bij case creation: incasso 8 taken, advies 4, insolventie 4, overig 2
+**Volgende prioriteit (sessie 8):** G4 dossiertypes, overige G-features uit DOSSIER-WERKPLEK-RESEARCH.md
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

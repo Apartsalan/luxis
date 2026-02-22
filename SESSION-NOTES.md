@@ -1,7 +1,35 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 feb 2026 (sessie 6 — G3 procesgegevens + G5 keyboard shortcuts)
-**Laatste feature/fix:** Procesgegevens sectie op dossierdetail + keyboard shortcuts
+**Laatst bijgewerkt:** 22 feb 2026 (sessie 7 — G14 sidebar + G10 task templates)
+**Laatste feature/fix:** Dossier sidebar + automatische taaktemplates bij aanmaken dossier
+
+## Wat er gedaan is (sessie 7 — 22 feb)
+
+### G14: Collapsible properties sidebar op dossierdetail ✅
+- **Nieuw bestand:** `zaken/[id]/components/DossierSidebar.tsx`
+- **Secties:** Dossierinfo (type, status, datum, debiteur, rente, referentie, zaaknr.), Client (link + email), Wederpartij (link + email), Advocaat wederpartij (indien aanwezig), Financieel snapshot
+- **Financieel:** OHW uit `useTimeEntrySummary`, incasso-details uit `useFinancialSummary` (hoofdsom, betaald, openstaand, derdengelden, progress bar), non-incasso basic (hoofdsom, betaald)
+- **Collapsible:** localStorage persistence (`luxis_sidebar_open`), fixed reopen-knop bij collapsed
+- **Layout:** `page.tsx` omgebouwd naar flex layout (content + sidebar)
+
+### G10: Task templates per dossiertype ✅
+- **Backend:** `backend/app/cases/service.py` — `_create_initial_tasks()` helper
+- **Templates per type:**
+  - **Incasso:** 8 taken (dossier controleren, herinnering, 14-dagenbrief, betaling controleren, sommatie, betaling controleren, beoordeel dagvaarding, verjaring controleren)
+  - **Advies:** 4 taken (controleren, juridisch onderzoek, concept advies, advies versturen)
+  - **Insolventie:** 4 taken (controleren, beoordeel aanvraag, verzoekschrift, indienen)
+  - **Overig:** 2 taken (controleren, plan van aanpak)
+- **Deadlines:** Relatief t.o.v. `date_opened` (1-180 dagen afhankelijk van type taak)
+- **Werking:** Taken worden automatisch aangemaakt bij `create_case()`, verschijnen direct op de Taken-tab
+- **Geen migratie nodig** — gebruikt bestaande WorkflowTask tabel
+
+### Commits sessie 7
+
+| Hash | Beschrijving |
+|------|-------------|
+| `288f568` | feat: add dossier sidebar and task templates (G14, G10) |
+
+---
 
 ## Wat er gedaan is (sessie 6 — 22 feb)
 

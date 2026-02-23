@@ -1,10 +1,101 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 feb 2026 (sessie 11 — UX Polish: G13 Budget + G9 Recurring Tasks + G11 Document Preview)
-**Laatste feature/fix:** Budget tracking, recurring tasks, inline document preview
-**Volgende sessie (12):** Fix email-bijlagen (2 bugs) + eventueel document template editing of M365 migratie.
+**Laatst bijgewerkt:** 23 feb 2026 (sessie 13 — OutlookProvider)
+**Laatste feature/fix:** OutlookProvider gebouwd (Microsoft Graph API)
+**Volgende sessie (14):** BUG-13 + BUG-14 fixen (email-bijlagen). Daarna: document template editing UI + merge fields uitbreiden.
 
-## Openstaande bugs einde sessie 11
+## Wat er gedaan is (sessie 13 — 23 feb)
+
+### Feature: OutlookProvider — Microsoft Graph API email provider ✅
+
+#### Backend
+- **Nieuw bestand `backend/app/email/providers/outlook.py`** — Volledige Microsoft Graph API implementatie van de `EmailProvider` interface
+  - OAuth 2.0: `get_authorize_url()`, `exchange_code()`, `refresh_access_token()` via Microsoft Identity Platform (tenant-specific endpoint)
+  - User info: `get_user_email()` via `/me` endpoint (mail of userPrincipalName)
+  - List messages: `list_messages()` via `/me/messages` met `$top`, `$orderby`, `$select`, `$search` (KQL)
+  - Get message: `get_message()` met body + attachment metadata
+  - Send: `send_message()` via `/me/sendMail` (202 Accepted, auto-save in Sent Items)
+  - Reply: `_reply_to_message()` via `/me/messages/{id}/reply`
+  - Draft: `create_draft()` via `POST /me/messages`
+  - Attachments: `get_attachment()` via contentBytes (base64) of `$value` fallback
+  - Attachment metadata: `_get_message_attachments()` — filtert inline images en itemAttachments
+  - Pagination: `@odata.nextLink` als page_token
+- **Config bijgewerkt:** `microsoft_client_id`, `microsoft_tenant_id`, `microsoft_client_secret`, `microsoft_redirect_uri` in Settings
+- **Provider factory:** `get_provider("outlook")` retourneert nu `OutlookProvider()`
+- **OAuth router uitgebreid:**
+  - `/authorize` checkt nu Microsoft credentials als `provider=outlook`
+  - `/callback/outlook` route toegevoegd (aparte redirect URI voor Azure App Registration)
+  - Callback logica gerefactord naar `_handle_oauth_callback()` helper (gedeeld door Gmail + Outlook)
+  - Provider-specifieke foutmeldingen bij ontbrekende refresh token
+
+#### Infrastructure
+- **docker-compose.prod.yml:** 4 Microsoft env vars toegevoegd (MICROSOFT_CLIENT_ID, MICROSOFT_TENANT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_REDIRECT_URI)
+
+#### Compatibiliteit
+- KQL (Keyword Query Language) voor Graph `$search` is compatibel met bestaande `from:email OR to:email` query syntax in sync_service.py
+- Bestaande auto-sync, matching, en compose flows werken ongewijzigd met OutlookProvider
+- `EmailAccount.provider = "outlook"` wordt automatisch opgepikt door alle bestaande email-logica
+
+### Bestanden aangemaakt/gewijzigd sessie 13
+
+**Nieuw (backend):**
+- `backend/app/email/providers/outlook.py` — OutlookProvider (~350 regels)
+
+**Gewijzigd (backend):**
+- `backend/app/config.py` — 4 Microsoft settings
+- `backend/app/email/providers/__init__.py` — OutlookProvider export
+- `backend/app/email/oauth_service.py` — OutlookProvider in get_provider()
+- `backend/app/email/oauth_router.py` — /callback/outlook route + _handle_oauth_callback helper + credential check
+
+**Gewijzigd (infra):**
+- `docker-compose.prod.yml` — 4 Microsoft env vars
+
+---
+
+## Wat er gedaan is (sessie 12 — 23 feb avond)
+
+### M0a: Microsoft 365 Setup voor Luxis Email Integratie ✅
+
+**Doel:** Risicovrij M365 opzetten voor Arsalan's testmailbox, zodat de OutlookProvider gebouwd en getest kan worden. Lisanne's mail blijft 100% op BaseNet.
+
+#### Stappen uitgevoerd:
+1. **M365 Business Basic aangeschaft** — gratis proefversie, tenant `KestingLegal019.onmicrosoft.com`
+2. **Domein `kestinglegal.nl` toegevoegd** — TXT-record `MS=ms93194745` in Wix DNS, **MX NIET gewijzigd**
+3. **Mailbox `seidony@kestinglegal.nl` aangemaakt** — primair adres gewijzigd van onmicrosoft.com naar kestinglegal.nl
+4. **Outlook getest** — versturen werkt ✅, ontvangen gaat naar BaseNet (verwacht, MX niet gewijzigd)
+5. **Azure App Registration aangemaakt:**
+   - App: `Luxis Email Integration`
+   - Client ID: `8483075a-e72e-4fa9-ac0d-0994682f031b`
+   - Tenant ID: `44ed7bee-37fc-4555-b2ef-b8a74c7fa28f`
+   - Client Secret: opgeslagen in `.env`
+   - Redirect URI: `https://luxis.kestinglegal.nl/api/email/oauth/callback/outlook`
+   - Machtigingen: `Mail.Read`, `Mail.ReadWrite`, `Mail.Send`, `offline_access`, `User.Read` — alle verleend met beheerderstoestemming
+
+#### DNS-info ontdekt:
+- Domein `kestinglegal.nl` staat bij registrar **Tucows** (reseller)
+- **Nameservers:** `ns10.wixdns.net`, `ns11.wixdns.net` (DNS beheerd in Wix)
+- Bestaande TXT-records: SPF voor BaseNet + Lovable verificatie (niet aangeraakt)
+
+#### Bestanden gewijzigd:
+- `.env` — Microsoft 365 credentials toegevoegd (MICROSOFT_CLIENT_ID, MICROSOFT_TENANT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_REDIRECT_URI)
+- `.env.example` — Lege Microsoft 365 velden toegevoegd als template
+
+#### Wat Lisanne merkt: NIKS
+- MX-records niet gewijzigd
+- Haar email blijft via BaseNet
+- Geen mailbox voor haar aangemaakt in M365
+
+### Volgende sessie: OutlookProvider bouwen
+- `backend/app/email/providers/outlook.py` aanmaken
+- Zelfde `EmailProvider` interface als `GmailProvider`
+- Microsoft Graph API: OAuth flow, list/get/send messages, attachments
+- OAuth router uitbreiden met `/callback/outlook` route
+- Config updaten met Microsoft settings
+- Testen met `seidony@kestinglegal.nl` account
+
+---
+
+## Openstaande bugs einde sessie 12
 
 ### BUG-13: Email-bijlage openen geeft foutmelding
 - **Locatie:** Correspondentie tab → email detail → bijlage download
@@ -571,7 +662,7 @@ Grondig onderzoek naar BaseNet, CreditDevice, Onguard, TAGOR, iFlow, Aryza, Buck
 ```
 EmailProvider (abstract interface)
   ├── GmailProvider    ✅ Gebouwd + bijlagen + auto-sync
-  └── OutlookProvider  TODO (Lisanne's M365, zelfde interface)
+  └── OutlookProvider  ✅ Gebouwd (Graph API, OAuth, mail CRUD, bijlagen)
 
 OAuth Flow:
   Frontend "Verbind met Gmail" → GET /authorize → Google consent popup
@@ -664,7 +755,7 @@ Compose via Provider:
 
 ### Later bouwen
 - **M5:** AutoTime op emails (backlog — bestaande timer dekt dit grotendeels)
-- **OutlookProvider** toevoegen wanneer Lisanne naar M365 migreert
+- ~~**OutlookProvider** toevoegen wanneer Lisanne naar M365 migreert~~ ✅ Gebouwd (sessie 13)
 
 ## Deploy commando (copy-paste ready)
 ```bash

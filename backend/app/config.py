@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/api/email/oauth/callback"
 
+    # Microsoft 365 / Outlook (Graph API)
+    microsoft_client_id: str = ""
+    microsoft_tenant_id: str = ""
+    microsoft_client_secret: str = ""
+    microsoft_redirect_uri: str = "https://luxis.kestinglegal.nl/api/email/oauth/callback/outlook"
+
     # Sentry
     sentry_dsn: str = ""
 

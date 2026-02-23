@@ -1,10 +1,11 @@
 """Email OAuth router — endpoints for connecting/managing email providers.
 
 Endpoints:
-- GET  /api/email/oauth/authorize   — Get OAuth authorize URL (redirects to Google/Microsoft)
-- GET  /api/email/oauth/callback    — OAuth callback (Google redirects here with code)
-- GET  /api/email/oauth/status      — Check if current user has a connected email account
-- POST /api/email/oauth/disconnect  — Remove email account connection
+- GET  /api/email/oauth/authorize          — Get OAuth authorize URL (Gmail or Outlook)
+- GET  /api/email/oauth/callback           — OAuth callback (Gmail redirects here)
+- GET  /api/email/oauth/callback/outlook   — OAuth callback (Microsoft redirects here)
+- GET  /api/email/oauth/status             — Check if current user has a connected email account
+- POST /api/email/oauth/disconnect         — Remove email account connection
 """
 
 import logging
@@ -63,12 +64,17 @@ async def get_authorize_url(
     """Generate an OAuth authorization URL.
 
     The frontend opens this URL in a new window. After the user approves,
-    Google redirects to /api/email/oauth/callback with an auth code.
+    the provider redirects to the appropriate callback with an auth code.
     """
-    if not settings.google_client_id:
+    if provider == "gmail" and not settings.google_client_id:
         raise BadRequestError(
             "Google OAuth is niet geconfigureerd. "
             "Stel GOOGLE_CLIENT_ID en GOOGLE_CLIENT_SECRET in."
+        )
+    if provider == "outlook" and not settings.microsoft_client_id:
+        raise BadRequestError(
+            "Microsoft OAuth is niet geconfigureerd. "
+            "Stel MICROSOFT_CLIENT_ID, MICROSOFT_TENANT_ID en MICROSOFT_CLIENT_SECRET in."
         )
 
     email_provider = get_provider(provider)
@@ -85,64 +91,23 @@ async def oauth_callback(
     state: str = Query(..., description="State parameter for CSRF verification"),
     db: AsyncSession = Depends(get_db),
 ):
-    """OAuth callback endpoint — Google redirects here after user approves.
+    """OAuth callback endpoint — Google redirects here after user approves."""
+    return await _handle_oauth_callback(code=code, state=state, db=db)
 
-    This endpoint:
-    1. Decodes the state to get user_id + tenant_id
-    2. Exchanges the code for tokens
-    3. Stores encrypted tokens in the database
-    4. Returns an HTML page that sends a message to the opener window and closes itself
+
+@router.get("/callback/outlook", response_class=HTMLResponse)
+async def oauth_callback_outlook(
+    request: Request,
+    code: str = Query(..., description="Authorization code from Microsoft"),
+    state: str = Query(..., description="State parameter for CSRF verification"),
+    db: AsyncSession = Depends(get_db),
+):
+    """OAuth callback endpoint for Microsoft/Outlook.
+
+    Separate route because Azure App Registration has a distinct redirect URI:
+    https://luxis.kestinglegal.nl/api/email/oauth/callback/outlook
     """
-    try:
-        state_data = decode_oauth_state(state)
-    except Exception:
-        logger.error("Ongeldig OAuth state parameter")
-        return HTMLResponse(_error_html("Ongeldige state parameter. Probeer opnieuw."))
-
-    user_id = state_data["user_id"]
-    tenant_id = state_data["tenant_id"]
-    provider = state_data["provider"]
-
-    try:
-        email_provider = get_provider(provider)
-        tokens = await email_provider.exchange_code(code)
-    except Exception as e:
-        logger.error(f"OAuth token exchange mislukt: {e}")
-        return HTMLResponse(_error_html(f"Token exchange mislukt: {e}"))
-
-    if not tokens.refresh_token:
-        logger.error("Geen refresh token ontvangen van Google")
-        return HTMLResponse(
-            _error_html(
-                "Geen refresh token ontvangen. "
-                "Ga naar myaccount.google.com → Beveiliging → Apps van derden "
-                "en verwijder Luxis, probeer dan opnieuw."
-            )
-        )
-
-    try:
-        # Set tenant context manually since this is an unauthenticated callback
-        from app.middleware.tenant import set_tenant_context
-
-        await set_tenant_context(db, tenant_id)
-
-        await store_email_account(
-            db,
-            user_id=user_id,
-            tenant_id=tenant_id,
-            provider=provider,
-            email_address=tokens.email,
-            access_token=tokens.access_token,
-            refresh_token=tokens.refresh_token,
-            expires_in=tokens.expires_in,
-            scopes=tokens.scope,
-        )
-    except Exception as e:
-        logger.error(f"Email account opslaan mislukt: {e}")
-        return HTMLResponse(_error_html(f"Opslaan mislukt: {e}"))
-
-    # Return HTML that notifies the opener window and closes itself
-    return HTMLResponse(_success_html(tokens.email, provider))
+    return await _handle_oauth_callback(code=code, state=state, db=db)
 
 
 @router.get("/status", response_model=EmailAccountStatus)
@@ -173,6 +138,72 @@ async def disconnect_email(
     if not removed:
         return DisconnectResponse(success=False, message="Geen e-mailaccount verbonden")
     return DisconnectResponse(success=True, message="E-mailaccount ontkoppeld")
+
+
+# ── Shared callback logic ─────────────────────────────────────────────────────
+
+
+async def _handle_oauth_callback(
+    *, code: str, state: str, db: AsyncSession
+) -> HTMLResponse:
+    """Shared OAuth callback logic for both Gmail and Outlook.
+
+    1. Decodes the state to get user_id + tenant_id + provider
+    2. Exchanges the code for tokens
+    3. Stores encrypted tokens in the database
+    4. Returns an HTML page that sends a message to the opener window and closes itself
+    """
+    try:
+        state_data = decode_oauth_state(state)
+    except Exception:
+        logger.error("Ongeldig OAuth state parameter")
+        return HTMLResponse(_error_html("Ongeldige state parameter. Probeer opnieuw."))
+
+    user_id = state_data["user_id"]
+    tenant_id = state_data["tenant_id"]
+    provider = state_data["provider"]
+
+    try:
+        email_provider = get_provider(provider)
+        tokens = await email_provider.exchange_code(code)
+    except Exception as e:
+        logger.error(f"OAuth token exchange mislukt ({provider}): {e}")
+        return HTMLResponse(_error_html(f"Token exchange mislukt: {e}"))
+
+    if not tokens.refresh_token:
+        logger.error(f"Geen refresh token ontvangen van {provider}")
+        if provider == "gmail":
+            hint = (
+                "Ga naar myaccount.google.com → Beveiliging → Apps van derden "
+                "en verwijder Luxis, probeer dan opnieuw."
+            )
+        else:
+            hint = "Probeer de verbinding opnieuw. Neem contact op als het blijft falen."
+        return HTMLResponse(
+            _error_html(f"Geen refresh token ontvangen. {hint}")
+        )
+
+    try:
+        from app.middleware.tenant import set_tenant_context
+
+        await set_tenant_context(db, tenant_id)
+
+        await store_email_account(
+            db,
+            user_id=user_id,
+            tenant_id=tenant_id,
+            provider=provider,
+            email_address=tokens.email,
+            access_token=tokens.access_token,
+            refresh_token=tokens.refresh_token,
+            expires_in=tokens.expires_in,
+            scopes=tokens.scope,
+        )
+    except Exception as e:
+        logger.error(f"Email account opslaan mislukt: {e}")
+        return HTMLResponse(_error_html(f"Opslaan mislukt: {e}"))
+
+    return HTMLResponse(_success_html(tokens.email, provider))
 
 
 # ── HTML templates for OAuth callback popup ──────────────────────────────────

@@ -214,7 +214,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 **✅ BUG-7/8/9 gefixt** (21 feb) — edit-modus, zaaknummer op form, advocaat wederpartij
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
 **TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op M365 migratie)
-**📋 M0a gepland** (23 feb) — Arsalan zet seidony@kestinglegal.nl over naar M365 Business Basic als test. MX blijft bij BaseNet. OutlookProvider bouwen + Graph API testen. Daarna pas Lisanne overzetten (M0b).
+**✅ M0a setup klaar** (23 feb) — M365 Business Basic actief, domein geverifieerd (TXT-record, geen MX), mailbox seidony@kestinglegal.nl actief (versturen werkt), Azure App Registration + Graph API machtigingen klaar. OutlookProvider bouwen in volgende sessie.
 **✅ F11 geïmplementeerd** (21 feb) — freestanding e-mail vanuit dossier met recipient quick-select chips
 **✅ M6 gebouwd** (22 feb) — Ongesorteerde email wachtrij met split-view, suggesties, bulk link/dismiss, sidebar badge
 **✅ Dossier detail refactoring** (sessie 5, 22 feb) — `zaken/[id]/page.tsx` van 4236 → ~236 regels, opgesplitst in 8 componentbestanden + types.tsx
@@ -226,7 +226,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 **✅ Incasso Batch Werkstroom** (sessie 9, 23 feb) — IncassoPipelineStep model + CRUD + batch actions + /incasso pagina met pipeline editor + batch werkstroom + pre-flight wizard + sidebar item. Migration 029.
 **✅ Template koppeling + Documentgeneratie + Smart Work Queues** (sessie 10, 23 feb) — template_type op pipeline steps (modern docx systeem), batch "Verstuur brief" genereert documenten via render_docx(), Smart Work Queue tabs (klaar/14d verlopen/actie vereist) + sidebar badge. Migration 030.
 **✅ UX Polish — G13 + G9 + G11** (sessie 11, 23 feb) — Budget tracking per dossier (togglebaar via "budget" module), recurring tasks (daily/weekly/monthly/quarterly/yearly + auto-create), inline document preview (eye button + PDF modal). Migrations 031 + 032.
-**Volgende prioriteit (sessie 12):** BUG-13 + BUG-14 fixen (email-bijlagen). Daarna: document template editing UI + merge fields uitbreiden, of M365 migratie starten (M0a).
+**✅ OutlookProvider gebouwd** (sessie 13, 23 feb) — `backend/app/email/providers/outlook.py` met Microsoft Graph API. Zelfde EmailProvider interface als GmailProvider. OAuth flow, list/get/send/draft/attachments. Config + docker-compose.prod.yml + OAuth router bijgewerkt.
+**Volgende prioriteit (sessie 14):** BUG-13 + BUG-14 fixen (email-bijlagen). Daarna: document template editing UI + merge fields uitbreiden.
 
 ### Sessie 12 Plan: Document Templates & Merge Fields
 
@@ -335,7 +336,7 @@ Arsalan test eerst met eigen mailbox `seidony@kestinglegal.nl` op M365. Lisanne 
 
 | Fase | Feature | Wat het oplevert | Status |
 |------|---------|-----------------|--------|
-| M0a | Test-mailbox Arsalan op M365 | seidony@kestinglegal.nl op M365, Graph API testbaar, OutlookProvider bouwen | 📋 Gepland — Arsalan pakt dit op |
+| M0a | Test-mailbox Arsalan op M365 | seidony@kestinglegal.nl op M365, Graph API testbaar, OutlookProvider bouwen | ✅ Compleet (23 feb) — mailbox actief, Azure App Registration klaar, OutlookProvider gebouwd en geregistreerd |
 | M0b | Lisanne overzetten naar M365 | Alle mail op M365, volledige integratie live | ⏳ Wacht op M0a succes + Lisanne |
 | M1 | OAuth + abstractielaag | EmailProvider interface, GmailProvider, OAuth flow, token opslag | ✅ Gebouwd (21 feb) |
 | M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) | ✅ Gebouwd (21 feb) |

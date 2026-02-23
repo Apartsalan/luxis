@@ -2,7 +2,27 @@
 
 **Laatst bijgewerkt:** 23 feb 2026 (sessie 11 — UX Polish: G13 Budget + G9 Recurring Tasks + G11 Document Preview)
 **Laatste feature/fix:** Budget tracking, recurring tasks, inline document preview
-**Volgende sessie (12):** Document template editing UI + merge fields uitbreiden. Of M365 migratie (M0a).
+**Volgende sessie (12):** Fix email-bijlagen (2 bugs) + eventueel document template editing of M365 migratie.
+
+## Openstaande bugs einde sessie 11
+
+### BUG-13: Email-bijlage openen geeft foutmelding
+- **Locatie:** Correspondentie tab → email detail → bijlage download
+- **Oorzaak:** Frontend maakt directe `<a href="/api/email/attachments/{id}/download">` link, maar backend vereist Bearer token auth. Een directe `<a>` tag stuurt geen auth header mee → 401 Unauthorized.
+- **Fix nodig (frontend):** Zelfde blob URL + fetch aanpak als G11 document preview: `fetch()` met Bearer token → `URL.createObjectURL()` → trigger download. Dit zit in `CorrespondentieTab.tsx` regel ~88-114.
+- **Bestanden:** `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx`
+- **Backend endpoint:** `GET /api/email/attachments/{attachment_id}/download` in `backend/app/email/sync_router.py:432-463`
+- **Ernst:** Hoog — bijlagen zijn onbruikbaar
+
+### BUG-14: Email-bijlage niet opslaan als dossierbestand
+- **Locatie:** Correspondentie tab → email detail → bijlage
+- **Probleem:** Er is geen knop/optie om een email-bijlage op te slaan als bestand in het dossier (case_files). Advocaten willen belangrijke bijlagen (contracten, vonnissen, etc.) archiveren bij het dossier.
+- **Fix nodig:**
+  - **Backend:** Nieuw endpoint `POST /api/email/attachments/{id}/save-to-case/{case_id}` — kopieert bestand van `/app/uploads/email_attachments/` naar `/app/uploads/case_files/`, maakt `CaseFile` record aan
+  - **Frontend:** "Opslaan in dossier" knop naast elke bijlage in de email detail view
+- **Bestanden:** `backend/app/email/sync_router.py` (nieuw endpoint), `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` (knop toevoegen)
+- **Ernst:** Midden — workaround is handmatig downloaden + uploaden via Documenten tab
+- **Provider-onafhankelijk:** Deze fix werkt ongeacht of we later naar Outlook/M365 overstappen
 
 ## Wat er gedaan is (sessie 11 — 23 feb)
 

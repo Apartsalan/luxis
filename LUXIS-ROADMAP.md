@@ -202,6 +202,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-10 | Dossier edit: velden wissen werkt niet — je kunt tekst toevoegen en opslaan, maar als je het wist en opslaat blijft de oude waarde staan. Oorzaak: `\|\| undefined` in handleSaveDetails. | Hoog | Klein | ✅ Gefixt (21 feb) — `.trim() \|\| null` stuurt lege velden als null mee |
 | BUG-11 | Taken niet zichtbaar na aanmaken in dossier — `useWorkflowTasks` verwachtte paginated object maar backend retourneert array. Ook: geen `assigned_to_id` bij handmatig aanmaken → taak verscheen niet bij Mijn Taken | Hoog | Klein | ✅ Gefixt (22 feb) — hook return type gecorrigeerd, `assigned_to_id` auto-set |
 | BUG-12 | Geen "Nieuwe taak" optie op Mijn Taken pagina — kon alleen vanuit dossier taken aanmaken | Midden | Klein | ✅ Gefixt (22 feb) — Nieuwe taak knop + formulier met dossier-picker |
+| BUG-13 | Email-bijlage openen geeft 401 — directe `<a href>` link stuurt geen Bearer token mee. Fix: blob URL + fetch (zelfde patroon als G11 preview) | Hoog | Klein | 🔴 Open |
+| BUG-14 | Email-bijlage niet opslaan als dossierbestand — geen knop/endpoint om bijlage te archiveren bij dossier. Fix: backend copy endpoint + frontend "Opslaan in dossier" knop | Midden | Klein-Midden | 🔴 Open |
 
 ---
 
@@ -224,7 +226,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 **✅ Incasso Batch Werkstroom** (sessie 9, 23 feb) — IncassoPipelineStep model + CRUD + batch actions + /incasso pagina met pipeline editor + batch werkstroom + pre-flight wizard + sidebar item. Migration 029.
 **✅ Template koppeling + Documentgeneratie + Smart Work Queues** (sessie 10, 23 feb) — template_type op pipeline steps (modern docx systeem), batch "Verstuur brief" genereert documenten via render_docx(), Smart Work Queue tabs (klaar/14d verlopen/actie vereist) + sidebar badge. Migration 030.
 **✅ UX Polish — G13 + G9 + G11** (sessie 11, 23 feb) — Budget tracking per dossier (togglebaar via "budget" module), recurring tasks (daily/weekly/monthly/quarterly/yearly + auto-create), inline document preview (eye button + PDF modal). Migrations 031 + 032.
-**Volgende prioriteit (sessie 12):** Document template editing UI + merge fields uitbreiden (procesgegevens, partijen, betalingstermijn naar templates). Of M365 migratie starten (M0a).
+**Volgende prioriteit (sessie 12):** BUG-13 + BUG-14 fixen (email-bijlagen). Daarna: document template editing UI + merge fields uitbreiden, of M365 migratie starten (M0a).
 
 ### Sessie 12 Plan: Document Templates & Merge Fields
 

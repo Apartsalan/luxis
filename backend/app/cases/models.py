@@ -99,6 +99,11 @@ class Case(TenantBase):
         Uuid, ForeignKey("users.id"), nullable=True
     )
 
+    # Incasso pipeline
+    incasso_step_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("incasso_pipeline_steps.id"), nullable=True
+    )  # Current step in the incasso pipeline
+
     # Dates
     date_opened: Mapped[date] = mapped_column(Date, nullable=False)
     date_closed: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -125,6 +130,9 @@ class Case(TenantBase):
     )
     assigned_to: Mapped["User | None"] = relationship(  # noqa: F821
         "User", foreign_keys=[assigned_to_id], lazy="selectin"
+    )
+    incasso_step: Mapped["IncassoPipelineStep | None"] = relationship(  # noqa: F821
+        "IncassoPipelineStep", lazy="selectin"
     )
     parties: Mapped[list["CaseParty"]] = relationship(
         "CaseParty", back_populates="case", lazy="selectin"

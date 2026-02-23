@@ -19,6 +19,7 @@ from app.email.compose_router import router as email_compose_router
 from app.email.oauth_router import router as email_oauth_router
 from app.email.router import router as email_router
 from app.email.sync_router import router as email_sync_router
+from app.incasso.router import router as incasso_router
 from app.invoices.router import expenses_router
 from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
@@ -98,6 +99,7 @@ app.include_router(email_oauth_router)
 app.include_router(email_sync_router)
 app.include_router(email_compose_router)
 app.include_router(search_router)
+app.include_router(incasso_router)
 
 
 @app.get("/health")

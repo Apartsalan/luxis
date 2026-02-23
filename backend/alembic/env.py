@@ -1,27 +1,39 @@
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from app.config import settings
-from app.database import Base
+from alembic import context
 
 # Import all models so Alembic can detect them
 from app.auth.models import Tenant, User  # noqa: F401
-from app.relations.models import Contact, ContactLink  # noqa: F401
 from app.cases.models import Case, CaseActivity, CaseParty  # noqa: F401
-from app.collections.models import Claim, Derdengelden, InterestRate, Payment, PaymentArrangement  # noqa: F401,E501
+from app.collections.models import (  # noqa: F401,E501
+    Claim,
+    Derdengelden,
+    InterestRate,
+    Payment,
+    PaymentArrangement,
+)
+from app.config import settings
+from app.database import Base
 from app.documents.models import DocumentTemplate, GeneratedDocument  # noqa: F401
-from app.invoices.models import Expense, Invoice, InvoiceLine, InvoicePayment  # noqa: F401
-from app.relations.kyc_models import KycVerification  # noqa: F401
-from app.time_entries.models import TimeEntry  # noqa: F401
-from app.trust_funds.models import TrustTransaction  # noqa: F401
-from app.workflow.models import WorkflowStatus, WorkflowTransition, WorkflowTask, WorkflowRule  # noqa: F401,E501
+from app.email.attachment_models import EmailAttachment  # noqa: F401
 from app.email.oauth_models import EmailAccount  # noqa: F401
 from app.email.synced_email_models import SyncedEmail  # noqa: F401
-from app.email.attachment_models import EmailAttachment  # noqa: F401
+from app.incasso.models import IncassoPipelineStep  # noqa: F401
+from app.invoices.models import Expense, Invoice, InvoiceLine, InvoicePayment  # noqa: F401
+from app.relations.kyc_models import KycVerification  # noqa: F401
+from app.relations.models import Contact, ContactLink  # noqa: F401
+from app.time_entries.models import TimeEntry  # noqa: F401
+from app.trust_funds.models import TrustTransaction  # noqa: F401
+from app.workflow.models import (  # noqa: F401,E501
+    WorkflowRule,
+    WorkflowStatus,
+    WorkflowTask,
+    WorkflowTransition,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

@@ -169,6 +169,7 @@ class CaseResponse(BaseModel):
     opposing_party: ContactBrief | None
     billing_contact: ContactBrief | None
     assigned_to: UserBrief | None
+    incasso_step_id: uuid.UUID | None = None
     date_opened: date
     date_closed: date | None
     total_principal: float
@@ -190,6 +191,7 @@ class CaseSummary(BaseModel):
     status: str
     description: str | None
     reference: str | None
+    incasso_step_id: uuid.UUID | None = None
     client: ContactBrief
     opposing_party: ContactBrief | None
     date_opened: date

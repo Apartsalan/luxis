@@ -11,6 +11,7 @@ export interface PipelineStep {
   sort_order: number;
   min_wait_days: number;
   template_id: string | null;
+  template_type: string | null;
   template_name: string | null;
   is_active: boolean;
   created_at: string;
@@ -62,6 +63,13 @@ export interface BatchActionResult {
   processed: number;
   skipped: number;
   errors: string[];
+  generated_document_ids: string[];
+}
+
+export interface QueueCounts {
+  ready_next_step: number;
+  wik_expired: number;
+  action_required: number;
 }
 
 // ── Pipeline Steps Hooks ─────────────────────────────────────────────────
@@ -85,6 +93,7 @@ export function useCreatePipelineStep() {
       sort_order: number;
       min_wait_days: number;
       template_id?: string | null;
+      template_type?: string | null;
     }) => {
       const res = await api("/api/incasso/pipeline-steps", {
         method: "POST",
@@ -114,6 +123,7 @@ export function useUpdatePipelineStep() {
       sort_order?: number;
       min_wait_days?: number;
       template_id?: string | null;
+      template_type?: string | null;
       is_active?: boolean;
     }) => {
       const res = await api(`/api/incasso/pipeline-steps/${id}`, {
@@ -184,6 +194,20 @@ export function useIncassoPipeline() {
   });
 }
 
+// ── Smart Work Queue Counts ─────────────────────────────────────────────
+
+export function useIncassoQueueCounts() {
+  return useQuery<QueueCounts>({
+    queryKey: ["incasso-queue-counts"],
+    queryFn: async () => {
+      const res = await api("/api/incasso/queues/counts");
+      if (!res.ok) return { ready_next_step: 0, wik_expired: 0, action_required: 0 };
+      return res.json();
+    },
+    refetchInterval: 5 * 60 * 1000, // 5-minute auto-refresh
+  });
+}
+
 // ── Batch Action Hooks ───────────────────────────────────────────────────
 
 export function useBatchPreview() {
@@ -231,6 +255,7 @@ export function useBatchExecute() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incasso-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["incasso-queue-counts"] });
       queryClient.invalidateQueries({ queryKey: ["cases"] });
     },
   });

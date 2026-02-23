@@ -19,6 +19,8 @@ import {
   Calculator,
   AlertTriangle,
   Users,
+  Clock,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -30,9 +32,26 @@ import {
   useIncassoPipeline,
   useBatchPreview,
   useBatchExecute,
+  useIncassoQueueCounts,
   type PipelineStep,
   type CaseInPipeline,
 } from "@/hooks/use-incasso";
+import {
+  useDocxTemplates,
+  getTemplateLabel,
+} from "@/hooks/use-documents";
+
+// ── Template type labels for dropdown ───────────────────────────────────
+
+const TEMPLATE_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "herinnering", label: "Herinnering" },
+  { value: "aanmaning", label: "Aanmaning" },
+  { value: "14_dagenbrief", label: "14-dagenbrief" },
+  { value: "sommatie", label: "Sommatie" },
+  { value: "tweede_sommatie", label: "Tweede sommatie" },
+  { value: "dagvaarding", label: "Dagvaarding" },
+  { value: "renteoverzicht", label: "Renteoverzicht" },
+];
 
 // ── Tabs ─────────────────────────────────────────────────────────────────
 
@@ -42,6 +61,10 @@ const TABS = [
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
+
+// ── Queue filter types ──────────────────────────────────────────────────
+
+type QueueFilter = "all" | "ready_next_step" | "wik_expired" | "action_required";
 
 // ── Main Page ────────────────────────────────────────────────────────────
 
@@ -100,9 +123,9 @@ function StappenTab() {
   const seedSteps = useSeedPipelineSteps();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0 });
+  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, template_type: "" });
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0 });
+  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, template_type: "" });
 
   const activeSteps = useMemo(
     () => (steps ?? []).filter((s) => s.is_active).sort((a, b) => a.sort_order - b.sort_order),
@@ -120,11 +143,16 @@ function StappenTab() {
     if (!newStep.name.trim()) return;
     const maxOrder = activeSteps.length > 0 ? Math.max(...activeSteps.map((s) => s.sort_order)) : 0;
     createStep.mutate(
-      { name: newStep.name.trim(), sort_order: maxOrder + 1, min_wait_days: newStep.min_wait_days },
+      {
+        name: newStep.name.trim(),
+        sort_order: maxOrder + 1,
+        min_wait_days: newStep.min_wait_days,
+        template_type: newStep.template_type || null,
+      },
       {
         onSuccess: () => {
           toast.success("Stap toegevoegd");
-          setNewStep({ name: "", min_wait_days: 0 });
+          setNewStep({ name: "", min_wait_days: 0, template_type: "" });
           setShowAddForm(false);
         },
         onError: (err) => toast.error(err.message),
@@ -156,12 +184,21 @@ function StappenTab() {
 
   const handleStartEdit = (step: PipelineStep) => {
     setEditingId(step.id);
-    setEditForm({ name: step.name, min_wait_days: step.min_wait_days });
+    setEditForm({
+      name: step.name,
+      min_wait_days: step.min_wait_days,
+      template_type: step.template_type || "",
+    });
   };
 
   const handleSaveEdit = (step: PipelineStep) => {
     updateStep.mutate(
-      { id: step.id, name: editForm.name.trim(), min_wait_days: editForm.min_wait_days },
+      {
+        id: step.id,
+        name: editForm.name.trim(),
+        min_wait_days: editForm.min_wait_days,
+        template_type: editForm.template_type || null,
+      },
       {
         onSuccess: () => {
           toast.success("Stap bijgewerkt");
@@ -228,8 +265,8 @@ function StappenTab() {
             <tr className="border-b border-border bg-muted/50">
               <th className="w-10 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">#</th>
               <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Naam</th>
-              <th className="w-32 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Wachtdagen</th>
-              <th className="w-40 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Template</th>
+              <th className="w-28 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Wachtdagen</th>
+              <th className="w-48 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Briefsjabloon</th>
               <th className="w-32 px-3 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase">Acties</th>
             </tr>
           </thead>
@@ -270,8 +307,32 @@ function StappenTab() {
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-2.5 text-muted-foreground">
-                  {step.template_name || "—"}
+                <td className="px-3 py-2.5">
+                  {editingId === step.id ? (
+                    <select
+                      value={editForm.template_type}
+                      onChange={(e) => setEditForm((f) => ({ ...f, template_type: e.target.value }))}
+                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                    >
+                      <option value="">Geen</option>
+                      {TEMPLATE_TYPE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {step.template_type ? (
+                        <span className="inline-flex items-center gap-1">
+                          <FileText className="h-3.5 w-3.5" />
+                          {getTemplateLabel(step.template_type)}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center justify-end gap-1">
@@ -350,7 +411,20 @@ function StappenTab() {
                     className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
                   />
                 </td>
-                <td className="px-3 py-2.5 text-muted-foreground">—</td>
+                <td className="px-3 py-2.5">
+                  <select
+                    value={newStep.template_type}
+                    onChange={(e) => setNewStep((f) => ({ ...f, template_type: e.target.value }))}
+                    className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                  >
+                    <option value="">Geen</option>
+                    {TEMPLATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
                 <td className="px-3 py-2.5">
                   <div className="flex items-center justify-end gap-1">
                     <button
@@ -368,7 +442,7 @@ function StappenTab() {
                     <button
                       onClick={() => {
                         setShowAddForm(false);
-                        setNewStep({ name: "", min_wait_days: 0 });
+                        setNewStep({ name: "", min_wait_days: 0, template_type: "" });
                       }}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
                       title="Annuleren"
@@ -391,6 +465,7 @@ function StappenTab() {
 function WerkstroomTab() {
   const { data: pipeline, isLoading } = useIncassoPipeline();
   const { data: steps } = useIncassoPipelineSteps();
+  const { data: queueCounts } = useIncassoQueueCounts();
   const batchPreview = useBatchPreview();
   const batchExecute = useBatchExecute();
 
@@ -398,6 +473,7 @@ function WerkstroomTab() {
   const [showPreview, setShowPreview] = useState(false);
   const [batchAction, setBatchAction] = useState<string | null>(null);
   const [targetStepId, setTargetStepId] = useState<string | null>(null);
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
 
   const allCases = useMemo(() => {
     if (!pipeline) return [];
@@ -409,6 +485,50 @@ function WerkstroomTab() {
     return cases;
   }, [pipeline]);
 
+  // Build a step lookup for queue filtering
+  const stepLookup = useMemo(() => {
+    if (!steps) return new Map<string, PipelineStep>();
+    return new Map(steps.map((s) => [s.id, s]));
+  }, [steps]);
+
+  // Next-step lookup: step_id -> next step
+  const nextStepMap = useMemo(() => {
+    if (!steps) return new Map<string, PipelineStep>();
+    const sorted = [...steps].sort((a, b) => a.sort_order - b.sort_order);
+    const map = new Map<string, PipelineStep>();
+    for (let i = 0; i < sorted.length - 1; i++) {
+      map.set(sorted[i].id, sorted[i + 1]);
+    }
+    return map;
+  }, [steps]);
+
+  // First step id for WIK filter
+  const firstStepId = useMemo(() => {
+    if (!steps || steps.length === 0) return null;
+    const sorted = [...steps].sort((a, b) => a.sort_order - b.sort_order);
+    return sorted[0].id;
+  }, [steps]);
+
+  // Filter cases based on queue selection
+  const filterCase = (c: CaseInPipeline): boolean => {
+    if (queueFilter === "all") return true;
+    if (queueFilter === "action_required") {
+      if (!c.incasso_step_id) return true; // unassigned
+      const nextStep = nextStepMap.get(c.incasso_step_id);
+      if (nextStep && c.days_in_step >= nextStep.min_wait_days) return true;
+      return false;
+    }
+    if (queueFilter === "ready_next_step") {
+      if (!c.incasso_step_id) return false;
+      const nextStep = nextStepMap.get(c.incasso_step_id);
+      return !!nextStep && c.days_in_step >= nextStep.min_wait_days;
+    }
+    if (queueFilter === "wik_expired") {
+      return c.incasso_step_id === firstStepId && c.days_in_step >= 14;
+    }
+    return true;
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -416,14 +536,6 @@ function WerkstroomTab() {
       else next.add(id);
       return next;
     });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === allCases.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(allCases.map((c) => c.id)));
-    }
   };
 
   const selectAllInStep = (stepCases: CaseInPipeline[]) => {
@@ -469,8 +581,10 @@ function WerkstroomTab() {
       },
       {
         onSuccess: (result) => {
+          const docCount = result.generated_document_ids?.length ?? 0;
+          const docMsg = docCount > 0 ? ` (${docCount} brief/brieven gegenereerd)` : "";
           toast.success(
-            `${result.processed} dossier(s) verwerkt${result.skipped > 0 ? `, ${result.skipped} overgeslagen` : ""}`
+            `${result.processed} dossier(s) verwerkt${result.skipped > 0 ? `, ${result.skipped} overgeslagen` : ""}${docMsg}`
           );
           setShowPreview(false);
           setSelectedIds(new Set());
@@ -503,36 +617,75 @@ function WerkstroomTab() {
     );
   }
 
+  // Queue filter tabs
+  const queueTabs: { id: QueueFilter; label: string; count: number; icon: typeof Filter }[] = [
+    { id: "all", label: "Alle dossiers", count: pipeline.total_cases, icon: Workflow },
+    { id: "ready_next_step", label: "Klaar voor volgende stap", count: queueCounts?.ready_next_step ?? 0, icon: ArrowRight },
+    { id: "wik_expired", label: "14d verlopen", count: queueCounts?.wik_expired ?? 0, icon: Clock },
+    { id: "action_required", label: "Actie vereist", count: queueCounts?.action_required ?? 0, icon: AlertTriangle },
+  ];
+
   return (
     <div className="space-y-4">
-      {/* Summary bar */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {pipeline.total_cases} incassodossier{pipeline.total_cases !== 1 ? "s" : ""}
-          {pipeline.unassigned.length > 0 && (
-            <span className="ml-1 text-amber-600 dark:text-amber-400">
-              ({pipeline.unassigned.length} zonder stap)
-            </span>
-          )}
-        </p>
+      {/* Summary bar + queue filters */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {queueTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setQueueFilter(tab.id);
+                setSelectedIds(new Set());
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                queueFilter === tab.id
+                  ? "bg-primary text-primary-foreground"
+                  : "border border-border hover:bg-muted"
+              }`}
+            >
+              <tab.icon className="h-3.5 w-3.5" />
+              {tab.label}
+              {tab.count > 0 && (
+                <span className={`ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${
+                  queueFilter === tab.id
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : tab.id === "action_required" && tab.count > 0
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                      : "bg-muted text-muted-foreground"
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Pipeline columns */}
-      {pipeline.columns.map((col) => (
-        <PipelineColumnView
-          key={col.step.id}
-          column={col}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onSelectAll={() => selectAllInStep(col.cases)}
-        />
-      ))}
+      {pipeline.columns.map((col) => {
+        const filteredCases = col.cases.filter(filterCase);
+        if (queueFilter !== "all" && filteredCases.length === 0) return null;
+
+        return (
+          <PipelineColumnView
+            key={col.step.id}
+            column={{ ...col, cases: filteredCases, count: filteredCases.length }}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onSelectAll={() => selectAllInStep(filteredCases)}
+          />
+        );
+      })}
 
       {/* Unassigned cases */}
-      {pipeline.unassigned.length > 0 && (
+      {pipeline.unassigned.length > 0 && (queueFilter === "all" || queueFilter === "action_required") && (
         <PipelineColumnView
           column={{
-            step: { id: "unassigned", name: "Zonder stap", sort_order: 999, min_wait_days: 0, template_id: null, template_name: null, is_active: true, created_at: "", updated_at: "" },
+            step: {
+              id: "unassigned", name: "Zonder stap", sort_order: 999, min_wait_days: 0,
+              template_id: null, template_type: null, template_name: null,
+              is_active: true, created_at: "", updated_at: "",
+            },
             cases: pipeline.unassigned,
             count: pipeline.unassigned.length,
           }}
@@ -650,6 +803,12 @@ function PipelineColumnView({
               (min. {column.step.min_wait_days} dagen)
             </span>
           )}
+          {column.step.template_type && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <FileText className="h-3 w-3" />
+              {getTemplateLabel(column.step.template_type)}
+            </span>
+          )}
         </div>
         <button
           onClick={onSelectAll}
@@ -673,7 +832,7 @@ function PipelineColumnView({
                 </button>
               </th>
               <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Dossiernr.</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Cliënt</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Cli&euml;nt</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Wederpartij</th>
               <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Hoofdsom</th>
               <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Openstaand</th>
@@ -747,7 +906,7 @@ function PreFlightDialog({
 }) {
   const actionLabels: Record<string, string> = {
     advance_step: "Stap wijzigen",
-    generate_document: "Brief versturen",
+    generate_document: "Brief genereren",
     recalculate_interest: "Rente herberekenen",
   };
 
@@ -806,6 +965,16 @@ function PreFlightDialog({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Info for generate_document */}
+            {action === "generate_document" && preview.ready > 0 && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-sm text-foreground flex items-center gap-1.5">
+                  <FileText className="h-4 w-4 text-primary" />
+                  {preview.ready} brief/brieven worden gegenereerd op basis van het briefsjabloon per stap.
+                </p>
               </div>
             )}
 

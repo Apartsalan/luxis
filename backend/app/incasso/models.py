@@ -24,7 +24,10 @@ class IncassoPipelineStep(TenantBase):
     )  # Minimum days before moving to this step
     template_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("document_templates.id"), nullable=True
-    )  # Linked document template for auto-generation
+    )  # Legacy: FK to deprecated HTML template system
+    template_type: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # Modern: docx template key (e.g. "aanmaning", "sommatie")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships

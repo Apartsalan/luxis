@@ -221,7 +221,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ G10 Task templates** (sessie 7, 22 feb) — Automatische taak-templates bij case creation: incasso 8 taken, advies 4, insolventie 4, overig 2
 **✅ BUG-11/12 gefixt** (sessie 8, 22 feb) — Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
 **✅ Incasso Batch Werkstroom** (sessie 9, 23 feb) — IncassoPipelineStep model + CRUD + batch actions + /incasso pagina met pipeline editor + batch werkstroom + pre-flight wizard + sidebar item. Migration 029.
-**Volgende prioriteit (sessie 10):** Smart Work Queues (P2), template koppeling in pipeline stappen, documentgeneratie-integratie bij batch-actie "Verstuur brief".
+**✅ Template koppeling + Documentgeneratie + Smart Work Queues** (sessie 10, 23 feb) — template_type op pipeline steps (modern docx systeem), batch "Verstuur brief" genereert documenten via render_docx(), Smart Work Queue tabs (klaar/14d verlopen/actie vereist) + sidebar badge. Migration 030.
+**Volgende prioriteit (sessie 11):** Data migratie BaseNet → Luxis, of verdere incasso/workflow optimalisaties.
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 
@@ -345,6 +346,46 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **Dependency:** Microsoft 365 Email Integratie (M1-M6) moet eerst af — de agent heeft email nodig om te functioneren.
 
 **Technisch:** Claude API / Anthropic API + tool use, getraind op Lisanne's dossierpatronen en templates.
+
+---
+
+## Data Migratie: BaseNet → Luxis
+
+**Doel:** Alle data uit BaseNet naadloos overzetten naar Luxis zodat Lisanne direct kan werken zonder dataverlies.
+
+**Wat BaseNet exporteert (onderzocht 23 feb 2026):**
+1. **Volledige backup** — dossiers, relaties, documenten, correspondentie als bestanden + CSV/Excel
+2. **CRM/Relaties** — export naar Excel
+3. **Boekhouding** — mutaties export naar Excel
+
+**Mapping BaseNet → Luxis:**
+
+| BaseNet Export | Luxis Tabel(len) | Complexiteit | Aanpak |
+|---|---|---|---|
+| Relaties (Excel/CSV) | `contacts` + `contact_links` | Laag | pandas parse → bulk insert |
+| Dossiers (CSV) | `cases` + `case_parties` | Middel | ID-mapping, relatie-linking |
+| Documenten (bestanden) | `generated_documents` / `case_files` + file storage | Middel | Bestanden kopiëren + metadata records |
+| Correspondentie | `synced_emails` / `generated_documents` | Middel | Email parsing + dossier-linking |
+| Boekhouding/mutaties | `invoices` + `payments` | Middel-Hoog | Extra validatie (totalen matchen) |
+| Uren | `time_entries` | Laag | Directe mapping |
+
+**Aanpak:**
+1. **Parse-scripts** — Python scripts die BaseNet CSV/Excel inlezen met pandas
+2. **Mapping & transformatie** — BaseNet velden → Luxis schema's (UUID generatie, tenant_id toewijzing, relatie-linking)
+3. **ID-mapping tabel** — BaseNet ID's → Luxis UUID's zodat relaties intact blijven
+4. **Dry-run modus** — rapporteert wat er geïmporteerd wordt zonder te schrijven
+5. **Import** — Bulk insert via SQLAlchemy met transactie-rollback bij fouten
+6. **Documenten** — Bestanden kopiëren naar Luxis storage volume, metadata records aanmaken
+7. **Verificatie-rapport** — Telling per entiteit: verwacht vs geïmporteerd
+
+**Aandachtspunten:**
+- Boekhouding is het meest gevoelige deel → extra validatie
+- Documentenvolume kan groot zijn → upload-tijd afhankelijk van VPS bandbreedte
+- BaseNet export moet door Lisanne gedaan worden (toegangsrechten)
+
+**Planning:** 1 sessie voor migratie-scripts + 1 sessie voor testen en uitvoeren
+**Dependency:** Lisanne moet BaseNet export klaarzetten
+**Status:** 📋 Gepland — wacht op BaseNet export van Lisanne
 
 ---
 

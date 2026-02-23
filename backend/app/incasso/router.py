@@ -18,6 +18,7 @@ from app.incasso.schemas import (
     PipelineStepCreate,
     PipelineStepResponse,
     PipelineStepUpdate,
+    QueueCounts,
 )
 
 router = APIRouter(prefix="/api/incasso", tags=["incasso"])
@@ -107,6 +108,18 @@ async def get_pipeline_overview(
     return await service.get_pipeline_overview(db, current_user.tenant_id)
 
 
+# ── Smart Work Queues ────────────────────────────────────────────────────
+
+
+@router.get("/queues/counts", response_model=QueueCounts)
+async def get_queue_counts(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get badge counts for Smart Work Queue tabs."""
+    return await service.get_queue_counts(db, current_user.tenant_id)
+
+
 # ── Batch Actions ─────────────────────────────────────────────────────────
 
 
@@ -136,6 +149,7 @@ async def batch_execute(
     return await service.batch_execute(
         db,
         current_user.tenant_id,
+        current_user.id,
         data.case_ids,
         data.action,
         data.target_step_id,

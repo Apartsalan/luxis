@@ -1,8 +1,53 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 feb 2026 (sessie 9 — Incasso Batch Werkstroom)
-**Laatste feature/fix:** Incasso Batch Werkstroom — pipeline model + batch UI + sidebar item
-**Volgende sessie (10):** Smart Work Queues, template koppeling in pipeline, documentgeneratie-integratie
+**Laatst bijgewerkt:** 23 feb 2026 (sessie 10 — Template koppeling + Documentgeneratie + Smart Work Queues)
+**Laatste feature/fix:** Template koppeling, batch documentgeneratie, Smart Work Queues + sidebar badge
+**Volgende sessie (11):** Data migratie BaseNet, of verdere incasso optimalisaties
+
+## Wat er gedaan is (sessie 10 — 23 feb)
+
+### Feature: Template koppeling + Documentgeneratie + Smart Work Queues ✅
+
+#### Backend
+- **Nieuw veld `template_type`** op `IncassoPipelineStep` — koppelt stap aan modern docx-template systeem (string key i.p.v. deprecated FK)
+- **Nieuw veld `step_entered_at`** op `Case` — timestamp wanneer dossier in huidige pipeline-stap is geplaatst
+- **Alembic migratie 030:** `template_type` kolom op `incasso_pipeline_steps` + `step_entered_at` kolom op `cases`
+- **Seed defaults bijgewerkt:** Aanmaning→"aanmaning", Sommatie→"sommatie", 2e Sommatie→"tweede_sommatie", Dagvaarding→"dagvaarding"
+- **Documentgeneratie bij batch "Verstuur brief":** `batch_execute(action=generate_document)` roept nu `render_docx()` aan per dossier, slaat `GeneratedDocument` op in database
+- **Smart Work Queue counts:** Nieuw endpoint `GET /api/incasso/queues/counts` — retourneert `{ ready_next_step, wik_expired, action_required }`
+- **Queue logica:** `ready_next_step` = cases waar `days_in_step >= min_wait_days` van volgende stap; `wik_expired` = cases in eerste stap ≥ 14 dagen; `action_required` = combinatie van beide + onzugeassigneerde cases
+
+#### Frontend
+- **Template dropdown** in pipeline editor: per stap een "Briefsjabloon" dropdown met alle 7 docx-templates (Aanmaning, Sommatie, 2e Sommatie, etc.)
+- **Smart Work Queue tabs** op werkstroom: "Alle dossiers" (default) | "Klaar voor volgende stap (X)" | "14d verlopen (X)" | "Actie vereist (X)"
+- **Client-side filtering** op queue selectie (ready_next_step, wik_expired, action_required filters)
+- **Sidebar badge** op Incasso nav item: rode teller met "actie vereist" count (auto-refresh 5 min)
+- **Hooks:** `useIncassoQueueCounts()` (5-min auto-refresh), `template_type` in alle pipeline step hooks
+
+### Commits sessie 10
+
+| Hash | Beschrijving |
+|------|-------------|
+| TBD | feat(incasso): template coupling, batch document generation, smart work queues |
+
+### Bestanden aangemaakt/gewijzigd
+
+**Nieuw (backend):**
+- `backend/alembic/versions/030_incasso_template_type_and_step_entered_at.py` — Migration
+
+**Gewijzigd (backend):**
+- `backend/app/incasso/models.py` — `template_type` field
+- `backend/app/incasso/schemas.py` — `template_type` in schemas + `QueueCounts` schema
+- `backend/app/incasso/service.py` — seed defaults, document generation, queue counts, step_entered_at tracking
+- `backend/app/incasso/router.py` — queue counts endpoint + user_id passing
+- `backend/app/cases/models.py` — `step_entered_at` field
+
+**Gewijzigd (frontend):**
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — template dropdown + Smart Work Queue tabs
+- `frontend/src/hooks/use-incasso.ts` — `template_type`, `QueueCounts`, `useIncassoQueueCounts`
+- `frontend/src/components/layout/app-sidebar.tsx` — incasso badge
+
+---
 
 ## Wat er gedaan is (sessie 9 — 23 feb)
 

@@ -13,6 +13,7 @@ class PipelineStepCreate(BaseModel):
     sort_order: int = 0
     min_wait_days: int = Field(default=0, ge=0)
     template_id: uuid.UUID | None = None
+    template_type: str | None = None  # docx template key (e.g. "aanmaning")
 
 
 class PipelineStepUpdate(BaseModel):
@@ -20,6 +21,7 @@ class PipelineStepUpdate(BaseModel):
     sort_order: int | None = None
     min_wait_days: int | None = Field(default=None, ge=0)
     template_id: uuid.UUID | None = None
+    template_type: str | None = None
     is_active: bool | None = None
 
 
@@ -29,6 +31,7 @@ class PipelineStepResponse(BaseModel):
     sort_order: int
     min_wait_days: int
     template_id: uuid.UUID | None
+    template_type: str | None = None
     template_name: str | None = None
     is_active: bool
     created_at: datetime
@@ -123,3 +126,15 @@ class BatchActionResult(BaseModel):
     processed: int
     skipped: int
     errors: list[str]
+    generated_document_ids: list[uuid.UUID] = []  # For generate_document action
+
+
+# ── Smart Work Queues ────────────────────────────────────────────────────
+
+
+class QueueCounts(BaseModel):
+    """Badge counts for Smart Work Queue tabs."""
+
+    ready_next_step: int = 0  # Cases where days_in_step >= next step's min_wait_days
+    wik_expired: int = 0  # Cases where 14-day WIK deadline has passed
+    action_required: int = 0  # Total needing attention (sum/union of above + unassigned)

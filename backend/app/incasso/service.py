@@ -1,12 +1,15 @@
 """Incasso pipeline service — business logic for pipeline steps and batch actions."""
 
+import logging
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case
+from app.documents.docx_service import render_docx
+from app.documents.models import GeneratedDocument
 from app.incasso.models import IncassoPipelineStep
 from app.incasso.schemas import (
     BatchActionResult,
@@ -18,8 +21,11 @@ from app.incasso.schemas import (
     PipelineStepCreate,
     PipelineStepResponse,
     PipelineStepUpdate,
+    QueueCounts,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
+
+logger = logging.getLogger(__name__)
 
 # ── Pipeline Step CRUD ────────────────────────────────────────────────────
 
@@ -122,11 +128,11 @@ async def seed_default_steps(
         return existing
 
     defaults = [
-        {"name": "Aanmaning", "sort_order": 1, "min_wait_days": 0},
-        {"name": "Sommatie", "sort_order": 2, "min_wait_days": 14},
-        {"name": "2e Sommatie", "sort_order": 3, "min_wait_days": 14},
+        {"name": "Aanmaning", "sort_order": 1, "min_wait_days": 0, "template_type": "aanmaning"},
+        {"name": "Sommatie", "sort_order": 2, "min_wait_days": 14, "template_type": "sommatie"},
+        {"name": "2e Sommatie", "sort_order": 3, "min_wait_days": 14, "template_type": "tweede_sommatie"},
         {"name": "Ingebrekestelling", "sort_order": 4, "min_wait_days": 14},
-        {"name": "Dagvaarding", "sort_order": 5, "min_wait_days": 14},
+        {"name": "Dagvaarding", "sort_order": 5, "min_wait_days": 14, "template_type": "dagvaarding"},
         {"name": "Executie", "sort_order": 6, "min_wait_days": 0},
     ]
 
@@ -153,6 +159,7 @@ def step_to_response(step: IncassoPipelineStep) -> PipelineStepResponse:
         sort_order=step.sort_order,
         min_wait_days=step.min_wait_days,
         template_id=step.template_id,
+        template_type=step.template_type,
         template_name=step.template.name if step.template else None,
         is_active=step.is_active,
         created_at=step.created_at,
@@ -163,10 +170,13 @@ def step_to_response(step: IncassoPipelineStep) -> PipelineStepResponse:
 # ── Pipeline Overview ─────────────────────────────────────────────────────
 
 
-def _case_to_pipeline_item(case: Case, step_entered_date: date | None = None) -> CaseInPipeline:
+def _case_to_pipeline_item(case: Case) -> CaseInPipeline:
     """Convert a Case model to CaseInPipeline schema."""
     outstanding = float(case.total_principal) - float(case.total_paid)
-    if step_entered_date:
+
+    # Use step_entered_at if available, otherwise fallback to date_opened
+    if case.step_entered_at:
+        step_entered_date = case.step_entered_at.date()
         days_in_step = (date.today() - step_entered_date).days
     else:
         days_in_step = (date.today() - case.date_opened).days
@@ -288,10 +298,24 @@ async def batch_preview(
             ready += 1
 
     elif action == "generate_document":
+        # Load all pipeline steps for checking template_type
+        steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+        step_map = {s.id: s for s in steps}
+
         for case in cases:
             if not case.incasso_step_id:
                 needs_step.append(_case_to_pipeline_item(case))
                 continue
+
+            step = step_map.get(case.incasso_step_id)
+            if step and not step.template_type:
+                blocked.append(BatchBlocker(
+                    case_id=case.id,
+                    case_number=case.case_number,
+                    reason=f"Stap '{step.name}' heeft geen briefsjabloon",
+                ))
+                continue
+
             ready += 1
 
     elif action == "recalculate_interest":
@@ -316,6 +340,7 @@ async def batch_preview(
 async def batch_execute(
     db: AsyncSession,
     tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
     case_ids: list[uuid.UUID],
     action: str,
     target_step_id: uuid.UUID | None = None,
@@ -338,6 +363,9 @@ async def batch_execute(
     processed = 0
     skipped = 0
     errors: list[str] = []
+    generated_doc_ids: list[uuid.UUID] = []
+
+    now = datetime.now(timezone.utc)
 
     if action == "advance_step":
         if not target_step_id:
@@ -362,17 +390,56 @@ async def batch_execute(
                 case.incasso_step_id = first_step.id
 
             case.incasso_step_id = target_step.id
+            case.step_entered_at = now
             processed += 1
 
     elif action == "generate_document":
-        # Document generation is a placeholder — will integrate with document module
+        # Load steps to get template_type
+        steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+        step_map = {s.id: s for s in steps}
+
         for case in cases:
             if not case.incasso_step_id:
                 skipped += 1
                 errors.append(f"{case.case_number}: geen pipeline stap — overgeslagen")
                 continue
-            # TODO: integrate with document generation service
-            processed += 1
+
+            step = step_map.get(case.incasso_step_id)
+            if not step or not step.template_type:
+                skipped += 1
+                step_name = step.name if step else "onbekend"
+                errors.append(
+                    f"{case.case_number}: stap '{step_name}' heeft geen briefsjabloon — overgeslagen"
+                )
+                continue
+
+            try:
+                docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
+                    db, tenant_id, case, step.template_type
+                )
+
+                doc = GeneratedDocument(
+                    tenant_id=tenant_id,
+                    case_id=case.id,
+                    generated_by_id=user_id,
+                    title=f"{tpl_type} - {case.case_number}",
+                    document_type=tpl_type,
+                    template_type=tpl_type,
+                    template_snapshot=tpl_snapshot,
+                )
+                db.add(doc)
+                await db.flush()
+                await db.refresh(doc)
+                generated_doc_ids.append(doc.id)
+                processed += 1
+            except Exception as exc:
+                logger.error(
+                    "Batch document generation failed for %s: %s",
+                    case.case_number,
+                    exc,
+                )
+                skipped += 1
+                errors.append(f"{case.case_number}: fout bij genereren — {exc}")
 
     elif action == "recalculate_interest":
         # Interest recalculation placeholder — will integrate with collections module
@@ -390,4 +457,69 @@ async def batch_execute(
         processed=processed,
         skipped=skipped,
         errors=errors,
+        generated_document_ids=generated_doc_ids,
+    )
+
+
+# ── Smart Work Queues ────────────────────────────────────────────────────
+
+
+async def get_queue_counts(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> QueueCounts:
+    """Calculate badge counts for Smart Work Queue tabs."""
+    # Get active steps ordered by sort_order
+    steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+    if not steps:
+        return QueueCounts()
+
+    # Build a lookup: step_id -> step, and step_id -> next step
+    step_list = sorted(steps, key=lambda s: s.sort_order)
+    next_step_map: dict[uuid.UUID, IncassoPipelineStep] = {}
+    for i, step in enumerate(step_list):
+        if i + 1 < len(step_list):
+            next_step_map[step.id] = step_list[i + 1]
+
+    # Get all active incasso cases (not closed/paid)
+    result = await db.execute(
+        select(Case).where(
+            Case.tenant_id == tenant_id,
+            Case.case_type == "incasso",
+            Case.is_active.is_(True),
+            Case.status.notin_(["betaald", "afgesloten"]),
+        )
+    )
+    all_cases = list(result.scalars().all())
+
+    ready_next_step = 0
+    wik_expired = 0
+    unassigned = 0
+
+    for case in all_cases:
+        if not case.incasso_step_id:
+            unassigned += 1
+            continue
+
+        # Calculate days in current step
+        if case.step_entered_at:
+            days_in_step = (date.today() - case.step_entered_at.date()).days
+        else:
+            days_in_step = (date.today() - case.date_opened).days
+
+        # Check if ready for next step
+        next_step = next_step_map.get(case.incasso_step_id)
+        if next_step and days_in_step >= next_step.min_wait_days:
+            ready_next_step += 1
+
+        # Check WIK 14-day expiry: cases in first step (Aanmaning) for >= 14 days
+        if case.incasso_step_id == step_list[0].id and days_in_step >= 14:
+            wik_expired += 1
+
+    action_required = ready_next_step + unassigned
+
+    return QueueCounts(
+        ready_next_step=ready_next_step,
+        wik_expired=wik_expired,
+        action_required=action_required,
     )

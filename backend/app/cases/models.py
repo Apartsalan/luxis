@@ -1,11 +1,12 @@
 """Cases module models — Case, CaseParty, CaseActivity, and CaseFile."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
@@ -103,6 +104,9 @@ class Case(TenantBase):
     incasso_step_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("incasso_pipeline_steps.id"), nullable=True
     )  # Current step in the incasso pipeline
+    step_entered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )  # When the case entered its current pipeline step
 
     # Dates
     date_opened: Mapped[date] = mapped_column(Date, nullable=False)

@@ -222,7 +222,21 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ BUG-11/12 gefixt** (sessie 8, 22 feb) — Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
 **✅ Incasso Batch Werkstroom** (sessie 9, 23 feb) — IncassoPipelineStep model + CRUD + batch actions + /incasso pagina met pipeline editor + batch werkstroom + pre-flight wizard + sidebar item. Migration 029.
 **✅ Template koppeling + Documentgeneratie + Smart Work Queues** (sessie 10, 23 feb) — template_type op pipeline steps (modern docx systeem), batch "Verstuur brief" genereert documenten via render_docx(), Smart Work Queue tabs (klaar/14d verlopen/actie vereist) + sidebar badge. Migration 030.
-**Volgende prioriteit (sessie 11):** Data migratie BaseNet → Luxis, of verdere incasso/workflow optimalisaties.
+**Volgende prioriteit (sessie 11):** Document template editing UI + merge fields uitbreiden (procesgegevens, partijen, betalingstermijn naar templates). Documenten-pagina moet templates bewerkbaar maken. Zie hieronder voor details.
+
+### Sessie 11 Plan: Document Templates & Merge Fields
+
+**Probleem 1: Templates niet bewerkbaar in UI**
+De Documenten-pagina (`/documenten`) toont templates read-only. Lisanne kan ze niet aanpassen. De .docx bestanden moeten handmatig op de server vervangen worden. Oplossing: upload-functie voor .docx templates + preview met voorbeelddata.
+
+**Probleem 2: Niet alle dossierdata komt in documenten terecht**
+De `render_docx()` functie in `docx_service.py` bouwt context op maar mist:
+- Procesgegevens: `court_name`, `court_case_number`, `judge_name`, `chamber`, `procedure_type`, `procedure_phase` (bestaan op Case model maar worden NIET doorgegeven)
+- CaseParty data: deurwaarder, advocaat wederpartij (bestaan in DB maar niet in template context)
+- Betalingstermijn: `Contact.payment_term_days` (beschikbaar maar niet doorgegeven)
+- Advocaat wederpartij naam/kantoor (uit CaseParty of Case.opposing_party_lawyer)
+
+**Aanpak:** Eerst templates finaliseren met Lisanne, dan merge fields uitbreiden. Beide in sessie 11.
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

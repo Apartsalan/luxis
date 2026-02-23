@@ -16,6 +16,7 @@ import {
   useCreateTask,
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
+  RECURRENCE_LABELS,
 } from "@/hooks/use-workflow";
 import { useAuth } from "@/hooks/use-auth";
 import { formatDateShort } from "@/lib/utils";
@@ -33,6 +34,8 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
     task_type: "custom",
     due_date: new Date().toISOString().split("T")[0],
     description: "",
+    recurrence: "none",
+    recurrence_end_date: "",
   });
 
   const handleComplete = async (taskId: string) => {
@@ -63,6 +66,8 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
         due_date: form.due_date,
         ...(form.description && { description: form.description }),
         ...(user?.id && { assigned_to_id: user.id }),
+        ...(form.recurrence !== "none" && { recurrence: form.recurrence }),
+        ...(form.recurrence !== "none" && form.recurrence_end_date && { recurrence_end_date: form.recurrence_end_date }),
       });
       toast.success("Taak aangemaakt");
       setShowForm(false);
@@ -71,6 +76,8 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
         task_type: "custom",
         due_date: new Date().toISOString().split("T")[0],
         description: "",
+        recurrence: "none",
+        recurrence_end_date: "",
       });
     } catch (err: any) {
       toast.error(err.message);
@@ -163,7 +170,42 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
                 className={inputClass}
               />
             </div>
-            <div className="sm:col-span-2">
+            {/* G9: Recurrence dropdown */}
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Herhaling
+              </label>
+              <select
+                value={form.recurrence}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, recurrence: e.target.value }))
+                }
+                className={inputClass}
+              >
+                {Object.entries(RECURRENCE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {form.recurrence !== "none" && (
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  Herhalen tot
+                </label>
+                <input
+                  type="date"
+                  value={form.recurrence_end_date}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, recurrence_end_date: e.target.value }))
+                  }
+                  className={inputClass}
+                />
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Optioneel</p>
+              </div>
+            )}
+            <div className={form.recurrence !== "none" ? "sm:col-span-2" : "sm:col-span-2"}>
               <label className="block text-xs font-medium text-foreground">
                 Omschrijving
               </label>

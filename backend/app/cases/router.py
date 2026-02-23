@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
@@ -309,6 +309,70 @@ async def download_file(
         filename=case_file.original_filename,
         media_type=case_file.content_type,
     )
+
+
+# G11: Inline file preview
+PREVIEWABLE_TYPES = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+@router.get("/{case_id}/files/{file_id}/preview")
+async def preview_file(
+    case_id: uuid.UUID,
+    file_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Preview a case file inline in the browser.
+
+    - PDF/images: served directly with Content-Disposition: inline
+    - DOCX: converted to PDF on-the-fly via LibreOffice
+    - Other types: returns 415 Unsupported Media Type
+    """
+    case_file = await files_service.get_case_file(
+        db, current_user.tenant_id, case_id, file_id
+    )
+    if not case_file:
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden")
+
+    if case_file.content_type not in PREVIEWABLE_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Preview niet beschikbaar voor bestandstype: {case_file.content_type}",
+        )
+
+    file_path = files_service.get_file_path(case_file)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden op schijf")
+
+    # PDF and images: serve directly
+    if case_file.content_type in ("application/pdf", "image/jpeg", "image/png", "image/gif"):
+        return FileResponse(
+            path=str(file_path),
+            filename=case_file.original_filename,
+            media_type=case_file.content_type,
+            headers={"Content-Disposition": f'inline; filename="{case_file.original_filename}"'},
+        )
+
+    # DOCX: convert to PDF
+    if case_file.content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        from app.documents.pdf_service import docx_to_pdf
+
+        docx_bytes = file_path.read_bytes()
+        pdf_bytes = await docx_to_pdf(docx_bytes)
+        pdf_name = case_file.original_filename.rsplit(".", 1)[0] + ".pdf"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{pdf_name}"'},
+        )
+
+    raise HTTPException(status_code=415, detail="Preview niet ondersteund")
 
 
 @router.delete("/{case_id}/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)

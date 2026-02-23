@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,6 +11,7 @@ import {
   Clock,
   CreditCard,
   Download,
+  Eye,
   File,
   FileText,
   Loader2,
@@ -20,6 +21,7 @@ import {
   Star,
   Trash2,
   Upload,
+  X,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -51,6 +53,7 @@ import {
   downloadCaseFile,
   formatFileSize,
   getFileIcon,
+  isPreviewable,
 } from "@/hooks/use-case-files";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 
@@ -476,6 +479,79 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   const deleteCaseFile = useDeleteCaseFile(caseId);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // G11: Inline document preview
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Cleanup blob URL on close
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    setPreviewTitle("");
+  }, [previewUrl]);
+
+  // Close on Escape key
+  useEffect(() => {
+    if (!previewOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closePreview();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [previewOpen, closePreview]);
+
+  /** Preview a generated document (DOCX → PDF via backend). */
+  const handlePreviewDocument = async (docId: string, title: string) => {
+    setPreviewTitle(title);
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+    try {
+      const token = localStorage.getItem("luxis_access_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${apiUrl}/api/documents/${docId}/preview`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Preview laden mislukt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+    } catch (err: any) {
+      toast.error(err.message || "Preview laden mislukt");
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  /** Preview an uploaded case file (PDF/image direct, DOCX → PDF). */
+  const handlePreviewFile = async (fileId: string, filename: string) => {
+    setPreviewTitle(filename);
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+    try {
+      const token = localStorage.getItem("luxis_access_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(
+        `${apiUrl}/api/cases/${caseId}/files/${fileId}/preview`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error("Preview laden mislukt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+    } catch (err: any) {
+      toast.error(err.message || "Preview laden mislukt");
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const handleGenerate = async (templateType: string) => {
     try {
       const result = await generateDocx.mutateAsync(templateType);
@@ -790,13 +866,24 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       </p>
                     </div>
                   </button>
-                  <button
-                    onClick={() => deleteCaseFile.mutate(f.id)}
-                    className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Verwijderen"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {isPreviewable(f.content_type) && (
+                      <button
+                        onClick={() => handlePreviewFile(f.id, f.original_filename)}
+                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Preview"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => deleteCaseFile.mutate(f.id)}
+                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Verwijderen"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -847,6 +934,13 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => handlePreviewDocument(doc.id, doc.title)}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Preview"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => handleOpenEmailDialog(doc)}
                     className="rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
                     title="Verstuur per e-mail"
@@ -878,6 +972,57 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
         defaultToName={opposingPartyName || ""}
         attachmentName={emailDoc ? `${emailDoc.title}.pdf` : undefined}
       />
+
+      {/* G11: Document preview dialog */}
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="relative flex h-[90vh] w-[90vw] max-w-5xl flex-col rounded-xl border border-border bg-card shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-5 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Eye className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-foreground truncate">
+                    {previewTitle}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">Document preview</p>
+                </div>
+              </div>
+              <button
+                onClick={closePreview}
+                className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Sluiten (Esc)"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden bg-muted/30">
+              {previewLoading ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Preview laden...</p>
+                  </div>
+                </div>
+              ) : previewUrl ? (
+                <iframe
+                  src={previewUrl}
+                  className="h-full w-full border-0"
+                  title={`Preview: ${previewTitle}`}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm text-muted-foreground">Preview niet beschikbaar</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,8 +1,97 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 feb 2026 (sessie 10 — Template koppeling + Documentgeneratie + Smart Work Queues)
-**Laatste feature/fix:** Template koppeling, batch documentgeneratie, Smart Work Queues + sidebar badge
-**Volgende sessie (11):** Data migratie BaseNet, of verdere incasso optimalisaties
+**Laatst bijgewerkt:** 23 feb 2026 (sessie 11 — UX Polish: G13 Budget + G9 Recurring Tasks + G11 Document Preview)
+**Laatste feature/fix:** Budget tracking, recurring tasks, inline document preview
+**Volgende sessie (12):** Document template editing UI + merge fields uitbreiden. Of M365 migratie (M0a).
+
+## Wat er gedaan is (sessie 11 — 23 feb)
+
+### Feature: G13 — Budget Tracking per Dossier ✅
+
+#### Backend
+- **Nieuw veld `budget`** op `Case` model — `Numeric(15, 2)`, nullable
+- **Schemas bijgewerkt:** `budget: float | None = None` in CaseCreate, CaseUpdate, CaseResponse, CaseSummary
+- **Alembic migratie 031:** `budget` kolom op `cases` tabel
+- **Service hoefde niet aangepast** — `update_case` gebruikt al dynamische `setattr` loop
+
+#### Frontend
+- **Module systeem:** "budget" toegevoegd als togglebare module (LuxisModule type + ALL_MODULES)
+- **Instellingen:** Budget module verschijnt in Modules-beheer met beschrijving
+- **Nieuw dossier:** Budget input veld (module-gated), type number, stap 0.01
+- **Dossier edit:** Budget bewerkbaar in DetailsTab (module-gated)
+- **Sidebar progress bar:** OHW (onderhanden werk) vs budget
+  - Groen (<80% besteed)
+  - Amber (80-100% besteed)
+  - Rood (>100% — "Budget overschreden")
+- **Volledig togglebaar:** Alles verborgen als budget-module uit staat
+
+### Feature: G9 — Recurring Tasks ✅
+
+#### Backend
+- **3 nieuwe velden** op `WorkflowTask` model: `recurrence` (String(20)), `recurrence_end_date` (Date), `parent_task_id` (FK naar zichzelf)
+- **Self-referential relationship:** `parent_task` relationship voor taak-keten tracking
+- **Auto-create volgende taak:** Bij voltooien van recurring taak → automatisch volgende occurrence aangemaakt
+- **Recurrence opties:** daily, weekly, monthly, quarterly, yearly
+- **Einddatum respect:** Stopt met herhalen als `recurrence_end_date` bereikt
+- **dateutil.relativedelta:** Nauwkeurige datumberekening (maandovergangen, schrikkeljaren)
+- **Alembic migratie 032:** 3 kolommen + FK constraint
+
+#### Frontend
+- **Taken pagina:** Herhaling dropdown (Eenmalig/Dagelijks/Wekelijks/Maandelijks/Per kwartaal/Jaarlijks) + conditioneel "Herhalen tot" datumveld
+- **Dossier taken tab:** Zelfde herhaling dropdown in taak-aanmaak
+- **Recurring badge:** Blauw badge met 🔄 icoon + herhalingslabel bij taken in de lijst
+- **Labels:** Nederlandse vertalingen (Eenmalig, Dagelijks, etc.)
+
+### Feature: G11 — Inline Document Preview ✅
+
+#### Backend
+- **Nieuw endpoint `GET /api/documents/{id}/preview`:** Re-renders DOCX template met huidige case data → converteert naar PDF → retourneert inline
+- **Nieuw endpoint `GET /api/cases/{case_id}/files/{file_id}/preview`:**
+  - PDF/images: direct serveren met Content-Disposition: inline
+  - DOCX: on-the-fly converteren naar PDF via `docx_to_pdf()`
+  - Andere types: 415 Unsupported Media Type
+- **PREVIEWABLE_TYPES set:** PDF, JPEG, PNG, GIF, DOCX
+
+#### Frontend
+- **`isPreviewable(contentType)` helper:** Checkt of bestand previewbaar is (PDF, images, DOCX)
+- **Eye (👁) button:** Op elk previewbaar bestand en elk gegenereerd document
+- **Preview dialog:** Fullscreen-achtig modal met:
+  - Header: titel + "Document preview" label + sluit-knop
+  - Content: iframe voor PDF rendering
+  - Loading state: spinner + "Preview laden..."
+  - Escape key: sluit dialog
+- **Blob URL auth approach:** Fetch met Bearer token → `URL.createObjectURL()` → iframe src
+- **Memory cleanup:** `URL.revokeObjectURL()` bij sluiten
+
+### Bestanden aangemaakt/gewijzigd sessie 11
+
+**Nieuw (backend):**
+- `backend/alembic/versions/031_add_budget_to_cases.py` — Migration
+- `backend/alembic/versions/032_recurring_tasks.py` — Migration
+
+**Gewijzigd (backend):**
+- `backend/app/cases/models.py` — `budget` field
+- `backend/app/cases/schemas.py` — `budget` in 4 schemas
+- `backend/app/workflow/models.py` — `recurrence`, `recurrence_end_date`, `parent_task_id`
+- `backend/app/workflow/schemas.py` — Velden in 3 schemas + RECURRENCE_OPTIONS
+- `backend/app/workflow/service.py` — Auto-create next recurring task + _RECURRENCE_DELTAS
+- `backend/app/documents/router.py` — Preview endpoint
+- `backend/app/cases/router.py` — File preview endpoint + PREVIEWABLE_TYPES
+
+**Gewijzigd (frontend):**
+- `frontend/src/hooks/use-modules.ts` — "budget" module
+- `frontend/src/hooks/use-cases.ts` — `budget` in interfaces
+- `frontend/src/hooks/use-workflow.ts` — recurrence fields + RECURRENCE_LABELS
+- `frontend/src/hooks/use-case-files.ts` — `isPreviewable()` helper
+- `frontend/src/app/(dashboard)/instellingen/page.tsx` — Budget module info
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — Budget input (module-gated)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DetailsTab.tsx` — Budget edit (module-gated)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DossierSidebar.tsx` — Budget progress bar (module-gated)
+- `frontend/src/app/(dashboard)/taken/page.tsx` — Recurrence dropdown + badge
+- `frontend/src/app/(dashboard)/zaken/[id]/components/TijdregistratieTab.tsx` — Recurrence dropdown
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — Preview dialog + eye buttons
+
+---
 
 ## Wat er gedaan is (sessie 10 — 23 feb)
 

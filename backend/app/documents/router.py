@@ -269,6 +269,54 @@ async def generate_docx(
     )
 
 
+# ── Document Preview Endpoint (G11) ──────────────────────────────────────
+
+
+@router.get("/{document_id}/preview")
+async def preview_document(
+    document_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Preview a generated document as inline PDF.
+
+    Re-renders the DOCX template with current case data and converts to PDF.
+    Returns PDF bytes with Content-Disposition: inline for browser preview.
+    """
+    doc = await service.get_generated_document(
+        db, user.tenant_id, document_id
+    )
+
+    if not doc.template_type:
+        raise BadRequestError(
+            "Document heeft geen sjabloontype — preview niet mogelijk"
+        )
+
+    # Load the case
+    result = await db.execute(
+        select(Case).where(
+            Case.id == doc.case_id,
+            Case.tenant_id == user.tenant_id,
+        )
+    )
+    case = result.scalar_one_or_none()
+    if case is None:
+        raise NotFoundError("Zaak niet gevonden")
+
+    # Re-render and convert to PDF
+    docx_bytes, filename, _, _ = await render_docx(
+        db, user.tenant_id, case, doc.template_type
+    )
+    pdf_bytes = await docx_to_pdf(docx_bytes)
+    pdf_filename = filename.replace(".docx", ".pdf")
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{pdf_filename}"'},
+    )
+
+
 # ── Send Document Endpoint ────────────────────────────────────────────────
 
 

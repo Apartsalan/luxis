@@ -380,11 +380,11 @@ Geen enkele juridische software doet dit goed. Luxis kan hier differentiëren:
 | G6 | **Facturen tab op dossierdetail** | Clio, PracticePanther, Kleos | ✅ E3 | - | Al gebouwd |
 | G7 | **Document versioning** | Kleos, Clio, Smokeball | 🟢 P2 | M | Version history per document, check-in/check-out |
 | G8 | **Slide-over/peek mode voor taken en documenten** | Asana, Linear | 🟢 P2 | M | Quick view zonder pagina te verlaten |
-| G9 | **Recurring tasks** | Clio, Kleos, PracticePanther | 🟢 P2 | S | Terugkerende taken (maandelijkse controle, periodieke review) |
+| G9 | **Recurring tasks** | Clio, Kleos, PracticePanther | ✅ | S | ✅ Gebouwd (23 feb) — daily/weekly/monthly/quarterly/yearly + auto-create next occurrence op completion |
 | G10 | **Task templates per dossiertype** | Smokeball, Clio | 🟡 P1 | M | Bij aanmaken incasso-dossier → automatisch 8 taken met relatieve deadlines |
-| G11 | **Inline document preview** | Kleos, Clio | 🟢 P2 | M | PDF/afbeeldingen bekijken in browser zonder download |
+| G11 | **Inline document preview** | Kleos, Clio | ✅ | M | ✅ Gebouwd (23 feb) — eye button op documenten + bestanden, PDF preview in modal dialog, blob URL auth |
 | G12 | **Outlook integratie** | Kleos, Hammock, PracticePanther | 🔴 P0 | XL | Emails automatisch koppelen aan dossiers. = M1-M6 in roadmap |
-| G13 | **Budget tracking per dossier** | Hammock, Clio, Kleos | 🟢 P2 | S | Budget instellen, progress bar, alert bij overschrijding |
+| G13 | **Budget tracking per dossier** | Hammock, Clio, Kleos | ✅ | S | ✅ Gebouwd (23 feb) — budget veld, sidebar progress bar (groen/amber/rood), togglebaar via "budget" module |
 | G14 | **Sidebar met dossierinfo + contact quick view** | Clio, Linear | 🟡 P1 | M | Rechter sidebar met cliënt/wederpartij info + financieel snapshot, inklapbaar |
 | G15 | **Telefoonnotitie als apart type** | BaseNet, Kleos | ✅ F10 | - | Al gebouwd |
 
@@ -424,13 +424,13 @@ Geen enkele juridische software doet dit goed. Luxis kan hier differentiëren:
 
 ### Fase 3: Nice-to-haves (P2)
 
-| # | Wat | Complexiteit |
-|---|-----|-------------|
-| G7 | Document versioning | M |
-| G8 | Slide-over/peek mode | M |
-| G9 | Recurring tasks | S |
-| G11 | Inline document preview | M |
-| G13 | Budget tracking | S |
+| # | Wat | Complexiteit | Status |
+|---|-----|-------------|--------|
+| G7 | Document versioning | M | ❌ Nog te doen |
+| G8 | Slide-over/peek mode | M | ❌ Nog te doen |
+| G9 | Recurring tasks | S | ✅ Gebouwd (23 feb) |
+| G11 | Inline document preview | M | ✅ Gebouwd (23 feb) |
+| G13 | Budget tracking | S | ✅ Gebouwd (23 feb) |
 
 ### Fase 4: Microsoft 365 (apart traject)
 

@@ -2,9 +2,9 @@
 
 import { useTenant } from "@/hooks/use-settings";
 
-export type LuxisModule = "incasso" | "tijdschrijven" | "facturatie" | "wwft";
+export type LuxisModule = "incasso" | "tijdschrijven" | "facturatie" | "wwft" | "budget";
 
-const ALL_MODULES: LuxisModule[] = ["incasso", "tijdschrijven", "facturatie", "wwft"];
+const ALL_MODULES: LuxisModule[] = ["incasso", "tijdschrijven", "facturatie", "wwft", "budget"];
 
 export function useModules() {
   const { data: tenant, isLoading } = useTenant();

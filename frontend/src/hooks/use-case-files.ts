@@ -101,6 +101,20 @@ export function useDeleteCaseFile(caseId: string) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
+/** Check whether a content type can be previewed inline (PDF, images, DOCX). */
+export function isPreviewable(contentType: string): boolean {
+  if (!contentType) return false;
+  if (contentType === "application/pdf") return true;
+  if (contentType.startsWith("image/")) return true;
+  if (
+    contentType ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    contentType === "application/msword"
+  )
+    return true;
+  return false;
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;

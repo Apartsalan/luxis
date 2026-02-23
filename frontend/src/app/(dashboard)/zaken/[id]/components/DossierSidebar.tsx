@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useFinancialSummary } from "@/hooks/use-collections";
 import { useTimeEntrySummary } from "@/hooks/use-time-entries";
+import { useModules } from "@/hooks/use-modules";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { STATUS_LABELS, TYPE_LABELS, INTEREST_LABELS } from "../types";
 
@@ -38,6 +39,7 @@ export default function DossierSidebar({
     isIncasso ? zaak.id : undefined
   );
   const { data: timeSummary } = useTimeEntrySummary({ case_id: zaak.id });
+  const { hasModule } = useModules();
 
   const toggle = () => {
     const next = !isOpen;
@@ -253,6 +255,37 @@ export default function DossierSidebar({
                 )}
               </dd>
             </div>
+
+            {/* G13: Budget progress bar — only when budget module enabled and budget set */}
+            {hasModule("budget") && zaak.budget != null && zaak.budget > 0 && (() => {
+              const spent = ohwAmount;
+              const budget = zaak.budget as number;
+              const pct = Math.round((spent / budget) * 100);
+              const barColor = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500";
+              return (
+                <div className="pt-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <dt className="text-xs text-muted-foreground">Budget</dt>
+                    <dd className="text-xs font-medium text-foreground">
+                      {formatCurrency(spent)} / {formatCurrency(budget)}
+                    </dd>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${barColor} transition-all`}
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                  </div>
+                  <p className={`text-[10px] mt-1 text-right ${
+                    pct >= 100 ? "text-red-600 font-medium" : pct >= 80 ? "text-amber-600" : "text-muted-foreground"
+                  }`}>
+                    {pct >= 100
+                      ? `Budget overschreden (${pct}%)`
+                      : `${pct}% besteed`}
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Incasso financials */}
             {isIncasso && financials && (

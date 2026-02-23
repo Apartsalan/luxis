@@ -60,6 +60,7 @@ class CaseCreate(BaseModel):
     billing_contact_id: uuid.UUID | None = None
     assigned_to_id: uuid.UUID | None = None
     date_opened: date
+    budget: float | None = None  # G13: optional budget (requires "budget" module)
 
 
 class CaseUpdate(BaseModel):
@@ -78,6 +79,7 @@ class CaseUpdate(BaseModel):
     opposing_party_id: uuid.UUID | None = None
     billing_contact_id: uuid.UUID | None = None
     assigned_to_id: uuid.UUID | None = None
+    budget: float | None = None  # G13
 
 
 class CaseStatusUpdate(BaseModel):
@@ -174,6 +176,7 @@ class CaseResponse(BaseModel):
     date_closed: date | None
     total_principal: float
     total_paid: float
+    budget: float | None = None  # G13
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -197,6 +200,7 @@ class CaseSummary(BaseModel):
     date_opened: date
     total_principal: float
     total_paid: float
+    budget: float | None = None  # G13
 
     model_config = {"from_attributes": True}
 

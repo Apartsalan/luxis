@@ -36,6 +36,7 @@ function NieuweZaakPage() {
     court_case_number: "",
     interest_type: "statutory",
     contractual_rate: "",
+    budget: "", // G13
     client_id: prefillClientId,
     opposing_party_id: "",
     date_opened: new Date().toISOString().split("T")[0],
@@ -140,6 +141,7 @@ function NieuweZaakPage() {
     if (form.interest_type === "contractual" && form.contractual_rate) {
       data.contractual_rate = parseFloat(form.contractual_rate);
     }
+    if (form.budget) data.budget = parseFloat(form.budget);
 
     try {
       const result = await createCase.mutateAsync(data);
@@ -273,6 +275,27 @@ function NieuweZaakPage() {
               />
             </div>
           </div>
+
+          {/* G13: Budget field — only shown when budget module is enabled */}
+          {hasModule("budget") && (
+            <div className="sm:w-1/2">
+              <label className="block text-sm font-medium text-foreground">
+                Budget
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.budget}
+                onChange={(e) => updateField("budget", e.target.value)}
+                className={inputClass}
+                placeholder="Bijv. 5000.00"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Optioneel budget in euro&apos;s voor dit dossier
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Interest settings — only for incasso cases */}

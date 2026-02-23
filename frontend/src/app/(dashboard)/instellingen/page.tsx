@@ -561,6 +561,11 @@ const MODULE_INFO: Record<string, { label: string; description: string }> = {
     description:
       "Cliëntidentificatie, UBO-registratie, PEP/sanctiecontrole en risicoclassificatie (WWFT-compliance)",
   },
+  budget: {
+    label: "Budget",
+    description:
+      "Budgetbeheer per dossier met voortgangsbalk en overschrijdingswaarschuwingen",
+  },
 };
 
 function ModulesTab() {

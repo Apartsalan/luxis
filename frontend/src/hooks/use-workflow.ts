@@ -41,6 +41,9 @@ export interface WorkflowTask {
   auto_execute: boolean;
   action_config: Record<string, unknown> | null;
   created_by_rule_id: string | null;
+  recurrence: string | null;  // G9: daily, weekly, monthly, quarterly, yearly
+  recurrence_end_date: string | null;  // G9
+  parent_task_id: string | null;  // G9
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -107,6 +110,15 @@ export const TASK_TYPE_LABELS: Record<string, string> = {
   manual_review: "Handmatige beoordeling",
   set_deadline: "Deadline instellen",
   custom: "Eigen taak",
+};
+
+export const RECURRENCE_LABELS: Record<string, string> = {
+  none: "Eenmalig",
+  daily: "Dagelijks",
+  weekly: "Wekelijks",
+  monthly: "Maandelijks",
+  quarterly: "Per kwartaal",
+  yearly: "Jaarlijks",
 };
 
 export const TASK_STATUS_LABELS: Record<string, string> = {
@@ -406,6 +418,8 @@ export function useCreateTask() {
       description?: string;
       due_date: string;
       assigned_to_id?: string;
+      recurrence?: string;  // G9
+      recurrence_end_date?: string;  // G9
     }) => {
       const res = await api("/api/workflow/tasks", {
         method: "POST",

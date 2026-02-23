@@ -120,6 +120,11 @@ class Case(TenantBase):
         Numeric(15, 2), default=0, nullable=False
     )
 
+    # G13: Budget tracking (optional, toggleable via "budget" module)
+    budget: Mapped[float | None] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )  # Optional budget in euros for this case
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships

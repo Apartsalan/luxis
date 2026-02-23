@@ -8,6 +8,7 @@ with additional hardcoded legal constraints (14-dagenbrief, verjaring).
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
+from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -577,6 +578,15 @@ async def update_task(
 
     await db.flush()
     await db.refresh(task)
+
+    # G9: If task is recurring and just completed, create next occurrence
+    if (
+        task.status == "completed"
+        and task.recurrence
+        and task.recurrence in ("daily", "weekly", "monthly", "quarterly", "yearly")
+    ):
+        await _create_next_recurring_task(db, task)
+
     return task
 
 
@@ -589,6 +599,58 @@ async def delete_task(
     task = await get_task(db, tenant_id, task_id)
     task.is_active = False
     await db.flush()
+
+
+# ── G9: Recurring task helper ────────────────────────────────────────────────
+
+
+_RECURRENCE_DELTAS = {
+    "daily": relativedelta(days=1),
+    "weekly": relativedelta(weeks=1),
+    "monthly": relativedelta(months=1),
+    "quarterly": relativedelta(months=3),
+    "yearly": relativedelta(years=1),
+}
+
+
+async def _create_next_recurring_task(
+    db: AsyncSession,
+    completed_task: WorkflowTask,
+) -> WorkflowTask | None:
+    """Create the next occurrence of a recurring task.
+
+    Called after a recurring task is marked as completed.
+    Returns the new task, or None if recurrence has ended.
+    """
+    delta = _RECURRENCE_DELTAS.get(completed_task.recurrence)  # type: ignore[arg-type]
+    if delta is None:
+        return None
+
+    next_due = completed_task.due_date + delta
+
+    # Check if past recurrence end date
+    if completed_task.recurrence_end_date and next_due > completed_task.recurrence_end_date:
+        return None
+
+    next_task = WorkflowTask(
+        tenant_id=completed_task.tenant_id,
+        case_id=completed_task.case_id,
+        assigned_to_id=completed_task.assigned_to_id,
+        task_type=completed_task.task_type,
+        title=completed_task.title,
+        description=completed_task.description,
+        due_date=next_due,
+        status="pending" if next_due > date.today() else "due",
+        auto_execute=completed_task.auto_execute,
+        action_config=completed_task.action_config,
+        recurrence=completed_task.recurrence,
+        recurrence_end_date=completed_task.recurrence_end_date,
+        parent_task_id=completed_task.id,
+    )
+    db.add(next_task)
+    await db.flush()
+    await db.refresh(next_task)
+    return next_task
 
 
 # ── Task Engine — create tasks from rules on status change ──────────────────

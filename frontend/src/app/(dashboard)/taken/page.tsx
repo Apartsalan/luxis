@@ -15,6 +15,7 @@ import {
   Inbox,
   Plus,
   Loader2,
+  Repeat,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ import {
   useCreateTask,
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
+  RECURRENCE_LABELS,
   type WorkflowTask,
 } from "@/hooks/use-workflow";
 import { useAuth } from "@/hooks/use-auth";
@@ -220,6 +222,14 @@ function TaskRow({
           <span className="flex items-center gap-1">
             {TASK_TYPE_LABELS[task.task_type] || task.task_type}
           </span>
+
+          {/* G9: Recurring badge */}
+          {task.recurrence && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
+              <Repeat className="h-2.5 w-2.5" />
+              {RECURRENCE_LABELS[task.recurrence] || task.recurrence}
+            </span>
+          )}
         </div>
 
         {/* Description */}
@@ -256,6 +266,8 @@ export default function TakenPage() {
     task_type: "custom",
     due_date: new Date().toISOString().split("T")[0],
     description: "",
+    recurrence: "none",
+    recurrence_end_date: "",
   });
 
   const { user } = useAuth();
@@ -281,6 +293,8 @@ export default function TakenPage() {
         due_date: form.due_date,
         ...(form.description && { description: form.description }),
         ...(user?.id && { assigned_to_id: user.id }),
+        ...(form.recurrence !== "none" && { recurrence: form.recurrence }),
+        ...(form.recurrence !== "none" && form.recurrence_end_date && { recurrence_end_date: form.recurrence_end_date }),
       });
       toast.success("Taak aangemaakt");
       setShowForm(false);
@@ -290,6 +304,8 @@ export default function TakenPage() {
         task_type: "custom",
         due_date: new Date().toISOString().split("T")[0],
         description: "",
+        recurrence: "none",
+        recurrence_end_date: "",
       });
     } catch (err: any) {
       toast.error(err.message);
@@ -505,7 +521,39 @@ export default function TakenPage() {
                 className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
               />
             </div>
-            <div className="sm:col-span-2">
+            {/* G9: Recurrence dropdown */}
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Herhaling
+              </label>
+              <select
+                value={form.recurrence}
+                onChange={(e) => setForm((f) => ({ ...f, recurrence: e.target.value }))}
+                className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+              >
+                {Object.entries(RECURRENCE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {form.recurrence !== "none" && (
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  Herhalen tot
+                </label>
+                <input
+                  type="date"
+                  value={form.recurrence_end_date}
+                  onChange={(e) => setForm((f) => ({ ...f, recurrence_end_date: e.target.value }))}
+                  className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                  placeholder="Optioneel"
+                />
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Optioneel — leeg = oneindig</p>
+              </div>
+            )}
+            <div className={form.recurrence !== "none" ? "" : "sm:col-span-2"}>
               <label className="block text-xs font-medium text-foreground">
                 Omschrijving
               </label>

@@ -100,6 +100,15 @@ class WorkflowTask(TenantBase):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    # G9: Recurring task support
+    recurrence: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )  # daily, weekly, monthly, quarterly, yearly
+    recurrence_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    parent_task_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("workflow_tasks.id"), nullable=True
+    )
+
     # Relationships
     case: Mapped["Case"] = relationship("Case", lazy="selectin")  # noqa: F821
     assigned_to: Mapped["User | None"] = relationship(  # noqa: F821
@@ -107,6 +116,9 @@ class WorkflowTask(TenantBase):
     )
     created_by_rule: Mapped["WorkflowRule | None"] = relationship(
         "WorkflowRule", lazy="selectin"
+    )
+    parent_task: Mapped["WorkflowTask | None"] = relationship(
+        "WorkflowTask", remote_side="WorkflowTask.id", lazy="selectin"
     )
 
 

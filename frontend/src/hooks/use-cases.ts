@@ -16,6 +16,7 @@ export interface CaseSummary {
   date_closed: string | null;
   total_principal: number;
   total_paid: number;
+  budget: number | null;  // G13
   client: { id: string; name: string; email?: string | null } | null;
   opposing_party: { id: string; name: string; email?: string | null } | null;
   created_at: string;
@@ -68,6 +69,7 @@ interface CaseCreateInput {
   opposing_party_id?: string;
   assigned_to_id?: string;
   date_opened: string;
+  budget?: number;  // G13
 }
 
 export function useCases(params?: {

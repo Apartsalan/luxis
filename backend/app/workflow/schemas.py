@@ -105,6 +105,9 @@ class AllowedTransitionResponse(BaseModel):
 # ── WorkflowTask ───────────────────────────────────────────────────────────
 
 
+RECURRENCE_OPTIONS = ("daily", "weekly", "monthly", "quarterly", "yearly")
+
+
 class WorkflowTaskCreate(BaseModel):
     case_id: uuid.UUID
     assigned_to_id: uuid.UUID | None = None
@@ -114,6 +117,8 @@ class WorkflowTaskCreate(BaseModel):
     due_date: date
     auto_execute: bool = False
     action_config: dict | None = None
+    recurrence: str | None = None  # G9: daily, weekly, monthly, quarterly, yearly
+    recurrence_end_date: date | None = None  # G9
 
 
 class WorkflowTaskUpdate(BaseModel):
@@ -122,6 +127,8 @@ class WorkflowTaskUpdate(BaseModel):
     description: str | None = None
     due_date: date | None = None
     status: str | None = None
+    recurrence: str | None = None  # G9
+    recurrence_end_date: date | None = None  # G9
 
 
 class WorkflowTaskResponse(BaseModel):
@@ -137,6 +144,9 @@ class WorkflowTaskResponse(BaseModel):
     auto_execute: bool
     action_config: dict | None
     created_by_rule_id: uuid.UUID | None
+    recurrence: str | None = None  # G9
+    recurrence_end_date: date | None = None  # G9
+    parent_task_id: uuid.UUID | None = None  # G9
     is_active: bool
     created_at: datetime
     updated_at: datetime

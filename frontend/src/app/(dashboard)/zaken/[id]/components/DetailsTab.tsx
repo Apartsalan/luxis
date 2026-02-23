@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { useUpdateCase, useAddCaseActivity, useAddCaseParty, useRemoveCaseParty } from "@/hooks/use-cases";
 import { useRelations } from "@/hooks/use-relations";
+import { useModules } from "@/hooks/use-modules";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { ACTIVITY_ICONS, ACTIVITY_COLORS } from "../types";
 
@@ -74,6 +75,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
   const updateCase = useUpdateCase();
   const addParty = useAddCaseParty();
   const removeParty = useRemoveCaseParty();
+  const { hasModule } = useModules();
 
   // Advocaat wederpartij search state
   const [lawyerSearch, setLawyerSearch] = useState("");
@@ -94,6 +96,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     chamber: zaak.chamber || "",
     procedure_type: zaak.procedure_type || "",
     procedure_phase: zaak.procedure_phase || "",
+    budget: zaak.budget != null ? String(zaak.budget) : "",
   });
 
   // Apply phone note text from parent
@@ -136,6 +139,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
           chamber: editForm.chamber.trim() || null,
           procedure_type: editForm.procedure_type.trim() || null,
           procedure_phase: editForm.procedure_phase.trim() || null,
+          ...(hasModule("budget") && { budget: editForm.budget ? parseFloat(editForm.budget) : null }),
         },
       });
       setIsEditing(false);
@@ -155,6 +159,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       chamber: zaak.chamber || "",
       procedure_type: zaak.procedure_type || "",
       procedure_phase: zaak.procedure_phase || "",
+      budget: zaak.budget != null ? String(zaak.budget) : "",
     });
     setIsEditing(false);
   };
@@ -304,6 +309,24 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                   </div>
                 )}
               </div>
+
+              {/* G13: Budget field — only when budget module is enabled */}
+              {hasModule("budget") && (
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Budget
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.budget}
+                    onChange={(e) => setEditForm(f => ({ ...f, budget: e.target.value }))}
+                    className={editInputClass}
+                    placeholder="Bijv. 5000.00"
+                  />
+                </div>
+              )}
             </div>
           ) : (
           <dl className="grid gap-4 sm:grid-cols-2">

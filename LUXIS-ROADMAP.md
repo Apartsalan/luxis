@@ -24,8 +24,8 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~85% | 115+ endpoints, 15 routers, solide CRUD en business logic, correcte financial calculations. `/api/search` gebouwd. Billing profile (F6), billing_contact_id (F7), extended filters (F9), incasso pipeline (sessie 9) toegevoegd. |
-| Frontend (Next.js) | ~60% | Alle Fase A-E + T1-T3 + F1-F10 features gebouwd. Status-filtered templates, workflow-suggesties, inline contact creation, telefoonnotitie, facturatieprofiel UI. |
+| Backend (FastAPI) | ~90% | 120+ endpoints, 15 routers, solide CRUD en business logic, correcte financial calculations. Budget tracking, recurring tasks, document preview endpoints. |
+| Frontend (Next.js) | ~65% | Alle Fase A-E + T1-T3 + F1-F10 + G3/G5/G9/G10/G11/G13/G14 features gebouwd. Budget module, recurring tasks, inline document preview, status-filtered templates, workflow-suggesties, keyboard shortcuts. |
 | Infra/DevOps | ~80% | Docker Compose + Caddy reverse proxy op Hetzner VPS. Productie draait op `docker-compose.prod.yml` met `--env-file .env.production`. SSL via Caddy auto-TLS. |
 
 **Rode draad:** De backend is vaak verder dan de frontend. ~40% van de verbeteringen vereist geen backend-werk.
@@ -114,7 +114,7 @@
 - Instellingen (kantoorgegevens, modules)
 
 ### Module systeem
-Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
+Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`, `budget`
 
 ---
 
@@ -212,6 +212,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ BUG-7/8/9 gefixt** (21 feb) — edit-modus, zaaknummer op form, advocaat wederpartij
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
 **TODO:** SMTP omzetten van Gmail test-credentials naar Lisanne's Outlook (wacht op M365 migratie)
+**📋 M0a gepland** (23 feb) — Arsalan zet seidony@kestinglegal.nl over naar M365 Business Basic als test. MX blijft bij BaseNet. OutlookProvider bouwen + Graph API testen. Daarna pas Lisanne overzetten (M0b).
 **✅ F11 geïmplementeerd** (21 feb) — freestanding e-mail vanuit dossier met recipient quick-select chips
 **✅ M6 gebouwd** (22 feb) — Ongesorteerde email wachtrij met split-view, suggesties, bulk link/dismiss, sidebar badge
 **✅ Dossier detail refactoring** (sessie 5, 22 feb) — `zaken/[id]/page.tsx` van 4236 → ~236 regels, opgesplitst in 8 componentbestanden + types.tsx
@@ -222,9 +223,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ BUG-11/12 gefixt** (sessie 8, 22 feb) — Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
 **✅ Incasso Batch Werkstroom** (sessie 9, 23 feb) — IncassoPipelineStep model + CRUD + batch actions + /incasso pagina met pipeline editor + batch werkstroom + pre-flight wizard + sidebar item. Migration 029.
 **✅ Template koppeling + Documentgeneratie + Smart Work Queues** (sessie 10, 23 feb) — template_type op pipeline steps (modern docx systeem), batch "Verstuur brief" genereert documenten via render_docx(), Smart Work Queue tabs (klaar/14d verlopen/actie vereist) + sidebar badge. Migration 030.
-**Volgende prioriteit (sessie 11):** Document template editing UI + merge fields uitbreiden (procesgegevens, partijen, betalingstermijn naar templates). Documenten-pagina moet templates bewerkbaar maken. Zie hieronder voor details.
+**✅ UX Polish — G13 + G9 + G11** (sessie 11, 23 feb) — Budget tracking per dossier (togglebaar via "budget" module), recurring tasks (daily/weekly/monthly/quarterly/yearly + auto-create), inline document preview (eye button + PDF modal). Migrations 031 + 032.
+**Volgende prioriteit (sessie 12):** Document template editing UI + merge fields uitbreiden (procesgegevens, partijen, betalingstermijn naar templates). Of M365 migratie starten (M0a).
 
-### Sessie 11 Plan: Document Templates & Merge Fields
+### Sessie 12 Plan: Document Templates & Merge Fields
 
 **Probleem 1: Templates niet bewerkbaar in UI**
 De Documenten-pagina (`/documenten`) toont templates read-only. Lisanne kan ze niet aanpassen. De .docx bestanden moeten handmatig op de server vervangen worden. Oplossing: upload-functie voor .docx templates + preview met voorbeelddata.
@@ -236,7 +238,7 @@ De `render_docx()` functie in `docx_service.py` bouwt context op maar mist:
 - Betalingstermijn: `Contact.payment_term_days` (beschikbaar maar niet doorgegeven)
 - Advocaat wederpartij naam/kantoor (uit CaseParty of Case.opposing_party_lawyer)
 
-**Aanpak:** Eerst templates finaliseren met Lisanne, dan merge fields uitbreiden. Beide in sessie 11.
+**Aanpak:** Eerst templates finaliseren met Lisanne, dan merge fields uitbreiden.
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 
@@ -302,16 +304,37 @@ De `render_docx()` functie in `docx_service.py` bouwt context op maar mist:
 **Technisch fundament:** OAuth 2.0 + abstractielaag — Gmail API (dev) / Microsoft Graph API (productie)
 
 **Prereq: Mail migratie BaseNet → Microsoft 365**
-- Lisanne's mail draait nu op BaseNet (MX: `mx1.basenet.nl`)
-- Microsoft 365 Business Basic aanschaffen (~€5,60/mnd)
+
+**Aanpak: Risicovrij testen via Optie 2 (beslissing 23 feb 2026)**
+
+Arsalan test eerst met eigen mailbox `seidony@kestinglegal.nl` op M365. Lisanne merkt niks — MX blijft bij BaseNet tot alles bewezen werkt.
+
+**Fase M0a — Arsalan's test-mailbox (kan zelfstandig, geen Lisanne nodig):**
+1. M365 Business Basic kopen (~€5,60/mnd) op admin.microsoft.com
+2. Domein `kestinglegal.nl` toevoegen — alleen TXT-record voor verificatie, **MX NIET wijzigen**
+3. Mailbox `seidony@kestinglegal.nl` aanmaken in M365
+4. Bestaande mail importeren van BaseNet via IMAP migratie tool
+5. Outlook instellen (web/desktop) — versturen werkt direct, ontvangen gaat nog via BaseNet
+6. OutlookProvider bouwen in Luxis + Graph API testen met dit account
+7. Luxis email-integratie volledig testen (sync, compose, correspondentie tab)
+
+**Fase M0b — Lisanne overzetten (samen met Lisanne, pas als M0a 100% werkt):**
+- Mailbox `lisanne@kestinglegal.nl` aanmaken in M365
 - Oude mails migreren via IMAP migratie tool (gratis van Microsoft)
-- MX records wijzigen bij domeinregistrar (kestinglegal.nl)
+- MX records wijzigen bij domeinregistrar → alle mail naar M365
 - Outlook instellen op laptop/telefoon
-- **Moet samen met Lisanne** — zij moet inloggen, abonnement afsluiten, DNS goedkeuren
+- BaseNet email opzeggen
+
+**Waarom deze aanpak:**
+- Nul risico voor Lisanne — haar mail blijft op BaseNet tot alles werkt
+- Graph API/OutlookProvider kan al gebouwd en getest worden
+- Oude mail wordt geïmporteerd — geen dataverlies
+- MX-wijziging pas op het allerlaatst, als alles bewezen werkt
 
 | Fase | Feature | Wat het oplevert | Status |
 |------|---------|-----------------|--------|
-| M0 | Mail migratie BaseNet → Microsoft 365 | Lisanne's mail draait op M365, Graph API beschikbaar | Wacht op Lisanne |
+| M0a | Test-mailbox Arsalan op M365 | seidony@kestinglegal.nl op M365, Graph API testbaar, OutlookProvider bouwen | 📋 Gepland — Arsalan pakt dit op |
+| M0b | Lisanne overzetten naar M365 | Alle mail op M365, volledige integratie live | ⏳ Wacht op M0a succes + Lisanne |
 | M1 | OAuth + abstractielaag | EmailProvider interface, GmailProvider, OAuth flow, token opslag | ✅ Gebouwd (21 feb) |
 | M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) | ✅ Gebouwd (21 feb) |
 | M2+ | Dossiernummer-matching | Emails met "2026-00003" in onderwerp/body → automatisch aan juiste dossier | ✅ Gebouwd (21 feb) |
@@ -326,7 +349,7 @@ De `render_docx()` functie in `docx_service.py` bouwt context op maar mist:
 | M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) | 🔵 Backlog (bestaande timer dekt dit grotendeels) |
 | M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties | ✅ Gebouwd (22 feb) |
 
-**Bouwvolgorde:** M0 (samen met Lisanne) → ~~M1 → M2 → M3 → M4 → M6~~ (M5 op backlog)
+**Bouwvolgorde:** M0a (Arsalan zelfstandig) → OutlookProvider bouwen → M0b (samen met Lisanne) → live (M5 op backlog)
 
 **Wat Lisanne ervaart na afronding:**
 - Template aanklikken → opent direct in Outlook met alles pre-filled

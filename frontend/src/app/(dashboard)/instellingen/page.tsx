@@ -1477,9 +1477,9 @@ function EmailTab() {
     return () => window.removeEventListener("message", handleOAuthMessage);
   }, [handleOAuthMessage]);
 
-  const handleConnect = async () => {
+  const handleConnect = async (provider: "gmail" | "outlook") => {
     try {
-      const result = await authorize.mutateAsync({ provider: "gmail" });
+      const result = await authorize.mutateAsync({ provider });
       // Open OAuth in popup window
       const width = 600;
       const height = 700;
@@ -1591,18 +1591,32 @@ function EmailTab() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={handleConnect}
-                disabled={authorize.isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-              >
-                {authorize.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Link className="h-4 w-4" />
-                )}
-                Verbind met Gmail
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleConnect("gmail")}
+                  disabled={authorize.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {authorize.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Link className="h-4 w-4" />
+                  )}
+                  Verbind met Gmail
+                </button>
+                <button
+                  onClick={() => handleConnect("outlook")}
+                  disabled={authorize.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+                >
+                  {authorize.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Link className="h-4 w-4" />
+                  )}
+                  Verbind met Outlook
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -336,7 +336,7 @@ Arsalan test eerst met eigen mailbox `seidony@kestinglegal.nl` op M365. Lisanne 
 
 | Fase | Feature | Wat het oplevert | Status |
 |------|---------|-----------------|--------|
-| M0a | Test-mailbox Arsalan op M365 | seidony@kestinglegal.nl op M365, Graph API testbaar, OutlookProvider bouwen | ✅ Compleet (23 feb) — mailbox actief, Azure App Registration klaar, OutlookProvider gebouwd en geregistreerd |
+| M0a | Test-mailbox Arsalan op M365 | seidony@kestinglegal.nl op M365, Graph API testbaar, OutlookProvider bouwen | ✅ Compleet (23 feb) — mailbox actief, Azure App Registration klaar, OutlookProvider gebouwd, OAuth flow getest en werkend |
 | M0b | Lisanne overzetten naar M365 | Alle mail op M365, volledige integratie live | ⏳ Wacht op M0a succes + Lisanne |
 | M1 | OAuth + abstractielaag | EmailProvider interface, GmailProvider, OAuth flow, token opslag | ✅ Gebouwd (21 feb) |
 | M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) | ✅ Gebouwd (21 feb) |

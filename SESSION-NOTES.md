@@ -1,12 +1,16 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 feb 2026 (sessie 13 — OutlookProvider)
-**Laatste feature/fix:** OutlookProvider gebouwd (Microsoft Graph API)
+**Laatst bijgewerkt:** 23 feb 2026 (sessie 13 — OutlookProvider + OAuth test)
+**Laatste feature/fix:** OutlookProvider gebouwd + Outlook OAuth flow getest met seidony@kestinglegal.nl ✅
 **Volgende sessie (14):** BUG-13 + BUG-14 fixen (email-bijlagen). Daarna: document template editing UI + merge fields uitbreiden.
 
 ## Wat er gedaan is (sessie 13 — 23 feb)
 
 ### Feature: OutlookProvider — Microsoft Graph API email provider ✅
+
+**Outlook OAuth flow getest met seidony@kestinglegal.nl** — verbinding succesvol, tokens opgeslagen. Frontend bijgewerkt met "Verbind met Gmail" + "Verbind met Outlook" knoppen (verschijnen als geen account verbonden).
+
+### Feature: OutlookProvider — Microsoft Graph API email provider ✅ (details)
 
 #### Backend
 - **Nieuw bestand `backend/app/email/providers/outlook.py`** — Volledige Microsoft Graph API implementatie van de `EmailProvider` interface

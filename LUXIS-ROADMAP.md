@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 22 februari 2026
+**Laatst bijgewerkt:** 23 februari 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -24,7 +24,7 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~80% | 110+ endpoints, 14 routers, solide CRUD en business logic, correcte financial calculations. `/api/search` gebouwd. Billing profile (F6), billing_contact_id (F7), extended filters (F9) toegevoegd. |
+| Backend (FastAPI) | ~85% | 115+ endpoints, 15 routers, solide CRUD en business logic, correcte financial calculations. `/api/search` gebouwd. Billing profile (F6), billing_contact_id (F7), extended filters (F9), incasso pipeline (sessie 9) toegevoegd. |
 | Frontend (Next.js) | ~60% | Alle Fase A-E + T1-T3 + F1-F10 features gebouwd. Status-filtered templates, workflow-suggesties, inline contact creation, telefoonnotitie, facturatieprofiel UI. |
 | Infra/DevOps | ~80% | Docker Compose + Caddy reverse proxy op Hetzner VPS. Productie draait op `docker-compose.prod.yml` met `--env-file .env.production`. SSL via Caddy auto-TLS. |
 
@@ -220,7 +220,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`
 **✅ G14 Dossier sidebar** (sessie 7, 22 feb) — Collapsible properties sidebar met dossierinfo, client, wederpartij, advocaat, financieel snapshot (OHW + incasso/non-incasso)
 **✅ G10 Task templates** (sessie 7, 22 feb) — Automatische taak-templates bij case creation: incasso 8 taken, advies 4, insolventie 4, overig 2
 **✅ BUG-11/12 gefixt** (sessie 8, 22 feb) — Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
-**Volgende prioriteit (sessie 9):** Incasso Batch Werkstroom — nieuw sidebar-item "Incasso" met pipeline editor + batch-acties op meerdere dossiers. Zie SESSION-NOTES.md voor volledig plan.
+**✅ Incasso Batch Werkstroom** (sessie 9, 23 feb) — IncassoPipelineStep model + CRUD + batch actions + /incasso pagina met pipeline editor + batch werkstroom + pre-flight wizard + sidebar item. Migration 029.
+**Volgende prioriteit (sessie 10):** Smart Work Queues (P2), template koppeling in pipeline stappen, documentgeneratie-integratie bij batch-actie "Verstuur brief".
 
 > **Sessie-log:** Zie `SESSION-LOG-20FEB-SESSIE3.md` voor gedetailleerde context over wat er al bestaat voor email (backend email module, SMTP service, send endpoint, templates)
 

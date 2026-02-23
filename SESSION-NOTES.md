@@ -1,8 +1,68 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 feb 2026 (sessie 8 — task fixes + incasso batch plan)
-**Laatste feature/fix:** Taken zichtbaar na aanmaken + Nieuwe taak knop op Mijn Taken pagina
-**Volgende sessie (9):** Incasso Batch Werkstroom bouwen (zie plan hieronder)
+**Laatst bijgewerkt:** 23 feb 2026 (sessie 9 — Incasso Batch Werkstroom)
+**Laatste feature/fix:** Incasso Batch Werkstroom — pipeline model + batch UI + sidebar item
+**Volgende sessie (10):** Smart Work Queues, template koppeling in pipeline, documentgeneratie-integratie
+
+## Wat er gedaan is (sessie 9 — 23 feb)
+
+### Feature: Incasso Batch Werkstroom ✅
+
+#### Backend
+- **Nieuw model `IncassoPipelineStep`** (tenant_id, name, sort_order, min_wait_days, template_id, is_active) in `backend/app/incasso/models.py`
+- **CRUD endpoints:** GET/POST/PUT/DELETE `/api/incasso/pipeline-steps` + POST `/api/incasso/pipeline-steps/seed` voor default stappen
+- **Pipeline overview:** GET `/api/incasso/pipeline` — alle incasso-dossiers gegroepeerd per stap
+- **Batch preview:** POST `/api/incasso/batch/preview` — pre-flight check met blockers + status info
+- **Batch execute:** POST `/api/incasso/batch` — batch-actie uitvoeren (advance_step, generate_document, recalculate_interest)
+- **Case model uitbreiding:** `incasso_step_id` FK (nullable) op cases tabel
+- **Alembic migratie 029:** `incasso_pipeline_steps` tabel + `incasso_step_id` kolom op cases
+- **Case schemas:** `incasso_step_id` toegevoegd aan CaseResponse en CaseSummary
+
+#### Frontend
+- **Sidebar item "Incasso"** (Gavel icoon, module-gated op "incasso")
+- **`/incasso` pagina** met twee tabs: Werkstroom (default) + Stappen beheren
+- **Pipeline Editor (Stappen beheren tab):**
+  - Lijst van stappen met naam, volgorde, wachtdagen, template
+  - Toevoegen, verwijderen, herordenen (up/down knoppen)
+  - Inline editing (klik op naam → edit, opslaan/annuleren)
+  - Seed-knop voor standaardstappen als er geen zijn
+- **Batch Werkstroom (hoofdscherm):**
+  - Tabel met incasso-dossiers gegroepeerd per pipeline-stap
+  - Kolommen: checkbox, dossiernr., cliënt, wederpartij, hoofdsom, openstaand, dagen in stap
+  - "Zonder stap" sectie voor niet-toegewezen dossiers (amber highlight)
+  - Checkboxes + "Selecteer alles" per stap
+  - Floating action bar: "Wijzig stap", "Verstuur brief", "Herbereken rente"
+  - Pre-flight wizard dialog met blocker-overzicht en bevestiging
+- **Hooks:** `useIncassoPipelineSteps`, `useCreatePipelineStep`, `useUpdatePipelineStep`, `useDeletePipelineStep`, `useSeedPipelineSteps`, `useIncassoPipeline`, `useBatchPreview`, `useBatchExecute`
+
+### Commits sessie 9
+
+| Hash | Beschrijving |
+|------|-------------|
+| `4c12b48` | feat(incasso): add incasso batch workflow — pipeline model, CRUD, batch actions, and full UI |
+
+### Bestanden aangemaakt/gewijzigd
+
+**Nieuw (backend):**
+- `backend/app/incasso/__init__.py`
+- `backend/app/incasso/models.py` — IncassoPipelineStep model
+- `backend/app/incasso/schemas.py` — Pydantic schemas
+- `backend/app/incasso/service.py` — Business logic
+- `backend/app/incasso/router.py` — FastAPI endpoints
+- `backend/alembic/versions/029_incasso_pipeline.py` — Migration
+
+**Nieuw (frontend):**
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — Incasso pagina (~650 regels)
+- `frontend/src/hooks/use-incasso.ts` — TanStack Query hooks
+
+**Gewijzigd:**
+- `backend/alembic/env.py` — IncassoPipelineStep model import
+- `backend/app/cases/models.py` — incasso_step_id FK + relationship
+- `backend/app/cases/schemas.py` — incasso_step_id in CaseResponse + CaseSummary
+- `backend/app/main.py` — incasso_router registratie
+- `frontend/src/components/layout/app-sidebar.tsx` — Incasso nav item
+
+---
 
 ## Plan voor sessie 9 — Incasso Batch Werkstroom
 

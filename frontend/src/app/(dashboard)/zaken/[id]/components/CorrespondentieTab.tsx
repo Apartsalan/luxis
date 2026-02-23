@@ -4,8 +4,10 @@ import { useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
   Download,
   File,
+  FolderInput,
   Loader2,
   Mail,
   Plus,
@@ -20,6 +22,7 @@ import {
   useCaseEmails,
   useSyncEmails,
   useSyncedEmailDetail,
+  useSaveAttachmentToCase,
   type SyncedEmailSummary,
 } from "@/hooks/use-email-sync";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
@@ -27,8 +30,47 @@ import { formatDate, formatDateShort } from "@/lib/utils";
 
 // ── Email Detail Panel ──────────────────────────────────────────────────────
 
-function EmailDetailPanel({ emailId, onClose }: { emailId: string; onClose: () => void }) {
+function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseId: string; onClose: () => void }) {
   const { data: email, isLoading } = useSyncedEmailDetail(emailId);
+  const saveToCase = useSaveAttachmentToCase();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  const handleDownloadAttachment = async (attachmentId: string, filename: string) => {
+    setDownloadingId(attachmentId);
+    try {
+      const token = localStorage.getItem("luxis_access_token");
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(
+        `${apiUrl}/api/email/attachments/${attachmentId}/download`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error("Download mislukt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err.message || "Download mislukt");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleSaveToCase = async (attachmentId: string) => {
+    try {
+      await saveToCase.mutateAsync({ attachmentId, caseId });
+      setSavedIds((prev) => new Set(prev).add(attachmentId));
+      toast.success("Bijlage opgeslagen in dossier");
+    } catch (err: any) {
+      toast.error(err.message || "Opslaan mislukt");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -92,22 +134,40 @@ function EmailDetailPanel({ emailId, onClose }: { emailId: string; onClose: () =
           </p>
           <div className="flex flex-wrap gap-2">
             {email.attachments.map((att: any) => (
-              <a
-                key={att.id}
-                href={`/api/email/attachments/${att.id}/download`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors"
-              >
-                <File className="h-3 w-3 text-muted-foreground" />
-                <span className="max-w-[150px] truncate">{att.filename}</span>
-                <span className="text-muted-foreground">
-                  ({att.file_size > 1048576
-                    ? `${(att.file_size / 1048576).toFixed(1)} MB`
-                    : `${Math.round(att.file_size / 1024)} KB`})
-                </span>
-                <Download className="h-3 w-3 text-muted-foreground" />
-              </a>
+              <div key={att.id} className="inline-flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadAttachment(att.id, att.filename)}
+                  disabled={downloadingId === att.id}
+                  className="inline-flex items-center gap-1.5 rounded-l-lg border border-border bg-muted/30 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 transition-colors"
+                >
+                  {downloadingId === att.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <File className="h-3 w-3 text-muted-foreground" />
+                  )}
+                  <span className="max-w-[150px] truncate">{att.filename}</span>
+                  <span className="text-muted-foreground">
+                    ({att.file_size > 1048576
+                      ? `${(att.file_size / 1048576).toFixed(1)} MB`
+                      : `${Math.round(att.file_size / 1024)} KB`})
+                  </span>
+                  <Download className="h-3 w-3 text-muted-foreground" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveToCase(att.id)}
+                  disabled={savedIds.has(att.id) || saveToCase.isPending}
+                  title="Opslaan in dossier"
+                  className="inline-flex items-center gap-1 rounded-r-lg border border-l-0 border-border bg-muted/30 px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50"
+                >
+                  {savedIds.has(att.id) ? (
+                    <Check className="h-3 w-3 text-emerald-600" />
+                  ) : (
+                    <FolderInput className="h-3 w-3" />
+                  )}
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -368,6 +428,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
         {selectedEmailId && (
           <EmailDetailPanel
             emailId={selectedEmailId}
+            caseId={caseId}
             onClose={() => setSelectedEmailId(null)}
           />
         )}

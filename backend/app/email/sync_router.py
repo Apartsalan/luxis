@@ -16,6 +16,8 @@ Endpoints:
 
 import json
 import logging
+import os
+import shutil
 import uuid
 from pathlib import Path
 
@@ -26,6 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
+from app.cases.models import CaseFile
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.email.attachment_models import EmailAttachment
@@ -43,6 +46,9 @@ from app.email.sync_service import (
 )
 from app.email.synced_email_models import SyncedEmail
 from app.shared.exceptions import BadRequestError, NotFoundError
+
+# Base upload directory for case files (same as files_service.py)
+CASE_FILES_UPLOADS_BASE = Path("/app/uploads")
 
 logger = logging.getLogger(__name__)
 
@@ -460,4 +466,84 @@ async def download_attachment(
         path=str(file_path),
         filename=attachment.filename,
         media_type=attachment.content_type,
+    )
+
+
+# ── Save attachment to case (BUG-14) ─────────────────────────────────────────
+
+
+class SaveToCaseResponse(BaseModel):
+    success: bool
+    case_file_id: str
+    filename: str
+
+
+@router.post("/attachments/{attachment_id}/save-to-case/{case_id}", response_model=SaveToCaseResponse)
+async def save_attachment_to_case(
+    attachment_id: uuid.UUID,
+    case_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Copy an email attachment to the case files storage and create a CaseFile record.
+
+    This allows users to archive important email attachments (contracts, rulings, etc.)
+    directly in the dossier's file list.
+    """
+    # 1. Find attachment
+    result = await db.execute(
+        select(EmailAttachment).where(
+            EmailAttachment.id == attachment_id,
+            EmailAttachment.tenant_id == user.tenant_id,
+        )
+    )
+    attachment = result.scalar_one_or_none()
+    if not attachment:
+        raise NotFoundError("Bijlage niet gevonden")
+
+    # 2. Verify source file exists
+    source_path = (
+        EMAIL_ATTACHMENTS_BASE
+        / str(attachment.tenant_id)
+        / str(attachment.synced_email_id)
+        / attachment.stored_filename
+    )
+    if not source_path.exists():
+        raise NotFoundError("Bijlagebestand niet gevonden op schijf")
+
+    # 3. Build destination path (same pattern as files_service._get_storage_path)
+    ext = os.path.splitext(attachment.filename)[1].lower() or ""
+    stored_filename = f"{uuid.uuid4()}{ext}"
+    dest_dir = CASE_FILES_UPLOADS_BASE / str(user.tenant_id) / str(case_id)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / stored_filename
+
+    # 4. Copy file
+    shutil.copy2(str(source_path), str(dest_path))
+
+    # 5. Create CaseFile record
+    case_file = CaseFile(
+        tenant_id=user.tenant_id,
+        case_id=case_id,
+        original_filename=attachment.filename,
+        stored_filename=stored_filename,
+        file_size=attachment.file_size,
+        content_type=attachment.content_type,
+        document_direction="inkomend",
+        description=f"Email-bijlage",
+        uploaded_by=user.id,
+    )
+    db.add(case_file)
+    await db.commit()
+    await db.refresh(case_file)
+
+    logger.info(
+        "Saved email attachment %s to case %s as CaseFile %s",
+        attachment_id, case_id, case_file.id,
+    )
+
+    return SaveToCaseResponse(
+        success=True,
+        case_file_id=str(case_file.id),
+        filename=attachment.filename,
     )

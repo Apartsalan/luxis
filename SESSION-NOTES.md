@@ -1,8 +1,42 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 feb 2026 (sessie 13 — OutlookProvider + OAuth test)
-**Laatste feature/fix:** OutlookProvider gebouwd + Outlook OAuth flow getest met seidony@kestinglegal.nl ✅
-**Volgende sessie (14):** BUG-13 + BUG-14 fixen (email-bijlagen). Daarna: document template editing UI + merge fields uitbreiden.
+**Laatst bijgewerkt:** 23 feb 2026 (sessie 14 — BUG-13 + BUG-14 email-bijlagen fix)
+**Laatste feature/fix:** Email-bijlage download gefixt (BUG-13) + "Opslaan in dossier" knop gebouwd (BUG-14) ✅
+**Volgende sessie (15):** Document template editing UI + merge fields uitbreiden.
+
+## Wat er gedaan is (sessie 14 — 23 feb)
+
+### BUG-13: Email-bijlage openen geeft 401 ✅
+- **Oorzaak:** Frontend maakte directe `<a href="/api/email/attachments/{id}/download">` links. Backend vereist Bearer token auth → directe `<a>` tag stuurt geen auth header mee → 401 Unauthorized.
+- **Fix (frontend):** `<a>` tags vervangen door `handleDownloadAttachment()` functie: `fetch()` met Bearer token → `res.blob()` → `URL.createObjectURL()` → programmatisch `<a>` element → download triggeren → `URL.revokeObjectURL()` cleanup.
+- **Patroon:** Zelfde blob URL + fetch aanpak als G11 inline document preview.
+- **Bestand:** `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx`
+
+### BUG-14: Email-bijlage opslaan als dossierbestand ✅
+- **Backend nieuw endpoint:** `POST /api/email/attachments/{attachment_id}/save-to-case/{case_id}`
+  - Zoekt EmailAttachment op + verifieert tenant_id
+  - Kopieert bestand van `/app/uploads/email_attachments/` naar `/app/uploads/{tenant_id}/{case_id}/`
+  - Maakt CaseFile record aan (original_filename, stored_filename met UUID, content_type, file_size)
+  - Zet `document_direction = "inkomend"` en `description = "Email-bijlage"`
+- **Frontend "Opslaan in dossier" knop:** Naast elke bijlage in de email detail view
+  - FolderInput icoon → klik → POST naar backend → groen vinkje na succes
+  - Disabled na opslaan (voorkomt duplicaten)
+  - `useSaveAttachmentToCase()` hook met TanStack Query mutation + cache invalidation op `case-files`
+- **Bestanden:**
+  - `backend/app/email/sync_router.py` — nieuw endpoint + SaveToCaseResponse schema
+  - `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — UI updates
+  - `frontend/src/hooks/use-email-sync.ts` — `useSaveAttachmentToCase()` hook
+
+### Bestanden aangemaakt/gewijzigd sessie 14
+
+**Gewijzigd (backend):**
+- `backend/app/email/sync_router.py` — save-to-case endpoint, CaseFile import, shutil/os imports
+
+**Gewijzigd (frontend):**
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — blob download, save-to-case knop, nieuwe iconen
+- `frontend/src/hooks/use-email-sync.ts` — `useSaveAttachmentToCase()` hook
+
+---
 
 ## Wat er gedaan is (sessie 13 — 23 feb)
 
@@ -99,25 +133,9 @@
 
 ---
 
-## Openstaande bugs einde sessie 12
+## Openstaande bugs einde sessie 14
 
-### BUG-13: Email-bijlage openen geeft foutmelding
-- **Locatie:** Correspondentie tab → email detail → bijlage download
-- **Oorzaak:** Frontend maakt directe `<a href="/api/email/attachments/{id}/download">` link, maar backend vereist Bearer token auth. Een directe `<a>` tag stuurt geen auth header mee → 401 Unauthorized.
-- **Fix nodig (frontend):** Zelfde blob URL + fetch aanpak als G11 document preview: `fetch()` met Bearer token → `URL.createObjectURL()` → trigger download. Dit zit in `CorrespondentieTab.tsx` regel ~88-114.
-- **Bestanden:** `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx`
-- **Backend endpoint:** `GET /api/email/attachments/{attachment_id}/download` in `backend/app/email/sync_router.py:432-463`
-- **Ernst:** Hoog — bijlagen zijn onbruikbaar
-
-### BUG-14: Email-bijlage niet opslaan als dossierbestand
-- **Locatie:** Correspondentie tab → email detail → bijlage
-- **Probleem:** Er is geen knop/optie om een email-bijlage op te slaan als bestand in het dossier (case_files). Advocaten willen belangrijke bijlagen (contracten, vonnissen, etc.) archiveren bij het dossier.
-- **Fix nodig:**
-  - **Backend:** Nieuw endpoint `POST /api/email/attachments/{id}/save-to-case/{case_id}` — kopieert bestand van `/app/uploads/email_attachments/` naar `/app/uploads/case_files/`, maakt `CaseFile` record aan
-  - **Frontend:** "Opslaan in dossier" knop naast elke bijlage in de email detail view
-- **Bestanden:** `backend/app/email/sync_router.py` (nieuw endpoint), `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` (knop toevoegen)
-- **Ernst:** Midden — workaround is handmatig downloaden + uploaden via Documenten tab
-- **Provider-onafhankelijk:** Deze fix werkt ongeacht of we later naar Outlook/M365 overstappen
+Geen openstaande bugs. Alle bugs t/m BUG-14 zijn gefixt.
 
 ## Wat er gedaan is (sessie 11 — 23 feb)
 

@@ -317,3 +317,30 @@ export function useSuggestCases(emailId: string | undefined) {
     enabled: !!emailId,
   });
 }
+
+/**
+ * Save an email attachment as a case file (dossierbestand).
+ */
+export function useSaveAttachmentToCase() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { success: boolean; case_file_id: string; filename: string },
+    Error,
+    { attachmentId: string; caseId: string }
+  >({
+    mutationFn: async ({ attachmentId, caseId }) => {
+      const res = await api(`/api/email/attachments/${attachmentId}/save-to-case/${caseId}`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Opslaan in dossier mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["case-files", variables.caseId] });
+    },
+  });
+}

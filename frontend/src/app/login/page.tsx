@@ -52,16 +52,27 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`${apiUrl}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       // Always show success — don't leak whether email exists
       setView("forgot-sent");
-    } catch {
-      setError("Kan geen verbinding maken met de server.");
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        // Timeout — still show success to not leak info, email may still arrive
+        setView("forgot-sent");
+      } else {
+        setError("Kan geen verbinding maken met de server.");
+      }
     } finally {
       setLoading(false);
     }

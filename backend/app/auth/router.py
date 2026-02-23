@@ -157,6 +157,19 @@ def _build_reset_email_html(reset_url: str) -> str:
 </html>"""
 
 
+async def _send_reset_email_safe(to: str, html_body: str) -> None:
+    """Send reset email with error handling so background task never crashes."""
+    try:
+        await send_email(
+            to=to,
+            subject="Wachtwoord herstellen — Luxis",
+            html_body=html_body,
+        )
+        logger.info("Password reset email sent to %s", to)
+    except Exception:
+        logger.exception("Failed to send password reset email to %s", to)
+
+
 @router.post("/forgot-password", status_code=200)
 async def forgot_password(
     data: ForgotPasswordRequest,
@@ -173,10 +186,7 @@ async def forgot_password(
         if smtp_is_configured():
             html_body = _build_reset_email_html(reset_url)
             background_tasks.add_task(
-                send_email,
-                to=data.email,
-                subject="Wachtwoord herstellen — Luxis",
-                html_body=html_body,
+                _send_reset_email_safe, data.email, html_body
             )
             logger.info("Password reset email queued for %s", data.email)
         else:

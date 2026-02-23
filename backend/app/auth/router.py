@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +36,7 @@ from app.auth.service import (
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
+from app.email.service import is_configured as smtp_is_configured, send_email
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +113,55 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
     return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
 
 
+def _build_reset_email_html(reset_url: str) -> str:
+    """Build a styled HTML email for password reset."""
+    return f"""\
+<!DOCTYPE html>
+<html lang="nl">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 0;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background:#1e293b;padding:24px 32px;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;">Luxis</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="margin:0 0 16px;color:#1e293b;font-size:18px;">Wachtwoord herstellen</h2>
+          <p style="color:#475569;font-size:14px;line-height:1.6;">
+            Er is een verzoek ingediend om je wachtwoord te herstellen.
+            Klik op de onderstaande knop om een nieuw wachtwoord in te stellen.
+          </p>
+          <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
+            <tr><td style="background:#2563eb;border-radius:6px;">
+              <a href="{reset_url}"
+                 style="display:inline-block;padding:12px 28px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">
+                Wachtwoord herstellen
+              </a>
+            </td></tr>
+          </table>
+          <p style="color:#94a3b8;font-size:12px;line-height:1.5;">
+            Deze link is 1 uur geldig. Als je geen wachtwoordherstel hebt aangevraagd,
+            kun je deze e-mail veilig negeren.
+          </p>
+        </td></tr>
+        <tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+          <p style="margin:0;color:#94a3b8;font-size:11px;text-align:center;">
+            &copy; Luxis &mdash; Juridisch dossierbeheer
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
 @router.post("/forgot-password", status_code=200)
 async def forgot_password(
-    data: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)
+    data: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
 ):
     """Request a password reset link. Always returns success to avoid leaking emails."""
     token = await create_password_reset_token(db, data.email)
@@ -123,11 +170,19 @@ async def forgot_password(
         frontend_url = settings.cors_origins.split(",")[0].strip()
         reset_url = f"{frontend_url}/reset-password?token={token}"
 
-        if settings.smtp_host:
-            # TODO: Send actual email when SMTP is configured
-            logger.info("Password reset requested for %s (email would be sent)", data.email)
+        if smtp_is_configured():
+            html_body = _build_reset_email_html(reset_url)
+            background_tasks.add_task(
+                send_email,
+                to=data.email,
+                subject="Wachtwoord herstellen — Luxis",
+                html_body=html_body,
+            )
+            logger.info("Password reset email queued for %s", data.email)
         else:
-            logger.info("Password reset URL for %s: %s", data.email, reset_url)
+            logger.warning(
+                "SMTP not configured — reset URL for %s: %s", data.email, reset_url
+            )
 
     return {"detail": "Als het e-mailadres bekend is, ontvang je een herstellink."}
 

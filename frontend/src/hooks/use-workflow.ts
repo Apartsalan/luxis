@@ -346,7 +346,7 @@ export function useMyOpenTasks(limit = 10) {
   return useQuery<WorkflowTask[]>({
     queryKey: ["workflow-tasks", "my-open", limit],
     queryFn: async () => {
-      const res = await api(`/api/workflow/tasks?status=due`);
+      const res = await api("/api/dashboard/my-tasks");
       if (!res.ok) throw new Error("Fout bij ophalen taken");
       const tasks: WorkflowTask[] = await res.json();
       return tasks.slice(0, limit);

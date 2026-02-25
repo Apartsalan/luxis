@@ -22,15 +22,22 @@
 - **Oorzaak:** `VALID_MODULES` in `backend/app/settings/schemas.py` miste `"budget"`.
 - **Fix:** `"budget"` toegevoegd aan de tuple.
 
-### BUG-21: Advocaat wederpartij niet zichtbaar na aanmaken dossier ✅
-- **Probleem:** Na aanmaken dossier met advocaat wederpartij, was deze niet zichtbaar op detailpagina.
-- **Oorzaak:** Zelfde race condition als BUG-19 — `add_party` transactie niet gecommit voordat detail page loaded.
-- **Fix:** Explicit `await db.commit()` + `await db.refresh()` in zowel `create_case` als `add_party` route handlers.
+### BUG-21: Advocaat wederpartij + budget niet zichtbaar na aanmaken dossier ✅
+- **Probleem:** Na aanmaken dossier: advocaat wederpartij niet zichtbaar (ook niet na bewerken), budget niet opgeslagen.
+- **Eerste poging:** Explicit `db.commit()` in router handlers — werkte niet, probleem bleef bestaan.
+- **Echte oorzaken (2):**
+  1. `create_case` service miste `budget`, `court_case_number`, `court_name`, `judge_name`, `chamber`, `procedure_type`, `procedure_phase`, `billing_contact_id` in de Case constructor — velden werden geaccepteerd door schema maar nooit doorgezet naar de database.
+  2. `get_case` en `add_case_party` hadden geen explicit `selectinload` voor nested `Case.parties → CaseParty.contact` relatie. In async SQLAlchemy wordt nested `lazy="selectin"` niet automatisch geketend — de contact data was dus altijd `null` in de JSON response.
+- **Fix backend:**
+  - Alle ontbrekende velden toegevoegd aan Case constructor in `create_case`
+  - `selectinload(Case.parties).selectinload(CaseParty.contact)` toegevoegd aan `get_case` query
+  - `add_case_party`: `db.refresh(party)` vervangen door re-query met explicit `selectinload(CaseParty.contact)`
 
 ### Bestanden gewijzigd sessie 18
 - `backend/app/settings/schemas.py` — "budget" toegevoegd aan VALID_MODULES
 - `backend/app/invoices/router.py` — explicit commit in create_invoice
 - `backend/app/cases/router.py` — explicit commit in create_case en add_party
+- `backend/app/cases/service.py` — missing fields in create_case + selectinload in get_case + add_case_party
 - `frontend/src/app/(dashboard)/page.tsx` — taak-titel als Link in dashboard widget
 - `frontend/src/app/(dashboard)/taken/page.tsx` — taak-titel als Link in Mijn Taken
 - `frontend/src/hooks/use-invoices.ts` — setQueryData in useCreateInvoice onSuccess

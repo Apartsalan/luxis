@@ -1,8 +1,41 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 25 feb 2026 (sessie 17 — QA doorloop + bugfixes)
-**Laatste feature/fix:** BUG-15 deployed + BUG-16 dashboard taken widget ✅
-**Volgende sessie (18):** QA-CHECKLIST.md verder doorlopen.
+**Laatst bijgewerkt:** 25 feb 2026 (sessie 18 — BUG-18 t/m BUG-21 gefixt)
+**Laatste feature/fix:** BUG-18 t/m BUG-21 alle 4 gefixt ✅
+**Volgende sessie (19):** QA via browser, eventueel nieuwe bugs noteren.
+
+## Wat er gedaan is (sessie 18 — 25 feb)
+
+### BUG-18: Taak klik navigeert niet naar dossier ✅
+- **Probleem:** In dashboard "Mijn Taken" widget en op `/taken` pagina, klik op taak navigeerde niet naar dossier.
+- **Oorzaak:** Taak-titel was een `<p>` element zonder link.
+- **Fix:** `<p>` vervangen door `<Link href={/zaken/${task.case_id}}>` in zowel `page.tsx` (dashboard widget) als `taken/page.tsx`.
+
+### BUG-19: Factuur aanmaken → "fout bij laden" ✅
+- **Probleem:** Na aanmaken van factuur, redirect naar detailpagina toonde "Fout bij laden van gegevens".
+- **Oorzaak:** Race condition: `get_db` dependency commit na response verzonden. Snel client-side navigatie kon GET sturen voordat transactie gecommit was.
+- **Fix backend:** Explicit `await db.commit()` + `await db.refresh(invoice)` in `create_invoice` route handler.
+- **Fix frontend:** `setQueryData` in `useCreateInvoice` onSuccess om React Query cache te pre-populaten met POST response data.
+
+### BUG-20: Budget module onbekend ✅
+- **Probleem:** Bij instellingen → modules → "budget" aanzetten gaf foutmelding.
+- **Oorzaak:** `VALID_MODULES` in `backend/app/settings/schemas.py` miste `"budget"`.
+- **Fix:** `"budget"` toegevoegd aan de tuple.
+
+### BUG-21: Advocaat wederpartij niet zichtbaar na aanmaken dossier ✅
+- **Probleem:** Na aanmaken dossier met advocaat wederpartij, was deze niet zichtbaar op detailpagina.
+- **Oorzaak:** Zelfde race condition als BUG-19 — `add_party` transactie niet gecommit voordat detail page loaded.
+- **Fix:** Explicit `await db.commit()` + `await db.refresh()` in zowel `create_case` als `add_party` route handlers.
+
+### Bestanden gewijzigd sessie 18
+- `backend/app/settings/schemas.py` — "budget" toegevoegd aan VALID_MODULES
+- `backend/app/invoices/router.py` — explicit commit in create_invoice
+- `backend/app/cases/router.py` — explicit commit in create_case en add_party
+- `frontend/src/app/(dashboard)/page.tsx` — taak-titel als Link in dashboard widget
+- `frontend/src/app/(dashboard)/taken/page.tsx` — taak-titel als Link in Mijn Taken
+- `frontend/src/hooks/use-invoices.ts` — setQueryData in useCreateInvoice onSuccess
+
+---
 
 ## Wat er gedaan is (sessie 17 — 25 feb)
 

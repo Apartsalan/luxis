@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 23 februari 2026
+**Laatst bijgewerkt:** 25 februari 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -26,7 +26,7 @@
 |------|--------------|-------------|
 | Backend (FastAPI) | ~90% | 120+ endpoints, 15 routers, solide CRUD en business logic, correcte financial calculations. Budget tracking, recurring tasks, document preview endpoints. |
 | Frontend (Next.js) | ~65% | Alle Fase A-E + T1-T3 + F1-F10 + G3/G5/G9/G10/G11/G13/G14 features gebouwd. Budget module, recurring tasks, inline document preview, status-filtered templates, workflow-suggesties, keyboard shortcuts. |
-| Infra/DevOps | ~80% | Docker Compose + Caddy reverse proxy op Hetzner VPS. Productie draait op `docker-compose.prod.yml` met `--env-file .env.production`. SSL via Caddy auto-TLS. |
+| Infra/DevOps | ~80% | Docker Compose op Hetzner VPS. Caddy reverse proxy geconfigureerd maar draait momenteel NIET — Next.js rewrite proxy als fallback toegevoegd (sessie 16). Frontend gebruikt nu relatieve URLs + Next.js rewrites `/api/*` → `backend:8000`. SSL via Caddy auto-TLS (als Caddy draait) of extern. |
 
 **Rode draad:** De backend is vaak verder dan de frontend. ~40% van de verbeteringen vereist geen backend-werk.
 
@@ -152,7 +152,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 | # | Feature | Complexiteit | Status |
 |---|---------|-------------|--------|
-| D1 | Wachtwoord vergeten flow | Klein-Midden | ✅ Gebouwd (forgot-password op login, reset-password pagina met token, 3-staps flow) |
+| D1 | Wachtwoord vergeten flow | Klein-Midden | ✅ Gebouwd (forgot-password op login, reset-password pagina met token, 3-staps flow, email sending via SMTP ✅). ✅ BUG-15 gefixt (25 feb). |
 | D2 | Gebruikersbeheer (rollen, rechten) | Groot | ❌ Niet relevant (Lisanne is enige gebruiker) |
 | D3 | Navigatie-verbeteringen | Klein | ✅ Gebouwd (breadcrumbs met dynamische labels, nested routes) |
 | D4 | Empty states en loading states | Klein | ✅ Gebouwd (skeleton loaders op alle dashboard pagina's) |
@@ -204,12 +204,39 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-12 | Geen "Nieuwe taak" optie op Mijn Taken pagina — kon alleen vanuit dossier taken aanmaken | Midden | Klein | ✅ Gefixt (22 feb) — Nieuwe taak knop + formulier met dossier-picker |
 | BUG-13 | Email-bijlage openen geeft 401 — directe `<a href>` link stuurt geen Bearer token mee. Fix: blob URL + fetch (zelfde patroon als G11 preview) | Hoog | Klein | ✅ Gefixt (23 feb) |
 | BUG-14 | Email-bijlage niet opslaan als dossierbestand — geen knop/endpoint om bijlage te archiveren bij dossier. Fix: backend copy endpoint + frontend "Opslaan in dossier" knop | Midden | Klein-Midden | ✅ Gefixt (23 feb) |
+| BUG-15 | Reset-password pagina hangt oneindig — browser POST naar `https://luxis.kestinglegal.nl/api/auth/reset-password` bereikt backend niet. Caddy reverse proxy draait niet, Next.js had geen rewrite. Fix: Next.js rewrite proxy `/api/*` → `backend:8000` + relatieve URLs. | Hoog | Midden | ✅ Gefixt (25 feb) |
+| BUG-16 | Dashboard "Mijn Taken" widget toonde geen taken — `useMyOpenTasks` gebruikte `/api/workflow/tasks?status=due` (alleen "due" taken), terwijl taken op "pending" of "overdue" stonden. Fix: nu gebruikt hetzelfde endpoint als Mijn Taken pagina (`/api/dashboard/my-tasks`). | Midden | S (1 regel) | ✅ Gefixt (25 feb) |
+| BUG-17 | Velden leegmaken + opslaan werkte niet (site-breed) — `|| undefined` in form handlers → JSON.stringify dropt de key → backend's `exclude_unset=True` slaat update over. 51 instances in 18 bestanden. | Hoog | M (18 bestanden, 86 regels gewijzigd) | ✅ Gefixt (25 feb) |
+| BUG-18 | Klik op taak in dashboard/Mijn Taken navigeert niet naar het juiste dossier — taak-titel was `<p>`, nu `<Link>` naar `/zaken/{case_id}` in zowel dashboard widget als Mijn Taken pagina. | Midden | S | ✅ Gefixt (25 feb) |
+| BUG-19 | Factuur aanmaken → redirect naar factuurpagina geeft "fout bij laden" — race condition: `get_db` dependency commit na response. Fix: explicit `db.commit()` in create_invoice router + `setQueryData` cache pre-populate in frontend. | Hoog | S-M | ✅ Gefixt (25 feb) |
+| BUG-20 | Budget module onbekend: "Onbekende modules: budget" — `VALID_MODULES` in `settings/schemas.py` miste `"budget"`. Toegevoegd. | Hoog | S | ✅ Gefixt (25 feb) |
+| BUG-21 | Advocaat wederpartij niet zichtbaar na aanmaken dossier — zelfde race condition als BUG-19. Fix: explicit `db.commit()` in `create_case` en `add_party` route handlers. | Midden | M | ✅ Gefixt (25 feb) |
+
+---
+
+## Backlog / Feature Requests
+
+- **FEATURE: Relaties — inline contactpersoon aanmaken vanuit koppeldialoog** — optie om nieuwe contactpersoon direct aan te maken vanuit koppeldialoog (i.p.v. alleen bestaande zoeken)
+- **FEATURE: Advocaat wederpartij — klikbare detailweergave** — klikbare detailweergave met gegevens + overzicht gekoppelde zaken
+
+### Incasso Workflow Automatisering (P1)
+
+**Doel:** Eén klik op "Verstuur brief" voor 40 dossiers → alles automatisch.
+
+1. **Template editor UI** — Lisanne kan zelf briefsjablonen bewerken in de UI (huisstijl, logo, kleuren). Eenmalig instellen, daarna herbruikbaar.
+2. **Batch brief + email verzenden** — "Verstuur brief" genereert documenten EN emailt ze naar de wederpartij via Outlook provider. Nu alleen documentgeneratie.
+3. **Auto-complete taken** — Na verzenden brief: bijbehorende taak automatisch afvinken.
+4. **Auto-advance pipeline** — Na taak afgerond: pipeline schuift automatisch naar volgende stap, volgende taak + deadline wordt actief.
+5. **Deadline kleuren per stap** — Groen = op tijd, Rood = te laat (deadline overschreden). Per stap zichtbaar in het pipeline-overzicht.
+6. **Instelbare dagen per stap** — Wachtdagen per pipeline-stap configureerbaar in de workflow editor (bestaat deels al via min_wait_days).
+
+**Flow:** Batch selectie → genereer brieven → email via Outlook → taken afgevinkt → pipeline doorgeschoven → deadline kleuren updaten
 
 ---
 
 ## Volgorde van werken
 
-**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, F1-F10, alle bugs t/m BUG-12
+**✅ Afgerond:** A1-A7, B1-B3, C1-C3, D1/D3/D4/D5, E1-E8, T1-T3, F1-F10, alle bugs t/m BUG-17
 **✅ VPS login gefixt** (21 feb) — DB wachtwoord mismatch opgelost, frontend herbouwd met correcte NEXT_PUBLIC_API_URL
 **✅ BUG-7/8/9 gefixt** (21 feb) — edit-modus, zaaknummer op form, advocaat wederpartij
 **❌ Niet relevant:** D2 (gebruikersbeheer — Lisanne is enige gebruiker)
@@ -228,7 +255,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 **✅ UX Polish — G13 + G9 + G11** (sessie 11, 23 feb) — Budget tracking per dossier (togglebaar via "budget" module), recurring tasks (daily/weekly/monthly/quarterly/yearly + auto-create), inline document preview (eye button + PDF modal). Migrations 031 + 032.
 **✅ OutlookProvider gebouwd** (sessie 13, 23 feb) — `backend/app/email/providers/outlook.py` met Microsoft Graph API. Zelfde EmailProvider interface als GmailProvider. OAuth flow, list/get/send/draft/attachments. Config + docker-compose.prod.yml + OAuth router bijgewerkt.
 **✅ BUG-13 + BUG-14 gefixt** (sessie 14, 23 feb) — Email-bijlage download met blob URL + Bearer token (BUG-13), "Opslaan in dossier" knop + backend endpoint om bijlage naar case_files te kopiëren (BUG-14).
-**Volgende prioriteit:** Document template editing UI + merge fields uitbreiden.
+**✅ Password reset email** (sessie 15, 23 feb) — `forgot_password()` stuurt nu daadwerkelijk email via SMTP (BackgroundTasks + aiosmtplib). HTML template met "Wachtwoord herstellen" knop. Getest: email ontvangen ✅.
+**✅ BUG-15 gefixt** (sessie 16, 23 feb → deployed 25 feb) — Next.js rewrite proxy (`/api/*` → `backend:8000`), alle `NEXT_PUBLIC_API_URL` vervangen door relatieve URLs. Deployed en getest.
+**✅ BUG-16 gefixt** (25 feb) — Dashboard "Mijn Taken" widget gebruikte verkeerd endpoint (`/api/workflow/tasks?status=due`), nu `/api/dashboard/my-tasks`.
+**Volgende prioriteit:** QA-CHECKLIST.md doorlopen, daarna document template editing UI + merge fields uitbreiden.
 
 ### Sessie 12 Plan: Document Templates & Merge Fields
 

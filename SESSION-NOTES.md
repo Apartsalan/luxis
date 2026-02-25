@@ -1,8 +1,127 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 feb 2026 (sessie 14 — BUG-13 + BUG-14 email-bijlagen fix)
-**Laatste feature/fix:** Email-bijlage download gefixt (BUG-13) + "Opslaan in dossier" knop gebouwd (BUG-14) ✅
-**Volgende sessie (15):** Document template editing UI + merge fields uitbreiden.
+**Laatst bijgewerkt:** 25 feb 2026 (sessie 17 — QA doorloop + bugfixes)
+**Laatste feature/fix:** BUG-15 deployed + BUG-16 dashboard taken widget ✅
+**Volgende sessie (18):** QA-CHECKLIST.md verder doorlopen.
+
+## Wat er gedaan is (sessie 17 — 25 feb)
+
+### BUG-15: Reset-password — DEPLOYED + GETEST ✅
+- Frontend container opnieuw gebouwd op VPS met Next.js rewrite proxy
+- Password reset flow getest: login → wachtwoord vergeten → email → link → nieuw wachtwoord → werkt ✅
+
+### BUG-16: Dashboard "Mijn Taken" widget toonde geen taken ✅
+- **Oorzaak:** `useMyOpenTasks` gebruikte `/api/workflow/tasks?status=due` — toonde alleen taken met status "due". Taken met status "pending" of "overdue" waren onzichtbaar.
+- **Fix:** Endpoint gewijzigd naar `/api/dashboard/my-tasks` (zelfde als Mijn Taken pagina) — toont nu alle open taken.
+- **Bestand:** `frontend/src/hooks/use-workflow.ts`
+
+### BUG-17: Velden leegmaken + opslaan werkte niet (site-breed) ✅
+- **Oorzaak:** `|| undefined` in form handlers → JSON.stringify dropt de key → backend `exclude_unset=True` slaat update over. Velden met lege waarde behielden hun oude inhoud.
+- **Fix:** `|| undefined` → `|| null` in alle form handlers. Null wordt wél meegestuurd in JSON.
+- **Scope:** 51 instances in 18 bestanden: relaties (31 velden), facturen (7), uren (2), agenda (4), email compose (4), timer (1), incasso (1), contact links (1)
+- **Interfaces ook bijgewerkt:** `string | null` i.p.v. `string | undefined` voor nullable velden
+
+### CLAUDE.md bijgewerkt
+- Nieuwe sectie "Kwaliteitsstandaard" toegevoegd: verificatie voor done, autonoom bugfixen, elegantie gebalanceerd, self-improvement, simplicity first.
+
+### Bestanden gewijzigd sessie 17
+**Gewijzigd (frontend):**
+- `frontend/src/hooks/use-workflow.ts` — useMyOpenTasks endpoint fix
+- `frontend/src/hooks/use-relations.ts` — `|| undefined` → `|| null` (31 velden)
+- `frontend/src/hooks/use-invoices.ts` — `|| undefined` → `|| null` (7 velden)
+- `frontend/src/hooks/use-time-entries.ts` — `|| undefined` → `|| null` (2 velden)
+- `frontend/src/hooks/use-calendar.ts` — `|| undefined` → `|| null` (4 velden)
+- `frontend/src/hooks/use-email-sync.ts` — `|| undefined` → `|| null` (4 velden)
+- `frontend/src/hooks/use-timer.ts` — `|| undefined` → `|| null` (1 veld)
+- `frontend/src/hooks/use-incasso.ts` — `|| undefined` → `|| null` (1 veld)
+- `frontend/src/hooks/use-contact-links.ts` — `|| undefined` → `|| null` (1 veld)
+- `frontend/src/app/(dashboard)/relaties/[id]/page.tsx` — interface `string | null`
+- `frontend/src/app/(dashboard)/relaties/nieuw/page.tsx` — interface `string | null`
+- `frontend/src/app/(dashboard)/facturatie/nieuw/page.tsx` — interface `string | null`
+- `frontend/src/app/(dashboard)/facturatie/[id]/page.tsx` — interface `string | null`
+- `frontend/src/app/(dashboard)/tijdschrijven/page.tsx` — interface `string | null`
+- `frontend/src/app/(dashboard)/agenda/page.tsx` — interface `string | null`
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — interface `string | null`
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DetailsTab.tsx` — interface `string | null`
+
+**Gewijzigd (docs):**
+- `CLAUDE.md` — kwaliteitsstandaard sectie toegevoegd
+
+---
+
+## Wat er gedaan is (sessie 15+16 — 23 feb)
+
+### Password Reset Email Sending ✅
+- **Probleem:** `/forgot-password` endpoint had een TODO en logde alleen de reset URL in console, stuurde geen email.
+- **Fix (backend `auth/router.py`):**
+  - `_build_reset_email_html(reset_url)` — gestylede HTML email template met "Wachtwoord herstellen" knop
+  - `_send_reset_email_safe(to, html_body)` — wrapper met try/except zodat BackgroundTask nooit crasht
+  - `forgot_password()` endpoint gebruikt nu `BackgroundTasks` om de email async te versturen
+  - SMTP config: `smtp.gmail.com:587`, `arsalanseidony@gmail.com`, app password
+- **Test:** Email succesvol verzonden naar `seidony@kestinglegal.nl` ✅
+
+### Frontend Forgot-Password Timeout ✅
+- **Probleem:** Forgot-password form bleef oneindig laden als server niet reageerde.
+- **Fix (`login/page.tsx`):** 15s `AbortController` timeout. Bij timeout → toon success (om email-bestaan niet te lekken).
+
+### BUG-15: Reset-Password Pagina Hangt — ROOT CAUSE GEVONDEN ✅
+- **Symptoom:** Na klik op reset-link uit email → nieuw wachtwoord invullen → "Wachtwoord instellen..." spinner draait oneindig.
+- **Root cause:** Browser stuurt POST naar `https://luxis.kestinglegal.nl/api/auth/reset-password`. De productie-setup verwacht **Caddy** als reverse proxy (poort 443 → `/api/*` naar backend:8000, `/*` naar frontend:3000). **Caddy container draait niet** — alleen frontend (3000) en backend (8000) draaien los. De frontend heeft geen Next.js rewrite → `/api/*` requests gaan nergens heen.
+- **Bewijs:** Backend logs tonen GEEN inkomend request. `curl` direct naar `localhost:8000` werkt wel.
+
+### Fix: Next.js Rewrite Proxy ✅ (DEPLOYMENT NOG TESTEN)
+- **Aanpak:** Next.js rewrites toegevoegd zodat de frontend zelf `/api/*` doorstuurt naar de backend. Werkt onafhankelijk van Caddy.
+- **`frontend/next.config.ts`:** Rewrite `/api/:path*` → `http://backend:8000/api/:path*`
+- **Alle `NEXT_PUBLIC_API_URL` referenties verwijderd** — vervangen door relatieve URLs (`""`)
+- **15s timeout toegevoegd aan reset-password fetch** voor betere UX
+
+### Bestanden gewijzigd sessie 15+16
+
+**Gewijzigd (backend):**
+- `backend/app/auth/router.py` — password reset email sending (BackgroundTasks, HTML template, _send_reset_email_safe)
+
+**Gewijzigd (frontend):**
+- `frontend/next.config.ts` — API rewrite proxy `/api/*` → `http://backend:8000/api/*`
+- `frontend/Dockerfile` — `NEXT_PUBLIC_API_URL` → `BACKEND_URL` build arg
+- `frontend/src/lib/api.ts` — `API_URL = ""` (relatieve URLs)
+- `frontend/src/app/login/page.tsx` — relatieve URL + 15s timeout op forgot-password
+- `frontend/src/app/reset-password/page.tsx` — relatieve URL + 15s timeout
+- `frontend/src/app/setup/page.tsx` — relatieve URL
+- `frontend/src/hooks/use-case-files.ts` — relatieve URL (2x)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — relatieve URL
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — relatieve URL (2x)
+
+**Gewijzigd (infra):**
+- `docker-compose.yml` — `NEXT_PUBLIC_API_URL` → `BACKEND_URL`
+- `docker-compose.prod.yml` — `NEXT_PUBLIC_API_URL` → `BACKEND_URL`
+- `frontend/Dockerfile` — `NEXT_PUBLIC_API_URL` → `BACKEND_URL`
+- `.env`, `.env.example`, `.env.production.example` — `NEXT_PUBLIC_API_URL` verwijderd
+
+### Status na sessie 16
+- Code is gecommit en klaar voor deployment
+- **Frontend container MOET opnieuw gebouwd worden** — de Next.js rewrite zit in de build
+- Nog NIET getest op productie — deployment + test is volgende stap
+
+### Deploy commando voor deze fix
+```bash
+cd /opt/luxis && git pull && \
+docker compose build frontend --no-cache && \
+docker compose up -d frontend
+```
+
+Of met prod compose:
+```bash
+cd /opt/luxis && git pull && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production build frontend --no-cache && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d frontend
+```
+
+### Mogelijke problemen bij deployment
+1. **Next.js rewrites bij standalone build:** `rewrites()` wordt bij build-time geëvalueerd. `BACKEND_URL` moet beschikbaar zijn als `npm run build` draait in Docker. Default is `http://backend:8000` (correct voor Docker netwerk).
+2. **Standalone mode:** Controleer of rewrites werken met `output: "standalone"`. Als het niet werkt, overweeg een `src/middleware.ts` als alternatief.
+3. **DNS/HTTPS:** Als `luxis.kestinglegal.nl` HTTPS verwacht maar er geen Caddy/SSL-terminator draait, moeten browser requests via HTTP komen of Caddy alsnog gestart worden.
+
+---
 
 ## Wat er gedaan is (sessie 14 — 23 feb)
 
@@ -133,9 +252,35 @@
 
 ---
 
-## Openstaande bugs einde sessie 14
+### Openstaande bugs einde sessie 17
 
-Geen openstaande bugs. Alle bugs t/m BUG-14 zijn gefixt.
+| # | Bug | Ernst | Status |
+|---|-----|-------|--------|
+| BUG-18 | Klik op taak in dashboard/Mijn Taken navigeert niet naar het juiste dossier | Midden | ❌ TODO |
+| BUG-19 | Factuur aanmaken → redirect naar factuurpagina geeft "fout bij laden" | Hoog | ❌ TODO |
+| BUG-20 | Budget module onbekend: "Onbekende modules: budget" — niet geregistreerd als geldige module in backend | Hoog | ❌ TODO |
+| BUG-21 | Advocaat wederpartij niet zichtbaar na aanmaken dossier (B2C en B2B) | Midden | ❌ TODO |
+
+### Nog te deployen
+- BUG-16 + BUG-17 fixes zijn gecommit en gepusht maar **nog NIET gedeployed** op VPS
+- Deploy commando (frontend only, geen migraties):
+```bash
+cd /opt/luxis && git pull && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production build --no-cache frontend && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d frontend
+```
+
+### Plan volgende sessie (18)
+1. Deploy BUG-16+17 naar VPS
+2. Fix BUG-18 t/m BUG-21
+3. Grondige QA via browser (Playwright/Claude in Chrome)
+
+### Feature requests (backlog)
+- Relaties — inline contactpersoon aanmaken vanuit koppeldialoog
+- Advocaat wederpartij — klikbare detailweergave met gekoppelde zaken
+- Incasso Workflow Automatisering (P1) — template editor, batch brief+email, auto-complete taken, auto-advance pipeline, deadline kleuren, instelbare dagen
+
+---
 
 ## Wat er gedaan is (sessie 11 — 23 feb)
 

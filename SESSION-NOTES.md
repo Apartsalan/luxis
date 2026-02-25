@@ -1,8 +1,40 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 25 feb 2026 (sessie 18 — BUG-18 t/m BUG-21 gefixt)
-**Laatste feature/fix:** BUG-18 t/m BUG-21 alle 4 gefixt ✅
-**Volgende sessie (19):** QA via browser, eventueel nieuwe bugs noteren.
+**Laatst bijgewerkt:** 25 feb 2026 (sessie 19 — advocaat wederpartij volledige fix)
+**Laatste feature/fix:** Advocaat wederpartij: inline aanmaken + auto-link + zaken zichtbaar op relatiepagina ✅
+**Volgende sessie (20):** Deploy sessie 19, QA via browser.
+
+## Wat er gedaan is (sessie 19 — 25 feb)
+
+### Feature: Inline advocaat wederpartij aanmaken bij nieuw dossier ✅
+- **Probleem:** Advocaat wederpartij kon alleen gelinkt worden als de persoon al als relatie bestond. Geen inline aanmaak-optie.
+- **Fix:** "+ Nieuwe advocaat aanmaken" knop toegevoegd aan Advocaat wederpartij sectie op nieuw dossier formulier.
+  - State: `showNewLawyer`, `newLawyer` (default `contact_type: "person"`)
+  - Extended `handleCreateInlineContact` voor `"lawyer"` role
+  - Violet-themed inline form (naam + email)
+- **Commit:** `0fd7899`
+
+### Feature: Auto ContactLink tussen advocaat en wederpartij (bedrijf) ✅
+- **Probleem:** Na aanmaken dossier met advocaat wederpartij en wederpartij (bedrijf) werd geen koppeling aangemaakt. Op de relatiepagina van de advocaat waren geen bedrijven zichtbaar.
+- **Fix:** In `handleSubmit`, na toevoegen advocaat als CaseParty, auto-create ContactLink (person_id=advocaat, company_id=wederpartij, role="Advocaat"). Non-blocking: 409 bij bestaande link wordt genegeerd.
+- **Bestand:** `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx`
+- **Commit:** `1fdb663`
+
+### Fix: Zaken niet zichtbaar op relatiepagina voor CaseParty-contacten ✅
+- **Probleem:** Op de relatiepagina van een advocaat wederpartij waren dossiers niet zichtbaar, ondanks dat de advocaat als CaseParty was toegevoegd.
+- **Root cause (2 lagen):**
+  1. **Backend** `list_cases` service: `client_id` filter zocht alleen in `Case.client_id` en `Case.opposing_party_id` — NIET in `CaseParty.contact_id`
+  2. **Frontend** relatiepagina: extra client-side filter `c.client?.id === id || c.opposing_party?.id === id` sloot CaseParty-matches uit
+- **Fix backend (`cases/service.py`):** `Case.parties.any(CaseParty.contact_id == client_id)` toegevoegd aan de OR-clause
+- **Fix frontend (`relaties/[id]/page.tsx`):** Strikte filter verwijderd (backend filtert al correct). Rol-label "Partij" in violet badge toegevoegd voor non-client/non-opposing-party contacten.
+- **Commit:** `f469f65`
+
+### Bestanden gewijzigd sessie 19
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — inline advocaat aanmaken + auto ContactLink + opponentContactType tracking
+- `backend/app/cases/service.py` — CaseParty filter in list_cases
+- `frontend/src/app/(dashboard)/relaties/[id]/page.tsx` — filter verwijderd + "Partij" rol label
+
+---
 
 ## Wat er gedaan is (sessie 18 — 25 feb)
 

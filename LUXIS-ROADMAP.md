@@ -216,8 +216,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 ## Backlog / Feature Requests
 
-- **FEATURE: Relaties — inline contactpersoon aanmaken vanuit koppeldialoog** — optie om nieuwe contactpersoon direct aan te maken vanuit koppeldialoog (i.p.v. alleen bestaande zoeken)
-- **FEATURE: Advocaat wederpartij — klikbare detailweergave** — klikbare detailweergave met gegevens + overzicht gekoppelde zaken
+- ~~**FEATURE: Relaties — inline contactpersoon aanmaken vanuit koppeldialoog**~~ ✅ Gedaan (sessie 19) — inline aanmaken van advocaat wederpartij bij nieuw dossier
+- ~~**FEATURE: Advocaat wederpartij — klikbare detailweergave**~~ ✅ Gedaan (sessie 19) — zaken zichtbaar op relatiepagina via CaseParty filter + "Partij" rol label
 
 ### Incasso Workflow Automatisering (P1)
 
@@ -258,6 +258,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 **✅ Password reset email** (sessie 15, 23 feb) — `forgot_password()` stuurt nu daadwerkelijk email via SMTP (BackgroundTasks + aiosmtplib). HTML template met "Wachtwoord herstellen" knop. Getest: email ontvangen ✅.
 **✅ BUG-15 gefixt** (sessie 16, 23 feb → deployed 25 feb) — Next.js rewrite proxy (`/api/*` → `backend:8000`), alle `NEXT_PUBLIC_API_URL` vervangen door relatieve URLs. Deployed en getest.
 **✅ BUG-16 gefixt** (25 feb) — Dashboard "Mijn Taken" widget gebruikte verkeerd endpoint (`/api/workflow/tasks?status=due`), nu `/api/dashboard/my-tasks`.
+**✅ Advocaat wederpartij volledig gefixt** (sessie 19) — inline aanmaken, auto ContactLink, CaseParty filter in list_cases + relatiepagina
 **Volgende prioriteit:** QA-CHECKLIST.md doorlopen, daarna document template editing UI + merge fields uitbreiden.
 
 ### Sessie 12 Plan: Document Templates & Merge Fields

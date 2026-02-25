@@ -186,7 +186,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 ---
 
-## Bugs — Volgende sessie fixen
+## Bugs
 
 > Detail + bestanden + fix-instructies: zie `BUGS-EN-VERBETERPUNTEN.md`
 
@@ -211,6 +211,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-19 | Factuur aanmaken → redirect naar factuurpagina geeft "fout bij laden" — race condition: `get_db` dependency commit na response. Fix: explicit `db.commit()` in create_invoice router + `setQueryData` cache pre-populate in frontend. | Hoog | S-M | ✅ Gefixt (25 feb) |
 | BUG-20 | Budget module onbekend: "Onbekende modules: budget" — `VALID_MODULES` in `settings/schemas.py` miste `"budget"`. Toegevoegd. | Hoog | S | ✅ Gefixt (25 feb) |
 | BUG-21 | Advocaat wederpartij niet zichtbaar na aanmaken/bewerken dossier + budget niet opgeslagen bij aanmaken — twee oorzaken: (1) `create_case` service miste `budget` + 7 andere velden in Case constructor, (2) `get_case` en `add_case_party` hadden geen explicit `selectinload` voor nested `parties→contact` relatie (async SQLAlchemy laadt nested selectin niet automatisch). Fix: velden toegevoegd + explicit `selectinload(Case.parties).selectinload(CaseParty.contact)` in queries. | Hoog | M | ✅ Gefixt (25 feb) |
+| BUG-22 | Invoice detail 500 Internal Server Error — `GET /api/invoices/{id}` crashte door circulaire `lazy="selectin"` op Invoice self-referential relationships (`credit_notes` en `linked_invoice`). | Hoog | M | ✅ Gefixt (25 feb, sessie 20) |
+| BUG-23 | `/notifications` endpoints 404 — Frontend riep `/notifications` en `/notifications/unread-count` aan op elke pagina maar er bestond geen backend module. Drie sub-issues: (1) module bestond niet, (2) import path was fout (`app.auth.dependencies` i.p.v. `app.dependencies`), (3) frontend miste `/api/` prefix in API calls. | Midden | M | ✅ Gefixt (25 feb, sessie 20) |
+| BUG-24 | `/api/users` endpoint 404 — Frontend riep `/api/users` aan voor dossierlijst filters maar endpoint bestond niet. | Laag | S | ✅ Gefixt (25 feb, sessie 20) |
 
 ---
 
@@ -259,7 +262,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 **✅ BUG-15 gefixt** (sessie 16, 23 feb → deployed 25 feb) — Next.js rewrite proxy (`/api/*` → `backend:8000`), alle `NEXT_PUBLIC_API_URL` vervangen door relatieve URLs. Deployed en getest.
 **✅ BUG-16 gefixt** (25 feb) — Dashboard "Mijn Taken" widget gebruikte verkeerd endpoint (`/api/workflow/tasks?status=due`), nu `/api/dashboard/my-tasks`.
 **✅ Advocaat wederpartij volledig gefixt** (sessie 19) — inline aanmaken, auto ContactLink, CaseParty filter in list_cases + relatiepagina
-**Volgende prioriteit:** QA-CHECKLIST.md doorlopen, daarna document template editing UI + merge fields uitbreiden.
+**✅ Sessie 20 QA + bugfix** (25 feb) — Playwright MCP QA over 14 secties, 3 bugs gevonden en gefixt (BUG-22/23/24). Deploy issues opgelost: `.env` ontbrak (`.env.production` → `.env` gekopieerd), notifications import path fout, frontend API prefix mismatch.
+**Volgende prioriteit:** Deploy verificatie (BUG-22/23/24), daarna QA-CHECKLIST.md volledig doorlopen, daarna document template editing UI + merge fields uitbreiden.
 
 ### Sessie 12 Plan: Document Templates & Merge Fields
 
@@ -477,10 +481,26 @@ Arsalan test eerst met eigen mailbox `seidony@kestinglegal.nl` op M365. Lisanne 
 
 ## Deploy
 
+**Belangrijk:** `.env` moet bestaan in `/opt/luxis/`. Docker Compose leest dit automatisch. Als het ontbreekt: `cp .env.production .env`.
+
 ```bash
 cd /opt/luxis && git pull && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production build --no-cache frontend backend && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d frontend backend
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend backend && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend backend
+```
+
+Alleen backend:
+```bash
+cd /opt/luxis && git pull && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache backend && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
+```
+
+Alleen frontend:
+```bash
+cd /opt/luxis && git pull && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend
 ```
 
 ---

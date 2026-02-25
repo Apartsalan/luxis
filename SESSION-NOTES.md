@@ -1,8 +1,70 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 25 feb 2026 (sessie 19 — advocaat wederpartij volledige fix)
-**Laatste feature/fix:** Advocaat wederpartij: inline aanmaken + auto-link + zaken zichtbaar op relatiepagina ✅
-**Volgende sessie (20):** Deploy sessie 19, QA via browser.
+**Laatst bijgewerkt:** 25 feb 2026 (sessie 20 — QA + bugfix + deploy)
+**Laatste feature/fix:** BUG-22/23/24 gefixt, deploy issues opgelost (.env, import path, API prefix)
+**Volgende sessie (21):** Verify deploy, volledige QA-CHECKLIST.md doorlopen, verder bouwen.
+
+## Wat er gedaan is (sessie 20 — 25 feb)
+
+### QA Testing via Playwright MCP ✅
+- Volledige QA van 14 secties uit QA-CHECKLIST.md via browser automation
+- Geverifieerd: BUG-18 (taak links → dossier ✅), BUG-21 (advocaat wederpartij zichtbaar ✅)
+- 3 nieuwe bugs gevonden: BUG-22, BUG-23, BUG-24
+
+### BUG-22: Invoice detail 500 Internal Server Error ✅
+- **Probleem:** `GET /api/invoices/{id}` gaf 500 error
+- **Oorzaak:** Circulaire `lazy="selectin"` op Invoice self-referential relationships (`credit_notes` en `linked_invoice`). Invoice → credit_notes → linked_invoice → Invoice → ... (oneindige loop)
+- **Fix:** `lazy="selectin"` → `lazy="noload"` op beide relaties + explicit `selectinload()` in `get_invoice()` en `list_invoices()`
+- **Bestanden:** `backend/app/invoices/models.py`, `backend/app/invoices/service.py`
+
+### BUG-23: /notifications endpoints 404 ✅
+- **Probleem:** Frontend riep `/notifications` en `/notifications/unread-count` aan op elke pagina maar backend had geen notification module
+- **Drie sub-issues gefixt:**
+  1. Stub router aangemaakt (`backend/app/notifications/router.py`) met lege responses
+  2. Import path fout: `from app.auth.dependencies` → `from app.dependencies` (veroorzaakte ImportError → backend crash)
+  3. Frontend API prefix mismatch: `/notifications/...` → `/api/notifications/...` (Next.js proxy matcht alleen `/api/*`)
+- **Bestanden:** `backend/app/notifications/__init__.py` (nieuw), `backend/app/notifications/router.py` (nieuw), `frontend/src/hooks/use-notifications.ts`, `backend/app/main.py`
+
+### BUG-24: /api/users endpoint 404 ✅
+- **Probleem:** Frontend riep `/api/users` aan voor dossierlijst filters maar endpoint bestond niet
+- **Fix:** `users_router` toegevoegd in `backend/app/auth/router.py` met `/api/users` prefix, lijst alle users in tenant
+- **Bestanden:** `backend/app/auth/router.py`, `backend/app/main.py`
+
+### Deploy issues opgelost
+- **`.env` ontbrak op VPS** — Docker Compose leest standaard `.env`, niet `.env.production`. Fix: `cp .env.production .env`
+- **502 errors na deploy** — Backend crashte door ImportError in notifications router (verkeerd import pad)
+- **Login credentials** — productiedatabase heeft user `seidony@kestinglegal.nl`, niet `arsalan@kestinglegal.nl`
+
+### Bestanden gewijzigd sessie 20
+
+**Nieuw (backend):**
+- `backend/app/notifications/__init__.py` — leeg init bestand
+- `backend/app/notifications/router.py` — stub notification router (4 endpoints)
+
+**Gewijzigd (backend):**
+- `backend/app/invoices/models.py` — `lazy="selectin"` → `lazy="noload"` op linked_invoice en credit_notes
+- `backend/app/invoices/service.py` — explicit `selectinload()` in get_invoice en list_invoices
+- `backend/app/auth/router.py` — `users_router` met `/api/users` prefix
+- `backend/app/main.py` — notifications_router en users_router geregistreerd
+
+**Gewijzigd (frontend):**
+- `frontend/src/hooks/use-notifications.ts` — `/notifications/...` → `/api/notifications/...` (4 API calls)
+
+### Commits sessie 20
+
+| Hash | Beschrijving |
+|------|-------------|
+| `b955cbc` | fix: invoice circular loading, add notifications stub router, add users endpoint |
+| `941aaad` | fix: correct import path and API prefix in notifications router |
+| `08142dc` | fix: add /api/ prefix to notification API calls in frontend |
+
+### Status na sessie 20
+- Code gecommit en gepusht
+- Backend opnieuw gedeployed ✅
+- Frontend nog NIET opnieuw gebouwd/gedeployed (notification prefix fix in frontend)
+- **Nog te doen:** Frontend rebuilden en deployen, dan BUG-22/23/24 verifiëren op productie
+
+---
 
 ## Wat er gedaan is (sessie 19 — 25 feb)
 

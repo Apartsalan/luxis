@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Search, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateCase, useConflictCheck, useAddCaseParty } from "@/hooks/use-cases";
-import { useRelations, useCreateRelation } from "@/hooks/use-relations";
+import { useRelations, useCreateRelation, useCreateContactLink } from "@/hooks/use-relations";
 import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
@@ -47,7 +47,9 @@ function NieuweZaakPage() {
   const [selectedLawyer, setSelectedLawyer] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState("");
   const createRelation = useCreateRelation();
+  const createContactLink = useCreateContactLink();
   const addParty = useAddCaseParty();
+  const [opponentContactType, setOpponentContactType] = useState("");
 
   // Inline contact creation forms
   const [showNewClient, setShowNewClient] = useState(false);
@@ -75,6 +77,7 @@ function NieuweZaakPage() {
       } else if (role === "opponent") {
         updateField("opposing_party_id", result.id);
         setOpponentSearch(result.name);
+        setOpponentContactType(data.contact_type);
         setShowNewOpponent(false);
         setNewOpponent({ contact_type: "company", name: "", email: "" });
         if (!form.debtor_type) {
@@ -162,6 +165,18 @@ function NieuweZaakPage() {
         } catch {
           // Non-blocking: case is created, party addition failed
           toast.error("Dossier aangemaakt, maar advocaat wederpartij kon niet worden toegevoegd");
+        }
+        // Auto-link lawyer (person) to opposing party (company) via ContactLink
+        if (form.opposing_party_id && opponentContactType === "company") {
+          try {
+            await createContactLink.mutateAsync({
+              person_id: selectedLawyer.id,
+              company_id: form.opposing_party_id,
+              role_at_company: "Advocaat",
+            });
+          } catch {
+            // Non-blocking: link may already exist (409) or opponent is not a company
+          }
         }
       }
       toast.success("Dossier aangemaakt");
@@ -537,6 +552,7 @@ function NieuweZaakPage() {
                   onClick={() => {
                     updateField("opposing_party_id", "");
                     setOpponentSearch("");
+                    setOpponentContactType("");
                   }}
                   className="text-xs text-destructive hover:underline"
                 >
@@ -566,6 +582,7 @@ function NieuweZaakPage() {
                           onClick={() => {
                             updateField("opposing_party_id", contact.id);
                             setOpponentSearch(contact.name);
+                            setOpponentContactType(contact.contact_type);
                             // Auto-fill debtor_type from contact type
                             if (!form.debtor_type) {
                               updateField(

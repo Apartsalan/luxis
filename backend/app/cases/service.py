@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.cases.models import Case, CaseActivity, CaseParty
 from app.workflow.models import WorkflowTask
@@ -234,9 +235,13 @@ async def get_case(
 ) -> Case:
     """Get a single case by ID. Raises NotFoundError if not found."""
     result = await db.execute(
-        select(Case).where(
+        select(Case)
+        .where(
             Case.id == case_id,
             Case.tenant_id == tenant_id,
+        )
+        .options(
+            selectinload(Case.parties).selectinload(CaseParty.contact),
         )
     )
     case = result.scalar_one_or_none()
@@ -290,13 +295,21 @@ async def create_case(
         status="nieuw",
         description=data.description,
         reference=data.reference,
+        court_case_number=data.court_case_number,
+        court_name=data.court_name,
+        judge_name=data.judge_name,
+        chamber=data.chamber,
+        procedure_type=data.procedure_type,
+        procedure_phase=data.procedure_phase,
         interest_type=data.interest_type,
         contractual_rate=data.contractual_rate,
         contractual_compound=data.contractual_compound,
         client_id=data.client_id,
         opposing_party_id=data.opposing_party_id,
+        billing_contact_id=data.billing_contact_id,
         assigned_to_id=data.assigned_to_id or user_id,
         date_opened=data.date_opened,
+        budget=data.budget,
     )
     db.add(case)
     await db.flush()
@@ -463,8 +476,14 @@ async def add_case_party(
     )
     db.add(party)
     await db.flush()
-    await db.refresh(party)
-    return party
+
+    # Re-query with explicit eager loading so contact is available for serialisation
+    result = await db.execute(
+        select(CaseParty)
+        .where(CaseParty.id == party.id)
+        .options(selectinload(CaseParty.contact))
+    )
+    return result.scalar_one()
 
 
 async def remove_case_party(

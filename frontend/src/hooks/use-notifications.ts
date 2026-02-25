@@ -49,7 +49,7 @@ export function useNotifications(limit = 20) {
   return useQuery<Notification[]>({
     queryKey: ["notifications", limit],
     queryFn: async () => {
-      const res = await api(`/notifications?limit=${limit}`);
+      const res = await api(`/api/notifications?limit=${limit}`);
       if (!res.ok) return [];
       return res.json();
     },
@@ -61,7 +61,7 @@ export function useUnreadCount() {
   return useQuery<number>({
     queryKey: ["notifications", "unread-count"],
     queryFn: async () => {
-      const res = await api("/notifications/unread-count");
+      const res = await api("/api/notifications/unread-count");
       if (!res.ok) return 0;
       const data = await res.json();
       return data.count ?? 0;
@@ -75,7 +75,7 @@ export function useMarkAsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (notificationId: string) => {
-      const res = await api(`/notifications/${notificationId}/read`, {
+      const res = await api(`/api/notifications/${notificationId}/read`, {
         method: "PUT",
       });
       if (!res.ok) throw new Error("Kon melding niet als gelezen markeren");
@@ -90,7 +90,7 @@ export function useMarkAllAsRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const res = await api("/notifications/read-all", {
+      const res = await api("/api/notifications/read-all", {
         method: "PUT",
       });
       if (!res.ok) throw new Error("Kon meldingen niet als gelezen markeren");

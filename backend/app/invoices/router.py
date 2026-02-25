@@ -76,7 +76,10 @@ async def create_invoice(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new invoice."""
-    return await service.create_invoice(db, current_user.tenant_id, data)
+    invoice = await service.create_invoice(db, current_user.tenant_id, data)
+    await db.commit()
+    await db.refresh(invoice)
+    return invoice
 
 
 @router.get("/{invoice_id}", response_model=InvoiceResponse)

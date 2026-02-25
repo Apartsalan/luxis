@@ -187,7 +187,10 @@ export function useCreateInvoice() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.id) {
+        qc.setQueryData(["invoices", data.id], data);
+      }
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },

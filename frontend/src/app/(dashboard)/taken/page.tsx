@@ -179,14 +179,15 @@ function TaskRow({
       {/* Task content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <p
+          <Link
+            href={`/zaken/${task.case_id}`}
             className={cn(
-              "text-sm font-medium leading-snug",
+              "text-sm font-medium leading-snug hover:text-primary transition-colors",
               isDone && "line-through text-muted-foreground"
             )}
           >
             {task.title}
-          </p>
+          </Link>
           {/* Status badge */}
           <span
             className={cn(

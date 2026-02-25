@@ -102,6 +102,8 @@ async def create_case(
     case = await service.create_case(
         db, current_user.tenant_id, current_user.id, data
     )
+    await db.commit()
+    await db.refresh(case)
     return case
 
 
@@ -184,6 +186,8 @@ async def add_party(
     party = await service.add_case_party(
         db, current_user.tenant_id, case_id, data
     )
+    await db.commit()
+    await db.refresh(party)
     return party
 
 

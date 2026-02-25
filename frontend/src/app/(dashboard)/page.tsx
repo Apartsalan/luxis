@@ -753,9 +753,12 @@ function MyTasksWidget() {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-card-foreground truncate">
+                  <Link
+                    href={`/zaken/${task.case_id}`}
+                    className="text-sm font-medium text-card-foreground truncate hover:text-primary transition-colors"
+                  >
                     {task.title}
-                  </p>
+                  </Link>
                   <span className="inline-flex shrink-0 items-center rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
                     {TASK_TYPE_LABELS[task.task_type] ?? task.task_type}
                   </span>

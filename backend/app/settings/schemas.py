@@ -4,7 +4,7 @@ import uuid
 
 from pydantic import BaseModel, Field
 
-VALID_MODULES = ("incasso", "tijdschrijven", "facturatie", "wwft")
+VALID_MODULES = ("incasso", "tijdschrijven", "facturatie", "wwft", "budget")
 
 
 class TenantSettingsResponse(BaseModel):

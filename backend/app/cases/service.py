@@ -176,11 +176,12 @@ async def list_cases(
         query = query.where(Case.status == status)
 
     if client_id:
-        # Filter cases where this contact is either client or opposing party
+        # Filter cases where this contact is client, opposing party, OR a case party
         query = query.where(
             or_(
                 Case.client_id == client_id,
                 Case.opposing_party_id == client_id,
+                Case.parties.any(CaseParty.contact_id == client_id),
             )
         )
 

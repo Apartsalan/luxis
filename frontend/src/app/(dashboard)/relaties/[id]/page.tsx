@@ -307,10 +307,8 @@ export default function RelatieDetailPage() {
     );
   }
 
-  // Filter linked cases to only those that actually reference this contact
-  const contactCases = linkedCases?.items.filter(
-    (c) => c.client?.id === id || c.opposing_party?.id === id
-  );
+  // Backend already filters: client, opposing party, OR case party (advocaat etc.)
+  const contactCases = linkedCases?.items;
 
   const kycStatus = kycData?.status || "niet_gestart";
   const kycConfig = KYC_STATUS_CONFIG[kycStatus] || KYC_STATUS_CONFIG.niet_gestart;
@@ -911,10 +909,12 @@ export default function RelatieDetailPage() {
                         className={`text-[10px] font-medium ${
                           zaak.client?.id === id
                             ? "text-primary"
-                            : "text-amber-600"
+                            : zaak.opposing_party?.id === id
+                            ? "text-amber-600"
+                            : "text-violet-600"
                         }`}
                       >
-                        {zaak.client?.id === id ? "Client" : "Wederpartij"}
+                        {zaak.client?.id === id ? "Client" : zaak.opposing_party?.id === id ? "Wederpartij" : "Partij"}
                       </span>
                     </div>
                   </Link>

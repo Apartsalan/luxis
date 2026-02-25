@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.router import router as auth_router
+from app.auth.router import users_router
 from app.calendar.router import router as calendar_router
 from app.cases.router import router as cases_router
 from app.collections.router import rates_router
@@ -20,6 +21,7 @@ from app.email.oauth_router import router as email_oauth_router
 from app.email.router import router as email_router
 from app.email.sync_router import router as email_sync_router
 from app.incasso.router import router as incasso_router
+from app.notifications.router import router as notifications_router
 from app.invoices.router import expenses_router
 from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
@@ -80,6 +82,7 @@ app.add_middleware(RequestLoggingMiddleware)
 
 # Routers
 app.include_router(auth_router)
+app.include_router(users_router)
 app.include_router(relations_router)
 app.include_router(cases_router)
 app.include_router(collections_router)
@@ -100,6 +103,7 @@ app.include_router(email_sync_router)
 app.include_router(email_compose_router)
 app.include_router(search_router)
 app.include_router(incasso_router)
+app.include_router(notifications_router)
 
 
 @app.get("/health")

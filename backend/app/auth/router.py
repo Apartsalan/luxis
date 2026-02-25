@@ -266,6 +266,21 @@ async def _change_password(
     await db.commit()
 
 
+users_router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+@users_router.get("", response_model=list[UserResponse])
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List all users in the current tenant."""
+    result = await db.execute(
+        select(User).where(User.tenant_id == current_user.tenant_id)
+    )
+    return list(result.scalars().all())
+
+
 @router.get("/tenant", response_model=TenantDetailResponse)
 async def get_tenant(
     db: AsyncSession = Depends(get_db),

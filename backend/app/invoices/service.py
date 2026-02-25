@@ -7,6 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.invoices.models import PAYMENT_METHODS, Expense, Invoice, InvoiceLine, InvoicePayment
 from app.time_entries.models import TimeEntry
@@ -114,6 +115,7 @@ async def list_invoices(
     """List invoices with pagination, optional status filter and search."""
     query = (
         select(Invoice)
+        .options(selectinload(Invoice.linked_invoice))
         .where(Invoice.tenant_id == tenant_id, Invoice.is_active.is_(True))
         .order_by(Invoice.invoice_date.desc(), Invoice.invoice_number.desc())
     )
@@ -182,7 +184,16 @@ async def get_invoice(
 ) -> Invoice:
     """Get a single invoice by ID."""
     result = await db.execute(
-        select(Invoice).where(
+        select(Invoice)
+        .options(
+            selectinload(Invoice.contact),
+            selectinload(Invoice.case),
+            selectinload(Invoice.lines),
+            selectinload(Invoice.payments),
+            selectinload(Invoice.credit_notes),
+            selectinload(Invoice.linked_invoice),
+        )
+        .where(
             Invoice.id == invoice_id,
             Invoice.tenant_id == tenant_id,
             Invoice.is_active.is_(True),

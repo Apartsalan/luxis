@@ -111,12 +111,12 @@ class Invoice(TenantBase):
         "Invoice",
         foreign_keys=[linked_invoice_id],
         remote_side="Invoice.id",
-        lazy="selectin",
+        lazy="noload",
     )
     credit_notes: Mapped[list["Invoice"]] = relationship(
         "Invoice",
         foreign_keys="Invoice.linked_invoice_id",
-        lazy="selectin",
+        lazy="noload",
     )
     lines: Mapped[list["InvoiceLine"]] = relationship(
         "InvoiceLine",

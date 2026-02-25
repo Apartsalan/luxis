@@ -54,9 +54,11 @@ function NieuweZaakPage() {
   const [newClient, setNewClient] = useState({ contact_type: "company" as "company" | "person", name: "", email: "" });
   const [showNewOpponent, setShowNewOpponent] = useState(false);
   const [newOpponent, setNewOpponent] = useState({ contact_type: "company" as "company" | "person", name: "", email: "" });
+  const [showNewLawyer, setShowNewLawyer] = useState(false);
+  const [newLawyer, setNewLawyer] = useState({ contact_type: "person" as "company" | "person", name: "", email: "" });
 
   const handleCreateInlineContact = async (
-    role: "client" | "opponent",
+    role: "client" | "opponent" | "lawyer",
     data: { contact_type: "company" | "person"; name: string; email: string }
   ) => {
     try {
@@ -70,7 +72,7 @@ function NieuweZaakPage() {
         setClientSearch(result.name);
         setShowNewClient(false);
         setNewClient({ contact_type: "company", name: "", email: "" });
-      } else {
+      } else if (role === "opponent") {
         updateField("opposing_party_id", result.id);
         setOpponentSearch(result.name);
         setShowNewOpponent(false);
@@ -78,6 +80,11 @@ function NieuweZaakPage() {
         if (!form.debtor_type) {
           updateField("debtor_type", data.contact_type === "company" ? "b2b" : "b2c");
         }
+      } else if (role === "lawyer") {
+        setSelectedLawyer({ id: result.id, name: result.name });
+        setLawyerSearch(result.name);
+        setShowNewLawyer(false);
+        setNewLawyer({ contact_type: "person", name: "", email: "" });
       }
       toast.success(`${data.name} aangemaakt`);
     } catch (err: any) {
@@ -718,6 +725,48 @@ function NieuweZaakPage() {
                       ))}
                     </div>
                   )}
+                {!showNewLawyer && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewLawyer(true); setNewLawyer(c => ({ ...c, name: lawyerSearch })); }}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Nieuwe advocaat aanmaken
+                  </button>
+                )}
+                {showNewLawyer && (
+                  <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50 p-3 space-y-2 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-violet-700">Nieuwe advocaat wederpartij aanmaken</span>
+                      <button type="button" onClick={() => setShowNewLawyer(false)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <input
+                        type="text"
+                        placeholder="Naam *"
+                        value={newLawyer.name}
+                        onChange={(e) => setNewLawyer(c => ({ ...c, name: e.target.value }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        type="email"
+                        placeholder="E-mail (optioneel)"
+                        value={newLawyer.email}
+                        onChange={(e) => setNewLawyer(c => ({ ...c, email: e.target.value }))}
+                        className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!newLawyer.name.trim() || createRelation.isPending}
+                      onClick={() => handleCreateInlineContact("lawyer", newLawyer)}
+                      className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                    >
+                      {createRelation.isPending ? "Aanmaken..." : "Aanmaken en selecteren"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

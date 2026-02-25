@@ -146,8 +146,8 @@ export default function FactuurDetailPage() {
           invoice_date: editDate,
           due_date: editDueDate,
           btw_percentage: parseFloat(editBtw),
-          reference: editReference || undefined,
-          notes: editNotes || undefined,
+          reference: editReference?.trim() || null,
+          notes: editNotes?.trim() || null,
         },
       });
       toast.success("Factuur bijgewerkt");

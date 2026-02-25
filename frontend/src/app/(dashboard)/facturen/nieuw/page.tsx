@@ -204,18 +204,18 @@ export default function NieuweFactuurPage() {
     try {
       const result = await createInvoice.mutateAsync({
         contact_id: form.contact_id,
-        case_id: form.case_id || undefined,
+        case_id: form.case_id || null,
         invoice_date: form.invoice_date,
         due_date: form.due_date,
         btw_percentage: parseFloat(form.btw_percentage),
-        reference: form.reference || undefined,
-        notes: form.notes || undefined,
+        reference: form.reference?.trim() || null,
+        notes: form.notes?.trim() || null,
         lines: validLines.map((l) => ({
           description: l.description,
           quantity: parseFloat(l.quantity) || 1,
           unit_price: parseFloat(l.unit_price),
-          time_entry_id: l.time_entry_id || undefined,
-          expense_id: l.expense_id || undefined,
+          time_entry_id: l.time_entry_id || null,
+          expense_id: l.expense_id || null,
         })),
       });
       toast.success("Factuur aangemaakt");

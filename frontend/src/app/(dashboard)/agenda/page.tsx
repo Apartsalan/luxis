@@ -510,10 +510,10 @@ function EventDialog({
         start_time: start,
         end_time: end,
         all_day: allDay,
-        location: location.trim() || undefined,
-        description: description.trim() || undefined,
-        case_id: caseId || undefined,
-        contact_id: contactId || undefined,
+        location: location.trim() || null,
+        description: description.trim() || null,
+        case_id: caseId || null,
+        contact_id: contactId || null,
         reminder_minutes: reminderMinutes,
       };
       await createMutation.mutateAsync(data);

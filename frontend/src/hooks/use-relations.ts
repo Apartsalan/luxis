@@ -214,7 +214,7 @@ export function useCreateContactLink() {
     mutationFn: async (data: {
       person_id: string;
       company_id: string;
-      role_at_company?: string;
+      role_at_company?: string | null;
     }) => {
       const res = await api("/api/relations/links", {
         method: "POST",

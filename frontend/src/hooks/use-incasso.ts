@@ -238,7 +238,7 @@ export function useBatchExecute() {
     {
       case_ids: string[];
       action: string;
-      target_step_id?: string;
+      target_step_id?: string | null;
       auto_assign_step?: boolean;
     }
   >({

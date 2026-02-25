@@ -20,10 +20,10 @@ import { cn } from "@/lib/utils";
 
 export interface EmailComposeData {
   recipient_email: string;
-  recipient_name?: string;
-  cc?: string[];
-  custom_subject?: string;
-  custom_body?: string;
+  recipient_name?: string | null;
+  cc?: string[] | null;
+  custom_subject?: string | null;
+  custom_body?: string | null;
 }
 
 /** A known recipient from the case (client, opposing party, etc.) */
@@ -150,10 +150,10 @@ export function EmailComposeDialog({
 
     onSend({
       recipient_email: to.trim(),
-      recipient_name: toName.trim() || undefined,
-      cc: ccList.length > 0 ? ccList : undefined,
-      custom_subject: subject.trim() || undefined,
-      custom_body: body.trim() || undefined,
+      recipient_name: toName.trim() || null,
+      cc: ccList.length > 0 ? ccList : null,
+      custom_subject: subject.trim() || null,
+      custom_body: body.trim() || null,
     });
   };
 

@@ -29,14 +29,14 @@ export interface UserCalendarEvent {
 
 export interface CalendarEventCreateInput {
   title: string;
-  description?: string;
+  description?: string | null;
   event_type: string;
   start_time: string;
   end_time: string;
   all_day?: boolean;
-  location?: string;
-  case_id?: string;
-  contact_id?: string;
+  location?: string | null;
+  case_id?: string | null;
+  contact_id?: string | null;
   color?: string;
   reminder_minutes?: number | null;
 }

@@ -82,29 +82,29 @@ interface InvoiceLineInput {
   description: string;
   quantity?: number;
   unit_price: number;
-  time_entry_id?: string;
-  expense_id?: string;
+  time_entry_id?: string | null;
+  expense_id?: string | null;
 }
 
 interface InvoiceCreateInput {
   contact_id: string;
-  case_id?: string;
+  case_id?: string | null;
   invoice_date: string;
   due_date: string;
   btw_percentage?: number;
-  reference?: string;
-  notes?: string;
+  reference?: string | null;
+  notes?: string | null;
   lines: InvoiceLineInput[];
 }
 
 interface InvoiceUpdateInput {
   contact_id?: string;
-  case_id?: string;
+  case_id?: string | null;
   invoice_date?: string;
   due_date?: string;
   btw_percentage?: number;
-  reference?: string;
-  notes?: string;
+  reference?: string | null;
+  notes?: string | null;
 }
 
 // ── Status labels ────────────────────────────────────────────────────────

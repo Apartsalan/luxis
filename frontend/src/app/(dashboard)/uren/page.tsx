@@ -368,9 +368,9 @@ export default function UrenPage() {
         date: formDate,
         duration_minutes: totalMinutes,
         activity_type: formActivity,
-        description: formDescription || undefined,
+        description: formDescription?.trim() || null,
         billable: formBillable,
-        hourly_rate: formRate ? parseFloat(formRate) : undefined,
+        hourly_rate: formRate ? parseFloat(formRate) : null,
       });
       toast.success("Tijdregistratie opgeslagen");
       resetForm();
@@ -398,7 +398,7 @@ export default function UrenPage() {
         id: editId,
         data: {
           duration_minutes: parseInt(editMinutes) || 1,
-          description: editDescription || undefined,
+          description: editDescription?.trim() || null,
         },
       });
       toast.success("Bijgewerkt");

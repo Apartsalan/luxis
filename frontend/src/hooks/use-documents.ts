@@ -235,10 +235,10 @@ export function useDocumentTemplates(templateType?: string) {
 
 export interface SendDocumentInput {
   recipient_email: string;
-  recipient_name?: string;
-  cc?: string[];
-  custom_subject?: string;
-  custom_body?: string;
+  recipient_name?: string | null;
+  cc?: string[] | null;
+  custom_subject?: string | null;
+  custom_body?: string | null;
 }
 
 export interface SendDocumentResponse {
@@ -302,8 +302,8 @@ export function useEmailLogs(caseId: string | undefined) {
 
 export interface SendCaseEmailInput {
   recipient_email: string;
-  recipient_name?: string;
-  cc?: string[];
+  recipient_name?: string | null;
+  cc?: string[] | null;
   subject: string;
   body: string;
 }

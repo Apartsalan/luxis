@@ -40,20 +40,20 @@ interface TimeEntryCreateInput {
   case_id: string;
   date: string;
   duration_minutes: number;
-  description?: string;
+  description?: string | null;
   activity_type?: string;
   billable?: boolean;
-  hourly_rate?: number;
+  hourly_rate?: number | null;
 }
 
 interface TimeEntryUpdateInput {
   case_id?: string;
   date?: string;
   duration_minutes?: number;
-  description?: string;
+  description?: string | null;
   activity_type?: string;
   billable?: boolean;
-  hourly_rate?: number;
+  hourly_rate?: number | null;
 }
 
 // ── Activity type labels ─────────────────────────────────────────────────

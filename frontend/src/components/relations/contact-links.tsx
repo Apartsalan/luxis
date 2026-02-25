@@ -97,8 +97,8 @@ export function ContactLinks({
     if (!selectedId) return;
 
     const data = isPerson
-      ? { person_id: contactId, company_id: selectedId, role_at_company: role || undefined }
-      : { person_id: selectedId, company_id: contactId, role_at_company: role || undefined };
+      ? { person_id: contactId, company_id: selectedId, role_at_company: role?.trim() || null }
+      : { person_id: selectedId, company_id: contactId, role_at_company: role?.trim() || null };
 
     try {
       await createLink.mutateAsync(data);

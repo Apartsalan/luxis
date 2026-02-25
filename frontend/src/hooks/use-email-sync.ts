@@ -151,8 +151,8 @@ export function useSendViaProvider(caseId: string) {
     Error,
     {
       recipient_email: string;
-      recipient_name?: string;
-      cc?: string[];
+      recipient_name?: string | null;
+      cc?: string[] | null;
       subject: string;
       body: string;
     }

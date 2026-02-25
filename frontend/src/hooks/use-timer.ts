@@ -250,7 +250,7 @@ export function useTimerProvider() {
         case_id: timer.caseId,
         date: toISO(new Date()),
         duration_minutes: minutes,
-        description: timer.description || undefined,
+        description: timer.description?.trim() || null,
         activity_type: timer.activityType || "other",
         billable: true,
       });

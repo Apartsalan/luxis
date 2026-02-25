@@ -576,7 +576,7 @@ function WerkstroomTab() {
       {
         case_ids: Array.from(selectedIds),
         action: batchAction,
-        target_step_id: targetStepId || undefined,
+        target_step_id: targetStepId || null,
         auto_assign_step: true,
       },
       {

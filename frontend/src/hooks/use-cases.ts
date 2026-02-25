@@ -222,7 +222,7 @@ export function useUpdateCaseStatus() {
     }: {
       id: string;
       new_status: string;
-      note?: string;
+      note?: string | null;
     }) => {
       const res = await api(`/api/cases/${id}/status`, {
         method: "POST",

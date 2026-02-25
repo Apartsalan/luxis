@@ -121,7 +121,7 @@ export default function ZaakDetailPage() {
       await updateStatus.mutateAsync({
         id,
         new_status: newStatus,
-        note: note || undefined,
+        note: note?.trim() || null,
       });
       toast.success(`Status gewijzigd naar ${STATUS_LABELS[newStatus]}`);
 

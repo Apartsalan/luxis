@@ -155,30 +155,30 @@ export default function RelatieDetailPage() {
   const handleSave = async () => {
     if (!contact) return;
     try {
-      const data: Record<string, string | undefined> = {};
+      const data: Record<string, string | null> = {};
       if (contact.contact_type === "company") {
         data.name = editForm.name;
       } else {
         data.first_name = editForm.first_name;
         data.last_name = editForm.last_name;
         data.name = `${editForm.first_name} ${editForm.last_name}`.trim();
-        data.date_of_birth = editForm.date_of_birth || undefined;
+        data.date_of_birth = editForm.date_of_birth || null;
       }
-      data.email = editForm.email || undefined;
-      data.phone = editForm.phone || undefined;
-      data.kvk_number = editForm.kvk_number || undefined;
-      data.btw_number = editForm.btw_number || undefined;
-      data.visit_address = editForm.visit_address || undefined;
-      data.visit_postcode = editForm.visit_postcode || undefined;
-      data.visit_city = editForm.visit_city || undefined;
-      data.postal_address = editForm.postal_address || undefined;
-      data.postal_postcode = editForm.postal_postcode || undefined;
-      data.postal_city = editForm.postal_city || undefined;
-      data.default_hourly_rate = editForm.default_hourly_rate ? editForm.default_hourly_rate : undefined;
-      data.payment_term_days = editForm.payment_term_days ? editForm.payment_term_days : undefined;
-      data.billing_email = editForm.billing_email || undefined;
-      data.iban = editForm.iban || undefined;
-      data.notes = editForm.notes || undefined;
+      data.email = editForm.email?.trim() || null;
+      data.phone = editForm.phone?.trim() || null;
+      data.kvk_number = editForm.kvk_number?.trim() || null;
+      data.btw_number = editForm.btw_number?.trim() || null;
+      data.visit_address = editForm.visit_address?.trim() || null;
+      data.visit_postcode = editForm.visit_postcode?.trim() || null;
+      data.visit_city = editForm.visit_city?.trim() || null;
+      data.postal_address = editForm.postal_address?.trim() || null;
+      data.postal_postcode = editForm.postal_postcode?.trim() || null;
+      data.postal_city = editForm.postal_city?.trim() || null;
+      data.default_hourly_rate = editForm.default_hourly_rate ? editForm.default_hourly_rate : null;
+      data.payment_term_days = editForm.payment_term_days ? editForm.payment_term_days : null;
+      data.billing_email = editForm.billing_email?.trim() || null;
+      data.iban = editForm.iban?.trim() || null;
+      data.notes = editForm.notes?.trim() || null;
 
       await updateRelation.mutateAsync({ id, data });
       toast.success("Relatie bijgewerkt");
@@ -234,27 +234,26 @@ export default function RelatieDetailPage() {
   const handleKycSave = async () => {
     try {
       const data: Record<string, any> = { contact_id: id };
-      // Only include non-empty fields
-      if (kycForm.risk_level) data.risk_level = kycForm.risk_level;
-      if (kycForm.risk_notes) data.risk_notes = kycForm.risk_notes;
-      if (kycForm.id_type) data.id_type = kycForm.id_type;
-      if (kycForm.id_number) data.id_number = kycForm.id_number;
-      if (kycForm.id_expiry_date) data.id_expiry_date = kycForm.id_expiry_date;
-      if (kycForm.id_verified_at) data.id_verified_at = kycForm.id_verified_at;
-      if (kycForm.ubo_name) data.ubo_name = kycForm.ubo_name;
-      if (kycForm.ubo_dob) data.ubo_dob = kycForm.ubo_dob;
-      if (kycForm.ubo_nationality) data.ubo_nationality = kycForm.ubo_nationality;
-      if (kycForm.ubo_percentage) data.ubo_percentage = kycForm.ubo_percentage;
-      if (kycForm.ubo_verified_at) data.ubo_verified_at = kycForm.ubo_verified_at;
+      data.risk_level = kycForm.risk_level || null;
+      data.risk_notes = kycForm.risk_notes?.trim() || null;
+      data.id_type = kycForm.id_type || null;
+      data.id_number = kycForm.id_number?.trim() || null;
+      data.id_expiry_date = kycForm.id_expiry_date || null;
+      data.id_verified_at = kycForm.id_verified_at || null;
+      data.ubo_name = kycForm.ubo_name?.trim() || null;
+      data.ubo_dob = kycForm.ubo_dob || null;
+      data.ubo_nationality = kycForm.ubo_nationality?.trim() || null;
+      data.ubo_percentage = kycForm.ubo_percentage?.trim() || null;
+      data.ubo_verified_at = kycForm.ubo_verified_at || null;
       data.pep_checked = kycForm.pep_checked;
       data.pep_is_pep = kycForm.pep_is_pep;
-      if (kycForm.pep_notes) data.pep_notes = kycForm.pep_notes;
+      data.pep_notes = kycForm.pep_notes?.trim() || null;
       data.sanctions_checked = kycForm.sanctions_checked;
       data.sanctions_hit = kycForm.sanctions_hit;
-      if (kycForm.sanctions_notes) data.sanctions_notes = kycForm.sanctions_notes;
-      if (kycForm.source_of_funds) data.source_of_funds = kycForm.source_of_funds;
+      data.sanctions_notes = kycForm.sanctions_notes?.trim() || null;
+      data.source_of_funds = kycForm.source_of_funds?.trim() || null;
       data.source_of_funds_verified = kycForm.source_of_funds_verified;
-      if (kycForm.notes) data.notes = kycForm.notes;
+      data.notes = kycForm.notes?.trim() || null;
 
       await saveKyc.mutateAsync(data);
       toast.success("WWFT-gegevens opgeslagen");

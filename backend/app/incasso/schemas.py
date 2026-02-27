@@ -12,6 +12,7 @@ class PipelineStepCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     sort_order: int = 0
     min_wait_days: int = Field(default=0, ge=0)
+    max_wait_days: int = Field(default=0, ge=0)
     template_id: uuid.UUID | None = None
     template_type: str | None = None  # docx template key (e.g. "aanmaning")
 
@@ -20,6 +21,7 @@ class PipelineStepUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     sort_order: int | None = None
     min_wait_days: int | None = Field(default=None, ge=0)
+    max_wait_days: int | None = Field(default=None, ge=0)
     template_id: uuid.UUID | None = None
     template_type: str | None = None
     is_active: bool | None = None
@@ -30,6 +32,7 @@ class PipelineStepResponse(BaseModel):
     name: str
     sort_order: int
     min_wait_days: int
+    max_wait_days: int = 0
     template_id: uuid.UUID | None
     template_type: str | None = None
     template_name: str | None = None
@@ -57,6 +60,7 @@ class CaseInPipeline(BaseModel):
     incasso_step_id: uuid.UUID | None
     status: str
     date_opened: str  # ISO date string
+    deadline_status: str = "gray"  # green | orange | red | gray
 
     model_config = {"from_attributes": True}
 

@@ -22,6 +22,9 @@ class IncassoPipelineStep(TenantBase):
     min_wait_days: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )  # Minimum days before moving to this step
+    max_wait_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )  # Threshold for "overdue" (red) status; 0 = use 2× min_wait_days
     template_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("document_templates.id"), nullable=True
     )  # Legacy: FK to deprecated HTML template system

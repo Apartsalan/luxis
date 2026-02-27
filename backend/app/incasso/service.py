@@ -128,12 +128,12 @@ async def seed_default_steps(
         return existing
 
     defaults = [
-        {"name": "Aanmaning", "sort_order": 1, "min_wait_days": 0, "template_type": "aanmaning"},
-        {"name": "Sommatie", "sort_order": 2, "min_wait_days": 14, "template_type": "sommatie"},
-        {"name": "2e Sommatie", "sort_order": 3, "min_wait_days": 14, "template_type": "tweede_sommatie"},
-        {"name": "Ingebrekestelling", "sort_order": 4, "min_wait_days": 14},
-        {"name": "Dagvaarding", "sort_order": 5, "min_wait_days": 14, "template_type": "dagvaarding"},
-        {"name": "Executie", "sort_order": 6, "min_wait_days": 0},
+        {"name": "Aanmaning", "sort_order": 1, "min_wait_days": 0, "max_wait_days": 7, "template_type": "aanmaning"},
+        {"name": "Sommatie", "sort_order": 2, "min_wait_days": 14, "max_wait_days": 28, "template_type": "sommatie"},
+        {"name": "2e Sommatie", "sort_order": 3, "min_wait_days": 14, "max_wait_days": 28, "template_type": "tweede_sommatie"},
+        {"name": "Ingebrekestelling", "sort_order": 4, "min_wait_days": 14, "max_wait_days": 28},
+        {"name": "Dagvaarding", "sort_order": 5, "min_wait_days": 14, "max_wait_days": 28, "template_type": "dagvaarding"},
+        {"name": "Executie", "sort_order": 6, "min_wait_days": 0, "max_wait_days": 0},
     ]
 
     steps = []
@@ -158,6 +158,7 @@ def step_to_response(step: IncassoPipelineStep) -> PipelineStepResponse:
         name=step.name,
         sort_order=step.sort_order,
         min_wait_days=step.min_wait_days,
+        max_wait_days=step.max_wait_days,
         template_id=step.template_id,
         template_type=step.template_type,
         template_name=step.template.name if step.template else None,
@@ -170,7 +171,27 @@ def step_to_response(step: IncassoPipelineStep) -> PipelineStepResponse:
 # ── Pipeline Overview ─────────────────────────────────────────────────────
 
 
-def _case_to_pipeline_item(case: Case) -> CaseInPipeline:
+def _compute_deadline_status(
+    days_in_step: int,
+    step: IncassoPipelineStep | None,
+) -> str:
+    """Compute deadline color: green (waiting), orange (ready), red (overdue), gray (no step)."""
+    if not step:
+        return "gray"
+    min_d = step.min_wait_days
+    max_d = step.max_wait_days if step.max_wait_days > 0 else (min_d * 2 if min_d > 0 else 0)
+
+    if max_d > 0 and days_in_step >= max_d:
+        return "red"
+    if days_in_step >= min_d:
+        return "orange"
+    return "green"
+
+
+def _case_to_pipeline_item(
+    case: Case,
+    step: IncassoPipelineStep | None = None,
+) -> CaseInPipeline:
     """Convert a Case model to CaseInPipeline schema."""
     outstanding = float(case.total_principal) - float(case.total_paid)
 
@@ -193,6 +214,7 @@ def _case_to_pipeline_item(case: Case) -> CaseInPipeline:
         incasso_step_id=case.incasso_step_id,
         status=case.status,
         date_opened=case.date_opened.isoformat(),
+        deadline_status=_compute_deadline_status(days_in_step, step),
     )
 
 
@@ -216,20 +238,22 @@ async def get_pipeline_overview(
     all_cases = list(result.scalars().all())
 
     # Group cases by step
-    step_map: dict[uuid.UUID, list[CaseInPipeline]] = {s.id: [] for s in steps}
+    step_by_id: dict[uuid.UUID, IncassoPipelineStep] = {s.id: s for s in steps}
+    case_map: dict[uuid.UUID, list[CaseInPipeline]] = {s.id: [] for s in steps}
     unassigned: list[CaseInPipeline] = []
 
     for case in all_cases:
-        item = _case_to_pipeline_item(case)
-        if case.incasso_step_id and case.incasso_step_id in step_map:
-            step_map[case.incasso_step_id].append(item)
+        step = step_by_id.get(case.incasso_step_id) if case.incasso_step_id else None
+        item = _case_to_pipeline_item(case, step)
+        if case.incasso_step_id and case.incasso_step_id in case_map:
+            case_map[case.incasso_step_id].append(item)
         else:
             unassigned.append(item)
 
     # Build columns
     columns = []
     for step in steps:
-        cases_in_step = step_map.get(step.id, [])
+        cases_in_step = case_map.get(step.id, [])
         columns.append(
             PipelineColumn(
                 step=step_to_response(step),

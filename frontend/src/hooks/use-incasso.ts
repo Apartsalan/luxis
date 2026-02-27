@@ -10,6 +10,7 @@ export interface PipelineStep {
   name: string;
   sort_order: number;
   min_wait_days: number;
+  max_wait_days: number;
   template_id: string | null;
   template_type: string | null;
   template_name: string | null;
@@ -17,6 +18,8 @@ export interface PipelineStep {
   created_at: string;
   updated_at: string;
 }
+
+export type DeadlineStatus = "green" | "orange" | "red" | "gray";
 
 export interface CaseInPipeline {
   id: string;
@@ -30,6 +33,7 @@ export interface CaseInPipeline {
   incasso_step_id: string | null;
   status: string;
   date_opened: string;
+  deadline_status: DeadlineStatus;
 }
 
 export interface PipelineColumn {
@@ -92,6 +96,7 @@ export function useCreatePipelineStep() {
       name: string;
       sort_order: number;
       min_wait_days: number;
+      max_wait_days?: number;
       template_id?: string | null;
       template_type?: string | null;
     }) => {
@@ -122,6 +127,7 @@ export function useUpdatePipelineStep() {
       name?: string;
       sort_order?: number;
       min_wait_days?: number;
+      max_wait_days?: number;
       template_id?: string | null;
       template_type?: string | null;
       is_active?: boolean;

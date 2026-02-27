@@ -35,6 +35,7 @@ import {
   useIncassoQueueCounts,
   type PipelineStep,
   type CaseInPipeline,
+  type DeadlineStatus,
 } from "@/hooks/use-incasso";
 import {
   useDocxTemplates,
@@ -123,9 +124,9 @@ function StappenTab() {
   const seedSteps = useSeedPipelineSteps();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, template_type: "" });
+  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, template_type: "" });
+  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
 
   const activeSteps = useMemo(
     () => (steps ?? []).filter((s) => s.is_active).sort((a, b) => a.sort_order - b.sort_order),
@@ -147,12 +148,13 @@ function StappenTab() {
         name: newStep.name.trim(),
         sort_order: maxOrder + 1,
         min_wait_days: newStep.min_wait_days,
+        max_wait_days: newStep.max_wait_days,
         template_type: newStep.template_type || null,
       },
       {
         onSuccess: () => {
           toast.success("Stap toegevoegd");
-          setNewStep({ name: "", min_wait_days: 0, template_type: "" });
+          setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
           setShowAddForm(false);
         },
         onError: (err) => toast.error(err.message),
@@ -187,6 +189,7 @@ function StappenTab() {
     setEditForm({
       name: step.name,
       min_wait_days: step.min_wait_days,
+      max_wait_days: step.max_wait_days,
       template_type: step.template_type || "",
     });
   };
@@ -197,6 +200,7 @@ function StappenTab() {
         id: step.id,
         name: editForm.name.trim(),
         min_wait_days: editForm.min_wait_days,
+        max_wait_days: editForm.max_wait_days,
         template_type: editForm.template_type || null,
       },
       {
@@ -265,7 +269,8 @@ function StappenTab() {
             <tr className="border-b border-border bg-muted/50">
               <th className="w-10 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">#</th>
               <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Naam</th>
-              <th className="w-28 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Wachtdagen</th>
+              <th className="w-24 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Min. dagen</th>
+              <th className="w-24 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase" title="Grens voor rode status (te laat)">Grens rood</th>
               <th className="w-48 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Briefsjabloon</th>
               <th className="w-32 px-3 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase">Acties</th>
             </tr>
@@ -303,7 +308,22 @@ function StappenTab() {
                     />
                   ) : (
                     <span className="text-muted-foreground">
-                      {step.min_wait_days > 0 ? `${step.min_wait_days} dagen` : "—"}
+                      {step.min_wait_days > 0 ? `${step.min_wait_days}d` : "—"}
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2.5">
+                  {editingId === step.id ? (
+                    <input
+                      type="number"
+                      min={0}
+                      value={editForm.max_wait_days}
+                      onChange={(e) => setEditForm((f) => ({ ...f, max_wait_days: parseInt(e.target.value) || 0 }))}
+                      className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                    />
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {step.max_wait_days > 0 ? `${step.max_wait_days}d` : "—"}
                     </span>
                   )}
                 </td>
@@ -412,6 +432,15 @@ function StappenTab() {
                   />
                 </td>
                 <td className="px-3 py-2.5">
+                  <input
+                    type="number"
+                    min={0}
+                    value={newStep.max_wait_days}
+                    onChange={(e) => setNewStep((f) => ({ ...f, max_wait_days: parseInt(e.target.value) || 0 }))}
+                    className="w-20 rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                  />
+                </td>
+                <td className="px-3 py-2.5">
                   <select
                     value={newStep.template_type}
                     onChange={(e) => setNewStep((f) => ({ ...f, template_type: e.target.value }))}
@@ -442,7 +471,7 @@ function StappenTab() {
                     <button
                       onClick={() => {
                         setShowAddForm(false);
-                        setNewStep({ name: "", min_wait_days: 0, template_type: "" });
+                        setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
                       }}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
                       title="Annuleren"
@@ -682,7 +711,7 @@ function WerkstroomTab() {
         <PipelineColumnView
           column={{
             step: {
-              id: "unassigned", name: "Zonder stap", sort_order: 999, min_wait_days: 0,
+              id: "unassigned", name: "Zonder stap", sort_order: 999, min_wait_days: 0, max_wait_days: 0,
               template_id: null, template_type: null, template_name: null,
               is_active: true, created_at: "", updated_at: "",
             },
@@ -857,7 +886,15 @@ function PipelineColumnView({
                       <Square className="h-4 w-4 text-muted-foreground" />
                     )}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs">{c.case_number}</td>
+                  <td className="px-3 py-2 font-mono text-xs">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full shrink-0 ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.dot ?? DEADLINE_STYLES.gray.dot}`}
+                        title={DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.label ?? ""}
+                      />
+                      {c.case_number}
+                    </span>
+                  </td>
                   <td className="px-3 py-2">{c.client_name}</td>
                   <td className="px-3 py-2 text-muted-foreground">{c.opposing_party_name || "—"}</td>
                   <td className="px-3 py-2 text-right font-mono">
@@ -868,7 +905,7 @@ function PipelineColumnView({
                       {formatCurrency(c.outstanding)}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">
+                  <td className={`px-3 py-2 text-right font-medium ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.text ?? "text-muted-foreground"}`}>
                     {c.days_in_step}d
                   </td>
                 </tr>
@@ -1037,6 +1074,13 @@ function PreFlightDialog({
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+
+const DEADLINE_STYLES: Record<DeadlineStatus, { dot: string; text: string; label: string }> = {
+  green:  { dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", label: "Wachtperiode" },
+  orange: { dot: "bg-amber-500",   text: "text-amber-600 dark:text-amber-400",     label: "Klaar voor actie" },
+  red:    { dot: "bg-red-500",     text: "text-red-600 dark:text-red-400",         label: "Te laat" },
+  gray:   { dot: "bg-gray-400",    text: "text-muted-foreground",                  label: "Geen stap" },
+};
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("nl-NL", {

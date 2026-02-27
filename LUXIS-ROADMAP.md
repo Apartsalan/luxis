@@ -232,8 +232,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 1. ✅ **Template editor UI** — Sjablonen tab in Instellingen: upload, download, bewerken, verwijderen van DOCX templates. Database-driven met disk-fallback. Incasso pipeline gebruikt dynamische template dropdown. Gebouwd sessie 24.
 2. **Batch brief + email verzenden** — "Verstuur brief" genereert documenten EN emailt ze naar de wederpartij via Outlook provider. Nu alleen documentgeneratie.
-3. **Auto-complete taken** — Na verzenden brief: bijbehorende taak automatisch afvinken.
-4. **Auto-advance pipeline** — Na taak afgerond: pipeline schuift automatisch naar volgende stap, volgende taak + deadline wordt actief.
+3. ✅ **Auto-complete taken** — Na document genereren: bijbehorende taken (generate_document/send_letter) automatisch afgevinkt. Gebouwd sessie 25.
+4. ✅ **Auto-advance pipeline** — Na alle taken voltooid: pipeline schuift automatisch naar volgende stap, nieuwe taak + deadline aangemaakt. Bij batch advance_step worden ook taken aangemaakt. Gebouwd sessie 25.
 5. ✅ **Deadline kleuren per stap** — Groen/oranje/rood kleurcodering per dossier in pipeline. Gebouwd sessie 23.
 6. ✅ **Instelbare dagen per stap** — `max_wait_days` per pipeline-stap. "Min. dagen" + "Grens rood" kolommen. Gebouwd sessie 23.
 

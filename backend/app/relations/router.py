@@ -33,7 +33,7 @@ router = APIRouter(prefix="/api/relations", tags=["relations"])
 @router.get("", response_model=PaginatedResponse)
 async def list_contacts(
     page: int = Query(default=1, ge=1),
-    per_page: int = Query(default=20, ge=1, le=100),
+    per_page: int = Query(default=20, ge=1, le=200),
     contact_type: str | None = Query(default=None, pattern="^(company|person)$"),
     search: str | None = Query(default=None),
     is_active: bool = Query(default=True),

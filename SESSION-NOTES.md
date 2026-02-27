@@ -1,8 +1,44 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 27 feb 2026 (sessie 23 — Incasso Workflow P1: stap 1+2)
-**Laatste feature/fix:** Instelbare dagen per stap (`max_wait_days`) + deadline kleuren (groen/oranje/rood) in incasso pipeline.
-**Volgende sessie (24):** Incasso Workflow P1 vervolg — dossiers toewijzen aan stappen (UI bug fix) + template editor UI (stap 3).
+**Laatst bijgewerkt:** 27 feb 2026 (sessie 25 — Incasso Workflow P1: auto-complete + auto-advance)
+**Laatste feature/fix:** Auto-complete taken na document generatie + auto-advance pipeline naar volgende stap.
+**Volgende sessie (26):** QA van incasso pipeline flow (taken aanmaken, auto-complete, auto-advance). VPS disk space opgelost (55GB vrij na prune).
+
+## Wat er gedaan is (sessie 25 — 27 feb) — Auto-complete taken + Auto-advance pipeline
+
+### P1 item 3: Auto-complete taken ✅
+- Na batch "Document genereren": open taken van type `generate_document`/`send_letter` worden automatisch als voltooid gemarkeerd
+- Zoekt op `task_type IN (generate_document, send_letter)` + `status IN (pending, due, overdue)`
+
+### P1 item 4: Auto-advance pipeline ✅
+- Na auto-complete: als ALLE open taken voor een dossier klaar zijn, schuift pipeline automatisch door naar volgende stap
+- Volgende stap bepaald via `sort_order` (bestaande `list_pipeline_steps`)
+- Nieuwe taak wordt aangemaakt voor de nieuwe stap (generate_document of manual_review)
+- CaseActivity audit trail logging bij elke auto-advance
+
+### Taken aanmaken bij stap-toewijzing ✅
+- Bij batch "Stap wijzigen": automatisch taak aangemaakt voor de target stap
+- Stap met `template_type` → task type `generate_document`
+- Stap zonder `template_type` → task type `manual_review`
+- Due date = vandaag + `min_wait_days`
+
+### VPS disk space issue
+- 144GB/150GB vol → PostgreSQL kon niet starten (postmaster.pid write failure)
+- `docker system prune -a --volumes -f` → 55GB vrijgemaakt (90GB/150GB)
+- Rebuild succesvol gestart, niet geverifieerd (sessie beëindigd)
+
+### Gewijzigde bestanden
+- `backend/app/incasso/service.py` — 3 nieuwe helpers (`_create_tasks_for_step`, `_auto_complete_tasks`, `_try_auto_advance`) + wiring in `batch_execute()`
+- `backend/app/incasso/schemas.py` — `tasks_auto_completed` + `cases_auto_advanced` op `BatchActionResult`
+- `frontend/src/hooks/use-incasso.ts` — TypeScript interface update
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — toast message met nieuwe counters
+- `LUXIS-ROADMAP.md` — P1 items 3+4 als ✅
+
+### Openstaande issues
+- Gebruiker meldt "het werkt nog niet helemaal goed" → QA nodig in sessie 26
+- VPS deploy niet geverifieerd (rebuild was gaande bij sessie-einde)
+
+---
 
 ## Wat er gedaan is (sessie 23 — 27 feb) — Incasso Workflow Automatisering P1
 

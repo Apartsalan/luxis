@@ -315,10 +315,8 @@ async def batch_preview(
                 ))
                 continue
 
-            if not case.incasso_step_id:
-                needs_step.append(_case_to_pipeline_item(case))
-                continue
-
+            # All non-blocked cases are ready for advance_step
+            # (unassigned cases will be moved directly to the target step)
             ready += 1
 
     elif action == "generate_document":
@@ -397,21 +395,11 @@ async def batch_execute(
 
         target_step = await get_pipeline_step_by_id(db, tenant_id, target_step_id)
 
-        # If auto_assign, get the first step for unassigned cases
-        first_step = None
-        if auto_assign_step:
-            steps = await list_pipeline_steps(db, tenant_id, active_only=True)
-            if steps:
-                first_step = steps[0]
-
         for case in cases:
             if case.status in ("betaald", "afgesloten"):
                 skipped += 1
                 errors.append(f"{case.case_number}: status '{case.status}' — overgeslagen")
                 continue
-
-            if not case.incasso_step_id and auto_assign_step and first_step:
-                case.incasso_step_id = first_step.id
 
             case.incasso_step_id = target_step.id
             case.step_entered_at = now

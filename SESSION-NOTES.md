@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 27 feb 2026 (sessie 22 — volledige QA secties 1-10)
-**Laatste feature/fix:** QA sessie 22 — 75/75 tests PASS, 0 nieuwe bugs, 5 bugfixes geverifieerd
-**Volgende sessie (23):** Fix BUG-25/26/27 (uit sessie 21A/21B), dan verder bouwen (Incasso Workflow Automatisering P1).
+**Laatst bijgewerkt:** 27 feb 2026 (sessie 22 — QA + BUG-25/26/27 gefixt)
+**Laatste feature/fix:** BUG-25/26/27 gefixt — alle QA bugs opgelost, 0 openstaande bugs
+**Volgende sessie (23):** Verder bouwen — Incasso Workflow Automatisering (P1).
 
 ## Wat er gedaan is (sessie 22 — 27 feb)
 
@@ -11,30 +11,50 @@
 - Geteste secties: Login, Dashboard, Relaties, Dossiers (lijst + nieuw + detail), Mijn Taken, Correspondentie, Incasso (werkstroom + stappen), Uren, Facturen, Documenten
 - Resultaten: `docs/qa/QA-SESSIE-22-RESULTATEN.md`
 
-### Geverifieerde bugfixes
+### Geverifieerde bugfixes (uit QA)
 - BUG-17 (velden leegmaken) ✅ — null waarden correct opgeslagen
 - BUG-18 (taak navigatie) ✅ — taken zijn klikbare links
 - BUG-22 (invoice 500 error) ✅ — factuur detail laadt correct
 - BUG-23 (/notifications 404) ✅ — geen console errors
 - BUG-24 (/api/users 404) ✅ — geen console errors
 
-### Openstaande bugs (uit sessie 21A/21B)
+### BUG-25: Timer FAB z-index overlap ✅
+- **Probleem:** Timer FAB (`z-40`) overlapt met sticky header (ook `z-40`)
+- **Fix:** Timer FAB z-index verhoogd naar `z-50` (3 plekken: collapsed running, collapsed idle, expanded)
+- **Bestand:** `frontend/src/components/floating-timer.tsx`
 
-| # | Bug | Ernst | Status |
-|---|-----|-------|--------|
-| BUG-25 | Timer FAB z-index overlap | Low | ❌ TODO |
-| BUG-26 | Relaties laden niet in agenda event formulier (`/api/relations` 404) | Medium | ❌ TODO |
-| BUG-27 | 404 pagina in het Engels zonder navigatie | Low | ❌ TODO |
+### BUG-26: Relaties laden niet in agenda event formulier ✅
+- **Probleem:** Relatie-dropdown in agenda event formulier toonde alleen "Geen relatie". Console: `GET /api/relations?page=1&per_page=200` foutmelding.
+- **Root cause:** Frontend vroeg `per_page=200` maar backend `list_contacts` had `le=100` validatielimiet → 422 Validation Error (niet 404 zoals eerder gerapporteerd)
+- **Fix:** Backend `per_page` limit verhoogd van 100 naar 200 (consistent met cases endpoint)
+- **Bestand:** `backend/app/relations/router.py`
+
+### BUG-27: 404 pagina in het Engels zonder navigatie ✅
+- **Probleem:** Standaard Next.js 404 toonde "This page could not be found." (Engels, geen navigatie)
+- **Fix:** Custom `not-found.tsx` met Nederlandse tekst "Pagina niet gevonden" + "Terug naar dashboard" link
+- **Bestand:** `frontend/src/app/not-found.tsx` (nieuw)
 
 ### Bestanden gewijzigd sessie 22
 
-**Nieuw (docs):**
+**Nieuw:**
 - `docs/qa/QA-SESSIE-22-RESULTATEN.md` — volledige QA resultaten
+- `frontend/src/app/not-found.tsx` — Nederlandse 404 pagina
+
+**Gewijzigd:**
+- `frontend/src/components/floating-timer.tsx` — z-index 40→50
+- `backend/app/relations/router.py` — per_page limit 100→200
+
+### Commits sessie 22
+
+| Hash | Beschrijving |
+|------|-------------|
+| `07b487b` | docs: QA session 22 results — 75/75 tests PASS, 0 new bugs |
+| `3cd9ddc` | fix: BUG-25/26/27 — timer z-index, relations 422, Dutch 404 page |
 
 ### Status na sessie 22
-- Secties 1-10: volledig getest, alles PASS
-- Secties 11-14: getest in sessie 21A/21B (BUG-25/26/27 gevonden)
-- Applicatie is stabiel, alle eerdere bugfixes werken op productie
+- **Alle QA bugs opgelost** — BUG-1 t/m BUG-27 allemaal ✅
+- Applicatie is stabiel, klaar voor feature development
+- **Nog te deployen:** BUG-25/26/27 fixes (frontend + backend rebuild)
 
 ---
 

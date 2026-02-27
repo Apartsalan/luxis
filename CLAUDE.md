@@ -112,7 +112,28 @@ Na het bouwen, voordat je deploy-commando geeft:
 - In Plan Mode: verken eerst de codebase, ontwerp de aanpak, presenteer het plan aan de gebruiker
 - Pas NA goedkeuring van het plan beginnen met bouwen
 - Dit voorkomt verspilde tijd en zorgt voor alignment voordat er code geschreven wordt
+- Als iets misgaat tijdens implementatie: **STOP en herplan** — niet doorduwen
 - **Uitzondering:** triviale fixes (typos, 1-regelige bugfixes, kleine tekstaanpassingen) mogen direct
+
+## Kwaliteitsstandaard
+
+**Verificatie voor "done":**
+- Markeer een taak NOOIT als klaar zonder bewijs (build, test, logs, handmatige check)
+- Vraag jezelf: "Zou een senior engineer dit goedkeuren?"
+
+**Bugs autonoom fixen:**
+- Bij een bugreport: gewoon fixen. Geen hand-holding vragen aan de gebruiker.
+- Zoek logs, errors, failing tests — los ze op.
+
+**Elegantie (gebalanceerd):**
+- Bij non-triviale changes: "is er een elegantere manier?" Maar niet over-engineeren bij simpele fixes.
+- Als een fix hacky voelt: "met alles wat ik nu weet, wat is de elegante oplossing?" — en die bouwen.
+
+**Self-improvement:**
+- Na elke correctie van de gebruiker: noteer de les in CLAUDE.md of memory zodat dezelfde fout niet herhaald wordt.
+
+**Simplicity first, no laziness:**
+- Minimale impact, geen overbodige wijzigingen. Maar altijd root causes fixen — geen tijdelijke workarounds.
 
 ## Gedragsregels (uit /insights analyse)
 
@@ -145,12 +166,14 @@ Na het bouwen, voordat je deploy-commando geeft:
 **Sessie-prompt genereren (HARDE REGEL):**
 - **VERPLICHT: Als de gebruiker vraagt om een prompt voor de volgende sessie, geef ALTIJD een COMPLETE prompt die ALLES bevat wat de volgende Claude nodig heeft.** De gebruiker mag NOOIT hoeven corrigeren of aanvullen. Een complete prompt bevat:
   1. **Repo pad:** `C:\Users\arsal\Documents\luxis`
-  2. **Bestanden lezen bij start:** `CLAUDE.md`, `SESSION-NOTES.md`, `LUXIS-ROADMAP.md`
+  2. **Bestanden lezen bij start:** ALLEEN de bestanden relevant voor de taak (CLAUDE.md wordt automatisch geladen). Nooit alles tegelijk — zie docs structuur in Context Management.
   3. **Exacte taak:** wat er gebouwd/gefixt moet worden
   4. **Welke bestanden betrokken zijn** (met paden)
-  5. **Verificatie:** hoe te checken (`npm run build`, `pytest`, etc.)
-  6. **Commit-instructies:** commit + push als het werkt
+  5. **Bekende bugs/context:** relevante BUG-nummers en status zodat de volgende sessie niet opnieuw hoeft te zoeken
+  6. **Verificatie:** hoe te checken (`npm run build`, `pytest`, etc.)
+  7. **Commit-instructies:** commit + push als het werkt
 - De gebruiker is geen developer. Hij kopieert de prompt en plakt het in een nieuwe sessie. Het moet foutloos werken zonder extra context.
+- **LEAN prompts:** De prompt + gevraagde bestanden samen mogen NIET boven 50KB uitkomen. Verwijs naar subdocs in `docs/` in plaats van alles in de prompt te zetten.
 
 **Deployment:**
 - Claude heeft GEEN SSH-toegang tot de VPS. Geef altijd het deploy-commando aan de gebruiker om zelf te draaien. Probeer NOOIT `ssh root@...` te runnen vanuit deze terminal.
@@ -165,14 +188,25 @@ Na het bouwen, voordat je deploy-commando geeft:
 
 ## Context Management
 
-**Doel: sessies zo lang mogelijk effectief houden.**
+**Doel: sessies zo lang mogelijk effectief houden. NOOIT alle docs tegelijk laden.**
 
-- **Gebruik subagents voor onderzoek.** Lees niet zelf 20 bestanden — delegeer naar een Task agent die een samenvatting teruggeeft.
+- **CLAUDE.md wordt automatisch geladen** — dat is genoeg om te starten.
 - **Lees alleen bestanden die je NODIG hebt** voor de huidige taak. Niet de hele codebase scannen.
-- **Commit + update SESSION-NOTES.md na elke afgeronde feature.** Zo kun je altijd stoppen zonder verlies.
-- **Bij sessie-start:** lees `SESSION-NOTES.md` + `CLAUDE.md` + `LUXIS-ROADMAP.md`. Niet meer.
-- **Bij sessie-einde:** draai `/sessie-einde` — dit doet lint/test/commit/push + update SESSION-NOTES.md.
-- **Slash commands:** `/sessie-start` en `/sessie-einde` zijn beschikbaar. Gebruik ze.
+- **Gebruik subagents voor onderzoek.** Lees niet zelf 20 bestanden — delegeer naar een Task agent.
+- **Commit + update SESSION-NOTES.md na elke afgeronde feature.**
+
+### Docs structuur (lees on-demand, niet bij start)
+
+```
+SESSION-NOTES.md          ← recente sessies (17-20), altijd lezen bij start
+LUXIS-ROADMAP.md          ← status + bugs + wat gebouwd moet worden
+docs/qa/                  ← QA checklists en resultaten
+docs/sessions/            ← sessie-archief (1-16), alleen bij behoefte
+docs/prompts/             ← sessie-prompts
+docs/research/            ← UX research, analyses, reviews
+docs/future-modules.md    ← M365, AI Agent, Data Migratie
+docs/completed-work.md    ← afgeronde features lijst
+```
 
 ## Known Quirks
 
@@ -187,3 +221,6 @@ Na het bouwen, voordat je deploy-commando geeft:
 - @docs/dutch-legal-rules.md — wettelijke rentetarieven, WIK-staffel, art. 6:44 BW
 - @backend/CLAUDE.md — backend-specifieke conventies
 - @frontend/CLAUDE.md — frontend-specifieke conventies
+- @docs/qa/ — QA checklists en testresultaten
+- @docs/research/ — UX research en analyses
+- @docs/future-modules.md — M365, AI Agent, Data Migratie plannen

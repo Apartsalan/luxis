@@ -61,9 +61,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        BACKEND_URL: http://backend:8000
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      BACKEND_URL: http://backend:8000
     ports: []  # Don't expose frontend directly in production
     expose:
       - "3000"

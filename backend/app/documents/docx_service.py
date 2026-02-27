@@ -467,34 +467,47 @@ async def render_docx(
 ) -> tuple[bytes, str, str, bytes]:
     """Render a .docx template with case data.
 
-    Args:
-        db: Database session
-        tenant_id: Current tenant
-        case: The case to generate the document for
-        template_type: One of the keys in TEMPLATE_FILES
+    Checks ManagedTemplate table first (custom > builtin),
+    falls back to disk files if not found.
 
     Returns:
         Tuple of (docx_bytes, filename, template_type, template_snapshot)
-
-    Raises:
-        NotFoundError: Template type unknown or file missing
-        BadRequestError: Rendering error
     """
-    if template_type not in TEMPLATE_FILES:
-        raise NotFoundError(
-            f"Onbekend sjabloontype: {template_type}. "
-            f"Beschikbaar: {', '.join(TEMPLATE_FILES.keys())}"
-        )
+    from app.documents.template_service import get_template_by_key
 
-    template_path = TEMPLATES_DIR / TEMPLATE_FILES[template_type]
-    if not template_path.exists():
-        raise NotFoundError(
-            f"Sjabloonbestand niet gevonden: {template_path}"
-        )
+    # Try managed template first
+    managed = await get_template_by_key(db, tenant_id, template_type)
+
+    if managed:
+        template_snapshot = managed.file_data
+        try:
+            tpl = DocxTemplate(io.BytesIO(template_snapshot))
+        except Exception as e:
+            raise BadRequestError(
+                f"Fout bij laden sjabloon: {e}"
+            )
+    else:
+        # Fallback to disk files
+        if template_type not in TEMPLATE_FILES:
+            raise NotFoundError(
+                f"Onbekend sjabloontype: {template_type}. "
+                f"Beschikbaar: "
+                f"{', '.join(TEMPLATE_FILES.keys())}"
+            )
+        template_path = TEMPLATES_DIR / TEMPLATE_FILES[template_type]
+        if not template_path.exists():
+            raise NotFoundError(
+                f"Sjabloonbestand niet gevonden: "
+                f"{template_path}"
+            )
+        template_snapshot = template_path.read_bytes()
+        tpl = DocxTemplate(str(template_path))
 
     # Build context based on template type
     if template_type == "renteoverzicht":
-        context = await _build_renteoverzicht_context(db, tenant_id, case)
+        context = await _build_renteoverzicht_context(
+            db, tenant_id, case
+        )
     else:
         context = await _build_base_context(db, tenant_id, case)
 
@@ -503,12 +516,8 @@ async def render_docx(
         k: v for k, v in context.items() if not k.startswith("_")
     }
 
-    # Read template snapshot before rendering
-    template_snapshot = template_path.read_bytes()
-
     # Render
     try:
-        tpl = DocxTemplate(str(template_path))
         tpl.render(render_context)
     except Exception as e:
         raise BadRequestError(f"Fout bij renderen sjabloon: {e}")
@@ -519,6 +528,9 @@ async def render_docx(
     docx_bytes = buffer.getvalue()
 
     # Generate filename
-    filename = f"{template_type}_{case.case_number}_{date.today().isoformat()}.docx"
+    today_str = date.today().isoformat()
+    filename = (
+        f"{template_type}_{case.case_number}_{today_str}.docx"
+    )
 
     return docx_bytes, filename, template_type, template_snapshot

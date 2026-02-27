@@ -1,11 +1,59 @@
-"""Documents module models — DocumentTemplate and GeneratedDocument."""
+"""Documents module models — templates and generated documents."""
 
 import uuid
 
-from sqlalchemy import ForeignKey, LargeBinary, String, Text, Uuid
+from sqlalchemy import (
+    Boolean,
+    ForeignKey,
+    Index,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
+
+
+class ManagedTemplate(TenantBase):
+    """A managed DOCX document template stored in the database.
+
+    Replaces the hardcoded disk-file template system. Each tenant gets
+    builtin templates seeded from disk, and can upload custom ones.
+    Custom templates with the same template_key override builtins.
+    """
+
+    __tablename__ = "managed_templates"
+    __table_args__ = (
+        Index(
+            "ix_managed_templates_tenant_key",
+            "tenant_id",
+            "template_key",
+        ),
+    )
+
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
+    template_key: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # e.g. "sommatie", "aanmaning", "14_dagenbrief"
+    file_data: Mapped[bytes] = mapped_column(
+        LargeBinary, nullable=False
+    )
+    original_filename: Mapped[str] = mapped_column(
+        String(500), nullable=False
+    )
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_builtin: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
 
 
 class DocumentTemplate(TenantBase):

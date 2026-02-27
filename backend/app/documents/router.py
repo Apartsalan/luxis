@@ -36,6 +36,7 @@ from app.documents.schemas import (
     SendDocumentRequest,
     SendDocumentResponse,
 )
+from app.documents.template_router import router as template_router
 from app.email.models import EmailLog
 from app.email.service import send_email
 from app.email.templates import _render_base, document_sent
@@ -44,6 +45,7 @@ from app.shared.exceptions import BadRequestError, NotFoundError
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
+router.include_router(template_router)
 
 # ── HTML Template Endpoints (DEPRECATED — use /docx/ endpoints instead) ─────
 

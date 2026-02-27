@@ -41,18 +41,10 @@ import {
   useDocxTemplates,
   getTemplateLabel,
 } from "@/hooks/use-documents";
-
-// ── Template type labels for dropdown ───────────────────────────────────
-
-const TEMPLATE_TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: "herinnering", label: "Herinnering" },
-  { value: "aanmaning", label: "Aanmaning" },
-  { value: "14_dagenbrief", label: "14-dagenbrief" },
-  { value: "sommatie", label: "Sommatie" },
-  { value: "tweede_sommatie", label: "Tweede sommatie" },
-  { value: "dagvaarding", label: "Dagvaarding" },
-  { value: "renteoverzicht", label: "Renteoverzicht" },
-];
+import {
+  useManagedTemplates,
+  getTemplateKeyLabel,
+} from "@/hooks/use-managed-templates";
 
 // ── Tabs ─────────────────────────────────────────────────────────────────
 
@@ -122,6 +114,7 @@ function StappenTab() {
   const updateStep = useUpdatePipelineStep();
   const deleteStep = useDeletePipelineStep();
   const seedSteps = useSeedPipelineSteps();
+  const { data: managedTemplates } = useManagedTemplates();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
@@ -132,6 +125,18 @@ function StappenTab() {
     () => (steps ?? []).filter((s) => s.is_active).sort((a, b) => a.sort_order - b.sort_order),
     [steps]
   );
+
+  // Dynamic template options from managed templates (deduplicated by template_key)
+  const templateTypeOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return (managedTemplates ?? [])
+      .filter((t) => {
+        if (seen.has(t.template_key)) return false;
+        seen.add(t.template_key);
+        return true;
+      })
+      .map((t) => ({ value: t.template_key, label: getTemplateKeyLabel(t.template_key) }));
+  }, [managedTemplates]);
 
   const handleSeed = () => {
     seedSteps.mutate(undefined, {
@@ -335,7 +340,7 @@ function StappenTab() {
                       className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
                     >
                       <option value="">Geen</option>
-                      {TEMPLATE_TYPE_OPTIONS.map((opt) => (
+                      {templateTypeOptions.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>
@@ -447,7 +452,7 @@ function StappenTab() {
                     className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
                   >
                     <option value="">Geen</option>
-                    {TEMPLATE_TYPE_OPTIONS.map((opt) => (
+                    {templateTypeOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
                         {opt.label}
                       </option>
@@ -1033,12 +1038,12 @@ function PreFlightDialog({
               </div>
             )}
 
-            {/* Needs step assignment */}
-            {preview.needs_step_assignment.length > 0 && (
+            {/* Needs step assignment (only show for non-advance_step actions) */}
+            {action !== "advance_step" && preview.needs_step_assignment.length > 0 && (
               <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-3">
                 <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                   <Users className="h-4 w-4" />
-                  {preview.needs_step_assignment.length} dossier(s) worden automatisch aan de eerste stap toegewezen.
+                  {preview.needs_step_assignment.length} dossier(s) zonder stap — wijs eerst een stap toe.
                 </p>
               </div>
             )}

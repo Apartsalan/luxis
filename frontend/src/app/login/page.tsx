@@ -13,7 +13,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  // Use relative URL so requests go through Next.js rewrite proxy
+  const apiUrl = "";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

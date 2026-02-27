@@ -3,7 +3,8 @@
  * Automatically attaches the access token and handles token refresh.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Use relative URL so requests go through Next.js rewrite proxy to the backend
+const API_URL = "";
 
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = localStorage.getItem("luxis_refresh_token");

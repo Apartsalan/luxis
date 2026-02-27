@@ -512,7 +512,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
     setPreviewOpen(true);
     try {
       const token = localStorage.getItem("luxis_access_token");
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = "";
       const res = await fetch(`${apiUrl}/api/documents/${docId}/preview`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -535,7 +535,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
     setPreviewOpen(true);
     try {
       const token = localStorage.getItem("luxis_access_token");
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = "";
       const res = await fetch(
         `${apiUrl}/api/cases/${caseId}/files/${fileId}/preview`,
         { headers: { Authorization: `Bearer ${token}` } }

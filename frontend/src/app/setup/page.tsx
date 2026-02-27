@@ -17,7 +17,8 @@ export default function SetupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  // Use relative URL so requests go through Next.js rewrite proxy
+  const apiUrl = "";
 
   // Check if setup is needed (no users exist yet)
   useEffect(() => {

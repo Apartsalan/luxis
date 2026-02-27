@@ -16,7 +16,8 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"form" | "done" | "invalid">(token ? "form" : "invalid");
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  // Use relative URL so requests go through Next.js rewrite proxy
+  const apiUrl = "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,11 +36,17 @@ function ResetPasswordContent() {
     setLoading(true);
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, new_password: password }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
@@ -52,8 +59,12 @@ function ResetPasswordContent() {
       }
 
       setStep("done");
-    } catch {
-      setError("Kan geen verbinding maken met de server.");
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        setError("De server reageert niet. Probeer het later opnieuw.");
+      } else {
+        setError("Kan geen verbinding maken met de server.");
+      }
     } finally {
       setLoading(false);
     }

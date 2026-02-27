@@ -40,7 +40,7 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
     setDownloadingId(attachmentId);
     try {
       const token = localStorage.getItem("luxis_access_token");
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = "";
       const res = await fetch(
         `${apiUrl}/api/email/attachments/${attachmentId}/download`,
         { headers: { Authorization: `Bearer ${token}` } }

@@ -52,7 +52,7 @@ export function useUploadCaseFile(caseId: string) {
       if (documentDirection) formData.append("document_direction", documentDirection);
 
       const token = localStorage.getItem("luxis_access_token");
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = "";
       const res = await fetch(
         `${apiUrl}/api/cases/${caseId}/files`,
         {
@@ -133,7 +133,7 @@ export function getFileIcon(contentType: string): { color: string; label: string
 
 export function downloadCaseFile(caseId: string, fileId: string, filename: string) {
   const token = localStorage.getItem("luxis_access_token");
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const apiUrl = "";
   fetch(`${apiUrl}/api/cases/${caseId}/files/${fileId}/download`, {
     headers: { Authorization: `Bearer ${token}` },
   })

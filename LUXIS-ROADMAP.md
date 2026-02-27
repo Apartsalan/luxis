@@ -233,8 +233,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 2. **Batch brief + email verzenden** — "Verstuur brief" genereert documenten EN emailt ze naar de wederpartij via Outlook provider. Nu alleen documentgeneratie.
 3. **Auto-complete taken** — Na verzenden brief: bijbehorende taak automatisch afvinken.
 4. **Auto-advance pipeline** — Na taak afgerond: pipeline schuift automatisch naar volgende stap, volgende taak + deadline wordt actief.
-5. **Deadline kleuren per stap** — Groen = op tijd, Rood = te laat (deadline overschreden). Per stap zichtbaar in het pipeline-overzicht.
-6. **Instelbare dagen per stap** — Wachtdagen per pipeline-stap configureerbaar in de workflow editor (bestaat deels al via min_wait_days).
+5. ✅ **Deadline kleuren per stap** — Groen/oranje/rood kleurcodering per dossier in pipeline. Gebouwd sessie 23.
+6. ✅ **Instelbare dagen per stap** — `max_wait_days` per pipeline-stap. "Min. dagen" + "Grens rood" kolommen. Gebouwd sessie 23.
 
 **Flow:** Batch selectie → genereer brieven → email via Outlook → taken afgevinkt → pipeline doorgeschoven → deadline kleuren updaten
 
@@ -301,26 +301,28 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 **Belangrijk:**
 - `.env` moet bestaan in `/opt/luxis/`. Docker Compose leest dit automatisch. Als het ontbreekt: `cp .env.production .env`.
-- `POSTGRES_PASSWORD` in `.env` werkt ALLEEN bij eerste DB-initialisatie (volume aanmaken). Wachtwoord later wijzigen? → `docker compose exec db psql -U luxis -d luxis -c "ALTER USER luxis PASSWORD 'nieuw_wachtwoord';"` + `docker compose up -d --force-recreate backend`
+- `.env` bevat `COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml` — hierdoor werkt gewoon `docker compose up -d` zonder `-f` flags.
+- `POSTGRES_PASSWORD` in `.env` werkt ALLEEN bij eerste DB-initialisatie (volume aanmaken). Wachtwoord later wijzigen? → `docker compose exec db psql -U luxis -d luxis -c "ALTER USER luxis PASSWORD 'nieuw_wachtwoord';"` + `docker compose restart backend`
 - Frontend moet ALTIJD relatieve URLs gebruiken (`""`) — NOOIT `localhost:8000`. Pre-commit hook blokkeert dit.
+- Na Alembic migraties: `docker compose run --rm backend python -m alembic upgrade head` (gebruik `run` niet `exec` als backend crashed)
 
 Frontend + backend:
 ```bash
 cd /opt/luxis && git pull && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend backend && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend backend
+docker compose build --no-cache frontend backend && \
+docker compose up -d frontend backend
 ```
 
 Alleen backend:
 ```bash
 cd /opt/luxis && git pull && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache backend && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
+docker compose build --no-cache backend && \
+docker compose up -d backend
 ```
 
 Alleen frontend:
 ```bash
 cd /opt/luxis && git pull && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend
+docker compose build --no-cache frontend && \
+docker compose up -d frontend
 ```

@@ -1,75 +1,107 @@
-# Sessie 24 — Incasso Workflow P1 vervolg: Dossier-toewijzing fix + Template Editor UI
+# Sessie 24 — Incasso Workflow P1 vervolg
 
-## Context
+> **LEES ALLEEN DIT BESTAND.** Alle benodigde context staat hieronder. Lees NIET `LUXIS-ROADMAP.md` of `SESSION-NOTES.md` — te groot, verspilt context.
 
-Luxis is het praktijkmanagementsysteem van Kesting Legal. Sessie 23 heeft **stap 1+2** van de P1 incasso workflow gebouwd:
-- ✅ Instelbare dagen per stap (`max_wait_days` kolom + "Min. dagen" / "Grens rood" UI)
-- ✅ Deadline kleuren (groen/oranje/rood bolletjes in pipeline view)
+## Project in het kort
 
-**Probleem ontdekt:** Dossiers kunnen niet handmatig aan pipeline stappen worden toegewezen. De "Stap wijzigen" batch-actie werkt alleen als dossiers AL in een stap zitten. Ongeassigneerde dossiers (in de "Nog niet toegewezen" sectie) kunnen niet naar een stap verplaatst worden.
+- **Luxis** = praktijkmanagementsysteem voor Kesting Legal (1 advocaat, incasso/insolventie, Amsterdam)
+- **Stack:** FastAPI (Python 3.12) + Next.js 15 + PostgreSQL 16 + Docker Compose
+- **Productie:** https://luxis.kestinglegal.nl — VPS op `/opt/luxis`
+- **Taal:** Nederlandse UI, Engelse code. Geen i18n framework.
+- **Auth:** JWT (python-jose + bcrypt). Login: arsal@kestinglegal.nl
+- **Financial precision:** Altijd `Decimal` + `NUMERIC(15,2)`, nooit float
+- **Multi-tenant:** `TenantBase` + `tenant_id` op alles
+
+## Architectuur snel-referentie
+
+- **Backend:** `backend/app/` — routers in `*/router.py`, services in `*/service.py`, models in `*/models.py`, schemas in `*/schemas.py`
+- **Frontend:** `frontend/src/app/(dashboard)/` — Next.js App Router, hooks in `frontend/src/hooks/`
+- **Migraties:** `backend/alembic/versions/` — nummering: `033_...`, `034_...` etc.
+- **Config:** `backend/app/config.py` — pydantic BaseSettings, leest env vars
+- **Templates:** `templates/` dir (docx bestanden voor documentgeneratie)
+- **Documenten service:** `backend/app/documents/docx_service.py` — docxtpl rendering
+
+## Wat er vorige sessie (23) gebouwd is
+
+✅ **Stap 5+6 van P1 incasso workflow:**
+- `max_wait_days` kolom op `IncassoPipelineStep` (migratie 033)
+- `_compute_deadline_status()` in `backend/app/incasso/service.py` — groen/oranje/rood/grijs
+- Frontend: "Min. dagen" + "Grens rood" kolommen in Stappen-tab, gekleurde bolletjes in Werkstroom-tab
 
 ## Wat deze sessie moet doen
 
 ### Prioriteit 1: Fix dossier-toewijzing aan pipeline stappen
 
-**Probleem:** Als er geen dossiers in stappen staan, kan de gebruiker ze niet toewijzen. De batch "advance_step" actie toont "0 gereed" voor ongeassigneerde dossiers.
+**Probleem:** Dossiers in de "Nog niet toegewezen" sectie van de pipeline kunnen niet naar een stap verplaatst worden. De "Stap wijzigen" batch-actie toont "0 gereed" voor ongeassigneerde dossiers.
 
 **Gewenste flow:**
-1. In de "Nog niet toegewezen" sectie moet je dossiers kunnen selecteren
-2. Bij "Stap wijzigen" moet je ze naar de eerste stap (of elke stap) kunnen toewijzen
-3. De `auto_assign_step` flag in `BatchActionRequest` bestaat al in het schema maar wordt mogelijk niet goed gebruikt
+1. In de "Nog niet toegewezen" sectie: dossiers selecteren met checkboxes
+2. "Stap wijzigen" → dropdown toont alle stappen → dossiers worden naar gekozen stap verplaatst
+3. De `auto_assign_step` flag in `BatchActionRequest` bestaat al maar wordt mogelijk niet goed gebruikt
 
-**Bestanden om te onderzoeken:**
+**Bestanden:**
 - `backend/app/incasso/service.py` — `batch_execute()` en `batch_preview()` functies
-- `frontend/src/app/(dashboard)/incasso/page.tsx` — PreFlightDialog en WerkstroomTab
+- `backend/app/incasso/schemas.py` — `BatchActionRequest`, `BatchPreviewResponse`
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — `PreFlightDialog` en `WerkstroomTab`
 - `frontend/src/hooks/use-incasso.ts` — `useBatchPreview` en `useBatchExecute`
 
-### Prioriteit 2: Template Editor UI (stap 3 uit P1 plan)
+### Prioriteit 2: Template Editor UI (stap 1 van P1)
 
-**Wat:** Lisanne kan DOCX-briefsjablonen uploaden, beheren en koppelen aan pipeline-stappen. Geen WYSIWYG-editor — Lisanne bewerkt in Word en uploadt naar Luxis.
+**Wat:** Lisanne kan DOCX-briefsjablonen uploaden en beheren. Geen WYSIWYG — ze bewerkt in Word en uploadt naar Luxis.
 
-**Backend:**
-- Nieuw `ManagedTemplate` model in `backend/app/documents/models.py`:
+**Backend (nieuw):**
+- Model: `ManagedTemplate` in `backend/app/documents/models.py`
   - `id`, `tenant_id`, `name`, `description`, `template_key`, `file_data` (LargeBinary), `filename`, `is_builtin`, `is_active`, timestamps
-- Nieuwe endpoints in `backend/app/documents/router.py`:
+- Endpoints in `backend/app/documents/router.py`:
   - `POST /api/documents/templates/upload` — Upload .docx
-  - `GET /api/documents/templates` — Lijst alle templates
-  - `PUT /api/documents/templates/{id}` — Metadata bijwerken
-  - `DELETE /api/documents/templates/{id}` — Verwijderen
+  - `GET /api/documents/templates` — Lijst
+  - `PUT /api/documents/templates/{id}` — Update metadata
+  - `DELETE /api/documents/templates/{id}` — Verwijder
   - `GET /api/documents/templates/{id}/preview/{case_id}` — Preview met echte data
-- `backend/app/documents/docx_service.py` aanpassen: check eerst ManagedTemplate, fallback naar disk
+- `docx_service.py` aanpassen: check eerst `ManagedTemplate` tabel, fallback naar disk
 
-**Frontend:**
-- Nieuwe pagina: `frontend/src/app/(dashboard)/instellingen/templates/page.tsx`
-  - Lijst templates, upload knop met drag & drop, preview, download, bewerken, verwijderen
-  - Merge field referentie-panel
+**Frontend (nieuw):**
+- Pagina: `frontend/src/app/(dashboard)/instellingen/templates/page.tsx`
+  - Lijst, upload (drag & drop), preview, download, bewerken, verwijderen
   - Badge: "Ingebouwd" vs "Aangepast"
-- Nieuwe hook: `frontend/src/hooks/use-templates.ts`
-- Pipeline stappen-tab: template dropdown inclusief custom templates
+- Hook: `frontend/src/hooks/use-templates.ts`
+- Pipeline stappen-tab: template-koppeling per stap
 
-## Essentieel om te lezen
+## Deploy-instructies (KRITISCH — lees dit!)
 
-1. `SESSION-NOTES.md` — status na sessie 23
-2. `LUXIS-ROADMAP.md` — P1 roadmap en wat er al gedaan is
-3. `backend/app/incasso/service.py` — bestaande batch logica
-4. `backend/app/documents/docx_service.py` — bestaande template rendering
-5. `frontend/src/app/(dashboard)/incasso/page.tsx` — huidige pipeline UI
-
-## Deploy-instructies
-
-Na bouwen:
 ```bash
-# Op VPS (/opt/luxis):
-git pull
-docker compose run --rm backend python -m alembic upgrade head  # als er migraties zijn
+# SSH naar VPS, dan:
+cd /opt/luxis && git pull
+
+# Als er Alembic migraties zijn (ALTIJD `run`, niet `exec`):
+docker compose run --rm backend python -m alembic upgrade head
+
+# Rebuild + restart:
 docker compose build --no-cache backend frontend
 docker compose up -d
 ```
 
-Let op: `.env` op VPS bevat nu `COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml`, dus gewoon `docker compose` werkt.
+**COMPOSE_FILE** staat al in `.env` → gewoon `docker compose` werkt (pakt automatisch prod override).
 
-## Wat er mis ging in sessie 23 (lessen)
+## Fouten uit het verleden — VOORKOM DEZE
 
-1. **COMPOSE_FILE niet ingesteld op VPS** — `docker compose up -d` gebruikte alleen base compose (dev config), niet de prod override. Gevolg: backend kreeg dev-wachtwoord. Fix: `COMPOSE_FILE` env var.
-2. **PostgreSQL wachtwoord in volume** — `POSTGRES_PASSWORD` wordt alleen bij eerste volume-initialisatie gebruikt. Later wijzigen vereist `ALTER USER` via psql.
-3. **Alembic migratie vereist `run` niet `exec`** — Als backend crashed, werkt `docker compose exec` niet. Gebruik `docker compose run --rm backend python -m alembic upgrade head`.
+1. **NOOIT `localhost:8000` in frontend code** — altijd relatieve URLs (`""`). Next.js rewrite proxy `/api/*` → `backend:8000`.
+2. **POSTGRES_PASSWORD werkt alleen bij eerste volume-init** — later wijzigen? → `docker compose exec db psql -U luxis -d luxis -c "ALTER USER luxis PASSWORD '...';"` + restart backend.
+3. **Alembic: gebruik `run` niet `exec`** als backend crashed: `docker compose run --rm backend python -m alembic upgrade head`
+4. **Frontend build MOET slagen** voordat je commit: `cd frontend && npm run build`
+5. **Backend lint check:** `cd backend && ruff check app/`
+6. **Nooit float voor geld** — altijd `Decimal` + `NUMERIC(15,2)`
+7. **Exclude_unset bug:** Bij PATCH/PUT: gebruik `value if value else None` NIET `value || undefined`. Lege strings moeten als `null` naar backend.
+8. **SQLAlchemy async:** Nested relaties laden vereist explicit `selectinload().selectinload()` — lazy loading werkt niet async.
+9. **Commit message format:** `feat:`, `fix:`, `docs:` prefix. Eindig met `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
+
+## P1 Incasso Workflow — totaal overzicht
+
+| # | Feature | Status |
+|---|---------|--------|
+| 1 | Template editor UI | ❌ Deze sessie (prio 2) |
+| 2 | Batch brief + email verzenden | ❌ Toekomstig |
+| 3 | Auto-complete taken | ❌ Toekomstig |
+| 4 | Auto-advance pipeline | ❌ Toekomstig |
+| 5 | Deadline kleuren per stap | ✅ Sessie 23 |
+| 6 | Instelbare dagen per stap | ✅ Sessie 23 |

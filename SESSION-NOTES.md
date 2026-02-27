@@ -40,6 +40,31 @@
 
 ---
 
+## Wat er gedaan is (sessie 24 — 27 feb) — Template Editor UI + BUG-28
+
+### Template Editor UI ✅
+- **Managed template editor** gebouwd met database-driven templates
+- Templates beheerbaar via UI (aanmaken, bewerken, verwijderen)
+- Gekoppeld aan incasso pipeline stappen
+
+### BUG-28: Batch advance_step zonder pipeline stap ✅
+- Fix: dossiers zonder pipeline stap-toewijzing konden niet aan een stap worden toegewezen via batch
+- `allow batch advance_step for cases without pipeline step assignment`
+
+### Subagents en skills systeem ✅
+- `.claude/agents/` — func-tester, security-reviewer, tech-tester, code-reviewer, luxis-researcher
+- `.claude/skills/` — incasso-workflow, deploy-regels, template-systeem, bekende-fouten
+- Context management geoptimaliseerd: docs verplaatst naar subdirectories
+
+### Gewijzigde bestanden
+- `backend/app/documents/` — managed template models, service, router, schemas
+- `backend/app/incasso/service.py` — BUG-28 fix (advance_step guard)
+- `frontend/src/app/(dashboard)/documenten/` — template editor UI
+- `.claude/agents/` en `.claude/skills/` — nieuw
+- `docs/` — gereorganiseerd naar subdirectories
+
+---
+
 ## Wat er gedaan is (sessie 23 — 27 feb) — Incasso Workflow Automatisering P1
 
 ### Stap 1: Instelbare dagen per stap (max_wait_days) ✅

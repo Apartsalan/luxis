@@ -2,12 +2,12 @@
 
 import logging
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cases.models import Case
+from app.cases.models import Case, CaseActivity
 from app.documents.docx_service import render_docx
 from app.documents.models import GeneratedDocument
 from app.incasso.models import IncassoPipelineStep
@@ -24,6 +24,7 @@ from app.incasso.schemas import (
     QueueCounts,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
+from app.workflow.models import WorkflowTask
 
 logger = logging.getLogger(__name__)
 
@@ -128,12 +129,34 @@ async def seed_default_steps(
         return existing
 
     defaults = [
-        {"name": "Aanmaning", "sort_order": 1, "min_wait_days": 0, "max_wait_days": 7, "template_type": "aanmaning"},
-        {"name": "Sommatie", "sort_order": 2, "min_wait_days": 14, "max_wait_days": 28, "template_type": "sommatie"},
-        {"name": "2e Sommatie", "sort_order": 3, "min_wait_days": 14, "max_wait_days": 28, "template_type": "tweede_sommatie"},
-        {"name": "Ingebrekestelling", "sort_order": 4, "min_wait_days": 14, "max_wait_days": 28},
-        {"name": "Dagvaarding", "sort_order": 5, "min_wait_days": 14, "max_wait_days": 28, "template_type": "dagvaarding"},
-        {"name": "Executie", "sort_order": 6, "min_wait_days": 0, "max_wait_days": 0},
+        {
+            "name": "Aanmaning", "sort_order": 1,
+            "min_wait_days": 0, "max_wait_days": 7,
+            "template_type": "aanmaning",
+        },
+        {
+            "name": "Sommatie", "sort_order": 2,
+            "min_wait_days": 14, "max_wait_days": 28,
+            "template_type": "sommatie",
+        },
+        {
+            "name": "2e Sommatie", "sort_order": 3,
+            "min_wait_days": 14, "max_wait_days": 28,
+            "template_type": "tweede_sommatie",
+        },
+        {
+            "name": "Ingebrekestelling", "sort_order": 4,
+            "min_wait_days": 14, "max_wait_days": 28,
+        },
+        {
+            "name": "Dagvaarding", "sort_order": 5,
+            "min_wait_days": 14, "max_wait_days": 28,
+            "template_type": "dagvaarding",
+        },
+        {
+            "name": "Executie", "sort_order": 6,
+            "min_wait_days": 0, "max_wait_days": 0,
+        },
     ]
 
     steps = []
@@ -356,6 +379,183 @@ async def batch_preview(
     )
 
 
+# ── Pipeline Automation Helpers ───────────────────────────────────────────
+
+
+async def _create_tasks_for_step(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+    step: IncassoPipelineStep,
+) -> list[WorkflowTask]:
+    """Create workflow task(s) for a case entering a pipeline step.
+
+    - Steps with template_type: create a 'generate_document' task
+    - Steps without template_type: create a 'manual_review' task
+    Due date = today + step.min_wait_days
+    """
+    due_date = date.today() + timedelta(days=step.min_wait_days)
+
+    if step.template_type:
+        task_type = "generate_document"
+        title = f"{step.name} genereren voor zaak {case.case_number}"
+    else:
+        task_type = "manual_review"
+        title = f"{step.name} controleren voor zaak {case.case_number}"
+
+    task = WorkflowTask(
+        tenant_id=tenant_id,
+        case_id=case.id,
+        assigned_to_id=case.assigned_to_id,
+        task_type=task_type,
+        title=title,
+        due_date=due_date,
+        status="pending" if step.min_wait_days > 0 else "due",
+        auto_execute=False,
+    )
+    db.add(task)
+    await db.flush()
+    await db.refresh(task)
+
+    activity = CaseActivity(
+        tenant_id=tenant_id,
+        case_id=case.id,
+        user_id=None,
+        activity_type="automation",
+        title=f"Taak aangemaakt: {title}",
+        description=(
+            f"Automatisch aangemaakt bij instap in '{step.name}'. "
+            f"Deadline: {due_date.strftime('%d-%m-%Y')}. Type: {task_type}."
+        ),
+    )
+    db.add(activity)
+    await db.flush()
+
+    return [task]
+
+
+async def _auto_complete_tasks(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> int:
+    """Auto-complete matching open tasks after document generation.
+
+    Matches: task_type in (generate_document, send_letter),
+             status in (pending, due, overdue), is_active=True
+    Returns: count of tasks completed.
+    """
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.case_id == case_id,
+            WorkflowTask.task_type.in_(["generate_document", "send_letter"]),
+            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+            WorkflowTask.is_active.is_(True),
+        )
+    )
+    tasks = list(result.scalars().all())
+
+    now = datetime.now(UTC)
+    for task in tasks:
+        task.status = "completed"
+        task.completed_at = now
+
+    if tasks:
+        await db.flush()
+
+    return len(tasks)
+
+
+async def _try_auto_advance(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+    user_id: uuid.UUID,
+    step_list: list[IncassoPipelineStep] | None = None,
+) -> bool:
+    """Check if all tasks are done for a case; if so, advance to next pipeline step.
+
+    Args:
+        step_list: Pre-fetched sorted pipeline steps to avoid N+1 queries.
+                   If None, fetches from DB.
+
+    Returns True if the case was advanced, False otherwise.
+    """
+    if not case.incasso_step_id:
+        return False
+
+    if case.status in ("betaald", "afgesloten"):
+        return False
+
+    # Check for remaining open tasks
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.case_id == case.id,
+            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+            WorkflowTask.is_active.is_(True),
+        ).limit(1)
+    )
+    if result.scalar_one_or_none():
+        return False  # Still has open tasks
+
+    # Find current and next step
+    if step_list is None:
+        steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+        step_list = sorted(steps, key=lambda s: s.sort_order)
+
+    current_idx = None
+    for i, step in enumerate(step_list):
+        if step.id == case.incasso_step_id:
+            current_idx = i
+            break
+
+    if current_idx is None:
+        return False
+
+    if current_idx + 1 >= len(step_list):
+        logger.debug(
+            "Case %s is on last step '%s' — no auto-advance possible",
+            case.case_number,
+            step_list[current_idx].name,
+        )
+        return False
+
+    next_step = step_list[current_idx + 1]
+    old_step_name = step_list[current_idx].name
+    now = datetime.now(UTC)
+
+    case.incasso_step_id = next_step.id
+    case.step_entered_at = now
+    await db.flush()
+
+    await _create_tasks_for_step(db, tenant_id, case, next_step)
+
+    activity = CaseActivity(
+        tenant_id=tenant_id,
+        case_id=case.id,
+        user_id=None,
+        activity_type="pipeline_advance",
+        title=f"Pipeline: {old_step_name} \u2192 {next_step.name}",
+        description=(
+            f"Automatisch doorgeschoven na voltooiing van alle taken. "
+            f"Vorige stap: {old_step_name}. Nieuwe stap: {next_step.name}."
+        ),
+    )
+    db.add(activity)
+    await db.flush()
+
+    logger.info(
+        "Auto-advanced case %s from '%s' to '%s'",
+        case.case_number,
+        old_step_name,
+        next_step.name,
+    )
+
+    return True
+
+
 # ── Batch Execute ─────────────────────────────────────────────────────────
 
 
@@ -386,8 +586,10 @@ async def batch_execute(
     skipped = 0
     errors: list[str] = []
     generated_doc_ids: list[uuid.UUID] = []
+    tasks_auto_completed = 0
+    cases_auto_advanced = 0
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if action == "advance_step":
         if not target_step_id:
@@ -405,6 +607,9 @@ async def batch_execute(
             case.step_entered_at = now
             processed += 1
 
+            # Create tasks for the new step
+            await _create_tasks_for_step(db, tenant_id, case, target_step)
+
     elif action == "generate_document":
         # Load steps to get template_type
         steps = await list_pipeline_steps(db, tenant_id, active_only=True)
@@ -421,7 +626,8 @@ async def batch_execute(
                 skipped += 1
                 step_name = step.name if step else "onbekend"
                 errors.append(
-                    f"{case.case_number}: stap '{step_name}' heeft geen briefsjabloon — overgeslagen"
+                    f"{case.case_number}: stap '{step_name}' heeft geen "
+                    f"briefsjabloon — overgeslagen"
                 )
                 continue
 
@@ -444,6 +650,21 @@ async def batch_execute(
                 await db.refresh(doc)
                 generated_doc_ids.append(doc.id)
                 processed += 1
+
+                # Auto-complete matching tasks
+                completed_count = await _auto_complete_tasks(
+                    db, tenant_id, case.id
+                )
+                tasks_auto_completed += completed_count
+
+                # Try auto-advance (always, even if no tasks were
+                # completed — case may already have all tasks done)
+                advanced = await _try_auto_advance(
+                    db, tenant_id, case, user_id,
+                    step_list=steps,
+                )
+                if advanced:
+                    cases_auto_advanced += 1
             except Exception as exc:
                 logger.error(
                     "Batch document generation failed for %s: %s",
@@ -470,6 +691,8 @@ async def batch_execute(
         skipped=skipped,
         errors=errors,
         generated_document_ids=generated_doc_ids,
+        tasks_auto_completed=tasks_auto_completed,
+        cases_auto_advanced=cases_auto_advanced,
     )
 
 

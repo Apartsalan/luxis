@@ -615,11 +615,15 @@ function WerkstroomTab() {
       },
       {
         onSuccess: (result) => {
+          const parts: string[] = [`${result.processed} dossier(s) verwerkt`];
+          if (result.skipped > 0) parts.push(`${result.skipped} overgeslagen`);
           const docCount = result.generated_document_ids?.length ?? 0;
-          const docMsg = docCount > 0 ? ` (${docCount} brief/brieven gegenereerd)` : "";
-          toast.success(
-            `${result.processed} dossier(s) verwerkt${result.skipped > 0 ? `, ${result.skipped} overgeslagen` : ""}${docMsg}`
-          );
+          if (docCount > 0) parts.push(`${docCount} brief/brieven gegenereerd`);
+          if (result.tasks_auto_completed > 0)
+            parts.push(`${result.tasks_auto_completed} taak/taken afgerond`);
+          if (result.cases_auto_advanced > 0)
+            parts.push(`${result.cases_auto_advanced} dossier(s) doorgeschoven`);
+          toast.success(parts.join(", "));
           setShowPreview(false);
           setSelectedIds(new Set());
           setBatchAction(null);

@@ -68,6 +68,8 @@ export interface BatchActionResult {
   skipped: number;
   errors: string[];
   generated_document_ids: string[];
+  tasks_auto_completed: number;
+  cases_auto_advanced: number;
 }
 
 export interface QueueCounts {

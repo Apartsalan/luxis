@@ -131,6 +131,8 @@ class BatchActionResult(BaseModel):
     skipped: int
     errors: list[str]
     generated_document_ids: list[uuid.UUID] = []  # For generate_document action
+    tasks_auto_completed: int = 0  # Tasks auto-completed after document generation
+    cases_auto_advanced: int = 0  # Cases auto-advanced to next pipeline step
 
 
 # ── Smart Work Queues ────────────────────────────────────────────────────

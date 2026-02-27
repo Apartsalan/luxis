@@ -682,7 +682,7 @@ function EventDialog({
                 <option value="">Geen relatie</option>
                 {(relations?.items ?? []).map((r: any) => (
                   <option key={r.id} value={r.id}>
-                    {r.display_name || r.company_name || `${r.first_name} ${r.last_name}`}
+                    {r.name}
                   </option>
                 ))}
               </select>

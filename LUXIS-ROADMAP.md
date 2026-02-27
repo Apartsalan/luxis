@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 25 februari 2026
+**Laatst bijgewerkt:** 27 februari 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -245,7 +245,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** Fix BUG-25/26/27 (uit QA sessie 21/22), daarna Incasso Workflow Automatisering (P1) — template editor, batch brief+email, auto-complete taken.
+**Volgende prioriteit:** Incasso Workflow Automatisering (P1) — template editor, batch brief+email, auto-complete taken, auto-advance pipeline, deadline kleuren, instelbare dagen.
 
 ---
 
@@ -299,8 +299,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 ## Deploy
 
-**Belangrijk:** `.env` moet bestaan in `/opt/luxis/`. Docker Compose leest dit automatisch. Als het ontbreekt: `cp .env.production .env`.
+**Belangrijk:**
+- `.env` moet bestaan in `/opt/luxis/`. Docker Compose leest dit automatisch. Als het ontbreekt: `cp .env.production .env`.
+- `POSTGRES_PASSWORD` in `.env` werkt ALLEEN bij eerste DB-initialisatie (volume aanmaken). Wachtwoord later wijzigen? → `docker compose exec db psql -U luxis -d luxis -c "ALTER USER luxis PASSWORD 'nieuw_wachtwoord';"` + `docker compose up -d --force-recreate backend`
+- Frontend moet ALTIJD relatieve URLs gebruiken (`""`) — NOOIT `localhost:8000`. Pre-commit hook blokkeert dit.
 
+Frontend + backend:
 ```bash
 cd /opt/luxis && git pull && \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend backend && \
@@ -312,4 +316,11 @@ Alleen backend:
 cd /opt/luxis && git pull && \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache backend && \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend
+```
+
+Alleen frontend:
+```bash
+cd /opt/luxis && git pull && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache frontend && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d frontend
 ```

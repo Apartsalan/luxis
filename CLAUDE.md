@@ -188,21 +188,41 @@ Na het bouwen, voordat je deploy-commando geeft:
 
 ## Context Management
 
-**Doel: sessies zo lang mogelijk effectief houden. NOOIT alle docs tegelijk laden.**
+**Doel: sessies zo lang mogelijk effectief houden.**
 
-- **CLAUDE.md wordt automatisch geladen** — dat is genoeg om te starten.
-- **Lees alleen bestanden die je NODIG hebt** voor de huidige taak. Niet de hele codebase scannen.
-- **Gebruik subagents voor onderzoek.** Lees niet zelf 20 bestanden — delegeer naar een Task agent.
-- **Commit + update SESSION-NOTES.md na elke afgeronde feature.**
+### Startprocedure bij elke sessie
 
-### Docs structuur (lees on-demand, niet bij start)
+1. CLAUDE.md wordt automatisch geladen — dat is de basis.
+2. **Gebruik de `luxis-researcher` subagent** om LUXIS-ROADMAP.md en SESSION-NOTES te lezen. Die draait in een apart context window en geeft een compacte samenvatting terug. Zo heb je alle kennis zonder je context te vullen.
+3. Skills worden automatisch geladen wanneer relevant (incasso-werk → incasso-workflow skill, deploy → deploy-regels skill).
+4. Lees alleen codebestanden die je NODIG hebt voor de huidige taak.
+
+### Subagents (`.claude/agents/`)
+
+- **`luxis-researcher`** — Leest grote docs (roadmap, session notes, research) en geeft compacte samenvattingen. GEBRUIK DIT in plaats van zelf grote bestanden te lezen.
+- **`code-reviewer`** — Reviewt code na implementatie. Checkt financial precision, multi-tenant, async, frontend URLs.
+
+### Skills (`.claude/skills/`) — geladen on-demand
+
+- **`incasso-workflow`** — Pipeline architectuur, batch acties, deadline kleuren, bestanden
+- **`deploy-regels`** — VPS deploy commando's, valkuilen, migratie-instructies
+- **`template-systeem`** — DOCX rendering, ManagedTemplate model, geplande UI
+- **`bekende-fouten`** — 15 bekende valkuilen uit 23 sessies (LEES DIT bij niet-triviale taken)
+
+### Context-besparende regels
+
+- **Gebruik `/clear` tussen onafhankelijke taken** — frisse context per taak
+- **Gebruik `/compact` als context vol raakt** — geef focus mee: `/compact Focus op de incasso pipeline changes`
+- **Delegeer onderzoek naar subagents** — lees niet zelf 20 bestanden
+- **Commit + update LUXIS-ROADMAP.md na elke afgeronde feature**
+
+### Docs structuur (lees on-demand via subagent)
 
 ```
-SESSION-NOTES.md          ← recente sessies (17-20), altijd lezen bij start
-LUXIS-ROADMAP.md          ← status + bugs + wat gebouwd moet worden
-docs/qa/                  ← QA checklists en resultaten
-docs/sessions/            ← sessie-archief (1-16), alleen bij behoefte
+LUXIS-ROADMAP.md          ← status + bugs + planning (source of truth)
+docs/sessions/            ← sessie-archief, alleen via luxis-researcher subagent
 docs/prompts/             ← sessie-prompts
+docs/qa/                  ← QA checklists en resultaten
 docs/research/            ← UX research, analyses, reviews
 docs/future-modules.md    ← M365, AI Agent, Data Migratie
 docs/completed-work.md    ← afgeronde features lijst

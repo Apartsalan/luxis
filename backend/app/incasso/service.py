@@ -412,6 +412,7 @@ async def _create_tasks_for_step(
         due_date=due_date,
         status="pending" if step.min_wait_days > 0 else "due",
         auto_execute=False,
+        action_config={"source": "pipeline", "step_id": str(step.id)},
     )
     db.add(task)
     await db.flush()
@@ -438,22 +439,30 @@ async def _auto_complete_tasks(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
+    step_id: uuid.UUID | None = None,
 ) -> int:
     """Auto-complete matching open tasks after document generation.
 
     Matches: task_type in (generate_document, send_letter),
              status in (pending, due, overdue), is_active=True
+    When step_id is provided, only completes pipeline tasks for that step.
     Returns: count of tasks completed.
     """
-    result = await db.execute(
-        select(WorkflowTask).where(
-            WorkflowTask.tenant_id == tenant_id,
-            WorkflowTask.case_id == case_id,
-            WorkflowTask.task_type.in_(["generate_document", "send_letter"]),
-            WorkflowTask.status.in_(["pending", "due", "overdue"]),
-            WorkflowTask.is_active.is_(True),
-        )
+    query = select(WorkflowTask).where(
+        WorkflowTask.tenant_id == tenant_id,
+        WorkflowTask.case_id == case_id,
+        WorkflowTask.task_type.in_(["generate_document", "send_letter"]),
+        WorkflowTask.status.in_(["pending", "due", "overdue"]),
+        WorkflowTask.is_active.is_(True),
     )
+
+    if step_id:
+        query = query.where(
+            WorkflowTask.action_config["source"].astext == "pipeline",
+            WorkflowTask.action_config["step_id"].astext == str(step_id),
+        )
+
+    result = await db.execute(query)
     tasks = list(result.scalars().all())
 
     now = datetime.now(UTC)
@@ -488,17 +497,21 @@ async def _try_auto_advance(
     if case.status in ("betaald", "afgesloten"):
         return False
 
-    # Check for remaining open tasks
+    # Check for remaining open pipeline tasks for the current step only.
+    # We scope to action_config.source == "pipeline" to avoid blocking
+    # on initial case tasks or manually created tasks.
     result = await db.execute(
         select(WorkflowTask).where(
             WorkflowTask.tenant_id == tenant_id,
             WorkflowTask.case_id == case.id,
             WorkflowTask.status.in_(["pending", "due", "overdue"]),
             WorkflowTask.is_active.is_(True),
+            WorkflowTask.action_config["source"].astext == "pipeline",
+            WorkflowTask.action_config["step_id"].astext == str(case.incasso_step_id),
         ).limit(1)
     )
     if result.scalar_one_or_none():
-        return False  # Still has open tasks
+        return False  # Still has open pipeline tasks for this step
 
     # Find current and next step
     if step_list is None:
@@ -607,6 +620,17 @@ async def batch_execute(
             case.step_entered_at = now
             processed += 1
 
+            # Audit trail for step assignment
+            activity = CaseActivity(
+                tenant_id=tenant_id,
+                case_id=case.id,
+                user_id=user_id,
+                activity_type="pipeline_change",
+                title=f"Pipeline stap: {target_step.name}",
+                description=f"Dossier verplaatst naar stap '{target_step.name}'.",
+            )
+            db.add(activity)
+
             # Create tasks for the new step
             await _create_tasks_for_step(db, tenant_id, case, target_step)
 
@@ -651,9 +675,9 @@ async def batch_execute(
                 generated_doc_ids.append(doc.id)
                 processed += 1
 
-                # Auto-complete matching tasks
+                # Auto-complete matching pipeline tasks for this step
                 completed_count = await _auto_complete_tasks(
-                    db, tenant_id, case.id
+                    db, tenant_id, case.id, case.incasso_step_id
                 )
                 tasks_auto_completed += completed_count
 

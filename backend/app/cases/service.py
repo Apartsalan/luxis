@@ -116,7 +116,13 @@ async def _create_initial_tasks(
     case: Case,
     user_id: uuid.UUID,
 ) -> list[WorkflowTask]:
-    """Create initial task templates for a newly created case based on case_type."""
+    """Create initial task templates for a newly created case based on case_type.
+
+    Incasso cases skip initial tasks — the incasso pipeline manages tasks per step.
+    """
+    if case.case_type == "incasso":
+        return []
+
     templates = TASK_TEMPLATES.get(case.case_type, OVERIG_TASKS)
     created: list[WorkflowTask] = []
 

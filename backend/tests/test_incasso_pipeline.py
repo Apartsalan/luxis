@@ -39,22 +39,41 @@ from tests.helpers.incasso_fixtures import (
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 
+class _FakeStep:
+    """Lightweight step-like object for unit tests (avoids SQLAlchemy instrumentation)."""
+
+    def __init__(
+        self,
+        min_wait: int = 0,
+        max_wait: int = 0,
+        template_type: str | None = None,
+        name: str = "TestStep",
+        email_subject_template: str | None = None,
+        email_body_template: str | None = None,
+    ):
+        self.min_wait_days = min_wait
+        self.max_wait_days = max_wait
+        self.template_type = template_type
+        self.name = name
+        self.email_subject_template = email_subject_template
+        self.email_body_template = email_body_template
+
+
 def _make_step(
     min_wait: int = 0,
     max_wait: int = 0,
     template_type: str | None = None,
     email_subject_template: str | None = None,
     email_body_template: str | None = None,
-) -> IncassoPipelineStep:
+):
     """Create a lightweight step object for unit tests (no DB)."""
-    step = IncassoPipelineStep.__new__(IncassoPipelineStep)
-    step.min_wait_days = min_wait
-    step.max_wait_days = max_wait
-    step.template_type = template_type
-    step.name = "TestStep"
-    step.email_subject_template = email_subject_template
-    step.email_body_template = email_body_template
-    return step
+    return _FakeStep(
+        min_wait=min_wait,
+        max_wait=max_wait,
+        template_type=template_type,
+        email_subject_template=email_subject_template,
+        email_body_template=email_body_template,
+    )
 
 
 # Helper to create a fake send_with_attachment that creates a real EmailLog

@@ -240,6 +240,11 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 **Flow:** Batch selectie → genereer brieven → email via Outlook → taken afgevinkt → pipeline doorgeschoven → deadline kleuren updaten
 
+**QA & Testdekking (sessie 28):**
+- ✅ **35 backend integration tests** — `test_incasso_pipeline.py`: deadline kleuren, email templates, auto-complete (BUG-29 regressie), auto-advance, batch preview, batch execute (met/zonder email, partial failure, edge cases), pipeline overview, queue counts. Alle 35 PASSED.
+- ✅ **9 Playwright E2E tests** — `frontend/e2e/incasso-pipeline.spec.ts`: page load, deadline colors, action bar, pre-flight dialog, email toggle, queue filters, stappen beheren.
+- ✅ **Smoke test checklist** — `docs/qa/p1-smoke-test-checklist.md`: 6 scenario's, 30+ handmatige checks.
+
 ---
 
 
@@ -247,7 +252,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** Incasso Workflow Automatisering (P1) — template editor, batch brief+email, auto-complete taken, auto-advance pipeline, deadline kleuren, instelbare dagen.
+**Volgende prioriteit:** P1 is 100% compleet incl. QA (35 backend tests, 9 E2E tests, smoke test checklist). Bepaal volgende prioriteit (P2 of gebruikersfeedback verwerken).
 
 ---
 

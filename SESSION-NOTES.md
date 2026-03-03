@@ -1,10 +1,34 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 3 maart 2026 (sessie 29 — Fix 20 pre-existing test failures)
-**Laatste feature/fix:** Alle 20 pre-existing test failures gefixt (BUG-30 t/m BUG-35). 316/316 tests PASSED.
+**Laatst bijgewerkt:** 3 maart 2026 (sessie 30 — QA: 64 nieuwe tests voor 4 modules)
+**Laatste feature/fix:** 64 nieuwe tests geschreven voor Email/Sync, Workflow/Taken, Facturatie, Tijdregistratie. 380/380 tests PASSED.
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (30):** Playwright E2E tests draaien, of nieuwe feature work
+**Volgende sessie (31):** QA-1/2/3/8/9 uitbreiden, Playwright E2E tests, of nieuwe feature work
+
+## Wat er gedaan is (sessie 30 — 3 maart) — QA: 64 nieuwe tests voor 4 ongedekte modules ✅
+
+### Overzicht
+4 modules hadden 0 tests. Alle 4 nu volledig gedekt, opgesplitst in aparte commits:
+
+### Blok 1: Tijdregistratie (QA-7) — 15 tests ✅
+- `backend/tests/test_time_entries.py` — CRUD, filters (case/billable/date range), unbilled, summary totals, summary per-case, my/today, validatie, tenant isolation
+
+### Blok 2: Facturatie (QA-6) — 19 tests ✅
+- `backend/tests/test_invoices.py` — Invoice CRUD, auto-nummering, status workflow (concept→approved→sent→paid→cancelled), BTW precision (Decimal), credit notes, lines add/remove, expenses CRUD, payment summary
+
+### Blok 3: Workflow/Taken (QA-5) — 19 tests ✅
+- `backend/tests/test_workflow.py` — Statuses CRUD, transitions (B2B/B2C filtering), tasks CRUD met case filter, task completion, invalid task_type, rules CRUD, calendar events, verjaring check
+
+### Blok 4: Email/Sync (QA-4) — 11 tests ✅
+- `backend/tests/test_email_sync.py` — Case emails, unlinked emails + count, link/bulk-link, dismiss, email detail, attachments listing, tenant isolation
+
+### Teststand
+- **316 → 380 tests** (+64 nieuwe tests)
+- **380/380 PASSED**, 0 failures
+- Alle 4 commits apart gepusht naar origin main
+
+---
 
 ## Wat er gedaan is (sessie 29 — 3 maart) — Fix 20 pre-existing test failures ✅
 

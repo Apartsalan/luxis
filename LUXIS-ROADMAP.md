@@ -271,15 +271,15 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | Fase | Module | Huidige dekking | Wat nodig is | Status |
 |------|--------|----------------|--------------|--------|
 | QA-0 | Bestaande test fixes | 20 tests stuk (BUG-30 t/m 35) | URL paden, schema's, transitions updaten | ✅ Compleet (3 mrt, sessie 29) — 316/316 tests PASSED |
-| QA-1 | Auth & Permissions | 7 tests (alle stuk) | Login, refresh, token validatie, role-based access | ❌ TODO |
-| QA-2 | Relaties/Contacts | ~15 tests (1 stuk) | CRUD, links, conflict check, zoeken | ❌ TODO |
-| QA-3 | Zaken/Cases | ~14 tests (2 stuk) | CRUD, status workflow, partijen, activiteiten | ❌ TODO |
-| QA-4 | Email/Sync | 0 tests | OAuth flow, inbox sync, auto-koppeling, compose, bijlagen | ❌ TODO |
+| QA-1 | Auth & Permissions | 8 tests (passing) | Login, refresh, token validatie, role-based access | ❌ TODO (uitbreiden) |
+| QA-2 | Relaties/Contacts | 25 tests (passing) | CRUD, links, conflict check, zoeken | ❌ TODO (uitbreiden) |
+| QA-3 | Zaken/Cases | 16 tests (passing) | CRUD, status workflow, partijen, activiteiten | ❌ TODO (uitbreiden) |
+| QA-4 | Email/Sync | 0 tests | OAuth flow, inbox sync, auto-koppeling, compose, bijlagen | ❌ TODO (hoog risico) |
 | QA-5 | Workflow/Taken | 0 tests | Taak CRUD, status transitions, toewijzing, deadline tracking | ❌ TODO |
 | QA-6 | Facturatie | 0 tests | Invoice CRUD, creditnota's, PDF generatie, status workflow | ❌ TODO |
 | QA-7 | Tijdregistratie | 0 tests | Timer, handmatige entries, rapportage | ❌ TODO |
-| QA-8 | Dashboard | 6 tests (1 stuk) | KPI's, recente activiteit, widgets | ❌ TODO |
-| QA-9 | Documents/Templates | ~20 tests (1 stuk) | Template CRUD, DOCX generatie, managed templates | ❌ TODO |
+| QA-8 | Dashboard | 6 tests (passing) | KPI's, recente activiteit, widgets | ❌ TODO (uitbreiden) |
+| QA-9 | Documents/Templates | 21 tests (passing) | Template CRUD, DOCX generatie, managed templates | ❌ TODO (uitbreiden) |
 | QA-P1 | Incasso Pipeline | 35 tests + 9 E2E | **Compleet** (sessie 28) | ✅ Gedaan |
 
 ---

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Gavel,
   Settings2,
@@ -21,6 +21,7 @@ import {
   Users,
   Clock,
   Filter,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -117,9 +118,9 @@ function StappenTab() {
   const { data: managedTemplates } = useManagedTemplates();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
+  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
+  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
 
   const activeSteps = useMemo(
     () => (steps ?? []).filter((s) => s.is_active).sort((a, b) => a.sort_order - b.sort_order),
@@ -155,11 +156,13 @@ function StappenTab() {
         min_wait_days: newStep.min_wait_days,
         max_wait_days: newStep.max_wait_days,
         template_type: newStep.template_type || null,
+        email_subject_template: newStep.email_subject_template.trim() || null,
+        email_body_template: newStep.email_body_template.trim() || null,
       },
       {
         onSuccess: () => {
           toast.success("Stap toegevoegd");
-          setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
+          setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
           setShowAddForm(false);
         },
         onError: (err) => toast.error(err.message),
@@ -196,6 +199,8 @@ function StappenTab() {
       min_wait_days: step.min_wait_days,
       max_wait_days: step.max_wait_days,
       template_type: step.template_type || "",
+      email_subject_template: step.email_subject_template || "",
+      email_body_template: step.email_body_template || "",
     });
   };
 
@@ -207,6 +212,8 @@ function StappenTab() {
         min_wait_days: editForm.min_wait_days,
         max_wait_days: editForm.max_wait_days,
         template_type: editForm.template_type || null,
+        email_subject_template: editForm.email_subject_template.trim() || null,
+        email_body_template: editForm.email_body_template.trim() || null,
       },
       {
         onSuccess: () => {
@@ -282,7 +289,8 @@ function StappenTab() {
           </thead>
           <tbody>
             {activeSteps.map((step, i) => (
-              <tr key={step.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+              <React.Fragment key={step.id}>
+              <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                 <td className="px-3 py-2.5 text-muted-foreground">{i + 1}</td>
                 <td className="px-3 py-2.5">
                   {editingId === step.id ? (
@@ -408,6 +416,47 @@ function StappenTab() {
                   </div>
                 </td>
               </tr>
+              {/* Email template fields — shown when editing a step with a template */}
+              {editingId === step.id && editForm.template_type && (
+                <tr className="border-b border-border last:border-0 bg-muted/20">
+                  <td colSpan={6} className="px-6 py-3">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        <Mail className="h-3.5 w-3.5" />
+                        E-mail template (optioneel)
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          E-mail onderwerp
+                        </label>
+                        <input
+                          type="text"
+                          value={editForm.email_subject_template}
+                          onChange={(e) => setEditForm((f) => ({ ...f, email_subject_template: e.target.value }))}
+                          placeholder="Bijv. Aanmaning inzake dossier {{ zaak.zaaknummer }}"
+                          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-foreground mb-1">
+                          E-mail bericht
+                        </label>
+                        <textarea
+                          value={editForm.email_body_template}
+                          onChange={(e) => setEditForm((f) => ({ ...f, email_body_template: e.target.value }))}
+                          placeholder={"Geachte {{ wederpartij.naam }},\n\nBijgaand treft u aan...\n\nMet vriendelijke groet,\n{{ kantoor.naam }}"}
+                          rows={4}
+                          className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 resize-y"
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Variabelen: {"{{ zaak.zaaknummer }}"}, {"{{ wederpartij.naam }}"}, {"{{ kantoor.naam }}"}, {"{{ schuldeiser.naam }}"}, {"{{ hoofdsom }}"}, {"{{ openstaand }}"}. Leeg = standaard e-mail template.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
 
             {/* Add step row */}
@@ -476,7 +525,7 @@ function StappenTab() {
                     <button
                       onClick={() => {
                         setShowAddForm(false);
-                        setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "" });
+                        setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
                       }}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
                       title="Annuleren"
@@ -507,6 +556,7 @@ function WerkstroomTab() {
   const [showPreview, setShowPreview] = useState(false);
   const [batchAction, setBatchAction] = useState<string | null>(null);
   const [targetStepId, setTargetStepId] = useState<string | null>(null);
+  const [sendEmail, setSendEmail] = useState(true);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
 
   const allCases = useMemo(() => {
@@ -612,6 +662,7 @@ function WerkstroomTab() {
         action: batchAction,
         target_step_id: targetStepId || null,
         auto_assign_step: true,
+        send_email: batchAction === "generate_document" ? sendEmail : false,
       },
       {
         onSuccess: (result) => {
@@ -619,6 +670,10 @@ function WerkstroomTab() {
           if (result.skipped > 0) parts.push(`${result.skipped} overgeslagen`);
           const docCount = result.generated_document_ids?.length ?? 0;
           if (docCount > 0) parts.push(`${docCount} brief/brieven gegenereerd`);
+          if (result.emails_sent > 0)
+            parts.push(`${result.emails_sent} e-mail(s) verzonden`);
+          if (result.emails_failed > 0)
+            parts.push(`${result.emails_failed} e-mail(s) mislukt`);
           if (result.tasks_auto_completed > 0)
             parts.push(`${result.tasks_auto_completed} taak/taken afgerond`);
           if (result.cases_auto_advanced > 0)
@@ -722,6 +777,7 @@ function WerkstroomTab() {
             step: {
               id: "unassigned", name: "Zonder stap", sort_order: 999, min_wait_days: 0, max_wait_days: 0,
               template_id: null, template_type: null, template_name: null,
+              email_subject_template: null, email_body_template: null,
               is_active: true, created_at: "", updated_at: "",
             },
             cases: pipeline.unassigned,
@@ -781,6 +837,8 @@ function WerkstroomTab() {
           steps={steps ?? []}
           targetStepId={targetStepId}
           onTargetStepChange={setTargetStepId}
+          sendEmail={sendEmail}
+          onSendEmailChange={setSendEmail}
           onConfirm={handleExecuteBatch}
           onClose={() => {
             setShowPreview(false);
@@ -937,6 +995,8 @@ function PreFlightDialog({
   steps,
   targetStepId,
   onTargetStepChange,
+  sendEmail,
+  onSendEmailChange,
   onConfirm,
   onClose,
 }: {
@@ -947,6 +1007,8 @@ function PreFlightDialog({
   steps: PipelineStep[];
   targetStepId: string | null;
   onTargetStepChange: (id: string) => void;
+  sendEmail: boolean;
+  onSendEmailChange: (v: boolean) => void;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -1024,6 +1086,38 @@ function PreFlightDialog({
               </div>
             )}
 
+            {/* Email toggle for generate_document */}
+            {action === "generate_document" && preview.ready > 0 && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendEmail}
+                    onChange={(e) => onSendEmailChange(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">
+                    Verstuur ook per e-mail
+                  </span>
+                </label>
+                {sendEmail && (
+                  <div className="ml-6 space-y-1">
+                    {preview.email_ready > 0 && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                        {preview.email_ready} dossier(s) worden per e-mail verstuurd
+                      </p>
+                    )}
+                    {preview.email_blocked.length > 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        {preview.email_blocked.length} dossier(s) zonder e-mailadres wederpartij — brief wordt wél gegenereerd
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Blockers */}
             {preview.blocked.length > 0 && (
               <div>
@@ -1074,7 +1168,9 @@ function PreFlightDialog({
             {isExecuting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : null}
-            Uitvoeren ({preview?.ready ?? 0} dossiers)
+            {action === "generate_document" && sendEmail
+              ? `Genereer en verstuur (${preview?.ready ?? 0} dossiers)`
+              : `Uitvoeren (${preview?.ready ?? 0} dossiers)`}
           </button>
         </div>
       </div>

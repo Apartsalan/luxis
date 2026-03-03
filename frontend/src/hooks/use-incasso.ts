@@ -14,6 +14,8 @@ export interface PipelineStep {
   template_id: string | null;
   template_type: string | null;
   template_name: string | null;
+  email_subject_template: string | null;
+  email_body_template: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -60,6 +62,8 @@ export interface BatchPreviewResponse {
   ready: number;
   blocked: BatchBlocker[];
   needs_step_assignment: CaseInPipeline[];
+  email_ready: number;
+  email_blocked: BatchBlocker[];
 }
 
 export interface BatchActionResult {
@@ -70,6 +74,8 @@ export interface BatchActionResult {
   generated_document_ids: string[];
   tasks_auto_completed: number;
   cases_auto_advanced: number;
+  emails_sent: number;
+  emails_failed: number;
 }
 
 export interface QueueCounts {
@@ -101,6 +107,8 @@ export function useCreatePipelineStep() {
       max_wait_days?: number;
       template_id?: string | null;
       template_type?: string | null;
+      email_subject_template?: string | null;
+      email_body_template?: string | null;
     }) => {
       const res = await api("/api/incasso/pipeline-steps", {
         method: "POST",
@@ -133,6 +141,8 @@ export function useUpdatePipelineStep() {
       template_id?: string | null;
       template_type?: string | null;
       is_active?: boolean;
+      email_subject_template?: string | null;
+      email_body_template?: string | null;
     }) => {
       const res = await api(`/api/incasso/pipeline-steps/${id}`, {
         method: "PUT",
@@ -248,6 +258,7 @@ export function useBatchExecute() {
       action: string;
       target_step_id?: string | null;
       auto_assign_step?: boolean;
+      send_email?: boolean;
     }
   >({
     mutationFn: async (data) => {

@@ -13,7 +13,13 @@ from urllib.parse import urlencode
 import httpx
 
 from app.config import settings
-from app.email.providers.base import AttachmentInfo, EmailMessage, EmailProvider, OAuthTokens
+from app.email.providers.base import (
+    AttachmentInfo,
+    EmailMessage,
+    EmailProvider,
+    OAuthTokens,
+    OutgoingAttachment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -259,19 +265,34 @@ class GmailProvider(EmailProvider):
         body_html: str,
         cc: list[str] | None = None,
         reply_to_message_id: str | None = None,
+        attachments: list[OutgoingAttachment] | None = None,
     ) -> str:
-        """Send an email via Gmail API."""
-        msg = MIMEMultipart("alternative")
+        """Send an email via Gmail API, optionally with file attachments."""
+        if attachments:
+            # Use multipart/mixed to include both HTML body and attachments
+            from email.mime.application import MIMEApplication
+
+            msg = MIMEMultipart("mixed")
+            html_part = MIMEMultipart("alternative")
+            html_part.attach(MIMEText(body_html, "html"))
+            msg.attach(html_part)
+
+            for att in attachments:
+                part = MIMEApplication(att.data, Name=att.filename)
+                part["Content-Disposition"] = f'attachment; filename="{att.filename}"'
+                part["Content-Type"] = att.content_type
+                msg.attach(part)
+        else:
+            msg = MIMEMultipart("alternative")
+            msg.attach(MIMEText(body_html, "html"))
+
         msg["To"] = ", ".join(to)
         msg["Subject"] = subject
         if cc:
             msg["Cc"] = ", ".join(cc)
-        msg.attach(MIMEText(body_html, "html"))
 
         # If replying, set threading headers
         if reply_to_message_id:
-            # Fetch original to get Message-ID header
-            original = await self.get_message(access_token, reply_to_message_id)
             # Gmail handles threading via threadId, but we also set headers
             msg["In-Reply-To"] = reply_to_message_id
             msg["References"] = reply_to_message_id

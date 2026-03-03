@@ -15,6 +15,8 @@ class PipelineStepCreate(BaseModel):
     max_wait_days: int = Field(default=0, ge=0)
     template_id: uuid.UUID | None = None
     template_type: str | None = None  # docx template key (e.g. "aanmaning")
+    email_subject_template: str | None = None
+    email_body_template: str | None = None
 
 
 class PipelineStepUpdate(BaseModel):
@@ -25,6 +27,8 @@ class PipelineStepUpdate(BaseModel):
     template_id: uuid.UUID | None = None
     template_type: str | None = None
     is_active: bool | None = None
+    email_subject_template: str | None = None
+    email_body_template: str | None = None
 
 
 class PipelineStepResponse(BaseModel):
@@ -36,6 +40,8 @@ class PipelineStepResponse(BaseModel):
     template_id: uuid.UUID | None
     template_type: str | None = None
     template_name: str | None = None
+    email_subject_template: str | None = None
+    email_body_template: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -110,6 +116,8 @@ class BatchPreviewResponse(BaseModel):
     ready: int
     blocked: list[BatchBlocker]
     needs_step_assignment: list[CaseInPipeline]  # Cases not yet in a step
+    email_ready: int = 0  # Cases with opposing party email (for generate_document)
+    email_blocked: list[BatchBlocker] = []  # Cases missing opposing party email
 
 
 class BatchActionRequest(BaseModel):
@@ -121,6 +129,7 @@ class BatchActionRequest(BaseModel):
     )
     target_step_id: uuid.UUID | None = None
     auto_assign_step: bool = False  # Auto-assign first step to unassigned cases
+    send_email: bool = False  # Also send generated document via email
 
 
 class BatchActionResult(BaseModel):
@@ -133,6 +142,8 @@ class BatchActionResult(BaseModel):
     generated_document_ids: list[uuid.UUID] = []  # For generate_document action
     tasks_auto_completed: int = 0  # Tasks auto-completed after document generation
     cases_auto_advanced: int = 0  # Cases auto-advanced to next pipeline step
+    emails_sent: int = 0  # Emails successfully sent
+    emails_failed: int = 0  # Emails that failed to send
 
 
 # ── Smart Work Queues ────────────────────────────────────────────────────

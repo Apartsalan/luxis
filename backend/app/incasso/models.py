@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Uuid
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -32,6 +32,14 @@ class IncassoPipelineStep(TenantBase):
         String(50), nullable=True
     )  # Modern: docx template key (e.g. "aanmaning", "sommatie")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # Email template for batch sending (Jinja2 with {{ zaak.zaaknummer }} etc.)
+    email_subject_template: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+    email_body_template: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
 
     # Relationships
     template: Mapped["DocumentTemplate | None"] = relationship(  # noqa: F821

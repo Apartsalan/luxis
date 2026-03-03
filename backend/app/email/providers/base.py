@@ -9,8 +9,17 @@ from dataclasses import dataclass, field
 
 
 @dataclass
+class OutgoingAttachment:
+    """A file to attach to an outgoing email."""
+
+    filename: str
+    data: bytes
+    content_type: str  # e.g. "application/pdf"
+
+
+@dataclass
 class AttachmentInfo:
-    """Metadata for an email attachment."""
+    """Metadata for an email attachment (incoming)."""
 
     attachment_id: str  # Provider-specific ID (Gmail: attachmentId)
     filename: str
@@ -150,6 +159,7 @@ class EmailProvider(ABC):
         body_html: str,
         cc: list[str] | None = None,
         reply_to_message_id: str | None = None,
+        attachments: list[OutgoingAttachment] | None = None,
     ) -> str:
         """Send an email through the provider.
 
@@ -160,6 +170,7 @@ class EmailProvider(ABC):
             body_html: HTML body content.
             cc: Optional CC recipients.
             reply_to_message_id: If replying, the original message ID.
+            attachments: Optional list of files to attach.
 
         Returns:
             The provider message ID of the sent message.

@@ -154,4 +154,5 @@ async def batch_execute(
         data.action,
         data.target_step_id,
         data.auto_assign_step,
+        data.send_email,
     )

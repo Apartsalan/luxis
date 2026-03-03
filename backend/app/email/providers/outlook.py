@@ -15,7 +15,13 @@ from urllib.parse import urlencode
 import httpx
 
 from app.config import settings
-from app.email.providers.base import AttachmentInfo, EmailMessage, EmailProvider, OAuthTokens
+from app.email.providers.base import (
+    AttachmentInfo,
+    EmailMessage,
+    EmailProvider,
+    OAuthTokens,
+    OutgoingAttachment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -280,10 +286,12 @@ class OutlookProvider(EmailProvider):
         body_html: str,
         cc: list[str] | None = None,
         reply_to_message_id: str | None = None,
+        attachments: list[OutgoingAttachment] | None = None,
     ) -> str:
         """Send an email via Microsoft Graph API.
 
         The message appears in the user's Sent Items folder automatically.
+        Supports file attachments inline via contentBytes (max ~4MB per attachment).
         """
         if reply_to_message_id:
             return await self._reply_to_message(
@@ -312,6 +320,17 @@ class OutlookProvider(EmailProvider):
         if cc:
             message_body["message"]["ccRecipients"] = [
                 {"emailAddress": {"address": addr}} for addr in cc
+            ]
+
+        if attachments:
+            message_body["message"]["attachments"] = [
+                {
+                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "name": att.filename,
+                    "contentType": att.content_type,
+                    "contentBytes": base64.b64encode(att.data).decode(),
+                }
+                for att in attachments
             ]
 
         async with httpx.AsyncClient() as client:
@@ -412,7 +431,10 @@ class OutlookProvider(EmailProvider):
                 params={"$select": "id,name,contentType,size,isInline"},
             )
             if resp.status_code != 200:
-                logger.warning(f"Bijlagen ophalen mislukt voor message {message_id}: {resp.status_code}")
+                logger.warning(
+                    "Bijlagen ophalen mislukt voor message %s: %s",
+                    message_id, resp.status_code,
+                )
                 return []
 
             data = resp.json()

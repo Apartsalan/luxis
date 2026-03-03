@@ -219,12 +219,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-27 | 404 pagina in het Engels zonder navigatie — standaard Next.js 404. Fix: custom `not-found.tsx` met Nederlandse tekst + dashboard link. | Laag | S | ✅ Gefixt (27 feb, sessie 22) |
 | BUG-28 | Batch "Stap wijzigen" toont "0 gereed" voor dossiers zonder pipeline stap — `batch_preview()` telde cases zonder `incasso_step_id` als `needs_step_assignment` i.p.v. `ready`. Fix: alle non-blocked cases tellen als ready voor advance_step. | Hoog | S | ✅ Gefixt (27 feb, sessie 24) |
 | BUG-29 | Auto-advance pipeline werkt niet — `_try_auto_advance` checkte ALLE open taken (incl. 8 initiële taken uit case-aanmaak), waardoor auto-advance altijd geblokkeerd werd. Fix: (1) pipeline taken getagd via `action_config.source=pipeline`, (2) auto-advance/auto-complete scoped naar pipeline taken per stap, (3) initiële taken overgeslagen voor incasso dossiers, (4) audit trail bij stap-wijziging. | Hoog | M | ✅ Gefixt (1 mrt, sessie 26) |
-| BUG-30 | test_auth.py (7 tests) — alle auth endpoints gebruiken `/auth/login`, `/auth/me`, `/auth/refresh` maar router prefix is `/api/auth`. Fix: URL paden updaten in alle 7 tests. | Laag | S | ❌ TODO |
-| BUG-31 | test_integration_api.py (8 tests) — `login()` helper gebruikt `/auth/login` i.p.v. `/api/auth/login`, alle 8 tests falen op login. Fix: 1 regel in helper functie. | Laag | S | ❌ TODO |
-| BUG-32 | test_cases.py (2 tests) — `test_status_workflow` verwacht `nieuw → 14_dagenbrief → sommatie` maar workflow engine gebruikt database-driven transitions die deze directe paden niet toestaan (409). `test_status_change_sets_date_closed` verwacht `nieuw → afgesloten` als directe transitie. Fix: tests updaten naar geldige transitiepaden via WorkflowTransition tabel. | Midden | S | ❌ TODO |
-| BUG-33 | test_dashboard.py (1 test) — `test_dashboard_summary_with_cases` maakt cases aan met `date_opened: "2026-02-17"` maar `cases_this_month` filter checkt huidige maand (maart). Fix: dynamische datum gebruiken (`date.today().isoformat()`). | Laag | S | ❌ TODO |
-| BUG-34 | test_documents.py (1 test) — `test_list_docx_templates` verwacht 3 templates maar er zijn er nu 7 (herinnering, aanmaning, tweede_sommatie, dagvaarding toegevoegd). Fix: assertion updaten naar `>= 3` of exact 7. | Laag | S | ❌ TODO |
-| BUG-35 | test_relations.py (1 test) — `test_get_contact_with_links` verwacht `data["linked_companies"][0]["name"]` maar response structuur is `LinkedContactInfo` met nested `contact` object. Fix: `data["linked_companies"][0]["contact"]["name"]`. | Laag | S | ❌ TODO |
+| BUG-30 | test_auth.py (7 tests) — URL paden `/auth/` → `/api/auth/` | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
+| BUG-31 | test_integration_api.py — login helper URL pad gefixt | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
+| BUG-32 | test_cases.py + test_integration_api.py — workflow_data fixture toegevoegd aan conftest.py, tests gebruiken geldige transitiepaden | Midden | S | ✅ Gefixt (3 mrt, sessie 29) |
+| BUG-33 | test_dashboard.py — hardcoded datum → `date.today().isoformat()` | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
+| BUG-34 | test_documents.py — template count assertion `>= 3` + subset check | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
+| BUG-35 | test_relations.py — nested response pad `["contact"]["name"]` | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
 
 ---
 
@@ -270,7 +270,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 | Fase | Module | Huidige dekking | Wat nodig is | Status |
 |------|--------|----------------|--------------|--------|
-| QA-0 | Bestaande test fixes | 20 tests stuk (BUG-30 t/m 35) | URL paden, schema's, transitions updaten | ❌ TODO (sessie 29) |
+| QA-0 | Bestaande test fixes | 20 tests stuk (BUG-30 t/m 35) | URL paden, schema's, transitions updaten | ✅ Compleet (3 mrt, sessie 29) — 316/316 tests PASSED |
 | QA-1 | Auth & Permissions | 7 tests (alle stuk) | Login, refresh, token validatie, role-based access | ❌ TODO |
 | QA-2 | Relaties/Contacts | ~15 tests (1 stuk) | CRUD, links, conflict check, zoeken | ❌ TODO |
 | QA-3 | Zaken/Cases | ~14 tests (2 stuk) | CRUD, status workflow, partijen, activiteiten | ❌ TODO |

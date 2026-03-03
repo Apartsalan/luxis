@@ -5,13 +5,13 @@
 
 ## Lees bij start
 1. CLAUDE.md (automatisch geladen)
-2. `backend/tests/test_auth.py`
-3. `backend/tests/test_integration_api.py`
-4. `backend/tests/test_cases.py` (regels 190-265)
-5. `backend/tests/test_dashboard.py` (regels 25-63)
-6. `backend/tests/test_documents.py` (regels 488-506)
-7. `backend/tests/test_relations.py` (regels 300-331)
-8. `LUXIS-ROADMAP.md` (BUG-30 t/m BUG-35 sectie)
+2. Gebruik `luxis-researcher` subagent om `LUXIS-ROADMAP.md` en `SESSION-NOTES.md` te lezen (context besparen)
+3. `backend/tests/test_auth.py`
+4. `backend/tests/test_integration_api.py`
+5. `backend/tests/test_cases.py` (regels 190-265)
+6. `backend/tests/test_dashboard.py` (regels 25-63)
+7. `backend/tests/test_documents.py` (regels 488-506)
+8. `backend/tests/test_relations.py` (regels 300-331)
 
 ## Context
 Sessie 28 heeft P1 QA afgerond: 35 nieuwe backend tests (alle PASSED), 9 Playwright E2E tests, smoke test checklist. Bij de regressietest bleken 20 oudere tests te falen door verouderde URL paden, schema-wijzigingen, en business logic changes. Dit moet nu gefixt worden.

@@ -1,10 +1,61 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 2 maart 2026 (sessie 27 — P1.2 Batch brief + email verzenden)
-**Laatste feature/fix:** Batch brief + email: genereer DOCX, converteer naar PDF, email als bijlage via provider.
-**P1 status:** ALLE 6 ITEMS AFGEROND ✅ — Incasso Workflow Automatisering is compleet.
-**Openstaande bugs:** Geen (BUG-1 t/m BUG-29 allemaal ✅)
-**Volgende sessie (28):** Nieuwe prioriteiten bepalen. Opties: QA van P1 flow, BaseNet data migratie, Lisanne overzetten naar M365, nieuw P2-blok definiëren.
+**Laatst bijgewerkt:** 3 maart 2026 (sessie 28 — P1 QA: 35 backend tests + 9 E2E tests)
+**Laatste feature/fix:** Systeembrede testdekking: 35 backend integration tests voor incasso pipeline, 9 Playwright E2E tests, smoke test checklist.
+**P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
+**Openstaande bugs:** BUG-30 t/m BUG-35 (20 pre-existing test failures, geen productiebugs)
+**Volgende sessie (29):** Fix 20 pre-existing test failures (BUG-30 t/m BUG-35) + draai Playwright E2E tests. Details: `docs/prompts/sessie-29-prompt.md`
+
+## Wat er gedaan is (sessie 28 — 3 maart) — P1 QA: Systeembrede testdekking ✅
+
+### 35 backend integration tests (test_incasso_pipeline.py) ✅
+- **6 deadline kleur tests** — groen/oranje/rood/grijs + edge cases (boundary, zero max)
+- **2 email template tests** — Jinja2 rendering met variabelen + fallback naar generic template
+- **2 task creation tests** — generate_document vs manual_review task type
+- **3 auto-complete tests** — pipeline tasks per stap, BUG-29 regressietest (manual tasks niet geraakt)
+- **4 auto-advance tests** — doorschuiven, blokkade door open tasks, laatste stap, manual tasks blokkeren niet
+- **5 batch preview API tests** — ready/blocked/needs_step_assignment/email readiness/skip closed
+- **8 batch execute API tests** — met/zonder email, advance step, meerdere cases, partial failure, email failure
+- **2 pipeline overview tests** — grouping by step + unassigned cases
+- **3 queue counts tests** — empty, with data, unassigned in action_required
+
+### 9 Playwright E2E tests (incasso-pipeline.spec.ts) ✅
+- E1-E5: page load, deadline colors, action bar, pre-flight dialog, email toggle
+- E6-E7: skipped (vereist mocked email provider)
+- E8-E9: queue filters, stappen beheren
+
+### Smoke test checklist ✅
+- `docs/qa/p1-smoke-test-checklist.md` — 6 scenario's, 30+ handmatige checks
+
+### Mock strategie
+- `FakeEmailProvider(EmailProvider)` — in-memory email recording voor test assertions
+- `_FakeStep` plain class — vervangt `IncassoPipelineStep.__new__()` die niet werkt met SQLAlchemy instrumented attributes
+- `patch("app.incasso.service.render_docx/docx_to_pdf/send_with_attachment")` — mocks op import-locatie
+
+### Regressietest resultaten
+- **35/35 nieuwe tests PASSED** (72 seconden)
+- **296/316 totaal PASSED** — 20 pre-existing failures gevonden (BUG-30 t/m BUG-35)
+- Pre-existing failures: URL paden (`/auth/login` → `/api/auth/login`), verouderde assertions, schema wijzigingen
+
+### QA-traject op roadmap gezet
+- QA-0 t/m QA-9 gepland: elke module dezelfde testdekking als P1
+- Prioriteit: eerst stukke tests fixen, dan modules zonder tests (email, workflow, facturatie, tijdregistratie)
+
+### Nieuwe bestanden
+- `backend/tests/helpers/__init__.py` — package init
+- `backend/tests/helpers/fake_email_provider.py` — FakeEmailProvider met in-memory sent_messages
+- `backend/tests/helpers/incasso_fixtures.py` — create_pipeline_steps, create_incasso_case, create_pipeline_task, create_manual_task
+- `backend/tests/test_incasso_pipeline.py` — 35 tests in 9 test classes
+- `frontend/playwright.config.ts` — Playwright config (chromium, baseURL localhost:3000)
+- `frontend/e2e/incasso-pipeline.spec.ts` — 9 E2E tests
+- `docs/qa/p1-smoke-test-checklist.md` — handmatige smoke test
+- `docs/prompts/sessie-29-prompt.md` — volgende sessie prompt
+
+### Gewijzigde bestanden
+- `frontend/package.json` — @playwright/test devDependency
+- `LUXIS-ROADMAP.md` — P1 QA status, BUG-30 t/m BUG-35, QA-traject roadmap
+
+---
 
 ## Wat er gedaan is (sessie 27 — 2 maart) — P1.2 Batch brief + email verzenden ✅
 

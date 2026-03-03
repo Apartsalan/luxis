@@ -1,10 +1,36 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 3 maart 2026 (sessie 30 — QA: 64 nieuwe tests voor 4 modules)
-**Laatste feature/fix:** 64 nieuwe tests geschreven voor Email/Sync, Workflow/Taken, Facturatie, Tijdregistratie. 380/380 tests PASSED.
+**Laatst bijgewerkt:** 3 maart 2026 (sessie 31 — QA: 26 tenant isolation tests)
+**Laatste feature/fix:** 26 tenant isolation + edge case tests toegevoegd aan 5 modules. 406/406 tests PASSED.
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (31):** QA-1/2/3/8/9 uitbreiden, Playwright E2E tests, of nieuwe feature work
+**Volgende sessie (32):** Playwright E2E tests, of nieuwe feature work
+
+## Wat er gedaan is (sessie 31 — 3 maart) — QA: Tenant isolation + edge case tests ✅
+
+### Overzicht
+Multi-tenant isolation was het grootste testgap — nergens getest. Nu alle 5 resterende modules gedekt.
+
+### Wat er gebouwd is
+- `conftest.py`: `second_tenant`, `second_user`, `second_auth_headers` fixtures
+- **QA-1 Auth** (8→14 tests): expired JWT, nonexistent user token, empty credentials, inactive user login, multi-tenant /me, invalid refresh token
+- **QA-2 Relations** (18→23 tests): cross-tenant list/detail/update/delete/conflict-check
+- **QA-3 Cases** (14→19 tests): cross-tenant list/detail/update/delete, terminal status blocks transitions
+- **QA-8 Dashboard** (6→10 tests): unauthenticated endpoints, cross-tenant summary/activity
+- **QA-9 Documents** (22→28 tests): cross-tenant template CRUD, case docs, docx generation
+
+### Teststand
+- **380 → 406 tests** (+26 nieuwe tests)
+- **406/406 PASSED**, 0 failures
+- Tenant isolation bevestigd: geen cross-tenant data leaks
+
+### Gewijzigde bestanden
+- `backend/tests/conftest.py` — 3 nieuwe fixtures
+- `backend/tests/test_auth.py` — 6 nieuwe tests
+- `backend/tests/test_relations.py` — 5 nieuwe tests
+- `backend/tests/test_cases.py` — 5 nieuwe tests
+- `backend/tests/test_dashboard.py` — 4 nieuwe tests
+- `backend/tests/test_documents.py` — 6 nieuwe tests
 
 ## Wat er gedaan is (sessie 30 — 3 maart) — QA: 64 nieuwe tests voor 4 ongedekte modules ✅
 

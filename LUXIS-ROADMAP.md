@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 27 februari 2026
+**Laatst bijgewerkt:** 3 maart 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -271,15 +271,15 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | Fase | Module | Huidige dekking | Wat nodig is | Status |
 |------|--------|----------------|--------------|--------|
 | QA-0 | Bestaande test fixes | 20 tests stuk (BUG-30 t/m 35) | URL paden, schema's, transitions updaten | ✅ Compleet (3 mrt, sessie 29) — 380/380 tests PASSED |
-| QA-1 | Auth & Permissions | 8 tests (passing) | Login, refresh, token validatie, role-based access | ❌ TODO (uitbreiden) |
-| QA-2 | Relaties/Contacts | 25 tests (passing) | CRUD, links, conflict check, zoeken | ❌ TODO (uitbreiden) |
-| QA-3 | Zaken/Cases | 16 tests (passing) | CRUD, status workflow, partijen, activiteiten | ❌ TODO (uitbreiden) |
+| QA-1 | Auth & Permissions | 14 tests (passing) | Login, refresh, token validatie, expired JWT, inactive user, tenant isolation | ✅ Uitgebreid (3 mrt, sessie 31) |
+| QA-2 | Relaties/Contacts | 23 tests (passing) | CRUD, links, conflict check, zoeken, cross-tenant isolation (5 tests) | ✅ Uitgebreid (3 mrt, sessie 31) |
+| QA-3 | Zaken/Cases | 19 tests (passing) | CRUD, status workflow, partijen, activiteiten, cross-tenant isolation, terminal status lock | ✅ Uitgebreid (3 mrt, sessie 31) |
 | QA-4 | Email/Sync | 11 tests | Case emails, unlinked, link/bulk-link, dismiss, detail, attachments, tenant isolation | ✅ Compleet (3 mrt, sessie 30) |
 | QA-5 | Workflow/Taken | 19 tests | Statuses CRUD, transitions (B2B/B2C), tasks CRUD, rules, calendar, verjaring | ✅ Compleet (3 mrt, sessie 30) |
 | QA-6 | Facturatie | 19 tests | Invoice CRUD, status workflow, BTW precision, credit notes, lines, expenses, payments | ✅ Compleet (3 mrt, sessie 30) |
 | QA-7 | Tijdregistratie | 15 tests | CRUD, filters (case/billable/date), unbilled, summary, my/today, tenant isolation | ✅ Compleet (3 mrt, sessie 30) |
-| QA-8 | Dashboard | 6 tests (passing) | KPI's, recente activiteit, widgets | ❌ TODO (uitbreiden) |
-| QA-9 | Documents/Templates | 21 tests (passing) | Template CRUD, DOCX generatie, managed templates | ❌ TODO (uitbreiden) |
+| QA-8 | Dashboard | 10 tests (passing) | KPI's, recente activiteit, auth checks, cross-tenant isolation | ✅ Uitgebreid (3 mrt, sessie 31) |
+| QA-9 | Documents/Templates | 28 tests (passing) | Template CRUD, DOCX generatie, cross-tenant template/doc/docx isolation | ✅ Uitgebreid (3 mrt, sessie 31) |
 | QA-P1 | Incasso Pipeline | 35 tests + 9 E2E | **Compleet** (sessie 28) | ✅ Gedaan |
 
 ---

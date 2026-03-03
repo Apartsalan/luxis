@@ -495,10 +495,10 @@ async def test_list_docx_templates(
     )
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 3
+    assert len(data) >= 3  # More templates added in later sessions
 
     types = {t["template_type"] for t in data}
-    assert types == {"14_dagenbrief", "sommatie", "renteoverzicht"}
+    assert {"14_dagenbrief", "sommatie", "renteoverzicht"}.issubset(types)
 
     # All should be available (templates exist on disk)
     for t in data:

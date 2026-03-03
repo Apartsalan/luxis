@@ -186,7 +186,7 @@ async def test_update_case(
 
 @pytest.mark.asyncio
 async def test_status_workflow(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
+    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
 ):
     """Status transitions should follow the allowed workflow."""
     # Create case (status: nieuw)
@@ -198,28 +198,28 @@ async def test_status_workflow(
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
 
-    # nieuw → 14_dagenbrief
+    # nieuw → herinnering (valid for both debtor types)
     response = await client.post(
         f"/api/cases/{case_id}/status",
-        json={"new_status": "14_dagenbrief", "note": "Brief verstuurd"},
+        json={"new_status": "herinnering", "note": "Herinnering verstuurd"},
         headers=auth_headers,
     )
     assert response.status_code == 200
-    assert response.json()["status"] == "14_dagenbrief"
+    assert response.json()["status"] == "herinnering"
 
-    # 14_dagenbrief → sommatie
+    # herinnering → aanmaning (valid for both debtor types)
     response = await client.post(
         f"/api/cases/{case_id}/status",
-        json={"new_status": "sommatie"},
+        json={"new_status": "aanmaning"},
         headers=auth_headers,
     )
     assert response.status_code == 200
-    assert response.json()["status"] == "sommatie"
+    assert response.json()["status"] == "aanmaning"
 
 
 @pytest.mark.asyncio
 async def test_status_invalid_transition(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
+    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
 ):
     """Invalid status transitions should return 409."""
     # Create case (status: nieuw)
@@ -242,9 +242,9 @@ async def test_status_invalid_transition(
 
 @pytest.mark.asyncio
 async def test_status_change_sets_date_closed(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
+    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
 ):
-    """Moving to 'betaald' or 'afgesloten' should set date_closed."""
+    """Moving to a terminal status ('betaald') should set date_closed."""
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
@@ -253,10 +253,10 @@ async def test_status_change_sets_date_closed(
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
 
-    # nieuw → afgesloten
+    # nieuw → betaald (terminal status, valid for both debtor types)
     response = await client.post(
         f"/api/cases/{case_id}/status",
-        json={"new_status": "afgesloten"},
+        json={"new_status": "betaald"},
         headers=auth_headers,
     )
     assert response.status_code == 200

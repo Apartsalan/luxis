@@ -12,6 +12,7 @@ from app.config import settings
 from app.database import Base, get_db
 from app.main import app
 from app.relations.models import Contact
+from app.workflow.models import WorkflowStatus, WorkflowTransition
 
 # Use a separate test database URL (only replace the database name at the end)
 _base_url = settings.database_url
@@ -135,3 +136,94 @@ async def test_person(db: AsyncSession, test_tenant: Tenant) -> Contact:
     await db.commit()
     await db.refresh(contact)
     return contact
+
+
+@pytest_asyncio.fixture
+async def workflow_data(db: AsyncSession, test_tenant: Tenant) -> dict[str, uuid.UUID]:
+    """Seed workflow statuses and transitions for the test tenant.
+
+    Mirrors the essential data from migration 009_workflow_tables.
+    Returns a dict mapping status slugs to their UUIDs.
+    """
+    tenant_id = test_tenant.id
+
+    # Create workflow statuses
+    statuses_config = [
+        ("nieuw", "Nieuw", "intake", 10, "#3b82f6", False, True),
+        ("herinnering", "Herinnering", "pre_legal", 20, "#f59e0b", False, False),
+        ("aanmaning", "Aanmaning", "pre_legal", 30, "#f97316", False, False),
+        ("14_dagenbrief", "14-Dagenbrief", "pre_legal", 40, "#ef4444", False, False),
+        ("sommatie", "Sommatie", "legal", 50, "#dc2626", False, False),
+        ("tweede_sommatie", "Tweede Sommatie", "legal", 55, "#b91c1c", False, False),
+        ("dagvaarding", "Dagvaarding", "legal", 60, "#7c3aed", False, False),
+        ("vonnis", "Vonnis", "execution", 70, "#6d28d9", False, False),
+        ("executie", "Executie", "execution", 80, "#4c1d95", False, False),
+        ("betalingsregeling", "Betalingsregeling", "legal", 45, "#0ea5e9", False, False),
+        ("conservatoir_beslag", "Conservatoir Beslag", "legal", 58, "#be185d", False, False),
+        ("faillissementsaanvraag", "Faillissementsaanvraag", "execution", 85, "#991b1b", False, False),
+        ("betaald", "Betaald", "closed", 90, "#10b981", True, False),
+        ("schikking", "Schikking", "closed", 91, "#14b8a6", True, False),
+        ("oninbaar", "Oninbaar", "closed", 95, "#6b7280", True, False),
+    ]
+
+    slug_to_id: dict[str, uuid.UUID] = {}
+    for slug, label, phase, sort_order, color, is_terminal, is_initial in statuses_config:
+        status_id = uuid.uuid4()
+        slug_to_id[slug] = status_id
+        db.add(WorkflowStatus(
+            id=status_id,
+            tenant_id=tenant_id,
+            slug=slug,
+            label=label,
+            phase=phase,
+            sort_order=sort_order,
+            color=color,
+            is_terminal=is_terminal,
+            is_initial=is_initial,
+        ))
+
+    # Create transitions (from_slug, to_slug, debtor_type)
+    transitions = [
+        ("nieuw", "herinnering", "both"),
+        ("nieuw", "aanmaning", "both"),
+        ("nieuw", "14_dagenbrief", "b2c"),
+        ("nieuw", "sommatie", "b2b"),
+        ("nieuw", "betaald", "both"),
+        ("nieuw", "oninbaar", "both"),
+        ("herinnering", "aanmaning", "both"),
+        ("herinnering", "14_dagenbrief", "b2c"),
+        ("herinnering", "sommatie", "b2b"),
+        ("herinnering", "betaald", "both"),
+        ("herinnering", "oninbaar", "both"),
+        ("aanmaning", "14_dagenbrief", "b2c"),
+        ("aanmaning", "sommatie", "b2b"),
+        ("aanmaning", "betaald", "both"),
+        ("aanmaning", "oninbaar", "both"),
+        ("14_dagenbrief", "sommatie", "both"),
+        ("14_dagenbrief", "betaald", "both"),
+        ("14_dagenbrief", "oninbaar", "both"),
+        ("sommatie", "tweede_sommatie", "both"),
+        ("sommatie", "dagvaarding", "both"),
+        ("sommatie", "betaald", "both"),
+        ("sommatie", "oninbaar", "both"),
+        ("dagvaarding", "vonnis", "both"),
+        ("dagvaarding", "betaald", "both"),
+        ("dagvaarding", "schikking", "both"),
+        ("vonnis", "executie", "both"),
+        ("vonnis", "betaald", "both"),
+        ("vonnis", "schikking", "both"),
+        ("executie", "betaald", "both"),
+        ("executie", "oninbaar", "both"),
+    ]
+
+    for from_slug, to_slug, debtor_type in transitions:
+        db.add(WorkflowTransition(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            from_status_id=slug_to_id[from_slug],
+            to_status_id=slug_to_id[to_slug],
+            debtor_type=debtor_type,
+        ))
+
+    await db.commit()
+    return slug_to_id

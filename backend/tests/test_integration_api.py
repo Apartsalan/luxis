@@ -64,7 +64,7 @@ async def seed_interest_rates(db: AsyncSession):
 async def login(client: AsyncClient, email: str, password: str) -> dict[str, str]:
     """Login and return auth headers."""
     response = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": email, "password": password},
     )
     assert response.status_code == 200, f"Login failed: {response.text}"
@@ -383,6 +383,7 @@ async def test_case_status_workflow(
     client: AsyncClient,
     test_user: User,
     test_tenant: Tenant,
+    workflow_data,
 ):
     """Case status follows the correct workflow: nieuw → sommatie → dagvaarding."""
     headers = await login(client, "lisanne@kestinglegal.nl", "testpassword123")
@@ -434,6 +435,7 @@ async def test_invalid_status_transition(
     client: AsyncClient,
     test_user: User,
     test_tenant: Tenant,
+    workflow_data,
 ):
     """Cannot skip from 'nieuw' directly to 'vonnis'."""
     headers = await login(client, "lisanne@kestinglegal.nl", "testpassword123")

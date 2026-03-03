@@ -29,6 +29,8 @@ async def test_dashboard_summary_with_cases(
     test_company: Contact,
 ):
     """Dashboard should reflect created cases."""
+    from datetime import date
+
     # Create a few cases
     for case_type in ["incasso", "incasso", "advies"]:
         await client.post(
@@ -36,7 +38,7 @@ async def test_dashboard_summary_with_cases(
             json={
                 "case_type": case_type,
                 "client_id": str(test_company.id),
-                "date_opened": "2026-02-17",
+                "date_opened": date.today().isoformat(),
             },
             headers=auth_headers,
         )

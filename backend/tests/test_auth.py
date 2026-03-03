@@ -19,7 +19,7 @@ async def test_health_check(client: AsyncClient):
 async def test_login_success(client: AsyncClient, test_user: User):
     """Valid credentials should return access + refresh tokens."""
     response = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "lisanne@kestinglegal.nl", "password": "testpassword123"},
     )
     assert response.status_code == 200
@@ -33,7 +33,7 @@ async def test_login_success(client: AsyncClient, test_user: User):
 async def test_login_wrong_password(client: AsyncClient, test_user: User):
     """Wrong password should return 401."""
     response = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "lisanne@kestinglegal.nl", "password": "wrongpassword"},
     )
     assert response.status_code == 401
@@ -43,7 +43,7 @@ async def test_login_wrong_password(client: AsyncClient, test_user: User):
 async def test_login_unknown_email(client: AsyncClient, test_user: User):
     """Unknown email should return 401."""
     response = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "nobody@example.com", "password": "testpassword123"},
     )
     assert response.status_code == 401
@@ -54,7 +54,7 @@ async def test_me_with_valid_token(client: AsyncClient, test_user: User, test_te
     """Authenticated request to /auth/me should return user info."""
     token = create_access_token(str(test_user.id), str(test_tenant.id))
     response = await client.get(
-        "/auth/me",
+        "/api/auth/me",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200
@@ -67,7 +67,7 @@ async def test_me_with_valid_token(client: AsyncClient, test_user: User, test_te
 @pytest.mark.asyncio
 async def test_me_without_token(client: AsyncClient):
     """Request without token should return 401."""
-    response = await client.get("/auth/me")
+    response = await client.get("/api/auth/me")
     assert response.status_code == 401
 
 
@@ -75,7 +75,7 @@ async def test_me_without_token(client: AsyncClient):
 async def test_me_with_invalid_token(client: AsyncClient):
     """Request with invalid token should return 401."""
     response = await client.get(
-        "/auth/me",
+        "/api/auth/me",
         headers={"Authorization": "Bearer invalid-token"},
     )
     assert response.status_code == 401
@@ -86,14 +86,14 @@ async def test_refresh_token(client: AsyncClient, test_user: User):
     """Login, then use refresh token to get new tokens."""
     # First login
     login_response = await client.post(
-        "/auth/login",
+        "/api/auth/login",
         json={"email": "lisanne@kestinglegal.nl", "password": "testpassword123"},
     )
     refresh_token = login_response.json()["refresh_token"]
 
     # Use refresh token
     response = await client.post(
-        "/auth/refresh",
+        "/api/auth/refresh",
         json={"refresh_token": refresh_token},
     )
     assert response.status_code == 200

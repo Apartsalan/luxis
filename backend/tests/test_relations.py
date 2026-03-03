@@ -319,7 +319,7 @@ async def test_get_contact_with_links(
     )
     data = response.json()
     assert len(data["linked_companies"]) == 1
-    assert data["linked_companies"][0]["name"] == "Acme B.V."
+    assert data["linked_companies"][0]["contact"]["name"] == "Acme B.V."
 
     # Check company detail — should show linked person
     response = await client.get(
@@ -327,7 +327,7 @@ async def test_get_contact_with_links(
     )
     data = response.json()
     assert len(data["linked_persons"]) == 1
-    assert data["linked_persons"][0]["name"] == "Jan de Vries"
+    assert data["linked_persons"][0]["contact"]["name"] == "Jan de Vries"
 
 
 @pytest.mark.asyncio

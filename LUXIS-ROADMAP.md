@@ -262,6 +262,28 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 ---
 
+### QA-traject: Systeembrede Testdekking
+
+**Doel:** Elke module dezelfde testdekking als P1 — backend integration tests, Playwright E2E, smoke test checklist.
+
+**Aanpak:** Per module, in prioriteitsvolgorde. Elke fase levert: pytest tests + E2E tests + smoke checklist.
+
+| Fase | Module | Huidige dekking | Wat nodig is | Status |
+|------|--------|----------------|--------------|--------|
+| QA-0 | Bestaande test fixes | 20 tests stuk (BUG-30 t/m 35) | URL paden, schema's, transitions updaten | ❌ TODO (sessie 29) |
+| QA-1 | Auth & Permissions | 7 tests (alle stuk) | Login, refresh, token validatie, role-based access | ❌ TODO |
+| QA-2 | Relaties/Contacts | ~15 tests (1 stuk) | CRUD, links, conflict check, zoeken | ❌ TODO |
+| QA-3 | Zaken/Cases | ~14 tests (2 stuk) | CRUD, status workflow, partijen, activiteiten | ❌ TODO |
+| QA-4 | Email/Sync | 0 tests | OAuth flow, inbox sync, auto-koppeling, compose, bijlagen | ❌ TODO |
+| QA-5 | Workflow/Taken | 0 tests | Taak CRUD, status transitions, toewijzing, deadline tracking | ❌ TODO |
+| QA-6 | Facturatie | 0 tests | Invoice CRUD, creditnota's, PDF generatie, status workflow | ❌ TODO |
+| QA-7 | Tijdregistratie | 0 tests | Timer, handmatige entries, rapportage | ❌ TODO |
+| QA-8 | Dashboard | 6 tests (1 stuk) | KPI's, recente activiteit, widgets | ❌ TODO |
+| QA-9 | Documents/Templates | ~20 tests (1 stuk) | Template CRUD, DOCX generatie, managed templates | ❌ TODO |
+| QA-P1 | Incasso Pipeline | 35 tests + 9 E2E | **Compleet** (sessie 28) | ✅ Gedaan |
+
+---
+
 
 > Bron: `PROMPT-BEVINDINGEN-LISANNE.md` — 10 bevindingen uit 10 min testen
 > Analyse: `BEVINDINGEN-ANALYSE.md` — volledige gap-analyse met concurrent-research

@@ -1,8 +1,56 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 27 feb 2026 (sessie 25 — Incasso Workflow P1: auto-complete + auto-advance)
-**Laatste feature/fix:** Auto-complete taken na document generatie + auto-advance pipeline naar volgende stap.
-**Volgende sessie (26):** QA van incasso pipeline flow (taken aanmaken, auto-complete, auto-advance). VPS disk space opgelost (55GB vrij na prune).
+**Laatst bijgewerkt:** 2 maart 2026 (sessie 27 — P1.2 Batch brief + email verzenden)
+**Laatste feature/fix:** Batch brief + email: genereer DOCX, converteer naar PDF, email als bijlage via provider.
+**P1 status:** ALLE 6 ITEMS AFGEROND ✅ — Incasso Workflow Automatisering is compleet.
+**Openstaande bugs:** Geen (BUG-1 t/m BUG-29 allemaal ✅)
+**Volgende sessie (28):** Nieuwe prioriteiten bepalen. Opties: QA van P1 flow, BaseNet data migratie, Lisanne overzetten naar M365, nieuw P2-blok definiëren.
+
+## Wat er gedaan is (sessie 27 — 2 maart) — P1.2 Batch brief + email verzenden ✅
+
+### P1 item 2: Batch brief + email verzenden ✅
+- **Batch "Verstuur brief"** genereert nu documenten EN emailt ze als PDF-bijlage naar wederpartij
+- **Flow:** DOCX genereren → PDF conversie via LibreOffice → email via Gmail/Outlook provider (SMTP fallback)
+- **PreFlightDialog:** Email toggle (default aan), toont email_ready/email_blocked counts
+- **Per-stap email templates:** Jinja2 subject + body templates met variabelen (zaak.zaaknummer, wederpartij.naam, etc.)
+- **Fallback:** Als step geen custom email template heeft → generic `document_sent()` template
+- **Toast:** Toont "X brieven gegenereerd, X emails verzonden, X emails mislukt"
+- **Seed:** Standaard email templates voor Aanmaning, Sommatie, 2e Sommatie
+
+### Nieuwe bestanden
+- `backend/alembic/versions/035_pipeline_email_templates.py` — email_subject_template + email_body_template kolommen
+- `backend/app/email/send_service.py` — unified send helper (provider-first, SMTP fallback, logging)
+
+### Gewijzigde bestanden
+- `backend/app/email/providers/base.py` — OutgoingAttachment dataclass + attachments param
+- `backend/app/email/providers/gmail.py` — MIME multipart/mixed bijlage support
+- `backend/app/email/providers/outlook.py` — Graph API fileAttachment + lint fix
+- `backend/app/incasso/models.py` — email template kolommen op IncassoPipelineStep
+- `backend/app/incasso/schemas.py` — send_email, email_ready, email_blocked, emails_sent/failed
+- `backend/app/incasso/service.py` — batch_preview + batch_execute email logica, _build_step_email(), seed templates
+- `backend/app/incasso/router.py` — send_email parameter doorvoeren
+- `frontend/src/hooks/use-incasso.ts` — email velden op alle interfaces
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — PreFlightDialog email toggle, step editor email templates, toast
+
+### P1 Completeness
+Alle 6 P1 items zijn nu ✅:
+1. Template editor UI (sessie 24)
+2. **Batch brief + email verzenden (sessie 27)** ← deze sessie
+3. Auto-complete taken (sessie 25, bugfix sessie 26)
+4. Auto-advance pipeline (sessie 25, bugfix sessie 26)
+5. Deadline kleuren per stap (sessie 23)
+6. Instelbare dagen per stap (sessie 23)
+
+---
+
+## Wat er gedaan is (sessie 26 — 1 maart) — BUG-29 fix
+
+### BUG-29: Auto-advance geblokkeerd door initiële taken ✅
+- Auto-advance naar volgende stap werkte niet: taken voor de NIEUWE stap werden aangemaakt vóór de check of alle taken voltooid waren
+- Fix: `_auto_complete_tasks` + `_try_auto_advance` scoped naar pipeline taken per stap
+- Commit: `c6ba817`
+
+---
 
 ## Wat er gedaan is (sessie 25 — 27 feb) — Auto-complete taken + Auto-advance pipeline
 

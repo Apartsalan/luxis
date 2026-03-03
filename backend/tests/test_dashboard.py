@@ -158,3 +158,82 @@ async def test_recent_activity_limit(
     assert response.status_code == 200
     data = response.json()
     assert len(data["items"]) <= 1
+
+
+# ── Auth Checks ──────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_dashboard_summary_unauthenticated(client: AsyncClient):
+    """Dashboard summary without auth should return 401."""
+    response = await client.get("/api/dashboard/summary")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_recent_activity_unauthenticated(client: AsyncClient):
+    """Recent activity without auth should return 401."""
+    response = await client.get("/api/dashboard/recent-activity")
+    assert response.status_code == 401
+
+
+# ── Tenant Isolation ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_dashboard_summary(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B's dashboard should NOT count Tenant A's cases."""
+    from datetime import date
+
+    # Create cases in Tenant A
+    for _ in range(3):
+        await client.post(
+            "/api/cases",
+            json={
+                "case_type": "incasso",
+                "client_id": str(test_company.id),
+                "date_opened": date.today().isoformat(),
+            },
+            headers=auth_headers,
+        )
+
+    # Tenant A sees 3 cases
+    resp_a = await client.get("/api/dashboard/summary", headers=auth_headers)
+    assert resp_a.json()["total_active_cases"] == 3
+
+    # Tenant B sees 0 cases
+    resp_b = await client.get("/api/dashboard/summary", headers=second_auth_headers)
+    assert resp_b.json()["total_active_cases"] == 0
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_recent_activity(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B's recent activity should NOT show Tenant A's activities."""
+    # Create a case in Tenant A (generates activity)
+    await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-17",
+        },
+        headers=auth_headers,
+    )
+
+    # Tenant A sees activity
+    resp_a = await client.get("/api/dashboard/recent-activity", headers=auth_headers)
+    assert resp_a.json()["total"] >= 1
+
+    # Tenant B sees nothing
+    resp_b = await client.get("/api/dashboard/recent-activity", headers=second_auth_headers)
+    assert resp_b.json()["total"] == 0

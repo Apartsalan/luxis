@@ -4,7 +4,9 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import Tenant
 from app.relations.models import Contact
 
 # ── List Contacts ─────────────────────────────────────────────────────────────
@@ -457,3 +459,99 @@ async def test_pagination(client: AsyncClient, auth_headers: dict):
     )
     data = response.json()
     assert len(data["items"]) == 1
+
+
+# ── Tenant Isolation ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_list_contacts(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    db: AsyncSession,
+    second_tenant: Tenant,
+    test_company: Contact,
+):
+    """Tenant B should NOT see contacts from Tenant A."""
+    # Create a contact in Tenant B
+    other_contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=second_tenant.id,
+        contact_type="company",
+        name="Other B.V.",
+        email="info@other.nl",
+    )
+    db.add(other_contact)
+    await db.commit()
+
+    # Tenant A sees their contacts
+    resp_a = await client.get("/api/relations", headers=auth_headers)
+    assert resp_a.status_code == 200
+    names_a = [c["name"] for c in resp_a.json()["items"]]
+    assert "Acme B.V." in names_a
+    assert "Other B.V." not in names_a
+
+    # Tenant B sees their contacts
+    resp_b = await client.get("/api/relations", headers=second_auth_headers)
+    assert resp_b.status_code == 200
+    names_b = [c["name"] for c in resp_b.json()["items"]]
+    assert "Other B.V." in names_b
+    assert "Acme B.V." not in names_b
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_get_contact_detail(
+    client: AsyncClient,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B should get 404 when trying to read Tenant A's contact."""
+    response = await client.get(
+        f"/api/relations/{test_company.id}", headers=second_auth_headers
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_update_contact(
+    client: AsyncClient,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B should NOT be able to update Tenant A's contact."""
+    response = await client.put(
+        f"/api/relations/{test_company.id}",
+        json={"name": "Hacked B.V."},
+        headers=second_auth_headers,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_delete_contact(
+    client: AsyncClient,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B should NOT be able to delete Tenant A's contact."""
+    response = await client.delete(
+        f"/api/relations/{test_company.id}", headers=second_auth_headers
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_conflict_check(
+    client: AsyncClient,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B's conflict check should NOT find Tenant A's contacts."""
+    response = await client.post(
+        "/api/relations/conflict-check",
+        json={"search_query": "Acme"},
+        headers=second_auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["results_found"] == 0

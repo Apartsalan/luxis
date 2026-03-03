@@ -139,6 +139,45 @@ async def test_person(db: AsyncSession, test_tenant: Tenant) -> Contact:
 
 
 @pytest_asyncio.fixture
+async def second_tenant(db: AsyncSession) -> Tenant:
+    """Create a second tenant for isolation tests."""
+    tenant = Tenant(
+        id=uuid.uuid4(),
+        name="Van den Berg Advocaten",
+        slug="vandenberg",
+        kvk_number="99001122",
+    )
+    db.add(tenant)
+    await db.commit()
+    await db.refresh(tenant)
+    return tenant
+
+
+@pytest_asyncio.fixture
+async def second_user(db: AsyncSession, second_tenant: Tenant) -> User:
+    """Create a user belonging to the second tenant."""
+    user = User(
+        id=uuid.uuid4(),
+        tenant_id=second_tenant.id,
+        email="pieter@vandenberg.nl",
+        hashed_password=hash_password("testpassword456"),
+        full_name="Pieter van den Berg",
+        role="admin",
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def second_auth_headers(second_user: User, second_tenant: Tenant) -> dict[str, str]:
+    """Provide Authorization headers for the second tenant."""
+    token = create_access_token(str(second_user.id), str(second_tenant.id))
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
 async def workflow_data(db: AsyncSession, test_tenant: Tenant) -> dict[str, uuid.UUID]:
     """Seed workflow statuses and transitions for the test tenant.
 

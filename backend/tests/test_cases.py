@@ -408,3 +408,142 @@ async def test_delete_case(
     # Verify it's gone from active list
     response = await client.get("/api/cases", headers=auth_headers)
     assert response.json()["total"] == 0
+
+
+# ── Tenant Isolation ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_list_cases(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B should NOT see cases from Tenant A."""
+    # Create a case in Tenant A
+    await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-17",
+        },
+        headers=auth_headers,
+    )
+
+    # Tenant A sees 1 case
+    resp_a = await client.get("/api/cases", headers=auth_headers)
+    assert resp_a.json()["total"] == 1
+
+    # Tenant B sees 0 cases
+    resp_b = await client.get("/api/cases", headers=second_auth_headers)
+    assert resp_b.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_get_case_detail(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B should get 404 when trying to read Tenant A's case."""
+    create_resp = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-17",
+        },
+        headers=auth_headers,
+    )
+    case_id = create_resp.json()["id"]
+
+    response = await client.get(f"/api/cases/{case_id}", headers=second_auth_headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_update_case(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B should NOT be able to update Tenant A's case."""
+    create_resp = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-17",
+        },
+        headers=auth_headers,
+    )
+    case_id = create_resp.json()["id"]
+
+    response = await client.put(
+        f"/api/cases/{case_id}",
+        json={"description": "Hacked"},
+        headers=second_auth_headers,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_delete_case(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    test_company: Contact,
+):
+    """Tenant B should NOT be able to delete Tenant A's case."""
+    create_resp = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-17",
+        },
+        headers=auth_headers,
+    )
+    case_id = create_resp.json()["id"]
+
+    response = await client.delete(f"/api/cases/{case_id}", headers=second_auth_headers)
+    assert response.status_code == 404
+
+
+# ── Terminal Status Lock ─────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_terminal_status_blocks_further_transitions(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
+):
+    """A case in terminal status (betaald) should not allow further transitions."""
+    # Create case → move to betaald
+    create_resp = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-17",
+        },
+        headers=auth_headers,
+    )
+    case_id = create_resp.json()["id"]
+
+    await client.post(
+        f"/api/cases/{case_id}/status",
+        json={"new_status": "betaald"},
+        headers=auth_headers,
+    )
+
+    # Try to move from betaald → herinnering (should fail)
+    response = await client.post(
+        f"/api/cases/{case_id}/status",
+        json={"new_status": "herinnering"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 409

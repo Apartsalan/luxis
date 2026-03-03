@@ -750,3 +750,165 @@ async def test_docx_financial_amounts_present(
     # Interest amount should be present (some EUR value)
     # The exact amount depends on calc date, but it should be > 0
     assert all_text.count("EUR") >= 3  # At least principal, BIK, and total
+
+
+# ── Tenant Isolation ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_list_templates(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+):
+    """Tenant B should NOT see templates created by Tenant A."""
+    # Create a template in Tenant A
+    await client.post(
+        "/api/documents/templates",
+        json=SAMPLE_TEMPLATE,
+        headers=auth_headers,
+    )
+
+    # Tenant A sees 1 template
+    resp_a = await client.get("/api/documents/templates", headers=auth_headers)
+    assert len(resp_a.json()) >= 1
+
+    # Tenant B sees 0 templates
+    resp_b = await client.get("/api/documents/templates", headers=second_auth_headers)
+    assert len(resp_b.json()) == 0
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_get_template_detail(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+):
+    """Tenant B should get 404 for Tenant A's template."""
+    create_resp = await client.post(
+        "/api/documents/templates",
+        json=SAMPLE_TEMPLATE,
+        headers=auth_headers,
+    )
+    template_id = create_resp.json()["id"]
+
+    response = await client.get(
+        f"/api/documents/templates/{template_id}",
+        headers=second_auth_headers,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_update_template(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+):
+    """Tenant B should NOT be able to update Tenant A's template."""
+    create_resp = await client.post(
+        "/api/documents/templates",
+        json=SAMPLE_TEMPLATE,
+        headers=auth_headers,
+    )
+    template_id = create_resp.json()["id"]
+
+    response = await client.put(
+        f"/api/documents/templates/{template_id}",
+        json={"name": "Hacked Template"},
+        headers=second_auth_headers,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_delete_template(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+):
+    """Tenant B should NOT be able to delete Tenant A's template."""
+    create_resp = await client.post(
+        "/api/documents/templates",
+        json=SAMPLE_TEMPLATE,
+        headers=auth_headers,
+    )
+    template_id = create_resp.json()["id"]
+
+    response = await client.delete(
+        f"/api/documents/templates/{template_id}",
+        headers=second_auth_headers,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_case_documents(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    test_person: Contact,
+):
+    """Tenant B should NOT see documents from Tenant A's cases."""
+    await _seed_interest_rates(db)
+    # Create case + generate document in Tenant A
+    case_resp = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "opposing_party_id": str(test_person.id),
+            "date_opened": "2026-02-17",
+        },
+        headers=auth_headers,
+    )
+    case_id = case_resp.json()["id"]
+
+    template_resp = await client.post(
+        "/api/documents/templates",
+        json=SAMPLE_TEMPLATE,
+        headers=auth_headers,
+    )
+    template_id = template_resp.json()["id"]
+
+    await client.post(
+        f"/api/documents/cases/{case_id}/generate",
+        json={"template_id": template_id},
+        headers=auth_headers,
+    )
+
+    # Tenant B cannot access the case's documents
+    resp = await client.get(
+        f"/api/documents/cases/{case_id}",
+        headers=second_auth_headers,
+    )
+    # Should be 404 (case not found for this tenant) or empty list
+    assert resp.status_code in (404, 200)
+    if resp.status_code == 200:
+        assert len(resp.json()) == 0
+
+
+@pytest.mark.asyncio
+async def test_tenant_isolation_docx_generation(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    test_person: Contact,
+):
+    """Tenant B should NOT be able to generate docx for Tenant A's case."""
+    case_id = await _create_case_with_claims(
+        client, auth_headers, db, test_tenant, test_company, test_person
+    )
+
+    response = await client.post(
+        f"/api/documents/docx/cases/{case_id}/generate",
+        json={"template_type": "14_dagenbrief"},
+        headers=second_auth_headers,
+    )
+    assert response.status_code == 404

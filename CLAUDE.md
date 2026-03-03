@@ -186,6 +186,13 @@ Na het bouwen, voordat je deploy-commando geeft:
 - Bij nieuwe TODO's: voeg toe aan de juiste sectie met status ❌ TODO.
 - Bij VPS/infra wijzigingen: update de status-tabel bovenin.
 
+**Session notes bijwerken (HARDE REGEL):**
+- **VERPLICHT: Aan het einde van ELKE sessie `SESSION-NOTES.md` bijwerken.** Dit is het geheugen tussen sessies.
+- Voeg een nieuwe entry toe bovenaan (nieuwste eerst) met het format: `## Wat er gedaan is (sessie N — datum) — [onderwerp]`
+- Bevat: wat er gebouwd/gefixt is, nieuwe bestanden, gewijzigde bestanden, bekende issues.
+- Update de header-regels (laatst bijgewerkt, laatste feature/fix, openstaande bugs, volgende sessie).
+- Doe dit VOOR het genereren van de sessie-prompt — de volgende sessie leest deze notes bij start.
+
 ## Context Management
 
 **Doel: sessies zo lang mogelijk effectief houden.**

@@ -1,10 +1,45 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 4 maart 2026 (sessie 33 — DevOps enhancements + financial precision)
-**Laatste feature/fix:** Claude Code DevOps (hooks, /learn, /verify, /compact-smart, bekende-fouten codificatie) + float→Decimal fix
+**Laatst bijgewerkt:** 4 maart 2026 (sessie 34 — E2E-2 Zaken CRUD tests)
+**Laatste feature/fix:** 8 Zaken CRUD E2E tests (create, detail, tabs, edit, status, delete)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (34):** E2E-2: Zaken CRUD E2E tests (~10 tests, 7 detail tabs)
+**Volgende sessie (35):** E2E-3: Facturen + Tijdschrijven E2E tests (~10-12 tests)
+
+## Wat er gedaan is (sessie 34 — 4 maart) — E2E-2: Zaken CRUD ✅
+
+### Overzicht
+8 Playwright E2E tests voor het volledige Zaken (Cases) CRUD lifecycle. Alle tests PASSED. Totaal E2E tests nu: 33 (24 nieuwe + 9 incasso bestaand).
+
+### Wat er gebouwd is
+- **`zaken.spec.ts`**: 8 tests — lijst, navigatie, create via form (client search+select), detail page, 7 tabs check, edit beschrijving, status change via API, delete via UI
+- **API helpers**: `createCase()`, `deleteCase()`, `updateCaseStatus()` in `e2e/helpers/api.ts`
+
+### Tests (Z1-Z8)
+| # | Test | Methode |
+|---|------|---------|
+| Z1 | Lijst laadt met UI elementen | UI check |
+| Z2 | "Nieuw dossier" navigeert | UI navigatie |
+| Z3 | Create case via form | UI form (client search, type select) |
+| Z4 | Detail pagina laadt | UI verify (case_number, status, client) |
+| Z5 | 7 tabs zichtbaar (non-incasso) | UI check + incasso tabs afwezig |
+| Z6 | Edit beschrijving | UI (Bewerken → textarea → Opslaan) |
+| Z7 | Status wijzigen | API (nieuw → herinnering) + UI verify |
+| Z8 | Delete dossier | UI (trash + confirm dialog) |
+
+### Lessen geleerd
+- Workflow statuses zijn dynamisch — `afgesloten` bestaat niet, gebruik workflow slugs (`herinnering`, `betaald`, etc.)
+- Meerdere "Opslaan" buttons op detail page — gebruik `.first()` voor strict mode
+- Toast tekst was "Dossiergegevens opgeslagen", niet "bijgewerkt" — altijd toast tekst checken in broncode
+
+### Nieuwe bestanden
+- `frontend/e2e/zaken.spec.ts`
+
+### Gewijzigde bestanden
+- `frontend/e2e/helpers/api.ts` (3 nieuwe helpers)
+- `LUXIS-ROADMAP.md` (E2E-2 status → compleet)
+
+---
 
 ## Wat er gedaan is (sessie 33 — 4 maart) — Claude Code DevOps + Financial Precision ✅
 

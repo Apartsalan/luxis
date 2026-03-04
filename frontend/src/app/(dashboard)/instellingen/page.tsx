@@ -381,7 +381,7 @@ function KantoorTab() {
   const handleSave = () => {
     updateTenant.mutate(
       {
-        name: form.name || null,
+        name: form.name || undefined,
         kvk_number: form.kvk_number || null,
         btw_number: form.btw_number || null,
         address: form.address || null,

@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '[hook] Session ending — did you run /session-end?'"
+            "command": "bash C:/Users/arsal/Documents/luxis/.claude/hooks/check-session-end.sh"
           }
         ]
       }

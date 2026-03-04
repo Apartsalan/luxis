@@ -34,3 +34,14 @@ Next.js 15 (App Router, React 19) + shadcn/ui + Tailwind CSS + TanStack Query.
 - Server state: TanStack Query (useQuery, useMutation)
 - Auth state: custom `useAuth` hook with localStorage tokens
 - No global state library needed (yet)
+
+## E2E Testing (Playwright)
+
+- Config: `frontend/playwright.config.ts` — 3-project setup (setup → auth → chromium)
+- Auth: storageState pattern — login in `auth.setup.ts`, reuse via `e2e/.auth/user.json`
+- Helpers: `frontend/e2e/helpers/` — `auth.ts` (login, token injection), `api.ts` (seed/cleanup via backend API)
+- **`force: true` on clicks** — Next.js dev overlay `<nextjs-portal>` blocks click events
+- **`getByPlaceholder()`** for forms without `htmlFor`/`id` attributes
+- **Regex for `waitForURL`** — `waitForURL(/\/relaties\/[a-f0-9-]+$/)` not `waitForURL("**/relaties/**")`
+- **Sequential execution** — `workers: 1`, `fullyParallel: false` for test interdependency
+- **Cleanup in `afterAll`** — delete test data via API helpers to avoid pollution

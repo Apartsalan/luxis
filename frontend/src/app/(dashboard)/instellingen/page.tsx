@@ -1729,7 +1729,7 @@ function SjablonenTab() {
         file: uploadFile,
         name: uploadName,
         template_key: uploadKey,
-        description: uploadDesc || null,
+        description: uploadDesc || undefined,
       },
       {
         onSuccess: () => {
@@ -1769,7 +1769,7 @@ function SjablonenTab() {
       {
         id: editingId,
         name: editName,
-        description: editDescription || null,
+        description: editDescription || undefined,
         template_key: editKey,
       },
       { onSuccess: () => setEditingId(null) }

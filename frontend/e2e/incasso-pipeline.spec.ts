@@ -44,7 +44,7 @@ async function createTestCase(
   token: string
 ): Promise<string> {
   // Create a contact for client
-  const clientRes = await request.post(`${API_URL}/api/contacts`, {
+  const clientRes = await request.post(`${API_URL}/api/relations`, {
     headers: { Authorization: `Bearer ${token}` },
     data: {
       contact_type: "company",
@@ -55,7 +55,7 @@ async function createTestCase(
   const client = await clientRes.json();
 
   // Create a contact for opposing party
-  const opRes = await request.post(`${API_URL}/api/contacts`, {
+  const opRes = await request.post(`${API_URL}/api/relations`, {
     headers: { Authorization: `Bearer ${token}` },
     data: {
       contact_type: "person",
@@ -92,7 +92,7 @@ test.describe("Incasso Pipeline", () => {
     // Set auth token in localStorage before navigating
     await page.goto("/login");
     await page.evaluate((token: string) => {
-      localStorage.setItem("access_token", token);
+      localStorage.setItem("luxis_access_token", token);
     }, authToken);
   });
 

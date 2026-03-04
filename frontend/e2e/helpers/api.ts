@@ -55,3 +55,67 @@ export async function deleteContact(
     throw new Error(`Delete contact failed: ${res.status()}`);
   }
 }
+
+/**
+ * Create a case (dossier) via the backend API.
+ */
+export async function createCase(
+  request: APIRequestContext,
+  token: string,
+  data: {
+    case_type: string;
+    client_id: string;
+    date_opened?: string;
+    description?: string;
+    opposing_party_id?: string;
+    interest_type?: string;
+  }
+): Promise<{ id: string; case_number: string; status: string }> {
+  const res = await request.post(`${API_URL}/api/cases`, {
+    headers: authHeaders(token),
+    data: {
+      date_opened: new Date().toISOString().split("T")[0],
+      ...data,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(`Create case failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+/**
+ * Delete a case by ID (soft delete).
+ */
+export async function deleteCase(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<void> {
+  const res = await request.delete(`${API_URL}/api/cases/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete case failed: ${res.status()}`);
+  }
+}
+
+/**
+ * Update a case's status via the backend API.
+ */
+export async function updateCaseStatus(
+  request: APIRequestContext,
+  token: string,
+  id: string,
+  newStatus: string,
+  note?: string
+): Promise<{ id: string; status: string }> {
+  const res = await request.post(`${API_URL}/api/cases/${id}/status`, {
+    headers: authHeaders(token),
+    data: { new_status: newStatus, note: note ?? null },
+  });
+  if (!res.ok()) {
+    throw new Error(`Update case status failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
+}

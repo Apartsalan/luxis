@@ -42,7 +42,14 @@
       "TodoWrite",
       "Task"
     ],
-    "deny": []
+    "deny": [
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(env | curl *)",
+      "Bash(curl * -d *env*)"
+    ]
   },
   "hooks": {
     "PostToolUse": [
@@ -51,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '[hook] File modified — remember to run tests before committing'"
+            "command": "echo '[hook] File modified — run /verify before committing'"
           }
         ]
       }

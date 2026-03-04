@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -59,9 +60,9 @@ class CaseInPipeline(BaseModel):
     case_number: str
     client_name: str
     opposing_party_name: str | None
-    total_principal: float
-    total_paid: float
-    outstanding: float
+    total_principal: Decimal
+    total_paid: Decimal
+    outstanding: Decimal
     days_in_step: int
     incasso_step_id: uuid.UUID | None
     status: str

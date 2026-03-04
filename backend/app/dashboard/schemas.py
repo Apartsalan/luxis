@@ -1,6 +1,7 @@
 """Dashboard module schemas — response models for KPIs and activity."""
 
 import uuid
+from decimal import Decimal
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -22,9 +23,9 @@ class DashboardSummary(BaseModel):
     """Main dashboard KPI summary."""
     total_active_cases: int
     total_contacts: int
-    total_outstanding: float  # Sum of all open cases' outstanding amounts
-    total_principal: float
-    total_paid: float
+    total_outstanding: Decimal  # Sum of all open cases' outstanding amounts
+    total_principal: Decimal
+    total_paid: Decimal
     cases_by_status: list[CaseStatusCount]
     cases_by_type: list[CaseTypeCount]
     cases_this_month: int

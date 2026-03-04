@@ -1,10 +1,45 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 4 maart 2026 (sessie 32 — E2E-1: 16 Playwright tests)
-**Laatste feature/fix:** 16 Playwright E2E tests: auth, dashboard, sidebar, relaties CRUD. 25 totaal E2E tests.
+**Laatst bijgewerkt:** 4 maart 2026 (sessie 33 — DevOps enhancements + financial precision)
+**Laatste feature/fix:** Claude Code DevOps (hooks, /learn, /verify, /compact-smart, bekende-fouten codificatie) + float→Decimal fix
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (33):** E2E-2: Zaken CRUD E2E tests (~10 tests, 7 detail tabs)
+**Volgende sessie (34):** E2E-2: Zaken CRUD E2E tests (~10 tests, 7 detail tabs)
+
+## Wat er gedaan is (sessie 33 — 4 maart) — Claude Code DevOps + Financial Precision ✅
+
+### Overzicht
+Claude Code configuratie verbeterd op basis van everything-claude-code repo analyse. 32 sessies retroactief geanalyseerd, lessen gecodificeerd. Financial precision bugs gefixt.
+
+### Wat er gebouwd is
+- **Bekende fouten uitgebreid:** 15 → 28 items in `.claude/skills/bekende-fouten/SKILL.md` (Playwright, test hygiene, SQLAlchemy, VPS)
+- **CLAUDE.md updates:** E2E Testing sectie in `frontend/CLAUDE.md`, Test Patterns + SQLAlchemy secties in `backend/CLAUDE.md`
+- **`/learn` command:** Extraheert sessie-patronen en stelt CLAUDE.md updates voor
+- **`/compact-smart` command:** Detecteert huidige focus en genereert optimale `/compact` string
+- **`/verify` command:** 7-staps post-implementatie checklist (tests, lint, build, grep-scan, code review, git status)
+- **Stop hook:** `check-session-end.sh` — checkt SESSION-NOTES.md, ROADMAP, uncommitted/unpushed bij sessie-einde
+- **PostToolUse hook:** Bericht verwijst nu naar `/verify`
+- **Security deny list:** ssh, scp, dangerous rm/curl patterns in settings.json
+
+### Fixes
+- **5x `float()` → `Decimal`** in `dashboard/service.py` + `dashboard/schemas.py` + `incasso/service.py` + `incasso/schemas.py`
+- **`|| undefined` in instellingen:** Onderzocht maar teruggedraaid — TypeScript types gebruiken optional (`?:`), niet nullable
+
+### Nieuwe bestanden
+- `.claude/hooks/check-session-end.sh`
+- `.claude/commands/learn.md`
+- `.claude/commands/compact-smart.md`
+- `.claude/commands/verify.md`
+
+### Gewijzigde bestanden
+- `.claude/settings.json` (Stop hook, PostToolUse, deny list)
+- `.claude/skills/bekende-fouten/SKILL.md` (13 nieuwe items)
+- `frontend/CLAUDE.md` (E2E sectie)
+- `backend/CLAUDE.md` (Test Patterns + SQLAlchemy secties)
+- `backend/app/dashboard/schemas.py` + `service.py` (Decimal)
+- `backend/app/incasso/schemas.py` + `service.py` (Decimal)
+
+---
 
 ## Wat er gedaan is (sessie 32 — 4 maart) — E2E-1: Auth + Dashboard + Sidebar + Relaties CRUD ✅
 

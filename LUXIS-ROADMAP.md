@@ -297,6 +297,14 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 **Totaal nu:** 16 E2E tests (nieuwe) + 9 incasso E2E tests (bestaand) = **25 E2E tests**
 
+### DevOps Enhancements (sessie 33, 4 maart) ✅
+
+- Bekende fouten gecodificeerd: 15 → 28 items (retroactieve analyse 32 sessies)
+- `/learn`, `/compact-smart`, `/verify` commands aangemaakt
+- Stop hook met session-end checks (SESSION-NOTES, ROADMAP, uncommitted/unpushed)
+- Security deny list (ssh, scp, dangerous rm/curl)
+- `float()` → `Decimal` fix in dashboard + incasso services/schemas
+
 **Bestanden:**
 - `frontend/e2e/auth.setup.ts` — storageState setup
 - `frontend/e2e/auth.spec.ts` — login, invalid creds, persistence, logout

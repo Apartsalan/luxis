@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,8 +48,8 @@ async def get_dashboard_summary(
         )
     )
     row = result.one()
-    total_principal = float(row[0])
-    total_paid = float(row[1])
+    total_principal = Decimal(str(row[0]))
+    total_paid = Decimal(str(row[1]))
     total_outstanding = total_principal - total_paid
 
     # Cases by status

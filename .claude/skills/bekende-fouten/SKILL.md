@@ -1,6 +1,6 @@
 ---
 name: bekende-fouten
-description: Bekende fouten en valkuilen uit 23 sessies Luxis-ontwikkeling. Lees dit bij elke niet-triviale taak.
+description: Bekende fouten en valkuilen uit 32 sessies Luxis-ontwikkeling. Lees dit bij elke niet-triviale taak.
 ---
 
 # Bekende Fouten — VOORKOM DEZE
@@ -31,3 +31,28 @@ description: Bekende fouten en valkuilen uit 23 sessies Luxis-ontwikkeling. Lees
 
 14. **Sessie-prompts moeten COMPLEET zijn** — de gebruiker is geen developer, prompt moet foutloos werken zonder extra context
 15. **LUXIS-ROADMAP.md is de enige source of truth** — update na ELKE wijziging
+
+## Playwright / E2E Testing
+
+16. **Next.js dev overlay `<nextjs-portal>` blokkeert clicks** — gebruik `{ force: true }` op click() calls in E2E tests
+17. **Forms zonder htmlFor/id** — gebruik `getByPlaceholder()` of `locator("label:has-text('X') + input")` in Playwright
+18. **`waitForURL("**/path/**")` matcht te breed** — gebruik regex: `waitForURL(/\/relaties\/[a-f0-9-]+$/)`
+19. **storageState pattern voor auth** — login eenmalig in `auth.setup.ts`, hergebruik `e2e/.auth/user.json` in alle specs. Token injection via localStorage is fragiel.
+
+## Test Hygiene
+
+20. **Geen hardcoded datums in tests** — gebruik `date.today()` of relatieve datums, niet `"2026-02-17"`
+21. **Geen exacte counts op seeded data** — gebruik `>= N` niet `== N`, gebruik subset checks niet exact equality
+22. **URL paden in tests ALTIJD met `/api/` prefix** — `/api/auth/login`, niet `/auth/login`
+
+## SQLAlchemy / Database
+
+23. **Nested selectinload ALTIJD expliciet** — `selectinload(Model.relation).selectinload(Relation.sub)` voor geneste relaties in async context
+24. **`lazy="selectin"` op self-referential models → circular load** — gebruik `lazy="noload"` en laad expliciet
+25. **Service constructor updaten bij schema groei** — nieuw veld in schema? Check of `create_*()` en `update_*()` het doorgeven
+26. **Alembic stamp voor pre-existing DB** — `alembic stamp head` bij eerste deploy als tabellen al bestaan, niet `upgrade head`
+
+## Infra / VPS
+
+27. **VPS disk vol → PostgreSQL crasht** — `docker system prune -a --volumes -f` vrijt ruimte. Check regelmatig.
+28. **COMPOSE_FILE moet in .env staan op VPS** — anders wordt prod override niet geladen en draait dev-config in productie

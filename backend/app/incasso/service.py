@@ -3,6 +3,7 @@
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -250,7 +251,7 @@ def _case_to_pipeline_item(
     step: IncassoPipelineStep | None = None,
 ) -> CaseInPipeline:
     """Convert a Case model to CaseInPipeline schema."""
-    outstanding = float(case.total_principal) - float(case.total_paid)
+    outstanding = Decimal(str(case.total_principal)) - Decimal(str(case.total_paid))
 
     # Use step_entered_at if available, otherwise fallback to date_opened
     if case.step_entered_at:
@@ -264,9 +265,9 @@ def _case_to_pipeline_item(
         case_number=case.case_number,
         client_name=case.client.name if case.client else "Onbekend",
         opposing_party_name=case.opposing_party.name if case.opposing_party else None,
-        total_principal=float(case.total_principal),
-        total_paid=float(case.total_paid),
-        outstanding=round(outstanding, 2),
+        total_principal=Decimal(str(case.total_principal)),
+        total_paid=Decimal(str(case.total_paid)),
+        outstanding=outstanding.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
         days_in_step=days_in_step,
         incasso_step_id=case.incasso_step_id,
         status=case.status,

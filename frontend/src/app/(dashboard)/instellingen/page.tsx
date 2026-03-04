@@ -381,7 +381,7 @@ function KantoorTab() {
   const handleSave = () => {
     updateTenant.mutate(
       {
-        name: form.name || undefined,
+        name: form.name || null,
         kvk_number: form.kvk_number || null,
         btw_number: form.btw_number || null,
         address: form.address || null,
@@ -1729,7 +1729,7 @@ function SjablonenTab() {
         file: uploadFile,
         name: uploadName,
         template_key: uploadKey,
-        description: uploadDesc || undefined,
+        description: uploadDesc || null,
       },
       {
         onSuccess: () => {
@@ -1769,7 +1769,7 @@ function SjablonenTab() {
       {
         id: editingId,
         name: editName,
-        description: editDescription || undefined,
+        description: editDescription || null,
         template_key: editKey,
       },
       { onSuccess: () => setEditingId(null) }

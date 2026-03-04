@@ -25,6 +25,20 @@ Every module follows: `router.py` (endpoints) → `service.py` (business logic, 
 - Every financial calc needs test with known-correct values from legal sources
 - Test files mirror module structure: `test_interest.py`, `test_wik.py`, `test_payment_distribution.py`
 
+## Test Patterns
+
+- No hardcoded dates — use `date.today()` or relative dates, not `"2026-02-17"`
+- No exact counts on seeded data — use `>=` and subset checks, not `== 3`
+- All API paths use `/api/` prefix — `/api/auth/login`, not `/auth/login`
+- When adding fields to a schema, always update the service `create_*()` and `update_*()` methods
+- `alembic stamp head` for pre-existing databases, not `alembic upgrade head`
+
+## SQLAlchemy Async Rules
+
+- Nested eager loading: chain `selectinload(A.b).selectinload(B.c)` for depth
+- Never rely on lazy loading in async context — it raises `MissingGreenlet`
+- `lazy="selectin"` on self-referential models causes circular load — use `lazy="noload"` instead
+
 ## Dependencies
 
 - `bcrypt` for passwords (NOT passlib)

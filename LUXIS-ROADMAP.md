@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 3 maart 2026
+**Laatst bijgewerkt:** 4 maart 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -281,6 +281,29 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | QA-8 | Dashboard | 10 tests (passing) | KPI's, recente activiteit, auth checks, cross-tenant isolation | ✅ Uitgebreid (3 mrt, sessie 31) |
 | QA-9 | Documents/Templates | 28 tests (passing) | Template CRUD, DOCX generatie, cross-tenant template/doc/docx isolation | ✅ Uitgebreid (3 mrt, sessie 31) |
 | QA-P1 | Incasso Pipeline | 35 tests + 9 E2E | **Compleet** (sessie 28) | ✅ Gedaan |
+
+### E2E Tests (Playwright) — Sessie-overzicht
+
+**Doel:** Elke core flow gedekt met Playwright E2E tests naast backend pytest tests.
+
+**Aanpak:** Opgesplitst in 3-4 sessies. Auth setup via storageState (login eenmalig, hergebruik in alle specs).
+
+| Sessie | Scope | Tests | Status |
+|--------|-------|-------|--------|
+| E2E-1 | Auth + Dashboard + Sidebar + Relaties CRUD | 16 tests (1 setup + 4 auth + 3 dashboard + 3 sidebar + 5 relaties) | ✅ Compleet (4 mrt, sessie 32) |
+| E2E-2 | Zaken CRUD (7 detail tabs) | ~10 tests | ❌ TODO |
+| E2E-3 | Facturen + Tijdschrijven + Documenten | ~12 tests | ❌ TODO |
+| E2E-4 | Correspondentie + Agenda + Taken + smoke | ~8 tests | ❌ TODO (optioneel) |
+
+**Totaal nu:** 16 E2E tests (nieuwe) + 9 incasso E2E tests (bestaand) = **25 E2E tests**
+
+**Bestanden:**
+- `frontend/e2e/auth.setup.ts` — storageState setup
+- `frontend/e2e/auth.spec.ts` — login, invalid creds, persistence, logout
+- `frontend/e2e/dashboard.spec.ts` — greeting, KPI cards, new dossier button
+- `frontend/e2e/sidebar.spec.ts` — nav items, click navigation, collapse/expand
+- `frontend/e2e/relaties.spec.ts` — list, create company/person, edit, delete
+- `frontend/e2e/helpers/auth.ts` + `api.ts` — shared utilities
 
 ---
 

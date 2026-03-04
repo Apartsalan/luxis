@@ -1,10 +1,57 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 3 maart 2026 (sessie 31 — QA: 26 tenant isolation tests)
-**Laatste feature/fix:** 26 tenant isolation + edge case tests toegevoegd aan 5 modules. 406/406 tests PASSED.
+**Laatst bijgewerkt:** 4 maart 2026 (sessie 32 — E2E-1: 16 Playwright tests)
+**Laatste feature/fix:** 16 Playwright E2E tests: auth, dashboard, sidebar, relaties CRUD. 25 totaal E2E tests.
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (32):** Playwright E2E tests, of nieuwe feature work
+**Volgende sessie (33):** E2E-2: Zaken CRUD E2E tests (~10 tests, 7 detail tabs)
+
+## Wat er gedaan is (sessie 32 — 4 maart) — E2E-1: Auth + Dashboard + Sidebar + Relaties CRUD ✅
+
+### Overzicht
+Eerste set Playwright E2E tests. Auth setup via storageState pattern (login eenmalig, hergebruik in alle specs). 16 nieuwe tests, allemaal PASSED.
+
+### Wat er gebouwd is
+- **`auth.setup.ts`**: Login via echt formulier, storageState opslaan in `e2e/.auth/user.json`
+- **`auth.spec.ts`** (4 tests): login form, invalid creds, session persistence na reload, logout
+- **`dashboard.spec.ts`** (3 tests): greeting met naam, KPI kaarten, "Nieuw dossier" knop
+- **`sidebar.spec.ts`** (3 tests): nav items zichtbaar, klik navigatie, collapse/expand
+- **`relaties.spec.ts`** (5 tests): lijst pagina, maak bedrijf, maak persoon, bewerk, verwijder
+- **`helpers/auth.ts`** + **`api.ts`**: herbruikbare test utilities
+- **`playwright.config.ts`**: 3-project setup (setup → auth → chromium met dependencies)
+
+### Fixes
+- `next.config.ts`: fallback URL `http://backend:8000` → `http://localhost:8000` (proxy 404 fix)
+- `incasso-pipeline.spec.ts`: `access_token` → `luxis_access_token` (auth key fix)
+- `.gitignore`: Playwright auth/results/report dirs toegevoegd
+- Greeting regex: `Goedenavond` → `Goede**n**avond` (verbindings-n)
+
+### Belangrijke lessen
+- Next.js dev overlay (`<nextjs-portal>`) blokkeert clicks → `{ force: true }` nodig
+- Forms zonder `htmlFor`/`id` → gebruik `getByPlaceholder` of `locator("label:has-text + input")`
+- Token injection via localStorage is fragiel → storageState pattern is betrouwbaar
+- `waitForURL("**/relaties/**")` matcht ook `/relaties/nieuw` → gebruik regex
+
+### Teststand
+- **16 nieuwe E2E tests PASSED** + 9 bestaande incasso E2E = **25 E2E tests totaal**
+- **406 backend tests** ongewijzigd
+
+### Nieuwe bestanden
+- `frontend/e2e/auth.setup.ts`
+- `frontend/e2e/auth.spec.ts`
+- `frontend/e2e/dashboard.spec.ts`
+- `frontend/e2e/sidebar.spec.ts`
+- `frontend/e2e/relaties.spec.ts`
+- `frontend/e2e/helpers/auth.ts`
+- `frontend/e2e/helpers/api.ts`
+
+### Gewijzigde bestanden
+- `frontend/next.config.ts` — proxy fallback URL
+- `frontend/playwright.config.ts` — 3-project auth setup
+- `frontend/e2e/incasso-pipeline.spec.ts` — localStorage key fix
+- `.gitignore` — Playwright dirs
+
+---
 
 ## Wat er gedaan is (sessie 31 — 3 maart) — QA: Tenant isolation + edge case tests ✅
 

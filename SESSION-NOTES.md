@@ -42,7 +42,7 @@
 ### Totaal E2E suite
 - **53 E2E tests** (44 nieuwe + 9 bestaande incasso)
 - **44 passed, 7 skipped** (incasso pipeline tests, handmatige setup nodig)
-- Alle backend tests (380+) blijven passing
+- Alle 406 backend tests passing
 
 ## Wat er gedaan is (sessie 35 — 5 maart) — E2E-3: Facturen + Tijdregistratie ✅
 

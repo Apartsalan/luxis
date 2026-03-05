@@ -1,10 +1,52 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 4 maart 2026 (sessie 34 — E2E-2 Zaken CRUD tests)
-**Laatste feature/fix:** 8 Zaken CRUD E2E tests (create, detail, tabs, edit, status, delete)
+**Laatst bijgewerkt:** 5 maart 2026 (sessie 35 — E2E-3 Facturen + Tijdregistratie tests)
+**Laatste feature/fix:** 12 Facturen + Tijdregistratie E2E tests
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (35):** E2E-3: Facturen + Tijdschrijven E2E tests (~10-12 tests)
+**Volgende sessie (36):** E2E-4: Correspondentie + Agenda + Taken + smoke (~8 tests, optioneel)
+
+## Wat er gedaan is (sessie 35 — 5 maart) — E2E-3: Facturen + Tijdregistratie ✅
+
+### Overzicht
+12 Playwright E2E tests voor Facturen (7) en Tijdregistratie (5). Alle tests PASSED. Totaal E2E tests nu: 45 (36 nieuwe + 9 incasso bestaand).
+
+### Wat er gebouwd is
+- **`facturen.spec.ts`**: 7 tests — lijst, create via form, detail page, approve, send, register payment, delete concept
+- **`tijdregistratie.spec.ts`**: 5 tests — page load, create via form, verify in table, inline edit, delete
+- **API helpers**: `createInvoice()`, `deleteInvoice()`, `approveInvoice()`, `sendInvoice()`, `createTimeEntry()`, `deleteTimeEntry()` in `e2e/helpers/api.ts`
+- **`auth.setup.ts` fix**: Auth detection gewijzigd van greeting heading naar URL redirect + sidebar "Dossiers" link
+
+### Tests
+| # | Test | Methode |
+|---|------|---------|
+| F1 | Facturen lijst laadt | UI check (h1, button, search) |
+| F2 | Create invoice via form | UI form (relatie search, line items, submit) |
+| F3 | Detail page toont info | UI verify (nummer, status, contact, regels) |
+| F4 | Approve invoice | UI button → toast + badge change |
+| F5 | Send invoice | UI button → toast + badge change |
+| F6 | Register payment | UI form (bedrag, submit) → toast |
+| F7 | Delete concept invoice | API seed + UI delete → redirect + toast |
+| T1 | Uren page laadt | UI check (h1, button, stopwatch, week nav) |
+| T2 | Create time entry | UI form (case selector, uren/min, activiteit, omschrijving) |
+| T3 | Entry in tabel | UI verify (case number, description, duration, billable) |
+| T4 | Edit inline | UI (Bewerken → input → Opslaan → toast) |
+| T5 | Delete entry | UI (Verwijderen → toast → entry weg) |
+
+### Lessen geleerd
+- Luxis forms gebruiken geen `<label>` elementen — `getByLabel()` werkt niet, gebruik `getByPlaceholder()` of `getByRole()`
+- Tijdregistratie tabel is div-based (geen `<table>/<tr>`) — gebruik `getByRole("button", { name: "Bewerken" })` i.p.v. `locator("tr")`
+- `getByText()` strict mode: bij meerdere matches (leftover data) altijd `.first()` toevoegen
+- Auth setup: "Welkom terug" staat op login pagina, niet alleen dashboard — check sidebar link i.p.v. heading
+- Payment form: `getByRole("spinbutton")` voor amount input (label is div, niet label element)
+
+### Bestanden
+- `frontend/e2e/facturen.spec.ts` (nieuw)
+- `frontend/e2e/tijdregistratie.spec.ts` (nieuw)
+- `frontend/e2e/helpers/api.ts` (6 helpers toegevoegd)
+- `frontend/e2e/auth.setup.ts` (auth detection fix)
+
+---
 
 ## Wat er gedaan is (sessie 34 — 4 maart) — E2E-2: Zaken CRUD ✅
 

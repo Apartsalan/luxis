@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 4 maart 2026
+**Laatst bijgewerkt:** 5 maart 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -292,10 +292,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 |--------|-------|-------|--------|
 | E2E-1 | Auth + Dashboard + Sidebar + Relaties CRUD | 16 tests (1 setup + 4 auth + 3 dashboard + 3 sidebar + 5 relaties) | ✅ Compleet (4 mrt, sessie 32) |
 | E2E-2 | Zaken CRUD (7 detail tabs, edit, status, delete) | 8 tests | ✅ Compleet (4 mrt, sessie 33) |
-| E2E-3 | Facturen + Tijdschrijven + Documenten | ~12 tests | ❌ TODO |
+| E2E-3 | Facturen (7) + Tijdschrijven (5) | 12 tests | ✅ Compleet (5 mrt, sessie 35) |
 | E2E-4 | Correspondentie + Agenda + Taken + smoke | ~8 tests | ❌ TODO (optioneel) |
 
-**Totaal nu:** 24 E2E tests (nieuwe) + 9 incasso E2E tests (bestaand) = **33 E2E tests**
+**Totaal nu:** 36 E2E tests (nieuwe) + 9 incasso E2E tests (bestaand) = **45 E2E tests**
 
 ### DevOps Enhancements (sessie 33, 4 maart) ✅
 
@@ -312,6 +312,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 - `frontend/e2e/sidebar.spec.ts` — nav items, click navigation, collapse/expand
 - `frontend/e2e/relaties.spec.ts` — list, create company/person, edit, delete
 - `frontend/e2e/helpers/auth.ts` + `api.ts` — shared utilities
+- `frontend/e2e/facturen.spec.ts` — invoice lifecycle (create, detail, approve, send, payment, delete)
+- `frontend/e2e/tijdregistratie.spec.ts` — time entry CRUD (create, verify, edit, delete)
 
 ---
 

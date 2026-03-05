@@ -1,10 +1,48 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 5 maart 2026 (sessie 35 — E2E-3 Facturen + Tijdregistratie tests)
-**Laatste feature/fix:** 12 Facturen + Tijdregistratie E2E tests
+**Laatst bijgewerkt:** 5 maart 2026 (sessie 36 — E2E-4 Correspondentie + Agenda + Taken tests)
+**Laatste feature/fix:** 8 Correspondentie + Agenda + Taken E2E tests + dashboard bugfix
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (36):** E2E-4: Correspondentie + Agenda + Taken + smoke (~8 tests, optioneel)
+**Volgende sessie (37):** E2E suite compleet (53 tests). Optioneel: incasso pipeline tests fixen, of nieuwe features.
+
+## Wat er gedaan is (sessie 36 — 5 maart) — E2E-4: Correspondentie + Agenda + Taken ✅
+
+### E2E Tests (8 nieuwe tests)
+
+**Correspondentie** (`frontend/e2e/correspondentie.spec.ts`) — 2 tests:
+- C1: Page load met heading, zoekbalk, sync-knop
+- C2: Empty state of email lijst zichtbaar
+
+**Agenda** (`frontend/e2e/agenda.spec.ts`) — 3 tests:
+- A1: Page load met kalender, navigatie, view toggles
+- A2: Event aanmaken via dialog
+- A3: Event aanmaken via API + verwijderen + verificatie
+
+**Taken** (`frontend/e2e/taken.spec.ts`) — 3 tests:
+- T1: Page load met heading, filter buttons, nieuwe taak button
+- T2: Taak aanmaken via formulier
+- T3: Taak als afgerond markeren
+
+### API Helpers uitgebreid (`frontend/e2e/helpers/`)
+- `api.ts`: `createCalendarEvent`, `deleteCalendarEvent`, `createWorkflowTask`, `deleteWorkflowTask`, `completeWorkflowTask`
+- `auth.ts`: `loginViaApi` retourneert nu ook `userId` (voor task assignment)
+
+### Dashboard bugfix
+- `backend/tests/test_dashboard.py`: `total_outstanding == 0` → `Decimal(str(total_outstanding)) == Decimal("0")` (Pydantic v2 serialiseert Decimal als string in JSON)
+
+### Lessen geleerd
+- `getByRole("button", { name: "Maand" })` matcht ook "Vorige maand"/"Volgende maand" — altijd `{ exact: true }` gebruiken
+- `getByRole("button", { name: "Afgerond" })` matcht ook "Markeer als afgerond" — `{ exact: true }` nodig
+- `selectOption({ label: new RegExp(...) })` werkt niet — label moet een string zijn
+- Kalender events zijn "hidden" in Playwright (overflow: hidden op cells) — klik op datum om detail panel te openen
+- Taken assignment: `createWorkflowTask` via API moet `assigned_to_id` bevatten, anders verschijnt de taak niet op `/taken`
+- Task complete button: gebruik `div.group` filter met task link om het juiste "Markeer als afgerond" knop te vinden
+
+### Totaal E2E suite
+- **53 E2E tests** (44 nieuwe + 9 bestaande incasso)
+- **44 passed, 7 skipped** (incasso pipeline tests, handmatige setup nodig)
+- Alle backend tests (380+) blijven passing
 
 ## Wat er gedaan is (sessie 35 — 5 maart) — E2E-3: Facturen + Tijdregistratie ✅
 

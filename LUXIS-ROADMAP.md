@@ -293,9 +293,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | E2E-1 | Auth + Dashboard + Sidebar + Relaties CRUD | 16 tests (1 setup + 4 auth + 3 dashboard + 3 sidebar + 5 relaties) | ✅ Compleet (4 mrt, sessie 32) |
 | E2E-2 | Zaken CRUD (7 detail tabs, edit, status, delete) | 8 tests | ✅ Compleet (4 mrt, sessie 33) |
 | E2E-3 | Facturen (7) + Tijdschrijven (5) | 12 tests | ✅ Compleet (5 mrt, sessie 35) |
-| E2E-4 | Correspondentie + Agenda + Taken + smoke | ~8 tests | ❌ TODO (optioneel) |
+| E2E-4 | Correspondentie (2) + Agenda (3) + Taken (3) | 8 tests | ✅ Compleet (5 mrt, sessie 36) |
 
-**Totaal nu:** 36 E2E tests (nieuwe) + 9 incasso E2E tests (bestaand) = **45 E2E tests**
+**Totaal nu:** 44 E2E tests (nieuwe) + 9 incasso E2E tests (bestaand) = **53 E2E tests**
 
 ### DevOps Enhancements (sessie 33, 4 maart) ✅
 

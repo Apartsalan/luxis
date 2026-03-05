@@ -1,6 +1,7 @@
 """Tests for the dashboard module — KPIs and recent activity."""
 
 import pytest
+from decimal import Decimal
 from httpx import AsyncClient
 
 from app.relations.models import Contact
@@ -17,7 +18,8 @@ async def test_dashboard_summary_empty(
     assert response.status_code == 200
     data = response.json()
     assert data["total_active_cases"] == 0
-    assert data["total_outstanding"] == 0
+    # Pydantic serializes Decimal as string in JSON
+    assert Decimal(str(data["total_outstanding"])) == Decimal("0")
     assert data["cases_by_status"] == []
     assert data["cases_by_type"] == []
 

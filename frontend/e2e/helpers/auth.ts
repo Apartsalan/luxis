@@ -12,13 +12,13 @@ const DEFAULT_EMAIL = "lisanne@kestinglegal.nl";
 const DEFAULT_PASSWORD = "testpassword123";
 
 /**
- * Login via backend API and return tokens.
+ * Login via backend API and return tokens + user ID.
  */
 export async function loginViaApi(
   request: APIRequestContext,
   email = DEFAULT_EMAIL,
   password = DEFAULT_PASSWORD
-): Promise<{ accessToken: string; refreshToken: string }> {
+): Promise<{ accessToken: string; refreshToken: string; userId: string }> {
   const res = await request.post(`${API_URL}/api/auth/login`, {
     data: { email, password },
   });
@@ -26,9 +26,18 @@ export async function loginViaApi(
     throw new Error(`Login failed: ${res.status()} ${await res.text()}`);
   }
   const body = await res.json();
+  const accessToken = body.access_token;
+
+  // Fetch user ID from /api/auth/me
+  const meRes = await request.get(`${API_URL}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const user = await meRes.json();
+
   return {
-    accessToken: body.access_token,
+    accessToken,
     refreshToken: body.refresh_token,
+    userId: user.id,
   };
 }
 

@@ -252,3 +252,113 @@ export async function deleteTimeEntry(
     throw new Error(`Delete time entry failed: ${res.status()}`);
   }
 }
+
+// ── Calendar event helpers ──────────────────────────────────────
+
+/**
+ * Create a calendar event via the backend API.
+ */
+export async function createCalendarEvent(
+  request: APIRequestContext,
+  token: string,
+  data: {
+    title: string;
+    start_time: string;
+    end_time: string;
+    event_type?: string;
+    description?: string;
+    location?: string;
+    all_day?: boolean;
+    case_id?: string;
+    contact_id?: string;
+  }
+): Promise<{ id: string; title: string; event_type: string }> {
+  const res = await request.post(`${API_URL}/api/calendar/events`, {
+    headers: authHeaders(token),
+    data: {
+      event_type: "appointment",
+      ...data,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(`Create calendar event failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+/**
+ * Delete a calendar event by ID.
+ */
+export async function deleteCalendarEvent(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<void> {
+  const res = await request.delete(`${API_URL}/api/calendar/events/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete calendar event failed: ${res.status()}`);
+  }
+}
+
+// ── Workflow task helpers ────────────────────────────────────────
+
+/**
+ * Create a workflow task via the backend API.
+ */
+export async function createWorkflowTask(
+  request: APIRequestContext,
+  token: string,
+  data: {
+    case_id: string;
+    task_type: string;
+    title: string;
+    due_date: string;
+    description?: string;
+    assigned_to_id?: string;
+  }
+): Promise<{ id: string; title: string; status: string }> {
+  const res = await request.post(`${API_URL}/api/workflow/tasks`, {
+    headers: authHeaders(token),
+    data,
+  });
+  if (!res.ok()) {
+    throw new Error(`Create workflow task failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+/**
+ * Delete a workflow task by ID.
+ */
+export async function deleteWorkflowTask(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<void> {
+  const res = await request.delete(`${API_URL}/api/workflow/tasks/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete workflow task failed: ${res.status()}`);
+  }
+}
+
+/**
+ * Complete a workflow task (set status to "completed").
+ */
+export async function completeWorkflowTask(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<{ id: string; status: string }> {
+  const res = await request.put(`${API_URL}/api/workflow/tasks/${id}`, {
+    headers: authHeaders(token),
+    data: { status: "completed" },
+  });
+  if (!res.ok()) {
+    throw new Error(`Complete workflow task failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
+}

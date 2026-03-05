@@ -16,10 +16,13 @@ setup("authenticate", async ({ page }) => {
   await page.locator("#password").fill("testpassword123");
   await page.getByRole("button", { name: "Inloggen" }).click();
 
-  // Wait for dashboard to load (confirms login succeeded)
+  // Wait for redirect to dashboard (away from /login)
+  await page.waitForURL(/^(?!.*\/login)/, { timeout: 20000 });
+
+  // Confirm dashboard loaded (sidebar link only visible when authenticated)
   await expect(
-    page.getByRole("heading", { level: 1 })
-  ).toContainText(/Goede(morgen|middag|navond)/, { timeout: 20000 });
+    page.getByRole("link", { name: /Dossiers/ })
+  ).toBeVisible({ timeout: 10000 });
 
   // Save the authenticated state (localStorage with tokens)
   await page.context().storageState({ path: authFile });

@@ -119,3 +119,136 @@ export async function updateCaseStatus(
   }
   return res.json();
 }
+
+// ── Invoice helpers ──────────────────────────────────────────────
+
+/**
+ * Create an invoice via the backend API.
+ */
+export async function createInvoice(
+  request: APIRequestContext,
+  token: string,
+  data: {
+    contact_id: string;
+    case_id?: string;
+    invoice_date?: string;
+    due_date?: string;
+    btw_percentage?: string;
+    reference?: string;
+    notes?: string;
+    lines: { description: string; quantity: string; unit_price: string }[];
+  }
+): Promise<{ id: string; invoice_number: string; status: string; total: string }> {
+  const today = new Date().toISOString().split("T")[0];
+  const due = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+  const res = await request.post(`${API_URL}/api/invoices`, {
+    headers: authHeaders(token),
+    data: {
+      invoice_date: today,
+      due_date: due,
+      btw_percentage: "21.00",
+      ...data,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(`Create invoice failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+/**
+ * Delete an invoice by ID (soft delete, concept only).
+ */
+export async function deleteInvoice(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<void> {
+  const res = await request.delete(`${API_URL}/api/invoices/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete invoice failed: ${res.status()}`);
+  }
+}
+
+/**
+ * Approve a concept invoice.
+ */
+export async function approveInvoice(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<void> {
+  const res = await request.post(`${API_URL}/api/invoices/${id}/approve`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok()) {
+    throw new Error(`Approve invoice failed: ${res.status()} ${await res.text()}`);
+  }
+}
+
+/**
+ * Mark an approved invoice as sent.
+ */
+export async function sendInvoice(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<void> {
+  const res = await request.post(`${API_URL}/api/invoices/${id}/send`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok()) {
+    throw new Error(`Send invoice failed: ${res.status()} ${await res.text()}`);
+  }
+}
+
+// ── Time entry helpers ───────────────────────────────────────────
+
+/**
+ * Create a time entry via the backend API.
+ */
+export async function createTimeEntry(
+  request: APIRequestContext,
+  token: string,
+  data: {
+    case_id: string;
+    date?: string;
+    duration_minutes: number;
+    description?: string;
+    activity_type: string;
+    billable?: boolean;
+    hourly_rate?: string;
+  }
+): Promise<{ id: string; duration_minutes: number; description: string | null }> {
+  const res = await request.post(`${API_URL}/api/time-entries`, {
+    headers: authHeaders(token),
+    data: {
+      date: new Date().toISOString().split("T")[0],
+      billable: true,
+      hourly_rate: "250.00",
+      ...data,
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(`Create time entry failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
+}
+
+/**
+ * Delete a time entry by ID.
+ */
+export async function deleteTimeEntry(
+  request: APIRequestContext,
+  token: string,
+  id: string
+): Promise<void> {
+  const res = await request.delete(`${API_URL}/api/time-entries/${id}`, {
+    headers: authHeaders(token),
+  });
+  if (!res.ok() && res.status() !== 404) {
+    throw new Error(`Delete time entry failed: ${res.status()}`);
+  }
+}

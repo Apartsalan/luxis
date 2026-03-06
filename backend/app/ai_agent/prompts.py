@@ -1,5 +1,6 @@
 """AI Agent prompts — system prompt and prompt builder for email classification."""
 
+import html
 import re
 
 CLASSIFICATION_SYSTEM_PROMPT = """\
@@ -83,12 +84,31 @@ def build_classification_prompt(
     )
 
 
-def strip_html(html: str) -> str:
-    """Strip HTML tags and decode entities to get plain text."""
-    if not html:
+def strip_html(raw_html: str) -> str:
+    """Strip HTML tags and decode entities to get plain text.
+
+    Handles Microsoft Outlook HTML which contains large <style> blocks,
+    conditional comments, and heavy entity encoding.
+    """
+    if not raw_html:
         return ""
-    # Remove HTML tags
-    text = re.sub(r"<[^>]+>", " ", html)
-    # Collapse whitespace
-    text = re.sub(r"\s+", " ", text).strip()
+    text = raw_html
+    # Remove <style> and <script> blocks entirely (including content)
+    text = re.sub(r"<style[^>]*>.*?</style>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<script[^>]*>.*?</script>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    # Remove HTML comments (including IE conditional comments <!--[if ...]>)
+    text = re.sub(r"<!--.*?-->", " ", text, flags=re.DOTALL)
+    # Replace <br>, <p>, <div>, <tr> with newlines for readability
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"</(p|div|tr|li|h[1-6])>", "\n", text, flags=re.IGNORECASE)
+    # Remove remaining HTML tags
+    text = re.sub(r"<[^>]+>", " ", text)
+    # Decode HTML entities (&amp; &nbsp; &#160; etc.)
+    text = html.unescape(text)
+    # Replace non-breaking spaces with regular spaces
+    text = text.replace("\u00a0", " ")
+    # Collapse multiple whitespace (but keep single newlines)
+    text = re.sub(r"[^\S\n]+", " ", text)  # collapse spaces/tabs but not newlines
+    text = re.sub(r"\n\s*\n+", "\n\n", text)  # collapse multiple blank lines
+    text = text.strip()
     return text

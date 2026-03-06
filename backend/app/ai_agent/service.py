@@ -90,6 +90,7 @@ async def classify_email(
         )
     )
     if existing.scalar_one_or_none():
+        logger.info("Email %s already classified — skipping", synced_email_id)
         return None
 
     # Load the email with its case
@@ -108,13 +109,29 @@ async def classify_email(
     )
     email = result.scalar_one_or_none()
     if not email or not email.case:
+        logger.warning(
+            "Email %s not found or has no case — skipping classification",
+            synced_email_id,
+        )
         return None
 
     case = email.case
 
     # Get email body (prefer plain text, fall back to stripped HTML)
     body = email.body_text or strip_html(email.body_html) or ""
+    logger.info(
+        "Email %s body extraction: body_text=%d chars, body_html=%d chars, "
+        "stripped_body=%d chars",
+        synced_email_id,
+        len(email.body_text or ""),
+        len(email.body_html or ""),
+        len(body),
+    )
     if not body.strip():
+        logger.warning(
+            "Email %s has empty body after extraction — skipping",
+            synced_email_id,
+        )
         return None  # Empty email — nothing to classify
 
     # Get the last outbound email on this case for context

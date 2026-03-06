@@ -1,11 +1,45 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 42 — AI Classificatie Fase 6 / E2E Verificatie)
-**Laatste feature/fix:** strip_html fix voor Microsoft HTML emails + model ID fix + diagnostic logging
+**Laatst bijgewerkt:** 6 maart 2026 (sessie 43 — BUG-36 + BUG-37 fix + E2E test AI Classificatie)
+**Laatste feature/fix:** BUG-37 fix (User.full_name) + E2E test AI classificatie flow succesvol
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
-**Openstaande bugs:** BUG-36: Anthropic API "credit balance too low" — API credits moeten apart gekocht worden op platform.claude.com/buy_credits (Claude.ai credits ≠ API credits)
+**Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 428 passed | **Ruff:** 0 warnings | **Frontend build:** OK
-**Volgende sessie (43):** Na aankoop API credits → deploy backend + end-to-end test classificatie flow via Playwright (classify → approve → execute)
+**Volgende sessie (44):** Nieuwe features of verbeteringen — AI classificatie is volledig werkend op productie
+
+## Wat er gedaan is (sessie 43 — 6 maart) — BUG-36 + BUG-37 fix + E2E Test AI Classificatie ✅
+
+### Samenvatting
+AI Email Classificatie Fase 6 volledig afgerond. Twee bugs gefixt en end-to-end flow succesvol getest op productie.
+
+**BUG-36 (API credits):**
+- Anthropic API gaf "credit balance too low" ondanks $10 zichtbaar saldo
+- Na krediet-aankoop via platform.claude.com en propagatie: API werkt correct
+- Geverifieerd met `curl` test op VPS: Claude Haiku 4.5 antwoordt succesvol
+
+**BUG-37 (User.full_name AttributeError):**
+- Na approve van classificatie: GET endpoint gaf 500 Internal Server Error
+- Oorzaak: `_classification_to_response()` in `router.py` gebruikte `reviewer.first_name`/`reviewer.last_name` maar User model heeft alleen `full_name`
+- Fix: `reviewer.full_name if reviewer else None`
+
+**E2E test resultaat (Playwright op productie):**
+1. Navigeerde naar zaak 2026-00001 → Correspondentie tab
+2. Klikte op Microsoft email → "Geen AI-classificatie" → klik "Classificeer"
+3. Classificatie verscheen: "Niet gerelateerd", 99% confidence, Suggestie: "Wegzetten"
+4. Redenering (uitklapbaar): AI herkende email als Microsoft notificatie, niet incasso-gerelateerd
+5. Klik "Akkoord" → Status: Goedgekeurd door Lisanne Kesting
+6. Klik "Uitvoeren" → Status: Uitgevoerd, Resultaat: "Email weggezet (niet relevant)"
+7. Volledige flow werkt foutloos op productie
+
+### Gewijzigde bestanden
+- `backend/app/ai_agent/router.py` — `reviewer.full_name` i.p.v. `first_name`/`last_name` (BUG-37 fix)
+
+### Bekende issues
+- Geen openstaande bugs
+
+### Volgende sessie
+- AI classificatie is volledig werkend — klaar voor dagelijks gebruik door Lisanne
+- Mogelijke verbeteringen: bulk classificatie, dashboard statistieken, auto-classificatie bij email sync
 
 ## Wat er gedaan is (sessie 42 — 6 maart) — AI Email Classificatie Fase 6 (E2E Verificatie) 🔶
 

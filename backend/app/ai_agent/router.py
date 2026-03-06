@@ -62,9 +62,7 @@ def _classification_to_response(c) -> ClassificationResponse:
         suggested_reminder_days=c.suggested_reminder_days,
         status=c.status,
         reviewed_by_name=(
-            f"{reviewer.first_name} {reviewer.last_name}".strip()
-            if reviewer
-            else None
+            reviewer.full_name if reviewer else None
         ),
         reviewed_at=c.reviewed_at,
         review_note=c.review_note,

@@ -45,6 +45,7 @@ services:
       MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:-}
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       MICROSOFT_REDIRECT_URI: ${MICROSOFT_REDIRECT_URI:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
     ports: []  # Don't expose backend directly in production
     expose:

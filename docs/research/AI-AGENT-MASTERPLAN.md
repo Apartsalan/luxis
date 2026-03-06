@@ -12,6 +12,8 @@ Een AI agent die het volledige incassowerk kan afhandelen, van intake tot afrond
 
 **Kernprincipe:** De advocaat blijft altijd eindverantwoordelijk (NOvA). De agent bereidt voor, de advocaat keurt goed.
 
+**Kostenprincipe:** De agent is een **taakuitvoerder**, geen chatbot. Geen open-ended conversatie — alleen patroonherkenning + standaardacties. Dit houdt de kosten laag en de output voorspelbaar.
+
 ---
 
 ## Concurrentie-analyse
@@ -257,19 +259,98 @@ Na bewezen copilot-fase, upgrade naar niveau 3 voor routine-taken:
 
 | Component | Technologie | Waarom |
 |-----------|------------|--------|
-| LLM | Claude API (Sonnet routine, Opus complex) | Best-in-class tool use, MCP native |
 | Agent framework | Claude Agent SDK / custom orchestrator | Orchestrator-worker pattern |
 | Tool interface | MCP servers (per Luxis module) | Standaard, toekomstbestendig |
 | Approval flow | WebSocket push + queue tabel | Real-time notificaties |
 | Audit trail | `agent_actions` tabel | Elke actie gelogd |
 | Cost control | Token tracking per dossier/maand | Voorkom onverwachte kosten |
 
-## Kostenschatting
+## Multi-Model Strategie (kostenoptimalisatie)
 
-- ~5-10 Claude API calls per dossier/maand
-- ~$0.10-0.30 per dossier/maand met Sonnet
-- Bij 200 actieve dossiers: ~$20-60/maand
-- **ROI**: 1 intake kost 15 min (€15). Agent doet het in 30 sec.
+**Principe:** De agent is een taakuitvoerder, geen chatbot. Harvey AI biedt een LLM-chat voor juridisch advies — dat is duur. Luxis' agent doet iets fundamenteel anders: hij herkent patronen en voert standaardacties uit. Dit maakt goedkope modellen mogelijk voor 90%+ van het werk.
+
+### Model-selectie per taaktype
+
+| Taak | Model | Kosten/call | Waarom |
+|------|-------|-------------|--------|
+| Email classificatie (5-6 categorieën) | **Kimi 2.5** | ~$0.001 | Simpele classificatie, goedkoopste optie |
+| Data extractie (bedrag, debiteur, datum) | **Kimi 2.5** | ~$0.001 | Gestructureerde extractie |
+| Standaard-antwoord selectie | **Kimi 2.5** | ~$0.001 | Template kiezen uit ~10 opties |
+| Factuur-regels samenstellen | **Kimi 2.5** | ~$0.001 | Data mapping, geen creativiteit nodig |
+| Onbekende email / twijfelgeval | **Claude Haiku** | ~$0.005 | Fallback bij lage confidence |
+| Complexe classificatie / escalatie-beslissing | **Claude Sonnet** | ~$0.02 | Alleen als goedkope modellen twijfelen |
+| Dagvaarding-drafting (optioneel) | **Claude Opus** | ~$0.10 | Zeldzaam, hoge kwaliteit nodig |
+
+### Decision tree
+
+```
+Inkomende taak
+  │
+  ├─ Standaard patroon? (rule-based check)
+  │   ├─ JA → Geen LLM nodig, direct uitvoeren
+  │   └─ NEE ↓
+  │
+  ├─ Classificatie/extractie nodig?
+  │   ├─ JA → Kimi 2.5 (goedkoopst)
+  │   │        ├─ Confidence > 90%? → Uitvoeren
+  │   │        └─ Confidence < 90%? → Haiku retry
+  │   │             ├─ Confidence > 90%? → Uitvoeren
+  │   │             └─ Confidence < 90%? → Escaleer naar lawyer
+  │   └─ NEE ↓
+  │
+  └─ Complexe taak (drafting, analyse)?
+      └─ Sonnet (of Opus voor juridische documenten)
+```
+
+### Template-based responses (voorspelbare kosten)
+
+De agent genereert GEEN vrije tekst voor debiteur-communicatie. In plaats daarvan:
+
+1. **Classificeer** de situatie (Kimi 2.5: ~$0.001)
+2. **Selecteer** het juiste template uit een vaste set:
+   - "Betwisting ontvangen — wij handhaven vordering"
+   - "Betalingsregeling — voorstel voorwaarden"
+   - "Betaling ontvangen — restant mededeling"
+   - "Geen reactie — escalatie waarschuwing"
+   - etc. (~10-15 templates)
+3. **Vul** de template met dossierdata (geen LLM nodig)
+4. **Presenteer** aan lawyer voor goedkeuring
+
+**Resultaat:** Voorspelbare output, voorspelbare kosten, geen hallucinatie-risico.
+
+### Rule-based first, LLM second
+
+Waar mogelijk gebruikt de agent **geen LLM**:
+
+| Actie | Methode | LLM nodig? |
+|-------|---------|-------------|
+| Rente berekenen | Python Decimal berekening | Nee |
+| BIK berekenen | WIK-staffel Python | Nee |
+| Betaling verdelen (art. 6:44) | Python logica | Nee |
+| Deadline checken | Datum-vergelijking | Nee |
+| Verjaring checken | 5-jaar berekening | Nee |
+| Pipeline stap bepalen | Status + dagen regel | Nee |
+| Email classificeren | LLM classificatie | Ja (Kimi 2.5) |
+| Factuur samenstellen uit uren | Data mapping + LLM | Minimaal |
+| Debiteur-email beantwoorden | Template selectie | Ja (Kimi 2.5) |
+
+## Kostenschatting (bijgewerkt met multi-model)
+
+### Per dossier per maand
+- ~5-10 agent-acties
+- ~3-7 Kimi 2.5 calls ($0.001 per stuk) = **$0.003 - $0.007**
+- ~1-2 Haiku fallback calls ($0.005 per stuk) = **$0.005 - $0.010**
+- ~0-1 Sonnet calls ($0.02 per stuk) = **$0.00 - $0.02**
+- **Totaal: ~$0.01 - $0.04 per dossier/maand**
+
+### Bij 200 actieve dossiers
+- **$2 - $8 per maand** (was $20-60 met alleen Claude)
+- **~85% kostenbesparing** vs. single-model approach
+
+### ROI
+- 1 dossier-intake handmatig: 15 min = ~€15 aan tijd
+- 1 dossier-intake met agent: 30 sec review = ~€0.50 aan tijd + $0.01 API
+- **Break-even bij 1 dossier per maand**
 
 ---
 

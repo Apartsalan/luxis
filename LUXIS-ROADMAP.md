@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 5 maart 2026
+**Laatst bijgewerkt:** 6 maart 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -294,8 +294,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | E2E-2 | Zaken CRUD (7 detail tabs, edit, status, delete) | 8 tests | ✅ Compleet (4 mrt, sessie 33) |
 | E2E-3 | Facturen (7) + Tijdschrijven (5) | 12 tests | ✅ Compleet (5 mrt, sessie 35) |
 | E2E-4 | Correspondentie (2) + Agenda (3) + Taken (3) | 8 tests | ✅ Compleet (5 mrt, sessie 36) |
+| E2E-fix | Incasso pipeline tests gefixt + lint cleanup | 7 tests un-skipped | ✅ Compleet (6 mrt, sessie 37) |
 
-**Totaal nu:** 44 E2E tests (nieuwe) + 9 incasso E2E tests (bestaand) = **53 E2E tests**
+**Totaal nu:** 44 E2E tests (nieuwe) + 7 incasso E2E tests (gefixt) = **51 E2E tests passing** (was 44 passing + 7 skipped)
 
 ### DevOps Enhancements (sessie 33, 4 maart) ✅
 

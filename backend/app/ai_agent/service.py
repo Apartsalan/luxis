@@ -48,7 +48,7 @@ async def _call_classification_ai(user_message: str) -> dict:
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     response = await client.messages.create(
-        model="claude-haiku-4-5-20250414",
+        model="claude-haiku-4-5",
         max_tokens=512,
         system=CLASSIFICATION_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_message}],

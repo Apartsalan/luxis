@@ -1,11 +1,33 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 40 — AI Email Classificatie Fase 3+4)
-**Laatste feature/fix:** AI email classificatie API endpoints + tests (Fase 3+4)
+**Laatst bijgewerkt:** 6 maart 2026 (sessie 40b — Docker-compose fix + AI classificatie live)
+**Laatste feature/fix:** ANTHROPIC_API_KEY toegevoegd aan docker-compose.prod.yml — AI classificatie nu live
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 428 passed | **Ruff:** 0 warnings | **Frontend build:** OK
-**Volgende sessie (41):** AI Email Classificatie afronden — Fase 5 (frontend), Fase 6 (seed templates, verificatie). Migration 036 uitvoeren op DB.
+**Volgende sessie (41):** AI Email Classificatie afronden — Fase 5 (frontend), Fase 6 (seed templates, verificatie).
+
+## Wat er gedaan is (sessie 40b — 6 maart) — Docker-compose fix + AI classificatie live
+
+### Samenvatting
+- `ANTHROPIC_API_KEY` ontbrak in `docker-compose.prod.yml` — container kreeg de env variabele niet door
+- Fix: variabele toegevoegd aan de backend environment sectie
+- Na deploy: AI classificatie scheduler draait nu live (`AI classification every 6 min`)
+- Migration 036 was al uitgevoerd, database is up-to-date
+- `anthropic` package moet nog in Docker image (nu handmatig geinstalleerd — herbouw nodig)
+
+### Gewijzigde bestanden
+- **Gewijzigd:** `docker-compose.prod.yml` (ANTHROPIC_API_KEY toegevoegd)
+
+### Bekende issues
+- `anthropic` package zit niet in Docker image — bij volgende `--no-cache` build moet het toegevoegd worden aan `pyproject.toml` dependencies of Dockerfile
+- Frontend (Fase 5) nog niet gebouwd
+- Seed templates (Fase 6) nog niet uitgevoerd
+
+### Volgende sessie
+1. Fase 5: Frontend hooks + classificatie-kaart in CorrespondentieTab
+2. Fase 6: Seed templates + verificatie
+3. Zorg dat `anthropic` in Docker image zit (check pyproject.toml)
 
 ## Wat er gedaan is (sessie 40 — 6 maart) — AI Email Classificatie Fase 3+4 ✅
 

@@ -1,10 +1,42 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 39 — AI Email Classificatie)
-**Laatste feature/fix:** AI email classificatie module backend (Fase 1+2)
+**Laatst bijgewerkt:** 6 maart 2026 (sessie 40 — AI Email Classificatie Fase 3+4)
+**Laatste feature/fix:** AI email classificatie API endpoints + tests (Fase 3+4)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Volgende sessie (40):** AI Email Classificatie afronden — Fase 3 (router, scheduler), Fase 4 (tests), Fase 5 (frontend), Fase 6 (seed templates)
+**Backend tests:** 428 passed | **Ruff:** 0 warnings | **Frontend build:** OK
+**Volgende sessie (41):** AI Email Classificatie afronden — Fase 5 (frontend), Fase 6 (seed templates, verificatie). Migration 036 uitvoeren op DB.
+
+## Wat er gedaan is (sessie 40 — 6 maart) — AI Email Classificatie Fase 3+4 ✅
+
+### Samenvatting
+API endpoints en tests gebouwd voor de AI email classificatie module. Branch `claude/dreamy-khayyam` gemerged naar main.
+
+**Fase 3 (API + Integratie):**
+- `router.py` met 10 endpoints: list/get/classify/approve/reject/execute/pending-count/templates/seed
+- Router geregistreerd in `main.py`
+- Scheduler job elke 6 min voor auto-classificatie (alleen als ANTHROPIC_API_KEY geconfigureerd)
+
+**Fase 4 (Tests):**
+- 22 tests met gemockte AI client (nooit echte API calls)
+- Classificatie flow, idempotency, approve/reject/execute, multi-tenant isolatie, pending count, templates, alle API endpoints
+
+### Gewijzigde bestanden
+- **Nieuw:** `backend/app/ai_agent/router.py` (283 regels, 10 endpoints)
+- **Nieuw:** `backend/tests/test_ai_agent.py` (743 regels, 22 tests)
+- **Gewijzigd:** `backend/app/main.py` (router registratie)
+- **Gewijzigd:** `backend/app/workflow/scheduler.py` (AI classificatie job)
+
+### Bekende issues
+- Migration 036 is nog NIET uitgevoerd op de database
+- Frontend (Fase 5) is nog niet gebouwd — classificatie-kaart in CorrespondentieTab ontbreekt
+- `anthropic` package moet in Docker image zitten (nu handmatig geinstalleerd)
+
+### Volgende sessie
+1. Fase 5: Frontend hooks (`use-ai-agent.ts`) + classificatie-kaart in CorrespondentieTab
+2. Fase 6: Seed templates uitvoeren + verificatie op live omgeving
+3. Migration 036 uitvoeren op de database
+4. Docker image rebuilden met `anthropic` package
 
 ## Wat er gedaan is (sessie 39 — 6 maart) — AI Email Classificatie Fase 1+2 ✅
 

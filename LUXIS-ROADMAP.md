@@ -368,7 +368,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 >
 > **AI Agent Masterplan** (sessie 38, 6 maart 2026): Uitgebreid onderzoeksplan in `docs/research/AI-AGENT-MASTERPLAN.md` (branch `claude/admiring-engelbart`). Bewaard voor toekomstige uitbreiding.
 >
-> **AI Email Classificatie** (sessie 39, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1+2 compleet** (models, migration, schemas, prompts, service layer). Fase 3-6 (router, tests, frontend, seed) in volgende sessie. Branch: `claude/dreamy-khayyam`. Plan: `.claude/plans/nifty-painting-forest.md`.
+> **AI Email Classificatie** (sessie 39-40, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-4 compleet** (models, migration, schemas, prompts, service layer, router met 10 endpoints, scheduler job, 22 tests). **Fase 5-6 open** (frontend classificatie-kaart, seed templates, verificatie). Migration 036 nog niet uitgevoerd op DB.
 
 ## Deploy
 

@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     microsoft_client_secret: str = ""
     microsoft_redirect_uri: str = "https://luxis.kestinglegal.nl/api/email/oauth/callback/outlook"
 
+    # AI Agent (Anthropic API)
+    anthropic_api_key: str = ""
+
     # Sentry
     sentry_dsn: str = ""
 

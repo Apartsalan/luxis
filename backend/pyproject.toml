@@ -46,6 +46,9 @@ dependencies = [
     # Scheduler
     "apscheduler>=3.10.0,<4.0.0",
 
+    # AI Agent (email classification)
+    "anthropic>=0.40.0",
+
     # Sentry (optional)
     "sentry-sdk[fastapi]>=2.0.0",
 ]

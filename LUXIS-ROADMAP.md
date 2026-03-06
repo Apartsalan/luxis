@@ -371,6 +371,17 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > **AI Agent Masterplan** (sessie 38, 6 maart 2026): Uitgebreid onderzoeksplan in `docs/research/AI-AGENT-MASTERPLAN.md` (branch `claude/admiring-engelbart`). Bewaard voor toekomstige uitbreiding.
 >
 > **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-6 COMPLEET** ✅ — E2E getest op productie (classify → approve → execute). BUG-36 (API credits) en BUG-37 (User.full_name) gefixt in sessie 43.
+>
+> **AI Classificatie — Fase 7: Echte actie-executie** (gepland sessie 44):
+> Alle "Uitvoeren" acties zijn nu stubs (loggen alleen tekst). Moet echte functionaliteit krijgen:
+> | Actie | Wat het moet doen | Complexiteit |
+> |-------|-------------------|-------------|
+> | `dismiss` | `SyncedEmail.is_dismissed = True` | S |
+> | `send_template` | Template renderen + email versturen via EmailProvider | M-L |
+> | `request_proof` | Template "verzoek betalingsbewijs" versturen via EmailProvider | M-L |
+> | `wait_and_remind` | CaseTask aanmaken met deadline + X dagen | M |
+> | `escalate` | CaseTask aanmaken voor advocaat + markeren als urgent | M |
+> | `no_action` | Alleen CaseActivity loggen (al werkend) | S (klaar) |
 
 ## Deploy
 

@@ -24,20 +24,21 @@ import { cn } from "@/lib/utils";
 import { useModules, type LuxisModule } from "@/hooks/use-modules";
 import { useUnlinkedCount } from "@/hooks/use-email-sync";
 import { useIncassoQueueCounts } from "@/hooks/use-incasso";
+import { usePendingCount } from "@/hooks/use-ai-agent";
 
 interface NavItem {
   name: string;
   href: string;
   icon: typeof LayoutDashboard;
   module?: LuxisModule;
-  badge?: "unlinked-count" | "incasso-action";
+  badge?: "unlinked-count" | "incasso-action" | "ai-pending";
 }
 
 const ALL_NAVIGATION: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Mijn Taken", href: "/taken", icon: CheckSquare },
   { name: "Relaties", href: "/relaties", icon: Users },
-  { name: "Dossiers", href: "/zaken", icon: Briefcase },
+  { name: "Dossiers", href: "/zaken", icon: Briefcase, badge: "ai-pending" },
   { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
   { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
   { name: "Agenda", href: "/agenda", icon: Calendar },
@@ -66,6 +67,8 @@ export function AppSidebar({
   const unlinkedCount = unlinkedCountData?.count ?? 0;
   const { data: queueCounts } = useIncassoQueueCounts();
   const incassoActionCount = queueCounts?.action_required ?? 0;
+  const { data: aiPendingData } = usePendingCount();
+  const aiPendingCount = aiPendingData?.count ?? 0;
 
   const navigation = useMemo(
     () =>
@@ -143,7 +146,8 @@ export function AppSidebar({
 
             const badgeCount =
               item.badge === "unlinked-count" ? unlinkedCount :
-              item.badge === "incasso-action" ? incassoActionCount : 0;
+              item.badge === "incasso-action" ? incassoActionCount :
+              item.badge === "ai-pending" ? aiPendingCount : 0;
 
             return (
               <Link

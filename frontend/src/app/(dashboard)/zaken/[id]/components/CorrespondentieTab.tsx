@@ -13,6 +13,7 @@ import {
   Plus,
   XCircle,
 } from "lucide-react";
+import { ClassificationCard } from "@/components/classification-card";
 import { toast } from "sonner";
 import {
   useEmailLogs,
@@ -125,6 +126,10 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
             <span>{formatDate(email.email_date)}</span>
           </div>
         </div>
+      </div>
+      {/* AI Classification */}
+      <div className="border-b border-border px-4 py-3">
+        <ClassificationCard syncedEmailId={emailId} />
       </div>
       {/* Attachments */}
       {email.attachments && email.attachments.length > 0 && (

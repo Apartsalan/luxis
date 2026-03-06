@@ -225,6 +225,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-33 | test_dashboard.py — hardcoded datum → `date.today().isoformat()` | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
 | BUG-34 | test_documents.py — template count assertion `>= 3` + subset check | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
 | BUG-35 | test_relations.py — nested response pad `["contact"]["name"]` | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
+| BUG-36 | Anthropic API "credit balance too low" — Claude.ai credits ($10) werken niet voor API. API credits moeten apart gekocht worden op platform.claude.com/buy_credits | Hoog (blocker) | N/A (billing) | ❌ Open — wacht op credit aankoop |
 
 ---
 
@@ -368,7 +369,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 >
 > **AI Agent Masterplan** (sessie 38, 6 maart 2026): Uitgebreid onderzoeksplan in `docs/research/AI-AGENT-MASTERPLAN.md` (branch `claude/admiring-engelbart`). Bewaard voor toekomstige uitbreiding.
 >
-> **AI Email Classificatie** (sessie 39-41, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-5 compleet** (models, migration 036, schemas, prompts, service, router 10 endpoints, scheduler 6 min, 22 tests, ANTHROPIC_API_KEY live, **frontend hooks + ClassificationCard + sidebar badge**). **Fase 6 open** (seed templates, `anthropic` in pyproject.toml, end-to-end verificatie).
+> **AI Email Classificatie** (sessie 39-42, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-5 compleet** + **Fase 6 grotendeels compleet** (strip_html fix voor Microsoft HTML, model ID fix, diagnostic logging, 6 templates geseeded, ANTHROPIC_API_KEY op VPS). **BLOCKER: BUG-15** — Anthropic API credits moeten apart gekocht worden op platform.claude.com/buy_credits (Claude.ai credits ≠ API credits). Na credit aankoop: deploy + end-to-end test.
 
 ## Deploy
 

@@ -1,11 +1,43 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 41 — AI Classificatie Frontend)
-**Laatste feature/fix:** Frontend classificatie-UI gebouwd (hooks, ClassificationCard, sidebar badge)
+**Laatst bijgewerkt:** 6 maart 2026 (sessie 42 — AI Classificatie Fase 6 / E2E Verificatie)
+**Laatste feature/fix:** strip_html fix voor Microsoft HTML emails + model ID fix + diagnostic logging
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
-**Openstaande bugs:** Geen bekende bugs
+**Openstaande bugs:** BUG-36: Anthropic API "credit balance too low" — API credits moeten apart gekocht worden op platform.claude.com/buy_credits (Claude.ai credits ≠ API credits)
 **Backend tests:** 428 passed | **Ruff:** 0 warnings | **Frontend build:** OK
-**Volgende sessie (42):** AI Email Classificatie Fase 6 — seed templates, `anthropic` in pyproject.toml, end-to-end verificatie op live omgeving.
+**Volgende sessie (43):** Na aankoop API credits → deploy backend + end-to-end test classificatie flow via Playwright (classify → approve → execute)
+
+## Wat er gedaan is (sessie 42 — 6 maart) — AI Email Classificatie Fase 6 (E2E Verificatie) 🔶
+
+### Samenvatting
+Fase 6 grotendeels afgerond — code werkt, maar geblokkeerd op Anthropic API billing.
+
+**Fixes deze sessie:**
+- `strip_html()` in `prompts.py` volledig herschreven — Microsoft Outlook HTML emails bevatten gigantische `<style>` blocks, conditional comments (`<!--[if ...]>`), en HTML entities. Oude naive regex gaf 0 chars terug, nu correct 9533/1201/1198 chars.
+- Model ID gefixt: `claude-haiku-4-5-20250414` (bestaat niet) → `claude-haiku-4-5` (correct alias)
+- Diagnostic logging toegevoegd aan `classify_email()` bij elke early return
+- Frontend error handling verbeterd voor null responses
+- 6 default response templates succesvol geseeded op VPS
+- `ANTHROPIC_API_KEY` toegevoegd aan `.env.production` op VPS
+
+**Blocker gevonden:**
+- Anthropic API retourneert "credit balance too low" ondanks $10 credit zichtbaar in console
+- Oorzaak: Claude.ai credits en API credits zijn GESCHEIDEN billing-systemen
+- Oplossing: apart API-credits kopen op platform.claude.com/buy_credits
+
+### Gewijzigde bestanden
+- `backend/app/ai_agent/prompts.py` — `strip_html()` herschreven voor Microsoft HTML
+- `backend/app/ai_agent/service.py` — diagnostic logging + model ID fix
+
+### Bekende issues
+- **BUG-15:** Anthropic API credits moeten apart gekocht worden — $10 Claude.ai credits werken niet voor API
+- Na credit fix: end-to-end test nog niet uitgevoerd (classify → approve → execute)
+
+### Volgende sessie
+1. Gebruiker koopt API credits op platform.claude.com/buy_credits
+2. Deploy backend op VPS
+3. End-to-end test classificatie flow via Playwright
+4. Roadmap updaten naar ✅ als alles werkt
 
 ## Wat er gedaan is (sessie 41 — 6 maart) — AI Email Classificatie Fase 5 (Frontend) ✅
 

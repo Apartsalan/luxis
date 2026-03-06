@@ -366,7 +366,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > **Toekomstige modules** (M365, AI Agent, Data Migratie, etc.) staan in `docs/future-modules.md`
 >
-> **AI Agent Masterplan** (sessie 38, 6 maart 2026): Uitgebreid onderzoeksplan in `docs/research/AI-AGENT-MASTERPLAN.md` (branch `claude/admiring-engelbart`). Concurrentie-analyse, multi-model strategie (Kimi 2.5 + Claude), 4 fases (MCP tools → Copilot → Dashboard → Autonoom). Status: DRAFT — wacht op review.
+> **AI Agent Masterplan** (sessie 38, 6 maart 2026): Uitgebreid onderzoeksplan in `docs/research/AI-AGENT-MASTERPLAN.md` (branch `claude/admiring-engelbart`). Bewaard voor toekomstige uitbreiding.
+>
+> **AI Email Classificatie** (sessie 39, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1+2 compleet** (models, migration, schemas, prompts, service layer). Fase 3-6 (router, tests, frontend, seed) in volgende sessie. Branch: `claude/dreamy-khayyam`. Plan: `.claude/plans/nifty-painting-forest.md`.
 
 ## Deploy
 

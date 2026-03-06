@@ -1,10 +1,48 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 38 — AI Agent Masterplan)
-**Laatste feature/fix:** AI Agent Masterplan research + documentatie
+**Laatst bijgewerkt:** 6 maart 2026 (sessie 39 — AI Email Classificatie)
+**Laatste feature/fix:** AI email classificatie module backend (Fase 1+2)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
-**Openstaande bugs:** Geen bekende bugs (tijdregistratie E2E heeft pre-existing 500 error, niet-kritiek)
-**Volgende sessie (39):** Review masterplan feedback van Arsalan → begin implementatie (A1: MCP Tool Layer of andere prioriteit)
+**Openstaande bugs:** Geen bekende bugs
+**Volgende sessie (40):** AI Email Classificatie afronden — Fase 3 (router, scheduler), Fase 4 (tests), Fase 5 (frontend), Fase 6 (seed templates)
+
+## Wat er gedaan is (sessie 39 — 6 maart) — AI Email Classificatie Fase 1+2 ✅
+
+### Samenvatting
+Eerste concrete AI-feature gebouwd: email classificatie voor incasso-dossiers. Debiteur-emails worden automatisch geclassificeerd in 8 categorieën (belofte_tot_betaling, betwisting, betalingsregeling_verzoek, beweert_betaald, onvermogen, juridisch_verweer, ontvangstbevestiging, niet_gerelateerd). AI selecteert een antwoord-template, Lisanne reviewt met 1 klik.
+
+**Fase 1 (Backend Foundation):** Models (EmailClassification + ResponseTemplate), Alembic migration 036, Pydantic schemas, Dutch system prompt, anthropic dependency + config.
+
+**Fase 2 (Service Layer):** Complete service met classify_email(), classify_new_emails() batch, approve/reject/execute flows, query helpers, seed_default_templates() met 6 basis-templates.
+
+**Niet af (Fase 3-6):** Router (API endpoints), scheduler integratie, tests, frontend components, template seeding.
+
+### Gewijzigde bestanden
+- **Nieuw:** `backend/app/ai_agent/__init__.py`, `models.py`, `schemas.py`, `prompts.py`, `service.py`
+- **Nieuw:** `backend/alembic/versions/036_ai_email_classification.py`
+- **Gewijzigd:** `backend/app/config.py` (anthropic_api_key), `backend/pyproject.toml` (anthropic dep)
+- **Plan:** `.claude/plans/nifty-painting-forest.md` (volledige implementatieplan)
+- **Branch:** `claude/dreamy-khayyam` (moet naar main gemerged worden)
+
+### Beslissingen
+- Claude Haiku 4.5 voor classificatie (~$0.04/maand bij 100 emails)
+- Template-based responses, GEEN vrije tekst naar debiteuren
+- Copilot mode: Lisanne reviewt altijd voor verzending
+- AI Agent Masterplan bewaard als `docs/research/AI-AGENT-MASTERPLAN.md` voor toekomstige uitbreiding
+- Stap-voor-stap: classificatie eerst, later intake agent en correspondentie-analyse
+
+### Bekende issues
+- Branch `claude/dreamy-khayyam` moet nog naar `main` gemerged worden
+- Fase 3 (router) is nog niet geschreven — API endpoints zijn er nog niet
+- Migration 036 is nog niet uitgevoerd op de database
+
+### Volgende sessie
+1. Merge branch naar main (of werk op main)
+2. Fase 3: `router.py` (9 endpoints), registreer in `main.py`, scheduler job in `scheduler.py`
+3. Fase 4: Tests met gemockte AI client
+4. Fase 5: Frontend hooks + CorrespondentieTab classificatie-kaart
+5. Fase 6: Seed templates + verificatie
+6. Migration 036 uitvoeren op DB
 
 ## Wat er gedaan is (sessie 38 — 6 maart) — AI Agent Masterplan ✅
 

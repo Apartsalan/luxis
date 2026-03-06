@@ -1,11 +1,41 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 40b — Docker-compose fix + AI classificatie live)
-**Laatste feature/fix:** ANTHROPIC_API_KEY toegevoegd aan docker-compose.prod.yml — AI classificatie nu live
+**Laatst bijgewerkt:** 6 maart 2026 (sessie 41 — AI Classificatie Frontend)
+**Laatste feature/fix:** Frontend classificatie-UI gebouwd (hooks, ClassificationCard, sidebar badge)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 428 passed | **Ruff:** 0 warnings | **Frontend build:** OK
-**Volgende sessie (41):** AI Email Classificatie afronden — Fase 5 (frontend), Fase 6 (seed templates, verificatie).
+**Volgende sessie (42):** AI Email Classificatie Fase 6 — seed templates, `anthropic` in pyproject.toml, end-to-end verificatie op live omgeving.
+
+## Wat er gedaan is (sessie 41 — 6 maart) — AI Email Classificatie Fase 5 (Frontend) ✅
+
+### Samenvatting
+Frontend voor AI email classificatie gebouwd. Alle hooks, componenten en integratie klaar.
+
+**Fase 5 (Frontend):**
+- `use-ai-agent.ts` — 7 TanStack Query hooks: useClassifications, useEmailClassification, usePendingCount, useApproveClassification, useRejectClassification, useExecuteClassification, useClassifyEmail
+- `classification-card.tsx` — Component met: categorie label + confidence bar, status badge (pending/approved/rejected/executed), suggested action + template naam, uitklapbare AI-redenering, approve/reject/execute knoppen, "Classificeer" trigger bij ontbrekende classificatie
+- CorrespondentieTab integratie — ClassificationCard verschijnt in de EmailDetailPanel boven de bijlagen bij elke email
+- Sidebar badge — AI pending count op "Dossiers" nav item (pollt elke 60s)
+
+### Nieuwe bestanden
+- `frontend/src/hooks/use-ai-agent.ts`
+- `frontend/src/components/classification-card.tsx`
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` (ClassificationCard import + render)
+- `frontend/src/components/layout/app-sidebar.tsx` (ai-pending badge type + usePendingCount hook)
+
+### Bekende issues
+- `anthropic` package zit niet in Docker image — bij volgende `--no-cache` build moet het toegevoegd worden aan `pyproject.toml`
+- Seed templates (Fase 6) nog niet uitgevoerd
+- End-to-end verificatie op live omgeving nog niet gedaan
+
+### Volgende sessie
+1. Check `anthropic` in `backend/pyproject.toml` — toevoegen als het ontbreekt
+2. Seed default templates via POST `/api/ai-agent/templates/seed`
+3. Deploy frontend + backend (met `--no-cache` na pyproject.toml fix)
+4. End-to-end test op live omgeving: email classificatie → review → execute
 
 ## Wat er gedaan is (sessie 40b — 6 maart) — Docker-compose fix + AI classificatie live
 

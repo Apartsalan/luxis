@@ -137,6 +137,45 @@ async def email_auto_sync() -> None:
         logger.exception("Scheduler: email auto-sync failed")
 
 
+async def ai_email_classification() -> None:
+    """Periodic job: classify unclassified inbound emails on incasso cases.
+
+    Runs every 6 minutes (offset from email sync).
+    Only active if ANTHROPIC_API_KEY is configured.
+    """
+    from app.ai_agent.service import classify_new_emails
+    from app.auth.models import Tenant
+
+    logger.info("Scheduler: starting AI email classification")
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(Tenant).where(Tenant.is_active.is_(True))
+            )
+            tenants = list(result.scalars().all())
+
+            total_classified = 0
+            for tenant in tenants:
+                try:
+                    count = await classify_new_emails(session, tenant.id)
+                    total_classified += count
+                except Exception as e:
+                    logger.error(
+                        "Scheduler: AI classification failed for tenant %s: %s",
+                        tenant.name,
+                        e,
+                    )
+
+            await session.commit()
+            if total_classified > 0:
+                logger.info(
+                    "Scheduler: AI classification complete — %d emails classified",
+                    total_classified,
+                )
+    except Exception:
+        logger.exception("Scheduler: AI email classification failed")
+
+
 def start_scheduler() -> None:
     """Start the APScheduler with daily + periodic jobs."""
     if scheduler.running:
@@ -169,9 +208,28 @@ def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    # Every 6 minutes: AI email classification (only if API key configured)
+    from app.config import settings as app_settings
+
+    ai_enabled = bool(app_settings.anthropic_api_key)
+    if ai_enabled:
+        scheduler.add_job(
+            ai_email_classification,
+            IntervalTrigger(minutes=6),
+            id="ai_email_classification",
+            name="AI email classification",
+            replace_existing=True,
+        )
+
     scheduler.start()
+    ai_status = (
+        "AI classification every 6 min"
+        if ai_enabled
+        else "AI classification OFF (no API key)"
+    )
     logger.info(
-        "Scheduler started: daily jobs at 06:00/06:15 UTC, email sync every 5 min"
+        "Scheduler started: daily jobs at 06:00/06:15 UTC, email sync every 5 min, %s",
+        ai_status,
     )
 
 

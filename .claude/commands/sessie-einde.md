@@ -1,21 +1,12 @@
 Sluit de huidige werksessie af. Dit is VERPLICHT aan het einde van elke sessie.
 
-## Stap 1: Kwaliteitscheck (parallel)
-
-Draai deze checks parallel:
-- **Lint**: `MSYS_NO_PATHCONV=1 docker compose exec backend ruff check app/`
-- **Backend tests**: `MSYS_NO_PATHCONV=1 docker compose exec backend pytest tests/ -x -q`
-- **Frontend build**: `cd frontend && npm run build`
-
-Als iets faalt: fix het VOOR je verdergaat.
-
-## Stap 2: Commit + push
+## Stap 1: Commit + push
 
 - `git status` — check op uncommitted changes
 - Commit alle wijzigingen met conventional commit message
 - `git push origin main`
 
-## Stap 3: Documentatie bijwerken
+## Stap 2: Documentatie bijwerken
 
 ### SESSION-NOTES.md
 Voeg een nieuwe entry toe BOVENAAN met:
@@ -41,7 +32,7 @@ Update ook de header-regels (laatst bijgewerkt, laatste feature/fix, openstaande
 - `git add SESSION-NOTES.md LUXIS-ROADMAP.md && git commit -m "docs: update session notes + roadmap for sessie N"`
 - `git push origin main`
 
-## Stap 4: Prompt voor volgende sessie genereren
+## Stap 3: Prompt voor volgende sessie genereren
 
 Gebruik de `luxis-researcher` subagent om LUXIS-ROADMAP.md en SESSION-NOTES.md te lezen voor actuele status.
 
@@ -79,7 +70,7 @@ Na afronding: commit + push naar main met conventional commit message.
 
 De prompt moet LEAN zijn (<50KB met gevraagde bestanden). Verwijs naar docs/ bestanden i.p.v. alles in de prompt te zetten.
 
-## Stap 5: Deploy-commando
+## Stap 4: Deploy-commando
 
 Als er iets gedeployd moet worden, geef het commando:
 ```
@@ -87,10 +78,9 @@ cd /opt/luxis && git pull && docker compose -f docker-compose.yml -f docker-comp
 ```
 Vermeld: welke services (frontend/backend/beide), en of er migraties nodig zijn.
 
-## Stap 6: Samenvatting
+## Stap 5: Samenvatting
 
 Geef de gebruiker een korte samenvatting:
 - Wat er gedaan is
-- Teststatus (passed/failed)
 - Of er gedeployd moet worden
 - Link naar de volgende sessie-prompt hierboven

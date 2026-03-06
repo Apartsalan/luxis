@@ -1,10 +1,56 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 37 — Lint cleanup + Incasso E2E fixes)
-**Laatste feature/fix:** Alle ruff warnings gefixt + 7 incasso E2E tests werkend gemaakt
+**Laatst bijgewerkt:** 6 maart 2026 (sessie 38 — AI Agent Masterplan)
+**Laatste feature/fix:** AI Agent Masterplan research + documentatie
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs (tijdregistratie E2E heeft pre-existing 500 error, niet-kritiek)
-**Volgende sessie (38):** Nieuwe features (M365 OutlookProvider, cliëntportaal, of andere roadmap items)
+**Volgende sessie (39):** Review masterplan feedback van Arsalan → begin implementatie (A1: MCP Tool Layer of andere prioriteit)
+
+## Wat er gedaan is (sessie 38 — 6 maart) — AI Agent Masterplan ✅
+
+### Research & documentatie (geen code changes)
+
+**Concurrentie-analyse:**
+- Legal AI: Harvey ($8B), CoCounsel (1M users), Luminance Autopilot, Clio Manage AI, Smokeball, Claude Cowork Legal Plugin
+- Incasso AI: Kolleno (3 autonomieniveaus), Prodigal (24/7 voice), Intrum/Ophelos (8 EU-markten), Flanderijn (83% ML predictie), Payt, POM
+- Nederlandse markt: Payt, POM, iFlow, CollectOnline, Ultimoo, Simplifai
+- **Gap gevonden:** Niemand combineert NL-recht + advocatenworkflow + AI + klein kantoor
+
+**Inventaris bestaande Luxis capabilities:**
+- 30+ API endpoints geinventariseerd die de agent als tools kan gebruiken
+- Alles al aanwezig: dossiers, facturatie, documenten, email, betalingen, pipeline, taken, agenda
+
+**Masterplan geschreven:**
+- 3-lagen architectuur: Luxis Core → MCP Tools → AI Agent
+- 3 autonomieniveaus: Inzicht / Copilot / Autonoom (per stap configureerbaar)
+- 4 fases: A1 (MCP tools) → A2 (Copilot) → A3 (Dashboard) → A4 (Autonoom)
+- A2.5 Facturatie Agent: eigen facturen + doorstorten aan client + incasso-afrekening
+- Multi-model strategie: Kimi 2.5 voor 90% (classificatie/extractie), Claude als fallback
+- Template-based responses i.p.v. generatief (voorspelbare kosten)
+- Geschatte kosten: $2-8/maand voor 200 dossiers (was $20-60 met single model)
+
+**NOvA compliance:**
+- Aanbevelingen AI in advocatuur (dec 2025) onderzocht
+- Advocaat blijft eindverantwoordelijk, AI = concept, transparantie vereist
+
+### Bestanden
+- **Nieuw:** `docs/research/AI-AGENT-MASTERPLAN.md` (branch: `claude/admiring-engelbart`)
+- **Gewijzigd:** Notification hook sound (RA2 Command & Conquer stijl) in `~/.claude/settings.json`
+
+### Beslissingen
+- Agent is taakuitvoerder, geen chatbot (juridisch advies via Claude chat apart)
+- Multi-model: Kimi 2.5 default, Claude Haiku/Sonnet/Opus als escalatie
+- Template-based responses, rule-based first, LLM second
+- A5 (advanced features) op backlog
+
+### Openstaande vragen (wacht op Arsalan's review)
+1. Agent ook dagvaardingen voorbereiden?
+2. Betalingsregelingen voorstellen aan debiteuren?
+3. Clientportaal met real-time status?
+4. Limieten op autonome acties?
+5. Ook niet-incasso dossiers ondersteunen?
+
+---
 
 ## Wat er gedaan is (sessie 37 — 6 maart) — Lint cleanup + Incasso E2E fixes ✅
 

@@ -365,6 +365,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 ---
 
 > **Toekomstige modules** (M365, AI Agent, Data Migratie, etc.) staan in `docs/future-modules.md`
+>
+> **AI Agent Masterplan** (sessie 38, 6 maart 2026): Uitgebreid onderzoeksplan in `docs/research/AI-AGENT-MASTERPLAN.md` (branch `claude/admiring-engelbart`). Concurrentie-analyse, multi-model strategie (Kimi 2.5 + Claude), 4 fases (MCP tools → Copilot → Dashboard → Autonoom). Status: DRAFT — wacht op review.
 
 ## Deploy
 

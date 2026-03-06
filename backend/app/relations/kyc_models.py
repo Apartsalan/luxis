@@ -8,7 +8,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
 
-
 # ── Valid values ────────────────────────────────────────────────────────────
 
 KYC_RISK_LEVELS = ("laag", "midden", "hoog")

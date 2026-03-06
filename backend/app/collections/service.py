@@ -15,6 +15,7 @@ from app.collections.models import (
     Payment,
     PaymentArrangement,
 )
+from app.collections.payment_distribution import distribute_payment
 from app.collections.schemas import (
     ArrangementCreate,
     ArrangementUpdate,
@@ -24,7 +25,6 @@ from app.collections.schemas import (
     PaymentCreate,
     PaymentUpdate,
 )
-from app.collections.payment_distribution import distribute_payment
 from app.collections.wik import calculate_bik
 from app.shared.exceptions import NotFoundError
 

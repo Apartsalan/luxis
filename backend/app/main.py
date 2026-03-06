@@ -21,10 +21,10 @@ from app.email.oauth_router import router as email_oauth_router
 from app.email.router import router as email_router
 from app.email.sync_router import router as email_sync_router
 from app.incasso.router import router as incasso_router
-from app.notifications.router import router as notifications_router
 from app.invoices.router import expenses_router
 from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
+from app.notifications.router import router as notifications_router
 from app.relations.kyc_router import router as kyc_router
 from app.relations.router import router as relations_router
 from app.search.router import router as search_router

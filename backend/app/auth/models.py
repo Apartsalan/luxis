@@ -50,7 +50,10 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(50), default="medewerker")  # admin, advocaat, medewerker
+    # Roles: admin, advocaat, medewerker
+    role: Mapped[str] = mapped_column(
+        String(50), default="medewerker"
+    )
     is_active: Mapped[bool] = mapped_column(default=True)
     password_reset_token: Mapped[str | None] = mapped_column(
         String(255), unique=True, nullable=True, default=None

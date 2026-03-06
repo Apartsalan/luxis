@@ -79,7 +79,8 @@ class WorkflowTask(TenantBase):
 
     task_type: Mapped[str] = mapped_column(
         String(50), nullable=False
-    )  # generate_document, send_letter, check_payment, escalate_status, manual_review, set_deadline, custom
+    )  # generate_document, send_letter, check_payment,
+    # escalate_status, manual_review, set_deadline, custom
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -140,7 +141,8 @@ class WorkflowRule(TenantBase):
     days_delay: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     action_type: Mapped[str] = mapped_column(
         String(50), nullable=False
-    )  # generate_document, send_letter, check_payment, escalate_status, manual_review, set_deadline, custom
+    )  # generate_document, send_letter, check_payment,
+    # escalate_status, manual_review, set_deadline, custom
 
     action_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 

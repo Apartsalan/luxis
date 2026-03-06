@@ -36,7 +36,8 @@ from app.auth.service import (
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user, require_role
-from app.email.service import is_configured as smtp_is_configured, send_email
+from app.email.service import is_configured as smtp_is_configured
+from app.email.service import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -122,20 +123,23 @@ def _build_reset_email_html(reset_url: str) -> str:
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 0;">
     <tr><td align="center">
-      <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+      <table width="480" cellpadding="0" cellspacing="0"
+        style="background:#fff;border-radius:8px;overflow:hidden;">
         <tr><td style="background:#1e293b;padding:24px 32px;">
-          <h1 style="margin:0;color:#ffffff;font-size:20px;">Luxis</h1>
+          <h1 style="margin:0;color:#fff;font-size:20px;">Luxis</h1>
         </td></tr>
         <tr><td style="padding:32px;">
-          <h2 style="margin:0 0 16px;color:#1e293b;font-size:18px;">Wachtwoord herstellen</h2>
+          <h2 style="margin:0 0 16px;color:#1e293b;font-size:18px;">
+            Wachtwoord herstellen</h2>
           <p style="color:#475569;font-size:14px;line-height:1.6;">
             Er is een verzoek ingediend om je wachtwoord te herstellen.
-            Klik op de onderstaande knop om een nieuw wachtwoord in te stellen.
+            Klik op onderstaande knop om een nieuw wachtwoord in te stellen.
           </p>
           <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
             <tr><td style="background:#2563eb;border-radius:6px;">
-              <a href="{reset_url}"
-                 style="display:inline-block;padding:12px 28px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;">
+              <a href="{reset_url}" style="display:inline-block;
+                padding:12px 28px;color:#fff;text-decoration:none;
+                font-size:14px;font-weight:600;">
                 Wachtwoord herstellen
               </a>
             </td></tr>

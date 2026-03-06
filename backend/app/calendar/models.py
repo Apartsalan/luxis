@@ -2,11 +2,10 @@
 
 import uuid
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
-
 
 # ── Event type constants ─────────────────────────────────────────────────────
 

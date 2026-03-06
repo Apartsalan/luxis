@@ -74,9 +74,8 @@ async def create_user(
     role: str = "medewerker",
 ) -> User:
     """Create a new user in the given tenant. Raises ConflictError on duplicate email."""
-    from app.shared.exceptions import BadRequestError, ConflictError
-
     from app.auth.schemas import ROLES
+    from app.shared.exceptions import BadRequestError, ConflictError
 
     if role not in ROLES:
         raise BadRequestError(

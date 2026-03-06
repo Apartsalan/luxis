@@ -5,7 +5,6 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
-
 # ── Legal constraints (hardcoded, not configurable) ─────────────────────────
 
 LEGAL_CONSTRAINTS = {

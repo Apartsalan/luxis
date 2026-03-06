@@ -36,7 +36,6 @@ from app.workflow.schemas import (
     WorkflowTransitionCreate,
 )
 
-
 # ── WorkflowStatus CRUD ────────────────────────────────────────────────────
 
 
@@ -150,7 +149,8 @@ async def delete_status(
     )
     if result.scalar_one_or_none():
         raise ConflictError(
-            f"Status '{status.label}' is in gebruik door actieve zaken en kan niet worden verwijderd"
+            f"Status '{status.label}' is in gebruik door actieve "
+            f"zaken en kan niet worden verwijderd"
         )
 
     status.is_active = False
@@ -285,7 +285,8 @@ async def validate_transition(
         allowed_labels = [t.to_label for t in allowed_transitions]
         errors.append(
             f"Status kan niet van '{case.status}' naar '{new_slug}'. "
-            f"Toegestane overgangen: {', '.join(allowed_labels) if allowed_labels else 'geen (eindstatus)'}"
+            "Toegestane overgangen: "
+            f"{', '.join(allowed_labels) if allowed_labels else 'geen (eindstatus)'}"
         )
         return TransitionValidationResult(allowed=False, errors=errors)
 

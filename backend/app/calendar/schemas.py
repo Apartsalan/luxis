@@ -1,10 +1,9 @@
 """Calendar module schemas — Pydantic models for calendar events."""
 
 import uuid
-from datetime import date, datetime
+from datetime import datetime
 
 from pydantic import BaseModel, Field
-
 
 # ── Event type labels ────────────────────────────────────────────────────────
 

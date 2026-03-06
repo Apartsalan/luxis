@@ -8,20 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.cases.models import Case, CaseActivity, CaseParty
-from app.workflow.models import WorkflowTask
 from app.cases.schemas import (
-    CASE_STATUSES,
     CASE_TYPES,
     DEBTOR_TYPES,
     INTEREST_TYPES,
-    STATUS_TRANSITIONS,
     CaseActivityCreate,
     CaseCreate,
     CasePartyCreate,
     CaseStatusUpdate,
     CaseUpdate,
 )
-from app.shared.exceptions import BadRequestError, ConflictError, NotFoundError
+from app.shared.exceptions import BadRequestError, NotFoundError
+from app.workflow.models import WorkflowTask
 
 # ── Case Number Generation ───────────────────────────────────────────────────
 
@@ -56,7 +54,8 @@ async def generate_case_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
 
 INCASSO_TASKS = [
     {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
-     "description": "Controleer of alle gegevens compleet zijn: facturen, contactgegevens wederpartij, renteberekening."},
+     "description": "Controleer of alle gegevens compleet zijn: "
+     "facturen, contactgegevens wederpartij, renteberekening."},
     {"title": "Herinnering versturen", "task_type": "send_letter", "days": 3,
      "description": "Stuur een herinnering naar de debiteur."},
     {"title": "14-dagenbrief versturen (B2C)", "task_type": "send_letter", "days": 7,
@@ -86,8 +85,10 @@ ADVIES_TASKS = [
 
 INSOLVENTIE_TASKS = [
     {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
-     "description": "Controleer of alle stukken compleet zijn: jaarrekeningen, crediteurenlijst, etc."},
-    {"title": "Beoordeel faillissementsaanvraag of surseance", "task_type": "manual_review", "days": 3,
+     "description": "Controleer of alle stukken compleet zijn: "
+     "jaarrekeningen, crediteurenlijst, etc."},
+    {"title": "Beoordeel faillissementsaanvraag of surseance",
+     "task_type": "manual_review", "days": 3,
      "description": "Beoordeel welke procedure het meest geschikt is."},
     {"title": "Verzoekschrift opstellen", "task_type": "generate_document", "days": 14,
      "description": "Stel het verzoekschrift op voor de rechtbank."},

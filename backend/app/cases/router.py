@@ -9,8 +9,7 @@ from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
-from app.cases import service
-from app.cases import files_service
+from app.cases import files_service, service
 from app.cases.schemas import (
     CaseActivityCreate,
     CaseActivityResponse,
@@ -364,7 +363,11 @@ async def preview_file(
         )
 
     # DOCX: convert to PDF
-    if case_file.content_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    docx_mime = (
+        "application/vnd.openxmlformats-officedocument"
+        ".wordprocessingml.document"
+    )
+    if case_file.content_type == docx_mime:
         from app.documents.pdf_service import docx_to_pdf
 
         docx_bytes = file_path.read_bytes()

@@ -3,7 +3,17 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import Boolean, Date, Float, ForeignKey, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import (
+    Boolean,
+    Date,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase

@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.invoices.models import PAYMENT_METHODS, Expense, Invoice, InvoiceLine, InvoicePayment
-from app.time_entries.models import TimeEntry
 from app.invoices.schemas import (
     AgingBucket,
     ContactReceivable,
@@ -24,6 +23,7 @@ from app.invoices.schemas import (
     ReceivablesSummary,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
+from app.time_entries.models import TimeEntry
 
 # ── Invoice Number Generation ────────────────────────────────────────────────
 
@@ -159,7 +159,10 @@ async def list_invoices(
             "case_id": inv.case_id,
             "case_number": inv.case.case_number if inv.case else None,
             "linked_invoice_id": inv.linked_invoice_id,
-            "linked_invoice_number": inv.linked_invoice.invoice_number if inv.linked_invoice else None,
+            "linked_invoice_number": (
+                inv.linked_invoice.invoice_number
+                if inv.linked_invoice else None
+            ),
             "invoice_date": inv.invoice_date,
             "due_date": inv.due_date,
             "subtotal": inv.subtotal,
@@ -478,7 +481,9 @@ async def add_line(
         raise BadRequestError("Regels kunnen alleen aan conceptfacturen worden toegevoegd")
 
     # Determine next line number
-    max_line = max((l.line_number for l in invoice.lines), default=0)
+    max_line = max(
+        (line.line_number for line in invoice.lines), default=0
+    )
 
     line_total = (quantity * unit_price).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP

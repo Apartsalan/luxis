@@ -232,7 +232,10 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
 async def trigger_sync(
     max_results: int = Query(default=100, le=500, description="Max emails op te halen"),
     query: str | None = Query(default=None, description="Gmail search query"),
-    case_id: uuid.UUID | None = Query(default=None, description="Dossier ID — filtert en linkt emails automatisch"),
+    case_id: uuid.UUID | None = Query(
+        default=None,
+        description="Dossier ID — filtert en linkt emails automatisch",
+    ),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -478,7 +481,10 @@ class SaveToCaseResponse(BaseModel):
     filename: str
 
 
-@router.post("/attachments/{attachment_id}/save-to-case/{case_id}", response_model=SaveToCaseResponse)
+@router.post(
+    "/attachments/{attachment_id}/save-to-case/{case_id}",
+    response_model=SaveToCaseResponse,
+)
 async def save_attachment_to_case(
     attachment_id: uuid.UUID,
     case_id: uuid.UUID,
@@ -530,7 +536,7 @@ async def save_attachment_to_case(
         file_size=attachment.file_size,
         content_type=attachment.content_type,
         document_direction="inkomend",
-        description=f"Email-bijlage",
+        description="Email-bijlage",
         uploaded_by=user.id,
     )
     db.add(case_file)

@@ -5,13 +5,12 @@ import uuid
 from pathlib import Path
 
 from fastapi import UploadFile
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import CaseFile
 from app.cases.schemas import (
     ALLOWED_EXTENSIONS,
-    ALLOWED_FILE_TYPES,
     MAX_FILE_SIZE,
     CaseFileResponse,
 )

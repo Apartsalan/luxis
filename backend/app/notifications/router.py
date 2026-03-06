@@ -6,8 +6,8 @@ The frontend already calls these endpoints on every page load.
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_current_user
 from app.auth.models import User
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 

@@ -4,8 +4,8 @@ import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
-from starlette import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status as http_status
 
 from app.auth.models import User
 from app.database import get_db

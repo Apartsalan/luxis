@@ -4,8 +4,8 @@ Each template function returns (subject, html_body) for use with email.service.s
 Templates are defined as Jinja2 strings rendered with case/document context.
 """
 
-from markupsafe import Markup
 from jinja2 import Environment, StrictUndefined
+from markupsafe import Markup
 
 _env = Environment(undefined=StrictUndefined, autoescape=True)
 

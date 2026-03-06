@@ -138,7 +138,9 @@ async def _find_case_by_case_number(
 
     if len(case_ids) > 1:
         logger.info(
-            f"Meerdere dossiers ({len(case_ids)}) gematcht op nummer/referentie/zaaknummer — niet auto-gekoppeld"
+            "Meerdere dossiers (%d) gematcht op "
+            "nummer/referentie/zaaknummer — niet auto-gekoppeld",
+            len(case_ids),
         )
 
     return None
@@ -201,7 +203,10 @@ async def _find_case_for_email(
 
     if len(case_ids) > 1:
         logger.info(
-            f"Meerdere dossiers ({len(case_ids)}) gevonden voor {email_addresses} — niet auto-gekoppeld"
+            "Meerdere dossiers (%d) gevonden voor %s"
+            " — niet auto-gekoppeld",
+            len(case_ids),
+            email_addresses,
         )
 
     return None
@@ -816,7 +821,12 @@ async def suggest_cases_for_email(
         )
         for row in court_result.all():
             court_num = row[3].strip()
-            if len(court_num) >= 3 and court_num.lower() in text_lower and row[0] not in suggestions:
+            is_match = (
+                len(court_num) >= 3
+                and court_num.lower() in text_lower
+                and row[0] not in suggestions
+            )
+            if is_match:
                 suggestions[row[0]] = {
                     "case_id": str(row[0]),
                     "case_number": row[1],
@@ -863,7 +873,11 @@ async def suggest_cases_for_email(
         if contact_ids:
             # Cases where contact is client or opposing party
             case_result = await db.execute(
-                select(Case.id, Case.case_number, Case.description, Case.client_id, Case.opposing_party_id).where(
+                select(
+                    Case.id, Case.case_number,
+                    Case.description, Case.client_id,
+                    Case.opposing_party_id,
+                ).where(
                     Case.tenant_id == tenant_id,
                     Case.is_active == True,  # noqa: E712
                     or_(

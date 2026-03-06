@@ -59,7 +59,10 @@ async def daily_verjaring_check() -> None:
                 if warnings:
                     for w in warnings:
                         level = "CRITICAL" if w["is_expired"] else "WARNING"
-                        days_info = "VERJAARD" if w["is_expired"] else f"{w['days_remaining']} dagen resterend"
+                        days_info = (
+                            "VERJAARD" if w["is_expired"]
+                            else f"{w['days_remaining']} dagen resterend"
+                        )
                         logger.warning(
                             f"Scheduler: [{level}] Verjaring zaak {w['case_number']} "
                             f"(tenant {tenant.name}) — {days_info}"
@@ -68,7 +71,10 @@ async def daily_verjaring_check() -> None:
 
             await session.commit()
             logger.info(
-                f"Scheduler: verjaring check complete — {total_warnings} warnings across {len(tenants)} tenants"
+                "Scheduler: verjaring check complete"
+                " — %d warnings across %d tenants",
+                total_warnings,
+                len(tenants),
             )
     except Exception:
         logger.exception("Scheduler: verjaring check failed")

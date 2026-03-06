@@ -7,10 +7,14 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.time_entries.models import TimeEntry
-from app.time_entries.schemas import CaseTimeSummary, TimeEntryCreate, TimeEntryUpdate, TimeEntrySummary
 from app.shared.exceptions import NotFoundError
-
+from app.time_entries.models import TimeEntry
+from app.time_entries.schemas import (
+    CaseTimeSummary,
+    TimeEntryCreate,
+    TimeEntrySummary,
+    TimeEntryUpdate,
+)
 
 # ── CRUD ──────────────────────────────────────────────────────────────────
 

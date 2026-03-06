@@ -1,12 +1,12 @@
 """WWFT/KYC service — Business logic for client verification and compliance."""
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.relations.kyc_models import KYC_STATUSES, KycVerification
+from app.relations.kyc_models import KycVerification
 from app.relations.kyc_schemas import KycComplete, KycCreate, KycUpdate
 from app.relations.models import Contact
 from app.shared.exceptions import BadRequestError, NotFoundError
@@ -249,7 +249,11 @@ async def get_kyc_dashboard(
     # Get KYC status for these clients
     kyc_query = select(KycVerification).where(
         KycVerification.tenant_id == tenant_id,
-        KycVerification.contact_id.in_(active_client_ids) if active_client_ids else KycVerification.contact_id == None,  # noqa: E711
+        (
+            KycVerification.contact_id.in_(active_client_ids)
+            if active_client_ids
+            else KycVerification.contact_id == None  # noqa: E711
+        ),
     )
     kyc_result = await db.execute(kyc_query)
     kyc_records = {kyc.contact_id: kyc for kyc in kyc_result.scalars().all()}

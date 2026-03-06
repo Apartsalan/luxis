@@ -262,7 +262,8 @@ async def on_payment_received(
                 title="Zaak volledig betaald — handmatige statuswijziging nodig",
                 description=(
                     f"Totaal openstaand: EUR 0,00. "
-                    f"Automatische transitie naar 'betaald' niet mogelijk vanuit status '{old_status}'. "
+                    f"Automatische transitie naar 'betaald' niet "
+                    f"mogelijk vanuit status '{old_status}'. "
                     f"Wijzig de status handmatig."
                 ),
             )

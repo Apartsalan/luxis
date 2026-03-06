@@ -29,7 +29,9 @@ class EmailAttachment(TenantBase):
     # File metadata
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
     stored_filename: Mapped[str] = mapped_column(String(500), nullable=False)
-    content_type: Mapped[str] = mapped_column(String(200), nullable=False, default="application/octet-stream")
+    content_type: Mapped[str] = mapped_column(
+        String(200), nullable=False, default="application/octet-stream"
+    )
     file_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     downloaded_at: Mapped[datetime] = mapped_column(

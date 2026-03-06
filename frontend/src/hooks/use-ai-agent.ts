@@ -180,7 +180,7 @@ export function useExecuteClassification() {
 export function useClassifyEmail() {
   const queryClient = useQueryClient();
 
-  return useMutation<Classification | null, Error, { emailId: string }>({
+  return useMutation<Classification, Error, { emailId: string }>({
     mutationFn: async ({ emailId }) => {
       const res = await api(`/api/ai-agent/classify/${emailId}`, {
         method: "POST",
@@ -190,7 +190,10 @@ export function useClassifyEmail() {
         throw new Error(err?.detail ?? "Classificatie mislukt");
       }
       const data = await res.json();
-      return data ?? null;
+      if (!data) {
+        throw new Error("Classificatie niet mogelijk — controleer of de AI API-key geldig is");
+      }
+      return data;
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["ai-classification-email", variables.emailId] });

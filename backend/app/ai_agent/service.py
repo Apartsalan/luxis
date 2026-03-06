@@ -42,10 +42,13 @@ async def _call_classification_ai(user_message: str) -> dict:
     Returns the parsed JSON dict from the AI response.
     Raises ValueError if the response is not valid JSON.
     """
+    if not settings.anthropic_api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     response = await client.messages.create(
-        model="claude-haiku-4-5",
+        model="claude-haiku-4-5-20250414",
         max_tokens=512,
         system=CLASSIFICATION_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_message}],

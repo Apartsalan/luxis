@@ -1,11 +1,34 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 maart 2026 (sessie 43 — BUG-36 + BUG-37 fix + E2E test AI Classificatie)
-**Laatste feature/fix:** BUG-37 fix (User.full_name) + E2E test AI classificatie flow succesvol
+**Laatst bijgewerkt:** 7 maart 2026 (sessie 44 — Notificatiegeluid + Claude Code update)
+**Laatste feature/fix:** Notificatiegeluid via VBS-script + Claude Code v2.1.49 → v2.1.71
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 428 passed | **Ruff:** 0 warnings | **Frontend build:** OK
-**Volgende sessie (44):** Nieuwe features of verbeteringen — AI classificatie is volledig werkend op productie
+**Volgende sessie (45):** AI Classificatie Fase 7 — echte actie-executie (dismiss, wait_and_remind, escalate, send_template, request_proof)
+
+## Wat er gedaan is (sessie 44 — 7 maart) — Notificatiegeluid + Claude Code update
+
+### Samenvatting
+- **Notificatiegeluid:** VBS-script (`~/.claude/notify.vbs`) dat tada.wav afspeelt als fire-and-forget
+- Claude Code hooks werken niet (getest: Notification, PreToolUse, Stop, UserPromptSubmit, PermissionRequest — geen enkel event vuurt, niet user-level, niet project-level)
+- Workaround: CLAUDE.md regel die Claude verplicht het geluid af te spelen via Bash vóór AskUserQuestion, EnterPlanMode, ExitPlanMode, en einde van taken
+- **Claude Code update:** v2.1.49 → v2.1.71 (22 versies, incl. hooks bugfixes)
+- Notification hook ook in project settings.json gezet als fallback voor toekomstige versies
+- Fase 7 niet gestart — hele sessie besteed aan notificatiegeluid
+
+### Gewijzigde bestanden
+- `CLAUDE.md` — notificatiegeluid regel toegevoegd
+- `.claude/settings.json` — Notification hook toegevoegd
+- `~/.claude/notify.vbs` — VBS-script (fire-and-forget tada.wav)
+- `~/.claude/settings.json` — opgeschoond (alleen skipDangerousModePermissionPrompt)
+
+### Bekende issues
+- Hooks vuren niet in huidige omgeving (bekend bug, zie github.com/anthropics/claude-code/issues/11544)
+
+### Volgende sessie
+- AI Classificatie Fase 7: echte actie-executie implementeren in `execute_classification()`
+- Acties: dismiss → wait_and_remind → escalate → send_template → request_proof
 
 ## Wat er gedaan is (sessie 43 — 6 maart) — BUG-36 + BUG-37 fix + E2E Test AI Classificatie ✅
 

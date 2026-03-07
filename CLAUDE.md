@@ -14,6 +14,18 @@ docker compose exec backend python -m alembic upgrade head           # Migration
 docker compose exec backend python -m alembic revision --autogenerate -m "desc"  # New migration
 ```
 
+## Notificatiegeluid (HARDE REGEL)
+
+**VERPLICHT: Speel een geluid af wanneer je op de gebruiker wacht.**
+- Voer `cscript //nologo //e:vbscript "C:\Users\arsal\.claude\notify.vbs"` uit via Bash **VOORDAT** je:
+  - `AskUserQuestion` gebruikt
+  - `EnterPlanMode` gebruikt (wacht op goedkeuring)
+  - `ExitPlanMode` gebruikt (wacht op goedkeuring)
+  - Klaar bent met een grote taak en op de volgende instructie wacht
+  - Een vraag stelt in je tekstoutput waar je een antwoord op verwacht
+- Dit geluid is **niet optioneel** — de gebruiker doet andere dingen terwijl Claude werkt en moet weten wanneer input nodig is.
+- Het VBS-script is fire-and-forget (blokkeert niet). Bestand: `C:\Users\arsal\.claude\notify.vbs`
+
 ## Critical Rules
 
 **IMPORTANT: Financial precision is non-negotiable.**

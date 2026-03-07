@@ -370,18 +370,19 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 >
 > **AI Agent Masterplan** (sessie 38, 6 maart 2026): Uitgebreid onderzoeksplan in `docs/research/AI-AGENT-MASTERPLAN.md` (branch `claude/admiring-engelbart`). Bewaard voor toekomstige uitbreiding.
 >
-> **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-6 COMPLEET** ✅ — E2E getest op productie (classify → approve → execute). BUG-36 (API credits) en BUG-37 (User.full_name) gefixt in sessie 43.
+> **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-7 COMPLEET** ✅ — E2E getest op productie.
 >
-> **AI Classificatie — Fase 7: Echte actie-executie** (gepland sessie 44):
-> Alle "Uitvoeren" acties zijn nu stubs (loggen alleen tekst). Moet echte functionaliteit krijgen:
-> | Actie | Wat het moet doen | Complexiteit |
-> |-------|-------------------|-------------|
-> | `dismiss` | `SyncedEmail.is_dismissed = True` | S |
-> | `send_template` | Template renderen + email versturen via EmailProvider | M-L |
-> | `request_proof` | Template "verzoek betalingsbewijs" versturen via EmailProvider | M-L |
-> | `wait_and_remind` | CaseTask aanmaken met deadline + X dagen | M |
-> | `escalate` | CaseTask aanmaken voor advocaat + markeren als urgent | M |
-> | `no_action` | Alleen CaseActivity loggen (al werkend) | S (klaar) |
+> **AI Classificatie — Fase 7: Echte actie-executie** ✅ Compleet (sessie 45, 7 maart 2026):
+> Alle acties in `execute_classification()` geïmplementeerd met echte side-effects:
+> | Actie | Wat het doet | Status |
+> |-------|-------------|--------|
+> | `dismiss` | `SyncedEmail.is_dismissed = True` | ✅ |
+> | `send_template` | Jinja2 template renderen + email versturen via EmailProvider/SMTP | ✅ |
+> | `request_proof` | Template "verzoek betalingsbewijs" versturen via EmailProvider/SMTP | ✅ |
+> | `wait_and_remind` | WorkflowTask aanmaken met due_date = vandaag + N dagen | ✅ |
+> | `escalate` | WorkflowTask aanmaken (urgent, due_date=vandaag) | ✅ |
+> | `no_action` | Alleen CaseActivity loggen | ✅ (was al werkend) |
+> 4 nieuwe tests toegevoegd (26 totaal), ruff clean.
 
 ## Deploy
 

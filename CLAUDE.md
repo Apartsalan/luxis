@@ -176,16 +176,33 @@ Na het bouwen, voordat je deploy-commando geeft:
 - **VERPLICHT: Als je een taak voor jezelf pakt, geef ALTIJD DIRECT kant-en-klare prompts voor de andere beschikbare terminals.** Dit is geen suggestie — het is een vereiste. Elke keer dat je zegt "ik ga X doen" moet je in DEZELFDE response ook de prompts voor terminal 2 en 3 geven. De gebruiker moet NOOIT hoeven vragen om prompts. De prompts bevatten: volledige context, repo pad, welke bestanden te lezen, exacte taak, en commit-instructies.
 
 **Sessie-prompt genereren (HARDE REGEL):**
-- **VERPLICHT: Als de gebruiker vraagt om een prompt voor de volgende sessie, geef ALTIJD een COMPLETE prompt die ALLES bevat wat de volgende Claude nodig heeft.** De gebruiker mag NOOIT hoeven corrigeren of aanvullen. Een complete prompt bevat:
-  1. **Repo pad:** `C:\Users\arsal\Documents\luxis`
-  2. **Bestanden lezen bij start:** ALLEEN de bestanden relevant voor de taak (CLAUDE.md wordt automatisch geladen). Nooit alles tegelijk — zie docs structuur in Context Management.
-  3. **Exacte taak:** wat er gebouwd/gefixt moet worden
-  4. **Welke bestanden betrokken zijn** (met paden)
-  5. **Bekende bugs/context:** relevante BUG-nummers en status zodat de volgende sessie niet opnieuw hoeft te zoeken
-  6. **Verificatie:** hoe te checken (`npm run build`, `pytest`, etc.)
-  7. **Commit-instructies:** commit + push als het werkt
+- **VERPLICHT: Als de gebruiker vraagt om een prompt voor de volgende sessie, geef ALTIJD een COMPLETE prompt die ALLES bevat wat de volgende Claude nodig heeft.** De gebruiker mag NOOIT hoeven corrigeren of aanvullen.
+- **LEAN prompts — MAXIMAAL LEAN:**
+  - De subagent bij start leest ALLEEN `LUXIS-ROADMAP.md` + `SESSION-NOTES.md`. Niks anders.
+  - Codebestanden worden NIET vooraf gelezen — Claude leest die on-demand wanneer het aan een specifieke taak begint.
+  - De prompt bevat: repo pad, subagent-instructie (roadmap + session notes), taak, verificatie, commit-instructies.
+  - GEEN lijst van "welke bestanden te lezen" — Claude zoekt zelf wat het nodig heeft.
+  - Prompt + gevraagde bestanden samen NOOIT boven 50KB.
+- Format:
+  ```
+  Sessie N — [onderwerp]
+  Repo: C:\Users\arsal\Documents\luxis
+
+  ## Context laden bij start
+  Gebruik de luxis-researcher subagent:
+  "Lees LUXIS-ROADMAP.md (sectie [relevant]) en SESSION-NOTES.md (sessie N-1). Geef compacte samenvatting."
+
+  ## Taak
+  [Concrete beschrijving — wat moet er gebouwd/gefixt worden]
+  [Startpunt: welk bestand/functie, maar ALLEEN als het niet obvious is]
+
+  ## Verificatie
+  [Test/lint/build commando's]
+
+  ## Commit
+  [Commit + push + deploy instructies]
+  ```
 - De gebruiker is geen developer. Hij kopieert de prompt en plakt het in een nieuwe sessie. Het moet foutloos werken zonder extra context.
-- **LEAN prompts:** De prompt + gevraagde bestanden samen mogen NIET boven 50KB uitkomen. Verwijs naar subdocs in `docs/` in plaats van alles in de prompt te zetten.
 
 **Deployment:**
 - Claude heeft GEEN SSH-toegang tot de VPS. Geef altijd het deploy-commando aan de gebruiker om zelf te draaien. Probeer NOOIT `ssh root@...` te runnen vanuit deze terminal.

@@ -1,11 +1,33 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 maart 2026 (sessie 44 — Notificatiegeluid + Claude Code update)
-**Laatste feature/fix:** Notificatiegeluid via VBS-script + Claude Code v2.1.49 → v2.1.71
+**Laatst bijgewerkt:** 7 maart 2026 (sessie 45 — AI Classificatie Fase 7 compleet)
+**Laatste feature/fix:** AI Classificatie Fase 7 — echte actie-executie (dismiss, wait_and_remind, escalate, send_template, request_proof)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Backend tests:** 428 passed | **Ruff:** 0 warnings | **Frontend build:** OK
-**Volgende sessie (45):** AI Classificatie Fase 7 — echte actie-executie (dismiss, wait_and_remind, escalate, send_template, request_proof)
+**Backend tests:** 26 AI agent tests passed (was 22) | **Ruff:** 0 warnings
+**Volgende sessie (46):** Zie roadmap voor volgende prioriteit (bijv. dashboard verbeteringen, incasso pipeline polish, of volgende AI feature)
+
+## Wat er gedaan is (sessie 45 — 7 maart) — AI Classificatie Fase 7: Echte actie-executie
+
+### Samenvatting
+Alle stubs in `execute_classification()` vervangen door echte functionaliteit:
+- **dismiss:** zet `SyncedEmail.is_dismissed = True`
+- **wait_and_remind:** maakt `WorkflowTask` aan (type `check_payment`, due_date = vandaag + N dagen)
+- **escalate:** maakt urgente `WorkflowTask` aan (type `manual_review`, due_date = vandaag, `URGENT` in titel)
+- **send_template / request_proof:** haalt `ResponseTemplate` op, rendert Jinja2 met zaak/wederpartij/kantoor context, stuurt email via `send_with_attachment()` (EmailProvider of SMTP fallback)
+- 4 nieuwe tests toegevoegd die side-effects verifiëren (WorkflowTask aanmaken, is_dismissed, email verzenden)
+
+### Gewijzigde bestanden
+- `backend/app/ai_agent/service.py` — echte actie-executie in `execute_classification()`, nieuwe imports (Jinja2, WorkflowTask, Tenant, send_with_attachment)
+- `backend/tests/test_ai_agent.py` — 4 nieuwe tests (26 totaal): dismiss, wait_and_remind, escalate, send_template
+- `LUXIS-ROADMAP.md` — Fase 7 als ✅ gemarkeerd
+
+### Bekende issues
+- Geen
+
+### Volgende sessie
+- Roadmap checken voor volgende prioriteit
+- Mogelijke verbeteringen: dashboard widgets, incasso pipeline polish, of volgende AI feature
 
 ## Wat er gedaan is (sessie 44 — 7 maart) — Notificatiegeluid + Claude Code update
 

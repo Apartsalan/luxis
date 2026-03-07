@@ -6,11 +6,12 @@ multi-tenant isolation, pending count, templates, and API endpoints.
 """
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.models import ClassificationStatus
@@ -31,6 +32,7 @@ from app.auth.models import Tenant, User
 from app.cases.models import Case
 from app.email.oauth_models import EmailAccount
 from app.email.synced_email_models import SyncedEmail
+from app.workflow.models import WorkflowTask
 
 # Fake AI response that _call_classification_ai returns
 FAKE_AI_RESPONSE = {
@@ -48,6 +50,24 @@ FAKE_AI_RESPONSE_BETWISTING = {
     "reasoning": "Debiteur betwist de vordering inhoudelijk.",
     "suggested_action": "escalate",
     "suggested_template_key": "ontvangst_betwisting",
+    "suggested_reminder_days": None,
+}
+
+FAKE_AI_RESPONSE_DISMISS = {
+    "category": "niet_gerelateerd",
+    "confidence": 0.95,
+    "reasoning": "Email is spam / niet gerelateerd aan de zaak.",
+    "suggested_action": "dismiss",
+    "suggested_template_key": None,
+    "suggested_reminder_days": None,
+}
+
+FAKE_AI_RESPONSE_SEND_TEMPLATE = {
+    "category": "beweert_betaald",
+    "confidence": 0.90,
+    "reasoning": "Debiteur beweert al betaald te hebben.",
+    "suggested_action": "send_template",
+    "suggested_template_key": "verzoek_betalingsbewijs",
     "suggested_reminder_days": None,
 }
 
@@ -330,6 +350,178 @@ async def test_execute_classification(
     assert executed.executed_at is not None
     assert executed.execution_result is not None
     assert "herinnering" in executed.execution_result.lower()
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
+async def test_execute_wait_and_remind_creates_task(
+    mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User, test_company
+):
+    """wait_and_remind creates a WorkflowTask with correct due_date."""
+    mock_ai.return_value = FAKE_AI_RESPONSE  # action=wait_and_remind, days=7
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_incasso_case(
+        db, test_tenant.id, test_company.id, test_company.id
+    )
+    email = await _create_inbound_email(
+        db, test_tenant.id, account.id, case.id
+    )
+    await db.commit()
+
+    c = await classify_email(db, email.id, test_tenant.id)
+    await db.commit()
+    await approve_classification(db, c.id, test_tenant.id, test_user.id)
+    await db.commit()
+    await execute_classification(db, c.id, test_tenant.id, test_user.id)
+    await db.commit()
+
+    # Verify WorkflowTask was created
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == test_tenant.id,
+            WorkflowTask.case_id == case.id,
+            WorkflowTask.task_type == "check_payment",
+        )
+    )
+    task = result.scalar_one_or_none()
+    assert task is not None
+    assert task.due_date == date.today() + timedelta(days=7)
+    assert task.status == "pending"
+    assert task.assigned_to_id == test_user.id
+    assert task.action_config["source"] == "ai_classification"
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
+async def test_execute_dismiss_sets_is_dismissed(
+    mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User, test_company
+):
+    """dismiss sets SyncedEmail.is_dismissed = True."""
+    mock_ai.return_value = FAKE_AI_RESPONSE_DISMISS
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_incasso_case(
+        db, test_tenant.id, test_company.id, test_company.id
+    )
+    email = await _create_inbound_email(
+        db, test_tenant.id, account.id, case.id,
+        body_text="Win a free iPhone!",
+    )
+    await db.commit()
+
+    c = await classify_email(db, email.id, test_tenant.id)
+    await db.commit()
+    await approve_classification(db, c.id, test_tenant.id, test_user.id)
+    await db.commit()
+
+    executed = await execute_classification(
+        db, c.id, test_tenant.id, test_user.id
+    )
+    await db.commit()
+
+    assert executed is not None
+    assert "weggezet" in executed.execution_result.lower()
+
+    # Verify SyncedEmail.is_dismissed was set
+    await db.refresh(email)
+    assert email.is_dismissed is True
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
+async def test_execute_escalate_creates_urgent_task(
+    mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User, test_company
+):
+    """escalate creates an urgent WorkflowTask with due_date=today."""
+    mock_ai.return_value = FAKE_AI_RESPONSE_BETWISTING
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_incasso_case(
+        db, test_tenant.id, test_company.id, test_company.id
+    )
+    email = await _create_inbound_email(
+        db, test_tenant.id, account.id, case.id,
+        body_text="Ik betwist deze vordering volledig.",
+    )
+    await db.commit()
+
+    c = await classify_email(db, email.id, test_tenant.id)
+    await db.commit()
+    await approve_classification(db, c.id, test_tenant.id, test_user.id)
+    await db.commit()
+    await execute_classification(db, c.id, test_tenant.id, test_user.id)
+    await db.commit()
+
+    # Verify urgent WorkflowTask was created
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == test_tenant.id,
+            WorkflowTask.case_id == case.id,
+            WorkflowTask.task_type == "manual_review",
+        )
+    )
+    task = result.scalar_one_or_none()
+    assert task is not None
+    assert task.due_date == date.today()
+    assert task.status == "pending"
+    assert task.action_config["urgent"] is True
+    assert task.action_config["source"] == "ai_classification"
+    assert "URGENT" in task.title
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.service.send_with_attachment", new_callable=AsyncMock)
+@patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
+async def test_execute_send_template_sends_email(
+    mock_ai,
+    mock_send,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    test_company,
+):
+    """send_template renders template and sends email."""
+    mock_ai.return_value = FAKE_AI_RESPONSE_SEND_TEMPLATE
+
+    # Mock send_with_attachment to return a successful EmailLog-like object
+    mock_email_log = AsyncMock()
+    mock_email_log.status = "sent"
+    mock_send.return_value = mock_email_log
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_incasso_case(
+        db, test_tenant.id, test_company.id, test_company.id
+    )
+    email = await _create_inbound_email(
+        db, test_tenant.id, account.id, case.id,
+        body_text="Ik heb al betaald vorige week.",
+    )
+    await db.commit()
+
+    # Seed templates first
+    await seed_default_templates(db, test_tenant.id)
+    await db.commit()
+
+    c = await classify_email(db, email.id, test_tenant.id)
+    await db.commit()
+    await approve_classification(db, c.id, test_tenant.id, test_user.id)
+    await db.commit()
+
+    executed = await execute_classification(
+        db, c.id, test_tenant.id, test_user.id
+    )
+    await db.commit()
+
+    assert executed is not None
+    assert "verzonden" in executed.execution_result.lower()
+
+    # Verify send_with_attachment was called correctly
+    mock_send.assert_called_once()
+    call_kwargs = mock_send.call_args
+    assert call_kwargs.kwargs["to"] == "debiteur@example.com"
+    assert "betalingsbewijs" in call_kwargs.kwargs["subject"].lower()
+    assert case.case_number in call_kwargs.kwargs["subject"]
 
 
 @pytest.mark.asyncio

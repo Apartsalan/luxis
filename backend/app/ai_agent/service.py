@@ -3,10 +3,11 @@
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import anthropic
+from jinja2 import Template
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -25,9 +26,12 @@ from app.ai_agent.prompts import (
     build_classification_prompt,
     strip_html,
 )
+from app.auth.models import Tenant
 from app.cases.models import Case, CaseActivity
 from app.config import settings
+from app.email.send_service import send_with_attachment
 from app.email.synced_email_models import SyncedEmail
+from app.workflow.models import WorkflowTask
 
 logger = logging.getLogger(__name__)
 
@@ -363,7 +367,17 @@ async def execute_classification(
     try:
         if action in ("send_template", "request_proof"):
             template_key = classification.suggested_template_key
-            if template_key:
+            if not template_key:
+                execution_notes.append("Geen template geselecteerd")
+            elif not email:
+                execution_notes.append(
+                    "Geen email gekoppeld aan classificatie"
+                )
+            elif not case:
+                execution_notes.append(
+                    "Geen zaak gekoppeld aan classificatie"
+                )
+            else:
                 # Find the template
                 tmpl_result = await db.execute(
                     select(ResponseTemplate).where(
@@ -373,30 +387,138 @@ async def execute_classification(
                     )
                 )
                 template = tmpl_result.scalar_one_or_none()
-                if template:
-                    execution_notes.append(
-                        f"Template '{template.name}' klaar om te "
-                        f"versturen naar {email.from_email}"
-                    )
-                else:
+                if not template:
                     execution_notes.append(
                         f"Template '{template_key}' niet gevonden"
                     )
-            else:
-                execution_notes.append("Geen template geselecteerd")
+                else:
+                    # Get tenant for kantoor context
+                    tenant_result = await db.execute(
+                        select(Tenant).where(Tenant.id == tenant_id)
+                    )
+                    tenant = tenant_result.scalar_one_or_none()
+
+                    # Build Jinja2 context
+                    wederpartij_naam = (
+                        case.opposing_party.name
+                        if case.opposing_party
+                        else email.from_name or email.from_email
+                    )
+                    tmpl_context = {
+                        "zaak": {"zaaknummer": case.case_number},
+                        "wederpartij": {"naam": wederpartij_naam},
+                        "kantoor": {
+                            "naam": tenant.name if tenant else "",
+                        },
+                    }
+
+                    # Render subject and body
+                    subject = Template(
+                        template.subject_template
+                    ).render(tmpl_context)
+                    body_text = Template(
+                        template.body_template
+                    ).render(tmpl_context)
+                    body_html = body_text.replace("\n", "<br>")
+
+                    # Send via email provider / SMTP
+                    email_log = await send_with_attachment(
+                        db,
+                        user_id,
+                        tenant_id,
+                        to=email.from_email,
+                        subject=subject,
+                        body_html=body_html,
+                        attachments=[],
+                        case_id=case.id,
+                        recipient_name=wederpartij_naam,
+                        sender_name=(
+                            tenant.name if tenant else ""
+                        ),
+                    )
+
+                    if email_log.status == "sent":
+                        execution_notes.append(
+                            f"Template '{template.name}' verzonden"
+                            f" naar {email.from_email}"
+                        )
+                    else:
+                        execution_notes.append(
+                            f"Verzending mislukt:"
+                            f" {email_log.error_message}"
+                        )
 
         elif action == "wait_and_remind":
             days = classification.suggested_reminder_days or 7
+            reminder_date = date.today() + timedelta(days=days)
+            if case:
+                task = WorkflowTask(
+                    tenant_id=tenant_id,
+                    case_id=case.id,
+                    assigned_to_id=user_id,
+                    task_type="check_payment",
+                    title=(
+                        f"Herinnering: opvolging email"
+                        f" — {case.case_number}"
+                    ),
+                    description=(
+                        f"Automatisch aangemaakt door AI classificatie.\n"
+                        f"Email van: {email.from_email if email else 'onbekend'}\n"
+                        f"Onderwerp: {email.subject if email else 'onbekend'}\n"
+                        f"Categorie: {CATEGORY_LABELS.get(
+                            classification.category,
+                            classification.category,
+                        )}"
+                    ),
+                    due_date=reminder_date,
+                    status="pending",
+                    action_config={
+                        "source": "ai_classification",
+                        "classification_id": str(classification.id),
+                    },
+                )
+                db.add(task)
             execution_notes.append(
-                f"Herinnering gepland over {days} dagen"
+                f"Herinnering gepland over {days} dagen ({reminder_date})"
             )
 
         elif action == "escalate":
+            if case:
+                task = WorkflowTask(
+                    tenant_id=tenant_id,
+                    case_id=case.id,
+                    assigned_to_id=user_id,
+                    task_type="manual_review",
+                    title=(
+                        f"URGENT: Escalatie email beoordelen"
+                        f" — {case.case_number}"
+                    ),
+                    description=(
+                        f"Automatisch geëscaleerd door AI classificatie.\n"
+                        f"Email van: {email.from_email if email else 'onbekend'}\n"
+                        f"Onderwerp: {email.subject if email else 'onbekend'}\n"
+                        f"Categorie: {CATEGORY_LABELS.get(
+                            classification.category,
+                            classification.category,
+                        )}\n"
+                        f"Reden: {classification.reasoning or 'niet opgegeven'}"
+                    ),
+                    due_date=date.today(),
+                    status="pending",
+                    action_config={
+                        "source": "ai_classification",
+                        "classification_id": str(classification.id),
+                        "urgent": True,
+                    },
+                )
+                db.add(task)
             execution_notes.append(
                 "Geëscaleerd naar advocaat voor beoordeling"
             )
 
         elif action == "dismiss":
+            if email:
+                email.is_dismissed = True
             execution_notes.append("Email weggezet (niet relevant)")
 
         elif action == "no_action":

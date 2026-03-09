@@ -1,11 +1,38 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 maart 2026 (sessie 45 — AI Classificatie Fase 7 compleet)
-**Laatste feature/fix:** AI Classificatie Fase 7 — echte actie-executie (dismiss, wait_and_remind, escalate, send_template, request_proof)
+**Laatst bijgewerkt:** 9 maart 2026 (sessie 46 — SSH deploy setup + CLAUDE.md verbeteringen)
+**Laatste feature/fix:** SSH deploy key geïnstalleerd — Claude deployt nu autonoom via SSH
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Backend tests:** 26 AI agent tests passed (was 22) | **Ruff:** 0 warnings
-**Volgende sessie (46):** Zie roadmap voor volgende prioriteit (bijv. dashboard verbeteringen, incasso pipeline polish, of volgende AI feature)
+**Backend tests:** 26 AI agent tests passed | **Ruff:** 0 warnings
+**Volgende sessie (47):** Zie roadmap voor volgende prioriteit
+
+## Wat er gedaan is (sessie 46 — 9 maart) — SSH deploy setup + CLAUDE.md verbeteringen
+
+### Samenvatting
+- SSH deploy key (`~/.ssh/luxis_deploy`) gegenereerd en geïnstalleerd op VPS (key-based auth, geen passphrase)
+- Bestaande persoonlijke key (`id_ed25519`) was versleuteld → aparte deploy key nodig
+- paramiko gebruikt om key te kopiëren (sshpass niet beschikbaar op Git Bash)
+- CLAUDE.md bijgewerkt met insights-regels:
+  - Task boundaries: "alleen documenteren" = geen code, "sla quality checks over" = geen tests
+  - Git workflow: geen worktrees tenzij expliciet gevraagd
+  - SSH deploy: Claude deployt autonoom, destructieve acties vereisen bevestiging
+  - Sessie-prompts: constraints sectie, single-goal focus
+- Deploy skill (`deploy-regels`) herschreven met echte SSH commando's
+- settings.json: ssh/scp van deny naar allow verplaatst
+
+### Gewijzigde bestanden
+- `CLAUDE.md` — nieuwe gedragsregels, SSH deploy sectie, sessie-prompt format
+- `.claude/skills/deploy-regels/SKILL.md` — SSH deploy commando's
+- `.claude/settings.json` — SSH in allow list
+
+### Bekende issues
+- Geen
+
+### Volgende sessie
+- Roadmap checken voor volgende prioriteit
+
+---
 
 ## Wat er gedaan is (sessie 45 — 7 maart) — AI Classificatie Fase 7: Echte actie-executie
 

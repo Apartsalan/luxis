@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 6 maart 2026
+**Laatst bijgewerkt:** 9 maart 2026
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -26,7 +26,7 @@
 |------|--------------|-------------|
 | Backend (FastAPI) | ~90% | 120+ endpoints, 15 routers, solide CRUD en business logic, correcte financial calculations. Budget tracking, recurring tasks, document preview endpoints. |
 | Frontend (Next.js) | ~65% | Alle Fase A-E + T1-T3 + F1-F10 + G3/G5/G9/G10/G11/G13/G14 features gebouwd. Budget module, recurring tasks, inline document preview, status-filtered templates, workflow-suggesties, keyboard shortcuts. |
-| Infra/DevOps | ~80% | Docker Compose op Hetzner VPS. Caddy reverse proxy geconfigureerd maar draait momenteel NIET — Next.js rewrite proxy als fallback toegevoegd (sessie 16). Frontend gebruikt nu relatieve URLs + Next.js rewrites `/api/*` → `backend:8000`. SSL via Caddy auto-TLS (als Caddy draait) of extern. |
+| Infra/DevOps | ~85% | Docker Compose op Hetzner VPS. Caddy reverse proxy. SSH deploy key geïnstalleerd (sessie 46) — Claude deployt nu autonoom via SSH. Frontend gebruikt relatieve URLs + Next.js rewrites `/api/*` → `backend:8000`. |
 
 **Rode draad:** De backend is vaak verder dan de frontend. ~40% van de verbeteringen vereist geen backend-werk.
 

@@ -34,6 +34,9 @@
       "Bash(gh *)",
       "Bash(MSYS_NO_PATHCONV=1 *)",
       "Bash(curl *)",
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(sshpass *)",
       "Read",
       "Write",
       "Edit",
@@ -43,8 +46,6 @@
       "Task"
     ],
     "deny": [
-      "Bash(ssh *)",
-      "Bash(scp *)",
       "Bash(rm -rf /)",
       "Bash(rm -rf ~)",
       "Bash(env | curl *)",

@@ -149,9 +149,14 @@ Na het bouwen, voordat je deploy-commando geeft:
 
 ## Gedragsregels (uit /insights analyse)
 
-**Documentatie vs. code:**
+**Task boundaries:**
 - Als de gebruiker zegt "documenteer" of "sla op in md": schrijf ALLEEN markdown. Geen code wijzigen.
+- Als de gebruiker zegt "sla quality checks over": draai GEEN lint/tests/build.
 - Als de grens onduidelijk is: vraag eerst.
+
+**Git workflow:**
+- Gebruik GEEN git worktrees tenzij de gebruiker expliciet "worktree" zegt.
+- Default: werk direct op main branch.
 
 **Eén source of truth:**
 - `LUXIS-ROADMAP.md` is de enige source of truth voor status, prioriteit en planning.
@@ -183,6 +188,7 @@ Na het bouwen, voordat je deploy-commando geeft:
   - De prompt bevat: repo pad, subagent-instructie (roadmap + session notes), taak, verificatie, commit-instructies.
   - GEEN lijst van "welke bestanden te lezen" — Claude zoekt zelf wat het nodig heeft.
   - Prompt + gevraagde bestanden samen NOOIT boven 50KB.
+- **Focus op 1 hoofdtaak per sessie** — uit insights: single-goal sessies presteren beter.
 - Format:
   ```
   Sessie N — [onderwerp]
@@ -199,14 +205,22 @@ Na het bouwen, voordat je deploy-commando geeft:
   ## Verificatie
   [Test/lint/build commando's]
 
+  ## Constraints (wat NIET doen)
+  [Expliciet benoemen wat buiten scope is — bijv. "geen nieuwe features", "geen worktrees", "geen refactors"]
+
   ## Commit
-  [Commit + push + deploy instructies]
+  [Commit + push instructies — deploy gebeurt automatisch via SSH]
   ```
 - De gebruiker is geen developer. Hij kopieert de prompt en plakt het in een nieuwe sessie. Het moet foutloos werken zonder extra context.
 
-**Deployment:**
-- Claude heeft GEEN SSH-toegang tot de VPS. Geef altijd het deploy-commando aan de gebruiker om zelf te draaien. Probeer NOOIT `ssh root@...` te runnen vanuit deze terminal.
-- **VERPLICHT: Na elke afgeronde feature die gecommit en gepusht is, geef ALTIJD het deploy-commando.** Vermeld of het alleen frontend is, of frontend+backend, en of er migraties nodig zijn. De gebruiker werkt met meerdere terminals en mist anders deployments. Voorbeeld: "🚀 Deploy (frontend only, geen migraties): `cd /opt/luxis && git pull && docker compose ... build --no-cache frontend && ... up -d frontend`"
+**Deployment via SSH (HARDE REGEL):**
+- Claude heeft SSH-toegang tot de VPS via deploy key: `ssh -i ~/.ssh/luxis_deploy root@46.225.115.216`
+- **Veilige acties (autonoom):** `git pull`, logs bekijken, disk check, `ps`, `docker compose ps`
+- **Deploy (autonoom NA groene tests):** build + restart containers na commit+push
+- **Destructieve acties (ALTIJD bevestiging vragen):** volumes verwijderen, database wissen, `rm -rf`, rollback migraties
+- **VERPLICHT: Na elke afgeronde feature die gecommit en gepusht is, deploy AUTOMATISCH via SSH.** Geen deploy-commando meer aan de gebruiker geven — Claude doet het zelf.
+- Deploy commando: `ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && docker compose build --no-cache [service] && docker compose up -d [service]"`
+- Vermeld na deploy altijd of het backend/frontend/beide was en of er migraties gedraaid zijn.
 
 **Roadmap bijwerken (HARDE REGEL):**
 - **VERPLICHT: Na ELKE wijziging (feature, bugfix, verbetering) ALTIJD `LUXIS-ROADMAP.md` bijwerken.** Dit is de enige source of truth. Als het niet in de roadmap staat, bestaat het niet.

@@ -20,6 +20,7 @@ import {
   Gavel,
   Bot,
   Zap,
+  Banknote,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,13 +30,14 @@ import { useIncassoQueueCounts } from "@/hooks/use-incasso";
 import { usePendingCount } from "@/hooks/use-ai-agent";
 import { useIntakePendingCount } from "@/hooks/use-intake";
 import { useFollowupPendingCount } from "@/hooks/use-followup";
+import { usePaymentPendingCount } from "@/hooks/use-payment-matching";
 
 interface NavItem {
   name: string;
   href: string;
   icon: typeof LayoutDashboard;
   module?: LuxisModule;
-  badge?: "unlinked-count" | "incasso-action" | "ai-pending" | "intake-pending" | "followup-pending";
+  badge?: "unlinked-count" | "incasso-action" | "ai-pending" | "intake-pending" | "followup-pending" | "payment-pending";
 }
 
 const ALL_NAVIGATION: NavItem[] = [
@@ -45,6 +47,7 @@ const ALL_NAVIGATION: NavItem[] = [
   { name: "Dossiers", href: "/zaken", icon: Briefcase, badge: "ai-pending" },
   { name: "AI Intake", href: "/intake", icon: Bot, badge: "intake-pending" },
   { name: "Follow-up", href: "/followup", icon: Zap, badge: "followup-pending" },
+  { name: "Betalingen", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
   { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
   { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
   { name: "Agenda", href: "/agenda", icon: Calendar },
@@ -79,6 +82,8 @@ export function AppSidebar({
   const intakePendingCount = intakePendingData?.count ?? 0;
   const { data: followupPendingData } = useFollowupPendingCount();
   const followupPendingCount = followupPendingData?.count ?? 0;
+  const { data: paymentPendingData } = usePaymentPendingCount();
+  const paymentPendingCount = paymentPendingData?.count ?? 0;
 
   const navigation = useMemo(
     () =>
@@ -159,7 +164,8 @@ export function AppSidebar({
               item.badge === "incasso-action" ? incassoActionCount :
               item.badge === "ai-pending" ? aiPendingCount :
               item.badge === "intake-pending" ? intakePendingCount :
-              item.badge === "followup-pending" ? followupPendingCount : 0;
+              item.badge === "followup-pending" ? followupPendingCount :
+              item.badge === "payment-pending" ? paymentPendingCount : 0;
 
             return (
               <Link

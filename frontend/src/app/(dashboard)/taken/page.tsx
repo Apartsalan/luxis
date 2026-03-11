@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 
 import { cn, formatDateShort } from "@/lib/utils";
+import { TASK_STATUS_BADGE, TASK_STATUS_BADGE_FALLBACK } from "@/lib/status-constants";
 import {
   useMyTasks,
   useCompleteTask,
@@ -71,20 +72,7 @@ function getStatusIcon(status: string) {
 }
 
 function getStatusBadgeClass(status: string): string {
-  switch (status) {
-    case "overdue":
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    case "due":
-      return "bg-amber-500/10 text-amber-700 border-amber-500/20";
-    case "pending":
-      return "bg-muted text-muted-foreground border-border";
-    case "completed":
-      return "bg-emerald-500/10 text-emerald-700 border-emerald-500/20";
-    case "skipped":
-      return "bg-muted text-muted-foreground border-border";
-    default:
-      return "bg-muted text-muted-foreground border-border";
-  }
+  return TASK_STATUS_BADGE[status] ?? TASK_STATUS_BADGE_FALLBACK;
 }
 
 function groupTasksByDate(tasks: WorkflowTask[]) {
@@ -191,7 +179,7 @@ function TaskRow({
           {/* Status badge */}
           <span
             className={cn(
-              "shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+              "shrink-0 inline-flex items-center gap-1 rounded-full ring-1 ring-inset px-2 py-0.5 text-xs font-medium",
               getStatusBadgeClass(task.status)
             )}
           >

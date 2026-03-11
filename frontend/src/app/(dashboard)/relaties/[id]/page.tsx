@@ -37,28 +37,11 @@ import { useKyc, useSaveKyc, useCompleteKyc } from "@/hooks/use-kyc";
 import { formatDate, formatCurrency, formatDateShort } from "@/lib/utils";
 import { ContactLinks } from "@/components/relations/contact-links";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
-
-const STATUS_LABELS: Record<string, string> = {
-  nieuw: "Nieuw",
-  "14_dagenbrief": "14-dagenbrief",
-  sommatie: "Sommatie",
-  dagvaarding: "Dagvaarding",
-  vonnis: "Vonnis",
-  executie: "Executie",
-  betaald: "Betaald",
-  afgesloten: "Afgesloten",
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  nieuw: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  "14_dagenbrief": "bg-sky-50 text-sky-700 ring-sky-600/20",
-  sommatie: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  dagvaarding: "bg-red-50 text-red-700 ring-red-600/20",
-  vonnis: "bg-purple-50 text-purple-700 ring-purple-600/20",
-  executie: "bg-red-50 text-red-800 ring-red-700/20",
-  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
-};
+import {
+  CASE_STATUS_LABELS as STATUS_LABELS,
+  CASE_STATUS_BADGE as STATUS_BADGE,
+  CASE_STATUS_BADGE_FALLBACK,
+} from "@/lib/status-constants";
 
 const KYC_STATUS_CONFIG: Record<string, { label: string; badge: string; icon: any }> = {
   niet_gestart: {

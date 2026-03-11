@@ -22,6 +22,12 @@ import {
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import {
+  CASE_STATUS_LABELS as STATUS_LABELS,
+  CASE_STATUS_BADGE as STATUS_BADGE_CLASSES,
+  CASE_STATUS_BADGE_FALLBACK,
+  CASE_STATUS_COLORS as STATUS_COLORS,
+} from "@/lib/status-constants";
 import { QueryError } from "@/components/query-error";
 import { useAuth } from "@/hooks/use-auth";
 import { useModules } from "@/hooks/use-modules";
@@ -61,38 +67,6 @@ interface RecentActivity {
   total: number;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  nieuw: "Nieuw",
-  "14_dagenbrief": "14-dagenbrief",
-  sommatie: "Sommatie",
-  dagvaarding: "Dagvaarding",
-  vonnis: "Vonnis",
-  executie: "Executie",
-  betaald: "Betaald",
-  afgesloten: "Afgesloten",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  nieuw: "bg-blue-500",
-  "14_dagenbrief": "bg-blue-400",
-  sommatie: "bg-amber-500",
-  dagvaarding: "bg-purple-500",
-  vonnis: "bg-purple-500",
-  executie: "bg-purple-600",
-  betaald: "bg-emerald-500",
-  afgesloten: "bg-slate-400",
-};
-
-const STATUS_BADGE_CLASSES: Record<string, string> = {
-  nieuw: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  "14_dagenbrief": "bg-blue-50 text-blue-700 ring-blue-600/20",
-  sommatie: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  dagvaarding: "bg-purple-50 text-purple-700 ring-purple-600/20",
-  vonnis: "bg-purple-50 text-purple-700 ring-purple-600/20",
-  executie: "bg-purple-50 text-purple-800 ring-purple-600/20",
-  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
-};
 
 const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
   status_change: FileText,

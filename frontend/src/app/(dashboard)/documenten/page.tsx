@@ -26,9 +26,9 @@ export default function DocumentenPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Documenten</h1>
+        <h1 className="text-2xl font-bold text-foreground">Sjablonen</h1>
         <p className="text-sm text-muted-foreground">
-          Beheer templates en genereer documenten voor dossiers
+          Beheer de documentsjablonen die beschikbaar zijn voor dossiergeneratie
         </p>
       </div>
 
@@ -36,9 +36,12 @@ export default function DocumentenPage() {
       <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
         <Info className="mt-0.5 h-4 w-4 text-primary shrink-0" />
         <p className="text-sm text-foreground">
-          Documenten worden gegenereerd vanuit het dossierdetail. Ga naar een dossier
-          en open het tabblad &quot;Documenten&quot; om een 14-dagenbrief,
-          sommatie of renteoverzicht te genereren als Word-bestand.
+          Documenten worden gegenereerd vanuit een dossier. Ga naar een{" "}
+          <Link href="/zaken" className="font-medium text-primary hover:underline">
+            dossier
+          </Link>{" "}
+          en open het tabblad &quot;Documenten&quot; om een document te genereren
+          op basis van deze sjablonen.
         </p>
       </div>
 

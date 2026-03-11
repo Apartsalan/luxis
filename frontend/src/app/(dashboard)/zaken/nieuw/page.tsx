@@ -27,6 +27,8 @@ function NieuweZaakPage() {
 
   const prefillClientId = searchParams.get("client_id") || "";
   const prefillClientName = searchParams.get("client_name") || "";
+  const prefillOpponentId = searchParams.get("opposing_party_id") || "";
+  const prefillOpponentName = searchParams.get("opposing_party_name") || "";
 
   const [form, setForm] = useState({
     case_type: "incasso",
@@ -38,11 +40,11 @@ function NieuweZaakPage() {
     contractual_rate: "",
     budget: "", // G13
     client_id: prefillClientId,
-    opposing_party_id: "",
+    opposing_party_id: prefillOpponentId,
     date_opened: new Date().toISOString().split("T")[0],
   });
   const [clientSearch, setClientSearch] = useState(prefillClientName);
-  const [opponentSearch, setOpponentSearch] = useState("");
+  const [opponentSearch, setOpponentSearch] = useState(prefillOpponentName);
   const [lawyerSearch, setLawyerSearch] = useState("");
   const [selectedLawyer, setSelectedLawyer] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState("");
@@ -545,7 +547,7 @@ function NieuweZaakPage() {
                 <span className="rounded-lg bg-warning/10 px-3 py-1.5 text-sm text-warning font-medium">
                   {opponentResults?.items.find(
                     (c) => c.id === form.opposing_party_id
-                  )?.name || "Geselecteerd"}
+                  )?.name || prefillOpponentName || "Geselecteerd"}
                 </span>
                 <button
                   type="button"

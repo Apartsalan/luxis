@@ -866,12 +866,21 @@ export default function RelatieDetailPage() {
                   )}
                 </h2>
               </div>
-              <Link
-                href={`/zaken/nieuw?client_id=${id}&client_name=${encodeURIComponent(contact?.name || "")}`}
-                className="text-xs text-primary hover:underline"
-              >
-                + Nieuw dossier
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/zaken/nieuw?client_id=${id}&client_name=${encodeURIComponent(contact?.name || "")}`}
+                  className="text-xs text-primary hover:underline"
+                >
+                  + Als client
+                </Link>
+                <span className="text-xs text-muted-foreground">|</span>
+                <Link
+                  href={`/zaken/nieuw?opposing_party_id=${id}&opposing_party_name=${encodeURIComponent(contact?.name || "")}`}
+                  className="text-xs text-amber-600 hover:underline"
+                >
+                  + Als wederpartij
+                </Link>
+              </div>
             </div>
             {contactCases && contactCases.length > 0 ? (
               <div className="divide-y divide-border">
@@ -927,7 +936,7 @@ export default function RelatieDetailPage() {
                   Nog geen gekoppelde dossiers
                 </p>
                 <Link
-                  href="/zaken/nieuw"
+                  href={`/zaken/nieuw?client_id=${id}&client_name=${encodeURIComponent(contact?.name || "")}`}
                   className="mt-1 inline-block text-sm text-primary hover:underline"
                 >
                   Maak een nieuw dossier aan

@@ -134,8 +134,10 @@ Na het bouwen, voordat je deploy-commando geeft:
 - Vraag jezelf: "Zou een senior engineer dit goedkeuren?"
 
 **Bugs autonoom fixen:**
-- Bij een bugreport: gewoon fixen. Geen hand-holding vragen aan de gebruiker.
-- Zoek logs, errors, failing tests — los ze op.
+- Bij een bugreport: schrijf EERST een test die de bug reproduceert (rode test).
+- Fix daarna de bug totdat de test groen is.
+- Gebruik subagents waar mogelijk om de fix te implementeren en te verifiëren.
+- **Uitzondering:** triviale bugs (typos, UI-tekst, styling) mogen direct gefixt worden zonder test.
 
 **Elegantie (gebalanceerd):**
 - Bij non-triviale changes: "is er een elegantere manier?" Maar niet over-engineeren bij simpele fixes.

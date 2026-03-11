@@ -1,11 +1,46 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 47 — UX polish: B3 rich text notities)
-**Laatste feature/fix:** B3 rich text editor voor notities (Tiptap, bold/italic/bullets)
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 48 — BUG-1 refix + frontend polish)
+**Laatste feature/fix:** Frontend polish: status constants consolidatie, instellingen refactor, documenten pagina hernoemen
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 26 AI agent tests passed | **Ruff:** 0 warnings
-**Volgende sessie (48):** Zie roadmap voor volgende prioriteit
+**Volgende sessie (49):** Zie roadmap — P2 features, Lisanne-feedback, of QA uitbreiden
+
+## Wat er gedaan is (sessie 48 — 11 maart) — BUG-1 refix + frontend polish
+
+### Samenvatting
+- **BUG-1 refix:** Wederpartij prefill bij nieuw dossier vanuit relatie detailpagina. Twee knoppen: "+ Als client" en "+ Als wederpartij". URL params `opposing_party_id`/`opposing_party_name` toegevoegd aan nieuw-dossier form.
+- **Status badges geconsolideerd:** Nieuw `lib/status-constants.ts` met alle case/task status labels en badge classes. Geïmporteerd in zaken, dashboard, taken, relaties pagina's. Duplicatie verwijderd.
+- **Instellingen pagina refactor:** 2113-regels monoliet opgesplitst in 9 tab componenten + thin shell (~85 regels). Geen visuele wijzigingen.
+- **Documenten pagina:** Titel "Documenten" → "Sjablonen", duidelijkere beschrijving, link naar dossiers.
+- Deploy: frontend only, geen migraties
+
+### Nieuwe bestanden
+- `frontend/src/lib/status-constants.ts` — shared status badge constants
+- `frontend/src/app/(dashboard)/instellingen/profiel-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/kantoor-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/modules-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/team-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/workflow-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/email-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/meldingen-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/sjablonen-tab.tsx`
+- `frontend/src/app/(dashboard)/instellingen/weergave-tab.tsx`
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — opposing party prefill
+- `frontend/src/app/(dashboard)/relaties/[id]/page.tsx` — dual-link + shared constants
+- `frontend/src/app/(dashboard)/zaken/page.tsx` — shared constants import
+- `frontend/src/app/(dashboard)/page.tsx` — shared constants import
+- `frontend/src/app/(dashboard)/taken/page.tsx` — shared constants + standardized badges
+- `frontend/src/app/(dashboard)/instellingen/page.tsx` — rewritten as thin shell
+- `frontend/src/app/(dashboard)/documenten/page.tsx` — title + description update
+
+### Bekende issues
+- Geen
+
+---
 
 ## Wat er gedaan is (sessie 47 — 11 maart) — UX polish: B3 rich text notities
 

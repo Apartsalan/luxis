@@ -158,6 +158,15 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | D4 | Empty states en loading states | Klein | ✅ Gebouwd (skeleton loaders op alle dashboard pagina's) |
 | D5 | Agenda events aanmaken | Midden (nieuw model + CRUD) | ✅ Gebouwd (20 feb) — CalendarEvent model met 7 typen, CRUD endpoints, EventDialog create/edit/delete, unifide calendar hook, case/contact pickers |
 
+### Frontend Polish (sessie 48, 11 maart)
+
+| # | Verbetering | Status |
+|---|-------------|--------|
+| FP1 | Status badge constants geconsolideerd → `lib/status-constants.ts` (was gedupliceerd in 4+ pagina's) | ✅ |
+| FP2 | Instellingen pagina opgesplitst: 2113-regels monoliet → 9 tab componenten + thin shell | ✅ |
+| FP3 | Documenten pagina hernoemd naar "Sjablonen" met duidelijkere beschrijving | ✅ |
+| FP4 | BUG-1 refix: wederpartij prefill bij nieuw dossier vanuit relatie detailpagina | ✅ |
+
 ### Fase E: Verbeterpunten uit handmatige test (sessie 2, 20 feb)
 
 | # | Feature | Complexiteit | Prioriteit | Status |
@@ -260,7 +269,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** P1 is 100% compleet incl. QA (35 backend tests, 9 E2E tests, smoke test checklist). Bepaal volgende prioriteit (P2 of gebruikersfeedback verwerken).
+**Volgende prioriteit:** Frontend polish afgerond (sessie 48). Bepaal volgende prioriteit: P2 features, Lisanne-feedback, of QA uitbreiden.
 
 ---
 

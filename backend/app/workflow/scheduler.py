@@ -137,6 +137,49 @@ async def email_auto_sync() -> None:
         logger.exception("Scheduler: email auto-sync failed")
 
 
+async def ai_intake_detection() -> None:
+    """Periodic job: detect + process potential dossier intake emails.
+
+    Runs every 7 minutes (offset from email sync and classification).
+    Only active if ANTHROPIC_API_KEY or KIMI_API_KEY is configured.
+    """
+    from app.ai_agent.intake_service import detect_intake_emails, process_detected_intakes
+    from app.auth.models import Tenant
+
+    logger.info("Scheduler: starting AI intake detection")
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(Tenant).where(Tenant.is_active.is_(True))
+            )
+            tenants = list(result.scalars().all())
+
+            total_detected = 0
+            total_processed = 0
+            for tenant in tenants:
+                try:
+                    detected = await detect_intake_emails(session, tenant.id)
+                    total_detected += detected
+                    processed = await process_detected_intakes(session, tenant.id)
+                    total_processed += processed
+                except Exception as e:
+                    logger.error(
+                        "Scheduler: AI intake failed for tenant %s: %s",
+                        tenant.name,
+                        e,
+                    )
+
+            await session.commit()
+            if total_detected > 0 or total_processed > 0:
+                logger.info(
+                    "Scheduler: AI intake complete — %d detected, %d processed",
+                    total_detected,
+                    total_processed,
+                )
+    except Exception:
+        logger.exception("Scheduler: AI intake detection failed")
+
+
 async def ai_email_classification() -> None:
     """Periodic job: classify unclassified inbound emails on incasso cases.
 
@@ -221,15 +264,32 @@ def start_scheduler() -> None:
             replace_existing=True,
         )
 
+    # Every 7 minutes: AI intake detection + processing
+    intake_enabled = ai_enabled or bool(app_settings.kimi_api_key)
+    if intake_enabled:
+        scheduler.add_job(
+            ai_intake_detection,
+            IntervalTrigger(minutes=7),
+            id="ai_intake_detection",
+            name="AI intake detection",
+            replace_existing=True,
+        )
+
     scheduler.start()
     ai_status = (
         "AI classification every 6 min"
         if ai_enabled
         else "AI classification OFF (no API key)"
     )
+    intake_status = (
+        "intake detection every 7 min"
+        if intake_enabled
+        else "intake OFF (no AI key)"
+    )
     logger.info(
-        "Scheduler started: daily jobs at 06:00/06:15 UTC, email sync every 5 min, %s",
+        "Scheduler started: daily jobs at 06:00/06:15 UTC, email sync every 5 min, %s, %s",
         ai_status,
+        intake_status,
     )
 
 

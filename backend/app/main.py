@@ -7,6 +7,7 @@ import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.ai_agent.intake_router import router as intake_router
 from app.ai_agent.router import router as ai_agent_router
 from app.auth.router import router as auth_router
 from app.auth.router import users_router
@@ -105,6 +106,7 @@ app.include_router(email_compose_router)
 app.include_router(search_router)
 app.include_router(incasso_router)
 app.include_router(ai_agent_router)
+app.include_router(intake_router)
 app.include_router(notifications_router)
 
 

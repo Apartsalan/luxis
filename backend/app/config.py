@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # AI Agent (Anthropic API)
     anthropic_api_key: str = ""
 
+    # AI Agent (Moonshot/Kimi API — primary intake model)
+    kimi_api_key: str = ""
+
     # Sentry
     sentry_dsn: str = ""
 

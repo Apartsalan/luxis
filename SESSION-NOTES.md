@@ -1,11 +1,33 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 50 — AI Agent tool layer tests)
-**Laatste feature/fix:** 57 tests voor tool layer (registry, executor, serializer)
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 51 — Dossier Intake Agent planning)
+**Laatste feature/fix:** Dossier Intake Agent (A2.1) plan goedgekeurd — klaar voor implementatie
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 83 AI agent tests passed (26 classificatie + 57 tool layer) | **Ruff:** 0 warnings
-**Volgende sessie (51):** Fase A2.1 (Dossier Intake Agent) — onderzoek + plan + bouw
+**Volgende sessie (52):** Fase A2.1 (Dossier Intake Agent) — implementatie volgens goedgekeurd plan
+
+## Wat er gedaan is (sessie 51 — 11 maart) — Dossier Intake Agent planning
+
+### Samenvatting
+- **Onderzoek concurrenten:** Clio (Manage AI), Smokeball (AI matter creation), Kolleno (AI debt collection), best practices legal intake automation
+- **Plan ontworpen en goedgekeurd** voor Dossier Intake Agent (A2.1):
+  - Client stuurt email met factuur → AI extraheert debiteur/factuur/bedrag → concept-dossier → 1-klik goedkeuring
+  - Kimi 2.5 als primair extractie-model ($0.001/call), Haiku 4.5 als fallback
+  - PDF-bijlagen worden gelezen via pdfplumber (facturen zitten vaak in PDF)
+  - 9 nieuwe bestanden, 3 gewijzigde bestanden
+  - ~15 tests gepland
+- **Plan opgeslagen:** `.claude/plans/cosmic-nibbling-stearns.md`
+- **Geen code geschreven** — pure planning sessie
+
+### Nieuwe bestanden
+- `.claude/plans/cosmic-nibbling-stearns.md` — volledig implementatieplan
+
+### Bekende issues
+- Geen
+
+### Volgende sessie
+- Fase A2.1 implementatie: model, migratie, Kimi client, PDF extract, service, router, tests
 
 ## Wat er gedaan is (sessie 50 — 11 maart) — AI Agent tool layer tests
 

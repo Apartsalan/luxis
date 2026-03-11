@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 50)
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 51)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -385,7 +385,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Tools: cases (5), contacts (3), collections (5), documents (3), email (2), invoices (5),
 > pipeline (3), workflow (3), time_entries (2), general (3). 26 bestaande tests passing, ruff clean.
 > 57 tests voor tool layer toegevoegd in sessie 50 (registry 14, executor 8, serializer 35). Totaal: 83 AI agent tests.
-> **Volgende:** Fase A2.1 (Dossier Intake Agent) — sessie 51.
+> **Volgende:** Fase A2.1 (Dossier Intake Agent) — plan goedgekeurd in sessie 51, implementatie in sessie 52.
+> Plan: `.claude/plans/cosmic-nibbling-stearns.md`. Kimi 2.5 primair, Haiku fallback. PDF parsing via pdfplumber.
+> 9 nieuwe bestanden + 3 gewijzigd. ~15 tests.
 >
 > **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-7 COMPLEET** ✅ — E2E getest op productie.
 >

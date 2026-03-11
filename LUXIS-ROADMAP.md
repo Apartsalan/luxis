@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 51)
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 52)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -385,9 +385,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Tools: cases (5), contacts (3), collections (5), documents (3), email (2), invoices (5),
 > pipeline (3), workflow (3), time_entries (2), general (3). 26 bestaande tests passing, ruff clean.
 > 57 tests voor tool layer toegevoegd in sessie 50 (registry 14, executor 8, serializer 35). Totaal: 83 AI agent tests.
-> **Volgende:** Fase A2.1 (Dossier Intake Agent) — plan goedgekeurd in sessie 51, implementatie in sessie 52.
-> Plan: `.claude/plans/cosmic-nibbling-stearns.md`. Kimi 2.5 primair, Haiku fallback. PDF parsing via pdfplumber.
-> 9 nieuwe bestanden + 3 gewijzigd. ~15 tests.
+> **AI Agent — Fase A2.1: Dossier Intake Agent** ✅ Compleet (sessie 52, 11 maart 2026):
+> Client stuurt email met factuur → AI extraheert debiteur/factuurdata → concept-dossier → 1-klik goedkeuring.
+> Kimi 2.5 primair ($0.001/call), Haiku 4.5 fallback ($0.005/call). PDF parsing via pdfplumber.
+> Componenten: IntakeRequest model, kimi_client (dual AI provider), pdf_extract, intake_service (detect/process/approve/reject),
+> intake_router (7 endpoints), intake_schemas, intake_prompts. Scheduler: elke 7 min. Migratie: 037_intake_requests.
+> 20 tests (detection 5, processing 4, approve 3, reject 1, queries 2, multi-tenant 1, API 4). 509 totaal tests passing.
 >
 > **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-7 COMPLEET** ✅ — E2E getest op productie.
 >

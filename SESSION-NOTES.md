@@ -1,11 +1,49 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 51 — Dossier Intake Agent planning)
-**Laatste feature/fix:** Dossier Intake Agent (A2.1) plan goedgekeurd — klaar voor implementatie
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 52 — Dossier Intake Agent implementatie)
+**Laatste feature/fix:** Dossier Intake Agent (A2.1) volledig geïmplementeerd en gedeployd
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Backend tests:** 83 AI agent tests passed (26 classificatie + 57 tool layer) | **Ruff:** 0 warnings
-**Volgende sessie (52):** Fase A2.1 (Dossier Intake Agent) — implementatie volgens goedgekeurd plan
+**Backend tests:** 509 tests passing (incl. 20 intake + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
+**Volgende sessie (53):** Frontend intake review UI, of volgende AI Agent fase (A2.2/A3)
+
+## Wat er gedaan is (sessie 52 — 11 maart) — Dossier Intake Agent implementatie (A2.1)
+
+### Samenvatting
+- **Volledige implementatie van de Dossier Intake Agent (A2.1):**
+  - Client stuurt email met factuur → AI extraheert debiteur/factuurdata → concept-dossier → 1-klik goedkeuring
+  - Kimi 2.5 als primair extractie-model ($0.001/call), Haiku 4.5 als fallback ($0.005/call)
+  - PDF-bijlagen worden gelezen via pdfplumber
+  - Scheduler: intake detectie + processing elke 7 minuten
+  - Approve-flow: maakt automatisch Contact (debiteur) + Case (incasso) + Claim aan
+- **9 nieuwe bestanden, 4 gewijzigde bestanden**
+- **20 tests geschreven en passing** (detection 5, processing 4, approve 3, reject 1, queries 2, multi-tenant 1, API 4)
+- **509/509 tests groen**, ruff clean op alle nieuwe bestanden
+- **Gedeployd naar productie** (backend rebuild + migratie 037)
+
+### Nieuwe bestanden
+- `backend/app/ai_agent/intake_models.py` — IntakeRequest model + IntakeStatus enum
+- `backend/app/ai_agent/kimi_client.py` — dual AI provider (Kimi 2.5 + Haiku 4.5 fallback)
+- `backend/app/ai_agent/pdf_extract.py` — pdfplumber text extraction voor facturen
+- `backend/app/ai_agent/intake_prompts.py` — Nederlands systeem prompt + prompt builder
+- `backend/app/ai_agent/intake_service.py` — detect, process, approve, reject flows
+- `backend/app/ai_agent/intake_schemas.py` — Pydantic response/request schemas
+- `backend/app/ai_agent/intake_router.py` — 7 API endpoints (`/api/intake`)
+- `backend/alembic/versions/037_intake_requests.py` — intake_requests tabel
+- `backend/tests/test_intake.py` — 20 tests
+
+### Gewijzigde bestanden
+- `backend/app/main.py` — intake_router toegevoegd
+- `backend/app/config.py` — kimi_api_key setting
+- `backend/app/workflow/scheduler.py` — ai_intake_detection job (7 min)
+- `backend/pyproject.toml` — pdfplumber dependency
+
+### Bekende issues
+- Geen
+
+### Volgende sessie
+- Frontend: intake review UI (lijst pending intakes, review modal, approve/reject)
+- Of: volgende AI Agent fase (A2.2 automatische follow-up, A3 betalingsmatching)
 
 ## Wat er gedaan is (sessie 51 — 11 maart) — Dossier Intake Agent planning
 

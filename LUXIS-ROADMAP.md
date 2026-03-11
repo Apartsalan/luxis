@@ -236,6 +236,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-35 | test_relations.py — nested response pad `["contact"]["name"]` | Laag | S | ✅ Gefixt (3 mrt, sessie 29) |
 | BUG-36 | Anthropic API "credit balance too low" — Credits moesten apart gekocht worden via platform.claude.com. Na aankoop + propagatie werkt API correct. | Hoog (blocker) | N/A (billing) | ✅ Gefixt (6 mrt, sessie 43) |
 | BUG-37 | AI classificatie GET endpoint 500 error na approve — `_classification_to_response()` gebruikte `reviewer.first_name`/`last_name` maar User model heeft alleen `full_name`. Fix: `reviewer.full_name`. | Hoog | S | ✅ Gefixt (6 mrt, sessie 43) |
+| BUG-38 | Kimi API URL verkeerd: `api.moonshot.cn` → `api.moonshot.ai`. Account zit op internationaal platform (.ai), niet Chinees (.cn). | Hoog (blocker) | S | ✅ Gefixt (11 mrt, sessie 60) |
+| BUG-39 | KIMI_API_KEY niet doorgegeven aan backend container — ontbrak in `docker-compose.prod.yml` environment. | Midden | S | ✅ Gefixt (11 mrt, sessie 60) |
+| BUG-40 | EmailAttachment model niet geregistreerd bij SQLAlchemy mapper — standalone scripts/scheduler crashten op `SyncedEmail` relationship. Fix: import in `email/__init__.py`. | Midden | S | ✅ Gefixt (11 mrt, sessie 60) |
 
 ---
 
@@ -396,11 +399,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Detail/review pagina (/intake/[id]) met inline-bewerkbare velden, approve/reject flow, AI analyse card.
 > Sidebar integratie met pending count badge. 7 TanStack Query hooks. Frontend-only deploy.
 >
-> **AI Agent — Fase A2.2: Follow-up Advisor** ✅ Compleet (sessie 54, 11 maart 2026):
+> **AI Agent — Fase A2.2: Follow-up Advisor** ✅ Compleet (sessie 54, 11 maart 2026) — **Productietest PASS** (sessie 60):
 > Rules-based workflow advisor — scant actieve incasso-dossiers, maakt aanbevelingen als min_wait_days bereikt.
 > Backend: FollowupRecommendation model, scan service (30min scheduler), approve/reject/execute endpoints, 19 tests.
 > Execute-flow: document genereren, email versturen, auto-advance pipeline stap. Geen AI/LLM nodig (deterministisch).
 > Frontend: /followup pagina met status tabs + urgentie badges + 1-klik uitvoeren. Sidebar badge. Case detail banner.
+> Productietest (sessie 60): 3/3 recommendations correct aangemaakt, urgency correct (normal/overdue), approve+execute succesvol (doc+email+auto-advance).
 >
 > **AI Agent — Fase A3: Betalingsmatching** ✅ Compleet (sessie 56-57, 11 maart 2026):
 > CSV-import van Rabobank derdengeldrekening → auto-match aan incasso-dossiers → 1-klik goedkeuring.

@@ -1,11 +1,41 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 59 — Intake E2E Testpakket Laag 3)
-**Laatste feature/fix:** Intake E2E geautomatiseerd testscript (4 scenario's, alle PASS)
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 60 — A2.2 Follow-up Advisor Productietest + Kimi API fix)
+**Laatste feature/fix:** Follow-up Advisor productietest PASS + 3 bugfixes (Kimi URL, env var, EmailAttachment model)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
-**Openstaande bugs:** Geen bekende bugs
+**Openstaande bugs:** Geen bekende bugs (BUG-38/39/40 gefixt in sessie 60)
 **Backend tests:** 568 tests passing (incl. 19 followup + 20 intake + 40 payment matching + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (60):** TBD
+**Volgende sessie (61):** TBD
+
+## Wat er gedaan is (sessie 60 — 11 maart) — A2.2 Follow-up Advisor Productietest + Kimi API Fix
+
+### Kimi API Fix (BUG-38/39)
+- **BUG-38:** Kimi API URL was `api.moonshot.cn` (Chinees platform), maar account zit op `api.moonshot.ai` (internationaal). Gefixt.
+- **BUG-39:** `KIMI_API_KEY` ontbrak in `docker-compose.prod.yml` → container ontving de key niet. Toegevoegd.
+- Nieuwe key geactiveerd en getest — Kimi 2.5 werkt nu op productie.
+
+### EmailAttachment model fix (BUG-40)
+- `SyncedEmail` had een relationship naar `EmailAttachment` die niet resolvede buiten de volledige app context.
+- Fix: beide modellen importeren in `email/__init__.py` zodat de SQLAlchemy mapper ze altijd vindt.
+
+### Follow-up Advisor Productietest (A2.2)
+- **Testdata:** 4 incassodossiers met variatie in pipeline-stap en dagen (Aanmaning 14d, Sommatie 16d, Sommatie 2d, 2e Sommatie 30d).
+- **Scan:** 3/4 cases kregen correct een recommendation. Case met 2 dagen (groen) werd correct overgeslagen.
+- **Urgency:** Correct berekend — 2026-00008 (30d in 2e Sommatie, max=28) kreeg "overdue", rest "normal".
+- **Approve+Execute:** Volledig end-to-end getest op 2026-00001:
+  - Document "aanmaning" gegenereerd ✅
+  - Email verstuurd naar opposing party ✅
+  - Case automatisch doorgeschoven naar Sommatie ✅
+- **Stats API:** Correct (pending=2, executed=1 na execute)
+- **Cleanup:** Alle testdata teruggezet naar oorspronkelijke staat.
+
+### Gewijzigde bestanden
+- `backend/app/ai_agent/kimi_client.py` — API URL fix (.cn → .ai)
+- `backend/app/email/__init__.py` — EmailAttachment model registration
+- `docker-compose.prod.yml` — KIMI_API_KEY environment variable
+
+### Conclusie
+Follow-up Advisor werkt correct op productie. Alle onderdelen getest: scan, recommendation creation, urgency berekening, approve+execute (document + email + auto-advance), deduplicatie.
 
 ## Wat er gedaan is (sessie 59 — 11 maart) — Intake E2E Testpakket Laag 3
 

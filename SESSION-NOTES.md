@@ -1,11 +1,29 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 56 — A3 backend gebouwd)
-**Laatste feature/fix:** A3 betalingsmatching backend compleet
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 57 — A3 frontend gebouwd)
+**Laatste feature/fix:** A3 betalingsmatching frontend compleet
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 568 tests passing (incl. 19 followup + 20 intake + 40 payment matching + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (57):** A3 betalingsmatching frontend (upload UI, match review, approve/reject flow)
+**Volgende sessie (58):** Intake E2E testpakket of volgende AI Agent fase
+
+## Wat er gedaan is (sessie 57 — 11 maart) — A3 Betalingsmatching Frontend
+
+### Samenvatting
+- **A3 Frontend compleet**: /betalingen pagina met upload en match review tabs.
+- **Upload tab**: CSV drag-and-drop upload met importgeschiedenis tabel, rematch knop.
+- **Matches tab**: Pending matches met confidence badges (groen ≥90%, amber ≥70%, rood <70%), 1-klik approve, reject met optionele notitie.
+- **Bulk approve**: Alle matches ≥85% in één klik goedkeuren en verwerken.
+- **Stats badges**: Pending count, verwerkt count, openstaand bedrag.
+- **Sidebar**: "Betalingen" menu-item met Banknote icoon en pending count badge.
+- **Build**: Slaagt, 7.83 kB pagina. Deployed op VPS.
+
+### Nieuwe bestanden
+- `frontend/src/hooks/use-payment-matching.ts` — 9 hooks (imports, upload, rematch, matches, stats, approve, reject, approveAll, pendingCount)
+- `frontend/src/app/(dashboard)/betalingen/page.tsx` — Pagina met 2 tabs (Upload + Matches)
+
+### Gewijzigde bestanden
+- `frontend/src/components/layout/app-sidebar.tsx` — Betalingen menu-item + payment-pending badge
 
 ## Wat er gedaan is (sessie 56 — 11 maart) — A3 Betalingsmatching Backend
 

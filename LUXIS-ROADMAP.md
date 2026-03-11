@@ -396,6 +396,13 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Detail/review pagina (/intake/[id]) met inline-bewerkbare velden, approve/reject flow, AI analyse card.
 > Sidebar integratie met pending count badge. 7 TanStack Query hooks. Frontend-only deploy.
 >
+> **AI Agent — Intake E2E Testpakket** ❌ TODO (na afronding alle AI Agent fases):
+> Pas uitvoeren als A2.2 + A3 af zijn — test dan de hele keten in één keer.
+> Laag 1: Seed script (`scripts/seed_intake_testdata.py`) — 15-20 intake_requests met diverse statussen/confidence/scenario's direct in DB.
+> Laag 2: Test-factuur PDFs genereren (5 stuks, nep-bedrijven) — handmatig mailen naar seidony@kestinglegal.nl voor E2E test.
+> Laag 3: Geautomatiseerd E2E script — programmatisch email sturen via Gmail API → sync triggeren → wachten op detectie/processing → API checks → approve → verify dossier/relatie/vordering → cleanup.
+> Scenario's: happy path, email zonder PDF, PDF zonder factuur, meerdere facturen, bestaande relatie vs onbekend, edit-before-approve, reject flow.
+>
 > **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-7 COMPLEET** ✅ — E2E getest op productie.
 >
 > **AI Classificatie — Fase 7: Echte actie-executie** ✅ Compleet (sessie 45, 7 maart 2026):

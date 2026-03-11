@@ -1,11 +1,47 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 48 — BUG-1 refix + frontend polish)
-**Laatste feature/fix:** Frontend polish: status constants consolidatie, instellingen refactor, documenten pagina hernoemen
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 49 — AI Agent Fase A1: MCP Tool Layer)
+**Laatste feature/fix:** AI Agent tool layer: 34 tools, ToolRegistry, ToolExecutor, 10 handler modules
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 26 AI agent tests passed | **Ruff:** 0 warnings
-**Volgende sessie (49):** Zie roadmap — P2 features, Lisanne-feedback, of QA uitbreiden
+**Volgende sessie (50):** Tests voor tool layer + Fase A2 (Incasso Copilot) starten
+
+## Wat er gedaan is (sessie 49 — 11 maart) — AI Agent Fase A1: MCP Tool Layer
+
+### Samenvatting
+- **Fase A1 van AI Agent Masterplan compleet:** 34 tools gebouwd die bestaande Luxis services wrappen voor Claude tool use. Dit is het fundament voor alle volgende fases (A2: Incasso Copilot, A3: Dashboard, A4: Autonoom).
+- **Architectuur:** ToolRegistry (maps namen → handlers + schemas) + ToolExecutor (voert tool_use blocks uit, error handling, serialisatie) + serialize utility (UUID/date/Decimal → JSON-safe)
+- **10 handler modules:** cases (5 tools), contacts (3), collections (5), documents (3), email (2), invoices (5), pipeline (3), workflow (3), time_entries (2), general (3)
+- **Tool definitions:** Alle 34 tools met Nederlandse beschrijvingen en JSON Schema input definities, klaar voor `client.messages.create(tools=[...])`
+- **Geen bestaande code gebroken:** 26 AI agent tests passing, ruff clean
+- Deploy: backend only, geen migraties
+
+### Nieuwe bestanden
+- `backend/app/ai_agent/tools/__init__.py` — serialize utility
+- `backend/app/ai_agent/tools/registry.py` — ToolRegistry class
+- `backend/app/ai_agent/tools/executor.py` — ToolExecutor class
+- `backend/app/ai_agent/tools/definitions.py` — 34 tool schemas + registratie
+- `backend/app/ai_agent/tools/handlers/__init__.py`
+- `backend/app/ai_agent/tools/handlers/cases.py` — case_list/get/create/update/add_activity
+- `backend/app/ai_agent/tools/handlers/contacts.py` — contact_lookup/get/create
+- `backend/app/ai_agent/tools/handlers/collections.py` — claim_list/create, payment_register/list, financial_summary
+- `backend/app/ai_agent/tools/handlers/documents.py` — document_generate/list, template_list
+- `backend/app/ai_agent/tools/handlers/email.py` — email_compose, email_unlinked
+- `backend/app/ai_agent/tools/handlers/invoices.py` — invoice_create/add_line/approve/send, receivables_list
+- `backend/app/ai_agent/tools/handlers/pipeline.py` — pipeline_overview/batch/queue_counts
+- `backend/app/ai_agent/tools/handlers/workflow.py` — task_create/list, verjaring_check
+- `backend/app/ai_agent/tools/handlers/time_entries.py` — time_entry_create, unbilled_hours
+- `backend/app/ai_agent/tools/handlers/general.py` — dashboard_summary, global_search, trust_fund_balance
+
+### Gewijzigde bestanden
+- `backend/pyproject.toml` — per-file ruff E501 override voor definitions.py
+
+### Bekende issues
+- Tool layer heeft nog geen eigen tests (gepland voor sessie 50)
+- Per-file-ignores in pyproject.toml wordt niet opgepikt door container (gecachte pyproject.toml in Docker image). Workaround: `ruff check --per-file-ignores 'app/ai_agent/tools/definitions.py:E501'`
+
+---
 
 ## Wat er gedaan is (sessie 48 — 11 maart) — BUG-1 refix + frontend polish
 

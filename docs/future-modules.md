@@ -6,12 +6,12 @@
 **Email strategie (beslissing 21 feb 2026):**
 - **F11 (SMTP vanuit Luxis)** is een **tijdelijke brug** — werkt nu, maar emails verschijnen niet in Outlook's Verzonden map
 - **M1-M6 (email integratie)** is de **eindoplossing** en wordt nu **prioriteit**
-- **Abstractielaag:** `EmailProvider` interface met `GmailProvider` (dev/test) + `OutlookProvider` (Lisanne, later)
-- **Test-aanpak:** Gmail API met Arsalan's account → alles bouwen en testen → later OutlookProvider toevoegen voor Lisanne
-- **Azure blocker:** Gratis Outlook.com accounts kunnen geen apps meer registreren → Gmail API als dev/test provider
+- **Abstractielaag:** `EmailProvider` interface met `OutlookProvider` (productie, M365 via Graph API)
+- **Huidige status:** OutlookProvider gebouwd en werkend met seidony@kestinglegal.nl op M365. GmailProvider bestaat nog maar wordt NIET meer gebruikt.
+- **LET OP: GEEN Gmail gebruiken — alles via OutlookProvider/Graph API met M365 account.**
 - **Overgangspad:** F11 blijft werken totdat M4 live is → dan vervangt de email provider de Luxis SMTP compose dialog
 
-**Technisch fundament:** OAuth 2.0 + abstractielaag — Gmail API (dev) / Microsoft Graph API (productie)
+**Technisch fundament:** OAuth 2.0 + OutlookProvider via Microsoft Graph API (M365)
 
 **Prereq: Mail migratie BaseNet → Microsoft 365**
 
@@ -45,21 +45,21 @@ Arsalan test eerst met eigen mailbox `seidony@kestinglegal.nl` op M365. Lisanne 
 |------|---------|-----------------|--------|
 | M0a | Test-mailbox Arsalan op M365 | seidony@kestinglegal.nl op M365, Graph API testbaar, OutlookProvider bouwen | ✅ Compleet (23 feb) — mailbox actief, Azure App Registration klaar, OutlookProvider gebouwd, OAuth flow getest en werkend |
 | M0b | Lisanne overzetten naar M365 | Alle mail op M365, volledige integratie live | ⏳ Wacht op M0a succes + Lisanne |
-| M1 | OAuth + abstractielaag | EmailProvider interface, GmailProvider, OAuth flow, token opslag | ✅ Gebouwd (21 feb) |
+| M1 | OAuth + abstractielaag | EmailProvider interface, OutlookProvider (Graph API), OAuth flow, token opslag | ✅ Gebouwd (21 feb) |
 | M2 | Inbox sync + auto-koppeling | Inkomende mails automatisch aan dossiers koppelen (afzender → relatie → dossier) | ✅ Gebouwd (21 feb) |
 | M2+ | Dossiernummer-matching | Emails met "2026-00003" in onderwerp/body → automatisch aan juiste dossier | ✅ Gebouwd (21 feb) |
 | M2+ | Klantreferentie-matching | Emails met bekende Case.reference → automatisch aan dossier | ✅ Gebouwd (21 feb) |
 | M2+ | Zaaknummer rechtbank-matching | Emails met Case.court_case_number in tekst → automatisch aan dossier | ✅ Gebouwd (21 feb) |
 | M2+ | body_html doorzoeken | HTML-only emails (Gmail/Outlook) worden nu ook doorzocht na HTML-stripping | ✅ Gefixt (21 feb) |
-| M2+ | Bijlagen sync | Attachments downloaden van Gmail, opslaan, tonen in detail panel + download | ✅ Gebouwd (21 feb) |
+| M2+ | Bijlagen sync | Attachments downloaden via provider, opslaan, tonen in detail panel + download | ✅ Gebouwd (21 feb) |
 | M2+ | Auto-sync (5 min) | APScheduler synct alle verbonden accounts elke 5 minuten automatisch | ✅ Gebouwd (21 feb) |
 | M2+ | Re-match ongelinkte emails | Bestaande ongelinkte emails worden bij elke sync opnieuw gematcht (altijd, ook vanuit dossier-context) | ✅ Gebouwd + gefixt (21 feb) |
 | M3 | Correspondentie tab (unified view) | Alle in- + uitgaande mails per dossier, split-view met detail panel + bijlagen | ✅ Gebouwd (21 feb) |
-| M4 | Compose via provider | Send via Gmail API (verschijnt in Verzonden), fallback naar SMTP | ✅ Gebouwd (21 feb) |
+| M4 | Compose via provider | Send via OutlookProvider/Graph API (verschijnt in Verzonden), fallback naar SMTP | ✅ Gebouwd (21 feb) |
 | M5 | AutoTime op emails | Automatische tijdregistratie bij mail-activiteit (à la Smokeball) | 🔵 Backlog (bestaande timer dekt dit grotendeels) |
 | M6 | "Ongesorteerd" wachtrij | Mails die niet auto-gekoppeld zijn handmatig toewijzen met suggesties | ✅ Gebouwd (22 feb) |
 
-**Bouwvolgorde:** M0a (Arsalan zelfstandig) → OutlookProvider bouwen → M0b (samen met Lisanne) → live (M5 op backlog)
+**Bouwvolgorde:** M0a ✅ → OutlookProvider ✅ → M0b (samen met Lisanne) → live (M5 op backlog)
 
 **Wat Lisanne ervaart na afronding:**
 - Template aanklikken → opent direct in Outlook met alles pre-filled

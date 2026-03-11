@@ -188,7 +188,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 |---|---------|-------------|--------|
 | T1 | Templates op zaakdetail (status-filtered) | Midden | ✅ Gebouwd (20 feb) — STATUS_TEMPLATE_MAP, aanbevolen/overige/verborgen secties, B2B/B2C filter |
 | T2 | Workflow-suggesties bij statuswijziging | Klein-Midden | ✅ Gebouwd (20 feb) — amber suggestie-banner na statuswijziging, auto-dismiss 30s, "Ga naar documenten" knop |
-| T3 | E-mail versturen vanuit Luxis (SMTP) | Groot | ✅ Gebouwd (20 feb) — compose dialog, send knop, correspondentie tab, email logs, test email, instellingen tab. **SMTP werkend met Gmail test-credentials. Later omzetten naar Lisanne's Outlook.** |
+| T3 | E-mail versturen vanuit Luxis (SMTP) | Groot | ✅ Gebouwd (20 feb) — compose dialog, send knop, correspondentie tab, email logs, test email, instellingen tab. **Nu via OutlookProvider (Graph API) met seidony@kestinglegal.nl op M365.** |
 
 > Detail: zie `PROMPT-TEMPLATES-IN-WORKFLOW.md`
 > E-mail templates (E8) wordt onderdeel van T3
@@ -249,7 +249,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 **Doel:** Eén klik op "Verstuur brief" voor 40 dossiers → alles automatisch.
 
 1. ✅ **Template editor UI** — Sjablonen tab in Instellingen: upload, download, bewerken, verwijderen van DOCX templates. Database-driven met disk-fallback. Incasso pipeline gebruikt dynamische template dropdown. Gebouwd sessie 24.
-2. ✅ **Batch brief + email verzenden** — "Verstuur brief" genereert documenten, converteert naar PDF, en emailt ze als bijlage naar de wederpartij via provider (Gmail/Outlook) met SMTP fallback. Email toggle in PreFlightDialog, instelbare email templates per stap, email readiness check in preview. Gebouwd sessie 27.
+2. ✅ **Batch brief + email verzenden** — "Verstuur brief" genereert documenten, converteert naar PDF, en emailt ze als bijlage naar de wederpartij via OutlookProvider (Graph API) met SMTP fallback. Email toggle in PreFlightDialog, instelbare email templates per stap, email readiness check in preview. Gebouwd sessie 27.
 3. ✅ **Auto-complete taken** — Na document genereren: bijbehorende taken (generate_document/send_letter) automatisch afgevinkt. Gebouwd sessie 25. Bugfix sessie 26: scoped naar pipeline taken per stap (BUG-29).
 4. ✅ **Auto-advance pipeline** — Na alle taken voltooid: pipeline schuift automatisch naar volgende stap, nieuwe taak + deadline aangemaakt. Bij batch advance_step worden ook taken aangemaakt. Gebouwd sessie 25. Bugfix sessie 26: blokkade door initiële taken opgelost (BUG-29).
 5. ✅ **Deadline kleuren per stap** — Groen/oranje/rood kleurcodering per dossier in pipeline. Gebouwd sessie 23.
@@ -413,8 +413,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Pas uitvoeren als A2.2 + A3 af zijn — test dan de hele keten in één keer.
 > Laag 1: Seed script (`scripts/seed_intake_testdata.py`) — 15-20 intake_requests met diverse statussen/confidence/scenario's direct in DB.
 > Laag 2: Test-factuur PDFs genereren (5 stuks, nep-bedrijven) — handmatig mailen naar seidony@kestinglegal.nl voor E2E test.
-> Laag 3: Geautomatiseerd E2E script — programmatisch email sturen via Gmail API → sync triggeren → wachten op detectie/processing → API checks → approve → verify dossier/relatie/vordering → cleanup.
+> Laag 3: Geautomatiseerd E2E script — programmatisch email sturen via OutlookProvider (Graph API, seidony@kestinglegal.nl op M365) → sync triggeren → wachten op detectie/processing → API checks → approve → verify dossier/relatie/vordering → cleanup.
 > Scenario's: happy path, email zonder PDF, PDF zonder factuur, meerdere facturen, bestaande relatie vs onbekend, edit-before-approve, reject flow.
+> **LET OP: GEEN Gmail gebruiken — alles via OutlookProvider/Graph API met M365 account.**
 >
 > **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-7 COMPLEET** ✅ — E2E getest op productie.
 >

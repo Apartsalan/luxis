@@ -19,6 +19,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   instellingen: "Instellingen",
   agenda: "Agenda",
   nieuw: "Nieuw",
+  intake: "AI Intake",
 };
 
 export interface BreadcrumbOverride {

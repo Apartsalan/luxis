@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Mail,
   Gavel,
+  Bot,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,13 +26,14 @@ import { useModules, type LuxisModule } from "@/hooks/use-modules";
 import { useUnlinkedCount } from "@/hooks/use-email-sync";
 import { useIncassoQueueCounts } from "@/hooks/use-incasso";
 import { usePendingCount } from "@/hooks/use-ai-agent";
+import { useIntakePendingCount } from "@/hooks/use-intake";
 
 interface NavItem {
   name: string;
   href: string;
   icon: typeof LayoutDashboard;
   module?: LuxisModule;
-  badge?: "unlinked-count" | "incasso-action" | "ai-pending";
+  badge?: "unlinked-count" | "incasso-action" | "ai-pending" | "intake-pending";
 }
 
 const ALL_NAVIGATION: NavItem[] = [
@@ -39,6 +41,7 @@ const ALL_NAVIGATION: NavItem[] = [
   { name: "Mijn Taken", href: "/taken", icon: CheckSquare },
   { name: "Relaties", href: "/relaties", icon: Users },
   { name: "Dossiers", href: "/zaken", icon: Briefcase, badge: "ai-pending" },
+  { name: "AI Intake", href: "/intake", icon: Bot, badge: "intake-pending" },
   { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
   { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
   { name: "Agenda", href: "/agenda", icon: Calendar },
@@ -69,6 +72,8 @@ export function AppSidebar({
   const incassoActionCount = queueCounts?.action_required ?? 0;
   const { data: aiPendingData } = usePendingCount();
   const aiPendingCount = aiPendingData?.count ?? 0;
+  const { data: intakePendingData } = useIntakePendingCount();
+  const intakePendingCount = intakePendingData?.count ?? 0;
 
   const navigation = useMemo(
     () =>
@@ -147,7 +152,8 @@ export function AppSidebar({
             const badgeCount =
               item.badge === "unlinked-count" ? unlinkedCount :
               item.badge === "incasso-action" ? incassoActionCount :
-              item.badge === "ai-pending" ? aiPendingCount : 0;
+              item.badge === "ai-pending" ? aiPendingCount :
+              item.badge === "intake-pending" ? intakePendingCount : 0;
 
             return (
               <Link

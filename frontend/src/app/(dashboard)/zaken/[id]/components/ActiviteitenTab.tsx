@@ -13,7 +13,8 @@ import {
 import { toast } from "sonner";
 import { useCaseActivities, useAddCaseActivity, type CaseActivity } from "@/hooks/use-cases";
 import { formatRelativeTime } from "@/lib/utils";
-import { ACTIVITY_ICONS, ACTIVITY_COLORS, ACTIVITY_TYPE_LABELS, renderSimpleMarkdown } from "../types";
+import { ACTIVITY_ICONS, ACTIVITY_COLORS, ACTIVITY_TYPE_LABELS, renderNoteContent } from "../types";
+import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor";
 
 export default function ActiviteitenTab({ zaak }: { zaak: any }) {
   const [page, setPage] = useState(1);
@@ -23,8 +24,7 @@ export default function ActiviteitenTab({ zaak }: { zaak: any }) {
   const addActivity = useAddCaseActivity();
 
   const handleAddNote = async () => {
-    const text = noteText.trim();
-    if (!text) return;
+    if (isNoteEmpty(noteText)) return;
 
     try {
       await addActivity.mutateAsync({
@@ -32,7 +32,7 @@ export default function ActiviteitenTab({ zaak }: { zaak: any }) {
         data: {
           activity_type: "note",
           title: "Notitie toegevoegd",
-          description: text,
+          description: noteText,
         },
       });
       setNoteText("");
@@ -53,13 +53,11 @@ export default function ActiviteitenTab({ zaak }: { zaak: any }) {
       <div className="rounded-xl border border-border bg-card">
         {isAddingNote ? (
           <div className="p-4 space-y-3">
-            <textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
+            <RichNoteEditor
+              content={noteText}
+              onChange={setNoteText}
               placeholder="Schrijf een notitie..."
               autoFocus
-              rows={3}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors resize-none"
             />
             <div className="flex items-center justify-end gap-2">
               <button
@@ -75,7 +73,7 @@ export default function ActiviteitenTab({ zaak }: { zaak: any }) {
               <button
                 type="button"
                 onClick={handleAddNote}
-                disabled={!noteText.trim() || addActivity.isPending}
+                disabled={isNoteEmpty(noteText) || addActivity.isPending}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {addActivity.isPending ? (
@@ -164,7 +162,7 @@ export default function ActiviteitenTab({ zaak }: { zaak: any }) {
                         {activity.description && (
                           <div className="text-sm text-muted-foreground mt-0.5">
                             {activity.activity_type === "note"
-                              ? renderSimpleMarkdown(activity.description)
+                              ? renderNoteContent(activity.description)
                               : <p className="whitespace-pre-wrap">{activity.description}</p>
                             }
                           </div>

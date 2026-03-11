@@ -108,6 +108,31 @@ export const TASK_STATUS_BADGE: Record<string, string> = {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+/**
+ * Render note content with backward compatibility.
+ * HTML notes (from Tiptap) → prose rendering.
+ * Plain text notes (legacy) → simple markdown rendering.
+ */
+export function renderNoteContent(text: string | null | undefined) {
+  if (!text) return null;
+  const isHtml = /<[a-z][\s\S]*>/i.test(text);
+  if (isHtml) {
+    return (
+      <div
+        className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0"
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
+    );
+  }
+  return renderSimpleMarkdown(text);
+}
+
+/** Strip HTML tags from a string (for truncated previews) */
+export function stripHtml(text: string | null | undefined): string {
+  if (!text) return "";
+  return text.replace(/<[^>]*>/g, "").trim();
+}
+
 export function renderSimpleMarkdown(text: string) {
   const lines = text.split("\n");
   return lines.map((line, i) => {

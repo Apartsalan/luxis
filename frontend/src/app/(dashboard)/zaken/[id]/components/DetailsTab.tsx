@@ -21,7 +21,8 @@ import { useUpdateCase, useAddCaseActivity, useAddCaseParty, useRemoveCaseParty 
 import { useRelations } from "@/hooks/use-relations";
 import { useModules } from "@/hooks/use-modules";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
-import { ACTIVITY_ICONS, ACTIVITY_COLORS } from "../types";
+import { ACTIVITY_ICONS, ACTIVITY_COLORS, stripHtml } from "../types";
+import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor";
 
 const DUTCH_COURTS = [
   "Rechtbank Amsterdam",
@@ -108,15 +109,14 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
   }, [initialNoteText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddNote = async () => {
-    const text = noteText.trim();
-    if (!text) return;
+    if (isNoteEmpty(noteText)) return;
     try {
       await addActivity.mutateAsync({
         caseId: zaak.id,
         data: {
           activity_type: "note",
           title: "Notitie toegevoegd",
-          description: text,
+          description: noteText,
         },
       });
       setNoteText("");
@@ -578,21 +578,16 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
               Notitie
             </h2>
           </div>
-          <textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
+          <RichNoteEditor
+            content={noteText}
+            onChange={setNoteText}
             placeholder="Schrijf een notitie..."
-            rows={3}
-            className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors resize-none"
           />
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-[10px] text-muted-foreground">
-              **vet**, *cursief*, - opsomming
-            </p>
+          <div className="flex items-center justify-end mt-2">
             <button
               type="button"
               onClick={handleAddNote}
-              disabled={!noteText.trim() || addActivity.isPending}
+              disabled={isNoteEmpty(noteText) || addActivity.isPending}
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {addActivity.isPending ? (
@@ -636,7 +631,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                       </p>
                       {activity.description && (
                         <p className="text-xs text-muted-foreground truncate">
-                          {activity.description}
+                          {stripHtml(activity.description)}
                         </p>
                       )}
                       <p className="text-xs text-muted-foreground/70 mt-0.5">

@@ -219,6 +219,46 @@ async def ai_email_classification() -> None:
         logger.exception("Scheduler: AI email classification failed")
 
 
+async def followup_scan() -> None:
+    """Periodic job: scan incasso cases for follow-up recommendations.
+
+    Runs every 30 minutes. Creates recommendations for cases that have been
+    in a pipeline step long enough (deadline_status = orange or red).
+    No AI/LLM needed — purely rules-based on pipeline step min_wait_days.
+    """
+    from app.ai_agent.followup_service import scan_for_followups
+    from app.auth.models import Tenant
+
+    logger.info("Scheduler: starting follow-up scan")
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(Tenant).where(Tenant.is_active.is_(True))
+            )
+            tenants = list(result.scalars().all())
+
+            total_created = 0
+            for tenant in tenants:
+                try:
+                    count = await scan_for_followups(session, tenant.id)
+                    total_created += count
+                except Exception as e:
+                    logger.error(
+                        "Scheduler: follow-up scan failed for tenant %s: %s",
+                        tenant.name,
+                        e,
+                    )
+
+            await session.commit()
+            if total_created > 0:
+                logger.info(
+                    "Scheduler: follow-up scan complete — %d nieuwe aanbevelingen",
+                    total_created,
+                )
+    except Exception:
+        logger.exception("Scheduler: follow-up scan failed")
+
+
 def start_scheduler() -> None:
     """Start the APScheduler with daily + periodic jobs."""
     if scheduler.running:
@@ -274,6 +314,15 @@ def start_scheduler() -> None:
             name="AI intake detection",
             replace_existing=True,
         )
+
+    # Every 30 minutes: follow-up recommendation scan (rules-based, no AI needed)
+    scheduler.add_job(
+        followup_scan,
+        IntervalTrigger(minutes=30),
+        id="followup_scan",
+        name="Follow-up recommendation scan",
+        replace_existing=True,
+    )
 
     scheduler.start()
     ai_status = (

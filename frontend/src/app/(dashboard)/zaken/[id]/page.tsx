@@ -15,6 +15,7 @@ import {
   Receipt,
   Users,
   Wallet,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCase, useUpdateCaseStatus, useDeleteCase } from "@/hooks/use-cases";
@@ -37,6 +38,7 @@ import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 import { useSendViaProvider } from "@/hooks/use-email-sync";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
+import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
 import { STATUS_LABELS } from "./types";
 
 // ── Tab components ───────────────────────────────────────────────────────────
@@ -59,6 +61,10 @@ export default function ZaakDetailPage() {
   const deleteCase = useDeleteCase();
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: workflowTransitions } = useWorkflowTransitions();
+
+  const { data: followupData } = useFollowupForCase(id);
+  const followupRec = followupData?.items?.[0] ?? null;
+  const approveAndExecuteFollowup = useApproveAndExecuteFollowup();
 
   // Set breadcrumb label to case number
   useBreadcrumbs(zaak ? [{ segment: id, label: zaak.case_number }] : []);
@@ -337,6 +343,47 @@ export default function ZaakDetailPage() {
         setCaseEmailOpen={setCaseEmailOpen}
         setPhoneNoteText={setPhoneNoteText}
       />
+
+      {/* Follow-up recommendation banner */}
+      {followupRec && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Zap className="h-5 w-5 text-amber-600 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-amber-900">
+                {followupRec.action_label}
+              </p>
+              <p className="text-xs text-amber-700">
+                {followupRec.reasoning}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            <button
+              onClick={() => {
+                approveAndExecuteFollowup.mutate(
+                  { id: followupRec.id },
+                  {
+                    onSuccess: () => toast.success("Aanbeveling uitgevoerd"),
+                    onError: (err) => toast.error(err.message),
+                  },
+                );
+              }}
+              disabled={approveAndExecuteFollowup.isPending}
+              className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+            >
+              <CheckCircle2 className="h-3 w-3" />
+              Uitvoeren
+            </button>
+            <Link
+              href="/followup"
+              className="text-xs text-amber-700 hover:text-amber-900 hover:underline"
+            >
+              Alle aanbevelingen
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main content + sidebar */}
       <div className="flex gap-6">

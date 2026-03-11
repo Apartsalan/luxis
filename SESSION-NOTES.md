@@ -1,11 +1,29 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 58 — Intake E2E Testpakket Laag 1+2)
-**Laatste feature/fix:** Intake E2E seed script + test-factuur PDFs
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 59 — Intake E2E Testpakket Laag 3)
+**Laatste feature/fix:** Intake E2E geautomatiseerd testscript (4 scenario's, alle PASS)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 568 tests passing (incl. 19 followup + 20 intake + 40 payment matching + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (59):** Intake E2E Testpakket Laag 3 (geautomatiseerd E2E script)
+**Volgende sessie (60):** TBD
+
+## Wat er gedaan is (sessie 59 — 11 maart) — Intake E2E Testpakket Laag 3
+
+### Samenvatting
+- **Laag 3 — E2E testscript** (`scripts/e2e_intake_test.py`): Geautomatiseerd script dat de volledige intake pipeline test via directe service-calls met gemockte AI extractie. 4 scenario's, alle PASS.
+- **Scenario 1 — Happy path**: email → `detect_intake_emails()` → `process_intake()` (AI gemockt) → `approve_intake()` → case + contact + claim aangemaakt en geverifieerd.
+- **Scenario 2 — Lege email body**: email zonder bruikbare inhoud → detectie → processing faalt gracefully (status `failed`).
+- **Scenario 3 — Edit-before-approve**: pending_review intake met incomplete data → data corrigeren → approve → gecorrigeerde data in case/contact geverifieerd.
+- **Scenario 4 — Reject flow**: pending_review intake → reject → status `rejected`, review_note aanwezig, geen case/contact aangemaakt.
+- **Technisch**: marker-based cleanup (`[E2E-INTAKE]`), deterministische UUIDs (uuid5), onafhankelijke DB sessies per scenario, SQL echo onderdrukt, SAWarning gefilterd.
+
+### Nieuwe bestanden
+- `scripts/e2e_intake_test.py` — E2E intake pipeline testscript (838 regels, 4 scenario's, dry-run + cleanup modes)
+
+### Bekende issues
+- Geen nieuwe bugs
+
+---
 
 ## Wat er gedaan is (sessie 58 — 11 maart) — Intake E2E Testpakket Laag 1+2
 

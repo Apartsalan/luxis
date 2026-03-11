@@ -1,11 +1,33 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 9 maart 2026 (sessie 46 — SSH deploy setup + CLAUDE.md verbeteringen)
-**Laatste feature/fix:** SSH deploy key geïnstalleerd — Claude deployt nu autonoom via SSH
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 47 — UX polish: B3 rich text notities)
+**Laatste feature/fix:** B3 rich text editor voor notities (Tiptap, bold/italic/bullets)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 26 AI agent tests passed | **Ruff:** 0 warnings
-**Volgende sessie (47):** Zie roadmap voor volgende prioriteit
+**Volgende sessie (48):** Zie roadmap voor volgende prioriteit
+
+## Wat er gedaan is (sessie 47 — 11 maart) — UX polish: B3 rich text notities
+
+### Samenvatting
+- **UX-VERBETERPLAN audit:** Alle 20 items gecontroleerd tegen de codebase. Bijna alles was al gebouwd in eerdere sessies. D3 (navigatie) bleek ook al compleet (back buttons bestonden al op alle detail pages).
+- **B3 Rich text notities gebouwd:** Plain textarea vervangen door Tiptap WYSIWYG editor met toolbar (bold, italic, bullet list). Backward compatibel met bestaande plain text notities.
+- Deploy: frontend only, geen migraties
+
+### Nieuwe bestanden
+- `frontend/src/components/rich-note-editor.tsx` — herbruikbare Tiptap editor component
+
+### Gewijzigde bestanden
+- `frontend/package.json` — @tiptap/react, @tiptap/starter-kit, @tiptap/pm, @tailwindcss/typography
+- `frontend/tailwind.config.ts` — typography plugin toegevoegd
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DetailsTab.tsx` — textarea → RichNoteEditor
+- `frontend/src/app/(dashboard)/zaken/[id]/components/ActiviteitenTab.tsx` — textarea → RichNoteEditor
+- `frontend/src/app/(dashboard)/zaken/[id]/types.tsx` — renderNoteContent() + stripHtml() toegevoegd
+
+### Bekende issues
+- Geen
+
+---
 
 ## Wat er gedaan is (sessie 46 — 9 maart) — SSH deploy setup + CLAUDE.md verbeteringen
 

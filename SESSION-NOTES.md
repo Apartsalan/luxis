@@ -16,9 +16,13 @@
 - **Scenario 3 — Edit-before-approve**: pending_review intake met incomplete data → data corrigeren → approve → gecorrigeerde data in case/contact geverifieerd.
 - **Scenario 4 — Reject flow**: pending_review intake → reject → status `rejected`, review_note aanwezig, geen case/contact aangemaakt.
 - **Technisch**: marker-based cleanup (`[E2E-INTAKE]`), deterministische UUIDs (uuid5), onafhankelijke DB sessies per scenario, SQL echo onderdrukt, SAWarning gefilterd.
+- **Kimi API key** toegevoegd aan VPS `.env` — intake extractie gebruikt nu Kimi 2.5 als primaire AI (~$0.001/call) met Claude Haiku als fallback.
 
 ### Nieuwe bestanden
 - `scripts/e2e_intake_test.py` — E2E intake pipeline testscript (838 regels, 4 scenario's, dry-run + cleanup modes)
+
+### Gewijzigde configuratie
+- VPS `/opt/luxis/.env` — `KIMI_API_KEY` toegevoegd, backend herstart
 
 ### Bekende issues
 - Geen nieuwe bugs

@@ -402,6 +402,13 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Execute-flow: document genereren, email versturen, auto-advance pipeline stap. Geen AI/LLM nodig (deterministisch).
 > Frontend: /followup pagina met status tabs + urgentie badges + 1-klik uitvoeren. Sidebar badge. Case detail banner.
 >
+> **AI Agent — Fase A3: Betalingsmatching** ✅ Backend compleet (sessie 56, 11 maart 2026) — Frontend TODO (sessie 57):
+> CSV-import van Rabobank derdengeldrekening → auto-match aan incasso-dossiers → 1-klik goedkeuring.
+> 5 matching methoden: dossiernr (95), factuurnr (90), IBAN (85), bedrag (70), naam (50).
+> Execute: Derdengelden deposit + Payment record met art. 6:44 BW distributie. Volgt A2.2 patroon.
+> Backend: 7 bestanden (models, csv_parsers, algorithm, schemas, service, router, migration). 15 API endpoints. 40 tests (568 totaal).
+> Frontend TODO: upload pagina, match review UI, approve/reject/execute flow, stats dashboard.
+>
 > **AI Agent — Intake E2E Testpakket** ❌ TODO (na afronding alle AI Agent fases):
 > Pas uitvoeren als A2.2 + A3 af zijn — test dan de hele keten in één keer.
 > Laag 1: Seed script (`scripts/seed_intake_testdata.py`) — 15-20 intake_requests met diverse statussen/confidence/scenario's direct in DB.

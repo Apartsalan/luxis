@@ -1,11 +1,64 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 54 — Follow-up Advisor A2.2)
-**Laatste feature/fix:** Follow-up Advisor (A2.2) volledig gebouwd en gedeployd
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 56 — A3 backend gebouwd)
+**Laatste feature/fix:** A3 betalingsmatching backend compleet
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Backend tests:** 528 tests passing (incl. 19 followup + 20 intake + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (55):** A3 betalingsmatching of A2.2 testen met echte data op productie
+**Backend tests:** 568 tests passing (incl. 19 followup + 20 intake + 40 payment matching + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
+**Volgende sessie (57):** A3 betalingsmatching frontend (upload UI, match review, approve/reject flow)
+
+## Wat er gedaan is (sessie 56 — 11 maart) — A3 Betalingsmatching Backend
+
+### Samenvatting
+- **A3 Backend compleet**: Alle 7 backend bestanden + migratie + 40 tests gebouwd en gedeployed.
+- **CSV Parser**: Rabobank zakelijk 26-kolom format parser. Alleen credit transacties (inkomend) worden opgeslagen.
+- **Match Algoritme**: 5 methoden met confidence scores: dossiernr (95), factuurnr (90), IBAN (85), bedrag (70), naam (50).
+- **Service Layer**: Import, auto-match, approve, reject, execute, manual match, approve-all met min_confidence filter.
+- **Execute Flow**: Derdengelden deposit + Payment record met art. 6:44 BW distributie (via bestaande create_payment()).
+- **Router**: 15 API endpoints op `/api/payment-matching/`.
+- **Tests**: 40 tests (9 CSV parser, 8 algorithm, 6 name similarity, 3 import service, 2 match generation, 7 workflow, 6 API).
+- **568 tests totaal**, ruff clean, deployed op VPS met migratie.
+
+### Nieuwe bestanden
+- `backend/app/ai_agent/payment_matching_models.py` — 3 tabellen (BankStatementImport, BankTransaction, PaymentMatch)
+- `backend/app/ai_agent/csv_parsers.py` — Rabobank CSV parser
+- `backend/app/ai_agent/payment_matching_algorithm.py` — 5 matching methoden
+- `backend/app/ai_agent/payment_matching_schemas.py` — Pydantic schemas
+- `backend/app/ai_agent/payment_matching_service.py` — Service layer (import, match, review, execute)
+- `backend/app/ai_agent/payment_matching_router.py` — 15 API endpoints
+- `backend/alembic/versions/038_payment_matching.py` — DB migratie
+- `backend/tests/test_payment_matching.py` — 40 tests
+
+### Gewijzigde bestanden
+- `backend/app/main.py` — payment_matching_router registratie
+
+### Bekende issues
+- A2.2 productietest nog niet uitgevoerd
+- A3 frontend nog niet gebouwd (sessie 57)
+
+## Wat er gedaan is (sessie 55 — 11 maart) — A3 Betalingsmatching Planning
+
+### Samenvatting
+- **A3 Plan goedgekeurd**: Betalingsmatching voor incasso-dossiers via CSV-import van Rabobank derdengeldrekening.
+- **Onderzoek**: Rabobank zakelijk CSV format onderzocht (26 kolommen, comma-delimited).
+- **Architectuur**: Volgt A2.2 followup-advisor patroon (scan → suggest → review → execute).
+- **3 nieuwe tabellen**: BankStatementImport, BankTransaction, PaymentMatch.
+- **Matching algoritme**: 5 methoden (dossiernr, factuurnr, IBAN, bedrag, naam) met confidence scores.
+- **Execute flow**: Derdengelden deposit + Payment record met art. 6:44 BW distributie.
+- **Exact Online**: Niet relevant voor incasso — alleen voor Lisanne's eigen facturen.
+- **Plan opgeslagen**: `.claude/plans/valiant-purring-dusk.md`
+
+### Nieuwe bestanden
+- Geen (alleen planning deze sessie)
+
+### Gewijzigde bestanden
+- Geen code wijzigingen
+
+### Bekende issues
+- A2.2 productietest nog niet uitgevoerd (followup_recommendations tabel leeg, collection_pipelines tabel bestaat niet op productie)
+- Incasso dossiers op productie staan allemaal op status "nieuw" — geen actieve pipeline stappen
+
+---
 
 ## Wat er gedaan is (sessie 54 — 11 maart) — Follow-up Advisor (A2.2)
 

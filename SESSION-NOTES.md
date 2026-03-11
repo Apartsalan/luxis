@@ -1,11 +1,37 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 49 — AI Agent Fase A1: MCP Tool Layer)
-**Laatste feature/fix:** AI Agent tool layer: 34 tools, ToolRegistry, ToolExecutor, 10 handler modules
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 50 — AI Agent tool layer tests)
+**Laatste feature/fix:** 57 tests voor tool layer (registry, executor, serializer)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Backend tests:** 26 AI agent tests passed | **Ruff:** 0 warnings
-**Volgende sessie (50):** Tests voor tool layer + Fase A2 (Incasso Copilot) starten
+**Backend tests:** 83 AI agent tests passed (26 classificatie + 57 tool layer) | **Ruff:** 0 warnings
+**Volgende sessie (51):** Fase A2.1 (Dossier Intake Agent) — onderzoek + plan + bouw
+
+## Wat er gedaan is (sessie 50 — 11 maart) — AI Agent tool layer tests
+
+### Samenvatting
+- **57 tests geschreven voor de tool layer** (sessie 49 output):
+  - `test_registry.py` (14 tests) — ToolDefinition dataclass, ToolRegistry CRUD (register, contains, list, get_handler, get_definition, overwrite), get_claude_tools() output format, create_default_registry (34 tools, handlers, schemas, descriptions, no duplicates)
+  - `test_executor.py` (8 tests) — ToolExecutor execution + context passing, result serialization (UUID/Decimal → str), error handling (unknown tool, TypeError, ValueError, generic exception, empty input)
+  - `test_serializer.py` (35 tests) — serialize() voor alle types: None, str, bool, int, float, UUID, Decimal, date, datetime, dict, list, tuple, nested dicts, Pydantic models, fallback to str()
+- **CLAUDE.md bijgewerkt:** bug-workflow naar test-first approach (schrijf eerst een rode test, fix daarna)
+- **Alle 83 AI agent tests groen** (26 classificatie + 57 tool layer)
+- Deploy: backend only, geen migraties
+
+### Nieuwe bestanden
+- `backend/tests/test_ai_tools/__init__.py`
+- `backend/tests/test_ai_tools/test_registry.py` — 14 tests
+- `backend/tests/test_ai_tools/test_executor.py` — 8 tests
+- `backend/tests/test_ai_tools/test_serializer.py` — 35 tests
+
+### Gewijzigde bestanden
+- `CLAUDE.md` — bug-workflow naar test-first approach
+
+### Bekende issues
+- Geen
+
+### Volgende sessie
+- Fase A2.1: Dossier Intake Agent — onderzoek concurrenten, plan, bouw
 
 ## Wat er gedaan is (sessie 49 — 11 maart) — AI Agent Fase A1: MCP Tool Layer
 

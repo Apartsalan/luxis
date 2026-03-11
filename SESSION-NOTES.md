@@ -1,11 +1,38 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 52 — Dossier Intake Agent implementatie)
-**Laatste feature/fix:** Dossier Intake Agent (A2.1) volledig geïmplementeerd en gedeployd
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 53 — Frontend Intake Review UI)
+**Laatste feature/fix:** Frontend intake review UI gebouwd en gedeployd
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 509 tests passing (incl. 20 intake + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (53):** Frontend intake review UI, of volgende AI Agent fase (A2.2/A3)
+**Volgende sessie (54):** Volgende AI Agent fase (A2.2 automatische follow-up of A3 betalingsmatching)
+
+## Wat er gedaan is (sessie 53 — 11 maart) — Frontend Intake Review UI
+
+### Samenvatting
+- **Intake overzichtspagina** (`/intake`): Tabel met status filter tabs (Te beoordelen, Gedetecteerd, Verwerken, Goedgekeurd, Afgewezen, Fout, Alle), confidence bars (groen ≥85%, amber 60-84%, rood <60%), paginatie
+- **Intake detail/review pagina** (`/intake/[id]`): Two-column layout met inline-bewerkbare velden (debiteur + factuurgegevens), approve/reject knoppen, AI analyse card met confidence bar + reasoning, bron e-mail info, review status na beoordeling
+- **Sidebar integratie**: "AI Intake" menu-item met Bot icoon + badge voor pending intake count
+- **Breadcrumbs**: `intake: "AI Intake"` label toegevoegd
+- **TanStack Query hooks**: 7 hooks (useIntakes, useIntake, useIntakePendingCount, useUpdateIntake, useApproveIntake, useRejectIntake, useProcessIntake)
+- Frontend build succesvol, gedeployd naar productie (alleen frontend)
+
+### Nieuwe bestanden
+- `frontend/src/hooks/use-intake.ts` — TanStack Query hooks voor alle 7 intake endpoints
+- `frontend/src/app/(dashboard)/intake/page.tsx` — Lijst pagina met status filters + tabel
+- `frontend/src/app/(dashboard)/intake/[id]/page.tsx` — Detail/review pagina met edit + approve/reject
+
+### Gewijzigde bestanden
+- `frontend/src/components/layout/app-sidebar.tsx` — AI Intake nav item + intake-pending badge
+- `frontend/src/components/layout/breadcrumbs.tsx` — intake segment label
+
+### Bekende issues
+- Geen bekende bugs
+- tiptap packages (@tiptap/react, @tiptap/starter-kit) waren niet geïnstalleerd — nu gefixt (maar package.json/lock niet meegecommit in docker build context, draait wel correct op VPS)
+
+### Volgende sessie
+- Volgende AI Agent fase: A2.2 (automatische follow-up) of A3 (betalingsmatching)
+- Of: handmatig testen van de intake review flow op productie met echte data
 
 ## Wat er gedaan is (sessie 52 — 11 maart) — Dossier Intake Agent implementatie (A2.1)
 

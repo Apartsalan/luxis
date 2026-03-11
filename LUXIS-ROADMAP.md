@@ -409,11 +409,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Backend: 7 bestanden (models, csv_parsers, algorithm, schemas, service, router, migration). 15 API endpoints. 40 tests (568 totaal).
 > Frontend: /betalingen pagina met CSV drag-and-drop upload, match review (confidence badges), 1-klik approve, bulk approve (≥85%), stats badges, sidebar met pending count badge.
 >
-> **AI Agent — Intake E2E Testpakket** ❌ TODO (na afronding alle AI Agent fases):
-> Pas uitvoeren als A2.2 + A3 af zijn — test dan de hele keten in één keer.
-> Laag 1: Seed script (`scripts/seed_intake_testdata.py`) — 15-20 intake_requests met diverse statussen/confidence/scenario's direct in DB.
-> Laag 2: Test-factuur PDFs genereren (5 stuks, nep-bedrijven) — handmatig mailen naar seidony@kestinglegal.nl voor E2E test.
-> Laag 3: Geautomatiseerd E2E script — programmatisch email sturen via OutlookProvider (Graph API, seidony@kestinglegal.nl op M365) → sync triggeren → wachten op detectie/processing → API checks → approve → verify dossier/relatie/vordering → cleanup.
+> **AI Agent — Intake E2E Testpakket** (gedeeltelijk af):
+> Laag 1: ✅ Seed script (`scripts/seed_intake_testdata.py`) — 18 intake_requests met diverse statussen/confidence/scenario's. --dry-run en --cleanup. (sessie 58, 11 maart)
+> Laag 2: ✅ Test-factuur PDFs (`scripts/generate_test_invoices.py`) — 5 professionele Nederlandse facturen via WeasyPrint. Output: `scripts/test_invoices/`. (sessie 58, 11 maart)
+> Laag 3: ❌ TODO — Geautomatiseerd E2E script — programmatisch email sturen via OutlookProvider (Graph API, seidony@kestinglegal.nl op M365) → sync triggeren → wachten op detectie/processing → API checks → approve → verify dossier/relatie/vordering → cleanup.
 > Scenario's: happy path, email zonder PDF, PDF zonder factuur, meerdere facturen, bestaande relatie vs onbekend, edit-before-approve, reject flow.
 > **LET OP: GEEN Gmail gebruiken — alles via OutlookProvider/Graph API met M365 account.**
 >

@@ -1,11 +1,28 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 57 — A3 frontend gebouwd)
-**Laatste feature/fix:** A3 betalingsmatching frontend compleet
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 58 — Intake E2E Testpakket Laag 1+2)
+**Laatste feature/fix:** Intake E2E seed script + test-factuur PDFs
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 568 tests passing (incl. 19 followup + 20 intake + 40 payment matching + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (58):** Intake E2E testpakket of volgende AI Agent fase
+**Volgende sessie (59):** Intake E2E Testpakket Laag 3 (geautomatiseerd E2E script)
+
+## Wat er gedaan is (sessie 58 — 11 maart) — Intake E2E Testpakket Laag 1+2
+
+### Samenvatting
+- **Laag 1 — Seed script** (`scripts/seed_intake_testdata.py`): 18 IntakeRequest records met diverse statussen (pending_review, approved, rejected, processing, detected, failed), confidence scores (0.15–0.96), B2B/B2C, bedragen van €320–€25.000, inclusief edge cases (onvolledige data, buitenlandse debiteur, meerdere facturen, marketing email). Supports `--dry-run` en `--cleanup`. Idempotent met deterministische UUIDs.
+- **Laag 2 — Test-factuur PDFs** (`scripts/generate_test_invoices.py`): 5 professionele Nederlandse factuur-PDFs via WeasyPrint. B2B standaard (€3.872), B2B klein (€765,73), B2C particulier (€450), internationaal Duits (€11.500), B2B groot multi-line (€25.000).
+- Beide scripts getest: dry-run, seed, idempotentie, cleanup. PDFs visueel geverifieerd.
+
+### Nieuwe bestanden
+- `scripts/seed_intake_testdata.py` — Intake seed script met 18 records + EmailAccount + SyncedEmail dependency chain
+- `scripts/generate_test_invoices.py` — WeasyPrint PDF generator met HTML template
+- `scripts/test_invoices/*.pdf` — 5 gegenereerde test-facturen
+
+### Bekende issues
+- Geen nieuwe bugs
+
+---
 
 ## Wat er gedaan is (sessie 57 — 11 maart) — A3 Betalingsmatching Frontend
 

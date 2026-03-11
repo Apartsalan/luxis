@@ -14,7 +14,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-KIMI_API_BASE = "https://api.moonshot.cn/v1"
+KIMI_API_BASE = "https://api.moonshot.ai/v1"
 KIMI_MODEL = "moonshot-v1-auto"
 
 

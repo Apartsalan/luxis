@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 53)
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 54)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -395,6 +395,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 > Overzichtspagina (/intake) met status filter tabs + confidence bars + paginatie.
 > Detail/review pagina (/intake/[id]) met inline-bewerkbare velden, approve/reject flow, AI analyse card.
 > Sidebar integratie met pending count badge. 7 TanStack Query hooks. Frontend-only deploy.
+>
+> **AI Agent — Fase A2.2: Follow-up Advisor** ✅ Compleet (sessie 54, 11 maart 2026):
+> Rules-based workflow advisor — scant actieve incasso-dossiers, maakt aanbevelingen als min_wait_days bereikt.
+> Backend: FollowupRecommendation model, scan service (30min scheduler), approve/reject/execute endpoints, 19 tests.
+> Execute-flow: document genereren, email versturen, auto-advance pipeline stap. Geen AI/LLM nodig (deterministisch).
+> Frontend: /followup pagina met status tabs + urgentie badges + 1-klik uitvoeren. Sidebar badge. Case detail banner.
 >
 > **AI Agent — Intake E2E Testpakket** ❌ TODO (na afronding alle AI Agent fases):
 > Pas uitvoeren als A2.2 + A3 af zijn — test dan de hele keten in één keer.

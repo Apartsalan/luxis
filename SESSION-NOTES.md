@@ -1,11 +1,47 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 53 — Frontend Intake Review UI)
-**Laatste feature/fix:** Frontend intake review UI gebouwd en gedeployd
+**Laatst bijgewerkt:** 11 maart 2026 (sessie 54 — Follow-up Advisor A2.2)
+**Laatste feature/fix:** Follow-up Advisor (A2.2) volledig gebouwd en gedeployd
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs
-**Backend tests:** 509 tests passing (incl. 20 intake + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (54):** Volgende AI Agent fase (A2.2 automatische follow-up of A3 betalingsmatching)
+**Backend tests:** 528 tests passing (incl. 19 followup + 20 intake + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
+**Volgende sessie (55):** A3 betalingsmatching of A2.2 testen met echte data op productie
+
+## Wat er gedaan is (sessie 54 — 11 maart) — Follow-up Advisor (A2.2)
+
+### Samenvatting
+- **Rules-based workflow advisor** voor incasso-dossiers. Scant elke 30 min alle actieve dossiers en maakt aanbevelingen als `min_wait_days` bereikt (oranje) of `max_wait_days` overschreden (rood).
+- **Backend**: FollowupRecommendation model (TenantBase), scan_for_followups service, approve/reject/execute endpoints, scheduler job (30 min interval), 19 tests.
+- **Execute-flow**: genereert DOCX document, converteert naar PDF, stuurt email met bijlage, auto-completes tasks, tries auto-advance naar volgende stap.
+- **Frontend**: /followup pagina met status tabs (Openstaand/Goedgekeurd/Uitgevoerd/Afgewezen), urgentie badges (oranje=klaar, rood=te laat), 1-klik goedkeuren & uitvoeren, inline reject met notitie.
+- **Case detail integratie**: Amber banner op dossierpagina als er een pending recommendation bestaat.
+- **Sidebar**: Follow-up nav item met Zap icoon + pending count badge.
+- **Deduplicatie**: skip cases met bestaande pending rec of executed-voor-dezelfde-stap. Rejected recs blokkeren niet.
+- **Geen AI/LLM nodig** — volledig deterministisch op basis van pipeline stap configuratie.
+
+### Nieuwe bestanden
+- `backend/app/ai_agent/followup_models.py` — FollowupRecommendation model + enums
+- `backend/app/ai_agent/followup_service.py` — Scan, list, CRUD, execute logica
+- `backend/app/ai_agent/followup_router.py` — REST API endpoints
+- `backend/app/ai_agent/followup_schemas.py` — Pydantic response schemas
+- `backend/alembic/versions/1a3b532bfc64_add_followup_recommendations_table.py` — Migratie
+- `backend/tests/test_followup.py` — 19 tests
+- `frontend/src/hooks/use-followup.ts` — TanStack Query hooks (8 hooks)
+- `frontend/src/app/(dashboard)/followup/page.tsx` — Follow-up pagina
+
+### Gewijzigde bestanden
+- `backend/alembic/env.py` — AI agent model imports toegevoegd
+- `backend/app/main.py` — followup_router geregistreerd
+- `backend/app/workflow/scheduler.py` — followup_scan job (30 min)
+- `frontend/src/components/layout/app-sidebar.tsx` — Follow-up nav item + badge
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — Recommendation banner
+
+### Deploy
+- Backend: gebouwd + migratie 1a3b532bfc64 gedraaid
+- Frontend: gebouwd + gedeployd
+- Beide live op productie
+
+---
 
 ## Wat er gedaan is (sessie 53 — 11 maart) — Frontend Intake Review UI
 

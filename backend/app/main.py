@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai_agent.followup_router import router as followup_router
 from app.ai_agent.intake_router import router as intake_router
+from app.ai_agent.payment_matching_router import router as payment_matching_router
 from app.ai_agent.router import router as ai_agent_router
 from app.auth.router import router as auth_router
 from app.auth.router import users_router
@@ -109,6 +110,7 @@ app.include_router(incasso_router)
 app.include_router(ai_agent_router)
 app.include_router(intake_router)
 app.include_router(followup_router)
+app.include_router(payment_matching_router)
 app.include_router(notifications_router)
 
 

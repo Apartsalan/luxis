@@ -4,7 +4,9 @@ import uuid
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.auth.models import Tenant, User
 from app.auth.service import create_access_token, hash_password
@@ -18,20 +20,28 @@ from app.workflow.models import WorkflowStatus, WorkflowTransition
 _base_url = settings.database_url
 TEST_DATABASE_URL = _base_url.rsplit("/", 1)[0] + "/luxis_test"
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, pool_pre_ping=True)
+# NullPool: no connection caching between tests. Each test gets a fresh
+# connection on its own event loop, avoiding "attached to a different loop".
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 TestSession = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_database():
-    """Create all tables before each test, drop them after."""
+    """Create all tables before each test, drop them after.
+
+    Uses DROP SCHEMA CASCADE to ensure complete cleanup including
+    PostgreSQL composite types and any lingering objects that
+    metadata.drop_all() might miss due to FK ordering issues.
+    """
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await test_engine.dispose()
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
+        await conn.execute(text("CREATE SCHEMA public"))
 
 
 @pytest_asyncio.fixture

@@ -12,9 +12,11 @@ async function loginViaForm(page: import("@playwright/test").Page) {
   await page.locator("#email").fill("lisanne@kestinglegal.nl");
   await page.locator("#password").fill("testpassword123");
   await page.getByRole("button", { name: "Inloggen" }).click();
+  // Wait for redirect away from /login first, then verify dashboard
+  await page.waitForURL(/^(?!.*\/login)/, { timeout: 20000 });
   await expect(
-    page.getByRole("heading", { level: 1 })
-  ).toContainText(/Goede(morgen|middag|navond)/, { timeout: 20000 });
+    page.getByRole("link", { name: /Dossiers/ })
+  ).toBeVisible({ timeout: 10000 });
 }
 
 test.describe("Authentication", () => {
@@ -25,13 +27,13 @@ test.describe("Authentication", () => {
     await page.locator("#password").fill("testpassword123");
     await page.getByRole("button", { name: "Inloggen" }).click();
 
-    // Wait for the greeting to appear on the dashboard
-    await expect(
-      page.getByRole("heading", { level: 1 })
-    ).toContainText(/Goede(morgen|middag|navond)/, { timeout: 20000 });
+    // Wait for redirect away from /login
+    await page.waitForURL(/^(?!.*\/login)/, { timeout: 20000 });
 
-    // Verify we're not on the login page anymore
-    expect(page.url()).not.toContain("/login");
+    // Verify dashboard loaded (sidebar visible = authenticated)
+    await expect(
+      page.getByRole("link", { name: /Dossiers/ })
+    ).toBeVisible({ timeout: 10000 });
 
     // Token should be stored in localStorage
     const token = await page.evaluate(() =>
@@ -66,8 +68,8 @@ test.describe("Authentication", () => {
 
     // Should still show dashboard (not redirected to login)
     await expect(
-      page.getByRole("heading", { level: 1 })
-    ).toContainText(/Goede(morgen|middag|navond)/, { timeout: 20000 });
+      page.getByRole("link", { name: /Dossiers/ })
+    ).toBeVisible({ timeout: 10000 });
   });
 
   test("A4: logout clears session and redirects to login", async ({

@@ -409,6 +409,7 @@ export default function UrenPage() {
   };
 
   const deleteEntry = async (id: string) => {
+    if (!confirm("Weet je zeker dat je deze registratie wilt verwijderen?")) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Verwijderd");
@@ -520,6 +521,7 @@ export default function UrenPage() {
           <button
             onClick={() => setWeekOffset((w) => w - 1)}
             className="rounded-md border border-border p-1.5 hover:bg-muted transition-colors"
+            aria-label="Vorige week"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -527,12 +529,14 @@ export default function UrenPage() {
             onClick={() => setWeekOffset(0)}
             className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
             disabled={isCurrentWeek}
+            aria-label="Ga naar huidige week"
           >
             Deze week
           </button>
           <button
             onClick={() => setWeekOffset((w) => w + 1)}
             className="rounded-md border border-border p-1.5 hover:bg-muted transition-colors"
+            aria-label="Volgende week"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -713,10 +717,12 @@ export default function UrenPage() {
           ))}
         </div>
       ) : !entries || entries.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card py-16 text-center">
-          <Clock className="mx-auto h-10 w-10 text-muted-foreground/30" />
-          <p className="mt-3 text-sm font-medium text-foreground">Geen registraties deze week</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <Clock className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="mt-5 text-base font-medium text-foreground">Geen registraties deze week</p>
+          <p className="mt-1 text-sm text-muted-foreground">
             Gebruik de stopwatch of klik op &quot;Nieuwe registratie&quot;
           </p>
         </div>

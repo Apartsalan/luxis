@@ -402,9 +402,9 @@ export default function TakenPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
             Nieuwe taak
           </button>
 
@@ -612,12 +612,14 @@ export default function TakenPage() {
 function EmptyState({ filter }: { filter: TaskFilter }) {
   if (filter === "completed") {
     return (
-      <div className="rounded-lg border border-dashed p-12 text-center">
-        <CheckSquare className="h-12 w-12 text-muted-foreground/30 mx-auto" />
-        <h3 className="mt-4 text-sm font-medium text-muted-foreground">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+          <CheckSquare className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="mt-5 text-base font-medium text-muted-foreground">
           Nog geen afgeronde taken
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground/70">
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
           Afgeronde taken verschijnen hier.
         </p>
       </div>
@@ -625,12 +627,14 @@ function EmptyState({ filter }: { filter: TaskFilter }) {
   }
 
   return (
-    <div className="rounded-lg border border-dashed p-12 text-center">
-      <Inbox className="h-12 w-12 text-emerald-500/30 mx-auto" />
-      <h3 className="mt-4 text-sm font-medium text-foreground">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50">
+        <Inbox className="h-8 w-8 text-emerald-500/50" />
+      </div>
+      <p className="mt-5 text-base font-medium text-foreground">
         Alles gedaan!
-      </h3>
-      <p className="mt-1 text-xs text-muted-foreground">
+      </p>
+      <p className="mt-1 text-sm text-muted-foreground">
         Er zijn geen openstaande taken. Goed werk!
       </p>
     </div>

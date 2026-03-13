@@ -8,10 +8,6 @@ import {
   Briefcase,
   ArrowUpRight,
   Filter,
-  MoreHorizontal,
-  Eye,
-  Pencil,
-  Trash2,
   ChevronLeft,
   ChevronRight,
   CheckSquare,
@@ -402,7 +398,7 @@ export default function ZakenPage() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="w-10 px-4 py-3.5">
-                    <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-foreground transition-colors">
+                    <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Selecteer alle dossiers">
                       {allSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
                     </button>
                   </th>
@@ -444,6 +440,7 @@ export default function ZakenPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleSelect(zaak.id); }}
                         className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={`Selecteer dossier ${zaak.case_number}`}
                       >
                         {selectedIds.has(zaak.id) ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
                       </button>

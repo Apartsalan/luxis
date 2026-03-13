@@ -563,6 +563,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   };
 
   const handleDelete = async (docId: string) => {
+    if (!confirm("Weet je zeker dat je dit document wilt verwijderen?")) return;
     try {
       await deleteDocument.mutateAsync(docId);
       toast.success("Document verwijderd");
@@ -877,7 +878,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       </button>
                     )}
                     <button
-                      onClick={() => deleteCaseFile.mutate(f.id)}
+                      onClick={() => { if (confirm("Weet je zeker dat je dit bestand wilt verwijderen?")) deleteCaseFile.mutate(f.id); }}
                       className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                       title="Verwijderen"
                     >

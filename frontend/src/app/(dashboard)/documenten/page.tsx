@@ -114,11 +114,13 @@ function DocxTemplatesView({
 
   if (!templates?.length) {
     return (
-      <div className="rounded-xl border border-dashed border-border py-16 text-center">
-        <File className="mx-auto h-12 w-12 text-muted-foreground/30" />
-        <h3 className="mt-4 text-base font-semibold text-foreground">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+          <File className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="mt-5 text-base font-medium text-foreground">
           Geen Word-templates beschikbaar
-        </h3>
+        </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Neem contact op met de beheerder om templates toe te voegen.
         </p>
@@ -190,11 +192,13 @@ function HtmlTemplatesView({
 
   if (!templates?.length) {
     return (
-      <div className="rounded-xl border border-dashed border-border py-16 text-center">
-        <FileCheck className="mx-auto h-12 w-12 text-muted-foreground/30" />
-        <h3 className="mt-4 text-base font-semibold text-foreground">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+          <FileCheck className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="mt-5 text-base font-medium text-foreground">
           Nog geen HTML-sjablonen aangemaakt
-        </h3>
+        </p>
         <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
           HTML-sjablonen worden gebruikt voor het genereren van documenten
           binnen het systeem. Ze kunnen via de API worden aangemaakt.

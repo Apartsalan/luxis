@@ -220,6 +220,7 @@ export default function FactuurDetailPage() {
   };
 
   const handleRemoveLine = async (lineId: string) => {
+    if (!confirm("Weet je zeker dat je deze factuurregel wilt verwijderen?")) return;
     try {
       await removeLineMutation.mutateAsync({ invoiceId: id, lineId });
       toast.success("Regel verwijderd");

@@ -5,6 +5,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from fastapi import status as http_status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
@@ -287,6 +288,30 @@ async def get_payment_summary(
     """Get payment summary for an invoice (total paid, outstanding)."""
     return await service.get_payment_summary(
         db, current_user.tenant_id, invoice_id
+    )
+
+
+# ── Invoice PDF ──────────────────────────────────────────────────────────────
+
+
+@router.get("/{invoice_id}/pdf")
+async def download_invoice_pdf(
+    invoice_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download invoice as PDF."""
+    invoice = await service.get_invoice(db, current_user.tenant_id, invoice_id)
+
+    from app.invoices.invoice_pdf_service import render_invoice_pdf
+
+    pdf_bytes, filename = await render_invoice_pdf(
+        db, current_user.tenant_id, invoice
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 20mm 25mm 20mm;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    color: #1a1a1a;
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+
+  .header {
+    display: table;
+    width: 100%;
+    margin-bottom: 30pt;
+    border-bottom: 2pt solid #2563eb;
+    padding-bottom: 12pt;
+  }
+
+  .header-left {
+    display: table-cell;
+    width: 55%;
+    vertical-align: top;
+  }
+
+  .header-right {
+    display: table-cell;
+    width: 45%;
+    vertical-align: top;
+    text-align: right;
+  }
+
+  .firm-name {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-bottom: 4pt;
+  }
+
+  .firm-detail {
+    font-size: 8pt;
+    color: #555;
+    line-height: 1.6;
+  }
+
+  /* ── Document title ─────────────────────────────────── */
+
+  .doc-title {
+    font-size: 20pt;
+    font-weight: 700;
+    color: {% if is_credit_note %}#dc2626{% else %}#1e3a5f{% endif %};
+    margin-bottom: 20pt;
+    letter-spacing: 1pt;
+  }
+
+  /* ── Info blocks ────────────────────────────────────── */
+
+  .info-row {
+    display: table;
+    width: 100%;
+    margin-bottom: 24pt;
+  }
+
+  .info-left {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+  }
+
+  .info-right {
+    display: table-cell;
+    width: 50%;
+    vertical-align: top;
+  }
+
+  .info-label {
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    margin-bottom: 4pt;
+  }
+
+  .client-name {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .client-detail {
+    font-size: 9pt;
+    color: #444;
+    line-height: 1.6;
+  }
+
+  .meta-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .meta-table td {
+    padding: 3pt 0;
+    font-size: 9pt;
+    vertical-align: top;
+  }
+
+  .meta-table td:first-child {
+    color: #666;
+    width: 45%;
+  }
+
+  .meta-table td:last-child {
+    font-weight: 500;
+    text-align: right;
+  }
+
+  /* ── Lines table ────────────────────────────────────── */
+
+  .lines-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16pt;
+  }
+
+  .lines-table thead th {
+    background-color: #f4f6f8;
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    padding: 8pt 10pt;
+    border-bottom: 1pt solid #ddd;
+  }
+
+  .lines-table thead th:first-child {
+    text-align: left;
+    width: 5%;
+  }
+
+  .lines-table thead th.col-desc {
+    text-align: left;
+    width: 50%;
+  }
+
+  .lines-table thead th.col-num {
+    text-align: right;
+    width: 15%;
+  }
+
+  .lines-table tbody td {
+    padding: 8pt 10pt;
+    font-size: 9pt;
+    border-bottom: 0.5pt solid #eee;
+    vertical-align: top;
+  }
+
+  .lines-table tbody td:first-child {
+    color: #888;
+  }
+
+  .lines-table tbody td.num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .lines-table tbody tr {
+    page-break-inside: avoid;
+  }
+
+  /* ── Totals ─────────────────────────────────────────── */
+
+  .totals-wrapper {
+    display: table;
+    width: 100%;
+    margin-bottom: 30pt;
+  }
+
+  .totals-spacer {
+    display: table-cell;
+    width: 55%;
+  }
+
+  .totals-block {
+    display: table-cell;
+    width: 45%;
+  }
+
+  .totals-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .totals-table td {
+    padding: 4pt 10pt;
+    font-size: 9pt;
+  }
+
+  .totals-table td:first-child {
+    color: #666;
+  }
+
+  .totals-table td:last-child {
+    text-align: right;
+    font-weight: 500;
+  }
+
+  .totals-table tr.total-row td {
+    border-top: 1.5pt solid #1e3a5f;
+    padding-top: 8pt;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  /* ── Payment info ───────────────────────────────────── */
+
+  .payment-block {
+    background-color: #f8f9fb;
+    border: 0.5pt solid #e2e5ea;
+    border-radius: 4pt;
+    padding: 14pt 16pt;
+    margin-top: 20pt;
+  }
+
+  .payment-title {
+    font-size: 8pt;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    margin-bottom: 6pt;
+  }
+
+  .payment-text {
+    font-size: 9pt;
+    color: #333;
+    line-height: 1.7;
+  }
+
+  .payment-text strong {
+    font-weight: 600;
+  }
+
+  /* ── Notes ──────────────────────────────────────────── */
+
+  .notes-block {
+    margin-top: 16pt;
+    font-size: 8.5pt;
+    color: #666;
+    line-height: 1.6;
+  }
+
+  .notes-label {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 2pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="firm-name">{{ kantoor.naam }}</div>
+    <div class="firm-detail">
+      {{ kantoor.adres }}<br>
+      {{ kantoor.postcode_stad }}<br>
+      {% if kantoor.telefoon %}Tel: {{ kantoor.telefoon }}<br>{% endif %}
+      {% if kantoor.email %}{{ kantoor.email }}{% endif %}
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="firm-detail">
+      {% if kantoor.kvk %}KvK: {{ kantoor.kvk }}<br>{% endif %}
+      {% if kantoor.btw %}BTW: {{ kantoor.btw }}<br>{% endif %}
+      {% if kantoor.iban %}IBAN: {{ kantoor.iban }}{% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Document title -->
+<div class="doc-title">{% if is_credit_note %}CREDITNOTA{% else %}FACTUUR{% endif %}</div>
+
+<!-- Client info + Invoice meta -->
+<div class="info-row">
+  <div class="info-left">
+    <div class="info-label">Factuuradres</div>
+    <div class="client-name">{{ klant.naam }}</div>
+    <div class="client-detail">
+      {% if klant.adres %}{{ klant.adres }}<br>{% endif %}
+      {% if klant.postcode_stad %}{{ klant.postcode_stad }}{% endif %}
+    </div>
+  </div>
+  <div class="info-right">
+    <table class="meta-table">
+      <tr>
+        <td>Factuurnummer</td>
+        <td>{{ factuur.nummer }}</td>
+      </tr>
+      <tr>
+        <td>Factuurdatum</td>
+        <td>{{ factuur.datum }}</td>
+      </tr>
+      <tr>
+        <td>Vervaldatum</td>
+        <td>{{ factuur.vervaldatum }}</td>
+      </tr>
+      {% if factuur.kenmerk %}
+      <tr>
+        <td>Kenmerk</td>
+        <td>{{ factuur.kenmerk }}</td>
+      </tr>
+      {% endif %}
+      {% if factuur.zaaknummer %}
+      <tr>
+        <td>Zaaknummer</td>
+        <td>{{ factuur.zaaknummer }}</td>
+      </tr>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+<!-- Line items -->
+<table class="lines-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th class="col-desc">Omschrijving</th>
+      <th class="col-num">Aantal</th>
+      <th class="col-num">Tarief</th>
+      <th class="col-num">Bedrag</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in regels %}
+    <tr>
+      <td>{{ r.nummer }}</td>
+      <td>{{ r.omschrijving }}</td>
+      <td class="num">{{ r.aantal }}</td>
+      <td class="num">{{ r.tarief }}</td>
+      <td class="num">{{ r.bedrag }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Totals -->
+<div class="totals-wrapper">
+  <div class="totals-spacer"></div>
+  <div class="totals-block">
+    <table class="totals-table">
+      <tr>
+        <td>Subtotaal</td>
+        <td>{{ subtotaal }}</td>
+      </tr>
+      <tr>
+        <td>{{ btw_label }}</td>
+        <td>{{ btw_bedrag }}</td>
+      </tr>
+      <tr class="total-row">
+        <td>Totaal</td>
+        <td>{{ totaal }}</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- Payment instructions -->
+<div class="payment-block">
+  <div class="payment-title">Betaalinstructie</div>
+  <div class="payment-text">
+    Gelieve het totaalbedrag van <strong>{{ totaal }}</strong> over te maken op:<br>
+    <strong>IBAN: {{ kantoor.iban }}</strong> t.n.v. {{ kantoor.naam }}<br>
+    onder vermelding van factuurnummer <strong>{{ factuur.nummer }}</strong>.<br>
+    Betalingstermijn: {{ betaaltermijn_dagen }} dagen (voor {{ factuur.vervaldatum }}).
+  </div>
+</div>
+
+{% if notities %}
+<div class="notes-block">
+  <div class="notes-label">Opmerkingen</div>
+  {{ notities }}
+</div>
+{% endif %}
+
+</body>
+</html>

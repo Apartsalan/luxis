@@ -23,6 +23,7 @@ import {
   ArrowDownLeft,
   ReceiptText,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -154,6 +155,27 @@ export default function FactuurDetailPage() {
       setEditing(false);
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      const token = localStorage.getItem("luxis_access_token");
+      const res = await fetch(`/api/invoices/${id}/pdf`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("PDF downloaden mislukt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${factuur?.invoice_number || "factuur"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err.message || "PDF downloaden mislukt");
     }
   };
 
@@ -425,6 +447,16 @@ export default function FactuurDetailPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {!editing && (
+            <button
+              onClick={handleDownloadPdf}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              title="PDF downloaden"
+            >
+              <Download className="h-4 w-4" />
+              PDF
+            </button>
+          )}
           {isConcept && (
             <button
               onClick={editing ? saveEdit : startEdit}

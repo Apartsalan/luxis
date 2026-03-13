@@ -1,12 +1,37 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 maart 2026 (sessie 66 — Lint fix + test inventarisatie)
-**Laatste feature/fix:** 49 lint warnings gefixt (0 remaining), test suite inventarisatie
+**Laatst bijgewerkt:** 13 maart 2026 (sessie 67 — BUG-42 fix, 573 tests passing)
+**Laatste feature/fix:** BUG-42 gefixt — alle 196 test errors + 1 failure opgelost
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**Openstaande bugs:** 196 test errors (pre-existing conftest.py DB setup) + 1 test failure (test_derdengelden_flow)
-**Backend tests:** 376 passed, 196 errors, 1 failed | **Frontend build:** ✅
-**Volgende sessie (67):** Fix 196 test errors + 1 failure in conftest.py
+**Openstaande bugs:** Geen bekende bugs
+**Backend tests:** 573 passed, 0 errors, 0 failures | **Ruff:** 0 warnings (app/ + tests/) | **Frontend build:** ✅
+**Volgende sessie:** Nieuwe features of launch prep
+
+## Wat er gedaan is (sessie 67 — 13 maart) — BUG-42 fix: 196 test errors + 1 failure
+
+### Samenvatting
+Alle 196 test errors en 1 failure (BUG-42) opgelost. Root cause: `conftest.py` importeerde maar 3 van 21 model modules, waardoor `Base.metadata.create_all()` de meeste tabellen niet aanmaakte. Daarnaast was de fixture ordering tussen `setup_database` en `db` niet gegarandeerd.
+
+### Root cause analyse
+- `Base.metadata.create_all()` maakt alleen tabellen aan voor models die geïmporteerd zijn
+- conftest.py importeerde: auth, relations, workflow (3 modules)
+- Ontbraken: ai_agent (5 files), calendar, cases, collections, documents, email (4 files), incasso, invoices, kyc, time_entries, trust_funds (18 modules)
+- `db` fixture had geen expliciete dependency op `setup_database`, dus execution order was niet gegarandeerd
+
+### Fix
+1. Alle 21 model modules importeren via `importlib.import_module()` (vermijdt Python name collision: `import app.x.models` zou de `app` naam overschrijven van FastAPI instance naar package module)
+2. `db` fixture expliciet afhankelijk gemaakt van `setup_database`
+3. 63 pre-existing ruff lint warnings in test files gefixt (E501, I001, F401, F841, UP017)
+
+### Gewijzigde bestanden
+- `backend/tests/conftest.py` — importlib imports + db fixture dependency
+- 22 test files — ruff lint fixes (auto-fix + handmatig E501)
+
+### Resultaat
+- `pytest tests/ -q`: 573 passed, 0 errors, 0 failures
+- `ruff check app/`: 0 warnings
+- `ruff check tests/`: 0 warnings
 
 ## Wat er gedaan is (sessie 66 — 13 maart) — Lint fix + test inventarisatie
 

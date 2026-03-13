@@ -251,7 +251,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-39 | KIMI_API_KEY niet doorgegeven aan backend container — ontbrak in `docker-compose.prod.yml` environment. | Midden | S | ✅ Gefixt (11 mrt, sessie 60) |
 | BUG-40 | EmailAttachment model niet geregistreerd bij SQLAlchemy mapper — standalone scripts/scheduler crashten op `SyncedEmail` relationship. Fix: import in `email/__init__.py`. | Midden | S | ✅ Gefixt (11 mrt, sessie 60) |
 | BUG-41 | 120 pre-existing test errors (conftest.py) — `metadata.drop_all()` kon composite types niet droppen (FK ordering) + connection pool hield stale connections vast tussen event loops. Fix: `DROP SCHEMA CASCADE` + `NullPool`. 573 tests passen nu. | Midden | S | ✅ Gefixt (13 mrt, sessie 65) |
-| BUG-42 | 196 test errors + 1 failure bij `pytest tests/ -q` — conftest.py `setup_database` maakt niet alle tabellen aan voor bepaalde test-modules. Errors: `relation "X" does not exist`. Failure: `test_derdengelden_flow`. Sessie 65 rapporteerde 573 passed/0 errors met `-v` flag, maar sessie 66 met `-q` toont 376 passed/196 errors/1 failed. Mogelijk test-ordering of fixture-scoping issue. | Hoog | M | ❌ TODO |
+| BUG-42 | 196 test errors + 1 failure bij `pytest tests/ -q` — conftest.py importeerde maar 3 van 21 model modules, waardoor `Base.metadata.create_all()` de meeste tabellen niet aanmaakte. Fix: alle 21 model modules importeren via `importlib.import_module()` (vermijdt `app` name collision) + `db` fixture expliciet afhankelijk gemaakt van `setup_database`. Resultaat: 573 passed, 0 errors, 0 failures (zowel -q als -v). | Hoog | M | ✅ Gefixt (13 mrt, sessie 67) |
 
 ---
 

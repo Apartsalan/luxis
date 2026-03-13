@@ -11,6 +11,7 @@ export interface User {
   full_name: string;
   role: "admin" | "advocaat" | "medewerker";
   tenant_id: string;
+  default_hourly_rate: number | null;
 }
 
 interface AuthContextValue {

@@ -21,7 +21,8 @@ export interface TenantDetail {
 }
 
 export interface UpdateProfileData {
-  full_name: string;
+  full_name?: string;
+  default_hourly_rate?: number | null;
 }
 
 export interface ChangePasswordData {

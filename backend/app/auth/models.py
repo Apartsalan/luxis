@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Uuid
+from decimal import Decimal
+
+from sqlalchemy import DateTime, ForeignKey, Numeric, String, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -55,6 +57,9 @@ class User(Base, TimestampMixin):
         String(50), default="medewerker"
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+    default_hourly_rate: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
     password_reset_token: Mapped[str | None] = mapped_column(
         String(255), unique=True, nullable=True, default=None
     )

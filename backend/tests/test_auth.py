@@ -201,6 +201,39 @@ async def test_me_returns_correct_tenant(
 
 
 @pytest.mark.asyncio
+async def test_update_profile_with_default_hourly_rate(
+    client: AsyncClient, test_user: User, test_tenant: Tenant
+):
+    """Updating profile should set default_hourly_rate on user."""
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Set default hourly rate
+    resp = await client.put(
+        "/api/auth/me",
+        json={"default_hourly_rate": "250.00"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["default_hourly_rate"] == "250.00"
+
+    # Verify it persists via GET
+    resp2 = await client.get("/api/auth/me", headers=headers)
+    assert resp2.status_code == 200
+    assert resp2.json()["default_hourly_rate"] == "250.00"
+
+    # Clear it by setting null
+    resp3 = await client.put(
+        "/api/auth/me",
+        json={"default_hourly_rate": None},
+        headers=headers,
+    )
+    assert resp3.status_code == 200
+    assert resp3.json()["default_hourly_rate"] is None
+
+
+@pytest.mark.asyncio
 async def test_refresh_with_invalid_token(client: AsyncClient):
     """Refreshing with garbage token should fail."""
     response = await client.post(

@@ -7,6 +7,9 @@ import { useUpdateProfile, useChangePassword } from "@/hooks/use-settings";
 
 export function ProfielTab({ user }: { user: any }) {
   const [fullName, setFullName] = useState(user?.full_name || "");
+  const [hourlyRate, setHourlyRate] = useState(
+    user?.default_hourly_rate != null ? String(user.default_hourly_rate) : ""
+  );
   const updateProfile = useUpdateProfile();
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -25,7 +28,10 @@ export function ProfielTab({ user }: { user: any }) {
       return;
     }
     updateProfile.mutate(
-      { full_name: fullName.trim() },
+      {
+        full_name: fullName.trim(),
+        default_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+      },
       {
         onSuccess: () => toast.success("Profiel bijgewerkt"),
         onError: (err) => toast.error(err.message),
@@ -86,6 +92,28 @@ export function ProfielTab({ user }: { user: any }) {
             />
             <p className="mt-1 text-xs text-muted-foreground">
               E-mailadres kan niet worden gewijzigd
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground">
+              Standaard uurtarief
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm mt-0.5">
+                &euro;
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="bijv. 250.00"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                className={`${inputClass} pl-7`}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Wordt automatisch ingevuld bij nieuwe tijdregistraties
             </p>
           </div>
           <button

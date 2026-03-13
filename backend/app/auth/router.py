@@ -227,8 +227,9 @@ async def update_profile(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update the current user's profile (name)."""
-    current_user.full_name = data.full_name
+    """Update the current user's profile (name, default hourly rate)."""
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(current_user, field, value)
     db.add(current_user)
     await db.commit()
     await db.refresh(current_user)

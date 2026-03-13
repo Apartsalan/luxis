@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -34,6 +35,7 @@ class UserResponse(BaseModel):
     role: str
     tenant_id: uuid.UUID
     is_active: bool
+    default_hourly_rate: Decimal | None = None
 
     model_config = {"from_attributes": True}
 
@@ -48,7 +50,8 @@ class TenantResponse(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
-    full_name: str
+    full_name: str | None = None
+    default_hourly_rate: Decimal | None = Field(None, ge=0, decimal_places=2)
 
 
 class ChangePasswordRequest(BaseModel):

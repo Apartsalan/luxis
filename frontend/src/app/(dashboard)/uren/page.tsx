@@ -30,6 +30,7 @@ import { useCases, type CaseSummary } from "@/hooks/use-cases";
 import { formatCurrency } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useTimer } from "@/hooks/use-timer";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -268,6 +269,8 @@ function CaseSelector({
 // ── Page component ───────────────────────────────────────────────────────
 
 export default function UrenPage() {
+  const { user } = useAuth();
+
   // Week navigation
   const [weekOffset, setWeekOffset] = useState(0);
   const week = getWeekDates(weekOffset);
@@ -343,7 +346,8 @@ export default function UrenPage() {
   const [formActivity, setFormActivity] = useState("other");
   const [formDescription, setFormDescription] = useState("");
   const [formBillable, setFormBillable] = useState(true);
-  const [formRate, setFormRate] = useState("");
+  const defaultRate = user?.default_hourly_rate != null ? String(user.default_hourly_rate) : "";
+  const [formRate, setFormRate] = useState(defaultRate);
 
   const resetForm = () => {
     setFormCaseId("");
@@ -353,7 +357,7 @@ export default function UrenPage() {
     setFormActivity("other");
     setFormDescription("");
     setFormBillable(true);
-    setFormRate("");
+    setFormRate(defaultRate);
   };
 
   const submitEntry = async () => {

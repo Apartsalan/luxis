@@ -162,7 +162,7 @@ export default function FacturenPage() {
           ) : data?.items && data.items.length > 0 ? (
             <>
               <div className="overflow-x-auto rounded-xl border border-border bg-card">
-                <table className="w-full min-w-[700px]">
+                <table className="w-full">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -177,10 +177,10 @@ export default function FacturenPage() {
                       <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Dossier
                       </th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Datum
                       </th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Vervaldatum
                       </th>
                       <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -236,10 +236,10 @@ export default function FacturenPage() {
                         <td className="hidden lg:table-cell px-4 py-3.5 text-sm text-muted-foreground font-mono">
                           {factuur.case_number ?? "-"}
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-muted-foreground">
+                        <td className="hidden sm:table-cell px-4 py-3.5 text-sm text-muted-foreground">
                           {formatDateShort(factuur.invoice_date)}
                         </td>
-                        <td className="px-4 py-3.5 text-sm text-muted-foreground">
+                        <td className="hidden sm:table-cell px-4 py-3.5 text-sm text-muted-foreground">
                           {formatDateShort(factuur.due_date)}
                         </td>
                         <td className="px-4 py-3.5 text-right">

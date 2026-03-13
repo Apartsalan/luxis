@@ -73,7 +73,7 @@ export default function RelatiesPage() {
               setContactType("");
               setPage(1);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${
               contactType === ""
                 ? "bg-primary text-primary-foreground"
                 : "border border-input bg-card text-muted-foreground hover:bg-muted"
@@ -86,7 +86,7 @@ export default function RelatiesPage() {
               setContactType("company");
               setPage(1);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${
               contactType === "company"
                 ? "bg-primary text-primary-foreground"
                 : "border border-input bg-card text-muted-foreground hover:bg-muted"
@@ -100,7 +100,7 @@ export default function RelatiesPage() {
               setContactType("person");
               setPage(1);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 ${
               contactType === "person"
                 ? "bg-primary text-primary-foreground"
                 : "border border-input bg-card text-muted-foreground hover:bg-muted"
@@ -139,7 +139,7 @@ export default function RelatiesPage() {
       ) : data?.items && data.items.length > 0 ? (
         <>
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -151,7 +151,7 @@ export default function RelatiesPage() {
                   <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Plaats
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Aangemaakt
                   </th>
                   <th className="px-4 py-3.5 w-10" />
@@ -230,7 +230,7 @@ export default function RelatiesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
+                    <td className="hidden sm:table-cell px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(contact.created_at)}
                     </td>
                     <td className="px-4 py-3.5">

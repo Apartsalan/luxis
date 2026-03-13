@@ -394,7 +394,7 @@ export default function ZakenPage() {
       ) : data?.items && data.items.length > 0 ? (
         <>
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full min-w-[700px]">
+            <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   <th className="w-10 px-4 py-3.5">
@@ -405,7 +405,7 @@ export default function ZakenPage() {
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Dossier
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Type
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -422,7 +422,7 @@ export default function ZakenPage() {
                       Hoofdsom
                     </th>
                   )}
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Geopend
                   </th>
                   <th className="px-4 py-3.5 w-10" />
@@ -458,7 +458,7 @@ export default function ZakenPage() {
                         </p>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="hidden sm:table-cell px-4 py-3.5">
                       <span
                         className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
                           TYPE_BADGE[zaak.case_type] ??
@@ -509,7 +509,7 @@ export default function ZakenPage() {
                         </span>
                       </td>
                     )}
-                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
+                    <td className="hidden sm:table-cell px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(zaak.date_opened)}
                     </td>
                     <td className="px-4 py-3.5">

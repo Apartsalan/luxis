@@ -120,13 +120,13 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
 };
 
 export const INVOICE_STATUS_COLORS: Record<string, string> = {
-  concept: "bg-gray-100 text-gray-700",
-  approved: "bg-blue-100 text-blue-700",
-  sent: "bg-amber-100 text-amber-700",
-  partially_paid: "bg-cyan-100 text-cyan-700",
-  paid: "bg-green-100 text-green-700",
-  overdue: "bg-red-100 text-red-700",
-  cancelled: "bg-gray-100 text-gray-400",
+  concept: "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20",
+  approved: "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20",
+  sent: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20",
+  partially_paid: "bg-cyan-50 text-cyan-700 ring-1 ring-inset ring-cyan-600/20",
+  paid: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20",
+  overdue: "bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20",
+  cancelled: "bg-gray-50 text-gray-400 ring-1 ring-inset ring-gray-400/20",
 };
 
 // ── Hooks ────────────────────────────────────────────────────────────────

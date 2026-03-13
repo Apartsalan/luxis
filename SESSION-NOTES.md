@@ -1,11 +1,43 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 maart 2026 (sessie 62 — Productie-readiness audit)
-**Laatste feature/fix:** Productie-readiness audit — alle modules geaudit, uitrolstrategie bepaald
+**Laatst bijgewerkt:** 13 maart 2026 (sessie 63 — Pre-launch Sprint: Eerste Batch)
+**Laatste feature/fix:** PL-5 default uurtarief per gebruiker + PL-1 backups + PL-3 E2E fix
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
+**Pre-Launch Sprint:** 4/6 taken klaar (PL-1 ✅, PL-3 ✅, PL-4 ✅ was al klaar, PL-5 ✅) — PL-2 en PL-6 naar sessie 64
 **Openstaande bugs:** Geen bekende bugs (47 lint warnings in ai_agent/tools/definitions.py — cosmetisch)
-**Backend tests:** 568 tests passing | **Frontend build:** ✅ | **E2E:** 4 failed (auth greeting mismatch — testfix nodig)
-**Volgende sessie (63):** Pre-launch sprint plannen — backups, factuur-PDF, timer persistence, default uurtarief, CSV payment UI, E2E fix
+**Backend tests:** 569 tests passing (568 + 1 nieuwe) | **Frontend build:** ✅ | **E2E:** auth tests gefixt
+**Volgende sessie (64):** PL-2 factuur-PDF generatie (4-6 uur) + PL-6 CSV payment import UI (2-3 uur)
+
+## Wat er gedaan is (sessie 63 — 13 maart) — Pre-launch Sprint: Eerste Batch
+
+### Samenvatting
+4 van 6 pre-launch taken afgerond. Backups geactiveerd, E2E tests gefixt, timer was al persistent, default uurtarief gebouwd en gedeployed.
+
+### Afgeronde taken
+- **PL-1: Backups** — `/backups/luxis/` dir, crontab `0 3 * * *`, 30 dagen retentie, eerste backup 647KB
+- **PL-3: E2E auth test fix** — Tests checken nu URL-redirect + sidebar visibility i.p.v. tijdsafhankelijke greeting tekst
+- **PL-4: Timer persistent** — Was al volledig geïmplementeerd met localStorage (startedAt timestamp, multi-tab sync, 10s auto-save, forgotten timer warning)
+- **PL-5: Default uurtarief** — `default_hourly_rate` veld op User model (Decimal, NUMERIC(10,2)), profiel-instellingen UI, auto-fill in uren formulier
+
+### Nieuwe/gewijzigde bestanden
+- `backend/app/auth/models.py` — User.default_hourly_rate veld
+- `backend/app/auth/schemas.py` — UserResponse + UpdateProfileRequest uitgebreid
+- `backend/app/auth/router.py` — PUT /api/auth/me verwerkt nu default_hourly_rate
+- `backend/alembic/versions/42aba19cd8b0_add_default_hourly_rate_to_users.py` — migratie
+- `backend/tests/test_auth.py` — test voor set/get/clear default_hourly_rate
+- `frontend/e2e/auth.spec.ts` — E2E tests verbeterd (URL+sidebar checks)
+- `frontend/src/hooks/use-auth.ts` — User interface uitgebreid met default_hourly_rate
+- `frontend/src/hooks/use-settings.ts` — UpdateProfileData uitgebreid
+- `frontend/src/app/(dashboard)/instellingen/profiel-tab.tsx` — uurtarief veld in profiel
+- `frontend/src/app/(dashboard)/uren/page.tsx` — auto-fill rate uit user settings
+
+### Deploy
+- Backend + frontend gedeployed naar productie
+- Migratie succesvol uitgevoerd op VPS
+
+### Open voor sessie 64
+- PL-2: Factuur-PDF generatie (4-6 uur) — BLOKKEREND
+- PL-6: CSV payment import UI (2-3 uur) — essentieel bij veel dossiers
 
 ## Wat er gedaan is (sessie 62 — 13 maart) — Productie-readiness Audit & Uitrolstrategie
 

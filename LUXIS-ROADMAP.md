@@ -291,11 +291,11 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 | # | Taak | Effort | Blokkerend? | Status |
 |---|------|--------|-------------|--------|
-| PL-1 | **Backups activeren op VPS** — crontab instellen, backup dir aanmaken, eerste backup testen | 15 min | JA — zonder backup = dataverlies risico | ❌ TODO |
+| PL-1 | **Backups activeren op VPS** — crontab instellen, backup dir aanmaken, eerste backup testen | 15 min | JA — zonder backup = dataverlies risico | ✅ Sessie 63 (13 mrt) |
 | PL-2 | **Factuur-PDF generatie** — endpoint + template + download knop op factuurdetail | 4-6 uur | JA — kan geen facturen versturen | ❌ TODO |
-| PL-3 | **E2E auth test fixen** — greeting text "Welkom terug" i.p.v. "Goedemorgen" | 30 min | Nee (test, niet productie) | ❌ TODO |
-| PL-4 | **Timer persistent maken** — localStorage opslag zodat page reload timer niet kwijtraakt | 1 uur | Nee maar high-impact UX | ❌ TODO |
-| PL-5 | **Default uurtarief per gebruiker** — settings + auto-fill bij tijdregistratie | 1-2 uur | Nee maar dagelijkse frustratie | ❌ TODO |
+| PL-3 | **E2E auth test fixen** — URL+sidebar check i.p.v. time-dependent greeting | 30 min | Nee (test, niet productie) | ✅ Sessie 63 (13 mrt) |
+| PL-4 | **Timer persistent maken** — localStorage opslag zodat page reload timer niet kwijtraakt | 1 uur | Nee maar high-impact UX | ✅ Was al geïmplementeerd |
+| PL-5 | **Default uurtarief per gebruiker** — settings + auto-fill bij tijdregistratie | 1-2 uur | Nee maar dagelijkse frustratie | ✅ Sessie 63 (13 mrt) |
 | PL-6 | **CSV payment import UI** — frontend pagina voor bestaand backend endpoint | 2-3 uur | Nee maar bij 20+ dossiers essentieel | ❌ TODO |
 
 **Geschatte doorlooptijd:** 1.5-2 sessies

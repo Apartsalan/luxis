@@ -6,7 +6,6 @@ All financial values are pre-formatted as Dutch currency strings.
 
 import logging
 import uuid
-from datetime import date
 from decimal import Decimal
 from pathlib import Path
 

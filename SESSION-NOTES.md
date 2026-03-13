@@ -1,12 +1,27 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 maart 2026 (sessie 64 — Factuur-PDF generatie)
-**Laatste feature/fix:** PL-2 factuur-PDF generatie (WeasyPrint) + PL-6 was al gebouwd
+**Laatst bijgewerkt:** 13 maart 2026 (sessie 65 — Fix 120 test errors)
+**Laatste feature/fix:** conftest.py fix — 573 tests passing, 0 errors
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **Openstaande bugs:** Geen bekende bugs (47 lint warnings in ai_agent/tools/definitions.py — cosmetisch)
-**Backend tests:** 427 passed (120 pre-existing DB setup errors, niet gerelateerd aan changes) | **Frontend build:** ✅
-**Volgende sessie (65):** Productie soft-launch met Lisanne — eventuele bugfixes en feedback verwerken
+**Backend tests:** 573 passed, 0 errors ✅ | **Frontend build:** ✅
+**Volgende sessie (66):** Inventarisatie openstaand werk + soft-launch voorbereiding
+
+## Wat er gedaan is (sessie 65 — 13 maart) — Fix 120 test errors (conftest.py)
+
+### Samenvatting
+Alle 120 pre-existing DB setup errors in de test suite gefixt. Root cause: `metadata.drop_all()` kon PostgreSQL composite types niet droppen (FK ordering), en module-level engine met connection pooling hield stale connections vast tussen event loops.
+
+### Afgeronde taken
+- **conftest.py fix** — Twee wijzigingen: (1) `DROP SCHEMA public CASCADE` + `CREATE SCHEMA public` i.p.v. `metadata.drop_all()` voor complete cleanup, (2) `NullPool` i.p.v. default pooling zodat elke test een verse connectie krijgt op eigen event loop.
+
+### Gewijzigde bestanden
+- `backend/tests/conftest.py` — setup_database fixture + engine configuratie
+
+### Resultaat
+- **Voor:** 427 passed, 120 errors (UniqueViolationError + event loop errors)
+- **Na:** 573 passed, 0 errors, 0 failures ✅
 
 ## Wat er gedaan is (sessie 64 — 13 maart) — Factuur-PDF generatie
 

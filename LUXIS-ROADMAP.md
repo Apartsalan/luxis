@@ -250,6 +250,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-38 | Kimi API URL verkeerd: `api.moonshot.cn` → `api.moonshot.ai`. Account zit op internationaal platform (.ai), niet Chinees (.cn). | Hoog (blocker) | S | ✅ Gefixt (11 mrt, sessie 60) |
 | BUG-39 | KIMI_API_KEY niet doorgegeven aan backend container — ontbrak in `docker-compose.prod.yml` environment. | Midden | S | ✅ Gefixt (11 mrt, sessie 60) |
 | BUG-40 | EmailAttachment model niet geregistreerd bij SQLAlchemy mapper — standalone scripts/scheduler crashten op `SyncedEmail` relationship. Fix: import in `email/__init__.py`. | Midden | S | ✅ Gefixt (11 mrt, sessie 60) |
+| BUG-41 | 120 pre-existing test errors (conftest.py) — `metadata.drop_all()` kon composite types niet droppen (FK ordering) + connection pool hield stale connections vast tussen event loops. Fix: `DROP SCHEMA CASCADE` + `NullPool`. 573 tests passen nu. | Midden | S | ✅ Gefixt (13 mrt, sessie 65) |
 
 ---
 

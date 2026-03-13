@@ -1,12 +1,37 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 maart 2026 (sessie 65 — Fix 120 test errors)
-**Laatste feature/fix:** conftest.py fix — 573 tests passing, 0 errors
+**Laatst bijgewerkt:** 13 maart 2026 (sessie 66 — Lint fix + test inventarisatie)
+**Laatste feature/fix:** 49 lint warnings gefixt (0 remaining), test suite inventarisatie
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**Openstaande bugs:** Geen bekende bugs (47 lint warnings in ai_agent/tools/definitions.py — cosmetisch)
-**Backend tests:** 573 passed, 0 errors ✅ | **Frontend build:** ✅
-**Volgende sessie (66):** Inventarisatie openstaand werk + soft-launch voorbereiding
+**Openstaande bugs:** 196 test errors (pre-existing conftest.py DB setup) + 1 test failure (test_derdengelden_flow)
+**Backend tests:** 376 passed, 196 errors, 1 failed | **Frontend build:** ✅
+**Volgende sessie (67):** Fix 196 test errors + 1 failure in conftest.py
+
+## Wat er gedaan is (sessie 66 — 13 maart) — Lint fix + test inventarisatie
+
+### Samenvatting
+Alle 49 ruff lint warnings gefixt (47x E501, 1x I001, 1x F401). Bij test-run bleken er 196 pre-existing DB setup errors en 1 failure te zijn — de conftest.py fix uit sessie 65 werkt niet consistent (mogelijk afhankelijk van pytest flags of test ordering).
+
+### Afgeronde taken
+- **Lint fix** — 47 E501 (line-too-long) in `ai_agent/tools/definitions.py`, 1 I001 (import sorting) in `auth/models.py`, 1 F401 (unused import) in `invoice_pdf_service.py`
+- **Test inventarisatie** — 376 passed, 196 errors, 1 failed. Errors zijn allemaal `relation "X" does not exist` (DB tabellen niet aangemaakt). Failure is `test_derdengelden_flow`.
+
+### Gewijzigde bestanden
+- `backend/app/ai_agent/tools/definitions.py` — alle JSON schema dicts opgesplitst over meerdere regels
+- `backend/app/auth/models.py` — import sorting fix
+- `backend/app/invoices/invoice_pdf_service.py` — unused `date` import verwijderd
+
+### Resultaat
+- **Lint:** 49 warnings → 0 warnings ✅
+- **Tests:** 376 passed, 196 errors, 1 failed (pre-existing)
+
+### Deploy
+- Backend gedeployed naar VPS
+
+### Bekende issues
+- **196 test errors** — conftest.py `setup_database` fixture maakt niet alle tabellen aan voor alle test-modules. `DROP SCHEMA CASCADE` + `CREATE SCHEMA` aanpak uit sessie 65 werkt niet consistent. Moet onderzocht worden.
+- **1 test failure** — `test_derdengelden_flow` faalt met `relation "cases" does not exist`
 
 ## Wat er gedaan is (sessie 65 — 13 maart) — Fix 120 test errors (conftest.py)
 

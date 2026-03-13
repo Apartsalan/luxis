@@ -216,7 +216,8 @@ def test_compound_1_5_years():
 
     # Year 1 (full): 2024-01-01 to 2025-01-01 = 366 days (2024 is leap year)
     days_y1 = (date(2025, 1, 1) - date(2024, 1, 1)).days  # 366
-    year1 = _round2(principal * Decimal("6") / Decimal("100") * Decimal(str(days_y1)) / Decimal("365"))
+    rate = Decimal("6") / Decimal("100")
+    year1 = _round2(principal * rate * Decimal(str(days_y1)) / Decimal("365"))
     new_principal = principal + year1
     # Remaining 181 days on new principal
     days_rem = (calc_date - date(2025, 1, 1)).days  # 181

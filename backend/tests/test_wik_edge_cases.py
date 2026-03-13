@@ -15,7 +15,6 @@ from decimal import Decimal
 
 from app.collections.wik import WIK_MAXIMUM, WIK_MINIMUM, calculate_bik
 
-
 # ── Exact Boundary: €2,500 ──────────────────────────────────────────────────
 
 

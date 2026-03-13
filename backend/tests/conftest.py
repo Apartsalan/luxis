@@ -1,5 +1,6 @@
 """Test configuration — sets up a test database and provides fixtures."""
 
+import importlib
 import uuid
 
 import pytest_asyncio
@@ -15,6 +16,30 @@ from app.database import Base, get_db
 from app.main import app
 from app.relations.models import Contact
 from app.workflow.models import WorkflowStatus, WorkflowTransition
+
+# Import ALL model modules so Base.metadata.create_all() creates every table.
+# Uses importlib to avoid overwriting the `app` name (FastAPI instance) with
+# the `app` package module that bare `import app.x.models` would cause.
+for _mod in [
+    "app.ai_agent.followup_models",
+    "app.ai_agent.intake_models",
+    "app.ai_agent.models",
+    "app.ai_agent.payment_matching_models",
+    "app.calendar.models",
+    "app.cases.models",
+    "app.collections.models",
+    "app.documents.models",
+    "app.email.attachment_models",
+    "app.email.models",
+    "app.email.oauth_models",
+    "app.email.synced_email_models",
+    "app.incasso.models",
+    "app.invoices.models",
+    "app.relations.kyc_models",
+    "app.time_entries.models",
+    "app.trust_funds.models",
+]:
+    importlib.import_module(_mod)
 
 # Use a separate test database URL (only replace the database name at the end)
 _base_url = settings.database_url
@@ -45,8 +70,11 @@ async def setup_database():
 
 
 @pytest_asyncio.fixture
-async def db():
-    """Provide a test database session."""
+async def db(setup_database):
+    """Provide a test database session.
+
+    Depends on setup_database to guarantee tables exist before any session is opened.
+    """
     async with TestSession() as session:
         yield session
 
@@ -209,7 +237,8 @@ async def workflow_data(db: AsyncSession, test_tenant: Tenant) -> dict[str, uuid
         ("executie", "Executie", "execution", 80, "#4c1d95", False, False),
         ("betalingsregeling", "Betalingsregeling", "legal", 45, "#0ea5e9", False, False),
         ("conservatoir_beslag", "Conservatoir Beslag", "legal", 58, "#be185d", False, False),
-        ("faillissementsaanvraag", "Faillissementsaanvraag", "execution", 85, "#991b1b", False, False),
+        ("faillissementsaanvraag", "Faillissementsaanvraag",
+         "execution", 85, "#991b1b", False, False),
         ("betaald", "Betaald", "closed", 90, "#10b981", True, False),
         ("schikking", "Schikking", "closed", 91, "#14b8a6", True, False),
         ("oninbaar", "Oninbaar", "closed", 95, "#6b7280", True, False),

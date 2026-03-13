@@ -10,7 +10,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant
-from app.collections.models import Claim, InterestRate
+from app.collections.models import InterestRate
 from app.documents.docx_service import (
     _fmt_currency,
     _fmt_date,

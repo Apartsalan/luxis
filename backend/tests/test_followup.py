@@ -18,7 +18,6 @@ from app.ai_agent.followup_models import (
     RecommendedAction,
 )
 from app.ai_agent.followup_service import (
-    approve_and_execute_recommendation,
     approve_recommendation,
     get_recommendation,
     get_recommendation_stats,
@@ -30,7 +29,6 @@ from app.auth.models import Tenant, User
 from app.cases.models import Case
 from app.incasso.models import IncassoPipelineStep
 from app.relations.models import Contact
-
 
 # ---------------------------------------------------------------------------
 # Helpers

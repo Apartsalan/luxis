@@ -1,16 +1,14 @@
 """Tests for the invoices module — CRUD, status workflow, lines, BTW, expenses."""
 
 import uuid
-from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import Tenant, User
+from app.auth.models import Tenant
 from app.relations.models import Contact
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

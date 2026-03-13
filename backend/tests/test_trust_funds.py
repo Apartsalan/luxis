@@ -1,7 +1,6 @@
 """Tests for the trust_funds module — derdengelden transactions, approval, balance."""
 
 import uuid
-from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -10,9 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
 from app.auth.service import create_access_token, hash_password
-from app.cases.models import Case
 from app.relations.models import Contact
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 

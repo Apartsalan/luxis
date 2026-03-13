@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import Tenant, User
 from app.collections.models import InterestRate
 
-
 # ── Fixtures for seeding interest rates ─────────────────────────────────────
 
 

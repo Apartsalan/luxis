@@ -13,7 +13,6 @@ from app.auth.service import create_access_token, hash_password
 from app.cases.models import Case
 from app.relations.models import Contact
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 

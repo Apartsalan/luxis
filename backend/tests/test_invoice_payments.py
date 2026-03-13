@@ -10,9 +10,7 @@ from decimal import Decimal
 import pytest
 from httpx import AsyncClient
 
-from app.auth.models import Tenant
 from app.relations.models import Contact
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -69,7 +67,6 @@ async def test_create_payment(
 ):
     """Creating a payment on a sent invoice should return 201."""
     invoice = await create_sent_invoice(client, auth_headers, str(test_company.id))
-    invoice_total = Decimal(invoice["total"])
 
     payment = {
         "amount": "500.00",
@@ -160,9 +157,7 @@ async def test_overpayment_rejected(
         client, auth_headers, str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
-    invoice_total = Decimal(invoice["total"])  # 121.00 (100 + 21% BTW)
-
-    # Try to pay more than the total
+    # Total is 121.00 (100 + 21% BTW) — try to pay more than that
     payment = {
         "amount": "200.00",
         "payment_date": "2026-02-15",

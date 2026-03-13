@@ -5,11 +5,10 @@ Covers: detection, processing, approve/reject, case creation,
 multi-tenant isolation, pending count, and API endpoints.
 """
 
-import json
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import select
@@ -22,12 +21,11 @@ from app.ai_agent.intake_service import (
     get_intake_by_id,
     get_intake_requests,
     get_pending_intake_count,
-    process_detected_intakes,
     process_intake,
     reject_intake,
 )
 from app.auth.models import Tenant, User
-from app.cases.models import Case, CaseActivity
+from app.cases.models import Case
 from app.collections.models import Claim
 from app.email.oauth_models import EmailAccount
 from app.email.synced_email_models import SyncedEmail

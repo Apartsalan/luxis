@@ -1,7 +1,6 @@
 """Tests for invoice PDF generation endpoint."""
 
 import uuid
-from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
@@ -9,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant
 from app.relations.models import Contact
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

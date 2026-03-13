@@ -8,15 +8,11 @@ Total: 36 test cases.
 """
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cases.models import Case, CaseActivity
+from app.cases.models import CaseActivity
 from app.documents.models import GeneratedDocument
 from app.email.models import EmailLog
 from app.incasso.models import IncassoPipelineStep
@@ -34,7 +30,6 @@ from tests.helpers.incasso_fixtures import (
     create_pipeline_steps,
     create_pipeline_task,
 )
-
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -606,7 +601,6 @@ class TestBatchPreview:
 # Need Contact import for email_readiness test
 from app.relations.models import Contact  # noqa: E402
 
-
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 5: Batch Execute (API tests with mocked external services)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -624,7 +618,10 @@ class TestBatchExecute:
         self, client, auth_headers, db, test_tenant, test_user,
         test_company, test_person
     ):
-        """Generate document only (send_email=false). Document created, tasks completed, case advanced."""
+        """Generate document only (send_email=false).
+
+        Document created, tasks completed, case advanced.
+        """
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
             db, test_tenant.id, test_company, test_person, test_user,
@@ -634,8 +631,14 @@ class TestBatchExecute:
         await db.commit()
 
         with (
-            patch("app.incasso.service.render_docx", new_callable=AsyncMock, return_value=_MOCK_DOCX),
-            patch("app.incasso.service.docx_to_pdf", new_callable=AsyncMock, return_value=_MOCK_PDF),
+            patch(
+                "app.incasso.service.render_docx",
+                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+            ),
+            patch(
+                "app.incasso.service.docx_to_pdf",
+                new_callable=AsyncMock, return_value=_MOCK_PDF,
+            ),
         ):
             resp = await client.post(
                 "/api/incasso/batch",
@@ -675,8 +678,14 @@ class TestBatchExecute:
         await db.commit()
 
         with (
-            patch("app.incasso.service.render_docx", new_callable=AsyncMock, return_value=_MOCK_DOCX),
-            patch("app.incasso.service.docx_to_pdf", new_callable=AsyncMock, return_value=_MOCK_PDF),
+            patch(
+                "app.incasso.service.render_docx",
+                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+            ),
+            patch(
+                "app.incasso.service.docx_to_pdf",
+                new_callable=AsyncMock, return_value=_MOCK_PDF,
+            ),
             patch(
                 "app.incasso.service.send_with_attachment",
                 side_effect=_fake_send_with_attachment,
@@ -790,8 +799,14 @@ class TestBatchExecute:
         await db.commit()
 
         with (
-            patch("app.incasso.service.render_docx", new_callable=AsyncMock, return_value=_MOCK_DOCX),
-            patch("app.incasso.service.docx_to_pdf", new_callable=AsyncMock, return_value=_MOCK_PDF),
+            patch(
+                "app.incasso.service.render_docx",
+                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+            ),
+            patch(
+                "app.incasso.service.docx_to_pdf",
+                new_callable=AsyncMock, return_value=_MOCK_PDF,
+            ),
         ):
             resp = await client.post(
                 "/api/incasso/batch",
@@ -839,7 +854,10 @@ class TestBatchExecute:
 
         with (
             patch("app.incasso.service.render_docx", side_effect=_render_docx_maybe_fail),
-            patch("app.incasso.service.docx_to_pdf", new_callable=AsyncMock, return_value=_MOCK_PDF),
+            patch(
+                "app.incasso.service.docx_to_pdf",
+                new_callable=AsyncMock, return_value=_MOCK_PDF,
+            ),
         ):
             resp = await client.post(
                 "/api/incasso/batch",
@@ -871,8 +889,14 @@ class TestBatchExecute:
         await db.commit()
 
         with (
-            patch("app.incasso.service.render_docx", new_callable=AsyncMock, return_value=_MOCK_DOCX),
-            patch("app.incasso.service.docx_to_pdf", new_callable=AsyncMock, return_value=_MOCK_PDF),
+            patch(
+                "app.incasso.service.render_docx",
+                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+            ),
+            patch(
+                "app.incasso.service.docx_to_pdf",
+                new_callable=AsyncMock, return_value=_MOCK_PDF,
+            ),
             patch(
                 "app.incasso.service.send_with_attachment",
                 side_effect=RuntimeError("SMTP connection failed"),

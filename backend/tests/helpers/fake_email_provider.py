@@ -3,7 +3,6 @@
 from dataclasses import dataclass, field
 
 from app.email.providers.base import (
-    AttachmentInfo,
     EmailMessage,
     EmailProvider,
     OAuthTokens,

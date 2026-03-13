@@ -15,7 +15,6 @@ from app.email.oauth_models import EmailAccount
 from app.email.synced_email_models import SyncedEmail
 from app.relations.models import Contact
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 

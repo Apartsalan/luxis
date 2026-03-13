@@ -11,7 +11,6 @@ from app.auth.models import Tenant, User
 from app.cases.models import Case
 from app.relations.models import Contact
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 

@@ -1,7 +1,8 @@
 """Tests for the dashboard module — KPIs and recent activity."""
 
-import pytest
 from decimal import Decimal
+
+import pytest
 from httpx import AsyncClient
 
 from app.relations.models import Contact

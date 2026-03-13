@@ -1,7 +1,7 @@
 """Tests for AI Agent serialize() utility."""
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from app.ai_agent.tools import serialize
@@ -68,7 +68,7 @@ class TestSerializeDatetime:
         assert serialize(dt) == "2026-03-11T14:30:00"
 
     def test_datetime_utc(self):
-        dt = datetime(2026, 3, 11, 14, 30, 0, tzinfo=timezone.utc)
+        dt = datetime(2026, 3, 11, 14, 30, 0, tzinfo=UTC)
         result = serialize(dt)
         assert "2026-03-11" in result
         assert "14:30:00" in result

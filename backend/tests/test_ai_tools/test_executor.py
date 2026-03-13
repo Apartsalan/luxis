@@ -2,13 +2,12 @@
 
 import uuid
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.ai_agent.tools.executor import ToolExecutor
 from app.ai_agent.tools.registry import ToolRegistry
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────
 

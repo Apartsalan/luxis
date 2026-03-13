@@ -11,17 +11,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai_agent.csv_parsers import parse_rabobank_csv
 from app.ai_agent.payment_matching_algorithm import (
     CaseMatchData,
-    MatchCandidate,
     _name_similarity,
     find_matches,
 )
 from app.ai_agent.payment_matching_models import (
-    BankStatementImport,
     BankTransaction,
     ImportStatus,
     MatchMethod,
     MatchStatus,
-    PaymentMatch,
 )
 from app.ai_agent.payment_matching_service import (
     approve_match,
@@ -36,7 +33,6 @@ from app.auth.models import Tenant, User
 from app.cases.models import Case
 from app.collections.models import Claim, InterestRate
 from app.relations.models import Contact
-
 
 # ── Test Data ────────────────────────────────────────────────────────────
 
@@ -472,7 +468,6 @@ class TestMatchWorkflow:
 
         result = await list_matches(db, test_tenant.id, status_filter="pending")
         match_id = result.items[0].id
-        txn_id = result.items[0].transaction_id
 
         # Reject
         rejected = await reject_match(

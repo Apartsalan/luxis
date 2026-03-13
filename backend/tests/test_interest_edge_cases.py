@@ -16,8 +16,6 @@ Tests cover:
 from datetime import date
 from decimal import Decimal
 
-import pytest
-
 from app.collections.interest import (
     _add_years,
     _round2,
@@ -365,7 +363,8 @@ class TestRateScheduleEdgeCases:
             (date(2025, 5, 1), Decimal("5.00")),
         ]
         schedule = build_rate_schedule(date(2025, 1, 15), date(2025, 6, 1), rates)
-        assert len(schedule) == 5  # 5 segments: Jan-15→Feb-1, Feb-1→Mar-1, Mar-1→Apr-1, Apr-1→May-1, May-1→Jun-1
+        # 5 segments: Jan-15→Feb-1, Feb-1→Mar-1, ..., May-1→Jun-1
+        assert len(schedule) == 5
 
     def test_no_rate_before_start(self):
         """All rates are after start date — should use earliest rate."""

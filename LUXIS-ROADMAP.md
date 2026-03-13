@@ -167,6 +167,17 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | FP3 | Documenten pagina hernoemd naar "Sjablonen" met duidelijkere beschrijving | ✅ |
 | FP4 | BUG-1 refix: wederpartij prefill bij nieuw dossier vanuit relatie detailpagina | ✅ |
 
+### Frontend UX Polish (sessie 61, 13 maart)
+
+| # | Verbetering | Status |
+|---|-------------|--------|
+| FP5 | Delete confirmations toegevoegd aan uren, documenten, factuurregels | ✅ |
+| FP6 | Empty states gestandaardiseerd (taken, uren, documenten → standaard patroon) | ✅ |
+| FP7 | Mobile responsive tables: non-essentiële kolommen hidden op sm: breakpoint | ✅ |
+| FP8 | Invoice status badges: ring-1 ring-inset voor visuele consistentie | ✅ |
+| FP9 | ARIA labels op checkboxes en navigatie, focus rings op filter buttons | ✅ |
+| FP10 | Button sizing + error styling + unused imports opgeruimd | ✅ |
+
 ### Fase E: Verbeterpunten uit handmatige test (sessie 2, 20 feb)
 
 | # | Feature | Complexiteit | Prioriteit | Status |

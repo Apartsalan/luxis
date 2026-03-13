@@ -1,11 +1,46 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 60 — A2.2 Follow-up Advisor Productietest + Kimi API fix)
-**Laatste feature/fix:** Follow-up Advisor productietest PASS + 3 bugfixes (Kimi URL, env var, EmailAttachment model)
+**Laatst bijgewerkt:** 13 maart 2026 (sessie 61 — Frontend UX polish)
+**Laatste feature/fix:** UX polish: delete confirmations, empty states, mobile responsive tables, badge consistency, ARIA labels
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
-**Openstaande bugs:** Geen bekende bugs (BUG-38/39/40 gefixt in sessie 60)
+**Openstaande bugs:** Geen bekende bugs
 **Backend tests:** 568 tests passing (incl. 19 followup + 20 intake + 40 payment matching + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (61):** TBD
+**Volgende sessie (62):** TBD
+
+## Wat er gedaan is (sessie 61 — 13 maart) — Frontend UX Polish
+
+### Samenvatting
+Frontend UX audit + polish sessie. BUG-1 en BUG-2 uit BUGS-EN-VERBETERPUNTEN.md bleken al gefixt in eerdere sessies. Focus op visuele consistentie, accessibility en mobile responsiveness.
+
+### Batch 1: Delete confirmations + empty states + styling
+- **Delete confirmations** toegevoegd aan: uren/page.tsx (tijdregistraties), DocumentenTab.tsx (documenten + case files), facturen/[id]/page.tsx (factuurregels). Voorkomt accidenteel dataverlies.
+- **Empty states gestandaardiseerd** op taken, uren, documenten pagina's naar het standaard patroon (rounded-xl, bg-card/50, py-20, icon container).
+- **Button sizing** gefixt op taken pagina (was px-3 py-1.5 text-xs, nu px-4 py-2.5 text-sm).
+- **ARIA labels** toegevoegd aan: zaken tabel checkboxes, uren week navigatie.
+- **Error state styling** gestandaardiseerd in facturen/nieuw (was border-red-200 bg-red-50, nu bg-destructive/10).
+- **Unused imports** opgeruimd in zaken/page.tsx (MoreHorizontal, Eye, Pencil, Trash2).
+
+### Batch 2: Mobile responsiveness + badge consistency
+- **Mobile responsive tables**: Non-essentiële kolommen hidden op sm: breakpoint — zaken (type, datum), relaties (datum), facturen (datum, vervaldatum). min-w constraints verwijderd.
+- **Invoice status badges**: ring-1 ring-inset toegevoegd voor visuele consistentie met andere badges.
+- **Focus rings**: focus:ring-2 focus:ring-primary/20 toegevoegd aan relaties filter buttons.
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/uren/page.tsx` — delete confirm, empty state, ARIA labels
+- `frontend/src/app/(dashboard)/taken/page.tsx` — empty state, button sizing
+- `frontend/src/app/(dashboard)/documenten/page.tsx` — empty states
+- `frontend/src/app/(dashboard)/facturen/nieuw/page.tsx` — error state styling
+- `frontend/src/app/(dashboard)/facturen/[id]/page.tsx` — delete confirm
+- `frontend/src/app/(dashboard)/facturen/page.tsx` — mobile responsive columns
+- `frontend/src/app/(dashboard)/zaken/page.tsx` — unused imports, ARIA, mobile columns
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — delete confirms
+- `frontend/src/app/(dashboard)/relaties/page.tsx` — focus rings, mobile columns
+- `frontend/src/hooks/use-invoices.ts` — badge ring styling
+
+### Bekende issues
+- Geen nieuwe bugs
+
+---
 
 ## Wat er gedaan is (sessie 60 — 11 maart) — A2.2 Follow-up Advisor Productietest + Kimi API Fix
 

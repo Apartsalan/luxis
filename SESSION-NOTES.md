@@ -1,11 +1,52 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 maart 2026 (sessie 61 — Frontend UX polish)
-**Laatste feature/fix:** UX polish: delete confirmations, empty states, mobile responsive tables, badge consistency, ARIA labels
+**Laatst bijgewerkt:** 13 maart 2026 (sessie 62 — Productie-readiness audit)
+**Laatste feature/fix:** Productie-readiness audit — alle modules geaudit, uitrolstrategie bepaald
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
-**Openstaande bugs:** Geen bekende bugs
-**Backend tests:** 568 tests passing (incl. 19 followup + 20 intake + 40 payment matching + 83 AI agent) | **Ruff:** 0 warnings op nieuwe code
-**Volgende sessie (62):** TBD
+**Openstaande bugs:** Geen bekende bugs (47 lint warnings in ai_agent/tools/definitions.py — cosmetisch)
+**Backend tests:** 568 tests passing | **Frontend build:** ✅ | **E2E:** 4 failed (auth greeting mismatch — testfix nodig)
+**Volgende sessie (63):** Pre-launch sprint plannen — backups, factuur-PDF, timer persistence, default uurtarief, CSV payment UI, E2E fix
+
+## Wat er gedaan is (sessie 62 — 13 maart) — Productie-readiness Audit & Uitrolstrategie
+
+### Samenvatting
+Complete productie-readiness audit uitgevoerd met 4 parallelle subagent audits. Alle modules geaudit, tests gedraaid, productie-endpoints gecheckt, VPS backup-situatie geanalyseerd. Uitrolstrategie bepaald.
+
+### Test Resultaten
+- **Backend pytest:** 568 passed, 0 failed (1 SQLAlchemy warning — cosmetisch)
+- **Frontend build:** Success — alle 25 pagina's compileren
+- **Ruff lint:** 47 E501 warnings in `ai_agent/tools/definitions.py` (te lange regels, cosmetisch)
+- **E2E Playwright:** 4 failed, 1 passed, 46 skipped — auth setup verwacht "Goedemorgen" maar dashboard toont "Welkom terug"
+- **Productie endpoints:** Alle healthy (401 = auth required = correct)
+
+### Module Audit Resultaten
+Alle modules PRODUCTIE-KLAAR beoordeeld:
+- Auth, Relaties, Dossiers, Tijdschrijven, Incasso Pipeline, Email (M365), Documenten/Templates, AI Agent (Intake/Follow-up/Betalingsmatching), Dashboard, Agenda, KYC/WWFT, Workflow/Taken
+
+### Kritieke Gaps Geïdentificeerd (pre-launch must-haves)
+1. **Backups NIET geconfigureerd** — script bestaat maar crontab leeg, geen backup directory
+2. **Factuur-PDF generatie ontbreekt** — kan geen facturen naar cliënten sturen
+3. **E2E auth test broken** — greeting text mismatch
+4. **Timer niet persistent** — page reload = timer kwijt
+5. **Geen default uurtarief** — moet per tijdregistratie ingevuld worden
+6. **CSV payment import UI ontbreekt** — backend klaar, frontend niet
+
+### VPS Status
+- Disk: 58GB/150GB (41%) — gezond
+- Database: 12MB — nauwelijks productiedata
+- Containers: alle 4 running
+- Backups: NIET actief (kritiek!)
+
+### Uitrolstrategie Bepaald
+1. Sessie 63+: Pre-launch sprint — alle 6 gaps dichten
+2. Demo met Lisanne
+3. Soft launch (2-3 echte dossiers, BaseNet blijft primair)
+4. Parallel draaien → BaseNet opzeggen
+
+### Geen gewijzigde bestanden (audit-only sessie)
+Alleen SESSION-NOTES.md en LUXIS-ROADMAP.md bijgewerkt.
+
+---
 
 ## Wat er gedaan is (sessie 61 — 13 maart) — Frontend UX Polish
 

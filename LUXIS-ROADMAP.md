@@ -283,7 +283,31 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** Frontend polish afgerond (sessie 48). Bepaal volgende prioriteit: P2 features, Lisanne-feedback, of QA uitbreiden.
+**Volgende prioriteit:** Pre-launch sprint (sessie 63+) — alle gaps dichten voor Lisanne demo + soft launch.
+
+### Pre-Launch Sprint (sessie 62 audit → uitrol)
+
+**Doel:** Alle blokkers oplossen zodat Lisanne daadwerkelijk met Luxis kan werken.
+
+| # | Taak | Effort | Blokkerend? | Status |
+|---|------|--------|-------------|--------|
+| PL-1 | **Backups activeren op VPS** — crontab instellen, backup dir aanmaken, eerste backup testen | 15 min | JA — zonder backup = dataverlies risico | ❌ TODO |
+| PL-2 | **Factuur-PDF generatie** — endpoint + template + download knop op factuurdetail | 4-6 uur | JA — kan geen facturen versturen | ❌ TODO |
+| PL-3 | **E2E auth test fixen** — greeting text "Welkom terug" i.p.v. "Goedemorgen" | 30 min | Nee (test, niet productie) | ❌ TODO |
+| PL-4 | **Timer persistent maken** — localStorage opslag zodat page reload timer niet kwijtraakt | 1 uur | Nee maar high-impact UX | ❌ TODO |
+| PL-5 | **Default uurtarief per gebruiker** — settings + auto-fill bij tijdregistratie | 1-2 uur | Nee maar dagelijkse frustratie | ❌ TODO |
+| PL-6 | **CSV payment import UI** — frontend pagina voor bestaand backend endpoint | 2-3 uur | Nee maar bij 20+ dossiers essentieel | ❌ TODO |
+
+**Geschatte doorlooptijd:** 1.5-2 sessies
+
+### Uitrolplan (na pre-launch sprint)
+
+1. **Demo met Lisanne** — samen door hele workflow lopen, feedback verzamelen
+2. **Feedback-fixes** — top-5 items fixen (1 sessie)
+3. **Soft launch** — 2-3 echte dossiers in Luxis, BaseNet blijft primair (2 weken)
+4. **Parallel draaien** — nieuwe dossiers in Luxis, BaseNet als backup (1 maand)
+5. **M0b: Lisanne naar M365** — email migratie
+6. **BaseNet opzeggen** — als alles bewezen werkt
 
 ---
 

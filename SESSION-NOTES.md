@@ -1,12 +1,37 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 71 — LF-15 + LF-17 compleet)
-**Laatste feature/fix:** LF-15 (betalingsregeling met termijnen), LF-17 (email bijlagen in dossierbestanden)
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 72 — LF-20/21 research + plan)
+**Laatste feature/fix:** LF-20/21 plan afgerond, implementatie gestart via 3 terminals
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**LF Sprint:** 19 van 22 items afgerond (LF-15, LF-17 net af)
+**LF Sprint:** 19 van 22 items afgerond — LF-20 + LF-21 in ontwikkeling
 **Backend tests:** 148 relevant passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** LF-20/21 (facturatie features), overige restanten
+**Volgende sessie:** Sessie 73 — LF-20/21 integratie, tests, deploy
+
+## Wat er gedaan is (sessie 72 — 16 maart 2026) — LF-20/21: Research + Plan
+
+### Samenvatting
+
+**Research & Planning sessie** — geen code geschreven, plan gemaakt voor LF-20 + LF-21:
+- UX research: Clio, BaseNet, LegalSense, Urios, Smokeball, PracticePanther onderzocht
+- Facturatiemodule volledig in kaart gebracht (models, schemas, service, router, frontend)
+- Implementatieplan geschreven en goedgekeurd: `.claude/plans/parallel-chasing-umbrella.md`
+- 3-terminal parallellisatie opgezet: B=backend, C=frontend, A(sessie 73)=tests+integratie
+
+**Kernbeslissingen:**
+- `billing_method` op Case: "hourly" (default) | "fixed_price" | "budget_cap"
+- 7 nieuwe velden op Case (billing + incasso provisie)
+- Voorschotnota als apart factuurtype met verrekening
+- Budget tracking met voortgangsbalk (groen/oranje/rood)
+- Provisie: percentage van geïnd bedrag, met minimum_fee en vaste dossierkosten
+
+### Gewijzigde bestanden
+- `.claude/plans/parallel-chasing-umbrella.md` — implementatieplan
+
+### Status na sessie
+- Terminal B start: backend implementatie (migratie, models, schemas, service, router)
+- Terminal C start: frontend implementatie (hooks, types, UI)
+- Sessie 73: integratie, tests, deploy
 
 ## Wat er gedaan is (sessie 71 — 16 maart 2026) — LF-15: Betalingsregeling + LF-17: Email bijlagen
 

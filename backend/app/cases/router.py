@@ -15,6 +15,7 @@ from app.cases.schemas import (
     CaseActivityResponse,
     CaseCreate,
     CaseDetailResponse,
+    CaseEmailAttachmentResponse,
     CaseFileResponse,
     CasePartyCreate,
     CasePartyResponse,
@@ -242,6 +243,57 @@ async def add_activity(
         db, current_user.tenant_id, case_id, current_user.id, data
     )
     return activity
+
+
+# ── Email Attachments (LF-17) ───────────────────────────────────────────────
+
+
+@router.get(
+    "/{case_id}/email-attachments",
+    response_model=list[CaseEmailAttachmentResponse],
+)
+async def list_email_attachments(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List email attachments linked to this case via synced emails."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    from app.email.attachment_models import EmailAttachment
+    from app.email.synced_email_models import SyncedEmail
+
+    stmt = (
+        select(EmailAttachment)
+        .join(SyncedEmail, EmailAttachment.synced_email_id == SyncedEmail.id)
+        .where(
+            SyncedEmail.case_id == case_id,
+            SyncedEmail.tenant_id == current_user.tenant_id,
+        )
+        .options(selectinload(EmailAttachment.synced_email))
+        .order_by(SyncedEmail.email_date.desc())
+    )
+    result = await db.execute(stmt)
+    attachments = result.scalars().all()
+
+    return [
+        CaseEmailAttachmentResponse(
+            id=att.id,
+            filename=att.filename,
+            file_size=att.file_size,
+            content_type=att.content_type,
+            email_subject=att.synced_email.subject if att.synced_email else None,
+            email_date=(
+                att.synced_email.email_date.isoformat()
+                if att.synced_email and att.synced_email.email_date
+                else None
+            ),
+            email_from=att.synced_email.from_email if att.synced_email else None,
+            synced_email_id=att.synced_email_id,
+        )
+        for att in attachments
+    ]
 
 
 # ── Case Files (E4: Document uploads) ───────────────────────────────────────

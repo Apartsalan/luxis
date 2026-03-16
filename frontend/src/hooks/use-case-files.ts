@@ -99,6 +99,54 @@ export function useDeleteCaseFile(caseId: string) {
   });
 }
 
+// ── Email Attachments (LF-17) ────────────────────────────────────────────
+
+export interface CaseEmailAttachment {
+  id: string;
+  filename: string;
+  file_size: number;
+  content_type: string;
+  email_subject: string | null;
+  email_date: string | null;
+  email_from: string | null;
+  synced_email_id: string;
+}
+
+export function useCaseEmailAttachments(caseId: string) {
+  return useQuery<CaseEmailAttachment[]>({
+    queryKey: ["case-email-attachments", caseId],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${caseId}/email-attachments`);
+      if (!res.ok) throw new Error("Email bijlagen ophalen mislukt");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+export function downloadEmailAttachment(attachmentId: string, filename: string) {
+  const token = localStorage.getItem("luxis_access_token");
+  const apiUrl = "";
+  fetch(`${apiUrl}/api/email/attachments/${attachmentId}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Download mislukt");
+      return res.blob();
+    })
+    .then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch(() => {
+      toast.error("Download mislukt");
+    });
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 /** Check whether a content type can be previewed inline (PDF, images, DOCX). */

@@ -269,3 +269,16 @@ class CaseFileResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CaseEmailAttachmentResponse(BaseModel):
+    """Email attachment linked to a case via synced email."""
+
+    id: uuid.UUID
+    filename: str
+    file_size: int
+    content_type: str
+    email_subject: str | None = None
+    email_date: str | None = None
+    email_from: str | None = None
+    synced_email_id: uuid.UUID

@@ -15,8 +15,10 @@ import {
   File,
   FileText,
   Loader2,
+  Mail,
   Plus,
   Receipt,
+  Save,
   Send,
   Star,
   Trash2,
@@ -55,7 +57,10 @@ import {
   formatFileSize,
   getFileIcon,
   isPreviewable,
+  useCaseEmailAttachments,
+  downloadEmailAttachment,
 } from "@/hooks/use-case-files";
+import { useSaveAttachmentToCase } from "@/hooks/use-email-sync";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 
 export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: string }) {
@@ -488,6 +493,10 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   const deleteCaseFile = useDeleteCaseFile(caseId);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Email attachments (LF-17)
+  const { data: emailAttachments, isLoading: emailAttachmentsLoading } = useCaseEmailAttachments(caseId);
+  const saveAttachment = useSaveAttachmentToCase();
+
   // G11: Inline document preview
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -824,81 +833,159 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
           </p>
         </div>
 
-        {/* File list */}
-        {filesLoading ? (
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-lg skeleton" />
-                  <div className="space-y-2">
-                    <div className="h-4 w-32 rounded skeleton" />
-                    <div className="h-3 w-20 rounded skeleton" />
+        {/* File list — merged uploaded files + email attachments */}
+        {(() => {
+          const loading = filesLoading || emailAttachmentsLoading;
+          // Build unified list
+          type UnifiedFile =
+            | { type: "upload"; id: string; filename: string; file_size: number; content_type: string; date: string; direction?: string | null }
+            | { type: "email"; id: string; filename: string; file_size: number; content_type: string; date: string; email_subject: string | null; email_from: string | null; synced_email_id: string };
+
+          const items: UnifiedFile[] = [
+            ...(caseFiles ?? []).map((f) => ({
+              type: "upload" as const,
+              id: f.id,
+              filename: f.original_filename,
+              file_size: f.file_size,
+              content_type: f.content_type,
+              date: f.created_at,
+              direction: f.document_direction,
+            })),
+            ...(emailAttachments ?? []).map((a) => ({
+              type: "email" as const,
+              id: a.id,
+              filename: a.filename,
+              file_size: a.file_size,
+              content_type: a.content_type,
+              date: a.email_date ?? "",
+              email_subject: a.email_subject,
+              email_from: a.email_from,
+              synced_email_id: a.synced_email_id,
+            })),
+          ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+          if (loading) {
+            return (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg skeleton" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-32 rounded skeleton" />
+                        <div className="h-3 w-20 rounded skeleton" />
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : !caseFiles?.length ? (
-          <div className="rounded-lg border border-dashed border-border py-6 text-center">
-            <File className="mx-auto h-6 w-6 text-muted-foreground/30" />
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Nog geen bestanden geüpload
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {caseFiles.map((f) => {
-              const icon = getFileIcon(f.content_type);
-              return (
-                <div
-                  key={f.id}
-                  className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors group"
-                >
-                  <button
-                    onClick={() => downloadCaseFile(caseId, f.id, f.original_filename)}
-                    className="flex items-center gap-3 min-w-0 flex-1 text-left"
+            );
+          }
+
+          if (!items.length) {
+            return (
+              <div className="rounded-lg border border-dashed border-border py-6 text-center">
+                <File className="mx-auto h-6 w-6 text-muted-foreground/30" />
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Nog geen bestanden
+                </p>
+              </div>
+            );
+          }
+
+          return (
+            <div className="space-y-2">
+              {items.map((item) => {
+                const icon = getFileIcon(item.content_type);
+                const isEmail = item.type === "email";
+
+                return (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors group"
                   >
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${icon.color}`}>
-                      <span className="text-[10px] font-bold">{icon.label}</span>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        {f.original_filename}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatFileSize(f.file_size)} · {formatDateShort(f.created_at)}
-                        {f.document_direction && (
-                          <span className="ml-1.5">
-                            · {f.document_direction === "inkomend" ? "↙ Inkomend" : "↗ Uitgaand"}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </button>
-                  <div className="flex items-center gap-1">
-                    {isPreviewable(f.content_type) && (
-                      <button
-                        onClick={() => handlePreviewFile(f.id, f.original_filename)}
-                        className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
-                        title="Preview"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                    )}
                     <button
-                      onClick={() => { if (confirm("Weet je zeker dat je dit bestand wilt verwijderen?")) deleteCaseFile.mutate(f.id); }}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                      title="Verwijderen"
+                      onClick={() =>
+                        isEmail
+                          ? downloadEmailAttachment(item.id, item.filename)
+                          : downloadCaseFile(caseId, item.id, item.filename)
+                      }
+                      className="flex items-center gap-3 min-w-0 flex-1 text-left"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${icon.color}`}>
+                        <span className="text-[10px] font-bold">{icon.label}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                            {item.filename}
+                          </p>
+                          {isEmail && (
+                            <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-400/30">
+                              <Mail className="h-2.5 w-2.5" />
+                              Email bijlage
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {formatFileSize(item.file_size)} · {formatDateShort(item.date)}
+                          {isEmail && item.email_from && (
+                            <span className="ml-1"> · Van: {item.email_from}</span>
+                          )}
+                          {isEmail && item.email_subject && (
+                            <span className="ml-1"> · {item.email_subject}</span>
+                          )}
+                          {!isEmail && item.direction && (
+                            <span className="ml-1.5">
+                              · {item.direction === "inkomend" ? "↙ Inkomend" : "↗ Uitgaand"}
+                            </span>
+                          )}
+                        </p>
+                      </div>
                     </button>
+                    <div className="flex items-center gap-1">
+                      {!isEmail && isPreviewable(item.content_type) && (
+                        <button
+                          onClick={() => handlePreviewFile(item.id, item.filename)}
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Preview"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      )}
+                      {isEmail && (
+                        <button
+                          onClick={() => {
+                            saveAttachment.mutate(
+                              { attachmentId: item.id, caseId },
+                              {
+                                onSuccess: () => toast.success(`${item.filename} opgeslagen in dossier`),
+                                onError: (err) => toast.error(err.message),
+                              }
+                            );
+                          }}
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Opslaan in dossier"
+                        >
+                          <Save className="h-4 w-4" />
+                        </button>
+                      )}
+                      {!isEmail && (
+                        <button
+                          onClick={() => { if (confirm("Weet je zeker dat je dit bestand wilt verwijderen?")) deleteCaseFile.mutate(item.id); }}
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Verwijderen"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Generated documents list */}

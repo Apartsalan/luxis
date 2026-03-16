@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cases.models import Case
 from app.collections.interest import calculate_case_interest
 from app.collections.models import (
     Claim,
@@ -27,6 +28,35 @@ from app.collections.schemas import (
 )
 from app.collections.wik import calculate_bik
 from app.shared.exceptions import NotFoundError
+
+
+async def _refresh_case_financials(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> None:
+    """Recalculate and update Case.total_principal and Case.total_paid cache."""
+    # Sum active claims
+    claims = await list_claims(db, tenant_id, case_id)
+    total_principal = sum(
+        (c.principal_amount for c in claims), Decimal("0")
+    )
+
+    # Sum active payments
+    payments = await list_payments(db, tenant_id, case_id)
+    total_paid = sum(
+        (p.amount for p in payments), Decimal("0")
+    )
+
+    # Update case
+    result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = result.scalar_one_or_none()
+    if case:
+        case.total_principal = total_principal
+        case.total_paid = total_paid
+        await db.flush()
 
 # ── Claims ───────────────────────────────────────────────────────────────────
 
@@ -62,6 +92,7 @@ async def create_claim(
     db.add(claim)
     await db.flush()
     await db.refresh(claim)
+    await _refresh_case_financials(db, tenant_id, case_id)
     return claim
 
 
@@ -87,6 +118,7 @@ async def update_claim(
 
     await db.flush()
     await db.refresh(claim)
+    await _refresh_case_financials(db, tenant_id, claim.case_id)
     return claim
 
 
@@ -105,8 +137,10 @@ async def delete_claim(
     claim = result.scalar_one_or_none()
     if claim is None:
         raise NotFoundError("Vordering niet gevonden")
+    case_id = claim.case_id
     claim.is_active = False
     await db.flush()
+    await _refresh_case_financials(db, tenant_id, case_id)
 
 
 # ── Payments ─────────────────────────────────────────────────────────────────
@@ -220,6 +254,7 @@ async def create_payment(
 
     await on_payment_received(db, tenant_id, case_id, data.amount, user_id)
 
+    await _refresh_case_financials(db, tenant_id, case_id)
     return payment
 
 
@@ -245,6 +280,7 @@ async def update_payment(
 
     await db.flush()
     await db.refresh(payment)
+    await _refresh_case_financials(db, tenant_id, payment.case_id)
     return payment
 
 
@@ -263,8 +299,10 @@ async def delete_payment(
     payment = result.scalar_one_or_none()
     if payment is None:
         raise NotFoundError("Betaling niet gevonden")
+    case_id = payment.case_id
     payment.is_active = False
     await db.flush()
+    await _refresh_case_financials(db, tenant_id, case_id)
 
 
 # ── Payment Arrangements ─────────────────────────────────────────────────────

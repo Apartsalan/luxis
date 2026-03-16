@@ -10,17 +10,21 @@ import {
   Clock,
   Euro,
   Loader2,
+  Pencil,
   Plus,
   Receipt,
+  Save,
   ShieldCheck,
   Trash2,
   Wallet,
+  X,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useClaims,
   useCreateClaim,
+  useUpdateClaim,
   useDeleteClaim,
   usePayments,
   useCreatePayment,
@@ -40,8 +44,17 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
   const { data: claims, isLoading } = useClaims(caseId);
   const { data: interest } = useCaseInterest(caseId);
   const createClaim = useCreateClaim();
+  const updateClaim = useUpdateClaim();
   const deleteClaim = useDeleteClaim();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    description: "",
+    principal_amount: "",
+    default_date: "",
+    invoice_number: "",
+    invoice_date: "",
+  });
   const [form, setForm] = useState({
     description: "",
     principal_amount: "",
@@ -84,6 +97,39 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
       toast.success("Vordering verwijderd");
     } catch {
       toast.error("Kon niet verwijderen");
+    }
+  };
+
+  const startEdit = (claim: { id: string; description: string; principal_amount: number; default_date: string; invoice_number: string | null; invoice_date: string | null }) => {
+    setEditingId(claim.id);
+    setEditForm({
+      description: claim.description,
+      principal_amount: String(claim.principal_amount),
+      default_date: claim.default_date,
+      invoice_number: claim.invoice_number || "",
+      invoice_date: claim.invoice_date || "",
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await updateClaim.mutateAsync({
+        caseId,
+        claimId: editingId,
+        data: {
+          description: editForm.description,
+          principal_amount: parseFloat(editForm.principal_amount),
+          default_date: editForm.default_date,
+          ...(editForm.invoice_number ? { invoice_number: editForm.invoice_number } : { invoice_number: null }),
+          ...(editForm.invoice_date ? { invoice_date: editForm.invoice_date } : { invoice_date: null }),
+        },
+      });
+      toast.success("Vordering bijgewerkt");
+      setEditingId(null);
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
@@ -220,6 +266,69 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                 const claimInterest = interest?.claims.find(
                   (c) => c.claim_id === claim.id
                 );
+                const isEditing = editingId === claim.id;
+
+                if (isEditing) {
+                  return (
+                    <tr key={claim.id} className="bg-muted/20">
+                      <td className="px-4 py-2">
+                        <input
+                          type="text"
+                          value={editForm.description}
+                          onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                          className={inputClass}
+                          placeholder="Beschrijving"
+                        />
+                        <input
+                          type="text"
+                          value={editForm.invoice_number}
+                          onChange={(e) => setEditForm((f) => ({ ...f, invoice_number: e.target.value }))}
+                          className={`${inputClass} mt-1`}
+                          placeholder="Factuurnummer (optioneel)"
+                        />
+                      </td>
+                      <td className="px-4 py-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={editForm.principal_amount}
+                          onChange={(e) => setEditForm((f) => ({ ...f, principal_amount: e.target.value }))}
+                          className={`${inputClass} text-right`}
+                        />
+                      </td>
+                      <td className="hidden sm:table-cell px-4 py-2">
+                        <input
+                          type="date"
+                          value={editForm.default_date}
+                          onChange={(e) => setEditForm((f) => ({ ...f, default_date: e.target.value }))}
+                          className={inputClass}
+                        />
+                      </td>
+                      <td className="hidden md:table-cell px-4 py-2" />
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={handleUpdate}
+                            disabled={updateClaim.isPending}
+                            className="rounded p-1 text-primary hover:bg-primary/10 transition-colors"
+                            title="Opslaan"
+                          >
+                            <Save className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="rounded p-1 text-muted-foreground hover:bg-muted transition-colors"
+                            title="Annuleren"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
                 return (
                   <tr
                     key={claim.id}
@@ -247,12 +356,22 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                         : "-"}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleDelete(claim.id)}
-                        className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startEdit(claim)}
+                          className="rounded p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                          title="Bewerken"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(claim.id)}
+                          className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title="Verwijderen"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

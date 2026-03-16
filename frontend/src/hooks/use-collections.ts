@@ -175,6 +175,41 @@ export function useCreateClaim() {
   });
 }
 
+export function useUpdateClaim() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      claimId,
+      data,
+    }: {
+      caseId: string;
+      claimId: string;
+      data: {
+        description?: string;
+        principal_amount?: number;
+        default_date?: string;
+        invoice_number?: string | null;
+        invoice_date?: string | null;
+      };
+    }) => {
+      const res = await api(`/api/cases/${caseId}/claims/${claimId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Failed to update claim");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useDeleteClaim() {
   const qc = useQueryClient();
   return useMutation({

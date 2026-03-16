@@ -423,7 +423,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 | # | Beschrijving | Cat. | Grootte | Fase | Status |
 |---|-------------|------|---------|------|--------|
-| LF-01 | Contact aanmaken: adresvelden ontbreken | UX | S | 2 | ❌ TODO |
+| LF-01 | Contact aanmaken: adresvelden ontbreken | UX | S | 2 | ✅ 16 mrt |
 | LF-02 | Dossieroverzicht: partijnamen niet zichtbaar bij smal scherm | UX/Responsive | S | 1 | ✅ 16 mrt |
 | LF-03 | Afgesproken rente: geen keuze maand/jaarbasis | Feature | S-M | 2 | ❌ TODO |
 | LF-04 | Vordering invullen bij aanmaken dossier | UX/Feature | M | 4 | ❌ TODO (onderdeel LF-11) |
@@ -434,7 +434,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | LF-09 | Geüploade factuur niet gekoppeld aan vordering | Feature | M | 3 | ❌ TODO |
 | LF-10 | AI factuur parsing: auto-invullen bij aanmaken dossier | Feature (AI) | XL | 8 | ❌ TODO (nice-to-have) |
 | LF-11 | Dossier aanmaken: alles in een keer (wizard) | UX/Feature | L | 4 | ❌ TODO |
-| LF-12 | Incassokosten handmatig aanpasbaar + calculator | Feature | M | 2 | ❌ TODO |
+| LF-12 | Incassokosten handmatig aanpasbaar + calculator | Feature | M | 2 | ✅ 16 mrt (frontend UI, backend later) |
 | LF-13 | Tabs "Vorderingen" en "Financieel" samenvoegen | UX | M | 3 | ❌ TODO |
 | LF-14 | Tabs "Betalingen" en "Derdengelden" samenvoegen | UX | M | 3 | ❌ TODO |
 | LF-15 | Betalingsregeling: termijnen, koppeling, meldingen | Feature (nieuw) | L-XL | 6 | ❌ TODO |

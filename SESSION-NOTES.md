@@ -1,12 +1,30 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 68 — LF Fase 1 implementatie)
-**Laatste feature/fix:** LF-06 (claims cache) + LF-08 (claim edit UI) gefixt + deployed
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 69B — LF Fase 2: frontend forms)
+**Laatste feature/fix:** LF-01 (adresvelden contact form) + LF-12 (BIK override UI)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**Openstaande bugs:** LF Fase 1: 2/7 done (LF-06 ✅, LF-08 ✅) — Terminal B werkt aan rest
+**LF Sprint:** Fase 1 compleet (7/7) + Fase 2: LF-01 ✅, LF-12 ✅ (frontend), LF-03/LF-19/LF-22 nog open
 **Backend tests:** 580 passed, 0 errors, 0 failures | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** LF Fase 2 — Kleine features (LF-01, LF-03, LF-12, LF-19, LF-22)
+**Volgende sessie:** LF Fase 2 rest — LF-03 (rente maand/jaarbasis), LF-19 (uurtarief per dossier), LF-22 (debiteursinstellingen) + LF-12 backend persistence
+
+## Wat er gedaan is (sessie 69B — 16 maart) — LF Fase 2: Frontend forms (LF-01, LF-12)
+
+**LF-01 (Contact aanmaken: adresvelden):**
+- Postadresvelden (straat, postcode, stad) toegevoegd aan contact create form
+- Label "Adres" → "Bezoekadres", nieuw "Postadres" blok met hint "alleen invullen als afwijkend"
+- Backend model + schema's hadden al postal_address/postal_postcode/postal_city — alleen frontend
+
+**LF-12 (Incassokosten handmatig aanpasbaar):**
+- BIK override UI in FinancieelTab: toont berekende WIK-bedrag + toggle naar handmatig
+- Override herberekent real-time: KPI-kaarten, progress bar, breakdown tabel, totalen
+- Label wisselt: "BIK (art. 6:96 BW)" → "Incassokosten (handmatig)" bij override
+- Waarschuwing: "bij handmatig bedrag is dit technisch geen WIK meer"
+- NB: frontend-only — backend `bik_override` veld moet nog toegevoegd worden (migratie)
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/relaties/nieuw/page.tsx` — postal address fields
+- `frontend/src/app/(dashboard)/zaken/[id]/components/IncassoTab.tsx` — BIK override UI in FinancieelTab
 
 ## Wat er gedaan is (sessie 68 — 16 maart) — Lisanne Feedback Plan + Fase 1 start
 

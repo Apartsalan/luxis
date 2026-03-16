@@ -1,40 +1,41 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 68 — Lisanne Feedback Projectplan)
-**Laatste feature/fix:** Projectplan 22 LF-items in roadmap (geen code deze sessie)
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 68 — LF Fase 1 implementatie)
+**Laatste feature/fix:** LF-06 (claims cache) + LF-08 (claim edit UI) gefixt + deployed
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**Openstaande bugs:** 22 LF-items (4 bugs, 5 UX, 13 features) — zie LUXIS-ROADMAP.md
-**Backend tests:** 573 passed, 0 errors, 0 failures | **Ruff:** 0 warnings (app/ + tests/) | **Frontend build:** ✅
-**Volgende sessie:** LF Fase 1 — Bugs & Vindbaarheid (LF-02, LF-05, LF-06, LF-07, LF-08, LF-16, LF-18) — 2 terminals parallel
+**Openstaande bugs:** LF Fase 1: 2/7 done (LF-06 ✅, LF-08 ✅) — Terminal B werkt aan rest
+**Backend tests:** 580 passed, 0 errors, 0 failures | **Ruff:** 0 warnings | **Frontend build:** ✅
+**Volgende sessie:** LF Fase 2 — Kleine features (LF-01, LF-03, LF-12, LF-19, LF-22)
 
-## Wat er gedaan is (sessie 68 — 16 maart) — Lisanne Feedback Projectplan
+## Wat er gedaan is (sessie 68 — 16 maart) — Lisanne Feedback Plan + Fase 1 start
 
-### Samenvatting
-Lisanne heeft 22 feedbackpunten opgeleverd na eerste gebruik. Deze sessie: alle items gecategoriseerd, gesized, dependencies geïdentificeerd, en verdeeld over 8 fasen met parallellisatie-strategie (2 terminals per fase).
+### Deel 1: Projectplan
+Lisanne heeft 22 feedbackpunten opgeleverd na eerste gebruik. Alle items gecategoriseerd, gesized, dependencies geïdentificeerd, en verdeeld over 8 fasen met parallellisatie-strategie (2 terminals per fase).
 
-### Bevindingen uit code-analyse
-- LF-02 (partijnamen): staan er al, verdwijnen bij smal scherm → responsive fix
-- LF-05 (kenmerk client): veld `reference` bestaat al → label/prominentie fix
-- LF-08 (vorderingen edit): edit UI ontbreekt compleet, alleen create + delete
-- LF-16 (email template): email compose dialog bestaat, niet vindbaar voor Lisanne
-- LF-19 (uurtarief per dossier): ontbreekt volledig in backend + frontend
+### Deel 2: Fase 1 Terminal A — LF-06 + LF-08
 
-### Projectplan
-- 22 items → 8 fasen → ~5-7 sessies doorlooptijd (2 terminals parallel per fase)
-- Fase 1: bugs (LF-02/05/06/07/08/16/18)
-- Fase 2: kleine features (LF-01/03/12/19/22)
-- Fase 3: tab herstructurering (LF-09/13/14)
-- Fase 4: dossier wizard (LF-04/11)
-- Fase 5: email (LF-17)
-- Fase 6: betalingsregeling (LF-15)
-- Fase 7: facturatie (LF-20/21)
-- Fase 8: AI parsing (LF-10, nice-to-have)
+**LF-06 (Bug: Vordering niet zichtbaar, hoofdsom 0):**
+- Root cause: `Case.total_principal` en `Case.total_paid` zijn cached velden die NOOIT geüpdatet werden na claim/payment mutations
+- Fix: `_refresh_case_financials()` helper toegevoegd die na elke claim/payment CRUD de cache herberekent
+- 6 service functies geüpdatet: create/update/delete claim + create/update/delete payment
+
+**LF-08 (Bug: Vorderingen niet aanpasbaar):**
+- Backend PUT endpoint bestond al
+- Frontend: `useUpdateClaim` hook + inline edit form in VorderingenTab
+- Pencil icon → row transforms naar input velden → Save/Cancel
 
 ### Gewijzigde bestanden
-- `LUXIS-ROADMAP.md` — LF-sectie met alle 22 items, fase-overzicht, dependencies
-- `SESSION-NOTES.md` — deze entry
-- `.claude/plans/staged-popping-haven.md` — gedetailleerd projectplan
+- `backend/app/collections/service.py` — `_refresh_case_financials()` + 6 CRUD functies
+- `frontend/src/hooks/use-collections.ts` — `useUpdateClaim` hook
+- `frontend/src/app/(dashboard)/zaken/[id]/components/IncassoTab.tsx` — edit UI
+- `backend/tests/test_claims_crud.py` — 7 nieuwe tests (580 totaal)
+
+### Bevindingen uit code-analyse (projectplan)
+- LF-02 (partijnamen): staan er al, verdwijnen bij smal scherm → responsive fix
+- LF-05 (kenmerk client): veld `reference` bestaat al → label/prominentie fix
+- LF-16 (email template): email compose dialog bestaat, niet vindbaar voor Lisanne
+- LF-19 (uurtarief per dossier): ontbreekt volledig in backend + frontend
 
 ---
 

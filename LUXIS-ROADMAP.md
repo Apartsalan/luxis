@@ -428,9 +428,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | LF-03 | Afgesproken rente: geen keuze maand/jaarbasis | Feature | S-M | 2 | ❌ TODO |
 | LF-04 | Vordering invullen bij aanmaken dossier | UX/Feature | M | 4 | ❌ TODO (onderdeel LF-11) |
 | LF-05 | Kenmerk client ontbreekt (veld bestaat al als `reference`) | UX/Vindbaarheid | S | 1 | ✅ 16 mrt |
-| LF-06 | Vordering niet zichtbaar na invullen, hoofdsom 0, incassokosten niet zichtbaar | Bug | M | 1 | ❌ TODO |
+| LF-06 | Vordering niet zichtbaar na invullen, hoofdsom 0, incassokosten niet zichtbaar | Bug | M | 1 | ✅ 16 mrt — Case.total_principal cache fix |
 | LF-07 | Navigatie factuur → terug → facturenoverzicht i.p.v. dossier | Bug | S | 1 | ✅ 16 mrt |
-| LF-08 | Vorderingen niet aanpasbaar (edit UI ontbreekt) | Bug | S-M | 1 | ❌ TODO |
+| LF-08 | Vorderingen niet aanpasbaar (edit UI ontbreekt) | Bug | S-M | 1 | ✅ 16 mrt — inline edit + useUpdateClaim |
 | LF-09 | Geüploade factuur niet gekoppeld aan vordering | Feature | M | 3 | ❌ TODO |
 | LF-10 | AI factuur parsing: auto-invullen bij aanmaken dossier | Feature (AI) | XL | 8 | ❌ TODO (nice-to-have) |
 | LF-11 | Dossier aanmaken: alles in een keer (wizard) | UX/Feature | L | 4 | ❌ TODO |

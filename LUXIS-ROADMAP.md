@@ -425,7 +425,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 |---|-------------|------|---------|------|--------|
 | LF-01 | Contact aanmaken: adresvelden ontbreken | UX | S | 2 | ✅ 16 mrt |
 | LF-02 | Dossieroverzicht: partijnamen niet zichtbaar bij smal scherm | UX/Responsive | S | 1 | ✅ 16 mrt |
-| LF-03 | Afgesproken rente: geen keuze maand/jaarbasis | Feature | S-M | 2 | ❌ TODO |
+| LF-03 | Afgesproken rente: geen keuze maand/jaarbasis | Feature | S-M | 2 | ✅ 16 mrt — rate_basis op Claim model |
 | LF-04 | Vordering invullen bij aanmaken dossier | UX/Feature | M | 4 | ❌ TODO (onderdeel LF-11) |
 | LF-05 | Kenmerk client ontbreekt (veld bestaat al als `reference`) | UX/Vindbaarheid | S | 1 | ✅ 16 mrt |
 | LF-06 | Vordering niet zichtbaar na invullen, hoofdsom 0, incassokosten niet zichtbaar | Bug | M | 1 | ✅ 16 mrt — Case.total_principal cache fix |
@@ -441,10 +441,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | LF-16 | Email template vanuit dossier (functie bestaat, niet vindbaar) | UX/Vindbaarheid | S | 1 | ✅ 16 mrt |
 | LF-17 | Dossierbestand als email bijlage + omgekeerd | Feature | M | 5 | ❌ TODO |
 | LF-18 | Batch-verstuurde brieven niet traceerbaar per dossier | Bug | M | 1 | ✅ 16 mrt |
-| LF-19 | Uurtarief per dossier aanpasbaar | Feature | S-M | 2 | ❌ TODO |
+| LF-19 | Uurtarief per dossier aanpasbaar | Feature | S-M | 2 | ✅ 16 mrt — hourly_rate op Case model |
 | LF-20 | Incassokosten doorbelasten bij facturatie (succesprovisie) | Feature | L | 7 | ❌ TODO |
 | LF-21 | Fixed price, max uren, voorschot bij facturatie | Feature | L | 7 | ❌ TODO |
-| LF-22 | Debiteursinstellingen in dossier | Feature | M | 2 | ❌ TODO |
+| LF-22 | Debiteursinstellingen in dossier | Feature | M | 2 | ✅ 16 mrt — payment_term_days, collection_strategy, debtor_notes |
 
 ### Fase-overzicht
 

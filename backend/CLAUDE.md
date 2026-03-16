@@ -20,10 +20,18 @@ Every module follows: `router.py` (endpoints) → `service.py` (business logic, 
 
 ## Testing
 
-- `pytest tests/ -v` — all tests must pass
 - `conftest.py` creates async test DB automatically
 - Every financial calc needs test with known-correct values from legal sources
 - Test files mirror module structure: `test_interest.py`, `test_wik.py`, `test_payment_distribution.py`
+
+### Test strategie (snelheid)
+
+- **Tijdens ontwikkeling:** alleen relevante tests draaien
+  - `pytest tests/test_claims_crud.py -v` — specifiek bestand
+  - `pytest tests/ -k "claim" -v` — keyword filter
+- **Vlak voor commit:** volledige suite één keer, op de achtergrond
+  - `pytest tests/ -v` — alle tests moeten slagen
+- **NOOIT** de volledige suite meerdere keren draaien per cyclus — één keer voor commit is genoeg
 
 ## Test Patterns
 

@@ -426,14 +426,14 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | LF-01 | Contact aanmaken: adresvelden ontbreken | UX | S | 2 | ✅ 16 mrt |
 | LF-02 | Dossieroverzicht: partijnamen niet zichtbaar bij smal scherm | UX/Responsive | S | 1 | ✅ 16 mrt |
 | LF-03 | Afgesproken rente: geen keuze maand/jaarbasis | Feature | S-M | 2 | ✅ 16 mrt — rate_basis op Claim model |
-| LF-04 | Vordering invullen bij aanmaken dossier | UX/Feature | M | 4 | ❌ TODO (onderdeel LF-11) |
+| LF-04 | Vordering invullen bij aanmaken dossier | UX/Feature | M | 4 | ✅ 16 mrt — onderdeel wizard (LF-11) |
 | LF-05 | Kenmerk client ontbreekt (veld bestaat al als `reference`) | UX/Vindbaarheid | S | 1 | ✅ 16 mrt |
 | LF-06 | Vordering niet zichtbaar na invullen, hoofdsom 0, incassokosten niet zichtbaar | Bug | M | 1 | ✅ 16 mrt — Case.total_principal cache fix |
 | LF-07 | Navigatie factuur → terug → facturenoverzicht i.p.v. dossier | Bug | S | 1 | ✅ 16 mrt |
 | LF-08 | Vorderingen niet aanpasbaar (edit UI ontbreekt) | Bug | S-M | 1 | ✅ 16 mrt — inline edit + useUpdateClaim |
 | LF-09 | Geüploade factuur niet gekoppeld aan vordering | Feature | M | 3 | ✅ 16 mrt — backend: invoice_file_id FK + PATCH endpoint |
 | LF-10 | AI factuur parsing: auto-invullen bij aanmaken dossier | Feature (AI) | XL | 8 | ❌ TODO (nice-to-have) |
-| LF-11 | Dossier aanmaken: alles in een keer (wizard) | UX/Feature | L | 4 | ❌ TODO |
+| LF-11 | Dossier aanmaken: alles in een keer (wizard) | UX/Feature | L | 4 | ✅ 16 mrt — 3-step wizard: zaakgegevens → partijen → vordering |
 | LF-12 | Incassokosten handmatig aanpasbaar + calculator | Feature | M | 2 | ✅ 16 mrt — frontend UI + backend persistence (bik_override) |
 | LF-13 | Tabs "Vorderingen" en "Financieel" samenvoegen | UX | M | 3 | ✅ 16 mrt |
 | LF-14 | Tabs "Betalingen" en "Derdengelden" samenvoegen | UX | M | 3 | ✅ 16 mrt |

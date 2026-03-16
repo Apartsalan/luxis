@@ -1,12 +1,39 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 69/70 — LF Fase 2+3 compleet)
-**Laatste feature/fix:** LF-12 backend (bik_override), LF-13 + LF-14 (tab merge), LF-09 (invoice linking)
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 70 — LF Fase 4 compleet)
+**Laatste feature/fix:** LF-11 + LF-04 (3-step dossier wizard), LF-03/19/22 frontend (case detail velden)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**LF Sprint:** Fase 1-3 compleet — 15 van 22 items afgerond (LF-09, LF-12, LF-13, LF-14 net af)
+**LF Sprint:** Fase 1-4 compleet — 17 van 22 items afgerond (LF-04, LF-11 net af)
 **Backend tests:** 137 relevant passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** LF Fase 4+ — LF-03/19/22 frontend UI, LF-04/LF-11 (dossier wizard), LF-15 (betalingsregeling)
+**Volgende sessie:** LF Fase 5+ — LF-15 (betalingsregeling, research af), LF-17 (email bijlagen), LF-20/21 (facturatie)
+
+## Wat er gedaan is (sessie 70 — 16 maart 2026) — LF-11 + LF-04: Dossier Wizard
+
+### Samenvatting
+- **LF-11 + LF-04**: Bestaand single-form "nieuw dossier" getransformeerd naar 3-step wizard:
+  - Stap 1: Zaakgegevens (dossiertype, rente-instellingen, incasso-instellingen)
+  - Stap 2: Partijen (client, wederpartij, advocaat + inline creation + conflict checks + KYC)
+  - Stap 3: Vordering (incasso only, meerdere vorderingen mogelijk, rate_basis keuze)
+- Horizontale stepper met klikbare navigatie en checkmarks voor voltooide stappen
+- Bij niet-incasso: stap 3 overgeslagen, wizard is 2 stappen
+- Submit flow: case aanmaken → party toevoegen → claims aanmaken (sequentieel)
+- LF-19/22 velden toegevoegd aan stap 1: uurtarief, betalingstermijn, incassostrategie, debiteurnotities
+- `useCreateClaim` hook type uitgebreid met `rate_basis`
+- **Terminal B (parallel)**: LF-03/19/22 frontend — velden getoond op dossierpagina (DetailsTab + Sidebar)
+- **Terminal C (parallel)**: LF-15 research — betalingsregeling onderzoek opgeslagen in docs/research/
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — volledige herstructurering naar wizard
+- `frontend/src/hooks/use-collections.ts` — rate_basis in useCreateClaim type
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DetailsTab.tsx` — incasso-instellingen sectie (terminal B)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DossierSidebar.tsx` — uurtarief/termijn info (terminal B)
+- `docs/research/lf15-betalingsregeling-research.md` — LF-15 research (terminal C)
+
+### Deploy
+- Frontend container herbouwd en herstart op VPS
+
+---
 
 ## Wat er gedaan is (sessie 70C — 16 maart 2026) — LF-09 backend: invoice linking
 

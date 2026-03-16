@@ -8,6 +8,27 @@
 **Backend tests:** 137 relevant passed | **Ruff:** 0 warnings | **Frontend build:** ✅
 **Volgende sessie:** LF Fase 4+ — LF-03/19/22 frontend UI, LF-04/LF-11 (dossier wizard), LF-15 (betalingsregeling)
 
+## Wat er gedaan is (sessie 70C — 16 maart 2026) — LF-09 backend: invoice linking
+
+### Samenvatting
+- **LF-09 backend**: `invoice_file_id` (UUID, FK → case_files.id, nullable) toegevoegd aan Claim model
+- Alembic migratie `f90362436e4a` — kolom + foreign key constraint
+- Schemas: `invoice_file_id` in ClaimCreate, ClaimUpdate, ClaimResponse
+- PATCH `/api/cases/{case_id}/claims/{claim_id}/link-invoice` endpoint voor achteraf koppelen
+- Productie migratie gedraaid (ook 040 bik_override mee)
+
+### Gewijzigde bestanden
+- `backend/app/collections/models.py` — `invoice_file_id` veld
+- `backend/app/collections/schemas.py` — 3 schemas bijgewerkt
+- `backend/app/collections/router.py` — PATCH link-invoice endpoint
+- `backend/alembic/versions/f90362436e4a_...` — migratie
+
+### Deploy
+- Backend migratie gedraaid op VPS (039 → 040 → f90362)
+- Backend container herstart
+
+---
+
 ## Wat er gedaan is (sessie 70B — 16 maart 2026) — LF-13 + LF-14 Tab herstructurering
 
 ### Samenvatting

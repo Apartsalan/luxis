@@ -28,7 +28,7 @@
 - `frontend/src/hooks/use-collections.ts` — rate_basis in useCreateClaim type
 - `frontend/src/app/(dashboard)/zaken/[id]/components/DetailsTab.tsx` — incasso-instellingen sectie (terminal B)
 - `frontend/src/app/(dashboard)/zaken/[id]/components/DossierSidebar.tsx` — uurtarief/termijn info (terminal B)
-- `docs/research/lf15-betalingsregeling-research.md` — LF-15 research (terminal C)
+- `docs/research/lf15-betalingsregeling-research.md` — LF-15 research (terminal C, NIET gecommit — opnieuw doen)
 
 ### Deploy
 - Frontend container herbouwd en herstart op VPS

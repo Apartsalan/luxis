@@ -442,8 +442,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | LF-17 | Dossierbestand als email bijlage + omgekeerd | Feature | M | 5 | ✅ 16 mrt |
 | LF-18 | Batch-verstuurde brieven niet traceerbaar per dossier | Bug | M | 1 | ✅ 16 mrt |
 | LF-19 | Uurtarief per dossier aanpasbaar | Feature | S-M | 2 | ✅ 16 mrt — hourly_rate op Case model |
-| LF-20 | Incassokosten doorbelasten bij facturatie (succesprovisie) | Feature | L | 7 | ❌ TODO |
-| LF-21 | Fixed price, max uren, voorschot bij facturatie | Feature | L | 7 | ❌ TODO |
+| LF-20 | Incassokosten doorbelasten bij facturatie (succesprovisie) | Feature | L | 7 | ✅ 16 mrt — provisie berekening, budget tracking, advance balance |
+| LF-21 | Fixed price, max uren, voorschot bij facturatie | Feature | L | 7 | ✅ 16 mrt — billing_method, voorschotnota, budget status |
 | LF-22 | Debiteursinstellingen in dossier | Feature | M | 2 | ✅ 16 mrt — payment_term_days, collection_strategy, debtor_notes |
 
 ### Fase-overzicht

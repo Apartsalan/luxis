@@ -60,6 +60,10 @@ class Claim(TenantBase):
         String(10), nullable=False, default="yearly"
     )  # LF-03: "monthly" or "yearly" — if monthly, rate * 12 for annual calculation
 
+    invoice_file_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("case_files.id"), nullable=True
+    )  # LF-09: link uploaded invoice PDF to this claim
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 

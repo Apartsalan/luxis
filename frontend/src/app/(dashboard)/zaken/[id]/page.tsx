@@ -10,11 +10,9 @@ import {
   CreditCard,
   Euro,
   File,
-  FileText,
   Mail,
   Receipt,
   Users,
-  Wallet,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -45,7 +43,7 @@ import { STATUS_LABELS } from "./types";
 import DossierHeader from "./components/DossierHeader";
 import DetailsTab from "./components/DetailsTab";
 import TijdregistratieTab from "./components/TijdregistratieTab";
-import { VorderingenTab, BetalingenTab, FinancieelTab, DerdengeldenTab } from "./components/IncassoTab";
+import { VorderingenFinancieelTab, BetalingenDerdengeldenTab } from "./components/IncassoTab";
 import { FacturenTab, DocumentenTab } from "./components/DocumentenTab";
 import CorrespondentieTab from "./components/CorrespondentieTab";
 import ActiviteitenTab from "./components/ActiviteitenTab";
@@ -313,8 +311,6 @@ export default function ZaakDetailPage() {
       ? [
           { id: "vorderingen", label: "Vorderingen", icon: Euro },
           { id: "betalingen", label: "Betalingen", icon: Receipt },
-          { id: "financieel", label: "Financieel", icon: Wallet },
-          { id: "derdengelden", label: "Derdengelden", icon: FileText },
         ]
       : []),
     { id: "facturen", label: "Facturen", icon: CreditCard },
@@ -412,10 +408,8 @@ export default function ZaakDetailPage() {
           <div className="mt-6">
             {activeTab === "overzicht" && <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />}
             {activeTab === "taken" && <TijdregistratieTab caseId={id} />}
-            {isIncasso && activeTab === "vorderingen" && <VorderingenTab caseId={id} />}
-            {isIncasso && activeTab === "betalingen" && <BetalingenTab caseId={id} />}
-            {isIncasso && activeTab === "financieel" && <FinancieelTab caseId={id} />}
-            {isIncasso && activeTab === "derdengelden" && <DerdengeldenTab caseId={id} />}
+            {isIncasso && activeTab === "vorderingen" && <VorderingenFinancieelTab caseId={id} />}
+            {isIncasso && activeTab === "betalingen" && <BetalingenDerdengeldenTab caseId={id} />}
             {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
             {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />}
             {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />}

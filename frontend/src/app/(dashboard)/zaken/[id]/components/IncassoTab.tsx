@@ -1275,3 +1275,27 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
     </div>
   );
 }
+
+// ── Combined: Vorderingen + Financieel (LF-13) ──────────────────────────────
+
+export function VorderingenFinancieelTab({ caseId }: { caseId: string }) {
+  return (
+    <div className="space-y-8">
+      <VorderingenTab caseId={caseId} />
+      <div className="border-t border-border" />
+      <FinancieelTab caseId={caseId} />
+    </div>
+  );
+}
+
+// ── Combined: Betalingen + Derdengelden (LF-14) ─────────────────────────────
+
+export function BetalingenDerdengeldenTab({ caseId }: { caseId: string }) {
+  return (
+    <div className="space-y-8">
+      <BetalingenTab caseId={caseId} />
+      <div className="border-t border-border" />
+      <DerdengeldenTab caseId={caseId} />
+    </div>
+  );
+}

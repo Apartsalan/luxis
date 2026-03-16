@@ -82,6 +82,23 @@ async def update_claim(
     return claim
 
 
+@router.patch("/claims/{claim_id}/link-invoice", response_model=ClaimResponse)
+async def link_invoice_to_claim(
+    case_id: uuid.UUID,
+    claim_id: uuid.UUID,
+    invoice_file_id: uuid.UUID | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Link (or unlink) an uploaded invoice file to a claim."""
+    await get_case(db, current_user.tenant_id, case_id)
+    claim = await service.update_claim(
+        db, current_user.tenant_id, claim_id,
+        ClaimUpdate(invoice_file_id=invoice_file_id),
+    )
+    return claim
+
+
 @router.delete(
     "/claims/{claim_id}",
     status_code=http_status.HTTP_204_NO_CONTENT,
@@ -189,6 +206,7 @@ async def create_payment(
         interest_type=case.interest_type,
         contractual_rate=case.contractual_rate,
         contractual_compound=case.contractual_compound,
+        bik_override=case.bik_override,
     )
 
 
@@ -341,6 +359,7 @@ async def financial_summary(
         case.contractual_rate,
         case.contractual_compound,
         as_of,
+        bik_override=case.bik_override,
     )
 
 

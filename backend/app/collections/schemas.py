@@ -19,6 +19,7 @@ class ClaimCreate(BaseModel):
     invoice_number: str | None = None
     invoice_date: date | None = None
     rate_basis: str = Field(default="yearly", description="monthly or yearly")
+    invoice_file_id: uuid.UUID | None = None
 
 
 class ClaimUpdate(BaseModel):
@@ -28,6 +29,7 @@ class ClaimUpdate(BaseModel):
     invoice_number: str | None = None
     invoice_date: date | None = None
     rate_basis: str | None = None
+    invoice_file_id: uuid.UUID | None = None
 
 
 class ClaimResponse(BaseModel):
@@ -39,6 +41,7 @@ class ClaimResponse(BaseModel):
     invoice_number: str | None
     invoice_date: date | None
     rate_basis: str
+    invoice_file_id: uuid.UUID | None
     is_active: bool
     created_at: datetime
     updated_at: datetime

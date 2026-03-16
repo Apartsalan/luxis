@@ -7,17 +7,315 @@ import {
   CalendarDays,
   ChevronRight,
   Euro,
+  Loader2,
   Mail,
   PanelRightClose,
   PanelRightOpen,
   Phone,
+  Save,
   User,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useFinancialSummary } from "@/hooks/use-collections";
 import { useTimeEntrySummary } from "@/hooks/use-time-entries";
 import { useModules } from "@/hooks/use-modules";
+import { useUpdateCase } from "@/hooks/use-cases";
+import { useBudgetStatus } from "@/hooks/use-invoices";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { STATUS_LABELS, TYPE_LABELS, INTEREST_LABELS } from "../types";
+
+const BILLING_METHOD_LABELS: Record<string, string> = {
+  hourly: "Uurtarief",
+  fixed_price: "Vaste prijs",
+  budget_cap: "Budgetplafond",
+};
+
+// ── Billing Settings Section ────────────────────────────────────────────────
+
+function BillingSettingsSection({ zaak }: { zaak: any }) {
+  const updateCase = useUpdateCase();
+  const [editing, setEditing] = useState(false);
+  const [billingMethod, setBillingMethod] = useState<string>(
+    zaak.billing_method || "hourly"
+  );
+  const [fixedPrice, setFixedPrice] = useState(
+    zaak.fixed_price_amount?.toString() || ""
+  );
+  const [budgetAmount, setBudgetAmount] = useState(
+    zaak.budget?.toString() || ""
+  );
+  const [budgetHours, setBudgetHours] = useState(
+    zaak.budget_hours?.toString() || ""
+  );
+
+  const handleSave = async () => {
+    try {
+      await updateCase.mutateAsync({
+        id: zaak.id,
+        data: {
+          billing_method: billingMethod,
+          fixed_price_amount:
+            billingMethod === "fixed_price" ? parseFloat(fixedPrice) || null : null,
+          budget:
+            billingMethod === "budget_cap" ? parseFloat(budgetAmount) || null : null,
+          budget_hours:
+            billingMethod === "budget_cap" ? parseFloat(budgetHours) || null : null,
+        },
+      });
+      toast.success("Facturatie-instellingen opgeslagen");
+      setEditing(false);
+    } catch (err: any) {
+      toast.error(err.message || "Opslaan mislukt");
+    }
+  };
+
+  const inputClass =
+    "w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 transition-colors";
+
+  if (!editing) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Facturatie
+          </h3>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            Wijzigen
+          </button>
+        </div>
+        <dl className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <dt className="text-xs text-muted-foreground">Methode</dt>
+            <dd className="text-xs font-medium text-foreground">
+              {BILLING_METHOD_LABELS[zaak.billing_method || "hourly"]}
+            </dd>
+          </div>
+          {zaak.billing_method === "fixed_price" && zaak.fixed_price_amount != null && (
+            <div className="flex items-center justify-between">
+              <dt className="text-xs text-muted-foreground">Vaste prijs</dt>
+              <dd className="text-xs font-medium text-foreground">
+                {formatCurrency(zaak.fixed_price_amount)}
+              </dd>
+            </div>
+          )}
+          {zaak.billing_method === "budget_cap" && (
+            <>
+              {zaak.budget != null && (
+                <div className="flex items-center justify-between">
+                  <dt className="text-xs text-muted-foreground">Max bedrag</dt>
+                  <dd className="text-xs font-medium text-foreground">
+                    {formatCurrency(zaak.budget)}
+                  </dd>
+                </div>
+              )}
+              {zaak.budget_hours != null && (
+                <div className="flex items-center justify-between">
+                  <dt className="text-xs text-muted-foreground">Max uren</dt>
+                  <dd className="text-xs font-medium text-foreground">
+                    {zaak.budget_hours} uur
+                  </dd>
+                </div>
+              )}
+            </>
+          )}
+        </dl>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-primary/30 bg-card p-4">
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        Facturatie
+      </h3>
+      <div className="space-y-3">
+        {/* Radio group */}
+        <div className="space-y-1.5">
+          {(["hourly", "fixed_price", "budget_cap"] as const).map((method) => (
+            <label
+              key={method}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs cursor-pointer transition-colors ${
+                billingMethod === method
+                  ? "bg-primary/5 ring-1 ring-primary/20"
+                  : "hover:bg-muted"
+              }`}
+            >
+              <input
+                type="radio"
+                name="billing_method"
+                value={method}
+                checked={billingMethod === method}
+                onChange={() => setBillingMethod(method)}
+                className="h-3 w-3 text-primary focus:ring-primary/20"
+              />
+              <span className="font-medium">{BILLING_METHOD_LABELS[method]}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Fixed price input */}
+        {billingMethod === "fixed_price" && (
+          <div>
+            <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+              Bedrag (€)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={fixedPrice}
+              onChange={(e) => setFixedPrice(e.target.value)}
+              placeholder="0.00"
+              className={inputClass}
+            />
+          </div>
+        )}
+
+        {/* Budget cap inputs */}
+        {billingMethod === "budget_cap" && (
+          <div className="space-y-2">
+            <div>
+              <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+                Max bedrag (€)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={budgetAmount}
+                onChange={(e) => setBudgetAmount(e.target.value)}
+                placeholder="0.00"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-medium text-muted-foreground mb-1">
+                Max uren
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                value={budgetHours}
+                onChange={(e) => setBudgetHours(e.target.value)}
+                placeholder="0"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={handleSave}
+            disabled={updateCase.isPending}
+            className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[10px] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {updateCase.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Save className="h-3 w-3" />
+            )}
+            Opslaan
+          </button>
+          <button
+            onClick={() => {
+              setEditing(false);
+              setBillingMethod(zaak.billing_method || "hourly");
+              setFixedPrice(zaak.fixed_price_amount?.toString() || "");
+              setBudgetAmount(zaak.budget?.toString() || "");
+              setBudgetHours(zaak.budget_hours?.toString() || "");
+            }}
+            className="rounded-md px-2.5 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            Annuleren
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Budget Progress Bar (LF-21) ────────────────────────────────────────────
+
+function BudgetProgressBar({ caseId }: { caseId: string }) {
+  const { data: budget } = useBudgetStatus(caseId);
+
+  if (!budget) return null;
+
+  const barColorClass =
+    budget.status === "red"
+      ? "bg-red-500"
+      : budget.status === "orange"
+        ? "bg-amber-500"
+        : "bg-emerald-500";
+
+  const textColorClass =
+    budget.status === "red"
+      ? "text-red-600 font-medium"
+      : budget.status === "orange"
+        ? "text-amber-600"
+        : "text-muted-foreground";
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        Budgetvoortgang
+      </h3>
+      <div className="space-y-3">
+        {/* Amount progress */}
+        {budget.budget_amount > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Bedrag</span>
+              <span className="text-xs font-medium text-foreground tabular-nums">
+                {formatCurrency(budget.used_amount)} / {formatCurrency(budget.budget_amount)}
+              </span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full ${barColorClass} transition-all`}
+                style={{ width: `${Math.min(100, budget.percentage_amount)}%` }}
+              />
+            </div>
+            <p className={`text-[10px] mt-1 text-right ${textColorClass}`}>
+              {budget.percentage_amount >= 100
+                ? `Budget overschreden (${Math.round(budget.percentage_amount)}%)`
+                : `${Math.round(budget.percentage_amount)}% besteed`}
+            </p>
+          </div>
+        )}
+
+        {/* Hours progress */}
+        {budget.budget_hours > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-muted-foreground">Uren</span>
+              <span className="text-xs font-medium text-foreground tabular-nums">
+                {budget.used_hours.toFixed(1)} / {budget.budget_hours} uur
+              </span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full ${barColorClass} transition-all`}
+                style={{ width: `${Math.min(100, budget.percentage_hours)}%` }}
+              />
+            </div>
+            <p className={`text-[10px] mt-1 text-right ${textColorClass}`}>
+              {budget.percentage_hours >= 100
+                ? `Uren overschreden (${Math.round(budget.percentage_hours)}%)`
+                : `${Math.round(budget.percentage_hours)}% besteed`}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const SIDEBAR_KEY = "luxis_sidebar_open";
 
@@ -251,6 +549,14 @@ export default function DossierSidebar({
               </a>
             )}
           </div>
+        )}
+
+        {/* LF-21: Billing settings */}
+        <BillingSettingsSection zaak={zaak} />
+
+        {/* LF-21: Budget progress bar (only for budget_cap billing) */}
+        {zaak.billing_method === "budget_cap" && (
+          <BudgetProgressBar caseId={zaak.id} />
         )}
 
         {/* Financieel snapshot */}

@@ -13,6 +13,8 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.invoices import service
 from app.invoices.schemas import (
+    AdvanceBalanceResponse,
+    BudgetStatusResponse,
     CreditNoteCreate,
     ExpenseCreate,
     ExpenseResponse,
@@ -26,7 +28,9 @@ from app.invoices.schemas import (
     InvoiceResponse,
     InvoiceUpdate,
     PaginatedInvoices,
+    ProvisieCalculationResponse,
     ReceivablesSummary,
+    VoorschotnotaCreate,
 )
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
@@ -134,6 +138,70 @@ async def create_credit_note(
 ):
     """Create a credit note linked to an existing invoice."""
     return await service.create_credit_note(db, current_user.tenant_id, data)
+
+
+# ── Voorschotnota ───────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/voorschotnota",
+    response_model=InvoiceResponse,
+    status_code=http_status.HTTP_201_CREATED,
+)
+async def create_voorschotnota(
+    data: VoorschotnotaCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a voorschotnota (advance invoice)."""
+    invoice = await service.create_voorschotnota(db, current_user.tenant_id, data)
+    await db.commit()
+    await db.refresh(invoice)
+    return invoice
+
+
+# ── Case Financial Endpoints (LF-20/LF-21) ─────────────────────────────────
+
+cases_billing_router = APIRouter(prefix="/api/cases", tags=["cases-billing"])
+
+
+@cases_billing_router.get(
+    "/{case_id}/advance-balance",
+    response_model=AdvanceBalanceResponse,
+)
+async def get_advance_balance(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get advance balance (voorschot saldo) for a case."""
+    return await service.get_advance_balance(db, current_user.tenant_id, case_id)
+
+
+@cases_billing_router.get(
+    "/{case_id}/budget-status",
+    response_model=BudgetStatusResponse,
+)
+async def get_budget_status(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get budget consumption status for a case."""
+    return await service.get_budget_status(db, current_user.tenant_id, case_id)
+
+
+@cases_billing_router.get(
+    "/{case_id}/provisie",
+    response_model=ProvisieCalculationResponse,
+)
+async def get_provisie(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Calculate succesprovisie for an incasso case."""
+    return await service.calculate_provisie(db, current_user.tenant_id, case_id)
 
 
 # ── Status Transitions ───────────────────────────────────────────────────────

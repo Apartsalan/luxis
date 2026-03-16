@@ -241,6 +241,56 @@ class ReceivablesSummary(BaseModel):
 # ── Expense Schemas ──────────────────────────────────────────────────────────
 
 
+# ── LF-20/LF-21: Voorschotnota, Budget, Provisie Schemas ────────────────────
+
+
+BILLING_METHODS = ("hourly", "fixed_price", "budget_cap")
+
+
+class VoorschotnotaCreate(BaseModel):
+    """Create a voorschotnota (advance invoice)."""
+
+    case_id: uuid.UUID
+    contact_id: uuid.UUID
+    amount: Decimal = Field(..., gt=Decimal("0"), decimal_places=2)
+    description: str | None = None
+    invoice_date: date
+    due_date: date
+    btw_percentage: Decimal = Field(default=Decimal("21.00"), ge=0)
+
+
+class AdvanceBalanceResponse(BaseModel):
+    """Voorschot saldo for a case."""
+
+    case_id: uuid.UUID
+    total_advance: Decimal  # Total paid voorschotnota's
+    total_offset: Decimal  # Verrekende bedragen
+    available_balance: Decimal  # Beschikbaar saldo
+
+
+class BudgetStatusResponse(BaseModel):
+    """Budget voortgang for a case."""
+
+    used_amount: Decimal  # Totaal besteed (uren * tarief + onkosten)
+    used_hours: Decimal  # Totaal geschreven uren
+    budget_amount: Decimal | None  # Budget limiet in euro's
+    budget_hours: Decimal | None  # Budget limiet in uren
+    percentage_amount: Decimal | None  # % verbruikt van budget bedrag
+    percentage_hours: Decimal | None  # % verbruikt van budget uren
+    status: str  # green | orange | red
+
+
+class ProvisieCalculationResponse(BaseModel):
+    """Succesprovisie berekening for an incasso case."""
+
+    collected_amount: Decimal  # Totaal geïnd
+    provisie_percentage: Decimal  # Afgesproken percentage
+    provisie_amount: Decimal  # Berekende provisie
+    fixed_case_costs: Decimal  # Vaste dossierkosten
+    minimum_fee: Decimal  # Minimumkosten
+    total_fee: Decimal  # Uiteindelijk honorarium (max van provisie, minimum)
+
+
 class ExpenseCreate(BaseModel):
     case_id: uuid.UUID | None = None
     description: str = Field(..., min_length=1, max_length=500)

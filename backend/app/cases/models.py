@@ -146,6 +146,26 @@ class Case(TenantBase):
         Text, nullable=True
     )  # Internal notes about the debtor/case
 
+    # LF-20/LF-21: Billing method & financial settings
+    billing_method: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="hourly", server_default="hourly"
+    )  # hourly | fixed_price | budget_cap
+    fixed_price_amount: Mapped[float | None] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )  # Vaste prijs (fixed_price method)
+    budget_hours: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )  # Max uren (budget_cap method)
+    provisie_percentage: Mapped[float | None] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )  # Incasso succesprovisie %
+    fixed_case_costs: Mapped[float | None] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )  # Vaste dossierkosten
+    minimum_fee: Mapped[float | None] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )  # Minimumkosten
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships

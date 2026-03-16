@@ -33,7 +33,7 @@ INVOICE_STATUSES = (
     "cancelled",
 )
 
-INVOICE_TYPES = ("invoice", "credit_note")
+INVOICE_TYPES = ("invoice", "credit_note", "voorschotnota")
 
 PAYMENT_METHODS = ("bank", "ideal", "cash", "verrekening")
 

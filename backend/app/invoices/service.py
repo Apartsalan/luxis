@@ -11,7 +11,9 @@ from sqlalchemy.orm import selectinload
 
 from app.invoices.models import PAYMENT_METHODS, Expense, Invoice, InvoiceLine, InvoicePayment
 from app.invoices.schemas import (
+    AdvanceBalanceResponse,
     AgingBucket,
+    BudgetStatusResponse,
     ContactReceivable,
     CreditNoteCreate,
     ExpenseCreate,
@@ -20,7 +22,9 @@ from app.invoices.schemas import (
     InvoicePaymentCreate,
     InvoicePaymentSummary,
     InvoiceUpdate,
+    ProvisieCalculationResponse,
     ReceivablesSummary,
+    VoorschotnotaCreate,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
 from app.time_entries.models import TimeEntry
@@ -990,3 +994,289 @@ async def delete_expense(
 
     expense.is_active = False
     await db.flush()
+
+
+# ── LF-20/LF-21: Voorschotnota, Budget, Provisie ──────────────────────────
+
+
+async def _next_voorschotnota_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
+    """Generate the next voorschotnota number: VN{year}-{seq:05d}."""
+    year = date.today().year
+    prefix = f"VN{year}-"
+
+    result = await db.execute(
+        select(func.count())
+        .select_from(Invoice)
+        .where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.invoice_number.like(f"{prefix}%"),
+        )
+    )
+    count = result.scalar_one()
+    return f"{prefix}{count + 1:05d}"
+
+
+async def create_voorschotnota(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    data: VoorschotnotaCreate,
+) -> Invoice:
+    """Create a voorschotnota (advance invoice) with a single line."""
+    invoice_number = await _next_voorschotnota_number(db, tenant_id)
+
+    invoice = Invoice(
+        tenant_id=tenant_id,
+        invoice_number=invoice_number,
+        invoice_type="voorschotnota",
+        status="concept",
+        contact_id=data.contact_id,
+        case_id=data.case_id,
+        invoice_date=data.invoice_date,
+        due_date=data.due_date,
+        btw_percentage=data.btw_percentage,
+    )
+    db.add(invoice)
+    await db.flush()
+
+    # Single line with the advance amount
+    description = data.description or "Voorschotnota"
+    line_total = data.amount
+    line = InvoiceLine(
+        tenant_id=tenant_id,
+        invoice_id=invoice.id,
+        line_number=1,
+        description=description,
+        quantity=Decimal("1"),
+        unit_price=data.amount,
+        line_total=line_total,
+    )
+    db.add(line)
+    await db.flush()
+    await db.refresh(invoice)
+    _recalculate_totals(invoice)
+    await db.flush()
+    await db.refresh(invoice)
+    return invoice
+
+
+async def get_advance_balance(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> AdvanceBalanceResponse:
+    """Calculate available advance balance for a case.
+
+    total_advance = sum of payments on paid voorschotnota's for this case
+    total_offset = sum of payments with method 'verrekening' on regular invoices for this case
+    available_balance = total_advance - total_offset
+    """
+    # Find all paid voorschotnota's for this case
+    vn_result = await db.execute(
+        select(
+            func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))
+        )
+        .select_from(InvoicePayment)
+        .join(Invoice, InvoicePayment.invoice_id == Invoice.id)
+        .where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.case_id == case_id,
+            Invoice.invoice_type == "voorschotnota",
+            Invoice.is_active.is_(True),
+        )
+    )
+    total_advance = vn_result.scalar_one()
+
+    # Find verrekening payments on regular invoices for this case
+    offset_result = await db.execute(
+        select(
+            func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))
+        )
+        .select_from(InvoicePayment)
+        .join(Invoice, InvoicePayment.invoice_id == Invoice.id)
+        .where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.case_id == case_id,
+            Invoice.invoice_type == "invoice",
+            Invoice.is_active.is_(True),
+            InvoicePayment.payment_method == "verrekening",
+        )
+    )
+    total_offset = offset_result.scalar_one()
+
+    available = total_advance - total_offset
+
+    return AdvanceBalanceResponse(
+        case_id=case_id,
+        total_advance=total_advance,
+        total_offset=total_offset,
+        available_balance=available,
+    )
+
+
+async def get_budget_status(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> BudgetStatusResponse:
+    """Calculate budget consumption from time entries + expenses.
+
+    Uses the case's hourly_rate (or user default) to calculate amount from hours.
+    """
+    from app.cases.models import Case
+
+    # Get case for budget settings
+    case_result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = case_result.scalar_one_or_none()
+    if case is None:
+        raise NotFoundError("Zaak niet gevonden")
+
+    # Sum billable time entries (hours)
+    te_result = await db.execute(
+        select(
+            func.coalesce(func.sum(TimeEntry.duration_minutes), 0)
+        ).where(
+            TimeEntry.tenant_id == tenant_id,
+            TimeEntry.case_id == case_id,
+            TimeEntry.billable.is_(True),
+        )
+    )
+    total_minutes = te_result.scalar_one()
+    used_hours = Decimal(str(total_minutes)) / Decimal("60")
+    used_hours = used_hours.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    # Calculate amount from time entries (using per-entry rate or case rate)
+    te_amount_result = await db.execute(
+        select(
+            func.coalesce(
+                func.sum(
+                    TimeEntry.duration_minutes
+                    * func.coalesce(TimeEntry.hourly_rate, Decimal("0"))
+                    / 60
+                ),
+                Decimal("0.00"),
+            )
+        ).where(
+            TimeEntry.tenant_id == tenant_id,
+            TimeEntry.case_id == case_id,
+            TimeEntry.billable.is_(True),
+        )
+    )
+    time_amount = Decimal(str(te_amount_result.scalar_one())).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+
+    # Sum billable expenses
+    exp_result = await db.execute(
+        select(
+            func.coalesce(func.sum(Expense.amount), Decimal("0.00"))
+        ).where(
+            Expense.tenant_id == tenant_id,
+            Expense.case_id == case_id,
+            Expense.billable.is_(True),
+            Expense.is_active.is_(True),
+        )
+    )
+    expense_amount = exp_result.scalar_one()
+
+    used_amount = (time_amount + expense_amount).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+
+    budget_amount = Decimal(str(case.budget)) if case.budget else None
+    budget_hours = Decimal(str(case.budget_hours)) if case.budget_hours else None
+
+    # Calculate percentages
+    percentage_amount = None
+    percentage_hours = None
+
+    if budget_amount and budget_amount > 0:
+        percentage_amount = (
+            used_amount / budget_amount * Decimal("100")
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    if budget_hours and budget_hours > 0:
+        percentage_hours = (
+            used_hours / budget_hours * Decimal("100")
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    # Determine status (traffic light)
+    max_pct = Decimal("0")
+    if percentage_amount is not None:
+        max_pct = max(max_pct, percentage_amount)
+    if percentage_hours is not None:
+        max_pct = max(max_pct, percentage_hours)
+
+    if max_pct >= Decimal("90"):
+        status = "red"
+    elif max_pct >= Decimal("75"):
+        status = "orange"
+    else:
+        status = "green"
+
+    return BudgetStatusResponse(
+        used_amount=used_amount,
+        used_hours=used_hours,
+        budget_amount=budget_amount,
+        budget_hours=budget_hours,
+        percentage_amount=percentage_amount,
+        percentage_hours=percentage_hours,
+        status=status,
+    )
+
+
+async def calculate_provisie(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> ProvisieCalculationResponse:
+    """Calculate succesprovisie for an incasso case.
+
+    collected_amount = sum of all payments received (from collections module)
+    provisie = collected_amount * provisie_percentage / 100
+    total_fee = max(provisie + fixed_case_costs, minimum_fee)
+    """
+    from app.cases.models import Case
+    from app.collections.models import Payment
+
+    # Get case
+    case_result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = case_result.scalar_one_or_none()
+    if case is None:
+        raise NotFoundError("Zaak niet gevonden")
+
+    provisie_pct = Decimal(str(case.provisie_percentage or 0))
+    fixed_costs = Decimal(str(case.fixed_case_costs or 0))
+    min_fee = Decimal(str(case.minimum_fee or 0))
+
+    # Sum all incasso payments for this case
+    pay_result = await db.execute(
+        select(
+            func.coalesce(func.sum(Payment.amount), Decimal("0.00"))
+        ).where(
+            Payment.tenant_id == tenant_id,
+            Payment.case_id == case_id,
+        )
+    )
+    collected_amount = pay_result.scalar_one()
+
+    # Calculate provisie
+    provisie_amount = (
+        collected_amount * provisie_pct / Decimal("100")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    # Total fee = max(provisie + fixed costs, minimum fee)
+    provisie_plus_costs = provisie_amount + fixed_costs
+    total_fee = max(provisie_plus_costs, min_fee)
+
+    return ProvisieCalculationResponse(
+        collected_amount=collected_amount,
+        provisie_percentage=provisie_pct,
+        provisie_amount=provisie_amount,
+        fixed_case_costs=fixed_costs,
+        minimum_fee=min_fee,
+        total_fee=total_fee,
+    )

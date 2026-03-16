@@ -25,7 +25,7 @@ from app.email.oauth_router import router as email_oauth_router
 from app.email.router import router as email_router
 from app.email.sync_router import router as email_sync_router
 from app.incasso.router import router as incasso_router
-from app.invoices.router import expenses_router
+from app.invoices.router import cases_billing_router, expenses_router
 from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
 from app.notifications.router import router as notifications_router
@@ -97,6 +97,7 @@ app.include_router(workflow_router)
 app.include_router(time_entries_router)
 app.include_router(invoices_router)
 app.include_router(expenses_router)
+app.include_router(cases_billing_router)
 app.include_router(settings_router)
 app.include_router(trust_funds_router)
 app.include_router(kyc_router)

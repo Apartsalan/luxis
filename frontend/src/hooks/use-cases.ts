@@ -17,6 +17,13 @@ export interface CaseSummary {
   total_principal: number;
   total_paid: number;
   budget: number | null;  // G13
+  // LF-20/LF-21: Billing fields
+  billing_method: "hourly" | "fixed_price" | "budget_cap";
+  fixed_price_amount: number | null;
+  budget_hours: number | null;
+  provisie_percentage: number | null;
+  fixed_case_costs: number | null;
+  minimum_fee: number | null;
   client: { id: string; name: string; email?: string | null } | null;
   opposing_party: { id: string; name: string; email?: string | null } | null;
   created_at: string;

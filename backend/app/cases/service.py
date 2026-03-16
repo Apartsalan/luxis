@@ -323,6 +323,12 @@ async def create_case(
         payment_term_days=data.payment_term_days,
         collection_strategy=data.collection_strategy,
         debtor_notes=data.debtor_notes,
+        billing_method=data.billing_method,
+        fixed_price_amount=data.fixed_price_amount,
+        budget_hours=data.budget_hours,
+        provisie_percentage=data.provisie_percentage,
+        fixed_case_costs=data.fixed_case_costs,
+        minimum_fee=data.minimum_fee,
     )
     db.add(case)
     await db.flush()

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateInvoice } from "@/hooks/use-invoices";
+import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance } from "@/hooks/use-invoices";
 import { useRelations } from "@/hooks/use-relations";
 import { useCases } from "@/hooks/use-cases";
 import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries";
@@ -24,7 +24,24 @@ export default function NieuweFactuurPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedCaseId = searchParams.get("case_id") || "";
+  const preselectedType = searchParams.get("type") || "factuur";
   const createInvoice = useCreateInvoice();
+  const createVoorschotnota = useCreateVoorschotnota();
+
+  // LF-21: Invoice type toggle
+  const [invoiceType, setInvoiceType] = useState<"factuur" | "voorschotnota">(
+    preselectedType === "voorschotnota" ? "voorschotnota" : "factuur"
+  );
+
+  // LF-21: Voorschotnota form state
+  const [voorschotForm, setVoorschotForm] = useState({
+    amount: "",
+    description: "",
+  });
+
+  // LF-21: Voorschot verrekening state
+  const [verrekenEnabled, setVerrekenEnabled] = useState(false);
+  const [verrekenAmount, setVerrekenAmount] = useState("");
 
   const [form, setForm] = useState({
     contact_id: "",
@@ -79,6 +96,11 @@ export default function NieuweFactuurPage() {
     uninvoiced_only: true,
     billable_only: true,
   });
+
+  // LF-21: Advance balance for voorschot verrekening
+  const { data: advanceBalance } = useAdvanceBalance(
+    invoiceType === "factuur" && form.case_id ? form.case_id : undefined
+  );
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -193,10 +215,54 @@ export default function NieuweFactuurPage() {
       return;
     }
 
+    // LF-21: Voorschotnota submit
+    if (invoiceType === "voorschotnota") {
+      if (!form.case_id) {
+        setError("Selecteer een dossier voor de voorschotnota");
+        return;
+      }
+      const amount = parseFloat(voorschotForm.amount);
+      if (!amount || amount <= 0) {
+        setError("Voer een geldig bedrag in");
+        return;
+      }
+      try {
+        const result = await createVoorschotnota.mutateAsync({
+          case_id: form.case_id,
+          contact_id: form.contact_id,
+          amount,
+          description: voorschotForm.description?.trim() || undefined,
+          invoice_date: form.invoice_date,
+          due_date: form.due_date,
+          btw_percentage: parseFloat(form.btw_percentage),
+        });
+        toast.success("Voorschotnota aangemaakt");
+        router.push(`/facturen/${result.id}`);
+      } catch (err: any) {
+        setError(err.message || "Er ging iets mis");
+      }
+      return;
+    }
+
+    // Regular invoice submit
     const validLines = lines.filter(
       (l) => l.description && parseFloat(l.unit_price) > 0
     );
-    if (validLines.length === 0) {
+
+    // Add voorschot verrekening as negative line
+    const allLines = [...validLines];
+    if (verrekenEnabled && verrekenAmount) {
+      const offsetAmount = parseFloat(verrekenAmount);
+      if (offsetAmount > 0) {
+        allLines.push({
+          description: "Verrekening voorschot",
+          quantity: "1",
+          unit_price: (-offsetAmount).toFixed(2),
+        });
+      }
+    }
+
+    if (allLines.filter((l) => l.description && parseFloat(l.unit_price) > 0).length === 0 && !verrekenEnabled) {
       setError("Voeg minimaal een factuurregel toe");
       return;
     }
@@ -210,7 +276,7 @@ export default function NieuweFactuurPage() {
         btw_percentage: parseFloat(form.btw_percentage),
         reference: form.reference?.trim() || null,
         notes: form.notes?.trim() || null,
-        lines: validLines.map((l) => ({
+        lines: allLines.map((l) => ({
           description: l.description,
           quantity: parseFloat(l.quantity) || 1,
           unit_price: parseFloat(l.unit_price),
@@ -239,12 +305,40 @@ export default function NieuweFactuurPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Nieuwe factuur
+            {invoiceType === "voorschotnota" ? "Nieuwe voorschotnota" : "Nieuwe factuur"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Maak een nieuwe factuur aan
+            {invoiceType === "voorschotnota"
+              ? "Maak een voorschotnota aan voor een dossier"
+              : "Maak een nieuwe factuur aan"}
           </p>
         </div>
+      </div>
+
+      {/* LF-21: Type selector */}
+      <div className="flex gap-1 rounded-lg border border-border bg-muted/30 p-1 w-fit">
+        <button
+          type="button"
+          onClick={() => setInvoiceType("factuur")}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            invoiceType === "factuur"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Factuur
+        </button>
+        <button
+          type="button"
+          onClick={() => setInvoiceType("voorschotnota")}
+          className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            invoiceType === "voorschotnota"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Voorschotnota
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -302,10 +396,10 @@ export default function NieuweFactuurPage() {
               )}
           </div>
 
-          {/* Case search (optional) */}
+          {/* Case search */}
           <div className="relative">
             <label className="block text-sm font-medium text-foreground">
-              Dossier (optioneel)
+              Dossier {invoiceType === "voorschotnota" ? "*" : "(optioneel)"}
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground mt-0.75" />
@@ -422,7 +516,65 @@ export default function NieuweFactuurPage() {
           </div>
         </div>
 
-        {/* Invoice lines */}
+        {/* LF-21: Voorschotnota — simplified fields */}
+        {invoiceType === "voorschotnota" && (
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Voorschotbedrag
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground">
+                  Bedrag (excl. BTW) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm mt-0.75">€</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={voorschotForm.amount}
+                    onChange={(e) =>
+                      setVoorschotForm((p) => ({ ...p, amount: e.target.value }))
+                    }
+                    placeholder="0.00"
+                    className={`${inputClass} pl-8`}
+                  />
+                </div>
+              </div>
+              <div className="flex items-end">
+                {voorschotForm.amount && (
+                  <div className="text-sm text-muted-foreground">
+                    <span>Incl. BTW: </span>
+                    <span className="font-medium text-foreground tabular-nums">
+                      {formatCurrency(
+                        (parseFloat(voorschotForm.amount) || 0) *
+                          (1 + (parseFloat(form.btw_percentage) || 0) / 100)
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Omschrijving (optioneel)
+              </label>
+              <input
+                type="text"
+                value={voorschotForm.description}
+                onChange={(e) =>
+                  setVoorschotForm((p) => ({ ...p, description: e.target.value }))
+                }
+                placeholder="Bijv. Voorschot juridische werkzaamheden"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Invoice lines — only for regular invoices */}
+        {invoiceType === "factuur" && (<>
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-foreground">
@@ -696,6 +848,14 @@ export default function NieuweFactuurPage() {
                 {formatCurrency(subtotal)}
               </span>
             </div>
+            {verrekenEnabled && verrekenAmount && parseFloat(verrekenAmount) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Verrekening voorschot</span>
+                <span className="font-medium tabular-nums text-emerald-600">
+                  -{formatCurrency(parseFloat(verrekenAmount))}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
                 BTW ({form.btw_percentage}%)
@@ -706,10 +866,70 @@ export default function NieuweFactuurPage() {
             </div>
             <div className="flex justify-between text-base font-semibold border-t border-border pt-2">
               <span>Totaal</span>
-              <span className="tabular-nums">{formatCurrency(total)}</span>
+              <span className="tabular-nums">
+                {formatCurrency(
+                  total -
+                    (verrekenEnabled ? (parseFloat(verrekenAmount) || 0) * (1 + btwPercentage / 100) : 0)
+                )}
+              </span>
             </div>
           </div>
         </div>
+
+        {/* LF-21: Voorschot verrekening — only for regular invoices with advance balance */}
+        {advanceBalance && advanceBalance.available_balance > 0 && (
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <h2 className="text-base font-semibold text-foreground">
+              Voorschot verrekenen
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Dit dossier heeft een beschikbaar voorschotsaldo van{" "}
+              <span className="font-medium text-foreground tabular-nums">
+                {formatCurrency(advanceBalance.available_balance)}
+              </span>
+            </p>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={verrekenEnabled}
+                onChange={(e) => {
+                  setVerrekenEnabled(e.target.checked);
+                  if (!e.target.checked) setVerrekenAmount("");
+                }}
+                className="h-4 w-4 rounded border-input text-primary focus:ring-primary/20"
+              />
+              <span className="text-sm font-medium text-foreground">
+                Voorschot verrekenen met deze factuur
+              </span>
+            </label>
+            {verrekenEnabled && (
+              <div className="pl-7">
+                <label className="block text-sm font-medium text-foreground mb-1">
+                  Verrekeningsbedrag (excl. BTW)
+                </label>
+                <div className="relative w-48">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">€</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={advanceBalance.available_balance}
+                    value={verrekenAmount}
+                    onChange={(e) => setVerrekenAmount(e.target.value)}
+                    placeholder="0.00"
+                    className={`${inputClass} pl-8 w-48`}
+                  />
+                </div>
+                {parseFloat(verrekenAmount) > advanceBalance.available_balance && (
+                  <p className="mt-1 text-xs text-red-600">
+                    Bedrag mag niet hoger zijn dan het beschikbare saldo
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        </>)}
 
         {/* Error */}
         {error && (
@@ -728,10 +948,14 @@ export default function NieuweFactuurPage() {
           </Link>
           <button
             type="submit"
-            disabled={createInvoice.isPending}
+            disabled={createInvoice.isPending || createVoorschotnota.isPending}
             className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {createInvoice.isPending ? "Aanmaken..." : "Factuur aanmaken"}
+            {(createInvoice.isPending || createVoorschotnota.isPending)
+              ? "Aanmaken..."
+              : invoiceType === "voorschotnota"
+                ? "Voorschotnota aanmaken"
+                : "Factuur aanmaken"}
           </button>
         </div>
       </form>

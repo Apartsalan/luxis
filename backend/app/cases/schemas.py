@@ -66,6 +66,13 @@ class CaseCreate(BaseModel):
     payment_term_days: int | None = None  # LF-22: debtor settings
     collection_strategy: str | None = None
     debtor_notes: str | None = None
+    # LF-20/LF-21: Billing settings
+    billing_method: str = Field(default="hourly", description="hourly | fixed_price | budget_cap")
+    fixed_price_amount: float | None = None
+    budget_hours: float | None = None
+    provisie_percentage: float | None = None
+    fixed_case_costs: float | None = None
+    minimum_fee: float | None = None
 
 
 class CaseUpdate(BaseModel):
@@ -90,6 +97,13 @@ class CaseUpdate(BaseModel):
     payment_term_days: int | None = None  # LF-22
     collection_strategy: str | None = None
     debtor_notes: str | None = None
+    # LF-20/LF-21: Billing settings
+    billing_method: str | None = None
+    fixed_price_amount: float | None = None
+    budget_hours: float | None = None
+    provisie_percentage: float | None = None
+    fixed_case_costs: float | None = None
+    minimum_fee: float | None = None
 
 
 class CaseStatusUpdate(BaseModel):
@@ -192,6 +206,13 @@ class CaseResponse(BaseModel):
     payment_term_days: int | None = None  # LF-22
     collection_strategy: str | None = None
     debtor_notes: str | None = None
+    # LF-20/LF-21
+    billing_method: str = "hourly"
+    fixed_price_amount: float | None = None
+    budget_hours: float | None = None
+    provisie_percentage: float | None = None
+    fixed_case_costs: float | None = None
+    minimum_fee: float | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -216,6 +237,7 @@ class CaseSummary(BaseModel):
     total_principal: float
     total_paid: float
     budget: float | None = None  # G13
+    billing_method: str = "hourly"  # LF-20/LF-21
 
     model_config = {"from_attributes": True}
 

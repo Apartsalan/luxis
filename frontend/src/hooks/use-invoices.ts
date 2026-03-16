@@ -545,3 +545,99 @@ export function useReceivables() {
     },
   });
 }
+
+// ── LF-20/LF-21: Voorschotnota, Budget, Provisie ───────────────────────────
+
+export interface VoorschotnotaInput {
+  case_id: string;
+  contact_id: string;
+  amount: number;
+  description?: string;
+  invoice_date: string;
+  due_date: string;
+  btw_percentage: number;
+}
+
+export function useCreateVoorschotnota() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: VoorschotnotaInput) => {
+      const res = await api("/api/invoices/voorschotnota", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Voorschotnota aanmaken mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["advance-balance"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export interface AdvanceBalance {
+  case_id: string;
+  total_advance: number;
+  total_offset: number;
+  available_balance: number;
+}
+
+export function useAdvanceBalance(caseId: string | undefined) {
+  return useQuery<AdvanceBalance>({
+    queryKey: ["advance-balance", caseId],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${caseId}/advance-balance`);
+      if (!res.ok) throw new Error("Kan voorschotsaldo niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+export interface BudgetStatus {
+  used_amount: number;
+  used_hours: number;
+  budget_amount: number;
+  budget_hours: number;
+  percentage_amount: number;
+  percentage_hours: number;
+  status: "green" | "orange" | "red";
+}
+
+export function useBudgetStatus(caseId: string | undefined) {
+  return useQuery<BudgetStatus>({
+    queryKey: ["budget-status", caseId],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${caseId}/budget-status`);
+      if (!res.ok) throw new Error("Kan budgetstatus niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+export interface ProvisieData {
+  collected_amount: number;
+  provisie_percentage: number;
+  provisie_amount: number;
+  fixed_case_costs: number;
+  minimum_fee: number;
+  total_fee: number;
+}
+
+export function useProvisie(caseId: string | undefined) {
+  return useQuery<ProvisieData>({
+    queryKey: ["provisie", caseId],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${caseId}/provisie`);
+      if (!res.ok) throw new Error("Kan provisie niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}

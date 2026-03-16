@@ -13,6 +13,7 @@ export interface Claim {
   default_date: string;
   invoice_number: string | null;
   invoice_date: string | null;
+  invoice_file_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

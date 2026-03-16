@@ -38,6 +38,7 @@ export interface CaseDetail extends CaseSummary {
   procedure_phase: string | null;
   contractual_rate: number | null;
   contractual_compound: boolean;
+  bik_override: number | null;
   billing_contact: { id: string; name: string } | null;
   assigned_to: { id: string; full_name: string } | null;
   parties: {

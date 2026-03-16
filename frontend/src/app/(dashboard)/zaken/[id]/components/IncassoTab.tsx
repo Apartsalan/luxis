@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Clock,
   Euro,
+  FileText,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -48,6 +49,7 @@ import {
 import type { Installment, ArrangementWithInstallments } from "@/hooks/use-collections";
 import { useCase, useUpdateCase } from "@/hooks/use-cases";
 import { useProvisie } from "@/hooks/use-invoices";
+import { useCaseFiles } from "@/hooks/use-case-files";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 
 // ── Vorderingen Tab ──────────────────────────────────────────────────────────
@@ -55,6 +57,7 @@ import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 export function VorderingenTab({ caseId }: { caseId: string }) {
   const { data: claims, isLoading } = useClaims(caseId);
   const { data: interest } = useCaseInterest(caseId);
+  const { data: caseFiles } = useCaseFiles(caseId);
   const createClaim = useCreateClaim();
   const updateClaim = useUpdateClaim();
   const deleteClaim = useDeleteClaim();
@@ -66,6 +69,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     default_date: "",
     invoice_number: "",
     invoice_date: "",
+    invoice_file_id: "",
   });
   const [form, setForm] = useState({
     description: "",
@@ -112,7 +116,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     }
   };
 
-  const startEdit = (claim: { id: string; description: string; principal_amount: number; default_date: string; invoice_number: string | null; invoice_date: string | null }) => {
+  const startEdit = (claim: { id: string; description: string; principal_amount: number; default_date: string; invoice_number: string | null; invoice_date: string | null; invoice_file_id: string | null }) => {
     setEditingId(claim.id);
     setEditForm({
       description: claim.description,
@@ -120,6 +124,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
       default_date: claim.default_date,
       invoice_number: claim.invoice_number || "",
       invoice_date: claim.invoice_date || "",
+      invoice_file_id: claim.invoice_file_id || "",
     });
   };
 
@@ -136,6 +141,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
           default_date: editForm.default_date,
           ...(editForm.invoice_number ? { invoice_number: editForm.invoice_number } : { invoice_number: null }),
           ...(editForm.invoice_date ? { invoice_date: editForm.invoice_date } : { invoice_date: null }),
+          ...(editForm.invoice_file_id ? { invoice_file_id: editForm.invoice_file_id } : { invoice_file_id: null }),
         },
       });
       toast.success("Vordering bijgewerkt");
@@ -298,6 +304,20 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                           className={`${inputClass} mt-1`}
                           placeholder="Factuurnummer (optioneel)"
                         />
+                        {caseFiles && caseFiles.length > 0 && (
+                          <select
+                            value={editForm.invoice_file_id}
+                            onChange={(e) => setEditForm((f) => ({ ...f, invoice_file_id: e.target.value }))}
+                            className={`${inputClass} mt-1`}
+                          >
+                            <option value="">Gekoppeld bestand (optioneel)</option>
+                            {caseFiles.map((file) => (
+                              <option key={file.id} value={file.id}>
+                                {file.original_filename}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td className="px-4 py-2">
                         <input
@@ -355,6 +375,15 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                           Factuur: {claim.invoice_number}
                         </p>
                       )}
+                      {claim.invoice_file_id && caseFiles && (() => {
+                        const linkedFile = caseFiles.find((f) => f.id === claim.invoice_file_id);
+                        return linkedFile ? (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <FileText className="h-3 w-3" />
+                            {linkedFile.original_filename}
+                          </p>
+                        ) : null;
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-semibold text-foreground tabular-nums">
                       {formatCurrency(claim.principal_amount)}
@@ -646,8 +675,20 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
 
 export function FinancieelTab({ caseId }: { caseId: string }) {
   const { data: summary, isLoading } = useFinancialSummary(caseId);
+  const { data: caseData } = useCase(caseId);
+  const updateCase = useUpdateCase();
   const [bikOverride, setBikOverride] = useState<string>("");
   const [bikManual, setBikManual] = useState(false);
+  const [bikSaved, setBikSaved] = useState(false);
+
+  // Initialize from persisted bik_override
+  useEffect(() => {
+    if (caseData?.bik_override != null) {
+      setBikManual(true);
+      setBikOverride(String(caseData.bik_override));
+      setBikSaved(true);
+    }
+  }, [caseData?.bik_override]);
 
   if (isLoading) {
     return (
@@ -760,21 +801,62 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
             <Wallet className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Incassokosten</h3>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setBikManual(!bikManual);
-              if (!bikManual) setBikOverride(summary.total_bik.toFixed(2));
-            }}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              bikManual
-                ? "bg-primary/10 text-primary border border-primary/20"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            <Pencil className="h-3 w-3" />
-            {bikManual ? "Handmatig" : "Aanpassen"}
-          </button>
+          <div className="flex items-center gap-2">
+            {bikManual && !bikSaved && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const val = parseFloat(bikOverride);
+                  if (isNaN(val) || val < 0) {
+                    toast.error("Voer een geldig bedrag in");
+                    return;
+                  }
+                  try {
+                    await updateCase.mutateAsync({ id: caseId, data: { bik_override: val } });
+                    setBikSaved(true);
+                    toast.success("Incassokosten opgeslagen");
+                  } catch {
+                    toast.error("Opslaan mislukt");
+                  }
+                }}
+                disabled={updateCase.isPending}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+              >
+                <Save className="h-3 w-3" />
+                Opslaan
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={async () => {
+                if (bikManual) {
+                  // Turning off manual mode → clear override on backend
+                  try {
+                    await updateCase.mutateAsync({ id: caseId, data: { bik_override: null } });
+                    setBikManual(false);
+                    setBikOverride("");
+                    setBikSaved(false);
+                    toast.success("Incassokosten teruggezet naar WIK-berekening");
+                  } catch {
+                    toast.error("Opslaan mislukt");
+                  }
+                } else {
+                  // Turning on manual mode
+                  setBikManual(true);
+                  setBikOverride(summary.total_bik.toFixed(2));
+                  setBikSaved(false);
+                }
+              }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                bikManual
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              <Pencil className="h-3 w-3" />
+              {bikManual ? "Resetten" : "Aanpassen"}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -804,7 +886,7 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
                   step="0.01"
                   min="0"
                   value={bikOverride}
-                  onChange={(e) => setBikOverride(e.target.value)}
+                  onChange={(e) => { setBikOverride(e.target.value); setBikSaved(false); }}
                   className="w-full rounded-lg border border-input bg-background pl-7 pr-3 py-2 text-sm font-medium tabular-nums focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                   placeholder={summary.total_bik.toFixed(2)}
                 />

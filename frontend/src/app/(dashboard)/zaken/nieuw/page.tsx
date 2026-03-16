@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, Suspense, useState } from "react";
+import { Fragment, Suspense, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,6 +11,8 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   FileText,
   Trash2,
 } from "lucide-react";
@@ -21,6 +23,30 @@ import { useCreateClaim } from "@/hooks/use-collections";
 import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
+import { InvoiceUploadZone } from "@/components/InvoiceUploadZone";
+import type { InvoiceParseResult } from "@/hooks/use-invoice-parser";
+
+// ── Confidence Indicator ─────────────────────────────────────────────────────
+
+function ConfidenceDot({ field, confidence }: { field: string; confidence: Record<string, number> }) {
+  const value = confidence[field];
+  if (value === undefined || value === null) return null;
+  const pct = Math.round(value * 100);
+  const color =
+    value >= 0.8
+      ? "bg-green-500"
+      : value >= 0.5
+      ? "bg-orange-400"
+      : "bg-red-500";
+  return (
+    <span className="relative group ml-1.5 inline-block">
+      <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block whitespace-nowrap rounded bg-foreground px-2 py-0.5 text-[10px] text-background">
+        AI confidence: {pct}%
+      </span>
+    </span>
+  );
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +66,36 @@ const EMPTY_CLAIM: ClaimForm = {
   invoice_number: "",
   invoice_date: "",
   rate_basis: "yearly",
+};
+
+interface InlineContact {
+  contact_type: "company" | "person";
+  name: string;
+  email: string;
+  phone: string;
+  kvk_number: string;
+  btw_number: string;
+  visit_address: string;
+  visit_postcode: string;
+  visit_city: string;
+  postal_address: string;
+  postal_postcode: string;
+  postal_city: string;
+}
+
+const EMPTY_INLINE_CONTACT: InlineContact = {
+  contact_type: "company",
+  name: "",
+  email: "",
+  phone: "",
+  kvk_number: "",
+  btw_number: "",
+  visit_address: "",
+  visit_postcode: "",
+  visit_city: "",
+  postal_address: "",
+  postal_postcode: "",
+  postal_city: "",
 };
 
 // ── Stepper Component ────────────────────────────────────────────────────────
@@ -112,6 +168,120 @@ function WizardStepper({
   );
 }
 
+// ── Inline Contact Details (expandable extra fields) ────────────────────────
+
+const inputCls = "rounded-md border border-input bg-background px-2 py-1.5 text-sm";
+
+function InlineContactDetails({
+  data,
+  onChange,
+  expanded,
+  onToggle,
+}: {
+  data: InlineContact;
+  onChange: (updates: Partial<InlineContact>) => void;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {expanded ? "Minder details" : "Meer details (adres, telefoon, KvK)"}
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-2">
+          {/* Phone */}
+          <input
+            type="tel"
+            placeholder="Telefoon"
+            value={data.phone}
+            onChange={(e) => onChange({ phone: e.target.value })}
+            className={inputCls}
+          />
+          {/* KvK + BTW (only for companies) */}
+          {data.contact_type === "company" && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input
+                type="text"
+                placeholder="KvK-nummer"
+                value={data.kvk_number}
+                onChange={(e) => onChange({ kvk_number: e.target.value })}
+                className={inputCls}
+              />
+              <input
+                type="text"
+                placeholder="BTW-nummer"
+                value={data.btw_number}
+                onChange={(e) => onChange({ btw_number: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+          )}
+          {/* Visit address */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Bezoekadres</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <input
+                type="text"
+                placeholder="Straat + huisnr"
+                value={data.visit_address}
+                onChange={(e) => onChange({ visit_address: e.target.value })}
+                className={`${inputCls} sm:col-span-1`}
+              />
+              <input
+                type="text"
+                placeholder="Postcode"
+                value={data.visit_postcode}
+                onChange={(e) => onChange({ visit_postcode: e.target.value })}
+                className={inputCls}
+              />
+              <input
+                type="text"
+                placeholder="Plaats"
+                value={data.visit_city}
+                onChange={(e) => onChange({ visit_city: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+          </div>
+          {/* Postal address */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Postadres (optioneel)</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <input
+                type="text"
+                placeholder="Straat + huisnr"
+                value={data.postal_address}
+                onChange={(e) => onChange({ postal_address: e.target.value })}
+                className={`${inputCls} sm:col-span-1`}
+              />
+              <input
+                type="text"
+                placeholder="Postcode"
+                value={data.postal_postcode}
+                onChange={(e) => onChange({ postal_postcode: e.target.value })}
+                className={inputCls}
+              />
+              <input
+                type="text"
+                placeholder="Plaats"
+                value={data.postal_city}
+                onChange={(e) => onChange({ postal_city: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page Wrapper ─────────────────────────────────────────────────────────────
 
 export default function NieuweZaakPageWrapper() {
@@ -141,6 +311,10 @@ function NieuweZaakPage() {
   const prefillClientName = searchParams.get("client_name") || "";
   const prefillOpponentId = searchParams.get("opposing_party_id") || "";
   const prefillOpponentName = searchParams.get("opposing_party_name") || "";
+
+  // ── Invoice AI parse state ──────────────────────────────────────────────
+  const [invoiceData, setInvoiceData] = useState<InvoiceParseResult | null>(null);
+  const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({});
 
   // ── Step state ───────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
@@ -183,46 +357,51 @@ function NieuweZaakPage() {
   const [opponentContactType, setOpponentContactType] = useState("");
 
   const [showNewClient, setShowNewClient] = useState(false);
-  const [newClient, setNewClient] = useState({
-    contact_type: "company" as "company" | "person",
-    name: "",
-    email: "",
-  });
+  const [newClient, setNewClient] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT });
+  const [showClientDetails, setShowClientDetails] = useState(false);
   const [showNewOpponent, setShowNewOpponent] = useState(false);
-  const [newOpponent, setNewOpponent] = useState({
-    contact_type: "company" as "company" | "person",
-    name: "",
-    email: "",
-  });
+  const [newOpponent, setNewOpponent] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT });
+  const [showOpponentDetails, setShowOpponentDetails] = useState(false);
   const [showNewLawyer, setShowNewLawyer] = useState(false);
-  const [newLawyer, setNewLawyer] = useState({
-    contact_type: "person" as "company" | "person",
-    name: "",
-    email: "",
-  });
+  const [newLawyer, setNewLawyer] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT, contact_type: "person" });
+  const [showLawyerDetails, setShowLawyerDetails] = useState(false);
 
   // ── Inline contact creation handler ──────────────────────────────────────
   const handleCreateInlineContact = async (
     role: "client" | "opponent" | "lawyer",
-    data: { contact_type: "company" | "person"; name: string; email: string }
+    data: InlineContact
   ) => {
     try {
-      const result = await createRelation.mutateAsync({
+      const payload: Record<string, unknown> = {
         contact_type: data.contact_type,
         name: data.name,
-        ...(data.email && { email: data.email }),
-      });
+      };
+      // Only include non-empty optional fields
+      if (data.email) payload.email = data.email;
+      if (data.phone) payload.phone = data.phone;
+      if (data.kvk_number) payload.kvk_number = data.kvk_number;
+      if (data.btw_number) payload.btw_number = data.btw_number;
+      if (data.visit_address) payload.visit_address = data.visit_address;
+      if (data.visit_postcode) payload.visit_postcode = data.visit_postcode;
+      if (data.visit_city) payload.visit_city = data.visit_city;
+      if (data.postal_address) payload.postal_address = data.postal_address;
+      if (data.postal_postcode) payload.postal_postcode = data.postal_postcode;
+      if (data.postal_city) payload.postal_city = data.postal_city;
+
+      const result = await createRelation.mutateAsync(payload as any);
       if (role === "client") {
         updateField("client_id", result.id);
         setClientSearch(result.name);
         setShowNewClient(false);
-        setNewClient({ contact_type: "company", name: "", email: "" });
+        setNewClient({ ...EMPTY_INLINE_CONTACT });
+        setShowClientDetails(false);
       } else if (role === "opponent") {
         updateField("opposing_party_id", result.id);
         setOpponentSearch(result.name);
         setOpponentContactType(data.contact_type);
         setShowNewOpponent(false);
-        setNewOpponent({ contact_type: "company", name: "", email: "" });
+        setNewOpponent({ ...EMPTY_INLINE_CONTACT });
+        setShowOpponentDetails(false);
         if (!form.debtor_type) {
           updateField(
             "debtor_type",
@@ -233,7 +412,8 @@ function NieuweZaakPage() {
         setSelectedLawyer({ id: result.id, name: result.name });
         setLawyerSearch(result.name);
         setShowNewLawyer(false);
-        setNewLawyer({ contact_type: "person", name: "", email: "" });
+        setNewLawyer({ ...EMPTY_INLINE_CONTACT, contact_type: "person" });
+        setShowLawyerDetails(false);
       }
       toast.success(`${data.name} aangemaakt`);
     } catch (err: any) {
@@ -271,6 +451,46 @@ function NieuweZaakPage() {
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  // ── Invoice parse handler ────────────────────────────────────────────────
+  const handleInvoiceParsed = useCallback(
+    (data: InvoiceParseResult) => {
+      setInvoiceData(data);
+      setFieldConfidence(data.confidence || {});
+
+      // Step 1: Zaakgegevens
+      if (data.description) updateField("description", data.description);
+      if (data.debtor_type) {
+        updateField("debtor_type", data.debtor_type === "company" ? "b2b" : "b2c");
+      }
+
+      // Step 2: Partijen — pre-fill search fields
+      if (data.debtor_name) setOpponentSearch(data.debtor_name);
+      if (data.creditor_name) setClientSearch(data.creditor_name);
+
+      // Step 3: Vordering — pre-fill first claim
+      const claimUpdates: Partial<ClaimForm> = {};
+      if (data.principal_amount != null) {
+        claimUpdates.principal_amount = String(data.principal_amount);
+      }
+      if (data.invoice_number) claimUpdates.invoice_number = data.invoice_number;
+      if (data.invoice_date) claimUpdates.invoice_date = data.invoice_date;
+      if (data.due_date) claimUpdates.default_date = data.due_date;
+      if (data.description) claimUpdates.description = data.description;
+
+      if (Object.keys(claimUpdates).length > 0) {
+        setClaims((prev) => {
+          const updated = [...prev];
+          updated[0] = { ...updated[0], ...claimUpdates };
+          return updated;
+        });
+      }
+
+      toast.success("Factuurgegevens ingevuld");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const isIncasso = form.case_type === "incasso";
   const totalSteps = isIncasso ? 3 : 2;
@@ -483,6 +703,11 @@ function NieuweZaakPage() {
           </p>
         </div>
       </div>
+
+      {/* AI Invoice Upload */}
+      {isIncasso && (
+        <InvoiceUploadZone onParsed={handleInvoiceParsed} />
+      )}
 
       {/* Stepper */}
       <div className="rounded-xl border border-border bg-card px-6 py-4">
@@ -884,6 +1109,12 @@ function NieuweZaakPage() {
                           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                         />
                       </div>
+                      <InlineContactDetails
+                        data={newClient}
+                        onChange={(updates) => setNewClient((c) => ({ ...c, ...updates }))}
+                        expanded={showClientDetails}
+                        onToggle={() => setShowClientDetails((v) => !v)}
+                      />
                       <button
                         type="button"
                         disabled={
@@ -1105,6 +1336,12 @@ function NieuweZaakPage() {
                           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                         />
                       </div>
+                      <InlineContactDetails
+                        data={newOpponent}
+                        onChange={(updates) => setNewOpponent((c) => ({ ...c, ...updates }))}
+                        expanded={showOpponentDetails}
+                        onToggle={() => setShowOpponentDetails((v) => !v)}
+                      />
                       <button
                         type="button"
                         disabled={
@@ -1272,6 +1509,12 @@ function NieuweZaakPage() {
                           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                         />
                       </div>
+                      <InlineContactDetails
+                        data={newLawyer}
+                        onChange={(updates) => setNewLawyer((c) => ({ ...c, ...updates }))}
+                        expanded={showLawyerDetails}
+                        onToggle={() => setShowLawyerDetails((v) => !v)}
+                      />
                       <button
                         type="button"
                         disabled={

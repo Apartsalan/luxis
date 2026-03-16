@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.models import ACTION_LABELS, CATEGORY_LABELS
@@ -29,6 +29,54 @@ from app.database import get_db
 from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/ai-agent", tags=["ai-agent"])
+
+# Max upload size: 10 MB
+_MAX_INVOICE_SIZE = 10 * 1024 * 1024
+
+
+# ---------------------------------------------------------------------------
+# Invoice parsing
+# ---------------------------------------------------------------------------
+
+
+@router.post("/parse-invoice")
+async def parse_invoice(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Parse a PDF invoice using AI and return extracted fields with confidence."""
+    # Validate content type
+    if file.content_type != "application/pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Alleen PDF-bestanden zijn toegestaan",
+        )
+
+    # Read and validate size
+    content = await file.read()
+    if len(content) > _MAX_INVOICE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bestand is te groot (max 10 MB)",
+        )
+
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bestand is leeg",
+        )
+
+    from app.ai_agent.invoice_parser import parse_invoice_pdf
+
+    try:
+        result = await parse_invoice_pdf(content, file.filename or "invoice.pdf")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e),
+        ) from e
+
+    return result
 
 
 # ---------------------------------------------------------------------------

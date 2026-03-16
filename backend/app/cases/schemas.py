@@ -61,6 +61,10 @@ class CaseCreate(BaseModel):
     assigned_to_id: uuid.UUID | None = None
     date_opened: date
     budget: float | None = None  # G13: optional budget (requires "budget" module)
+    hourly_rate: float | None = None  # LF-19: per-case hourly rate
+    payment_term_days: int | None = None  # LF-22: debtor settings
+    collection_strategy: str | None = None
+    debtor_notes: str | None = None
 
 
 class CaseUpdate(BaseModel):
@@ -80,6 +84,10 @@ class CaseUpdate(BaseModel):
     billing_contact_id: uuid.UUID | None = None
     assigned_to_id: uuid.UUID | None = None
     budget: float | None = None  # G13
+    hourly_rate: float | None = None  # LF-19
+    payment_term_days: int | None = None  # LF-22
+    collection_strategy: str | None = None
+    debtor_notes: str | None = None
 
 
 class CaseStatusUpdate(BaseModel):
@@ -177,6 +185,10 @@ class CaseResponse(BaseModel):
     total_principal: float
     total_paid: float
     budget: float | None = None  # G13
+    hourly_rate: float | None = None  # LF-19
+    payment_term_days: int | None = None  # LF-22
+    collection_strategy: str | None = None
+    debtor_notes: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

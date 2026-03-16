@@ -125,6 +125,22 @@ class Case(TenantBase):
         Numeric(15, 2), nullable=True
     )  # Optional budget in euros for this case
 
+    # LF-19: Per-case hourly rate (overrides user default)
+    hourly_rate: Mapped[float | None] = mapped_column(
+        Numeric(10, 2), nullable=True
+    )
+
+    # LF-22: Debtor settings
+    payment_term_days: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )  # Default payment term for this debtor
+    collection_strategy: Mapped[str | None] = mapped_column(
+        String(50), nullable=True
+    )  # e.g. "standaard", "voorzichtig", "agressief"
+    debtor_notes: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # Internal notes about the debtor/case
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships

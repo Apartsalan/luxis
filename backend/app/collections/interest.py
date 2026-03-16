@@ -312,9 +312,17 @@ async def calculate_case_interest(
     for claim in claims:
         principal = Decimal(str(claim["principal_amount"]))
         default_dt = claim["default_date"]
+        claim_rate_basis = claim.get("rate_basis", "yearly")
+
+        # LF-03: If rate_basis is "monthly", convert contractual rate to yearly
+        if interest_type == "contractual" and claim_rate_basis == "monthly":
+            effective_rate = contractual_rate * Decimal("12")
+            claim_rate_history = [(date(1900, 1, 1), effective_rate)]
+        else:
+            claim_rate_history = rate_history
 
         interest, periods = calc_fn(
-            principal, default_dt, calc_date, rate_history
+            principal, default_dt, calc_date, claim_rate_history
         )
 
         total_principal += principal

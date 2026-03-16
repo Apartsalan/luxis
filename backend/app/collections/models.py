@@ -56,6 +56,10 @@ class Claim(TenantBase):
         Date, nullable=True
     )  # Original invoice date
 
+    rate_basis: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="yearly"
+    )  # LF-03: "monthly" or "yearly" — if monthly, rate * 12 for annual calculation
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 

@@ -120,6 +120,7 @@ async def calculate_interest(
             "description": c.description,
             "principal_amount": c.principal_amount,
             "default_date": c.default_date,
+            "rate_basis": c.rate_basis,
         }
         for c in claims
     ]

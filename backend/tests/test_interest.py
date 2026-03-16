@@ -408,3 +408,68 @@ def test_single_day_interest():
     # 365000 * 0.06 * 1/365 = 60.00
     assert total == Decimal("60.00")
     assert periods[0]["days"] == 1
+
+
+# ── LF-03: rate_basis monthly/yearly ────────────────────────────────────────
+
+
+def test_rate_basis_monthly_simple_interest():
+    """Monthly rate 2% = yearly rate 24%. Simple interest on €5,000 for 1 year.
+
+    2% per month → 24% per year
+    €5,000 * 24% * 365/365 = €1,200.00
+    """
+    monthly_rate = Decimal("2.00")
+    yearly_rate = monthly_rate * Decimal("12")
+    rate_history = [(date(2020, 1, 1), yearly_rate)]
+    principal = Decimal("5000.00")
+
+    total, periods = calculate_simple_interest(
+        principal, date(2025, 1, 1), date(2026, 1, 1), rate_history
+    )
+
+    # 5000 * 0.24 * 365/365 = 1200.00
+    assert total == Decimal("1200.00")
+
+
+def test_rate_basis_monthly_compound_interest():
+    """Monthly rate 1% = yearly rate 12%. Compound interest on €10,000 for 2 years.
+
+    1% per month → 12% per year
+    Year 1: €10,000 * 12% = €1,200 → capitalize → €11,200
+    Year 2: €11,200 * 12% = €1,344
+    Total: €2,544.00
+    """
+    monthly_rate = Decimal("1.00")
+    yearly_rate = monthly_rate * Decimal("12")
+    rate_history = [(date(2020, 1, 1), yearly_rate)]
+    principal = Decimal("10000.00")
+
+    total, periods = calculate_compound_interest(
+        principal, date(2024, 1, 1), date(2026, 1, 1), rate_history
+    )
+
+    d = Decimal
+    # Year 1: 366 days (2024 is leap)
+    days_y1 = (date(2025, 1, 1) - date(2024, 1, 1)).days
+    y1 = _round2(principal * d("12") / d("100") * d(str(days_y1)) / d("365"))
+    p2 = principal + y1
+    # Year 2: 365 days
+    days_y2 = (date(2026, 1, 1) - date(2025, 1, 1)).days
+    y2 = _round2(p2 * d("12") / d("100") * d(str(days_y2)) / d("365"))
+    expected = _round2(y1 + y2)
+
+    assert total == expected
+
+
+def test_rate_basis_yearly_is_default():
+    """When rate_basis is 'yearly', the rate should be used as-is (no conversion)."""
+    rate_history = [(date(2020, 1, 1), Decimal("6.00"))]
+    principal = Decimal("5000.00")
+
+    total, _ = calculate_simple_interest(
+        principal, date(2025, 1, 1), date(2026, 1, 1), rate_history
+    )
+
+    # 5000 * 0.06 * 365/365 = 300.00
+    assert total == Decimal("300.00")

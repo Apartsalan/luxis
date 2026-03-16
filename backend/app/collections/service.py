@@ -195,6 +195,7 @@ async def create_payment(
                 "description": c.description,
                 "principal_amount": c.principal_amount,
                 "default_date": c.default_date,
+                "rate_basis": c.rate_basis,
             }
             for c in claims
         ]
@@ -483,6 +484,7 @@ async def get_financial_summary(
             "description": c.description,
             "principal_amount": c.principal_amount,
             "default_date": c.default_date,
+            "rate_basis": c.rate_basis,
         }
         for c in claims
     ]

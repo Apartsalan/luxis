@@ -9,12 +9,16 @@ from pydantic import BaseModel, Field
 # ── Claim Schemas ────────────────────────────────────────────────────────────
 
 
+RATE_BASES = ("monthly", "yearly")
+
+
 class ClaimCreate(BaseModel):
     description: str = Field(..., min_length=1, max_length=500)
     principal_amount: Decimal = Field(..., gt=0, decimal_places=2)
     default_date: date
     invoice_number: str | None = None
     invoice_date: date | None = None
+    rate_basis: str = Field(default="yearly", description="monthly or yearly")
 
 
 class ClaimUpdate(BaseModel):
@@ -23,6 +27,7 @@ class ClaimUpdate(BaseModel):
     default_date: date | None = None
     invoice_number: str | None = None
     invoice_date: date | None = None
+    rate_basis: str | None = None
 
 
 class ClaimResponse(BaseModel):
@@ -33,6 +38,7 @@ class ClaimResponse(BaseModel):
     default_date: date
     invoice_number: str | None
     invoice_date: date | None
+    rate_basis: str
     is_active: bool
     created_at: datetime
     updated_at: datetime

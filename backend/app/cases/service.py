@@ -318,6 +318,10 @@ async def create_case(
         assigned_to_id=data.assigned_to_id or user_id,
         date_opened=data.date_opened,
         budget=data.budget,
+        hourly_rate=data.hourly_rate,
+        payment_term_days=data.payment_term_days,
+        collection_strategy=data.collection_strategy,
+        debtor_notes=data.debtor_notes,
     )
     db.add(case)
     await db.flush()

@@ -138,6 +138,22 @@ export default function DossierSidebar({
                 </dd>
               </div>
             )}
+            {zaak.hourly_rate != null && (
+              <div className="flex items-center justify-between">
+                <dt className="text-xs text-muted-foreground">Uurtarief</dt>
+                <dd className="text-xs font-medium text-foreground">
+                  € {zaak.hourly_rate.toFixed(2)}
+                </dd>
+              </div>
+            )}
+            {zaak.payment_term_days != null && (
+              <div className="flex items-center justify-between">
+                <dt className="text-xs text-muted-foreground">Betaaltermijn</dt>
+                <dd className="text-xs font-medium text-foreground">
+                  {zaak.payment_term_days} dagen
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
 

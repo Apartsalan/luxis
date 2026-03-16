@@ -6,6 +6,7 @@ import {
   Building2,
   ChevronDown,
   Clock,
+  Euro,
   FileText,
   Gavel,
   Loader2,
@@ -55,6 +56,12 @@ const PROCEDURE_TYPES = [
   "Verzet",
 ];
 
+const COLLECTION_STRATEGIES = [
+  { value: "standaard", label: "Standaard" },
+  { value: "minnelijk", label: "Minnelijk" },
+  { value: "gerechtelijk", label: "Gerechtelijk" },
+];
+
 const PROCEDURE_PHASES = [
   "Aangebracht",
   "Dagvaarding uitgebracht",
@@ -98,7 +105,13 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     procedure_type: zaak.procedure_type || "",
     procedure_phase: zaak.procedure_phase || "",
     budget: zaak.budget != null ? String(zaak.budget) : "",
+    hourly_rate: zaak.hourly_rate != null ? String(zaak.hourly_rate) : "",
+    payment_term_days: zaak.payment_term_days != null ? String(zaak.payment_term_days) : "",
+    collection_strategy: zaak.collection_strategy || "",
+    debtor_notes: zaak.debtor_notes || "",
   });
+
+  const isIncasso = zaak.case_type === "incasso";
 
   // Apply phone note text from parent
   useEffect(() => {
@@ -140,6 +153,12 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
           procedure_type: editForm.procedure_type.trim() || null,
           procedure_phase: editForm.procedure_phase.trim() || null,
           ...(hasModule("budget") && { budget: editForm.budget ? parseFloat(editForm.budget) : null }),
+          ...(isIncasso && {
+            hourly_rate: editForm.hourly_rate ? parseFloat(editForm.hourly_rate) : null,
+            payment_term_days: editForm.payment_term_days ? parseInt(editForm.payment_term_days, 10) : null,
+            collection_strategy: editForm.collection_strategy || null,
+            debtor_notes: editForm.debtor_notes.trim() || null,
+          }),
         },
       });
       setIsEditing(false);
@@ -160,6 +179,10 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       procedure_type: zaak.procedure_type || "",
       procedure_phase: zaak.procedure_phase || "",
       budget: zaak.budget != null ? String(zaak.budget) : "",
+      hourly_rate: zaak.hourly_rate != null ? String(zaak.hourly_rate) : "",
+      payment_term_days: zaak.payment_term_days != null ? String(zaak.payment_term_days) : "",
+      collection_strategy: zaak.collection_strategy || "",
+      debtor_notes: zaak.debtor_notes || "",
     });
     setIsEditing(false);
   };
@@ -566,6 +589,108 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
             )}
           </div>
         </div>
+
+        {/* Debiteurinstellingen — alleen bij incasso */}
+        {isIncasso && (
+          <div className="rounded-xl border border-border bg-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Euro className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-card-foreground uppercase tracking-wider">
+                Debiteurinstellingen
+              </h2>
+            </div>
+
+            {isEditing ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Uurtarief (EUR/uur)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.hourly_rate}
+                    onChange={(e) => setEditForm(f => ({ ...f, hourly_rate: e.target.value }))}
+                    className={editInputClass}
+                    placeholder="Bijv. 225.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Betalingstermijn (dagen)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    value={editForm.payment_term_days}
+                    onChange={(e) => setEditForm(f => ({ ...f, payment_term_days: e.target.value }))}
+                    className={editInputClass}
+                    placeholder="Bijv. 14"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Incassostrategie
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={editForm.collection_strategy}
+                      onChange={(e) => setEditForm(f => ({ ...f, collection_strategy: e.target.value }))}
+                      className={`${editInputClass} appearance-none pr-8`}
+                    >
+                      <option value="">Selecteer strategie...</option>
+                      {COLLECTION_STRATEGIES.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Debiteurnotities
+                  </label>
+                  <textarea
+                    value={editForm.debtor_notes}
+                    onChange={(e) => setEditForm(f => ({ ...f, debtor_notes: e.target.value }))}
+                    rows={3}
+                    className={editInputClass}
+                    placeholder="Notities over de debiteur..."
+                  />
+                </div>
+              </div>
+            ) : (
+              <dl className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-1">Uurtarief</dt>
+                  <dd className="text-sm text-foreground">
+                    {zaak.hourly_rate != null ? `€ ${zaak.hourly_rate.toFixed(2)} / uur` : "-"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-1">Betalingstermijn</dt>
+                  <dd className="text-sm text-foreground">
+                    {zaak.payment_term_days != null ? `${zaak.payment_term_days} dagen` : "-"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-1">Incassostrategie</dt>
+                  <dd className="text-sm text-foreground">
+                    {COLLECTION_STRATEGIES.find(s => s.value === zaak.collection_strategy)?.label || "-"}
+                  </dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-xs text-muted-foreground mb-1">Debiteurnotities</dt>
+                  <dd className="text-sm text-foreground whitespace-pre-wrap">
+                    {zaak.debtor_notes || "-"}
+                  </dd>
+                </div>
+              </dl>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right: Note + Recent Activity */}

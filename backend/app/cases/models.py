@@ -130,6 +130,11 @@ class Case(TenantBase):
         Numeric(10, 2), nullable=True
     )
 
+    # LF-12: Manual BIK override (None = use WIK-staffel calculation)
+    bik_override: Mapped[float | None] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )
+
     # LF-22: Debtor settings
     payment_term_days: Mapped[int | None] = mapped_column(
         Integer, nullable=True

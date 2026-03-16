@@ -318,6 +318,7 @@ async def create_case(
         assigned_to_id=data.assigned_to_id or user_id,
         date_opened=data.date_opened,
         budget=data.budget,
+        bik_override=data.bik_override,
         hourly_rate=data.hourly_rate,
         payment_term_days=data.payment_term_days,
         collection_strategy=data.collection_strategy,

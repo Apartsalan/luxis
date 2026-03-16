@@ -172,6 +172,7 @@ async def create_payment(
     interest_type: str = "statutory",
     contractual_rate: Decimal | None = None,
     contractual_compound: bool = False,
+    bik_override: Decimal | None = None,
 ) -> Payment:
     """Register a payment for a case.
 
@@ -207,9 +208,12 @@ async def create_payment(
     else:
         total_interest = Decimal("0")
 
-    # BIK costs
-    bik_result = calculate_bik(total_principal)
-    total_costs = bik_result["bik_inclusive"]
+    # BIK costs (LF-12: use override if set)
+    if bik_override is not None:
+        total_costs = bik_override
+    else:
+        bik_result = calculate_bik(total_principal)
+        total_costs = bik_result["bik_inclusive"]
 
     # Subtract previously allocated amounts from existing payments
     existing_payments = await list_payments(db, tenant_id, case_id)
@@ -468,6 +472,7 @@ async def get_financial_summary(
     contractual_rate: Decimal | None,
     contractual_compound: bool,
     calc_date: date | None = None,
+    bik_override: Decimal | None = None,
 ) -> dict:
     """Build a complete financial summary for a case.
 
@@ -503,11 +508,16 @@ async def get_financial_summary(
     total_principal = interest_result["total_principal"]
     total_interest = interest_result["total_interest"]
 
-    # Calculate BIK
+    # Calculate BIK (LF-12: use override if set)
     bik_result = calculate_bik(total_principal)
-    bik_exclusive = bik_result["bik_exclusive"]
-    bik_btw = bik_result["btw_amount"]
-    total_bik = bik_result["bik_inclusive"]
+    if bik_override is not None:
+        bik_exclusive = bik_override
+        bik_btw = Decimal("0")
+        total_bik = bik_override
+    else:
+        bik_exclusive = bik_result["bik_exclusive"]
+        bik_btw = bik_result["btw_amount"]
+        total_bik = bik_result["bik_inclusive"]
 
     # Get payments
     payments = await list_payments(db, tenant_id, case_id)

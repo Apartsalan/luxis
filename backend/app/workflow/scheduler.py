@@ -259,6 +259,27 @@ async def followup_scan() -> None:
         logger.exception("Scheduler: follow-up scan failed")
 
 
+async def daily_installment_overdue_check() -> None:
+    """Daily job: mark overdue payment arrangement installments.
+
+    Finds pending installments with due_date < today and marks them as overdue.
+    """
+    from app.collections.service import mark_overdue_installments
+
+    logger.info("Scheduler: starting installment overdue check")
+    try:
+        async with async_session() as session:
+            count = await mark_overdue_installments(session)
+            await session.commit()
+            if count > 0:
+                logger.info(
+                    "Scheduler: installment overdue — %d termijnen achterstallig",
+                    count,
+                )
+    except Exception:
+        logger.exception("Scheduler: installment overdue check failed")
+
+
 def start_scheduler() -> None:
     """Start the APScheduler with daily + periodic jobs."""
     if scheduler.running:
@@ -279,6 +300,15 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=15),
         id="daily_verjaring_check",
         name="Check verjaring for all tenants",
+        replace_existing=True,
+    )
+
+    # Daily at 06:30 UTC: mark overdue installments
+    scheduler.add_job(
+        daily_installment_overdue_check,
+        CronTrigger(hour=6, minute=30),
+        id="daily_installment_overdue_check",
+        name="Mark overdue payment arrangement installments",
         replace_existing=True,
     )
 

@@ -14,16 +14,19 @@ from app.collections.schemas import (
     ArrangementCreate,
     ArrangementResponse,
     ArrangementUpdate,
+    ArrangementWithInstallmentsResponse,
     ClaimCreate,
     ClaimResponse,
     ClaimUpdate,
     DerdengeldenBalance,
     DerdengeldenCreate,
     DerdengeldenResponse,
+    InstallmentResponse,
     InterestRateResponse,
     PaymentCreate,
     PaymentResponse,
     PaymentUpdate,
+    RecordInstallmentPayment,
 )
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -243,17 +246,44 @@ async def delete_payment(
 # ── Payment Arrangements ─────────────────────────────────────────────────────
 
 
-@router.get("/arrangements", response_model=list[ArrangementResponse])
+@router.get(
+    "/arrangements",
+    response_model=list[ArrangementWithInstallmentsResponse],
+)
 async def list_arrangements(
     case_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List payment arrangements for a case."""
+    """List payment arrangements for a case, with installments."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.list_arrangements(
+    results = await service.list_arrangements(
         db, current_user.tenant_id, case_id
     )
+    # Convert service dicts to response models
+    out = []
+    for r in results:
+        arr = r["arrangement"]
+        out.append(
+            ArrangementWithInstallmentsResponse(
+                id=arr.id,
+                case_id=arr.case_id,
+                total_amount=arr.total_amount,
+                installment_amount=arr.installment_amount,
+                frequency=arr.frequency,
+                start_date=arr.start_date,
+                end_date=arr.end_date,
+                status=arr.status,
+                notes=arr.notes,
+                created_at=arr.created_at,
+                installments=[
+                    InstallmentResponse.model_validate(i) for i in r["installments"]
+                ],
+                paid_count=r["paid_count"],
+                total_paid_amount=r["total_paid_amount"],
+            )
+        )
+    return out
 
 
 @router.post(
@@ -267,10 +297,49 @@ async def create_arrangement(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a payment arrangement."""
+    """Create a payment arrangement with auto-generated installments."""
     await get_case(db, current_user.tenant_id, case_id)
     return await service.create_arrangement(
         db, current_user.tenant_id, case_id, data
+    )
+
+
+@router.get(
+    "/arrangements/{arrangement_id}",
+    response_model=ArrangementWithInstallmentsResponse,
+)
+async def get_arrangement(
+    case_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a single arrangement with installments."""
+    await get_case(db, current_user.tenant_id, case_id)
+    arr = await service.get_arrangement(
+        db, current_user.tenant_id, arrangement_id
+    )
+    installments = sorted(arr.installments, key=lambda i: i.installment_number)
+    from decimal import Decimal
+
+    return ArrangementWithInstallmentsResponse(
+        id=arr.id,
+        case_id=arr.case_id,
+        total_amount=arr.total_amount,
+        installment_amount=arr.installment_amount,
+        frequency=arr.frequency,
+        start_date=arr.start_date,
+        end_date=arr.end_date,
+        status=arr.status,
+        notes=arr.notes,
+        created_at=arr.created_at,
+        installments=[
+            InstallmentResponse.model_validate(i) for i in installments
+        ],
+        paid_count=len([i for i in installments if i.status == "paid"]),
+        total_paid_amount=sum(
+            (i.paid_amount for i in installments), Decimal("0")
+        ),
     )
 
 
@@ -289,6 +358,82 @@ async def update_arrangement(
     await get_case(db, current_user.tenant_id, case_id)
     return await service.update_arrangement(
         db, current_user.tenant_id, arrangement_id, data
+    )
+
+
+@router.post(
+    "/arrangements/{arrangement_id}/installments/{installment_id}/record-payment",
+    response_model=InstallmentResponse,
+)
+async def record_installment_payment(
+    case_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+    installment_id: uuid.UUID,
+    data: RecordInstallmentPayment,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record a payment for a specific installment."""
+    case = await get_case(db, current_user.tenant_id, case_id)
+    return await service.record_installment_payment(
+        db, current_user.tenant_id, case_id, arrangement_id, installment_id,
+        data, current_user.id,
+        interest_type=case.interest_type,
+        contractual_rate=case.contractual_rate,
+        contractual_compound=case.contractual_compound,
+        bik_override=case.bik_override,
+    )
+
+
+@router.patch(
+    "/arrangements/{arrangement_id}/default",
+    response_model=ArrangementResponse,
+)
+async def default_arrangement(
+    case_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mark an arrangement as defaulted (wanprestatie)."""
+    await get_case(db, current_user.tenant_id, case_id)
+    return await service.default_arrangement(
+        db, current_user.tenant_id, arrangement_id
+    )
+
+
+@router.patch(
+    "/arrangements/{arrangement_id}/cancel",
+    response_model=ArrangementResponse,
+)
+async def cancel_arrangement(
+    case_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancel an arrangement."""
+    await get_case(db, current_user.tenant_id, case_id)
+    return await service.cancel_arrangement(
+        db, current_user.tenant_id, arrangement_id
+    )
+
+
+@router.patch(
+    "/arrangements/{arrangement_id}/installments/{installment_id}/waive",
+    response_model=InstallmentResponse,
+)
+async def waive_installment(
+    case_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+    installment_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Waive (kwijtschelden) a single installment."""
+    await get_case(db, current_user.tenant_id, case_id)
+    return await service.waive_installment(
+        db, current_user.tenant_id, arrangement_id, installment_id
     )
 
 

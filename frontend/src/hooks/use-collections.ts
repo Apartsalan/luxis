@@ -128,6 +128,41 @@ export interface DerdengeldenBalance {
   available: number;
 }
 
+// ── Payment Arrangements ─────────────────────────────────────────────────────
+
+export interface Installment {
+  id: string;
+  arrangement_id: string;
+  installment_number: number;
+  due_date: string;
+  amount: number;
+  paid_amount: number;
+  paid_date: string | null;
+  payment_id: string | null;
+  status: "pending" | "paid" | "overdue" | "missed" | "waived" | "partial";
+  notes: string | null;
+  created_at: string;
+}
+
+export interface Arrangement {
+  id: string;
+  case_id: string;
+  total_amount: number;
+  installment_amount: number;
+  frequency: "weekly" | "monthly" | "quarterly";
+  start_date: string;
+  end_date: string | null;
+  status: "active" | "completed" | "defaulted" | "cancelled";
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ArrangementWithInstallments extends Arrangement {
+  installments: Installment[];
+  paid_count: number;
+  total_paid_amount: number;
+}
+
 // ── Claims ───────────────────────────────────────────────────────────────────
 
 export function useClaims(caseId: string | undefined) {
@@ -416,6 +451,167 @@ export function useRejectTrustTransaction() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
+    },
+  });
+}
+
+// ── Payment Arrangements Hooks ──────────────────────────────────────────────
+
+export function useArrangements(caseId: string | undefined) {
+  return useQuery<ArrangementWithInstallments[]>({
+    queryKey: ["cases", caseId, "arrangements"],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${caseId}/arrangements`);
+      if (!res.ok) throw new Error("Failed to fetch arrangements");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+export function useCreateArrangement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      data,
+    }: {
+      caseId: string;
+      data: {
+        total_amount: number;
+        installment_amount: number;
+        frequency: string;
+        start_date: string;
+        notes?: string;
+      };
+    }) => {
+      const res = await api(`/api/cases/${caseId}/arrangements`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Betalingsregeling aanmaken mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+    },
+  });
+}
+
+export function useRecordInstallmentPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      arrangementId,
+      installmentId,
+      data,
+    }: {
+      caseId: string;
+      arrangementId: string;
+      installmentId: string;
+      data: {
+        amount: number;
+        payment_date: string;
+        payment_method?: string;
+        notes?: string;
+      };
+    }) => {
+      const res = await api(
+        `/api/cases/${caseId}/arrangements/${arrangementId}/installments/${installmentId}/record-payment`,
+        { method: "POST", body: JSON.stringify(data) }
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Betaling registreren mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+    },
+  });
+}
+
+export function useDefaultArrangement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      arrangementId,
+    }: {
+      caseId: string;
+      arrangementId: string;
+    }) => {
+      const res = await api(
+        `/api/cases/${caseId}/arrangements/${arrangementId}/default`,
+        { method: "PATCH" }
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Wanprestatie markeren mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+    },
+  });
+}
+
+export function useCancelArrangement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      arrangementId,
+    }: {
+      caseId: string;
+      arrangementId: string;
+    }) => {
+      const res = await api(
+        `/api/cases/${caseId}/arrangements/${arrangementId}/cancel`,
+        { method: "PATCH" }
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Annuleren mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+    },
+  });
+}
+
+export function useWaiveInstallment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      arrangementId,
+      installmentId,
+    }: {
+      caseId: string;
+      arrangementId: string;
+      installmentId: string;
+    }) => {
+      const res = await api(
+        `/api/cases/${caseId}/arrangements/${arrangementId}/installments/${installmentId}/waive`,
+        { method: "PATCH" }
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Kwijtschelden mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
     },
   });
 }

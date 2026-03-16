@@ -17,7 +17,7 @@ from sqlalchemy import (
     Text,
     Uuid,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base, TimestampMixin
 from app.shared.models import TenantBase
@@ -135,6 +135,52 @@ class PaymentArrangement(TenantBase):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="active"
     )  # active, completed, defaulted
+
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    installments: Mapped[list["PaymentArrangementInstallment"]] = relationship(
+        back_populates="arrangement", lazy="noload",
+    )
+
+
+class PaymentArrangementInstallment(TenantBase):
+    """A single installment (termijn) within a payment arrangement.
+
+    Each arrangement generates N installments when created.
+    Status flow: pending → paid/partial/overdue/missed/waived
+    """
+
+    __tablename__ = "payment_arrangement_installments"
+
+    arrangement_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("payment_arrangements.id"), nullable=False
+    )
+
+    arrangement: Mapped["PaymentArrangement"] = relationship(
+        back_populates="installments", lazy="noload",
+    )
+
+    installment_number: Mapped[int] = mapped_column(nullable=False)  # 1, 2, 3, ...
+
+    due_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    amount: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), nullable=False
+    )
+
+    paid_amount: Mapped[Decimal] = mapped_column(
+        Numeric(15, 2), default=Decimal("0"), nullable=False
+    )
+
+    paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    payment_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("payments.id"), nullable=True
+    )  # Link to the Payment record when paid
+
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending"
+    )  # pending | paid | partial | overdue | missed | waived
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 

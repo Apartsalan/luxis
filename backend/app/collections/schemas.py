@@ -94,8 +94,26 @@ class ArrangementCreate(BaseModel):
 
 
 class ArrangementUpdate(BaseModel):
-    status: str | None = Field(None, pattern="^(active|completed|defaulted)$")
+    status: str | None = Field(
+        None, pattern="^(active|completed|defaulted|cancelled)$"
+    )
     notes: str | None = None
+
+
+class InstallmentResponse(BaseModel):
+    id: uuid.UUID
+    arrangement_id: uuid.UUID
+    installment_number: int
+    due_date: date
+    amount: Decimal
+    paid_amount: Decimal
+    paid_date: date | None
+    payment_id: uuid.UUID | None
+    status: str
+    notes: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class ArrangementResponse(BaseModel):
@@ -111,6 +129,19 @@ class ArrangementResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ArrangementWithInstallmentsResponse(ArrangementResponse):
+    installments: list[InstallmentResponse] = []
+    paid_count: int = 0
+    total_paid_amount: Decimal = Decimal("0")
+
+
+class RecordInstallmentPayment(BaseModel):
+    amount: Decimal = Field(..., gt=0, decimal_places=2)
+    payment_date: date
+    payment_method: str | None = None
+    notes: str | None = None
 
 
 # ── Derdengelden Schemas ─────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ from app.collections.models import (
     InterestRate,
     Payment,
     PaymentArrangement,
+    PaymentArrangementInstallment,
 )
 from app.collections.payment_distribution import distribute_payment
 from app.collections.schemas import (
@@ -25,9 +26,10 @@ from app.collections.schemas import (
     DerdengeldenCreate,
     PaymentCreate,
     PaymentUpdate,
+    RecordInstallmentPayment,
 )
 from app.collections.wik import calculate_bik
-from app.shared.exceptions import NotFoundError
+from app.shared.exceptions import BadRequestError, ConflictError, NotFoundError
 
 
 async def _refresh_case_financials(
@@ -313,19 +315,76 @@ async def delete_payment(
 # ── Payment Arrangements ─────────────────────────────────────────────────────
 
 
+def _generate_installment_dates(
+    start_date: date,
+    frequency: str,
+    count: int,
+) -> list[date]:
+    """Generate installment due dates from a start date and frequency."""
+    from dateutil.relativedelta import relativedelta
+
+    deltas = {
+        "weekly": relativedelta(weeks=1),
+        "monthly": relativedelta(months=1),
+        "quarterly": relativedelta(months=3),
+    }
+    delta = deltas[frequency]
+    return [start_date + delta * i for i in range(count)]
+
+
 async def list_arrangements(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
-) -> list[PaymentArrangement]:
-    """List payment arrangements for a case."""
+) -> list[dict]:
+    """List payment arrangements for a case, with installments."""
+    from sqlalchemy.orm import selectinload
+
     result = await db.execute(
-        select(PaymentArrangement).where(
+        select(PaymentArrangement)
+        .options(selectinload(PaymentArrangement.installments))
+        .where(
             PaymentArrangement.tenant_id == tenant_id,
             PaymentArrangement.case_id == case_id,
-        ).order_by(PaymentArrangement.start_date.desc())
+        )
+        .order_by(PaymentArrangement.start_date.desc())
     )
-    return list(result.scalars().all())
+    arrangements = list(result.scalars().all())
+
+    out = []
+    for arr in arrangements:
+        installments = sorted(arr.installments, key=lambda i: i.installment_number)
+        out.append({
+            "arrangement": arr,
+            "installments": installments,
+            "paid_count": len([i for i in installments if i.status == "paid"]),
+            "total_paid_amount": sum(
+                (i.paid_amount for i in installments), Decimal("0")
+            ),
+        })
+    return out
+
+
+async def get_arrangement(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+) -> PaymentArrangement:
+    """Get a single arrangement with installments."""
+    from sqlalchemy.orm import selectinload
+
+    result = await db.execute(
+        select(PaymentArrangement)
+        .options(selectinload(PaymentArrangement.installments))
+        .where(
+            PaymentArrangement.id == arrangement_id,
+            PaymentArrangement.tenant_id == tenant_id,
+        )
+    )
+    arrangement = result.scalar_one_or_none()
+    if arrangement is None:
+        raise NotFoundError("Betalingsregeling niet gevonden")
+    return arrangement
 
 
 async def create_arrangement(
@@ -334,13 +393,71 @@ async def create_arrangement(
     case_id: uuid.UUID,
     data: ArrangementCreate,
 ) -> PaymentArrangement:
-    """Create a payment arrangement."""
+    """Create a payment arrangement with auto-generated installments.
+
+    Validates that there is no other active arrangement for this case.
+    Generates installment schedule based on total_amount, installment_amount, and frequency.
+    Last installment is adjusted for rounding difference.
+    """
+    import math
+
+    # Check no other active arrangement exists for this case
+    existing = await db.execute(
+        select(PaymentArrangement).where(
+            PaymentArrangement.tenant_id == tenant_id,
+            PaymentArrangement.case_id == case_id,
+            PaymentArrangement.status == "active",
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise ConflictError("Er is al een actieve betalingsregeling voor dit dossier")
+
+    # Calculate number of installments
+    num_installments = math.ceil(data.total_amount / data.installment_amount)
+
+    # Generate due dates
+    due_dates = _generate_installment_dates(
+        data.start_date, data.frequency, num_installments
+    )
+
+    # Calculate end_date
+    end_date = due_dates[-1] if due_dates else data.start_date
+
     arrangement = PaymentArrangement(
         tenant_id=tenant_id,
         case_id=case_id,
-        **data.model_dump(),
+        total_amount=data.total_amount,
+        installment_amount=data.installment_amount,
+        frequency=data.frequency,
+        start_date=data.start_date,
+        end_date=end_date,
+        status="active",
+        notes=data.notes,
     )
     db.add(arrangement)
+    await db.flush()
+
+    # Generate installments — last one adjusted for rounding
+    remaining = data.total_amount
+    for i, due_date in enumerate(due_dates, start=1):
+        if i == len(due_dates):
+            # Last installment gets the remainder
+            amount = remaining
+        else:
+            amount = min(data.installment_amount, remaining)
+        remaining -= amount
+
+        installment = PaymentArrangementInstallment(
+            tenant_id=tenant_id,
+            arrangement_id=arrangement.id,
+            installment_number=i,
+            due_date=due_date,
+            amount=amount,
+            paid_amount=Decimal("0"),
+            status="pending",
+        )
+        db.add(installment)
+
     await db.flush()
     await db.refresh(arrangement)
     return arrangement
@@ -369,6 +486,202 @@ async def update_arrangement(
     await db.flush()
     await db.refresh(arrangement)
     return arrangement
+
+
+async def record_installment_payment(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+    installment_id: uuid.UUID,
+    data: RecordInstallmentPayment,
+    user_id: uuid.UUID | None = None,
+    *,
+    interest_type: str = "statutory",
+    contractual_rate: Decimal | None = None,
+    contractual_compound: bool = False,
+    bik_override: Decimal | None = None,
+) -> PaymentArrangementInstallment:
+    """Record a payment for a specific installment.
+
+    Creates a Payment record (with art. 6:44 BW distribution) and links it
+    to the installment. Updates installment status to paid or partial.
+    If all installments are paid, marks the arrangement as completed.
+    """
+    # Load installment
+    result = await db.execute(
+        select(PaymentArrangementInstallment).where(
+            PaymentArrangementInstallment.id == installment_id,
+            PaymentArrangementInstallment.arrangement_id == arrangement_id,
+            PaymentArrangementInstallment.tenant_id == tenant_id,
+        )
+    )
+    installment = result.scalar_one_or_none()
+    if installment is None:
+        raise NotFoundError("Termijn niet gevonden")
+
+    if installment.status in ("paid", "waived"):
+        raise BadRequestError("Deze termijn is al betaald of kwijtgescholden")
+
+    # Create a Payment via existing service (art. 6:44 BW distribution)
+    payment_data = PaymentCreate(
+        amount=data.amount,
+        payment_date=data.payment_date,
+        description=f"Betalingsregeling termijn {installment.installment_number}",
+        payment_method=data.payment_method,
+    )
+    payment = await create_payment(
+        db, tenant_id, case_id, payment_data, user_id,
+        interest_type=interest_type,
+        contractual_rate=contractual_rate,
+        contractual_compound=contractual_compound,
+        bik_override=bik_override,
+    )
+
+    # Update installment
+    installment.paid_amount = installment.paid_amount + data.amount
+    installment.paid_date = data.payment_date
+    installment.payment_id = payment.id
+    if data.notes:
+        installment.notes = data.notes
+
+    if installment.paid_amount >= installment.amount:
+        installment.status = "paid"
+    else:
+        installment.status = "partial"
+
+    await db.flush()
+
+    # Check if all installments are now paid → complete arrangement
+    await _check_arrangement_completion(db, tenant_id, arrangement_id)
+
+    await db.refresh(installment)
+    return installment
+
+
+async def default_arrangement(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+) -> PaymentArrangement:
+    """Mark an arrangement as defaulted (wanprestatie).
+
+    Sets all pending/overdue installments to missed.
+    """
+    arrangement = await get_arrangement(db, tenant_id, arrangement_id)
+    if arrangement.status != "active":
+        raise BadRequestError("Alleen actieve regelingen kunnen als wanprestatie worden gemarkeerd")
+
+    arrangement.status = "defaulted"
+
+    # Mark all pending/overdue installments as missed
+    for inst in arrangement.installments:
+        if inst.status in ("pending", "overdue"):
+            inst.status = "missed"
+
+    await db.flush()
+    await db.refresh(arrangement)
+    return arrangement
+
+
+async def cancel_arrangement(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+) -> PaymentArrangement:
+    """Cancel an arrangement. Waives all pending installments."""
+    arrangement = await get_arrangement(db, tenant_id, arrangement_id)
+    if arrangement.status != "active":
+        raise BadRequestError("Alleen actieve regelingen kunnen worden geannuleerd")
+
+    arrangement.status = "cancelled"
+
+    for inst in arrangement.installments:
+        if inst.status in ("pending", "overdue"):
+            inst.status = "waived"
+
+    await db.flush()
+    await db.refresh(arrangement)
+    return arrangement
+
+
+async def waive_installment(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+    installment_id: uuid.UUID,
+) -> PaymentArrangementInstallment:
+    """Waive (kwijtschelden) a single installment."""
+    result = await db.execute(
+        select(PaymentArrangementInstallment).where(
+            PaymentArrangementInstallment.id == installment_id,
+            PaymentArrangementInstallment.arrangement_id == arrangement_id,
+            PaymentArrangementInstallment.tenant_id == tenant_id,
+        )
+    )
+    installment = result.scalar_one_or_none()
+    if installment is None:
+        raise NotFoundError("Termijn niet gevonden")
+
+    if installment.status in ("paid",):
+        raise BadRequestError("Betaalde termijnen kunnen niet worden kwijtgescholden")
+
+    installment.status = "waived"
+    await db.flush()
+
+    # Check if all installments are now resolved → complete arrangement
+    await _check_arrangement_completion(db, tenant_id, arrangement_id)
+
+    await db.refresh(installment)
+    return installment
+
+
+async def _check_arrangement_completion(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    arrangement_id: uuid.UUID,
+) -> None:
+    """Check if all installments are resolved and auto-complete the arrangement."""
+    result = await db.execute(
+        select(PaymentArrangementInstallment).where(
+            PaymentArrangementInstallment.arrangement_id == arrangement_id,
+            PaymentArrangementInstallment.tenant_id == tenant_id,
+        )
+    )
+    installments = list(result.scalars().all())
+
+    all_resolved = all(
+        i.status in ("paid", "waived") for i in installments
+    )
+    if all_resolved and installments:
+        arr_result = await db.execute(
+            select(PaymentArrangement).where(
+                PaymentArrangement.id == arrangement_id,
+                PaymentArrangement.tenant_id == tenant_id,
+            )
+        )
+        arrangement = arr_result.scalar_one_or_none()
+        if arrangement and arrangement.status == "active":
+            arrangement.status = "completed"
+            await db.flush()
+
+
+async def mark_overdue_installments(db: AsyncSession) -> int:
+    """Mark pending installments past due_date as overdue. Returns count updated."""
+    from datetime import date as date_type
+
+    today = date_type.today()
+    result = await db.execute(
+        select(PaymentArrangementInstallment).where(
+            PaymentArrangementInstallment.status == "pending",
+            PaymentArrangementInstallment.due_date < today,
+        )
+    )
+    installments = list(result.scalars().all())
+    for inst in installments:
+        inst.status = "overdue"
+    await db.flush()
+    return len(installments)
 
 
 # ── Derdengelden ─────────────────────────────────────────────────────────────

@@ -1,12 +1,38 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 73 — LF-20/21 integratie, tests, deploy)
-**Laatste feature/fix:** LF-20 + LF-21 volledig afgerond en gedeployed
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 74 — LF-10 AI factuur parsing)
+**Laatste feature/fix:** LF-10 — AI factuur parsing bij dossier aanmaken
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**LF Sprint:** 21/22 afgerond — alleen LF-10 (AI factuur parsing, nice-to-have) resteert
-**Backend tests:** 609 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
+**LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
+**Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
 **Volgende sessie:** TBD
+
+## Wat er gedaan is (sessie 74 — 16 maart 2026) — LF-10: AI Factuur Parsing
+
+### Samenvatting
+
+**Laatste LF sprint item afgerond.** Upload een PDF factuur bij het aanmaken van een incassodossier → AI parseert de factuur en vult automatisch de wizard-velden in.
+
+### Nieuwe bestanden
+- `backend/app/ai_agent/invoice_prompts.py` — System prompt + builder voor factuur-parsing
+- `backend/app/ai_agent/invoice_parser.py` — PDF extractie + AI parsing + validatie
+- `backend/tests/test_invoice_parser.py` — 13 tests (unit + integration)
+- `frontend/src/hooks/use-invoice-parser.ts` — TanStack mutation hook
+- `frontend/src/components/InvoiceUploadZone.tsx` — Drag-and-drop upload zone
+
+### Gewijzigde bestanden
+- `backend/app/ai_agent/router.py` — POST /api/ai-agent/parse-invoice endpoint
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — Upload zone + pre-fill logic + confidence dots
+
+### Hoe het werkt
+1. Upload zone boven de stepper (alleen bij incasso dossiers)
+2. PDF wordt naar backend gestuurd → pdfplumber extract tekst → Kimi/Haiku AI parseert
+3. Response bevat per-veld confidence scores
+4. Frontend pre-fillt: beschrijving + debiteurtype (stap 1), client/wederpartij zoek (stap 2), vordering (stap 3)
+5. Gekleurde dots (groen >0.8, oranje 0.5-0.8, rood <0.5) met tooltip "AI confidence: X%"
+
+---
 
 ## Wat er gedaan is (sessie 73 — 16 maart 2026) — LF-20/21: Integratie, tests, deploy
 

@@ -1,12 +1,42 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 maart 2026 (sessie 67 — BUG-42 fix, 573 tests passing)
-**Laatste feature/fix:** BUG-42 gefixt — alle 196 test errors + 1 failure opgelost
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 68 — Lisanne Feedback Projectplan)
+**Laatste feature/fix:** Projectplan 22 LF-items in roadmap (geen code deze sessie)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**Openstaande bugs:** Geen bekende bugs
+**Openstaande bugs:** 22 LF-items (4 bugs, 5 UX, 13 features) — zie LUXIS-ROADMAP.md
 **Backend tests:** 573 passed, 0 errors, 0 failures | **Ruff:** 0 warnings (app/ + tests/) | **Frontend build:** ✅
-**Volgende sessie:** Nieuwe features of launch prep
+**Volgende sessie:** LF Fase 1 — Bugs & Vindbaarheid (LF-02, LF-05, LF-06, LF-07, LF-08, LF-16, LF-18) — 2 terminals parallel
+
+## Wat er gedaan is (sessie 68 — 16 maart) — Lisanne Feedback Projectplan
+
+### Samenvatting
+Lisanne heeft 22 feedbackpunten opgeleverd na eerste gebruik. Deze sessie: alle items gecategoriseerd, gesized, dependencies geïdentificeerd, en verdeeld over 8 fasen met parallellisatie-strategie (2 terminals per fase).
+
+### Bevindingen uit code-analyse
+- LF-02 (partijnamen): staan er al, verdwijnen bij smal scherm → responsive fix
+- LF-05 (kenmerk client): veld `reference` bestaat al → label/prominentie fix
+- LF-08 (vorderingen edit): edit UI ontbreekt compleet, alleen create + delete
+- LF-16 (email template): email compose dialog bestaat, niet vindbaar voor Lisanne
+- LF-19 (uurtarief per dossier): ontbreekt volledig in backend + frontend
+
+### Projectplan
+- 22 items → 8 fasen → ~5-7 sessies doorlooptijd (2 terminals parallel per fase)
+- Fase 1: bugs (LF-02/05/06/07/08/16/18)
+- Fase 2: kleine features (LF-01/03/12/19/22)
+- Fase 3: tab herstructurering (LF-09/13/14)
+- Fase 4: dossier wizard (LF-04/11)
+- Fase 5: email (LF-17)
+- Fase 6: betalingsregeling (LF-15)
+- Fase 7: facturatie (LF-20/21)
+- Fase 8: AI parsing (LF-10, nice-to-have)
+
+### Gewijzigde bestanden
+- `LUXIS-ROADMAP.md` — LF-sectie met alle 22 items, fase-overzicht, dependencies
+- `SESSION-NOTES.md` — deze entry
+- `.claude/plans/staged-popping-haven.md` — gedetailleerd projectplan
+
+---
 
 ## Wat er gedaan is (sessie 67 — 13 maart) — BUG-42 fix: 196 test errors + 1 failure
 

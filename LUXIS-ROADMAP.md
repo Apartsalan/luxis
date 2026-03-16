@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 11 maart 2026 (sessie 54)
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 68)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -285,7 +285,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** Pre-launch sprint (sessie 63+) — alle gaps dichten voor Lisanne demo + soft launch.
+**Volgende prioriteit:** Lisanne Feedback Sprint — Fase 1: Bugs & Vindbaarheid (LF-02, LF-05, LF-06, LF-07, LF-08, LF-16, LF-18)
 
 ### Pre-Launch Sprint (sessie 62 audit → uitrol)
 
@@ -412,6 +412,63 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 6. Volgende feature
 
 ---
+
+## Lisanne Feedback Sprint (LF-01 t/m LF-22)
+
+**Bron:** `docs/research/LISANNE-FEEDBACK-13MRT.md` (13 maart 2026, eerste echte gebruik)
+**Projectplan:** `.claude/plans/staged-popping-haven.md`
+**Aanpak:** 8 fasen, 2 terminals parallel per fase, ~5-7 sessies doorlooptijd
+
+### Alle items
+
+| # | Beschrijving | Cat. | Grootte | Fase | Status |
+|---|-------------|------|---------|------|--------|
+| LF-01 | Contact aanmaken: adresvelden ontbreken | UX | S | 2 | ❌ TODO |
+| LF-02 | Dossieroverzicht: partijnamen niet zichtbaar bij smal scherm | UX/Responsive | S | 1 | ❌ TODO |
+| LF-03 | Afgesproken rente: geen keuze maand/jaarbasis | Feature | S-M | 2 | ❌ TODO |
+| LF-04 | Vordering invullen bij aanmaken dossier | UX/Feature | M | 4 | ❌ TODO (onderdeel LF-11) |
+| LF-05 | Kenmerk client ontbreekt (veld bestaat al als `reference`) | UX/Vindbaarheid | S | 1 | ❌ TODO |
+| LF-06 | Vordering niet zichtbaar na invullen, hoofdsom 0, incassokosten niet zichtbaar | Bug | M | 1 | ❌ TODO |
+| LF-07 | Navigatie factuur → terug → facturenoverzicht i.p.v. dossier | Bug | S | 1 | ❌ TODO |
+| LF-08 | Vorderingen niet aanpasbaar (edit UI ontbreekt) | Bug | S-M | 1 | ❌ TODO |
+| LF-09 | Geüploade factuur niet gekoppeld aan vordering | Feature | M | 3 | ❌ TODO |
+| LF-10 | AI factuur parsing: auto-invullen bij aanmaken dossier | Feature (AI) | XL | 8 | ❌ TODO (nice-to-have) |
+| LF-11 | Dossier aanmaken: alles in een keer (wizard) | UX/Feature | L | 4 | ❌ TODO |
+| LF-12 | Incassokosten handmatig aanpasbaar + calculator | Feature | M | 2 | ❌ TODO |
+| LF-13 | Tabs "Vorderingen" en "Financieel" samenvoegen | UX | M | 3 | ❌ TODO |
+| LF-14 | Tabs "Betalingen" en "Derdengelden" samenvoegen | UX | M | 3 | ❌ TODO |
+| LF-15 | Betalingsregeling: termijnen, koppeling, meldingen | Feature (nieuw) | L-XL | 6 | ❌ TODO |
+| LF-16 | Email template vanuit dossier (functie bestaat, niet vindbaar) | UX/Vindbaarheid | S | 1 | ❌ TODO |
+| LF-17 | Dossierbestand als email bijlage + omgekeerd | Feature | M | 5 | ❌ TODO |
+| LF-18 | Batch-verstuurde brieven niet traceerbaar per dossier | Bug | M | 1 | ❌ TODO |
+| LF-19 | Uurtarief per dossier aanpasbaar | Feature | S-M | 2 | ❌ TODO |
+| LF-20 | Incassokosten doorbelasten bij facturatie (succesprovisie) | Feature | L | 7 | ❌ TODO |
+| LF-21 | Fixed price, max uren, voorschot bij facturatie | Feature | L | 7 | ❌ TODO |
+| LF-22 | Debiteursinstellingen in dossier | Feature | M | 2 | ❌ TODO |
+
+### Fase-overzicht
+
+| Fase | Doel | Items | Terminals |
+|------|------|-------|-----------|
+| 1 | Bugs & Vindbaarheid | LF-02, LF-05, LF-06, LF-07, LF-08, LF-16, LF-18 | 2 parallel |
+| 2 | Kleine features + velden | LF-01, LF-03, LF-12, LF-19, LF-22 | 2 parallel |
+| 3 | Tab herstructurering | LF-09, LF-13, LF-14 | 2 parallel |
+| 4 | Dossier wizard | LF-04, LF-11 | 2 sequentieel |
+| 5 | Email verbeteringen | LF-17 | 2 sequentieel |
+| 6 | Betalingsregeling | LF-15 | 2 sequentieel |
+| 7 | Geavanceerde facturatie | LF-20, LF-21 | 2 parallel |
+| 8 | AI factuur parsing | LF-10 | 2 sequentieel |
+
+### Dependencies
+
+```
+LF-04 → onderdeel van LF-11
+LF-06 → moet gefixt voor LF-12, LF-13
+LF-08 → moet gefixt voor LF-09, LF-12
+LF-16 → moet vindbaar voor LF-17
+LF-19 → basis voor LF-20, LF-21
+LF-10 → afhankelijk van LF-11
+```
 
 ---
 

@@ -634,6 +634,8 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
 
 export function FinancieelTab({ caseId }: { caseId: string }) {
   const { data: summary, isLoading } = useFinancialSummary(caseId);
+  const [bikOverride, setBikOverride] = useState<string>("");
+  const [bikManual, setBikManual] = useState(false);
 
   if (isLoading) {
     return (
@@ -651,18 +653,27 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
 
   if (!summary) return null;
 
-  const paidPercent = summary.grand_total > 0
-    ? Math.min(100, Math.round((summary.total_paid / summary.grand_total) * 100))
+  const bikOverrideAmount = bikManual && bikOverride !== "" ? parseFloat(bikOverride) : null;
+  const effectiveBik = bikOverrideAmount !== null && !isNaN(bikOverrideAmount) ? bikOverrideAmount : summary.total_bik;
+  const bikDiff = effectiveBik - summary.total_bik;
+  const effectiveGrandTotal = summary.grand_total + bikDiff;
+  const effectiveOutstanding = summary.total_outstanding + bikDiff;
+  const effectiveRemainingCosts = summary.remaining_costs + bikDiff;
+
+  const paidPercent = effectiveGrandTotal > 0
+    ? Math.min(100, Math.round((summary.total_paid / effectiveGrandTotal) * 100))
     : 0;
 
   const rows = [
     { label: "Hoofdsom", total: summary.total_principal, paid: summary.total_paid_principal, open: summary.remaining_principal },
     { label: "Rente", total: summary.total_interest, paid: summary.total_paid_interest, open: summary.remaining_interest },
     {
-      label: summary.bik_btw > 0 ? "BIK incl. BTW" : "BIK (art. 6:96 BW)",
-      total: summary.total_bik,
+      label: bikOverrideAmount !== null && !isNaN(bikOverrideAmount)
+        ? "Incassokosten (handmatig)"
+        : summary.bik_btw > 0 ? "BIK incl. BTW" : "BIK (art. 6:96 BW)",
+      total: effectiveBik,
       paid: summary.total_paid_costs,
-      open: summary.remaining_costs,
+      open: effectiveRemainingCosts,
     },
   ];
 
@@ -676,7 +687,7 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
             <span className="text-xs font-medium uppercase tracking-wider">Totale vordering</span>
           </div>
           <p className="text-2xl font-bold tabular-nums text-foreground">
-            {formatCurrency(summary.grand_total)}
+            {formatCurrency(effectiveGrandTotal)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Hoofdsom + rente + kosten
@@ -700,7 +711,7 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
             <span className="text-xs font-medium uppercase tracking-wider">Openstaand</span>
           </div>
           <p className="text-2xl font-bold tabular-nums text-amber-600">
-            {formatCurrency(summary.total_outstanding)}
+            {formatCurrency(effectiveOutstanding)}
           </p>
           {summary.derdengelden_balance > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -726,8 +737,80 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
         </div>
         <div className="flex justify-between mt-1.5">
           <span className="text-[10px] text-emerald-600 tabular-nums">{formatCurrency(summary.total_paid)} betaald</span>
-          <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(summary.grand_total)} totaal</span>
+          <span className="text-[10px] text-muted-foreground tabular-nums">{formatCurrency(effectiveGrandTotal)} totaal</span>
         </div>
+      </div>
+
+      {/* BIK override */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Incassokosten</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setBikManual(!bikManual);
+              if (!bikManual) setBikOverride(summary.total_bik.toFixed(2));
+            }}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              bikManual
+                ? "bg-primary/10 text-primary border border-primary/20"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            <Pencil className="h-3 w-3" />
+            {bikManual ? "Handmatig" : "Aanpassen"}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground mb-1">
+              Berekend (WIK-staffel art. 6:96 BW)
+            </p>
+            <p className="text-lg font-semibold tabular-nums text-foreground">
+              {formatCurrency(summary.total_bik)}
+            </p>
+            {summary.bik_btw > 0 && (
+              <p className="text-xs text-muted-foreground">
+                incl. {formatCurrency(summary.bik_btw)} BTW
+              </p>
+            )}
+          </div>
+
+          {bikManual && (
+            <div className="flex-1">
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Handmatig bedrag
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={bikOverride}
+                  onChange={(e) => setBikOverride(e.target.value)}
+                  className="w-full rounded-lg border border-input bg-background pl-7 pr-3 py-2 text-sm font-medium tabular-nums focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                  placeholder={summary.total_bik.toFixed(2)}
+                />
+              </div>
+              {bikOverrideAmount !== null && !isNaN(bikOverrideAmount) && bikDiff !== 0 && (
+                <p className={`text-xs mt-1 ${bikDiff > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                  {bikDiff > 0 ? "+" : ""}{formatCurrency(bikDiff)} t.o.v. WIK-berekening
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {bikManual && (
+          <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/20 rounded-lg px-3 py-2 border border-amber-200 dark:border-amber-800">
+            Let op: bij een handmatig bedrag is dit technisch geen WIK meer. Het berekende bedrag (WIK-staffel) blijft zichtbaar ter referentie.
+          </p>
+        )}
       </div>
 
       {/* Breakdown table */}
@@ -772,9 +855,9 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
           <tfoot>
             <tr className="border-t-2 border-border bg-muted/30">
               <td className="px-5 py-3.5 text-sm font-bold text-foreground">Totaal</td>
-              <td className="px-5 py-3.5 text-right text-sm font-bold text-foreground tabular-nums">{formatCurrency(summary.grand_total)}</td>
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-foreground tabular-nums">{formatCurrency(effectiveGrandTotal)}</td>
               <td className="px-5 py-3.5 text-right text-sm font-bold text-emerald-600 tabular-nums">{formatCurrency(summary.total_paid)}</td>
-              <td className="px-5 py-3.5 text-right text-sm font-bold text-amber-600 tabular-nums">{formatCurrency(summary.total_outstanding)}</td>
+              <td className="px-5 py-3.5 text-right text-sm font-bold text-amber-600 tabular-nums">{formatCurrency(effectiveOutstanding)}</td>
             </tr>
           </tfoot>
         </table>

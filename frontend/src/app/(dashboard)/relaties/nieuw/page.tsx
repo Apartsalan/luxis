@@ -25,6 +25,9 @@ export default function NieuweRelatiePage() {
     visit_address: "",
     visit_postcode: "",
     visit_city: "",
+    postal_address: "",
+    postal_postcode: "",
+    postal_city: "",
     notes: "",
   });
   const [error, setError] = useState("");
@@ -50,6 +53,9 @@ export default function NieuweRelatiePage() {
       ...(form.visit_address && { visit_address: form.visit_address }),
       ...(form.visit_postcode && { visit_postcode: form.visit_postcode }),
       ...(form.visit_city && { visit_city: form.visit_city }),
+      ...(form.postal_address && { postal_address: form.postal_address }),
+      ...(form.postal_postcode && { postal_postcode: form.postal_postcode }),
+      ...(form.postal_city && { postal_city: form.postal_city }),
       ...(form.notes && { notes: form.notes }),
     };
 
@@ -211,7 +217,7 @@ export default function NieuweRelatiePage() {
             </div>
           )}
 
-          <h3 className="pt-2 text-sm font-semibold text-foreground">Adres</h3>
+          <h3 className="pt-2 text-sm font-semibold text-foreground">Bezoekadres</h3>
           <div>
             <label className="block text-sm font-medium text-foreground">
               Straat + huisnummer
@@ -244,6 +250,45 @@ export default function NieuweRelatiePage() {
                 type="text"
                 value={form.visit_city}
                 onChange={(e) => updateField("visit_city", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <h3 className="pt-2 text-sm font-semibold text-foreground">Postadres</h3>
+          <p className="text-xs text-muted-foreground -mt-2">Alleen invullen als dit afwijkt van het bezoekadres</p>
+          <div>
+            <label className="block text-sm font-medium text-foreground">
+              Straat + huisnummer
+            </label>
+            <input
+              type="text"
+              value={form.postal_address}
+              onChange={(e) => updateField("postal_address", e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Postcode
+              </label>
+              <input
+                type="text"
+                value={form.postal_postcode}
+                onChange={(e) => updateField("postal_postcode", e.target.value)}
+                className={inputClass}
+                placeholder="1234 AB"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground">
+                Plaats
+              </label>
+              <input
+                type="text"
+                value={form.postal_city}
+                onChange={(e) => updateField("postal_city", e.target.value)}
                 className={inputClass}
               />
             </div>

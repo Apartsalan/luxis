@@ -431,12 +431,12 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | LF-06 | Vordering niet zichtbaar na invullen, hoofdsom 0, incassokosten niet zichtbaar | Bug | M | 1 | ✅ 16 mrt — Case.total_principal cache fix |
 | LF-07 | Navigatie factuur → terug → facturenoverzicht i.p.v. dossier | Bug | S | 1 | ✅ 16 mrt |
 | LF-08 | Vorderingen niet aanpasbaar (edit UI ontbreekt) | Bug | S-M | 1 | ✅ 16 mrt — inline edit + useUpdateClaim |
-| LF-09 | Geüploade factuur niet gekoppeld aan vordering | Feature | M | 3 | ❌ TODO |
+| LF-09 | Geüploade factuur niet gekoppeld aan vordering | Feature | M | 3 | ✅ 16 mrt — backend: invoice_file_id FK + PATCH endpoint |
 | LF-10 | AI factuur parsing: auto-invullen bij aanmaken dossier | Feature (AI) | XL | 8 | ❌ TODO (nice-to-have) |
 | LF-11 | Dossier aanmaken: alles in een keer (wizard) | UX/Feature | L | 4 | ❌ TODO |
-| LF-12 | Incassokosten handmatig aanpasbaar + calculator | Feature | M | 2 | ✅ 16 mrt (frontend UI, backend later) |
-| LF-13 | Tabs "Vorderingen" en "Financieel" samenvoegen | UX | M | 3 | ❌ TODO |
-| LF-14 | Tabs "Betalingen" en "Derdengelden" samenvoegen | UX | M | 3 | ❌ TODO |
+| LF-12 | Incassokosten handmatig aanpasbaar + calculator | Feature | M | 2 | ✅ 16 mrt — frontend UI + backend persistence (bik_override) |
+| LF-13 | Tabs "Vorderingen" en "Financieel" samenvoegen | UX | M | 3 | ✅ 16 mrt |
+| LF-14 | Tabs "Betalingen" en "Derdengelden" samenvoegen | UX | M | 3 | ✅ 16 mrt |
 | LF-15 | Betalingsregeling: termijnen, koppeling, meldingen | Feature (nieuw) | L-XL | 6 | ❌ TODO |
 | LF-16 | Email template vanuit dossier (functie bestaat, niet vindbaar) | UX/Vindbaarheid | S | 1 | ✅ 16 mrt |
 | LF-17 | Dossierbestand als email bijlage + omgekeerd | Feature | M | 5 | ❌ TODO |

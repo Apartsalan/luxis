@@ -1,12 +1,29 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 69 — LF Fase 2 compleet)
-**Laatste feature/fix:** LF-03 (rate_basis), LF-19 (hourly_rate), LF-22 (debtor settings) + LF-01, LF-12 frontend
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 69/70 — LF Fase 2+3 compleet)
+**Laatste feature/fix:** LF-12 backend (bik_override), LF-13 + LF-14 (tab merge), LF-09 (invoice linking)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**LF Sprint:** Fase 1 compleet (7/7) ✅ + Fase 2 compleet (5/5) ✅ — 12 van 22 items afgerond
-**Backend tests:** 583 passed, 0 errors, 0 failures | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** LF Fase 3 — Tab herstructurering (LF-09, LF-13, LF-14) + LF-12 backend persistence (bik_override migratie)
+**LF Sprint:** Fase 1-3 compleet — 15 van 22 items afgerond (LF-09, LF-12, LF-13, LF-14 net af)
+**Backend tests:** 137 relevant passed | **Ruff:** 0 warnings | **Frontend build:** ✅
+**Volgende sessie:** LF Fase 4+ — LF-03/19/22 frontend UI, LF-04/LF-11 (dossier wizard), LF-15 (betalingsregeling)
+
+## Wat er gedaan is (sessie 70B — 16 maart 2026) — LF-13 + LF-14 Tab herstructurering
+
+### Samenvatting
+- **LF-13**: Tabs "Vorderingen" en "Financieel" samengevoegd tot 1 tab "Vorderingen" — claims tabel bovenaan, financieel overzicht (KPI cards, BIK override, specificatietabel) eronder
+- **LF-14**: Tabs "Betalingen" en "Derdengelden" samengevoegd tot 1 tab "Betalingen" — betalingen lijst bovenaan, derdengelden sectie eronder
+- Incasso module gaat van 4 sub-tabs naar 2 sub-tabs (Vorderingen, Betalingen)
+- Geen backend wijzigingen
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/zaken/[id]/components/IncassoTab.tsx` — 2 nieuwe combined components toegevoegd
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — tabs array en rendering bijgewerkt, unused icons verwijderd
+
+### Deploy
+- Frontend deployed naar VPS
+
+---
 
 ## Wat er gedaan is (sessie 69A — 16 maart) — LF Fase 2: Backend migraties (LF-03, LF-19, LF-22)
 
@@ -33,7 +50,7 @@
 
 ### Bekende issues
 - LF-03/LF-19/LF-22 frontend UI ontbreekt nog (dropdowns, velden, panels) — gepland voor latere sessie
-- LF-12 backend persistence (`bik_override` veld + migratie) moet nog
+- LF-12 backend persistence — ✅ afgerond (bik_override op Case model, migratie 040)
 
 ### Volgende sessie
 - LF Fase 3: Tab herstructurering (LF-09, LF-13, LF-14)

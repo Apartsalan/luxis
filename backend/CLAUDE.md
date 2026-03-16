@@ -29,9 +29,8 @@ Every module follows: `router.py` (endpoints) → `service.py` (business logic, 
 - **Tijdens ontwikkeling:** alleen relevante tests draaien
   - `pytest tests/test_claims_crud.py -v` — specifiek bestand
   - `pytest tests/ -k "claim" -v` — keyword filter
-- **Vlak voor commit:** volledige suite één keer, op de achtergrond
-  - `pytest tests/ -v` — alle tests moeten slagen
-- **NOOIT** de volledige suite meerdere keren draaien per cyclus — één keer voor commit is genoeg
+- **Full suite:** alleen draaien bij wijzigingen die bestaande functionaliteit kunnen breken (refactors, gedeelde functies, schema-wijzigingen aan bestaande velden). NIET bij puur additieve wijzigingen (nieuwe velden, nieuwe endpoints).
+- **NOOIT** de volledige suite draaien "voor de zekerheid" — beoordeel of het nodig is
 
 ## Test Patterns
 

@@ -746,6 +746,7 @@ function NieuweZaakPage() {
                 <div>
                   <label className="block text-sm font-medium text-foreground">
                     Debiteurtype
+                    <ConfidenceDot field="debtor_type" confidence={fieldConfidence} />
                   </label>
                   <select
                     value={form.debtor_type}
@@ -777,6 +778,7 @@ function NieuweZaakPage() {
               <div>
                 <label className="block text-sm font-medium text-foreground">
                   Beschrijving
+                  <ConfidenceDot field="description" confidence={fieldConfidence} />
                 </label>
                 <textarea
                   value={form.description}
@@ -987,6 +989,7 @@ function NieuweZaakPage() {
             <div>
               <label className="block text-sm font-medium text-foreground">
                 Client *
+                {invoiceData && <ConfidenceDot field="creditor_name" confidence={fieldConfidence} />}
               </label>
               {form.client_id ? (
                 <div className="mt-1.5 flex items-center gap-2">
@@ -1200,6 +1203,7 @@ function NieuweZaakPage() {
             <div>
               <label className="block text-sm font-medium text-foreground">
                 Wederpartij
+                {invoiceData && <ConfidenceDot field="debtor_name" confidence={fieldConfidence} />}
               </label>
               {form.opposing_party_id ? (
                 <div className="mt-1.5 flex items-center gap-2">
@@ -1580,6 +1584,7 @@ function NieuweZaakPage() {
                     <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-foreground">
                         Omschrijving
+                        {index === 0 && invoiceData && <ConfidenceDot field="description" confidence={fieldConfidence} />}
                       </label>
                       <input
                         type="text"
@@ -1594,6 +1599,7 @@ function NieuweZaakPage() {
                     <div>
                       <label className="block text-sm font-medium text-foreground">
                         Hoofdsom
+                        {index === 0 && invoiceData && <ConfidenceDot field="principal_amount" confidence={fieldConfidence} />}
                       </label>
                       <input
                         type="number"
@@ -1614,6 +1620,7 @@ function NieuweZaakPage() {
                     <div>
                       <label className="block text-sm font-medium text-foreground">
                         Verzuimdatum
+                        {index === 0 && invoiceData && <ConfidenceDot field="due_date" confidence={fieldConfidence} />}
                       </label>
                       <input
                         type="date"
@@ -1627,6 +1634,7 @@ function NieuweZaakPage() {
                     <div>
                       <label className="block text-sm font-medium text-foreground">
                         Factuurnummer
+                        {index === 0 && invoiceData && <ConfidenceDot field="invoice_number" confidence={fieldConfidence} />}
                       </label>
                       <input
                         type="text"
@@ -1641,6 +1649,7 @@ function NieuweZaakPage() {
                     <div>
                       <label className="block text-sm font-medium text-foreground">
                         Factuurdatum
+                        {index === 0 && invoiceData && <ConfidenceDot field="invoice_date" confidence={fieldConfidence} />}
                       </label>
                       <input
                         type="date"

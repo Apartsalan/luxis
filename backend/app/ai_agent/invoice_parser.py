@@ -1,6 +1,5 @@
 """Invoice PDF parser — extracts structured data from invoice PDFs using AI."""
 
-import json
 import logging
 import tempfile
 from decimal import Decimal, InvalidOperation

@@ -156,6 +156,7 @@ export function useCreateClaim() {
         default_date: string;
         invoice_number?: string;
         invoice_date?: string;
+        rate_basis?: string;
       };
     }) => {
       const res = await api(`/api/cases/${caseId}/claims`, {

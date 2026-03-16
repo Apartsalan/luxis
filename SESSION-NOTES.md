@@ -1,12 +1,44 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 69B — LF Fase 2: frontend forms)
-**Laatste feature/fix:** LF-01 (adresvelden contact form) + LF-12 (BIK override UI)
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 69 — LF Fase 2 compleet)
+**Laatste feature/fix:** LF-03 (rate_basis), LF-19 (hourly_rate), LF-22 (debtor settings) + LF-01, LF-12 frontend
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**LF Sprint:** Fase 1 compleet (7/7) + Fase 2: LF-01 ✅, LF-12 ✅ (frontend), LF-03/LF-19/LF-22 nog open
-**Backend tests:** 580 passed, 0 errors, 0 failures | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** LF Fase 2 rest — LF-03 (rente maand/jaarbasis), LF-19 (uurtarief per dossier), LF-22 (debiteursinstellingen) + LF-12 backend persistence
+**LF Sprint:** Fase 1 compleet (7/7) ✅ + Fase 2 compleet (5/5) ✅ — 12 van 22 items afgerond
+**Backend tests:** 583 passed, 0 errors, 0 failures | **Ruff:** 0 warnings | **Frontend build:** ✅
+**Volgende sessie:** LF Fase 3 — Tab herstructurering (LF-09, LF-13, LF-14) + LF-12 backend persistence (bik_override migratie)
+
+## Wat er gedaan is (sessie 69A — 16 maart) — LF Fase 2: Backend migraties (LF-03, LF-19, LF-22)
+
+### Samenvatting
+- **LF-03**: `rate_basis` veld op Claim model (monthly/yearly, default yearly). Bij monthly wordt contractuele rente * 12 voor jaarlijkse berekening. Interest engine aangepast in `calculate_case_interest`. 3 nieuwe tests.
+- **LF-19**: `hourly_rate` veld op Case model (Numeric(10,2), nullable). Per-dossier uurtarief dat user default overschrijft.
+- **LF-22**: `payment_term_days` (int), `collection_strategy` (string), `debtor_notes` (text) op Case model.
+- Alembic migratie 039 voor alle nieuwe kolommen.
+- Schemas + services bijgewerkt (CaseCreate, CaseUpdate, CaseResponse, ClaimCreate, ClaimUpdate, ClaimResponse).
+- Test strategie aangepast: full suite alleen bij wijzigingen die bestaand gedrag breken.
+
+### Gewijzigde bestanden
+- `backend/app/cases/models.py` — hourly_rate, payment_term_days, collection_strategy, debtor_notes
+- `backend/app/cases/schemas.py` — nieuwe velden in Create/Update/Response
+- `backend/app/cases/service.py` — create_case doorgeeft nieuwe velden
+- `backend/app/collections/models.py` — rate_basis op Claim
+- `backend/app/collections/schemas.py` — rate_basis in Create/Update/Response
+- `backend/app/collections/interest.py` — monthly→yearly conversie in calculate_case_interest
+- `backend/app/collections/service.py` — rate_basis in claim_dicts
+- `backend/app/collections/router.py` — rate_basis in claim_dicts
+- `backend/alembic/versions/039_lf03_lf19_lf22_rate_basis_hourly_rate_debtor_settings.py`
+- `backend/tests/test_interest.py` — 3 nieuwe tests (583 totaal)
+- `backend/CLAUDE.md` — test strategie update
+
+### Bekende issues
+- LF-03/LF-19/LF-22 frontend UI ontbreekt nog (dropdowns, velden, panels) — gepland voor latere sessie
+- LF-12 backend persistence (`bik_override` veld + migratie) moet nog
+
+### Volgende sessie
+- LF Fase 3: Tab herstructurering (LF-09, LF-13, LF-14)
+
+---
 
 ## Wat er gedaan is (sessie 69B — 16 maart) — LF Fase 2: Frontend forms (LF-01, LF-12)
 

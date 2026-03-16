@@ -4,7 +4,7 @@
 **Laatste feature/fix:** LF-20 + LF-21 volledig afgerond en gedeployed
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**LF Sprint:** 21 van 22 items afgerond — alleen LF-16 (dossier archivering) resteert
+**LF Sprint:** 21/22 afgerond — alleen LF-10 (AI factuur parsing, nice-to-have) resteert
 **Backend tests:** 609 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
 **Volgende sessie:** TBD
 

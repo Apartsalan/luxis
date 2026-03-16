@@ -395,17 +395,17 @@ export default function DossierHeader({
             </div>
             <span className="text-xs text-muted-foreground">Partijen</span>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             {zaak.client && (
               <Link
                 href={`/relaties/${zaak.client.id}`}
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors block truncate"
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors block break-words"
               >
                 {zaak.client.name}
               </Link>
             )}
             {zaak.opposing_party && (
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground break-words">
                 vs. {zaak.opposing_party.name}
               </p>
             )}
@@ -470,10 +470,10 @@ export default function DossierHeader({
         <button
           type="button"
           onClick={() => setCaseEmailOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors"
         >
-          <Mail className="h-3.5 w-3.5 text-blue-500" />
-          E-mail
+          <Mail className="h-3.5 w-3.5" />
+          E-mail versturen
         </button>
         {isIncasso && (
           <button

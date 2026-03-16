@@ -124,8 +124,8 @@ export default function DossierSidebar({
             )}
             {zaak.reference && (
               <div className="flex items-center justify-between">
-                <dt className="text-xs text-muted-foreground">Referentie</dt>
-                <dd className="text-xs font-medium text-foreground font-mono truncate max-w-[120px]">
+                <dt className="text-xs font-medium text-foreground">Kenmerk cliënt</dt>
+                <dd className="text-xs font-semibold text-primary font-mono truncate max-w-[140px]" title={zaak.reference}>
                   {zaak.reference}
                 </dd>
               </div>

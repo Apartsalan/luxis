@@ -36,6 +36,7 @@ import {
   getTemplatesForStatus,
   triggerDownload,
   useSendCaseEmail,
+  useEmailLogs,
   type GeneratedDocumentSummary,
 } from "@/hooks/use-documents";
 import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
@@ -408,7 +409,7 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
             {invoices.map((inv) => (
               <Link
                 key={inv.id}
-                href={`/facturen/${inv.id}`}
+                href={`/facturen/${inv.id}?from_case=1`}
                 className="flex items-center justify-between rounded-lg border border-border p-4 hover:border-primary/30 hover:bg-muted/30 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -461,9 +462,17 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
 export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, opposingPartyName }: { caseId: string; caseNumber?: string; caseStatus?: string; debtorType?: string | null; opposingPartyName?: string }) {
   const { data: templates, isLoading: templatesLoading } = useDocxTemplates();
   const { data: documents, isLoading: docsLoading } = useCaseDocuments(caseId);
+  const { data: emailLogs } = useEmailLogs(caseId);
   const generateDocx = useGenerateDocx(caseId);
   const deleteDocument = useDeleteDocument(caseId);
   const sendDocument = useSendDocument(caseId);
+
+  // Build set of document titles that have been emailed (for "Verzonden" badge)
+  const sentDocTitles = new Set(
+    (emailLogs ?? [])
+      .filter((log) => log.status === "sent")
+      .map((log) => log.subject)
+  );
 
   // Email compose dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -925,11 +934,22 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {doc.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {doc.title}
+                      </p>
+                      {sentDocTitles.has(doc.title) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                          <Send className="h-2.5 w-2.5" />
+                          Verzonden
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {formatDateShort(doc.created_at)}
+                      {doc.document_type && (
+                        <span className="ml-1.5">· {getTemplateLabel(doc.document_type)}</span>
+                      )}
                     </p>
                   </div>
                 </div>

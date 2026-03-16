@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -79,6 +79,7 @@ const STATUS_ACTIONS: Record<
 export default function FactuurDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id as string;
 
   const { data: factuur, isLoading, isError, error, refetch } = useInvoice(id);
@@ -403,8 +404,17 @@ export default function FactuurDetailPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Link
-            href="/facturen"
+            href={
+              searchParams.get("from_case") && factuur.case
+                ? `/zaken/${factuur.case.id}`
+                : "/facturen"
+            }
             className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors"
+            title={
+              searchParams.get("from_case") && factuur.case
+                ? `Terug naar dossier ${factuur.case.case_number}`
+                : "Terug naar facturen"
+            }
           >
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>

@@ -220,7 +220,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">
-                  Referentie (klantreferentie)
+                  Kenmerk cliënt
                 </label>
                 <input
                   type="text"
@@ -339,11 +339,11 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground mb-1">
-                Referentie
+              <dt className="text-xs font-medium text-foreground mb-1">
+                Kenmerk cliënt
               </dt>
-              <dd className="text-sm text-foreground font-mono">
-                {zaak.reference || "-"}
+              <dd className="text-sm font-semibold text-primary font-mono">
+                {zaak.reference || <span className="text-muted-foreground font-normal">-</span>}
               </dd>
             </div>
             <div>

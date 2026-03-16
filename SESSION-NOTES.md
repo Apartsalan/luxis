@@ -1,12 +1,50 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 70 — LF Fase 4 compleet)
-**Laatste feature/fix:** LF-11 + LF-04 (3-step dossier wizard), LF-03/19/22 frontend (case detail velden)
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 71 — LF-15 + LF-17 compleet)
+**Laatste feature/fix:** LF-15 (betalingsregeling met termijnen), LF-17 (email bijlagen in dossierbestanden)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
-**LF Sprint:** Fase 1-4 compleet — 17 van 22 items afgerond (LF-04, LF-11 net af)
-**Backend tests:** 137 relevant passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** LF Fase 5+ — LF-15 (betalingsregeling, research af), LF-17 (email bijlagen), LF-20/21 (facturatie)
+**LF Sprint:** 19 van 22 items afgerond (LF-15, LF-17 net af)
+**Backend tests:** 148 relevant passed | **Ruff:** 0 warnings | **Frontend build:** ✅
+**Volgende sessie:** LF-20/21 (facturatie features), overige restanten
+
+## Wat er gedaan is (sessie 71 — 16 maart 2026) — LF-15: Betalingsregeling + LF-17: Email bijlagen
+
+### Samenvatting
+
+**LF-15 — Betalingsregeling (Payment Arrangements with Installments):**
+- Nieuw model `PaymentArrangementInstallment` met volledige lifecycle: pending → paid/partial/overdue/missed/waived
+- Auto-generatie van termijnen bij aanmaken regeling (weekly/monthly/quarterly)
+- Afrondingsverschil op laatste termijn (bijv. €1000/3 = €333.34 + €333.34 + €333.32)
+- Termijnbetaling registreren → maakt automatisch Payment aan met art. 6:44 BW toerekening
+- Wanprestatie (default), annuleren (cancel), kwijtschelden (waive) flows
+- Auto-completion: arrangement → completed wanneer alle termijnen betaald/waived
+- Max 1 actieve regeling per dossier (409 Conflict)
+- Scheduler job: daily overdue check om 06:30 UTC
+- Frontend: BetalingsregelingSection in IncassoTab met create dialog, progress tracking, termijntabel, payment recording
+- 11 backend tests, allemaal groen
+- Research document: `docs/research/UX-RESEARCH-BETALINGSREGELINGEN.md`
+
+**LF-17 — Email bijlagen in dossierbestanden:** (Terminal C)
+- Email bijlagen nu zichtbaar in Bestanden tab van dossier
+
+### Gewijzigde bestanden
+- `backend/app/collections/models.py` — PaymentArrangementInstallment model + relationship
+- `backend/app/collections/schemas.py` — InstallmentResponse, ArrangementWithInstallmentsResponse, RecordInstallmentPayment
+- `backend/app/collections/service.py` — termijngeneratie, record_payment, default, cancel, waive, mark_overdue
+- `backend/app/collections/router.py` — 5 nieuwe endpoints
+- `backend/app/workflow/scheduler.py` — daily_installment_overdue_check
+- `backend/alembic/versions/2e1747ba61ca_add_payment_arrangement_installments.py` — migratie
+- `backend/tests/test_payment_arrangements.py` — 11 tests
+- `frontend/src/hooks/use-collections.ts` — arrangement hooks
+- `frontend/src/app/(dashboard)/zaken/[id]/components/IncassoTab.tsx` — BetalingsregelingSection UI
+- `docs/research/UX-RESEARCH-BETALINGSREGELINGEN.md` — UX research
+
+### Deploy
+- Backend + frontend containers herbouwd en herstart op VPS
+- Migratie gedraaid op productie
+
+---
 
 ## Wat er gedaan is (sessie 70 — 16 maart 2026) — LF-11 + LF-04: Dossier Wizard
 

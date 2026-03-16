@@ -285,7 +285,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** Lisanne Feedback Sprint — Fase 1: Bugs & Vindbaarheid (LF-02, LF-05, LF-06, LF-07, LF-08, LF-16, LF-18)
+**Volgende prioriteit:** Lisanne Feedback Sprint — LF-20/LF-21 (facturatie), overige restanten
 
 ### Pre-Launch Sprint (sessie 62 audit → uitrol)
 
@@ -437,9 +437,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | LF-12 | Incassokosten handmatig aanpasbaar + calculator | Feature | M | 2 | ✅ 16 mrt — frontend UI + backend persistence (bik_override) |
 | LF-13 | Tabs "Vorderingen" en "Financieel" samenvoegen | UX | M | 3 | ✅ 16 mrt |
 | LF-14 | Tabs "Betalingen" en "Derdengelden" samenvoegen | UX | M | 3 | ✅ 16 mrt |
-| LF-15 | Betalingsregeling: termijnen, koppeling, meldingen | Feature (nieuw) | L-XL | 6 | ❌ TODO |
+| LF-15 | Betalingsregeling: termijnen, koppeling, meldingen | Feature (nieuw) | L-XL | 6 | ✅ 16 mrt |
 | LF-16 | Email template vanuit dossier (functie bestaat, niet vindbaar) | UX/Vindbaarheid | S | 1 | ✅ 16 mrt |
-| LF-17 | Dossierbestand als email bijlage + omgekeerd | Feature | M | 5 | ❌ TODO |
+| LF-17 | Dossierbestand als email bijlage + omgekeerd | Feature | M | 5 | ✅ 16 mrt |
 | LF-18 | Batch-verstuurde brieven niet traceerbaar per dossier | Bug | M | 1 | ✅ 16 mrt |
 | LF-19 | Uurtarief per dossier aanpasbaar | Feature | S-M | 2 | ✅ 16 mrt — hourly_rate op Case model |
 | LF-20 | Incassokosten doorbelasten bij facturatie (succesprovisie) | Feature | L | 7 | ❌ TODO |

@@ -1,12 +1,43 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 76 — QA P1/P2 bugfixes + test data cleanup)
-**Laatste feature/fix:** QA sessie 76 — 7 bugs gefixt + test data opgeschoond
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 77 — Email IMAP sync + attachment preview)
+**Laatste feature/fix:** Sessie 77 — IMAP sync voor BaseNet, multi-account fix, email attachment preview
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Sessie 77 — AI factuur parsing validatie met echte facturen
+**Volgende sessie:** Sessie 78 — Gebruiker vraagt wat te doen (AI factuur parsing / demo prep / verdere email tests)
+
+## Wat er gedaan is (sessie 77 — 18 maart 2026) — Email IMAP Sync + Attachment Preview
+
+### Samenvatting
+
+**IMAP sync toegevoegd voor BaseNet email, multi-account bug gefixt, email attachment preview in Documenten tab.**
+
+Onderzoek gedaan naar waarom email sync niet werkte:
+- Ontdekt dat Outlook desktop via IMAP/BaseNet loopt, niet via M365 Exchange
+- Graph API zag daarom geen inkomende/uitgaande mails van Outlook desktop
+- IMAP provider was al gebouwd (sessie 76), maar multi-account bug brak de sync
+
+### Gefixt
+- **Multi-account crash:** `get_email_account()` crashte met `MultipleResultsFound` omdat er nu 2 accounts zijn (outlook + imap). Gefixt: retourneert nu eerste match, met voorkeur voor outlook provider.
+- **IMAP attachment indexing:** Walk-index mismatch tussen `_get_attachments` en `_fetch_attachment_from_imap`. Gefixt: consistent walk-index gebruiken.
+- **IMAP folder search:** Attachment download zoekt nu in meerdere folders (INBOX, INBOX.Sent).
+- **Email attachment preview:** Preview (Eye) knop toegevoegd voor email bijlagen in Documenten tab.
+
+### Gewijzigde bestanden
+- `backend/app/email/providers/imap_provider.py` — attachment indexing fix + multi-folder search
+- `backend/app/email/oauth_service.py` — multi-account support in get_email_account
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — preview knop voor email attachments
+
+### Bekende issues
+- **P2-02:** Sidebar badge "3" onduidelijk vs dashboard "16 actieve dossiers" — niet-blokkerend
+- **Email inbound:** Externe mail (van buiten M365) komt niet in M365 mailbox. Dit is GEEN bug — MX wijst naar BaseNet. Oplossing: M0b (MX switch) of IMAP sync (nu werkend als workaround).
+- **IMAP sync alleen via scheduler:** "Sync inbox" knop in dossier triggert alleen M365 sync, niet IMAP. IMAP draait elke 5 min via scheduler.
+- **BaseNet IMAP credentials:** seidony@kestinglegal.nl / cj%30wo2ba — opgeslagen in email_accounts tabel
+
+### Volgende sessie
+- Gebruiker bepaalt prioriteit: AI factuur parsing validatie, demo prep, of verdere email tests
 
 ## Wat er gedaan is (sessie 76 — 18 maart 2026) — QA P1/P2 Bugfixes + Test Data Cleanup
 

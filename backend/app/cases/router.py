@@ -114,6 +114,11 @@ async def get_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Get full case detail with parties and recent activities."""
+    # Refresh cached financials to ensure accuracy
+    from app.collections.service import _refresh_case_financials
+    await _refresh_case_financials(db, current_user.tenant_id, case_id)
+    await db.commit()
+
     case = await service.get_case(db, current_user.tenant_id, case_id)
 
     # Get recent activities (last 10)

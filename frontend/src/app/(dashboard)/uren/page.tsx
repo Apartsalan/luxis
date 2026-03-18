@@ -53,7 +53,7 @@ function fmtMinutes(mins: number): string {
 }
 
 function toISO(d: Date): string {
-  return d.toISOString().split("T")[0];
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 function getWeekDates(weekOffset: number): { start: string; end: string; days: Date[]; monday: Date; friday: Date } {

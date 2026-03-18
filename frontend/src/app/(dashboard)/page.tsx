@@ -335,51 +335,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Cases by status (bars) */}
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="text-sm font-semibold text-card-foreground mb-4">
-                Dossiers per status
-              </h2>
-              {summary?.cases_by_status && summary.cases_by_status.length > 0 ? (
-                <div className="space-y-3">
-                  {summary.cases_by_status.map((item) => {
-                    const pct =
-                      totalPipelineCases > 0
-                        ? (item.count / totalPipelineCases) * 100
-                        : 0;
-                    return (
-                      <div key={item.status}>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`h-2 w-2 rounded-full ${STATUS_COLORS[item.status] ?? "bg-slate-400"}`}
-                            />
-                            <span className="text-sm text-muted-foreground">
-                              {STATUS_LABELS[item.status] ?? item.status}
-                            </span>
-                          </div>
-                          <span className="text-sm font-semibold text-card-foreground tabular-nums">
-                            {item.count}
-                          </span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              STATUS_COLORS[item.status] ?? "bg-slate-400"
-                            } transition-all duration-500`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Geen dossiers gevonden
-                </p>
-              )}
-            </div>
           </div>
         )}
 

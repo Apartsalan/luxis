@@ -586,9 +586,11 @@ function EmailListItem({
       {/* Content */}
       <div className="flex-1 min-w-0" onClick={onSelect}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium truncate">
+          <p className="text-sm font-medium truncate" title={email.direction === "inbound" ? email.from_email : email.to_emails[0]}>
             {email.direction === "inbound"
-              ? email.from_name || email.from_email
+              ? email.from_name
+                ? `${email.from_name} (${email.from_email.split("@")[0]})`
+                : email.from_email
               : email.to_emails[0] || "Onbekend"}
           </p>
           <div className="flex items-center gap-1.5 shrink-0">

@@ -264,6 +264,8 @@ export default function TakenPage() {
   const { data: casesData } = useCases({ per_page: 100, status: "" });
   const completeTask = useCompleteTask();
   const skipTask = useSkipTask();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const TASKS_PER_GROUP = 10;
   const createTask = useCreateTask();
 
   const cases = casesData?.items ?? [];
@@ -588,7 +590,7 @@ export default function TakenPage() {
                 </span>
               </h2>
               <div className="space-y-2">
-                {group.tasks.map((task) => (
+                {(expandedGroups[group.label] ? group.tasks : group.tasks.slice(0, TASKS_PER_GROUP)).map((task) => (
                   <TaskRow
                     key={task.id}
                     task={task}
@@ -598,6 +600,14 @@ export default function TakenPage() {
                     isSkipping={skipTask.isPending}
                   />
                 ))}
+                {group.tasks.length > TASKS_PER_GROUP && !expandedGroups[group.label] && (
+                  <button
+                    onClick={() => setExpandedGroups(prev => ({ ...prev, [group.label]: true }))}
+                    className="w-full py-2 text-sm text-primary hover:text-primary/80 font-medium rounded-lg border border-dashed border-border hover:border-primary/30 transition-colors"
+                  >
+                    Toon alle {group.tasks.length} taken
+                  </button>
+                )}
               </div>
             </div>
           ))}

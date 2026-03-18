@@ -1,13 +1,46 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 78 — Demo feedback Sprint 1 + Sprint 2)
-**Laatste feature/fix:** Sessie 78 — Sprint 1 (7 bugs) + Sprint 2 (4 uren features) afgerond
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 79 — Demo feedback Sprint 3)
+**Laatste feature/fix:** Sessie 79 — 6 van 9 demo feedback items opgelost (DF-06 t/m DF-12)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
-**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅, Sprint 3-4 openstaand (9 items)
+**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 3 items wachten op Lisanne
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Sessie 79 — Demo feedback Sprint 3 (incasso provisie, BTW toggle, factuur context, navigatie, contractuele rente, betaalregelingen) + Sprint 4 (verschotten, voorschotnota)
+**Volgende sessie:** Sessie 80 — Na overleg Lisanne: DF-05 (provisie factuurregel), DF-11 (betaling auto-koppelen), DF-13 (voorschotnota verrekening type)
+
+## Wat er gedaan is (sessie 79 — 18 maart 2026) — Demo Feedback Sprint 3
+
+### Samenvatting
+6 van 9 demo feedback items opgelost. 3 items (DF-05, DF-11, DF-13) wachten op verduidelijking van Lisanne.
+
+### Afgeronde items
+- **DF-06**: BTW dropdown met presets (21%/0% vrijgesteld/aangepast percentage) i.p.v. vrij numeriek veld
+- **DF-07**: Context panel bij factuur aanmaken — toont al gefactureerd bedrag, derdengelden saldo en budget status per dossier
+- **DF-08**: Na factuur aanmaken navigeert terug naar dossier als via case_id param geopend
+- **DF-09**: Rentefrequentie UI verbeterd — "Rentefrequentie" label i.p.v. "Rente per", rate_basis toegevoegd aan VorderingenTab create/edit forms (was alleen in wizard)
+- **DF-10**: Betaalregelingen: "Aantal termijnen" veld toegevoegd → bedrag per termijn auto-berekend (total / count), bewerkbaar
+- **DF-12**: Verschotten uitgebreid: `tax_type` (belast/onbelast/vrijgesteld) + `file_id` (koppeling aan case files). Nieuwe VerschottenSection in FacturenTab met volledige CRUD
+
+### Geparkeerde items (wachten op Lisanne)
+- **DF-05**: Incasso provisie als configureerbare factuurregel — onduidelijk: per dossier of per factuur?
+- **DF-11**: Betaling auto-koppelen aan betaalregeling termijn — onduidelijk: altijd, alleen CSV, of suggestie?
+- **DF-13**: Voorschotnota verrekening type — onduidelijk: tussentijds vs bij sluiting
+
+### Nieuwe bestanden
+- `backend/alembic/versions/041_df12_expense_tax_type_file_id.py`
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/facturen/nieuw/page.tsx` — BTW dropdown, context panel, navigatie fix
+- `frontend/src/app/(dashboard)/zaken/[id]/components/IncassoTab.tsx` — rate_basis in create/edit, termijnen auto-berekening
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — VerschottenSection
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — rentefrequentie label
+- `frontend/src/hooks/use-collections.ts` — rate_basis + invoice_file_id in useUpdateClaim type
+- `frontend/src/hooks/use-expenses.ts` — tax_type + file_id types
+- `backend/app/invoices/models.py` — Expense: tax_type, file_id velden
+- `backend/app/invoices/schemas.py` — ExpenseCreate/Update/Response uitgebreid
+
+---
 
 ## Wat er gedaan is (sessie 78, deel 2) — Sprint 2: Uren & Facturatie
 

@@ -260,6 +260,30 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-48 | Stale "Selecteer een client" validatiefout bleef zichtbaar na succesvolle client selectie. Fix: error wordt gecleared in updateField wanneer client_id wordt gezet. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-49 | Week range header in urenregistratie toonde "15 mrt — 19 mrt" maar dagen waren Ma 16 - Vr 20 mrt. Fix: gebruik lokale Date objecten i.p.v. re-parsing van ISO strings (timezone offset veroorzaakte off-by-one). | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-50 | favicon.ico 404 op alle pagina's. Fix: SVG favicon (Scale icoon) toegevoegd in `src/app/icon.svg`. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-51 | AI factuur parser werkte niet — KIMI_API_KEY niet doorgegeven via docker-compose env vars | Hoog | S | ✅ Gefixt (18 mrt, sessie 78) |
+| BUG-52 | Timer rondde af per minuut i.p.v. per 6 minuten — standaard juridische facturering | Midden | S | ✅ Gefixt (18 mrt, sessie 78) |
+| BUG-53 | Factuur PDF niet gekoppeld als document na AI parse + dossier aanmaken | Midden | S | ✅ Gefixt (18 mrt, sessie 78) |
+| BUG-54 | Renteoverzicht knop verwees naar niet-bestaande "financieel" tab | Hoog | M | ✅ Gefixt (18 mrt, sessie 78) — RenteoverzichtDialog gebouwd |
+| BUG-55 | Geen delete knop voor facturen in dossier Facturen tab | Midden | S | ✅ Gefixt (18 mrt, sessie 78) |
+| BUG-56 | Wizard stap 3 (Vordering) overgeslagen bij incasso dossiers — Enter key + button click-through | Hoog | S | ✅ Gefixt (18 mrt, sessie 78) — handleSubmit guard + React key props |
+
+### Demo Feedback Sprint 2-4 (openstaand, sessie 78)
+
+| # | Feature/Fix | Ernst | Status |
+|---|-------------|-------|--------|
+| DF-01 | Bestede uren vs te factureren uren (standaard gelijk, aanpasbaar) | Hoog | ❌ TODO |
+| DF-02 | Uren filters: maand, dag, client, factuurnummer zoeken | Midden | ❌ TODO |
+| DF-03 | Datum aanpassen bij uren (inline edit) | Laag | ❌ TODO |
+| DF-04 | Uren-factuur koppeling zichtbaar (factuurnummer bij time entry) | Midden | ❌ TODO |
+| DF-05 | Incasso provisie als configureerbare factuurregel | Hoog | ❌ TODO |
+| DF-06 | BTW toggle verbeteren (dropdown: 21%/0%/aangepast) | Midden | ❌ TODO |
+| DF-07 | Factuur context panel (al gefactureerd + derdengelden per dossier) | Hoog | ❌ TODO |
+| DF-08 | Navigatie terug naar dossier na factuur aanmaken | Laag | ❌ TODO |
+| DF-09 | Contractuele rente frequentie UI duidelijker | Midden | ❌ TODO |
+| DF-10 | Betaalregelingen: aantal termijnen → bedrag auto-berekenen | Midden | ❌ TODO |
+| DF-11 | Betaling auto-koppelen aan betaalregeling termijn | Midden | ❌ TODO |
+| DF-12 | Verschotten: file upload + belast/onbelast veld (voor Exact koppeling) | Hoog | ❌ TODO |
+| DF-13 | Voorschotnota: verrekening type (tussentijds / bij sluiting) | Midden | ❌ TODO |
 
 ---
 

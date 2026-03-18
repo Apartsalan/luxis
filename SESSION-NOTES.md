@@ -1,12 +1,66 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 77 — Email IMAP sync + attachment preview)
-**Laatste feature/fix:** Sessie 77 — IMAP sync voor BaseNet, multi-account fix, email attachment preview
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 78 — Demo feedback fixes Sprint 1)
+**Laatste feature/fix:** Sessie 78 — 7 demo feedback issues opgelost + UrenTab in dossier
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
+**Demo feedback sprint:** Sprint 1 (7/20) afgerond, Sprint 2-4 openstaand
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Sessie 78 — Gebruiker vraagt wat te doen (AI factuur parsing / demo prep / verdere email tests)
+**Volgende sessie:** Sessie 79 — Demo feedback Sprint 2+ (bestede/te factureren uren, uren filters, incasso provisie, verschotten, BTW toggle, betaalregelingen)
+
+## Wat er gedaan is (sessie 78 — 18 maart 2026) — Demo Feedback Fixes Sprint 1
+
+### Samenvatting
+
+**Eerste demo met Lisanne leverde 20 feedbackpunten op. Sprint 1 (7 kritieke bugs) opgelost + UrenTab gebouwd via parallelle terminal.**
+
+Lisanne testte het systeem en vond problemen in: uren/facturatie koppeling, wizard flow, AI parser, renteoverzicht, verschotten, betaalregelingen, en meer. Alle 20 punten gedocumenteerd en geprioriteerd in 4 sprints.
+
+### Gefixt (Sprint 1)
+- **AI factuur parsen werkte niet:** KIMI_API_KEY niet doorgegeven in docker-compose.yml env vars. Key toegevoegd + getest.
+- **Timer per 6 minuten:** Was per minuut, nu `Math.ceil(sec/360)*6` — minimum 6 min (standaard juridische facturering).
+- **Factuur PDF niet in dossier:** Na AI parse werd het PDF bestand niet als document gekoppeld aan het dossier. Nu: automatisch upload na case creation.
+- **Renteoverzicht knop deed niks:** Verwees naar niet-bestaande "financieel" tab. Nu: opent RenteoverzichtDialog met rente per vordering + BIK overzicht.
+- **Delete facturen in dossier:** Geen delete knop zichtbaar. Toegevoegd met hover-effect en bevestigingsdialog.
+- **Wizard stap 3 overgeslagen:** Twee oorzaken gefixt: (1) Enter key in inputs triggerde form submit → nu advance naar volgende stap, (2) "Volgende" en "Dossier aanmaken" knop op zelfde positie → React key props toegevoegd.
+- **UrenTab in dossier (terminal 2):** Nieuwe "Uren" tab in case detail met summary cards (totaal uren, declarabel, bedrag) + gedetailleerde tabel.
+
+### Getest door test-terminal
+- 5/6 Sprint 1 fixes getest en geslaagd op productie
+- Wizard bug bevestigd en daarna gefixt (tweede fix met key props)
+
+### Openstaand (Sprint 2-4, 13 punten)
+- B3: Bestede uren vs te factureren uren (standaard gelijk, aanpasbaar)
+- B4: Uren filters verbeteren (maand, dag, client, factuurnummer)
+- B5: Datum aanpassen bij uren
+- B6: Uren-factuur koppeling zichtbaar
+- C1: Incasso provisie UI (percentage als factuurregel)
+- C2: BTW toggle verbeteren (dropdown: 21%/0%/aangepast)
+- C3: Factuur context panel (al gefactureerd + derdengelden per dossier)
+- C4: Navigatie terug naar dossier na factuur aanmaken
+- D1: Contractuele rente frequentie UI duidelijker
+- D2: Betaalregelingen: aantal termijnen invoeren → bedrag auto-berekenen
+- D3: Betaling auto-koppelen aan betaalregeling
+- E1: Verschotten uploaden + belast/onbelast (voor Exact koppeling)
+- E2: Voorschotnota verrekening type (tussentijds/bij sluiting)
+
+### Nieuwe/gewijzigde bestanden
+- `docker-compose.yml` — KIMI_API_KEY + ANTHROPIC_API_KEY env vars
+- `.env` — Kimi API key toegevoegd
+- `frontend/src/hooks/use-timer.ts` — 6-min afronding
+- `frontend/src/components/InvoiceUploadZone.tsx` — File object doorgeven aan parent
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — File upload na case creation + wizard fixes
+- `frontend/src/app/(dashboard)/zaken/[id]/components/RenteoverzichtDialog.tsx` — NIEUW
+- `frontend/src/app/(dashboard)/zaken/[id]/components/UrenTab.tsx` — NIEUW (terminal 2)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DossierHeader.tsx` — Renteoverzicht dialog
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — Delete facturen knop
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — UrenTab + financieel tab verwijderd
+
+### Proces-lessen
+- **Altijd testen na implementatie** — Sprint 1 was niet handmatig getest voor deploy
+- **Altijd vragen bij twijfel** — Niet gokken, eerst bevestigen met gebruiker
+- **Betere terminal prompts** — Subagents moeten CLAUDE.md regels kennen (roadmap update, session notes, commit regels)
 
 ## Wat er gedaan is (sessie 77 — 18 maart 2026) — Email IMAP Sync + Attachment Preview
 

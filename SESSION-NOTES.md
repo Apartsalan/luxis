@@ -1,13 +1,51 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 79 — Demo feedback Sprint 3)
-**Laatste feature/fix:** Sessie 79 — 6 van 9 demo feedback items opgelost (DF-06 t/m DF-12)
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 79b — UX Review & Fixes)
+**Laatste feature/fix:** Sessie 79b — Volledige UX review + 5 fixes gedeployd
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 3 items wachten op Lisanne
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Sessie 80 — Na overleg Lisanne: DF-05 (provisie factuurregel), DF-11 (betaling auto-koppelen), DF-13 (voorschotnota verrekening type)
+**Volgende sessie:** Sessie 80 — Resterende UX fixes (13 items) + DF-05/DF-11/DF-13 na overleg Lisanne + volledige hertest
+
+## Wat er gedaan is (sessie 79b — 18 maart 2026) — UX Review & Fixes
+
+### Samenvatting
+Volledige UX review van de hele applicatie — elk scherm, elke tab, elk formulier doorgelopen (31 screenshots). 18 UX issues gevonden, 5 gefixt en gedeployd. Overige 13 items gedocumenteerd voor sessie 80.
+
+### Gefixt (5 items)
+- **UX-FIX-1**: Uren weekdag highlight gebruikte UTC i.p.v. lokale timezone → `toISO()` functie gefixt
+- **UX-FIX-2**: Dossier summary cards toonden € 0,00 voor hoofdsom terwijl vorderingen € 5.000 hadden → case detail endpoint refresht nu altijd financials
+- **UX-FIX-3**: Redundante "Dossiers per status" widget verwijderd van dashboard (Pipeline balk toont dezelfde data)
+- **UX-FIX-4**: Taken pagina toonde alle 190 taken in één lijst → nu max 10 per groep met "Toon meer" knop
+- **UX-FIX-5**: Correspondentie toonde alleen voornaam afzender → nu "Naam (email-prefix)" met tooltip voor volledige email
+
+### Openstaande UX issues (voor sessie 80)
+- **UX-TODO-1**: Dossier tabs niet scrollbaar als er te veel zijn (10 tabs, eerste verdwijnt)
+- **UX-TODO-2**: Dossier header dupliceert bij scrollen (sticky header overlap)
+- **UX-TODO-3**: Correspondentie afzender: alleen voornaam bij korte namen — overweeg volledige email
+- **UX-TODO-4**: Documenten pagina: geen directe generatie vanuit sjabloon (moet via dossier)
+- **UX-TODO-5**: Betalingen pagina: onduidelijke flow, Upload knop niet prominent
+- **UX-TODO-6**: Incasso pipeline: betaald dossier verschijnt nog in "Zonder stap"
+- **UX-TODO-7**: Follow-up pagina: geen uitleg wat het doet als er geen aanbevelingen zijn
+- **UX-TODO-8**: Dashboard taken tonen duplicaten (3x zelfde taak) — groepering nodig
+- **UX-TODO-9**: Relaties lijst: type kolom niet sorteerbaar
+- **UX-TODO-10**: Factuur: verwijder-knop per regel alleen zichtbaar bij >1 regel (intentional maar onverwacht)
+- **UX-TODO-11**: Dossier "Hoofdsom" card toont € 0,00 op lijst-pagina (alleen detail is gefixt)
+- **UX-TODO-12**: Dossier overzicht: "Rente" en "Partijen" cards nemen te veel ruimte in
+- **UX-TODO-13**: Testdata opruimen (E2E Debug relaties, E2E Test taken)
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/uren/page.tsx` — toISO timezone fix
+- `frontend/src/app/(dashboard)/page.tsx` — redundante widget verwijderd
+- `frontend/src/app/(dashboard)/correspondentie/page.tsx` — afzender display
+- `frontend/src/app/(dashboard)/taken/page.tsx` — paginering per groep
+- `backend/app/cases/router.py` — financials refresh bij case detail
+
+### Bekende issues
+- Live site wachtwoord is niet `Hetbaken-KL-5` (werkt alleen op localhost)
+- 3 demo feedback items wachten op Lisanne (DF-05, DF-11, DF-13)
 
 ## Wat er gedaan is (sessie 79 — 18 maart 2026) — Demo Feedback Sprint 3
 

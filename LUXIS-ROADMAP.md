@@ -290,6 +290,26 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | DF-12 | Verschotten: file upload + belast/onbelast veld (voor Exact koppeling) | Hoog | ✅ 18 mrt |
 | DF-13 | Voorschotnota: verrekening type (tussentijds / bij sluiting) | Midden | ⏳ Wacht op Lisanne |
 
+### UX Review Fixes (sessie 79b — 18 mrt 2026)
+
+Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
+
+| # | Issue | Prioriteit | Status |
+|---|-------|-----------|--------|
+| UX-1 | Uren weekdag highlight UTC vs lokale timezone | Hoog | ✅ 18 mrt |
+| UX-2 | Dossier summary cards hoofdsom stale cache | Hoog | ✅ 18 mrt |
+| UX-3 | Redundante "Dossiers per status" widget op dashboard | Laag | ✅ 18 mrt |
+| UX-4 | Taken pagina toont alle 190 taken zonder paginering | Midden | ✅ 18 mrt |
+| UX-5 | Correspondentie afzender toont alleen voornaam | Midden | ✅ 18 mrt |
+| UX-6 | Dossier tabs overflow (10 tabs, niet scrollbaar) | Midden | ❌ TODO |
+| UX-7 | Dossier header dupliceert bij scrollen (sticky overlap) | Midden | ❌ TODO |
+| UX-8 | Documenten: geen directe generatie vanuit sjabloon | Laag | ❌ TODO |
+| UX-9 | Betalingen pagina: onduidelijke flow | Laag | ❌ TODO |
+| UX-10 | Incasso pipeline: betaald dossier in "Zonder stap" | Midden | ❌ TODO |
+| UX-11 | Follow-up: geen uitleg als leeg | Laag | ❌ TODO |
+| UX-12 | Dashboard taken duplicaten groeperen | Laag | ❌ TODO |
+| UX-13 | Dossier hoofdsom op lijst-pagina (alleen detail gefixt) | Midden | ❌ TODO |
+
 ---
 
 ## Backlog / Feature Requests

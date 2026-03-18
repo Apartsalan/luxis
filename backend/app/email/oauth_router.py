@@ -53,6 +53,19 @@ class DisconnectResponse(BaseModel):
     message: str
 
 
+class ImapConnectRequest(BaseModel):
+    email_address: str
+    host: str
+    port: int = 993
+    password: str
+
+
+class ImapConnectResponse(BaseModel):
+    success: bool
+    message: str
+    email_address: str | None = None
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 
@@ -125,6 +138,54 @@ async def get_oauth_status(
         provider=account.provider,
         email_address=account.email_address,
         connected_at=account.connected_at.isoformat() if account.connected_at else None,
+    )
+
+
+@router.post("/imap/connect", response_model=ImapConnectResponse)
+async def connect_imap_account(
+    body: ImapConnectRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Connect an IMAP email account (e.g. BaseNet).
+
+    Tests the connection first, then stores encrypted credentials.
+    """
+    import imaplib
+
+    # Test the IMAP connection
+    try:
+        imap = imaplib.IMAP4_SSL(body.host, body.port)
+        imap.login(body.email_address, body.password)
+        imap.select("INBOX", readonly=True)
+        imap.close()
+        imap.logout()
+    except Exception as e:
+        logger.error(f"IMAP connection test failed: {e}")
+        return ImapConnectResponse(
+            success=False,
+            message=f"IMAP verbinding mislukt: {e}",
+        )
+
+    # Store as EmailAccount with provider="imap"
+    # Password in access_token_enc, host:port in scopes
+    await store_email_account(
+        db,
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        provider="imap",
+        email_address=body.email_address,
+        access_token=body.password,
+        refresh_token="imap-no-refresh-token",
+        expires_in=999999999,  # Never expires (password-based)
+        scopes=f"{body.host}:{body.port}",
+    )
+
+    logger.info(f"IMAP account verbonden: {body.email_address} ({body.host}:{body.port})")
+    return ImapConnectResponse(
+        success=True,
+        message=f"IMAP account verbonden: {body.email_address}",
+        email_address=body.email_address,
     )
 
 

@@ -27,6 +27,7 @@ from app.email.oauth_models import EmailAccount
 from app.email.oauth_service import get_provider, get_valid_access_token
 from app.email.providers.base import EmailMessage
 from app.email.synced_email_models import SyncedEmail
+from app.email.token_encryption import decrypt_token
 from app.relations.models import Contact
 
 # Base directory for email attachment storage
@@ -294,6 +295,10 @@ async def _download_attachments(
     tenant_id: uuid.UUID,
     synced_email_id: uuid.UUID,
     msg: EmailMessage,
+    *,
+    imap_host: str = "",
+    imap_port: int = 993,
+    imap_username: str = "",
 ) -> int:
     """Download all attachments for an email and store them on disk + DB.
 
@@ -310,9 +315,15 @@ async def _download_attachments(
     for att in msg.attachments:
         try:
             # Download from provider
-            file_bytes = await provider.get_attachment(
-                access_token, msg.provider_message_id, att.attachment_id
-            )
+            if imap_host:
+                file_bytes = await provider.get_attachment(
+                    access_token, msg.provider_message_id, att.attachment_id,
+                    host=imap_host, port=imap_port, username=imap_username,
+                )
+            else:
+                file_bytes = await provider.get_attachment(
+                    access_token, msg.provider_message_id, att.attachment_id
+                )
 
             # Generate stored filename
             import os
@@ -366,7 +377,12 @@ async def sync_emails_for_account(
     Returns a summary dict with counts.
     """
     provider = get_provider(account.provider)
-    access_token = await get_valid_access_token(db, account)
+
+    # IMAP accounts use password directly instead of OAuth tokens
+    if account.provider == "imap":
+        access_token = decrypt_token(account.access_token_enc)
+    else:
+        access_token = await get_valid_access_token(db, account)
 
     # If syncing from a dossier context, build a Gmail query from the case contacts
     if force_case_id and not query:
@@ -389,11 +405,24 @@ async def sync_emails_for_account(
             )
 
     # Fetch messages from provider
-    messages, next_page = await provider.list_messages(
-        access_token,
-        max_results=max_results,
-        query=query,
-    )
+    if account.provider == "imap":
+        # IMAP: parse host:port from scopes field, pass username
+        host_port = (account.scopes or "imap.basenet.nl:993").split(":")
+        imap_host = host_port[0]
+        imap_port = int(host_port[1]) if len(host_port) > 1 else 993
+        messages, next_page = await provider.list_messages(
+            access_token,
+            max_results=max_results,
+            host=imap_host,
+            port=imap_port,
+            username=account.email_address,
+        )
+    else:
+        messages, next_page = await provider.list_messages(
+            access_token,
+            max_results=max_results,
+            query=query,
+        )
 
     stats = {"fetched": len(messages), "new": 0, "linked": 0, "skipped": 0}
     new_emails_with_attachments: list[tuple[EmailMessage, uuid.UUID]] = []
@@ -499,10 +528,20 @@ async def sync_emails_for_account(
 
     # Download attachments for new emails
     attachments_downloaded = 0
+    # Prepare IMAP kwargs for attachment downloads
+    att_kwargs = {}
+    if account.provider == "imap":
+        host_port = (account.scopes or "imap.basenet.nl:993").split(":")
+        att_kwargs = {
+            "imap_host": host_port[0],
+            "imap_port": int(host_port[1]) if len(host_port) > 1 else 993,
+            "imap_username": account.email_address,
+        }
     for msg, synced_id in new_emails_with_attachments:
         try:
             downloaded = await _download_attachments(
-                db, provider, access_token, account.tenant_id, synced_id, msg
+                db, provider, access_token, account.tenant_id, synced_id, msg,
+                **att_kwargs,
             )
             attachments_downloaded += downloaded
         except Exception as e:

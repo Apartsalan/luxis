@@ -1797,6 +1797,7 @@ function NieuweZaakPage() {
 
             {isLastStep ? (
               <button
+                key="submit"
                 type="submit"
                 disabled={isSubmitting}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
@@ -1805,6 +1806,7 @@ function NieuweZaakPage() {
               </button>
             ) : (
               <button
+                key="next"
                 type="button"
                 onClick={handleNext}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"

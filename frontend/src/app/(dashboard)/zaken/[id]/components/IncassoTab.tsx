@@ -70,6 +70,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     invoice_number: "",
     invoice_date: "",
     invoice_file_id: "",
+    rate_basis: "yearly",
   });
   const [form, setForm] = useState({
     description: "",
@@ -77,6 +78,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     default_date: "",
     invoice_number: "",
     invoice_date: "",
+    rate_basis: "yearly",
   });
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -90,6 +92,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
           default_date: form.default_date,
           ...(form.invoice_number && { invoice_number: form.invoice_number }),
           ...(form.invoice_date && { invoice_date: form.invoice_date }),
+          rate_basis: form.rate_basis,
         },
       });
       toast.success("Vordering toegevoegd");
@@ -100,6 +103,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
         default_date: "",
         invoice_number: "",
         invoice_date: "",
+        rate_basis: "yearly",
       });
     } catch (err: any) {
       toast.error(err.message);
@@ -116,7 +120,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     }
   };
 
-  const startEdit = (claim: { id: string; description: string; principal_amount: number; default_date: string; invoice_number: string | null; invoice_date: string | null; invoice_file_id: string | null }) => {
+  const startEdit = (claim: { id: string; description: string; principal_amount: number; default_date: string; invoice_number: string | null; invoice_date: string | null; invoice_file_id: string | null; rate_basis?: string }) => {
     setEditingId(claim.id);
     setEditForm({
       description: claim.description,
@@ -125,6 +129,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
       invoice_number: claim.invoice_number || "",
       invoice_date: claim.invoice_date || "",
       invoice_file_id: claim.invoice_file_id || "",
+      rate_basis: claim.rate_basis || "yearly",
     });
   };
 
@@ -142,6 +147,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
           ...(editForm.invoice_number ? { invoice_number: editForm.invoice_number } : { invoice_number: null }),
           ...(editForm.invoice_date ? { invoice_date: editForm.invoice_date } : { invoice_date: null }),
           ...(editForm.invoice_file_id ? { invoice_file_id: editForm.invoice_file_id } : { invoice_file_id: null }),
+          rate_basis: editForm.rate_basis,
         },
       });
       toast.success("Vordering bijgewerkt");
@@ -233,6 +239,21 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                 className={inputClass}
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Rentefrequentie
+              </label>
+              <select
+                value={form.rate_basis}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, rate_basis: e.target.value }))
+                }
+                className={inputClass}
+              >
+                <option value="yearly">Per jaar</option>
+                <option value="monthly">Per maand</option>
+              </select>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -318,6 +339,14 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                             ))}
                           </select>
                         )}
+                        <select
+                          value={editForm.rate_basis}
+                          onChange={(e) => setEditForm((f) => ({ ...f, rate_basis: e.target.value }))}
+                          className={`${inputClass} mt-1`}
+                        >
+                          <option value="yearly">Rente per jaar</option>
+                          <option value="monthly">Rente per maand</option>
+                        </select>
                       </td>
                       <td className="px-4 py-2">
                         <input
@@ -1427,6 +1456,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
   const [form, setForm] = useState({
     total_amount: "",
     installment_amount: "",
+    num_installments: "",
     frequency: "monthly",
     start_date: "",
     notes: "",
@@ -1458,7 +1488,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       });
       toast.success("Betalingsregeling aangemaakt");
       setShowCreate(false);
-      setForm({ total_amount: "", installment_amount: "", frequency: "monthly", start_date: "", notes: "" });
+      setForm({ total_amount: "", installment_amount: "", num_installments: "", frequency: "monthly", start_date: "", notes: "" });
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -1547,6 +1577,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
               setForm({
                 total_amount: financial?.total_outstanding?.toString() || "",
                 installment_amount: "",
+                num_installments: "",
                 frequency: "monthly",
                 start_date: new Date().toISOString().split("T")[0],
                 notes: "",
@@ -1580,8 +1611,35 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 min="0.01"
                 required
                 value={form.total_amount}
-                onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
+                onChange={(e) => {
+                  const total = e.target.value;
+                  const numInst = parseInt(form.num_installments) || 0;
+                  const autoAmount = numInst > 0 && parseFloat(total) > 0
+                    ? (parseFloat(total) / numInst).toFixed(2)
+                    : form.installment_amount;
+                  setForm({ ...form, total_amount: total, installment_amount: autoAmount });
+                }}
                 placeholder="0,00"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Aantal termijnen</label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                value={form.num_installments}
+                onChange={(e) => {
+                  const num = e.target.value;
+                  const total = parseFloat(form.total_amount) || 0;
+                  const count = parseInt(num) || 0;
+                  const autoAmount = count > 0 && total > 0
+                    ? (total / count).toFixed(2)
+                    : form.installment_amount;
+                  setForm({ ...form, num_installments: num, installment_amount: autoAmount });
+                }}
+                placeholder="Bijv. 6"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
@@ -1597,6 +1655,11 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 placeholder="0,00"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               />
+              {form.num_installments && parseFloat(form.total_amount) > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Auto-berekend op basis van {form.num_installments} termijnen
+                </p>
+              )}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Frequentie</label>

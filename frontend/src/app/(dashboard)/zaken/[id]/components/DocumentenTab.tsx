@@ -50,6 +50,7 @@ import {
   INVOICE_STATUS_COLORS,
 } from "@/hooks/use-invoices";
 import { useUnbilledTimeEntries } from "@/hooks/use-time-entries";
+import { useExpenses, useCreateExpense, useDeleteExpense, EXPENSE_CATEGORY_LABELS } from "@/hooks/use-expenses";
 import {
   useCaseFiles,
   useUploadCaseFile,
@@ -475,6 +476,291 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
             </p>
             <p className="text-sm font-semibold text-foreground tabular-nums">
               Totaal: {formatCurrency(invoices.reduce((sum, inv) => sum + inv.total, 0))}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* DF-12: Verschotten sectie */}
+      <VerschottenSection caseId={caseId} />
+    </div>
+  );
+}
+
+// ── DF-12: Verschotten Section ──────────────────────────────────────────────
+
+const TAX_TYPE_LABELS: Record<string, string> = {
+  belast: "Belast",
+  onbelast: "Onbelast",
+  vrijgesteld: "Vrijgesteld",
+};
+
+function VerschottenSection({ caseId }: { caseId: string }) {
+  const { data: expenses, isLoading } = useExpenses({ case_id: caseId });
+  const { data: caseFiles } = useCaseFiles(caseId);
+  const createExpense = useCreateExpense();
+  const deleteExpense = useDeleteExpense();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    description: "",
+    amount: "",
+    expense_date: new Date().toISOString().split("T")[0],
+    category: "overig",
+    billable: true,
+    tax_type: "belast",
+    file_id: "",
+  });
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createExpense.mutateAsync({
+        case_id: caseId,
+        description: form.description,
+        amount: parseFloat(form.amount),
+        expense_date: form.expense_date,
+        category: form.category,
+        billable: form.billable,
+        tax_type: form.tax_type,
+        ...(form.file_id && { file_id: form.file_id }),
+      });
+      toast.success("Verschot toegevoegd");
+      setShowForm(false);
+      setForm({
+        description: "",
+        amount: "",
+        expense_date: new Date().toISOString().split("T")[0],
+        category: "overig",
+        billable: true,
+        tax_type: "belast",
+        file_id: "",
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Aanmaken mislukt");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Verschot verwijderen?")) return;
+    try {
+      await deleteExpense.mutateAsync(id);
+      toast.success("Verschot verwijderd");
+    } catch {
+      toast.error("Verwijderen mislukt");
+    }
+  };
+
+  const inputClass =
+    "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Receipt className="h-5 w-5 text-primary" />
+          <h2 className="text-base font-semibold text-foreground">Verschotten</h2>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowForm(!showForm)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Verschot toevoegen
+        </button>
+      </div>
+
+      <div className="p-5 space-y-4">
+        {/* Create form */}
+        {showForm && (
+          <form
+            onSubmit={handleCreate}
+            className="rounded-xl border border-primary/20 bg-primary/5 p-5 space-y-3"
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  Beschrijving *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                  className={inputClass}
+                  placeholder="Bijv. Griffierecht kantonrechter"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  Bedrag *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  value={form.amount}
+                  onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                  className={inputClass}
+                  placeholder="0,00"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  Datum *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={form.expense_date}
+                  onChange={(e) => setForm((f) => ({ ...f, expense_date: e.target.value }))}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  Categorie
+                </label>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                  className={inputClass}
+                >
+                  {Object.entries(EXPENSE_CATEGORY_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  BTW-type
+                </label>
+                <select
+                  value={form.tax_type}
+                  onChange={(e) => setForm((f) => ({ ...f, tax_type: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="belast">Belast (BTW)</option>
+                  <option value="onbelast">Onbelast (geen BTW)</option>
+                  <option value="vrijgesteld">Vrijgesteld</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-foreground">
+                  Bestand (optioneel)
+                </label>
+                <select
+                  value={form.file_id}
+                  onChange={(e) => setForm((f) => ({ ...f, file_id: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="">Geen bestand</option>
+                  {caseFiles?.map((file) => (
+                    <option key={file.id} value={file.id}>
+                      {file.original_filename}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.billable}
+                  onChange={(e) => setForm((f) => ({ ...f, billable: e.target.checked }))}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary/20"
+                />
+                <span className="text-sm font-medium text-foreground">Doorbelastbaar</span>
+              </label>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={createExpense.isPending}
+                className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {createExpense.isPending ? "Opslaan..." : "Opslaan"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="rounded-lg border border-border px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+              >
+                Annuleren
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Expenses list */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !expenses || expenses.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border py-8 text-center">
+            <Receipt className="mx-auto h-8 w-8 text-muted-foreground/30" />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Nog geen verschotten geregistreerd
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {expenses.map((expense) => (
+              <div key={expense.id} className="flex items-center justify-between py-3 px-1 group">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {expense.description}
+                    </span>
+                    <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
+                      {EXPENSE_CATEGORY_LABELS[expense.category] || expense.category}
+                    </span>
+                    {expense.tax_type !== "belast" && (
+                      <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700">
+                        {TAX_TYPE_LABELS[expense.tax_type] || expense.tax_type}
+                      </span>
+                    )}
+                    {expense.invoiced && (
+                      <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium bg-green-100 text-green-700">
+                        Gefactureerd
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {formatDateShort(expense.expense_date)}
+                    {!expense.billable && " · Niet doorbelastbaar"}
+                    {expense.file_id && " · Bestand gekoppeld"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold tabular-nums text-foreground">
+                    {formatCurrency(expense.amount)}
+                  </span>
+                  {!expense.invoiced && (
+                    <button
+                      onClick={() => handleDelete(expense.id)}
+                      className="rounded p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                      title="Verwijderen"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {expenses && expenses.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border pt-3">
+            <p className="text-sm text-muted-foreground">
+              {expenses.length} verschot{expenses.length !== 1 ? "ten" : ""}
+            </p>
+            <p className="text-sm font-semibold text-foreground tabular-nums">
+              Totaal: {formatCurrency(expenses.reduce((sum, e) => sum + e.amount, 0))}
             </p>
           </div>
         )}

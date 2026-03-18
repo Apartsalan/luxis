@@ -228,6 +228,8 @@ export function useUpdateClaim() {
         default_date?: string;
         invoice_number?: string | null;
         invoice_date?: string | null;
+        invoice_file_id?: string | null;
+        rate_basis?: string;
       };
     }) => {
       const res = await api(`/api/cases/${caseId}/claims/${claimId}`, {

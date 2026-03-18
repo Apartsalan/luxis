@@ -14,6 +14,8 @@ export interface Expense {
   category: string;
   billable: boolean;
   invoiced: boolean;
+  tax_type: string;
+  file_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -26,6 +28,8 @@ interface ExpenseCreateInput {
   expense_date: string;
   category?: string;
   billable?: boolean;
+  tax_type?: string;
+  file_id?: string;
 }
 
 interface ExpenseUpdateInput {
@@ -34,6 +38,8 @@ interface ExpenseUpdateInput {
   expense_date?: string;
   category?: string;
   billable?: boolean;
+  tax_type?: string;
+  file_id?: string | null;
 }
 
 // ── Category labels ─────────────────────────────────────────────────────

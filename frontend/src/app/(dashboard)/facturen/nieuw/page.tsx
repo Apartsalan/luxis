@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance } from "@/hooks/use-invoices";
+import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus } from "@/hooks/use-invoices";
+import { useDerdengeldenBalance } from "@/hooks/use-collections";
 import { useRelations } from "@/hooks/use-relations";
 import { useCases, useCase } from "@/hooks/use-cases";
 import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries";
@@ -42,6 +43,9 @@ export default function NieuweFactuurPage() {
   // LF-21: Voorschot verrekening state
   const [verrekenEnabled, setVerrekenEnabled] = useState(false);
   const [verrekenAmount, setVerrekenAmount] = useState("");
+
+  // DF-06: BTW mode (preset dropdown + custom option)
+  const [btwMode, setBtwMode] = useState<"21" | "0" | "custom">("21");
 
   const [form, setForm] = useState({
     contact_id: "",
@@ -113,6 +117,18 @@ export default function NieuweFactuurPage() {
   // LF-21: Advance balance for voorschot verrekening
   const { data: advanceBalance } = useAdvanceBalance(
     invoiceType === "factuur" && form.case_id ? form.case_id : undefined
+  );
+
+  // DF-07: Context panel data — existing invoices, derdengelden, budget
+  const { data: caseInvoices } = useInvoices({
+    case_id: form.case_id || undefined,
+    per_page: 100,
+  });
+  const { data: derdengeldenBalance } = useDerdengeldenBalance(
+    form.case_id || undefined
+  );
+  const { data: budgetStatus } = useBudgetStatus(
+    form.case_id || undefined
   );
 
   const updateField = (field: string, value: string) => {
@@ -250,7 +266,7 @@ export default function NieuweFactuurPage() {
           btw_percentage: parseFloat(form.btw_percentage),
         });
         toast.success("Voorschotnota aangemaakt");
-        router.push(`/facturen/${result.id}`);
+        router.push(preselectedCaseId ? `/zaken/${preselectedCaseId}` : `/facturen/${result.id}`);
       } catch (err: any) {
         setError(err.message || "Er ging iets mis");
       }
@@ -298,7 +314,7 @@ export default function NieuweFactuurPage() {
         })),
       });
       toast.success("Factuur aangemaakt");
-      router.push(`/facturen/${result.id}`);
+      router.push(preselectedCaseId ? `/zaken/${preselectedCaseId}` : `/facturen/${result.id}`);
     } catch (err: any) {
       setError(err.message || "Er ging iets mis");
     }
@@ -461,6 +477,57 @@ export default function NieuweFactuurPage() {
               )}
           </div>
 
+          {/* DF-07: Context panel — al gefactureerd + derdengelden + budget */}
+          {form.case_id && (caseInvoices?.items?.length || derdengeldenBalance || budgetStatus?.budget_amount) && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 space-y-2">
+              <p className="text-xs font-medium text-blue-800 uppercase tracking-wider">
+                Dossier overzicht
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {caseInvoices?.items && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Al gefactureerd</p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {formatCurrency(
+                        caseInvoices.items
+                          .filter((inv) => inv.status !== "cancelled")
+                          .reduce((sum, inv) => sum + Number(inv.total), 0)
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {caseInvoices.items.filter((inv) => inv.status !== "cancelled").length} facturen
+                    </p>
+                  </div>
+                )}
+                {derdengeldenBalance && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Derdengelden saldo</p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {formatCurrency(derdengeldenBalance.total_balance)}
+                    </p>
+                  </div>
+                )}
+                {budgetStatus && budgetStatus.budget_amount && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Budget verbruikt</p>
+                    <p className="text-sm font-semibold tabular-nums">
+                      {formatCurrency(Number(budgetStatus.used_amount))} / {formatCurrency(Number(budgetStatus.budget_amount))}
+                    </p>
+                    {budgetStatus.percentage_amount && (
+                      <p className={`text-xs font-medium ${
+                        budgetStatus.status === "red" ? "text-red-600" :
+                        budgetStatus.status === "orange" ? "text-amber-600" :
+                        "text-emerald-600"
+                      }`}>
+                        {Number(budgetStatus.percentage_amount).toFixed(0)}%
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground">
@@ -491,15 +558,34 @@ export default function NieuweFactuurPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground">
-                BTW-percentage
+                BTW
               </label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.btw_percentage}
-                onChange={(e) => updateField("btw_percentage", e.target.value)}
+              <select
+                value={btwMode}
+                onChange={(e) => {
+                  const mode = e.target.value as "21" | "0" | "custom";
+                  setBtwMode(mode);
+                  if (mode === "21") updateField("btw_percentage", "21.00");
+                  else if (mode === "0") updateField("btw_percentage", "0.00");
+                }}
                 className={inputClass}
-              />
+              >
+                <option value="21">21% (standaard)</option>
+                <option value="0">0% (vrijgesteld)</option>
+                <option value="custom">Aangepast percentage</option>
+              </select>
+              {btwMode === "custom" && (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={form.btw_percentage}
+                  onChange={(e) => updateField("btw_percentage", e.target.value)}
+                  placeholder="Bijv. 9.00"
+                  className={`${inputClass} mt-2`}
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">

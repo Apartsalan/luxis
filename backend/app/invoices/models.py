@@ -245,9 +245,22 @@ class Expense(TenantBase):
     billable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     invoiced: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # DF-12: Tax type for Exact Online export
+    tax_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="belast"
+    )  # belast, onbelast, vrijgesteld
+
+    # DF-12: Optional file attachment (bon/factuur)
+    file_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("case_files.id"), nullable=True
+    )
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships
     case: Mapped["Case | None"] = relationship(  # noqa: F821
         "Case", foreign_keys=[case_id], lazy="selectin"
+    )
+    file: Mapped["CaseFile | None"] = relationship(  # noqa: F821
+        "CaseFile", foreign_keys=[file_id], lazy="selectin"
     )

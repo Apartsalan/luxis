@@ -1736,7 +1736,7 @@ function NieuweZaakPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-foreground">
-                        Rente per
+                        Rentefrequentie
                       </label>
                       <select
                         value={claim.rate_basis}
@@ -1745,8 +1745,8 @@ function NieuweZaakPage() {
                         }
                         className={inputClass}
                       >
-                        <option value="yearly">Jaar</option>
-                        <option value="monthly">Maand</option>
+                        <option value="yearly">Per jaar</option>
+                        <option value="monthly">Per maand</option>
                       </select>
                     </div>
                   </div>

@@ -298,6 +298,8 @@ class ExpenseCreate(BaseModel):
     expense_date: date
     category: str = Field(default="overig")
     billable: bool = True
+    tax_type: str = Field(default="belast", description="belast, onbelast, vrijgesteld")
+    file_id: uuid.UUID | None = None
 
 
 class ExpenseUpdate(BaseModel):
@@ -306,6 +308,8 @@ class ExpenseUpdate(BaseModel):
     expense_date: date | None = None
     category: str | None = None
     billable: bool | None = None
+    tax_type: str | None = None
+    file_id: uuid.UUID | None = None
 
 
 class ExpenseResponse(BaseModel):
@@ -317,6 +321,8 @@ class ExpenseResponse(BaseModel):
     category: str
     billable: bool
     invoiced: bool
+    tax_type: str
+    file_id: uuid.UUID | None
     is_active: bool
     created_at: datetime
     updated_at: datetime

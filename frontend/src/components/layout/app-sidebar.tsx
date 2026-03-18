@@ -44,7 +44,7 @@ const ALL_NAVIGATION: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Mijn Taken", href: "/taken", icon: CheckSquare },
   { name: "Relaties", href: "/relaties", icon: Users },
-  { name: "Dossiers", href: "/zaken", icon: Briefcase, badge: "ai-pending" },
+  { name: "Dossiers", href: "/zaken", icon: Briefcase },
   { name: "AI Intake", href: "/intake", icon: Bot, badge: "intake-pending" },
   { name: "Follow-up", href: "/followup", icon: Zap, badge: "followup-pending" },
   { name: "Betalingen", href: "/betalingen", icon: Banknote, badge: "payment-pending" },

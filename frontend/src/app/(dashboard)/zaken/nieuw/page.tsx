@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, Suspense, useCallback, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -148,8 +148,8 @@ function WizardStepper({
               >
                 {step.label}
                 {step.optional && (
-                  <span className="ml-1 text-[11px] text-muted-foreground font-normal">
-                    (optioneel)
+                  <span className="text-[11px] text-muted-foreground font-normal">
+                    {" "}(optioneel)
                   </span>
                 )}
               </span>
@@ -450,7 +450,49 @@ function NieuweZaakPage() {
   // ── Helpers ──────────────────────────────────────────────────────────────
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    // Clear validation error when a required field is filled
+    if (field === "client_id" && value) setError("");
   };
+
+  // ── Auto-select contacts when AI parsing pre-fills search fields ─────────
+  const [aiParsedClient, setAiParsedClient] = useState(false);
+  const [aiParsedOpponent, setAiParsedOpponent] = useState(false);
+
+  // Auto-select client from search results when AI-parsed
+  useEffect(() => {
+    if (
+      aiParsedClient &&
+      clientSearch &&
+      !form.client_id &&
+      clientResults?.items &&
+      clientResults.items.length > 0
+    ) {
+      const match = clientResults.items[0];
+      updateField("client_id", match.id);
+      setClientSearch(match.name);
+      setAiParsedClient(false);
+    }
+  }, [aiParsedClient, clientSearch, clientResults, form.client_id]);
+
+  // Auto-select opponent from search results when AI-parsed
+  useEffect(() => {
+    if (
+      aiParsedOpponent &&
+      opponentSearch &&
+      !form.opposing_party_id &&
+      opponentResults?.items &&
+      opponentResults.items.length > 0
+    ) {
+      const match = opponentResults.items[0];
+      updateField("opposing_party_id", match.id);
+      setOpponentSearch(match.name);
+      setOpponentContactType(match.contact_type);
+      if (!form.debtor_type) {
+        updateField("debtor_type", match.contact_type === "company" ? "b2b" : "b2c");
+      }
+      setAiParsedOpponent(false);
+    }
+  }, [aiParsedOpponent, opponentSearch, opponentResults, form.opposing_party_id, form.debtor_type]);
 
   // ── Invoice parse handler ────────────────────────────────────────────────
   const handleInvoiceParsed = useCallback(
@@ -464,9 +506,15 @@ function NieuweZaakPage() {
         updateField("debtor_type", data.debtor_type === "company" ? "b2b" : "b2c");
       }
 
-      // Step 2: Partijen — pre-fill search fields
-      if (data.debtor_name) setOpponentSearch(data.debtor_name);
-      if (data.creditor_name) setClientSearch(data.creditor_name);
+      // Step 2: Partijen — pre-fill search fields and trigger auto-match
+      if (data.debtor_name) {
+        setOpponentSearch(data.debtor_name);
+        setAiParsedOpponent(true);
+      }
+      if (data.creditor_name) {
+        setClientSearch(data.creditor_name);
+        setAiParsedClient(true);
+      }
 
       // Step 3: Vordering — pre-fill first claim
       const claimUpdates: Partial<ClaimForm> = {};

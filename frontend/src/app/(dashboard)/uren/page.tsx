@@ -41,7 +41,7 @@ function fmtMinutes(mins: number): string {
   return `${h}:${String(m).padStart(2, "0")}`;
 }
 
-function getWeekDates(weekOffset: number): { start: string; end: string; days: Date[] } {
+function getWeekDates(weekOffset: number): { start: string; end: string; days: Date[]; monday: Date; friday: Date } {
   const now = new Date();
   const day = now.getDay(); // 0=Sun
   const mondayOffset = day === 0 ? -6 : 1 - day;
@@ -60,6 +60,8 @@ function getWeekDates(weekOffset: number): { start: string; end: string; days: D
     start: toISO(monday),
     end: toISO(friday),
     days,
+    monday,
+    friday,
   };
 }
 
@@ -545,9 +547,9 @@ export default function UrenPage() {
             <ChevronRight className="h-4 w-4" />
           </button>
           <span className="ml-2 text-sm text-muted-foreground">
-            {new Date(week.start).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+            {week.monday.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
             {" — "}
-            {new Date(week.end).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+            {week.friday.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -751,7 +753,7 @@ export default function UrenPage() {
               className="group grid grid-cols-[100px_80px_1fr_120px_80px_60px_60px] gap-2 items-center px-5 py-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
             >
               <span className="text-sm text-foreground tabular-nums">
-                {new Date(entry.date).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                {new Date(entry.date + "T00:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
               </span>
               <Link
                 href={`/zaken/${entry.case.id}`}

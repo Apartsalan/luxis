@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance } from "@/hooks/use-invoices";
 import { useRelations } from "@/hooks/use-relations";
-import { useCases } from "@/hooks/use-cases";
+import { useCases, useCase } from "@/hooks/use-cases";
 import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries";
 import { useExpenses } from "@/hooks/use-expenses";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
@@ -67,6 +67,19 @@ export default function NieuweFactuurPage() {
   const [showExpenses, setShowExpenses] = useState(false);
   const [selectedTimeEntryIds, setSelectedTimeEntryIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
+
+  // Pre-fill from case_id URL parameter
+  const { data: preselectedCase } = useCase(preselectedCaseId || undefined);
+
+  useEffect(() => {
+    if (preselectedCase && preselectedCaseId) {
+      setSelectedCaseNumber(preselectedCase.case_number);
+      if (preselectedCase.client) {
+        setSelectedContactName(preselectedCase.client.name);
+        setForm((prev) => ({ ...prev, contact_id: preselectedCase.client!.id }));
+      }
+    }
+  }, [preselectedCase, preselectedCaseId]);
 
   const { data: contactResults } = useRelations({
     search: contactSearch || undefined,

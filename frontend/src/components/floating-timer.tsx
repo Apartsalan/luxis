@@ -157,6 +157,14 @@ function CompactCasePicker({
 
 export function FloatingTimer() {
   const { user } = useAuth();
+
+  // Don't render (or run hooks like useCases) if not logged in
+  if (!user) return null;
+
+  return <FloatingTimerInner />;
+}
+
+function FloatingTimerInner() {
   const {
     timer,
     startTimer,
@@ -171,14 +179,8 @@ export function FloatingTimer() {
   const router = useRouter();
   const [autoTimer, setAutoTimer] = useAutoTimerPreference();
 
-  // Only fetch cases when user is logged in
-  const { data: casesData } = useCases(
-    user ? { per_page: 200 } : undefined
-  );
+  const { data: casesData } = useCases({ per_page: 200 });
   const cases = casesData?.items ?? [];
-
-  // Don't render if not logged in
-  if (!user) return null;
 
   // Collapsed state: just a small pill when timer is running
   if (timer.running && !isExpanded) {

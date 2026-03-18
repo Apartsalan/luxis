@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 68)
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 80)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -301,14 +301,14 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | UX-3 | Redundante "Dossiers per status" widget op dashboard | Laag | ✅ 18 mrt |
 | UX-4 | Taken pagina toont alle 190 taken zonder paginering | Midden | ✅ 18 mrt |
 | UX-5 | Correspondentie afzender toont alleen voornaam | Midden | ✅ 18 mrt |
-| UX-6 | Dossier tabs overflow (10 tabs, niet scrollbaar) | Midden | ❌ TODO |
-| UX-7 | Dossier header dupliceert bij scrollen (sticky overlap) | Midden | ❌ TODO |
-| UX-8 | Documenten: geen directe generatie vanuit sjabloon | Laag | ❌ TODO |
-| UX-9 | Betalingen pagina: onduidelijke flow | Laag | ❌ TODO |
-| UX-10 | Incasso pipeline: betaald dossier in "Zonder stap" | Midden | ❌ TODO |
-| UX-11 | Follow-up: geen uitleg als leeg | Laag | ❌ TODO |
-| UX-12 | Dashboard taken duplicaten groeperen | Laag | ❌ TODO |
-| UX-13 | Dossier hoofdsom op lijst-pagina (alleen detail gefixt) | Midden | ❌ TODO |
+| UX-6 | Dossier tabs overflow — sticky tab bar onder header | Midden | ✅ Sessie 80 |
+| UX-7 | Dossier header sticky overlap — tabs sticky gemaakt | Midden | ✅ Sessie 80 |
+| UX-8 | Documenten: case picker dialog voor directe generatie | Laag | ✅ Sessie 80 |
+| UX-9 | Betalingen: prominente Upload knop in header | Laag | ✅ Sessie 80 |
+| UX-10 | Incasso pipeline: betaalde dossiers uitgefilterd | Midden | ✅ Sessie 80 |
+| UX-11 | Follow-up: uitleg toegevoegd bij lege staat | Laag | ✅ Sessie 80 |
+| UX-12 | Dashboard taken: duplicaten gegroepeerd (bijv. "3x ...") | Laag | ✅ Sessie 80 |
+| UX-13 | Dossier lijst: "Openstaand" kolom toegevoegd | Midden | ✅ Sessie 80 |
 
 ---
 

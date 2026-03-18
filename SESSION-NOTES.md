@@ -1,13 +1,46 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 79b — UX Review & Fixes)
-**Laatste feature/fix:** Sessie 79b — Volledige UX review + 5 fixes gedeployd
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 80 — UX Fixes Batch 2)
+**Laatste feature/fix:** Sessie 80 — 8 UX fixes (UX-6 t/m UX-13) gedeployd
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 3 items wachten op Lisanne
+**UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Sessie 80 — Resterende UX fixes (13 items) + DF-05/DF-11/DF-13 na overleg Lisanne + volledige hertest
+**Volgende sessie:** Hertest hele app + DF-05/DF-11/DF-13 na overleg Lisanne + overige UX-TODO items
+
+## Wat er gedaan is (sessie 80 — 18 maart 2026) — UX Fixes Batch 2
+
+### Samenvatting
+Alle 8 resterende UX issues (UX-6 t/m UX-13) opgelost en gedeployd. Backend + frontend wijzigingen.
+
+### Gefixt (8 items)
+- **UX-6/7**: Dossier tab bar sticky gemaakt onder de app header → tabs blijven zichtbaar bij scrollen, horizontale scroll werkt met 6px scrollbar
+- **UX-8**: Case picker dialog op Documenten pagina → "Genereer" knop op elk beschikbaar sjabloon, dossier zoeken en direct navigeren naar documenten tab
+- **UX-9**: Prominente "CSV uploaden" knop in Betalingen header → upload direct vanuit header, "Upload" tab hernoemd naar "Importgeschiedenis"
+- **UX-10**: Betaalde dossiers niet meer in incasso pipeline → backend filter uitgebreid: `Case.status.notin_(["betaald", "afgesloten"])`
+- **UX-11**: Follow-up lege staat → uitleg toegevoegd: "Follow-up analyseert automatisch je incassodossiers..."
+- **UX-12**: Dashboard taken groepering → duplicaten gegroepeerd met count badge (bijv. "3x Dossier controleren"), link naar taken pagina
+- **UX-13**: Dossier lijst → "Openstaand" kolom toegevoegd naast "Hoofdsom" met kleurcodering (amber=openstaand, groen=betaald)
+- **Bonus**: Case detail page accepteert nu `?tab=documenten` query param voor directe navigatie naar tabs
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — sticky tabs, query param tab support
+- `frontend/src/app/(dashboard)/documenten/page.tsx` — case picker dialog, genereer knop
+- `frontend/src/app/(dashboard)/betalingen/page.tsx` — header upload button, tab rename
+- `frontend/src/app/(dashboard)/followup/page.tsx` — empty state uitleg
+- `frontend/src/app/(dashboard)/page.tsx` — dashboard task grouping
+- `frontend/src/app/(dashboard)/zaken/page.tsx` — openstaand kolom
+- `backend/app/incasso/service.py` — betaald status filter in pipeline
+
+### Bekende issues (nog open)
+- Live site wachtwoord status onbekend
+- 3 demo feedback items wachten op Lisanne (DF-05, DF-11, DF-13)
+- UX-TODO-9: Relaties lijst type-kolom niet sorteerbaar
+- UX-TODO-10: Factuur verwijder-knop per regel
+- UX-TODO-12: Dossier overzicht rente/partijen cards
+- UX-TODO-13: Testdata opruimen
 
 ## Wat er gedaan is (sessie 79b — 18 maart 2026) — UX Review & Fixes
 

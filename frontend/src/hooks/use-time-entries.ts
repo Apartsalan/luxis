@@ -11,10 +11,12 @@ export interface TimeEntry {
   case: { id: string; case_number: string };
   date: string;
   duration_minutes: number;
+  billable_minutes: number | null;
   description: string | null;
   activity_type: string;
   billable: boolean;
   invoiced: boolean;
+  invoice_number: string | null;
   hourly_rate: number | null;
   created_at: string;
   updated_at: string;
@@ -43,6 +45,7 @@ interface TimeEntryCreateInput {
   description?: string | null;
   activity_type?: string;
   billable?: boolean;
+  billable_minutes?: number | null;
   hourly_rate?: number | null;
 }
 
@@ -50,6 +53,7 @@ interface TimeEntryUpdateInput {
   case_id?: string;
   date?: string;
   duration_minutes?: number;
+  billable_minutes?: number | null;
   description?: string | null;
   activity_type?: string;
   billable?: boolean;
@@ -77,15 +81,17 @@ export function useTimeEntries(params?: {
   date_from?: string;
   date_to?: string;
   billable?: boolean;
+  contact_id?: string;
 }) {
   const case_id = params?.case_id ?? "";
   const user_id = params?.user_id ?? "";
   const date_from = params?.date_from ?? "";
   const date_to = params?.date_to ?? "";
   const billable = params?.billable;
+  const contact_id = params?.contact_id ?? "";
 
   return useQuery<TimeEntry[]>({
-    queryKey: ["time-entries", { case_id, user_id, date_from, date_to, billable }],
+    queryKey: ["time-entries", { case_id, user_id, date_from, date_to, billable, contact_id }],
     queryFn: async () => {
       const qp = new URLSearchParams();
       if (case_id) qp.set("case_id", case_id);
@@ -93,6 +99,7 @@ export function useTimeEntries(params?: {
       if (date_from) qp.set("date_from", date_from);
       if (date_to) qp.set("date_to", date_to);
       if (billable !== undefined) qp.set("billable", String(billable));
+      if (contact_id) qp.set("contact_id", contact_id);
       const res = await api(`/api/time-entries?${qp}`);
       if (!res.ok) throw new Error("Kan tijdregistraties niet laden");
       return res.json();

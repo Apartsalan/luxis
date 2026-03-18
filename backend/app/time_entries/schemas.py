@@ -32,6 +32,9 @@ class TimeEntryCreate(BaseModel):
         pattern="^(correspondence|meeting|phone|research|court|travel|drafting|other)$",
     )
     billable: bool = True
+    billable_minutes: int | None = Field(
+        None, gt=0, description="Te factureren minuten",
+    )
     hourly_rate: Decimal | None = Field(None, ge=0, decimal_places=2)
 
 
@@ -71,10 +74,12 @@ class TimeEntryResponse(BaseModel):
     case: CaseBrief
     date: date_type
     duration_minutes: int
+    billable_minutes: int | None
     description: str | None
     activity_type: str
     billable: bool
     invoiced: bool
+    invoice_number: str | None = None
     hourly_rate: Decimal | None
     created_at: datetime
     updated_at: datetime

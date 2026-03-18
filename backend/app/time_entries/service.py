@@ -29,6 +29,7 @@ async def list_time_entries(
     date_to: date | None = None,
     billable: bool | None = None,
     invoiced: bool | None = None,
+    contact_id: uuid.UUID | None = None,
 ) -> list[TimeEntry]:
     """List time entries with optional filters."""
     query = select(TimeEntry).where(
@@ -46,6 +47,11 @@ async def list_time_entries(
         query = query.where(TimeEntry.billable.is_(billable))
     if invoiced is not None:
         query = query.where(TimeEntry.invoiced.is_(invoiced))
+    if contact_id is not None:
+        from app.cases.models import Case
+        query = query.join(Case, TimeEntry.case_id == Case.id).where(
+            Case.client_id == contact_id
+        )
 
     query = query.order_by(TimeEntry.date.desc(), TimeEntry.created_at.desc())
     result = await db.execute(query)
@@ -158,11 +164,15 @@ async def get_summary(
     case_map: dict[uuid.UUID, dict] = {}
 
     for e in entries:
+        # Use billable_minutes if set, otherwise fall back to duration_minutes
+        effective_minutes = (
+            e.billable_minutes if e.billable_minutes is not None else e.duration_minutes
+        )
         total_minutes += e.duration_minutes
         if e.billable:
-            billable_minutes += e.duration_minutes
+            billable_minutes += effective_minutes
             if e.hourly_rate:
-                hours = Decimal(str(e.duration_minutes)) / Decimal("60")
+                hours = Decimal(str(effective_minutes)) / Decimal("60")
                 total_amount += hours * e.hourly_rate
 
         cid = e.case_id
@@ -176,9 +186,9 @@ async def get_summary(
             }
         case_map[cid]["total_minutes"] += e.duration_minutes
         if e.billable:
-            case_map[cid]["billable_minutes"] += e.duration_minutes
+            case_map[cid]["billable_minutes"] += effective_minutes
             if e.hourly_rate:
-                hours = Decimal(str(e.duration_minutes)) / Decimal("60")
+                hours = Decimal(str(effective_minutes)) / Decimal("60")
                 case_map[cid]["total_amount"] += hours * e.hourly_rate
 
     per_case = [
@@ -207,3 +217,24 @@ async def get_my_today(
         date_from=date.today(),
         date_to=date.today(),
     )
+
+
+async def get_invoice_numbers(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    entry_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, str]:
+    """Batch lookup: time_entry_id → invoice_number for invoiced entries."""
+    if not entry_ids:
+        return {}
+    from app.invoices.models import Invoice, InvoiceLine
+    result = await db.execute(
+        select(InvoiceLine.time_entry_id, Invoice.invoice_number)
+        .join(Invoice, InvoiceLine.invoice_id == Invoice.id)
+        .where(
+            InvoiceLine.time_entry_id.in_(entry_ids),
+            Invoice.tenant_id == tenant_id,
+            Invoice.is_active.is_(True),
+        )
+    )
+    return {row[0]: row[1] for row in result.all()}

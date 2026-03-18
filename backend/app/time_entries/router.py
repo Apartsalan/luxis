@@ -28,11 +28,12 @@ async def list_time_entries(
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
     billable: bool | None = Query(default=None),
+    contact_id: uuid.UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """List time entries with optional filters."""
-    return await service.list_time_entries(
+    entries = await service.list_time_entries(
         db,
         current_user.tenant_id,
         case_id=case_id,
@@ -40,7 +41,19 @@ async def list_time_entries(
         date_from=date_from,
         date_to=date_to,
         billable=billable,
+        contact_id=contact_id,
     )
+    # Enrich with invoice numbers for invoiced entries
+    invoiced_ids = [e.id for e in entries if e.invoiced]
+    inv_map = await service.get_invoice_numbers(
+        db, current_user.tenant_id, invoiced_ids
+    )
+    results = []
+    for e in entries:
+        resp = TimeEntryResponse.model_validate(e)
+        resp.invoice_number = inv_map.get(e.id)
+        results.append(resp)
+    return results
 
 
 @router.post(

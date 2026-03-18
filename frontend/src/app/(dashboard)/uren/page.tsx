@@ -31,7 +31,18 @@ import { formatCurrency } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useTimer } from "@/hooks/use-timer";
 import { useAuth } from "@/hooks/use-auth";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
+
+// ── Types ────────────────────────────────────────────────────────────────
+
+type ViewMode = "week" | "month" | "day";
+
+interface Contact {
+  id: string;
+  name: string;
+  contact_type: string;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -39,6 +50,10 @@ function fmtMinutes(mins: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+function toISO(d: Date): string {
+  return d.toISOString().split("T")[0];
 }
 
 function getWeekDates(weekOffset: number): { start: string; end: string; days: Date[]; monday: Date; friday: Date } {
@@ -65,8 +80,30 @@ function getWeekDates(weekOffset: number): { start: string; end: string; days: D
   };
 }
 
-function toISO(d: Date): string {
-  return d.toISOString().split("T")[0];
+function getMonthDates(monthOffset: number): { start: string; end: string; label: string; monthDate: Date } {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return {
+    start: toISO(d),
+    end: toISO(lastDay),
+    label: d.toLocaleDateString("nl-NL", { month: "long", year: "numeric" }),
+    monthDate: d,
+  };
+}
+
+function getDayDate(dayOffset: number): { start: string; end: string; label: string; date: Date } {
+  const now = new Date();
+  const d = new Date(now);
+  d.setDate(now.getDate() + dayOffset);
+  d.setHours(0, 0, 0, 0);
+  const iso = toISO(d);
+  return {
+    start: iso,
+    end: iso,
+    label: d.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+    date: d,
+  };
 }
 
 const DAY_NAMES = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
@@ -273,14 +310,49 @@ function CaseSelector({
 export default function UrenPage() {
   const { user } = useAuth();
 
-  // Week navigation
+  // ── View mode & navigation offsets ─────────────────────────────────────
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [dayOffset, setDayOffset] = useState(0);
+
+  // Compute date range based on view mode
+  const dateRange = useMemo(() => {
+    if (viewMode === "week") {
+      const w = getWeekDates(weekOffset);
+      return { start: w.start, end: w.end };
+    } else if (viewMode === "month") {
+      const m = getMonthDates(monthOffset);
+      return { start: m.start, end: m.end };
+    } else {
+      const d = getDayDate(dayOffset);
+      return { start: d.start, end: d.end };
+    }
+  }, [viewMode, weekOffset, monthOffset, dayOffset]);
+
   const week = getWeekDates(weekOffset);
-  const isCurrentWeek = weekOffset === 0;
+  const month = getMonthDates(monthOffset);
+  const dayInfo = getDayDate(dayOffset);
+  const isCurrentPeriod =
+    viewMode === "week" ? weekOffset === 0 :
+    viewMode === "month" ? monthOffset === 0 :
+    dayOffset === 0;
 
   // Filters
   const [filterCaseId, setFilterCaseId] = useState("");
   const [filterBillable, setFilterBillable] = useState<string>("");
+  const [filterContactId, setFilterContactId] = useState("");
+
+  // Contacts for filter
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  useEffect(() => {
+    api("/api/contacts?contact_type=company&per_page=200")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.items) setContacts(data.items);
+      })
+      .catch(() => {});
+  }, []);
 
   // Query data
   const {
@@ -290,15 +362,16 @@ export default function UrenPage() {
     error,
     refetch,
   } = useTimeEntries({
-    date_from: week.start,
-    date_to: week.end,
+    date_from: dateRange.start,
+    date_to: dateRange.end,
     case_id: filterCaseId || undefined,
     billable: filterBillable === "" ? undefined : filterBillable === "true",
+    contact_id: filterContactId || undefined,
   });
 
   const { data: summary } = useTimeEntrySummary({
-    date_from: week.start,
-    date_to: week.end,
+    date_from: dateRange.start,
+    date_to: dateRange.end,
   });
 
   const { data: todayEntries } = useMyTodayEntries();
@@ -350,6 +423,8 @@ export default function UrenPage() {
   const [formBillable, setFormBillable] = useState(true);
   const defaultRate = user?.default_hourly_rate != null ? String(user.default_hourly_rate) : "";
   const [formRate, setFormRate] = useState(defaultRate);
+  const [formDiscount, setFormDiscount] = useState(false);
+  const [formBillableMinutes, setFormBillableMinutes] = useState("");
 
   const resetForm = () => {
     setFormCaseId("");
@@ -360,6 +435,8 @@ export default function UrenPage() {
     setFormDescription("");
     setFormBillable(true);
     setFormRate(defaultRate);
+    setFormDiscount(false);
+    setFormBillableMinutes("");
   };
 
   const submitEntry = async () => {
@@ -369,7 +446,7 @@ export default function UrenPage() {
       return;
     }
     try {
-      await createMutation.mutateAsync({
+      const payload: Record<string, unknown> = {
         case_id: formCaseId,
         date: formDate,
         duration_minutes: totalMinutes,
@@ -377,7 +454,11 @@ export default function UrenPage() {
         description: formDescription?.trim() || null,
         billable: formBillable,
         hourly_rate: formRate ? parseFloat(formRate) : null,
-      });
+      };
+      if (formDiscount && formBillableMinutes !== "") {
+        payload.billable_minutes = parseInt(formBillableMinutes) || 0;
+      }
+      await createMutation.mutateAsync(payload as any);
       toast.success("Tijdregistratie opgeslagen");
       resetForm();
       setShowForm(false);
@@ -390,22 +471,37 @@ export default function UrenPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editMinutes, setEditMinutes] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editBillableMinutes, setEditBillableMinutes] = useState("");
 
   const startEdit = (entry: TimeEntry) => {
     setEditId(entry.id);
     setEditMinutes(String(entry.duration_minutes));
     setEditDescription(entry.description || "");
+    setEditDate(entry.date);
+    setEditBillableMinutes(
+      entry.billable_minutes != null && entry.billable_minutes !== entry.duration_minutes
+        ? String(entry.billable_minutes)
+        : ""
+    );
   };
 
   const saveEdit = async () => {
     if (!editId) return;
     try {
+      const data: Record<string, unknown> = {
+        duration_minutes: parseInt(editMinutes) || 1,
+        description: editDescription?.trim() || null,
+        date: editDate,
+      };
+      if (editBillableMinutes !== "") {
+        data.billable_minutes = parseInt(editBillableMinutes) || 0;
+      } else {
+        data.billable_minutes = null;
+      }
       await updateMutation.mutateAsync({
         id: editId,
-        data: {
-          duration_minutes: parseInt(editMinutes) || 1,
-          description: editDescription?.trim() || null,
-        },
+        data: data as any,
       });
       toast.success("Bijgewerkt");
       setEditId(null);
@@ -434,6 +530,37 @@ export default function UrenPage() {
 
   const todayTotal = todayEntries?.reduce((sum, e) => sum + e.duration_minutes, 0) ?? 0;
   const timerDisplay = `${Math.floor(timerSeconds / 3600)}:${String(Math.floor((timerSeconds % 3600) / 60)).padStart(2, "0")}:${String(timerSeconds % 60).padStart(2, "0")}`;
+
+  // ── Navigation helpers ────────────────────────────────────────────────
+  const navigateBack = () => {
+    if (viewMode === "week") setWeekOffset((w) => w - 1);
+    else if (viewMode === "month") setMonthOffset((m) => m - 1);
+    else setDayOffset((d) => d - 1);
+  };
+
+  const navigateForward = () => {
+    if (viewMode === "week") setWeekOffset((w) => w + 1);
+    else if (viewMode === "month") setMonthOffset((m) => m + 1);
+    else setDayOffset((d) => d + 1);
+  };
+
+  const navigateToday = () => {
+    if (viewMode === "week") setWeekOffset(0);
+    else if (viewMode === "month") setMonthOffset(0);
+    else setDayOffset(0);
+  };
+
+  const periodLabel = useMemo(() => {
+    if (viewMode === "week") {
+      return `${week.monday.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} — ${week.friday.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}`;
+    } else if (viewMode === "month") {
+      return month.label;
+    } else {
+      return dayInfo.label;
+    }
+  }, [viewMode, week, month, dayInfo]);
+
+  const todayButtonLabel = viewMode === "week" ? "Deze week" : viewMode === "month" ? "Deze maand" : "Vandaag";
 
   // ── Render ───────────────────────────────────────────────────────────
 
@@ -497,7 +624,7 @@ export default function UrenPage() {
 
         {/* Summary cards */}
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-sm font-medium text-muted-foreground">Totaal deze week</p>
+          <p className="text-sm font-medium text-muted-foreground">Totaal deze {viewMode === "week" ? "week" : viewMode === "month" ? "maand" : "dag"}</p>
           <p className="mt-1 text-2xl font-bold text-foreground">
             {summary ? fmtMinutes(summary.total_minutes) : "—"}
           </p>
@@ -517,88 +644,125 @@ export default function UrenPage() {
           <p className="mt-1 text-2xl font-bold text-foreground">
             {summary ? formatCurrency(summary.total_amount) : "—"}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">deze week</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">deze {viewMode === "week" ? "week" : viewMode === "month" ? "maand" : "dag"}</p>
         </div>
       </div>
 
-      {/* Week navigation + filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setWeekOffset((w) => w - 1)}
-            className="rounded-md border border-border p-1.5 hover:bg-muted transition-colors"
-            aria-label="Vorige week"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setWeekOffset(0)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
-            disabled={isCurrentWeek}
-            aria-label="Ga naar huidige week"
-          >
-            Deze week
-          </button>
-          <button
-            onClick={() => setWeekOffset((w) => w + 1)}
-            className="rounded-md border border-border p-1.5 hover:bg-muted transition-colors"
-            aria-label="Volgende week"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <span className="ml-2 text-sm text-muted-foreground">
-            {week.monday.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
-            {" — "}
-            {week.friday.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-56">
-            <CaseSelector
-              cases={cases}
-              value={filterCaseId}
-              onChange={setFilterCaseId}
-              placeholder="Alle dossiers"
-            />
-          </div>
-          <select
-            value={filterBillable}
-            onChange={(e) => setFilterBillable(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-          >
-            <option value="">Alle typen</option>
-            <option value="true">Declarabel</option>
-            <option value="false">Niet-declarabel</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Week day bar */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-        {week.days.slice(0, 5).map((day, i) => {
-          const iso = toISO(day);
-          const total = dayTotals.get(iso) || 0;
-          const isToday = iso === toISO(new Date());
-          return (
-            <div
-              key={iso}
-              className={`rounded-lg border p-3 text-center transition-colors ${
-                isToday
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-card"
-              }`}
-            >
-              <p className="text-xs font-medium text-muted-foreground">{DAY_NAMES[i]}</p>
-              <p className="text-xs text-muted-foreground">
-                {day.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
-              </p>
-              <p className={`mt-1 text-lg font-bold tabular-nums ${total > 0 ? "text-foreground" : "text-muted-foreground/40"}`}>
-                {fmtMinutes(total)}
-              </p>
+      {/* View mode switcher + navigation + filters */}
+      <div className="flex flex-col gap-3">
+        {/* Row 1: View mode tabs + navigation */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {/* View mode tabs */}
+            <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
+              {(["dag", "week", "maand"] as const).map((label) => {
+                const mode = label === "dag" ? "day" : label === "maand" ? "month" : "week";
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                      viewMode === mode
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label.charAt(0).toUpperCase() + label.slice(1)}
+                  </button>
+                );
+              })}
             </div>
-          );
-        })}
+
+            {/* Period navigation */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={navigateBack}
+                className="rounded-md border border-border p-1.5 hover:bg-muted transition-colors"
+                aria-label="Vorige periode"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={navigateToday}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+                disabled={isCurrentPeriod}
+              >
+                {todayButtonLabel}
+              </button>
+              <button
+                onClick={navigateForward}
+                className="rounded-md border border-border p-1.5 hover:bg-muted transition-colors"
+                aria-label="Volgende periode"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <span className="ml-2 text-sm text-muted-foreground">
+                {periodLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="w-56">
+              <CaseSelector
+                cases={cases}
+                value={filterCaseId}
+                onChange={setFilterCaseId}
+                placeholder="Alle dossiers"
+              />
+            </div>
+            <select
+              value={filterContactId}
+              onChange={(e) => setFilterContactId(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            >
+              <option value="">Alle relaties</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select
+              value={filterBillable}
+              onChange={(e) => setFilterBillable(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+            >
+              <option value="">Alle typen</option>
+              <option value="true">Declarabel</option>
+              <option value="false">Niet-declarabel</option>
+            </select>
+          </div>
+        </div>
       </div>
+
+      {/* Week day bar (only shown in week view) */}
+      {viewMode === "week" && (
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          {week.days.slice(0, 5).map((day, i) => {
+            const iso = toISO(day);
+            const total = dayTotals.get(iso) || 0;
+            const isToday = iso === toISO(new Date());
+            return (
+              <div
+                key={iso}
+                className={`rounded-lg border p-3 text-center transition-colors ${
+                  isToday
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card"
+                }`}
+              >
+                <p className="text-xs font-medium text-muted-foreground">{DAY_NAMES[i]}</p>
+                <p className="text-xs text-muted-foreground">
+                  {day.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                </p>
+                <p className={`mt-1 text-lg font-bold tabular-nums ${total > 0 ? "text-foreground" : "text-muted-foreground/40"}`}>
+                  {fmtMinutes(total)}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* New entry form (modal-like panel) */}
       {showForm && (
@@ -684,7 +848,7 @@ export default function UrenPage() {
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -694,8 +858,33 @@ export default function UrenPage() {
                 />
                 <span className="text-sm text-foreground">Declarabel</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formDiscount}
+                  onChange={(e) => setFormDiscount(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary"
+                />
+                <span className="text-sm text-foreground">Korting geven</span>
+              </label>
             </div>
           </div>
+          {formDiscount && (
+            <div className="mt-3 max-w-xs">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Te factureren (minuten)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="bijv. 45"
+                value={formBillableMinutes}
+                onChange={(e) => setFormBillableMinutes(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Standaard: zelfde als duur. Vul hier een lager aantal in voor korting.
+              </p>
+            </div>
+          )}
           <div className="flex justify-end mt-4">
             <button
               onClick={submitEntry}
@@ -727,7 +916,9 @@ export default function UrenPage() {
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
             <Clock className="h-8 w-8 text-muted-foreground/50" />
           </div>
-          <p className="mt-5 text-base font-medium text-foreground">Geen registraties deze week</p>
+          <p className="mt-5 text-base font-medium text-foreground">
+            Geen registraties {viewMode === "week" ? "deze week" : viewMode === "month" ? "deze maand" : "vandaag"}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Gebruik de stopwatch of klik op &quot;Nieuwe registratie&quot;
           </p>
@@ -736,13 +927,14 @@ export default function UrenPage() {
         <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto">
           <div className="min-w-[700px]">
           {/* Table header */}
-          <div className="grid grid-cols-[100px_80px_1fr_120px_80px_60px_60px] gap-2 px-5 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-[100px_80px_1fr_120px_80px_60px_80px_60px] gap-2 px-5 py-2.5 border-b border-border bg-muted/50 text-xs font-medium text-muted-foreground">
             <span>Datum</span>
             <span>Dossier</span>
             <span>Omschrijving</span>
             <span>Activiteit</span>
             <span className="text-right">Duur</span>
             <span className="text-center">Decl.</span>
+            <span className="text-center">Factuur</span>
             <span></span>
           </div>
 
@@ -750,11 +942,20 @@ export default function UrenPage() {
           {entries.map((entry) => (
             <div
               key={entry.id}
-              className="group grid grid-cols-[100px_80px_1fr_120px_80px_60px_60px] gap-2 items-center px-5 py-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+              className="group grid grid-cols-[100px_80px_1fr_120px_80px_60px_80px_60px] gap-2 items-center px-5 py-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
             >
-              <span className="text-sm text-foreground tabular-nums">
-                {new Date(entry.date + "T00:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
-              </span>
+              {editId === entry.id ? (
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="rounded border border-input bg-background px-1.5 py-1 text-sm w-full"
+                />
+              ) : (
+                <span className="text-sm text-foreground tabular-nums">
+                  {new Date(entry.date + "T00:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                </span>
+              )}
               <Link
                 href={`/zaken/${entry.case.id}`}
                 className="text-sm font-medium text-foreground truncate hover:text-primary transition-colors"
@@ -780,18 +981,38 @@ export default function UrenPage() {
                 {ACTIVITY_TYPE_LABELS[entry.activity_type] || entry.activity_type}
               </span>
               {editId === entry.id ? (
-                <input
-                  type="number"
-                  value={editMinutes}
-                  onChange={(e) => setEditMinutes(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && saveEdit()}
-                  className="rounded border border-input bg-background px-2 py-1 text-sm text-right w-full"
-                  min="1"
-                />
+                <div className="space-y-1">
+                  <input
+                    type="number"
+                    value={editMinutes}
+                    onChange={(e) => setEditMinutes(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+                    className="rounded border border-input bg-background px-2 py-1 text-sm text-right w-full"
+                    min="1"
+                    title="Duur (minuten)"
+                  />
+                  <input
+                    type="number"
+                    value={editBillableMinutes}
+                    onChange={(e) => setEditBillableMinutes(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+                    className="rounded border border-input bg-background px-2 py-1 text-xs text-right w-full"
+                    min="0"
+                    placeholder="factur."
+                    title="Te factureren minuten (leeg = zelfde als duur)"
+                  />
+                </div>
               ) : (
-                <span className="text-sm font-medium text-foreground text-right tabular-nums">
-                  {fmtMinutes(entry.duration_minutes)}
-                </span>
+                <div className="text-right">
+                  <span className="text-sm font-medium text-foreground tabular-nums">
+                    {fmtMinutes(entry.duration_minutes)}
+                  </span>
+                  {entry.billable_minutes != null && entry.billable_minutes !== entry.duration_minutes && (
+                    <span className="block text-[10px] text-muted-foreground tabular-nums">
+                      facturabel: {fmtMinutes(entry.billable_minutes)}
+                    </span>
+                  )}
+                </div>
               )}
               <span className="text-center">
                 {entry.billable ? (
@@ -802,6 +1023,15 @@ export default function UrenPage() {
                   <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
                     Nee
                   </span>
+                )}
+              </span>
+              <span className="text-center">
+                {entry.invoiced && entry.invoice_number ? (
+                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                    {entry.invoice_number}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">—</span>
                 )}
               </span>
               <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -34,6 +34,10 @@ class TimeEntry(TenantBase):
     )
     date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    billable_minutes: Mapped[int | None] = mapped_column(
+        Integer, nullable=True,
+        comment="Te factureren minuten (null = gelijk aan duration_minutes)",
+    )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     activity_type: Mapped[str] = mapped_column(
         String(30), nullable=False, default="other"

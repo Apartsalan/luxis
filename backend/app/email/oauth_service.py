@@ -51,7 +51,11 @@ async def get_email_account(
     tenant_id: uuid.UUID,
     provider: str | None = None,
 ) -> EmailAccount | None:
-    """Get the email account for a user, optionally filtered by provider."""
+    """Get the email account for a user, optionally filtered by provider.
+
+    When multiple accounts exist and no provider is specified, prefer
+    'outlook' (Graph API) over other providers.
+    """
     query = select(EmailAccount).where(
         EmailAccount.user_id == user_id,
         EmailAccount.tenant_id == tenant_id,
@@ -59,7 +63,16 @@ async def get_email_account(
     if provider:
         query = query.where(EmailAccount.provider == provider)
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    rows = result.scalars().all()
+    if not rows:
+        return None
+    if len(rows) == 1:
+        return rows[0]
+    # Multiple accounts — prefer outlook (Graph API) for sending/compose
+    for row in rows:
+        if row.provider == "outlook":
+            return row
+    return rows[0]
 
 
 async def store_email_account(

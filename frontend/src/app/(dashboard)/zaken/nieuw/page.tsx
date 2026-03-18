@@ -618,6 +618,12 @@ function NieuweZaakPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // If not on the last step, advance instead of submitting
+    // (prevents Enter key in inputs from skipping steps)
+    if (currentStep !== totalSteps) {
+      handleNext();
+      return;
+    }
     setError("");
 
     // Validate all steps

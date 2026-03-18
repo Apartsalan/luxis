@@ -1,12 +1,48 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 74 — LF-10 AI factuur parsing)
-**Laatste feature/fix:** LF-10 — AI factuur parsing bij dossier aanmaken
+**Laatst bijgewerkt:** 16 maart 2026 (sessie 75 — QA walkthrough + Timer fix)
+**Laatste feature/fix:** QA sessie 75 — volledige walkthrough + Timer overlay fix
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** TBD
+**Volgende sessie:** Sessie 76 — QA P1 bugfixes + test data cleanup
+
+## Wat er gedaan is (sessie 75 — 16 maart 2026) — QA Walkthrough + Demo Voorbereiding
+
+### Samenvatting
+
+**Volledige QA walkthrough via Playwright op productie.** Systeem is demo-ready. 11 flows getest, 0 P0 bugs, 4 P1 bugs, 7 P2 bugs gevonden. Timer overlay fix gedeployed.
+
+### Geteste flows (alle werken)
+- Login, dashboard, sidebar navigatie
+- Nieuw dossier wizard met AI factuur parsing + confidence dots
+- Dossier detail (alle 9 tabs)
+- Facturatie (aanmaken + PDF generatie + download)
+- Relatiebeheer, incasso pipeline, urenregistratie, agenda, zakenlijst
+
+### Gefixt
+- **Timer overlay** — floating Timer button blokkeerde "Volgende" en andere action buttons. Verplaatst van `bottom-4` naar `bottom-20` in `floating-timer.tsx`
+- **Missing dependencies** — `@radix-ui/react-progress` en `@radix-ui/react-radio-group` ontbraken in frontend build
+
+### Gewijzigde bestanden
+- `frontend/src/components/floating-timer.tsx` — Timer positie fix (3 locaties)
+
+### Nieuwe bestanden
+- `docs/qa/QA-SESSIE75.md` — Volledig QA rapport met 18 screenshots
+
+### Open issues (uit QA rapport)
+- P1-01: API call op login pagina voor auth check (401 in console)
+- P1-03: AI-parsed partijnamen niet gematcht met bestaande contacten
+- P1-04: case_id URL parameter vult factuurformulier niet visueel in
+- P2-01: favicon.ico 404
+- P2-02: Sidebar badge onduidelijk vs dashboard count
+- P2-03: "Vordering(optioneel)" spatie ontbreekt
+- P2-04: Stale validatiefout na client selectie
+- P2-05: Test/rommel data opschonen voor demo
+- P2-06: Week range off-by-one in urenregistratie
+
+---
 
 ## Wat er gedaan is (sessie 74 — 16 maart 2026) — LF-10: AI Factuur Parsing
 

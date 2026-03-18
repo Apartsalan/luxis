@@ -252,6 +252,14 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-40 | EmailAttachment model niet geregistreerd bij SQLAlchemy mapper — standalone scripts/scheduler crashten op `SyncedEmail` relationship. Fix: import in `email/__init__.py`. | Midden | S | ✅ Gefixt (11 mrt, sessie 60) |
 | BUG-41 | 120 pre-existing test errors (conftest.py) — `metadata.drop_all()` kon composite types niet droppen (FK ordering) + connection pool hield stale connections vast tussen event loops. Fix: `DROP SCHEMA CASCADE` + `NullPool`. 573 tests passen nu. | Midden | S | ✅ Gefixt (13 mrt, sessie 65) |
 | BUG-42 | 196 test errors + 1 failure bij `pytest tests/ -q` — conftest.py importeerde maar 3 van 21 model modules, waardoor `Base.metadata.create_all()` de meeste tabellen niet aanmaakte. Fix: alle 21 model modules importeren via `importlib.import_module()` (vermijdt `app` name collision) + `db` fixture expliciet afhankelijk gemaakt van `setup_database`. Resultaat: 573 passed, 0 errors, 0 failures (zowel -q als -v). | Hoog | M | ✅ Gefixt (13 mrt, sessie 67) |
+| BUG-43 | Timer floating button blokkeert "Volgende" en andere action buttons op meerdere pagina's — `fixed bottom-4 right-4` overlapt met knoppen onderaan. Fix: verplaatst naar `bottom-20`. | Hoog | S | ✅ Gefixt (16 mrt, sessie 75) |
+| BUG-44 | API call `/api/cases?page=1&per_page=20` op login pagina voor auth check — 401 error in console. Component laadt data voordat auth check compleet is. | Midden | S | ❌ TODO |
+| BUG-45 | AI-parsed partijnamen in wizard stap 2 worden als zoektekst in veld gezet maar triggeren geen selectie van bestaande contacten. Gebruiker moet handmatig wissen en opnieuw zoeken. | Midden | M | ❌ TODO |
+| BUG-46 | `case_id` URL parameter op factuur-aanmaakpagina vult Relatie/Dossier velden niet visueel in (data wordt WEL correct opgeslagen). | Midden | S | ❌ TODO |
+| BUG-47 | "Vordering(optioneel)" in wizard step indicator — spatie ontbreekt voor haakje. | Laag | S | ❌ TODO |
+| BUG-48 | Stale "Selecteer een client" validatiefout blijft zichtbaar na succesvolle client selectie in wizard stap 2. | Laag | S | ❌ TODO |
+| BUG-49 | Week range header in urenregistratie toont "15 mrt — 19 mrt" maar dagen zijn Ma 16 - Vr 20 mrt (off-by-one). | Laag | S | ❌ TODO |
+| BUG-50 | favicon.ico 404 op alle pagina's. | Laag | S | ❌ TODO |
 
 ---
 
@@ -285,7 +293,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** Lisanne Feedback Sprint — LF-20/LF-21 (facturatie), overige restanten
+**Volgende prioriteit:** QA bugfixes (BUG-44 t/m BUG-50) + test data cleanup + AI factuur parsing validatie
 
 ### Pre-Launch Sprint (sessie 62 audit → uitrol)
 
@@ -304,12 +312,16 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 ### Uitrolplan (na pre-launch sprint)
 
-1. **Demo met Lisanne** — samen door hele workflow lopen, feedback verzamelen
-2. **Feedback-fixes** — top-5 items fixen (1 sessie)
-3. **Soft launch** — 2-3 echte dossiers in Luxis, BaseNet blijft primair (2 weken)
-4. **Parallel draaien** — nieuwe dossiers in Luxis, BaseNet als backup (1 maand)
-5. **M0b: Lisanne naar M365** — email migratie
-6. **BaseNet opzeggen** — als alles bewezen werkt
+1. ✅ **QA Walkthrough** — volledige Playwright walkthrough (sessie 75, 16 mrt)
+2. **QA Bugfixes** — P1/P2 issues uit QA-SESSIE75.md fixen (sessie 76)
+3. **AI Factuur Parsing Validatie** — LF-10 feature uitgebreid testen met echte facturen van Lisanne. Test cases: verschillende factuurtypes (B2B/B2C), incomplete facturen, meerdere vorderingen, edge cases. Doel: betrouwbaarheid valideren voor productiegebruik.
+4. **Test data opschonen** — rommel-relaties en dossiers verwijderen voor demo
+5. **Demo met Lisanne** — samen door hele workflow lopen, feedback verzamelen
+6. **Feedback-fixes** — top-5 items fixen (1 sessie)
+7. **Soft launch** — 2-3 echte dossiers in Luxis, BaseNet blijft primair (2 weken)
+8. **Parallel draaien** — nieuwe dossiers in Luxis, BaseNet als backup (1 maand)
+9. **M0b: Lisanne naar M365** — email migratie
+10. **BaseNet opzeggen** — als alles bewezen werkt
 
 ---
 

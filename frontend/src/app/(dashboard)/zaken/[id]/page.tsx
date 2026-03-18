@@ -43,6 +43,7 @@ import { STATUS_LABELS } from "./types";
 import DossierHeader from "./components/DossierHeader";
 import DetailsTab from "./components/DetailsTab";
 import TijdregistratieTab from "./components/TijdregistratieTab";
+import UrenTab from "./components/UrenTab";
 import { VorderingenFinancieelTab, BetalingenDerdengeldenTab } from "./components/IncassoTab";
 import { FacturenTab, DocumentenTab } from "./components/DocumentenTab";
 import CorrespondentieTab from "./components/CorrespondentieTab";
@@ -209,7 +210,7 @@ export default function ZaakDetailPage() {
   // Tab IDs for numeric shortcuts — order matches the tab bar
   const isIncasso = hasModule("incasso") && zaak?.case_type === "incasso";
   const tabIds = [
-    "overzicht", "taken",
+    "overzicht", "taken", "uren",
     ...(isIncasso ? ["vorderingen", "betalingen", "derdengelden"] : []),
     "facturen", "documenten", "correspondentie", "activiteiten", "partijen",
   ];
@@ -307,6 +308,7 @@ export default function ZaakDetailPage() {
   const tabs = [
     { id: "overzicht", label: "Overzicht", icon: Briefcase },
     { id: "taken", label: "Taken", icon: CheckCircle2 },
+    { id: "uren", label: "Uren", icon: Clock },
     ...(isIncasso
       ? [
           { id: "vorderingen", label: "Vorderingen", icon: Euro },
@@ -408,6 +410,7 @@ export default function ZaakDetailPage() {
           <div className="mt-6">
             {activeTab === "overzicht" && <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />}
             {activeTab === "taken" && <TijdregistratieTab caseId={id} />}
+            {activeTab === "uren" && <UrenTab caseId={id} />}
             {isIncasso && activeTab === "vorderingen" && <VorderingenFinancieelTab caseId={id} />}
             {isIncasso && activeTab === "betalingen" && <BetalingenDerdengeldenTab caseId={id} />}
             {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}

@@ -268,7 +268,10 @@ def _fetch_attachment_from_imap(
     attachment_idx: int,
     folder: str = "INBOX",
 ) -> bytes:
-    """Fetch a specific attachment from IMAP by searching for Message-ID."""
+    """Fetch a specific attachment from IMAP by searching for Message-ID.
+
+    Tries multiple folders (INBOX, Sent) to find the message.
+    """
     try:
         imap = imaplib.IMAP4_SSL(host, port)
         imap.login(username, password)
@@ -277,37 +280,46 @@ def _fetch_attachment_from_imap(
         raise
 
     try:
-        imap.select(folder, readonly=True)
+        # Try multiple folders to find the message
+        folders_to_try = [folder, "INBOX.Sent", "INBOX"]
+        # Deduplicate while preserving order
+        seen = set()
+        unique_folders = []
+        for f in folders_to_try:
+            if f not in seen:
+                seen.add(f)
+                unique_folders.append(f)
 
-        # Search by Message-ID header
-        status, data = imap.search(None, f'(HEADER Message-ID "{message_id}")')
-        if status != "OK" or not data[0]:
+        raw_bytes = None
+        for try_folder in unique_folders:
+            try:
+                status, _ = imap.select(try_folder, readonly=True)
+                if status != "OK":
+                    continue
+                status, data = imap.search(
+                    None, f'(HEADER Message-ID "{message_id}")'
+                )
+                if status != "OK" or not data[0]:
+                    continue
+                uid = data[0].split()[0]
+                status, msg_data = imap.fetch(uid, "(RFC822)")
+                if status == "OK" and msg_data and msg_data[0]:
+                    raw_bytes = msg_data[0][1]
+                    break
+            except Exception:
+                continue
+
+        if not raw_bytes:
             raise ValueError(f"Message not found: {message_id}")
 
-        uid = data[0].split()[0]
-        status, msg_data = imap.fetch(uid, "(RFC822)")
-        if status != "OK" or not msg_data or not msg_data[0]:
-            raise ValueError(f"Failed to fetch message: {message_id}")
-
-        raw_bytes = msg_data[0][1]
         msg = email_lib.message_from_bytes(raw_bytes)
 
-        # Walk to find the right attachment
-        idx = 0
-        for part in msg.walk():
-            disposition = str(part.get("Content-Disposition", ""))
-            content_type = part.get_content_type()
-
-            if "attachment" not in disposition and "inline" not in disposition:
-                continue
-            if content_type in ("text/plain", "text/html") and "inline" in disposition:
-                continue
-
-            if idx == attachment_idx:
+        # Walk to find the right part by walk-index (matches _get_attachments)
+        for i, part in enumerate(msg.walk()):
+            if i == attachment_idx:
                 return part.get_payload(decode=True) or b""
-            idx += 1
 
-        raise ValueError(f"Attachment index {attachment_idx} not found")
+        raise ValueError(f"Attachment walk-index {attachment_idx} not found")
 
     finally:
         try:

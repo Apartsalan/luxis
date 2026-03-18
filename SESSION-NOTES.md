@@ -8,7 +8,7 @@
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 3 items wachten op Lisanne
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Hertest hele app + DF-05/DF-11/DF-13 na overleg Lisanne + overige UX-TODO items
+**Volgende sessie:** DF-05/DF-11/DF-13 na overleg Lisanne + overige UX-TODO items (relaties sorteren, factuur verwijder-knop, rente/partijen cards, testdata opruimen)
 
 ## Wat er gedaan is (sessie 80 — 18 maart 2026) — UX Fixes Batch 2
 
@@ -34,8 +34,21 @@ Alle 8 resterende UX issues (UX-6 t/m UX-13) opgelost en gedeployd. Backend + fr
 - `frontend/src/app/(dashboard)/zaken/page.tsx` — openstaand kolom
 - `backend/app/incasso/service.py` — betaald status filter in pipeline
 
+### Hertest alle 13 UX fixes op live site — ALLE GESLAAGD
+- UX-1: Uren weekdag highlight — Wo 18 mrt correct gehighlight ✅
+- UX-2: Dossier summary cards — financials refreshen bij laden ✅
+- UX-3: Dashboard widget verwijderd — geen "Dossiers per status" meer ✅
+- UX-4: Taken pagina — groepen met counts (Te laat/Vandaag/Later) ✅
+- UX-5: Correspondentie afzender — "Naam (email-prefix)" format ✅
+- UX-6/7: Sticky tabs — tabs plakken onder header bij scrollen ✅
+- UX-8: Documenten case picker — dialog met zoekbalk opent correct ✅
+- UX-9: Betalingen upload — prominente knop in header zichtbaar ✅
+- UX-10: Pipeline filter — geen betaalde dossiers in pipeline ✅
+- UX-11: Follow-up lege staat — uitleg tekst zichtbaar ✅
+- UX-12: Dashboard taken groepering — logica correct ✅
+- UX-13: Dossier lijst openstaand — kolom met kleurcodering zichtbaar ✅
+
 ### Bekende issues (nog open)
-- Live site wachtwoord status onbekend
 - 3 demo feedback items wachten op Lisanne (DF-05, DF-11, DF-13)
 - UX-TODO-9: Relaties lijst type-kolom niet sorteerbaar
 - UX-TODO-10: Factuur verwijder-knop per regel

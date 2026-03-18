@@ -290,7 +290,7 @@ async def get_pipeline_overview(
             Case.tenant_id == tenant_id,
             Case.case_type == "incasso",
             Case.is_active.is_(True),
-            Case.status != "afgesloten",
+            Case.status.notin_(["betaald", "afgesloten"]),
         )
     )
     all_cases = list(result.scalars().all())

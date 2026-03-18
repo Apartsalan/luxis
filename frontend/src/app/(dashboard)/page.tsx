@@ -639,6 +639,22 @@ function MyTasksWidget() {
 
   const now = new Date();
 
+  // UX-12: Group duplicate tasks by title
+  const grouped: { task: WorkflowTask; count: number; allTasks: WorkflowTask[] }[] = [];
+  const titleMap = new Map<string, number>();
+
+  for (const task of tasks) {
+    const key = task.title;
+    const existing = titleMap.get(key);
+    if (existing !== undefined) {
+      grouped[existing].count++;
+      grouped[existing].allTasks.push(task);
+    } else {
+      titleMap.set(key, grouped.length);
+      grouped.push({ task, count: 1, allTasks: [task] });
+    }
+  }
+
   return (
     <div className="rounded-xl border border-border bg-card">
       <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -655,12 +671,17 @@ function MyTasksWidget() {
         </div>
       </div>
       <div className="divide-y divide-border">
-        {tasks.map((task: WorkflowTask) => {
-          const dueDate = new Date(task.due_date);
-          const isOverdue = dueDate < now && task.status !== "completed";
+        {grouped.map(({ task, count, allTasks }) => {
+          // For grouped tasks, show the earliest due date
+          const earliestDue = allTasks.reduce((earliest, t) => {
+            const d = new Date(t.due_date);
+            return d < earliest ? d : earliest;
+          }, new Date(task.due_date));
+
+          const isOverdue = earliestDue < now && task.status !== "completed";
           const isDueSoon =
             !isOverdue &&
-            dueDate.getTime() - now.getTime() < 24 * 60 * 60 * 1000;
+            earliestDue.getTime() - now.getTime() < 24 * 60 * 60 * 1000;
 
           return (
             <div
@@ -669,37 +690,48 @@ function MyTasksWidget() {
                 isOverdue ? "bg-red-50/50" : ""
               }`}
             >
-              <button
-                onClick={() => completeTask.mutate(task.id)}
-                disabled={completeTask.isPending}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-muted-foreground/30 hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
-                title="Markeer als afgerond"
-              >
-                {completeTask.isPending && (
-                  <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                )}
-              </button>
+              {count === 1 ? (
+                <button
+                  onClick={() => completeTask.mutate(task.id)}
+                  disabled={completeTask.isPending}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-muted-foreground/30 hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
+                  title="Markeer als afgerond"
+                >
+                  {completeTask.isPending && (
+                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  )}
+                </button>
+              ) : (
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                  {count}
+                </span>
+              )}
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/zaken/${task.case_id}`}
+                    href={count === 1 ? `/zaken/${task.case_id}` : "/taken"}
                     className="text-sm font-medium text-card-foreground truncate hover:text-primary transition-colors"
                   >
-                    {task.title}
+                    {count > 1 ? `${count}x ${task.title}` : task.title}
                   </Link>
                   <span className="inline-flex shrink-0 items-center rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
                     {TASK_TYPE_LABELS[task.task_type] ?? task.task_type}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {task.case && (
+                  {count === 1 && task.case && (
                     <Link
                       href={`/zaken/${task.case_id}`}
                       className="text-xs text-primary hover:underline"
                     >
                       {task.case.case_number}
                     </Link>
+                  )}
+                  {count > 1 && (
+                    <span className="text-xs text-muted-foreground">
+                      {count} dossiers
+                    </span>
                   )}
                   <span
                     className={`text-xs ${
@@ -711,7 +743,7 @@ function MyTasksWidget() {
                     }`}
                   >
                     {isOverdue && "Verlopen: "}
-                    {formatDateShort(task.due_date)}
+                    {formatDateShort(earliestDue.toISOString())}
                   </span>
                 </div>
               </div>

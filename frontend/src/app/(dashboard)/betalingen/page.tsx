@@ -80,6 +80,29 @@ type MainTab = "upload" | "matches";
 
 export default function BetalingenPage() {
   const [mainTab, setMainTab] = useState<MainTab>("matches");
+  const uploadFileRef = useRef<HTMLInputElement>(null);
+  const upload = useUploadCSV();
+
+  const handleQuickUpload = useCallback(
+    (file: File) => {
+      if (!file.name.endsWith(".csv")) {
+        toast.error("Alleen CSV-bestanden worden ondersteund");
+        return;
+      }
+      upload.mutate(file, {
+        onSuccess: (result) => {
+          toast.success(
+            `${result.credit_count} inkomende transacties geïmporteerd, ${result.matched_count} gematcht`,
+          );
+          setMainTab("matches");
+        },
+        onError: (err) => {
+          toast.error(err.message || "Upload mislukt");
+        },
+      });
+    },
+    [upload],
+  );
 
   return (
     <div className="space-y-4">
@@ -94,6 +117,27 @@ export default function BetalingenPage() {
             Bankafschriften importeren en betalingen automatisch matchen aan
             dossiers
           </p>
+        </div>
+        <div>
+          <input
+            ref={uploadFileRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleQuickUpload(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => uploadFileRef.current?.click()}
+            disabled={upload.isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            <Upload className="h-4 w-4" />
+            {upload.isPending ? "Importeren..." : "CSV uploaden"}
+          </button>
         </div>
       </div>
 
@@ -117,7 +161,7 @@ export default function BetalingenPage() {
               : "bg-muted text-muted-foreground hover:bg-muted/80"
           }`}
         >
-          Upload
+          Importgeschiedenis
         </button>
       </div>
 

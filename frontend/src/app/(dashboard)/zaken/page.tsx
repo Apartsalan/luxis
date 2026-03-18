@@ -418,9 +418,14 @@ export default function ZakenPage() {
                     Wederpartij
                   </th>
                   {hasModule("incasso") && (
-                    <th className="hidden md:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Hoofdsom
-                    </th>
+                    <>
+                      <th className="hidden md:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Hoofdsom
+                      </th>
+                      <th className="hidden lg:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Openstaand
+                      </th>
+                    </>
                   )}
                   <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Geopend
@@ -503,11 +508,22 @@ export default function ZakenPage() {
                       )}
                     </td>
                     {hasModule("incasso") && (
-                      <td className="hidden md:table-cell px-4 py-3.5 text-right">
-                        <span className="text-sm font-semibold text-foreground tabular-nums">
-                          {formatCurrency(zaak.total_principal)}
-                        </span>
-                      </td>
+                      <>
+                        <td className="hidden md:table-cell px-4 py-3.5 text-right">
+                          <span className="text-sm font-semibold text-foreground tabular-nums">
+                            {formatCurrency(zaak.total_principal)}
+                          </span>
+                        </td>
+                        <td className="hidden lg:table-cell px-4 py-3.5 text-right">
+                          <span className={`text-sm font-semibold tabular-nums ${
+                            (zaak.total_principal - zaak.total_paid) > 0
+                              ? "text-amber-600"
+                              : "text-emerald-600"
+                          }`}>
+                            {formatCurrency(zaak.total_principal - zaak.total_paid)}
+                          </span>
+                        </td>
+                      </>
                     )}
                     <td className="hidden sm:table-cell px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(zaak.date_opened)}

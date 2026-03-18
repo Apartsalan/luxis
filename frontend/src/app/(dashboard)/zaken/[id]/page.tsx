@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Briefcase,
@@ -54,6 +54,7 @@ import DossierSidebar from "./components/DossierSidebar";
 export default function ZaakDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params.id as string;
   const { data: zaak, isLoading } = useCase(id);
   const updateStatus = useUpdateCaseStatus();
@@ -70,7 +71,8 @@ export default function ZaakDetailPage() {
   const { hasModule } = useModules();
   const { startTimer, stopTimer, discardTimer, timer } = useTimer();
   const [autoTimerEnabled] = useAutoTimerPreference();
-  const [activeTab, setActiveTab] = useState("overzicht");
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "overzicht");
   const [phoneNoteText, setPhoneNoteText] = useState("");
   const autoStartedRef = useRef<string | null>(null);
 
@@ -386,24 +388,28 @@ export default function ZaakDetailPage() {
       {/* Main content + sidebar */}
       <div className="flex gap-6">
         <div className="min-w-0 flex-1">
-          {/* Tabs */}
-          <div className="border-b border-border overflow-x-auto">
-            <nav className="flex gap-0.5 min-w-max">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                  }`}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+          {/* Tabs — sticky under app header (UX-6: scroll indicators, UX-7: sticky) */}
+          <div className="sticky top-14 z-30 bg-background -mx-4 sm:-mx-6 px-4 sm:px-6">
+            <div className="relative">
+              <div className="border-b border-border overflow-x-auto">
+                <nav className="flex gap-0.5 min-w-max">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? "border-primary text-primary"
+                          : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                      }`}
+                    >
+                      <tab.icon className="h-4 w-4" />
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </div>
           </div>
 
           {/* Tab content */}

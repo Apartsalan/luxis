@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   File,
@@ -9,6 +10,7 @@ import {
   Search,
   ArrowRight,
   Info,
+  Download,
 } from "lucide-react";
 import {
   useDocxTemplates,
@@ -16,6 +18,7 @@ import {
   getTemplateDescription,
 } from "@/hooks/use-documents";
 import { useDocumentTemplates } from "@/hooks/use-documents";
+import { useCases } from "@/hooks/use-cases";
 
 export default function DocumentenPage() {
   const [tab, setTab] = useState<"docx" | "html">("docx");
@@ -85,6 +88,88 @@ export default function DocumentenPage() {
   );
 }
 
+// ── Case Picker Dialog ──────────────────────────────────────────────────────
+
+function CasePickerDialog({
+  open,
+  onClose,
+  templateType,
+}: {
+  open: boolean;
+  onClose: () => void;
+  templateType: string;
+}) {
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { data: casesData } = useCases({
+    search,
+    per_page: 8,
+    case_type: "incasso",
+  });
+
+  useEffect(() => {
+    if (open) {
+      setSearch("");
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-xl">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-sm font-semibold text-foreground">
+            Kies een dossier voor &quot;{getTemplateLabel(templateType)}&quot;
+          </h3>
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Zoek op dossiernummer of naam..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
+        <div className="max-h-64 overflow-y-auto p-2">
+          {casesData?.items?.length ? (
+            casesData.items.map((c: any) => (
+              <button
+                key={c.id}
+                onClick={() => {
+                  router.push(`/zaken/${c.id}?tab=documenten`);
+                  onClose();
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-muted transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {c.case_number}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {c.client_name}{c.opposing_party_name ? ` vs. ${c.opposing_party_name}` : ""}
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            ))
+          ) : (
+            <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+              {search ? "Geen dossiers gevonden" : "Typ om te zoeken..."}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Docx Templates View ─────────────────────────────────────────────────────
 
 function DocxTemplatesView({
@@ -94,6 +179,7 @@ function DocxTemplatesView({
   templates: any[] | undefined;
   isLoading: boolean;
 }) {
+  const [pickerTemplate, setPickerTemplate] = useState<string | null>(null);
   if (isLoading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -129,38 +215,57 @@ function DocxTemplatesView({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {templates.map((template) => (
-        <div
-          key={template.template_type}
-          className="group rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-primary/20 transition-all"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <FileText className="h-5 w-5 text-primary" />
+    <>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {templates.map((template) => (
+          <div
+            key={template.template_type}
+            className="group rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-primary/20 transition-all"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
+                  template.available
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {template.available ? "Beschikbaar" : "Niet beschikbaar"}
+              </span>
             </div>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${
-                template.available
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {template.available ? "Beschikbaar" : "Niet beschikbaar"}
-            </span>
+            <h3 className="mt-3 text-sm font-semibold text-foreground">
+              {getTemplateLabel(template.template_type)}
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              {getTemplateDescription(template.template_type)}
+            </p>
+            <div className="mt-3 flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground/70">
+                {template.filename}
+              </p>
+              {template.available && (
+                <button
+                  onClick={() => setPickerTemplate(template.template_type)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <Download className="h-3 w-3" />
+                  Genereer
+                </button>
+              )}
+            </div>
           </div>
-          <h3 className="mt-3 text-sm font-semibold text-foreground">
-            {getTemplateLabel(template.template_type)}
-          </h3>
-          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-            {getTemplateDescription(template.template_type)}
-          </p>
-          <p className="mt-2 text-[11px] text-muted-foreground/70">
-            {template.filename}
-          </p>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      <CasePickerDialog
+        open={pickerTemplate !== null}
+        onClose={() => setPickerTemplate(null)}
+        templateType={pickerTemplate ?? ""}
+      />
+    </>
   );
 }
 

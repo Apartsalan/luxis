@@ -1,15 +1,44 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 78 — Demo feedback fixes Sprint 1)
-**Laatste feature/fix:** Sessie 78 — 7 demo feedback issues opgelost + UrenTab in dossier
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 78 — Demo feedback Sprint 1 + Sprint 2)
+**Laatste feature/fix:** Sessie 78 — Sprint 1 (7 bugs) + Sprint 2 (4 uren features) afgerond
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
-**Demo feedback sprint:** Sprint 1 (7/20) afgerond, Sprint 2-4 openstaand
+**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅, Sprint 3-4 openstaand (9 items)
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Sessie 79 — Demo feedback Sprint 2+ (bestede/te factureren uren, uren filters, incasso provisie, verschotten, BTW toggle, betaalregelingen)
+**Volgende sessie:** Sessie 79 — Demo feedback Sprint 3 (incasso provisie, BTW toggle, factuur context, navigatie, contractuele rente, betaalregelingen) + Sprint 4 (verschotten, voorschotnota)
 
-## Wat er gedaan is (sessie 78 — 18 maart 2026) — Demo Feedback Fixes Sprint 1
+## Wat er gedaan is (sessie 78, deel 2) — Sprint 2: Uren & Facturatie
+
+### Samenvatting
+**4 uren-features gebouwd: bestede vs te factureren uren, factuur-koppeling zichtbaar, datum bewerken, verbeterde filters.**
+
+### Gebouwd
+- **DF-01 Bestede vs te factureren uren:** Nieuw `billable_minutes` veld op TimeEntry model (nullable, null=gelijk aan besteed). "Korting geven" toggle in formulier. Summary berekening gebruikt effective minutes.
+- **DF-02 Uren filters verbeteren:** Dag/Week/Maand view switcher. Maand toont hele kalendermaand. Dag toont specifieke datum. Relatie/cliënt dropdown filter. Contact_id filter in backend via case.client_id JOIN.
+- **DF-03 Datum aanpassen:** Date picker in inline edit modus voor bestaande entries.
+- **DF-04 Factuur-koppeling:** Factuurnummer (bv "F2026-00003") als blauwe badge bij gefactureerde entries. Batch lookup via InvoiceLine → Invoice JOIN.
+
+### Bugfix onderweg
+- `/api/contacts` endpoint bestond niet → gefixt naar `/api/relations` voor relatie filter dropdown.
+
+### Getest via browser (productie)
+- Maand view: werkt, toont entries + summary
+- View switcher: Dag/Week/Maand knoppen werken
+- Factuur kolom: zichtbaar in tabel
+- Relatie filter: gefixt en gedeployed
+
+### Nieuwe/gewijzigde bestanden
+- `backend/app/time_entries/models.py` — billable_minutes veld
+- `backend/app/time_entries/schemas.py` — billable_minutes + invoice_number in response
+- `backend/app/time_entries/service.py` — effective minutes berekening + contact_id filter + invoice_number batch lookup
+- `backend/app/time_entries/router.py` — contact_id param + invoice enrichment
+- `backend/alembic/versions/f05a42a3eeca_*.py` — migratie
+- `frontend/src/hooks/use-time-entries.ts` — billable_minutes, invoice_number, contact_id
+- `frontend/src/app/(dashboard)/uren/page.tsx` — view switcher, filters, date edit, discount, invoice badge
+
+## Wat er gedaan is (sessie 78, deel 1) — Demo Feedback Fixes Sprint 1
 
 ### Samenvatting
 

@@ -267,14 +267,19 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-55 | Geen delete knop voor facturen in dossier Facturen tab | Midden | S | ✅ Gefixt (18 mrt, sessie 78) |
 | BUG-56 | Wizard stap 3 (Vordering) overgeslagen bij incasso dossiers — Enter key + button click-through | Hoog | S | ✅ Gefixt (18 mrt, sessie 78) — handleSubmit guard + React key props |
 
-### Demo Feedback Sprint 2-4 (openstaand, sessie 78)
+### Demo Feedback Sprint 2 (afgerond, sessie 78)
 
 | # | Feature/Fix | Ernst | Status |
 |---|-------------|-------|--------|
-| DF-01 | Bestede uren vs te factureren uren (standaard gelijk, aanpasbaar) | Hoog | ❌ TODO |
-| DF-02 | Uren filters: maand, dag, client, factuurnummer zoeken | Midden | ❌ TODO |
-| DF-03 | Datum aanpassen bij uren (inline edit) | Laag | ❌ TODO |
-| DF-04 | Uren-factuur koppeling zichtbaar (factuurnummer bij time entry) | Midden | ❌ TODO |
+| DF-01 | Bestede uren vs te factureren uren (standaard gelijk, aanpasbaar) | Hoog | ✅ Gebouwd (18 mrt, sessie 78) |
+| DF-02 | Uren filters: maand, dag, client filter | Midden | ✅ Gebouwd (18 mrt, sessie 78) |
+| DF-03 | Datum aanpassen bij uren (inline edit) | Laag | ✅ Gebouwd (18 mrt, sessie 78) |
+| DF-04 | Uren-factuur koppeling zichtbaar (factuurnummer bij time entry) | Midden | ✅ Gebouwd (18 mrt, sessie 78) |
+
+### Demo Feedback Sprint 3-4 (openstaand)
+
+| # | Feature/Fix | Ernst | Status |
+|---|-------------|-------|--------|
 | DF-05 | Incasso provisie als configureerbare factuurregel | Hoog | ❌ TODO |
 | DF-06 | BTW toggle verbeteren (dropdown: 21%/0%/aangepast) | Midden | ❌ TODO |
 | DF-07 | Factuur context panel (al gefactureerd + derdengelden per dossier) | Hoog | ❌ TODO |

@@ -7,7 +7,7 @@ import { useParseInvoice, type InvoiceParseResult } from "@/hooks/use-invoice-pa
 type UploadState = "idle" | "uploading" | "success" | "error";
 
 interface InvoiceUploadZoneProps {
-  onParsed: (data: InvoiceParseResult) => void;
+  onParsed: (data: InvoiceParseResult, file: File) => void;
 }
 
 export function InvoiceUploadZone({ onParsed }: InvoiceUploadZoneProps) {
@@ -38,7 +38,7 @@ export function InvoiceUploadZone({ onParsed }: InvoiceUploadZoneProps) {
       try {
         const result = await parseInvoice.mutateAsync(file);
         setState("success");
-        onParsed(result);
+        onParsed(result, file);
       } catch (err: any) {
         setState("error");
         setErrorMsg(err.message || "Factuur parsing mislukt");

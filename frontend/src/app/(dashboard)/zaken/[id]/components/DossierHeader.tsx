@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -38,6 +39,7 @@ import {
   getAvailableTransitions,
 } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
 
 // ── VerjaringBadge ──────────────────────────────────────────────────────────
 
@@ -128,6 +130,8 @@ export default function DossierHeader({
   setCaseEmailOpen,
   setPhoneNoteText,
 }: DossierHeaderProps) {
+  const [renteDialogOpen, setRenteDialogOpen] = useState(false);
+
   // Determine current phase from workflow data or fallback
   const currentPhase = workflowStatuses
     ? getPhaseForStatus(workflowStatuses, zaak.status)
@@ -476,14 +480,21 @@ export default function DossierHeader({
           E-mail versturen
         </button>
         {isIncasso && (
-          <button
-            type="button"
-            onClick={() => setActiveTab("financieel")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-          >
-            <Euro className="h-3.5 w-3.5 text-orange-500" />
-            Renteoverzicht
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setRenteDialogOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              <Euro className="h-3.5 w-3.5 text-orange-500" />
+              Renteoverzicht
+            </button>
+            <RenteoverzichtDialog
+              caseId={zaak.id}
+              open={renteDialogOpen}
+              onOpenChange={setRenteDialogOpen}
+            />
+          </>
         )}
       </div>
     </>

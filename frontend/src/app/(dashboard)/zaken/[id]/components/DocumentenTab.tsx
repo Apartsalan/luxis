@@ -45,6 +45,7 @@ import { EmailComposeDialog, type EmailComposeData } from "@/components/email-co
 import {
   useInvoices,
   useCreateInvoice,
+  useDeleteInvoice,
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
 } from "@/hooks/use-invoices";
@@ -68,6 +69,7 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
   const { data, isLoading } = useInvoices({ case_id: caseId, per_page: 100 });
   const invoices = data?.items ?? [];
   const createInvoice = useCreateInvoice();
+  const deleteInvoice = useDeleteInvoice();
 
   // Quick Bill state
   const [showQuickBill, setShowQuickBill] = useState(false);
@@ -442,6 +444,23 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
                   <span className="text-sm font-semibold text-foreground tabular-nums">
                     {formatCurrency(inv.total)}
                   </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (confirm("Weet je zeker dat je deze factuur wilt verwijderen?")) {
+                        deleteInvoice.mutate(inv.id, {
+                          onSuccess: () => toast.success("Factuur verwijderd"),
+                          onError: () => toast.error("Fout bij verwijderen factuur"),
+                        });
+                      }
+                    }}
+                    className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                    title="Verwijderen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                   <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </Link>

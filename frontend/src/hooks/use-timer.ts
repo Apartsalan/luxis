@@ -244,7 +244,8 @@ export function useTimerProvider() {
   }, []);
 
   const stopTimer = useCallback(async () => {
-    const minutes = Math.max(1, Math.round(timer.seconds / 60));
+    // Round up to nearest 6 minutes (0.1 hour) — standard legal billing
+    const minutes = Math.max(6, Math.ceil(timer.seconds / 360) * 6);
     try {
       await createMutation.mutateAsync({
         case_id: timer.caseId,

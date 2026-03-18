@@ -315,6 +315,7 @@ function NieuweZaakPage() {
   // ── Invoice AI parse state ──────────────────────────────────────────────
   const [invoiceData, setInvoiceData] = useState<InvoiceParseResult | null>(null);
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({});
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
   // ── Step state ───────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
@@ -496,9 +497,10 @@ function NieuweZaakPage() {
 
   // ── Invoice parse handler ────────────────────────────────────────────────
   const handleInvoiceParsed = useCallback(
-    (data: InvoiceParseResult) => {
+    (data: InvoiceParseResult, file: File) => {
       setInvoiceData(data);
       setFieldConfidence(data.confidence || {});
+      setInvoiceFile(file);
 
       // Step 1: Zaakgegevens
       if (data.description) updateField("description", data.description);
@@ -715,6 +717,24 @@ function NieuweZaakPage() {
               `Vordering "${claim.description}" kon niet worden aangemaakt`
             );
           }
+        }
+      }
+
+      // 5. Upload invoice PDF to case documents (if uploaded via AI parse)
+      if (invoiceFile) {
+        try {
+          const formData = new FormData();
+          formData.append("file", invoiceFile);
+          formData.append("description", `Factuur: ${invoiceFile.name}`);
+          const token = localStorage.getItem("luxis_access_token");
+          await fetch(`/api/cases/${result.id}/files`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+        } catch {
+          // Non-blocking: case is created, file upload is optional
+          toast.error("Factuurbestand kon niet worden gekoppeld aan het dossier");
         }
       }
 

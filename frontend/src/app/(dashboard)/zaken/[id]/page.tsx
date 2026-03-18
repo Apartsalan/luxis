@@ -210,7 +210,7 @@ export default function ZaakDetailPage() {
   const isIncasso = hasModule("incasso") && zaak?.case_type === "incasso";
   const tabIds = [
     "overzicht", "taken",
-    ...(isIncasso ? ["vorderingen", "betalingen", "financieel", "derdengelden"] : []),
+    ...(isIncasso ? ["vorderingen", "betalingen", "derdengelden"] : []),
     "facturen", "documenten", "correspondentie", "activiteiten", "partijen",
   ];
 

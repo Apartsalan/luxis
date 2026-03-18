@@ -1,12 +1,48 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 16 maart 2026 (sessie 75 — QA walkthrough + Timer fix)
-**Laatste feature/fix:** QA sessie 75 — volledige walkthrough + Timer overlay fix
+**Laatst bijgewerkt:** 18 maart 2026 (sessie 76 — QA P1/P2 bugfixes + test data cleanup)
+**Laatste feature/fix:** QA sessie 76 — 7 bugs gefixt + test data opgeschoond
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Sessie 76 — QA P1 bugfixes + test data cleanup
+**Volgende sessie:** Sessie 77 — AI factuur parsing validatie met echte facturen
+
+## Wat er gedaan is (sessie 76 — 18 maart 2026) — QA P1/P2 Bugfixes + Test Data Cleanup
+
+### Samenvatting
+
+**Alle 4 P1 bugs en 3 P2 bugs uit QA sessie 75 gefixt + rommel test data opgeschoond.** Systeem is nu demo-ready met schone data.
+
+### Gefixt (P1)
+- **BUG-44:** FloatingTimer veroorzaakte 401 op login pagina — split in wrapper+inner component zodat useCases alleen draait wanneer authenticated
+- **BUG-45:** AI-parsed partijnamen automatisch matchen met bestaande contacten via useEffect auto-select
+- **BUG-46:** Factuur formulier pre-fill wanneer case_id in URL via useCase hook + useEffect
+
+### Gefixt (P2)
+- **BUG-47:** "Vordering(optioneel)" spatie fix in wizard stepper
+- **BUG-48:** Stale validatiefout verdwijnt nu bij client selectie
+- **BUG-49:** Week range off-by-one in urenregistratie — timezone issue gefixt door lokale Date objects te gebruiken
+- **BUG-50:** SVG favicon (Scale icoon) toegevoegd
+
+### Test data cleanup
+- 13 rommel cases verwijderd (dsaas, poephoofd, looo, etc.)
+- 15 rommel contacten verwijderd
+- Behouden: 4 echte cases + 3 echte contacten (Bespoke Staffing Solutions, Legalwork B.V., TS Health Products)
+
+### Gewijzigde bestanden
+- `frontend/src/components/floating-timer.tsx` — BUG-44: split wrapper/inner
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — BUG-45, BUG-47, BUG-48
+- `frontend/src/app/(dashboard)/facturen/nieuw/page.tsx` — BUG-46
+- `frontend/src/app/(dashboard)/uren/page.tsx` — BUG-49
+
+### Nieuwe bestanden
+- `frontend/src/app/icon.svg` — BUG-50: favicon
+
+### Openstaand (P2, niet-blokkerend)
+- P2-02: Sidebar badge "3" onduidelijk vs dashboard "16 actieve dossiers"
+
+---
 
 ## Wat er gedaan is (sessie 75 — 16 maart 2026) — QA Walkthrough + Demo Voorbereiding
 

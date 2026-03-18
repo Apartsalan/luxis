@@ -253,13 +253,13 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-41 | 120 pre-existing test errors (conftest.py) — `metadata.drop_all()` kon composite types niet droppen (FK ordering) + connection pool hield stale connections vast tussen event loops. Fix: `DROP SCHEMA CASCADE` + `NullPool`. 573 tests passen nu. | Midden | S | ✅ Gefixt (13 mrt, sessie 65) |
 | BUG-42 | 196 test errors + 1 failure bij `pytest tests/ -q` — conftest.py importeerde maar 3 van 21 model modules, waardoor `Base.metadata.create_all()` de meeste tabellen niet aanmaakte. Fix: alle 21 model modules importeren via `importlib.import_module()` (vermijdt `app` name collision) + `db` fixture expliciet afhankelijk gemaakt van `setup_database`. Resultaat: 573 passed, 0 errors, 0 failures (zowel -q als -v). | Hoog | M | ✅ Gefixt (13 mrt, sessie 67) |
 | BUG-43 | Timer floating button blokkeert "Volgende" en andere action buttons op meerdere pagina's — `fixed bottom-4 right-4` overlapt met knoppen onderaan. Fix: verplaatst naar `bottom-20`. | Hoog | S | ✅ Gefixt (16 mrt, sessie 75) |
-| BUG-44 | API call `/api/cases?page=1&per_page=20` op login pagina voor auth check — 401 error in console. Component laadt data voordat auth check compleet is. | Midden | S | ❌ TODO |
-| BUG-45 | AI-parsed partijnamen in wizard stap 2 worden als zoektekst in veld gezet maar triggeren geen selectie van bestaande contacten. Gebruiker moet handmatig wissen en opnieuw zoeken. | Midden | M | ❌ TODO |
-| BUG-46 | `case_id` URL parameter op factuur-aanmaakpagina vult Relatie/Dossier velden niet visueel in (data wordt WEL correct opgeslagen). | Midden | S | ❌ TODO |
-| BUG-47 | "Vordering(optioneel)" in wizard step indicator — spatie ontbreekt voor haakje. | Laag | S | ❌ TODO |
-| BUG-48 | Stale "Selecteer een client" validatiefout blijft zichtbaar na succesvolle client selectie in wizard stap 2. | Laag | S | ❌ TODO |
-| BUG-49 | Week range header in urenregistratie toont "15 mrt — 19 mrt" maar dagen zijn Ma 16 - Vr 20 mrt (off-by-one). | Laag | S | ❌ TODO |
-| BUG-50 | favicon.ico 404 op alle pagina's. | Laag | S | ❌ TODO |
+| BUG-44 | API call `/api/cases?page=1&per_page=20` op login pagina voor auth check — 401 error in console. FloatingTimer component riep useCases() aan in root Providers. Fix: split in wrapper+inner component zodat hooks alleen draaien wanneer user authenticated is. | Midden | S | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-45 | AI-parsed partijnamen in wizard stap 2 werden als zoektekst in veld gezet maar triggeren geen selectie van bestaande contacten. Fix: useEffect auto-selecteert eerste match uit zoekresultaten wanneer AI parsing de search text heeft gezet. | Midden | M | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-46 | `case_id` URL parameter op factuur-aanmaakpagina vulde Relatie/Dossier velden niet visueel in (data werd WEL correct opgeslagen). Fix: useCase hook + useEffect om case details te laden en display fields te vullen bij pageload. | Midden | S | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-47 | "Vordering(optioneel)" in wizard step indicator — spatie ontbreekt voor haakje. Fix: literal space character toegevoegd. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-48 | Stale "Selecteer een client" validatiefout bleef zichtbaar na succesvolle client selectie. Fix: error wordt gecleared in updateField wanneer client_id wordt gezet. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-49 | Week range header in urenregistratie toonde "15 mrt — 19 mrt" maar dagen waren Ma 16 - Vr 20 mrt. Fix: gebruik lokale Date objecten i.p.v. re-parsing van ISO strings (timezone offset veroorzaakte off-by-one). | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-50 | favicon.ico 404 op alle pagina's. Fix: SVG favicon (Scale icoon) toegevoegd in `src/app/icon.svg`. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 
 ---
 
@@ -313,9 +313,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 ### Uitrolplan (na pre-launch sprint)
 
 1. ✅ **QA Walkthrough** — volledige Playwright walkthrough (sessie 75, 16 mrt)
-2. **QA Bugfixes** — P1/P2 issues uit QA-SESSIE75.md fixen (sessie 76)
+2. ✅ **QA Bugfixes** — 4 P1 + 3 P2 bugs gefixt (sessie 76, 18 mrt)
 3. **AI Factuur Parsing Validatie** — LF-10 feature uitgebreid testen met echte facturen van Lisanne. Test cases: verschillende factuurtypes (B2B/B2C), incomplete facturen, meerdere vorderingen, edge cases. Doel: betrouwbaarheid valideren voor productiegebruik.
-4. **Test data opschonen** — rommel-relaties en dossiers verwijderen voor demo
+4. ✅ **Test data opschonen** — 13 rommel cases + 15 rommel contacten verwijderd (sessie 76, 18 mrt)
 5. **Demo met Lisanne** — samen door hele workflow lopen, feedback verzamelen
 6. **Feedback-fixes** — top-5 items fixen (1 sessie)
 7. **Soft launch** — 2-3 echte dossiers in Luxis, BaseNet blijft primair (2 weken)

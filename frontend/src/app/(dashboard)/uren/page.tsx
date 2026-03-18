@@ -346,7 +346,7 @@ export default function UrenPage() {
   // Contacts for filter
   const [contacts, setContacts] = useState<Contact[]>([]);
   useEffect(() => {
-    api("/api/contacts?contact_type=company&per_page=200")
+    api("/api/relations?contact_type=company&per_page=200")
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data?.items) setContacts(data.items);

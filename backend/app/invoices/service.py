@@ -38,15 +38,18 @@ async def _next_invoice_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
     prefix = f"F{year}-"
 
     result = await db.execute(
-        select(func.count())
-        .select_from(Invoice)
+        select(func.max(Invoice.invoice_number))
         .where(
             Invoice.tenant_id == tenant_id,
             Invoice.invoice_number.like(f"{prefix}%"),
         )
     )
-    count = result.scalar_one()
-    return f"{prefix}{count + 1:05d}"
+    max_number = result.scalar_one()
+    if max_number:
+        seq = int(max_number.replace(prefix, "")) + 1
+    else:
+        seq = 1
+    return f"{prefix}{seq:05d}"
 
 
 async def _next_credit_note_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
@@ -55,15 +58,18 @@ async def _next_credit_note_number(db: AsyncSession, tenant_id: uuid.UUID) -> st
     prefix = f"CN{year}-"
 
     result = await db.execute(
-        select(func.count())
-        .select_from(Invoice)
+        select(func.max(Invoice.invoice_number))
         .where(
             Invoice.tenant_id == tenant_id,
             Invoice.invoice_number.like(f"{prefix}%"),
         )
     )
-    count = result.scalar_one()
-    return f"{prefix}{count + 1:05d}"
+    max_number = result.scalar_one()
+    if max_number:
+        seq = int(max_number.replace(prefix, "")) + 1
+    else:
+        seq = 1
+    return f"{prefix}{seq:05d}"
 
 
 # ── Invoice Totals ───────────────────────────────────────────────────────────
@@ -1005,15 +1011,18 @@ async def _next_voorschotnota_number(db: AsyncSession, tenant_id: uuid.UUID) -> 
     prefix = f"VN{year}-"
 
     result = await db.execute(
-        select(func.count())
-        .select_from(Invoice)
+        select(func.max(Invoice.invoice_number))
         .where(
             Invoice.tenant_id == tenant_id,
             Invoice.invoice_number.like(f"{prefix}%"),
         )
     )
-    count = result.scalar_one()
-    return f"{prefix}{count + 1:05d}"
+    max_number = result.scalar_one()
+    if max_number:
+        seq = int(max_number.replace(prefix, "")) + 1
+    else:
+        seq = 1
+    return f"{prefix}{seq:05d}"
 
 
 async def create_voorschotnota(

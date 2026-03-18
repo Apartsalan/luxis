@@ -570,6 +570,29 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
     }
   };
 
+  /** Preview an email attachment (PDF/image). */
+  const handlePreviewEmailAttachment = async (attachmentId: string, filename: string) => {
+    setPreviewTitle(filename);
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+    try {
+      const token = localStorage.getItem("luxis_access_token");
+      const res = await fetch(
+        `/api/email/attachments/${attachmentId}/download`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error("Preview laden mislukt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+    } catch (err: any) {
+      toast.error(err.message || "Preview laden mislukt");
+      setPreviewOpen(false);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const handleGenerate = async (templateType: string) => {
     try {
       const result = await generateDocx.mutateAsync(templateType);
@@ -947,6 +970,15 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       {!isEmail && isPreviewable(item.content_type) && (
                         <button
                           onClick={() => handlePreviewFile(item.id, item.filename)}
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Preview"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      )}
+                      {isEmail && isPreviewable(item.content_type) && (
+                        <button
+                          onClick={() => handlePreviewEmailAttachment(item.id, item.filename)}
                           className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
                           title="Preview"
                         >

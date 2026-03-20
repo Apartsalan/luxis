@@ -1,14 +1,74 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 82 — DF-11)
-**Laatste feature/fix:** Sessie 82 — DF-11 betaling auto-koppelen aan betaalregeling termijn
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 83 — Security + Code Quality audit)
+**Laatste feature/fix:** Sessie 83 — Security Sprint: 11/15 items gefixt + Code Quality Sprint op roadmap
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
+**Security Sprint:** 11/15 afgerond (SEC-1 t/m SEC-8, SEC-10, SEC-11, SEC-14) ✅
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** TBD
+**Volgende sessie:** Security Sprint fase 3 (SEC-9/12/13/15) + Code Quality Sprint (CQ-1 t/m CQ-9)
+
+## Wat er gedaan is (sessie 83 — 20 maart 2026) — Security + Code Quality audit
+
+### Samenvatting
+Volledige codebase audit (code quality + security pentest). 9 code quality items en 15 security items geïdentificeerd. 11 security fixes direct geïmplementeerd en live gedeployed. Alles op de roadmap gezet.
+
+### Security fixes geïmplementeerd (11/15)
+
+**Fase 1 — Kritiek (alle 6 + bonus SEC-8):**
+- SEC-1: SQL injection preventie in tenant middleware — UUID validatie vóór interpolatie (`middleware/tenant.py`)
+- SEC-2: OAuth state HMAC signing met expiry (10 min) — voorkomt CSRF aanval (`email/oauth_service.py`)
+- SEC-3: DOMPurify geïnstalleerd + `sanitizeHtml()` helper — XSS bescherming op email HTML rendering (3 frontend files)
+- SEC-4: Startup check die weigert te starten met default SECRET_KEY in productie (`main.py`)
+- SEC-5: Password reset token verwijderd uit log messages (`auth/router.py`)
+- SEC-6: Git history gecontroleerd — .env nooit gecommit, secrets veilig
+- SEC-8: postMessage wildcard `'*'` → specifieke Luxis origin + HTML/JS escaping (`email/oauth_router.py`)
+
+**Fase 2 — Hoog/Medium (4 items):**
+- SEC-7: Rate limiting via slowapi — login 10/min, forgot-password 3/uur, reset 5/uur (`auth/router.py`, `middleware/rate_limit.py`)
+- SEC-10: Jinja2 SandboxedEnvironment voor DB-opgeslagen response templates (`ai_agent/service.py`)
+- SEC-11: Backend Dockerfile draait nu als non-root `appuser` (`backend/Dockerfile`)
+- SEC-14: `html.escape()` op user input vóór HTML email rendering (3 backend files)
+
+### Code Quality audit (op roadmap, niet geïmplementeerd)
+- CQ-1/2/3: Float → Decimal in cases/models.py, cases/schemas.py, relations/models.py
+- CQ-4: Stille no-op "Herbereken rente" batch-actie
+- CQ-5: invoices/service.py opsplitsen (1292 regels)
+- CQ-6: Frontend god-components splitsen (IncassoTab 2292r, etc.)
+- CQ-7: Paginatie-duplicatie opruimen
+- CQ-8: Dead code verwijderen (GmailProvider)
+- CQ-9: Test hygiene (hardcoded datums)
+
+### Nieuwe bestanden
+- `frontend/src/lib/sanitize.ts` — DOMPurify sanitizeHtml helper
+- `backend/app/middleware/rate_limit.py` — slowapi rate limiter instance
+
+### Gewijzigde bestanden
+- `backend/app/middleware/tenant.py` — UUID validatie
+- `backend/app/email/oauth_service.py` — HMAC signed state + expiry
+- `backend/app/email/oauth_router.py` — postMessage origin + HTML/JS escaping
+- `backend/app/auth/router.py` — rate limiting + log fix
+- `backend/app/main.py` — SECRET_KEY check + slowapi registration
+- `backend/app/ai_agent/service.py` — Jinja2 sandbox + html.escape
+- `backend/app/documents/router.py` — html.escape op custom_body
+- `backend/app/email/router.py` — html.escape op email body
+- `backend/Dockerfile` — non-root appuser
+- `backend/pyproject.toml` — slowapi dependency
+- `frontend/package.json` — dompurify dependency
+- `frontend/src/app/(dashboard)/correspondentie/page.tsx` — sanitizeHtml
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — sanitizeHtml
+- `frontend/src/app/(dashboard)/zaken/[id]/types.tsx` — sanitizeHtml
+- `LUXIS-ROADMAP.md` — Security Sprint + Code Quality Sprint secties
+
+### Bekende issues
+- SEC-9 (PostgreSQL RLS policies) — groter item, aparte sessie
+- SEC-12 (Refresh token rotation) — medium
+- SEC-13 (Wachtwoord-complexiteit) — klein
+- SEC-15 (File upload hardening) — klein-medium
+- CQ-1 t/m CQ-9 — code quality items nog te doen
 
 ## Wat er gedaan is (sessie 82 — 20 maart 2026) — DF-11
 

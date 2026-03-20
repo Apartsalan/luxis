@@ -544,3 +544,261 @@ async def test_weekly_frequency_installments(
     dates = [date.fromisoformat(i["due_date"]) for i in installments]
     for i in range(1, len(dates)):
         assert (dates[i] - dates[i - 1]).days == 7
+
+
+# ── DF-11: Auto-link payment to installment ──────────────────────────────────
+
+
+async def _create_arrangement_for_case(
+    client: AsyncClient,
+    headers: dict,
+    case_id: str,
+    total: str = "1200.00",
+    installment: str = "300.00",
+    frequency: str = "monthly",
+) -> dict:
+    """Create an arrangement and return the response JSON."""
+    start = date.today() + timedelta(days=1)
+    resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": total,
+            "installment_amount": installment,
+            "frequency": frequency,
+            "start_date": start.isoformat(),
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    return resp.json()
+
+
+async def _get_installments(
+    client: AsyncClient, headers: dict, case_id: str, arrangement_id: str
+) -> list[dict]:
+    """Fetch installments for an arrangement."""
+    resp = await client.get(
+        f"/api/cases/{case_id}/arrangements/{arrangement_id}",
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    return resp.json()["installments"]
+
+
+@pytest.mark.asyncio
+async def test_df11_payment_auto_links_to_first_installment(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db: AsyncSession
+):
+    """DF-11: A regular payment should auto-link to the first open installment."""
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="1200.00"
+    )
+    arr = await _create_arrangement_for_case(
+        client, auth_headers, case_id,
+        total="1200.00", installment="300.00",
+    )
+    arr_id = arr["id"]
+
+    # Create a regular payment (not via arrangement endpoint)
+    pay_resp = await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "300.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+    assert pay_resp.status_code == 201
+
+    # Check: first installment should be paid
+    installments = await _get_installments(client, auth_headers, case_id, arr_id)
+    first = installments[0]
+    assert first["status"] == "paid"
+    assert Decimal(first["paid_amount"]) == Decimal("300.00")
+    assert first["payment_id"] == pay_resp.json()["id"]
+
+    # Second installment should still be pending
+    assert installments[1]["status"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_df11_partial_payment_marks_partial(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db: AsyncSession
+):
+    """DF-11: A payment smaller than the installment marks it as partial."""
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="1200.00"
+    )
+    arr = await _create_arrangement_for_case(
+        client, auth_headers, case_id,
+        total="1200.00", installment="300.00",
+    )
+    arr_id = arr["id"]
+
+    pay_resp = await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "150.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+    assert pay_resp.status_code == 201
+
+    installments = await _get_installments(client, auth_headers, case_id, arr_id)
+    first = installments[0]
+    assert first["status"] == "partial"
+    assert Decimal(first["paid_amount"]) == Decimal("150.00")
+
+
+@pytest.mark.asyncio
+async def test_df11_overpayment_cascades_to_next_installment(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db: AsyncSession
+):
+    """DF-11: Payment larger than one installment cascades to the next."""
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="1200.00"
+    )
+    arr = await _create_arrangement_for_case(
+        client, auth_headers, case_id,
+        total="1200.00", installment="300.00",
+    )
+    arr_id = arr["id"]
+
+    # Pay 500 — should cover installment 1 (300) + partial installment 2 (200)
+    pay_resp = await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "500.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+    assert pay_resp.status_code == 201
+    payment_id = pay_resp.json()["id"]
+
+    installments = await _get_installments(client, auth_headers, case_id, arr_id)
+    assert installments[0]["status"] == "paid"
+    assert Decimal(installments[0]["paid_amount"]) == Decimal("300.00")
+
+    assert installments[1]["status"] == "partial"
+    assert Decimal(installments[1]["paid_amount"]) == Decimal("200.00")
+    assert installments[1]["payment_id"] == payment_id
+
+    # Third and fourth should be untouched
+    assert installments[2]["status"] == "pending"
+    assert installments[3]["status"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_df11_no_arrangement_no_link(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db: AsyncSession
+):
+    """DF-11: Without an active arrangement, payments work unchanged."""
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="1200.00"
+    )
+
+    # No arrangement — just create a payment
+    pay_resp = await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "300.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+    assert pay_resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_df11_full_payment_completes_arrangement(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db: AsyncSession
+):
+    """DF-11: Paying all installments via regular payments completes the arrangement."""
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="600.00"
+    )
+    arr = await _create_arrangement_for_case(
+        client, auth_headers, case_id,
+        total="600.00", installment="300.00",
+    )
+    arr_id = arr["id"]
+
+    # Pay full amount in one go
+    await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "600.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+
+    # Check arrangement status
+    arr_resp = await client.get(
+        f"/api/cases/{case_id}/arrangements/{arr_id}",
+        headers=auth_headers,
+    )
+    assert arr_resp.status_code == 200
+    assert arr_resp.json()["status"] == "completed"
+
+    installments = arr_resp.json()["installments"]
+    assert all(i["status"] == "paid" for i in installments)
+
+
+@pytest.mark.asyncio
+async def test_df11_sequential_partial_payments(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db: AsyncSession
+):
+    """DF-11: Multiple partial payments accumulate on the same installment."""
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="1200.00"
+    )
+    arr = await _create_arrangement_for_case(
+        client, auth_headers, case_id,
+        total="1200.00", installment="300.00",
+    )
+    arr_id = arr["id"]
+
+    # First partial payment: 100
+    await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "100.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+
+    installments = await _get_installments(client, auth_headers, case_id, arr_id)
+    assert installments[0]["status"] == "partial"
+    assert Decimal(installments[0]["paid_amount"]) == Decimal("100.00")
+
+    # Second partial payment: 200 (completes first installment)
+    await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "200.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+
+    installments = await _get_installments(client, auth_headers, case_id, arr_id)
+    assert installments[0]["status"] == "paid"
+    assert Decimal(installments[0]["paid_amount"]) == Decimal("300.00")
+    assert installments[1]["status"] == "pending"

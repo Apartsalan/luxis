@@ -175,6 +175,7 @@ async def create_payment(
     contractual_rate: Decimal | None = None,
     contractual_compound: bool = False,
     bik_override: Decimal | None = None,
+    _skip_installment_link: bool = False,
 ) -> Payment:
     """Register a payment for a case.
 
@@ -260,6 +261,12 @@ async def create_payment(
     from app.workflow.hooks import on_payment_received
 
     await on_payment_received(db, tenant_id, case_id, data.amount, user_id)
+
+    # DF-11: Auto-link payment to installment if active arrangement exists
+    if not _skip_installment_link:
+        await _auto_link_payment_to_installments(
+            db, tenant_id, case_id, payment,
+        )
 
     await _refresh_case_financials(db, tenant_id, case_id)
     return payment
@@ -536,6 +543,7 @@ async def record_installment_payment(
         contractual_rate=contractual_rate,
         contractual_compound=contractual_compound,
         bik_override=bik_override,
+        _skip_installment_link=True,  # Already linking manually below
     )
 
     # Update installment
@@ -634,6 +642,75 @@ async def waive_installment(
 
     await db.refresh(installment)
     return installment
+
+
+async def _auto_link_payment_to_installments(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    payment: Payment,
+) -> None:
+    """DF-11: Auto-link a payment to the next open installment(s).
+
+    When a case has an active payment arrangement, incoming payments are
+    automatically matched to the earliest open installment(s) by due_date.
+    - Partial: installment stays 'partial'
+    - Exact or overshoot: installment becomes 'paid', remainder cascades
+    """
+    # Find active arrangement for this case
+    arr_result = await db.execute(
+        select(PaymentArrangement).where(
+            PaymentArrangement.case_id == case_id,
+            PaymentArrangement.tenant_id == tenant_id,
+            PaymentArrangement.status == "active",
+        )
+    )
+    arrangement = arr_result.scalar_one_or_none()
+    if arrangement is None:
+        return
+
+    # Get open installments sorted by due_date
+    inst_result = await db.execute(
+        select(PaymentArrangementInstallment).where(
+            PaymentArrangementInstallment.arrangement_id == arrangement.id,
+            PaymentArrangementInstallment.tenant_id == tenant_id,
+            PaymentArrangementInstallment.status.in_(
+                ("pending", "partial", "overdue")
+            ),
+        ).order_by(
+            PaymentArrangementInstallment.due_date,
+            PaymentArrangementInstallment.installment_number,
+        )
+    )
+    installments = list(inst_result.scalars().all())
+    if not installments:
+        return
+
+    remaining = payment.amount
+    for inst in installments:
+        if remaining <= Decimal("0"):
+            break
+
+        outstanding = inst.amount - inst.paid_amount
+        if outstanding <= Decimal("0"):
+            continue
+
+        allocated = min(remaining, outstanding)
+        inst.paid_amount = inst.paid_amount + allocated
+        inst.paid_date = payment.payment_date
+        inst.payment_id = payment.id
+
+        if inst.paid_amount >= inst.amount:
+            inst.status = "paid"
+        else:
+            inst.status = "partial"
+
+        remaining = remaining - allocated
+
+    await db.flush()
+
+    # Check if arrangement is now fully completed
+    await _check_arrangement_completion(db, tenant_id, arrangement.id)
 
 
 async def _check_arrangement_completion(

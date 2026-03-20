@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "docker-compose.yml", "-f", "docker-compose.dev.yml", "up", "frontend"],
+      "port": 3000
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "docker-compose.yml", "-f", "docker-compose.dev.yml", "up", "backend"],
+      "port": 8000
+    },
+    {
+      "name": "all",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "docker-compose.yml", "-f", "docker-compose.dev.yml", "up"],
+      "port": 3000
+    }
+  ]
+}

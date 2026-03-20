@@ -1,17 +1,16 @@
 """AI Agent service — email classification, review, and execution logic."""
 
-import json
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-import anthropic
 from jinja2.sandbox import SandboxedEnvironment
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.ai_agent.kimi_client import call_intake_ai
 from app.ai_agent.models import (
     ACTION_LABELS,
     CATEGORY_LABELS,
@@ -28,7 +27,6 @@ from app.ai_agent.prompts import (
 )
 from app.auth.models import Tenant
 from app.cases.models import Case, CaseActivity
-from app.config import settings
 from app.email.send_service import send_with_attachment
 from app.email.synced_email_models import SyncedEmail
 from app.workflow.models import WorkflowTask
@@ -42,36 +40,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 async def _call_classification_ai(user_message: str) -> dict:
-    """Call the Anthropic API to classify a debtor email.
+    """Call AI to classify a debtor email.
 
+    Uses Kimi 2.5 (primary) with Claude Haiku fallback via kimi_client.
     Returns the parsed JSON dict from the AI response.
-    Raises ValueError if the response is not valid JSON.
     """
-    if not settings.anthropic_api_key:
-        raise ValueError("ANTHROPIC_API_KEY is not configured")
-
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-
-    response = await client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=512,
-        system=CLASSIFICATION_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
-
-    raw_text = response.content[0].text.strip()
-
-    # Parse JSON — the prompt instructs the model to return pure JSON
-    try:
-        return json.loads(raw_text)
-    except json.JSONDecodeError:
-        # Try to extract JSON from markdown code block
-        if "```" in raw_text:
-            json_part = raw_text.split("```")[1]
-            if json_part.startswith("json"):
-                json_part = json_part[4:]
-            return json.loads(json_part.strip())
-        raise ValueError(f"AI returned invalid JSON: {raw_text[:200]}")
+    result, model = await call_intake_ai(CLASSIFICATION_SYSTEM_PROMPT, user_message)
+    logger.info("Classification AI: used %s", model)
+    return result
 
 
 # ---------------------------------------------------------------------------

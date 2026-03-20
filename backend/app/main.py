@@ -1,6 +1,7 @@
 """Luxis — Practice Management System for Dutch Law Firms."""
 
 import logging
+import sys
 from contextlib import asynccontextmanager
 
 import sentry_sdk
@@ -43,6 +44,15 @@ logging.basicConfig(
     level=logging.INFO if not settings.app_debug else logging.DEBUG,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+
+# SEC-4: Refuse to start in production with default SECRET_KEY
+_default_key = "change-this-to-a-random-string-in-production"
+if settings.app_env == "production" and settings.secret_key == _default_key:
+    logging.critical(
+        "FATAL: SECRET_KEY is the default placeholder. "
+        "Set a strong random SECRET_KEY in production!"
+    )
+    sys.exit(1)
 
 # Initialize Sentry if DSN is configured
 if settings.sentry_dsn:

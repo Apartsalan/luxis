@@ -195,7 +195,8 @@ async def forgot_password(
             logger.info("Password reset email queued for %s", data.email)
         else:
             logger.warning(
-                "SMTP not configured — reset URL for %s: %s", data.email, reset_url
+                "SMTP not configured — password reset requested for %s",
+                data.email,
             )
 
     return {"detail": "Als het e-mailadres bekend is, ontvang je een herstellink."}

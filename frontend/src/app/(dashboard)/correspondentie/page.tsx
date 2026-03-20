@@ -35,6 +35,7 @@ import {
 } from "@/hooks/use-email-sync";
 import { useCases } from "@/hooks/use-cases";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -409,7 +410,7 @@ export default function CorrespondentiePage() {
                     <div
                       className="prose prose-sm max-w-none text-foreground"
                       dangerouslySetInnerHTML={{
-                        __html: emailDetail.body_html,
+                        __html: sanitizeHtml(emailDetail.body_html),
                       }}
                     />
                   ) : (

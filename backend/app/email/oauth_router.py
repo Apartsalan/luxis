@@ -272,6 +272,15 @@ async def _handle_oauth_callback(
 
 def _success_html(email: str, provider: str) -> str:
     """HTML page shown after successful OAuth — notifies opener and closes."""
+    import html as _html
+    import json as _json
+    safe_email = _html.escape(email)
+    safe_provider = _html.escape(provider)
+    # JSON-encode for safe JavaScript string embedding
+    js_email = _json.dumps(email)
+    js_provider = _json.dumps(provider)
+    origin = settings.cors_origins.split(",")[0].strip()
+    js_origin = _json.dumps(origin)
     return f"""<!DOCTYPE html>
 <html>
 <head><title>Luxis — E-mail verbonden</title></head>
@@ -280,7 +289,7 @@ def _success_html(email: str, provider: str) -> str:
   <div style="text-align: center; padding: 2rem;">
     <div style="font-size: 3rem; margin-bottom: 1rem;">&#10003;</div>
     <h2 style="color: #1a1a2e;">E-mail verbonden!</h2>
-    <p style="color: #666;">{email} ({provider})</p>
+    <p style="color: #666;">{safe_email} ({safe_provider})</p>
     <p style="color: #999; font-size: 0.875rem;">Dit venster sluit automatisch...</p>
   </div>
   <script>
@@ -288,9 +297,9 @@ def _success_html(email: str, provider: str) -> str:
     if (window.opener) {{
       window.opener.postMessage({{
         type: 'LUXIS_EMAIL_OAUTH_SUCCESS',
-        email: '{email}',
-        provider: '{provider}'
-      }}, '*');
+        email: {js_email},
+        provider: {js_provider}
+      }}, {js_origin});
     }}
     // Close this popup after a brief delay
     setTimeout(() => window.close(), 2000);
@@ -301,6 +310,7 @@ def _success_html(email: str, provider: str) -> str:
 
 def _error_html(message: str) -> str:
     """HTML page shown after failed OAuth."""
+    import json as _json
     # Escape for safe HTML insertion
     safe_msg = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return f"""<!DOCTYPE html>
@@ -316,10 +326,11 @@ def _error_html(message: str) -> str:
   </div>
   <script>
     if (window.opener) {{
+      var origin = {_json.dumps(settings.cors_origins.split(",")[0].strip())};
       window.opener.postMessage({{
         type: 'LUXIS_EMAIL_OAUTH_ERROR',
-        error: '{safe_msg}'
-      }}, '*');
+        error: {_json.dumps(message)}
+      }}, origin);
     }}
   </script>
 </body>

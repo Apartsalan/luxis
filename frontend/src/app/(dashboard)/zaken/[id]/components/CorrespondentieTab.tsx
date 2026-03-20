@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ClassificationCard } from "@/components/classification-card";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/sanitize";
 import {
   useEmailLogs,
   type EmailLogEntry,
@@ -182,7 +183,7 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
         {email.body_html ? (
           <div
             className="prose prose-sm max-w-none text-foreground"
-            dangerouslySetInnerHTML={{ __html: email.body_html }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.body_html) }}
           />
         ) : (
           <pre className="text-sm text-foreground whitespace-pre-wrap font-sans">

@@ -7,6 +7,7 @@ import {
   CreditCard,
   Briefcase,
 } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 // ── Status & Pipeline constants ─────────────────────────────────────────────
 
@@ -120,7 +121,7 @@ export function renderNoteContent(text: string | null | undefined) {
     return (
       <div
         className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0"
-        dangerouslySetInnerHTML={{ __html: text }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
       />
     );
   }

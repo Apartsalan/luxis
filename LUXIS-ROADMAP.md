@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 80)
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 83)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -342,7 +342,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 > Volledige lijst van alle afgeronde items staat in `docs/completed-work.md`
 
-**Volgende prioriteit:** QA bugfixes (BUG-44 t/m BUG-50) + test data cleanup + AI factuur parsing validatie
+**Volgende prioriteit:** Security Sprint (SEC-1 t/m SEC-15) + Code Quality Sprint (CQ-1 t/m CQ-9) — sessie 83 audits
 
 ### Pre-Launch Sprint (sessie 62 audit → uitrol)
 
@@ -358,6 +358,73 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | PL-6 | **CSV payment import UI** — frontend pagina voor bestaand backend endpoint | 2-3 uur | Nee maar bij 20+ dossiers essentieel | ✅ Was al gebouwd (sessie 56-57) |
 
 **Geschatte doorlooptijd:** 1.5-2 sessies
+
+### Security Sprint (sessie 83 pentest)
+
+**Bron:** Security audit sessie 83 (20 maart 2026). Volledige OWASP Top 10 + extra checks op advocatenkantoor-specifieke risico's.
+
+**Positief:** Tenant isolation via JWT consistent, OAuth tokens encrypted at rest (Fernet), bcrypt correct, JWT access tokens 15 min expiry, Sentry PII disabled, Pydantic validatie op alle schemas, productie Docker ports niet exposed.
+
+**Prioriteit legenda:** 🔴 Kritiek (direct exploiteerbaar) | 🟠 Hoog (serieus risico) | 🟡 Medium | 🟢 Laag/Info
+
+#### Fase 1 — Kritiek (vóór volgende deploy)
+
+| # | Issue | Ernst | Grootte | Status |
+|---|-------|-------|---------|--------|
+| SEC-1 | **SQL injection in tenant middleware** — f-string in `SET app.current_tenant = '{tenant_id}'`. Fix: UUID validatie vóór interpolatie. | 🔴 Kritiek | S | ✅ Sessie 83 |
+| SEC-2 | **OAuth state parameter niet gesigned** — base64-encoded JSON zonder HMAC. Fix: HMAC signing + nonce + 10min expiry. | 🔴 Kritiek | M | ✅ Sessie 83 |
+| SEC-3 | **XSS via email HTML** — `dangerouslySetInnerHTML` op 3 plekken zonder sanitatie. Fix: DOMPurify geïnstalleerd + sanitizeHtml helper. | 🔴 Kritiek | S | ✅ Sessie 83 |
+| SEC-4 | **SECRET_KEY default waarde** — placeholder string als JWT signing key. Fix: startup check die weigert te starten met default key in productie. | 🟠 Hoog | S | ✅ Sessie 83 |
+| SEC-5 | **Password reset token in logs** — plaintext reset URL gelogd. Fix: URL verwijderd uit logmelding. | 🟠 Hoog | S | ✅ Sessie 83 |
+| SEC-6 | **API secrets roteren** — gecontroleerd: .env is NOOIT gecommit in git history. Secrets zijn veilig. | 🟠 Hoog | S | ✅ Sessie 83 |
+
+#### Fase 2 — Hoog (binnen 1-2 sessies)
+
+| # | Issue | Ernst | Grootte | Status |
+|---|-------|-------|---------|--------|
+| SEC-7 | **Rate limiting op auth endpoints** — geen brute-force bescherming op login/forgot-password/reset. Fix: slowapi of Redis-backed limiter (5/min login, 3/uur forgot). | 🟠 Hoog | M | ❌ TODO |
+| SEC-8 | **postMessage wildcard origin** — OAuth success popup stuurt `postMessage('*')`. Fix: specifieke origin + HTML/JS escaping. | 🟠 Hoog | S | ✅ Sessie 83 |
+| SEC-9 | **PostgreSQL RLS niet actief** — `SET app.current_tenant` wordt gezet maar geen `CREATE POLICY` in migraties. Tenant isolation is puur applicatie-level. Fix: RLS policies via Alembic migratie. | 🟠 Hoog | M-L | ❌ TODO |
+| SEC-10 | **Jinja2 Server-Side Template Injection** — DB-opgeslagen templates gerenderd zonder sandbox. Fix: `SandboxedEnvironment`. | 🟠 Hoog | S | ❌ TODO |
+| SEC-11 | **Container draait als root** — Dockerfile mist non-root user. Fix: `adduser` + `USER appuser`. | 🟡 Medium | S | ❌ TODO |
+
+#### Fase 3 — Medium/Laag (hardening)
+
+| # | Issue | Ernst | Grootte | Status |
+|---|-------|-------|---------|--------|
+| SEC-12 | **Refresh token rotation** — oude refresh tokens blijven geldig tot expiry (7 dagen). Fix: token blocklist of DB-opslag met rotation. | 🟡 Medium | M | ❌ TODO |
+| SEC-13 | **Wachtwoord-complexiteit** — alleen min 8 chars, geen complexiteitsregels. Fix: min 12 + complexiteit voor advocatenkantoor. | 🟡 Medium | S | ❌ TODO |
+| SEC-14 | **HTML-escape user input in emails** — `custom_body.replace("\n", "<br>")` zonder escape. Fix: `html.escape()` eerst. | 🟡 Medium | S | ❌ TODO |
+| SEC-15 | **File upload hardening** — .doc/.xls (macro-gevoelig) toegestaan, geen magic byte validatie. Fix: legacy formaten verwijderen + python-magic check. | 🟡 Medium | S-M | ❌ TODO |
+
+**Toekomstig (backlog):**
+- Audit trail voor alle data-wijzigingen (AVG/GDPR compliance)
+- GDPR data export + verwijdering endpoints (Art. 15/17)
+- JWT tokens migreren van localStorage naar httpOnly cookies
+- Failed login logging + monitoring
+- Refresh naar PyJWT (python-jose niet meer actief onderhouden)
+
+**Aanbevolen volgorde:** SEC-1 → SEC-2 → SEC-3 → SEC-4/5/6 → SEC-7 t/m SEC-11 → SEC-12 t/m SEC-15
+
+### Code Quality Sprint (sessie 83 audit)
+
+**Bron:** Codebase audit sessie 83 (20 maart 2026). Alle bevindingen uit onafhankelijke code review.
+
+**Prioriteit legenda:** 🔴 Kritiek (functioneel risico) | 🟡 Belangrijk (onderhoud) | 🟢 Nice-to-have
+
+| # | Issue | Prioriteit | Grootte | Kan zonder Lisanne? | Status |
+|---|-------|-----------|---------|---------------------|--------|
+| CQ-1 | **Float → Decimal in cases/models.py** — 11 financiële velden (`total_principal`, `budget`, `hourly_rate`, etc.) gebruiken `Mapped[float]` i.p.v. `Mapped[Decimal]`. Database is NUMERIC(15,2) maar Python geeft floats terug. | 🔴 Kritiek | M | ✅ Ja | ❌ TODO |
+| CQ-2 | **Float → Decimal in cases/schemas.py** — 15+ Pydantic schema-velden voor geld als `float` i.p.v. `Decimal` | 🔴 Kritiek | S | ✅ Ja | ❌ TODO |
+| CQ-3 | **Float in relations/models.py** — `default_hourly_rate` is `Float` kolomtype (niet NUMERIC). Financieel veld in IEEE 754 floating-point. | 🔴 Kritiek | S | ✅ Ja | ❌ TODO |
+| CQ-4 | **Stille no-op: "Herbereken rente" batch-actie** — `incasso/service.py` regel ~807: loop telt `processed += 1` maar doet niks. Gebruiker krijgt succesbericht terwijl er niks gebeurt. | 🔴 Kritiek | S-M | ✅ Ja | ❌ TODO |
+| CQ-5 | **invoices/service.py opsplitsen** — 1292 regels, bevat CRUD + PDF + credit notes + provisie + budget tracking. Minimaal splitsen in 2-3 files. | 🟡 Belangrijk | M | ✅ Ja | ❌ TODO |
+| CQ-6 | **Frontend god-components splitsen** — IncassoTab.tsx (2292r), zaken/nieuw/page.tsx (1823r), relaties/[id]/page.tsx (1545r). Moeilijk te onderhouden/debuggen. | 🟡 Belangrijk | L | ✅ Ja | ❌ TODO |
+| CQ-7 | **Paginatie-duplicatie opruimen** — 3-4 modules berekenen handmatig offset/limit/ceil i.p.v. gedeelde `PaginatedResponse` helper. `PaginatedInvoices` is exacte kopie. | 🟢 Nice-to-have | S | ✅ Ja | ❌ TODO |
+| CQ-8 | **Dead code verwijderen** — GmailProvider (niet meer gebruikt), TijdregistratieTab/UrenTab overlap check | 🟢 Nice-to-have | S | ✅ Ja | ❌ TODO |
+| CQ-9 | **Test hygiene** — 19x hardcoded datum `"2026-02-17"` in test_cases.py + exact counts op seeded data in test_ai_agent.py | 🟢 Nice-to-have | S | ✅ Ja | ❌ TODO |
+
+**Aanbevolen volgorde:** CQ-1 + CQ-2 + CQ-3 (float→Decimal, samen doen) → CQ-4 (stille bug) → CQ-5 → CQ-6 → CQ-7/8/9
 
 ### Uitrolplan (na pre-launch sprint)
 

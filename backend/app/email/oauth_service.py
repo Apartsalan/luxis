@@ -4,14 +4,18 @@ Handles OAuth state generation, token storage, auto-refresh, and provider instan
 """
 
 import base64
+import hashlib
+import hmac
 import json
 import logging
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.email.oauth_models import EmailAccount
 from app.email.providers.base import EmailProvider
 from app.email.providers.gmail import GmailProvider
@@ -20,6 +24,16 @@ from app.email.providers.outlook import OutlookProvider
 from app.email.token_encryption import decrypt_token, encrypt_token
 
 logger = logging.getLogger(__name__)
+
+# OAuth state signing — HMAC prevents forgery
+_STATE_MAX_AGE_SECONDS = 600  # 10 minutes
+
+
+def _sign_state(payload_b64: str) -> str:
+    """Create HMAC signature for OAuth state."""
+    return hmac.new(
+        settings.secret_key.encode(), payload_b64.encode(), hashlib.sha256
+    ).hexdigest()
 
 
 def get_provider(provider_name: str) -> EmailProvider:
@@ -34,15 +48,32 @@ def get_provider(provider_name: str) -> EmailProvider:
 
 
 def encode_oauth_state(user_id: str, tenant_id: str, provider: str) -> str:
-    """Encode user context into the OAuth state parameter for CSRF protection."""
-    payload = json.dumps({"user_id": user_id, "tenant_id": tenant_id, "provider": provider})
-    return base64.urlsafe_b64encode(payload.encode()).decode()
+    """Encode and HMAC-sign user context into the OAuth state parameter."""
+    payload = json.dumps({
+        "user_id": user_id,
+        "tenant_id": tenant_id,
+        "provider": provider,
+        "ts": int(time.time()),
+    })
+    payload_b64 = base64.urlsafe_b64encode(payload.encode()).decode()
+    sig = _sign_state(payload_b64)
+    return f"{payload_b64}.{sig}"
 
 
 def decode_oauth_state(state: str) -> dict:
-    """Decode the OAuth state parameter back to user context."""
-    payload = base64.urlsafe_b64decode(state.encode()).decode()
-    return json.loads(payload)
+    """Decode and verify HMAC-signed OAuth state parameter."""
+    if "." not in state:
+        raise ValueError("Invalid OAuth state format")
+    payload_b64, sig = state.rsplit(".", 1)
+    expected_sig = _sign_state(payload_b64)
+    if not hmac.compare_digest(sig, expected_sig):
+        raise ValueError("OAuth state signature mismatch — possible CSRF attack")
+    payload = json.loads(base64.urlsafe_b64decode(payload_b64.encode()).decode())
+    # Check expiry
+    ts = payload.get("ts", 0)
+    if time.time() - ts > _STATE_MAX_AGE_SECONDS:
+        raise ValueError("OAuth state expired")
+    return payload
 
 
 async def get_email_account(

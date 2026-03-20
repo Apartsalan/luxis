@@ -419,7 +419,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | CQ-3 | **Float in relations/models.py** — `default_hourly_rate` is `Float` kolomtype (niet NUMERIC). Financieel veld in IEEE 754 floating-point. | 🔴 Kritiek | S | ✅ Ja | ✅ Sessie 84 |
 | CQ-4 | **Stille no-op: "Herbereken rente" batch-actie** — `incasso/service.py` regel ~807: loop telt `processed += 1` maar doet niks. Gebruiker krijgt succesbericht terwijl er niks gebeurt. | 🔴 Kritiek | S-M | ✅ Ja | ✅ Sessie 84 |
 | CQ-5 | **invoices/service.py opsplitsen** — 1292 regels, bevat CRUD + PDF + credit notes + provisie + budget tracking. Minimaal splitsen in 2-3 files. | 🟡 Belangrijk | M | ✅ Ja | ✅ Sessie 84 |
-| CQ-6 | **Frontend god-components splitsen** — IncassoTab.tsx (2292r), zaken/nieuw/page.tsx (1823r), relaties/[id]/page.tsx (1545r). Moeilijk te onderhouden/debuggen. | 🟡 Belangrijk | L | ✅ Ja | ❌ TODO |
+| CQ-6 | **Frontend god-components splitsen** — IncassoTab.tsx (2292r), zaken/nieuw/page.tsx (1823r), relaties/[id]/page.tsx (1545r). Moeilijk te onderhouden/debuggen. | 🟡 Belangrijk | L | ✅ Ja | ✅ Sessie 85 |
 | CQ-7 | **Paginatie-duplicatie opruimen** — bestaande dict returns matchen al PaginatedResponse shape, minimale winst. | 🟢 Nice-to-have | S | ✅ Ja | ⏭️ Overgeslagen |
 | CQ-8 | **Dead code verwijderen** — GmailProvider (364 regels verwijderd) | 🟢 Nice-to-have | S | ✅ Ja | ✅ Sessie 84 |
 | CQ-9 | **Test hygiene** — 21x hardcoded datum `"2026-02-17"` → `date.today().isoformat()` in test_cases.py | 🟢 Nice-to-have | S | ✅ Ja | ✅ Sessie 84 |

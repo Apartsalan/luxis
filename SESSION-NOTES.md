@@ -1,16 +1,40 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 84 — Security Fase 3 + Code Quality Sprint)
-**Laatste feature/fix:** Sessie 84 — SEC-9/12/13/15 + CQ-1/2/3/4/5/8/9 afgerond en deployed
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 85 — CQ-6: Frontend god-components splitsen)
+**Laatste feature/fix:** Sessie 85 — CQ-6 afgerond: drie god-components gesplitst en deployed
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Security Sprint:** 15/15 COMPLEET ✅
-**Code Quality Sprint:** 7/9 afgerond (CQ-6 open, CQ-7 overgeslagen)
+**Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen)
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** CQ-6 (frontend god-components splitsen) of nieuwe features
+**Volgende sessie:** Nieuwe features of data migratie
+
+## Wat er gedaan is (sessie 85 — 20 maart 2026) — CQ-6: Frontend god-components splitsen
+
+**CQ-6 afgerond: drie god-components gesplitst**
+
+1. **IncassoTab.tsx (2292 regels → 8 bestanden)**
+   - Gesplitst naar `zaken/[id]/components/incasso/`
+   - VorderingenTab, BetalingenTab, FinancieelTab, DerdengeldenTab
+   - BetalingsregelingSection, ProvisieSettingsSection
+   - VorderingenFinancieelTab, BetalingenDerdengeldenTab (wrappers)
+   - index.ts barrel export
+
+2. **zaken/nieuw/page.tsx (1823 regels → 7 bestanden + thin wrapper)**
+   - Gesplitst naar `components/cases/wizard/`
+   - types.ts, ConfidenceDot, WizardStepper, InlineContactDetails
+   - Step1Zaakgegevens, Step2Partijen, Step3Vorderingen
+   - page.tsx blijft als state owner + orchestrator
+
+3. **relaties/[id]/page.tsx (1545 regels → 3 bestanden + thin wrapper)**
+   - Gesplitst naar `components/relations/detail/`
+   - ContactInfoSection, LinkedCasesSection, KycSection
+   - page.tsx blijft als state owner + header + layout
+
+Alle builds geslaagd, deployed naar VPS.
 
 ## Wat er gedaan is (sessie 84 — 20 maart 2026) — Security Fase 3 + Code Quality Sprint
 

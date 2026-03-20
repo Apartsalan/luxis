@@ -1,14 +1,60 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 80b — Strategisch overleg + Clarity)
-**Laatste feature/fix:** Sessie 80 — 8 UX fixes (UX-6 t/m UX-13) gedeployd
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 81a — DF-05 + DF-13)
+**Laatste feature/fix:** Sessie 81a — DF-05 provisie-factuur knop + DF-13 settlement_type
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
-**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 3 items wachten op Lisanne
+**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (19/20) ✅, 1 item wacht op Lisanne
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Microsoft Clarity toevoegen (project ID nodig) + UX-TODO items + DF-05/DF-11/DF-13 na overleg Lisanne
+**Volgende sessie:** DF-11 (betaling auto-koppelen aan betaalregeling termijn) — wacht op Lisanne input
+
+## Wat er gedaan is (sessie 81a — 20 maart 2026) — DF-05 + DF-13
+
+### Samenvatting
+DF-05 (incasso provisie als factuurregel) en DF-13 (voorschotnota verrekening type) geïmplementeerd en gedeployd.
+
+### Gebouwd
+
+**DF-05: Incasso provisie-factuur knop (alleen frontend)**
+- "Provisie factureren" knop toegevoegd in `IncassoTab` op dossier detail pagina
+- Knop verschijnt alleen als er betalingen zijn en provisie configuratie aanwezig is (`case.provisie_percentage` of `case.provisie_min_fee`)
+- Klikt open factuur-aanmaken pagina met pre-filled regels: beschrijving "Incasso provisie [dossiernummer]", bedrag berekend op basis van ontvangen betalingen
+- Geen backend wijzigingen — hergebruikt bestaand factuur endpoint
+- Bestaande provisie tests (4): allemaal groen ✅
+
+**DF-13: Voorschotnota verrekening type (backend + frontend)**
+- Backend: `settlement_type` kolom toegevoegd aan `invoices` tabel (enum: `bij_sluiting` / `tussentijds`, default `bij_sluiting`)
+- Alembic migratie: `df13_settlement_type` (enkel head, geen conflict)
+- Schema: `settlement_type` veld in `InvoiceCreate`, `InvoiceUpdate`, `InvoiceResponse`
+- Frontend: card-selector UI in factuur-aanmaken + badge in factuur detail
+- Bestaande voorschotnota tests (2): allemaal groen ✅
+
+**Alembic heads conflict opgelost**
+- `down_revision` gecorrigeerd in `df13` migratie zodat er één lineaire head is
+
+### Status na sessie
+- DF-05: ✅ Gebouwd en gedeployd
+- DF-13: ✅ Gebouwd en gedeployd
+- DF-11: ⏳ Nog open — wacht op Lisanne input over gewenste koppelingslogica
+
+### Gewijzigde bestanden
+- `backend/app/billing/models.py` — settlement_type enum + kolom
+- `backend/app/billing/schemas.py` — settlement_type veld
+- `backend/alembic/versions/df13_settlement_type.py` — migratie
+- `frontend/src/app/(dashboard)/zaken/[id]/IncassoTab.tsx` — provisie knop
+- `frontend/src/app/(dashboard)/facturen/nieuw/page.tsx` — settlement_type card-selector
+- `frontend/src/components/InvoiceDetail.tsx` — settlement_type badge
+- `LUXIS-ROADMAP.md` — DF-05 en DF-13 op ✅
+
+### Tests & kwaliteit
+- ruff: 0 warnings ✅
+- provisie tests (4/4): passed ✅
+- settlement/voorschot tests (2/2): passed ✅
+- alembic heads: 1 head (df13_settlement_type) ✅
+
+---
 
 ## Wat er gedaan is (sessie 80b — 20 maart 2026) — Strategisch overleg
 

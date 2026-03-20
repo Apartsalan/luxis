@@ -1,14 +1,39 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 81a — DF-05 + DF-13)
-**Laatste feature/fix:** Sessie 81a — DF-05 provisie-factuur knop + DF-13 settlement_type
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 82 — DF-11)
+**Laatste feature/fix:** Sessie 82 — DF-11 betaling auto-koppelen aan betaalregeling termijn
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
-**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (19/20) ✅, 1 item wacht op Lisanne
+**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
-**Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** DF-11 (betaling auto-koppelen aan betaalregeling termijn) — wacht op Lisanne input
+**Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
+**Volgende sessie:** TBD
+
+## Wat er gedaan is (sessie 82 — 20 maart 2026) — DF-11
+
+### Samenvatting
+DF-11: bij elke binnenkomende betaling (handmatig of CSV bank import) automatisch matchen aan de eerstvolgende openstaande termijn van een betaalregeling.
+
+### Gebouwd
+
+**DF-11: Betaling auto-koppelen aan betaalregeling termijn (backend)**
+- Nieuwe helper `_auto_link_payment_to_installments()` in `backend/app/collections/service.py`
+- Aangeroepen vanuit `create_payment()` — werkt voor zowel handmatige betalingen als CSV bank import
+- Logica: zoek actieve betaalregeling op dossier → match aan eerstvolgende openstaande termijn (op vervaldatum)
+- Partial payments: termijn blijft "partial" met geaccumuleerd `paid_amount`
+- Overschot: cascadeert naar volgende termijn(en)
+- Alle termijnen betaald → arrangement auto-completes naar "completed"
+- `record_installment_payment()` passt `_skip_installment_link=True` om recursie te voorkomen
+- 6 nieuwe tests: exact match, partial, cascade, no-arrangement, full completion, sequential partials
+- Alle 17 arrangement tests groen (0 regressie)
+
+### Gewijzigde bestanden
+- `backend/app/collections/service.py` — `_auto_link_payment_to_installments()` + `_skip_installment_link` param
+- `backend/tests/test_payment_arrangements.py` — 6 nieuwe DF-11 tests
+
+### Bekende issues
+Geen.
 
 ## Wat er gedaan is (sessie 81a — 20 maart 2026) — DF-05 + DF-13
 

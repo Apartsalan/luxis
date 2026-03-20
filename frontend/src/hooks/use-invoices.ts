@@ -61,6 +61,7 @@ export interface InvoiceDetail {
   total: number;
   reference: string | null;
   notes: string | null;
+  settlement_type: string | null;  // DF-13: tussentijds | bij_sluiting
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -556,6 +557,7 @@ export interface VoorschotnotaInput {
   invoice_date: string;
   due_date: string;
   btw_percentage: number;
+  settlement_type?: "tussentijds" | "bij_sluiting";  // DF-13
 }
 
 export function useCreateVoorschotnota() {

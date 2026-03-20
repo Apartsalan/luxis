@@ -280,7 +280,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 | # | Feature/Fix | Ernst | Status |
 |---|-------------|-------|--------|
-| DF-05 | Incasso provisie als configureerbare factuurregel | Hoog | ⏳ Wacht op Lisanne |
+| DF-05 | Incasso provisie als configureerbare factuurregel | Hoog | ✅ 20 mrt |
 | DF-06 | BTW toggle verbeteren (dropdown: 21%/0%/aangepast) | Midden | ✅ 18 mrt |
 | DF-07 | Factuur context panel (al gefactureerd + derdengelden per dossier) | Hoog | ✅ 18 mrt |
 | DF-08 | Navigatie terug naar dossier na factuur aanmaken | Laag | ✅ 18 mrt |
@@ -288,7 +288,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | DF-10 | Betaalregelingen: aantal termijnen → bedrag auto-berekenen | Midden | ✅ 18 mrt |
 | DF-11 | Betaling auto-koppelen aan betaalregeling termijn | Midden | ⏳ Wacht op Lisanne |
 | DF-12 | Verschotten: file upload + belast/onbelast veld (voor Exact koppeling) | Hoog | ✅ 18 mrt |
-| DF-13 | Voorschotnota: verrekening type (tussentijds / bij sluiting) | Midden | ⏳ Wacht op Lisanne |
+| DF-13 | Voorschotnota: verrekening type (tussentijds / bij sluiting) | Midden | ✅ 20 mrt |
 
 ### UX Review Fixes (sessie 79b — 18 mrt 2026)
 

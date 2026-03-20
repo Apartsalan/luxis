@@ -35,6 +35,9 @@ INVOICE_STATUSES = (
 
 INVOICE_TYPES = ("invoice", "credit_note", "voorschotnota")
 
+# DF-13: Settlement type for voorschotnota — when does the advance get offset?
+SETTLEMENT_TYPES = ("tussentijds", "bij_sluiting")
+
 PAYMENT_METHODS = ("bank", "ideal", "cash", "verrekening")
 
 
@@ -92,6 +95,11 @@ class Invoice(TenantBase):
     )
     total: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), nullable=False, default=Decimal("0")
+    )
+
+    # DF-13: Settlement type for voorschotnota — "tussentijds" or "bij_sluiting"
+    settlement_type: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
     )
 
     # Reference / notes

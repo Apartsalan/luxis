@@ -113,6 +113,7 @@ class InvoiceResponse(BaseModel):
     total: Decimal
     reference: str | None
     notes: str | None
+    settlement_type: str | None = None  # DF-13: tussentijds | bij_sluiting
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -257,6 +258,11 @@ class VoorschotnotaCreate(BaseModel):
     invoice_date: date
     due_date: date
     btw_percentage: Decimal = Field(default=Decimal("21.00"), ge=0)
+    # DF-13: When is the advance offset against invoices?
+    settlement_type: str = Field(
+        default="tussentijds",
+        description="tussentijds (per invoice) or bij_sluiting (at case closure)",
+    )
 
 
 class AdvanceBalanceResponse(BaseModel):

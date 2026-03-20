@@ -1043,6 +1043,7 @@ async def create_voorschotnota(
         invoice_date=data.invoice_date,
         due_date=data.due_date,
         btw_percentage=data.btw_percentage,
+        settlement_type=data.settlement_type,  # DF-13
     )
     db.add(invoice)
     await db.flush()

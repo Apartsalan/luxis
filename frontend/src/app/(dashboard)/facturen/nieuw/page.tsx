@@ -38,6 +38,7 @@ export default function NieuweFactuurPage() {
   const [voorschotForm, setVoorschotForm] = useState({
     amount: "",
     description: "",
+    settlement_type: "tussentijds" as "tussentijds" | "bij_sluiting",
   });
 
   // LF-21: Voorschot verrekening state
@@ -264,6 +265,7 @@ export default function NieuweFactuurPage() {
           invoice_date: form.invoice_date,
           due_date: form.due_date,
           btw_percentage: parseFloat(form.btw_percentage),
+          settlement_type: voorschotForm.settlement_type,
         });
         toast.success("Voorschotnota aangemaakt");
         router.push(preselectedCaseId ? `/zaken/${preselectedCaseId}` : `/facturen/${result.id}`);
@@ -668,6 +670,43 @@ export default function NieuweFactuurPage() {
                 placeholder="Bijv. Voorschot juridische werkzaamheden"
                 className={inputClass}
               />
+            </div>
+
+            {/* DF-13: Verrekening type */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Verrekening
+              </label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setVoorschotForm((p) => ({ ...p, settlement_type: "tussentijds" }))}
+                  className={`flex-1 rounded-lg border px-4 py-3 text-left transition-colors ${
+                    voorschotForm.settlement_type === "tussentijds"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border bg-background hover:bg-muted"
+                  }`}
+                >
+                  <div className="text-sm font-medium text-foreground">Tussentijds</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    Voorschot wordt bij elke factuur verrekend
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVoorschotForm((p) => ({ ...p, settlement_type: "bij_sluiting" }))}
+                  className={`flex-1 rounded-lg border px-4 py-3 text-left transition-colors ${
+                    voorschotForm.settlement_type === "bij_sluiting"
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border bg-background hover:bg-muted"
+                  }`}
+                >
+                  <div className="text-sm font-medium text-foreground">Bij sluiting</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    Voorschot wordt bij afsluiting dossier verrekend
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         )}

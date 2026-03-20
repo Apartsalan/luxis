@@ -699,6 +699,24 @@ export default function FactuurDetailPage() {
         </div>
       )}
 
+      {/* DF-13: Settlement type — alleen voor voorschotnota's */}
+      {factuur.invoice_type === "voorschotnota" && factuur.settlement_type && (
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Verrekening:</span>{" "}
+            {factuur.settlement_type === "bij_sluiting" ? (
+              <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                Bij sluiting dossier
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                Tussentijds
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
       {/* Lines table */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-border">

@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 85 — CQ-6: Frontend god-components splitsen)
-**Laatste feature/fix:** Sessie 85 — CQ-6 afgerond: drie god-components gesplitst en deployed
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 85b — AI UX Redesign: Onzichtbare AI)
+**Laatste feature/fix:** Sessie 85b — AI features geïntegreerd in Mijn Taken, sidebar opgeruimd
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -10,7 +10,36 @@
 **Security Sprint:** 15/15 COMPLEET ✅
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen)
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Nieuwe features of data migratie
+**Volgende sessie:** Lisanne's verbeterpunten verwerken
+
+## Wat er gedaan is (sessie 85b — 20 maart 2026) — AI UX Redesign: Onzichtbare AI
+
+**AI features geïntegreerd in Mijn Taken pagina, sidebar opgeruimd**
+
+1. **Taken pagina — AI Aanbevelingen sectie**
+   - Nieuwe `FollowupSection` component: toont pending follow-up recommendations als kaartjes
+   - Per kaartje: dossiernummer, actie, urgentie-badge, reasoning, Akkoord/Afwijzen knoppen
+   - Sectie verdwijnt automatisch als er geen pending items zijn
+
+2. **Taken pagina — Nieuwe Dossiers sectie**
+   - Nieuwe `IntakeSection` component: toont pending AI intakes als kaartjes
+   - Per kaartje: onderwerp, afzender, bedrag, confidence-badge, Bekijken link naar `/intake/[id]`
+   - Sectie verdwijnt automatisch als er geen items zijn
+
+3. **Sidebar opgeruimd**
+   - "AI Intake" en "Follow-up" verwijderd uit navigatie
+   - "Betalingen" hernoemd naar "Bank Import"
+   - Gecombineerde badge op "Mijn Taken": verlopen taken + pending follow-ups + pending intakes
+
+4. **Betalingen pagina** — titel hernoemd naar "Bank Import"
+
+**Niet getest (TODO voor volgende sessie):**
+- AI secties met echte data (geen pending follow-ups/intakes in dev DB)
+- Akkoord/Afwijzen knoppen functioneel testen
+- Bekijken link naar `/intake/[id]` testen
+
+Gewijzigde bestanden: `taken/page.tsx`, `betalingen/page.tsx`, `app-sidebar.tsx`
+Frontend build groen, deployed naar VPS.
 
 ## Wat er gedaan is (sessie 85 — 20 maart 2026) — CQ-6: Frontend god-components splitsen
 

@@ -26,6 +26,7 @@ export interface BankStatementImportList {
   total: number;
   page: number;
   per_page: number;
+  pages: number;
 }
 
 export interface PaymentMatch {
@@ -59,6 +60,7 @@ export interface PaymentMatchList {
   total: number;
   page: number;
   per_page: number;
+  pages: number;
 }
 
 export interface PaymentMatchStats {

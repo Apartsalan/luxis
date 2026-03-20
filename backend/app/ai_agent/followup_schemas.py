@@ -52,6 +52,7 @@ class FollowupRecommendationList(BaseModel):
     total: int
     page: int
     per_page: int
+    pages: int
 
 
 class FollowupStatsOut(BaseModel):

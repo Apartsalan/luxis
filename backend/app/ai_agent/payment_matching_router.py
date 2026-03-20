@@ -126,7 +126,14 @@ async def list_transactions(
         db, current_user.tenant_id, import_id,
         page=page, per_page=per_page, unmatched_only=unmatched_only,
     )
-    return {"items": items, "total": total, "page": page, "per_page": per_page}
+    import math
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": math.ceil(total / per_page) if total > 0 else 0,
+    }
 
 
 @router.post("/imports/{import_id}/rematch")

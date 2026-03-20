@@ -1,6 +1,7 @@
 """Payment matching service — import, match, review, and execute bank payments."""
 
 import logging
+import math
 import uuid
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
@@ -339,6 +340,7 @@ async def list_imports(
         total=total,
         page=page,
         per_page=per_page,
+        pages=math.ceil(total / per_page) if total > 0 else 0,
     )
 
 
@@ -464,6 +466,7 @@ async def list_matches(
         total=total,
         page=page,
         per_page=per_page,
+        pages=math.ceil(total / per_page) if total > 0 else 0,
     )
 
 

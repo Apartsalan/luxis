@@ -1,6 +1,7 @@
 """Follow-up recommendation service — rules-based workflow advisor for incasso cases."""
 
 import logging
+import math
 import uuid
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
@@ -261,6 +262,7 @@ async def list_recommendations(
         total=total,
         page=page,
         per_page=per_page,
+        pages=math.ceil(total / per_page) if total > 0 else 0,
     )
 
 

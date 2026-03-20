@@ -57,6 +57,7 @@ class BankStatementImportList(BaseModel):
     total: int
     page: int
     per_page: int
+    pages: int
 
 
 # ── Payment Match ────────────────────────────────────────────────────────
@@ -110,6 +111,7 @@ class PaymentMatchList(BaseModel):
     total: int
     page: int
     per_page: int
+    pages: int
 
 
 class PaymentMatchStatsOut(BaseModel):

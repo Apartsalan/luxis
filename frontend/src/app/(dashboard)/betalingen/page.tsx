@@ -111,7 +111,7 @@ export default function BetalingenPage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
             <Banknote className="h-5 w-5 text-primary" />
-            Betalingen
+            Bank Import
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Bankafschriften importeren en betalingen automatisch matchen aan

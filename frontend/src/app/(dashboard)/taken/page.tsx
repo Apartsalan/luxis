@@ -17,10 +17,15 @@ import {
   Loader2,
   Repeat,
   X,
+  Zap,
+  Bot,
+  Check,
+  Eye,
+  ArrowUpRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { cn, formatDateShort } from "@/lib/utils";
+import { cn, formatDateShort, formatCurrency } from "@/lib/utils";
 import { TASK_STATUS_BADGE, TASK_STATUS_BADGE_FALLBACK } from "@/lib/status-constants";
 import {
   useMyTasks,
@@ -34,6 +39,13 @@ import {
 } from "@/hooks/use-workflow";
 import { useAuth } from "@/hooks/use-auth";
 import { useCases } from "@/hooks/use-cases";
+import {
+  useFollowupRecommendations,
+  useApproveAndExecuteFollowup,
+  useRejectFollowup,
+  type FollowupRecommendation,
+} from "@/hooks/use-followup";
+import { useIntakes, type IntakeResponse } from "@/hooks/use-intake";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -244,6 +256,180 @@ function TaskRow({
   );
 }
 
+// ── AI Aanbevelingen (Follow-ups) ────────────────────────────────────────────
+
+const URGENCY_STYLES: Record<string, string> = {
+  high: "border-red-200 bg-red-50/50",
+  medium: "border-amber-200 bg-amber-50/50",
+  low: "border-border bg-card",
+};
+
+const URGENCY_BADGE: Record<string, string> = {
+  high: "bg-red-50 text-red-700 ring-red-600/20",
+  medium: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  low: "bg-slate-50 text-slate-600 ring-slate-500/20",
+};
+
+function FollowupSection() {
+  const { data, isLoading } = useFollowupRecommendations("pending", 1, 5);
+  const approveAndExecute = useApproveAndExecuteFollowup();
+  const reject = useRejectFollowup();
+
+  const items = data?.items ?? [];
+
+  if (isLoading || items.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Zap className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold text-foreground">AI Aanbevelingen</h2>
+        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+          {data?.total ?? items.length}
+        </span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className={cn(
+              "rounded-lg border p-3 transition-colors",
+              URGENCY_STYLES[item.urgency] ?? URGENCY_STYLES.low,
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/zaken/${item.case_id}`}
+                  className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                >
+                  {item.case_number}
+                </Link>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {item.opposing_party_name ?? item.client_name ?? ""}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
+                  URGENCY_BADGE[item.urgency] ?? URGENCY_BADGE.low,
+                )}
+              >
+                {item.urgency_label || item.urgency}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-foreground font-medium">
+              {item.action_label || item.recommended_action}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-2">
+              {item.reasoning}
+            </p>
+            <div className="mt-2.5 flex items-center gap-1.5">
+              <button
+                onClick={() => approveAndExecute.mutate({ id: item.id }, {
+                  onSuccess: () => toast.success("Aanbeveling uitgevoerd"),
+                  onError: (err) => toast.error(err.message),
+                })}
+                disabled={approveAndExecute.isPending}
+                className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                <Check className="h-3 w-3" />
+                Akkoord
+              </button>
+              <button
+                onClick={() => reject.mutate({ id: item.id }, {
+                  onSuccess: () => toast.success("Aanbeveling afgewezen"),
+                  onError: (err) => toast.error(err.message),
+                })}
+                disabled={reject.isPending}
+                className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
+              >
+                <X className="h-3 w-3" />
+                Afwijzen
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Nieuwe Dossiers (Intakes) ────────────────────────────────────────────────
+
+function confidenceBadge(confidence: number | null) {
+  if (!confidence) return "bg-slate-50 text-slate-600 ring-slate-500/20";
+  if (confidence >= 80) return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
+  if (confidence >= 60) return "bg-amber-50 text-amber-700 ring-amber-600/20";
+  return "bg-red-50 text-red-700 ring-red-600/20";
+}
+
+function IntakeSection() {
+  const { data: intakes, isLoading } = useIntakes("pending", 1, 5);
+
+  const items = intakes ?? [];
+
+  if (isLoading || items.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Bot className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold text-foreground">Nieuwe Dossiers</h2>
+        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+          {items.length}
+        </span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="rounded-lg border bg-card p-3 hover:bg-accent/5 transition-colors"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {item.email_subject}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {item.email_from}
+                </p>
+              </div>
+              <span
+                className={cn(
+                  "shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
+                  confidenceBadge(item.ai_confidence),
+                )}
+              >
+                {item.ai_confidence ? `${Math.round(item.ai_confidence)}%` : "?"}
+              </span>
+            </div>
+            {(item.debtor_name || item.principal_amount) && (
+              <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                {item.debtor_name && <span>{item.debtor_name}</span>}
+                {item.principal_amount && (
+                  <span className="font-medium text-foreground tabular-nums">
+                    {formatCurrency(item.principal_amount)}
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="mt-2.5">
+              <Link
+                href={`/intake/${item.id}`}
+                className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                <Eye className="h-3 w-3" />
+                Bekijken
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TakenPage() {
@@ -435,6 +621,10 @@ export default function TakenPage() {
         </div>
         </div>
       </div>
+
+      {/* AI Sections */}
+      <FollowupSection />
+      <IntakeSection />
 
       {/* Create task form */}
       {showForm && (

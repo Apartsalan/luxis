@@ -18,8 +18,6 @@ import {
   ChevronRight,
   Mail,
   Gavel,
-  Bot,
-  Zap,
   Banknote,
   X,
 } from "lucide-react";
@@ -31,23 +29,22 @@ import { usePendingCount } from "@/hooks/use-ai-agent";
 import { useIntakePendingCount } from "@/hooks/use-intake";
 import { useFollowupPendingCount } from "@/hooks/use-followup";
 import { usePaymentPendingCount } from "@/hooks/use-payment-matching";
+import { useMyTasks } from "@/hooks/use-workflow";
 
 interface NavItem {
   name: string;
   href: string;
   icon: typeof LayoutDashboard;
   module?: LuxisModule;
-  badge?: "unlinked-count" | "incasso-action" | "ai-pending" | "intake-pending" | "followup-pending" | "payment-pending";
+  badge?: "unlinked-count" | "incasso-action" | "ai-pending" | "taken-combined" | "payment-pending";
 }
 
 const ALL_NAVIGATION: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Mijn Taken", href: "/taken", icon: CheckSquare },
+  { name: "Mijn Taken", href: "/taken", icon: CheckSquare, badge: "taken-combined" },
   { name: "Relaties", href: "/relaties", icon: Users },
   { name: "Dossiers", href: "/zaken", icon: Briefcase },
-  { name: "AI Intake", href: "/intake", icon: Bot, badge: "intake-pending" },
-  { name: "Follow-up", href: "/followup", icon: Zap, badge: "followup-pending" },
-  { name: "Betalingen", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
+  { name: "Bank Import", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
   { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
   { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
   { name: "Agenda", href: "/agenda", icon: Calendar },
@@ -84,6 +81,9 @@ export function AppSidebar({
   const followupPendingCount = followupPendingData?.count ?? 0;
   const { data: paymentPendingData } = usePaymentPendingCount();
   const paymentPendingCount = paymentPendingData?.count ?? 0;
+  const { data: myTasks } = useMyTasks();
+  const overdueTaskCount = myTasks?.filter((t) => t.status === "overdue").length ?? 0;
+  const takenCombinedCount = overdueTaskCount + followupPendingCount + intakePendingCount;
 
   const navigation = useMemo(
     () =>
@@ -163,8 +163,7 @@ export function AppSidebar({
               item.badge === "unlinked-count" ? unlinkedCount :
               item.badge === "incasso-action" ? incassoActionCount :
               item.badge === "ai-pending" ? aiPendingCount :
-              item.badge === "intake-pending" ? intakePendingCount :
-              item.badge === "followup-pending" ? followupPendingCount :
+              item.badge === "taken-combined" ? takenCombinedCount :
               item.badge === "payment-pending" ? paymentPendingCount : 0;
 
             return (

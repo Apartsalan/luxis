@@ -1,6 +1,6 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 18 maart 2026 (sessie 80 — UX Fixes Batch 2)
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 80b — Strategisch overleg + Clarity)
 **Laatste feature/fix:** Sessie 80 — 8 UX fixes (UX-6 t/m UX-13) gedeployd
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -8,7 +8,25 @@
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 3 items wachten op Lisanne
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** DF-05/DF-11/DF-13 na overleg Lisanne + overige UX-TODO items (relaties sorteren, factuur verwijder-knop, rente/partijen cards, testdata opruimen)
+**Volgende sessie:** Microsoft Clarity toevoegen (project ID nodig) + UX-TODO items + DF-05/DF-11/DF-13 na overleg Lisanne
+
+## Wat er gedaan is (sessie 80b — 20 maart 2026) — Strategisch overleg
+
+### Samenvatting
+Geen code-wijzigingen. Strategisch gesprek over Luxis richting, prioriteiten en aanpak.
+
+### Beslissingen
+- **Focus:** Lisanne ontzorgen = prioriteit #1. Basenet vervangen. Verkoop komt later, alleen als het product goed genoeg is.
+- **Soft launch strategie:** Lisanne zet een paar nieuwe zaken in Luxis en werkt daar vanuit. Niet alles in één keer overzetten.
+- **Microsoft Clarity:** Toevoegen aan frontend voor UX analytics (rage clicks, dead clicks, scroll depth). User moet project ID aanmaken op clarity.microsoft.com.
+- **BA/testing:** Gesprekken met Lisanne en andere advocaten is menselijk werk. Claude helpt met gestructureerde checklists en Basenet feature gap analyse.
+
+### Openstaand
+- Microsoft Clarity integratie (wacht op project ID van gebruiker)
+- DF-05, DF-11, DF-13 (wacht op Lisanne)
+- UX-TODO items (kleine verbeteringen)
+
+---
 
 ## Wat er gedaan is (sessie 80 — 18 maart 2026) — UX Fixes Batch 2
 

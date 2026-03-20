@@ -13,6 +13,17 @@ from app.shared.exceptions import BadRequestError, NotFoundError
 ALLOWED_EXTENSIONS = {".docx"}
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
+# DOCX magic bytes: PK zip header (all .docx files are zip archives)
+_DOCX_MAGIC = b"PK\x03\x04"
+
+
+def _validate_docx_magic(data: bytes) -> None:
+    """Verify that file content starts with the DOCX/ZIP magic bytes."""
+    if not data.startswith(_DOCX_MAGIC):
+        raise BadRequestError(
+            "Bestand is geen geldig .docx bestand (ongeldige bestandsinhoud)"
+        )
+
 
 async def list_managed_templates(
     db: AsyncSession,
@@ -102,6 +113,8 @@ async def upload_template(
     if file_size > MAX_FILE_SIZE:
         raise BadRequestError("Bestand te groot (max 10 MB)")
 
+    _validate_docx_magic(file_data)
+
     tpl = ManagedTemplate(
         tenant_id=tenant_id,
         name=name,
@@ -154,6 +167,8 @@ async def replace_template_file(
         raise BadRequestError("Leeg bestand")
     if len(file_data) > MAX_FILE_SIZE:
         raise BadRequestError("Bestand te groot (max 10 MB)")
+
+    _validate_docx_magic(file_data)
 
     tpl.file_data = file_data
     tpl.original_filename = filename

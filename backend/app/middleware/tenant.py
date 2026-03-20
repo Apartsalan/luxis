@@ -21,4 +21,4 @@ async def set_tenant_context(db: AsyncSession, tenant_id: str) -> None:
         validated = str(_uuid.UUID(str(tenant_id)))
     except (ValueError, AttributeError):
         raise ValueError(f"Invalid tenant_id: {tenant_id}")
-    await db.execute(text(f"SET app.current_tenant = '{validated}'"))
+    await db.execute(text(f"SET LOCAL app.current_tenant = '{validated}'"))

@@ -802,10 +802,56 @@ async def batch_execute(
                 errors.append(f"{case.case_number}: fout bij genereren — {exc}")
 
     elif action == "recalculate_interest":
-        # Interest recalculation placeholder — will integrate with collections module
+        from app.collections.interest import calculate_case_interest
+        from app.collections.models import Claim
+
         for case in cases:
-            # TODO: integrate with interest calculation service
-            processed += 1
+            try:
+                # Fetch active claims for this case
+                claims_result = await db.execute(
+                    select(Claim).where(
+                        Claim.case_id == case.id,
+                        Claim.is_active.is_(True),
+                    )
+                )
+                claims = claims_result.scalars().all()
+
+                if not claims:
+                    skipped += 1
+                    continue
+
+                claim_dicts = [
+                    {
+                        "id": str(c.id),
+                        "description": c.description,
+                        "principal_amount": c.principal_amount,
+                        "default_date": c.default_date,
+                        "rate_basis": c.rate_basis,
+                    }
+                    for c in claims
+                ]
+
+                result = await calculate_case_interest(
+                    db=db,
+                    case_id=str(case.id),
+                    interest_type=case.interest_type,
+                    contractual_rate=case.contractual_rate,
+                    contractual_compound=case.contractual_compound,
+                    claims=claim_dicts,
+                    calc_date=date.today(),
+                )
+
+                # Update case financial totals
+                case.total_principal = result["total_principal"]
+                processed += 1
+            except Exception as exc:
+                logger.error(
+                    "Interest recalculation failed for %s: %s",
+                    case.case_number,
+                    exc,
+                )
+                skipped += 1
+                errors.append(f"{case.case_number}: renteberekening mislukt — {exc}")
 
     else:
         raise BadRequestError(f"Onbekende actie: {action}")

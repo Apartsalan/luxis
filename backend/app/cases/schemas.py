@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -53,26 +54,26 @@ class CaseCreate(BaseModel):
         default="statutory",
         description="statutory, commercial, government, contractual",
     )
-    contractual_rate: float | None = None
+    contractual_rate: Decimal | None = None
     contractual_compound: bool = True
     client_id: uuid.UUID
     opposing_party_id: uuid.UUID | None = None
     billing_contact_id: uuid.UUID | None = None
     assigned_to_id: uuid.UUID | None = None
     date_opened: date
-    budget: float | None = None  # G13: optional budget (requires "budget" module)
-    bik_override: float | None = None  # LF-12: manual BIK override
-    hourly_rate: float | None = None  # LF-19: per-case hourly rate
+    budget: Decimal | None = None  # G13: optional budget (requires "budget" module)
+    bik_override: Decimal | None = None  # LF-12: manual BIK override
+    hourly_rate: Decimal | None = None  # LF-19: per-case hourly rate
     payment_term_days: int | None = None  # LF-22: debtor settings
     collection_strategy: str | None = None
     debtor_notes: str | None = None
     # LF-20/LF-21: Billing settings
     billing_method: str = Field(default="hourly", description="hourly | fixed_price | budget_cap")
-    fixed_price_amount: float | None = None
-    budget_hours: float | None = None
-    provisie_percentage: float | None = None
-    fixed_case_costs: float | None = None
-    minimum_fee: float | None = None
+    fixed_price_amount: Decimal | None = None
+    budget_hours: Decimal | None = None
+    provisie_percentage: Decimal | None = None
+    fixed_case_costs: Decimal | None = None
+    minimum_fee: Decimal | None = None
 
 
 class CaseUpdate(BaseModel):
@@ -86,24 +87,24 @@ class CaseUpdate(BaseModel):
     procedure_type: str | None = None
     procedure_phase: str | None = None
     interest_type: str | None = None
-    contractual_rate: float | None = None
+    contractual_rate: Decimal | None = None
     contractual_compound: bool | None = None
     opposing_party_id: uuid.UUID | None = None
     billing_contact_id: uuid.UUID | None = None
     assigned_to_id: uuid.UUID | None = None
-    budget: float | None = None  # G13
-    bik_override: float | None = None  # LF-12
-    hourly_rate: float | None = None  # LF-19
+    budget: Decimal | None = None  # G13
+    bik_override: Decimal | None = None  # LF-12
+    hourly_rate: Decimal | None = None  # LF-19
     payment_term_days: int | None = None  # LF-22
     collection_strategy: str | None = None
     debtor_notes: str | None = None
     # LF-20/LF-21: Billing settings
     billing_method: str | None = None
-    fixed_price_amount: float | None = None
-    budget_hours: float | None = None
-    provisie_percentage: float | None = None
-    fixed_case_costs: float | None = None
-    minimum_fee: float | None = None
+    fixed_price_amount: Decimal | None = None
+    budget_hours: Decimal | None = None
+    provisie_percentage: Decimal | None = None
+    fixed_case_costs: Decimal | None = None
+    minimum_fee: Decimal | None = None
 
 
 class CaseStatusUpdate(BaseModel):
@@ -189,7 +190,7 @@ class CaseResponse(BaseModel):
     procedure_type: str | None
     procedure_phase: str | None
     interest_type: str
-    contractual_rate: float | None
+    contractual_rate: Decimal | None
     contractual_compound: bool
     client: ContactBrief
     opposing_party: ContactBrief | None
@@ -198,21 +199,21 @@ class CaseResponse(BaseModel):
     incasso_step_id: uuid.UUID | None = None
     date_opened: date
     date_closed: date | None
-    total_principal: float
-    total_paid: float
-    budget: float | None = None  # G13
-    bik_override: float | None = None  # LF-12
-    hourly_rate: float | None = None  # LF-19
+    total_principal: Decimal
+    total_paid: Decimal
+    budget: Decimal | None = None  # G13
+    bik_override: Decimal | None = None  # LF-12
+    hourly_rate: Decimal | None = None  # LF-19
     payment_term_days: int | None = None  # LF-22
     collection_strategy: str | None = None
     debtor_notes: str | None = None
     # LF-20/LF-21
     billing_method: str = "hourly"
-    fixed_price_amount: float | None = None
-    budget_hours: float | None = None
-    provisie_percentage: float | None = None
-    fixed_case_costs: float | None = None
-    minimum_fee: float | None = None
+    fixed_price_amount: Decimal | None = None
+    budget_hours: Decimal | None = None
+    provisie_percentage: Decimal | None = None
+    fixed_case_costs: Decimal | None = None
+    minimum_fee: Decimal | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -234,9 +235,9 @@ class CaseSummary(BaseModel):
     client: ContactBrief
     opposing_party: ContactBrief | None
     date_opened: date
-    total_principal: float
-    total_paid: float
-    budget: float | None = None  # G13
+    total_principal: Decimal
+    total_paid: Decimal
+    budget: Decimal | None = None  # G13
     billing_method: str = "hourly"  # LF-20/LF-21
 
     model_config = {"from_attributes": True}

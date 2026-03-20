@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -67,3 +67,30 @@ class User(Base, TimestampMixin):
     )
 
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="users")
+
+
+class RefreshToken(Base, TimestampMixin):
+    """Stored refresh token hash for token rotation and theft detection.
+
+    Flow:
+    1. Login → create refresh token JWT + store SHA-256 hash here
+    2. Refresh → find by hash, check is_used == False, mark as used, issue new pair
+    3. Reuse detection → if is_used == True, reject + revoke all user tokens
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False, index=True
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("tenants.id"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )  # SHA-256 hex digest of the JWT
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )

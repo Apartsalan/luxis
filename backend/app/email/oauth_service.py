@@ -18,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.email.oauth_models import EmailAccount
 from app.email.providers.base import EmailProvider
-from app.email.providers.gmail import GmailProvider
 from app.email.providers.imap_provider import ImapProvider
 from app.email.providers.outlook import OutlookProvider
 from app.email.token_encryption import decrypt_token, encrypt_token
@@ -38,8 +37,6 @@ def _sign_state(payload_b64: str) -> str:
 
 def get_provider(provider_name: str) -> EmailProvider:
     """Get an EmailProvider instance by name."""
-    if provider_name == "gmail":
-        return GmailProvider()
     if provider_name == "outlook":
         return OutlookProvider()
     if provider_name == "imap":

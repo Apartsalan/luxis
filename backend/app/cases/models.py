@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
@@ -76,7 +77,7 @@ class Case(TenantBase):
         String(30), nullable=False, default="statutory"
     )  # statutory, commercial, government, contractual
 
-    contractual_rate: Mapped[float | None] = mapped_column(
+    contractual_rate: Mapped[Decimal | None] = mapped_column(
         Numeric(5, 2), nullable=True
     )  # e.g. 8.00 (only for contractual)
 
@@ -113,25 +114,25 @@ class Case(TenantBase):
     date_closed: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Financial summary cache (updated on payment/claim changes)
-    total_principal: Mapped[float] = mapped_column(
+    total_principal: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), default=0, nullable=False
     )
-    total_paid: Mapped[float] = mapped_column(
+    total_paid: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), default=0, nullable=False
     )
 
     # G13: Budget tracking (optional, toggleable via "budget" module)
-    budget: Mapped[float | None] = mapped_column(
+    budget: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )  # Optional budget in euros for this case
 
     # LF-19: Per-case hourly rate (overrides user default)
-    hourly_rate: Mapped[float | None] = mapped_column(
+    hourly_rate: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2), nullable=True
     )
 
     # LF-12: Manual BIK override (None = use WIK-staffel calculation)
-    bik_override: Mapped[float | None] = mapped_column(
+    bik_override: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )
 
@@ -150,19 +151,19 @@ class Case(TenantBase):
     billing_method: Mapped[str] = mapped_column(
         String(20), nullable=False, default="hourly", server_default="hourly"
     )  # hourly | fixed_price | budget_cap
-    fixed_price_amount: Mapped[float | None] = mapped_column(
+    fixed_price_amount: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )  # Vaste prijs (fixed_price method)
-    budget_hours: Mapped[float | None] = mapped_column(
+    budget_hours: Mapped[Decimal | None] = mapped_column(
         Numeric(10, 2), nullable=True
     )  # Max uren (budget_cap method)
-    provisie_percentage: Mapped[float | None] = mapped_column(
+    provisie_percentage: Mapped[Decimal | None] = mapped_column(
         Numeric(5, 2), nullable=True
     )  # Incasso succesprovisie %
-    fixed_case_costs: Mapped[float | None] = mapped_column(
+    fixed_case_costs: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )  # Vaste dossierkosten
-    minimum_fee: Mapped[float | None] = mapped_column(
+    minimum_fee: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )  # Minimumkosten
 

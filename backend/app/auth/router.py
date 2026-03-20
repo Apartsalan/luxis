@@ -31,6 +31,8 @@ from app.auth.service import (
     get_user_by_id,
     hash_password,
     reset_password_with_token,
+    rotate_refresh_token,
+    store_refresh_token,
     verify_password,
 )
 from app.config import settings
@@ -63,6 +65,10 @@ async def login(
     access_token = create_access_token(str(user.id), str(user.tenant_id))
     refresh_token = create_refresh_token(str(user.id), str(user.tenant_id))
 
+    # Store refresh token hash for rotation
+    await store_refresh_token(db, refresh_token, user.id, user.tenant_id)
+    await db.commit()
+
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
@@ -91,7 +97,7 @@ async def register(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    """Exchange a refresh token for new access + refresh tokens."""
+    """Exchange a refresh token for new access + refresh tokens (with rotation)."""
     try:
         payload = decode_token(request.refresh_token)
         if payload.get("type") != "refresh":
@@ -100,8 +106,24 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
                 detail="Invalid token type",
             )
         user_id = payload.get("sub")
-        _tenant_id = payload.get("tenant_id")  # noqa: F841
     except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
+    # Rotate: consume old token, detect reuse
+    try:
+        rt = await rotate_refresh_token(db, request.refresh_token)
+    except ValueError:
+        # Token reuse detected — all tokens revoked
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token reuse detected — all sessions revoked",
+        )
+
+    if rt is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
@@ -116,6 +138,10 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
     access_token = create_access_token(str(user.id), str(user.tenant_id))
     new_refresh_token = create_refresh_token(str(user.id), str(user.tenant_id))
+
+    # Store new refresh token hash
+    await store_refresh_token(db, new_refresh_token, user.id, user.tenant_id)
+    await db.commit()
 
     return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
 

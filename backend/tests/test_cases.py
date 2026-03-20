@@ -1,6 +1,7 @@
 """Tests for the cases module — case CRUD, status workflow, parties, activities."""
 
 import uuid
+from datetime import date
 
 import pytest
 from httpx import AsyncClient
@@ -21,12 +22,12 @@ async def test_create_case(
         "interest_type": "statutory",
         "client_id": str(test_company.id),
         "opposing_party_id": str(test_person.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     response = await client.post("/api/cases", json=payload, headers=auth_headers)
     assert response.status_code == 201
     data = response.json()
-    assert data["case_number"].startswith("2026-")
+    assert data["case_number"].startswith(f"{date.today().year}-")
     assert data["case_type"] == "incasso"
     assert data["status"] == "nieuw"
     assert data["interest_type"] == "statutory"
@@ -43,14 +44,15 @@ async def test_create_case_auto_increment(
         payload = {
             "case_type": "incasso",
             "client_id": str(test_company.id),
-            "date_opened": "2026-02-17",
+            "date_opened": date.today().isoformat(),
         }
         await client.post("/api/cases", json=payload, headers=auth_headers)
 
     response = await client.get("/api/cases", headers=auth_headers)
     data = response.json()
     numbers = sorted([item["case_number"] for item in data["items"]])
-    assert numbers == ["2026-00001", "2026-00002", "2026-00003"]
+    year = str(date.today().year)
+    assert numbers == [f"{year}-00001", f"{year}-00002", f"{year}-00003"]
 
 
 @pytest.mark.asyncio
@@ -63,7 +65,7 @@ async def test_create_case_contractual_interest(
         "case_type": "incasso",
         "interest_type": "contractual",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     response = await client.post("/api/cases", json=payload, headers=auth_headers)
     assert response.status_code == 400
@@ -97,7 +99,7 @@ async def test_list_cases_filter_by_type(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     await client.post("/api/cases", json=payload, headers=auth_headers)
 
@@ -125,7 +127,7 @@ async def test_get_case_detail(
         "case_type": "incasso",
         "description": "Test zaak",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -162,7 +164,7 @@ async def test_update_case(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -193,7 +195,7 @@ async def test_status_workflow(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -226,7 +228,7 @@ async def test_status_invalid_transition(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -248,7 +250,7 @@ async def test_status_change_sets_date_closed(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -275,7 +277,7 @@ async def test_add_case_party(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -303,7 +305,7 @@ async def test_remove_case_party(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -334,7 +336,7 @@ async def test_add_activity(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -363,7 +365,7 @@ async def test_list_activities(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -396,7 +398,7 @@ async def test_delete_case(
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
-        "date_opened": "2026-02-17",
+        "date_opened": date.today().isoformat(),
     }
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
@@ -427,7 +429,7 @@ async def test_tenant_isolation_list_cases(
         json={
             "case_type": "incasso",
             "client_id": str(test_company.id),
-            "date_opened": "2026-02-17",
+            "date_opened": date.today().isoformat(),
         },
         headers=auth_headers,
     )
@@ -454,7 +456,7 @@ async def test_tenant_isolation_get_case_detail(
         json={
             "case_type": "incasso",
             "client_id": str(test_company.id),
-            "date_opened": "2026-02-17",
+            "date_opened": date.today().isoformat(),
         },
         headers=auth_headers,
     )
@@ -477,7 +479,7 @@ async def test_tenant_isolation_update_case(
         json={
             "case_type": "incasso",
             "client_id": str(test_company.id),
-            "date_opened": "2026-02-17",
+            "date_opened": date.today().isoformat(),
         },
         headers=auth_headers,
     )
@@ -504,7 +506,7 @@ async def test_tenant_isolation_delete_case(
         json={
             "case_type": "incasso",
             "client_id": str(test_company.id),
-            "date_opened": "2026-02-17",
+            "date_opened": date.today().isoformat(),
         },
         headers=auth_headers,
     )
@@ -528,7 +530,7 @@ async def test_terminal_status_blocks_further_transitions(
         json={
             "case_type": "incasso",
             "client_id": str(test_company.id),
-            "date_opened": "2026-02-17",
+            "date_opened": date.today().isoformat(),
         },
         headers=auth_headers,
     )

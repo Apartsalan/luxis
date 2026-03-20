@@ -2,13 +2,14 @@
 
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     Date,
-    Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -61,7 +62,7 @@ class Contact(TenantBase):
     postal_city: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Billing profile (F6)
-    default_hourly_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    default_hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     payment_term_days: Mapped[int | None] = mapped_column(Integer, nullable=True)  # default: 14/30
     billing_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     iban: Mapped[str | None] = mapped_column(String(34), nullable=True)

@@ -1,15 +1,16 @@
 """Authentication service — JWT creation, verification, and password hashing."""
 
+import hashlib
 import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
 from jose import jwt
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import User
+from app.auth.models import RefreshToken, User
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -144,3 +145,79 @@ async def reset_password_with_token(
     db.add(user)
     await db.flush()
     return True
+
+
+# ── Refresh Token Rotation (SEC-12) ─────────────────────────────────────────
+
+
+def _hash_token(token: str) -> str:
+    """SHA-256 hash of a JWT for storage."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def store_refresh_token(
+    db: AsyncSession,
+    token: str,
+    user_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+) -> None:
+    """Store a refresh token hash in the database."""
+    expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    rt = RefreshToken(
+        user_id=user_id,
+        tenant_id=tenant_id,
+        token_hash=_hash_token(token),
+        expires_at=expires_at,
+    )
+    db.add(rt)
+    await db.flush()
+
+
+async def rotate_refresh_token(
+    db: AsyncSession,
+    old_token: str,
+) -> RefreshToken | None:
+    """Validate and consume a refresh token for rotation.
+
+    Returns the RefreshToken record if valid, None if not found/expired.
+    Raises ValueError if token was already used (possible theft).
+    """
+    token_hash = _hash_token(old_token)
+    result = await db.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+    )
+    rt = result.scalar_one_or_none()
+
+    if rt is None:
+        return None
+
+    # Token reuse detection — possible token theft
+    if rt.is_used:
+        logger.warning(
+            "Refresh token reuse detected for user %s — revoking all tokens",
+            rt.user_id,
+        )
+        await revoke_all_refresh_tokens(db, rt.user_id)
+        raise ValueError("Token reuse detected")
+
+    # Check expiry
+    if rt.expires_at < datetime.now(UTC):
+        return None
+
+    # Mark as used (consumed)
+    rt.is_used = True
+    await db.flush()
+    return rt
+
+
+async def revoke_all_refresh_tokens(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> None:
+    """Revoke all refresh tokens for a user (logout everywhere / theft detection)."""
+    await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user_id, RefreshToken.is_used.is_(False))
+        .values(is_used=True)
+    )
+    await db.flush()

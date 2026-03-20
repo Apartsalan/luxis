@@ -44,7 +44,7 @@ import DossierHeader from "./components/DossierHeader";
 import DetailsTab from "./components/DetailsTab";
 import TijdregistratieTab from "./components/TijdregistratieTab";
 import UrenTab from "./components/UrenTab";
-import { VorderingenFinancieelTab, BetalingenDerdengeldenTab } from "./components/IncassoTab";
+import { VorderingenFinancieelTab, BetalingenDerdengeldenTab } from "./components/incasso";
 import { FacturenTab, DocumentenTab } from "./components/DocumentenTab";
 import CorrespondentieTab from "./components/CorrespondentieTab";
 import ActiviteitenTab from "./components/ActiviteitenTab";

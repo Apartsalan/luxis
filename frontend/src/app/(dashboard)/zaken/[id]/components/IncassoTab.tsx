@@ -2255,6 +2255,15 @@ function ProvisieSettingsSection({ caseId }: { caseId: string }) {
                   Minimumkosten van {formatCurrency(provisie.minimum_fee)} zijn van toepassing
                 </p>
               )}
+              <div className="mt-4">
+                <a
+                  href={`/facturen/nieuw?case_id=${caseId}&provisie=true`}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                >
+                  <Receipt className="h-4 w-4" />
+                  Genereer provisie-factuur
+                </a>
+              </div>
             </div>
           )}
         </div>

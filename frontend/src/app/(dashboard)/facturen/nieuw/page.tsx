@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus } from "@/hooks/use-invoices";
+import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus, useProvisie } from "@/hooks/use-invoices";
 import { useDerdengeldenBalance } from "@/hooks/use-collections";
 import { useRelations } from "@/hooks/use-relations";
 import { useCases, useCase } from "@/hooks/use-cases";
@@ -26,6 +26,7 @@ export default function NieuweFactuurPage() {
   const searchParams = useSearchParams();
   const preselectedCaseId = searchParams.get("case_id") || "";
   const preselectedType = searchParams.get("type") || "factuur";
+  const isProvisieMode = searchParams.get("provisie") === "true";
   const createInvoice = useCreateInvoice();
   const createVoorschotnota = useCreateVoorschotnota();
 
@@ -74,6 +75,10 @@ export default function NieuweFactuurPage() {
 
   // Pre-fill from case_id URL parameter
   const { data: preselectedCase } = useCase(preselectedCaseId || undefined);
+  // DF-05: Provisie pre-fill
+  const { data: provisieData } = useProvisie(
+    isProvisieMode && preselectedCaseId ? preselectedCaseId : undefined
+  );
 
   useEffect(() => {
     if (preselectedCase && preselectedCaseId) {
@@ -84,6 +89,17 @@ export default function NieuweFactuurPage() {
       }
     }
   }, [preselectedCase, preselectedCaseId]);
+
+  // DF-05: Pre-fill provisie line when provisie=true
+  useEffect(() => {
+    if (isProvisieMode && provisieData && provisieData.total_fee > 0) {
+      setLines([{
+        description: `Succesprovisie ${provisieData.provisie_percentage}% over geïnd bedrag`,
+        quantity: "1",
+        unit_price: String(provisieData.total_fee),
+      }]);
+    }
+  }, [isProvisieMode, provisieData]);
 
   const { data: contactResults } = useRelations({
     search: contactSearch || undefined,

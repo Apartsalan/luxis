@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 83)
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 84)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -384,7 +384,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 |---|-------|-------|---------|--------|
 | SEC-7 | **Rate limiting op auth endpoints** — slowapi geïnstalleerd. Login: 10/min, forgot-password: 3/uur, reset: 5/uur. | 🟠 Hoog | M | ✅ Sessie 83 |
 | SEC-8 | **postMessage wildcard origin** — OAuth success popup stuurt `postMessage('*')`. Fix: specifieke origin + HTML/JS escaping. | 🟠 Hoog | S | ✅ Sessie 83 |
-| SEC-9 | **PostgreSQL RLS niet actief** — `SET app.current_tenant` wordt gezet maar geen `CREATE POLICY` in migraties. Tenant isolation is puur applicatie-level. Fix: RLS policies via Alembic migratie. | 🟠 Hoog | M-L | ❌ TODO |
+| SEC-9 | **PostgreSQL RLS niet actief** — `SET app.current_tenant` wordt gezet maar geen `CREATE POLICY` in migraties. Tenant isolation is puur applicatie-level. Fix: RLS policies via Alembic migratie. | 🟠 Hoog | M-L | ✅ Sessie 84 |
 | SEC-10 | **Jinja2 Server-Side Template Injection** — Fix: `SandboxedEnvironment` voor alle DB-templates. | 🟠 Hoog | S | ✅ Sessie 83 |
 | SEC-11 | **Container draait als root** — Fix: `adduser appuser` + `USER appuser` in Dockerfile. | 🟡 Medium | S | ✅ Sessie 83 |
 
@@ -392,10 +392,10 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Issue | Ernst | Grootte | Status |
 |---|-------|-------|---------|--------|
-| SEC-12 | **Refresh token rotation** — oude refresh tokens blijven geldig tot expiry (7 dagen). Fix: token blocklist of DB-opslag met rotation. | 🟡 Medium | M | ❌ TODO |
-| SEC-13 | **Wachtwoord-complexiteit** — alleen min 8 chars, geen complexiteitsregels. Fix: min 12 + complexiteit voor advocatenkantoor. | 🟡 Medium | S | ❌ TODO |
+| SEC-12 | **Refresh token rotation** — oude refresh tokens blijven geldig tot expiry (7 dagen). Fix: token blocklist of DB-opslag met rotation. | 🟡 Medium | M | ✅ Sessie 84 |
+| SEC-13 | **Wachtwoord-complexiteit** — alleen min 8 chars, geen complexiteitsregels. Fix: min 12 + complexiteit voor advocatenkantoor. | 🟡 Medium | S | ✅ Sessie 84 |
 | SEC-14 | **HTML-escape user input in emails** — Fix: `html.escape()` vóór newline-conversie in 3 bestanden. | 🟡 Medium | S | ✅ Sessie 83 |
-| SEC-15 | **File upload hardening** — .doc/.xls (macro-gevoelig) toegestaan, geen magic byte validatie. Fix: legacy formaten verwijderen + python-magic check. | 🟡 Medium | S-M | ❌ TODO |
+| SEC-15 | **File upload hardening** — .doc/.xls (macro-gevoelig) toegestaan, geen magic byte validatie. Fix: legacy formaten verwijderen + python-magic check. | 🟡 Medium | S-M | ✅ Sessie 84 |
 
 **Toekomstig (backlog):**
 - Audit trail voor alle data-wijzigingen (AVG/GDPR compliance)
@@ -414,15 +414,15 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Issue | Prioriteit | Grootte | Kan zonder Lisanne? | Status |
 |---|-------|-----------|---------|---------------------|--------|
-| CQ-1 | **Float → Decimal in cases/models.py** — 11 financiële velden (`total_principal`, `budget`, `hourly_rate`, etc.) gebruiken `Mapped[float]` i.p.v. `Mapped[Decimal]`. Database is NUMERIC(15,2) maar Python geeft floats terug. | 🔴 Kritiek | M | ✅ Ja | ❌ TODO |
-| CQ-2 | **Float → Decimal in cases/schemas.py** — 15+ Pydantic schema-velden voor geld als `float` i.p.v. `Decimal` | 🔴 Kritiek | S | ✅ Ja | ❌ TODO |
-| CQ-3 | **Float in relations/models.py** — `default_hourly_rate` is `Float` kolomtype (niet NUMERIC). Financieel veld in IEEE 754 floating-point. | 🔴 Kritiek | S | ✅ Ja | ❌ TODO |
-| CQ-4 | **Stille no-op: "Herbereken rente" batch-actie** — `incasso/service.py` regel ~807: loop telt `processed += 1` maar doet niks. Gebruiker krijgt succesbericht terwijl er niks gebeurt. | 🔴 Kritiek | S-M | ✅ Ja | ❌ TODO |
-| CQ-5 | **invoices/service.py opsplitsen** — 1292 regels, bevat CRUD + PDF + credit notes + provisie + budget tracking. Minimaal splitsen in 2-3 files. | 🟡 Belangrijk | M | ✅ Ja | ❌ TODO |
+| CQ-1 | **Float → Decimal in cases/models.py** — 11 financiële velden (`total_principal`, `budget`, `hourly_rate`, etc.) gebruiken `Mapped[float]` i.p.v. `Mapped[Decimal]`. Database is NUMERIC(15,2) maar Python geeft floats terug. | 🔴 Kritiek | M | ✅ Ja | ✅ Sessie 84 |
+| CQ-2 | **Float → Decimal in cases/schemas.py** — 15+ Pydantic schema-velden voor geld als `float` i.p.v. `Decimal` | 🔴 Kritiek | S | ✅ Ja | ✅ Sessie 84 |
+| CQ-3 | **Float in relations/models.py** — `default_hourly_rate` is `Float` kolomtype (niet NUMERIC). Financieel veld in IEEE 754 floating-point. | 🔴 Kritiek | S | ✅ Ja | ✅ Sessie 84 |
+| CQ-4 | **Stille no-op: "Herbereken rente" batch-actie** — `incasso/service.py` regel ~807: loop telt `processed += 1` maar doet niks. Gebruiker krijgt succesbericht terwijl er niks gebeurt. | 🔴 Kritiek | S-M | ✅ Ja | ✅ Sessie 84 |
+| CQ-5 | **invoices/service.py opsplitsen** — 1292 regels, bevat CRUD + PDF + credit notes + provisie + budget tracking. Minimaal splitsen in 2-3 files. | 🟡 Belangrijk | M | ✅ Ja | ✅ Sessie 84 |
 | CQ-6 | **Frontend god-components splitsen** — IncassoTab.tsx (2292r), zaken/nieuw/page.tsx (1823r), relaties/[id]/page.tsx (1545r). Moeilijk te onderhouden/debuggen. | 🟡 Belangrijk | L | ✅ Ja | ❌ TODO |
-| CQ-7 | **Paginatie-duplicatie opruimen** — 3-4 modules berekenen handmatig offset/limit/ceil i.p.v. gedeelde `PaginatedResponse` helper. `PaginatedInvoices` is exacte kopie. | 🟢 Nice-to-have | S | ✅ Ja | ❌ TODO |
-| CQ-8 | **Dead code verwijderen** — GmailProvider (niet meer gebruikt), TijdregistratieTab/UrenTab overlap check | 🟢 Nice-to-have | S | ✅ Ja | ❌ TODO |
-| CQ-9 | **Test hygiene** — 19x hardcoded datum `"2026-02-17"` in test_cases.py + exact counts op seeded data in test_ai_agent.py | 🟢 Nice-to-have | S | ✅ Ja | ❌ TODO |
+| CQ-7 | **Paginatie-duplicatie opruimen** — bestaande dict returns matchen al PaginatedResponse shape, minimale winst. | 🟢 Nice-to-have | S | ✅ Ja | ⏭️ Overgeslagen |
+| CQ-8 | **Dead code verwijderen** — GmailProvider (364 regels verwijderd) | 🟢 Nice-to-have | S | ✅ Ja | ✅ Sessie 84 |
+| CQ-9 | **Test hygiene** — 21x hardcoded datum `"2026-02-17"` → `date.today().isoformat()` in test_cases.py | 🟢 Nice-to-have | S | ✅ Ja | ✅ Sessie 84 |
 
 **Aanbevolen volgorde:** CQ-1 + CQ-2 + CQ-3 (float→Decimal, samen doen) → CQ-4 (stille bug) → CQ-5 → CQ-6 → CQ-7/8/9
 

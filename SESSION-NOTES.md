@@ -1,15 +1,66 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 83 — Security + Code Quality audit)
-**Laatste feature/fix:** Sessie 83 — Security Sprint: 11/15 items gefixt + Code Quality Sprint op roadmap
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 84 — Security Fase 3 + Code Quality Sprint)
+**Laatste feature/fix:** Sessie 84 — SEC-9/12/13/15 + CQ-1/2/3/4/5/8/9 afgerond en deployed
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
-**Security Sprint:** 11/15 afgerond (SEC-1 t/m SEC-8, SEC-10, SEC-11, SEC-14) ✅
+**Security Sprint:** 15/15 COMPLEET ✅
+**Code Quality Sprint:** 7/9 afgerond (CQ-6 open, CQ-7 overgeslagen)
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Security Sprint fase 3 (SEC-9/12/13/15) + Code Quality Sprint (CQ-1 t/m CQ-9)
+**Volgende sessie:** CQ-6 (frontend god-components splitsen) of nieuwe features
+
+## Wat er gedaan is (sessie 84 — 20 maart 2026) — Security Fase 3 + Code Quality Sprint
+
+### Samenvatting
+Alle resterende 4 security items (SEC-9/12/13/15) en 7 van 9 code quality items afgerond. Alles gecommit, gepusht en deployed naar productie met 3 Alembic migraties.
+
+### Security fixes (4/4)
+- **SEC-13:** Wachtwoord-complexiteit — min 12 tekens, 1 hoofdletter, 1 cijfer op Register/Change/Reset (`auth/schemas.py`)
+- **SEC-15:** DOCX magic byte validatie op template uploads (`documents/template_service.py`)
+- **SEC-12:** Refresh token rotation — SHA-256 hash in DB, single-use, reuse detection → revoke all (`auth/models.py`, `auth/service.py`, `auth/router.py`)
+- **SEC-9:** Row-Level Security policies op 38 tenant-scoped tabellen + `SET LOCAL` in tenant middleware (`middleware/tenant.py`, Alembic migratie)
+
+### Code Quality fixes (7/9)
+- **CQ-1:** cases/models.py — 11 velden `Mapped[float]` → `Mapped[Decimal]`
+- **CQ-2:** cases/schemas.py — 31 velden `float` → `Decimal` across 4 schema's
+- **CQ-3:** relations/models.py — `Float` → `Numeric(10,2)` + Alembic migratie
+- **CQ-4:** Batch "herbereken rente" — was no-op placeholder, nu roept `calculate_case_interest()` aan per dossier (`incasso/service.py`)
+- **CQ-5:** invoices/service.py — 1292→~700 regels, gesplitst in `invoice_numbering.py` (3 functies) + `invoice_payment_service.py` (7 functies), re-exports in service.py zodat router.py ongewijzigd blijft
+- **CQ-8:** GmailProvider verwijderd (364 regels) + imports opgeruimd in `__init__.py` en `oauth_service.py`
+- **CQ-9:** test_cases.py — 21x `"2026-02-17"` → `date.today().isoformat()`, case number assertions ook dynamisch
+
+### Overgeslagen
+- **CQ-7:** Paginatie — bestaande dict returns matchen al PaginatedResponse shape, minimale winst
+- **CQ-6:** Frontend god-components — te groot voor deze sessie
+
+### Nieuwe bestanden
+- `backend/app/invoices/invoice_numbering.py` — nummer generatie helpers
+- `backend/app/invoices/invoice_payment_service.py` — betalingen + receivables/aging
+- `backend/alembic/versions/cq3_contact_hourly_rate_float_to_numeric.py`
+- `backend/alembic/versions/sec12_refresh_token_rotation.py`
+- `backend/alembic/versions/sec9_row_level_security.py`
+
+### Verwijderde bestanden
+- `backend/app/email/providers/gmail.py` — 364 regels dead code
+
+### Gewijzigde bestanden (16)
+- `backend/app/auth/models.py` — RefreshToken model
+- `backend/app/auth/router.py` — token rotation in login/refresh
+- `backend/app/auth/schemas.py` — password complexity validator
+- `backend/app/auth/service.py` — store/rotate/revoke refresh tokens
+- `backend/app/cases/models.py` — float→Decimal
+- `backend/app/cases/schemas.py` — float→Decimal
+- `backend/app/documents/template_service.py` — magic byte check
+- `backend/app/email/oauth_service.py` — gmail import verwijderd
+- `backend/app/email/providers/__init__.py` — gmail export verwijderd
+- `backend/app/incasso/service.py` — herbereken rente implementatie
+- `backend/app/invoices/service.py` — gesplitst + re-exports
+- `backend/app/middleware/tenant.py` — SET → SET LOCAL
+- `backend/app/relations/models.py` — Float→Numeric
+- `backend/tests/test_cases.py` — dynamische datums
 
 ## Wat er gedaan is (sessie 83 — 20 maart 2026) — Security + Code Quality audit
 

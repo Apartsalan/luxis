@@ -1,14 +1,41 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 80b — Strategisch overleg + Clarity)
-**Laatste feature/fix:** Sessie 80 — 8 UX fixes (UX-6 t/m UX-13) gedeployd
+**Laatst bijgewerkt:** 20 maart 2026 (sessie 81a — DF-05 provisie + DF-13 verrekening)
+**Laatste feature/fix:** Sessie 81a — DF-05 provisie-factuurknop + DF-13 settlement_type op voorschotnota
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
-**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 3 items wachten op Lisanne
+**Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅, 1 item nog open (DF-11)
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Backend tests:** 622 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Microsoft Clarity toevoegen (project ID nodig) + UX-TODO items + DF-05/DF-11/DF-13 na overleg Lisanne
+**Volgende sessie:** DF-11 (betaling auto-koppelen aan termijn) + UX-TODO items + Microsoft Clarity (project ID nodig)
+
+## Wat er gedaan is (sessie 81a — 20 maart 2026) — DF-05 provisie + DF-13 verrekening
+
+### Samenvatting
+DF-05 en DF-13 geïmplementeerd na Lisanne's beslissingen. Alembic multiple-heads conflict opgelost. Alle tests groen.
+
+### Gefixt/Afgerond
+- **DF-05**: Provisie-factuur knop op incasso dossier detail — opent factuurdialoog met auto-prefill van provisie-factuurregel (percentage × geïncasseerd bedrag). Geen backend wijzigingen nodig — hergebruikt bestaand factuur endpoint.
+- **DF-13**: `settlement_type` kolom toegevoegd aan `invoices` tabel voor voorschotnota verrekening (`tussentijds` of `bij_sluiting`). Backend: model + schema + migratie (`df13_settlement_type`). Frontend: card-selector bij aanmaken voorschotnota + badge op detail pagina.
+- **Alembic conflict**: Migratie chain gecorrigeerd — `df13` hangt nu correct na `df12` (was losse head).
+
+### Gewijzigde bestanden
+- `backend/app/invoices/models.py` — `settlement_type` kolom (String, nullable)
+- `backend/app/invoices/schemas.py` — `settlement_type` veld in create/response schemas
+- `backend/alembic/versions/df13_settlement_type.py` — nieuwe migratie
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — provisie-factuur knop
+- `frontend/src/app/(dashboard)/facturen/page.tsx` — card-selector settlement_type bij voorschotnota
+
+### Bekende issues (nog open)
+- DF-11: betaling auto-koppelen aan betaalregeling termijn (wacht op Lisanne — altijd, alleen CSV, of suggestie?)
+- Microsoft Clarity integratie (wacht op project ID van gebruiker)
+- UX-TODO-9: Relaties lijst type-kolom niet sorteerbaar
+- UX-TODO-10: Factuur verwijder-knop per regel altijd zichtbaar
+- UX-TODO-12: Dossier overzicht rente/partijen cards te groot
+- UX-TODO-13: Testdata opruimen
+
+---
 
 ## Wat er gedaan is (sessie 80b — 20 maart 2026) — Strategisch overleg
 

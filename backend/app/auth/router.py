@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from jose import JWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +38,7 @@ from app.database import get_db
 from app.dependencies import get_current_user, require_role
 from app.email.service import is_configured as smtp_is_configured
 from app.email.service import send_email
+from app.middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,14 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(
+    request: Request,
+    login_data: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+):
     """Authenticate with email and password, receive JWT tokens."""
-    user = await authenticate_user(db, request.email, request.password)
+    user = await authenticate_user(db, login_data.email, login_data.password)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -175,7 +181,9 @@ async def _send_reset_email_safe(to: str, html_body: str) -> None:
 
 
 @router.post("/forgot-password", status_code=200)
+@limiter.limit("3/hour")
 async def forgot_password(
+    request: Request,
     data: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
@@ -203,8 +211,11 @@ async def forgot_password(
 
 
 @router.post("/reset-password", status_code=200)
+@limiter.limit("5/hour")
 async def reset_password(
-    data: ResetPasswordRequest, db: AsyncSession = Depends(get_db)
+    request: Request,
+    data: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
 ):
     """Reset password using a valid reset token."""
     success = await reset_password_with_token(db, data.token, data.new_password)

@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 import anthropic
-from jinja2 import Template
+from jinja2.sandbox import SandboxedEnvironment
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -33,6 +33,7 @@ from app.email.send_service import send_with_attachment
 from app.email.synced_email_models import SyncedEmail
 from app.workflow.models import WorkflowTask
 
+_jinja_env = SandboxedEnvironment()
 logger = logging.getLogger(__name__)
 
 
@@ -412,14 +413,15 @@ async def execute_classification(
                         },
                     }
 
-                    # Render subject and body
-                    subject = Template(
+                    # Render subject and body (sandboxed to prevent SSTI)
+                    subject = _jinja_env.from_string(
                         template.subject_template
                     ).render(tmpl_context)
-                    body_text = Template(
+                    body_text = _jinja_env.from_string(
                         template.body_template
                     ).render(tmpl_context)
-                    body_html = body_text.replace("\n", "<br>")
+                    import html as _html
+                    body_html = _html.escape(body_text).replace("\n", "<br>")
 
                     # Send via email provider / SMTP
                     email_log = await send_with_attachment(

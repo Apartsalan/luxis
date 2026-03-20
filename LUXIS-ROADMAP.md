@@ -382,11 +382,11 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Issue | Ernst | Grootte | Status |
 |---|-------|-------|---------|--------|
-| SEC-7 | **Rate limiting op auth endpoints** — geen brute-force bescherming op login/forgot-password/reset. Fix: slowapi of Redis-backed limiter (5/min login, 3/uur forgot). | 🟠 Hoog | M | ❌ TODO |
+| SEC-7 | **Rate limiting op auth endpoints** — slowapi geïnstalleerd. Login: 10/min, forgot-password: 3/uur, reset: 5/uur. | 🟠 Hoog | M | ✅ Sessie 83 |
 | SEC-8 | **postMessage wildcard origin** — OAuth success popup stuurt `postMessage('*')`. Fix: specifieke origin + HTML/JS escaping. | 🟠 Hoog | S | ✅ Sessie 83 |
 | SEC-9 | **PostgreSQL RLS niet actief** — `SET app.current_tenant` wordt gezet maar geen `CREATE POLICY` in migraties. Tenant isolation is puur applicatie-level. Fix: RLS policies via Alembic migratie. | 🟠 Hoog | M-L | ❌ TODO |
-| SEC-10 | **Jinja2 Server-Side Template Injection** — DB-opgeslagen templates gerenderd zonder sandbox. Fix: `SandboxedEnvironment`. | 🟠 Hoog | S | ❌ TODO |
-| SEC-11 | **Container draait als root** — Dockerfile mist non-root user. Fix: `adduser` + `USER appuser`. | 🟡 Medium | S | ❌ TODO |
+| SEC-10 | **Jinja2 Server-Side Template Injection** — Fix: `SandboxedEnvironment` voor alle DB-templates. | 🟠 Hoog | S | ✅ Sessie 83 |
+| SEC-11 | **Container draait als root** — Fix: `adduser appuser` + `USER appuser` in Dockerfile. | 🟡 Medium | S | ✅ Sessie 83 |
 
 #### Fase 3 — Medium/Laag (hardening)
 
@@ -394,7 +394,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 |---|-------|-------|---------|--------|
 | SEC-12 | **Refresh token rotation** — oude refresh tokens blijven geldig tot expiry (7 dagen). Fix: token blocklist of DB-opslag met rotation. | 🟡 Medium | M | ❌ TODO |
 | SEC-13 | **Wachtwoord-complexiteit** — alleen min 8 chars, geen complexiteitsregels. Fix: min 12 + complexiteit voor advocatenkantoor. | 🟡 Medium | S | ❌ TODO |
-| SEC-14 | **HTML-escape user input in emails** — `custom_body.replace("\n", "<br>")` zonder escape. Fix: `html.escape()` eerst. | 🟡 Medium | S | ❌ TODO |
+| SEC-14 | **HTML-escape user input in emails** — Fix: `html.escape()` vóór newline-conversie in 3 bestanden. | 🟡 Medium | S | ✅ Sessie 83 |
 | SEC-15 | **File upload hardening** — .doc/.xls (macro-gevoelig) toegestaan, geen magic byte validatie. Fix: legacy formaten verwijderen + python-magic check. | 🟡 Medium | S-M | ❌ TODO |
 
 **Toekomstig (backlog):**

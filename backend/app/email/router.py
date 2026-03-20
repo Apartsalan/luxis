@@ -125,7 +125,8 @@ async def send_case_email(
     tenant = await _load_tenant(db, user.tenant_id)
     kantoor = _tenant_ctx(tenant)
 
-    body_html = data.body.replace("\n", "<br>")
+    import html as _html
+    body_html = _html.escape(data.body).replace("\n", "<br>")
     html_body = _render_base(kantoor, body_html)
 
     # Create email log

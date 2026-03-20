@@ -7,6 +7,8 @@ from contextlib import asynccontextmanager
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.ai_agent.followup_router import router as followup_router
 from app.ai_agent.intake_router import router as intake_router
@@ -29,6 +31,7 @@ from app.incasso.router import router as incasso_router
 from app.invoices.router import cases_billing_router, expenses_router
 from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
+from app.middleware.rate_limit import limiter
 from app.notifications.router import router as notifications_router
 from app.relations.kyc_router import router as kyc_router
 from app.relations.router import router as relations_router
@@ -90,6 +93,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting on auth endpoints
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Request logging
 app.add_middleware(RequestLoggingMiddleware)

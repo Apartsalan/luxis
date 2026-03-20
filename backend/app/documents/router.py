@@ -377,8 +377,9 @@ async def send_document(
         # Use custom subject/body from the frontend compose dialog
         subject = data.custom_subject or f"{doc.title} — {case.case_number}"
         if data.custom_body:
-            # Wrap custom body text in base HTML layout (convert newlines to <br>)
-            body_html = data.custom_body.replace("\n", "<br>")
+            # Wrap custom body text in base HTML layout (escape + convert newlines)
+            import html as _html
+            body_html = _html.escape(data.custom_body).replace("\n", "<br>")
             html_body = _render_base(kantoor, body_html)
         else:
             _, html_body = document_sent(

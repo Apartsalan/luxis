@@ -28,5 +28,10 @@ RUN uv pip install --system ".[dev]"
 # Copy application code
 COPY . .
 
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' --uid 1001 appuser \
+    && mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
+USER appuser
+
 # Run migrations and start server
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

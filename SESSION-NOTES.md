@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 95 — Tooling research + planning)
-**Laatste feature/fix:** Sessie 95 — Research 20+ AI tools/skills/MCP servers, 14 items op roadmap gezet (TOOL-01 t/m TOOL-14 + UX-22)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 96 — Tooling upgrade + frontend design audit)
+**Laatste feature/fix:** Sessie 96 — 12 tools geïnstalleerd, 2 MCP servers verwijderd, UX-22 Frontend Design Audit (score 5.5/10, 20 pagina's)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -11,7 +11,36 @@
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/12/13/14-18/19/20 gefixt)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
-**Volgende sessie:** Sessie 96 — Tooling Upgrade: 12 tools installeren + 2 opruimen (Perplexity/Firecrawl verwijderen) + Tavily API key nodig van gebruiker
+**Volgende sessie:** Sessie 97 — Frontend Design Sprint (top 10 UX issues uit UX-22 audit fixen)
+
+## Wat er gedaan is (sessie 96 — 21 maart 2026) — Tooling upgrade + frontend design audit
+
+### Wat er gedaan is:
+- **12 tools geïnstalleerd:** Codebase Memory MCP, Context7 MCP, Tavily MCP (vervangt Perplexity+Firecrawl), 5 dev skills (systematic-debugging, receiving-code-review, verification-before-completion, frontend-design, deep-research), Brand Guidelines skill, Canvas Design skill, Claude SEO (12 skills), Marketing Skills (33 skills)
+- **2 MCP servers verwijderd:** Perplexity (te duur) en Firecrawl (credits op)
+- **UX-22 Frontend Design Audit:** 20 pagina's gescreend via Playwright, beoordeeld op design principes. Overall score: 5.5/10. Rapport: `docs/research/UX-22-FRONTEND-DESIGN-AUDIT.md`
+
+### Top 10 UX issues (uit audit):
+1. Geen visuele identiteit — geen custom font, kleurpalet, logo
+2. Inconsistente spacing — marges variëren per pagina
+3. Geen micro-interacties — geen hover effects, transitions, animaties
+4. Generieke typografie — system fonts, geen hiërarchie
+5. Kleurgebruik functioneel maar saai — geen accent colors
+6. Formulieren missen structuur — geen fieldsets, groepering
+7. Lege states missen begeleiding — geen illustraties
+8. Sidebar mist visuele hierarchie — alles zelfde gewicht
+9. Tabellen missen density controls
+10. Geen dark mode support
+
+### Nieuwe bestanden:
+- `.claude/skills/frontend-design/SKILL.md`
+- `.claude/skills/systematic-debugging/SKILL.md`
+- `.claude/skills/receiving-code-review/SKILL.md`
+- `.claude/skills/verification-before-completion/SKILL.md`
+- `.claude/skills/brand-guidelines/SKILL.md`
+- `.claude/skills/deep-research/SKILL.md` + reference files
+- `.claude/skills/canvas-design/SKILL.md`
+- `docs/research/UX-22-FRONTEND-DESIGN-AUDIT.md`
 
 ## Wat er gedaan is (sessie 95 — 21 maart 2026) — Tooling research + planning
 

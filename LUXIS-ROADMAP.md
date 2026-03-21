@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 94 — BUG-50 test fixes + UX improvements)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 96 — tooling upgrade + frontend design audit)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -478,7 +478,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | UX-19 | **Error boundaries per tab** — JS error in één tab crasht hele case detail. | Frontend | ❌ TODO |
 | UX-20 | **formatCurrency NaN** — toont "NaN" bij null waarden. | Frontend | ❌ TODO |
 | UX-21 | **isError niet afgevangen** — financiële queries tonen lege lijst i.p.v. error. | Frontend | ✅ Sessie 91 (QueryError in 5 financial tabs) |
-| UX-22 | **Frontend Design Audit** — alle pagina's doorlopen met Frontend Design skill en UI verbeterpunten inventariseren (anti-"AI slop", design systeem, typografie, kleurgebruik, compositie). | Frontend | ❌ TODO |
+| UX-22 | **Frontend Design Audit** — alle pagina's doorlopen met Frontend Design skill en UI verbeterpunten inventariseren (anti-"AI slop", design systeem, typografie, kleurgebruik, compositie). Rapport: `docs/research/UX-22-FRONTEND-DESIGN-AUDIT.md` (score 5.5/10, 20 pagina's geaudit). | Frontend | ✅ Sessie 96 |
 
 ### Tooling Upgrade (sessie 96)
 
@@ -486,20 +486,20 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Tool | Categorie | Doel | Status |
 |---|------|-----------|------|--------|
-| TOOL-01 | **Codebase Memory MCP** | Dev infra | Knowledge graph van codebase, 99% minder tokens | ❌ TODO |
-| TOOL-02 | **Context7 MCP** | Dev infra | Up-to-date library docs (Next.js 15, React 19, SQLAlchemy 2.0) | ❌ TODO |
-| TOOL-03 | **Tavily MCP** | Search/scrape | Vervangt Perplexity + Firecrawl (gratis 1.000 calls/mnd) | ❌ TODO |
-| TOOL-04 | **Systematic Debugging skill** | Dev skill | 4-fase debugging: root cause → patroon → hypothese → fix | ❌ TODO |
-| TOOL-05 | **Receiving Code Review skill** | Dev skill | Regels voor feedback verwerken, anti-slijmerij, YAGNI check | ❌ TODO |
-| TOOL-06 | **Verification Before Completion skill** | Dev skill | Operationeel protocol: verse output, verboden woorden, agent-verificatie | ❌ TODO |
-| TOOL-07 | **Frontend Design skill** | Dev skill | Anti-"AI slop" design richtlijnen, merge met frontend/CLAUDE.md | ❌ TODO |
-| TOOL-08 | **Deep Research skill** | Dev + Marketing | 8-fase research pipeline met citations | ❌ TODO |
-| TOOL-09 | **Claude SEO** | Marketing | SEO audit + schema + E-E-A-T + AI Search optimalisatie voor kestinglegal.nl | ❌ TODO |
-| TOOL-10 | **Marketing Skills** (Corey Haines) | Marketing | 30+ skills: SEO, copywriting, cold email, content strategie | ❌ TODO |
-| TOOL-11 | **Brand Guidelines skill** | Marketing | Kesting Legal branding vastleggen voor consistent materiaal | ❌ TODO |
-| TOOL-12 | **Canvas Design skill** | Marketing | Social graphics, LinkedIn visuals zonder designer | ❌ TODO |
-| TOOL-13 | **Perplexity MCP verwijderen** | Opruimen | Te duur, geen free tier, geen budget | ❌ TODO |
-| TOOL-14 | **Firecrawl MCP verwijderen** | Opruimen | Credits op, niet vernieuwd | ❌ TODO |
+| TOOL-01 | **Codebase Memory MCP** | Dev infra | Knowledge graph van codebase, 99% minder tokens | ✅ Sessie 96 |
+| TOOL-02 | **Context7 MCP** | Dev infra | Up-to-date library docs (Next.js 15, React 19, SQLAlchemy 2.0) | ✅ Sessie 96 |
+| TOOL-03 | **Tavily MCP** | Search/scrape | Vervangt Perplexity + Firecrawl (gratis 1.000 calls/mnd) | ✅ Sessie 96 |
+| TOOL-04 | **Systematic Debugging skill** | Dev skill | 4-fase debugging: root cause → patroon → hypothese → fix | ✅ Sessie 96 |
+| TOOL-05 | **Receiving Code Review skill** | Dev skill | Regels voor feedback verwerken, anti-slijmerij, YAGNI check | ✅ Sessie 96 |
+| TOOL-06 | **Verification Before Completion skill** | Dev skill | Operationeel protocol: verse output, verboden woorden, agent-verificatie | ✅ Sessie 96 |
+| TOOL-07 | **Frontend Design skill** | Dev skill | Anti-"AI slop" design richtlijnen, merge met frontend/CLAUDE.md | ✅ Sessie 96 |
+| TOOL-08 | **Deep Research skill** | Dev + Marketing | 8-fase research pipeline met citations | ✅ Sessie 96 |
+| TOOL-09 | **Claude SEO** | Marketing | SEO audit + schema + E-E-A-T + AI Search optimalisatie voor kestinglegal.nl | ✅ Sessie 96 |
+| TOOL-10 | **Marketing Skills** (Corey Haines) | Marketing | 30+ skills: SEO, copywriting, cold email, content strategie | ✅ Sessie 96 |
+| TOOL-11 | **Brand Guidelines skill** | Marketing | Kesting Legal branding vastleggen voor consistent materiaal | ✅ Sessie 96 |
+| TOOL-12 | **Canvas Design skill** | Marketing | Social graphics, LinkedIn visuals zonder designer | ✅ Sessie 96 |
+| TOOL-13 | **Perplexity MCP verwijderen** | Opruimen | Te duur, geen free tier, geen budget | ✅ Sessie 96 |
+| TOOL-14 | **Firecrawl MCP verwijderen** | Opruimen | Credits op, niet vernieuwd | ✅ Sessie 96 |
 
 ### Code Quality Sprint (sessie 83 audit)
 

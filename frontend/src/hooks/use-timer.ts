@@ -43,6 +43,7 @@ export interface TimerState {
 interface TimerContextValue {
   timer: TimerState;
   startTimer: (caseId: string, caseName: string) => void;
+  resumeTimer: () => void;
   stopTimer: () => Promise<void>;
   discardTimer: () => void;
   setTimerCase: (caseId: string, caseName: string) => void;
@@ -74,6 +75,7 @@ const defaultTimer: TimerState = {
 export const TimerContext = createContext<TimerContextValue>({
   timer: defaultTimer,
   startTimer: () => {},
+  resumeTimer: () => {},
   stopTimer: async () => {},
   discardTimer: () => {},
   setTimerCase: () => {},
@@ -105,31 +107,52 @@ export function useAutoTimerPreference(): [boolean, (v: boolean) => void] {
 
 // ── Provider hook ────────────────────────────────────────────────────────
 
-function loadFromStorage(): TimerState {
-  if (typeof window === "undefined") return defaultTimer;
+// Threshold to distinguish page refresh from browser close (5 seconds)
+const BROWSER_CLOSE_THRESHOLD = 5000;
+
+interface PersistedTimerState extends TimerState {
+  lastSavedAt?: number; // timestamp of last save (for browser close detection)
+}
+
+function loadFromStorage(): { state: TimerState; wasRestoredFromClose: boolean } {
+  if (typeof window === "undefined") return { state: defaultTimer, wasRestoredFromClose: false };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultTimer;
-    const saved = JSON.parse(raw) as TimerState;
+    if (!raw) return { state: defaultTimer, wasRestoredFromClose: false };
+    const saved = JSON.parse(raw) as PersistedTimerState;
 
     // Ensure activityType exists (backwards compat)
     if (!saved.activityType) saved.activityType = "other";
 
-    // If timer was running, recalculate elapsed seconds
+    // If timer was running, check if this is a page refresh or browser reopen
     if (saved.running && saved.startedAt) {
+      const timeSinceLastSave = saved.lastSavedAt
+        ? Date.now() - saved.lastSavedAt
+        : Infinity;
+
+      if (timeSinceLastSave > BROWSER_CLOSE_THRESHOLD) {
+        // Browser was closed — pause the timer at the last known seconds
+        return {
+          state: { ...saved, running: false },
+          wasRestoredFromClose: true,
+        };
+      }
+
+      // Page refresh — recalculate elapsed seconds and keep running
       const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
-      return { ...saved, seconds: elapsed };
+      return { state: { ...saved, seconds: elapsed }, wasRestoredFromClose: false };
     }
-    return saved;
+    return { state: saved, wasRestoredFromClose: false };
   } catch {
-    return defaultTimer;
+    return { state: defaultTimer, wasRestoredFromClose: false };
   }
 }
 
 function saveToStorage(state: TimerState) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const persisted: PersistedTimerState = { ...state, lastSavedAt: Date.now() };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
   } catch {
     // Storage full or unavailable — ignore
   }
@@ -149,16 +172,46 @@ export function useTimerProvider() {
   const [isExpanded, setIsExpanded] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasWarnedRef = useRef(false);
+  const timerRef = useRef<TimerState>(defaultTimer);
   const createMutation = useCreateTimeEntry();
 
   // Load persisted timer on mount
   useEffect(() => {
-    const restored = loadFromStorage();
+    const { state: restored, wasRestoredFromClose } = loadFromStorage();
     setTimer(restored);
-    // If timer was running, auto-expand to show it
-    if (restored.running) {
+    // If timer was running or restored from close, auto-expand to show it
+    if (restored.running || wasRestoredFromClose) {
       setIsExpanded(true);
     }
+    // Notify user that timer was paused due to browser close
+    if (wasRestoredFromClose && restored.seconds > 0) {
+      const h = Math.floor(restored.seconds / 3600);
+      const m = Math.floor((restored.seconds % 3600) / 60);
+      const time = h > 0
+        ? `${h}:${String(m).padStart(2, "0")} uur`
+        : `${m} minuten`;
+      toast.info(
+        `Timer voor ${restored.caseName} gepauzeerd op ${time} (browser was gesloten)`,
+        { duration: 8000 }
+      );
+    }
+  }, []);
+
+  // Keep ref in sync with state (for use in beforeunload)
+  useEffect(() => {
+    timerRef.current = timer;
+  }, [timer]);
+
+  // Save accurate state on browser close / tab close / navigation
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const current = timerRef.current;
+      if (current.running) {
+        saveToStorage(current);
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
   // Multi-tab sync: listen for storage changes from other tabs
@@ -243,6 +296,21 @@ export function useTimerProvider() {
     setIsExpanded(true);
   }, []);
 
+  // Resume a paused timer (e.g. after browser close restore)
+  const resumeTimer = useCallback(() => {
+    setTimer((prev) => {
+      if (prev.running || !prev.caseId) return prev;
+      const resumed: TimerState = {
+        ...prev,
+        running: true,
+        // Set startedAt so elapsed calculation works: now minus already-elapsed seconds
+        startedAt: Date.now() - prev.seconds * 1000,
+      };
+      saveToStorage(resumed);
+      return resumed;
+    });
+  }, []);
+
   const stopTimer = useCallback(async () => {
     // Round up to nearest 6 minutes (0.1 hour) — standard legal billing
     const minutes = Math.max(6, Math.ceil(timer.seconds / 360) * 6);
@@ -296,6 +364,7 @@ export function useTimerProvider() {
   return {
     timer,
     startTimer,
+    resumeTimer,
     stopTimer,
     discardTimer,
     setTimerCase,

@@ -62,9 +62,8 @@ DEBTOR_TYPE_LABELS = {
 
 CASE_TYPE_LABELS = {
     "incasso": "Incasso",
-    "insolventie": "Insolventie",
+    "dossier": "Dossier",
     "advies": "Advies",
-    "overig": "Overig",
 }
 
 # Merge field definitions — used by the /merge-fields endpoint

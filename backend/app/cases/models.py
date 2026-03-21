@@ -37,7 +37,7 @@ class Case(TenantBase):
     # Case details
     case_type: Mapped[str] = mapped_column(
         String(30), nullable=False, default="incasso"
-    )  # incasso, insolventie, advies, overig
+    )  # incasso, dossier, advies
 
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="nieuw"

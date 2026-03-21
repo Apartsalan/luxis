@@ -57,9 +57,9 @@ const PROCEDURE_TYPES = [
 ];
 
 const COLLECTION_STRATEGIES = [
-  { value: "standaard", label: "Standaard" },
-  { value: "minnelijk", label: "Minnelijk" },
-  { value: "gerechtelijk", label: "Gerechtelijk" },
+  { value: "standaard", label: "Standaard (volledig traject)", description: "Herinnering → aanmaning → 14-dagenbrief → sommatie → dagvaarding" },
+  { value: "minnelijk", label: "Minnelijk", description: "Buitengerechtelijk traject, geen dagvaarding" },
+  { value: "gerechtelijk", label: "Gerechtelijk", description: "Direct naar dagvaarding" },
 ];
 
 const PROCEDURE_PHASES = [
@@ -647,6 +647,11 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   </div>
+                  {editForm.collection_strategy && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {COLLECTION_STRATEGIES.find(s => s.value === editForm.collection_strategy)?.description}
+                    </p>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs text-muted-foreground mb-1">

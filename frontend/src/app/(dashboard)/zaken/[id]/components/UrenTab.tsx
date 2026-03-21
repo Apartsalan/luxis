@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, Euro } from "lucide-react";
+import { useState } from "react";
+import { Clock, Euro, Filter } from "lucide-react";
 import {
   useTimeEntries,
   useTimeEntrySummary,
@@ -18,6 +19,8 @@ function formatDuration(minutes: number): string {
 export default function UrenTab({ caseId }: { caseId: string }) {
   const { data: entries, isLoading } = useTimeEntries({ case_id: caseId });
   const { data: summary } = useTimeEntrySummary({ case_id: caseId });
+  const [billableFilter, setBillableFilter] = useState<"alle" | "declarabel" | "niet-declarabel">("alle");
+  const [activityFilter, setActivityFilter] = useState<string>("alle");
 
   if (isLoading) {
     return (
@@ -77,8 +80,64 @@ export default function UrenTab({ caseId }: { caseId: string }) {
             Start de timer of registreer handmatig via Tijdschrijven
           </p>
         </div>
-      ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
+      ) : (() => {
+        // Collect unique activity types for filter
+        const activityTypes = [...new Set(entries.map((e: TimeEntry) => e.activity_type))];
+
+        // Apply filters
+        const filtered = entries.filter((entry: TimeEntry) => {
+          if (billableFilter === "declarabel" && !entry.billable) return false;
+          if (billableFilter === "niet-declarabel" && entry.billable) return false;
+          if (activityFilter !== "alle" && entry.activity_type !== activityFilter) return false;
+          return true;
+        });
+
+        return (
+        <div className="space-y-3">
+          {/* Filters */}
+          {entries.length > 2 && (
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                {(["alle", "declarabel", "niet-declarabel"] as const).map((opt) => {
+                  const isActive = billableFilter === opt;
+                  const label = opt === "alle" ? "Alle" : opt === "declarabel" ? "Declarabel" : "Niet declarabel";
+                  return (
+                    <button
+                      key={opt}
+                      onClick={() => setBillableFilter(opt)}
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              {activityTypes.length > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Activiteit:</span>
+                  <select
+                    value={activityFilter}
+                    onChange={(e) => setActivityFilter(e.target.value)}
+                    className="rounded-lg border border-border bg-card px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="alle">Alle</option>
+                    {activityTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {ACTIVITY_TYPE_LABELS[type] ?? type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
@@ -103,7 +162,13 @@ export default function UrenTab({ caseId }: { caseId: string }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {entries.map((entry: TimeEntry) => {
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    Geen uren voor dit filter
+                  </td>
+                </tr>
+              ) : filtered.map((entry: TimeEntry) => {
                 const amount =
                   entry.billable && entry.hourly_rate
                     ? (entry.duration_minutes / 60) * entry.hourly_rate
@@ -144,7 +209,9 @@ export default function UrenTab({ caseId }: { caseId: string }) {
             </tbody>
           </table>
         </div>
-      )}
+        </div>
+        );
+      })()}
     </div>
   );
 }

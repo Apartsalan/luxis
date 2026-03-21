@@ -7,7 +7,7 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 
 # Valid case types and statuses
-CASE_TYPES = ("incasso", "insolventie", "advies", "overig")
+CASE_TYPES = ("incasso", "dossier", "advies")
 CASE_STATUSES = (
     "nieuw",
     "14_dagenbrief",

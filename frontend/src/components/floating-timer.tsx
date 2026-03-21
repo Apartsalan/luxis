@@ -168,6 +168,7 @@ function FloatingTimerInner() {
   const {
     timer,
     startTimer,
+    resumeTimer,
     stopTimer,
     discardTimer,
     setTimerCase,
@@ -305,6 +306,31 @@ function FloatingTimerInner() {
               >
                 <Square className="h-3 w-3" />
                 Stop & Opslaan
+              </button>
+              <button
+                onClick={discardTimer}
+                className="inline-flex items-center justify-center rounded-lg border border-border px-2.5 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Verwijderen"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </>
+          ) : timer.seconds > 0 && timer.caseId ? (
+            // Paused timer (e.g. restored after browser close) — show resume + discard
+            <>
+              <button
+                onClick={resumeTimer}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+              >
+                <Play className="h-3 w-3" />
+                Hervat
+              </button>
+              <button
+                onClick={stopTimer}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Opslaan"
+              >
+                <Square className="h-3 w-3" />
               </button>
               <button
                 onClick={discardTimer}

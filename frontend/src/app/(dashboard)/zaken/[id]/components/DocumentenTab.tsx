@@ -13,7 +13,10 @@ import {
   Download,
   Eye,
   File,
+  FileSpreadsheet,
   FileText,
+  Filter,
+  Image,
   Loader2,
   Mail,
   Plus,
@@ -802,6 +805,9 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   const { data: emailAttachments, isLoading: emailAttachmentsLoading } = useCaseEmailAttachments(caseId);
   const saveAttachment = useSaveAttachmentToCase();
 
+  // LF-21: File type filter
+  const [fileTypeFilter, setFileTypeFilter] = useState<string>("alle");
+
   // G11: Inline document preview
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -1169,7 +1175,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
             | { type: "upload"; id: string; filename: string; file_size: number; content_type: string; date: string; direction?: string | null }
             | { type: "email"; id: string; filename: string; file_size: number; content_type: string; date: string; email_subject: string | null; email_from: string | null; synced_email_id: string };
 
-          const items: UnifiedFile[] = [
+          const allItems: UnifiedFile[] = [
             ...(caseFiles ?? []).map((f) => ({
               type: "upload" as const,
               id: f.id,
@@ -1192,6 +1198,42 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
             })),
           ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+          // LF-21: File type categorization & filtering
+          const getFileCategory = (contentType: string): string => {
+            if (contentType === "application/pdf") return "pdf";
+            if (contentType.includes("word") || contentType.includes("msword")) return "word";
+            if (contentType.includes("excel") || contentType.includes("spreadsheet")) return "excel";
+            if (contentType.startsWith("image/")) return "afbeelding";
+            if (contentType.includes("email") || contentType.includes("message")) return "email";
+            return "overig";
+          };
+
+          const FILE_TYPE_OPTIONS: { value: string; label: string; icon: React.ReactNode }[] = [
+            { value: "alle", label: "Alle", icon: <File className="h-3 w-3" /> },
+            { value: "pdf", label: "PDF", icon: <FileText className="h-3 w-3" /> },
+            { value: "word", label: "Word", icon: <FileText className="h-3 w-3" /> },
+            { value: "excel", label: "Excel", icon: <FileSpreadsheet className="h-3 w-3" /> },
+            { value: "afbeelding", label: "Afbeeldingen", icon: <Image className="h-3 w-3" /> },
+            { value: "email", label: "E-mail", icon: <Mail className="h-3 w-3" /> },
+            { value: "overig", label: "Overig", icon: <File className="h-3 w-3" /> },
+          ];
+
+          // Count per category
+          const categoryCounts: Record<string, number> = {};
+          allItems.forEach((item) => {
+            const cat = getFileCategory(item.content_type);
+            categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+          });
+
+          // Only show filter options that have items
+          const visibleOptions = FILE_TYPE_OPTIONS.filter(
+            (opt) => opt.value === "alle" || (categoryCounts[opt.value] ?? 0) > 0
+          );
+
+          const items = fileTypeFilter === "alle"
+            ? allItems
+            : allItems.filter((item) => getFileCategory(item.content_type) === fileTypeFilter);
+
           if (loading) {
             return (
               <div className="space-y-2">
@@ -1210,7 +1252,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
             );
           }
 
-          if (!items.length) {
+          if (!allItems.length) {
             return (
               <div className="rounded-lg border border-dashed border-border py-6 text-center">
                 <File className="mx-auto h-6 w-6 text-muted-foreground/30" />
@@ -1222,7 +1264,51 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
           }
 
           return (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* LF-21: Bestandstype filter */}
+              {visibleOptions.length > 2 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  {visibleOptions.map((opt) => {
+                    const isActive = fileTypeFilter === opt.value;
+                    const count = opt.value === "alle" ? allItems.length : (categoryCounts[opt.value] ?? 0);
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setFileTypeFilter(opt.value)}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                        }`}
+                      >
+                        {opt.icon}
+                        {opt.label}
+                        <span className={`ml-0.5 ${isActive ? "text-primary-foreground/70" : "text-muted-foreground/60"}`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Filtered results */}
+              {items.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border py-6 text-center">
+                  <Filter className="mx-auto h-6 w-6 text-muted-foreground/30" />
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    Geen bestanden van dit type
+                  </p>
+                  <button
+                    onClick={() => setFileTypeFilter("alle")}
+                    className="mt-2 text-xs text-primary hover:text-primary/80 font-medium"
+                  >
+                    Toon alle bestanden
+                  </button>
+                </div>
+              ) : (
+              <div className="space-y-2">
               {items.map((item) => {
                 const icon = getFileIcon(item.content_type);
                 const isEmail = item.type === "email";
@@ -1320,6 +1406,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                   </div>
                 );
               })}
+            </div>
+              )}
             </div>
           );
         })()}

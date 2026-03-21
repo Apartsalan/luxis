@@ -103,11 +103,17 @@ OVERIG_TASKS = [
      "description": "Bepaal de strategie en het plan van aanpak voor deze zaak."},
 ]
 
+DOSSIER_TASKS = [
+    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
+     "description": "Controleer of alle gegevens en stukken compleet zijn."},
+    {"title": "Plan van aanpak bepalen", "task_type": "manual_review", "days": 3,
+     "description": "Bepaal de strategie en het plan van aanpak voor deze zaak."},
+]
+
 TASK_TEMPLATES: dict[str, list[dict]] = {
     "incasso": INCASSO_TASKS,
     "advies": ADVIES_TASKS,
-    "insolventie": INSOLVENTIE_TASKS,
-    "overig": OVERIG_TASKS,
+    "dossier": DOSSIER_TASKS,
 }
 
 
@@ -124,7 +130,7 @@ async def _create_initial_tasks(
     if case.case_type == "incasso":
         return []
 
-    templates = TASK_TEMPLATES.get(case.case_type, OVERIG_TASKS)
+    templates = TASK_TEMPLATES.get(case.case_type, DOSSIER_TASKS)
     created: list[WorkflowTask] = []
 
     for tpl in templates:

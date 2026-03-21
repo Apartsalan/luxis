@@ -12,10 +12,6 @@ interface Step1Props {
     contractual_rate: string;
     budget: string;
     date_opened: string;
-    hourly_rate: string;
-    payment_term_days: string;
-    collection_strategy: string;
-    debtor_notes: string;
   };
   updateField: (field: string, value: string) => void;
   isIncasso: boolean;
@@ -50,9 +46,8 @@ export function Step1Zaakgegevens({
               className={inputClass}
             >
               <option value="incasso">Incasso</option>
-              <option value="insolventie">Insolventie</option>
+              <option value="dossier">Dossier</option>
               <option value="advies">Advies</option>
-              <option value="overig">Overig</option>
             </select>
           </div>
           <div>
@@ -203,90 +198,6 @@ export function Step1Zaakgegevens({
         </div>
       )}
 
-      {/* LF-19/22: Incasso-instellingen — only for incasso */}
-      {isIncasso && (
-        <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-          <h2 className="text-base font-semibold text-foreground">
-            Incasso-instellingen
-          </h2>
-          <p className="text-xs text-muted-foreground -mt-2">
-            Optionele instellingen voor dit incassodossier
-          </p>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-foreground">
-                Uurtarief
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.hourly_rate}
-                onChange={(e) =>
-                  updateField("hourly_rate", e.target.value)
-                }
-                className={inputClass}
-                placeholder="Bijv. 250.00"
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                EUR per uur (overschrijft kantoorstandaard)
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground">
-                Betalingstermijn
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={form.payment_term_days}
-                onChange={(e) =>
-                  updateField("payment_term_days", e.target.value)
-                }
-                className={inputClass}
-                placeholder="Bijv. 14"
-              />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Dagen
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground">
-              Incassostrategie
-            </label>
-            <select
-              value={form.collection_strategy}
-              onChange={(e) =>
-                updateField("collection_strategy", e.target.value)
-              }
-              className={inputClass}
-            >
-              <option value="">Niet ingesteld</option>
-              <option value="standaard">Standaard</option>
-              <option value="minnelijk">Minnelijk</option>
-              <option value="gerechtelijk">Gerechtelijk</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground">
-              Debiteurnotities
-            </label>
-            <textarea
-              value={form.debtor_notes}
-              onChange={(e) =>
-                updateField("debtor_notes", e.target.value)
-              }
-              rows={2}
-              className={inputClass}
-              placeholder="Bijv. debiteur heeft eerder betaald na 2e aanmaning..."
-            />
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -56,9 +56,8 @@ export const NEXT_STATUSES: Record<string, string[]> = {
 
 export const TYPE_LABELS: Record<string, string> = {
   incasso: "Incasso",
-  insolventie: "Insolventie",
+  dossier: "Dossier",
   advies: "Advies",
-  overig: "Overig",
 };
 
 export const INTEREST_LABELS: Record<string, string> = {

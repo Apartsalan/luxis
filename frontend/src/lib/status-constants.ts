@@ -43,16 +43,14 @@ export const CASE_STATUS_COLORS: Record<string, string> = {
 
 export const CASE_TYPE_LABELS: Record<string, string> = {
   incasso: "Incasso",
-  insolventie: "Insolventie",
+  dossier: "Dossier",
   advies: "Advies",
-  overig: "Overig",
 };
 
 export const CASE_TYPE_BADGE: Record<string, string> = {
   incasso: "bg-blue-50 text-blue-600",
-  insolventie: "bg-purple-50 text-purple-600",
+  dossier: "bg-slate-50 text-slate-600",
   advies: "bg-teal-50 text-teal-600",
-  overig: "bg-slate-50 text-slate-600",
 };
 
 // --- Task statuses (workflow tasks) ---

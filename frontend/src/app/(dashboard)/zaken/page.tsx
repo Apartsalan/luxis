@@ -198,9 +198,8 @@ export default function ZakenPage() {
           >
             <option value="">Alle types</option>
             <option value="incasso">Incasso</option>
-            <option value="insolventie">Insolventie</option>
+            <option value="dossier">Dossier</option>
             <option value="advies">Advies</option>
-            <option value="overig">Overig</option>
           </select>
           <select
             value={status}

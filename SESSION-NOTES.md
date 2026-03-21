@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 96 — Tooling upgrade + frontend design audit)
-**Laatste feature/fix:** Sessie 96 — 12 tools geïnstalleerd, 2 MCP servers verwijderd, UX-22 Frontend Design Audit (score 5.5/10, 20 pagina's)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 97 — Frontend Design Sprint)
+**Laatste feature/fix:** Sessie 97 — UX-22 Top 10: 8/10 items geïmplementeerd (font, login, empty states, KPI cards, sidebar, tabellen, microinteracties)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -11,7 +11,37 @@
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/12/13/14-18/19/20 gefixt)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
-**Volgende sessie:** Sessie 97 — Frontend Design Sprint (top 10 UX issues uit UX-22 audit fixen)
+**Volgende sessie:** Sessie 98 — Frontend Design Sprint deel 2 (resterende 2 UX-22 items + visuele QA)
+
+## Wat er gedaan is (sessie 97 — 21 maart 2026) — Frontend Design Sprint (UX-22 Top 10)
+
+### Wat er gedaan is:
+- **Inter font** geladen via `next/font/google` (was eerder alleen CSS reference zonder import)
+- **Login pagina redesign:** gradient achtergrond met radiale glow, dot grid pattern, gradient tekst, verbeterde branding
+- **Dashboard KPI-kaarten upgrade:** gradient icoon-achtergronden met gekleurde shadows, hover lift effect
+- **Sidebar sectiescheiding:** navigatie gegroepeerd in Overzicht/Beheer/Financieel/Systeem met labels
+- **Tabel responsiveness:** min-width, truncate, hidden columns op sm voor Dossiers/Facturen/Relaties
+- **EmptyState component:** herbruikbaar component met icoon-cirkel, heading, beschrijving, CTA button
+- **Alle empty states vervangen:** 7 dossier-tabs gebruiken nu EmptyState (Uren, Betalingen, Vorderingen, Documenten, Activiteiten, Correspondentie, Facturen)
+- **Microinteracties:** smooth transitions op buttons/links, card hover effect, table row transitions
+- **Docker fix:** tailwind.config.ts toegevoegd aan volume mount, font-family via CSS variable
+
+### Commits:
+- `06e885c` feat(frontend): add Inter font via next/font + global microinteractions
+- `d0e986c` feat(frontend): login redesign + dashboard KPI card upgrade
+- `f9d06e5` fix(frontend): fix Inter font loading in Docker + mount tailwind config
+- `7e98f60` feat(frontend): sidebar section headers + table responsiveness
+- `a74fda7` feat(frontend): reusable EmptyState component + upgrade all empty states
+
+### Nog open (sessie 98):
+- Item 9: Incasso pipeline — collapse lege secties, warning-styling
+- Item 10: Correspondentie — in/uit visueel onderscheid, date grouping
+
+### Bekende issues:
+- Preview screenshot tool werkt niet goed met Docker-based dev server (timeout)
+- Pre-existing TSC errors (radix-ui, dompurify) — niet door onze changes
+
+---
 
 ## Wat er gedaan is (sessie 96 — 21 maart 2026) — Tooling upgrade + frontend design audit
 

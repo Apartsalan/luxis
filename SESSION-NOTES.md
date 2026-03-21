@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 87 — Lisanne Feedback Sprint 3)
-**Laatste feature/fix:** Sessie 87 — LF-16 t/m LF-21 (6/6 afgerond)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 88 — QA LF-16 t/m LF-21)
+**Laatste feature/fix:** Sessie 88 — QA alle 6 LF items getest: 6/6 PASS
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -9,9 +9,26 @@
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Security Sprint:** 15/15 COMPLEET ✅
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen)
-**Lisanne Feedback Sprint 3:** 6/6 afgerond — SPRINT COMPLEET ✅
+**Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
 **Volgende sessie:** TBD
+
+## Wat er gedaan is (sessie 88 — 21 maart 2026) — QA: LF-16 t/m LF-21
+
+**Alle 6 Lisanne Feedback Sprint 3 items getest op luxis.kestinglegal.nl — 6/6 PASS**
+
+| Test | Feature | Status | Opmerking |
+|------|---------|--------|-----------|
+| 1 | LF-19: Wizard state behouden bij terugnavigatie | PASS | Alle velden behouden na Step 2 → Step 1 |
+| 2 | LF-16: Timer persistence bij navigatie | PASS | Timer hersteld na wegnavigeren (0:00:53, correct dossier) |
+| 3 | LF-17: Incasso-instellingen weg uit wizard | PASS | Geen uurtarief/betalingstermijn/strategie/notities. Rente WEL zichtbaar |
+| 4 | LF-18: Strategie labels verduidelijkt | PASS | "Standaard (volledig traject)" + beschrijving stappen |
+| 5 | LF-20: Dossiertypes vereenvoudigd | PASS | Alleen Incasso/Dossier/Advies in wizard + dossierlijst filter |
+| 6 | LF-21: Documentfilter op bestandstype | PASS | Code correct, filter verschijnt bij 2+ types (slim design) |
+
+**Wachtwoord gereset:** seidony@kestinglegal.nl wachtwoord was verlopen, gereset naar Hetbaken-KL-5 via VPS.
+
+**Geen bugs gevonden.** Geen code-wijzigingen gemaakt.
 
 ## Wat er gedaan is (sessie 87 — 21 maart 2026) — Lisanne Feedback Sprint 3
 

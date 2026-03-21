@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 86 — QA Sprint + Bugfixes)
-**Laatste feature/fix:** Sessie 86 — 3 bugs gefixt (hourly_rate crash, SEC-9 RLS, provisie knop)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 87 — Lisanne Feedback Sprint 3)
+**Laatste feature/fix:** Sessie 87 — LF-16 t/m LF-21 (6/6 afgerond)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -9,8 +9,44 @@
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Security Sprint:** 15/15 COMPLEET ✅
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen)
+**Lisanne Feedback Sprint 3:** 6/6 afgerond — SPRINT COMPLEET ✅
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Lisanne's verbeterpunten verwerken (LF-16 t/m LF-21)
+**Volgende sessie:** TBD
+
+## Wat er gedaan is (sessie 87 — 21 maart 2026) — Lisanne Feedback Sprint 3
+
+**Multi-terminal sessie: 3 terminals parallel, 6 feedback items afgerond**
+
+### LF-16: Timer persistence (Terminal B)
+- Timer state opgeslagen in `localStorage` bij `beforeunload` event
+- Bij app laden: actieve timer hersteld uit `localStorage`
+- Bestanden: `use-timer.ts`, `floating-timer.tsx`
+
+### LF-17: Incasso-instellingen uit wizard (Terminal A)
+- Uurtarief, betalingstermijn, incassostrategie, debiteurnotities verwijderd uit wizard Step 1
+- Deze velden worden nu alleen ingesteld binnen het dossier zelf (DetailsTab)
+- Bestanden: `zaken/nieuw/page.tsx`, `Step1Zaakgegevens.tsx`
+
+### LF-18: Strategie labels verduidelijkt (Terminal A)
+- "Standaard" → "Standaard (volledig traject)" met beschrijving per strategie
+- Beschrijvingen: herinnering → aanmaning → 14-dagenbrief → sommatie → dagvaarding
+- Bestanden: `DetailsTab.tsx`
+
+### LF-19: Wizard state behouden bij terugnavigatie (Terminal A)
+- `{currentStep === N && (...)}` vervangen door `<div className={currentStep !== N ? "hidden" : ""}>`
+- DOM blijft gemount bij stapwisseling, alle state behouden
+- Bestanden: `zaken/nieuw/page.tsx`
+
+### LF-20: Dossiertypes vereenvoudigd (Terminal A)
+- "Insolventie" en "Overig" verwijderd, "Dossier" toegevoegd
+- Nu: Incasso, Dossier, Advies
+- Frontend + backend + docx labels bijgewerkt
+- Bestanden: `page.tsx` (wizard + lijst), `types.tsx`, `status-constants.ts`, `schemas.py`, `service.py`, `models.py`, `docx_service.py`
+
+### LF-21: Documentfilter op bestandstype (Terminal C)
+- Filter dropdown toegevoegd aan DocumentenTab
+- Filtert op bestandstype (Word, PDF, Excel, etc.)
+- Bestanden: `DocumentenTab.tsx`
 
 ## Wat er gedaan is (sessie 86 — 21 maart 2026) — QA Sprint + Bugfixes
 

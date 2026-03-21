@@ -319,12 +319,12 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Feature/Fix | Ernst | Grootte | Status |
 |---|-------------|-------|---------|--------|
-| LF-16 | Timer loopt door na sluiten programma — moet pauzeren/stoppen bij afsluiten browser | Hoog | M | ❌ TODO |
-| LF-17 | "Incasso/instellingen" (uurtarief, betalingstermijn) verwijderen uit dossier-aanmaak wizard — hoort in dossier zelf | Midden | S | ❌ TODO |
-| LF-18 | "Normaal" strategie onduidelijk bij dossier-aanmaak — hernoemen of verduidelijken | Laag | S | ❌ TODO |
-| LF-19 | Terugknop in dossier-wizard wist alle ingevoerde gegevens — moet state behouden | Hoog | M | ❌ TODO |
-| LF-20 | Te veel opties bij "type dossier" — alleen "Incasso" en "Dossier" (evt. "Advies"), insolventie/overig weg | Laag | S | ❌ TODO |
-| LF-21 | Filteroptie bij documenten ontbreekt — filter op bestandstype (Word, PDF, etc.) binnen dossier | Laag | S | ❌ TODO |
+| LF-16 | Timer loopt door na sluiten programma — moet pauzeren/stoppen bij afsluiten browser | Hoog | M | ✅ 21 mrt |
+| LF-17 | "Incasso/instellingen" (uurtarief, betalingstermijn) verwijderen uit dossier-aanmaak wizard — hoort in dossier zelf | Midden | S | ✅ 21 mrt |
+| LF-18 | "Normaal" strategie onduidelijk bij dossier-aanmaak — hernoemen of verduidelijken | Laag | S | ✅ 21 mrt |
+| LF-19 | Terugknop in dossier-wizard wist alle ingevoerde gegevens — moet state behouden | Hoog | M | ✅ 21 mrt |
+| LF-20 | Te veel opties bij "type dossier" — alleen "Incasso" en "Dossier" (evt. "Advies"), insolventie/overig weg | Laag | S | ✅ 21 mrt |
+| LF-21 | Filteroptie bij documenten ontbreekt — filter op bestandstype (Word, PDF, etc.) binnen dossier | Laag | S | ✅ 21 mrt |
 
 ---
 

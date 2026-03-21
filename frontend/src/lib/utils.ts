@@ -12,8 +12,10 @@ export function cn(...inputs: ClassValue[]) {
  * Format a number as Euro currency (Dutch locale).
  * Example: 1523.47 → "€ 1.523,47"
  */
-export function formatCurrency(amount: number | string): string {
+export function formatCurrency(amount: number | string | null | undefined): string {
+  if (amount == null) return "€ 0,00";
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(num)) return "€ 0,00";
   return new Intl.NumberFormat("nl-NL", {
     style: "currency",
     currency: "EUR",

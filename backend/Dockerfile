@@ -23,7 +23,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml ./
 
 # Install dependencies only (not the package itself — code isn't copied yet)
-RUN uv pip install --system ".[dev]"
+RUN uv pip install --system "."
 
 # Copy application code
 COPY . .

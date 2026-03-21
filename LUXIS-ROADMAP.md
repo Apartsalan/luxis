@@ -429,7 +429,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | # | Issue | Domein | Status |
 |---|-------|--------|--------|
 | SEC-16 | **Fernet KDF zwak** — enkele SHA-256 zonder salt/iteraties voor OAuth token encryptie. Fix: PBKDF2HMAC met salt + 600k iteraties. | Security | ❌ TODO |
-| SEC-17 | **DB/Redis poorten open in prod** — docker-compose.prod.yml override mist `ports: []` voor db en redis. | Infra | ❌ TODO |
+| SEC-17 | **DB/Redis poorten open in prod** — ports verplaatst van base naar dev override; prod heeft geen exposed ports. | Infra | ✅ Sessie 92 |
 | SEC-18 | **Redis zonder wachtwoord** — geen `requirepass` in productie. | Infra | ✅ Sessie 90 (REDIS_PASSWORD ingesteld op VPS) |
 | SEC-19 | **localStorage tokens** — JWT in localStorage, XSS-extractable. Interim: centraliseer in tokenStore. Later: httpOnly cookies. | Security | ❌ TODO |
 | CQ-10 | **Missing db.commit()** — file upload, credit note, approve, send, cancel, add/remove line, expenses, payments nooit gecommit. | Backend | ✅ Sessie 90 |
@@ -461,14 +461,14 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | # | Issue | Domein | Status |
 |---|-------|--------|--------|
 | SEC-27 | **Security headers in prod** — ontbrekende security headers in docker-compose.prod.yml. | Infra | ✅ Sessie 90 |
-| SEC-28 | **Dev deps in prod image** — `uv pip install ".[dev]"` in Dockerfile. | Infra | ❌ TODO |
-| SEC-29 | **Mass assignment setattr** — user profile update itereert model_dump. Fix: explicit allowlist. | Security | ❌ TODO |
-| SEC-30 | **CSP unsafe-inline/unsafe-eval** — neutraliseert XSS bescherming. Fix: drop unsafe-eval in prod. | Infra | ❌ TODO |
-| CQ-21 | **Backend .dockerignore** — .env en test files kopiëren mee in image. | Infra | ❌ TODO |
-| CQ-22 | **Container health checks** — backend en frontend missen health checks in compose. | Infra | ❌ TODO |
-| CQ-23 | **Container resource limits** — geen mem_limit/cpus in prod compose. | Infra | ❌ TODO |
-| CQ-24 | **Off-site backups** — backups alleen lokaal op VPS, geen off-site kopie. | Infra | ❌ TODO |
-| CQ-25 | **Uptime monitoring** — geen extern monitoring (UptimeRobot etc). | Infra | ❌ TODO |
+| SEC-28 | **Dev deps in prod image** — Changed to `uv pip install "."` (without dev extras). | Infra | ✅ Sessie 92 |
+| SEC-29 | **Mass assignment setattr** — Explicit ALLOWED_FIELDS allowlist in update_profile + update_tenant. | Security | ✅ Sessie 92 |
+| SEC-30 | **CSP unsafe-inline/unsafe-eval** — Removed unsafe-eval from script-src in Caddyfile. | Infra | ✅ Sessie 92 |
+| CQ-21 | **Backend .dockerignore** — Created backend/.dockerignore excluding .env, tests, cache, docs. | Infra | ✅ Sessie 92 |
+| CQ-22 | **Container health checks** — Added healthchecks for all 4 services in docker-compose.prod.yml. | Infra | ✅ Sessie 92 |
+| CQ-23 | **Container resource limits** — Added mem_limit + cpus for all services in prod compose. | Infra | ✅ Sessie 92 |
+| CQ-24 | **Off-site backups** — Updated backup.sh with rclone off-site upload support (needs rclone config on VPS). | Infra | ✅ Sessie 92 (script klaar, rclone config nodig op VPS) |
+| CQ-25 | **Uptime monitoring** — Created setup script + self-hosted health checker; UptimeRobot setup nodig. | Infra | ✅ Sessie 92 (script klaar, UptimeRobot account nodig) |
 | UX-14 | **Responsive tabellen** — data verborgen op mobiel zonder alternatief. | Frontend | ❌ TODO |
 | UX-15 | **Form validatie** — geen inline foutmeldingen op formulieren. | Frontend | ❌ TODO |
 | UX-16 | **Unsaved changes warning** — geen waarschuwing bij onopgeslagen wijzigingen. | Frontend | ❌ TODO |

@@ -90,21 +90,27 @@ function ClassificationCardInner({ c }: { c: Classification }) {
     try {
       await approve.mutateAsync({ id: c.id });
       toast.success("Classificatie goedgekeurd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Goedkeuren mislukt");
+    }
   };
 
   const handleReject = async () => {
     try {
       await reject.mutateAsync({ id: c.id });
       toast.success("Classificatie afgewezen");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Afwijzen mislukt");
+    }
   };
 
   const handleExecute = async () => {
     try {
       await execute.mutateAsync({ id: c.id });
       toast.success("Actie uitgevoerd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Uitvoeren mislukt");
+    }
   };
 
   const isPending = c.status === "pending";
@@ -251,7 +257,9 @@ export function ClassificationCard({ syncedEmailId }: { syncedEmailId: string })
     try {
       await classifyEmail.mutateAsync({ emailId: syncedEmailId });
       toast.success("E-mail geclassificeerd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Classificatie mislukt");
+    }
   };
 
   if (isLoading) {

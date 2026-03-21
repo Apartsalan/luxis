@@ -289,11 +289,11 @@ export default function NieuweFactuurPage() {
         const result = await createVoorschotnota.mutateAsync({
           case_id: form.case_id,
           contact_id: form.contact_id,
-          amount,
+          amount: voorschotForm.amount,
           description: voorschotForm.description?.trim() || undefined,
           invoice_date: form.invoice_date,
           due_date: form.due_date,
-          btw_percentage: parseFloat(form.btw_percentage),
+          btw_percentage: form.btw_percentage,
           settlement_type: voorschotForm.settlement_type,
         });
         toast.success("Voorschotnota aangemaakt");
@@ -333,13 +333,13 @@ export default function NieuweFactuurPage() {
         case_id: form.case_id || null,
         invoice_date: form.invoice_date,
         due_date: form.due_date,
-        btw_percentage: parseFloat(form.btw_percentage),
+        btw_percentage: form.btw_percentage,
         reference: form.reference?.trim() || null,
         notes: form.notes?.trim() || null,
         lines: allLines.map((l) => ({
           description: l.description,
-          quantity: parseFloat(l.quantity) || 1,
-          unit_price: parseFloat(l.unit_price),
+          quantity: l.quantity || "1",
+          unit_price: l.unit_price,
           time_entry_id: l.time_entry_id || null,
           expense_id: l.expense_id || null,
         })),

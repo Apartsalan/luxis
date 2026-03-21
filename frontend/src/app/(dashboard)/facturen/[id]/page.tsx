@@ -48,6 +48,7 @@ import {
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
+import { tokenStore } from "@/lib/token-store";
 
 // ── Status transition map ────────────────────────────────────────────────
 
@@ -163,7 +164,7 @@ export default function FactuurDetailPage() {
 
   const handleDownloadPdf = async () => {
     try {
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const res = await fetch(`/api/invoices/${id}/pdf`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

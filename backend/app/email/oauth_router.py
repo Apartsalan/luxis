@@ -91,7 +91,7 @@ async def get_authorize_url(
         )
 
     email_provider = get_provider(provider)
-    state = encode_oauth_state(str(user.id), str(user.tenant_id), provider)
+    state = await encode_oauth_state(str(user.id), str(user.tenant_id), provider)
     url = email_provider.get_authorize_url(state)
 
     return AuthorizeResponse(authorize_url=url)
@@ -251,7 +251,7 @@ async def _handle_oauth_callback(
     4. Returns an HTML page that sends a message to the opener window and closes itself
     """
     try:
-        state_data = decode_oauth_state(state)
+        state_data = await decode_oauth_state(state)
     except Exception:
         logger.error("Ongeldig OAuth state parameter")
         return HTMLResponse(_error_html("Ongeldige state parameter. Probeer opnieuw."))

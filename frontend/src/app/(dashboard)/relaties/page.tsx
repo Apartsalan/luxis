@@ -139,19 +139,19 @@ export default function RelatiesPage() {
       ) : data?.items && data.items.length > 0 ? (
         <>
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Relatie
                   </th>
-                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Contact
                   </th>
-                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Plaats
                   </th>
-                  <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Aangemaakt
                   </th>
                   <th className="px-4 py-3.5 w-10" />
@@ -195,7 +195,7 @@ export default function RelatiesPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="hidden md:table-cell px-4 py-3.5">
+                    <td className="px-4 py-3.5">
                       <div className="space-y-1">
                         {contact.email && (
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -218,7 +218,7 @@ export default function RelatiesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="hidden lg:table-cell px-4 py-3.5">
+                    <td className="px-4 py-3.5">
                       {contact.visit_city ? (
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3 shrink-0" />
@@ -230,7 +230,7 @@ export default function RelatiesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3.5 text-sm text-muted-foreground">
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(contact.created_at)}
                     </td>
                     <td className="px-4 py-3.5">

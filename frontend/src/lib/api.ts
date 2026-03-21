@@ -3,6 +3,8 @@
  * Automatically attaches the access token and handles token refresh.
  */
 
+import { tokenStore } from "@/lib/token-store";
+
 // Use relative URL so requests go through Next.js rewrite proxy to the backend
 const API_URL = "";
 
@@ -13,7 +15,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const refreshToken = localStorage.getItem("luxis_refresh_token");
+    const refreshToken = tokenStore.getRefresh();
     if (!refreshToken) return null;
 
     try {
@@ -26,8 +28,7 @@ async function refreshAccessToken(): Promise<string | null> {
       if (!response.ok) return null;
 
       const data = await response.json();
-      localStorage.setItem("luxis_access_token", data.access_token);
-      localStorage.setItem("luxis_refresh_token", data.refresh_token);
+      tokenStore.setTokens(data.access_token, data.refresh_token);
       return data.access_token;
     } catch {
       return null;
@@ -42,7 +43,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function api(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = localStorage.getItem("luxis_access_token");
+  const token = tokenStore.getAccess();
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -69,8 +70,7 @@ export async function api(path: string, options: RequestInit = {}): Promise<Resp
       });
     } else {
       // Refresh failed — redirect to login
-      localStorage.removeItem("luxis_access_token");
-      localStorage.removeItem("luxis_refresh_token");
+      tokenStore.clear();
       window.location.href = "/login";
     }
   }

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { tokenStore } from "@/lib/token-store";
 import { toast } from "sonner";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ export function useUploadTemplate() {
       formData.append("template_key", template_key);
       if (description) formData.append("description", description);
 
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const res = await fetch("/api/documents/managed-templates/upload", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -106,7 +107,7 @@ export function useReplaceTemplateFile() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const res = await fetch(
         `/api/documents/managed-templates/${id}/replace`,
         {
@@ -158,7 +159,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 export async function downloadTemplate(id: string, filename: string) {
-  const token = localStorage.getItem("luxis_access_token");
+  const token = tokenStore.getAccess();
   const res = await fetch(`/api/documents/managed-templates/${id}/download`, {
     headers: { Authorization: `Bearer ${token}` },
   });

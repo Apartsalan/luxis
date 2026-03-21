@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -76,6 +76,16 @@ export default function RelatieDetailPage() {
 
   // Set breadcrumb label to contact name
   useBreadcrumbs(contact ? [{ segment: id, label: contact.name }] : []);
+
+  // UX-16: Warn on unsaved changes (beforeunload)
+  useEffect(() => {
+    if (!editing) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [editing]);
 
   // Fetch cases where this contact is client or opposing party
   const { data: linkedCases } = useCases({

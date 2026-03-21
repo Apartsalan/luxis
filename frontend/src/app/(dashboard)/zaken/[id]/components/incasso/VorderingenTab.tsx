@@ -21,9 +21,10 @@ import {
 } from "@/hooks/use-collections";
 import { useCaseFiles } from "@/hooks/use-case-files";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 export function VorderingenTab({ caseId }: { caseId: string }) {
-  const { data: claims, isLoading } = useClaims(caseId);
+  const { data: claims, isLoading, isError, error, refetch } = useClaims(caseId);
   const { data: interest } = useCaseInterest(caseId);
   const { data: caseFiles } = useCaseFiles(caseId);
   const createClaim = useCreateClaim();
@@ -250,6 +251,8 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
             <div key={i} className="h-16 rounded-lg skeleton" />
           ))}
         </div>
+      ) : isError ? (
+        <QueryError message={error?.message} onRetry={refetch} />
       ) : claims && claims.length > 0 ? (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full">

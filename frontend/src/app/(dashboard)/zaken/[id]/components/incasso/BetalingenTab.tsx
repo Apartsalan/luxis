@@ -5,9 +5,10 @@ import { Loader2, Plus, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { usePayments, useCreatePayment } from "@/hooks/use-collections";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 export function BetalingenTab({ caseId }: { caseId: string }) {
-  const { data: payments, isLoading } = usePayments(caseId);
+  const { data: payments, isLoading, isError, error, refetch } = usePayments(caseId);
   const createPayment = useCreatePayment();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -150,6 +151,8 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
             <div key={i} className="h-16 rounded-lg skeleton" />
           ))}
         </div>
+      ) : isError ? (
+        <QueryError message={error?.message} onRetry={refetch} />
       ) : payments && payments.length > 0 ? (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full">
@@ -211,8 +214,11 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
       ) : (
         <div className="rounded-xl border border-dashed border-border py-12 text-center">
           <Receipt className="mx-auto h-10 w-10 text-muted-foreground/30" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Nog geen betalingen
+          <p className="mt-3 text-sm font-medium text-foreground">
+            Nog geen betalingen geregistreerd
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground max-w-xs mx-auto">
+            Betalingen worden hier getoond zodra ze zijn geregistreerd of automatisch gematcht via bankafschriften.
           </p>
         </div>
       )}

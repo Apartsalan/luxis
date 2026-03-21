@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { tokenStore } from "@/lib/token-store";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ export function useUploadCSV() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const res = await fetch("/api/payment-matching/import?bank=rabobank", {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},

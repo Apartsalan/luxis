@@ -25,6 +25,7 @@ import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
 import { InvoiceUploadZone } from "@/components/InvoiceUploadZone";
 import type { InvoiceParseResult } from "@/hooks/use-invoice-parser";
+import { tokenStore } from "@/lib/token-store";
 
 // ── Confidence Indicator ─────────────────────────────────────────────────────
 
@@ -655,10 +656,10 @@ function NieuweZaakPage() {
       if (form.opposing_party_id)
         data.opposing_party_id = form.opposing_party_id;
       if (form.interest_type === "contractual" && form.contractual_rate) {
-        data.contractual_rate = parseFloat(form.contractual_rate);
+        data.contractual_rate = form.contractual_rate;
       }
-      if (form.budget) data.budget = parseFloat(form.budget);
-      if (form.hourly_rate) data.hourly_rate = parseFloat(form.hourly_rate);
+      if (form.budget) data.budget = form.budget;
+      if (form.hourly_rate) data.hourly_rate = form.hourly_rate;
       if (form.payment_term_days)
         data.payment_term_days = parseInt(form.payment_term_days, 10);
       if (form.collection_strategy)
@@ -732,7 +733,7 @@ function NieuweZaakPage() {
           const formData = new FormData();
           formData.append("file", invoiceFile);
           formData.append("description", `Factuur: ${invoiceFile.name}`);
-          const token = localStorage.getItem("luxis_access_token");
+          const token = tokenStore.getAccess();
           await fetch(`/api/cases/${result.id}/files`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },

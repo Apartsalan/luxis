@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { tokenStore } from "@/lib/token-store";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ export function useParseInvoice() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const res = await fetch("/api/ai-agent/parse-invoice", {
         method: "POST",
         headers: {

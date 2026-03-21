@@ -8,10 +8,12 @@ import hashlib
 import hmac
 import json
 import logging
+import secrets
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import redis.asyncio as aioredis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +28,12 @@ logger = logging.getLogger(__name__)
 
 # OAuth state signing — HMAC prevents forgery
 _STATE_MAX_AGE_SECONDS = 600  # 10 minutes
+_NONCE_PREFIX = "oauth_nonce:"
+
+
+def _get_redis() -> aioredis.Redis:
+    """Get async Redis client."""
+    return aioredis.from_url(settings.redis_url, decode_responses=True)
 
 
 def _sign_state(payload_b64: str) -> str:
@@ -44,21 +52,37 @@ def get_provider(provider_name: str) -> EmailProvider:
     raise ValueError(f"Onbekende email provider: {provider_name}")
 
 
-def encode_oauth_state(user_id: str, tenant_id: str, provider: str) -> str:
-    """Encode and HMAC-sign user context into the OAuth state parameter."""
+async def encode_oauth_state(user_id: str, tenant_id: str, provider: str) -> str:
+    """Encode and HMAC-sign user context into the OAuth state parameter.
+
+    Stores a single-use nonce in Redis to prevent replay attacks (SEC-21).
+    """
+    nonce = secrets.token_urlsafe(32)
     payload = json.dumps({
         "user_id": user_id,
         "tenant_id": tenant_id,
         "provider": provider,
+        "nonce": nonce,
         "ts": int(time.time()),
     })
     payload_b64 = base64.urlsafe_b64encode(payload.encode()).decode()
     sig = _sign_state(payload_b64)
+
+    # Store nonce in Redis with TTL matching state max age
+    r = _get_redis()
+    try:
+        await r.setex(f"{_NONCE_PREFIX}{nonce}", _STATE_MAX_AGE_SECONDS, "1")
+    finally:
+        await r.aclose()
+
     return f"{payload_b64}.{sig}"
 
 
-def decode_oauth_state(state: str) -> dict:
-    """Decode and verify HMAC-signed OAuth state parameter."""
+async def decode_oauth_state(state: str) -> dict:
+    """Decode and verify HMAC-signed OAuth state parameter.
+
+    Consumes the nonce from Redis — state can only be used once (SEC-21).
+    """
     if "." not in state:
         raise ValueError("Invalid OAuth state format")
     payload_b64, sig = state.rsplit(".", 1)
@@ -70,6 +94,20 @@ def decode_oauth_state(state: str) -> dict:
     ts = payload.get("ts", 0)
     if time.time() - ts > _STATE_MAX_AGE_SECONDS:
         raise ValueError("OAuth state expired")
+
+    # Verify and consume nonce — prevents replay (SEC-21)
+    nonce = payload.get("nonce")
+    if nonce:
+        r = _get_redis()
+        try:
+            deleted = await r.delete(f"{_NONCE_PREFIX}{nonce}")
+            if not deleted:
+                raise ValueError(
+                    "OAuth state nonce already used or expired"
+                )
+        finally:
+            await r.aclose()
+
     return payload
 
 

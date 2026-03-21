@@ -15,9 +15,10 @@ import { toast } from "sonner";
 import { useFinancialSummary } from "@/hooks/use-collections";
 import { useCase, useUpdateCase } from "@/hooks/use-cases";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 export function FinancieelTab({ caseId }: { caseId: string }) {
-  const { data: summary, isLoading } = useFinancialSummary(caseId);
+  const { data: summary, isLoading, isError, error, refetch } = useFinancialSummary(caseId);
   const { data: caseData } = useCase(caseId);
   const updateCase = useUpdateCase();
   const [bikOverride, setBikOverride] = useState<string>("");
@@ -46,6 +47,8 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
       </div>
     );
   }
+
+  if (isError) return <QueryError message={error?.message} onRetry={refetch} />;
 
   if (!summary) return null;
 

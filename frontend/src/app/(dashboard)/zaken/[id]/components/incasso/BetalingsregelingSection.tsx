@@ -25,6 +25,7 @@ import {
 } from "@/hooks/use-collections";
 import type { Installment, ArrangementWithInstallments } from "@/hooks/use-collections";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 const FREQUENCY_LABELS: Record<string, string> = {
   weekly: "Wekelijks",
@@ -54,9 +55,14 @@ const INSTALLMENT_STYLES: Record<string, { bg: string; text: string; label: stri
   waived: { bg: "bg-gray-100", text: "text-gray-500", label: "Kwijtgescholden" },
 };
 
-function computePreview(totalAmount: number, installmentAmount: number, frequency: string, startDate: string) {
-  if (!totalAmount || !installmentAmount || !startDate || installmentAmount <= 0) return null;
-  const count = Math.ceil(totalAmount / installmentAmount);
+function computePreview(totalStr: string, installmentStr: string, frequency: string, startDate: string) {
+  const total = parseFloat(totalStr);
+  const installment = parseFloat(installmentStr);
+  if (!total || !installment || !startDate || installment <= 0) return null;
+  // Use integer cents to avoid float division imprecision (CQ-19)
+  const totalCents = Math.round(total * 100);
+  const installmentCents = Math.round(installment * 100);
+  const count = Math.ceil(totalCents / installmentCents);
   const days = FREQUENCY_DAYS[frequency] || 30;
   const start = new Date(startDate);
   const endMs = start.getTime() + (count - 1) * days * 86400000;
@@ -65,7 +71,7 @@ function computePreview(totalAmount: number, installmentAmount: number, frequenc
 }
 
 export function BetalingsregelingSection({ caseId }: { caseId: string }) {
-  const { data: arrangements, isLoading } = useArrangements(caseId);
+  const { data: arrangements, isLoading, isError, error, refetch } = useArrangements(caseId);
   const { data: financial } = useFinancialSummary(caseId);
   const createArrangement = useCreateArrangement();
   const recordPayment = useRecordInstallmentPayment();
@@ -175,8 +181,8 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
   };
 
   const preview = computePreview(
-    parseFloat(form.total_amount) || 0,
-    parseFloat(form.installment_amount) || 0,
+    form.total_amount,
+    form.installment_amount,
     form.frequency,
     form.start_date
   );
@@ -188,6 +194,8 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       </div>
     );
   }
+
+  if (isError) return <QueryError message={error?.message} onRetry={refetch} />;
 
   return (
     <div className="space-y-6">

@@ -22,9 +22,10 @@ import {
   useRejectTrustTransaction,
 } from "@/hooks/use-collections";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { QueryError } from "@/components/query-error";
 
 export function DerdengeldenTab({ caseId }: { caseId: string }) {
-  const { data: txData, isLoading } = useDerdengelden(caseId);
+  const { data: txData, isLoading, isError, error, refetch } = useDerdengelden(caseId);
   const { data: balance } = useDerdengeldenBalance(caseId);
   const createTx = useCreateDerdengelden();
   const approveTx = useApproveTrustTransaction();
@@ -295,6 +296,8 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
             <div key={i} className="h-16 rounded-lg skeleton" />
           ))}
         </div>
+      ) : isError ? (
+        <QueryError message={error?.message} onRetry={refetch} />
       ) : transactions.length > 0 ? (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <table className="w-full">

@@ -70,14 +70,14 @@ interface CaseCreateInput {
   description?: string;
   reference?: string;
   interest_type?: string;
-  contractual_rate?: number;
+  contractual_rate?: string | number;
   contractual_compound?: boolean;
   court_case_number?: string;
   client_id: string;
   opposing_party_id?: string;
   assigned_to_id?: string;
   date_opened: string;
-  budget?: number;  // G13
+  budget?: string | number;  // G13
 }
 
 export function useCases(params?: {

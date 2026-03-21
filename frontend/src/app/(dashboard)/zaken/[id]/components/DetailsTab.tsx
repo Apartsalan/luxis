@@ -111,6 +111,16 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     debtor_notes: zaak.debtor_notes || "",
   });
 
+  // UX-16: Warn on unsaved changes (beforeunload)
+  useEffect(() => {
+    if (!isEditing) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isEditing]);
+
   const isIncasso = zaak.case_type === "incasso";
 
   // Apply phone note text from parent
@@ -152,9 +162,9 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
           chamber: editForm.chamber.trim() || null,
           procedure_type: editForm.procedure_type.trim() || null,
           procedure_phase: editForm.procedure_phase.trim() || null,
-          ...(hasModule("budget") && { budget: editForm.budget ? parseFloat(editForm.budget) : null }),
+          ...(hasModule("budget") && { budget: editForm.budget || null }),
           ...(isIncasso && {
-            hourly_rate: editForm.hourly_rate ? parseFloat(editForm.hourly_rate) : null,
+            hourly_rate: editForm.hourly_rate || null,
             payment_term_days: editForm.payment_term_days ? parseInt(editForm.payment_term_days, 10) : null,
             collection_strategy: editForm.collection_strategy || null,
             debtor_notes: editForm.debtor_notes.trim() || null,

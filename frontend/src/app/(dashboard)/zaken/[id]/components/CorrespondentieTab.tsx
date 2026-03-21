@@ -29,6 +29,7 @@ import {
 } from "@/hooks/use-email-sync";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
 import { formatDate, formatDateShort } from "@/lib/utils";
+import { tokenStore } from "@/lib/token-store";
 
 // ── Email Detail Panel ──────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
   const handleDownloadAttachment = async (attachmentId: string, filename: string) => {
     setDownloadingId(attachmentId);
     try {
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const apiUrl = "";
       const res = await fetch(
         `${apiUrl}/api/email/attachments/${attachmentId}/download`,

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Scale, Eye, EyeOff, ArrowRight, Mail, ArrowLeft } from "lucide-react";
+import { tokenStore } from "@/lib/token-store";
 
 type View = "login" | "forgot" | "forgot-sent";
 
@@ -35,10 +36,7 @@ export default function LoginPage() {
       }
 
       const data = await response.json();
-      localStorage.setItem("luxis_access_token", data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem("luxis_refresh_token", data.refresh_token);
-      }
+      tokenStore.setTokens(data.access_token, data.refresh_token);
       window.location.href = "/";
     } catch {
       setError("Kan geen verbinding maken met de server. Probeer het later opnieuw.");

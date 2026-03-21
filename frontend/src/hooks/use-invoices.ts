@@ -552,11 +552,11 @@ export function useReceivables() {
 export interface VoorschotnotaInput {
   case_id: string;
   contact_id: string;
-  amount: number;
+  amount: string | number;
   description?: string;
   invoice_date: string;
   due_date: string;
-  btw_percentage: number;
+  btw_percentage: string | number;
   settlement_type?: "tussentijds" | "bij_sluiting";  // DF-13
 }
 

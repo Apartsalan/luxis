@@ -55,11 +55,11 @@ function BillingSettingsSection({ zaak }: { zaak: any }) {
         data: {
           billing_method: billingMethod,
           fixed_price_amount:
-            billingMethod === "fixed_price" ? parseFloat(fixedPrice) || null : null,
+            billingMethod === "fixed_price" ? (fixedPrice || null) : null,
           budget:
-            billingMethod === "budget_cap" ? parseFloat(budgetAmount) || null : null,
+            billingMethod === "budget_cap" ? (budgetAmount || null) : null,
           budget_hours:
-            billingMethod === "budget_cap" ? parseFloat(budgetHours) || null : null,
+            billingMethod === "budget_cap" ? (budgetHours || null) : null,
         },
       });
       toast.success("Facturatie-instellingen opgeslagen");

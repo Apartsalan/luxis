@@ -68,6 +68,7 @@ import {
 } from "@/hooks/use-case-files";
 import { useSaveAttachmentToCase } from "@/hooks/use-email-sync";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { tokenStore } from "@/lib/token-store";
 
 export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: string }) {
   const router = useRouter();
@@ -525,7 +526,7 @@ function VerschottenSection({ caseId }: { caseId: string }) {
       await createExpense.mutateAsync({
         case_id: caseId,
         description: form.description,
-        amount: parseFloat(form.amount),
+        amount: form.amount,
         expense_date: form.expense_date,
         category: form.category,
         billable: form.billable,
@@ -711,8 +712,11 @@ function VerschottenSection({ caseId }: { caseId: string }) {
         ) : !expenses || expenses.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-8 text-center">
             <Receipt className="mx-auto h-8 w-8 text-muted-foreground/30" />
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm font-medium text-foreground">
               Nog geen verschotten geregistreerd
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground max-w-xs mx-auto">
+              Registreer kosten zoals griffierecht of deurwaarderskosten die doorbelast worden aan de client.
             </p>
           </div>
         ) : (
@@ -847,7 +851,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
     setPreviewLoading(true);
     setPreviewOpen(true);
     try {
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const apiUrl = "";
       const res = await fetch(`${apiUrl}/api/documents/${docId}/preview`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -870,7 +874,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
     setPreviewLoading(true);
     setPreviewOpen(true);
     try {
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const apiUrl = "";
       const res = await fetch(
         `${apiUrl}/api/cases/${caseId}/files/${fileId}/preview`,
@@ -894,7 +898,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
     setPreviewLoading(true);
     setPreviewOpen(true);
     try {
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const res = await fetch(
         `/api/email/attachments/${attachmentId}/download`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -1262,10 +1266,13 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
 
           if (!allItems.length) {
             return (
-              <div className="rounded-lg border border-dashed border-border py-6 text-center">
-                <File className="mx-auto h-6 w-6 text-muted-foreground/30" />
-                <p className="mt-1.5 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-border py-8 text-center">
+                <File className="mx-auto h-8 w-8 text-muted-foreground/30" />
+                <p className="mt-2 text-sm font-medium text-foreground">
                   Nog geen bestanden
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground max-w-xs mx-auto">
+                  Upload bestanden via het uploadgebied hierboven, of genereer documenten via sjablonen.
                 </p>
               </div>
             );

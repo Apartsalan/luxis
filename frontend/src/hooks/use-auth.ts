@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { tokenStore } from "@/lib/token-store";
 
 // ─── Types ────────────────────────────────────────────────────────
 export interface User {
@@ -42,7 +43,7 @@ export function useAuthProvider() {
   const router = useRouter();
 
   const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem("luxis_access_token");
+    const token = tokenStore.getAccess();
     if (!token) {
       setUser(null);
       setLoading(false);
@@ -55,8 +56,7 @@ export function useAuthProvider() {
       const data = await res.json();
       setUser(data);
     } catch {
-      localStorage.removeItem("luxis_access_token");
-      localStorage.removeItem("luxis_refresh_token");
+      tokenStore.clear();
       setUser(null);
     } finally {
       setLoading(false);
@@ -68,8 +68,7 @@ export function useAuthProvider() {
   }, [fetchUser]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("luxis_access_token");
-    localStorage.removeItem("luxis_refresh_token");
+    tokenStore.clear();
     setUser(null);
     router.push("/login");
   }, [router]);

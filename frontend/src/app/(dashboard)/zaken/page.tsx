@@ -393,7 +393,7 @@ export default function ZakenPage() {
       ) : data?.items && data.items.length > 0 ? (
         <>
           <div className="overflow-x-auto rounded-xl border border-border bg-card">
-            <table className="w-full">
+            <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b border-border">
                   <th className="w-10 px-4 py-3.5">
@@ -404,29 +404,29 @@ export default function ZakenPage() {
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Dossier
                   </th>
-                  <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Type
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Status
                   </th>
-                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Client
                   </th>
-                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Wederpartij
                   </th>
                   {hasModule("incasso") && (
                     <>
-                      <th className="hidden md:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Hoofdsom
                       </th>
-                      <th className="hidden lg:table-cell px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Openstaand
                       </th>
                     </>
                   )}
-                  <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Geopend
                   </th>
                   <th className="px-4 py-3.5 w-10" />
@@ -462,7 +462,7 @@ export default function ZakenPage() {
                         </p>
                       )}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3.5">
+                    <td className="px-4 py-3.5">
                       <span
                         className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${
                           TYPE_BADGE[zaak.case_type] ??
@@ -482,7 +482,7 @@ export default function ZakenPage() {
                         {dynamicStatusLabels[zaak.status] ?? zaak.status}
                       </span>
                     </td>
-                    <td className="hidden md:table-cell px-4 py-3.5">
+                    <td className="px-4 py-3.5">
                       {zaak.client ? (
                         <Link
                           href={`/relaties/${zaak.client.id}`}
@@ -494,7 +494,7 @@ export default function ZakenPage() {
                         <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="hidden lg:table-cell px-4 py-3.5">
+                    <td className="px-4 py-3.5">
                       {zaak.opposing_party ? (
                         <Link
                           href={`/relaties/${zaak.opposing_party.id}`}
@@ -508,12 +508,12 @@ export default function ZakenPage() {
                     </td>
                     {hasModule("incasso") && (
                       <>
-                        <td className="hidden md:table-cell px-4 py-3.5 text-right">
+                        <td className="px-4 py-3.5 text-right">
                           <span className="text-sm font-semibold text-foreground tabular-nums">
                             {formatCurrency(zaak.total_principal)}
                           </span>
                         </td>
-                        <td className="hidden lg:table-cell px-4 py-3.5 text-right">
+                        <td className="px-4 py-3.5 text-right">
                           <span className={`text-sm font-semibold tabular-nums ${
                             (zaak.total_principal - zaak.total_paid) > 0
                               ? "text-amber-600"
@@ -524,7 +524,7 @@ export default function ZakenPage() {
                         </td>
                       </>
                     )}
-                    <td className="hidden sm:table-cell px-4 py-3.5 text-sm text-muted-foreground">
+                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(zaak.date_opened)}
                     </td>
                     <td className="px-4 py-3.5">

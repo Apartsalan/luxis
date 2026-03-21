@@ -24,7 +24,7 @@ export interface Expense {
 interface ExpenseCreateInput {
   case_id?: string;
   description: string;
-  amount: number;
+  amount: string | number;
   expense_date: string;
   category?: string;
   billable?: boolean;
@@ -34,7 +34,7 @@ interface ExpenseCreateInput {
 
 interface ExpenseUpdateInput {
   description?: string;
-  amount?: number;
+  amount?: string | number;
   expense_date?: string;
   category?: string;
   billable?: boolean;

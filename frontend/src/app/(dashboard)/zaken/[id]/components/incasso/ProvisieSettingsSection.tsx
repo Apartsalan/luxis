@@ -39,9 +39,9 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
       await updateCase.mutateAsync({
         id: caseId,
         data: {
-          provisie_percentage: parseFloat(provPerc) || null,
-          fixed_case_costs: parseFloat(fixedCosts) || null,
-          minimum_fee: parseFloat(minFee) || null,
+          provisie_percentage: provPerc || null,
+          fixed_case_costs: fixedCosts || null,
+          minimum_fee: minFee || null,
         },
       });
       toast.success("Provisie-instellingen opgeslagen");

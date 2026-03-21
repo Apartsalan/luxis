@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { tokenStore } from "@/lib/token-store";
 import { toast } from "sonner";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ export function useUploadCaseFile(caseId: string) {
       if (description) formData.append("description", description);
       if (documentDirection) formData.append("document_direction", documentDirection);
 
-      const token = localStorage.getItem("luxis_access_token");
+      const token = tokenStore.getAccess();
       const apiUrl = "";
       const res = await fetch(
         `${apiUrl}/api/cases/${caseId}/files`,
@@ -119,7 +120,7 @@ export function useCaseEmailAttachments(caseId: string) {
 }
 
 export function downloadEmailAttachment(attachmentId: string, filename: string) {
-  const token = localStorage.getItem("luxis_access_token");
+  const token = tokenStore.getAccess();
   const apiUrl = "";
   fetch(`${apiUrl}/api/email/attachments/${attachmentId}/download`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -174,7 +175,7 @@ export function getFileIcon(contentType: string): { color: string; label: string
 }
 
 export function downloadCaseFile(caseId: string, fileId: string, filename: string) {
-  const token = localStorage.getItem("luxis_access_token");
+  const token = tokenStore.getAccess();
   const apiUrl = "";
   fetch(`${apiUrl}/api/cases/${caseId}/files/${fileId}/download`, {
     headers: { Authorization: `Bearer ${token}` },

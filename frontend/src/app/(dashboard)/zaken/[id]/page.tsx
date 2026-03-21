@@ -51,6 +51,22 @@ import CorrespondentieTab from "./components/CorrespondentieTab";
 import ActiviteitenTab from "./components/ActiviteitenTab";
 import PartijenTab from "./components/PartijenTab";
 import DossierSidebar from "./components/DossierSidebar";
+import { ErrorBoundary } from "@/components/error-boundary";
+
+function TabErrorFallback({ tabName }: { tabName: string }) {
+  return (
+    <div className="flex items-center justify-center rounded-xl border border-dashed border-destructive/30 bg-destructive/5 py-12">
+      <div className="text-center">
+        <p className="text-sm font-medium text-destructive">
+          Er ging iets mis in het tabblad &quot;{tabName}&quot;
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          De overige tabbladen werken nog normaal.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function ZaakDetailPage() {
   const params = useParams();
@@ -416,18 +432,58 @@ export default function ZaakDetailPage() {
             </div>
           </div>
 
-          {/* Tab content */}
+          {/* Tab content — each tab wrapped in ErrorBoundary (UX-19) */}
           <div className="mt-6">
-            {activeTab === "overzicht" && <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />}
-            {activeTab === "taken" && <TijdregistratieTab caseId={id} />}
-            {activeTab === "uren" && <UrenTab caseId={id} />}
-            {isIncasso && activeTab === "vorderingen" && <VorderingenFinancieelTab caseId={id} />}
-            {isIncasso && activeTab === "betalingen" && <BetalingenDerdengeldenTab caseId={id} />}
-            {activeTab === "facturen" && <FacturenTab caseId={id} clientId={zaak?.client?.id} />}
-            {activeTab === "documenten" && <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />}
-            {activeTab === "correspondentie" && <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />}
-            {activeTab === "activiteiten" && <ActiviteitenTab zaak={zaak} />}
-            {activeTab === "partijen" && <PartijenTab zaak={zaak} />}
+            {activeTab === "overzicht" && (
+              <ErrorBoundary key="overzicht" fallback={<TabErrorFallback tabName="Overzicht" />}>
+                <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />
+              </ErrorBoundary>
+            )}
+            {activeTab === "taken" && (
+              <ErrorBoundary key="taken" fallback={<TabErrorFallback tabName="Taken" />}>
+                <TijdregistratieTab caseId={id} />
+              </ErrorBoundary>
+            )}
+            {activeTab === "uren" && (
+              <ErrorBoundary key="uren" fallback={<TabErrorFallback tabName="Uren" />}>
+                <UrenTab caseId={id} />
+              </ErrorBoundary>
+            )}
+            {isIncasso && activeTab === "vorderingen" && (
+              <ErrorBoundary key="vorderingen" fallback={<TabErrorFallback tabName="Vorderingen" />}>
+                <VorderingenFinancieelTab caseId={id} />
+              </ErrorBoundary>
+            )}
+            {isIncasso && activeTab === "betalingen" && (
+              <ErrorBoundary key="betalingen" fallback={<TabErrorFallback tabName="Betalingen" />}>
+                <BetalingenDerdengeldenTab caseId={id} />
+              </ErrorBoundary>
+            )}
+            {activeTab === "facturen" && (
+              <ErrorBoundary key="facturen" fallback={<TabErrorFallback tabName="Facturen" />}>
+                <FacturenTab caseId={id} clientId={zaak?.client?.id} />
+              </ErrorBoundary>
+            )}
+            {activeTab === "documenten" && (
+              <ErrorBoundary key="documenten" fallback={<TabErrorFallback tabName="Documenten" />}>
+                <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />
+              </ErrorBoundary>
+            )}
+            {activeTab === "correspondentie" && (
+              <ErrorBoundary key="correspondentie" fallback={<TabErrorFallback tabName="Correspondentie" />}>
+                <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />
+              </ErrorBoundary>
+            )}
+            {activeTab === "activiteiten" && (
+              <ErrorBoundary key="activiteiten" fallback={<TabErrorFallback tabName="Activiteiten" />}>
+                <ActiviteitenTab zaak={zaak} />
+              </ErrorBoundary>
+            )}
+            {activeTab === "partijen" && (
+              <ErrorBoundary key="partijen" fallback={<TabErrorFallback tabName="Partijen" />}>
+                <PartijenTab zaak={zaak} />
+              </ErrorBoundary>
+            )}
           </div>
         </div>
 

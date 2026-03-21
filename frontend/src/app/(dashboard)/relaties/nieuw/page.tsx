@@ -31,10 +31,61 @@ export default function NieuweRelatiePage() {
     notes: "",
   });
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const validateField = (field: string, value: string): string => {
+    switch (field) {
+      case "name":
+        if (contactType === "company" && !value.trim()) return "Bedrijfsnaam is verplicht";
+        break;
+      case "first_name":
+        if (contactType === "person" && !value.trim()) return "Voornaam is verplicht";
+        break;
+      case "last_name":
+        if (contactType === "person" && !value.trim()) return "Achternaam is verplicht";
+        break;
+      case "email":
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Ongeldig e-mailadres";
+        break;
+      case "kvk_number":
+        if (value && !/^\d{8}$/.test(value)) return "KvK-nummer moet 8 cijfers zijn";
+        break;
+      case "visit_postcode":
+      case "postal_postcode":
+        if (value && !/^\d{4}\s?[A-Za-z]{2}$/.test(value)) return "Ongeldige postcode (bijv. 1234 AB)";
+        break;
+    }
+    return "";
+  };
+
+  const handleBlur = (field: string) => {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+    const err = validateField(field, form[field as keyof typeof form] || "");
+    setFieldErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
+  const validateAll = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (contactType === "company") {
+      errors.name = validateField("name", form.name);
+    } else {
+      errors.first_name = validateField("first_name", form.first_name);
+      errors.last_name = validateField("last_name", form.last_name);
+    }
+    errors.email = validateField("email", form.email);
+    errors.kvk_number = validateField("kvk_number", form.kvk_number);
+    errors.visit_postcode = validateField("visit_postcode", form.visit_postcode);
+    errors.postal_postcode = validateField("postal_postcode", form.postal_postcode);
+    setFieldErrors(errors);
+    setTouched(Object.fromEntries(Object.keys(errors).map((k) => [k, true])));
+    return !Object.values(errors).some(Boolean);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!validateAll()) return;
 
     const data = {
       contact_type: contactType,
@@ -74,6 +125,16 @@ export default function NieuweRelatiePage() {
 
   const inputClass =
     "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+  const inputErrorClass =
+    "mt-1.5 w-full rounded-lg border border-destructive bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-destructive focus:outline-none focus:ring-2 focus:ring-destructive/20 transition-colors";
+
+  const getInputClass = (field: string) =>
+    touched[field] && fieldErrors[field] ? inputErrorClass : inputClass;
+
+  const FieldError = ({ field }: { field: string }) =>
+    touched[field] && fieldErrors[field] ? (
+      <p className="mt-1 text-xs text-destructive">{fieldErrors[field]}</p>
+    ) : null;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-fade-in">
@@ -130,9 +191,11 @@ export default function NieuweRelatiePage() {
                 required
                 value={form.name}
                 onChange={(e) => updateField("name", e.target.value)}
-                className={inputClass}
+                onBlur={() => handleBlur("name")}
+                className={getInputClass("name")}
                 placeholder="Acme B.V."
               />
+              <FieldError field="name" />
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -145,8 +208,10 @@ export default function NieuweRelatiePage() {
                   required
                   value={form.first_name}
                   onChange={(e) => updateField("first_name", e.target.value)}
-                  className={inputClass}
+                  onBlur={() => handleBlur("first_name")}
+                  className={getInputClass("first_name")}
                 />
+                <FieldError field="first_name" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground">
@@ -157,8 +222,10 @@ export default function NieuweRelatiePage() {
                   required
                   value={form.last_name}
                   onChange={(e) => updateField("last_name", e.target.value)}
-                  className={inputClass}
+                  onBlur={() => handleBlur("last_name")}
+                  className={getInputClass("last_name")}
                 />
+                <FieldError field="last_name" />
               </div>
             </div>
           )}
@@ -172,8 +239,10 @@ export default function NieuweRelatiePage() {
                 type="email"
                 value={form.email}
                 onChange={(e) => updateField("email", e.target.value)}
-                className={inputClass}
+                onBlur={() => handleBlur("email")}
+                className={getInputClass("email")}
               />
+              <FieldError field="email" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
@@ -198,9 +267,11 @@ export default function NieuweRelatiePage() {
                   type="text"
                   value={form.kvk_number}
                   onChange={(e) => updateField("kvk_number", e.target.value)}
-                  className={inputClass}
+                  onBlur={() => handleBlur("kvk_number")}
+                  className={getInputClass("kvk_number")}
                   maxLength={8}
                 />
+                <FieldError field="kvk_number" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground">
@@ -238,9 +309,11 @@ export default function NieuweRelatiePage() {
                 type="text"
                 value={form.visit_postcode}
                 onChange={(e) => updateField("visit_postcode", e.target.value)}
-                className={inputClass}
+                onBlur={() => handleBlur("visit_postcode")}
+                className={getInputClass("visit_postcode")}
                 placeholder="1234 AB"
               />
+              <FieldError field="visit_postcode" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">
@@ -277,9 +350,11 @@ export default function NieuweRelatiePage() {
                 type="text"
                 value={form.postal_postcode}
                 onChange={(e) => updateField("postal_postcode", e.target.value)}
-                className={inputClass}
+                onBlur={() => handleBlur("postal_postcode")}
+                className={getInputClass("postal_postcode")}
                 placeholder="1234 AB"
               />
+              <FieldError field="postal_postcode" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground">

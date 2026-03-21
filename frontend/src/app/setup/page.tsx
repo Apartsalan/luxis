@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Scale, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
+import { tokenStore } from "@/lib/token-store";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -72,10 +73,7 @@ export default function SetupPage() {
       }
 
       const data = await response.json();
-      localStorage.setItem("luxis_access_token", data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem("luxis_refresh_token", data.refresh_token);
-      }
+      tokenStore.setTokens(data.access_token, data.refresh_token);
       setStep("done");
     } catch {
       setError("Kan geen verbinding maken met de server.");

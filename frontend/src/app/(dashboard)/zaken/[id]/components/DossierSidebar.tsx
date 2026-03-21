@@ -440,7 +440,7 @@ export default function DossierSidebar({
               <div className="flex items-center justify-between">
                 <dt className="text-xs text-muted-foreground">Uurtarief</dt>
                 <dd className="text-xs font-medium text-foreground">
-                  € {zaak.hourly_rate.toFixed(2)}
+                  € {Number(zaak.hourly_rate).toFixed(2)}
                 </dd>
               </div>
             )}

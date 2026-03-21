@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus } from "@/hooks/use-invoices";
+import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus, useProvisie } from "@/hooks/use-invoices";
 import { useDerdengeldenBalance } from "@/hooks/use-collections";
 import { useRelations } from "@/hooks/use-relations";
 import { useCases, useCase } from "@/hooks/use-cases";
@@ -26,6 +26,7 @@ export default function NieuweFactuurPage() {
   const searchParams = useSearchParams();
   const preselectedCaseId = searchParams.get("case_id") || "";
   const preselectedType = searchParams.get("type") || "factuur";
+  const isProvisie = searchParams.get("provisie") === "true";
   const createInvoice = useCreateInvoice();
   const createVoorschotnota = useCreateVoorschotnota();
 
@@ -76,6 +77,11 @@ export default function NieuweFactuurPage() {
   // Pre-fill from case_id URL parameter
   const { data: preselectedCase } = useCase(preselectedCaseId || undefined);
 
+  // DF-05: Provisie pre-fill
+  const { data: provisieData } = useProvisie(
+    isProvisie && preselectedCaseId ? preselectedCaseId : undefined
+  );
+
   useEffect(() => {
     if (preselectedCase && preselectedCaseId) {
       setSelectedCaseNumber(preselectedCase.case_number);
@@ -85,6 +91,29 @@ export default function NieuweFactuurPage() {
       }
     }
   }, [preselectedCase, preselectedCaseId]);
+
+  // DF-05: Pre-fill provisie line when provisie data is loaded
+  useEffect(() => {
+    if (isProvisie && provisieData && provisieData.total_fee > 0) {
+      const feeAmount = provisieData.minimum_fee > 0 && provisieData.total_fee < provisieData.minimum_fee
+        ? provisieData.minimum_fee
+        : provisieData.total_fee;
+      setLines([
+        {
+          description: `Provisie ${provisieData.provisie_percentage}% over geïnd bedrag (${formatCurrency(provisieData.collected_amount)})`,
+          quantity: "1",
+          unit_price: feeAmount.toFixed(2),
+        },
+        ...(provisieData.fixed_case_costs > 0
+          ? [{
+              description: "Vaste dossierkosten",
+              quantity: "1",
+              unit_price: provisieData.fixed_case_costs.toFixed(2),
+            }]
+          : []),
+      ]);
+    }
+  }, [isProvisie, provisieData]);
 
   const { data: contactResults } = useRelations({
     search: contactSearch || undefined,

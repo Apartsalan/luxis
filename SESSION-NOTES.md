@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 maart 2026 (sessie 85b — AI UX Redesign: Onzichtbare AI)
-**Laatste feature/fix:** Sessie 85b — AI features geïntegreerd in Mijn Taken, sidebar opgeruimd
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 86 — QA Sprint + Bugfixes)
+**Laatste feature/fix:** Sessie 86 — 3 bugs gefixt (hourly_rate crash, SEC-9 RLS, provisie knop)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -10,7 +10,35 @@
 **Security Sprint:** 15/15 COMPLEET ✅
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen)
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Lisanne's verbeterpunten verwerken
+**Volgende sessie:** Lisanne's verbeterpunten verwerken (LF-16 t/m LF-21)
+
+## Wat er gedaan is (sessie 86 — 21 maart 2026) — QA Sprint + Bugfixes
+
+**Multi-terminal QA sessie: 3 terminals parallel, alle features uit sessie 81-85 getest**
+
+### QA Resultaten (3 terminals)
+
+**Terminal A — Incasso features:** 5/5 passed (BIK override, Verschotten CRUD, Termijnen auto-berekening, Auto-koppeling betaling, Herbereken rente)
+**Terminal B — Factuur & AI features:** 4/5 passed (DF-13 ✅, DF-07 ✅, DF-09 ✅, AI Taken ✅ gebouwd, DF-05 ❌ knop ontbrak)
+**Terminal C — Security:** 4/5 passed (SEC-12 ✅, SEC-13 ✅, SEC-15 ✅, SEC-7 ✅, SEC-9 ❌ RLS niet afgedwongen)
+
+### Bugs gevonden + gefixt
+
+1. **BUG-57: `hourly_rate.toFixed is not a function`** — Zaakdetailpagina crashte bij dossiers met uurtarief (API retourneert string). Fix: `Number()` wrap op DossierSidebar, DetailsTab, ContactInfoSection.
+
+2. **BUG-58: SEC-9 RLS niet afgedwongen** — RLS policies bestonden maar `luxis` user is superuser (bypast RLS altijd). Fix: nieuwe Alembic migratie `sec9b_force_rls` die `luxis_app` non-superuser role aanmaakt + `FORCE ROW LEVEL SECURITY` + middleware `SET LOCAL ROLE luxis_app`.
+
+3. **BUG-59: Provisie factureren knop ontbrak** — DF-05 instellingen werkten maar er was geen actie om een factuur aan te maken. Fix: "Provisie factureren" knop in ProvisieSettingsSection + `?provisie=true` query param op factuurpagina die regels pre-filled.
+
+### Lisanne's feedback op roadmap gezet (LF-16 t/m LF-21)
+- LF-16: Timer persistence bij browser sluiten
+- LF-17: Incasso-instellingen uit wizard
+- LF-18: "Normaal" strategie hernoemen
+- LF-19: Terugknop wizard state behouden
+- LF-20: Minder dossiertypes
+- LF-21: Documentfilter op bestandstype
+
+Gewijzigde bestanden: `DossierSidebar.tsx`, `DetailsTab.tsx`, `ContactInfoSection.tsx`, `ProvisieSettingsSection.tsx`, `facturen/nieuw/page.tsx`, `middleware/tenant.py`, `sec9b_force_rls.py`, `LUXIS-ROADMAP.md`
 
 ## Wat er gedaan is (sessie 85b — 20 maart 2026) — AI UX Redesign: Onzichtbare AI
 

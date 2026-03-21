@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Euro, Loader2, Save } from "lucide-react";
+import Link from "next/link";
+import { Euro, FileText, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { useCase, useUpdateCase } from "@/hooks/use-cases";
 import { useProvisie } from "@/hooks/use-invoices";
@@ -204,6 +205,15 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
                   Minimumkosten van {formatCurrency(provisie.minimum_fee)} zijn van toepassing
                 </p>
               )}
+              <div className="mt-4">
+                <Link
+                  href={`/facturen/nieuw?case_id=${caseId}&provisie=true`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  <FileText className="h-4 w-4" />
+                  Provisie factureren
+                </Link>
+              </div>
             </div>
           )}
         </div>

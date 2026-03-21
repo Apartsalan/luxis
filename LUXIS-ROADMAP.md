@@ -266,6 +266,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-54 | Renteoverzicht knop verwees naar niet-bestaande "financieel" tab | Hoog | M | ✅ Gefixt (18 mrt, sessie 78) — RenteoverzichtDialog gebouwd |
 | BUG-55 | Geen delete knop voor facturen in dossier Facturen tab | Midden | S | ✅ Gefixt (18 mrt, sessie 78) |
 | BUG-56 | Wizard stap 3 (Vordering) overgeslagen bij incasso dossiers — Enter key + button click-through | Hoog | S | ✅ Gefixt (18 mrt, sessie 78) — handleSubmit guard + React key props |
+| BUG-57 | `hourly_rate.toFixed is not a function` — zaakdetailpagina crasht bij dossiers met uurtarief. API retourneert string, `.toFixed()` verwacht number. Fix: `Number()` wrap op 3 plekken. | Hoog | S | ✅ Gefixt (21 mrt, sessie 86) |
+| BUG-58 | SEC-9 RLS niet afgedwongen — policies bestonden maar `luxis` is superuser en bypast RLS. Fix: `luxis_app` non-superuser role + `FORCE ROW LEVEL SECURITY` + `SET LOCAL ROLE` in middleware. | Kritiek | M | ✅ Gefixt (21 mrt, sessie 86) |
+| BUG-59 | Provisie factureren knop ontbreekt (DF-05 incompleet) — instellingen bestaan maar geen actie om factuur aan te maken met provisie pre-filled. Fix: "Provisie factureren" knop + `?provisie=true` query param. | Midden | S | ✅ Gefixt (21 mrt, sessie 86) |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 
@@ -309,6 +312,19 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | UX-11 | Follow-up: uitleg toegevoegd bij lege staat | Laag | ✅ Sessie 80 |
 | UX-12 | Dashboard taken: duplicaten gegroepeerd (bijv. "3x ...") | Laag | ✅ Sessie 80 |
 | UX-13 | Dossier lijst: "Openstaand" kolom toegevoegd | Midden | ✅ Sessie 80 |
+
+---
+
+### Lisanne Feedback Sprint 3 (sessie 86, 21 maart 2026)
+
+| # | Feature/Fix | Ernst | Grootte | Status |
+|---|-------------|-------|---------|--------|
+| LF-16 | Timer loopt door na sluiten programma — moet pauzeren/stoppen bij afsluiten browser | Hoog | M | ❌ TODO |
+| LF-17 | "Incasso/instellingen" (uurtarief, betalingstermijn) verwijderen uit dossier-aanmaak wizard — hoort in dossier zelf | Midden | S | ❌ TODO |
+| LF-18 | "Normaal" strategie onduidelijk bij dossier-aanmaak — hernoemen of verduidelijken | Laag | S | ❌ TODO |
+| LF-19 | Terugknop in dossier-wizard wist alle ingevoerde gegevens — moet state behouden | Hoog | M | ❌ TODO |
+| LF-20 | Te veel opties bij "type dossier" — alleen "Incasso" en "Dossier" (evt. "Advies"), insolventie/overig weg | Laag | S | ❌ TODO |
+| LF-21 | Filteroptie bij documenten ontbreekt — filter op bestandstype (Word, PDF, etc.) binnen dossier | Laag | S | ❌ TODO |
 
 ---
 
@@ -384,7 +400,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 |---|-------|-------|---------|--------|
 | SEC-7 | **Rate limiting op auth endpoints** — slowapi geïnstalleerd. Login: 10/min, forgot-password: 3/uur, reset: 5/uur. | 🟠 Hoog | M | ✅ Sessie 83 |
 | SEC-8 | **postMessage wildcard origin** — OAuth success popup stuurt `postMessage('*')`. Fix: specifieke origin + HTML/JS escaping. | 🟠 Hoog | S | ✅ Sessie 83 |
-| SEC-9 | **PostgreSQL RLS niet actief** — `SET app.current_tenant` wordt gezet maar geen `CREATE POLICY` in migraties. Tenant isolation is puur applicatie-level. Fix: RLS policies via Alembic migratie. | 🟠 Hoog | M-L | ✅ Sessie 84 |
+| SEC-9 | **PostgreSQL RLS niet actief** — RLS policies bestonden maar werden niet afgedwongen (owner bypast RLS). Fix: `FORCE ROW LEVEL SECURITY` + `luxis_app` non-superuser role + `SET LOCAL ROLE` in middleware. | 🟠 Hoog | M-L | ✅ Sessie 84 + fix sessie 86 |
 | SEC-10 | **Jinja2 Server-Side Template Injection** — Fix: `SandboxedEnvironment` voor alle DB-templates. | 🟠 Hoog | S | ✅ Sessie 83 |
 | SEC-11 | **Container draait als root** — Fix: `adduser appuser` + `USER appuser` in Dockerfile. | 🟡 Medium | S | ✅ Sessie 83 |
 

@@ -401,7 +401,7 @@ export function ContactInfoSection({
             {contact.default_hourly_rate && (
               <div>
                 <dt className="text-xs text-muted-foreground">Uurtarief</dt>
-                <dd className="text-sm font-medium text-foreground">€ {contact.default_hourly_rate.toFixed(2)}</dd>
+                <dd className="text-sm font-medium text-foreground">€ {Number(contact.default_hourly_rate).toFixed(2)}</dd>
               </div>
             )}
             {contact.payment_term_days && (

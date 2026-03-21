@@ -666,7 +666,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                 <div>
                   <dt className="text-xs text-muted-foreground mb-1">Uurtarief</dt>
                   <dd className="text-sm text-foreground">
-                    {zaak.hourly_rate != null ? `€ ${zaak.hourly_rate.toFixed(2)} / uur` : "-"}
+                    {zaak.hourly_rate != null ? `€ ${Number(zaak.hourly_rate).toFixed(2)} / uur` : "-"}
                   </dd>
                 </div>
                 <div>

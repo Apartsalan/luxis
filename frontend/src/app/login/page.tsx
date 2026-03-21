@@ -80,10 +80,24 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-gradient-to-br from-[hsl(224,30%,14%)] via-[hsl(224,35%,20%)] to-[hsl(224,30%,16%)] p-12">
-        <div>
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden p-12">
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(224,40%,12%)] via-[hsl(224,45%,18%)] to-[hsl(240,35%,14%)]" />
+        {/* Subtle radial glow */}
+        <div className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] rounded-full bg-primary/8 blur-3xl" />
+        <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] rounded-full bg-accent/5 blur-3xl" />
+        {/* Dot grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+
+        <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/25">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/30 ring-1 ring-white/10">
               <Scale className="h-5 w-5 text-white" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">
@@ -92,41 +106,40 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="relative z-10 space-y-6">
           <h2 className="text-4xl font-bold text-white leading-tight">
             Praktijkmanagement
             <br />
-            <span className="text-primary/80">voor de advocatuur</span>
+            <span className="bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text text-transparent">voor de advocatuur</span>
           </h2>
-          <p className="text-base text-white/50 max-w-md leading-relaxed">
+          <p className="text-base text-white/55 max-w-md leading-relaxed">
             Dossierbeheer, tijdschrijven, facturatie en documentgeneratie
             in één overzichtelijk platform.
           </p>
-          <div className="flex gap-6 pt-4">
-            <div>
-              <p className="text-2xl font-bold text-white">Dossiers</p>
-              <p className="text-xs text-white/40 mt-0.5">Centraal beheer</p>
-            </div>
-            <div className="w-px bg-white/10" />
-            <div>
-              <p className="text-2xl font-bold text-white">Uren</p>
-              <p className="text-xs text-white/40 mt-0.5">Tijdschrijven</p>
-            </div>
-            <div className="w-px bg-white/10" />
-            <div>
-              <p className="text-2xl font-bold text-white">Facturen</p>
-              <p className="text-xs text-white/40 mt-0.5">Facturatie</p>
-            </div>
+          <div className="flex gap-8 pt-4">
+            {[
+              { label: "Dossiers", sub: "Centraal beheer" },
+              { label: "Uren", sub: "Tijdschrijven" },
+              { label: "Facturen", sub: "Facturatie" },
+            ].map((item, i) => (
+              <div key={item.label} className="flex gap-8">
+                {i > 0 && <div className="w-px bg-white/10 -ml-8 mr-0" />}
+                <div>
+                  <p className="text-2xl font-bold text-white">{item.label}</p>
+                  <p className="text-xs text-white/40 mt-0.5">{item.sub}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <p className="text-xs text-white/20">
+        <p className="relative z-10 text-xs text-white/20">
           © {new Date().getFullYear()} Luxis · Kesting Legal
         </p>
       </div>
 
       {/* Right panel — forms */}
-      <div className="flex flex-1 items-center justify-center bg-background px-6 sm:px-8">
+      <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-background to-muted/30 px-6 sm:px-8">
         <div className="w-full max-w-sm animate-fade-in">
           {/* Mobile logo */}
           <div className="mb-8 text-center lg:hidden">
@@ -141,13 +154,13 @@ export default function LoginPage() {
           {view === "login" && (
             <>
               <div className="hidden lg:block mb-8">
-                <h1 className="text-2xl font-bold text-foreground">Welkom terug</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <h1 className="text-2xl font-bold text-foreground tracking-tight">Welkom terug</h1>
+                <p className="mt-1.5 text-sm text-muted-foreground">
                   Log in op je Luxis account
                 </p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-5">
+              <form onSubmit={handleLogin} className="space-y-5 rounded-2xl bg-card p-6 shadow-sm ring-1 ring-border/50 lg:p-0 lg:bg-transparent lg:shadow-none lg:ring-0">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
                     E-mailadres

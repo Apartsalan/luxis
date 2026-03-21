@@ -412,17 +412,17 @@ function KPICard({
   color: "primary" | "success" | "warning";
   href?: string;
 }) {
-  const colorClasses = {
-    primary: "bg-blue-50 text-blue-600",
-    success: "bg-emerald-50 text-emerald-600",
-    warning: "bg-amber-50 text-amber-600",
+  const iconClasses = {
+    primary: "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-500/25",
+    success: "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-emerald-500/25",
+    warning: "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-amber-500/25",
   };
 
   const content = (
-    <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md hover:border-border/80 transition-all group cursor-pointer">
+    <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group cursor-pointer">
       <div className="flex items-start justify-between">
         <div
-          className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorClasses[color]}`}
+          className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-lg ${iconClasses[color]}`}
         >
           {icon}
         </div>
@@ -430,8 +430,8 @@ function KPICard({
           <ArrowUpRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground transition-all" />
         )}
       </div>
-      <div className="mt-3">
-        <p className="text-2xl font-bold text-card-foreground tabular-nums">
+      <div className="mt-4">
+        <p className="text-2xl font-bold text-card-foreground tabular-nums tracking-tight">
           {value}
         </p>
         <p className="text-sm text-muted-foreground mt-0.5">{label}</p>

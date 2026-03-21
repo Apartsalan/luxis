@@ -21,7 +21,7 @@ import {
 } from "@/hooks/use-relations";
 import { useCases } from "@/hooks/use-cases";
 import { useModules } from "@/hooks/use-modules";
-import { useKyc, useSaveKyc, useCompleteKyc } from "@/hooks/use-kyc";
+import { useKyc, useSaveKyc, useCompleteKyc, type KycFormData } from "@/hooks/use-kyc";
 import { formatDateShort } from "@/lib/utils";
 import { ContactLinks } from "@/components/relations/contact-links";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
@@ -30,6 +30,7 @@ import {
   LinkedCasesSection,
   KycSection,
   KYC_STATUS_CONFIG,
+  type KycFormState,
 } from "@/components/relations/detail";
 
 export default function RelatieDetailPage() {
@@ -50,7 +51,28 @@ export default function RelatieDetailPage() {
   const completeKyc = useCompleteKyc();
   const [kycOpen, setKycOpen] = useState(false);
   const [kycEditing, setKycEditing] = useState(false);
-  const [kycForm, setKycForm] = useState<Record<string, any>>({});
+  const [kycForm, setKycForm] = useState<KycFormState>({
+    risk_level: "",
+    risk_notes: "",
+    id_type: "",
+    id_number: "",
+    id_expiry_date: "",
+    id_verified_at: "",
+    ubo_name: "",
+    ubo_dob: "",
+    ubo_nationality: "",
+    ubo_percentage: "",
+    ubo_verified_at: "",
+    pep_checked: false,
+    pep_is_pep: false,
+    pep_notes: "",
+    sanctions_checked: false,
+    sanctions_hit: false,
+    sanctions_notes: "",
+    source_of_funds: "",
+    source_of_funds_verified: false,
+    notes: "",
+  });
 
   // Set breadcrumb label to contact name
   useBreadcrumbs(contact ? [{ segment: id, label: contact.name }] : []);
@@ -168,27 +190,29 @@ export default function RelatieDetailPage() {
 
   const handleKycSave = async () => {
     try {
-      const data: Record<string, any> = { contact_id: id };
-      data.risk_level = kycForm.risk_level || null;
-      data.risk_notes = kycForm.risk_notes?.trim() || null;
-      data.id_type = kycForm.id_type || null;
-      data.id_number = kycForm.id_number?.trim() || null;
-      data.id_expiry_date = kycForm.id_expiry_date || null;
-      data.id_verified_at = kycForm.id_verified_at || null;
-      data.ubo_name = kycForm.ubo_name?.trim() || null;
-      data.ubo_dob = kycForm.ubo_dob || null;
-      data.ubo_nationality = kycForm.ubo_nationality?.trim() || null;
-      data.ubo_percentage = kycForm.ubo_percentage?.trim() || null;
-      data.ubo_verified_at = kycForm.ubo_verified_at || null;
-      data.pep_checked = kycForm.pep_checked;
-      data.pep_is_pep = kycForm.pep_is_pep;
-      data.pep_notes = kycForm.pep_notes?.trim() || null;
-      data.sanctions_checked = kycForm.sanctions_checked;
-      data.sanctions_hit = kycForm.sanctions_hit;
-      data.sanctions_notes = kycForm.sanctions_notes?.trim() || null;
-      data.source_of_funds = kycForm.source_of_funds?.trim() || null;
-      data.source_of_funds_verified = kycForm.source_of_funds_verified;
-      data.notes = kycForm.notes?.trim() || null;
+      const data: KycFormData = {
+        contact_id: id,
+        risk_level: kycForm.risk_level || null,
+        risk_notes: kycForm.risk_notes?.trim() || null,
+        id_type: kycForm.id_type || null,
+        id_number: kycForm.id_number?.trim() || null,
+        id_expiry_date: kycForm.id_expiry_date || null,
+        id_verified_at: kycForm.id_verified_at || null,
+        ubo_name: kycForm.ubo_name?.trim() || null,
+        ubo_dob: kycForm.ubo_dob || null,
+        ubo_nationality: kycForm.ubo_nationality?.trim() || null,
+        ubo_percentage: kycForm.ubo_percentage?.trim() || null,
+        ubo_verified_at: kycForm.ubo_verified_at || null,
+        pep_checked: kycForm.pep_checked,
+        pep_is_pep: kycForm.pep_is_pep,
+        pep_notes: kycForm.pep_notes?.trim() || null,
+        sanctions_checked: kycForm.sanctions_checked,
+        sanctions_hit: kycForm.sanctions_hit,
+        sanctions_notes: kycForm.sanctions_notes?.trim() || null,
+        source_of_funds: kycForm.source_of_funds?.trim() || null,
+        source_of_funds_verified: kycForm.source_of_funds_verified,
+        notes: kycForm.notes?.trim() || null,
+      };
 
       await saveKyc.mutateAsync(data);
       toast.success("WWFT-gegevens opgeslagen");
@@ -208,7 +232,7 @@ export default function RelatieDetailPage() {
     }
   };
 
-  const updateKycField = (field: string, value: any) => {
+  const updateKycField = (field: string, value: string | boolean) => {
     setKycForm((prev) => ({ ...prev, [field]: value }));
   };
 

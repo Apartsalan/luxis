@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.cases.models import CaseFile
 from app.cases.schemas import (
@@ -87,8 +88,14 @@ async def upload_case_file(
     )
     db.add(case_file)
     await db.flush()
-    await db.refresh(case_file)
-    return case_file
+
+    # Re-query with eager load so uploader is available for serialisation (CQ-18)
+    result = await db.execute(
+        select(CaseFile)
+        .where(CaseFile.id == case_file.id)
+        .options(selectinload(CaseFile.uploader))
+    )
+    return result.scalar_one()
 
 
 async def list_case_files(
@@ -104,6 +111,7 @@ async def list_case_files(
             CaseFile.case_id == case_id,
             CaseFile.is_active.is_(True),
         )
+        .options(selectinload(CaseFile.uploader))
         .order_by(CaseFile.created_at.desc())
     )
     return list(result.scalars().all())
@@ -117,12 +125,14 @@ async def get_case_file(
 ) -> CaseFile | None:
     """Get a single case file by ID."""
     result = await db.execute(
-        select(CaseFile).where(
+        select(CaseFile)
+        .where(
             CaseFile.id == file_id,
             CaseFile.tenant_id == tenant_id,
             CaseFile.case_id == case_id,
             CaseFile.is_active.is_(True),
         )
+        .options(selectinload(CaseFile.uploader))
     )
     return result.scalar_one_or_none()
 
@@ -143,7 +153,7 @@ async def delete_case_file(
 ) -> None:
     """Soft-delete a case file (keeps file on disk for recovery)."""
     case_file.is_active = False
-    await db.commit()
+    await db.flush()
 
 
 def to_response(case_file: CaseFile) -> CaseFileResponse:

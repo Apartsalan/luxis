@@ -28,6 +28,7 @@ from app.cases.schemas import (
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.shared.pagination import PaginatedResponse
+from app.shared.sanitize import content_disposition
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
@@ -417,7 +418,11 @@ async def preview_file(
             path=str(file_path),
             filename=case_file.original_filename,
             media_type=case_file.content_type,
-            headers={"Content-Disposition": f'inline; filename="{case_file.original_filename}"'},
+            headers={
+                "Content-Disposition": content_disposition(
+                    "inline", case_file.original_filename
+                ),
+            },
         )
 
     # DOCX: convert to PDF
@@ -434,7 +439,7 @@ async def preview_file(
         return Response(
             content=pdf_bytes,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="{pdf_name}"'},
+            headers={"Content-Disposition": content_disposition("inline", pdf_name)},
         )
 
     raise HTTPException(status_code=415, detail="Preview niet ondersteund")

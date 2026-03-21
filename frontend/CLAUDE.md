@@ -35,6 +35,12 @@ Next.js 15 (App Router, React 19) + shadcn/ui + Tailwind CSS + TanStack Query.
 - Auth state: custom `useAuth` hook with localStorage tokens
 - No global state library needed (yet)
 
+## TypeScript Rules
+
+- **Nooit `|| undefined` wijzigen naar `|| null`** — semantisch verschillend in TypeScript. Optional fields moeten `undefined` blijven, niet `null`.
+- **Altijd build verificatie na TypeScript wijzigingen:** draai `npx tsc --noEmit` voordat je commit. Dit vangt type-errors die anders pas bij deploy/PR opvallen.
+- Bij twijfel over `null` vs `undefined`: check het Pydantic schema (backend) en het TypeScript interface — ze moeten matchen.
+
 ## E2E Testing (Playwright)
 
 - Config: `frontend/playwright.config.ts` — 3-project setup (setup → auth → chromium)

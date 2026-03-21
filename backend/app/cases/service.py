@@ -233,9 +233,14 @@ async def list_cases(
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar_one()
 
-    # Apply pagination and ordering
+    # Apply pagination, ordering, and eager loads (CQ-16)
     query = (
-        query.order_by(Case.date_opened.desc(), Case.case_number.desc())
+        query.options(
+            selectinload(Case.client),
+            selectinload(Case.opposing_party),
+            selectinload(Case.assigned_to),
+        )
+        .order_by(Case.date_opened.desc(), Case.case_number.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
     )

@@ -106,12 +106,36 @@ export function useKycDashboard() {
   });
 }
 
+export interface KycFormData {
+  contact_id: string;
+  risk_level: string | null;
+  risk_notes: string | null;
+  id_type: string | null;
+  id_number: string | null;
+  id_expiry_date: string | null;
+  id_verified_at: string | null;
+  ubo_name: string | null;
+  ubo_dob: string | null;
+  ubo_nationality: string | null;
+  ubo_percentage: string | null;
+  ubo_verified_at: string | null;
+  pep_checked: boolean;
+  pep_is_pep: boolean;
+  pep_notes: string | null;
+  sanctions_checked: boolean;
+  sanctions_hit: boolean;
+  sanctions_notes: string | null;
+  source_of_funds: string | null;
+  source_of_funds_verified: boolean;
+  notes: string | null;
+}
+
 // Create or update KYC
 export function useSaveKyc() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Record<string, any>) => {
+    mutationFn: async (data: KycFormData) => {
       const res = await api("/api/kyc", {
         method: "POST",
         body: JSON.stringify(data),
@@ -135,7 +159,7 @@ export function useUpdateKyc() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<KycFormData> }) => {
       const res = await api(`/api/kyc/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),

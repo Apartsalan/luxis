@@ -22,7 +22,7 @@ export interface TenantDetail {
 
 export interface UpdateProfileData {
   full_name?: string;
-  default_hourly_rate?: number | null;
+  default_hourly_rate?: string | number | null;
 }
 
 export interface ChangePasswordData {

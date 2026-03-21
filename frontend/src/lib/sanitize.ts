@@ -7,7 +7,26 @@ import DOMPurify from "dompurify";
  * Note: 'style' attribute is intentionally excluded — CSS can be abused
  * for data exfiltration via background-image requests. Email HTML uses
  * class-based styling instead.
+ *
+ * SEC-24: IMG src attributes are removed to block tracker pixels.
+ * A tags get rel="noopener noreferrer" and target="_blank" enforced.
  */
+
+// Hook to block tracker pixels and harden links — runs after DOMPurify sanitizes attributes
+DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  // Block tracker pixels: remove src from IMG tags
+  if (node.tagName === "IMG") {
+    node.removeAttribute("src");
+    node.setAttribute("alt", node.getAttribute("alt") || "(afbeelding verwijderd)");
+  }
+
+  // Harden links: force safe link attributes
+  if (node.tagName === "A") {
+    node.setAttribute("rel", "noopener noreferrer");
+    node.setAttribute("target", "_blank");
+  }
+});
+
 export function sanitizeHtml(dirty: string): string {
   return DOMPurify.sanitize(dirty, {
     ALLOWED_TAGS: [

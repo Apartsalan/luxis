@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
-from jose import jwt
+import jwt
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,11 +52,41 @@ def decode_token(token: str) -> dict:
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
-    """Verify email + password and return the user if valid."""
+    """Verify email + password and return the user if valid.
+
+    SEC-20: Implements account lockout after repeated failed attempts.
+    - 5 failures → locked for 15 minutes
+    - 10 failures → locked for 1 hour
+    Successful login resets the counter.
+    """
     result = await db.execute(select(User).where(User.email == email, User.is_active.is_(True)))
     user = result.scalar_one_or_none()
-    if user is None or not verify_password(password, user.hashed_password):
+    if user is None:
         return None
+
+    # Check if account is locked
+    if user.locked_until and user.locked_until > datetime.now(UTC):
+        return None
+
+    # If lock has expired, reset counter
+    if user.locked_until and user.locked_until <= datetime.now(UTC):
+        user.failed_login_count = 0
+        user.locked_until = None
+
+    if not verify_password(password, user.hashed_password):
+        user.failed_login_count += 1
+        if user.failed_login_count >= 10:
+            user.locked_until = datetime.now(UTC) + timedelta(hours=1)
+        elif user.failed_login_count >= 5:
+            user.locked_until = datetime.now(UTC) + timedelta(minutes=15)
+        await db.flush()
+        return None
+
+    # Successful login — reset lockout counter
+    if user.failed_login_count > 0:
+        user.failed_login_count = 0
+        user.locked_until = None
+        await db.flush()
     return user
 
 

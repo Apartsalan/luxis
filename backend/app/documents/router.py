@@ -41,6 +41,7 @@ from app.email.models import EmailLog
 from app.email.service import send_email
 from app.email.templates import _render_base, document_sent
 from app.shared.exceptions import BadRequestError, NotFoundError
+from app.shared.sanitize import content_disposition
 
 logger = logging.getLogger(__name__)
 
@@ -271,7 +272,7 @@ async def generate_docx(
     return Response(
         content=docx_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": content_disposition("attachment", filename)},
     )
 
 
@@ -319,7 +320,7 @@ async def preview_document(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{pdf_filename}"'},
+        headers={"Content-Disposition": content_disposition("inline", pdf_filename)},
     )
 
 

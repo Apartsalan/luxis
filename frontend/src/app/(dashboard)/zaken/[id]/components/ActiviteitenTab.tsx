@@ -16,7 +16,9 @@ import { formatRelativeTime } from "@/lib/utils";
 import { ACTIVITY_ICONS, ACTIVITY_COLORS, ACTIVITY_TYPE_LABELS, renderNoteContent } from "../types";
 import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor";
 
-export default function ActiviteitenTab({ zaak }: { zaak: any }) {
+import type { CaseDetail } from "@/hooks/use-cases";
+
+export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
   const [page, setPage] = useState(1);
   const [noteText, setNoteText] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);

@@ -23,7 +23,7 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
       await createPayment.mutateAsync({
         caseId,
         data: {
-          amount: parseFloat(form.amount),
+          amount: form.amount,
           payment_date: form.payment_date,
           ...(form.description && { description: form.description }),
           ...(form.payment_method && { payment_method: form.payment_method }),
@@ -37,7 +37,9 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
         description: "",
         payment_method: "",
       });
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const inputClass =

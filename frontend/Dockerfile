@@ -18,5 +18,9 @@ ENV BACKEND_URL=$BACKEND_URL
 # Build
 RUN npm run build
 
+# SEC-25: Run as non-root user
+RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app
+USER appuser
+
 # Start
 CMD ["npm", "start"]

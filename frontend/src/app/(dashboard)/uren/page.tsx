@@ -455,7 +455,7 @@ export default function UrenPage() {
         activity_type: formActivity,
         description: formDescription?.trim() || null,
         billable: formBillable,
-        hourly_rate: formRate ? parseFloat(formRate) : null,
+        hourly_rate: formRate || null,
       };
       if (formDiscount && formBillableMinutes !== "") {
         payload.billable_minutes = parseInt(formBillableMinutes) || 0;
@@ -464,7 +464,9 @@ export default function UrenPage() {
       toast.success("Tijdregistratie opgeslagen");
       resetForm();
       setShowForm(false);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   // ── Inline edit ──────────────────────────────────────────────────────
@@ -505,7 +507,9 @@ export default function UrenPage() {
       });
       toast.success("Bijgewerkt");
       setEditId(null);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const deleteEntry = async (id: string) => {
@@ -513,7 +517,9 @@ export default function UrenPage() {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Verwijderd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   // ── Computed ─────────────────────────────────────────────────────────

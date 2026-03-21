@@ -54,7 +54,7 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
         caseId,
         data: {
           transaction_type: showForm,
-          amount: parseFloat(form.amount),
+          amount: form.amount,
           description: form.description,
           ...(form.payment_method && { payment_method: form.payment_method }),
           ...(form.reference && { reference: form.reference }),
@@ -64,21 +64,27 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
       });
       toast.success(showForm === "deposit" ? "Storting geregistreerd" : "Uitbetaling ingediend ter goedkeuring");
       resetForm();
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleApprove = async (txId: string) => {
     try {
       await approveTx.mutateAsync({ transactionId: txId, caseId });
       toast.success("Transactie goedgekeurd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleReject = async (txId: string) => {
     try {
       await rejectTx.mutateAsync({ transactionId: txId, caseId });
       toast.success("Transactie afgewezen");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const inputClass =

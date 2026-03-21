@@ -81,8 +81,8 @@ interface PaginatedInvoices {
 
 interface InvoiceLineInput {
   description: string;
-  quantity?: number;
-  unit_price: number;
+  quantity?: string | number;
+  unit_price: string | number;
   time_entry_id?: string | null;
   expense_id?: string | null;
 }
@@ -92,7 +92,7 @@ interface InvoiceCreateInput {
   case_id?: string | null;
   invoice_date: string;
   due_date: string;
-  btw_percentage?: number;
+  btw_percentage?: string | number;
   reference?: string | null;
   notes?: string | null;
   lines: InvoiceLineInput[];
@@ -103,7 +103,7 @@ interface InvoiceUpdateInput {
   case_id?: string | null;
   invoice_date?: string;
   due_date?: string;
-  btw_percentage?: number;
+  btw_percentage?: string | number;
   reference?: string | null;
   notes?: string | null;
 }
@@ -435,7 +435,7 @@ export function useCreateInvoicePayment() {
     }: {
       invoiceId: string;
       data: {
-        amount: number;
+        amount: string;
         payment_date: string;
         payment_method: string;
         reference?: string;

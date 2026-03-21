@@ -236,20 +236,29 @@ async def get_receivables(
 
     today = date.today()
 
+    # CQ-11: Single grouped aggregate query instead of N+1
+    invoice_ids = [inv.id for inv in invoices]
+    paid_map: dict[uuid.UUID, Decimal] = {}
+    if invoice_ids:
+        paid_result = await db.execute(
+            select(
+                InvoicePayment.invoice_id,
+                func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00")),
+            )
+            .where(
+                InvoicePayment.tenant_id == tenant_id,
+                InvoicePayment.invoice_id.in_(invoice_ids),
+            )
+            .group_by(InvoicePayment.invoice_id)
+        )
+        for inv_id, total_paid in paid_result.all():
+            paid_map[inv_id] = total_paid
+
     # Per-invoice: calculate outstanding amount (total - payments)
     contact_map: dict[uuid.UUID, dict] = {}
 
     for inv in invoices:
-        # Sum payments for this invoice
-        pay_result = await db.execute(
-            select(
-                func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))
-            ).where(
-                InvoicePayment.tenant_id == tenant_id,
-                InvoicePayment.invoice_id == inv.id,
-            )
-        )
-        paid = pay_result.scalar_one()
+        paid = paid_map.get(inv.id, Decimal("0.00"))
         outstanding = inv.total - paid
         if outstanding <= Decimal("0"):
             continue

@@ -18,6 +18,7 @@ from app.documents.template_schemas import (
     ManagedTemplateUpdate,
 )
 from app.shared.exceptions import NotFoundError
+from app.shared.sanitize import content_disposition
 
 router = APIRouter(
     prefix="/managed-templates",
@@ -137,7 +138,7 @@ async def download_template(
         ),
         headers={
             "Content-Disposition": (
-                f'attachment; filename="{tpl.original_filename}"'
+                content_disposition("attachment", tpl.original_filename)
             )
         },
     )
@@ -208,7 +209,7 @@ async def preview_template(
         ),
         headers={
             "Content-Disposition": (
-                f'attachment; filename="{filename}"'
+                content_disposition("attachment", filename)
             )
         },
     )

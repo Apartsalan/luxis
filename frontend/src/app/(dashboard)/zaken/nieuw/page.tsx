@@ -707,7 +707,7 @@ function NieuweZaakPage() {
               caseId: result.id,
               data: {
                 description: claim.description,
-                principal_amount: parseFloat(claim.principal_amount),
+                principal_amount: claim.principal_amount,
                 default_date: claim.default_date,
                 ...(claim.invoice_number && {
                   invoice_number: claim.invoice_number,

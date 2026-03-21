@@ -149,13 +149,13 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
               <button
                 type="button"
                 onClick={async () => {
-                  const val = parseFloat(bikOverride);
+                  const val = Number(bikOverride);
                   if (isNaN(val) || val < 0) {
                     toast.error("Voer een geldig bedrag in");
                     return;
                   }
                   try {
-                    await updateCase.mutateAsync({ id: caseId, data: { bik_override: val } });
+                    await updateCase.mutateAsync({ id: caseId, data: { bik_override: bikOverride } });
                     setBikSaved(true);
                     toast.success("Incassokosten opgeslagen");
                   } catch {

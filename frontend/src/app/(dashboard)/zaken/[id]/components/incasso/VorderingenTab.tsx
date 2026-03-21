@@ -57,7 +57,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
         caseId,
         data: {
           description: form.description,
-          principal_amount: parseFloat(form.principal_amount),
+          principal_amount: form.principal_amount,
           default_date: form.default_date,
           ...(form.invoice_number && { invoice_number: form.invoice_number }),
           ...(form.invoice_date && { invoice_date: form.invoice_date }),
@@ -74,7 +74,9 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
         invoice_date: "",
         rate_basis: "yearly",
       });
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleDelete = async (claimId: string) => {
@@ -109,7 +111,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
         claimId: editingId,
         data: {
           description: editForm.description,
-          principal_amount: parseFloat(editForm.principal_amount),
+          principal_amount: editForm.principal_amount,
           default_date: editForm.default_date,
           ...(editForm.invoice_number ? { invoice_number: editForm.invoice_number } : { invoice_number: null }),
           ...(editForm.invoice_date ? { invoice_date: editForm.invoice_date } : { invoice_date: null }),
@@ -119,7 +121,9 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
       });
       toast.success("Vordering bijgewerkt");
       setEditingId(null);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const inputClass =

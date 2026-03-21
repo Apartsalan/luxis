@@ -149,14 +149,16 @@ export default function FactuurDetailPage() {
         data: {
           invoice_date: editDate,
           due_date: editDueDate,
-          btw_percentage: parseFloat(editBtw),
+          btw_percentage: editBtw,
           reference: editReference?.trim() || null,
           notes: editNotes?.trim() || null,
         },
       });
       toast.success("Factuur bijgewerkt");
       setEditing(false);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleDownloadPdf = async () => {
@@ -186,7 +188,9 @@ export default function FactuurDetailPage() {
       await deleteInvoice.mutateAsync(id);
       toast.success("Factuur verwijderd");
       router.push("/facturen");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleStatusAction = async (next: string) => {
@@ -201,7 +205,9 @@ export default function FactuurDetailPage() {
         await markPaidMutation.mutateAsync({ id });
         toast.success("Factuur gemarkeerd als betaald");
       }
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleCancel = async () => {
@@ -209,7 +215,9 @@ export default function FactuurDetailPage() {
     try {
       await cancelMutation.mutateAsync(id);
       toast.success("Factuur geannuleerd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleAddLine = async () => {
@@ -222,8 +230,8 @@ export default function FactuurDetailPage() {
         invoiceId: id,
         data: {
           description: lineDescription,
-          quantity: parseFloat(lineQuantity) || 1,
-          unit_price: parseFloat(lineUnitPrice),
+          quantity: lineQuantity || "1",
+          unit_price: lineUnitPrice,
         },
       });
       toast.success("Regel toegevoegd");
@@ -231,7 +239,9 @@ export default function FactuurDetailPage() {
       setLineQuantity("1");
       setLineUnitPrice("");
       setShowLineForm(false);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleRemoveLine = async (lineId: string) => {
@@ -239,7 +249,9 @@ export default function FactuurDetailPage() {
     try {
       await removeLineMutation.mutateAsync({ invoiceId: id, lineId });
       toast.success("Regel verwijderd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleAddPayment = async () => {
@@ -251,7 +263,7 @@ export default function FactuurDetailPage() {
       await createPayment.mutateAsync({
         invoiceId: id,
         data: {
-          amount: parseFloat(payAmount),
+          amount: payAmount,
           payment_date: payDate,
           payment_method: payMethod,
           ...(payReference && { reference: payReference }),
@@ -265,7 +277,9 @@ export default function FactuurDetailPage() {
       setPayMethod("bank");
       setPayReference("");
       setPayDescription("");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleDeletePayment = async (paymentId: string) => {
@@ -273,7 +287,9 @@ export default function FactuurDetailPage() {
     try {
       await deletePayment.mutateAsync({ invoiceId: id, paymentId });
       toast.success("Betaling verwijderd");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   // ── Credit note handlers ───────────────────────────────────────────
@@ -297,8 +313,8 @@ export default function FactuurDetailPage() {
       .filter((l) => l.description && l.unit_price)
       .map((l) => ({
         description: l.description,
-        quantity: parseFloat(l.quantity) || 1,
-        unit_price: parseFloat(l.unit_price),
+        quantity: l.quantity || "1",
+        unit_price: l.unit_price,
       }));
     if (lines.length === 0) {
       toast.error("Voeg minstens één regel toe");
@@ -315,7 +331,9 @@ export default function FactuurDetailPage() {
       toast.success("Credit nota aangemaakt");
       setShowCreditNoteForm(false);
       router.push(`/facturen/${result.id}`);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const addCnLine = () => {

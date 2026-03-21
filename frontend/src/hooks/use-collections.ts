@@ -188,7 +188,7 @@ export function useCreateClaim() {
       caseId: string;
       data: {
         description: string;
-        principal_amount: number;
+        principal_amount: string;
         default_date: string;
         invoice_number?: string;
         invoice_date?: string;
@@ -224,7 +224,7 @@ export function useUpdateClaim() {
       claimId: string;
       data: {
         description?: string;
-        principal_amount?: number;
+        principal_amount?: string;
         default_date?: string;
         invoice_number?: string | null;
         invoice_date?: string | null;
@@ -323,7 +323,7 @@ export function useCreatePayment() {
     }: {
       caseId: string;
       data: {
-        amount: number;
+        amount: string;
         payment_date: string;
         description?: string;
         payment_method?: string;
@@ -396,7 +396,7 @@ export function useCreateDerdengelden() {
       caseId: string;
       data: {
         transaction_type: "deposit" | "disbursement";
-        amount: number;
+        amount: string;
         description: string;
         payment_method?: string;
         reference?: string;
@@ -481,8 +481,8 @@ export function useCreateArrangement() {
     }: {
       caseId: string;
       data: {
-        total_amount: number;
-        installment_amount: number;
+        total_amount: string;
+        installment_amount: string;
         frequency: string;
         start_date: string;
         notes?: string;
@@ -517,7 +517,7 @@ export function useRecordInstallmentPayment() {
       arrangementId: string;
       installmentId: string;
       data: {
-        amount: number;
+        amount: string;
         payment_date: string;
         payment_method?: string;
         notes?: string;

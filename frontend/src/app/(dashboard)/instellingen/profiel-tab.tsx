@@ -5,7 +5,9 @@ import { Shield, Save, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useUpdateProfile, useChangePassword } from "@/hooks/use-settings";
 
-export function ProfielTab({ user }: { user: any }) {
+import type { User } from "@/hooks/use-auth";
+
+export function ProfielTab({ user }: { user: User | null }) {
   const [fullName, setFullName] = useState(user?.full_name || "");
   const [hourlyRate, setHourlyRate] = useState(
     user?.default_hourly_rate != null ? String(user.default_hourly_rate) : ""
@@ -30,7 +32,7 @@ export function ProfielTab({ user }: { user: any }) {
     updateProfile.mutate(
       {
         full_name: fullName.trim(),
-        default_hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+        default_hourly_rate: hourlyRate || null,
       },
       {
         onSuccess: () => toast.success("Profiel bijgewerkt"),

@@ -214,7 +214,7 @@ def calculate_compound_interest(
 
         # Capitalize at end of full year (add interest to principal)
         if is_full_year:
-            current_principal += year_interest
+            current_principal = _round2(current_principal + year_interest)
 
         year_start = period_end
 

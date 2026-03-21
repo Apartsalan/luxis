@@ -31,11 +31,13 @@ from app.time_entries.models import TimeEntry
 # ── Invoice Totals ───────────────────────────────────────────────────────────
 
 
-def _recalculate_totals(invoice: Invoice) -> None:
-    """Recalculate subtotal, BTW, and total from lines."""
-    subtotal = Decimal("0")
-    for line in invoice.lines:
-        subtotal += line.line_total
+async def _recalculate_totals(db: AsyncSession, invoice: Invoice) -> None:
+    """Recalculate subtotal, BTW, and total from DB aggregate (CQ-15)."""
+    result = await db.execute(
+        select(func.coalesce(func.sum(InvoiceLine.line_total), Decimal("0.00")))
+        .where(InvoiceLine.invoice_id == invoice.id)
+    )
+    subtotal = result.scalar_one()
 
     invoice.subtotal = subtotal
     invoice.btw_amount = (
@@ -244,7 +246,7 @@ async def create_invoice(
             if time_entry:
                 time_entry.invoiced = True
 
-    _recalculate_totals(invoice)
+    await _recalculate_totals(db, invoice)
     await db.flush()
     await db.refresh(invoice)
     return invoice
@@ -267,7 +269,7 @@ async def update_invoice(
 
     # Recalculate if btw_percentage changed
     if data.btw_percentage is not None:
-        _recalculate_totals(invoice)
+        await _recalculate_totals(db, invoice)
 
     await db.flush()
     await db.refresh(invoice)
@@ -356,7 +358,7 @@ async def create_credit_note(
 
     await db.flush()
     await db.refresh(credit_note)
-    _recalculate_totals(credit_note)
+    await _recalculate_totals(db, credit_note)
     await db.flush()
     await db.refresh(credit_note)
     return credit_note
@@ -403,9 +405,21 @@ async def mark_paid(
     invoice_id: uuid.UUID,
     paid_date: date | None = None,
 ) -> Invoice:
-    """Mark an invoice as paid."""
+    """Mark an invoice as paid (CQ-17: verifies payments cover invoice total)."""
+    from app.invoices.invoice_payment_service import _total_paid
+
     invoice = await get_invoice(db, tenant_id, invoice_id)
     _validate_transition(invoice.status, "paid")
+
+    # CQ-17: Verify that recorded payments cover the invoice total
+    total_paid = await _total_paid(db, tenant_id, invoice_id)
+    if total_paid < invoice.total:
+        raise BadRequestError(
+            f"Factuur kan niet als betaald worden gemarkeerd: "
+            f"totaal betaald ({total_paid}) is minder dan factuurbedrag ({invoice.total}). "
+            f"Registreer eerst de betaling(en)."
+        )
+
     invoice.status = "paid"
     invoice.paid_date = paid_date or date.today()
     await db.flush()
@@ -482,7 +496,7 @@ async def add_line(
 
     await db.flush()
     await db.refresh(invoice)
-    _recalculate_totals(invoice)
+    await _recalculate_totals(db, invoice)
     await db.flush()
     await db.refresh(invoice)
     return line
@@ -538,7 +552,7 @@ async def remove_line(
     await db.delete(line)
     await db.flush()
     await db.refresh(invoice)
-    _recalculate_totals(invoice)
+    await _recalculate_totals(db, invoice)
     await db.flush()
 
 
@@ -681,7 +695,7 @@ async def create_voorschotnota(
     db.add(line)
     await db.flush()
     await db.refresh(invoice)
-    _recalculate_totals(invoice)
+    await _recalculate_totals(db, invoice)
     await db.flush()
     await db.refresh(invoice)
     return invoice

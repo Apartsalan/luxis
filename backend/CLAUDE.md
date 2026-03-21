@@ -49,6 +49,6 @@ Every module follows: `router.py` (endpoints) → `service.py` (business logic, 
 ## Dependencies
 
 - `bcrypt` for passwords (NOT passlib)
-- `python-jose` for JWT
+- `PyJWT` for JWT
 - `sqlalchemy[asyncio]` + `asyncpg` for DB
 - `ruff` for linting

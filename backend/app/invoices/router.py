@@ -32,6 +32,7 @@ from app.invoices.schemas import (
     ReceivablesSummary,
     VoorschotnotaCreate,
 )
+from app.shared.sanitize import content_disposition
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 expenses_router = APIRouter(prefix="/api/expenses", tags=["expenses"])
@@ -379,7 +380,7 @@ async def download_invoice_pdf(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": content_disposition("attachment", filename)},
     )
 
 

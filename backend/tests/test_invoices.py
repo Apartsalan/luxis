@@ -1,6 +1,7 @@
 """Tests for the invoices module — CRUD, status workflow, lines, BTW, expenses."""
 
 import uuid
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -190,6 +191,19 @@ async def test_status_workflow_happy_path(
     resp = await client.post(f"/api/invoices/{inv_id}/send", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "sent"
+
+    # Record payment covering the full invoice total (CQ-17: required before mark-paid)
+    invoice_total = created["total"]
+    resp = await client.post(
+        f"/api/invoices/{inv_id}/payments",
+        json={
+            "amount": str(invoice_total),
+            "payment_date": str(date.today()),
+            "payment_method": "bank",
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
 
     # Mark paid
     resp = await client.post(f"/api/invoices/{inv_id}/mark-paid", headers=auth_headers)

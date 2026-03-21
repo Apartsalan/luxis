@@ -105,8 +105,8 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       await createArrangement.mutateAsync({
         caseId,
         data: {
-          total_amount: parseFloat(form.total_amount),
-          installment_amount: parseFloat(form.installment_amount),
+          total_amount: form.total_amount,
+          installment_amount: form.installment_amount,
           frequency: form.frequency,
           start_date: form.start_date,
           ...(form.notes && { notes: form.notes }),
@@ -115,7 +115,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       toast.success("Betalingsregeling aangemaakt");
       setShowCreate(false);
       setForm({ total_amount: "", installment_amount: "", num_installments: "", frequency: "monthly", start_date: "", notes: "" });
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleRecordPayment = async (e: React.FormEvent) => {
@@ -127,7 +129,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
         arrangementId: showPayment.arrangementId,
         installmentId: showPayment.installment.id,
         data: {
-          amount: parseFloat(payForm.amount),
+          amount: payForm.amount,
           payment_date: payForm.payment_date,
           ...(payForm.payment_method && { payment_method: payForm.payment_method }),
           ...(payForm.notes && { notes: payForm.notes }),
@@ -135,7 +137,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       });
       toast.success("Betaling geregistreerd");
       setShowPayment(null);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleDefault = async (arrangementId: string) => {
@@ -144,7 +148,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       await defaultArrangement.mutateAsync({ caseId, arrangementId });
       toast.success("Wanprestatie geconstateerd");
       setActionsOpen(null);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleCancel = async (arrangementId: string) => {
@@ -153,7 +159,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       await cancelArrangement.mutateAsync({ caseId, arrangementId });
       toast.success("Betalingsregeling geannuleerd");
       setActionsOpen(null);
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const handleWaive = async (arrangementId: string, installmentId: string) => {
@@ -161,7 +169,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
     try {
       await waiveInstallment.mutateAsync({ caseId, arrangementId, installmentId });
       toast.success("Termijn kwijtgescholden");
-    } catch {}
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
+    }
   };
 
   const preview = computePreview(
@@ -229,12 +239,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 required
                 value={form.total_amount}
                 onChange={(e) => {
-                  const total = e.target.value;
-                  const numInst = parseInt(form.num_installments) || 0;
-                  const autoAmount = numInst > 0 && parseFloat(total) > 0
-                    ? (parseFloat(total) / numInst).toFixed(2)
-                    : form.installment_amount;
-                  setForm({ ...form, total_amount: total, installment_amount: autoAmount });
+                  setForm({ ...form, total_amount: e.target.value });
                 }}
                 placeholder="0,00"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
@@ -248,13 +253,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 min="1"
                 value={form.num_installments}
                 onChange={(e) => {
-                  const num = e.target.value;
-                  const total = parseFloat(form.total_amount) || 0;
-                  const count = parseInt(num) || 0;
-                  const autoAmount = count > 0 && total > 0
-                    ? (total / count).toFixed(2)
-                    : form.installment_amount;
-                  setForm({ ...form, num_installments: num, installment_amount: autoAmount });
+                  setForm({ ...form, num_installments: e.target.value });
                 }}
                 placeholder="Bijv. 6"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
@@ -272,11 +271,6 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 placeholder="0,00"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               />
-              {form.num_installments && parseFloat(form.total_amount) > 0 && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Auto-berekend op basis van {form.num_installments} termijnen
-                </p>
-              )}
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium">Frequentie</label>

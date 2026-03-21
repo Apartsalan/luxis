@@ -141,6 +141,38 @@ async def get_oauth_status(
     )
 
 
+def _is_blocked_host(host: str) -> bool:
+    """Check if a hostname resolves to a private/loopback IP or is a known service name."""
+    import ipaddress
+    import socket
+
+    # Block known Docker service names
+    blocked_names = {"localhost", "db", "redis", "backend", "frontend", "caddy"}
+    if host.lower() in blocked_names:
+        return True
+
+    # Resolve hostname and check against private ranges
+    try:
+        addrinfos = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        return False  # Unresolvable — will fail at IMAP connect anyway
+
+    blocked_networks = [
+        ipaddress.ip_network("127.0.0.0/8"),
+        ipaddress.ip_network("10.0.0.0/8"),
+        ipaddress.ip_network("172.16.0.0/12"),
+        ipaddress.ip_network("192.168.0.0/16"),
+        ipaddress.ip_network("::1/128"),
+        ipaddress.ip_network("fe80::/10"),
+    ]
+    for addrinfo in addrinfos:
+        ip = ipaddress.ip_address(addrinfo[4][0])
+        for net in blocked_networks:
+            if ip in net:
+                return True
+    return False
+
+
 @router.post("/imap/connect", response_model=ImapConnectResponse)
 async def connect_imap_account(
     body: ImapConnectRequest,
@@ -152,6 +184,10 @@ async def connect_imap_account(
     Tests the connection first, then stores encrypted credentials.
     """
     import imaplib
+
+    # SEC-22: Block SSRF — prevent connections to internal networks
+    if _is_blocked_host(body.host):
+        raise BadRequestError("Ongeldige IMAP server: interne adressen zijn niet toegestaan.")
 
     # Test the IMAP connection
     try:

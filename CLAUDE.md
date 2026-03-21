@@ -41,7 +41,7 @@ docker compose exec backend python -m alembic revision --autogenerate -m "desc" 
 
 - **Backend:** FastAPI 3.12 + SQLAlchemy 2.0 + Alembic | Module pattern: `router.py`, `service.py`, `models.py`, `schemas.py`
 - **Frontend:** Next.js 15 (React 19, App Router) + shadcn/ui + Tailwind | Path alias: `@/*` = `src/*`
-- **Auth:** python-jose + bcrypt (NOT passlib) | **Docs:** docxtpl + WeasyPrint | **Queue:** Celery + Redis
+- **Auth:** PyJWT + bcrypt (NOT passlib) | **Docs:** docxtpl + WeasyPrint | **Queue:** Celery + Redis
 - **API:** `/api/` prefix, snake_case JSON, pagination `?page=1&per_page=20`, errors `{"detail": "msg"}`
 
 ## Design & UX
@@ -154,6 +154,7 @@ Na het bouwen, voordat je deploy-commando geeft:
 **Task boundaries:**
 - Als de gebruiker zegt "documenteer" of "sla op in md": schrijf ALLEEN markdown. Geen code wijzigen.
 - Als de gebruiker zegt "sla quality checks over": draai GEEN lint/tests/build.
+- Draai GEEN lint, tests, of build tenzij expliciet gevraagd of onderdeel van een gedefinieerde workflow. "Even checken voor de zekerheid" is geen reden.
 - Als de grens onduidelijk is: vraag eerst.
 
 **Git workflow:**
@@ -286,6 +287,8 @@ docs/completed-work.md    ← afgeronde features lijst
 - Container: `python -m alembic` i.p.v. bare `alembic`
 - asyncpg: Python `date` objects, geen strings
 - bcrypt 5.x: passlib incompatible, gebruik direct `bcrypt`
+- **Docker commands ALTIJD vanuit de hoofdrepo-directory draaien** (`C:\Users\arsal\Documents\luxis`), NOOIT vanuit worktree-directories — docker-compose.yml staat alleen in de hoofdrepo.
+- **Bij falende tests: check eerst stale DB state / ontbrekende migraties** voordat je aanneemt dat de code fout is. Draai `alembic upgrade head` in de test-container als tests onverwacht falen.
 
 ## References
 

@@ -10,11 +10,13 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { formatDateShort } from "@/lib/utils";
+import type { KycVerification } from "@/hooks/use-kyc";
 
 export const KYC_STATUS_CONFIG: Record<
   string,
-  { label: string; badge: string; icon: any }
+  { label: string; badge: string; icon: LucideIcon }
 > = {
   niet_gestart: {
     label: "Niet gestart",
@@ -53,17 +55,40 @@ const RISK_LABELS: Record<string, { label: string; color: string }> = {
   hoog: { label: "Hoog", color: "bg-red-50 text-red-700" },
 };
 
+export interface KycFormState {
+  risk_level: string;
+  risk_notes: string;
+  id_type: string;
+  id_number: string;
+  id_expiry_date: string;
+  id_verified_at: string;
+  ubo_name: string;
+  ubo_dob: string;
+  ubo_nationality: string;
+  ubo_percentage: string;
+  ubo_verified_at: string;
+  pep_checked: boolean;
+  pep_is_pep: boolean;
+  pep_notes: string;
+  sanctions_checked: boolean;
+  sanctions_hit: boolean;
+  sanctions_notes: string;
+  source_of_funds: string;
+  source_of_funds_verified: boolean;
+  notes: string;
+}
+
 interface KycSectionProps {
   contactId: string;
   contactType: string;
-  kycData: any;
+  kycData: KycVerification | null | undefined;
   kycLoading: boolean;
   kycOpen: boolean;
   setKycOpen: (v: boolean) => void;
   kycEditing: boolean;
   setKycEditing: (v: boolean) => void;
-  kycForm: Record<string, any>;
-  updateKycField: (field: string, value: any) => void;
+  kycForm: KycFormState;
+  updateKycField: (field: string, value: string | boolean) => void;
   startKycEditing: () => void;
   handleKycSave: () => Promise<void>;
   handleKycComplete: () => Promise<void>;

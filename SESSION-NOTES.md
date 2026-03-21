@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 91 — Mega-audit Sprint 2: security + frontend code quality fixes)
-**Laatste feature/fix:** Sessie 91 — 8 mega-audit issues gefixt (SEC-19/21, CQ-12/13/19, UX-21 + SEC-16/23 bevestigd) + infra hardening (sessie 92) + deploy
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 94 — BUG-50 test fixes + UX improvements)
+**Laatste feature/fix:** Sessie 94 — BUG-50 (5 test failures) gefixt + ruff N806 lint fixes + frontend UX improvements (terminal B)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -10,8 +10,26 @@
 **Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89-92 (28/30 gefixt, 2 resterend: SEC-16 KDF al gefixt maar niet in audit, SEC-23 idem)
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/12/13/14-18/19/20 gefixt)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
-**Backend tests:** 135 passed, 5 pre-existing failures (BUG-50) | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** BUG-50 test failures fixen + resterende MEDIUM items (UX-14 t/m UX-20)
+**Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+**Volgende sessie:** Volledige testsuite draaien + mega-audit verificatie (alles wat in sessie 89-94 is aangepast reviewen) + deploy + resterende MEDIUM items (UX-14 t/m UX-18)
+
+## Wat er gedaan is (sessie 94 — 21 maart 2026) — BUG-50 test fixes + UX improvements
+
+### Terminal A — BUG-50 fixes (5 pre-existing test failures):
+- **test_refresh_token:** Root cause: `create_refresh_token()` genereerde deterministische JWT's — login + refresh in dezelfde seconde → zelfde token → duplicate `token_hash`. Fix: `jti` (uuid4) toegevoegd aan refresh token payload.
+- **test_validate_and_clean_basic + decimal_precision + parse_invoice_pdf_success:** Root cause: `_validate_and_clean()` converteert `principal_amount` naar `str(Decimal(...))` (correct voor financial precision). Tests vergeleken met `float` i.p.v. `str`. Fix: test assertions aangepast naar string vergelijking (`"1500.50"` i.p.v. `1500.50`).
+- **test_status_workflow_happy_path:** Root cause: `record_payment` auto-transitioneert factuur naar "paid" via `_update_invoice_payment_status()` als `total_paid >= total`. De test deed daarna nog een `mark-paid` call die failde omdat factuur al "paid" was. Fix: test aangepast om GET te doen en auto-transitie te verifiëren i.p.v. redundante mark-paid.
+- **Ruff N806:** 2 `ALLOWED_FIELDS` variabelen in `auth/router.py` hernoemd naar `allowed_fields`.
+
+### Terminal B — Frontend UX improvements:
+- Diverse frontend UX verbeteringen aan lijstpagina's en wizard
+
+### Nog te doen (volgende sessie):
+- Volledige backend testsuite draaien (targeted tests passeerden, full suite nog niet bevestigd)
+- Mega-audit verificatie: alle sessie 89-94 wijzigingen reviewen op correctheid
+- UX-14 t/m UX-18 (resterende MEDIUM items)
+- Deploy naar productie
+- Pre-existing TSC errors fixen (radix-ui types, dompurify types)
 
 ## Wat er gedaan is (sessie 91 — 21 maart 2026) — Mega-audit Sprint 2: security + frontend code quality
 

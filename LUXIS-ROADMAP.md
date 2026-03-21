@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 91 — Mega-audit Sprint 2: security + frontend code quality fixes)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 94 — BUG-50 test fixes + UX improvements)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -259,7 +259,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-47 | "Vordering(optioneel)" in wizard step indicator — spatie ontbreekt voor haakje. Fix: literal space character toegevoegd. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-48 | Stale "Selecteer een client" validatiefout bleef zichtbaar na succesvolle client selectie. Fix: error wordt gecleared in updateField wanneer client_id wordt gezet. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-49 | Week range header in urenregistratie toonde "15 mrt — 19 mrt" maar dagen waren Ma 16 - Vr 20 mrt. Fix: gebruik lokale Date objecten i.p.v. re-parsing van ISO strings (timezone offset veroorzaakte off-by-one). | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
-| BUG-50 | 5 pre-existing test failures: test_refresh_token (IntegrityError), test_validate_and_clean_basic + test_validate_and_clean_decimal_precision + test_parse_invoice_pdf_success (AssertionError), test_status_workflow_happy_path (assert 400==200). Ontdekt sessie 91. | Midden | M | ❌ TODO |
+| BUG-50 | 5 pre-existing test failures: test_refresh_token (IntegrityError), test_validate_and_clean_basic + test_validate_and_clean_decimal_precision + test_parse_invoice_pdf_success (AssertionError), test_status_workflow_happy_path (assert 400==200). Ontdekt sessie 91. | Midden | M | ✅ Gefixt (21 mrt, sessie 94) |
 | BUG-50 | favicon.ico 404 op alle pagina's. Fix: SVG favicon (Scale icoon) toegevoegd in `src/app/icon.svg`. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-51 | AI factuur parser werkte niet — KIMI_API_KEY niet doorgegeven via docker-compose env vars | Hoog | S | ✅ Gefixt (18 mrt, sessie 78) |
 | BUG-52 | Timer rondde af per minuut i.p.v. per 6 minuten — standaard juridische facturering | Midden | S | ✅ Gefixt (18 mrt, sessie 78) |
@@ -713,6 +713,17 @@ LF-10 → afhankelijk van LF-11
 > Laag 2: ✅ Test-factuur PDFs (`scripts/generate_test_invoices.py`) — 5 professionele Nederlandse facturen via WeasyPrint. Output: `scripts/test_invoices/`. (sessie 58, 11 maart)
 > Laag 3: ✅ COMPLEET — Geautomatiseerd E2E script (`scripts/e2e_intake_test.py`) — directe service-calls met gemockte AI extractie. 4 scenario's (happy path, lege email body, edit-before-approve, reject flow). Marker-based cleanup, deterministische UUIDs, onafhankelijke DB sessies per scenario. (sessie 59, 11 maart)
 > **LET OP: GEEN Gmail gebruiken — alles via OutlookProvider/Graph API met M365 account.**
+>
+> **AI Agent — Knowledge Base & Learning Loop** 📋 Gepland:
+> De agent heeft een kennisbank nodig (algemene voorwaarden, wettelijke regels, interne richtlijnen) en een feedback/learning loop
+> zodat hij leert van Lisanne's correcties en steeds beter wordt. Vereist: onderzoekssessie (hoe doen Harvey AI, CoCounsel, Clio AI dit?)
+> → architectuurkeuze (RAG vs structured prompting) → knowledge base UI → feedback loop mechanisme.
+> Onderdelen:
+> - Knowledge base in Luxis (algemene voorwaarden Kesting Legal, wettelijke regels, standaard reacties, interne richtlijnen)
+> - Feedback loop: agent voorstel → Lisanne keurt goed/corrigeert → agent onthoudt de juiste aanpak
+> - Patroonherkenning: na N dossiers leert de agent welke aanpak werkt bij welk type debiteur
+> - UI voor kennisbeheer (toevoegen/bewerken van kennis door Arsalan/Lisanne)
+> - Meetbaarheid: success rate, aantal escalaties, verbetering over tijd
 >
 > **AI Email Classificatie** (sessie 39-43, 6 maart 2026): Eerste concrete AI-feature. Classificeert debiteur-emails in 8 categorieën, selecteert antwoord-template, Lisanne reviewt met 1 klik. Claude Haiku 4.5 via Anthropic SDK. Status: **Fase 1-7 COMPLEET** ✅ — E2E getest op productie.
 >

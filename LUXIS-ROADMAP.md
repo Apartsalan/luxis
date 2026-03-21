@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 90 — Mega-audit Sprint 1: CRITICAL + HIGH backend/security fixes)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 91 — Mega-audit Sprint 2: security + frontend code quality fixes)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -259,6 +259,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-47 | "Vordering(optioneel)" in wizard step indicator — spatie ontbreekt voor haakje. Fix: literal space character toegevoegd. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-48 | Stale "Selecteer een client" validatiefout bleef zichtbaar na succesvolle client selectie. Fix: error wordt gecleared in updateField wanneer client_id wordt gezet. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-49 | Week range header in urenregistratie toonde "15 mrt — 19 mrt" maar dagen waren Ma 16 - Vr 20 mrt. Fix: gebruik lokale Date objecten i.p.v. re-parsing van ISO strings (timezone offset veroorzaakte off-by-one). | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
+| BUG-50 | 5 pre-existing test failures: test_refresh_token (IntegrityError), test_validate_and_clean_basic + test_validate_and_clean_decimal_precision + test_parse_invoice_pdf_success (AssertionError), test_status_workflow_happy_path (assert 400==200). Ontdekt sessie 91. | Midden | M | ❌ TODO |
 | BUG-50 | favicon.ico 404 op alle pagina's. Fix: SVG favicon (Scale icoon) toegevoegd in `src/app/icon.svg`. | Laag | S | ✅ Gefixt (18 mrt, sessie 76) |
 | BUG-51 | AI factuur parser werkte niet — KIMI_API_KEY niet doorgegeven via docker-compose env vars | Hoog | S | ✅ Gefixt (18 mrt, sessie 78) |
 | BUG-52 | Timer rondde af per minuut i.p.v. per 6 minuten — standaard juridische facturering | Midden | S | ✅ Gefixt (18 mrt, sessie 78) |
@@ -428,23 +429,23 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Issue | Domein | Status |
 |---|-------|--------|--------|
-| SEC-16 | **Fernet KDF zwak** — enkele SHA-256 zonder salt/iteraties voor OAuth token encryptie. Fix: PBKDF2HMAC met salt + 600k iteraties. | Security | ❌ TODO |
+| SEC-16 | **Fernet KDF zwak** — enkele SHA-256 zonder salt/iteraties voor OAuth token encryptie. Fix: PBKDF2HMAC met salt + 600k iteraties. | Security | ✅ Sessie 90 (al gefixt, bevestigd sessie 91) |
 | SEC-17 | **DB/Redis poorten open in prod** — ports verplaatst van base naar dev override; prod heeft geen exposed ports. | Infra | ✅ Sessie 92 |
 | SEC-18 | **Redis zonder wachtwoord** — geen `requirepass` in productie. | Infra | ✅ Sessie 90 (REDIS_PASSWORD ingesteld op VPS) |
-| SEC-19 | **localStorage tokens** — JWT in localStorage, XSS-extractable. Interim: centraliseer in tokenStore. Later: httpOnly cookies. | Security | ❌ TODO |
+| SEC-19 | **localStorage tokens** — JWT in localStorage, XSS-extractable. Interim: centraliseer in tokenStore. Later: httpOnly cookies. | Security | ✅ Sessie 91 (tokenStore module, 17 bestanden gemigreerd) |
 | CQ-10 | **Missing db.commit()** — file upload, credit note, approve, send, cancel, add/remove line, expenses, payments nooit gecommit. | Backend | ✅ Sessie 90 |
 | CQ-11 | **N+1 query in receivables** — 1 DB query per factuur in loop. Fix: single grouped aggregate. | Backend | ✅ Sessie 90 |
-| CQ-12 | **Silent catch{} blocks** — 14+ plaatsen in frontend slikken financiële mutatie-errors. Gebruiker ziet niks. | Frontend | ❌ TODO |
-| CQ-13 | **parseFloat voor geldbedragen** — IEEE 754 precisieverlies bij transport naar backend. Fix: string transport. | Frontend | ❌ TODO |
+| CQ-12 | **Silent catch{} blocks** — 14+ plaatsen in frontend slikken financiële mutatie-errors. Gebruiker ziet niks. | Frontend | ✅ Sessie 91 (4 catch blocks → toast.error) |
+| CQ-13 | **parseFloat voor geldbedragen** — IEEE 754 precisieverlies bij transport naar backend. Fix: string transport. | Frontend | ✅ Sessie 91 (alle parseFloat verwijderd, string transport) |
 
 #### HIGH — Serieus risico
 
 | # | Issue | Domein | Status |
 |---|-------|--------|--------|
 | SEC-20 | **Geen account lockout** — 10/min rate limit = 14.400 pogingen/dag. Fix: per-account lockout na 5 mislukte pogingen. | Security | ✅ Sessie 90 (lockout na 5 pogingen + migratie) |
-| SEC-21 | **OAuth callback unauthenticated** — user_id trusted uit state parameter. Fix: server-side nonce in Redis. | Security | ❌ TODO |
+| SEC-21 | **OAuth callback unauthenticated** — user_id trusted uit state parameter. Fix: server-side nonce in Redis. | Security | ✅ Sessie 91 (Redis nonce, single-use, 10min TTL) |
 | SEC-22 | **Input sanitization** — user input niet gesanitized. Fix: backend + frontend sanitization. | Security | ✅ Sessie 90 (backend sanitize.py + frontend DOMPurify) |
-| SEC-23 | **Filename injection Content-Disposition** — ongesanitized filename in headers. Fix: strip speciale chars. | Security | ❌ TODO |
+| SEC-23 | **Filename injection Content-Disposition** — ongesanitized filename in headers. Fix: strip speciale chars. | Security | ✅ Sessie 90 (al gefixt, bevestigd sessie 91) |
 | SEC-24 | **Token encryption** — OAuth tokens onvoldoende versleuteld. Fix: Fernet encryption. | Security | ✅ Sessie 90 (Fernet versterkt) |
 | SEC-25 | **OAuth state parameter** — geen validatie van state parameter. Fix: server-side validatie. | Security | ✅ Sessie 90 (state parameter validatie + frontend USER directive) |
 | SEC-26 | **PyJWT migratie** — python-jose niet meer onderhouden. Vervangen door PyJWT. | Backend | ✅ Sessie 90 |
@@ -453,7 +454,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | CQ-16 | **list_cases missing eager loads** — MissingGreenlet crash risico bij serialisatie. | Backend | ✅ Sessie 90 |
 | CQ-17 | **Factuur paid zonder payments** — status `paid` bereikbaar zonder betalingsrecords. | Backend | ✅ Sessie 90 |
 | CQ-18 | **files_service uploader lazy load** — crash in async context. Fix: selectinload. | Backend | ✅ Sessie 90 |
-| CQ-19 | **Float divisie betalingsregeling** — installment bedrag berekend met JS float. Fix: backend endpoint. | Frontend | ❌ TODO |
+| CQ-19 | **Float divisie betalingsregeling** — installment bedrag berekend met JS float. Fix: integer cents arithmetic. | Frontend | ✅ Sessie 91 (integer cents i.p.v. float divisie) |
 | CQ-20 | **KYC/WWFT data typed als any** — compliance risico. Fix: typed KycData interface. | Frontend | ✅ Sessie 90 (KycSection getypeerd) |
 
 #### MEDIUM — Moet gefixt, geen acuut risico
@@ -476,7 +477,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | UX-18 | **Breadcrumbs** — ontbreken op detail pagina's. | Frontend | ❌ TODO |
 | UX-19 | **Error boundaries per tab** — JS error in één tab crasht hele case detail. | Frontend | ❌ TODO |
 | UX-20 | **formatCurrency NaN** — toont "NaN" bij null waarden. | Frontend | ❌ TODO |
-| UX-21 | **isError niet afgevangen** — financiële queries tonen lege lijst i.p.v. error. | Frontend | ❌ TODO |
+| UX-21 | **isError niet afgevangen** — financiële queries tonen lege lijst i.p.v. error. | Frontend | ✅ Sessie 91 (QueryError in 5 financial tabs) |
 
 ### Code Quality Sprint (sessie 83 audit)
 

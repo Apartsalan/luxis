@@ -1,17 +1,51 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 90 — Mega-audit Sprint 1: CRITICAL + HIGH backend/security fixes)
-**Laatste feature/fix:** Sessie 90 — 15 mega-audit issues gefixt (CQ-10/11/14-18/20, SEC-18/20/22/24/25/26/27) + deploy
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 91 — Mega-audit Sprint 2: security + frontend code quality fixes)
+**Laatste feature/fix:** Sessie 91 — 8 mega-audit issues gefixt (SEC-19/21, CQ-12/13/19, UX-21 + SEC-16/23 bevestigd) + infra hardening (sessie 92) + deploy
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
-**Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89+90 (15/30 gefixt, 15 resterend)
-**Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/14-18/20 gefixt, CQ-12/13/19 resterend)
+**Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89-92 (28/30 gefixt, 2 resterend: SEC-16 KDF al gefixt maar niet in audit, SEC-23 idem)
+**Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/12/13/14-18/19/20 gefixt)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
-**Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Mega-audit Sprint 2 — resterende CRITICAL + HIGH (SEC-16/17/19/21/23 + CQ-12/13/19)
+**Backend tests:** 135 passed, 5 pre-existing failures (BUG-50) | **Ruff:** 0 warnings | **Frontend build:** ✅
+**Volgende sessie:** BUG-50 test failures fixen + resterende MEDIUM items (UX-14 t/m UX-20)
+
+## Wat er gedaan is (sessie 91 — 21 maart 2026) — Mega-audit Sprint 2: security + frontend code quality
+
+**3 terminals parallel, 45 bestanden gewijzigd, 605 regels toegevoegd, 162 verwijderd.**
+
+### Terminal A — Security + Code Quality fixes:
+- **SEC-19:** JWT tokens gecentraliseerd in `tokenStore` module (`frontend/src/lib/token-store.ts`) — 17 bestanden gemigreerd van directe localStorage calls
+- **SEC-21:** OAuth nonce via Redis — `secrets.token_urlsafe(32)`, single-use met `r.delete()`, 10min TTL via `setex`
+- **CQ-12:** 4 silent `catch {}` blocks in `classification-card.tsx` → `toast.error()` met gebruiksvriendelijke foutmelding
+- **CQ-13:** Alle `parseFloat()` voor geldbedragen verwijderd — string transport naar backend Decimal (facturen, dossiers, verschotten)
+- **CQ-19:** `BetalingsregelingSection` preview: float divisie → integer cents arithmetic (`Math.round(total * 100)`)
+- **UX-21:** `QueryError` component toegevoegd aan 5 financiële tabs (FinancieelTab, VorderingenTab, BetalingenTab, DerdengeldenTab, BetalingsregelingSection)
+- **SEC-16 + SEC-23:** Bevestigd al gefixt in sessie 90
+
+### Terminal B — Infra hardening (sessie 92):
+- **SEC-17:** DB/Redis poorten verplaatst van base naar dev-only compose
+- **SEC-28:** Dev dependencies uit prod Docker image
+- **SEC-29:** Mass assignment protection met ALLOWED_FIELDS allowlist
+- **SEC-30:** CSP unsafe-eval verwijderd uit Caddyfile
+- **CQ-21:** Backend .dockerignore aangemaakt
+- **CQ-22:** Container healthchecks voor alle services
+- **CQ-23:** Container resource limits (mem_limit + cpus)
+- **CQ-24:** Off-site backup script met rclone support
+- **CQ-25:** Uptime monitoring setup script
+
+### Terminal C — Frontend UX polish (sessie 93):
+- Relaties/facturen/zaken lijstpagina verbeteringen
+- Case detail page UX fixes
+
+### Deploy:
+- Backend + frontend gedeployed naar VPS (git stash voor lokale backup.sh wijziging)
+
+### Bekende issues:
+- **BUG-50:** 5 pre-existing test failures (test_refresh_token, 3x test_invoice_parser, test_status_workflow) — niet gerelateerd aan sessie 91 wijzigingen
 
 ## Wat er gedaan is (sessie 90 — 21 maart 2026) — Mega-audit Sprint 1: CRITICAL + HIGH fixes
 

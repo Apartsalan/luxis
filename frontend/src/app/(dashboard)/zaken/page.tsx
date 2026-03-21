@@ -392,7 +392,63 @@ export default function ZakenPage() {
         </div>
       ) : data?.items && data.items.length > 0 ? (
         <>
-          <div className="overflow-x-auto rounded-xl border border-border bg-card">
+          {/* Mobile card view */}
+          <div className="block sm:hidden space-y-3">
+            {data.items.map((zaak) => (
+              <Link
+                key={zaak.id}
+                href={`/zaken/${zaak.id}`}
+                className="block rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-mono text-sm font-semibold text-foreground">
+                      {zaak.case_number}
+                    </p>
+                    {zaak.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {zaak.description}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                      dynamicStatusBadge[zaak.status] ??
+                      "bg-slate-50 text-slate-600 ring-slate-500/20"
+                    }`}
+                  >
+                    {dynamicStatusLabels[zaak.status] ?? zaak.status}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span
+                    className={`inline-flex rounded-md px-2 py-0.5 font-medium ${
+                      TYPE_BADGE[zaak.case_type] ?? "bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    {TYPE_LABELS[zaak.case_type] ?? zaak.case_type}
+                  </span>
+                  {zaak.client && (
+                    <span className="truncate max-w-[140px]">{zaak.client.name}</span>
+                  )}
+                  <span className="ml-auto tabular-nums">{formatDateShort(zaak.date_opened)}</span>
+                </div>
+                {hasModule("incasso") && (zaak.total_principal > 0) && (
+                  <div className="mt-2 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Hoofdsom: <span className="font-semibold text-foreground tabular-nums">{formatCurrency(zaak.total_principal)}</span></span>
+                    <span className={`font-semibold tabular-nums ${
+                      (zaak.total_principal - zaak.total_paid) > 0 ? "text-amber-600" : "text-emerald-600"
+                    }`}>
+                      Open: {formatCurrency(zaak.total_principal - zaak.total_paid)}
+                    </span>
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card">
             <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b border-border">

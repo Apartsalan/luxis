@@ -138,7 +138,64 @@ export default function RelatiesPage() {
         </div>
       ) : data?.items && data.items.length > 0 ? (
         <>
-          <div className="overflow-x-auto rounded-xl border border-border bg-card">
+          {/* Mobile card view */}
+          <div className="block sm:hidden space-y-3">
+            {data.items.map((contact) => (
+              <Link
+                key={contact.id}
+                href={`/relaties/${contact.id}`}
+                className="block rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                      contact.contact_type === "company"
+                        ? "bg-blue-50 text-blue-600"
+                        : "bg-violet-50 text-violet-600"
+                    }`}
+                  >
+                    {contact.contact_type === "company" ? (
+                      <Building2 className="h-4 w-4" />
+                    ) : (
+                      <User className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {contact.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {contact.contact_type === "company" ? "Bedrijf" : "Persoon"}
+                      {contact.kvk_number && ` · KvK ${contact.kvk_number}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2.5 space-y-1 text-xs text-muted-foreground">
+                  {contact.email && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{contact.email}</span>
+                    </div>
+                  )}
+                  {contact.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      {contact.phone}
+                    </div>
+                  )}
+                  {contact.visit_city && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      {contact.visit_city}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop table view */}
+          <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card">
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border">

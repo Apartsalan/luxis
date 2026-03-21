@@ -18,6 +18,8 @@ interface Step1Props {
   inputClass: string;
   fieldConfidence: Record<string, number>;
   hasModule: (mod: LuxisModule) => boolean;
+  fieldErrors?: Record<string, string>;
+  onBlur?: (field: string) => void;
 }
 
 export function Step1Zaakgegevens({
@@ -27,7 +29,27 @@ export function Step1Zaakgegevens({
   inputClass,
   fieldConfidence,
   hasModule,
+  fieldErrors = {},
+  onBlur,
 }: Step1Props) {
+  const inputErrorClass = inputClass.replace(
+    "border-input",
+    "border-destructive"
+  ).replace(
+    "focus:border-primary",
+    "focus:border-destructive"
+  ).replace(
+    "focus:ring-primary/20",
+    "focus:ring-destructive/20"
+  );
+
+  const getClass = (field: string) =>
+    fieldErrors[field] ? inputErrorClass : inputClass;
+
+  const FieldError = ({ field }: { field: string }) =>
+    fieldErrors[field] ? (
+      <p className="mt-1 text-xs text-destructive">{fieldErrors[field]}</p>
+    ) : null;
   return (
     <>
       <div className="rounded-xl border border-border bg-card p-6 space-y-4">
@@ -77,8 +99,10 @@ export function Step1Zaakgegevens({
               required
               value={form.date_opened}
               onChange={(e) => updateField("date_opened", e.target.value)}
-              className={inputClass}
+              onBlur={() => onBlur?.("date_opened")}
+              className={getClass("date_opened")}
             />
+            <FieldError field="date_opened" />
           </div>
         </div>
 
@@ -190,9 +214,11 @@ export function Step1Zaakgegevens({
                 onChange={(e) =>
                   updateField("contractual_rate", e.target.value)
                 }
-                className={inputClass}
+                onBlur={() => onBlur?.("contractual_rate")}
+                className={getClass("contractual_rate")}
                 placeholder="Bijv. 8.00"
               />
+              <FieldError field="contractual_rate" />
             </div>
           )}
         </div>

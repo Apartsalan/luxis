@@ -353,6 +353,21 @@ function NieuweZaakPage() {
     name: string;
   } | null>(null);
   const [error, setError] = useState("");
+  const [wizardFieldErrors, setWizardFieldErrors] = useState<Record<string, string>>({});
+
+  const validateWizardField = (field: string, value: string): string => {
+    if (field === "date_opened" && !value) return "Datum geopend is verplicht";
+    if (field === "contractual_rate" && form.interest_type === "contractual" && !value) return "Rentepercentage is verplicht";
+    if (field === "client_id" && !value) return "Selecteer een client";
+    return "";
+  };
+
+  const handleWizardBlur = (field: string) => {
+    const value = form[field as keyof typeof form] || "";
+    const err = validateWizardField(field, value);
+    setWizardFieldErrors((prev) => ({ ...prev, [field]: err }));
+  };
+
   const createRelation = useCreateRelation();
   const createContactLink = useCreateContactLink();
   const addParty = useAddCaseParty();
@@ -454,6 +469,10 @@ function NieuweZaakPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
     // Clear validation error when a required field is filled
     if (field === "client_id" && value) setError("");
+    // Clear inline field error when user types
+    if (wizardFieldErrors[field]) {
+      setWizardFieldErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   // ── Auto-select contacts when AI parsing pre-fills search fields ─────────
@@ -543,6 +562,17 @@ function NieuweZaakPage() {
     []
   );
 
+  // UX-16: Warn on unsaved changes
+  const wizardDirty = form.client_id || form.description || form.reference || claims.some(c => c.description || c.principal_amount);
+  useEffect(() => {
+    if (!wizardDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [wizardDirty]);
+
   const isIncasso = form.case_type === "incasso";
   const totalSteps = isIncasso ? 3 : 2;
 
@@ -603,6 +633,16 @@ function NieuweZaakPage() {
     const validationError = validateStep(currentStep);
     if (validationError) {
       setError(validationError);
+      // Set inline field errors for the current step
+      if (currentStep === 1) {
+        const errs: Record<string, string> = {};
+        if (!form.date_opened) errs.date_opened = "Datum geopend is verplicht";
+        if (form.interest_type === "contractual" && isIncasso && !form.contractual_rate) errs.contractual_rate = "Rentepercentage is verplicht";
+        setWizardFieldErrors((prev) => ({ ...prev, ...errs }));
+      }
+      if (currentStep === 2) {
+        if (!form.client_id) setWizardFieldErrors((prev) => ({ ...prev, client_id: "Selecteer een client" }));
+      }
       return;
     }
     setError("");
@@ -757,6 +797,8 @@ function NieuweZaakPage() {
   // ── Styling ──────────────────────────────────────────────────────────────
   const inputClass =
     "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
+  const inputErrorClass = inputClass.replace("border-input", "border-destructive").replace("focus:border-primary", "focus:border-destructive").replace("focus:ring-primary/20", "focus:ring-destructive/20");
+  const getWizardInputClass = (field: string) => wizardFieldErrors[field] ? inputErrorClass : inputClass;
 
   const isLastStep = currentStep === totalSteps;
 
@@ -843,8 +885,12 @@ function NieuweZaakPage() {
                     required
                     value={form.date_opened}
                     onChange={(e) => updateField("date_opened", e.target.value)}
-                    className={inputClass}
+                    onBlur={() => handleWizardBlur("date_opened")}
+                    className={getWizardInputClass("date_opened")}
                   />
+                  {wizardFieldErrors.date_opened && (
+                    <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.date_opened}</p>
+                  )}
                 </div>
               </div>
 
@@ -956,9 +1002,13 @@ function NieuweZaakPage() {
                       onChange={(e) =>
                         updateField("contractual_rate", e.target.value)
                       }
-                      className={inputClass}
+                      onBlur={() => handleWizardBlur("contractual_rate")}
+                      className={getWizardInputClass("contractual_rate")}
                       placeholder="Bijv. 8.00"
                     />
+                    {wizardFieldErrors.contractual_rate && (
+                      <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.contractual_rate}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1006,10 +1056,17 @@ function NieuweZaakPage() {
                       type="text"
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
-                      className="w-full rounded-lg border border-input bg-background pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                      className={`w-full rounded-lg border bg-background pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-colors ${
+                        wizardFieldErrors.client_id
+                          ? "border-destructive focus:border-destructive focus:ring-destructive/20"
+                          : "border-input focus:border-primary focus:ring-primary/20"
+                      }`}
                       placeholder="Zoek een client..."
                     />
                   </div>
+                  {wizardFieldErrors.client_id && (
+                    <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.client_id}</p>
+                  )}
                   {clientSearch &&
                     clientResults?.items &&
                     clientResults.items.length > 0 && (

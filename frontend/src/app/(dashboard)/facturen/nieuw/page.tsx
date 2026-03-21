@@ -73,6 +73,18 @@ export default function NieuweFactuurPage() {
   const [showExpenses, setShowExpenses] = useState(false);
   const [selectedTimeEntryIds, setSelectedTimeEntryIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
+  const [invoiceFieldErrors, setInvoiceFieldErrors] = useState<Record<string, string>>({});
+
+  // UX-16: Warn on unsaved changes
+  const formDirty = form.contact_id || form.case_id !== preselectedCaseId || lines.some(l => l.description || l.unit_price);
+  useEffect(() => {
+    if (!formDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [formDirty]);
 
   // Pre-fill from case_id URL parameter
   const { data: preselectedCase } = useCase(preselectedCaseId || undefined);
@@ -271,6 +283,7 @@ export default function NieuweFactuurPage() {
 
     if (!form.contact_id) {
       setError("Selecteer een relatie");
+      setInvoiceFieldErrors((prev) => ({ ...prev, contact_id: "Selecteer een relatie" }));
       return;
     }
 
@@ -423,12 +436,20 @@ export default function NieuweFactuurPage() {
                   setContactSearch(e.target.value);
                   setSelectedContactName("");
                   updateField("contact_id", "");
+                  setInvoiceFieldErrors((prev) => ({ ...prev, contact_id: "" }));
                   setShowContactResults(true);
                 }}
                 onFocus={() => setShowContactResults(true)}
-                className={`${inputClass} pl-10`}
+                className={`mt-1.5 w-full rounded-lg border bg-background pl-10 pr-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-colors ${
+                  invoiceFieldErrors.contact_id
+                    ? "border-destructive focus:border-destructive focus:ring-destructive/20"
+                    : "border-input focus:border-primary focus:ring-primary/20"
+                }`}
               />
             </div>
+            {invoiceFieldErrors.contact_id && (
+              <p className="mt-1 text-xs text-destructive">{invoiceFieldErrors.contact_id}</p>
+            )}
             {showContactResults &&
               contactSearch &&
               contactResults?.items &&
@@ -443,6 +464,7 @@ export default function NieuweFactuurPage() {
                         setSelectedContactName(c.name);
                         setContactSearch("");
                         setShowContactResults(false);
+                        setInvoiceFieldErrors((prev) => ({ ...prev, contact_id: "" }));
                       }}
                       className="flex w-full items-center px-4 py-2.5 text-sm hover:bg-muted transition-colors first:rounded-t-lg last:rounded-b-lg"
                     >

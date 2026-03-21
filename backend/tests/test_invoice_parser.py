@@ -78,7 +78,7 @@ def test_validate_and_clean_basic():
     result = _validate_and_clean(SAMPLE_AI_RESPONSE)
     assert result["debtor_name"] == "Acme B.V."
     assert result["debtor_type"] == "company"
-    assert result["principal_amount"] == 1500.50
+    assert result["principal_amount"] == "1500.50"
     assert result["confidence"]["debtor_name"] == 0.95
 
 
@@ -86,7 +86,7 @@ def test_validate_and_clean_decimal_precision():
     raw = {**SAMPLE_AI_RESPONSE, "principal_amount": 1234.567}
     result = _validate_and_clean(raw)
     # Should be rounded to 2 decimal places
-    assert result["principal_amount"] == 1234.57
+    assert result["principal_amount"] == "1234.57"
 
 
 def test_validate_and_clean_invalid_amount():
@@ -142,7 +142,7 @@ async def test_parse_invoice_pdf_success():
     ):
         result = await parse_invoice_pdf(b"fake-pdf-bytes", "test.pdf")
         assert result["debtor_name"] == "Acme B.V."
-        assert result["principal_amount"] == 1500.50
+        assert result["principal_amount"] == "1500.50"
         assert result["model"] == "kimi-2.5"
         assert "confidence" in result
 

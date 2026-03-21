@@ -42,6 +42,7 @@ def create_refresh_token(user_id: str, tenant_id: str) -> str:
         "tenant_id": tenant_id,
         "type": "refresh",
         "exp": expire,
+        "jti": str(uuid.uuid4()),
     }
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 

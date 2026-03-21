@@ -192,7 +192,8 @@ async def test_status_workflow_happy_path(
     assert resp.status_code == 200
     assert resp.json()["status"] == "sent"
 
-    # Record payment covering the full invoice total (CQ-17: required before mark-paid)
+    # Record payment covering the full invoice total
+    # (auto-transitions to "paid" via _update_invoice_payment_status)
     invoice_total = created["total"]
     resp = await client.post(
         f"/api/invoices/{inv_id}/payments",
@@ -205,8 +206,8 @@ async def test_status_workflow_happy_path(
     )
     assert resp.status_code == 201
 
-    # Mark paid
-    resp = await client.post(f"/api/invoices/{inv_id}/mark-paid", headers=auth_headers)
+    # Verify the payment auto-transitioned the invoice to "paid"
+    resp = await client.get(f"/api/invoices/{inv_id}", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "paid"
     assert resp.json()["paid_date"] is not None

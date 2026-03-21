@@ -161,7 +161,57 @@ export default function FacturenPage() {
             </div>
           ) : data?.items && data.items.length > 0 ? (
             <>
-              <div className="overflow-x-auto rounded-xl border border-border bg-card">
+              {/* Mobile card view */}
+              <div className="block sm:hidden space-y-3">
+                {data.items.map((factuur) => (
+                  <Link
+                    key={factuur.id}
+                    href={`/facturen/${factuur.id}`}
+                    className="block rounded-xl border border-border bg-card p-4 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`font-mono text-sm font-semibold ${
+                            factuur.invoice_type === "credit_note" ? "text-purple-700" : "text-foreground"
+                          }`}>
+                            {factuur.invoice_number}
+                          </p>
+                          {factuur.invoice_type === "credit_note" && (
+                            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-600">
+                              CN
+                            </span>
+                          )}
+                        </div>
+                        {factuur.contact_name && (
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                            {factuur.contact_name}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          INVOICE_STATUS_COLORS[factuur.status] ?? "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {INVOICE_STATUS_LABELS[factuur.status] ?? factuur.status}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{formatDateShort(factuur.invoice_date)}</span>
+                      <span className={`text-sm font-semibold tabular-nums ${
+                        factuur.invoice_type === "credit_note" ? "text-red-600" : "text-foreground"
+                      }`}>
+                        {factuur.invoice_type === "credit_note" ? "-" : ""}
+                        {formatCurrency(factuur.total)}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Desktop table view */}
+              <div className="hidden sm:block overflow-x-auto rounded-xl border border-border bg-card">
                 <table className="w-full min-w-[800px]">
                   <thead>
                     <tr className="border-b border-border">

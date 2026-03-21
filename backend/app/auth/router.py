@@ -266,9 +266,9 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
 ):
     """Update the current user's profile (name, default hourly rate)."""
-    ALLOWED_FIELDS = {"full_name", "default_hourly_rate"}
+    allowed_fields = {"full_name", "default_hourly_rate"}
     for field, value in data.model_dump(exclude_unset=True).items():
-        if field not in ALLOWED_FIELDS:
+        if field not in allowed_fields:
             continue
         setattr(current_user, field, value)
     db.add(current_user)
@@ -349,7 +349,7 @@ async def update_tenant(
     admin: User = Depends(require_role("admin")),
 ):
     """Update the current user's tenant (office) details. Admin only."""
-    ALLOWED_FIELDS = {
+    allowed_fields = {
         "name", "kvk_number", "btw_number", "address", "postal_code",
         "city", "iban", "phone", "email", "modules_enabled",
     }
@@ -360,7 +360,7 @@ async def update_tenant(
     if tenant is None:
         raise HTTPException(status_code=404, detail="Kantoor niet gevonden")
     for field, value in data.model_dump(exclude_unset=True).items():
-        if field not in ALLOWED_FIELDS:
+        if field not in allowed_fields:
             continue
         setattr(tenant, field, value)
     db.add(tenant)

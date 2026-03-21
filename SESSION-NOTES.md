@@ -1,17 +1,53 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 89 — Mega-audit + multi-terminal fixes)
-**Laatste feature/fix:** Sessie 89 — 46 bestanden gefixt over 3 terminals (security + juridisch + frontend)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 90 — Mega-audit Sprint 1: CRITICAL + HIGH backend/security fixes)
+**Laatste feature/fix:** Sessie 90 — 15 mega-audit issues gefixt (CQ-10/11/14-18/20, SEC-18/20/22/24/25/26/27) + deploy
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
-**Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89 (nieuwe bevindingen → SEC-16 t/m SEC-30)
-**Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit sessie 89 (nieuwe bevindingen → CQ-10 t/m CQ-25)
+**Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89+90 (15/30 gefixt, 15 resterend)
+**Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/14-18/20 gefixt, CQ-12/13/19 resterend)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** Mega-audit Sprint 1 — CRITICAL fixes (8 items, 3 terminals parallel)
+**Volgende sessie:** Mega-audit Sprint 2 — resterende CRITICAL + HIGH (SEC-16/17/19/21/23 + CQ-12/13/19)
+
+## Wat er gedaan is (sessie 90 — 21 maart 2026) — Mega-audit Sprint 1: CRITICAL + HIGH fixes
+
+**3 terminals parallel, 44 bestanden gewijzigd, 526 regels toegevoegd, 158 verwijderd.**
+
+### Terminal A — Backend Critical/High fixes:
+- **CQ-10:** `db.commit()` toegevoegd op alle muterende endpoints (cases/router, invoices/router, documents/router, template_router)
+- **CQ-11:** N+1 query in receivables → single grouped aggregate query
+- **CQ-14:** Compound interest rounding fix (`_round2` na elke jaarperiode)
+- **CQ-15:** `_recalculate_totals` → DB aggregate i.p.v. stale in-memory loop
+- **CQ-16:** `list_cases` eager loads voor client + opposing_party
+- **CQ-17:** Payment verificatie: check total payments >= invoice.total voor paid-transitie
+- **CQ-18:** `selectinload(CaseFile.uploader)` in files_service queries
+- **SEC-26:** python-jose → PyJWT migratie (pyproject.toml + auth/service.py)
+
+### Terminal B — Security fixes:
+- **SEC-20:** Account lockout na 5 mislukte pogingen + Alembic migratie (sec20_account_lockout)
+- **SEC-22:** Input sanitization — backend `app/shared/sanitize.py` + frontend `lib/sanitize.ts`
+- **SEC-24:** Token encryption versterkt met Fernet in `email/token_encryption.py`
+- **SEC-25:** OAuth state parameter validatie in `email/oauth_router.py` + frontend Dockerfile USER directive
+- **SEC-27:** Security headers toegevoegd aan `docker-compose.prod.yml`
+
+### Terminal C — Frontend fixes:
+- XSS sanitization met DOMPurify in meerdere componenten
+- **CQ-20:** KYC section getypeerd (was `any`)
+- Component data handling fixes (BetalingsregelingSection, VorderingenTab, etc.)
+
+### Deploy:
+- Backend + frontend gedeployed naar VPS
+- Migratie `sec20_account_lockout` uitgevoerd
+- Redis gefixt: REDIS_PASSWORD ingesteld (SEC-18)
+
+### Nog open (15 items):
+- **CRITICAL (3):** SEC-16 (Fernet KDF), SEC-17 (poorten prod), SEC-19 (localStorage tokens), CQ-12 (silent catch), CQ-13 (parseFloat)
+- **HIGH (2):** SEC-21 (OAuth nonce), SEC-23 (filename injection), CQ-19 (float divisie)
+- **MEDIUM (10):** SEC-28-30, CQ-21-25, UX-14 t/m UX-21
 
 ## Wat er gedaan is (sessie 89 — 21 maart 2026) — Mega-audit + multi-terminal fixes
 

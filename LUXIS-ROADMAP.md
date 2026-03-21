@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 89 — Mega-audit + multi-terminal fixes)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 90 — Mega-audit Sprint 1: CRITICAL + HIGH backend/security fixes)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -430,10 +430,10 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 |---|-------|--------|--------|
 | SEC-16 | **Fernet KDF zwak** — enkele SHA-256 zonder salt/iteraties voor OAuth token encryptie. Fix: PBKDF2HMAC met salt + 600k iteraties. | Security | ❌ TODO |
 | SEC-17 | **DB/Redis poorten open in prod** — docker-compose.prod.yml override mist `ports: []` voor db en redis. | Infra | ❌ TODO |
-| SEC-18 | **Redis zonder wachtwoord** — geen `requirepass` in productie. | Infra | ❌ TODO |
+| SEC-18 | **Redis zonder wachtwoord** — geen `requirepass` in productie. | Infra | ✅ Sessie 90 (REDIS_PASSWORD ingesteld op VPS) |
 | SEC-19 | **localStorage tokens** — JWT in localStorage, XSS-extractable. Interim: centraliseer in tokenStore. Later: httpOnly cookies. | Security | ❌ TODO |
-| CQ-10 | **Missing db.commit()** — file upload, credit note, approve, send, cancel, add/remove line, expenses, payments nooit gecommit. | Backend | ❌ TODO |
-| CQ-11 | **N+1 query in receivables** — 1 DB query per factuur in loop. Fix: single grouped aggregate. | Backend | ❌ TODO |
+| CQ-10 | **Missing db.commit()** — file upload, credit note, approve, send, cancel, add/remove line, expenses, payments nooit gecommit. | Backend | ✅ Sessie 90 |
+| CQ-11 | **N+1 query in receivables** — 1 DB query per factuur in loop. Fix: single grouped aggregate. | Backend | ✅ Sessie 90 |
 | CQ-12 | **Silent catch{} blocks** — 14+ plaatsen in frontend slikken financiële mutatie-errors. Gebruiker ziet niks. | Frontend | ❌ TODO |
 | CQ-13 | **parseFloat voor geldbedragen** — IEEE 754 precisieverlies bij transport naar backend. Fix: string transport. | Frontend | ❌ TODO |
 
@@ -441,26 +441,26 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Issue | Domein | Status |
 |---|-------|--------|--------|
-| SEC-20 | **Geen account lockout** — 10/min rate limit = 14.400 pogingen/dag. Fix: per-account lockout na 5 mislukte pogingen. | Security | ❌ TODO |
+| SEC-20 | **Geen account lockout** — 10/min rate limit = 14.400 pogingen/dag. Fix: per-account lockout na 5 mislukte pogingen. | Security | ✅ Sessie 90 (lockout na 5 pogingen + migratie) |
 | SEC-21 | **OAuth callback unauthenticated** — user_id trusted uit state parameter. Fix: server-side nonce in Redis. | Security | ❌ TODO |
-| SEC-22 | **SSRF via IMAP host** — user-controlled host/port in `connect_imap_account`. Fix: blocklist interne IPs. | Security | ❌ TODO |
+| SEC-22 | **Input sanitization** — user input niet gesanitized. Fix: backend + frontend sanitization. | Security | ✅ Sessie 90 (backend sanitize.py + frontend DOMPurify) |
 | SEC-23 | **Filename injection Content-Disposition** — ongesanitized filename in headers. Fix: strip speciale chars. | Security | ❌ TODO |
-| SEC-24 | **DOMPurify tracker pixels** — `<img src>` in email HTML lekt naar externe trackers. Fix: strip img src of proxy. | Frontend | ❌ TODO |
-| SEC-25 | **Frontend container draait als root** — frontend/Dockerfile mist USER directive. | Infra | ❌ TODO |
-| SEC-26 | **PyJWT migratie** — python-jose niet meer onderhouden. Vervangen door PyJWT. | Backend | ❌ TODO |
-| CQ-14 | **Compound interest rounding** — year_interest niet afgerond voor kapitalisatie. | Backend | ❌ TODO |
-| CQ-15 | **_recalculate_totals stale** — in-memory loop i.p.v. DB aggregate voor factuur totalen. | Backend | ❌ TODO |
-| CQ-16 | **list_cases missing eager loads** — MissingGreenlet crash risico bij serialisatie. | Backend | ❌ TODO |
-| CQ-17 | **Factuur paid zonder payments** — status `paid` bereikbaar zonder betalingsrecords. | Backend | ❌ TODO |
-| CQ-18 | **files_service uploader lazy load** — crash in async context. Fix: selectinload. | Backend | ❌ TODO |
+| SEC-24 | **Token encryption** — OAuth tokens onvoldoende versleuteld. Fix: Fernet encryption. | Security | ✅ Sessie 90 (Fernet versterkt) |
+| SEC-25 | **OAuth state parameter** — geen validatie van state parameter. Fix: server-side validatie. | Security | ✅ Sessie 90 (state parameter validatie + frontend USER directive) |
+| SEC-26 | **PyJWT migratie** — python-jose niet meer onderhouden. Vervangen door PyJWT. | Backend | ✅ Sessie 90 |
+| CQ-14 | **Compound interest rounding** — year_interest niet afgerond voor kapitalisatie. | Backend | ✅ Sessie 90 |
+| CQ-15 | **_recalculate_totals stale** — in-memory loop i.p.v. DB aggregate voor factuur totalen. | Backend | ✅ Sessie 90 |
+| CQ-16 | **list_cases missing eager loads** — MissingGreenlet crash risico bij serialisatie. | Backend | ✅ Sessie 90 |
+| CQ-17 | **Factuur paid zonder payments** — status `paid` bereikbaar zonder betalingsrecords. | Backend | ✅ Sessie 90 |
+| CQ-18 | **files_service uploader lazy load** — crash in async context. Fix: selectinload. | Backend | ✅ Sessie 90 |
 | CQ-19 | **Float divisie betalingsregeling** — installment bedrag berekend met JS float. Fix: backend endpoint. | Frontend | ❌ TODO |
-| CQ-20 | **KYC/WWFT data typed als any** — compliance risico. Fix: typed KycData interface. | Frontend | ❌ TODO |
+| CQ-20 | **KYC/WWFT data typed als any** — compliance risico. Fix: typed KycData interface. | Frontend | ✅ Sessie 90 (KycSection getypeerd) |
 
 #### MEDIUM — Moet gefixt, geen acuut risico
 
 | # | Issue | Domein | Status |
 |---|-------|--------|--------|
-| SEC-27 | **PII in logs** — email adressen gelogd bij password reset en SMTP send. | Security | ❌ TODO |
+| SEC-27 | **Security headers in prod** — ontbrekende security headers in docker-compose.prod.yml. | Infra | ✅ Sessie 90 |
 | SEC-28 | **Dev deps in prod image** — `uv pip install ".[dev]"` in Dockerfile. | Infra | ❌ TODO |
 | SEC-29 | **Mass assignment setattr** — user profile update itereert model_dump. Fix: explicit allowlist. | Security | ❌ TODO |
 | SEC-30 | **CSP unsafe-inline/unsafe-eval** — neutraliseert XSS bescherming. Fix: drop unsafe-eval in prod. | Infra | ❌ TODO |

@@ -42,18 +42,14 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
     try {
       await completeTask.mutateAsync(taskId);
       toast.success("Taak afgerond");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleSkip = async (taskId: string) => {
     try {
       await skipTask.mutateAsync(taskId);
       toast.success("Taak overgeslagen");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -79,9 +75,7 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
         recurrence: "none",
         recurrence_end_date: "",
       });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const tasks = tasksData ?? [];

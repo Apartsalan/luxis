@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import Link from "next/link";
 import {
   Clock,
@@ -309,6 +310,7 @@ function CaseSelector({
 
 export default function UrenPage() {
   const { user } = useAuth();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   // ── View mode & navigation offsets ─────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>("week");
@@ -462,9 +464,7 @@ export default function UrenPage() {
       toast.success("Tijdregistratie opgeslagen");
       resetForm();
       setShowForm(false);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   // ── Inline edit ──────────────────────────────────────────────────────
@@ -505,19 +505,15 @@ export default function UrenPage() {
       });
       toast.success("Bijgewerkt");
       setEditId(null);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const deleteEntry = async (id: string) => {
-    if (!confirm("Weet je zeker dat je deze registratie wilt verwijderen?")) return;
+    if (!await confirm({ title: "Registratie verwijderen", description: "Weet je zeker dat je deze registratie wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Verwijderd");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   // ── Computed ─────────────────────────────────────────────────────────
@@ -566,6 +562,7 @@ export default function UrenPage() {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialogEl}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

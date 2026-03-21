@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -74,6 +75,7 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
   const invoices = data?.items ?? [];
   const createInvoice = useCreateInvoice();
   const deleteInvoice = useDeleteInvoice();
+  const { confirm: confirmDelete, ConfirmDialog: ConfirmDialogEl1 } = useConfirm();
 
   // Quick Bill state
   const [showQuickBill, setShowQuickBill] = useState(false);
@@ -134,6 +136,7 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
 
   return (
     <div className="space-y-6">
+      {ConfirmDialogEl1}
       {/* Quick Bill Dialog */}
       {showQuickBill && (
         <div className="rounded-xl border-2 border-primary/30 bg-card p-6 space-y-4">
@@ -450,10 +453,11 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
                   </span>
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (confirm("Weet je zeker dat je deze factuur wilt verwijderen?")) {
+                      const ok = await confirmDelete({ title: "Factuur verwijderen", description: "Weet je zeker dat je deze factuur wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" });
+                      if (ok) {
                         deleteInvoice.mutate(inv.id, {
                           onSuccess: () => toast.success("Factuur verwijderd"),
                           onError: () => toast.error("Fout bij verwijderen factuur"),
@@ -503,6 +507,7 @@ function VerschottenSection({ caseId }: { caseId: string }) {
   const { data: caseFiles } = useCaseFiles(caseId);
   const createExpense = useCreateExpense();
   const deleteExpense = useDeleteExpense();
+  const { confirm: confirmDelete, ConfirmDialog: ConfirmDialogEl2 } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     description: "",
@@ -544,7 +549,7 @@ function VerschottenSection({ caseId }: { caseId: string }) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Verschot verwijderen?")) return;
+    if (!await confirmDelete({ title: "Verschot verwijderen", description: "Weet je zeker dat je dit verschot wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deleteExpense.mutateAsync(id);
       toast.success("Verschot verwijderd");
@@ -558,6 +563,7 @@ function VerschottenSection({ caseId }: { caseId: string }) {
 
   return (
     <div className="rounded-xl border border-border bg-card">
+      {ConfirmDialogEl2}
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <div className="flex items-center gap-2">
           <Receipt className="h-5 w-5 text-primary" />
@@ -779,6 +785,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   const generateDocx = useGenerateDocx(caseId);
   const deleteDocument = useDeleteDocument(caseId);
   const sendDocument = useSendDocument(caseId);
+  const { confirm: confirmDelete, ConfirmDialog: ConfirmDialogEl3 } = useConfirm();
 
   // Build set of document titles that have been emailed (for "Verzonden" badge)
   const sentDocTitles = new Set(
@@ -915,7 +922,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   };
 
   const handleDelete = async (docId: string) => {
-    if (!confirm("Weet je zeker dat je dit document wilt verwijderen?")) return;
+    if (!await confirmDelete({ title: "Document verwijderen", description: "Weet je zeker dat je dit document wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deleteDocument.mutateAsync(docId);
       toast.success("Document verwijderd");
@@ -969,6 +976,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
 
   return (
     <div className="space-y-6">
+      {ConfirmDialogEl3}
       {/* Generate from templates (T1: status-filtered) */}
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-1 text-base font-semibold text-foreground">
@@ -1383,7 +1391,6 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                               { attachmentId: item.id, caseId },
                               {
                                 onSuccess: () => toast.success(`${item.filename} opgeslagen in dossier`),
-                                onError: (err) => toast.error(err.message),
                               }
                             );
                           }}
@@ -1395,7 +1402,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       )}
                       {!isEmail && (
                         <button
-                          onClick={() => { if (confirm("Weet je zeker dat je dit bestand wilt verwijderen?")) deleteCaseFile.mutate(item.id); }}
+                          onClick={async () => { if (await confirmDelete({ title: "Bestand verwijderen", description: "Weet je zeker dat je dit bestand wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) deleteCaseFile.mutate(item.id); }}
                           className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
                           title="Verwijderen"
                         >

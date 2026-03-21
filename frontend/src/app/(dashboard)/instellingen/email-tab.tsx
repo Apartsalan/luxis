@@ -13,9 +13,11 @@ export function EmailTab() {
   const authorize = useEmailOAuthAuthorize();
   const disconnect = useEmailOAuthDisconnect();
 
-  // Listen for OAuth popup success message
+  // Listen for OAuth popup success message (validate origin to prevent spoofing)
   const handleOAuthMessage = useCallback(
     (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
       if (event.data?.type === "LUXIS_EMAIL_OAUTH_SUCCESS") {
         toast.success(`E-mail verbonden: ${event.data.email}`);
         oauthStatus.refetch();

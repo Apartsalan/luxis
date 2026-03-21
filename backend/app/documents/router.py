@@ -194,7 +194,9 @@ async def delete_document(
     "/merge-fields",
     response_model=list[MergeFieldCategory],
 )
-async def list_merge_fields():
+async def list_merge_fields(
+    user: User = Depends(get_current_user),
+):
     """Return all available merge fields grouped by category with NL labels.
 
     Used by the template editor to show which fields can be inserted.
@@ -220,7 +222,9 @@ async def list_merge_fields():
     "/docx/templates",
     response_model=list[DocxTemplateInfo],
 )
-async def list_docx_templates():
+async def list_docx_templates(
+    user: User = Depends(get_current_user),
+):
     """List available .docx template types."""
     return get_available_templates()
 

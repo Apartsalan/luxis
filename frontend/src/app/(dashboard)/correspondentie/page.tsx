@@ -36,23 +36,9 @@ import {
 import { useCases } from "@/hooks/use-cases";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { formatRelativeTime } from "@/lib/utils";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDateShort(iso: string) {
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "nu";
-  if (diffMins < 60) return `${diffMins}m`;
-  if (diffHours < 24) return `${diffHours}u`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
-}
 
 function useDebounce(value: string, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -599,7 +585,7 @@ function EmailListItem({
               <Paperclip className="h-3 w-3 text-muted-foreground" />
             )}
             <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {formatDateShort(email.email_date)}
+              {formatRelativeTime(email.email_date)}
             </span>
           </div>
         </div>

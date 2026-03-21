@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ export function ContactLinks({
   contactType,
   links,
 }: ContactLinksProps) {
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -111,7 +113,7 @@ export function ContactLinks({
   };
 
   const handleDelete = async (linkId: string) => {
-    if (!confirm("Weet je zeker dat je deze koppeling wilt verwijderen?")) return;
+    if (!await confirm({ title: "Koppeling verwijderen", description: "Weet je zeker dat je deze koppeling wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     setDeletingId(linkId);
     try {
       await deleteLink.mutateAsync(linkId);
@@ -143,6 +145,7 @@ export function ContactLinks({
 
   return (
     <>
+      {ConfirmDialogEl}
       <div className="rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">

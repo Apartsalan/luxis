@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   useClaims,
   useCreateClaim,
@@ -28,6 +29,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
   const createClaim = useCreateClaim();
   const updateClaim = useUpdateClaim();
   const deleteClaim = useDeleteClaim();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -72,13 +74,11 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
         invoice_date: "",
         rate_basis: "yearly",
       });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleDelete = async (claimId: string) => {
-    if (!confirm("Vordering verwijderen?")) return;
+    if (!await confirm({ title: "Vordering verwijderen", description: "Weet je zeker dat je deze vordering wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deleteClaim.mutateAsync({ caseId, claimId });
       toast.success("Vordering verwijderd");
@@ -119,9 +119,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
       });
       toast.success("Vordering bijgewerkt");
       setEditingId(null);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const inputClass =
@@ -129,6 +127,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
 
   return (
     <div className="space-y-4">
+      {ConfirmDialogEl}
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-foreground">
           Vorderingen

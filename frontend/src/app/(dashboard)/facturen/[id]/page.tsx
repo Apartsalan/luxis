@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -98,6 +99,7 @@ export default function FactuurDetailPage() {
   const createPayment = useCreateInvoicePayment();
   const deletePayment = useDeleteInvoicePayment();
   const createCreditNote = useCreateCreditNote();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   // Credit note form
   const [showCreditNoteForm, setShowCreditNoteForm] = useState(false);
@@ -154,9 +156,7 @@ export default function FactuurDetailPage() {
       });
       toast.success("Factuur bijgewerkt");
       setEditing(false);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleDownloadPdf = async () => {
@@ -181,14 +181,12 @@ export default function FactuurDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Weet je zeker dat je deze factuur wilt verwijderen?")) return;
+    if (!await confirm({ title: "Factuur verwijderen", description: "Weet je zeker dat je deze factuur wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deleteInvoice.mutateAsync(id);
       toast.success("Factuur verwijderd");
       router.push("/facturen");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleStatusAction = async (next: string) => {
@@ -203,19 +201,15 @@ export default function FactuurDetailPage() {
         await markPaidMutation.mutateAsync({ id });
         toast.success("Factuur gemarkeerd als betaald");
       }
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleCancel = async () => {
-    if (!confirm("Weet je zeker dat je deze factuur wilt annuleren?")) return;
+    if (!await confirm({ title: "Factuur annuleren", description: "Weet je zeker dat je deze factuur wilt annuleren?", variant: "destructive", confirmText: "Annuleren" })) return;
     try {
       await cancelMutation.mutateAsync(id);
       toast.success("Factuur geannuleerd");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleAddLine = async () => {
@@ -237,19 +231,15 @@ export default function FactuurDetailPage() {
       setLineQuantity("1");
       setLineUnitPrice("");
       setShowLineForm(false);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleRemoveLine = async (lineId: string) => {
-    if (!confirm("Weet je zeker dat je deze factuurregel wilt verwijderen?")) return;
+    if (!await confirm({ title: "Regel verwijderen", description: "Weet je zeker dat je deze factuurregel wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await removeLineMutation.mutateAsync({ invoiceId: id, lineId });
       toast.success("Regel verwijderd");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleAddPayment = async () => {
@@ -275,19 +265,15 @@ export default function FactuurDetailPage() {
       setPayMethod("bank");
       setPayReference("");
       setPayDescription("");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm("Weet je zeker dat je deze betaling wilt verwijderen?")) return;
+    if (!await confirm({ title: "Betaling verwijderen", description: "Weet je zeker dat je deze betaling wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deletePayment.mutateAsync({ invoiceId: id, paymentId });
       toast.success("Betaling verwijderd");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   // ── Credit note handlers ───────────────────────────────────────────
@@ -329,9 +315,7 @@ export default function FactuurDetailPage() {
       toast.success("Credit nota aangemaakt");
       setShowCreditNoteForm(false);
       router.push(`/facturen/${result.id}`);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const addCnLine = () => {
@@ -400,6 +384,7 @@ export default function FactuurDetailPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {ConfirmDialogEl}
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">

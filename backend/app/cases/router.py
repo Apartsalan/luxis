@@ -3,6 +3,7 @@
 import math
 import uuid
 from datetime import date
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse, Response
@@ -45,8 +46,8 @@ async def list_cases(
     assigned_to_id: uuid.UUID | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
-    min_amount: float | None = Query(default=None, ge=0),
-    max_amount: float | None = Query(default=None, ge=0),
+    min_amount: Decimal | None = Query(default=None, ge=0),
+    max_amount: Decimal | None = Query(default=None, ge=0),
     is_active: bool = Query(default=True),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

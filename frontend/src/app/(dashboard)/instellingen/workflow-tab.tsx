@@ -98,7 +98,6 @@ export function WorkflowTab() {
                   toast.success(
                     active ? "Regel geactiveerd" : "Regel gedeactiveerd"
                   ),
-                onError: (err) => toast.error(err.message),
               }
             )
           }

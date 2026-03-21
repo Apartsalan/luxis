@@ -37,9 +37,7 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
         description: "",
         payment_method: "",
       });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const inputClass =

@@ -64,27 +64,21 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
       });
       toast.success(showForm === "deposit" ? "Storting geregistreerd" : "Uitbetaling ingediend ter goedkeuring");
       resetForm();
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleApprove = async (txId: string) => {
     try {
       await approveTx.mutateAsync({ transactionId: txId, caseId });
       toast.success("Transactie goedgekeurd");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleReject = async (txId: string) => {
     try {
       await rejectTx.mutateAsync({ transactionId: txId, caseId });
       toast.success("Transactie afgewezen");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const inputClass =

@@ -53,7 +53,7 @@ def _validate_and_clean(raw: dict) -> dict:
     if amount is not None:
         try:
             d = Decimal(str(amount)).quantize(Decimal("0.01"))
-            result["principal_amount"] = float(d)
+            result["principal_amount"] = str(d)
         except (InvalidOperation, ValueError):
             result["principal_amount"] = None
 

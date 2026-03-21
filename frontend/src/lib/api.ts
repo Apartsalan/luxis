@@ -6,25 +6,38 @@
 // Use relative URL so requests go through Next.js rewrite proxy to the backend
 const API_URL = "";
 
+// Mutex: reuse a single in-flight refresh promise to avoid race conditions
+let refreshPromise: Promise<string | null> | null = null;
+
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem("luxis_refresh_token");
-  if (!refreshToken) return null;
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = localStorage.getItem("luxis_refresh_token");
+    if (!refreshToken) return null;
+
+    try {
+      const response = await fetch(`${API_URL}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      localStorage.setItem("luxis_access_token", data.access_token);
+      localStorage.setItem("luxis_refresh_token", data.refresh_token);
+      return data.access_token;
+    } catch {
+      return null;
+    }
+  })();
 
   try {
-    const response = await fetch(`${API_URL}/api/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    localStorage.setItem("luxis_access_token", data.access_token);
-    localStorage.setItem("luxis_refresh_token", data.refresh_token);
-    return data.access_token;
-  } catch {
-    return null;
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
   }
 }
 

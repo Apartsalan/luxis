@@ -47,7 +47,6 @@ export function KantoorTab() {
       },
       {
         onSuccess: () => toast.success("Kantoorgegevens bijgewerkt"),
-        onError: (err) => toast.error(err.message),
       }
     );
   };

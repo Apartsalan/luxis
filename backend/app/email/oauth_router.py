@@ -164,7 +164,7 @@ async def connect_imap_account(
         logger.error(f"IMAP connection test failed: {e}")
         return ImapConnectResponse(
             success=False,
-            message=f"IMAP verbinding mislukt: {e}",
+            message="IMAP verbinding mislukt. Controleer de inloggegevens en server-instellingen.",
         )
 
     # Store as EmailAccount with provider="imap"
@@ -229,7 +229,7 @@ async def _handle_oauth_callback(
         tokens = await email_provider.exchange_code(code)
     except Exception as e:
         logger.error(f"OAuth token exchange mislukt ({provider}): {e}")
-        return HTMLResponse(_error_html(f"Token exchange mislukt: {e}"))
+        return HTMLResponse(_error_html("Token exchange mislukt. Probeer opnieuw."))
 
     if not tokens.refresh_token:
         logger.error(f"Geen refresh token ontvangen van {provider}")
@@ -262,7 +262,7 @@ async def _handle_oauth_callback(
         )
     except Exception as e:
         logger.error(f"Email account opslaan mislukt: {e}")
-        return HTMLResponse(_error_html(f"Opslaan mislukt: {e}"))
+        return HTMLResponse(_error_html("Opslaan mislukt. Probeer opnieuw of neem contact op."))
 
     return HTMLResponse(_success_html(tokens.email, provider))
 

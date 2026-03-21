@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,17 +33,20 @@ async def generate_case_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
     current_year = datetime.now(UTC).year
     prefix = f"{current_year}-"
 
-    # Find the highest case number for this tenant and year
+    # FOR UPDATE locks the row to prevent race conditions with concurrent requests
     result = await db.execute(
-        select(func.max(Case.case_number)).where(
+        select(Case.case_number)
+        .where(
             Case.tenant_id == tenant_id,
             Case.case_number.like(f"{prefix}%"),
         )
+        .order_by(Case.case_number.desc())
+        .limit(1)
+        .with_for_update()
     )
     last_number = result.scalar_one_or_none()
 
     if last_number:
-        # Extract the sequence part and increment
         seq = int(last_number.split("-")[1]) + 1
     else:
         seq = 1
@@ -170,8 +174,8 @@ async def list_cases(
     assigned_to_id: uuid.UUID | None = None,
     date_from: "date | None" = None,
     date_to: "date | None" = None,
-    min_amount: float | None = None,
-    max_amount: float | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
     is_active: bool = True,
 ) -> tuple[list[Case], int]:
     """List cases with optional filtering and pagination."""
@@ -462,6 +466,12 @@ async def conflict_check(
         )
     else:
         return []
+
+    # Eager load client + opposing_party to avoid lazy loading crash in async context
+    query = query.options(
+        selectinload(Case.client),
+        selectinload(Case.opposing_party),
+    )
 
     result = await db.execute(query)
     cases = list(result.scalars().all())

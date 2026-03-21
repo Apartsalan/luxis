@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +27,7 @@ class ContactCreate(BaseModel):
     postal_address: str | None = None
     postal_postcode: str | None = None
     postal_city: str | None = None
-    default_hourly_rate: float | None = None
+    default_hourly_rate: Decimal | None = None
     payment_term_days: int | None = None
     billing_email: str | None = None
     iban: str | None = None
@@ -48,7 +49,7 @@ class ContactUpdate(BaseModel):
     postal_address: str | None = None
     postal_postcode: str | None = None
     postal_city: str | None = None
-    default_hourly_rate: float | None = None
+    default_hourly_rate: Decimal | None = None
     payment_term_days: int | None = None
     billing_email: str | None = None
     iban: str | None = None

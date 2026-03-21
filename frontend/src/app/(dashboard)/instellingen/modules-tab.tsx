@@ -76,7 +76,6 @@ export function ModulesTab() {
               ? `${MODULE_INFO[moduleKey]?.label} uitgeschakeld`
               : `${MODULE_INFO[moduleKey]?.label} ingeschakeld`
           ),
-        onError: (err) => toast.error(err.message),
       }
     );
   };

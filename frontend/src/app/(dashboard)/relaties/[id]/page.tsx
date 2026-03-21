@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -39,6 +40,7 @@ export default function RelatieDetailPage() {
   const { data: contact, isLoading } = useRelation(id);
   const updateRelation = useUpdateRelation();
   const deleteRelation = useDeleteRelation();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
 
@@ -122,7 +124,7 @@ export default function RelatieDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Weet je zeker dat je deze relatie wilt verwijderen?")) return;
+    if (!await confirm({ title: "Relatie verwijderen", description: "Weet je zeker dat je deze relatie wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deleteRelation.mutateAsync(id);
       toast.success("Relatie verwijderd");
@@ -252,6 +254,7 @@ export default function RelatieDetailPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {ConfirmDialogEl}
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">

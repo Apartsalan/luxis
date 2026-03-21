@@ -4,6 +4,7 @@ This enables Row-Level Security: every query is automatically scoped to the curr
 """
 
 import logging
+import os
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +43,15 @@ async def set_tenant_context(db: AsyncSession, tenant_id: str) -> None:
         _rls_role_available = result.scalar() is not None
         _rls_role_checked = True
         if not _rls_role_available:
-            logger.warning("luxis_app role not found — RLS role switching disabled")
+            app_env = os.environ.get("APP_ENV", "development")
+            if app_env == "production":
+                raise RuntimeError(
+                    "CRITICAL: luxis_app role not found in production — "
+                    "RLS cannot be enforced. Run migrations first."
+                )
+            logger.warning(
+                "luxis_app role not found — RLS role switching disabled (non-production)"
+            )
 
     if _rls_role_available:
         await db.execute(text("SET LOCAL ROLE luxis_app"))

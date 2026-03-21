@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Save, Loader2, FileText, Download, Upload, Trash2, Pencil, Lock, X } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   useManagedTemplates,
   useUploadTemplate,
@@ -18,6 +19,7 @@ import {
 
 export function SjablonenTab() {
   const { data: templates, isLoading } = useManagedTemplates();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
   const uploadTemplate = useUploadTemplate();
   const updateTemplate = useUpdateTemplate();
   const deleteTemplate = useDeleteTemplate();
@@ -102,6 +104,7 @@ export function SjablonenTab() {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialogEl}
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -274,10 +277,9 @@ export function SjablonenTab() {
                                   <Upload className="h-3.5 w-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => {
-                                    if (confirm("Sjabloon verwijderen?")) {
-                                      deleteTemplate.mutate(tpl.id);
-                                    }
+                                  onClick={async () => {
+                                    const ok = await confirm({ title: "Sjabloon verwijderen", description: "Weet je zeker dat je dit sjabloon wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" });
+                                    if (ok) deleteTemplate.mutate(tpl.id);
                                   }}
                                   className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
                                   title="Verwijderen"

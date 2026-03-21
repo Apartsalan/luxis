@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   useArrangements,
   useCreateArrangement,
@@ -71,6 +72,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
   const defaultArrangement = useDefaultArrangement();
   const cancelArrangement = useCancelArrangement();
   const waiveInstallment = useWaiveInstallment();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const [showCreate, setShowCreate] = useState(false);
   const [showPayment, setShowPayment] = useState<{ arrangementId: string; installment: Installment } | null>(null);
@@ -113,9 +115,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       toast.success("Betalingsregeling aangemaakt");
       setShowCreate(false);
       setForm({ total_amount: "", installment_amount: "", num_installments: "", frequency: "monthly", start_date: "", notes: "" });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleRecordPayment = async (e: React.FormEvent) => {
@@ -135,41 +135,33 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
       });
       toast.success("Betaling geregistreerd");
       setShowPayment(null);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleDefault = async (arrangementId: string) => {
-    if (!confirm("Wanprestatie constateren? Alle openstaande termijnen worden als gemist gemarkeerd.")) return;
+    if (!await confirm({ title: "Wanprestatie constateren", description: "Alle openstaande termijnen worden als gemist gemarkeerd.", variant: "destructive", confirmText: "Bevestigen" })) return;
     try {
       await defaultArrangement.mutateAsync({ caseId, arrangementId });
       toast.success("Wanprestatie geconstateerd");
       setActionsOpen(null);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleCancel = async (arrangementId: string) => {
-    if (!confirm("Betalingsregeling annuleren? Alle openstaande termijnen worden kwijtgescholden.")) return;
+    if (!await confirm({ title: "Betalingsregeling annuleren", description: "Alle openstaande termijnen worden kwijtgescholden.", variant: "destructive", confirmText: "Annuleren" })) return;
     try {
       await cancelArrangement.mutateAsync({ caseId, arrangementId });
       toast.success("Betalingsregeling geannuleerd");
       setActionsOpen(null);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleWaive = async (arrangementId: string, installmentId: string) => {
-    if (!confirm("Termijn kwijtschelden?")) return;
+    if (!await confirm({ title: "Termijn kwijtschelden", description: "Weet je zeker dat je deze termijn wilt kwijtschelden?", variant: "destructive", confirmText: "Kwijtschelden" })) return;
     try {
       await waiveInstallment.mutateAsync({ caseId, arrangementId, installmentId });
       toast.success("Termijn kwijtgescholden");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const preview = computePreview(
@@ -189,6 +181,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
 
   return (
     <div className="space-y-6">
+      {ConfirmDialogEl}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

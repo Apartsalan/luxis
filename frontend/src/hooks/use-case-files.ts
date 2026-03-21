@@ -73,9 +73,6 @@ export function useUploadCaseFile(caseId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["case-files", caseId] });
     },
-    onError: (err: Error) => {
-      toast.error(err.message);
-    },
   });
 }
 
@@ -92,9 +89,6 @@ export function useDeleteCaseFile(caseId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["case-files", caseId] });
       toast.success("Bestand verwijderd");
-    },
-    onError: (err: Error) => {
-      toast.error(err.message);
     },
   });
 }

@@ -115,7 +115,8 @@ async def create_password_reset_token(db: AsyncSession, email: str) -> str | Non
         return None
 
     token = str(uuid.uuid4())
-    user.password_reset_token = token
+    # Hash before storage — if DB is compromised, tokens can't be used
+    user.password_reset_token = hashlib.sha256(token.encode()).hexdigest()
     user.password_reset_expires = datetime.now(UTC) + timedelta(hours=1)
     db.add(user)
     await db.flush()
@@ -129,8 +130,10 @@ async def reset_password_with_token(
 
     Returns True on success, False if token is invalid or expired.
     """
+    # Hash the incoming token to compare with stored hash
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
     result = await db.execute(
-        select(User).where(User.password_reset_token == token)
+        select(User).where(User.password_reset_token == token_hash)
     )
     user = result.scalar_one_or_none()
     if user is None:

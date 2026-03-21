@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useConfirm, usePrompt } from "@/components/confirm-dialog";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -59,6 +60,8 @@ export default function ZaakDetailPage() {
   const { data: zaak, isLoading } = useCase(id);
   const updateStatus = useUpdateCaseStatus();
   const deleteCase = useDeleteCase();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
+  const { prompt: promptDialog, PromptDialog: PromptDialogEl } = usePrompt();
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: workflowTransitions } = useWorkflowTransitions();
 
@@ -123,7 +126,7 @@ export default function ZaakDetailPage() {
   }, [zaak?.id, autoTimerEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleStatusChange = async (newStatus: string) => {
-    const note = prompt("Notitie bij statuswijziging (optioneel):");
+    const note = await promptDialog({ title: "Statuswijziging", description: "Notitie bij statuswijziging (optioneel):", placeholder: "Typ een notitie...", confirmText: "Wijzigen" });
     try {
       await updateStatus.mutateAsync({
         id,
@@ -144,7 +147,7 @@ export default function ZaakDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm("Weet je zeker dat je dit dossier wilt verwijderen?")) return;
+    if (!await confirm({ title: "Dossier verwijderen", description: "Weet je zeker dat je dit dossier wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) return;
     try {
       await deleteCase.mutateAsync(id);
       toast.success("Dossier verwijderd");
@@ -326,6 +329,8 @@ export default function ZaakDetailPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {ConfirmDialogEl}
+      {PromptDialogEl}
       <DossierHeader
         zaak={zaak}
         isIncasso={isIncasso}
@@ -365,7 +370,6 @@ export default function ZaakDetailPage() {
                   { id: followupRec.id },
                   {
                     onSuccess: () => toast.success("Aanbeveling uitgevoerd"),
-                    onError: (err) => toast.error(err.message),
                   },
                 );
               }}

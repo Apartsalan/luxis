@@ -212,9 +212,6 @@ export default function IntakeDetailPage() {
         onSuccess: () => {
           toast.success("Gegevens bijgewerkt");
         },
-        onError: (err) => {
-          toast.error(err.message);
-        },
       },
     );
   };
@@ -227,9 +224,6 @@ export default function IntakeDetailPage() {
           toast.success(
             `Intake goedgekeurd — dossier ${data.created_case_number} aangemaakt`,
           );
-        },
-        onError: (err) => {
-          toast.error(err.message);
         },
       },
     );
@@ -244,9 +238,6 @@ export default function IntakeDetailPage() {
           setRejectMode(false);
           setRejectNote("");
         },
-        onError: (err) => {
-          toast.error(err.message);
-        },
       },
     );
   };
@@ -257,9 +248,6 @@ export default function IntakeDetailPage() {
       {
         onSuccess: () => {
           toast.success("AI verwerking gestart");
-        },
-        onError: (err) => {
-          toast.error(err.message);
         },
       },
     );

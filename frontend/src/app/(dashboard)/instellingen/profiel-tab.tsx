@@ -34,7 +34,6 @@ export function ProfielTab({ user }: { user: any }) {
       },
       {
         onSuccess: () => toast.success("Profiel bijgewerkt"),
-        onError: (err) => toast.error(err.message),
       }
     );
   };
@@ -57,7 +56,6 @@ export function ProfielTab({ user }: { user: any }) {
           setNewPassword("");
           setShowPasswordForm(false);
         },
-        onError: (err) => toast.error(err.message),
       }
     );
   };

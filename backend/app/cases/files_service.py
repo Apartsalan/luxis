@@ -86,7 +86,7 @@ async def upload_case_file(
         uploaded_by=user_id,
     )
     db.add(case_file)
-    await db.commit()
+    await db.flush()
     await db.refresh(case_file)
     return case_file
 

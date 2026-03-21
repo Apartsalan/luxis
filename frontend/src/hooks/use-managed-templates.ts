@@ -65,9 +65,6 @@ export function useUploadTemplate() {
       queryClient.invalidateQueries({ queryKey: ["managed-templates"] });
       toast.success("Sjabloon geüpload");
     },
-    onError: (err) => {
-      toast.error(err.message);
-    },
   });
 }
 
@@ -94,9 +91,6 @@ export function useUpdateTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["managed-templates"] });
       toast.success("Sjabloon bijgewerkt");
-    },
-    onError: (err) => {
-      toast.error(err.message);
     },
   });
 }
@@ -132,9 +126,6 @@ export function useReplaceTemplateFile() {
       queryClient.invalidateQueries({ queryKey: ["managed-templates"] });
       toast.success("Sjabloonbestand vervangen");
     },
-    onError: (err) => {
-      toast.error(err.message);
-    },
   });
 }
 
@@ -154,9 +145,6 @@ export function useDeleteTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["managed-templates"] });
       toast.success("Sjabloon verwijderd");
-    },
-    onError: (err) => {
-      toast.error(err.message);
     },
   });
 }

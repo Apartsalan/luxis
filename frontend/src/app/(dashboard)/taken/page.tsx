@@ -328,7 +328,6 @@ function FollowupSection() {
               <button
                 onClick={() => approveAndExecute.mutate({ id: item.id }, {
                   onSuccess: () => toast.success("Aanbeveling uitgevoerd"),
-                  onError: (err) => toast.error(err.message),
                 })}
                 disabled={approveAndExecute.isPending}
                 className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
@@ -339,7 +338,6 @@ function FollowupSection() {
               <button
                 onClick={() => reject.mutate({ id: item.id }, {
                   onSuccess: () => toast.success("Aanbeveling afgewezen"),
-                  onError: (err) => toast.error(err.message),
                 })}
                 disabled={reject.isPending}
                 className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
@@ -484,22 +482,18 @@ export default function TakenPage() {
         recurrence: "none",
         recurrence_end_date: "",
       });
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch {}
   };
 
   const handleComplete = (id: string) => {
     completeTask.mutate(id, {
       onSuccess: () => toast.success("Taak afgerond"),
-      onError: (err) => toast.error(err.message),
     });
   };
 
   const handleSkip = (id: string) => {
     skipTask.mutate(id, {
       onSuccess: () => toast.success("Taak overgeslagen"),
-      onError: (err) => toast.error(err.message),
     });
   };
 

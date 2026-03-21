@@ -32,7 +32,7 @@ Tiered calculation on principal:
 
 - **Minimum:** EUR 40
 - **Maximum:** EUR 6.775
-- **BTW:** 21% bovenop BIK als schuldeiser BTW-plichtig is
+- **BTW:** 21% bovenop BIK als schuldeiser NIET BTW-plichtig is (en BTW dus niet kan verrekenen)
 
 ## Payment Distribution (Art. 6:44 BW)
 
@@ -52,4 +52,4 @@ Volgorde van toerekening bij deelbetaling:
 
 - Termijn: minimaal 7 dagen voor zitting
 - Griffierecht: afhankelijk van vorderingsbedrag
-- Nakosten: EUR 178 (zonder betekening) / EUR 274 (met betekening) — per 2024 tarieven
+- Nakosten: EUR 189 (zonder betekening) / EUR 287 (met betekening) — per 1 februari 2026 liquidatietarief

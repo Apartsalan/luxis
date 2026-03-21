@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 import {
   Gavel,
   Settings2,
@@ -116,6 +117,7 @@ function StappenTab() {
   const deleteStep = useDeletePipelineStep();
   const seedSteps = useSeedPipelineSteps();
   const { data: managedTemplates } = useManagedTemplates();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
@@ -142,7 +144,6 @@ function StappenTab() {
   const handleSeed = () => {
     seedSteps.mutate(undefined, {
       onSuccess: () => toast.success("Standaard incassostappen aangemaakt"),
-      onError: (err) => toast.error(err.message),
     });
   };
 
@@ -165,16 +166,14 @@ function StappenTab() {
           setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
           setShowAddForm(false);
         },
-        onError: (err) => toast.error(err.message),
       }
     );
   };
 
-  const handleDelete = (step: PipelineStep) => {
-    if (!confirm(`Weet je zeker dat je "${step.name}" wilt verwijderen?`)) return;
+  const handleDelete = async (step: PipelineStep) => {
+    if (!await confirm({ title: "Stap verwijderen", description: `Weet je zeker dat je "${step.name}" wilt verwijderen?`, variant: "destructive", confirmText: "Verwijderen" })) return;
     deleteStep.mutate(step.id, {
       onSuccess: () => toast.success(`"${step.name}" verwijderd`),
-      onError: (err) => toast.error(err.message),
     });
   };
 
@@ -220,7 +219,6 @@ function StappenTab() {
           toast.success("Stap bijgewerkt");
           setEditingId(null);
         },
-        onError: (err) => toast.error(err.message),
       }
     );
   };
@@ -261,6 +259,7 @@ function StappenTab() {
 
   return (
     <div className="space-y-4">
+      {ConfirmDialogEl}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Configureer de stappen in het incassoproces. De volgorde bepaalt de workflow.
@@ -642,16 +641,11 @@ function WerkstroomTab() {
     }
     setShowPreview(true);
 
-    batchPreview.mutate(
-      {
-        case_ids: Array.from(selectedIds),
-        action,
-        target_step_id: action === "advance_step" && steps ? steps[0].id : undefined,
-      },
-      {
-        onError: (err) => toast.error(err.message),
-      }
-    );
+    batchPreview.mutate({
+      case_ids: Array.from(selectedIds),
+      action,
+      target_step_id: action === "advance_step" && steps ? steps[0].id : undefined,
+    });
   };
 
   const handleExecuteBatch = () => {
@@ -683,7 +677,6 @@ function WerkstroomTab() {
           setSelectedIds(new Set());
           setBatchAction(null);
         },
-        onError: (err) => toast.error(err.message),
       }
     );
   };

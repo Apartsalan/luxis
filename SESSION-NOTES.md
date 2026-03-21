@@ -1,17 +1,59 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 88 — QA LF-16 t/m LF-21)
-**Laatste feature/fix:** Sessie 88 — QA alle 6 LF items getest: 6/6 PASS
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 89 — Mega-audit + multi-terminal fixes)
+**Laatste feature/fix:** Sessie 89 — 46 bestanden gefixt over 3 terminals (security + juridisch + frontend)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
-**Security Sprint:** 15/15 COMPLEET ✅
-**Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen)
+**Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89 (nieuwe bevindingen → SEC-16 t/m SEC-30)
+**Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit sessie 89 (nieuwe bevindingen → CQ-10 t/m CQ-25)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
 **Backend tests:** 628 passed | **Ruff:** 0 warnings | **Frontend build:** ✅
-**Volgende sessie:** TBD
+**Volgende sessie:** Mega-audit Sprint 1 — CRITICAL fixes (8 items, 3 terminals parallel)
+
+## Wat er gedaan is (sessie 89 — 21 maart 2026) — Mega-audit + multi-terminal fixes
+
+**6 parallelle audit-agents gedraaid (security, backend code, frontend code, juridisch, UX, infra). 100+ bevindingen.**
+
+### Gefixt in deze sessie (3 terminals, 46 bestanden):
+
+**Terminal A (security):**
+- Auth toegevoegd aan merge-fields en docx-templates endpoints
+- RLS policy voor email_logs tabel (nieuwe migratie sec13_rls_email_logs)
+- Tenant SET LOCAL → `set_config()` geparameteriseerd
+- Rate limiter X-Forwarded-For hardening
+- OAuth postMessage origin check
+- Sanitizer: img src tracker pixels geblokkeerd, noopener op links
+- CSP upgrade-insecure-requests in Caddyfile
+
+**Terminal B (juridisch + backend):**
+- 14-dagenbrief: "na dagtekening" → "na ontvangst" (KRITIEK juridisch)
+- Nakosten bedragen gecorrigeerd in dutch-legal-rules.md
+- Invoice numbering: FOR UPDATE race condition fix
+- Float → Decimal in relations schemas
+- invoice_parser: float(d) → str(d) voor Decimal veiligheid
+- files_service: db.commit() → db.flush() (unit of work)
+- Conflict check: selectinload voor client/opposing_party
+
+**Terminal C (frontend):**
+- ConfirmDialog component — alle 14 window.confirm() + 1 window.prompt() vervangen
+- shadcn AlertDialog component toegevoegd
+- Token refresh mutex (race condition fix)
+- Duplicate formatDateShort verwijderd uit correspondentie
+- Duplicate formatFileSize verwijderd uit hooks
+- Download helper gecentraliseerd in api.ts
+- Unused imports opgeruimd in settings tabs
+
+### Mega-audit bevindingen (nog te fixen):
+
+**CRITICAL (8 items):** missing db.commit() op meerdere endpoints, N+1 in receivables, silent catch{} blocks, parseFloat voor geldbedragen, Fernet KDF zwak, DB/Redis poorten open in prod, localStorage tokens
+**HIGH (18 items):** compound interest rounding, stale recalculate_totals, eager load crashes, account lockout, Redis zonder wachtwoord, DOMPurify tracker pixels, float divisie betalingsregeling, KYC any-types
+**MEDIUM (30 items):** type safety, form validatie, error boundaries, infra hardening, UX verbeteringen
+**LOW (15+ items):** styling consistentie, aria-labels, paginatie, etc.
+
+Alle bevindingen staan in LUXIS-ROADMAP.md onder nieuwe secties SEC-16+ en CQ-10+.
 
 ## Wat er gedaan is (sessie 88 — 21 maart 2026) — QA: LF-16 t/m LF-21
 

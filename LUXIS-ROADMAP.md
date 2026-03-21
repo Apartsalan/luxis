@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 88 — QA LF-16 t/m LF-21)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 89 — Mega-audit + multi-terminal fixes)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -416,11 +416,67 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 **Toekomstig (backlog):**
 - Audit trail voor alle data-wijzigingen (AVG/GDPR compliance)
 - GDPR data export + verwijdering endpoints (Art. 15/17)
-- JWT tokens migreren van localStorage naar httpOnly cookies
 - Failed login logging + monitoring
-- Refresh naar PyJWT (python-jose niet meer actief onderhouden)
 
 **Aanbevolen volgorde:** SEC-1 → SEC-2 → SEC-3 → SEC-4/5/6 → SEC-7 t/m SEC-11 → SEC-12 t/m SEC-15
+
+### Mega-Audit Sprint (sessie 89, 21 maart 2026)
+
+**Bron:** 6 parallelle audit-agents: security, backend code, frontend code, juridisch, UX/design, infra/DevOps. 100+ bevindingen geconsolideerd en gededupliceerd.
+
+#### CRITICAL — Must-fix (juridisch/financieel/security risico)
+
+| # | Issue | Domein | Status |
+|---|-------|--------|--------|
+| SEC-16 | **Fernet KDF zwak** — enkele SHA-256 zonder salt/iteraties voor OAuth token encryptie. Fix: PBKDF2HMAC met salt + 600k iteraties. | Security | ❌ TODO |
+| SEC-17 | **DB/Redis poorten open in prod** — docker-compose.prod.yml override mist `ports: []` voor db en redis. | Infra | ❌ TODO |
+| SEC-18 | **Redis zonder wachtwoord** — geen `requirepass` in productie. | Infra | ❌ TODO |
+| SEC-19 | **localStorage tokens** — JWT in localStorage, XSS-extractable. Interim: centraliseer in tokenStore. Later: httpOnly cookies. | Security | ❌ TODO |
+| CQ-10 | **Missing db.commit()** — file upload, credit note, approve, send, cancel, add/remove line, expenses, payments nooit gecommit. | Backend | ❌ TODO |
+| CQ-11 | **N+1 query in receivables** — 1 DB query per factuur in loop. Fix: single grouped aggregate. | Backend | ❌ TODO |
+| CQ-12 | **Silent catch{} blocks** — 14+ plaatsen in frontend slikken financiële mutatie-errors. Gebruiker ziet niks. | Frontend | ❌ TODO |
+| CQ-13 | **parseFloat voor geldbedragen** — IEEE 754 precisieverlies bij transport naar backend. Fix: string transport. | Frontend | ❌ TODO |
+
+#### HIGH — Serieus risico
+
+| # | Issue | Domein | Status |
+|---|-------|--------|--------|
+| SEC-20 | **Geen account lockout** — 10/min rate limit = 14.400 pogingen/dag. Fix: per-account lockout na 5 mislukte pogingen. | Security | ❌ TODO |
+| SEC-21 | **OAuth callback unauthenticated** — user_id trusted uit state parameter. Fix: server-side nonce in Redis. | Security | ❌ TODO |
+| SEC-22 | **SSRF via IMAP host** — user-controlled host/port in `connect_imap_account`. Fix: blocklist interne IPs. | Security | ❌ TODO |
+| SEC-23 | **Filename injection Content-Disposition** — ongesanitized filename in headers. Fix: strip speciale chars. | Security | ❌ TODO |
+| SEC-24 | **DOMPurify tracker pixels** — `<img src>` in email HTML lekt naar externe trackers. Fix: strip img src of proxy. | Frontend | ❌ TODO |
+| SEC-25 | **Frontend container draait als root** — frontend/Dockerfile mist USER directive. | Infra | ❌ TODO |
+| SEC-26 | **PyJWT migratie** — python-jose niet meer onderhouden. Vervangen door PyJWT. | Backend | ❌ TODO |
+| CQ-14 | **Compound interest rounding** — year_interest niet afgerond voor kapitalisatie. | Backend | ❌ TODO |
+| CQ-15 | **_recalculate_totals stale** — in-memory loop i.p.v. DB aggregate voor factuur totalen. | Backend | ❌ TODO |
+| CQ-16 | **list_cases missing eager loads** — MissingGreenlet crash risico bij serialisatie. | Backend | ❌ TODO |
+| CQ-17 | **Factuur paid zonder payments** — status `paid` bereikbaar zonder betalingsrecords. | Backend | ❌ TODO |
+| CQ-18 | **files_service uploader lazy load** — crash in async context. Fix: selectinload. | Backend | ❌ TODO |
+| CQ-19 | **Float divisie betalingsregeling** — installment bedrag berekend met JS float. Fix: backend endpoint. | Frontend | ❌ TODO |
+| CQ-20 | **KYC/WWFT data typed als any** — compliance risico. Fix: typed KycData interface. | Frontend | ❌ TODO |
+
+#### MEDIUM — Moet gefixt, geen acuut risico
+
+| # | Issue | Domein | Status |
+|---|-------|--------|--------|
+| SEC-27 | **PII in logs** — email adressen gelogd bij password reset en SMTP send. | Security | ❌ TODO |
+| SEC-28 | **Dev deps in prod image** — `uv pip install ".[dev]"` in Dockerfile. | Infra | ❌ TODO |
+| SEC-29 | **Mass assignment setattr** — user profile update itereert model_dump. Fix: explicit allowlist. | Security | ❌ TODO |
+| SEC-30 | **CSP unsafe-inline/unsafe-eval** — neutraliseert XSS bescherming. Fix: drop unsafe-eval in prod. | Infra | ❌ TODO |
+| CQ-21 | **Backend .dockerignore** — .env en test files kopiëren mee in image. | Infra | ❌ TODO |
+| CQ-22 | **Container health checks** — backend en frontend missen health checks in compose. | Infra | ❌ TODO |
+| CQ-23 | **Container resource limits** — geen mem_limit/cpus in prod compose. | Infra | ❌ TODO |
+| CQ-24 | **Off-site backups** — backups alleen lokaal op VPS, geen off-site kopie. | Infra | ❌ TODO |
+| CQ-25 | **Uptime monitoring** — geen extern monitoring (UptimeRobot etc). | Infra | ❌ TODO |
+| UX-14 | **Responsive tabellen** — data verborgen op mobiel zonder alternatief. | Frontend | ❌ TODO |
+| UX-15 | **Form validatie** — geen inline foutmeldingen op formulieren. | Frontend | ❌ TODO |
+| UX-16 | **Unsaved changes warning** — geen waarschuwing bij onopgeslagen wijzigingen. | Frontend | ❌ TODO |
+| UX-17 | **Empty state guidance** — lege lijsten missen begeleiding/onboarding. | Frontend | ❌ TODO |
+| UX-18 | **Breadcrumbs** — ontbreken op detail pagina's. | Frontend | ❌ TODO |
+| UX-19 | **Error boundaries per tab** — JS error in één tab crasht hele case detail. | Frontend | ❌ TODO |
+| UX-20 | **formatCurrency NaN** — toont "NaN" bij null waarden. | Frontend | ❌ TODO |
+| UX-21 | **isError niet afgevangen** — financiële queries tonen lege lijst i.p.v. error. | Frontend | ❌ TODO |
 
 ### Code Quality Sprint (sessie 83 audit)
 

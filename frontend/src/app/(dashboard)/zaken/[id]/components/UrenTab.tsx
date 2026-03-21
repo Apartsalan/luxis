@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Clock, Euro, Filter } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import {
   useTimeEntries,
   useTimeEntrySummary,
@@ -71,15 +72,11 @@ export default function UrenTab({ caseId }: { caseId: string }) {
 
       {/* Time entries list */}
       {!entries || entries.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border py-12 text-center">
-          <Clock className="mx-auto h-10 w-10 text-muted-foreground/30" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Geen uren geregistreerd voor dit dossier
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Start de timer of registreer handmatig via Tijdschrijven
-          </p>
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="Geen uren geregistreerd"
+          description="Start de timer of registreer handmatig via Tijdschrijven om uren bij te houden voor dit dossier."
+        />
       ) : (() => {
         // Collect unique activity types for filter
         const activityTypes = [...new Set(entries.map((e: TimeEntry) => e.activity_type))];

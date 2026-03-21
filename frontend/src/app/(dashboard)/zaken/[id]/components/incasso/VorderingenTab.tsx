@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/confirm-dialog";
 import {
@@ -440,18 +441,12 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
           </table>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border py-12 text-center">
-          <Euro className="mx-auto h-10 w-10 text-muted-foreground/30" />
-          <p className="mt-3 text-sm text-muted-foreground">
-            Nog geen vorderingen
-          </p>
-          <button
-            onClick={() => setShowForm(true)}
-            className="mt-2 text-sm text-primary hover:underline"
-          >
-            Voeg de eerste vordering toe
-          </button>
-        </div>
+        <EmptyState
+          icon={Euro}
+          title="Nog geen vorderingen"
+          description="Voeg vorderingen toe met hoofdsom en verzuimdatum. Rente wordt automatisch berekend."
+          action={{ label: "Vordering toevoegen", onClick: () => setShowForm(true) }}
+        />
       )}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Plus, Receipt } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { usePayments, useCreatePayment } from "@/hooks/use-collections";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
@@ -212,15 +213,12 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border py-12 text-center">
-          <Receipt className="mx-auto h-10 w-10 text-muted-foreground/30" />
-          <p className="mt-3 text-sm font-medium text-foreground">
-            Nog geen betalingen geregistreerd
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground max-w-xs mx-auto">
-            Betalingen worden hier getoond zodra ze zijn geregistreerd of automatisch gematcht via bankafschriften.
-          </p>
-        </div>
+        <EmptyState
+          icon={Receipt}
+          title="Nog geen betalingen"
+          description="Betalingen worden hier getoond zodra ze zijn geregistreerd of automatisch gematcht via bankafschriften."
+          action={{ label: "Betaling registreren", onClick: () => setShowForm(true) }}
+        />
       )}
     </div>
   );

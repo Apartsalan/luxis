@@ -13,6 +13,7 @@ import {
   Plus,
   XCircle,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { ClassificationCard } from "@/components/classification-card";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -363,14 +364,13 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="rounded-xl border border-border bg-card p-6">
-              <div className="rounded-lg border border-dashed border-border py-8 text-center">
-                <Mail className="mx-auto h-8 w-8 text-muted-foreground/30" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {oauthStatus.data?.connected
-                    ? "Nog geen e-mails voor dit dossier. Klik 'Sync inbox' om te starten."
-                    : "Verbind je e-mail via Instellingen om e-mails te synchroniseren."}
-                </p>
-              </div>
+              <EmptyState
+                icon={Mail}
+                title="Nog geen e-mails"
+                description={oauthStatus.data?.connected
+                  ? "Nog geen e-mails voor dit dossier. Klik 'Sync inbox' om e-mails op te halen."
+                  : "Verbind je e-mail via Instellingen om e-mails te synchroniseren."}
+              />
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">

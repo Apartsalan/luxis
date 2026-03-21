@@ -10,6 +10,7 @@ import {
   Plus,
   Send,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import { useCaseActivities, useAddCaseActivity, type CaseActivity } from "@/hooks/use-cases";
 import { formatRelativeTime } from "@/lib/utils";
@@ -189,15 +190,11 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
             })}
           </div>
         ) : (
-          <div className="px-5 py-12 text-center">
-            <Clock className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">
-              Geen activiteiten
-            </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              Voeg een notitie toe om de timeline te starten.
-            </p>
-          </div>
+          <EmptyState
+            icon={Clock}
+            title="Nog geen activiteiten"
+            description="Voeg een notitie toe om de timeline te starten. Activiteiten zoals e-mails, documenten en statuswijzigingen verschijnen hier automatisch."
+          />
         )}
 
         {/* Pagination */}

@@ -30,6 +30,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import {
   useDocxTemplates,
@@ -406,19 +407,12 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
             ))}
           </div>
         ) : !invoices.length ? (
-          <div className="rounded-lg border border-dashed border-border py-8 text-center">
-            <CreditCard className="mx-auto h-8 w-8 text-muted-foreground/30" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Nog geen facturen voor dit dossier
-            </p>
-            <Link
-              href={`/facturen/nieuw?case_id=${caseId}`}
-              className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Eerste factuur aanmaken
-            </Link>
-          </div>
+          <EmptyState
+            icon={CreditCard}
+            title="Nog geen facturen"
+            description="Maak een factuur aan op basis van geregistreerde uren en verschotten."
+            action={{ label: "Factuur aanmaken", onClick: () => router.push(`/facturen/nieuw?case_id=${caseId}`) }}
+          />
         ) : (
           <div className="space-y-2">
             {invoices.map((inv) => (
@@ -710,15 +704,11 @@ function VerschottenSection({ caseId }: { caseId: string }) {
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : !expenses || expenses.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border py-8 text-center">
-            <Receipt className="mx-auto h-8 w-8 text-muted-foreground/30" />
-            <p className="mt-2 text-sm font-medium text-foreground">
-              Nog geen verschotten geregistreerd
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground max-w-xs mx-auto">
-              Registreer kosten zoals griffierecht of deurwaarderskosten die doorbelast worden aan de client.
-            </p>
-          </div>
+          <EmptyState
+            icon={Receipt}
+            title="Nog geen verschotten"
+            description="Registreer kosten zoals griffierecht of deurwaarderskosten die doorbelast worden aan de client."
+          />
         ) : (
           <div className="divide-y divide-border">
             {expenses.map((expense) => (
@@ -1266,15 +1256,11 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
 
           if (!allItems.length) {
             return (
-              <div className="rounded-lg border border-dashed border-border py-8 text-center">
-                <File className="mx-auto h-8 w-8 text-muted-foreground/30" />
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  Nog geen bestanden
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground max-w-xs mx-auto">
-                  Upload bestanden via het uploadgebied hierboven, of genereer documenten via sjablonen.
-                </p>
-              </div>
+              <EmptyState
+                icon={File}
+                title="Nog geen bestanden"
+                description="Upload bestanden via het uploadgebied hierboven, of genereer documenten via sjablonen."
+              />
             );
           }
 
@@ -1442,12 +1428,11 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
             Documenten laden...
           </div>
         ) : !documents?.length ? (
-          <div className="rounded-lg border border-dashed border-border py-8 text-center">
-            <File className="mx-auto h-8 w-8 text-muted-foreground/30" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Nog geen documenten gegenereerd voor dit dossier
-            </p>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="Nog geen documenten"
+            description="Genereer documenten vanuit sjablonen zoals sommaties, dagvaardingen of brieven."
+          />
         ) : (
           <div className="space-y-2">
             {documents.map((doc) => (

@@ -469,7 +469,7 @@ export default function ZakenPage() {
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Client
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Wederpartij
                   </th>
                   {hasModule("incasso") && (
@@ -542,7 +542,7 @@ export default function ZakenPage() {
                       {zaak.client ? (
                         <Link
                           href={`/relaties/${zaak.client.id}`}
-                          className="text-sm text-foreground hover:text-primary transition-colors"
+                          className="text-sm text-foreground hover:text-primary transition-colors truncate max-w-[200px] block"
                         >
                           {zaak.client.name}
                         </Link>
@@ -550,11 +550,11 @@ export default function ZakenPage() {
                         <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="hidden lg:table-cell px-4 py-3.5">
                       {zaak.opposing_party ? (
                         <Link
                           href={`/relaties/${zaak.opposing_party.id}`}
-                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors truncate max-w-[200px] block"
                         >
                           {zaak.opposing_party.name}
                         </Link>

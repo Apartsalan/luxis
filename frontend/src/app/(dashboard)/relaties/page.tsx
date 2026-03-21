@@ -205,10 +205,10 @@ export default function RelatiesPage() {
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Contact
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Plaats
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Aangemaakt
                   </th>
                   <th className="px-4 py-3.5 w-10" />
@@ -275,7 +275,7 @@ export default function RelatiesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="hidden lg:table-cell px-4 py-3.5">
                       {contact.visit_city ? (
                         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3 shrink-0" />
@@ -287,7 +287,7 @@ export default function RelatiesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-muted-foreground">
+                    <td className="hidden md:table-cell px-4 py-3.5 text-sm text-muted-foreground">
                       {formatDateShort(contact.created_at)}
                     </td>
                     <td className="px-4 py-3.5">

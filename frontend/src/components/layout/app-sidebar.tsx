@@ -39,19 +39,44 @@ interface NavItem {
   badge?: "unlinked-count" | "incasso-action" | "ai-pending" | "taken-combined" | "payment-pending";
 }
 
-const ALL_NAVIGATION: NavItem[] = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Mijn Taken", href: "/taken", icon: CheckSquare, badge: "taken-combined" },
-  { name: "Relaties", href: "/relaties", icon: Users },
-  { name: "Dossiers", href: "/zaken", icon: Briefcase },
-  { name: "Bank Import", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
-  { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
-  { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
-  { name: "Agenda", href: "/agenda", icon: Calendar },
-  { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
-  { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
-  { name: "Documenten", href: "/documenten", icon: FileText },
-  { name: "Instellingen", href: "/instellingen", icon: Settings },
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const ALL_SECTIONS: NavSection[] = [
+  {
+    label: "Overzicht",
+    items: [
+      { name: "Dashboard", href: "/", icon: LayoutDashboard },
+      { name: "Mijn Taken", href: "/taken", icon: CheckSquare, badge: "taken-combined" },
+    ],
+  },
+  {
+    label: "Beheer",
+    items: [
+      { name: "Relaties", href: "/relaties", icon: Users },
+      { name: "Dossiers", href: "/zaken", icon: Briefcase },
+      { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
+      { name: "Agenda", href: "/agenda", icon: Calendar },
+      { name: "Documenten", href: "/documenten", icon: FileText },
+    ],
+  },
+  {
+    label: "Financieel",
+    items: [
+      { name: "Bank Import", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
+      { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
+      { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
+      { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
+    ],
+  },
+  {
+    label: "Systeem",
+    items: [
+      { name: "Instellingen", href: "/instellingen", icon: Settings },
+    ],
+  },
 ];
 
 interface AppSidebarProps {
@@ -85,11 +110,14 @@ export function AppSidebar({
   const overdueTaskCount = myTasks?.filter((t) => t.status === "overdue").length ?? 0;
   const takenCombinedCount = overdueTaskCount + followupPendingCount + intakePendingCount;
 
-  const navigation = useMemo(
+  const sections = useMemo(
     () =>
-      ALL_NAVIGATION.filter(
-        (item) => !item.module || hasModule(item.module)
-      ),
+      ALL_SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.filter(
+          (item) => !item.module || hasModule(item.module)
+        ),
+      })).filter((section) => section.items.length > 0),
     [hasModule]
   );
 
@@ -150,62 +178,86 @@ export function AppSidebar({
         {/* Navigation */}
         <nav
           className={cn(
-            "flex-1 space-y-0.5 py-3",
+            "flex-1 space-y-1 overflow-y-auto py-3",
             collapsed && !mobileOpen ? "px-2" : "px-3"
           )}
         >
-          {navigation.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
-
-            const badgeCount =
-              item.badge === "unlinked-count" ? unlinkedCount :
-              item.badge === "incasso-action" ? incassoActionCount :
-              item.badge === "ai-pending" ? aiPendingCount :
-              item.badge === "taken-combined" ? takenCombinedCount :
-              item.badge === "payment-pending" ? paymentPendingCount : 0;
-
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={onMobileClose}
-                title={collapsed && !mobileOpen ? item.name : undefined}
-                className={cn(
-                  "group flex items-center rounded-md text-sm font-medium transition-all duration-150",
-                  collapsed && !mobileOpen
-                    ? "justify-center p-2.5"
-                    : "gap-3 px-3 py-2",
-                  isActive
-                    ? "bg-sidebar-accent text-white"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-muted hover:text-sidebar-foreground"
-                )}
-              >
-                <div className="relative shrink-0">
-                  <item.icon
-                    className={cn(
-                      collapsed && !mobileOpen ? "h-5 w-5" : "h-[18px] w-[18px]"
-                    )}
-                  />
-                  {/* Badge dot on collapsed icon */}
-                  {collapsed && !mobileOpen && badgeCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+          {sections.map((section, sectionIdx) => (
+            <div key={section.label}>
+              {/* Section divider (not before first section) */}
+              {sectionIdx > 0 && (
+                <div
+                  className={cn(
+                    "my-2",
+                    collapsed && !mobileOpen
+                      ? "mx-1 border-t border-sidebar-muted/40"
+                      : "mx-2 border-t border-sidebar-muted/30"
                   )}
-                </div>
-                {(!collapsed || mobileOpen) && (
-                  <>
-                    <span className="flex-1">{item.name}</span>
-                    {badgeCount > 0 && (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[10px] font-semibold text-red-400">
-                        {badgeCount > 99 ? "99+" : badgeCount}
-                      </span>
-                    )}
-                  </>
-                )}
-              </Link>
-            );
-          })}
+                />
+              )}
+              {/* Section label (only in expanded state) */}
+              {(!collapsed || mobileOpen) && (
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/30">
+                  {section.label}
+                </p>
+              )}
+              {/* Section items */}
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href));
+
+                  const badgeCount =
+                    item.badge === "unlinked-count" ? unlinkedCount :
+                    item.badge === "incasso-action" ? incassoActionCount :
+                    item.badge === "ai-pending" ? aiPendingCount :
+                    item.badge === "taken-combined" ? takenCombinedCount :
+                    item.badge === "payment-pending" ? paymentPendingCount : 0;
+
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={onMobileClose}
+                      title={collapsed && !mobileOpen ? item.name : undefined}
+                      className={cn(
+                        "group flex items-center rounded-md text-sm font-medium transition-all duration-150",
+                        collapsed && !mobileOpen
+                          ? "justify-center p-2.5"
+                          : "gap-3 px-3 py-2",
+                        isActive
+                          ? "bg-sidebar-accent text-white"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-muted hover:text-sidebar-foreground"
+                      )}
+                    >
+                      <div className="relative shrink-0">
+                        <item.icon
+                          className={cn(
+                            collapsed && !mobileOpen ? "h-5 w-5" : "h-[18px] w-[18px]"
+                          )}
+                        />
+                        {/* Badge dot on collapsed icon */}
+                        {collapsed && !mobileOpen && badgeCount > 0 && (
+                          <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" />
+                        )}
+                      </div>
+                      {(!collapsed || mobileOpen) && (
+                        <>
+                          <span className="flex-1">{item.name}</span>
+                          {badgeCount > 0 && (
+                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[10px] font-semibold text-red-400">
+                              {badgeCount > 99 ? "99+" : badgeCount}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Collapse toggle (desktop only) */}

@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 94 — BUG-50 test fixes + UX improvements)
-**Laatste feature/fix:** Sessie 94 — BUG-50 (5 test failures) gefixt + ruff N806 lint fixes + frontend UX improvements (terminal B)
+**Laatst bijgewerkt:** 21 maart 2026 (sessie 95 — Tooling research + planning)
+**Laatste feature/fix:** Sessie 95 — Research 20+ AI tools/skills/MCP servers, 14 items op roadmap gezet (TOOL-01 t/m TOOL-14 + UX-22)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -11,7 +11,30 @@
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/12/13/14-18/19/20 gefixt)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
-**Volgende sessie:** Volledige testsuite draaien + mega-audit verificatie (alles wat in sessie 89-94 is aangepast reviewen) + deploy + resterende MEDIUM items (UX-14 t/m UX-18)
+**Volgende sessie:** Sessie 96 — Tooling Upgrade: 12 tools installeren + 2 opruimen (Perplexity/Firecrawl verwijderen) + Tavily API key nodig van gebruiker
+
+## Wat er gedaan is (sessie 95 — 21 maart 2026) — Tooling research + planning
+
+### Wat er gedaan is:
+- **Research:** 20+ AI tools, skills en MCP servers geëvalueerd uit virale Twitter thread (1.000+ repos gescand)
+- **Superpowers deep dive:** Alle 13 skills individueel doorgelezen en vergeleken met onze CLAUDE.md workflow. 3 echte gaten gevonden.
+- **Prijsvergelijking:** Tavily vs Perplexity vs Firecrawl. Beslissing: Tavily (gratis 1.000 calls/mnd) vervangt beide.
+- **Roadmap bijgewerkt:** UX-22 (Frontend Design Audit) + TOOL-01 t/m TOOL-14 (Tooling Upgrade sectie) toegevoegd
+
+### Beslissingen:
+- **Perplexity MCP verwijderen** — te duur, geen free tier, gebruiker heeft geen budget erop gezet
+- **Firecrawl MCP verwijderen** — credits op, niet vernieuwd
+- **Tavily MCP toevoegen** — gratis 1.000 calls/mnd, vervangt beide (search + extract + crawl + map)
+- **3 superpowers skills cherry-picken:** systematic-debugging, receiving-code-review, verification-before-completion
+- **Marketing stack toevoegen:** Claude SEO + Marketing Skills + Brand Guidelines + Canvas Design
+- **Dev stack toevoegen:** Codebase Memory MCP + Context7 + Frontend Design skill + Deep Research skill
+
+### Niet gekozen (met reden):
+- Claude Squad/cmux: conflicteert met no-worktree regel
+- TDD Guard: te rigide, blokkeert triviale fixes
+- gstack/Agent Alchemy: te veel overlap met bestaande workflow
+- Figaro: geen auth/TLS by design — onacceptabel voor advocatuur
+- Context Engineering Skills: educatief, niet praktisch
 
 ## Wat er gedaan is (sessie 94 — 21 maart 2026) — BUG-50 test fixes + UX improvements
 

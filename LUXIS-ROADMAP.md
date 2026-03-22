@@ -496,7 +496,16 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 |---|-------------|--------|
 | AI-UX-01 | **AI badges op email-rijen** — classificatie-badge (categorie + confidence) direct zichtbaar in de correspondentie email-lijst, niet alleen na klikken in detail-panel. | ❌ TODO |
 | AI-UX-02 | **"Wacht op review" indicator** — visuele hint op emails die nog op AI-review wachten (icoontje of kleur). | ❌ TODO |
-| AI-UX-03 | **Correspondentie zoekfunctie** — zoeken werkt niet (BUG-51). | ❌ TODO |
+| AI-UX-03 | **AI suggesties in Mijn Taken** — AI-suggesties verschijnen als taken (met 🤖 badge) in de bestaande takenlijst. Geen aparte AI-pagina. | ❌ TODO |
+| AI-UX-04 | **AI suggestion banner op dossier** — bovenaan dossier-detail een inklapbare kaart met de huidige AI-suggestie + Accepteren/Afwijzen. | ❌ TODO |
+| AI-UX-05 | **AI indicators op incasso pipeline** — AI-badge op dossier-kaarten in de pipeline ("Termijn verloopt morgen", "Actie voorgesteld"). | ❌ TODO |
+| AI-UX-06 | **AI in activity feed** — AI-acties in dezelfde tijdlijn als menselijke acties, met AI-badge/avatar. | ❌ TODO |
+| AI-UX-07 | **Dashboard AI widget** — samenvatting "3 dossiers vereisen actie, 2 termijnen verlopen vandaag". | ❌ TODO |
+| AI-UX-08 | **Nederlandse tekstlabels i.p.v. percentages** — "Aanbevolen" (blauw), "Mogelijk" (oranje), "Onzeker" (grijs) i.p.v. "95%". | ❌ TODO |
+| AI-UX-09 | **AI concept-berichten klaarzetten** — bij accepteren schrijft de AI een kant-en-klaar bericht op basis van response templates + algemene voorwaarden cliënt + dossiercontext. Lisanne reviewt en verstuurt. Alleen voor incasso. | ❌ TODO |
+| AI-UX-10 | **Response templates tailoren** — de 6 standaard antwoord-templates moeten nog afgestemd worden op hoe Kesting Legal communiceert. Input van Arsalan nodig. | ❌ TODO — wacht op input |
+| AI-UX-11 | **Algemene voorwaarden per cliënt** — upload/opslag van algemene voorwaarden per cliënt (niet van Kesting Legal). AI valt hier op terug bij betwistingen. | ❌ TODO |
+| AI-UX-12 | **Correspondentie zoekfunctie** — zoeken werkt niet (BUG-51). | ❌ TODO |
 
 ### Tooling Upgrade (sessie 96)
 

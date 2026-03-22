@@ -433,13 +433,13 @@ export default function ZakenPage() {
                   )}
                   <span className="ml-auto tabular-nums">{formatDateShort(zaak.date_opened)}</span>
                 </div>
-                {hasModule("incasso") && (zaak.total_principal > 0) && (
+                {hasModule("incasso") && ((zaak.total_principal ?? 0) > 0) && (
                   <div className="mt-2 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Hoofdsom: <span className="font-semibold text-foreground tabular-nums">{formatCurrency(zaak.total_principal)}</span></span>
                     <span className={`font-semibold tabular-nums ${
-                      (zaak.total_principal - zaak.total_paid) > 0 ? "text-amber-600" : "text-emerald-600"
+                      ((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0)) > 0 ? "text-amber-600" : "text-emerald-600"
                     }`}>
-                      Open: {formatCurrency(zaak.total_principal - zaak.total_paid)}
+                      Open: {formatCurrency((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0))}
                     </span>
                   </div>
                 )}
@@ -571,11 +571,11 @@ export default function ZakenPage() {
                         </td>
                         <td className="px-4 py-3.5 text-right">
                           <span className={`text-sm font-semibold tabular-nums ${
-                            (zaak.total_principal - zaak.total_paid) > 0
+                            ((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0)) > 0
                               ? "text-amber-600"
                               : "text-emerald-600"
                           }`}>
-                            {formatCurrency(zaak.total_principal - zaak.total_paid)}
+                            {formatCurrency((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0))}
                           </span>
                         </td>
                       </>

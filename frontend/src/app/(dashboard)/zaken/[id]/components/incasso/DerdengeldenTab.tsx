@@ -299,8 +299,8 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
       ) : isError ? (
         <QueryError message={error?.message} onRetry={refetch} />
       ) : transactions.length > 0 ? (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full">
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
+          <table className="w-full min-w-[500px]">
             <thead>
               <tr className="border-b border-border bg-muted/30">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">

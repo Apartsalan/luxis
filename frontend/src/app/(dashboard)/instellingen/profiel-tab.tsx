@@ -20,15 +20,18 @@ export function ProfielTab({ user }: { user: User | null }) {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const changePassword = useChangePassword();
+  const [profileError, setProfileError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const inputClass =
     "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
 
   const handleSaveProfile = () => {
     if (!fullName.trim()) {
-      toast.error("Naam mag niet leeg zijn");
+      setProfileError("Naam mag niet leeg zijn");
       return;
     }
+    setProfileError("");
     updateProfile.mutate(
       {
         full_name: fullName.trim(),
@@ -42,13 +45,14 @@ export function ProfielTab({ user }: { user: User | null }) {
 
   const handleChangePassword = () => {
     if (!currentPassword || !newPassword) {
-      toast.error("Vul beide velden in");
+      setPasswordError("Vul beide velden in");
       return;
     }
     if (newPassword.length < 8) {
-      toast.error("Nieuw wachtwoord moet minimaal 8 tekens zijn");
+      setPasswordError("Nieuw wachtwoord moet minimaal 8 tekens zijn");
       return;
     }
+    setPasswordError("");
     changePassword.mutate(
       { current_password: currentPassword, new_password: newPassword },
       {
@@ -76,9 +80,12 @@ export function ProfielTab({ user }: { user: User | null }) {
             <input
               type="text"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className={inputClass}
+              onChange={(e) => { setFullName(e.target.value); setProfileError(""); }}
+              className={`${inputClass} ${profileError ? "border-destructive ring-1 ring-destructive/30" : ""}`}
             />
+            {profileError && (
+              <p className="mt-1 text-xs text-destructive">{profileError}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground">
@@ -198,6 +205,9 @@ export function ProfielTab({ user }: { user: User | null }) {
                 </button>
               </div>
             </div>
+            {passwordError && (
+              <p className="text-xs text-destructive">{passwordError}</p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleChangePassword}

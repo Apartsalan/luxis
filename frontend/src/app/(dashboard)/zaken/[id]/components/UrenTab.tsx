@@ -134,8 +134,8 @@ export default function UrenTab({ caseId }: { caseId: string }) {
             </div>
           )}
 
-          <div className="rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="rounded-xl border border-border overflow-x-auto">
+          <table className="w-full min-w-[600px] text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">

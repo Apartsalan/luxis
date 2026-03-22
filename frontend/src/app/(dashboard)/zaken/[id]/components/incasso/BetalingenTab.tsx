@@ -18,9 +18,22 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
     description: "",
     payment_method: "",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: Record<string, string> = {};
+    const amount = parseFloat(form.amount);
+    if (!form.amount || isNaN(amount) || amount <= 0) {
+      errors.amount = "Voer een geldig bedrag in";
+    }
+    if (!form.payment_date) {
+      errors.payment_date = "Datum is verplicht";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
     try {
       await createPayment.mutateAsync({
         caseId,
@@ -33,6 +46,7 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
       });
       toast.success("Betaling geregistreerd");
       setShowForm(false);
+      setFieldErrors({});
       setForm({
         amount: "",
         payment_date: new Date().toISOString().split("T")[0],
@@ -75,12 +89,16 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
                 step="0.01"
                 required
                 value={form.amount}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, amount: e.target.value }))
-                }
-                className={inputClass}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, amount: e.target.value }));
+                  if (fieldErrors.amount) setFieldErrors((p) => { const n = { ...p }; delete n.amount; return n; });
+                }}
+                className={`${inputClass} ${fieldErrors.amount ? "border-destructive ring-1 ring-destructive/30" : ""}`}
                 placeholder="0.00"
               />
+              {fieldErrors.amount && (
+                <p className="mt-1 text-xs text-destructive">{fieldErrors.amount}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground">
@@ -90,11 +108,15 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
                 type="date"
                 required
                 value={form.payment_date}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, payment_date: e.target.value }))
-                }
-                className={inputClass}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, payment_date: e.target.value }));
+                  if (fieldErrors.payment_date) setFieldErrors((p) => { const n = { ...p }; delete n.payment_date; return n; });
+                }}
+                className={`${inputClass} ${fieldErrors.payment_date ? "border-destructive ring-1 ring-destructive/30" : ""}`}
               />
+              {fieldErrors.payment_date && (
+                <p className="mt-1 text-xs text-destructive">{fieldErrors.payment_date}</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-foreground">
@@ -155,8 +177,8 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
       ) : isError ? (
         <QueryError message={error?.message} onRetry={refetch} />
       ) : payments && payments.length > 0 ? (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full">
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
+          <table className="w-full min-w-[500px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">

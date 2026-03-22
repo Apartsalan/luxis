@@ -175,6 +175,9 @@ export default function NieuweFactuurPage() {
 
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (invoiceFieldErrors[field]) {
+      setInvoiceFieldErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+    }
   };
 
   const updateLine = (index: number, field: keyof LineItem, value: string) => {
@@ -280,22 +283,23 @@ export default function NieuweFactuurPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const errors: Record<string, string> = {};
 
     if (!form.contact_id) {
-      setError("Selecteer een relatie");
-      setInvoiceFieldErrors((prev) => ({ ...prev, contact_id: "Selecteer een relatie" }));
-      return;
+      errors.contact_id = "Selecteer een relatie";
     }
 
     // LF-21: Voorschotnota submit
     if (invoiceType === "voorschotnota") {
       if (!form.case_id) {
-        setError("Selecteer een dossier voor de voorschotnota");
-        return;
+        errors.case_id = "Selecteer een dossier voor de voorschotnota";
       }
       const amount = parseFloat(voorschotForm.amount);
       if (!amount || amount <= 0) {
-        setError("Voer een geldig bedrag in");
+        errors.voorschot_amount = "Voer een geldig bedrag in";
+      }
+      if (Object.keys(errors).length > 0) {
+        setInvoiceFieldErrors(errors);
         return;
       }
       try {
@@ -336,7 +340,11 @@ export default function NieuweFactuurPage() {
     }
 
     if (allLines.filter((l) => l.description && parseFloat(l.unit_price) > 0).length === 0 && !verrekenEnabled) {
-      setError("Voeg minimaal een factuurregel toe");
+      errors.lines = "Voeg minimaal een factuurregel toe";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setInvoiceFieldErrors(errors);
       return;
     }
 
@@ -496,9 +504,12 @@ export default function NieuweFactuurPage() {
                   setShowCaseResults(true);
                 }}
                 onFocus={() => setShowCaseResults(true)}
-                className={`${inputClass} pl-10`}
+                className={`${inputClass} pl-10 ${invoiceFieldErrors.case_id ? "border-destructive ring-1 ring-destructive/30" : ""}`}
               />
             </div>
+            {invoiceFieldErrors.case_id && (
+              <p className="mt-1 text-xs text-destructive">{invoiceFieldErrors.case_id}</p>
+            )}
             {showCaseResults &&
               caseSearch &&
               caseResults?.items &&
@@ -690,9 +701,12 @@ export default function NieuweFactuurPage() {
                       setVoorschotForm((p) => ({ ...p, amount: e.target.value }))
                     }
                     placeholder="0.00"
-                    className={`${inputClass} pl-8`}
+                    className={`${inputClass} pl-8 ${invoiceFieldErrors.voorschot_amount ? "border-destructive ring-1 ring-destructive/30" : ""}`}
                   />
                 </div>
+                {invoiceFieldErrors.voorschot_amount && (
+                  <p className="mt-1 text-xs text-destructive">{invoiceFieldErrors.voorschot_amount}</p>
+                )}
               </div>
               <div className="flex items-end">
                 {voorschotForm.amount && (
@@ -766,9 +780,14 @@ export default function NieuweFactuurPage() {
         {invoiceType === "factuur" && (<>
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground">
-              Factuurregels
-            </h2>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                Factuurregels
+              </h2>
+              {invoiceFieldErrors.lines && (
+                <p className="text-xs text-destructive mt-1">{invoiceFieldErrors.lines}</p>
+              )}
+            </div>
             <div className="flex gap-2">
               {form.case_id && (
                 <>

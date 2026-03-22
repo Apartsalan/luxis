@@ -254,12 +254,12 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
       </div>
 
       {/* Breakdown table */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border bg-muted/30">
           <Euro className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Specificatie</h3>
         </div>
-        <table className="w-full">
+        <table className="w-full min-w-[400px]">
           <thead>
             <tr className="border-b border-border">
               <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Post</th>

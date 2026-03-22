@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -33,6 +33,15 @@ export default function NieuweRelatiePage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // UX-16: Warn on unsaved changes
+  const formDirty = form.name || form.first_name || form.last_name || form.email || form.phone;
+  useEffect(() => {
+    if (!formDirty) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [formDirty]);
 
   const validateField = (field: string, value: string): string => {
     switch (field) {

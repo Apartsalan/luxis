@@ -275,7 +275,7 @@ function StappenTab() {
 
       {/* Steps list */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
               <th className="w-10 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">#</th>
@@ -935,7 +935,7 @@ function PipelineColumnView({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
               <th className="w-10 px-3 py-2 text-left">

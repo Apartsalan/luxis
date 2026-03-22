@@ -96,6 +96,7 @@ export function EmailComposeDialog({
   const [subject, setSubject] = useState(defaultSubject);
   const [body, setBody] = useState(defaultBody);
   const [selectedRecipientEmail, setSelectedRecipientEmail] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Reset form when dialog opens with new defaults
   const handleOpenChange = (nextOpen: boolean) => {
@@ -108,6 +109,7 @@ export function EmailComposeDialog({
       setSubject(defaultSubject);
       setBody(defaultBody);
       setSelectedRecipientEmail(null);
+      setFieldErrors({});
     }
     onOpenChange(nextOpen);
   };
@@ -146,7 +148,19 @@ export function EmailComposeDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!to.trim()) return;
+    const errors: Record<string, string> = {};
+    if (!to.trim()) {
+      errors.to = "E-mailadres is verplicht";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) {
+      errors.to = "Ongeldig e-mailadres";
+    }
+    if (!subject.trim()) {
+      errors.subject = "Onderwerp is verplicht";
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
 
     onSend({
       recipient_email: to.trim(),
@@ -213,13 +227,14 @@ export function EmailComposeDialog({
                 value={to}
                 onChange={(e) => {
                   setTo(e.target.value);
+                  if (fieldErrors.to) setFieldErrors((p) => { const n = { ...p }; delete n.to; return n; });
                   // Clear chip selection if user manually types
                   if (selectedRecipientEmail && e.target.value !== selectedRecipientEmail) {
                     setSelectedRecipientEmail(null);
                   }
                 }}
                 required
-                className="flex-1"
+                className={cn("flex-1", fieldErrors.to && "border-destructive ring-1 ring-destructive/30")}
               />
               {!showCc && (
                 <Button
@@ -233,6 +248,9 @@ export function EmailComposeDialog({
                 </Button>
               )}
             </div>
+            {fieldErrors.to && (
+              <p className="text-[13px] text-destructive">{fieldErrors.to}</p>
+            )}
           </div>
 
           {/* Naam ontvanger */}
@@ -296,13 +314,20 @@ export function EmailComposeDialog({
 
           {/* Onderwerp */}
           <div className="space-y-1.5">
-            <Label htmlFor="email-subject">Onderwerp</Label>
+            <Label htmlFor="email-subject">Onderwerp *</Label>
             <Input
               id="email-subject"
               placeholder="Onderwerp van de e-mail"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                if (fieldErrors.subject) setFieldErrors((p) => { const n = { ...p }; delete n.subject; return n; });
+              }}
+              className={cn(fieldErrors.subject && "border-destructive ring-1 ring-destructive/30")}
             />
+            {fieldErrors.subject && (
+              <p className="text-[13px] text-destructive">{fieldErrors.subject}</p>
+            )}
           </div>
 
           {/* Body */}

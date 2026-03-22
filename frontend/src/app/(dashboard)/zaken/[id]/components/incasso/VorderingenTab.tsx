@@ -255,8 +255,8 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
       ) : isError ? (
         <QueryError message={error?.message} onRetry={refetch} />
       ) : claims && claims.length > 0 ? (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full">
+        <div className="rounded-xl border border-border bg-card overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">

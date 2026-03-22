@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — UX quality sweep)
-**Laatste feature/fix:** Sessie 98 — Alle UX items compleet (UX-14 t/m UX-20 ✅)
+**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — UX sweep + AI UX research)
+**Laatste feature/fix:** Sessie 98 — UX-14 t/m UX-20 compleet + AI UX research + sidebar fix + disk cleanup
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -14,23 +14,45 @@
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
 
-## Wat er gedaan is (sessie 98 — 22 maart 2026) — UX Quality Sweep + Design Sprint deel 2
+## Wat er gedaan is (sessie 98 — 22 maart 2026) — UX sweep + AI UX research + infra
 
-### UX-22 Design Sprint deel 2 (items 9+10):
+### UX Quality Sweep (UX-14 t/m UX-20):
+- **UX-20:** formatCurrency NaN fix — null-safe arithmetic in dossiers pagina
+- **UX-19:** Error boundaries per tab — waren al geïmplementeerd (10 tabs)
+- **UX-18:** Breadcrumbs — waren al geïmplementeerd (alle detail pages)
+- **UX-15:** Inline form validatie — factuur, email compose, betaling, instellingen formulieren
+- **UX-16:** Unsaved changes warning — beforeunload op nieuwe relatie form
+- **UX-14:** Responsive tabellen — overflow-x-auto + min-width op alle tab-tabellen
+
+### UX-22 Design Sprint deel 2 (items 9+10, eerder in sessie):
 - Incasso pipeline lege secties collapsed + warning-styling
 - Correspondentie in/uit visueel onderscheid + date grouping
 
-### UX Quality Sweep (UX-14 t/m UX-20):
-- **UX-20:** formatCurrency NaN fix — null-safe arithmetic `(??0)` in dossiers pagina
-- **UX-19:** Error boundaries per tab — waren al geïmplementeerd (10 tabs)
-- **UX-18:** Breadcrumbs — waren al geïmplementeerd (breadcrumb-context op alle detail pages)
-- **UX-15:** Inline form validatie — factuur, email compose, betaling, instellingen formulieren
-- **UX-16:** Unsaved changes warning — beforeunload op nieuwe relatie (andere forms hadden het al)
-- **UX-14:** Responsive tabellen — overflow-x-auto + min-width op alle incasso/dossier tab-tabellen
+### Sidebar fix:
+- Incasso verplaatst van FINANCIEEL naar BEHEER sectie
+
+### AI UX Research (groot):
+- Twee onderzoeksrapporten geschreven: `docs/research/INLINE-AI-UX-PATTERNS.md` + `docs/research/AI-INLINE-UX-RESEARCH.md`
+- 12 SaaS tools + 8 incasso platforms geanalyseerd
+- 14 AI-UX roadmap items aangemaakt (AI-UX-01 t/m AI-UX-14)
+- Kernbeslissingen:
+  - AI onzichtbaar, resultaten zichtbaar OVERAL in de workflow (taken, dossier, pipeline, correspondentie, dashboard)
+  - AI concept-berichten op basis van volledige dossiercontext (emails, notities, contract, AV cliënt, factuur, vorderingen, activity feed)
+  - Nederlandse tekstlabels i.p.v. percentages ("Aanbevolen" niet "95%")
+  - Bronvermelding in concept-berichten
+  - Algemene voorwaarden per cliënt (niet van Kesting Legal)
+
+### Infra:
+- VPS disk vol (100%) → Docker image prune → 6% (137GB vrij)
+- BUG-51 genoteerd: correspondentie zoekfunctie werkt niet
 
 ### Commits:
-- `ac0ad7e` feat(frontend): incasso collapse empty sections + correspondentie date grouping
 - `b8e03ca` fix(frontend): UX quality improvements — validation, responsive tables, NaN fix
+- `9c0ace6` docs: sessie 98 — alle UX items compleet
+- `0d1f62e` fix(frontend): move Incasso from Financieel to Beheer in sidebar
+- `0b44d60` docs: AI UX research — inline patterns + incasso-specific tools
+- `ba501ee` docs: AI UX roadmap — 12 items voor inline AI in workflow
+- `299e954` docs: AI UX roadmap — volledige dossiercontext + bronvermelding
 
 ## Wat er gedaan is (sessie 98 — 22 maart 2026) — Frontend Design Sprint deel 2 (UX-22 items 9+10)
 

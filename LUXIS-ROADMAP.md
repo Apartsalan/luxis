@@ -509,6 +509,14 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | AI-UX-14 | **Bronvermelding in concept-berichten** — AI verwijst naar specifieke artikelen uit contract/AV, berekent termijnen, citeert relevante correspondentie. Lisanne kan snel checken of het klopt. | ❌ TODO |
 | AI-UX-12 | **Correspondentie zoekfunctie** — zoeken werkt niet (BUG-51). | ✅ Niet reproduceerbaar (sessie 99, 22 mrt) |
 
+### AI Technische Verbeteringen (sessie 98 research)
+
+| # | Omschrijving | Status |
+|---|-------------|--------|
+| AI-TECH-01 | **pymupdf4llm** — vervang pdfplumber door pymupdf4llm in `backend/app/ai_agent/pdf_extract.py`. Betere tabel/layout extractie, 5-10x sneller, Markdown output voor LLM. Simpele swap (~30 min). | ❌ TODO |
+| AI-TECH-02 | **Claude native PDF voor contractanalyse** — bij betwistingen/zware analyse: stuur PDF direct naar Claude API i.p.v. tekst extractie. Alleen voor dure taken (1-2x/week), dagelijks werk blijft Kimi. | ❌ TODO |
+| AI-TECH-03 | **Claude Structured Outputs** — gebruik structured outputs bij Claude Haiku calls zodat responses gegarandeerd het juiste JSON format hebben. Elimineert parsing errors. Alleen voor Claude calls, niet Kimi. | ❌ TODO |
+
 ### Tooling Upgrade (sessie 96)
 
 **Bron:** Research sessie 95 — 1.000+ repos gescand, 20 tools geëvalueerd. Installeer tools die directe waarde toevoegen aan development en marketing.

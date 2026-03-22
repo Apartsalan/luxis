@@ -21,15 +21,22 @@
 - **AI-UX-03:** AI-secties in Mijn Taken verbeterd — paarse "AI" badge op headers, lege state tekst i.p.v. verborgen secties
 - **AI-UX-12 / BUG-51:** Correspondentie zoekfunctie geverifieerd — werkt correct, niet reproduceerbaar
 
-### Proces:
+### Proces & infra:
 - Verificatie-loop als harde regel toegevoegd aan CLAUDE.md (build → visueel → functioneel → pas dan done)
 - .claude/worktrees opgeruimd: 35 worktrees + 36 branches verwijderd (42MB)
 - Vergelijking gemaakt van .claude/ folder structuur met best practices — conclusie: onze setup is goed, rules/ niet nodig
+- Claude Code Channels (Telegram) ingesteld — Bun geïnstalleerd, telegram plugin geïnstalleerd, bot token geconfigureerd, pairing gedaan
+- `claude-tg.bat` aangemaakt in home folder als shortcut voor `claude --channels plugin:telegram@claude-plugins-official`
+- Laptop energie-instellingen: slaapstand/hibernate/scherm-uit op netstroom = nooit. Deksel dicht = slaapstand (bewust).
 
 ### Gewijzigde bestanden:
 - `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — classificatie badges
 - `frontend/src/app/(dashboard)/taken/page.tsx` — AI badge headers + empty state
 - `CLAUDE.md` — verificatie-loop regel
+- `C:\Users\arsal\claude-tg.bat` — shortcut voor channels
+
+### Volgende sessie:
+- AI-UX-08 (Nederlandse labels) → AI-UX-02 (review indicator) → AI-UX-04 (dossier banner)
 
 ---
 

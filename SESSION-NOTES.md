@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — Frontend Design Sprint deel 2)
-**Laatste feature/fix:** Sessie 98 — UX-22 Top 10: 10/10 items COMPLEET (incasso collapse + correspondentie date grouping)
+**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — UX quality sweep)
+**Laatste feature/fix:** Sessie 98 — Alle UX items compleet (UX-14 t/m UX-20 ✅)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -11,7 +11,26 @@
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/12/13/14-18/19/20 gefixt)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
+**UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 98 — 22 maart 2026) — UX Quality Sweep + Design Sprint deel 2
+
+### UX-22 Design Sprint deel 2 (items 9+10):
+- Incasso pipeline lege secties collapsed + warning-styling
+- Correspondentie in/uit visueel onderscheid + date grouping
+
+### UX Quality Sweep (UX-14 t/m UX-20):
+- **UX-20:** formatCurrency NaN fix — null-safe arithmetic `(??0)` in dossiers pagina
+- **UX-19:** Error boundaries per tab — waren al geïmplementeerd (10 tabs)
+- **UX-18:** Breadcrumbs — waren al geïmplementeerd (breadcrumb-context op alle detail pages)
+- **UX-15:** Inline form validatie — factuur, email compose, betaling, instellingen formulieren
+- **UX-16:** Unsaved changes warning — beforeunload op nieuwe relatie (andere forms hadden het al)
+- **UX-14:** Responsive tabellen — overflow-x-auto + min-width op alle incasso/dossier tab-tabellen
+
+### Commits:
+- `ac0ad7e` feat(frontend): incasso collapse empty sections + correspondentie date grouping
+- `b8e03ca` fix(frontend): UX quality improvements — validation, responsive tables, NaN fix
 
 ## Wat er gedaan is (sessie 98 — 22 maart 2026) — Frontend Design Sprint deel 2 (UX-22 items 9+10)
 

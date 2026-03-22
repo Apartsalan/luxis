@@ -470,13 +470,13 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | CQ-23 | **Container resource limits** — Added mem_limit + cpus for all services in prod compose. | Infra | ✅ Sessie 92 |
 | CQ-24 | **Off-site backups** — Updated backup.sh with rclone off-site upload support (needs rclone config on VPS). | Infra | ✅ Sessie 92 (script klaar, rclone config nodig op VPS) |
 | CQ-25 | **Uptime monitoring** — Created setup script + self-hosted health checker; UptimeRobot setup nodig. | Infra | ✅ Sessie 92 (script klaar, UptimeRobot account nodig) |
-| UX-14 | **Responsive tabellen** — data verborgen op mobiel zonder alternatief. | Frontend | ❌ TODO |
-| UX-15 | **Form validatie** — geen inline foutmeldingen op formulieren. | Frontend | ❌ TODO |
-| UX-16 | **Unsaved changes warning** — geen waarschuwing bij onopgeslagen wijzigingen. | Frontend | ❌ TODO |
+| UX-14 | **Responsive tabellen** — overflow-x-auto + min-width op alle tab-tabellen en incasso pipeline. | Frontend | ✅ Sessie 98 |
+| UX-15 | **Form validatie** — inline foutmeldingen op factuur, email compose, betaling, instellingen formulieren. | Frontend | ✅ Sessie 98 |
+| UX-16 | **Unsaved changes warning** — beforeunload op nieuwe relatie (andere formulieren hadden het al). | Frontend | ✅ Sessie 98 |
 | UX-17 | **Empty state guidance** — lege lijsten missen begeleiding/onboarding. EmptyState component + 7 tabs vervangen. | Frontend | ✅ Sessie 97 |
-| UX-18 | **Breadcrumbs** — ontbreken op detail pagina's. | Frontend | ❌ TODO |
-| UX-19 | **Error boundaries per tab** — JS error in één tab crasht hele case detail. | Frontend | ❌ TODO |
-| UX-20 | **formatCurrency NaN** — toont "NaN" bij null waarden. | Frontend | ❌ TODO |
+| UX-18 | **Breadcrumbs** — waren al geïmplementeerd (breadcrumb-context + useBreadcrumbs hook op alle detail pages). | Frontend | ✅ Al compleet |
+| UX-19 | **Error boundaries per tab** — waren al geïmplementeerd (ErrorBoundary + TabErrorFallback op alle 10 tabs). | Frontend | ✅ Al compleet |
+| UX-20 | **formatCurrency NaN** — null-safe arithmetic (??0) in dossiers pagina. | Frontend | ✅ Sessie 98 |
 | UX-21 | **isError niet afgevangen** — financiële queries tonen lege lijst i.p.v. error. | Frontend | ✅ Sessie 91 (QueryError in 5 financial tabs) |
 | UX-22 | **Frontend Design Audit** — alle pagina's doorlopen met Frontend Design skill en UI verbeterpunten inventariseren (anti-"AI slop", design systeem, typografie, kleurgebruik, compositie). Rapport: `docs/research/UX-22-FRONTEND-DESIGN-AUDIT.md` (score 5.5/10, 20 pagina's geaudit). | Frontend | ✅ Sessie 96 |
 | UX-23 | **Design Sprint deel 1** — 8/10 UX-22 Top 10 items geïmplementeerd: Inter font, login redesign, empty states, KPI cards, sidebar secties, tabel responsiveness, microinteracties. | Frontend | ✅ Sessie 97 |

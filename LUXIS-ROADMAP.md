@@ -482,6 +482,22 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | UX-23 | **Design Sprint deel 1** — 8/10 UX-22 Top 10 items geïmplementeerd: Inter font, login redesign, empty states, KPI cards, sidebar secties, tabel responsiveness, microinteracties. | Frontend | ✅ Sessie 97 |
 | UX-24 | **Design Sprint deel 2** — resterende 2 items: incasso pipeline collapse lege secties + correspondentie in/uit visueel + date grouping. | Frontend | ✅ Sessie 98 |
 
+### Bugs & Issues
+
+| # | Omschrijving | Ernst | Status |
+|---|-------------|-------|--------|
+| BUG-51 | **Correspondentie zoekfunctie** — zoeken op de correspondentie pagina geeft geen resultaten. | Midden | ❌ TODO |
+
+### AI UX/UI Verbetering (sessie 98 feedback)
+
+**Bron:** Gebruiker-feedback: AI resultaten zijn niet zichtbaar genoeg BINNEN de workflow. Designkeuze blijft: geen aparte AI-pagina, AI is onzichtbaar maar de resultaten moeten wél duidelijk zijn op de plekken waar ze relevant zijn.
+
+| # | Omschrijving | Status |
+|---|-------------|--------|
+| AI-UX-01 | **AI badges op email-rijen** — classificatie-badge (categorie + confidence) direct zichtbaar in de correspondentie email-lijst, niet alleen na klikken in detail-panel. | ❌ TODO |
+| AI-UX-02 | **"Wacht op review" indicator** — visuele hint op emails die nog op AI-review wachten (icoontje of kleur). | ❌ TODO |
+| AI-UX-03 | **Correspondentie zoekfunctie** — zoeken werkt niet (BUG-51). | ❌ TODO |
+
 ### Tooling Upgrade (sessie 96)
 
 **Bron:** Research sessie 95 — 1.000+ repos gescand, 20 tools geëvalueerd. Installeer tools die directe waarde toevoegen aan development en marketing.

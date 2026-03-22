@@ -57,6 +57,7 @@ const ALL_SECTIONS: NavSection[] = [
     items: [
       { name: "Relaties", href: "/relaties", icon: Users },
       { name: "Dossiers", href: "/zaken", icon: Briefcase },
+      { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
       { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
       { name: "Agenda", href: "/agenda", icon: Calendar },
       { name: "Documenten", href: "/documenten", icon: FileText },
@@ -66,7 +67,6 @@ const ALL_SECTIONS: NavSection[] = [
     label: "Financieel",
     items: [
       { name: "Bank Import", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
-      { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
       { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
       { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
     ],

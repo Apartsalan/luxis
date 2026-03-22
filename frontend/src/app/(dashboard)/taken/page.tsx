@@ -277,7 +277,7 @@ function FollowupSection() {
 
   const items = data?.items ?? [];
 
-  if (isLoading || items.length === 0) return null;
+  if (isLoading) return null;
 
   return (
     <div className="space-y-3">
@@ -287,7 +287,15 @@ function FollowupSection() {
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
           {data?.total ?? items.length}
         </span>
+        <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+          AI
+        </span>
       </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic pl-6">
+          Geen AI-aanbevelingen op dit moment
+        </p>
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <div
@@ -367,7 +375,7 @@ function IntakeSection() {
 
   const items = intakes ?? [];
 
-  if (isLoading || items.length === 0) return null;
+  if (isLoading) return null;
 
   return (
     <div className="space-y-3">
@@ -377,7 +385,15 @@ function IntakeSection() {
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
           {items.length}
         </span>
+        <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+          AI
+        </span>
       </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic pl-6">
+          Geen nieuwe dossierverzoeken gevonden
+        </p>
+      ) : null}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <div

@@ -100,6 +100,24 @@ export default function CorrespondentiePage() {
     );
   }, [allEmails, emailFilter]);
 
+  // Group emails by date for display
+  const groupedEmails = useMemo(() => {
+    if (emails.length === 0) return [];
+    const groups: { label: string; emails: typeof emails }[] = [];
+    let currentLabel = "";
+
+    for (const email of emails) {
+      const label = getDateGroupLabel(email.email_date);
+      if (label !== currentLabel) {
+        currentLabel = label;
+        groups.push({ label, emails: [email] });
+      } else {
+        groups[groups.length - 1].emails.push(email);
+      }
+    }
+    return groups;
+  }, [emails]);
+
   // Clear selection when emails change
   useEffect(() => {
     if (selectedEmailId && !allEmails.find((e) => e.id === selectedEmailId)) {
@@ -301,17 +319,28 @@ export default function CorrespondentiePage() {
               </span>
             </div>
 
-            <div className="rounded-xl border border-border bg-card overflow-hidden divide-y divide-border">
-              {emails.map((email) => (
-                <EmailListItem
-                  key={email.id}
-                  email={email}
-                  isSelected={selectedEmailId === email.id}
-                  isChecked={selectedIds.has(email.id)}
-                  onSelect={() => setSelectedEmailId(email.id)}
-                  onToggleCheck={() => toggleSelect(email.id)}
-                  compact={!!selectedEmailId}
-                />
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              {groupedEmails.map((group) => (
+                <div key={group.label}>
+                  <div className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm px-4 py-1.5 border-b border-border">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      {group.label}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {group.emails.map((email) => (
+                      <EmailListItem
+                        key={email.id}
+                        email={email}
+                        isSelected={selectedEmailId === email.id}
+                        isChecked={selectedIds.has(email.id)}
+                        onSelect={() => setSelectedEmailId(email.id)}
+                        onToggleCheck={() => toggleSelect(email.id)}
+                        compact={!!selectedEmailId}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -527,10 +556,16 @@ function EmailListItem({
   onToggleCheck: () => void;
   compact: boolean;
 }) {
+  const directionBorder = email.direction === "inbound"
+    ? "border-l-blue-500 dark:border-l-blue-400"
+    : "border-l-emerald-500 dark:border-l-emerald-400";
+
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer ${
-        isSelected ? "bg-primary/5 border-l-2 border-l-primary" : ""
+      className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer border-l-3 ${
+        isSelected
+          ? `bg-primary/5 ${directionBorder}`
+          : directionBorder
       }`}
     >
       {/* Checkbox */}
@@ -742,4 +777,22 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getDateGroupLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const emailDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.floor((today.getTime() - emailDay.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Vandaag";
+  if (diffDays === 1) return "Gisteren";
+  if (diffDays < 7) return `${diffDays} dagen geleden`;
+
+  return date.toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
 }

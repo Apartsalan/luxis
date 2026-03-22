@@ -859,35 +859,62 @@ function PipelineColumnView({
   isUnassigned?: boolean;
 }) {
   const allSelected = column.cases.length > 0 && column.cases.every((c) => selectedIds.has(c.id));
+  const isEmpty = column.cases.length === 0;
+  const [collapsed, setCollapsed] = useState(isEmpty);
 
-  if (column.cases.length === 0) {
+  if (isEmpty) {
     return (
-      <div className="rounded-xl border border-border bg-card">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="rounded-xl border border-border bg-card/50 opacity-75 hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="flex items-center justify-between w-full px-4 py-2.5 text-left"
+        >
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-foreground">{column.step.name}</h3>
+            <h3 className="text-sm font-medium text-muted-foreground">{column.step.name}</h3>
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
               0
             </span>
           </div>
-        </div>
-        <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-          Geen dossiers in deze stap
+          {collapsed ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+        <div
+          className={`overflow-hidden transition-all duration-200 ease-in-out ${
+            collapsed ? "max-h-0" : "max-h-20"
+          }`}
+        >
+          <div className="px-4 py-4 text-center text-sm text-muted-foreground border-t border-border">
+            Geen dossiers in deze stap
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`rounded-xl border bg-card ${isUnassigned ? "border-amber-300 dark:border-amber-700" : "border-border"}`}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    <div className={`rounded-xl border bg-card ${
+      isUnassigned
+        ? "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10"
+        : "border-border"
+    }`}>
+      <div className={`flex items-center justify-between px-4 py-3 border-b ${
+        isUnassigned ? "border-amber-200 dark:border-amber-800" : "border-border"
+      }`}>
         <div className="flex items-center gap-2">
           {isUnassigned && <AlertTriangle className="h-4 w-4 text-amber-500" />}
-          <h3 className="text-sm font-semibold text-foreground">{column.step.name}</h3>
+          <h3 className={`text-sm font-semibold ${isUnassigned ? "text-amber-700 dark:text-amber-400" : "text-foreground"}`}>{column.step.name}</h3>
           <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${isUnassigned ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-primary/10 text-primary"}`}>
             {column.count}
           </span>
-          {column.step.min_wait_days > 0 && (
+          {isUnassigned && (
+            <span className="text-xs text-amber-600 dark:text-amber-400">
+              — wijs een stap toe
+            </span>
+          )}
+          {!isUnassigned && column.step.min_wait_days > 0 && (
             <span className="text-xs text-muted-foreground">
               (min. {column.step.min_wait_days} dagen)
             </span>

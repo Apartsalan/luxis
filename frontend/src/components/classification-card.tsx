@@ -57,24 +57,15 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Confidence indicator ─────────────────────────────────────────────────────
 
-function ConfidenceBar({ confidence }: { confidence: number }) {
-  const pct = Math.round(confidence * 100);
-  const color =
-    pct >= 80
-      ? "bg-emerald-500"
-      : pct >= 60
-        ? "bg-amber-500"
-        : "bg-red-500";
+import { confidenceLabelText, confidenceBadgeClasses } from "@/lib/confidence";
+
+function ConfidenceLabel({ confidence }: { confidence: number }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-16 rounded-full bg-muted">
-        <div
-          className={`h-full rounded-full ${color}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="text-[10px] text-muted-foreground">{pct}%</span>
-    </div>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${confidenceBadgeClasses(confidence)}`}
+    >
+      {confidenceLabelText(confidence)}
+    </span>
   );
 }
 
@@ -127,7 +118,7 @@ function ClassificationCardInner({ c }: { c: Classification }) {
           <span className="text-xs font-semibold text-foreground truncate">
             {c.category_label}
           </span>
-          <ConfidenceBar confidence={c.confidence} />
+          <ConfidenceLabel confidence={c.confidence} />
         </div>
         <StatusBadge status={c.status} />
       </div>

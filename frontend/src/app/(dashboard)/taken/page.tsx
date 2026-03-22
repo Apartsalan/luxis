@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 
 import { cn, formatDateShort, formatCurrency } from "@/lib/utils";
+import { confidenceBadgeClasses, confidenceLabelText } from "@/lib/confidence";
 import { TASK_STATUS_BADGE, TASK_STATUS_BADGE_FALLBACK } from "@/lib/status-constants";
 import {
   useMyTasks,
@@ -364,10 +365,8 @@ function FollowupSection() {
 // ── Nieuwe Dossiers (Intakes) ────────────────────────────────────────────────
 
 function confidenceBadge(confidence: number | null) {
-  if (!confidence) return "bg-slate-50 text-slate-600 ring-slate-500/20";
-  if (confidence >= 80) return "bg-emerald-50 text-emerald-700 ring-emerald-600/20";
-  if (confidence >= 60) return "bg-amber-50 text-amber-700 ring-amber-600/20";
-  return "bg-red-50 text-red-700 ring-red-600/20";
+  if (!confidence) return "bg-slate-50 text-slate-600 ring-slate-500/20 dark:bg-slate-800/30 dark:text-slate-400";
+  return confidenceBadgeClasses(confidence / 100);
 }
 
 function IntakeSection() {
@@ -415,7 +414,7 @@ function IntakeSection() {
                   confidenceBadge(item.ai_confidence),
                 )}
               >
-                {item.ai_confidence ? `${Math.round(item.ai_confidence)}%` : "?"}
+                {item.ai_confidence ? confidenceLabelText(item.ai_confidence / 100) : "?"}
               </span>
             </div>
             {(item.debtor_name || item.principal_amount) && (

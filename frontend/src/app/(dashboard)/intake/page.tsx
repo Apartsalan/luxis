@@ -12,6 +12,7 @@ import {
 import { useIntakes } from "@/hooks/use-intake";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { confidenceBgColor, confidenceTextColor as sharedConfidenceTextColor, confidenceLabelText } from "@/lib/confidence";
 
 // ── Status config ────────────────────────────────────────────────────────────
 
@@ -52,19 +53,10 @@ const STATUS_TABS = [
   { value: "", label: "Alle" },
 ];
 
-// ── Confidence helpers ───────────────────────────────────────────────────────
+// ── Confidence helpers (use shared lib) ──────────────────────────────────────
 
-function confidenceColor(c: number): string {
-  if (c >= 0.85) return "bg-emerald-500";
-  if (c >= 0.6) return "bg-amber-500";
-  return "bg-red-500";
-}
-
-function confidenceTextColor(c: number): string {
-  if (c >= 0.85) return "text-emerald-700";
-  if (c >= 0.6) return "text-amber-700";
-  return "text-red-700";
-}
+const confidenceColor = confidenceBgColor;
+const confidenceTextColor = sharedConfidenceTextColor;
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -237,9 +229,9 @@ export default function IntakePage() {
                           />
                         </div>
                         <span
-                          className={`text-xs font-medium tabular-nums ${confidenceTextColor(item.ai_confidence)}`}
+                          className={`text-xs font-medium ${confidenceTextColor(item.ai_confidence)}`}
                         >
-                          {Math.round(item.ai_confidence * 100)}%
+                          {confidenceLabelText(item.ai_confidence)}
                         </span>
                       </>
                     ) : (

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Bot,
   Check,
   CheckCheck,
   Download,
@@ -30,6 +31,7 @@ import {
   type SyncedEmailSummary,
 } from "@/hooks/use-email-sync";
 import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
+import { confidenceBadgeClasses } from "@/lib/confidence";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
 import { formatDate, formatDateShort } from "@/lib/utils";
 import { tokenStore } from "@/lib/token-store";
@@ -204,12 +206,7 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
 // ── Classification Badge ─────────────────────────────────────────────────────
 
 function ClassificationBadge({ classification }: { classification: Classification }) {
-  const confidenceColor =
-    classification.confidence >= 0.8
-      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-      : classification.confidence >= 0.6
-        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-        : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+  const confidenceColor = confidenceBadgeClasses(classification.confidence);
 
   const statusIcon =
     classification.status === "executed" ? (
@@ -455,7 +452,15 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                           {formatDateShort(item.date)}
                         </span>
                       </div>
-                      <p className="text-sm text-foreground truncate">{item.subject}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm text-foreground truncate">{item.subject}</p>
+                        {item.type === "synced" && classificationMap.get(item.id)?.status === "pending" && (
+                          <span className="shrink-0 flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400" title="Wacht op review">
+                            <Bot className="h-2.5 w-2.5" />
+                            Review
+                          </span>
+                        )}
+                      </div>
                       {item.snippet && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">
                           {item.snippet}

@@ -28,6 +28,7 @@ import type { IntakeUpdateData } from "@/hooks/use-intake";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
+import { confidenceBgColor, confidenceTextColor as sharedConfidenceTextColor, confidenceLabelText } from "@/lib/confidence";
 
 // ── Status config ────────────────────────────────────────────────────────────
 
@@ -58,25 +59,11 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string }> = {
   },
 };
 
-// ── Confidence helpers ───────────────────────────────────────────────────────
+// ── Confidence helpers (use shared lib) ──────────────────────────────────────
 
-function confidenceColor(c: number): string {
-  if (c >= 0.85) return "bg-emerald-500";
-  if (c >= 0.6) return "bg-amber-500";
-  return "bg-red-500";
-}
-
-function confidenceLabel(c: number): string {
-  if (c >= 0.85) return "Hoog";
-  if (c >= 0.6) return "Gemiddeld";
-  return "Laag";
-}
-
-function confidenceTextColor(c: number): string {
-  if (c >= 0.85) return "text-emerald-700";
-  if (c >= 0.6) return "text-amber-700";
-  return "text-red-700";
-}
+const confidenceColor = confidenceBgColor;
+const confidenceLabel = confidenceLabelText;
+const confidenceTextColor = sharedConfidenceTextColor;
 
 // ── Editable field component ─────────────────────────────────────────────────
 
@@ -611,7 +598,6 @@ export default function IntakeDetailPage() {
                   <span
                     className={`text-sm font-semibold tabular-nums ${confidenceTextColor(intake.ai_confidence)}`}
                   >
-                    {Math.round(intake.ai_confidence * 100)}% —{" "}
                     {confidenceLabel(intake.ai_confidence)}
                   </span>
                 </div>

@@ -5,15 +5,21 @@ import { useConfirm, usePrompt } from "@/components/confirm-dialog";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  Bot,
   Briefcase,
+  Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   CreditCard,
   Euro,
   File,
+  Loader2,
   Mail,
   Receipt,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +44,13 @@ import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 import { useSendViaProvider } from "@/hooks/use-email-sync";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
 import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
+import {
+  useClassifications,
+  useApproveClassification,
+  useRejectClassification,
+  type Classification,
+} from "@/hooks/use-ai-agent";
+import { confidenceLabelText, confidenceTextColor as confidenceTextCls } from "@/lib/confidence";
 import { STATUS_LABELS } from "./types";
 
 // ── Tab components ───────────────────────────────────────────────────────────
@@ -84,6 +97,14 @@ export default function ZaakDetailPage() {
   const { data: followupData } = useFollowupForCase(id);
   const followupRec = followupData?.items?.[0] ?? null;
   const approveAndExecuteFollowup = useApproveAndExecuteFollowup();
+
+  // AI-UX-04: pending classifications for this case
+  const { data: pendingClassifications } = useClassifications("pending", id, 1, 1);
+  const latestPendingClassification = pendingClassifications?.[0] ?? null;
+  const approveClassification = useApproveClassification();
+  const rejectClassification = useRejectClassification();
+  const [aiBannerCollapsed, setAiBannerCollapsed] = useState(false);
+  const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
 
   // Set breadcrumb label to case number
   useBreadcrumbs(zaak ? [{ segment: id, label: zaak.case_number }] : []);
@@ -365,43 +386,143 @@ export default function ZaakDetailPage() {
         setPhoneNoteText={setPhoneNoteText}
       />
 
-      {/* Follow-up recommendation banner */}
-      {followupRec && (
-        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Zap className="h-5 w-5 text-amber-600 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-amber-900">
-                {followupRec.action_label}
-              </p>
-              <p className="text-xs text-amber-700">
-                {followupRec.reasoning}
-              </p>
+      {/* AI-UX-04: AI suggestion banner */}
+      {!aiBannerDismissed && (latestPendingClassification || followupRec) && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+          {/* Header — clickable to collapse */}
+          <button
+            type="button"
+            onClick={() => setAiBannerCollapsed(!aiBannerCollapsed)}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-primary/10 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">
+                AI-suggestie
+              </span>
+              <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+                AI
+              </span>
             </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-4">
-            <button
-              onClick={() => {
-                approveAndExecuteFollowup.mutate(
-                  { id: followupRec.id },
-                  {
-                    onSuccess: () => toast.success("Aanbeveling uitgevoerd"),
-                  },
-                );
-              }}
-              disabled={approveAndExecuteFollowup.isPending}
-              className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
-            >
-              <CheckCircle2 className="h-3 w-3" />
-              Uitvoeren
-            </button>
-            <Link
-              href="/followup"
-              className="text-xs text-amber-700 hover:text-amber-900 hover:underline"
-            >
-              Alle aanbevelingen
-            </Link>
-          </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setAiBannerDismissed(true); }}
+                className="rounded-md p-1 hover:bg-muted transition-colors"
+                title="Verberg"
+              >
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+              {aiBannerCollapsed ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+          </button>
+
+          {/* Content — collapsible */}
+          {!aiBannerCollapsed && (
+            <div className="px-4 pb-4 space-y-3">
+              {/* Pending classification */}
+              {latestPendingClassification && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {latestPendingClassification.category_label}
+                      </p>
+                      <span className={`shrink-0 text-[10px] font-medium ${confidenceTextCls(latestPendingClassification.confidence)}`}>
+                        {confidenceLabelText(latestPendingClassification.confidence)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground truncate pl-5.5">
+                      {latestPendingClassification.suggested_action_label}
+                      {latestPendingClassification.email_subject && ` — "${latestPendingClassification.email_subject}"`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        approveClassification.mutate(
+                          { id: latestPendingClassification.id },
+                          { onSuccess: () => toast.success("Classificatie goedgekeurd") },
+                        );
+                      }}
+                      disabled={approveClassification.isPending || rejectClassification.isPending}
+                      className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-[11px] font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                      {approveClassification.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                      Akkoord
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        rejectClassification.mutate(
+                          { id: latestPendingClassification.id },
+                          { onSuccess: () => toast.success("Classificatie afgewezen") },
+                        );
+                      }}
+                      disabled={approveClassification.isPending || rejectClassification.isPending}
+                      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 transition-colors"
+                    >
+                      {rejectClassification.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )}
+                      Afwijzen
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Followup recommendation */}
+              {followupRec && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {followupRec.action_label}
+                      </p>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground truncate pl-5.5">
+                      {followupRec.reasoning}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        approveAndExecuteFollowup.mutate(
+                          { id: followupRec.id },
+                          { onSuccess: () => toast.success("Aanbeveling uitgevoerd") },
+                        );
+                      }}
+                      disabled={approveAndExecuteFollowup.isPending}
+                      className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-2.5 py-1.5 text-[11px] font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      Uitvoeren
+                    </button>
+                    <Link
+                      href="/followup"
+                      className="text-[11px] text-muted-foreground hover:text-foreground hover:underline"
+                    >
+                      Details
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

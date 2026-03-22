@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
   Check,
+  CheckCheck,
   Download,
   File,
   FolderInput,
@@ -28,6 +29,7 @@ import {
   useSaveAttachmentToCase,
   type SyncedEmailSummary,
 } from "@/hooks/use-email-sync";
+import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
 import { formatDate, formatDateShort } from "@/lib/utils";
 import { tokenStore } from "@/lib/token-store";
@@ -199,13 +201,60 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
 
 // ── Correspondentie Tab ─────────────────────────────────────────────────────
 
+// ── Classification Badge ─────────────────────────────────────────────────────
+
+function ClassificationBadge({ classification }: { classification: Classification }) {
+  const confidenceColor =
+    classification.confidence >= 0.8
+      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+      : classification.confidence >= 0.6
+        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+        : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400";
+
+  const statusIcon =
+    classification.status === "executed" ? (
+      <CheckCheck className="h-2.5 w-2.5" />
+    ) : classification.status === "approved" ? (
+      <Check className="h-2.5 w-2.5" />
+    ) : classification.status === "pending" ? (
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-current" />
+      </span>
+    ) : null;
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${confidenceColor}`}
+      title={`${classification.category_label} (${Math.round(classification.confidence * 100)}% zekerheid) — ${classification.suggested_action_label}`}
+    >
+      {statusIcon}
+      {classification.category_label}
+    </span>
+  );
+}
+
+// ── Correspondentie Tab ─────────────────────────────────────────────────────
+
 function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?: () => void }) {
   const { data: logs, isLoading: logsLoading } = useEmailLogs(caseId);
   const { data: syncedData, isLoading: syncedLoading } = useCaseEmails(caseId);
+  const { data: classifications } = useClassifications(undefined, caseId, 1, 100);
   const oauthStatus = useEmailOAuthStatus();
   const syncEmails = useSyncEmails();
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [viewFilter, setViewFilter] = useState<"all" | "inbound" | "outbound">("all");
+
+  // Build lookup map: synced_email_id → Classification
+  const classificationMap = useMemo(() => {
+    const map = new Map<string, Classification>();
+    if (classifications) {
+      for (const c of classifications) {
+        map.set(c.synced_email_id, c);
+      }
+    }
+    return map;
+  }, [classifications]);
 
   const isLoading = logsLoading || syncedLoading;
 
@@ -413,6 +462,9 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1">
+                        {item.type === "synced" && item.direction === "inbound" && classificationMap.has(item.id) && (
+                          <ClassificationBadge classification={classificationMap.get(item.id)!} />
+                        )}
                         {item.status === "failed" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
                             <XCircle className="h-2.5 w-2.5" />

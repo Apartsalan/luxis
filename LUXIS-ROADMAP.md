@@ -495,13 +495,13 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | # | Omschrijving | Status |
 |---|-------------|--------|
 | AI-UX-01 | **AI badges op email-rijen** — classificatie-badge (categorie + confidence) direct zichtbaar in de correspondentie email-lijst, niet alleen na klikken in detail-panel. | ✅ Done (sessie 99, 22 mrt) |
-| AI-UX-02 | **"Wacht op review" indicator** — visuele hint op emails die nog op AI-review wachten (icoontje of kleur). | ❌ TODO |
+| AI-UX-02 | **"Wacht op review" indicator** — visuele hint op emails die nog op AI-review wachten (icoontje of kleur). | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-03 | **AI suggesties in Mijn Taken** — AI-secties met paarse AI-badge, tonen altijd (ook als lege state). Geen aparte AI-pagina. | ✅ Done (sessie 99, 22 mrt) |
-| AI-UX-04 | **AI suggestion banner op dossier** — bovenaan dossier-detail een inklapbare kaart met de huidige AI-suggestie + Accepteren/Afwijzen. | ❌ TODO |
+| AI-UX-04 | **AI suggestion banner op dossier** — bovenaan dossier-detail een inklapbare kaart met de huidige AI-suggestie + Accepteren/Afwijzen. | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-05 | **AI indicators op incasso pipeline** — AI-badge op dossier-kaarten in de pipeline ("Termijn verloopt morgen", "Actie voorgesteld"). | ❌ TODO |
 | AI-UX-06 | **AI in activity feed** — AI-acties in dezelfde tijdlijn als menselijke acties, met AI-badge/avatar. | ❌ TODO |
 | AI-UX-07 | **Dashboard AI widget** — samenvatting "3 dossiers vereisen actie, 2 termijnen verlopen vandaag". | ❌ TODO |
-| AI-UX-08 | **Nederlandse tekstlabels i.p.v. percentages** — "Aanbevolen" (blauw), "Mogelijk" (oranje), "Onzeker" (grijs) i.p.v. "95%". | ❌ TODO |
+| AI-UX-08 | **Nederlandse tekstlabels i.p.v. percentages** — "Aanbevolen" (blauw), "Mogelijk" (oranje), "Onzeker" (grijs) i.p.v. "95%". | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-09 | **AI concept-berichten klaarzetten** — bij accepteren schrijft de AI een kant-en-klaar inhoudelijk bericht. Niet een standaard afwijzing, maar een onderbouwd antwoord op basis van ALLE dossiercontext (zie AI-UX-13). Lisanne reviewt en verstuurt. Alleen voor incasso. | ❌ TODO |
 | AI-UX-10 | **Response templates tailoren** — de 6 standaard antwoord-templates moeten nog afgestemd worden op hoe Kesting Legal communiceert. Input van Arsalan nodig. | ❌ TODO — wacht op input |
 | AI-UX-11 | **Algemene voorwaarden per cliënt** — upload/opslag van algemene voorwaarden per cliënt (niet van Kesting Legal). AI valt hier op terug bij betwistingen. Per dossier gekoppeld via de cliënt. | ❌ TODO |

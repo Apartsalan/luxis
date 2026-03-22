@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 maart 2026 (sessie 99 — AI UX inline badges)
-**Laatste feature/fix:** Sessie 99 — AI-UX-01 (email badges) + AI-UX-03 (taken AI badges) + BUG-51 verified + verificatie-loop in CLAUDE.md
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 100 — AI UX Fase 2)
+**Laatste feature/fix:** Sessie 100 — AI-UX-08 (Nederlandse tekstlabels) + AI-UX-02 ("Wacht op review" indicator) + AI-UX-04 (AI suggestion banner)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +13,26 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 100 — 23 maart 2026) — AI UX Fase 2
+
+**AI-UX-08: Nederlandse tekstlabels i.p.v. percentages**
+- Confidence percentages vervangen door "Aanbevolen" (blauw, ≥80%), "Mogelijk" (oranje, ≥60%), "Onzeker" (grijs, <60%)
+- Gedeelde utility `frontend/src/lib/confidence.ts` voor consistente labels en kleuren
+- Aangepaste bestanden: classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx
+
+**AI-UX-02: "Wacht op review" indicator op emails**
+- Emails met pending classificatie tonen nu een subtiel Bot-icoon + "Review" label naast het onderwerp in de CorrespondentieTab email-lijst
+
+**AI-UX-04: AI suggestion banner bovenaan dossier-detail**
+- Inklapbare kaart met AI-badge bovenaan de dossier-detail page
+- Toont pending classificatie (met categorie, suggestie, en confidence label) en followup-aanbevelingen
+- Inline Akkoord/Afwijzen knoppen direct op de banner
+- Vervangt de oude eenvoudige followup-banner met een uitgebreidere versie
+- Dismiss-knop om de banner te verbergen
+
+**Nieuwe bestanden:** frontend/src/lib/confidence.ts
+**Gewijzigde bestanden:** classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx, zaken/[id]/page.tsx
 
 ## Wat er gedaan is (sessie 99 — 22 maart 2026) — AI UX inline badges
 

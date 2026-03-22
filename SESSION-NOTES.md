@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 97 — Frontend Design Sprint)
-**Laatste feature/fix:** Sessie 97 — UX-22 Top 10: 8/10 items geïmplementeerd (font, login, empty states, KPI cards, sidebar, tabellen, microinteracties)
+**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — Frontend Design Sprint deel 2)
+**Laatste feature/fix:** Sessie 98 — UX-22 Top 10: 10/10 items COMPLEET (incasso collapse + correspondentie date grouping)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -10,8 +10,27 @@
 **Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89-92 (28/30 gefixt, 2 resterend: SEC-16 KDF al gefixt maar niet in audit, SEC-23 idem)
 **Code Quality Sprint:** 8/9 afgerond (CQ-7 overgeslagen) + mega-audit (CQ-10/11/12/13/14-18/19/20 gefixt)
 **Lisanne Feedback Sprint 3:** 6/6 afgerond + QA PASS ✅
+**UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
-**Volgende sessie:** Sessie 98 — Frontend Design Sprint deel 2 (resterende 2 UX-22 items + visuele QA)
+
+## Wat er gedaan is (sessie 98 — 22 maart 2026) — Frontend Design Sprint deel 2 (UX-22 items 9+10)
+
+### Wat er gedaan is:
+- **Incasso pipeline — lege secties collapsed:** secties zonder dossiers worden standaard ingeklapt weergegeven met subtiele styling (opacity + chevron toggle), expand/collapse met smooth animatie
+- **Incasso pipeline — "Zonder stap" warning-styling:** amber border, amber header tekst, amber achtergrond tint, hint "wijs een stap toe"
+- **Correspondentie — in/uit visueel onderscheid:** gekleurde linkerrand per richting (blauw = inkomend, groen/emerald = uitgaand) op elke email rij
+- **Correspondentie — date grouping:** emails gegroepeerd per dag met sticky headers ("Vandaag", "Gisteren", "3 dagen geleden", "18 maart")
+
+### UX-22 Top 10 status: 10/10 COMPLEET ✅
+
+### Commits:
+- `ac0ad7e` feat(frontend): incasso collapse empty sections + correspondentie date grouping
+
+### Gewijzigde bestanden:
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — PipelineColumnView: collapsed empty state + warning styling
+- `frontend/src/app/(dashboard)/correspondentie/page.tsx` — date grouping + direction left border
+
+---
 
 ## Wat er gedaan is (sessie 97 — 21 maart 2026) — Frontend Design Sprint (UX-22 Top 10)
 

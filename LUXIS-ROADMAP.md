@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 21 maart 2026 (sessie 96 — tooling upgrade + frontend design audit)
+**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — UX-22 Design Sprint compleet)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -480,7 +480,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | UX-21 | **isError niet afgevangen** — financiële queries tonen lege lijst i.p.v. error. | Frontend | ✅ Sessie 91 (QueryError in 5 financial tabs) |
 | UX-22 | **Frontend Design Audit** — alle pagina's doorlopen met Frontend Design skill en UI verbeterpunten inventariseren (anti-"AI slop", design systeem, typografie, kleurgebruik, compositie). Rapport: `docs/research/UX-22-FRONTEND-DESIGN-AUDIT.md` (score 5.5/10, 20 pagina's geaudit). | Frontend | ✅ Sessie 96 |
 | UX-23 | **Design Sprint deel 1** — 8/10 UX-22 Top 10 items geïmplementeerd: Inter font, login redesign, empty states, KPI cards, sidebar secties, tabel responsiveness, microinteracties. | Frontend | ✅ Sessie 97 |
-| UX-24 | **Design Sprint deel 2** — resterende 2 items: incasso pipeline collapse lege secties + correspondentie in/uit visueel + date grouping. | Frontend | ❌ TODO |
+| UX-24 | **Design Sprint deel 2** — resterende 2 items: incasso pipeline collapse lege secties + correspondentie in/uit visueel + date grouping. | Frontend | ✅ Sessie 98 |
 
 ### Tooling Upgrade (sessie 96)
 

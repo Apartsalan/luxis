@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — UX sweep + AI UX research)
-**Laatste feature/fix:** Sessie 98 — UX-14 t/m UX-20 compleet + AI UX research + sidebar fix + disk cleanup
+**Laatst bijgewerkt:** 22 maart 2026 (sessie 99 — AI UX inline badges)
+**Laatste feature/fix:** Sessie 99 — AI-UX-01 (email badges) + AI-UX-03 (taken AI badges) + BUG-51 verified + verificatie-loop in CLAUDE.md
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +13,25 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 99 — 22 maart 2026) — AI UX inline badges
+
+### AI UX implementatie:
+- **AI-UX-01:** Classificatie-badges op email-rijen in CorrespondentieTab — badge toont category_label (Nederlands) + confidence kleurcodering (groen/blauw/oranje) + status icon (pulsend stipje/check/dubbel-check)
+- **AI-UX-03:** AI-secties in Mijn Taken verbeterd — paarse "AI" badge op headers, lege state tekst i.p.v. verborgen secties
+- **AI-UX-12 / BUG-51:** Correspondentie zoekfunctie geverifieerd — werkt correct, niet reproduceerbaar
+
+### Proces:
+- Verificatie-loop als harde regel toegevoegd aan CLAUDE.md (build → visueel → functioneel → pas dan done)
+- .claude/worktrees opgeruimd: 35 worktrees + 36 branches verwijderd (42MB)
+- Vergelijking gemaakt van .claude/ folder structuur met best practices — conclusie: onze setup is goed, rules/ niet nodig
+
+### Gewijzigde bestanden:
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — classificatie badges
+- `frontend/src/app/(dashboard)/taken/page.tsx` — AI badge headers + empty state
+- `CLAUDE.md` — verificatie-loop regel
+
+---
 
 ## Wat er gedaan is (sessie 98 — 22 maart 2026) — UX sweep + AI UX research + infra
 

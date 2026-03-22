@@ -486,7 +486,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Omschrijving | Ernst | Status |
 |---|-------------|-------|--------|
-| BUG-51 | **Correspondentie zoekfunctie** — zoeken op de correspondentie pagina geeft geen resultaten. | Midden | ❌ TODO |
+| BUG-51 | **Correspondentie zoekfunctie** — zoeken op de correspondentie pagina geeft geen resultaten. | Midden | ✅ Niet reproduceerbaar (sessie 99, 22 mrt) — zoekfunctie werkt correct |
 
 ### AI UX/UI Verbetering (sessie 98 feedback)
 
@@ -494,9 +494,9 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Omschrijving | Status |
 |---|-------------|--------|
-| AI-UX-01 | **AI badges op email-rijen** — classificatie-badge (categorie + confidence) direct zichtbaar in de correspondentie email-lijst, niet alleen na klikken in detail-panel. | ❌ TODO |
+| AI-UX-01 | **AI badges op email-rijen** — classificatie-badge (categorie + confidence) direct zichtbaar in de correspondentie email-lijst, niet alleen na klikken in detail-panel. | ✅ Done (sessie 99, 22 mrt) |
 | AI-UX-02 | **"Wacht op review" indicator** — visuele hint op emails die nog op AI-review wachten (icoontje of kleur). | ❌ TODO |
-| AI-UX-03 | **AI suggesties in Mijn Taken** — AI-suggesties verschijnen als taken (met 🤖 badge) in de bestaande takenlijst. Geen aparte AI-pagina. | ❌ TODO |
+| AI-UX-03 | **AI suggesties in Mijn Taken** — AI-secties met paarse AI-badge, tonen altijd (ook als lege state). Geen aparte AI-pagina. | ✅ Done (sessie 99, 22 mrt) |
 | AI-UX-04 | **AI suggestion banner op dossier** — bovenaan dossier-detail een inklapbare kaart met de huidige AI-suggestie + Accepteren/Afwijzen. | ❌ TODO |
 | AI-UX-05 | **AI indicators op incasso pipeline** — AI-badge op dossier-kaarten in de pipeline ("Termijn verloopt morgen", "Actie voorgesteld"). | ❌ TODO |
 | AI-UX-06 | **AI in activity feed** — AI-acties in dezelfde tijdlijn als menselijke acties, met AI-badge/avatar. | ❌ TODO |
@@ -507,7 +507,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | AI-UX-11 | **Algemene voorwaarden per cliënt** — upload/opslag van algemene voorwaarden per cliënt (niet van Kesting Legal). AI valt hier op terug bij betwistingen. Per dossier gekoppeld via de cliënt. | ❌ TODO |
 | AI-UX-13 | **AI raadpleegt volledige dossiercontext** — de AI leest ALLES voordat hij een concept schrijft: (1) alle emails in+uit, (2) notities/telefoonnotities in het dossier, (3) contract/overeenkomst PDF, (4) factuur PDF, (5) algemene voorwaarden cliënt, (6) vorderingen + betalingen, (7) activity feed, (8) eerder verzonden brieven. Zonder deze context is de AI te simpel. | ❌ TODO |
 | AI-UX-14 | **Bronvermelding in concept-berichten** — AI verwijst naar specifieke artikelen uit contract/AV, berekent termijnen, citeert relevante correspondentie. Lisanne kan snel checken of het klopt. | ❌ TODO |
-| AI-UX-12 | **Correspondentie zoekfunctie** — zoeken werkt niet (BUG-51). | ❌ TODO |
+| AI-UX-12 | **Correspondentie zoekfunctie** — zoeken werkt niet (BUG-51). | ✅ Niet reproduceerbaar (sessie 99, 22 mrt) |
 
 ### Tooling Upgrade (sessie 96)
 

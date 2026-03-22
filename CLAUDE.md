@@ -98,13 +98,17 @@ Laat zien:
 
 Pas na goedkeuring implementeren.
 
-### Stap 4: Zelfcheck na implementatie
+### Stap 4: Verificatie-loop (HARDE REGEL)
 
-Na het bouwen, voordat je deploy-commando geeft:
-- Klik zelf door de hele flow (via Playwright als beschikbaar)
-- Vergelijk met wat je in je onderzoek vond
-- Vraag jezelf af: zou ik hier als gebruiker tevreden mee zijn?
-- Zijn er edge cases die je niet hebt afgevangen?
+Na elke implementatie, VOORDAT je doorgaat naar de volgende taak:
+
+1. **Build check** — `tsc --noEmit` (frontend) of `pytest` (backend). Rood? → Fix → opnieuw.
+2. **Visuele check** — Preview/screenshot van het resultaat. Ziet het er goed uit?
+3. **Functionele check** — Klik door de flow. Werkt de interactie?
+4. **Pas "done" als alle 3 groen zijn.** Niet eerder.
+
+Als iets faalt: fix EERST, dan opnieuw door de loop.
+Ga NOOIT door naar de volgende taak met een kapotte vorige taak.
 
 ## Working Agreements
 
@@ -131,6 +135,7 @@ Na het bouwen, voordat je deploy-commando geeft:
 
 **Verificatie voor "done":**
 - Markeer een taak NOOIT als klaar zonder bewijs (build, test, logs, handmatige check)
+- Volg ALTIJD de verificatie-loop uit Stap 4 (build → visueel → functioneel → pas dan done)
 - Vraag jezelf: "Zou een senior engineer dit goedkeuren?"
 
 **Bugs autonoom fixen:**

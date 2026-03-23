@@ -924,7 +924,13 @@ async def get_incasso_invoice_preview(
 
     # Interest calculation
     from app.collections.service import get_financial_summary
-    fin_summary = await get_financial_summary(db, tenant_id, case_id)
+    fin_summary = await get_financial_summary(
+        db, tenant_id, case_id,
+        interest_type=case.interest_type,
+        contractual_rate=case.contractual_rate,
+        contractual_compound=case.contractual_compound,
+        bik_override=case.bik_override,
+    )
     interest_amount = Decimal(str(fin_summary.get("total_interest", 0)))
     today_str = date.today().isoformat()
 

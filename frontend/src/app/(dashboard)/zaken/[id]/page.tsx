@@ -238,10 +238,10 @@ export default function ZaakDetailPage() {
           inline_attachments: data.inline_attachments,
         });
 
-        // Draft is created in M365 — syncs to desktop Outlook instantly
-        // Try opening desktop Outlook via protocol handler
-        window.location.href = "ms-outlook:";
-        toast.success("Concept staat klaar in Outlook — ga naar Concepten en klik Verzenden");
+        // Draft syncs to desktop Outlook within seconds
+        toast.success("Concept staat klaar in Outlook → ga naar Concepten en klik Verzenden", {
+          duration: 6000,
+        });
       } else {
         // Fallback: direct send via SMTP (no attachments)
         await sendCaseEmail.mutateAsync({

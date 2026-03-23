@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 100 — AI UX Fase 2)
-**Laatste feature/fix:** Sessie 100 — AI-UX-08 (Nederlandse tekstlabels) + AI-UX-02 ("Wacht op review" indicator) + AI-UX-04 (AI suggestion banner)
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 100 — AI UX Fase 2 + AI-UX-11)
+**Laatste feature/fix:** Sessie 100 — AI-UX-08 (Nederlandse tekstlabels) + AI-UX-02 ("Wacht op review" indicator) + AI-UX-04 (AI suggestion banner) + AI-UX-11 (Algemene Voorwaarden per client)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -61,8 +61,16 @@
 - Gebruikt structured output (tool_use) wanneer schema gedetecteerd wordt
 - Bedoeld voor zware analyse (contracten, betwistingen) — niet voor dagelijks volume
 
-**Nieuwe bestanden:** frontend/src/lib/confidence.ts
-**Gewijzigde bestanden:** classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx, zaken/[id]/page.tsx
+**AI-UX-11: Algemene Voorwaarden per client — upload/opslag**
+- Backend: terms_file_path + terms_file_name kolommen op Contact model
+- Upload/download/delete endpoints in relations router (PDF, DOCX, max 10MB)
+- Alembic migratie voor nieuwe kolommen
+- Frontend: TermsSection component op relatie-detail pagina
+- Upload drop zone, download, vervangen en verwijderen acties
+- Fix: sec13 RLS migratie voor ontbrekende email_logs tabel (IF EXISTS guard)
+
+**Nieuwe bestanden:** frontend/src/lib/confidence.ts, frontend/src/app/(dashboard)/relaties/[id]/components/TermsSection.tsx, backend/alembic/versions/*_add_terms_file_to_contacts.py
+**Gewijzigde bestanden:** classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx, zaken/[id]/page.tsx, backend/app/relations/models.py, backend/app/relations/schemas.py, backend/app/relations/router.py, frontend/src/app/(dashboard)/relaties/[id]/page.tsx, backend/alembic/versions/*_sec13_rls.py
 
 ## Wat er gedaan is (sessie 99 — 22 maart 2026) — AI UX inline badges
 

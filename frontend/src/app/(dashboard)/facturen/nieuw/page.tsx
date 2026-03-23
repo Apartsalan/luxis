@@ -114,13 +114,13 @@ export default function NieuweFactuurPage() {
         {
           description: `Provisie ${provisieData.provisie_percentage}% over geïnd bedrag (${formatCurrency(provisieData.collected_amount)})`,
           quantity: "1",
-          unit_price: feeAmount.toFixed(2),
+          unit_price: Number(feeAmount).toFixed(2),
         },
         ...(provisieData.fixed_case_costs > 0
           ? [{
               description: "Vaste dossierkosten",
               quantity: "1",
-              unit_price: provisieData.fixed_case_costs.toFixed(2),
+              unit_price: Number(provisieData.fixed_case_costs).toFixed(2),
             }]
           : []),
       ]);
@@ -230,7 +230,7 @@ export default function NieuweFactuurPage() {
 
     const newLines: LineItem[] = selected.map((entry) => {
       const hours = entry.duration_minutes / 60;
-      const rate = entry.hourly_rate ?? 0;
+      const rate = Number(entry.hourly_rate ?? 0);
       return {
         description: entry.description || "Juridische werkzaamheden",
         quantity: hours.toFixed(2),
@@ -255,7 +255,7 @@ export default function NieuweFactuurPage() {
       {
         description: expense.description,
         quantity: "1",
-        unit_price: expense.amount.toFixed(2),
+        unit_price: Number(expense.amount).toFixed(2),
         expense_id: expense.id,
       },
     ]);
@@ -864,7 +864,7 @@ export default function NieuweFactuurPage() {
                   <div className="space-y-1">
                     {availableEntries.map((entry) => {
                       const hours = entry.duration_minutes / 60;
-                      const amount = hours * (entry.hourly_rate ?? 0);
+                      const amount = hours * Number(entry.hourly_rate ?? 0);
                       const isSelected = selectedTimeEntryIds.has(entry.id);
 
                       return (

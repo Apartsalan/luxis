@@ -24,6 +24,7 @@ export interface CaseSummary {
   provisie_percentage: number | null;
   fixed_case_costs: number | null;
   minimum_fee: number | null;
+  provisie_base: string;
   client: { id: string; name: string; email?: string | null } | null;
   opposing_party: { id: string; name: string; email?: string | null } | null;
   created_at: string;

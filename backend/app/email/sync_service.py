@@ -1,12 +1,13 @@
 """Email sync service — fetches emails from provider, matches to dossiers.
 
 Matching logic (in priority order):
-  1. Case number match: scan subject + body for patterns like "2026-00012"
-  2. Client reference match: scan subject + body for known Case.reference values
-  3. Court case number match: scan subject + body for known Case.court_case_number values
+  1. Thread match: same provider_thread_id as an already-linked email
+  2. System/bounce email: auto-dismiss, link only via thread or case number
+  3. Case number match: scan SUBJECT for patterns like "2026-00012"
+     If a case number is found but the dossier doesn't exist → STOP (don't fallthrough)
   4. Contact email match: look up email addresses → Contact → Case
-  5. If exactly one case matches (from any method), auto-link
-  6. If multiple cases match, leave unlinked (user assigns via M6 "ongesorteerd" queue)
+  5. If exactly one case matches, auto-link
+  6. If multiple cases match, leave unlinked (user assigns via "ongesorteerd" queue)
 """
 
 import json
@@ -76,75 +77,115 @@ def _build_searchable_text(
 async def _find_case_by_case_number(
     db: AsyncSession,
     tenant_id: uuid.UUID,
-    text: str,
-) -> uuid.UUID | None:
-    """Scan text for case numbers, client references, and court case numbers.
+    subject: str,
+) -> tuple[uuid.UUID | None, str | None, bool]:
+    """Scan subject for case numbers like "2026-00012".
 
-    Matching methods (all run, results merged):
-      1. Case number regex: "2026-00012" → Case.case_number
-      2. Client reference: known Case.reference values found in text
-      3. Court case number: known Case.court_case_number values found in text
-
-    Returns case_id if exactly one active case matches, otherwise None.
+    Returns (case_id, matched_by, has_case_number):
+      - (uuid, "case_number", True) — matched to an active case
+      - (None, None, True)          — case number found but dossier doesn't exist
+      - (None, None, False)         — no case number found in text
     """
-    if not text:
-        return None
+    if not subject:
+        return None, None, False
 
-    case_ids = set()
-    text_lower = text.lower()
+    matches = CASE_NUMBER_RE.findall(subject)
+    if not matches:
+        return None, None, False
 
-    # --- Method 1: Case number regex ---
-    matches = CASE_NUMBER_RE.findall(text)
-    if matches:
-        result = await db.execute(
-            select(Case.id).where(
-                Case.tenant_id == tenant_id,
-                Case.is_active == True,  # noqa: E712
-                Case.case_number.in_(matches),
-            )
-        )
-        for row in result.all():
-            case_ids.add(row[0])
-
-    # --- Method 2: Client reference match ---
-    ref_result = await db.execute(
-        select(Case.id, Case.reference).where(
+    # Case number found in subject — look up in DB
+    result = await db.execute(
+        select(Case.id).where(
             Case.tenant_id == tenant_id,
             Case.is_active == True,  # noqa: E712
-            Case.reference.isnot(None),
-            Case.reference != "",
+            Case.case_number.in_(matches),
         )
     )
-    for row in ref_result.all():
-        ref = row[1].strip()
-        if len(ref) >= 3 and ref.lower() in text_lower:
-            case_ids.add(row[0])
-
-    # --- Method 3: Court case number match (zaaknummer rechtbank) ---
-    court_result = await db.execute(
-        select(Case.id, Case.court_case_number).where(
-            Case.tenant_id == tenant_id,
-            Case.is_active == True,  # noqa: E712
-            Case.court_case_number.isnot(None),
-            Case.court_case_number != "",
-        )
-    )
-    for row in court_result.all():
-        court_num = row[1].strip()
-        if len(court_num) >= 3 and court_num.lower() in text_lower:
-            case_ids.add(row[0])
+    case_ids = {row[0] for row in result.all()}
 
     if len(case_ids) == 1:
-        return case_ids.pop()
+        return case_ids.pop(), "case_number", True
 
     if len(case_ids) > 1:
         logger.info(
-            "Meerdere dossiers (%d) gematcht op "
-            "nummer/referentie/zaaknummer — niet auto-gekoppeld",
+            "Meerdere dossiers (%d) gematcht op dossiernummer %s"
+            " — niet auto-gekoppeld",
             len(case_ids),
+            matches,
         )
+        return None, None, True
 
-    return None
+    # Case number found in text but no active dossier exists
+    logger.info(
+        "Dossiernummer %s gevonden in email maar dossier bestaat niet"
+        " — niet doorvallen naar contact-matching",
+        matches,
+    )
+    return None, None, True
+
+
+async def _find_case_by_thread(
+    db: AsyncSession,
+    account_id: uuid.UUID,
+    thread_id: str | None,
+) -> uuid.UUID | None:
+    """Find a case via an already-linked email in the same thread."""
+    if not thread_id:
+        return None
+    result = await db.execute(
+        select(SyncedEmail.case_id)
+        .where(
+            SyncedEmail.email_account_id == account_id,
+            SyncedEmail.provider_thread_id == thread_id,
+            SyncedEmail.case_id.isnot(None),
+        )
+        .order_by(SyncedEmail.email_date.desc())
+        .limit(1)
+    )
+    row = result.first()
+    return row[0] if row else None
+
+
+# ── Bounce / system email detection ──────────────────────────────────────────
+
+_BOUNCE_FROM_LOCALS = {
+    "mailer-daemon", "postmaster", "mail-daemon",
+    "noreply", "no-reply", "auto-reply", "autoreply",
+}
+
+_BOUNCE_SUBJECT_RE = re.compile(
+    r"(undeliverable|delivery.{0,10}fail|returned.{0,5}mail|"
+    r"niet.{0,5}bezorg|onbestelbaar|failure.{0,5}notice|"
+    r"delivery.{0,5}status|auto.{0,3}reply|automatisch.{0,5}antwoord|"
+    r"out.{0,3}of.{0,3}office|afwezig)",
+    re.IGNORECASE,
+)
+
+
+def _is_system_email(msg: EmailMessage) -> bool:
+    """Detect bounce/NDR/auto-reply/system emails."""
+    from_email = (msg.from_email or "").lower()
+    from_local = from_email.split("@")[0] if from_email else ""
+    from_name = (msg.from_name or "").lower()
+    subject = msg.subject or ""
+
+    # Known bounce senders
+    if from_local in _BOUNCE_FROM_LOCALS:
+        return True
+
+    # Microsoft Exchange bounce format
+    if "microsoftexchange" in from_email.replace("-", "").replace("_", ""):
+        return True
+
+    # Microsoft system notifications
+    if from_name in ("microsoft", "microsoft outlook", "microsoft 365"):
+        return True
+
+    # Bounce/auto-reply subject patterns
+    if _BOUNCE_SUBJECT_RE.search(subject):
+        return True
+
+    return False
 
 
 async def _find_case_for_email(
@@ -440,22 +481,45 @@ async def sync_emails_for_account(
             # If already synced but unlinked → try to link it
             if existing_row[1] is None:
                 link_to = force_case_id
+                matched_by_val = "force_case_id" if force_case_id else None
                 if not link_to:
-                    # Try case number matching on this already-synced email
-                    searchable = _build_searchable_text(
-                        msg.subject, msg.body_text, msg.body_html, msg.snippet
-                    )
-                    link_to = await _find_case_by_case_number(
-                        db, account.tenant_id, searchable
+                    link_to, matched_by_val, _ = await _find_case_by_case_number(
+                        db, account.tenant_id, msg.subject or ""
                     )
                 if link_to:
                     synced_email = (await db.execute(
                         select(SyncedEmail).where(SyncedEmail.id == existing_row[0])
                     )).scalar_one()
                     synced_email.case_id = link_to
+                    synced_email.matched_by = matched_by_val
                     stats["linked"] += 1
             stats["skipped"] += 1
             continue
+
+        # Secondary dedup: outbound emails sent via provider get a synthetic
+        # message ID ("outlook-sent-..."). When the sync later picks up the
+        # same email from Sent Items with a real Graph ID, merge instead of
+        # creating a duplicate.
+        if msg.from_email and msg.from_email.lower() == account.email_address.lower():
+            from sqlalchemy import func as sa_func
+            dedup_result = await db.execute(
+                select(SyncedEmail).where(
+                    SyncedEmail.email_account_id == account.id,
+                    SyncedEmail.provider_message_id.like("outlook-sent-%"),
+                    SyncedEmail.direction == "outbound",
+                    sa_func.left(SyncedEmail.subject, 30) == (msg.subject or "")[:30],
+                )
+            )
+            dedup_match = dedup_result.scalar()
+            if dedup_match:
+                # Update existing record with real IDs from Graph
+                dedup_match.provider_message_id = msg.provider_message_id
+                dedup_match.provider_thread_id = msg.thread_id
+                logger.info(
+                    f"Dedup merge: updated synthetic ID for '{msg.subject[:50]}'"
+                )
+                stats["skipped"] += 1
+                continue
 
         # Collect all email addresses from the message for matching
         all_addresses = []
@@ -476,23 +540,54 @@ async def sync_emails_for_account(
         # Remove the account's own email from matching
         all_addresses = [a for a in all_addresses if a != account.email_address.lower()]
 
-        # Try to match to a case — priority: force_case_id > case number > email address
-        if force_case_id:
-            case_id = force_case_id
-        else:
-            # First try: match case number or client reference in subject + body + html
-            searchable_text = _build_searchable_text(
-                msg.subject, msg.body_text, msg.body_html, msg.snippet
-            )
-            case_id = await _find_case_by_case_number(
-                db, account.tenant_id, searchable_text
-            )
-            # Second try: match email addresses to contacts → cases
-            if not case_id:
-                case_id = await _find_case_for_email(db, account.tenant_id, all_addresses)
-
+        # ── Matching pipeline ──────────────────────────────────────────────
         direction = _determine_direction(msg, account.email_address)
         email_date = _parse_email_date(msg.date)
+        case_id = None
+        matched_by = None
+        is_bounce = False
+
+        if force_case_id:
+            # Priority 1: explicit case context
+            case_id = force_case_id
+            matched_by = "force_case_id"
+        else:
+            # Priority 2: thread matching — most reliable
+            case_id = await _find_case_by_thread(
+                db, account.id, msg.thread_id
+            )
+            if case_id:
+                matched_by = "thread"
+
+            # Priority 3: bounce/system email detection
+            if not case_id and _is_system_email(msg):
+                is_bounce = True
+                # For bounces: only try case number in subject, never contact-match
+                cn_case_id, cn_matched_by, _ = await _find_case_by_case_number(
+                    db, account.tenant_id, msg.subject or ""
+                )
+                if cn_case_id:
+                    case_id = cn_case_id
+                    matched_by = cn_matched_by
+                # Bounce without a link → leave unlinked, auto-dismiss
+            elif not case_id:
+                # Priority 4: case number in subject
+                cn_case_id, cn_matched_by, has_case_number = await _find_case_by_case_number(
+                    db, account.tenant_id, msg.subject or ""
+                )
+                if cn_case_id:
+                    case_id = cn_case_id
+                    matched_by = cn_matched_by
+                elif not has_case_number:
+                    # Priority 5: contact email match
+                    # ONLY if no case number was found in the subject
+                    # (if a case number was found but dossier doesn't exist,
+                    #  we intentionally stop here — don't guess)
+                    case_id = await _find_case_for_email(
+                        db, account.tenant_id, all_addresses
+                    )
+                    if case_id:
+                        matched_by = "contact_email"
 
         synced = SyncedEmail(
             tenant_id=account.tenant_id,
@@ -511,6 +606,9 @@ async def sync_emails_for_account(
             direction=direction,
             is_read=msg.is_read,
             has_attachments=msg.has_attachments,
+            is_bounce=is_bounce,
+            is_dismissed=is_bounce,  # auto-dismiss bounces
+            matched_by=matched_by,
             email_date=email_date,
             synced_at=datetime.now(UTC),
         )
@@ -572,8 +670,8 @@ async def _rematch_unlinked_emails(
 ) -> int:
     """Re-scan all unlinked synced emails and try to match them to a case.
 
-    Uses case number + reference matching on subject/body/snippet,
-    and email address → contact → case matching.
+    Uses thread matching, then case number in subject, then contact email.
+    Skips bounce/system emails. Same restrictive pipeline as initial sync.
 
     Returns the number of emails that were newly linked.
     """
@@ -581,6 +679,7 @@ async def _rematch_unlinked_emails(
         select(SyncedEmail).where(
             SyncedEmail.tenant_id == tenant_id,
             SyncedEmail.case_id == None,  # noqa: E711
+            SyncedEmail.is_bounce == False,  # noqa: E712 — skip bounces
         )
     )
     unlinked = list(result.scalars().all())
@@ -589,13 +688,29 @@ async def _rematch_unlinked_emails(
 
     linked_count = 0
     for email in unlinked:
-        # Try case number / reference matching
-        searchable_text = _build_searchable_text(
-            email.subject, email.body_text, email.body_html, email.snippet
-        )
-        case_id = await _find_case_by_case_number(db, tenant_id, searchable_text)
+        case_id = None
+        matched_by = None
 
-        # If no case number match, try email address matching
+        # Priority 1: thread matching
+        case_id = await _find_case_by_thread(
+            db, email.email_account_id, email.provider_thread_id
+        )
+        if case_id:
+            matched_by = "thread"
+
+        # Priority 2: case number in subject
+        if not case_id:
+            cn_case_id, cn_matched_by, has_case_number = await _find_case_by_case_number(
+                db, tenant_id, email.subject or ""
+            )
+            if cn_case_id:
+                case_id = cn_case_id
+                matched_by = cn_matched_by
+            elif has_case_number:
+                # Case number found but dossier doesn't exist → don't fallthrough
+                continue
+
+        # Priority 3: contact email match (only if no case number found)
         if not case_id:
             all_addresses = []
             if email.from_email:
@@ -610,7 +725,6 @@ async def _rematch_unlinked_emails(
                     a = a[a.index("<") + 1 : a.index(">")]
                 all_addresses.append(a.lower())
 
-            # Get account email to exclude
             if email.email_account:
                 all_addresses = [
                     a for a in all_addresses
@@ -618,12 +732,16 @@ async def _rematch_unlinked_emails(
                 ]
 
             case_id = await _find_case_for_email(db, tenant_id, all_addresses)
+            if case_id:
+                matched_by = "contact_email"
 
         if case_id:
             email.case_id = case_id
+            email.matched_by = matched_by
             linked_count += 1
             logger.info(
-                f"Re-match: email '{email.subject}' gekoppeld aan case {case_id}"
+                f"Re-match: email '{email.subject}' gekoppeld aan case"
+                f" {case_id} via {matched_by}"
             )
 
     if linked_count:

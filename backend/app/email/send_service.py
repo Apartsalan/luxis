@@ -141,6 +141,7 @@ async def send_with_attachment(
             direction="outbound",
             is_read=True,
             has_attachments=bool(attachments),
+            matched_by="outbound_send",
             email_date=datetime.now(UTC),
             synced_at=datetime.now(UTC),
         )

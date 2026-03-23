@@ -51,6 +51,11 @@ class SyncedEmail(TenantBase):
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     has_attachments: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_dismissed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_bounce: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # How was this email matched to a case?
+    # Values: "thread", "case_number", "contact_email", "outbound_send", "force_case_id", None
+    matched_by: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     email_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False

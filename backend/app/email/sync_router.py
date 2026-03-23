@@ -76,6 +76,8 @@ class SyncedEmailSummary(BaseModel):
     is_read: bool
     has_attachments: bool
     attachment_count: int = 0
+    is_bounce: bool = False
+    matched_by: str | None = None
     email_date: str
     case_id: str | None
 
@@ -101,6 +103,8 @@ class SyncedEmailDetail(BaseModel):
     is_read: bool
     has_attachments: bool
     attachments: list[AttachmentInfo] = []
+    is_bounce: bool = False
+    matched_by: str | None = None
     email_date: str
     case_id: str | None
     provider_thread_id: str | None
@@ -179,6 +183,8 @@ def _email_to_summary(email: SyncedEmail) -> SyncedEmailSummary:
         is_read=email.is_read,
         has_attachments=email.has_attachments,
         attachment_count=len(email.attachments) if email.attachments else 0,
+        is_bounce=email.is_bounce,
+        matched_by=email.matched_by,
         email_date=email.email_date.isoformat(),
         case_id=str(email.case_id) if email.case_id else None,
     )
@@ -219,6 +225,8 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
         is_read=email.is_read,
         has_attachments=email.has_attachments,
         attachments=attachment_list,
+        is_bounce=email.is_bounce,
+        matched_by=email.matched_by,
         email_date=email.email_date.isoformat(),
         case_id=str(email.case_id) if email.case_id else None,
         provider_thread_id=email.provider_thread_id,

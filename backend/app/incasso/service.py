@@ -9,9 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
-from app.documents.docx_service import render_docx
+from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
+from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
 from app.email.templates import _render_base, document_sent
 from app.incasso.models import IncassoPipelineStep
@@ -711,8 +712,14 @@ async def batch_execute(
                 continue
 
             try:
+                # Build context once — reused for DOCX archive + HTML email
+                base_context = await build_base_context(
+                    db, tenant_id, case
+                )
+
                 docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
-                    db, tenant_id, case, step.template_type
+                    db, tenant_id, case, step.template_type,
+                    pre_built_context=base_context,
                 )
 
                 doc = GeneratedDocument(
@@ -730,34 +737,63 @@ async def batch_execute(
                 generated_doc_ids.append(doc.id)
                 processed += 1
 
-                # Send email with PDF attachment if requested
+                # Send email if requested
                 if (
                     send_email
                     and case.opposing_party
                     and case.opposing_party.email
                 ):
                     try:
-                        pdf_bytes = await docx_to_pdf(docx_bytes)
-                        pdf_filename = filename.replace(".docx", ".pdf")
-
-                        email_subject, email_body = _build_step_email(
-                            step, case, db, tenant_id
+                        # Try HTML body (brief as email content, no attachment)
+                        inline_html = render_incasso_email(
+                            step.template_type, base_context
                         )
 
-                        email_log = await send_with_attachment(
-                            db,
-                            user_id,
-                            tenant_id,
-                            to=case.opposing_party.email,
-                            subject=email_subject,
-                            body_html=email_body,
-                            attachments=[
-                                (pdf_filename, pdf_bytes, "pdf"),
-                            ],
-                            case_id=case.id,
-                            document_id=doc.id,
-                            recipient_name=case.opposing_party.name or "",
-                        )
+                        if inline_html:
+                            # Brief IS the email body — no PDF attachment
+                            email_subject = (
+                                f"{step.name} inzake dossier "
+                                f"{case.case_number}"
+                            )
+                            email_log = await send_with_attachment(
+                                db,
+                                user_id,
+                                tenant_id,
+                                to=case.opposing_party.email,
+                                subject=email_subject,
+                                body_html=inline_html,
+                                attachments=[],
+                                case_id=case.id,
+                                document_id=doc.id,
+                                recipient_name=(
+                                    case.opposing_party.name or ""
+                                ),
+                            )
+                        else:
+                            # Fallback: PDF as attachment (dagvaarding, etc.)
+                            pdf_bytes = await docx_to_pdf(docx_bytes)
+                            pdf_filename = filename.replace(".docx", ".pdf")
+
+                            email_subject, email_body = _build_step_email(
+                                step, case, db, tenant_id
+                            )
+
+                            email_log = await send_with_attachment(
+                                db,
+                                user_id,
+                                tenant_id,
+                                to=case.opposing_party.email,
+                                subject=email_subject,
+                                body_html=email_body,
+                                attachments=[
+                                    (pdf_filename, pdf_bytes, "pdf"),
+                                ],
+                                case_id=case.id,
+                                document_id=doc.id,
+                                recipient_name=(
+                                    case.opposing_party.name or ""
+                                ),
+                            )
 
                         if email_log.status == "sent":
                             emails_sent += 1

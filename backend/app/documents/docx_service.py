@@ -243,7 +243,7 @@ def _tenant_ctx(tenant: Tenant | None) -> dict:
 # ── Context builders per template type ─────────────────────────────────────
 
 
-async def _load_tenant(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant | None:
+async def load_tenant(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant | None:
     """Load the tenant for kantoor merge fields."""
     result = await db.execute(
         select(Tenant).where(Tenant.id == tenant_id)
@@ -251,16 +251,19 @@ async def _load_tenant(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant | None:
     return result.scalar_one_or_none()
 
 
-async def _build_base_context(
+async def build_base_context(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     case: Case,
 ) -> dict:
-    """Build the shared context used by all templates."""
+    """Build the shared context used by all templates.
+
+    Public so that incasso email templates can reuse the same context data.
+    """
     today = date.today()
 
     # Load tenant for kantoor fields
-    tenant = await _load_tenant(db, tenant_id)
+    tenant = await load_tenant(db, tenant_id)
 
     claims = await list_claims(db, tenant_id, case.id)
     payments = await list_payments(db, tenant_id, case.id)
@@ -390,7 +393,7 @@ async def _build_renteoverzicht_context(
     case: Case,
 ) -> dict:
     """Build extra context for the renteoverzicht template."""
-    base = await _build_base_context(db, tenant_id, case)
+    base = await build_base_context(db, tenant_id, case)
     financieel = base["_financieel"]
 
     # Flatten interest periods across all claims into one list
@@ -463,11 +466,16 @@ async def render_docx(
     tenant_id: uuid.UUID,
     case: Case,
     template_type: str,
+    pre_built_context: dict | None = None,
 ) -> tuple[bytes, str, str, bytes]:
     """Render a .docx template with case data.
 
     Checks ManagedTemplate table first (custom > builtin),
     falls back to disk files if not found.
+
+    Args:
+        pre_built_context: Optional pre-built context from build_base_context().
+            If provided, skips internal context building (avoids duplicate DB queries).
 
     Returns:
         Tuple of (docx_bytes, filename, template_type, template_snapshot)
@@ -502,13 +510,15 @@ async def render_docx(
         template_snapshot = template_path.read_bytes()
         tpl = DocxTemplate(str(template_path))
 
-    # Build context based on template type
-    if template_type == "renteoverzicht":
+    # Build context based on template type (skip if pre-built context provided)
+    if pre_built_context is not None:
+        context = pre_built_context
+    elif template_type == "renteoverzicht":
         context = await _build_renteoverzicht_context(
             db, tenant_id, case
         )
     else:
-        context = await _build_base_context(db, tenant_id, case)
+        context = await build_base_context(db, tenant_id, case)
 
     # Remove internal keys (prefixed with _)
     render_context = {

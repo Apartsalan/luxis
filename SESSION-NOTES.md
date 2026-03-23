@@ -33,7 +33,25 @@
 6. ✅ AI-acties in activity feed — AI/Automatisering badges
 7. ✅ "Wacht op review" indicator op emails — Bot-icoon + "Review" label
 
-**Gewijzigde bestanden:** Caddyfile, docker-compose.prod.yml, LUXIS-ROADMAP.md, SESSION-NOTES.md
+**Bugfixes:**
+- BUG-60: Factuur uren import toonde geen bedragen (hourly_rate null → auto-fill vanuit user default)
+- BUG-61: toFixed crash bij uren import (Decimal strings → Number() wrap)
+- BUG-62: Misleidende dark mode knoppen verwijderd uit instellingen
+
+**Email matching systeem — fundamentele herstructurering:**
+- Root cause gevonden: verwijderde testdossiers → case_number match faalt → doorval naar contact-matching → fout gekoppeld
+- Thread-matching geïmplementeerd: provider_thread_id (Outlook conversationId) nu gebruikt als primaire matching methode
+- Bounce/system-email detectie: auto-dismiss voor bounces, NDRs, Microsoft-systeemberichten
+- Case number priority met stop-on-miss: als dossiernummer gevonden maar niet in DB → STOPT, geen doorval
+- Referentie substring matching verwijderd (bron van valse matches)
+- Outbound dedup fix: synthetische IDs worden gemerged met echte Graph IDs
+- matched_by + is_bounce tracking op synced_emails
+- 4 fout-gekoppelde emails gefixed, 1 dubbel record verwijderd
+- Gewijzigde bestanden: sync_service.py, synced_email_models.py, send_service.py, sync_router.py + migratie
+
+**Testdata opgeruimd:** contacten "laak" en "paak" + dossier 2026-00020 verwijderd
+
+**Gewijzigde bestanden:** Caddyfile, docker-compose.prod.yml, sync_service.py, synced_email_models.py, send_service.py, sync_router.py, facturen/nieuw/page.tsx, weergave-tab.tsx, time_entries/service.py, LUXIS-ROADMAP.md, SESSION-NOTES.md
 
 ## Wat er gedaan is (sessie 100 — 23 maart 2026) — AI UX Fase 2
 

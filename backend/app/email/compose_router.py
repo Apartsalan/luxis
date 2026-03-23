@@ -1,22 +1,24 @@
 """Email compose router — compose emails via connected provider (Outlook/Gmail).
 
-Creates drafts in Outlook with all content pre-filled (recipients, body, attachments).
-User opens the draft in Outlook Web to review and send.
+Generates .eml files that open directly in Outlook desktop as new compose windows
+with all content pre-filled (recipients, subject, body, attachments).
 
 Endpoints:
 - POST /api/email/compose/send          — Send email via provider (direct)
 - POST /api/email/compose/draft         — Create draft in provider
-- POST /api/email/compose/cases/{id}    — Create draft from case context (with attachments)
+- POST /api/email/compose/cases/{id}    — Generate .eml file for Outlook desktop
 - POST /api/email/compose/cases/{id}/render-template — Preview template as HTML
 """
 
 import base64
-import json
 import logging
 import uuid
+from email.message import EmailMessage
+from email.utils import formataddr
 from pathlib import Path
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -228,17 +230,17 @@ async def create_draft_via_provider(
         raise BadRequestError(f"Concept aanmaken mislukt: {e}")
 
 
-@router.post("/cases/{case_id}", response_model=ComposeResponse)
-async def create_draft_from_case(
+@router.post("/cases/{case_id}")
+async def compose_eml_from_case(
     case_id: uuid.UUID,
     data: CaseComposeRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a draft email in Outlook from case context.
+    """Generate a .eml file that opens in Outlook desktop as a new email.
 
-    The draft is created with recipients, body, and attachments pre-filled.
-    Returns a web_link that opens the draft in Outlook Web for review and sending.
+    The .eml contains recipients, subject, HTML body, and attachments.
+    When opened on Windows, Outlook desktop shows it as a ready-to-send email.
     """
     # Verify case exists
     result = await db.execute(
@@ -247,15 +249,6 @@ async def create_draft_from_case(
     case = result.scalar_one_or_none()
     if not case:
         raise NotFoundError("Dossier niet gevonden")
-
-    account = await get_email_account(db, user.id, user.tenant_id)
-    if not account:
-        raise BadRequestError(
-            "Geen e-mailaccount verbonden. Verbind Outlook via Instellingen → E-mail."
-        )
-
-    provider = get_provider(account.provider)
-    access_token = await get_valid_access_token(db, account)
 
     # Resolve body HTML
     if data.body_html:
@@ -271,21 +264,36 @@ async def create_draft_from_case(
         data.case_file_ids, data.inline_attachments,
     )
 
-    try:
-        draft_id, web_link = await provider.create_draft(
-            access_token,
-            to=[data.recipient_email],
-            subject=data.subject,
-            body_html=body_html,
-            cc=data.cc,
-            attachments=attachments if attachments else None,
+    # Get sender email from connected account (for From header)
+    account = await get_email_account(db, user.id, user.tenant_id)
+    sender_email = account.email_address if account else (user.email or "")
+    sender_name = user.full_name or ""
+
+    # Build .eml (RFC 2822 MIME message)
+    msg = EmailMessage()
+    msg["Subject"] = data.subject
+    msg["To"] = data.recipient_email
+    if data.cc:
+        msg["Cc"] = ", ".join(data.cc)
+    if sender_email:
+        msg["From"] = formataddr((sender_name, sender_email))
+    # No Date header → Outlook treats it as unsent/draft
+    msg["X-Unsent"] = "1"  # Outlook-specific: opens in compose mode
+
+    # Set HTML body
+    msg.set_content(body_html, subtype="html")
+
+    # Add attachments
+    for att in attachments:
+        maintype, _, subtype = att.content_type.partition("/")
+        if not subtype:
+            maintype, subtype = "application", "octet-stream"
+        msg.add_attachment(
+            att.data,
+            maintype=maintype,
+            subtype=subtype,
+            filename=att.filename,
         )
-    except Exception as e:
-        logger.error(
-            "Draft aanmaken mislukt via %s voor zaak %s: %s",
-            account.provider, case_id, e,
-        )
-        raise BadRequestError(f"Concept aanmaken mislukt: {e}")
 
     # Log activity on the case
     recipient_label = data.recipient_name or data.recipient_email
@@ -296,20 +304,22 @@ async def create_draft_from_case(
         case_id=case.id,
         user_id=user.id,
         activity_type="email",
-        title=f"Concept e-mail aangemaakt voor {recipient_label}",
-        description=(
-            f"Onderwerp: {data.subject}{att_text} — "
-            f"geopend in {account.provider}"
-        ),
+        title=f"E-mail opgesteld voor {recipient_label}",
+        description=f"Onderwerp: {data.subject}{att_text}",
     )
     db.add(activity)
     await db.flush()
 
-    return ComposeResponse(
-        success=True,
-        draft_id=draft_id,
-        web_link=web_link,
-        message=f"Concept aangemaakt in {account.provider}",
+    # Return .eml file
+    eml_bytes = msg.as_bytes()
+    filename = f"email-{case.case_number}.eml"
+
+    return Response(
+        content=eml_bytes,
+        media_type="message/rfc822",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
     )
 
 

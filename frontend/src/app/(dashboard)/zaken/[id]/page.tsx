@@ -41,8 +41,7 @@ import {
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
-import { useSendViaProvider, useCreateCaseDraft } from "@/hooks/use-email-sync";
-import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
+import { useSendViaProvider } from "@/hooks/use-email-sync";
 import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
 import {
   useClassifications,
@@ -198,8 +197,6 @@ export default function ZaakDetailPage() {
   const [caseEmailOpen, setCaseEmailOpen] = useState(false);
   const sendCaseEmail = useSendCaseEmail(id);
   const sendViaProvider = useSendViaProvider(id);
-  const createDraft = useCreateCaseDraft(id);
-  const emailOAuthStatus = useEmailOAuthStatus();
 
   function buildDossierRecipients(z: typeof zaak): EmailRecipient[] {
     if (!z) return [];
@@ -225,9 +222,10 @@ export default function ZaakDetailPage() {
     const body = data.custom_body || "";
 
     try {
-      // Try creating a draft in Outlook (opens in browser)
-      if (emailOAuthStatus.data?.connected) {
-        const result = await createDraft.mutateAsync({
+      // Generate .eml file and open in Outlook desktop
+      const res = await api(`/api/email/compose/cases/${id}`, {
+        method: "POST",
+        body: JSON.stringify({
           recipient_email: data.recipient_email,
           recipient_name: data.recipient_name,
           cc: data.cc,
@@ -236,26 +234,29 @@ export default function ZaakDetailPage() {
           body_html: data.body_html,
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,
-        });
+        }),
+      });
 
-        // Draft syncs to desktop Outlook within seconds
-        toast.success("Concept staat klaar in Outlook → ga naar Concepten en klik Verzenden", {
-          duration: 6000,
-        });
-      } else {
-        // Fallback: direct send via SMTP (no attachments)
-        await sendCaseEmail.mutateAsync({
-          recipient_email: data.recipient_email,
-          recipient_name: data.recipient_name,
-          cc: data.cc,
-          subject,
-          body,
-        });
-        toast.success("E-mail verzonden");
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "E-mail opstellen mislukt");
       }
+
+      // Download and open the .eml file → Outlook desktop opens it as new email
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `email-${zaak?.case_number || "concept"}.eml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("E-mail geopend in Outlook");
       setCaseEmailOpen(false);
     } catch (err: any) {
-      toast.error(err.message || "E-mail verzenden mislukt");
+      toast.error(err.message || "E-mail opstellen mislukt");
     }
   };
 
@@ -628,7 +629,7 @@ export default function ZaakDetailPage() {
         open={caseEmailOpen}
         onOpenChange={setCaseEmailOpen}
         onSend={handleSendCaseEmail}
-        isSending={createDraft.isPending || sendCaseEmail.isPending}
+        isSending={sendCaseEmail.isPending}
         title="E-mail opstellen"
         defaultSubject={zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""}
         recipients={zaak ? buildDossierRecipients(zaak) : []}

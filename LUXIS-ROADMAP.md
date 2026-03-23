@@ -270,6 +270,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-57 | `hourly_rate.toFixed is not a function` — zaakdetailpagina crasht bij dossiers met uurtarief. API retourneert string, `.toFixed()` verwacht number. Fix: `Number()` wrap op 3 plekken. | Hoog | S | ✅ Gefixt (21 mrt, sessie 86) |
 | BUG-58 | SEC-9 RLS niet afgedwongen — policies bestonden maar `luxis` is superuser en bypast RLS. Fix: `luxis_app` non-superuser role + `FORCE ROW LEVEL SECURITY` + `SET LOCAL ROLE` in middleware. | Kritiek | M | ✅ Gefixt (21 mrt, sessie 86) |
 | BUG-59 | Provisie factureren knop ontbreekt (DF-05 incompleet) — instellingen bestaan maar geen actie om factuur aan te maken met provisie pre-filled. Fix: "Provisie factureren" knop + `?provisie=true` query param. | Midden | S | ✅ Gefixt (21 mrt, sessie 86) |
+| BUG-60 | Factuur uren import toont geen bedragen — `hourly_rate` niet auto-ingevuld bij time entry creatie. Fix: backend vult nu `default_hourly_rate` van user in + bestaande entries gebackfilled. | Hoog | S | ✅ Gefixt (23 mrt, sessie 101) |
+| BUG-61 | `toFixed is not a function` bij factuur uren import — zelfde type als BUG-57 maar op facturen/nieuw pagina. Decimal strings van API niet naar Number() geconverteerd. | Hoog | S | ✅ Gefixt (23 mrt, sessie 101) |
+| BUG-62 | Dark mode/Systeem knoppen in Instellingen doen niks (tonen alleen toast). Fix: knoppen verwijderd, alleen "Licht" behouden. | Laag | S | ✅ Gefixt (23 mrt, sessie 101) |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 
@@ -469,7 +472,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | CQ-22 | **Container health checks** — Added healthchecks for all 4 services in docker-compose.prod.yml. | Infra | ✅ Sessie 92 |
 | CQ-23 | **Container resource limits** — Added mem_limit + cpus for all services in prod compose. | Infra | ✅ Sessie 92 |
 | CQ-24 | **Off-site backups** — Updated backup.sh with rclone off-site upload support. rclone geïnstalleerd op VPS (sessie 101). Config naar Backblaze B2 nog nodig vóór soft launch. | Infra | ⏳ rclone config vóór soft launch |
-| CQ-25 | **Uptime monitoring** — Self-hosted health check actief (elke 5 min, auto-restart bij downtime). /health endpoint extern beschikbaar. UptimeRobot account optioneel. | Infra | ✅ Sessie 101 |
+| CQ-25 | **Uptime monitoring** — Self-hosted health check actief (elke 5 min, auto-restart bij downtime). /health endpoint extern beschikbaar. UptimeRobot (extern) nog opzetten vóór soft launch. | Infra | ⏳ UptimeRobot vóór soft launch |
 | UX-14 | **Responsive tabellen** — overflow-x-auto + min-width op alle tab-tabellen en incasso pipeline. | Frontend | ✅ Sessie 98 |
 | UX-15 | **Form validatie** — inline foutmeldingen op factuur, email compose, betaling, instellingen formulieren. | Frontend | ✅ Sessie 98 |
 | UX-16 | **Unsaved changes warning** — beforeunload op nieuwe relatie (andere formulieren hadden het al). | Frontend | ✅ Sessie 98 |

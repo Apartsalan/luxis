@@ -31,6 +31,7 @@ import {
   type SyncedEmailSummary,
 } from "@/hooks/use-email-sync";
 import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
+import { useGenerateDraft, type AiDraft } from "@/hooks/use-ai-draft";
 import { confidenceBadgeClasses, confidenceLabelText } from "@/lib/confidence";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
 import { formatDate, formatDateShort } from "@/lib/utils";
@@ -241,6 +242,8 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
   const syncEmails = useSyncEmails();
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [viewFilter, setViewFilter] = useState<"all" | "inbound" | "outbound">("all");
+  const generateDraft = useGenerateDraft();
+  const [draft, setDraft] = useState<AiDraft | null>(null);
 
   // Build lookup map: synced_email_id → Classification
   const classificationMap = useMemo(() => {
@@ -346,6 +349,26 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const result = await generateDraft.mutateAsync({ caseId });
+                  setDraft(result);
+                } catch (err: any) {
+                  toast.error(err.message || "Concept genereren mislukt");
+                }
+              }}
+              disabled={generateDraft.isPending}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+            >
+              {generateDraft.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Bot className="h-3.5 w-3.5" />
+              )}
+              AI Concept
+            </button>
             {oauthStatus.data?.connected && (
               <button
                 type="button"
@@ -396,6 +419,85 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
           )}
         </div>
       </div>
+
+      {/* AI Draft preview panel */}
+      {draft && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-primary/10">
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">AI Concept</span>
+              <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+                AI
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                {draft.tone} · {draft.model}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDraft(null)}
+              className="rounded-md p-1 hover:bg-muted transition-colors"
+            >
+              <XCircle className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+          <div className="p-4 space-y-3">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Onderwerp</p>
+              <p className="text-sm font-medium text-foreground">{draft.subject}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Bericht</p>
+              <pre className="text-sm text-foreground whitespace-pre-wrap font-sans bg-card rounded-lg border border-border p-3 max-h-[300px] overflow-y-auto">
+                {draft.body}
+              </pre>
+            </div>
+            {draft.sources.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Bronnen</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {draft.sources.map((s, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                    >
+                      {s.type === "email" ? "📧" : s.type === "factuur" ? "📄" : s.type === "av" ? "📋" : "⚖️"}{" "}
+                      {s.reference}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {draft.reasoning && (
+              <p className="text-xs text-muted-foreground italic">{draft.reasoning}</p>
+            )}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onCompose) onCompose();
+                  setDraft(null);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                Gebruik als e-mail
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`Onderwerp: ${draft.subject}\n\n${draft.body}`);
+                  toast.success("Concept gekopieerd naar klembord");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
+              >
+                Kopiëren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Email list + detail split */}
       <div className="flex gap-4">

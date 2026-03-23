@@ -3,6 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.models import ACTION_LABELS, CATEGORY_LABELS
@@ -327,3 +328,34 @@ async def seed_templates(
     created = await seed_default_templates(db, current_user.tenant_id)
     await db.commit()
     return {"created": created}
+
+
+# ── AI-UX-09/13/14: Draft generation ────────────────────────────────────────
+
+
+class DraftRequest(BaseModel):
+    instruction: str | None = None
+
+
+@router.post("/draft/{case_id}")
+async def generate_draft_email(
+    case_id: uuid.UUID,
+    data: DraftRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an AI draft email for a case based on full dossier context."""
+    from app.ai_agent.draft_service import generate_draft
+
+    try:
+        result = await generate_draft(
+            db,
+            current_user.tenant_id,
+            case_id,
+            instruction=data.instruction if data else None,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Concept genereren mislukt: {e}")

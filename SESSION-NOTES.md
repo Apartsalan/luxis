@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 102 — QA: Email matching + bugfixes testen)
-**Laatste feature/fix:** Sessie 102 — QA + 2 bugfixes (Fernet key derivatie, outbound dedup unique ID)
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 102 — QA + Incasso facturatie feature)
+**Laatste feature/fix:** Sessie 102 — IncassoKostenPanel (BIK/rente/provisie op factuur) + dashboard fix + email QA
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +13,20 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 102 — 23 maart 2026) — QA + Incasso Facturatie
+
+**Incasso facturatie feature (nieuw):**
+- Dashboard fix: Relaties-kaart toont nu "X nieuw deze maand" i.p.v. "dossiers afgesloten"
+- Nieuw `provisie_base` veld op Case model ("collected_amount" of "total_claim") + migratie
+- ProvisieSettingsSection: berekeningsbasis toggle toegevoegd
+- Nieuw backend endpoint: `GET /api/cases/{id}/incasso-invoice-preview` — combineert BIK, rente, provisie + already-invoiced detectie
+- Nieuw frontend component: `IncassoKostenPanel` met BIK, rente, provisie quick-add
+- Paneel verschijnt alleen bij incasso dossiers op factuur-aanmaakpagina
+- Already-invoiced waarschuwing voorkomt dubbel factureren
+- Provisie berekening over geincasseerd bedrag OF totale vordering, percentage inline aanpasbaar
+
+**Nieuwe/gewijzigde bestanden:** dashboard/service.py, dashboard/schemas.py, cases/models.py, cases/schemas.py, invoices/router.py, invoices/schemas.py, invoices/service.py, page.tsx (dashboard), page.tsx (facturen/nieuw), ProvisieSettingsSection.tsx, IncassoKostenPanel.tsx (nieuw), use-invoices.ts, use-cases.ts, add_provisie_base_to_cases.py (migratie)
 
 ## Wat er gedaan is (sessie 102 — 23 maart 2026) — QA: Email matching + bugfixes testen
 

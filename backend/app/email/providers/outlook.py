@@ -348,7 +348,9 @@ class OutlookProvider(EmailProvider):
         # We return a synthetic ID based on timestamp for tracking
         # The actual message will appear in Sent Items after a short delay
         logger.info(f"Email verzonden via Outlook naar {to}")
-        return f"outlook-sent-{subject[:30]}"
+        from datetime import datetime, UTC
+        ts = int(datetime.now(UTC).timestamp() * 1000)
+        return f"outlook-sent-{ts}-{subject[:30]}"
 
     async def create_draft(
         self,

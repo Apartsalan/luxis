@@ -513,9 +513,9 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Omschrijving | Status |
 |---|-------------|--------|
-| AI-TECH-01 | **pymupdf4llm** — vervang pdfplumber door pymupdf4llm in `backend/app/ai_agent/pdf_extract.py`. Betere tabel/layout extractie, 5-10x sneller, Markdown output voor LLM. Simpele swap (~30 min). | ❌ TODO |
-| AI-TECH-02 | **Claude native PDF voor contractanalyse** — bij betwistingen/zware analyse: stuur PDF direct naar Claude API i.p.v. tekst extractie. Alleen voor dure taken (1-2x/week), dagelijks werk blijft Kimi. | ❌ TODO |
-| AI-TECH-03 | **Claude Structured Outputs** — gebruik structured outputs bij Claude Haiku calls zodat responses gegarandeerd het juiste JSON format hebben. Elimineert parsing errors. Alleen voor Claude calls, niet Kimi. | ❌ TODO |
+| AI-TECH-01 | **pymupdf4llm** — vervang pdfplumber door pymupdf4llm in `backend/app/ai_agent/pdf_extract.py`. Betere tabel/layout extractie, 5-10x sneller, Markdown output voor LLM. Simpele swap (~30 min). | ✅ 23 mrt 2026 |
+| AI-TECH-02 | **Claude native PDF voor contractanalyse** — bij betwistingen/zware analyse: stuur PDF direct naar Claude API i.p.v. tekst extractie. Alleen voor dure taken (1-2x/week), dagelijks werk blijft Kimi. | ✅ 23 mrt 2026 |
+| AI-TECH-03 | **Claude Structured Outputs** — gebruik structured outputs bij Claude Haiku calls zodat responses gegarandeerd het juiste JSON format hebben. Elimineert parsing errors. Alleen voor Claude calls, niet Kimi. | ✅ 23 mrt 2026 |
 
 ### Tooling Upgrade (sessie 96)
 

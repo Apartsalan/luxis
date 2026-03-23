@@ -44,6 +44,23 @@
 - Toont tot 3 recente pending classificaties met confidence labels en directe links naar dossiers
 - Widget verschijnt alleen als er pending items zijn
 
+**AI-TECH-03: Claude Structured Outputs**
+- Haiku gebruikt nu tool_use met forced tool_choice voor gegarandeerd valide JSON
+- Schema's gedefinieerd voor classificatie, intake, en factuur extractie
+- Automatische schema-detectie op basis van system prompt content
+- Fallback naar plain text + _parse_json voor onbekende prompts
+
+**AI-TECH-01: pymupdf4llm PDF parser**
+- pdfplumber vervangen door pymupdf4llm in pdf_extract.py
+- Output is nu Markdown i.p.v. plain text — betere tabel/layout extractie voor LLM
+- pyproject.toml dependency geüpdatet
+
+**AI-TECH-02: Claude native PDF analyse**
+- Nieuwe functie call_claude_with_pdf() in kimi_client.py
+- Stuurt PDF als base64 document block direct naar Claude API
+- Gebruikt structured output (tool_use) wanneer schema gedetecteerd wordt
+- Bedoeld voor zware analyse (contracten, betwistingen) — niet voor dagelijks volume
+
 **Nieuwe bestanden:** frontend/src/lib/confidence.ts
 **Gewijzigde bestanden:** classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx, zaken/[id]/page.tsx
 

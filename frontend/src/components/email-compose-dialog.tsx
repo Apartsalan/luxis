@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  Mail, Paperclip, Loader2, X, Plus, User,
-  ExternalLink, FileText, Upload, FolderSearch, Trash2,
+  Mail, Paperclip, Loader2, X, Plus,
+  ExternalLink, FileText, Upload, FolderSearch,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogDescription, DialogFooter,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,6 @@ export interface EmailComposeData {
   inline_attachments?: ComposeInlineAttachment[];
 }
 
-/** A known recipient from the case (client, opposing party, etc.) */
 export interface EmailRecipient {
   name: string;
   email: string;
@@ -48,7 +47,6 @@ interface CaseFileItem {
   original_filename: string;
   file_size: number;
   content_type: string;
-  created_at: string;
 }
 
 interface TemplateInfo {
@@ -64,12 +62,12 @@ interface AttachmentRef {
   source: "dossier" | "upload" | "other";
 }
 
-// ── Dutch role labels ───────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
   client: "Cliënt",
   opposing_party: "Wederpartij",
-  advocaat_wederpartij: "Advocaat wederpartij",
+  advocaat_wederpartij: "Adv. wederpartij",
   deurwaarder: "Deurwaarder",
   rechtbank: "Rechtbank",
   mediator: "Mediator",
@@ -78,16 +76,6 @@ const ROLE_LABELS: Record<string, string> = {
   notaris: "Notaris",
   overig: "Overig",
 };
-
-function getRoleLabel(role: string): string {
-  return ROLE_LABELS[role] ?? role;
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 const TEMPLATE_LABELS: Record<string, string> = {
   aanmaning: "Aanmaning",
@@ -98,6 +86,12 @@ const TEMPLATE_LABELS: Record<string, string> = {
   dagvaarding: "Dagvaarding",
   renteoverzicht: "Renteoverzicht",
 };
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -113,7 +107,6 @@ export interface EmailComposeDialogProps {
   attachmentName?: string;
   title?: string;
   recipients?: EmailRecipient[];
-  /** Case ID — enables template selector + file picker */
   caseId?: string;
 }
 
@@ -129,10 +122,11 @@ export function EmailComposeDialog({
   defaultSubject = "",
   defaultBody = "",
   attachmentName,
-  title = "E-mail opstellen",
+  title = "Nieuwe e-mail",
   recipients,
   caseId,
 }: EmailComposeDialogProps) {
+  // ── State ─────────────────────────────────────────────────────────────
   const [to, setTo] = useState(defaultTo);
   const [toName, setToName] = useState(defaultToName);
   const [ccList, setCcList] = useState<string[]>([]);
@@ -140,16 +134,16 @@ export function EmailComposeDialog({
   const [showCc, setShowCc] = useState(false);
   const [subject, setSubject] = useState(defaultSubject);
   const [body, setBody] = useState(defaultBody);
-  const [selectedRecipientEmail, setSelectedRecipientEmail] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [selectedChip, setSelectedChip] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Template state
+  // Template
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [templateHtml, setTemplateHtml] = useState<string | null>(null);
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const renderTemplate = caseId ? useRenderTemplate(caseId) : null;
 
-  // Attachment state
+  // Attachments
   const [attachments, setAttachments] = useState<AttachmentRef[]>([]);
   const [inlineFiles, setInlineFiles] = useState<Map<string, ComposeInlineAttachment>>(new Map());
   const [caseFileIds, setCaseFileIds] = useState<Set<string>>(new Set());
@@ -158,16 +152,16 @@ export function EmailComposeDialog({
   const [loadingFiles, setLoadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // "Ander dossier" state
+  // Other-case picker
   const [showOtherCase, setShowOtherCase] = useState(false);
-  const [otherCaseSearch, setOtherCaseSearch] = useState("");
-  const [otherCaseResults, setOtherCaseResults] = useState<{ id: string; case_number: string; description: string }[]>([]);
-  const [otherCaseSelected, setOtherCaseSelected] = useState<string | null>(null);
-  const [otherCaseFiles, setOtherCaseFiles] = useState<CaseFileItem[]>([]);
-  const [loadingOtherCase, setLoadingOtherCase] = useState(false);
+  const [otherSearch, setOtherSearch] = useState("");
+  const [otherResults, setOtherResults] = useState<{ id: string; case_number: string; description: string }[]>([]);
+  const [otherSelected, setOtherSelected] = useState<string | null>(null);
+  const [otherFiles, setOtherFiles] = useState<CaseFileItem[]>([]);
+  const [loadingOther, setLoadingOther] = useState(false);
   const [loadingOtherFiles, setLoadingOtherFiles] = useState(false);
 
-  // Load templates list when dialog opens
+  // Load templates
   useEffect(() => {
     if (open && caseId && templates.length === 0) {
       api("/api/documents/docx/templates")
@@ -177,7 +171,7 @@ export function EmailComposeDialog({
     }
   }, [open, caseId]);
 
-  // Reset form when dialog opens
+  // Reset on open
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setTo(defaultTo);
@@ -187,8 +181,8 @@ export function EmailComposeDialog({
       setShowCc(false);
       setSubject(defaultSubject);
       setBody(defaultBody);
-      setSelectedRecipientEmail(null);
-      setFieldErrors({});
+      setSelectedChip(null);
+      setErrors({});
       setSelectedTemplate("");
       setTemplateHtml(null);
       setAttachments([]);
@@ -196,23 +190,25 @@ export function EmailComposeDialog({
       setCaseFileIds(new Set());
       setShowFilePicker(false);
       setShowOtherCase(false);
-      setOtherCaseSearch("");
-      setOtherCaseResults([]);
-      setOtherCaseSelected(null);
-      setOtherCaseFiles([]);
+      setOtherSearch("");
+      setOtherResults([]);
+      setOtherSelected(null);
+      setOtherFiles([]);
     }
     onOpenChange(nextOpen);
   };
 
-  const selectRecipient = (recipient: EmailRecipient) => {
-    if (selectedRecipientEmail === recipient.email) {
+  // ── Recipient handlers ────────────────────────────────────────────────
+
+  const selectRecipient = (r: EmailRecipient) => {
+    if (selectedChip === r.email) {
       setTo("");
       setToName("");
-      setSelectedRecipientEmail(null);
+      setSelectedChip(null);
     } else {
-      setTo(recipient.email);
-      setToName(recipient.name);
-      setSelectedRecipientEmail(recipient.email);
+      setTo(r.email);
+      setToName(r.name);
+      setSelectedChip(r.email);
     }
   };
 
@@ -224,33 +220,24 @@ export function EmailComposeDialog({
     }
   };
 
-  const removeCc = (email: string) => {
-    setCcList(ccList.filter((e) => e !== email));
+  const addCcFromRecipient = (r: EmailRecipient) => {
+    if (!ccList.includes(r.email)) setCcList([...ccList, r.email]);
   };
 
-  const handleCcKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addCc();
-    }
-  };
+  // ── Template handlers ─────────────────────────────────────────────────
 
-  // ── Template handling ─────────────────────────────────────────────────
-
-  const handleTemplateSelect = async (templateType: string) => {
-    if (!templateType || !caseId || !renderTemplate) {
+  const handleTemplateSelect = async (val: string) => {
+    if (!val || !caseId || !renderTemplate) {
       setSelectedTemplate("");
       setTemplateHtml(null);
       return;
     }
-    setSelectedTemplate(templateType);
+    setSelectedTemplate(val);
     try {
-      const result = await renderTemplate.mutateAsync({ template_type: templateType });
+      const result = await renderTemplate.mutateAsync({ template_type: val });
       if (result.supported && result.body_html) {
         setTemplateHtml(result.body_html);
-        if (result.subject && !subject) {
-          setSubject(result.subject);
-        }
+        if (result.subject && !subject) setSubject(result.subject);
       } else {
         setSelectedTemplate("");
         setTemplateHtml(null);
@@ -261,12 +248,7 @@ export function EmailComposeDialog({
     }
   };
 
-  const clearTemplate = () => {
-    setSelectedTemplate("");
-    setTemplateHtml(null);
-  };
-
-  // ── File picker ───────────────────────────────────────────────────────
+  // ── File picker handlers ──────────────────────────────────────────────
 
   const loadCaseFiles = async () => {
     if (!caseId) return;
@@ -281,192 +263,104 @@ export function EmailComposeDialog({
     setLoadingFiles(false);
   };
 
-  const toggleFilePicker = () => {
-    if (!showFilePicker) loadCaseFiles();
-    setShowFilePicker(!showFilePicker);
-  };
-
-  const toggleCaseFile = (file: CaseFileItem) => {
-    const newIds = new Set(caseFileIds);
-    const newAtts = [...attachments];
-    if (newIds.has(file.id)) {
-      newIds.delete(file.id);
-      const idx = newAtts.findIndex((a) => a.id === file.id);
-      if (idx >= 0) newAtts.splice(idx, 1);
+  const toggleCaseFile = (f: CaseFileItem) => {
+    const ids = new Set(caseFileIds);
+    const atts = [...attachments];
+    if (ids.has(f.id)) {
+      ids.delete(f.id);
+      const idx = atts.findIndex((a) => a.id === f.id);
+      if (idx >= 0) atts.splice(idx, 1);
     } else {
-      newIds.add(file.id);
-      newAtts.push({
-        id: file.id,
-        filename: file.original_filename,
-        size: file.file_size,
-        source: "dossier",
-      });
+      ids.add(f.id);
+      atts.push({ id: f.id, filename: f.original_filename, size: f.file_size, source: "dossier" });
     }
-    setCaseFileIds(newIds);
-    setAttachments(newAtts);
+    setCaseFileIds(ids);
+    setAttachments(atts);
   };
-
-  // ── Upload handling ───────────────────────────────────────────────────
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
     Array.from(files).forEach((file) => {
       if (file.size > 3 * 1024 * 1024) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          attachments: `'${file.name}' is te groot (max 3 MB)`,
-        }));
+        setErrors((p) => ({ ...p, attachments: `'${file.name}' is te groot (max 3 MB)` }));
         return;
       }
-
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = (reader.result as string).split(",")[1];
         const id = `upload-${Date.now()}-${file.name}`;
-
-        setInlineFiles((prev) => {
-          const next = new Map(prev);
-          next.set(id, {
-            filename: file.name,
-            data_base64: base64,
-            content_type: file.type || "application/octet-stream",
-          });
-          return next;
-        });
-
-        setAttachments((prev) => [
-          ...prev,
-          { id, filename: file.name, size: file.size, source: "upload" },
-        ]);
+        setInlineFiles((prev) => { const n = new Map(prev); n.set(id, { filename: file.name, data_base64: base64, content_type: file.type || "application/octet-stream" }); return n; });
+        setAttachments((prev) => [...prev, { id, filename: file.name, size: file.size, source: "upload" }]);
       };
       reader.readAsDataURL(file);
     });
-
-    // Reset input so same file can be selected again
     e.target.value = "";
   };
 
   const removeAttachment = (id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-    setCaseFileIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    setInlineFiles((prev) => {
-      const next = new Map(prev);
-      next.delete(id);
-      return next;
-    });
-    if (fieldErrors.attachments) {
-      setFieldErrors((prev) => {
-        const next = { ...prev };
-        delete next.attachments;
-        return next;
-      });
-    }
+    setAttachments((p) => p.filter((a) => a.id !== id));
+    setCaseFileIds((p) => { const n = new Set(p); n.delete(id); return n; });
+    setInlineFiles((p) => { const n = new Map(p); n.delete(id); return n; });
   };
 
-  // ── Other case file picker ─────────────────────────────────────────
+  // ── Other-case handlers ───────────────────────────────────────────────
 
   const searchOtherCases = async () => {
-    if (!otherCaseSearch.trim()) return;
-    setLoadingOtherCase(true);
-    setOtherCaseSelected(null);
-    setOtherCaseFiles([]);
+    if (!otherSearch.trim()) return;
+    setLoadingOther(true);
+    setOtherSelected(null);
+    setOtherFiles([]);
     try {
-      const res = await api(`/api/cases?search=${encodeURIComponent(otherCaseSearch.trim())}&per_page=10`);
+      const res = await api(`/api/cases?search=${encodeURIComponent(otherSearch.trim())}&per_page=10`);
       if (res.ok) {
         const data = await res.json();
-        const items = (data.items ?? data) as { id: string; case_number: string; description?: string }[];
-        // Filter out current case
-        setOtherCaseResults(items.filter((c) => c.id !== caseId).map((c) => ({
-          id: c.id,
-          case_number: c.case_number,
-          description: c.description || "",
-        })));
+        setOtherResults(((data.items ?? data) as { id: string; case_number: string; description?: string }[])
+          .filter((c) => c.id !== caseId)
+          .map((c) => ({ id: c.id, case_number: c.case_number, description: c.description || "" })));
       }
     } catch { /* ignore */ }
-    setLoadingOtherCase(false);
+    setLoadingOther(false);
   };
 
-  const selectOtherCase = async (otherCaseId: string) => {
-    setOtherCaseSelected(otherCaseId);
+  const selectOtherCase = async (id: string) => {
+    setOtherSelected(id);
     setLoadingOtherFiles(true);
     try {
-      const res = await api(`/api/cases/${otherCaseId}/files`);
-      if (res.ok) {
-        const data = await res.json();
-        setOtherCaseFiles(data.items ?? data);
-      }
+      const res = await api(`/api/cases/${id}/files`);
+      if (res.ok) { const data = await res.json(); setOtherFiles(data.items ?? data); }
     } catch { /* ignore */ }
     setLoadingOtherFiles(false);
   };
 
-  const addOtherCaseFile = async (file: CaseFileItem) => {
-    if (!otherCaseSelected) return;
-    const id = `other-${otherCaseSelected}-${file.id}`;
-
+  const addOtherFile = async (f: CaseFileItem) => {
+    if (!otherSelected) return;
+    const id = `other-${otherSelected}-${f.id}`;
     try {
-      const res = await api(`/api/cases/${otherCaseSelected}/files/${file.id}/download`);
-      if (!res.ok) {
-        setFieldErrors((prev) => ({ ...prev, attachments: `Kan '${file.original_filename}' niet downloaden` }));
-        return;
-      }
+      const res = await api(`/api/cases/${otherSelected}/files/${f.id}/download`);
+      if (!res.ok) return;
       const blob = await res.blob();
-      if (blob.size > 3 * 1024 * 1024) {
-        setFieldErrors((prev) => ({ ...prev, attachments: `'${file.original_filename}' is te groot (max 3 MB)` }));
-        return;
-      }
-
-      // Read as base64
+      if (blob.size > 3 * 1024 * 1024) { setErrors((p) => ({ ...p, attachments: `'${f.original_filename}' te groot (max 3 MB)` })); return; }
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve((reader.result as string).split(",")[1]);
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-
-      setInlineFiles((prev) => {
-        const next = new Map(prev);
-        next.set(id, {
-          filename: file.original_filename,
-          data_base64: base64,
-          content_type: file.content_type || "application/octet-stream",
-        });
-        return next;
-      });
-      setAttachments((prev) => [
-        ...prev,
-        { id, filename: file.original_filename, size: blob.size, source: "other" },
-      ]);
-    } catch {
-      setFieldErrors((prev) => ({ ...prev, attachments: `Fout bij downloaden '${file.original_filename}'` }));
-    }
+      setInlineFiles((prev) => { const n = new Map(prev); n.set(id, { filename: f.original_filename, data_base64: base64, content_type: f.content_type || "application/octet-stream" }); return n; });
+      setAttachments((prev) => [...prev, { id, filename: f.original_filename, size: blob.size, source: "other" }]);
+    } catch { /* ignore */ }
   };
 
   // ── Submit ────────────────────────────────────────────────────────────
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const errors: Record<string, string> = {};
-    if (!to.trim()) {
-      errors.to = "E-mailadres is verplicht";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) {
-      errors.to = "Ongeldig e-mailadres";
-    }
-    if (!subject.trim()) {
-      errors.subject = "Onderwerp is verplicht";
-    }
-    if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
-
-    const fileIds = Array.from(caseFileIds);
-    const uploads = Array.from(inlineFiles.values());
+    const errs: Record<string, string> = {};
+    if (!to.trim()) errs.to = "Vul een e-mailadres in";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) errs.to = "Ongeldig e-mailadres";
+    if (!subject.trim()) errs.subject = "Vul een onderwerp in";
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     onSend({
       recipient_email: to.trim(),
@@ -475,169 +369,143 @@ export function EmailComposeDialog({
       custom_subject: subject.trim() || null,
       custom_body: templateHtml ? null : (body.trim() || null),
       body_html: templateHtml || null,
-      case_file_ids: fileIds.length > 0 ? fileIds : undefined,
-      inline_attachments: uploads.length > 0 ? uploads : undefined,
+      case_file_ids: Array.from(caseFileIds).length > 0 ? Array.from(caseFileIds) : undefined,
+      inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
     });
   };
 
   const validRecipients = recipients?.filter((r) => r.email) ?? [];
-  const isTemplateLoading = renderTemplate?.isPending ?? false;
+  const ccRecipients = validRecipients.filter((r) => r.email !== to && !ccList.includes(r.email));
+  const isLoading = renderTemplate?.isPending ?? false;
+
+  // ── Render ────────────────────────────────────────────────────────────
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[680px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
+      <DialogContent className="sm:max-w-[640px] max-h-[85vh] overflow-y-auto p-0">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-5 pb-3">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Mail className="h-4 w-4 text-primary" />
             {title}
           </DialogTitle>
-          <DialogDescription>
-            Stel de e-mail samen en open in Outlook
-          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Recipient quick-select chips */}
-          {validRecipients.length > 0 && (
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <div className="px-6 space-y-3">
+            {/* ── Aan (To) ─────────────────────────────────────────── */}
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Snelkeuze ontvanger</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {validRecipients.map((r) => (
-                  <button
-                    key={r.email}
-                    type="button"
-                    onClick={() => selectRecipient(r)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                      "border cursor-pointer",
-                      selectedRecipientEmail === r.email
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background text-foreground border-border hover:bg-muted"
-                    )}
-                  >
-                    <User className="h-3 w-3" />
-                    <span>{r.name}</span>
-                    <span className="text-[10px] opacity-70">
-                      {getRoleLabel(r.role)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Aan */}
-          <div className="space-y-1.5">
-            <Label htmlFor="email-to">Aan *</Label>
-            <div className="flex gap-2">
-              <Input
-                id="email-to"
-                type="email"
-                placeholder="email@voorbeeld.nl"
-                value={to}
-                onChange={(e) => {
-                  setTo(e.target.value);
-                  if (fieldErrors.to) setFieldErrors((p) => { const n = { ...p }; delete n.to; return n; });
-                  if (selectedRecipientEmail && e.target.value !== selectedRecipientEmail) {
-                    setSelectedRecipientEmail(null);
-                  }
-                }}
-                required
-                className={cn("flex-1", fieldErrors.to && "border-destructive ring-1 ring-destructive/30")}
-              />
-              {!showCc && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => setShowCc(true)} className="text-xs text-muted-foreground">
-                  CC
-                </Button>
-              )}
-            </div>
-            {fieldErrors.to && <p className="text-[13px] text-destructive">{fieldErrors.to}</p>}
-          </div>
-
-          {/* Naam ontvanger */}
-          <div className="space-y-1.5">
-            <Label htmlFor="email-to-name">Naam ontvanger</Label>
-            <Input
-              id="email-to-name"
-              placeholder="Naam (voor aanhef)"
-              value={toName}
-              onChange={(e) => setToName(e.target.value)}
-            />
-          </div>
-
-          {/* CC */}
-          {showCc && (
-            <div className="space-y-1.5">
-              <Label>CC</Label>
-              {/* CC quick-select chips */}
-              {validRecipients.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {validRecipients
-                    .filter((r) => r.email !== to && !ccList.includes(r.email))
-                    .map((r) => (
-                      <button
-                        key={`cc-${r.email}`}
-                        type="button"
-                        onClick={() => {
-                          if (!ccList.includes(r.email)) {
-                            setCcList([...ccList, r.email]);
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-                      >
-                        <Plus className="h-2.5 w-2.5" />
-                        {r.name}
-                        <span className="text-[10px] opacity-70">{getRoleLabel(r.role)}</span>
-                      </button>
-                    ))}
-                </div>
-              )}
-              {ccList.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {ccList.map((email) => (
-                    <span key={email} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      {email}
-                      <button type="button" onClick={() => removeCc(email)} className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-12 shrink-0">Aan</span>
+                <div className="flex-1 flex flex-wrap items-center gap-1.5 min-h-[36px] rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+                  {/* Selected recipient chip */}
+                  {to && selectedChip && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium">
+                      {toName || to}
+                      <button type="button" onClick={() => { setTo(""); setToName(""); setSelectedChip(null); }} className="hover:text-destructive">
                         <X className="h-3 w-3" />
                       </button>
                     </span>
+                  )}
+                  {/* Input (hidden when chip selected) */}
+                  {!selectedChip && (
+                    <input
+                      type="email"
+                      placeholder="E-mailadres..."
+                      value={to}
+                      onChange={(e) => { setTo(e.target.value); if (errors.to) setErrors((p) => { const n = { ...p }; delete n.to; return n; }); }}
+                      className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  )}
+                </div>
+                <button type="button" onClick={() => setShowCc(!showCc)} className={cn("text-xs font-medium px-2 py-1 rounded hover:bg-muted transition-colors", showCc ? "text-primary" : "text-muted-foreground")}>
+                  CC
+                </button>
+              </div>
+              {errors.to && <p className="text-xs text-destructive ml-14">{errors.to}</p>}
+
+              {/* Quick-select chips (only when no recipient selected) */}
+              {!selectedChip && validRecipients.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 ml-14">
+                  {validRecipients.map((r) => (
+                    <button
+                      key={r.email}
+                      type="button"
+                      onClick={() => selectRecipient(r)}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                      {r.name}
+                      <span className="opacity-60">{ROLE_LABELS[r.role] ?? r.role}</span>
+                    </button>
                   ))}
                 </div>
               )}
-              <div className="flex gap-2">
-                <Input type="email" placeholder="cc@voorbeeld.nl" value={ccInput} onChange={(e) => setCcInput(e.target.value)} onKeyDown={handleCcKeyDown} className="flex-1" />
-                <Button type="button" variant="outline" size="icon" onClick={addCc} disabled={!ccInput.trim()}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Druk op Enter of komma om toe te voegen</p>
             </div>
-          )}
 
-          {/* Onderwerp */}
-          <div className="space-y-1.5">
-            <Label htmlFor="email-subject">Onderwerp *</Label>
-            <Input
-              id="email-subject"
-              placeholder="Onderwerp van de e-mail"
-              value={subject}
-              onChange={(e) => {
-                setSubject(e.target.value);
-                if (fieldErrors.subject) setFieldErrors((p) => { const n = { ...p }; delete n.subject; return n; });
-              }}
-              className={cn(fieldErrors.subject && "border-destructive ring-1 ring-destructive/30")}
-            />
-            {fieldErrors.subject && <p className="text-[13px] text-destructive">{fieldErrors.subject}</p>}
-          </div>
+            {/* ── CC ───────────────────────────────────────────────── */}
+            {showCc && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground w-12 shrink-0">CC</span>
+                  <div className="flex-1 flex flex-wrap items-center gap-1.5 min-h-[36px] rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+                    {ccList.map((email) => (
+                      <span key={email} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                        {email}
+                        <button type="button" onClick={() => setCcList(ccList.filter((e) => e !== email))} className="hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      type="email"
+                      placeholder={ccList.length ? "" : "E-mailadres..."}
+                      value={ccInput}
+                      onChange={(e) => setCcInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addCc(); } }}
+                      className="flex-1 min-w-[80px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </div>
+                {/* CC quick-select */}
+                {ccRecipients.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 ml-14">
+                    {ccRecipients.map((r) => (
+                      <button key={`cc-${r.email}`} type="button" onClick={() => addCcFromRecipient(r)}
+                        className="inline-flex items-center gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer">
+                        <Plus className="h-2.5 w-2.5" />
+                        {r.name}
+                        <span className="opacity-60">{ROLE_LABELS[r.role] ?? r.role}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-          {/* Template selector */}
-          {caseId && templates.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Template</Label>
-              <div className="flex gap-2">
+            {/* ── Divider ─────────────────────────────────────────── */}
+            <div className="border-t border-border" />
+
+            {/* ── Onderwerp ────────────────────────────────────────── */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground w-12 shrink-0">Betreft</span>
+              <input
+                type="text"
+                placeholder="Onderwerp..."
+                value={subject}
+                onChange={(e) => { setSubject(e.target.value); if (errors.subject) setErrors((p) => { const n = { ...p }; delete n.subject; return n; }); }}
+                className={cn("flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground", errors.subject && "text-destructive")}
+              />
+            </div>
+            {errors.subject && <p className="text-xs text-destructive ml-14">{errors.subject}</p>}
+
+            {/* ── Template selector ────────────────────────────────── */}
+            {caseId && templates.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-12 shrink-0">Sjabloon</span>
                 <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Geen template (vrije tekst)" />
+                  <SelectTrigger className="flex-1 h-8 text-sm">
+                    <SelectValue placeholder="Geen sjabloon" />
                   </SelectTrigger>
                   <SelectContent>
                     {templates.map((t) => (
@@ -648,273 +516,199 @@ export function EmailComposeDialog({
                   </SelectContent>
                 </Select>
                 {selectedTemplate && (
-                  <Button type="button" variant="ghost" size="sm" onClick={clearTemplate} className="text-xs text-muted-foreground">
-                    Wis template
-                  </Button>
+                  <button type="button" onClick={() => { setSelectedTemplate(""); setTemplateHtml(null); }} className="text-xs text-muted-foreground hover:text-foreground">
+                    Wissen
+                  </button>
                 )}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Body — template preview OR free text */}
-          {isTemplateLoading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Template laden...</span>
-            </div>
-          ) : templateHtml ? (
-            <div className="space-y-1.5">
-              <Label>Bericht (template)</Label>
-              <div className="rounded-lg border border-border overflow-hidden">
+            {/* ── Divider ─────────────────────────────────────────── */}
+            <div className="border-t border-border" />
+          </div>
+
+          {/* ── Body ──────────────────────────────────────────────── */}
+          <div className="px-6 py-2">
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Sjabloon laden...</span>
+              </div>
+            ) : templateHtml ? (
+              <div className="rounded-md border overflow-hidden">
                 <iframe
                   srcDoc={templateHtml}
                   className="w-full border-0"
-                  style={{ height: "300px" }}
+                  style={{ height: "280px" }}
                   sandbox="allow-same-origin"
-                  title="Template preview"
+                  title="Sjabloon preview"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Template wordt als e-mail body verstuurd. Klik &quot;Wis template&quot; voor vrije tekst.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="email-body">Bericht</Label>
+            ) : (
               <Textarea
-                id="email-body"
-                placeholder="Typ hier uw bericht..."
+                placeholder="Typ uw bericht..."
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                rows={6}
-                className="resize-y"
+                rows={8}
+                className="resize-none border-0 shadow-none focus-visible:ring-0 px-0 text-sm"
               />
-            </div>
-          )}
+            )}
+          </div>
 
-          {/* Legacy attachment indicator */}
-          {attachmentName && !caseId && (
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
-              <Paperclip className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Bijlage: <span className="font-medium text-foreground">{attachmentName}</span>
-              </span>
-            </div>
-          )}
+          {/* ── Attachments ───────────────────────────────────────── */}
+          <div className="px-6 pb-3 space-y-2">
+            {/* Attachment chips */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attachments.map((att) => (
+                  <span key={att.id} className="inline-flex items-center gap-1.5 rounded-md bg-muted/80 px-2.5 py-1 text-xs">
+                    <Paperclip className="h-3 w-3 text-muted-foreground" />
+                    <span className="max-w-[140px] truncate">{att.filename}</span>
+                    <span className="text-muted-foreground">{formatSize(att.size)}</span>
+                    <button type="button" onClick={() => removeAttachment(att.id)} className="hover:text-destructive ml-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
 
-          {/* Attachments section */}
-          {caseId && (
-            <div className="space-y-2">
+            {/* Legacy indicator */}
+            {attachmentName && !caseId && (
+              <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-xs">
+                <Paperclip className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Bijlage: <span className="font-medium text-foreground">{attachmentName}</span></span>
+              </div>
+            )}
+
+            {/* File picker panel */}
+            {showFilePicker && (
+              <div className="rounded-md border p-3 space-y-2 bg-muted/20 text-xs">
+                <p className="font-medium text-muted-foreground">Bestanden in dit dossier</p>
+                {loadingFiles ? (
+                  <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Laden...
+                  </div>
+                ) : caseFiles.length === 0 ? (
+                  <p className="text-muted-foreground py-1">Geen bestanden</p>
+                ) : (
+                  <div className="space-y-0.5 max-h-[120px] overflow-y-auto">
+                    {caseFiles.map((f) => (
+                      <label key={f.id} className={cn("flex items-center gap-2 rounded px-2 py-1 cursor-pointer hover:bg-muted transition-colors", caseFileIds.has(f.id) && "bg-primary/5")}>
+                        <input type="checkbox" checked={caseFileIds.has(f.id)} onChange={() => toggleCaseFile(f)} className="rounded border-border" />
+                        <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="truncate flex-1">{f.original_filename}</span>
+                        <span className="text-muted-foreground shrink-0">{formatSize(f.file_size)}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <button type="button" onClick={() => setShowFilePicker(false)} className="text-muted-foreground hover:text-foreground text-xs">Sluiten</button>
+              </div>
+            )}
+
+            {/* Other-case picker */}
+            {showOtherCase && (
+              <div className="rounded-md border p-3 space-y-2 bg-muted/20 text-xs">
+                <p className="font-medium text-muted-foreground">Bestand uit ander dossier</p>
+                <div className="flex gap-2">
+                  <Input placeholder="Zoek dossier..." value={otherSearch} onChange={(e) => setOtherSearch(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); searchOtherCases(); } }} className="flex-1 h-7 text-xs" />
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={searchOtherCases} disabled={loadingOther || !otherSearch.trim()}>
+                    {loadingOther ? <Loader2 className="h-3 w-3 animate-spin" /> : "Zoeken"}
+                  </Button>
+                </div>
+                {otherResults.length > 0 && !otherSelected && (
+                  <div className="space-y-0.5 max-h-[100px] overflow-y-auto">
+                    {otherResults.map((c) => (
+                      <button key={c.id} type="button" onClick={() => selectOtherCase(c.id)}
+                        className="w-full flex items-center gap-2 rounded px-2 py-1 text-left hover:bg-muted transition-colors">
+                        <FolderSearch className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="font-medium">{c.case_number}</span>
+                        <span className="text-muted-foreground truncate">{c.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {otherSelected && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Dossier: <span className="font-medium text-foreground">{otherResults.find((c) => c.id === otherSelected)?.case_number}</span></span>
+                      <button type="button" onClick={() => { setOtherSelected(null); setOtherFiles([]); }} className="text-primary text-[10px] hover:underline">Wijzig</button>
+                    </div>
+                    {loadingOtherFiles ? (
+                      <div className="flex items-center gap-2 py-1 text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" /> Laden...</div>
+                    ) : otherFiles.length === 0 ? (
+                      <p className="text-muted-foreground">Geen bestanden</p>
+                    ) : (
+                      <div className="space-y-0.5 max-h-[100px] overflow-y-auto">
+                        {otherFiles.map((f) => {
+                          const added = attachments.some((a) => a.id === `other-${otherSelected}-${f.id}`);
+                          return (
+                            <button key={f.id} type="button" onClick={() => !added && addOtherFile(f)} disabled={added}
+                              className={cn("w-full flex items-center gap-2 rounded px-2 py-1 text-left hover:bg-muted transition-colors", added && "opacity-40")}>
+                              <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="truncate flex-1">{f.original_filename}</span>
+                              <span className="text-muted-foreground shrink-0">{formatSize(f.file_size)}</span>
+                              {added && <span className="text-primary text-[10px]">✓</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button type="button" onClick={() => setShowOtherCase(false)} className="text-muted-foreground hover:text-foreground text-xs">Sluiten</button>
+              </div>
+            )}
+
+            {errors.attachments && <p className="text-xs text-destructive">{errors.attachments}</p>}
+          </div>
+
+          {/* ── Footer ────────────────────────────────────────────── */}
+          <div className="border-t px-6 py-3 flex items-center justify-between">
+            {/* Left: attachments button */}
+            {caseId && (
               <div className="flex items-center gap-2">
-                <Label>Bijlagen</Label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs">
-                      <Plus className="h-3 w-3" />
-                      Bijlage toevoegen
+                    <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground">
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {attachments.length > 0 ? `Bijlagen (${attachments.length})` : "Bijlage"}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={toggleFilePicker}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Uit dit dossier
+                    <DropdownMenuItem onClick={() => { setShowFilePicker(true); setShowOtherCase(false); loadCaseFiles(); }}>
+                      <FileText className="h-4 w-4 mr-2" /> Uit dit dossier
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Bestand uploaden
+                      <Upload className="h-4 w-4 mr-2" /> Uploaden
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setShowOtherCase(true); setShowFilePicker(false); }}>
-                      <FolderSearch className="h-4 w-4 mr-2" />
-                      Uit ander dossier
+                      <FolderSearch className="h-4 w-4 mr-2" /> Ander dossier
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
+                <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileUpload} />
               </div>
+            )}
 
-              {/* File picker panel */}
-              {showFilePicker && (
-                <div className="rounded-lg border border-border p-3 space-y-2 bg-muted/30">
-                  <p className="text-xs font-medium text-muted-foreground">Bestanden in dit dossier</p>
-                  {loadingFiles ? (
-                    <div className="flex items-center gap-2 py-2 text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      <span className="text-xs">Laden...</span>
-                    </div>
-                  ) : caseFiles.length === 0 ? (
-                    <p className="text-xs text-muted-foreground py-2">Geen bestanden in dit dossier</p>
-                  ) : (
-                    <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                      {caseFiles.map((f) => (
-                        <label
-                          key={f.id}
-                          className={cn(
-                            "flex items-center gap-2 rounded px-2 py-1.5 text-xs cursor-pointer hover:bg-muted transition-colors",
-                            caseFileIds.has(f.id) && "bg-primary/10"
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={caseFileIds.has(f.id)}
-                            onChange={() => toggleCaseFile(f)}
-                            className="rounded border-border"
-                          />
-                          <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="truncate flex-1">{f.original_filename}</span>
-                          <span className="text-muted-foreground shrink-0">{formatFileSize(f.file_size)}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowFilePicker(false)} className="text-xs">
-                    Sluiten
-                  </Button>
-                </div>
-              )}
-
-              {/* Other case file picker */}
-              {showOtherCase && (
-                <div className="rounded-lg border border-border p-3 space-y-2 bg-muted/30">
-                  <p className="text-xs font-medium text-muted-foreground">Bestand uit ander dossier</p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Zoek op dossiernummer of naam..."
-                      value={otherCaseSearch}
-                      onChange={(e) => setOtherCaseSearch(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); searchOtherCases(); } }}
-                      className="flex-1 h-8 text-xs"
-                    />
-                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={searchOtherCases} disabled={loadingOtherCase || !otherCaseSearch.trim()}>
-                      {loadingOtherCase ? <Loader2 className="h-3 w-3 animate-spin" /> : "Zoeken"}
-                    </Button>
-                  </div>
-
-                  {/* Case results */}
-                  {otherCaseResults.length > 0 && !otherCaseSelected && (
-                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
-                      {otherCaseResults.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => selectOtherCase(c.id)}
-                          className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left hover:bg-muted transition-colors"
-                        >
-                          <FolderSearch className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="font-medium">{c.case_number}</span>
-                          <span className="text-muted-foreground truncate">{c.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Files from selected other case */}
-                  {otherCaseSelected && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          Dossier: <span className="font-medium text-foreground">{otherCaseResults.find((c) => c.id === otherCaseSelected)?.case_number}</span>
-                        </p>
-                        <Button type="button" variant="ghost" size="sm" className="h-5 text-[10px] px-1.5" onClick={() => { setOtherCaseSelected(null); setOtherCaseFiles([]); }}>
-                          Wijzig
-                        </Button>
-                      </div>
-                      {loadingOtherFiles ? (
-                        <div className="flex items-center gap-2 py-2 text-muted-foreground">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span className="text-xs">Bestanden laden...</span>
-                        </div>
-                      ) : otherCaseFiles.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-1">Geen bestanden in dit dossier</p>
-                      ) : (
-                        <div className="space-y-1 max-h-[120px] overflow-y-auto">
-                          {otherCaseFiles.map((f) => (
-                            <button
-                              key={f.id}
-                              type="button"
-                              onClick={() => addOtherCaseFile(f)}
-                              disabled={attachments.some((a) => a.id === `other-${otherCaseSelected}-${f.id}`)}
-                              className={cn(
-                                "w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left hover:bg-muted transition-colors",
-                                attachments.some((a) => a.id === `other-${otherCaseSelected}-${f.id}`) && "opacity-50 cursor-not-allowed"
-                              )}
-                            >
-                              <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <span className="truncate flex-1">{f.original_filename}</span>
-                              <span className="text-muted-foreground shrink-0">{formatFileSize(f.file_size)}</span>
-                              {attachments.some((a) => a.id === `other-${otherCaseSelected}-${f.id}`) && (
-                                <span className="text-[10px] text-primary">Toegevoegd</span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowOtherCase(false)} className="text-xs">
-                    Sluiten
-                  </Button>
-                </div>
-              )}
-
-              {/* Attachment badges */}
-              {attachments.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {attachments.map((att) => (
-                    <span
-                      key={att.id}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2.5 py-1 text-xs"
-                    >
-                      <Paperclip className="h-3 w-3 text-muted-foreground" />
-                      <span className="max-w-[150px] truncate">{att.filename}</span>
-                      <span className="text-muted-foreground">{formatFileSize(att.size)}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(att.id)}
-                        className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {fieldErrors.attachments && (
-                <p className="text-[13px] text-destructive">{fieldErrors.attachments}</p>
-              )}
+            {/* Right: cancel + send */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenChange(false)} disabled={isSending}>
+                Annuleren
+              </Button>
+              <Button type="submit" size="sm" disabled={isSending || !to.trim()} className="gap-1.5">
+                {isSending ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Bezig...</>
+                ) : caseId ? (
+                  <><ExternalLink className="h-3.5 w-3.5" /> Open in Outlook</>
+                ) : (
+                  <><Mail className="h-3.5 w-3.5" /> Versturen</>
+                )}
+              </Button>
             </div>
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSending}>
-              Annuleren
-            </Button>
-            <Button type="submit" disabled={isSending || !to.trim()}>
-              {isSending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Aanmaken...
-                </>
-              ) : caseId ? (
-                <>
-                  <ExternalLink className="h-4 w-4" />
-                  Open in Outlook
-                </>
-              ) : (
-                <>
-                  <Mail className="h-4 w-4" />
-                  Versturen
-                </>
-              )}
-            </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

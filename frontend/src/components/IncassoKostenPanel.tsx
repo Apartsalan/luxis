@@ -44,17 +44,17 @@ export function IncassoKostenPanel({
   useEffect(() => {
     if (preview && !initialized.current) {
       initialized.current = true;
-      setBikAmount(preview.bik.amount.toFixed(2));
-      setRenteAmount(preview.interest.amount.toFixed(2));
+      setBikAmount(Number(preview.bik.amount).toFixed(2));
+      setRenteAmount(Number(preview.interest.amount).toFixed(2));
       setProvisieBase(
         preview.provisie.base as "collected_amount" | "total_claim"
       );
-      setProvisiePct(preview.provisie.percentage.toString());
+      setProvisiePct(String(preview.provisie.percentage));
       // Calculate initial provisie amount
       const base =
         preview.provisie.base === "total_claim"
-          ? preview.provisie.over_claim.amount
-          : preview.provisie.over_collected.amount;
+          ? Number(preview.provisie.over_claim.amount)
+          : Number(preview.provisie.over_collected.amount);
       setProvisieAmount(base.toFixed(2));
     }
   }, [preview]);
@@ -65,11 +65,11 @@ export function IncassoKostenPanel({
     const pct = parseFloat(provisiePct) || 0;
     const baseAmount =
       provisieBase === "total_claim"
-        ? preview.principal
-        : preview.collected_amount;
+        ? Number(preview.principal)
+        : Number(preview.collected_amount);
     const raw = (baseAmount * pct) / 100;
-    const fixedCosts = preview.provisie.fixed_costs;
-    const minFee = preview.provisie.minimum_fee;
+    const fixedCosts = Number(preview.provisie.fixed_costs);
+    const minFee = Number(preview.provisie.minimum_fee);
     const total = Math.max(raw + fixedCosts, minFee);
     setProvisieAmount(total > 0 ? total.toFixed(2) : "0.00");
   }, [provisieBase, provisiePct, preview]);
@@ -91,10 +91,10 @@ export function IncassoKostenPanel({
 
   const baseLabel =
     provisieBase === "total_claim"
-      ? `totale vordering (${formatCurrency(preview.principal)})`
-      : `geincasseerd bedrag (${formatCurrency(preview.collected_amount)})`;
+      ? `totale vordering (${formatCurrency(Number(preview.principal))})`
+      : `geincasseerd bedrag (${formatCurrency(Number(preview.collected_amount))})`;
 
-  const noCollected = preview.collected_amount <= 0;
+  const noCollected = Number(preview.collected_amount) <= 0;
 
   const inputClass =
     "w-28 rounded-lg border border-input bg-background px-3 py-1.5 text-sm text-right font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
@@ -187,8 +187,8 @@ export function IncassoKostenPanel({
                   onClick={() => {
                     const desc =
                       provisieBase === "total_claim"
-                        ? `Provisie ${provisiePct}% over totale vordering (${formatCurrency(preview.principal)})`
-                        : `Provisie ${provisiePct}% over geincasseerd bedrag (${formatCurrency(preview.collected_amount)})`;
+                        ? `Provisie ${provisiePct}% over totale vordering (${formatCurrency(Number(preview.principal))})`
+                        : `Provisie ${provisiePct}% over geincasseerd bedrag (${formatCurrency(Number(preview.collected_amount))})`;
                     onAddLine({
                       description: desc,
                       quantity: "1",
@@ -247,17 +247,17 @@ export function IncassoKostenPanel({
               />
               <span className="text-xs text-muted-foreground">%</span>
             </div>
-            {(preview.provisie.fixed_costs > 0 ||
-              preview.provisie.minimum_fee > 0) && (
+            {(Number(preview.provisie.fixed_costs) > 0 ||
+              Number(preview.provisie.minimum_fee) > 0) && (
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 <Info className="h-3 w-3" />
-                {preview.provisie.fixed_costs > 0 &&
-                  `Vaste kosten: ${formatCurrency(preview.provisie.fixed_costs)}`}
-                {preview.provisie.fixed_costs > 0 &&
-                  preview.provisie.minimum_fee > 0 &&
+                {Number(preview.provisie.fixed_costs) > 0 &&
+                  `Vaste kosten: ${formatCurrency(Number(preview.provisie.fixed_costs))}`}
+                {Number(preview.provisie.fixed_costs) > 0 &&
+                  Number(preview.provisie.minimum_fee) > 0 &&
                   " · "}
-                {preview.provisie.minimum_fee > 0 &&
-                  `Min. tarief: ${formatCurrency(preview.provisie.minimum_fee)}`}
+                {Number(preview.provisie.minimum_fee) > 0 &&
+                  `Min. tarief: ${formatCurrency(Number(preview.provisie.minimum_fee))}`}
               </p>
             )}
             {noCollected && provisieBase === "collected_amount" && (

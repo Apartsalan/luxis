@@ -171,9 +171,16 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
                           </div>
                         )}
                       </div>
-                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                        {typeLabel}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {(activity.activity_type === "ai_action" || activity.activity_type === "automation") && (
+                          <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+                            AI
+                          </span>
+                        )}
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                          {typeLabel}
+                        </span>
+                      </div>
                     </div>
                     <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground/70">
                       <span>{formatRelativeTime(activity.created_at)}</span>

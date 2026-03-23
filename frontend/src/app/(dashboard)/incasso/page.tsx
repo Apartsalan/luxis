@@ -23,6 +23,7 @@ import {
   Clock,
   Filter,
   Mail,
+  Bot,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,6 +48,7 @@ import {
   useManagedTemplates,
   getTemplateKeyLabel,
 } from "@/hooks/use-managed-templates";
+import { useClassifications } from "@/hooks/use-ai-agent";
 
 // ── Tabs ─────────────────────────────────────────────────────────────────
 
@@ -551,6 +553,16 @@ function WerkstroomTab() {
   const batchPreview = useBatchPreview();
   const batchExecute = useBatchExecute();
 
+  // AI-UX-05: pending classifications per case
+  const { data: pendingClassifications } = useClassifications("pending", undefined, 1, 100);
+  const aiCaseIds = useMemo(() => {
+    const set = new Set<string>();
+    if (pendingClassifications) {
+      for (const c of pendingClassifications) set.add(c.case_id);
+    }
+    return set;
+  }, [pendingClassifications]);
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showPreview, setShowPreview] = useState(false);
   const [batchAction, setBatchAction] = useState<string | null>(null);
@@ -759,6 +771,7 @@ function WerkstroomTab() {
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onSelectAll={() => selectAllInStep(filteredCases)}
+            aiCaseIds={aiCaseIds}
           />
         );
       })}
@@ -780,6 +793,7 @@ function WerkstroomTab() {
           onToggleSelect={toggleSelect}
           onSelectAll={() => selectAllInStep(pipeline.unassigned)}
           isUnassigned
+          aiCaseIds={aiCaseIds}
         />
       )}
 
@@ -851,12 +865,14 @@ function PipelineColumnView({
   onToggleSelect,
   onSelectAll,
   isUnassigned = false,
+  aiCaseIds = new Set<string>(),
 }: {
   column: { step: PipelineStep; cases: CaseInPipeline[]; count: number };
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onSelectAll: () => void;
   isUnassigned?: boolean;
+  aiCaseIds?: Set<string>;
 }) {
   const allSelected = column.cases.length > 0 && column.cases.every((c) => selectedIds.has(c.id));
   const isEmpty = column.cases.length === 0;
@@ -980,6 +996,12 @@ function PipelineColumnView({
                         title={DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.label ?? ""}
                       />
                       {c.case_number}
+                      {aiCaseIds.has(c.id) && (
+                        <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-100 dark:bg-violet-900/30 px-1 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400" title="AI-suggestie wacht op review">
+                          <Bot className="h-2.5 w-2.5" />
+                          AI
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="px-3 py-2">{c.client_name}</td>

@@ -1,11 +1,13 @@
 import {
   ArrowUpDown,
+  Bot,
   MessageSquare,
   Phone,
   Mail,
   FileText,
   CreditCard,
   Briefcase,
+  Zap,
 } from "lucide-react";
 import { sanitizeHtml } from "@/lib/sanitize";
 
@@ -76,6 +78,8 @@ export const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
   email: Mail,
   document: FileText,
   payment: CreditCard,
+  ai_action: Bot,
+  automation: Zap,
 };
 
 export const ACTIVITY_COLORS: Record<string, string> = {
@@ -85,6 +89,8 @@ export const ACTIVITY_COLORS: Record<string, string> = {
   email: "bg-violet-50 text-violet-600",
   document: "bg-slate-100 text-slate-600",
   payment: "bg-green-50 text-green-600",
+  ai_action: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+  automation: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
 };
 
 export const ACTIVITY_TYPE_LABELS: Record<string, string> = {
@@ -94,6 +100,8 @@ export const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   email: "E-mail",
   document: "Document",
   payment: "Betaling",
+  ai_action: "AI",
+  automation: "Automatisering",
 };
 
 // ── Task constants ──────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  Bot,
   Briefcase,
   Building2,
   Euro,
@@ -14,10 +15,12 @@ import {
   FileText,
   CreditCard,
   ArrowUpRight,
+  Mail,
   Users,
   Receipt,
   Timer,
   ShieldAlert,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -40,6 +43,9 @@ import {
 import { useMyTodayEntries, useTimeEntrySummary } from "@/hooks/use-time-entries";
 import { useInvoices, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hooks/use-invoices";
 import { useKycDashboard } from "@/hooks/use-kyc";
+import { usePendingCount, useClassifications, type Classification } from "@/hooks/use-ai-agent";
+import { useFollowupStats } from "@/hooks/use-followup";
+import { confidenceLabelText, confidenceTextColor as confidenceTextCls } from "@/lib/confidence";
 
 interface DashboardSummary {
   total_active_cases: number;
@@ -75,6 +81,8 @@ const ACTIVITY_ICONS: Record<string, typeof Briefcase> = {
   email: FileText,
   document: FileText,
   payment: CreditCard,
+  ai_action: Bot,
+  automation: Zap,
 };
 
 function getGreeting(): string {
@@ -259,6 +267,9 @@ export default function DashboardPage() {
 
       {/* KYC Compliance warnings */}
       {hasModule("wwft") && <KycWarningWidget />}
+
+      {/* AI-UX-07: AI Suggestions widget */}
+      <AiSuggestionsWidget />
 
       {/* My Tasks widget */}
       <MyTasksWidget />
@@ -764,6 +775,85 @@ function MyTasksWidget() {
             Alle {totalOpen} taken bekijken →
           </span>
         </Link>
+      )}
+    </div>
+  );
+}
+
+function AiSuggestionsWidget() {
+  const { data: pendingCount } = usePendingCount();
+  const { data: followupStats } = useFollowupStats();
+  const { data: pendingClassifications } = useClassifications("pending", undefined, 1, 5);
+
+  const classificationCount = pendingCount?.count ?? 0;
+  const followupCount = followupStats?.pending ?? 0;
+  const totalPending = classificationCount + followupCount;
+
+  if (totalPending === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-primary/10">
+        <div className="flex items-center gap-2">
+          <Bot className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">
+            AI-suggesties
+          </h2>
+          <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+            AI
+          </span>
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
+            {totalPending}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {classificationCount > 0 && (
+            <Link
+              href="/taken"
+              className="text-xs text-primary hover:underline"
+            >
+              {classificationCount} classificatie{classificationCount !== 1 ? "s" : ""} →
+            </Link>
+          )}
+          {followupCount > 0 && (
+            <Link
+              href="/followup"
+              className="text-xs text-primary hover:underline"
+            >
+              {followupCount} follow-up{followupCount !== 1 ? "s" : ""} →
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {pendingClassifications && pendingClassifications.length > 0 && (
+        <div className="divide-y divide-border/50">
+          {pendingClassifications.slice(0, 3).map((c: Classification) => (
+            <Link
+              key={c.id}
+              href={`/zaken/${c.case_id}?tab=correspondentie`}
+              className="flex items-start gap-3 px-5 py-3 hover:bg-primary/10 transition-colors"
+            >
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30">
+                <Mail className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {c.category_label}
+                  </p>
+                  <span className={`shrink-0 text-[10px] font-medium ${confidenceTextCls(c.confidence)}`}>
+                    {confidenceLabelText(c.confidence)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {c.case_number} — {c.suggested_action_label}
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   );

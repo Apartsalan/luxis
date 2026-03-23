@@ -31,6 +31,19 @@
 - Vervangt de oude eenvoudige followup-banner met een uitgebreidere versie
 - Dismiss-knop om de banner te verbergen
 
+**AI-UX-05: AI indicators op incasso pipeline**
+- AI-badge (Bot icoon + "AI") naast dossiernummer in pipeline tabel als er pending classificatie is
+- Bulk fetch van pending classificaties, case_id matching via Set
+
+**AI-UX-06: AI-acties in activity feed**
+- Activity types `ai_action` en `automation` toegevoegd aan icons/colors/labels in types.tsx
+- Paarse AI-badge naast type-label in de tijdlijn
+
+**AI-UX-07: Dashboard AI widget**
+- Samenvatting widget met pending classificatie- en followup-counts
+- Toont tot 3 recente pending classificaties met confidence labels en directe links naar dossiers
+- Widget verschijnt alleen als er pending items zijn
+
 **Nieuwe bestanden:** frontend/src/lib/confidence.ts
 **Gewijzigde bestanden:** classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx, zaken/[id]/page.tsx
 

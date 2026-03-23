@@ -306,14 +306,14 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | # | Feature/Fix | Ernst | Grootte | Status |
 |---|-------------|-------|---------|--------|
 | DF2-01 | **Email compose uitbreiden** — volledige email-flow: kies ontvanger (wederpartij/advocaat/cliënt/handmatig), bijlagen uit dossier + computer + ander dossier, template als mail-body (niet bijlage), opent in Outlook met alles pre-filled incl. alle betrokkenen-emails. Onderzoek eerst. | Hoog | XL | ❌ TODO |
-| DF2-02 | **Incasso stappen bewerken** — bestaande stappen kunnen aanpassen, niet alleen nieuwe toevoegen | Midden | S | ❌ TODO |
-| DF2-03 | **BTW per factuurregel** — per regel btw-soort kiezen (21%/0%/anders). Griffierecht = verschot zonder btw. Ook bij factuur bewerken (regel toevoegen achteraf) | Hoog | M | ❌ TODO |
-| DF2-04 | **Voorschotbedrag op uren** — naast bedrag ook aantal uur invoeren → automatisch berekenen op basis van uurtarief | Midden | S | ❌ TODO |
-| DF2-05 | **Rentetype verplaatsen naar stap 3** — staat nu bij stap 1, hoort bij stap 3 (bij de vordering) | Laag | S | ❌ TODO |
-| DF2-06 | **Profiel invullen bij nieuw dossier** — bij nieuwe betrokkenen meteen volledig profiel laten invullen (alleen voor nieuwe personen) | Midden | M | ❌ TODO |
-| DF2-07 | **PDF parsing verbeterd** — "Geen tekst gevonden" bij gewone PDF's. Moet ook scans/afbeeldingen kunnen lezen (OCR via AI) | Hoog | M | ❌ TODO |
+| DF2-02 | **Incasso stappen bewerken** — bewerk-knop (potlood-icoon) toegevoegd naast bestaande inline-edit | Midden | S | ✅ Sessie 103 |
+| DF2-03 | **BTW per factuurregel** — per regel btw-soort kiezen (21%/9%/0%). Per-tariegroep berekening (NL belastingwet). Smart PDF uitsplitsing. Auto-BTW bij expense import. | Hoog | M | ✅ Sessie 103 |
+| DF2-04 | **Voorschotbedrag op uren** — uren × uurtarief auto-berekening op voorschotnota | Midden | S | ✅ Sessie 103 |
+| DF2-05 | **Rentetype verplaatsen naar stap 3** — van stap 1 (Zaakgegevens) naar stap 3 (Vordering) | Laag | S | ✅ Sessie 103 |
+| DF2-06 | **Profiel invullen bij nieuw dossier** — contactdetails standaard open bij nieuwe betrokkenen | Midden | S | ✅ Sessie 103 |
+| DF2-07 | **PDF parsing verbeterd** — fallback naar Claude native PDF bij scans/afbeeldingen | Hoog | M | ✅ Sessie 103 |
 | DF2-08 | **Genereer brief → mail als body** — template als mail-body versturen (met logo/handtekening/opmaak Kesting Legal), niet als bijgevoegd bestand. 5 HTML templates (aanmaning, sommatie, tweede_sommatie, 14_dagenbrief, herinnering) met Kesting Legal branding. Fallback naar PDF bijlage voor dagvaarding/renteoverzicht. | Hoog | L | ✅ Sessie 103b |
-| DF2-09 | **Incasso fase vanuit dossier** — dossier toewijzen aan incasso-fase vanuit het dossier zelf, niet alleen vanuit incasso-overzicht | Midden | S | ❌ TODO |
+| DF2-09 | **Incasso fase vanuit dossier** — pipeline step dropdown op dossier-detail header | Midden | S | ✅ Sessie 103 |
 
 ### UX Review Fixes (sessie 79b — 18 mrt 2026)
 

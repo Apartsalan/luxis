@@ -238,12 +238,10 @@ export default function ZaakDetailPage() {
           inline_attachments: data.inline_attachments,
         });
 
-        if (result.web_link) {
-          window.open(result.web_link, "_blank");
-          toast.success("Concept geopend in Outlook");
-        } else {
-          toast.success("Concept aangemaakt in Outlook — ga naar Concepten om te versturen");
-        }
+        // Draft is created in M365 — syncs to desktop Outlook instantly
+        // Try opening desktop Outlook via protocol handler
+        window.location.href = "ms-outlook:";
+        toast.success("Concept staat klaar in Outlook — ga naar Concepten en klik Verzenden");
       } else {
         // Fallback: direct send via SMTP (no attachments)
         await sendCaseEmail.mutateAsync({

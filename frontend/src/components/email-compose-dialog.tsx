@@ -158,6 +158,15 @@ export function EmailComposeDialog({
   const [loadingFiles, setLoadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // "Ander dossier" state
+  const [showOtherCase, setShowOtherCase] = useState(false);
+  const [otherCaseSearch, setOtherCaseSearch] = useState("");
+  const [otherCaseResults, setOtherCaseResults] = useState<{ id: string; case_number: string; description: string }[]>([]);
+  const [otherCaseSelected, setOtherCaseSelected] = useState<string | null>(null);
+  const [otherCaseFiles, setOtherCaseFiles] = useState<CaseFileItem[]>([]);
+  const [loadingOtherCase, setLoadingOtherCase] = useState(false);
+  const [loadingOtherFiles, setLoadingOtherFiles] = useState(false);
+
   // Load templates list when dialog opens
   useEffect(() => {
     if (open && caseId && templates.length === 0) {
@@ -186,6 +195,11 @@ export function EmailComposeDialog({
       setInlineFiles(new Map());
       setCaseFileIds(new Set());
       setShowFilePicker(false);
+      setShowOtherCase(false);
+      setOtherCaseSearch("");
+      setOtherCaseResults([]);
+      setOtherCaseSelected(null);
+      setOtherCaseFiles([]);
     }
     onOpenChange(nextOpen);
   };
@@ -353,6 +367,85 @@ export function EmailComposeDialog({
         return next;
       });
     }
+  };
+
+  // ── Other case file picker ─────────────────────────────────────────
+
+  const searchOtherCases = async () => {
+    if (!otherCaseSearch.trim()) return;
+    setLoadingOtherCase(true);
+    setOtherCaseSelected(null);
+    setOtherCaseFiles([]);
+    try {
+      const res = await api(`/api/cases?search=${encodeURIComponent(otherCaseSearch.trim())}&per_page=10`);
+      if (res.ok) {
+        const data = await res.json();
+        const items = (data.items ?? data) as { id: string; case_number: string; description?: string }[];
+        // Filter out current case
+        setOtherCaseResults(items.filter((c) => c.id !== caseId).map((c) => ({
+          id: c.id,
+          case_number: c.case_number,
+          description: c.description || "",
+        })));
+      }
+    } catch { /* ignore */ }
+    setLoadingOtherCase(false);
+  };
+
+  const selectOtherCase = async (otherCaseId: string) => {
+    setOtherCaseSelected(otherCaseId);
+    setLoadingOtherFiles(true);
+    try {
+      const res = await api(`/api/cases/${otherCaseId}/files`);
+      if (res.ok) {
+        const data = await res.json();
+        setOtherCaseFiles(data.items ?? data);
+      }
+    } catch { /* ignore */ }
+    setLoadingOtherFiles(false);
+  };
+
+  const addOtherCaseFile = (file: CaseFileItem) => {
+    // Other case files are loaded from a different case — we need to read
+    // them from disk via the backend. We store them as case_file_ids but
+    // the backend _resolve_attachments also needs to search across cases.
+    // Simpler: download the file and add as inline attachment.
+    const downloadAndAttach = async () => {
+      if (!otherCaseSelected) return;
+      try {
+        const res = await api(`/api/cases/${otherCaseSelected}/files/${file.id}/download`);
+        if (!res.ok) return;
+        const blob = await res.blob();
+        if (blob.size > 3 * 1024 * 1024) {
+          setFieldErrors((prev) => ({ ...prev, attachments: `'${file.original_filename}' is te groot (max 3 MB)` }));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(",")[1];
+          const id = `other-${otherCaseSelected}-${file.id}`;
+
+          // Skip if already added
+          if (attachments.some((a) => a.id === id)) return;
+
+          setInlineFiles((prev) => {
+            const next = new Map(prev);
+            next.set(id, {
+              filename: file.original_filename,
+              data_base64: base64,
+              content_type: file.content_type || "application/octet-stream",
+            });
+            return next;
+          });
+          setAttachments((prev) => [
+            ...prev,
+            { id, filename: file.original_filename, size: blob.size, source: "other" },
+          ]);
+        };
+        reader.readAsDataURL(blob);
+      } catch { /* ignore */ }
+    };
+    downloadAndAttach();
   };
 
   // ── Submit ────────────────────────────────────────────────────────────
@@ -608,6 +701,10 @@ export function EmailComposeDialog({
                       <Upload className="h-4 w-4 mr-2" />
                       Bestand uploaden
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setShowOtherCase(true); setShowFilePicker(false); }}>
+                      <FolderSearch className="h-4 w-4 mr-2" />
+                      Uit ander dossier
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <input
@@ -654,6 +751,91 @@ export function EmailComposeDialog({
                     </div>
                   )}
                   <Button type="button" variant="ghost" size="sm" onClick={() => setShowFilePicker(false)} className="text-xs">
+                    Sluiten
+                  </Button>
+                </div>
+              )}
+
+              {/* Other case file picker */}
+              {showOtherCase && (
+                <div className="rounded-lg border border-border p-3 space-y-2 bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground">Bestand uit ander dossier</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Zoek op dossiernummer of naam..."
+                      value={otherCaseSearch}
+                      onChange={(e) => setOtherCaseSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); searchOtherCases(); } }}
+                      className="flex-1 h-8 text-xs"
+                    />
+                    <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={searchOtherCases} disabled={loadingOtherCase || !otherCaseSearch.trim()}>
+                      {loadingOtherCase ? <Loader2 className="h-3 w-3 animate-spin" /> : "Zoeken"}
+                    </Button>
+                  </div>
+
+                  {/* Case results */}
+                  {otherCaseResults.length > 0 && !otherCaseSelected && (
+                    <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                      {otherCaseResults.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => selectOtherCase(c.id)}
+                          className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left hover:bg-muted transition-colors"
+                        >
+                          <FolderSearch className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="font-medium">{c.case_number}</span>
+                          <span className="text-muted-foreground truncate">{c.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Files from selected other case */}
+                  {otherCaseSelected && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          Dossier: <span className="font-medium text-foreground">{otherCaseResults.find((c) => c.id === otherCaseSelected)?.case_number}</span>
+                        </p>
+                        <Button type="button" variant="ghost" size="sm" className="h-5 text-[10px] px-1.5" onClick={() => { setOtherCaseSelected(null); setOtherCaseFiles([]); }}>
+                          Wijzig
+                        </Button>
+                      </div>
+                      {loadingOtherFiles ? (
+                        <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="text-xs">Bestanden laden...</span>
+                        </div>
+                      ) : otherCaseFiles.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-1">Geen bestanden in dit dossier</p>
+                      ) : (
+                        <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                          {otherCaseFiles.map((f) => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => addOtherCaseFile(f)}
+                              disabled={attachments.some((a) => a.id === `other-${otherCaseSelected}-${f.id}`)}
+                              className={cn(
+                                "w-full flex items-center gap-2 rounded px-2 py-1.5 text-xs text-left hover:bg-muted transition-colors",
+                                attachments.some((a) => a.id === `other-${otherCaseSelected}-${f.id}`) && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="truncate flex-1">{f.original_filename}</span>
+                              <span className="text-muted-foreground shrink-0">{formatFileSize(f.file_size)}</span>
+                              {attachments.some((a) => a.id === `other-${otherCaseSelected}-${f.id}`) && (
+                                <span className="text-[10px] text-primary">Toegevoegd</span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowOtherCase(false)} className="text-xs">
                     Sluiten
                   </Button>
                 </div>

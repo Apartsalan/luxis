@@ -273,6 +273,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-60 | Factuur uren import toont geen bedragen — `hourly_rate` niet auto-ingevuld bij time entry creatie. Fix: backend vult nu `default_hourly_rate` van user in + bestaande entries gebackfilled. | Hoog | S | ✅ Gefixt (23 mrt, sessie 101) |
 | BUG-61 | `toFixed is not a function` bij factuur uren import — zelfde type als BUG-57 maar op facturen/nieuw pagina. Decimal strings van API niet naar Number() geconverteerd. | Hoog | S | ✅ Gefixt (23 mrt, sessie 101) |
 | BUG-62 | Dark mode/Systeem knoppen in Instellingen doen niks (tonen alleen toast). Fix: knoppen verwijderd, alleen "Licht" behouden. | Laag | S | ✅ Gefixt (23 mrt, sessie 101) |
+| BUG-63 | Email matching: emails bij verkeerd dossier — verwijderde testdossiers → case_number miss → doorval naar contact-matching → fout gekoppeld. Fix: fundamentele herstructurering matching pipeline (thread-matching, stop-on-miss, bounce-detectie, referentie matching verwijderd, outbound dedup). **NOG NIET GETEST.** | Kritiek | L | ⏳ Gebouwd sessie 101, QA nodig sessie 102 |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 

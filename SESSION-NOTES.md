@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 101 — Uitrolvoorbereiding: QA + infra hardening)
-**Laatste feature/fix:** Sessie 101 — Health endpoint via Caddy, uptime monitoring actief, productie QA pass (alle AI features)
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 101 — Uitrolvoorbereiding: QA + infra hardening + email matching overhaul)
+**Laatste feature/fix:** Sessie 101 — Email matching overhaul (thread-matching, bounce-detectie, stop-on-miss) + 3 bugfixes + infra hardening
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅

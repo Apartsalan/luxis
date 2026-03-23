@@ -405,47 +405,46 @@ export function EmailComposeDialog({
     setLoadingOtherFiles(false);
   };
 
-  const addOtherCaseFile = (file: CaseFileItem) => {
-    // Other case files are loaded from a different case — we need to read
-    // them from disk via the backend. We store them as case_file_ids but
-    // the backend _resolve_attachments also needs to search across cases.
-    // Simpler: download the file and add as inline attachment.
-    const downloadAndAttach = async () => {
-      if (!otherCaseSelected) return;
-      try {
-        const res = await api(`/api/cases/${otherCaseSelected}/files/${file.id}/download`);
-        if (!res.ok) return;
-        const blob = await res.blob();
-        if (blob.size > 3 * 1024 * 1024) {
-          setFieldErrors((prev) => ({ ...prev, attachments: `'${file.original_filename}' is te groot (max 3 MB)` }));
-          return;
-        }
+  const addOtherCaseFile = async (file: CaseFileItem) => {
+    if (!otherCaseSelected) return;
+    const id = `other-${otherCaseSelected}-${file.id}`;
+
+    try {
+      const res = await api(`/api/cases/${otherCaseSelected}/files/${file.id}/download`);
+      if (!res.ok) {
+        setFieldErrors((prev) => ({ ...prev, attachments: `Kan '${file.original_filename}' niet downloaden` }));
+        return;
+      }
+      const blob = await res.blob();
+      if (blob.size > 3 * 1024 * 1024) {
+        setFieldErrors((prev) => ({ ...prev, attachments: `'${file.original_filename}' is te groot (max 3 MB)` }));
+        return;
+      }
+
+      // Read as base64
+      const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = (reader.result as string).split(",")[1];
-          const id = `other-${otherCaseSelected}-${file.id}`;
-
-          // Skip if already added
-          if (attachments.some((a) => a.id === id)) return;
-
-          setInlineFiles((prev) => {
-            const next = new Map(prev);
-            next.set(id, {
-              filename: file.original_filename,
-              data_base64: base64,
-              content_type: file.content_type || "application/octet-stream",
-            });
-            return next;
-          });
-          setAttachments((prev) => [
-            ...prev,
-            { id, filename: file.original_filename, size: blob.size, source: "other" },
-          ]);
-        };
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
         reader.readAsDataURL(blob);
-      } catch { /* ignore */ }
-    };
-    downloadAndAttach();
+      });
+
+      setInlineFiles((prev) => {
+        const next = new Map(prev);
+        next.set(id, {
+          filename: file.original_filename,
+          data_base64: base64,
+          content_type: file.content_type || "application/octet-stream",
+        });
+        return next;
+      });
+      setAttachments((prev) => [
+        ...prev,
+        { id, filename: file.original_filename, size: blob.size, source: "other" },
+      ]);
+    } catch {
+      setFieldErrors((prev) => ({ ...prev, attachments: `Fout bij downloaden '${file.original_filename}'` }));
+    }
   };
 
   // ── Submit ────────────────────────────────────────────────────────────
@@ -570,8 +569,31 @@ export function EmailComposeDialog({
           {showCc && (
             <div className="space-y-1.5">
               <Label>CC</Label>
+              {/* CC quick-select chips */}
+              {validRecipients.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {validRecipients
+                    .filter((r) => r.email !== to && !ccList.includes(r.email))
+                    .map((r) => (
+                      <button
+                        key={`cc-${r.email}`}
+                        type="button"
+                        onClick={() => {
+                          if (!ccList.includes(r.email)) {
+                            setCcList([...ccList, r.email]);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium border border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                      >
+                        <Plus className="h-2.5 w-2.5" />
+                        {r.name}
+                        <span className="text-[10px] opacity-70">{getRoleLabel(r.role)}</span>
+                      </button>
+                    ))}
+                </div>
+              )}
               {ccList.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-1.5">
+                <div className="flex flex-wrap gap-1.5">
                   {ccList.map((email) => (
                     <span key={email} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
                       {email}

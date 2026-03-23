@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 101 — Uitrolvoorbereiding: QA + infra hardening + email matching overhaul)
-**Laatste feature/fix:** Sessie 101 — Email matching overhaul (thread-matching, bounce-detectie, stop-on-miss) + 3 bugfixes + infra hardening
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 102 — QA: Email matching + bugfixes testen)
+**Laatste feature/fix:** Sessie 102 — QA + 2 bugfixes (Fernet key derivatie, outbound dedup unique ID)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +13,34 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 102 — 23 maart 2026) — QA: Email matching + bugfixes testen
+
+**QA Resultaten (alle sessie 101 changes getest op productie):**
+
+| Test | Status | Details |
+|------|--------|---------|
+| BUG-60: Factuur uurimport bedragen | ✅ PASS | Bedragen correct getoond (€ 12.150, € 25, € 25, € 250) |
+| BUG-61: toFixed crash | ✅ PASS | Import + factuur aanmaken werkt foutloos |
+| BUG-62: Alleen Licht thema | ✅ PASS | Geen Donker/Systeem knoppen meer |
+| BUG-63a: Thread-matching | ✅ CODE PASS | Pipeline correct, kan niet e2e testen zonder extern reply |
+| BUG-63b: Case number in subject | ✅ PASS | Bounces correct gekoppeld via case_number |
+| BUG-63c: Stop-on-miss | ✅ CODE PASS | has_case_number=True + geen dossier → skip contact-matching |
+| BUG-63d: Bounce detectie | ✅ PASS | 4 bounces correct: is_bounce=true, is_dismissed=true |
+| BUG-63e: Outbound dedup | ✅ PASS | Synthetic ID geupdate naar echte Graph ID bij sync |
+| BUG-63f: Contact-email matching | ✅ CODE PASS | Logic correct, geen testdata beschikbaar |
+| BUG-63g: Geen referentie matching | ✅ PASS | Geen body/reference scanning in sync pipeline |
+| Regressie: Dashboard | ✅ PASS | AI widget, stats, pipeline, taken |
+| Regressie: Correspondentie | ✅ PASS | 14 emails, confidence labels, bijlage-iconen |
+| Regressie: Taken pagina | ✅ PASS | 8 openstaand, 3 te laat, groepering correct |
+
+**Bugs gevonden en gefixt tijdens QA:**
+
+1. **Fernet key derivatie broken** — Sessie 90 audit veranderde SHA-256 → PBKDF2-HMAC, waardoor alle OAuth tokens ongeldig werden. Email sync crashte met `InvalidToken`. Fix: teruggedraaid naar originele SHA-256 derivatie.
+
+2. **Outbound dedup unique violation** — Synthetic message ID `outlook-sent-{subject[:30]}` was niet uniek bij meerdere emails met hetzelfde onderwerp. Fix: timestamp toegevoegd aan synthetic ID: `outlook-sent-{ts}-{subject[:30]}`.
+
+**Gewijzigde bestanden:** token_encryption.py, providers/outlook.py
 
 ## Wat er gedaan is (sessie 101 — 23 maart 2026) — Uitrolvoorbereiding: QA + infra hardening
 

@@ -49,6 +49,7 @@ import {
   useRejectClassification,
   type Classification,
 } from "@/hooks/use-ai-agent";
+import { api } from "@/lib/api";
 import { confidenceLabelText, confidenceTextColor as confidenceTextCls } from "@/lib/confidence";
 import { STATUS_LABELS } from "./types";
 

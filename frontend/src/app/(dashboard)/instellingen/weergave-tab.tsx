@@ -1,6 +1,5 @@
 "use client";
 
-import { toast } from "sonner";
 
 export function WeergaveTab() {
   return (
@@ -17,27 +16,11 @@ export function WeergaveTab() {
             Thema
           </label>
           <div className="flex gap-3">
-            {(
-              [
-                { id: "light", label: "Licht" },
-                { id: "dark", label: "Donker" },
-                { id: "system", label: "Systeem" },
-              ] as const
-            ).map((theme) => (
-              <button
-                key={theme.id}
-                onClick={() =>
-                  toast.info("Thema-instellingen worden binnenkort toegevoegd")
-                }
-                className={`flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all ${
-                  theme.id === "light"
-                    ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
-                    : "border-border text-muted-foreground hover:border-primary/30"
-                }`}
-              >
-                {theme.label}
-              </button>
-            ))}
+            <button
+              className="flex-1 rounded-lg border p-3 text-center text-sm font-medium transition-all border-primary bg-primary/5 text-primary ring-1 ring-primary/20"
+            >
+              Licht
+            </button>
           </div>
         </div>
 

@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import User
 from app.shared.exceptions import NotFoundError
 from app.time_entries.models import TimeEntry
 from app.time_entries.schemas import (
@@ -98,10 +99,16 @@ async def create_time_entry(
     data: TimeEntryCreate,
 ) -> TimeEntry:
     """Create a new time entry."""
+    entry_data = data.model_dump()
+    # Auto-fill hourly_rate from user's default if not provided
+    if entry_data.get("hourly_rate") is None:
+        user = await db.get(User, user_id)
+        if user and user.default_hourly_rate is not None:
+            entry_data["hourly_rate"] = user.default_hourly_rate
     entry = TimeEntry(
         tenant_id=tenant_id,
         user_id=user_id,
-        **data.model_dump(),
+        **entry_data,
     )
     db.add(entry)
     await db.flush()

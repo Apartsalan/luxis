@@ -40,6 +40,9 @@ import {
 } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
+import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
+import { useUpdateCase } from "@/hooks/use-cases";
+import { toast } from "sonner";
 
 // ── VerjaringBadge ──────────────────────────────────────────────────────────
 
@@ -131,6 +134,27 @@ export default function DossierHeader({
   setPhoneNoteText,
 }: DossierHeaderProps) {
   const [renteDialogOpen, setRenteDialogOpen] = useState(false);
+
+  // DF2-09: Pipeline step selector for incasso cases
+  const { data: pipelineSteps } = useIncassoPipelineSteps(true);
+  const updateCase = useUpdateCase();
+  const activeSteps = pipelineSteps?.filter((s: any) => s.is_active) ?? [];
+
+  const handleStepChange = async (stepId: string) => {
+    try {
+      await updateCase.mutateAsync({
+        id: zaak.id,
+        data: {
+          incasso_step_id: stepId || null,
+          incasso_step_entered_at: stepId ? new Date().toISOString() : null,
+        },
+      });
+      const stepName = activeSteps.find((s: any) => s.id === stepId)?.name ?? "Geen";
+      toast.success(`Incassostap gewijzigd naar: ${stepName}`);
+    } catch {
+      toast.error("Kon incassostap niet wijzigen");
+    }
+  };
 
   // Determine current phase from workflow data or fallback
   const currentPhase = workflowStatuses
@@ -265,6 +289,28 @@ export default function DossierHeader({
               );
             })}
           </div>
+
+          {/* DF2-09: Pipeline step selector */}
+          {activeSteps.length > 0 && (
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                Incassostap:
+              </span>
+              <select
+                value={zaak.incasso_step_id ?? ""}
+                onChange={(e) => handleStepChange(e.target.value)}
+                disabled={updateCase.isPending}
+                className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+              >
+                <option value="">Niet toegewezen</option>
+                {activeSteps.map((step: any) => (
+                  <option key={step.id} value={step.id}>
+                    {step.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Status transition buttons */}
           {!isTerminal && (

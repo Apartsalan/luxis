@@ -354,13 +354,13 @@ function NieuweZaakPage() {
 
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClient, setNewClient] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT });
-  const [showClientDetails, setShowClientDetails] = useState(false);
+  const [showClientDetails, setShowClientDetails] = useState(true);
   const [showNewOpponent, setShowNewOpponent] = useState(false);
   const [newOpponent, setNewOpponent] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT });
-  const [showOpponentDetails, setShowOpponentDetails] = useState(false);
+  const [showOpponentDetails, setShowOpponentDetails] = useState(true);
   const [showNewLawyer, setShowNewLawyer] = useState(false);
   const [newLawyer, setNewLawyer] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT, contact_type: "person" });
-  const [showLawyerDetails, setShowLawyerDetails] = useState(false);
+  const [showLawyerDetails, setShowLawyerDetails] = useState(true);
 
   // ── Inline contact creation handler ──────────────────────────────────────
   const handleCreateInlineContact = async (
@@ -581,18 +581,18 @@ function NieuweZaakPage() {
   const validateStep = (step: number): string | null => {
     if (step === 1) {
       if (!form.date_opened) return "Datum geopend is verplicht";
-      if (
-        form.interest_type === "contractual" &&
-        isIncasso &&
-        !form.contractual_rate
-      )
-        return "Contractueel rentepercentage is verplicht";
     }
     if (step === 2) {
       if (!form.client_id) return "Selecteer een client";
     }
     // Step 3 claims are optional — but if filled, validate required fields
     if (step === 3) {
+      if (
+        form.interest_type === "contractual" &&
+        isIncasso &&
+        !form.contractual_rate
+      )
+        return "Contractueel rentepercentage is verplicht";
       for (let i = 0; i < claims.length; i++) {
         const c = claims[i];
         if (c.description || c.principal_amount || c.default_date) {
@@ -937,61 +937,6 @@ function NieuweZaakPage() {
               )}
             </div>
 
-            {/* Interest settings — only for incasso */}
-            {isIncasso && (
-              <div className="rounded-xl border border-border bg-card p-6 space-y-4">
-                <h2 className="text-base font-semibold text-foreground">
-                  Rente-instellingen
-                </h2>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground">
-                    Type rente
-                  </label>
-                  <select
-                    value={form.interest_type}
-                    onChange={(e) =>
-                      updateField("interest_type", e.target.value)
-                    }
-                    className={inputClass}
-                  >
-                    <option value="statutory">
-                      Wettelijke rente (art. 6:119 BW)
-                    </option>
-                    <option value="commercial">
-                      Handelsrente (art. 6:119a BW)
-                    </option>
-                    <option value="government">
-                      Overheidsrente (art. 6:119b BW)
-                    </option>
-                    <option value="contractual">Contractuele rente</option>
-                  </select>
-                </div>
-
-                {form.interest_type === "contractual" && (
-                  <div>
-                    <label className="block text-sm font-medium text-foreground">
-                      Contractueel rentepercentage (%) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required={form.interest_type === "contractual"}
-                      value={form.contractual_rate}
-                      onChange={(e) =>
-                        updateField("contractual_rate", e.target.value)
-                      }
-                      onBlur={() => handleWizardBlur("contractual_rate")}
-                      className={getWizardInputClass("contractual_rate")}
-                      placeholder="Bijv. 8.00"
-                    />
-                    {wizardFieldErrors.contractual_rate && (
-                      <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.contractual_rate}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
         </div>
 
@@ -1711,6 +1656,60 @@ function NieuweZaakPage() {
                 <Plus className="h-4 w-4" />
                 Nog een vordering toevoegen
               </button>
+            </div>
+
+            {/* Interest settings — moved from step 1 to step 3 */}
+            <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+              <h2 className="text-base font-semibold text-foreground">
+                Rente-instellingen
+              </h2>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground">
+                  Type rente
+                </label>
+                <select
+                  value={form.interest_type}
+                  onChange={(e) =>
+                    updateField("interest_type", e.target.value)
+                  }
+                  className={inputClass}
+                >
+                  <option value="statutory">
+                    Wettelijke rente (art. 6:119 BW)
+                  </option>
+                  <option value="commercial">
+                    Handelsrente (art. 6:119a BW)
+                  </option>
+                  <option value="government">
+                    Overheidsrente (art. 6:119b BW)
+                  </option>
+                  <option value="contractual">Contractuele rente</option>
+                </select>
+              </div>
+
+              {form.interest_type === "contractual" && (
+                <div>
+                  <label className="block text-sm font-medium text-foreground">
+                    Contractueel rentepercentage (%) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required={form.interest_type === "contractual"}
+                    value={form.contractual_rate}
+                    onChange={(e) =>
+                      updateField("contractual_rate", e.target.value)
+                    }
+                    onBlur={() => handleWizardBlur("contractual_rate")}
+                    className={getWizardInputClass("contractual_rate")}
+                    placeholder="Bijv. 8.00"
+                  />
+                  {wizardFieldErrors.contractual_rate && (
+                    <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.contractual_rate}</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

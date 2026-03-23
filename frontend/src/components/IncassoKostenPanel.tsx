@@ -12,6 +12,7 @@ interface LineItem {
   description: string;
   quantity: string;
   unit_price: string;
+  btw_percentage: string;
 }
 
 interface IncassoKostenPanelProps {
@@ -122,6 +123,7 @@ export function IncassoKostenPanel({
               description: "Buitengerechtelijke incassokosten (BIK)",
               quantity: "1",
               unit_price: bikAmount,
+              btw_percentage: "21.00",
             });
             setBikAdded(true);
           }}
@@ -142,6 +144,7 @@ export function IncassoKostenPanel({
               description: "Rente op vordering",
               quantity: "1",
               unit_price: renteAmount,
+              btw_percentage: "21.00",
             });
             setRenteAdded(true);
           }}
@@ -193,6 +196,7 @@ export function IncassoKostenPanel({
                       description: desc,
                       quantity: "1",
                       unit_price: provisieAmount,
+                      btw_percentage: "21.00",
                     });
                     setProvisieAdded(true);
                   }}

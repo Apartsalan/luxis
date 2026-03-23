@@ -122,6 +122,7 @@ export default function FactuurDetailPage() {
   const [lineDescription, setLineDescription] = useState("");
   const [lineQuantity, setLineQuantity] = useState("1");
   const [lineUnitPrice, setLineUnitPrice] = useState("");
+  const [lineBtwPercentage, setLineBtwPercentage] = useState("21.00");
 
   // Payment form
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -233,12 +234,14 @@ export default function FactuurDetailPage() {
           description: lineDescription,
           quantity: lineQuantity || "1",
           unit_price: lineUnitPrice,
+          btw_percentage: lineBtwPercentage,
         },
       });
       toast.success("Regel toegevoegd");
       setLineDescription("");
       setLineQuantity("1");
       setLineUnitPrice("");
+      setLineBtwPercentage("21.00");
       setShowLineForm(false);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Er ging iets mis");
@@ -741,7 +744,7 @@ export default function FactuurDetailPage() {
         {/* Add line form */}
         {showLineForm && (
           <div className="border-b border-border bg-muted/30 px-5 py-3">
-            <div className="grid grid-cols-[1fr_80px_120px_auto] gap-2 items-end">
+            <div className="grid grid-cols-[1fr_80px_120px_80px_auto] gap-2 items-end">
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">
                   Omschrijving
@@ -780,6 +783,20 @@ export default function FactuurDetailPage() {
                   placeholder="0,00"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                  BTW
+                </label>
+                <select
+                  value={lineBtwPercentage}
+                  onChange={(e) => setLineBtwPercentage(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
+                >
+                  <option value="21.00">21%</option>
+                  <option value="9.00">9%</option>
+                  <option value="0.00">0%</option>
+                </select>
               </div>
               <div className="flex gap-1">
                 <button

@@ -107,6 +107,9 @@ class CaseUpdate(BaseModel):
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
     provisie_base: str | None = None  # "collected_amount" or "total_claim"
+    # DF2-09: Pipeline step assignment from case detail
+    incasso_step_id: uuid.UUID | None = None
+    incasso_step_entered_at: datetime | None = None
 
 
 class CaseStatusUpdate(BaseModel):

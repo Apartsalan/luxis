@@ -32,18 +32,32 @@ from app.time_entries.models import TimeEntry
 
 
 async def _recalculate_totals(db: AsyncSession, invoice: Invoice) -> None:
-    """Recalculate subtotal, BTW, and total from DB aggregate (CQ-15)."""
+    """Recalculate subtotal, BTW, and total from per-line VAT (DF2-03).
+
+    BTW is calculated per rate group (Dutch tax law), not per individual line.
+    """
+    # Group lines by btw_percentage and sum line_totals per group
     result = await db.execute(
-        select(func.coalesce(func.sum(InvoiceLine.line_total), Decimal("0.00")))
+        select(
+            InvoiceLine.btw_percentage,
+            func.coalesce(func.sum(InvoiceLine.line_total), Decimal("0.00")),
+        )
         .where(InvoiceLine.invoice_id == invoice.id)
+        .group_by(InvoiceLine.btw_percentage)
     )
-    subtotal = result.scalar_one()
+    groups = result.all()
+
+    subtotal = Decimal("0.00")
+    btw_total = Decimal("0.00")
+    for btw_pct, group_total in groups:
+        subtotal += group_total
+        btw_total += (
+            group_total * btw_pct / Decimal("100")
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     invoice.subtotal = subtotal
-    invoice.btw_amount = (
-        subtotal * invoice.btw_percentage / Decimal("100")
-    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    invoice.total = invoice.subtotal + invoice.btw_amount
+    invoice.btw_amount = btw_total
+    invoice.total = subtotal + btw_total
 
 
 # ── Status Workflow ──────────────────────────────────────────────────────────
@@ -212,6 +226,7 @@ async def create_invoice(
             quantity=line_data.quantity,
             unit_price=line_data.unit_price,
             line_total=line_total,
+            btw_percentage=line_data.btw_percentage,
             time_entry_id=line_data.time_entry_id,
             expense_id=line_data.expense_id,
         )
@@ -353,6 +368,7 @@ async def create_credit_note(
             quantity=line_data.quantity,
             unit_price=line_data.unit_price,
             line_total=line_total,
+            btw_percentage=line_data.btw_percentage,
         )
         db.add(line)
 
@@ -451,6 +467,7 @@ async def add_line(
     description: str,
     quantity: Decimal,
     unit_price: Decimal,
+    btw_percentage: Decimal = Decimal("21.00"),
     time_entry_id: uuid.UUID | None = None,
     expense_id: uuid.UUID | None = None,
 ) -> InvoiceLine:
@@ -477,6 +494,7 @@ async def add_line(
         quantity=quantity,
         unit_price=unit_price,
         line_total=line_total,
+        btw_percentage=btw_percentage,
         time_entry_id=time_entry_id,
         expense_id=expense_id,
     )
@@ -691,6 +709,7 @@ async def create_voorschotnota(
         quantity=Decimal("1"),
         unit_price=data.amount,
         line_total=line_total,
+        btw_percentage=data.btw_percentage,
     )
     db.add(line)
     await db.flush()

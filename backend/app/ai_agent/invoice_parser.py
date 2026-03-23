@@ -9,7 +9,7 @@ from app.ai_agent.invoice_prompts import (
     INVOICE_PARSE_SYSTEM_PROMPT,
     build_invoice_parse_prompt,
 )
-from app.ai_agent.kimi_client import call_intake_ai
+from app.ai_agent.kimi_client import call_intake_ai, call_claude_with_pdf
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 
 logger = logging.getLogger(__name__)
@@ -95,17 +95,29 @@ async def parse_invoice_pdf(file_content: bytes, filename: str) -> dict:
     try:
         # Extract text from PDF
         pdf_text = extract_text_from_pdf(tmp_path)
-        if not pdf_text.strip():
-            raise ValueError(
-                "Geen tekst gevonden in de PDF. "
-                "Het bestand is mogelijk een scan of afbeelding."
-            )
 
-        # Build prompt and call AI
-        user_message = build_invoice_parse_prompt(pdf_text)
-        raw_result, model_name = await call_intake_ai(
-            INVOICE_PARSE_SYSTEM_PROMPT, user_message
-        )
+        if pdf_text.strip():
+            # Normal path: text-based extraction + AI parsing
+            user_message = build_invoice_parse_prompt(pdf_text)
+            raw_result, model_name = await call_intake_ai(
+                INVOICE_PARSE_SYSTEM_PROMPT, user_message
+            )
+        else:
+            # DF2-07: Fallback for scanned/image PDFs — send directly to Claude
+            logger.info(
+                "No text extracted from %s, falling back to Claude native PDF",
+                filename,
+            )
+            raw_result = await call_claude_with_pdf(
+                system_prompt=INVOICE_PARSE_SYSTEM_PROMPT,
+                user_message=(
+                    "Dit is een gescande factuur (afbeelding-PDF). "
+                    "Analyseer de afbeelding en extraheer alle velden. "
+                    "Retourneer het resultaat als JSON."
+                ),
+                pdf_path=tmp_path,
+            )
+            model_name = "claude-native-pdf"
 
         # Validate and clean the result
         cleaned = _validate_and_clean(raw_result)

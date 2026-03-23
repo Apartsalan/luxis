@@ -293,6 +293,7 @@ async def add_line(
         description=data.description,
         quantity=data.quantity,
         unit_price=data.unit_price,
+        btw_percentage=data.btw_percentage,
         time_entry_id=data.time_entry_id,
         expense_id=data.expense_id,
     )

@@ -24,6 +24,7 @@ import {
   Filter,
   Mail,
   Bot,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -389,6 +390,13 @@ function StappenTab() {
                       </>
                     ) : (
                       <>
+                        <button
+                          onClick={() => handleStartEdit(step)}
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                          title="Bewerken"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => handleMoveUp(step, i)}
                           disabled={i === 0}

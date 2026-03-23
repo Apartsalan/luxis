@@ -6,7 +6,8 @@ All financial values are pre-formatted as Dutch currency strings.
 
 import logging
 import uuid
-from decimal import Decimal
+from collections import defaultdict
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import jinja2
@@ -61,7 +62,7 @@ async def render_invoice_pdf(
     """
     tenant = await _load_tenant(db, tenant_id)
 
-    # Build line items context
+    # Build line items context (DF2-03: include per-line BTW)
     regels = [
         {
             "nummer": line.line_number,
@@ -69,6 +70,7 @@ async def render_invoice_pdf(
             "aantal": _fmt_quantity(line.quantity),
             "tarief": _fmt_currency(line.unit_price),
             "bedrag": _fmt_currency(line.line_total),
+            "btw_pct": line.btw_percentage,
         }
         for line in invoice.lines
     ]
@@ -78,12 +80,30 @@ async def render_invoice_pdf(
     if days_until_due < 1:
         days_until_due = 30  # fallback
 
-    # BTW label
-    btw_pct = invoice.btw_percentage
-    if btw_pct == btw_pct.to_integral_value():
-        btw_label = f"BTW ({int(btw_pct)}%)"
+    # DF2-03: BTW groups — group lines by rate, calculate per-group totals
+    btw_group_totals: dict[Decimal, Decimal] = defaultdict(lambda: Decimal("0.00"))
+    for line in invoice.lines:
+        btw_group_totals[line.btw_percentage] += line.line_total
+
+    btw_groups = []
+    for pct in sorted(btw_group_totals.keys()):
+        group_subtotal = btw_group_totals[pct]
+        group_btw = (group_subtotal * pct / Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        pct_label = f"{int(pct)}%" if pct == pct.to_integral_value() else f"{pct}%"
+        btw_groups.append({
+            "tarief": pct_label,
+            "subtotaal": _fmt_currency(group_subtotal),
+            "btw_bedrag": _fmt_currency(group_btw),
+        })
+
+    # Smart label: single rate = simple, multiple rates = breakdown
+    has_mixed_rates = len(btw_groups) > 1
+    if not has_mixed_rates and btw_groups:
+        btw_label = f"BTW ({btw_groups[0]['tarief']})"
     else:
-        btw_label = f"BTW ({btw_pct}%)"
+        btw_label = "BTW"
 
     context = {
         "kantoor": _tenant_ctx(tenant),
@@ -99,6 +119,8 @@ async def render_invoice_pdf(
         "subtotaal": _fmt_currency(invoice.subtotal),
         "btw_label": btw_label,
         "btw_bedrag": _fmt_currency(invoice.btw_amount),
+        "btw_groups": btw_groups,
+        "has_mixed_rates": has_mixed_rates,
         "totaal": _fmt_currency(invoice.total),
         "is_credit_note": invoice.invoice_type == "credit_note",
         "betaaltermijn_dagen": days_until_due,

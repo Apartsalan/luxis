@@ -83,6 +83,7 @@ interface InvoiceLineInput {
   description: string;
   quantity?: string | number;
   unit_price: string | number;
+  btw_percentage?: string | number;
   time_entry_id?: string | null;
   expense_id?: string | null;
 }

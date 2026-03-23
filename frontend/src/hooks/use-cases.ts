@@ -18,6 +18,7 @@ export interface CaseSummary {
   total_paid: number;
   budget: number | null;  // G13
   // LF-20/LF-21: Billing fields
+  hourly_rate: number | null;  // LF-19
   billing_method: "hourly" | "fixed_price" | "budget_cap";
   fixed_price_amount: number | null;
   budget_hours: number | null;

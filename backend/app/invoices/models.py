@@ -166,6 +166,11 @@ class InvoiceLine(TenantBase):
         Numeric(15, 2), nullable=False
     )
 
+    # DF2-03: Per-line VAT rate
+    btw_percentage: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("21.00")
+    )
+
     # Optional link to time entry or expense
     time_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("time_entries.id"), nullable=True

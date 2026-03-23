@@ -299,6 +299,22 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | DF-12 | Verschotten: file upload + belast/onbelast veld (voor Exact koppeling) | Hoog | ✅ 18 mrt |
 | DF-13 | Voorschotnota: verrekening type (tussentijds / bij sluiting) | Midden | ✅ 20 mrt |
 
+### Demo Feedback Sprint 5 (sessie 103 — 23 mrt 2026)
+
+**Bron:** Demo met Lisanne, 23 maart 2026.
+
+| # | Feature/Fix | Ernst | Grootte | Status |
+|---|-------------|-------|---------|--------|
+| DF2-01 | **Email compose uitbreiden** — volledige email-flow: kies ontvanger (wederpartij/advocaat/cliënt/handmatig), bijlagen uit dossier + computer + ander dossier, template als mail-body (niet bijlage), opent in Outlook met alles pre-filled incl. alle betrokkenen-emails. Onderzoek eerst. | Hoog | XL | ❌ TODO |
+| DF2-02 | **Incasso stappen bewerken** — bestaande stappen kunnen aanpassen, niet alleen nieuwe toevoegen | Midden | S | ❌ TODO |
+| DF2-03 | **BTW per factuurregel** — per regel btw-soort kiezen (21%/0%/anders). Griffierecht = verschot zonder btw. Ook bij factuur bewerken (regel toevoegen achteraf) | Hoog | M | ❌ TODO |
+| DF2-04 | **Voorschotbedrag op uren** — naast bedrag ook aantal uur invoeren → automatisch berekenen op basis van uurtarief | Midden | S | ❌ TODO |
+| DF2-05 | **Rentetype verplaatsen naar stap 3** — staat nu bij stap 1, hoort bij stap 3 (bij de vordering) | Laag | S | ❌ TODO |
+| DF2-06 | **Profiel invullen bij nieuw dossier** — bij nieuwe betrokkenen meteen volledig profiel laten invullen (alleen voor nieuwe personen) | Midden | M | ❌ TODO |
+| DF2-07 | **PDF parsing verbeterd** — "Geen tekst gevonden" bij gewone PDF's. Moet ook scans/afbeeldingen kunnen lezen (OCR via AI) | Hoog | M | ❌ TODO |
+| DF2-08 | **Genereer brief → mail als body** — template als mail-body versturen (met logo/handtekening/opmaak Kesting Legal), niet als bijgevoegd bestand. Vereist Lisanne's email-layout. Hangt samen met DF2-01. | Hoog | L | ❌ TODO |
+| DF2-09 | **Incasso fase vanuit dossier** — dossier toewijzen aan incasso-fase vanuit het dossier zelf, niet alleen vanuit incasso-overzicht | Midden | S | ❌ TODO |
+
 ### UX Review Fixes (sessie 79b — 18 mrt 2026)
 
 Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.

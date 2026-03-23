@@ -67,6 +67,10 @@ class Contact(TenantBase):
     billing_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
 
+    # Algemene Voorwaarden (AI-UX-11)
+    terms_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    terms_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Other
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

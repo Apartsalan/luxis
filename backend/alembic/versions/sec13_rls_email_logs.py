@@ -19,17 +19,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Enable RLS
-    op.execute("ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY")
-    # Create tenant isolation policy
-    op.execute(
-        "CREATE POLICY tenant_isolation ON email_logs "
-        "USING (tenant_id = current_setting('app.current_tenant')::uuid)"
-    )
-    # Force RLS (so luxis_app role is subject to it)
-    op.execute("ALTER TABLE email_logs FORCE ROW LEVEL SECURITY")
-    # Grant permissions to luxis_app role
-    op.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON email_logs TO luxis_app")
+    # Only apply if email_logs table exists (may not exist on all environments)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'email_logs') THEN
+                EXECUTE 'ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY';
+                EXECUTE 'ALTER TABLE email_logs FORCE ROW LEVEL SECURITY';
+                IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'email_logs' AND policyname = 'tenant_isolation') THEN
+                    EXECUTE 'CREATE POLICY tenant_isolation ON email_logs USING (tenant_id = current_setting(''app.current_tenant'')::uuid)';
+                END IF;
+                EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON email_logs TO luxis_app';
+            END IF;
+        END $$;
+    """)
 
 
 def downgrade() -> None:

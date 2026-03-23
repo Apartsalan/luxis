@@ -92,6 +92,7 @@ class ContactResponse(BaseModel):
     payment_term_days: int | None
     billing_email: str | None
     iban: str | None
+    terms_file_name: str | None = None
     notes: str | None
     is_active: bool
     created_at: datetime

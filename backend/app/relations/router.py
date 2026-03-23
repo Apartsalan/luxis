@@ -1,9 +1,12 @@
 """Relations module endpoints — CRUD for contacts and contact links."""
 
 import math
+import os
 import uuid
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
@@ -170,3 +173,102 @@ async def conflict_check(
         results_found=len(matches),
         matches=[ContactSummary.model_validate(c) for c in matches],
     )
+
+
+# ── Algemene Voorwaarden (AI-UX-11) ─────────────────────────────────────────
+
+TERMS_BASE = Path("/app/uploads/terms")
+ALLOWED_TERMS_EXT = {".pdf", ".docx", ".doc"}
+MAX_TERMS_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+@router.post("/{contact_id}/terms", status_code=status.HTTP_200_OK)
+async def upload_terms(
+    contact_id: uuid.UUID,
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload algemene voorwaarden (AV) for a contact."""
+    contact = await service.get_contact(db, current_user.tenant_id, contact_id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="Relatie niet gevonden")
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Bestandsnaam is verplicht")
+
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_TERMS_EXT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Bestandstype '{ext}' niet toegestaan. Gebruik: {', '.join(ALLOWED_TERMS_EXT)}",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_TERMS_SIZE:
+        raise HTTPException(status_code=400, detail="Bestand te groot (max 10 MB)")
+
+    # Store file
+    tenant_dir = TERMS_BASE / str(current_user.tenant_id)
+    tenant_dir.mkdir(parents=True, exist_ok=True)
+    storage_name = f"{contact_id}{ext}"
+    file_path = tenant_dir / storage_name
+    file_path.write_bytes(content)
+
+    # Update contact
+    contact.terms_file_path = str(file_path)
+    contact.terms_file_name = file.filename
+    await db.commit()
+
+    return {
+        "terms_file_name": file.filename,
+        "message": "Algemene voorwaarden geüpload",
+    }
+
+
+@router.get("/{contact_id}/terms")
+async def download_terms(
+    contact_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download algemene voorwaarden (AV) for a contact."""
+    contact = await service.get_contact(db, current_user.tenant_id, contact_id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="Relatie niet gevonden")
+
+    if not contact.terms_file_path:
+        raise HTTPException(status_code=404, detail="Geen algemene voorwaarden geüpload")
+
+    file_path = Path(contact.terms_file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=contact.terms_file_name or "voorwaarden.pdf",
+        media_type="application/octet-stream",
+    )
+
+
+@router.delete("/{contact_id}/terms", status_code=status.HTTP_200_OK)
+async def delete_terms(
+    contact_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete algemene voorwaarden (AV) for a contact."""
+    contact = await service.get_contact(db, current_user.tenant_id, contact_id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="Relatie niet gevonden")
+
+    if contact.terms_file_path:
+        file_path = Path(contact.terms_file_path)
+        if file_path.exists():
+            file_path.unlink()
+
+    contact.terms_file_path = None
+    contact.terms_file_name = None
+    await db.commit()
+
+    return {"message": "Algemene voorwaarden verwijderd"}

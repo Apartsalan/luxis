@@ -7,9 +7,13 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Building2,
+  Download,
+  File,
+  Loader2,
   User,
   Trash2,
   Pencil,
+  Upload,
   X,
   Check,
 } from "lucide-react";
@@ -25,6 +29,7 @@ import { useKyc, useSaveKyc, useCompleteKyc, type KycFormData } from "@/hooks/us
 import { formatDateShort } from "@/lib/utils";
 import { ContactLinks } from "@/components/relations/contact-links";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
+import { tokenStore } from "@/lib/token-store";
 import {
   ContactInfoSection,
   LinkedCasesSection,
@@ -427,6 +432,140 @@ export default function RelatieDetailPage() {
           completeKycIsPending={completeKyc.isPending}
           inputClass={inputClass}
         />
+      )}
+
+      {/* AI-UX-11: Algemene Voorwaarden */}
+      <TermsSection contactId={id} termsFileName={contact.terms_file_name} />
+    </div>
+  );
+}
+
+// ── Algemene Voorwaarden Section ─────────────────────────────────────────────
+
+function TermsSection({ contactId, termsFileName }: { contactId: string; termsFileName?: string | null }) {
+  const [uploading, setUploading] = useState(false);
+  const [currentFile, setCurrentFile] = useState(termsFileName);
+  const { data: contact, refetch } = useRelation(contactId);
+
+  // Sync with contact data
+  useEffect(() => {
+    if (contact) setCurrentFile(contact.terms_file_name);
+  }, [contact?.terms_file_name]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const token = tokenStore.getAccess();
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/relations/${contactId}/terms`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail || "Upload mislukt");
+      }
+      const data = await res.json();
+      setCurrentFile(data.terms_file_name);
+      refetch();
+      toast.success("Algemene voorwaarden geüpload");
+    } catch (err: any) {
+      toast.error(err.message || "Upload mislukt");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      const token = tokenStore.getAccess();
+      const res = await fetch(`/api/relations/${contactId}/terms`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Download mislukt");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = currentFile || "voorwaarden.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      toast.error(err.message || "Download mislukt");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const token = tokenStore.getAccess();
+      const res = await fetch(`/api/relations/${contactId}/terms`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Verwijderen mislukt");
+      setCurrentFile(null);
+      refetch();
+      toast.success("Algemene voorwaarden verwijderd");
+    } catch (err: any) {
+      toast.error(err.message || "Verwijderen mislukt");
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5">
+      <h3 className="text-sm font-semibold text-card-foreground mb-3">
+        Algemene Voorwaarden
+      </h3>
+
+      {currentFile ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <File className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-foreground truncate">{currentFile}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="rounded-md p-1.5 hover:bg-muted transition-colors"
+              title="Downloaden"
+            >
+              <Download className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+            <label className="rounded-md p-1.5 hover:bg-muted transition-colors cursor-pointer" title="Vervangen">
+              <Upload className="h-3.5 w-3.5 text-muted-foreground" />
+              <input type="file" accept=".pdf,.docx,.doc" onChange={handleUpload} className="hidden" />
+            </label>
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-md p-1.5 hover:bg-destructive/10 transition-colors"
+              title="Verwijderen"
+            >
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 cursor-pointer hover:bg-muted/40 transition-colors">
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Upload className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="text-sm text-muted-foreground">
+            {uploading ? "Uploaden..." : "Upload algemene voorwaarden (PDF, DOCX)"}
+          </span>
+          <input type="file" accept=".pdf,.docx,.doc" onChange={handleUpload} className="hidden" disabled={uploading} />
+        </label>
       )}
     </div>
   );

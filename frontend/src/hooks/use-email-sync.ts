@@ -176,6 +176,82 @@ export function useSendViaProvider(caseId: string) {
   });
 }
 
+// ── Compose: create draft in Outlook with attachments ──────────────────────
+
+export interface ComposeInlineAttachment {
+  filename: string;
+  data_base64: string;
+  content_type: string;
+}
+
+export interface CaseComposeInput {
+  recipient_email: string;
+  recipient_name?: string | null;
+  cc?: string[] | null;
+  subject: string;
+  body?: string;
+  body_html?: string | null;
+  case_file_ids?: string[];
+  inline_attachments?: ComposeInlineAttachment[];
+}
+
+export interface CaseComposeResult {
+  success: boolean;
+  draft_id?: string | null;
+  web_link?: string | null;
+  message: string;
+}
+
+/**
+ * Create a draft email in Outlook from case context.
+ * Returns web_link to open in Outlook Web.
+ */
+export function useCreateCaseDraft(caseId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<CaseComposeResult, Error, CaseComposeInput>({
+    mutationFn: async (data) => {
+      const res = await api(`/api/email/compose/cases/${caseId}`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Concept aanmaken mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["case-activities", caseId] });
+    },
+  });
+}
+
+export interface RenderTemplateResult {
+  supported: boolean;
+  subject?: string | null;
+  body_html?: string | null;
+}
+
+/**
+ * Render an incasso template as HTML for email body preview.
+ */
+export function useRenderTemplate(caseId: string) {
+  return useMutation<RenderTemplateResult, Error, { template_type: string }>({
+    mutationFn: async (data) => {
+      const res = await api(
+        `/api/email/compose/cases/${caseId}/render-template`,
+        { method: "POST", body: JSON.stringify(data) },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Template laden mislukt");
+      }
+      return res.json();
+    },
+  });
+}
+
 /**
  * Create a draft in the connected email provider.
  */

@@ -1,20 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { Mail, Paperclip, Send, Loader2, X, Plus, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  Mail, Paperclip, Loader2, X, Plus, User,
+  ExternalLink, FileText, Upload, FolderSearch, Trash2,
+} from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { useRenderTemplate, type ComposeInlineAttachment } from "@/hooks/use-email-sync";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +31,9 @@ export interface EmailComposeData {
   cc?: string[] | null;
   custom_subject?: string | null;
   custom_body?: string | null;
+  body_html?: string | null;
+  case_file_ids?: string[];
+  inline_attachments?: ComposeInlineAttachment[];
 }
 
 /** A known recipient from the case (client, opposing party, etc.) */
@@ -33,10 +43,31 @@ export interface EmailRecipient {
   role: string;
 }
 
+interface CaseFileItem {
+  id: string;
+  original_filename: string;
+  file_size: number;
+  content_type: string;
+  created_at: string;
+}
+
+interface TemplateInfo {
+  template_type: string;
+  filename: string;
+  available: boolean;
+}
+
+interface AttachmentRef {
+  id: string;
+  filename: string;
+  size: number;
+  source: "dossier" | "upload" | "other";
+}
+
 // ── Dutch role labels ───────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
-  client: "Client",
+  client: "Cliënt",
   opposing_party: "Wederpartij",
   advocaat_wederpartij: "Advocaat wederpartij",
   deurwaarder: "Deurwaarder",
@@ -52,25 +83,38 @@ function getRoleLabel(role: string): string {
   return ROLE_LABELS[role] ?? role;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const TEMPLATE_LABELS: Record<string, string> = {
+  aanmaning: "Aanmaning",
+  sommatie: "Sommatie",
+  tweede_sommatie: "Tweede sommatie",
+  "14_dagenbrief": "14-dagenbrief",
+  herinnering: "Herinnering",
+  dagvaarding: "Dagvaarding",
+  renteoverzicht: "Renteoverzicht",
+};
+
+// ── Props ────────────────────────────────────────────────────────────────────
+
 export interface EmailComposeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSend: (data: EmailComposeData) => void;
   isSending?: boolean;
-  /** Pre-filled recipient email */
   defaultTo?: string;
-  /** Pre-filled recipient name */
   defaultToName?: string;
-  /** Pre-filled subject */
   defaultSubject?: string;
-  /** Pre-filled body */
   defaultBody?: string;
-  /** Attachment filename to display */
   attachmentName?: string;
-  /** Dialog title override */
   title?: string;
-  /** Known recipients from the case for quick-select chips */
   recipients?: EmailRecipient[];
+  /** Case ID — enables template selector + file picker */
+  caseId?: string;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -85,8 +129,9 @@ export function EmailComposeDialog({
   defaultSubject = "",
   defaultBody = "",
   attachmentName,
-  title = "E-mail versturen",
+  title = "E-mail opstellen",
   recipients,
+  caseId,
 }: EmailComposeDialogProps) {
   const [to, setTo] = useState(defaultTo);
   const [toName, setToName] = useState(defaultToName);
@@ -98,7 +143,32 @@ export function EmailComposeDialog({
   const [selectedRecipientEmail, setSelectedRecipientEmail] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // Reset form when dialog opens with new defaults
+  // Template state
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [templateHtml, setTemplateHtml] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<TemplateInfo[]>([]);
+  const renderTemplate = caseId ? useRenderTemplate(caseId) : null;
+
+  // Attachment state
+  const [attachments, setAttachments] = useState<AttachmentRef[]>([]);
+  const [inlineFiles, setInlineFiles] = useState<Map<string, ComposeInlineAttachment>>(new Map());
+  const [caseFileIds, setCaseFileIds] = useState<Set<string>>(new Set());
+  const [showFilePicker, setShowFilePicker] = useState(false);
+  const [caseFiles, setCaseFiles] = useState<CaseFileItem[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load templates list when dialog opens
+  useEffect(() => {
+    if (open && caseId && templates.length === 0) {
+      api("/api/documents/docx/templates")
+        .then((r) => r.ok ? r.json() : [])
+        .then((data: TemplateInfo[]) => setTemplates(data.filter((t) => t.available)))
+        .catch(() => {});
+    }
+  }, [open, caseId]);
+
+  // Reset form when dialog opens
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setTo(defaultTo);
@@ -110,13 +180,18 @@ export function EmailComposeDialog({
       setBody(defaultBody);
       setSelectedRecipientEmail(null);
       setFieldErrors({});
+      setSelectedTemplate("");
+      setTemplateHtml(null);
+      setAttachments([]);
+      setInlineFiles(new Map());
+      setCaseFileIds(new Set());
+      setShowFilePicker(false);
     }
     onOpenChange(nextOpen);
   };
 
   const selectRecipient = (recipient: EmailRecipient) => {
     if (selectedRecipientEmail === recipient.email) {
-      // Deselect
       setTo("");
       setToName("");
       setSelectedRecipientEmail(null);
@@ -146,6 +221,142 @@ export function EmailComposeDialog({
     }
   };
 
+  // ── Template handling ─────────────────────────────────────────────────
+
+  const handleTemplateSelect = async (templateType: string) => {
+    if (!templateType || !caseId || !renderTemplate) {
+      setSelectedTemplate("");
+      setTemplateHtml(null);
+      return;
+    }
+    setSelectedTemplate(templateType);
+    try {
+      const result = await renderTemplate.mutateAsync({ template_type: templateType });
+      if (result.supported && result.body_html) {
+        setTemplateHtml(result.body_html);
+        if (result.subject && !subject) {
+          setSubject(result.subject);
+        }
+      } else {
+        setSelectedTemplate("");
+        setTemplateHtml(null);
+      }
+    } catch {
+      setSelectedTemplate("");
+      setTemplateHtml(null);
+    }
+  };
+
+  const clearTemplate = () => {
+    setSelectedTemplate("");
+    setTemplateHtml(null);
+  };
+
+  // ── File picker ───────────────────────────────────────────────────────
+
+  const loadCaseFiles = async () => {
+    if (!caseId) return;
+    setLoadingFiles(true);
+    try {
+      const res = await api(`/api/cases/${caseId}/files`);
+      if (res.ok) {
+        const data = await res.json();
+        setCaseFiles(data.items ?? data);
+      }
+    } catch { /* ignore */ }
+    setLoadingFiles(false);
+  };
+
+  const toggleFilePicker = () => {
+    if (!showFilePicker) loadCaseFiles();
+    setShowFilePicker(!showFilePicker);
+  };
+
+  const toggleCaseFile = (file: CaseFileItem) => {
+    const newIds = new Set(caseFileIds);
+    const newAtts = [...attachments];
+    if (newIds.has(file.id)) {
+      newIds.delete(file.id);
+      const idx = newAtts.findIndex((a) => a.id === file.id);
+      if (idx >= 0) newAtts.splice(idx, 1);
+    } else {
+      newIds.add(file.id);
+      newAtts.push({
+        id: file.id,
+        filename: file.original_filename,
+        size: file.file_size,
+        source: "dossier",
+      });
+    }
+    setCaseFileIds(newIds);
+    setAttachments(newAtts);
+  };
+
+  // ── Upload handling ───────────────────────────────────────────────────
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      if (file.size > 3 * 1024 * 1024) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          attachments: `'${file.name}' is te groot (max 3 MB)`,
+        }));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const id = `upload-${Date.now()}-${file.name}`;
+
+        setInlineFiles((prev) => {
+          const next = new Map(prev);
+          next.set(id, {
+            filename: file.name,
+            data_base64: base64,
+            content_type: file.type || "application/octet-stream",
+          });
+          return next;
+        });
+
+        setAttachments((prev) => [
+          ...prev,
+          { id, filename: file.name, size: file.size, source: "upload" },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+    setCaseFileIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setInlineFiles((prev) => {
+      const next = new Map(prev);
+      next.delete(id);
+      return next;
+    });
+    if (fieldErrors.attachments) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next.attachments;
+        return next;
+      });
+    }
+  };
+
+  // ── Submit ────────────────────────────────────────────────────────────
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
@@ -162,27 +373,34 @@ export function EmailComposeDialog({
       return;
     }
 
+    const fileIds = Array.from(caseFileIds);
+    const uploads = Array.from(inlineFiles.values());
+
     onSend({
       recipient_email: to.trim(),
       recipient_name: toName.trim() || null,
       cc: ccList.length > 0 ? ccList : null,
       custom_subject: subject.trim() || null,
-      custom_body: body.trim() || null,
+      custom_body: templateHtml ? null : (body.trim() || null),
+      body_html: templateHtml || null,
+      case_file_ids: fileIds.length > 0 ? fileIds : undefined,
+      inline_attachments: uploads.length > 0 ? uploads : undefined,
     });
   };
 
   const validRecipients = recipients?.filter((r) => r.email) ?? [];
+  const isTemplateLoading = renderTemplate?.isPending ?? false;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
+      <DialogContent className="sm:max-w-[680px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
             {title}
           </DialogTitle>
           <DialogDescription>
-            Vul de e-mail in en klik op versturen
+            Stel de e-mail samen en open in Outlook
           </DialogDescription>
         </DialogHeader>
 
@@ -228,7 +446,6 @@ export function EmailComposeDialog({
                 onChange={(e) => {
                   setTo(e.target.value);
                   if (fieldErrors.to) setFieldErrors((p) => { const n = { ...p }; delete n.to; return n; });
-                  // Clear chip selection if user manually types
                   if (selectedRecipientEmail && e.target.value !== selectedRecipientEmail) {
                     setSelectedRecipientEmail(null);
                   }
@@ -237,20 +454,12 @@ export function EmailComposeDialog({
                 className={cn("flex-1", fieldErrors.to && "border-destructive ring-1 ring-destructive/30")}
               />
               {!showCc && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowCc(true)}
-                  className="text-xs text-muted-foreground"
-                >
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowCc(true)} className="text-xs text-muted-foreground">
                   CC
                 </Button>
               )}
             </div>
-            {fieldErrors.to && (
-              <p className="text-[13px] text-destructive">{fieldErrors.to}</p>
-            )}
+            {fieldErrors.to && <p className="text-[13px] text-destructive">{fieldErrors.to}</p>}
           </div>
 
           {/* Naam ontvanger */}
@@ -271,16 +480,9 @@ export function EmailComposeDialog({
               {ccList.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-1.5">
                   {ccList.map((email) => (
-                    <span
-                      key={email}
-                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground"
-                    >
+                    <span key={email} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
                       {email}
-                      <button
-                        type="button"
-                        onClick={() => removeCc(email)}
-                        className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
-                      >
+                      <button type="button" onClick={() => removeCc(email)} className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive">
                         <X className="h-3 w-3" />
                       </button>
                     </span>
@@ -288,27 +490,12 @@ export function EmailComposeDialog({
                 </div>
               )}
               <div className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="cc@voorbeeld.nl"
-                  value={ccInput}
-                  onChange={(e) => setCcInput(e.target.value)}
-                  onKeyDown={handleCcKeyDown}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={addCc}
-                  disabled={!ccInput.trim()}
-                >
+                <Input type="email" placeholder="cc@voorbeeld.nl" value={ccInput} onChange={(e) => setCcInput(e.target.value)} onKeyDown={handleCcKeyDown} className="flex-1" />
+                <Button type="button" variant="outline" size="icon" onClick={addCc} disabled={!ccInput.trim()}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Druk op Enter of komma om toe te voegen
-              </p>
+              <p className="text-xs text-muted-foreground">Druk op Enter of komma om toe te voegen</p>
             </div>
           )}
 
@@ -325,26 +512,73 @@ export function EmailComposeDialog({
               }}
               className={cn(fieldErrors.subject && "border-destructive ring-1 ring-destructive/30")}
             />
-            {fieldErrors.subject && (
-              <p className="text-[13px] text-destructive">{fieldErrors.subject}</p>
-            )}
+            {fieldErrors.subject && <p className="text-[13px] text-destructive">{fieldErrors.subject}</p>}
           </div>
 
-          {/* Body */}
-          <div className="space-y-1.5">
-            <Label htmlFor="email-body">Bericht</Label>
-            <Textarea
-              id="email-body"
-              placeholder="Typ hier uw bericht..."
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={6}
-              className="resize-y"
-            />
-          </div>
+          {/* Template selector */}
+          {caseId && templates.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Template</Label>
+              <div className="flex gap-2">
+                <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Geen template (vrije tekst)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((t) => (
+                      <SelectItem key={t.template_type} value={t.template_type}>
+                        {TEMPLATE_LABELS[t.template_type] ?? t.template_type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedTemplate && (
+                  <Button type="button" variant="ghost" size="sm" onClick={clearTemplate} className="text-xs text-muted-foreground">
+                    Wis template
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
-          {/* Bijlage indicator */}
-          {attachmentName && (
+          {/* Body — template preview OR free text */}
+          {isTemplateLoading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Template laden...</span>
+            </div>
+          ) : templateHtml ? (
+            <div className="space-y-1.5">
+              <Label>Bericht (template)</Label>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <iframe
+                  srcDoc={templateHtml}
+                  className="w-full border-0"
+                  style={{ height: "300px" }}
+                  sandbox="allow-same-origin"
+                  title="Template preview"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Template wordt als e-mail body verstuurd. Klik &quot;Wis template&quot; voor vrije tekst.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="email-body">Bericht</Label>
+              <Textarea
+                id="email-body"
+                placeholder="Typ hier uw bericht..."
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={6}
+                className="resize-y"
+              />
+            </div>
+          )}
+
+          {/* Legacy attachment indicator */}
+          {attachmentName && !caseId && (
             <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
               <Paperclip className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
@@ -353,24 +587,125 @@ export function EmailComposeDialog({
             </div>
           )}
 
+          {/* Attachments section */}
+          {caseId && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label>Bijlagen</Label>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs">
+                      <Plus className="h-3 w-3" />
+                      Bijlage toevoegen
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={toggleFilePicker}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Uit dit dossier
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Bestand uploaden
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+              </div>
+
+              {/* File picker panel */}
+              {showFilePicker && (
+                <div className="rounded-lg border border-border p-3 space-y-2 bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground">Bestanden in dit dossier</p>
+                  {loadingFiles ? (
+                    <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-xs">Laden...</span>
+                    </div>
+                  ) : caseFiles.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2">Geen bestanden in dit dossier</p>
+                  ) : (
+                    <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                      {caseFiles.map((f) => (
+                        <label
+                          key={f.id}
+                          className={cn(
+                            "flex items-center gap-2 rounded px-2 py-1.5 text-xs cursor-pointer hover:bg-muted transition-colors",
+                            caseFileIds.has(f.id) && "bg-primary/10"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={caseFileIds.has(f.id)}
+                            onChange={() => toggleCaseFile(f)}
+                            className="rounded border-border"
+                          />
+                          <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="truncate flex-1">{f.original_filename}</span>
+                          <span className="text-muted-foreground shrink-0">{formatFileSize(f.file_size)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowFilePicker(false)} className="text-xs">
+                    Sluiten
+                  </Button>
+                </div>
+              )}
+
+              {/* Attachment badges */}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {attachments.map((att) => (
+                    <span
+                      key={att.id}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2.5 py-1 text-xs"
+                    >
+                      <Paperclip className="h-3 w-3 text-muted-foreground" />
+                      <span className="max-w-[150px] truncate">{att.filename}</span>
+                      <span className="text-muted-foreground">{formatFileSize(att.size)}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(att.id)}
+                        className="rounded-full p-0.5 hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {fieldErrors.attachments && (
+                <p className="text-[13px] text-destructive">{fieldErrors.attachments}</p>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={isSending}
-            >
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSending}>
               Annuleren
             </Button>
             <Button type="submit" disabled={isSending || !to.trim()}>
               {isSending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Verzenden...
+                  Aanmaken...
+                </>
+              ) : caseId ? (
+                <>
+                  <ExternalLink className="h-4 w-4" />
+                  Open in Outlook
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4" />
+                  <Mail className="h-4 w-4" />
                   Versturen
                 </>
               )}

@@ -41,7 +41,7 @@ import {
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
-import { useSendViaProvider } from "@/hooks/use-email-sync";
+import { useSendViaProvider, useCreateCaseDraft } from "@/hooks/use-email-sync";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
 import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
 import {
@@ -198,6 +198,7 @@ export default function ZaakDetailPage() {
   const [caseEmailOpen, setCaseEmailOpen] = useState(false);
   const sendCaseEmail = useSendCaseEmail(id);
   const sendViaProvider = useSendViaProvider(id);
+  const createDraft = useCreateCaseDraft(id);
   const emailOAuthStatus = useEmailOAuthStatus();
 
   function buildDossierRecipients(z: typeof zaak): EmailRecipient[] {
@@ -224,15 +225,27 @@ export default function ZaakDetailPage() {
     const body = data.custom_body || "";
 
     try {
+      // Try creating a draft in Outlook (opens in browser)
       if (emailOAuthStatus.data?.connected) {
-        await sendViaProvider.mutateAsync({
+        const result = await createDraft.mutateAsync({
           recipient_email: data.recipient_email,
           recipient_name: data.recipient_name,
           cc: data.cc,
           subject,
           body,
+          body_html: data.body_html,
+          case_file_ids: data.case_file_ids,
+          inline_attachments: data.inline_attachments,
         });
+
+        if (result.web_link) {
+          window.open(result.web_link, "_blank");
+          toast.success("Concept geopend in Outlook");
+        } else {
+          toast.success("Concept aangemaakt in Outlook — ga naar Concepten om te versturen");
+        }
       } else {
+        // Fallback: direct send via SMTP (no attachments)
         await sendCaseEmail.mutateAsync({
           recipient_email: data.recipient_email,
           recipient_name: data.recipient_name,
@@ -240,8 +253,8 @@ export default function ZaakDetailPage() {
           subject,
           body,
         });
+        toast.success("E-mail verzonden");
       }
-      toast.success("E-mail verzonden");
       setCaseEmailOpen(false);
     } catch (err: any) {
       toast.error(err.message || "E-mail verzenden mislukt");
@@ -617,10 +630,11 @@ export default function ZaakDetailPage() {
         open={caseEmailOpen}
         onOpenChange={setCaseEmailOpen}
         onSend={handleSendCaseEmail}
-        isSending={sendCaseEmail.isPending}
-        title="E-mail versturen"
+        isSending={createDraft.isPending || sendCaseEmail.isPending}
+        title="E-mail opstellen"
         defaultSubject={zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
+        caseId={id}
       />
     </div>
   );

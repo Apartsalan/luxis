@@ -360,8 +360,14 @@ class OutlookProvider(EmailProvider):
         subject: str,
         body_html: str,
         cc: list[str] | None = None,
-    ) -> str:
-        """Create a draft email in Outlook Drafts folder."""
+        attachments: list[OutgoingAttachment] | None = None,
+    ) -> tuple[str, str | None]:
+        """Create a draft email in Outlook Drafts folder.
+
+        Returns:
+            Tuple of (draft_id, web_link). web_link is the Outlook Web App
+            URL to open the draft directly.
+        """
         draft_body: dict = {
             "subject": subject,
             "body": {
@@ -378,6 +384,17 @@ class OutlookProvider(EmailProvider):
                 {"emailAddress": {"address": addr}} for addr in cc
             ]
 
+        if attachments:
+            draft_body["attachments"] = [
+                {
+                    "@odata.type": "#microsoft.graph.fileAttachment",
+                    "name": att.filename,
+                    "contentType": att.content_type,
+                    "contentBytes": base64.b64encode(att.data).decode(),
+                }
+                for att in attachments
+            ]
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{GRAPH_API_BASE}/me/messages",
@@ -388,7 +405,8 @@ class OutlookProvider(EmailProvider):
                 json=draft_body,
             )
             resp.raise_for_status()
-            return resp.json()["id"]
+            data = resp.json()
+            return data["id"], data.get("webLink")
 
     async def get_attachment(
         self,

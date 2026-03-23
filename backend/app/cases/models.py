@@ -166,6 +166,10 @@ class Case(TenantBase):
     minimum_fee: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
     )  # Minimumkosten
+    provisie_base: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="collected_amount",
+        server_default="collected_amount",
+    )  # "collected_amount" or "total_claim"
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

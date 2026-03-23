@@ -22,6 +22,9 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
   const [minFee, setMinFee] = useState(
     zaak?.minimum_fee?.toString() || ""
   );
+  const [provBase, setProvBase] = useState(
+    zaak?.provisie_base || "collected_amount"
+  );
 
   // Sync state when zaak data changes
   const zaakRef = useRef(zaak);
@@ -31,6 +34,7 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
       setProvPerc(zaak.provisie_percentage?.toString() || "");
       setFixedCosts(zaak.fixed_case_costs?.toString() || "");
       setMinFee(zaak.minimum_fee?.toString() || "");
+      setProvBase(zaak.provisie_base || "collected_amount");
     }
   }
 
@@ -42,6 +46,7 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
           provisie_percentage: provPerc || null,
           fixed_case_costs: fixedCosts || null,
           minimum_fee: minFee || null,
+          provisie_base: provBase,
         },
       });
       toast.success("Provisie-instellingen opgeslagen");
@@ -119,6 +124,36 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Berekeningsbasis
+            </label>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="provisie_base"
+                  value="collected_amount"
+                  checked={provBase === "collected_amount"}
+                  onChange={() => setProvBase("collected_amount")}
+                  className="text-primary"
+                />
+                <span className="text-sm">Over geïncasseerd bedrag</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="provisie_base"
+                  value="total_claim"
+                  checked={provBase === "total_claim"}
+                  onChange={() => setProvBase("total_claim")}
+                  className="text-primary"
+                />
+                <span className="text-sm">Over totale vordering</span>
+              </label>
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <button
               onClick={handleSave}
@@ -138,6 +173,7 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
                 setProvPerc(zaak?.provisie_percentage?.toString() || "");
                 setFixedCosts(zaak?.fixed_case_costs?.toString() || "");
                 setMinFee(zaak?.minimum_fee?.toString() || "");
+                setProvBase(zaak?.provisie_base || "collected_amount");
               }}
               className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
             >
@@ -147,7 +183,7 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card p-5">
-          <dl className="grid grid-cols-3 gap-4">
+          <dl className="grid grid-cols-4 gap-4">
             <div>
               <dt className="text-xs text-muted-foreground">Provisie</dt>
               <dd className="text-sm font-medium text-foreground mt-0.5">
@@ -164,6 +200,12 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
               <dt className="text-xs text-muted-foreground">Minimumkosten</dt>
               <dd className="text-sm font-medium text-foreground mt-0.5">
                 {zaak?.minimum_fee != null ? formatCurrency(zaak.minimum_fee) : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Berekeningsbasis</dt>
+              <dd className="text-sm font-medium text-foreground mt-0.5">
+                {zaak?.provisie_base === "total_claim" ? "Totale vordering" : "Geïncasseerd bedrag"}
               </dd>
             </div>
           </dl>

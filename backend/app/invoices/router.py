@@ -28,6 +28,7 @@ from app.invoices.schemas import (
     InvoiceResponse,
     InvoiceUpdate,
     PaginatedInvoices,
+    IncassoInvoicePreviewResponse,
     ProvisieCalculationResponse,
     ReceivablesSummary,
     VoorschotnotaCreate,
@@ -203,6 +204,25 @@ async def get_provisie(
 ):
     """Calculate succesprovisie for an incasso case."""
     return await service.calculate_provisie(db, current_user.tenant_id, case_id)
+
+
+@cases_billing_router.get(
+    "/{case_id}/incasso-invoice-preview",
+    response_model=IncassoInvoicePreviewResponse,
+)
+async def get_incasso_invoice_preview(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Preview all incasso cost items for invoice creation.
+
+    Returns pre-calculated BIK, interest, and provisie amounts plus
+    already-invoiced detection to prevent accidental double-billing.
+    """
+    return await service.get_incasso_invoice_preview(
+        db, current_user.tenant_id, case_id
+    )
 
 
 # ── Status Transitions ───────────────────────────────────────────────────────

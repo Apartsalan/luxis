@@ -57,6 +57,7 @@ interface DashboardSummary {
   cases_by_type: { case_type: string; count: number }[];
   cases_this_month: number;
   cases_closed_this_month: number;
+  contacts_this_month: number;
 }
 
 interface RecentActivity {
@@ -196,7 +197,7 @@ export default function DashboardPage() {
           icon={<Users className="h-5 w-5" />}
           label="Relaties"
           value={summary?.total_contacts ?? 0}
-          subtitle={`${summary?.cases_closed_this_month ?? 0} dossiers afgesloten`}
+          subtitle={`${summary?.contacts_this_month ?? 0} nieuw deze maand`}
           color="success"
           href="/relaties"
         />

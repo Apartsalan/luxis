@@ -98,6 +98,15 @@ async def get_dashboard_summary(
     )
     cases_closed_this_month = result.scalar() or 0
 
+    # Contacts created this month
+    result = await db.execute(
+        select(func.count(Contact.id)).where(
+            Contact.tenant_id == tenant_id,
+            Contact.created_at >= first_of_month,
+        )
+    )
+    contacts_this_month = result.scalar() or 0
+
     return {
         "total_active_cases": total_active_cases,
         "total_contacts": total_contacts,
@@ -108,6 +117,7 @@ async def get_dashboard_summary(
         "cases_by_type": cases_by_type,
         "cases_this_month": cases_this_month,
         "cases_closed_this_month": cases_closed_this_month,
+        "contacts_this_month": contacts_this_month,
     }
 
 

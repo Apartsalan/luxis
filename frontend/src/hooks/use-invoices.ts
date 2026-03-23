@@ -643,3 +643,36 @@ export function useProvisie(caseId: string | undefined) {
     enabled: !!caseId,
   });
 }
+
+export interface IncassoInvoicePreview {
+  bik: { amount: number; is_override: boolean; source: string };
+  interest: { amount: number; calc_date: string; source: string };
+  principal: number;
+  collected_amount: number;
+  provisie: {
+    percentage: number;
+    base: string;
+    over_collected: { base_amount: number; amount: number };
+    over_claim: { base_amount: number; amount: number };
+    fixed_costs: number;
+    minimum_fee: number;
+  };
+  already_invoiced: {
+    has_bik_line: boolean;
+    has_provisie_line: boolean;
+    has_rente_line: boolean;
+    invoices: string[];
+  };
+}
+
+export function useIncassoInvoicePreview(caseId: string | undefined) {
+  return useQuery<IncassoInvoicePreview>({
+    queryKey: ["incasso-invoice-preview", caseId],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${caseId}/incasso-invoice-preview`);
+      if (!res.ok) throw new Error("Kan incasso preview niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}

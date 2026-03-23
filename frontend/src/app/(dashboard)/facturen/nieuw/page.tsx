@@ -12,6 +12,7 @@ import { useCases, useCase } from "@/hooks/use-cases";
 import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries";
 import { useExpenses } from "@/hooks/use-expenses";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { IncassoKostenPanel } from "@/components/IncassoKostenPanel";
 
 interface LineItem {
   description: string;
@@ -105,8 +106,9 @@ export default function NieuweFactuurPage() {
   }, [preselectedCase, preselectedCaseId]);
 
   // DF-05: Pre-fill provisie line when provisie data is loaded
+  // Skip for incasso cases — the IncassoKostenPanel handles provisie there
   useEffect(() => {
-    if (isProvisie && provisieData && provisieData.total_fee > 0) {
+    if (isProvisie && provisieData && provisieData.total_fee > 0 && preselectedCase?.case_type !== "incasso") {
       const feeAmount = provisieData.minimum_fee > 0 && provisieData.total_fee < provisieData.minimum_fee
         ? provisieData.minimum_fee
         : provisieData.total_fee;
@@ -125,7 +127,7 @@ export default function NieuweFactuurPage() {
           : []),
       ]);
     }
-  }, [isProvisie, provisieData]);
+  }, [isProvisie, provisieData, preselectedCase]);
 
   const { data: contactResults } = useRelations({
     search: contactSearch || undefined,
@@ -774,6 +776,16 @@ export default function NieuweFactuurPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Incasso kosten panel — only for incasso cases */}
+        {invoiceType === "factuur" && preselectedCase?.case_type === "incasso" && form.case_id && (
+          <IncassoKostenPanel
+            caseId={form.case_id}
+            onAddLine={(line) => {
+              setLines((prev) => [...prev.filter(l => l.description || l.unit_price), line]);
+            }}
+          />
         )}
 
         {/* Invoice lines — only for regular invoices */}

@@ -297,6 +297,43 @@ class ProvisieCalculationResponse(BaseModel):
     total_fee: Decimal  # Uiteindelijk honorarium (max van provisie, minimum)
 
 
+class IncassoBIKPreview(BaseModel):
+    amount: Decimal
+    is_override: bool
+    source: str
+
+class IncassoInterestPreview(BaseModel):
+    amount: Decimal
+    calc_date: str
+    source: str
+
+class IncassoProvisieOption(BaseModel):
+    base_amount: Decimal
+    amount: Decimal
+
+class IncassoProvisiePreview(BaseModel):
+    percentage: Decimal
+    base: str  # "collected_amount" or "total_claim"
+    over_collected: IncassoProvisieOption
+    over_claim: IncassoProvisieOption
+    fixed_costs: Decimal
+    minimum_fee: Decimal
+
+class AlreadyInvoicedInfo(BaseModel):
+    has_bik_line: bool
+    has_provisie_line: bool
+    has_rente_line: bool
+    invoices: list[str]  # invoice numbers
+
+class IncassoInvoicePreviewResponse(BaseModel):
+    bik: IncassoBIKPreview
+    interest: IncassoInterestPreview
+    principal: Decimal
+    collected_amount: Decimal
+    provisie: IncassoProvisiePreview
+    already_invoiced: AlreadyInvoicedInfo
+
+
 class ExpenseCreate(BaseModel):
     case_id: uuid.UUID | None = None
     description: str = Field(..., min_length=1, max_length=500)

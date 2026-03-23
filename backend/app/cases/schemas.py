@@ -74,6 +74,7 @@ class CaseCreate(BaseModel):
     provisie_percentage: Decimal | None = None
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
+    provisie_base: str = Field(default="collected_amount", description="collected_amount | total_claim")
 
 
 class CaseUpdate(BaseModel):
@@ -105,6 +106,7 @@ class CaseUpdate(BaseModel):
     provisie_percentage: Decimal | None = None
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
+    provisie_base: str | None = None  # "collected_amount" or "total_claim"
 
 
 class CaseStatusUpdate(BaseModel):
@@ -214,6 +216,7 @@ class CaseResponse(BaseModel):
     provisie_percentage: Decimal | None = None
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
+    provisie_base: str = "collected_amount"
     is_active: bool
     created_at: datetime
     updated_at: datetime

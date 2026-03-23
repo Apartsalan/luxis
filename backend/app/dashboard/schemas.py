@@ -30,6 +30,7 @@ class DashboardSummary(BaseModel):
     cases_by_type: list[CaseTypeCount]
     cases_this_month: int
     cases_closed_this_month: int
+    contacts_this_month: int
 
 
 class RecentActivityItem(BaseModel):

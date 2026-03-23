@@ -870,6 +870,142 @@ async def calculate_provisie(
     )
 
 
+async def get_incasso_invoice_preview(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> dict:
+    """Build a preview of all incasso cost items for invoice creation.
+
+    Combines BIK, interest, and provisie calculations with already-invoiced
+    detection to help users create incasso invoices without double-billing.
+    """
+    from app.cases.models import Case
+    from app.collections.models import Claim, Payment
+    from app.collections.wik import calculate_bik
+    from app.invoices.models import Invoice, InvoiceLine
+
+    # Get case
+    case_result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = case_result.scalar_one_or_none()
+    if case is None:
+        raise NotFoundError("Zaak niet gevonden")
+
+    # Total principal (from claims)
+    claims_result = await db.execute(
+        select(func.coalesce(func.sum(Claim.principal_amount), Decimal("0.00"))).where(
+            Claim.tenant_id == tenant_id,
+            Claim.case_id == case_id,
+        )
+    )
+    total_principal = claims_result.scalar_one()
+
+    # Collected amount (from payments)
+    pay_result = await db.execute(
+        select(func.coalesce(func.sum(Payment.amount), Decimal("0.00"))).where(
+            Payment.tenant_id == tenant_id,
+            Payment.case_id == case_id,
+        )
+    )
+    collected_amount = pay_result.scalar_one()
+
+    # BIK calculation
+    if case.bik_override is not None:
+        bik_amount = case.bik_override
+        bik_is_override = True
+        bik_source = "Handmatig ingesteld"
+    else:
+        bik_result = calculate_bik(total_principal)
+        bik_amount = bik_result["bik_exclusive"]
+        bik_is_override = False
+        bik_source = f"WIK-staffel over € {total_principal:,.2f}".replace(",", ".")
+
+    # Interest calculation
+    from app.collections.service import get_financial_summary
+    fin_summary = await get_financial_summary(db, tenant_id, case_id)
+    interest_amount = Decimal(str(fin_summary.get("total_interest", 0)))
+    today_str = date.today().isoformat()
+
+    # Provisie calculation (both bases)
+    provisie_pct = Decimal(str(case.provisie_percentage or 0))
+    fixed_costs = Decimal(str(case.fixed_case_costs or 0))
+    min_fee = Decimal(str(case.minimum_fee or 0))
+    provisie_base = case.provisie_base or "collected_amount"
+
+    prov_over_collected = (
+        collected_amount * provisie_pct / Decimal("100")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if collected_amount > 0 else Decimal("0.00")
+
+    prov_over_claim = (
+        total_principal * provisie_pct / Decimal("100")
+    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if total_principal > 0 else Decimal("0.00")
+
+    # Already invoiced detection
+    already_result = await db.execute(
+        select(InvoiceLine.description, Invoice.invoice_number)
+        .join(Invoice, Invoice.id == InvoiceLine.invoice_id)
+        .where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.case_id == case_id,
+            Invoice.status != "cancelled",
+        )
+    )
+    existing_lines = already_result.all()
+
+    has_bik = False
+    has_provisie = False
+    has_rente = False
+    invoice_numbers = set()
+    for desc, inv_num in existing_lines:
+        desc_lower = (desc or "").lower()
+        if "incassokosten" in desc_lower or "bik" in desc_lower:
+            has_bik = True
+            invoice_numbers.add(inv_num)
+        if "provisie" in desc_lower:
+            has_provisie = True
+            invoice_numbers.add(inv_num)
+        if "rente" in desc_lower:
+            has_rente = True
+            invoice_numbers.add(inv_num)
+
+    return {
+        "bik": {
+            "amount": bik_amount,
+            "is_override": bik_is_override,
+            "source": bik_source,
+        },
+        "interest": {
+            "amount": interest_amount,
+            "calc_date": today_str,
+            "source": f"Samengestelde rente t/m {today_str}",
+        },
+        "principal": total_principal,
+        "collected_amount": collected_amount,
+        "provisie": {
+            "percentage": provisie_pct,
+            "base": provisie_base,
+            "over_collected": {
+                "base_amount": collected_amount,
+                "amount": prov_over_collected,
+            },
+            "over_claim": {
+                "base_amount": total_principal,
+                "amount": prov_over_claim,
+            },
+            "fixed_costs": fixed_costs,
+            "minimum_fee": min_fee,
+        },
+        "already_invoiced": {
+            "has_bik_line": has_bik,
+            "has_provisie_line": has_provisie,
+            "has_rente_line": has_rente,
+            "invoices": sorted(invoice_numbers),
+        },
+    }
+
+
 # ── Re-exports from extracted modules (keep router.py working) ──────────────
 
 from app.invoices.invoice_payment_service import (  # noqa: E402, F401

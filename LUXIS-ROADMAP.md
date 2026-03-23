@@ -274,6 +274,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-61 | `toFixed is not a function` bij factuur uren import — zelfde type als BUG-57 maar op facturen/nieuw pagina. Decimal strings van API niet naar Number() geconverteerd. | Hoog | S | ✅ Gefixt + QA pass (sessie 101+102) |
 | BUG-62 | Dark mode/Systeem knoppen in Instellingen doen niks (tonen alleen toast). Fix: knoppen verwijderd, alleen "Licht" behouden. | Laag | S | ✅ Gefixt + QA pass (sessie 101+102) |
 | BUG-63 | Email matching: emails bij verkeerd dossier. Fix: thread-matching, stop-on-miss, bounce-detectie, referentie matching verwijderd, outbound dedup. QA: alle 7 scenario's PASS. Extra fixes sessie 102: Fernet key derivatie hersteld (sessie 90 regressie), outbound synthetic ID uniek gemaakt met timestamp. | Kritiek | L | ✅ Gefixt + QA pass (sessie 101+102) |
+| BUG-64 | Rentetype (interest_type) niet bewerkbaar na aanmaken dossier — staat alleen in wizard stap 2, niet in DetailsTab bewerkformulier. Moet bewerkbaar zijn incl. contractuele rente velden. | Midden | S | ❌ TODO |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 

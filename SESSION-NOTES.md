@@ -69,8 +69,16 @@
 - Upload drop zone, download, vervangen en verwijderen acties
 - Fix: sec13 RLS migratie voor ontbrekende email_logs tabel (IF EXISTS guard)
 
-**Nieuwe bestanden:** frontend/src/lib/confidence.ts, frontend/src/app/(dashboard)/relaties/[id]/components/TermsSection.tsx, backend/alembic/versions/*_add_terms_file_to_contacts.py
-**Gewijzigde bestanden:** classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx, zaken/[id]/page.tsx, backend/app/relations/models.py, backend/app/relations/schemas.py, backend/app/relations/router.py, frontend/src/app/(dashboard)/relaties/[id]/page.tsx, backend/alembic/versions/*_sec13_rls.py
+**AI-UX-09/13/14: AI concept-berichten met dossiercontext + bronvermelding**
+- Backend: draft_service.py verzamelt volledige dossiercontext (emails, vorderingen, betalingen, AV)
+- Nieuw endpoint POST /api/ai-agent/draft/{case_id} genereert concept-bericht via AI
+- Context bevat: recente correspondentie, financieel overzicht, vorderingen, AV excerpt
+- AI genereert: onderwerp, body, toon, bronvermelding, redenering
+- Frontend: use-ai-draft.ts hook + "AI Concept" knop op CorrespondentieTab
+- Draft preview panel met onderwerp, bericht, bronnen, en acties (Gebruik als e-mail / Kopiëren)
+
+**Nieuwe bestanden:** frontend/src/lib/confidence.ts, frontend/src/app/(dashboard)/relaties/[id]/components/TermsSection.tsx, backend/alembic/versions/*_add_terms_file_to_contacts.py, backend/app/ai_agent/draft_service.py, frontend/src/hooks/use-ai-draft.ts
+**Gewijzigde bestanden:** classification-card.tsx, ConfidenceDot.tsx, taken/page.tsx, intake/page.tsx, intake/[id]/page.tsx, CorrespondentieTab.tsx, zaken/[id]/page.tsx, backend/app/relations/models.py, backend/app/relations/schemas.py, backend/app/relations/router.py, frontend/src/app/(dashboard)/relaties/[id]/page.tsx, backend/alembic/versions/*_sec13_rls.py, backend/app/ai_agent/router.py
 
 ## Wat er gedaan is (sessie 99 — 22 maart 2026) — AI UX inline badges
 

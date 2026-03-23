@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 102 — QA + Incasso facturatie feature)
-**Laatste feature/fix:** Sessie 102 — IncassoKostenPanel (BIK/rente/provisie op factuur) + dashboard fix + email QA
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 103b — DF2-08: Incasso brieven als HTML email body)
+**Laatste feature/fix:** Sessie 103b — Incasso brieven verstuurd als branded HTML email body i.p.v. PDF bijlage
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +13,19 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 103b — 23 maart 2026) — DF2-08: Brief → mail als body
+
+**Incasso brieven als HTML email body:**
+- Incasso brieven (aanmaning, sommatie, tweede_sommatie, 14_dagenbrief, herinnering) worden nu als branded HTML email body verstuurd i.p.v. als PDF bijlage
+- Nieuw `incasso_templates.py` met 5 HTML email templates — exacte juridische tekst uit DOCX templates
+- Kesting Legal branding: logo, navy/goud kleuren, professionele handtekening/footer met contactgegevens
+- `build_base_context()` public gemaakt voor hergebruik tussen DOCX en email rendering
+- `render_docx()` accepteert optionele `pre_built_context` parameter (voorkomt dubbele DB queries)
+- Fallback: dagvaarding en renteoverzicht worden nog steeds als PDF bijlage verstuurd
+- DOCX generatie blijft voor document-archief/download (GeneratedDocument)
+
+**Nieuwe/gewijzigde bestanden:** backend/app/email/incasso_templates.py (nieuw), backend/app/documents/docx_service.py, backend/app/incasso/service.py
 
 ## Wat er gedaan is (sessie 102 — 23 maart 2026) — QA + Incasso Facturatie
 

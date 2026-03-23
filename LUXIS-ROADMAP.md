@@ -312,7 +312,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | DF2-05 | **Rentetype verplaatsen naar stap 3** — staat nu bij stap 1, hoort bij stap 3 (bij de vordering) | Laag | S | ❌ TODO |
 | DF2-06 | **Profiel invullen bij nieuw dossier** — bij nieuwe betrokkenen meteen volledig profiel laten invullen (alleen voor nieuwe personen) | Midden | M | ❌ TODO |
 | DF2-07 | **PDF parsing verbeterd** — "Geen tekst gevonden" bij gewone PDF's. Moet ook scans/afbeeldingen kunnen lezen (OCR via AI) | Hoog | M | ❌ TODO |
-| DF2-08 | **Genereer brief → mail als body** — template als mail-body versturen (met logo/handtekening/opmaak Kesting Legal), niet als bijgevoegd bestand. Vereist Lisanne's email-layout. Hangt samen met DF2-01. | Hoog | L | ❌ TODO |
+| DF2-08 | **Genereer brief → mail als body** — template als mail-body versturen (met logo/handtekening/opmaak Kesting Legal), niet als bijgevoegd bestand. 5 HTML templates (aanmaning, sommatie, tweede_sommatie, 14_dagenbrief, herinnering) met Kesting Legal branding. Fallback naar PDF bijlage voor dagvaarding/renteoverzicht. | Hoog | L | ✅ Sessie 103b |
 | DF2-09 | **Incasso fase vanuit dossier** — dossier toewijzen aan incasso-fase vanuit het dossier zelf, niet alleen vanuit incasso-overzicht | Midden | S | ❌ TODO |
 
 ### UX Review Fixes (sessie 79b — 18 mrt 2026)
@@ -360,7 +360,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 **Doel:** Eén klik op "Verstuur brief" voor 40 dossiers → alles automatisch.
 
 1. ✅ **Template editor UI** — Sjablonen tab in Instellingen: upload, download, bewerken, verwijderen van DOCX templates. Database-driven met disk-fallback. Incasso pipeline gebruikt dynamische template dropdown. Gebouwd sessie 24.
-2. ✅ **Batch brief + email verzenden** — "Verstuur brief" genereert documenten, converteert naar PDF, en emailt ze als bijlage naar de wederpartij via OutlookProvider (Graph API) met SMTP fallback. Email toggle in PreFlightDialog, instelbare email templates per stap, email readiness check in preview. Gebouwd sessie 27.
+2. ✅ **Batch brief + email verzenden** — "Verstuur brief" genereert documenten en emailt ze naar de wederpartij via OutlookProvider (Graph API) met SMTP fallback. Sinds sessie 103b: brieven als branded HTML email body (Kesting Legal logo/kleuren/handtekening) i.p.v. PDF bijlage. Fallback naar PDF bijlage voor dagvaarding/renteoverzicht. Email toggle in PreFlightDialog, instelbare email templates per stap, email readiness check in preview. Gebouwd sessie 27, HTML body sessie 103b.
 3. ✅ **Auto-complete taken** — Na document genereren: bijbehorende taken (generate_document/send_letter) automatisch afgevinkt. Gebouwd sessie 25. Bugfix sessie 26: scoped naar pipeline taken per stap (BUG-29).
 4. ✅ **Auto-advance pipeline** — Na alle taken voltooid: pipeline schuift automatisch naar volgende stap, nieuwe taak + deadline aangemaakt. Bij batch advance_step worden ook taken aangemaakt. Gebouwd sessie 25. Bugfix sessie 26: blokkade door initiële taken opgelost (BUG-29).
 5. ✅ **Deadline kleuren per stap** — Groen/oranje/rood kleurcodering per dossier in pipeline. Gebouwd sessie 23.

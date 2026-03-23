@@ -1,12 +1,13 @@
-"""PDF text extraction using pdfplumber.
+"""PDF text extraction using pymupdf4llm.
 
-Extracts text from PDF attachments for invoice/claim data extraction.
+AI-TECH-01: Replaced pdfplumber with pymupdf4llm for better table/layout
+extraction and Markdown output optimized for LLM consumption. 5-10x faster.
 """
 
 import logging
 from pathlib import Path
 
-import pdfplumber
+import pymupdf4llm
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,9 @@ MAX_CHARS = 5000
 
 
 def extract_text_from_pdf(file_path: str | Path) -> str:
-    """Extract text from a PDF file using pdfplumber.
+    """Extract text from a PDF file as Markdown using pymupdf4llm.
 
-    Returns extracted text, truncated to MAX_CHARS.
+    Returns extracted text (Markdown format), truncated to MAX_CHARS.
     Returns empty string on failure.
     """
     file_path = Path(file_path)
@@ -28,22 +29,20 @@ def extract_text_from_pdf(file_path: str | Path) -> str:
         return ""
 
     try:
-        text_parts: list[str] = []
-        with pdfplumber.open(file_path) as pdf:
-            for i, page in enumerate(pdf.pages[:MAX_PAGES]):
-                page_text = page.extract_text()
-                if page_text:
-                    text_parts.append(page_text)
+        md_text = pymupdf4llm.to_markdown(
+            str(file_path),
+            pages=list(range(MAX_PAGES)),
+            show_progress=False,
+        )
 
-        full_text = "\n\n".join(text_parts).strip()
+        full_text = md_text.strip()
 
         if len(full_text) > MAX_CHARS:
             full_text = full_text[:MAX_CHARS] + "\n[... ingekort ...]"
 
         logger.info(
-            "PDF extraction: %s — %d pages, %d chars",
+            "PDF extraction (pymupdf4llm): %s — %d chars",
             file_path.name,
-            len(text_parts),
             len(full_text),
         )
         return full_text

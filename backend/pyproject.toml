@@ -49,8 +49,8 @@ dependencies = [
     # AI Agent (email classification + intake)
     "anthropic>=0.40.0",
 
-    # PDF text extraction (for intake invoice parsing)
-    "pdfplumber>=0.11.0",
+    # PDF text extraction — pymupdf4llm outputs Markdown for better LLM results
+    "pymupdf4llm>=0.0.17",
 
     # Rate limiting
     "slowapi>=0.1.9",

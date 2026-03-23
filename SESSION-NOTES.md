@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 103b — DF2-08: Incasso brieven als HTML email body)
-**Laatste feature/fix:** Sessie 103b — Incasso brieven verstuurd als branded HTML email body i.p.v. PDF bijlage
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 103b — DF2-01 + DF2-08: Email compose + HTML brieven)
+**Laatste feature/fix:** Sessie 103b — DF2-01: Email compose met draft-in-Outlook, bijlagen, template preview
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +13,33 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 103b — 23 maart 2026) — DF2-01: Email compose uitbreiden
+
+**Email compose → "Open in Outlook" flow:**
+- Email compose vanuit dossiers maakt nu een **draft in Outlook** aan i.p.v. direct verzenden
+- Draft opent in Outlook Web met alles pre-filled: ontvangers, onderwerp, body, bijlagen
+- Lisanne reviewt en verstuurt zelf vanuit Outlook
+- OutlookProvider.create_draft() uitgebreid met attachments + webLink return
+- Nieuw compose endpoint: accepteert case_file_ids + inline uploads (base64)
+- _resolve_attachments() helper: laadt CaseFiles van disk + decodeert inline uploads
+- Max 3MB per bijlage (Graph API limiet), max 10 bijlagen
+
+**Template als email body:**
+- Template selector dropdown in compose dialog
+- Nieuw render-template endpoint: rendert incasso template als HTML preview
+- Template preview in iframe (read-only, juridische tekst niet bewerkbaar)
+- Hergebruikt DF2-08's render_incasso_email() + build_base_context()
+
+**Frontend compose dialog uitgebreid:**
+- 680px breed (was 560px)
+- Template selector boven body-veld
+- "Bijlage toevoegen" dropdown: uit dossier / uploaden
+- File picker panel met checkboxes
+- Attachment badges met grootte + verwijder-knop
+- "Open in Outlook" knop i.p.v. "Versturen"
+
+**Nieuwe/gewijzigde bestanden:** backend/app/email/providers/outlook.py, backend/app/email/compose_router.py, frontend/src/components/email-compose-dialog.tsx, frontend/src/hooks/use-email-sync.ts, frontend/src/app/(dashboard)/zaken/[id]/page.tsx
 
 ## Wat er gedaan is (sessie 103b — 23 maart 2026) — DF2-08: Brief → mail als body
 

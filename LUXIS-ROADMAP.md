@@ -305,7 +305,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 
 | # | Feature/Fix | Ernst | Grootte | Status |
 |---|-------------|-------|---------|--------|
-| DF2-01 | **Email compose uitbreiden** — volledige email-flow: kies ontvanger (wederpartij/advocaat/cliënt/handmatig), bijlagen uit dossier + computer + ander dossier, template als mail-body (niet bijlage), opent in Outlook met alles pre-filled incl. alle betrokkenen-emails. Onderzoek eerst. | Hoog | XL | ❌ TODO |
+| DF2-01 | **Email compose uitbreiden** — Draft-in-Outlook flow: ontvanger chips, template selector (incasso templates als HTML body), bijlagen uit dossier + upload, draft opent in Outlook Web met alles pre-filled. "Ander dossier" bijlagen nog niet gebouwd (weinig gebruikt). | Hoog | XL | ✅ Sessie 103b |
 | DF2-02 | **Incasso stappen bewerken** — bewerk-knop (potlood-icoon) toegevoegd naast bestaande inline-edit | Midden | S | ✅ Sessie 103 |
 | DF2-03 | **BTW per factuurregel** — per regel btw-soort kiezen (21%/9%/0%). Per-tariegroep berekening (NL belastingwet). Smart PDF uitsplitsing. Auto-BTW bij expense import. | Hoog | M | ✅ Sessie 103 |
 | DF2-04 | **Voorschotbedrag op uren** — uren × uurtarief auto-berekening op voorschotnota | Midden | S | ✅ Sessie 103 |

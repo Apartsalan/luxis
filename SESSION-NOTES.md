@@ -1,7 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 103b — DF2-01 + DF2-08: Email compose + HTML brieven)
-**Laatste feature/fix:** Sessie 103b — DF2-01: Email compose met draft-in-Outlook, bijlagen, template preview
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 103 — Demo Feedback Sprint 5 COMPLEET)
+**Laatste feature/fix:** Sessie 103 — DF2-01 t/m DF2-09: alle 9 demo feedback punten afgerond
+**Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +14,26 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 103 — 23 maart 2026) — Demo Feedback Sprint 5
+
+**Alle 9 demo feedback punten van Lisanne afgerond in 2 parallelle sessies:**
+
+| # | Feature | Sessie |
+|---|---------|--------|
+| DF2-01 | Email compose uitbreiden (ontvangers, bijlagen, templates, draft-in-Outlook) | 103b |
+| DF2-02 | Incasso stappen bewerken — pencil icon toegevoegd | 103 |
+| DF2-03 | BTW per factuurregel (21%/9%/0%, groepsberekening NL belastingwet, smart PDF uitsplitsing) | 103 |
+| DF2-04 | Voorschotbedrag op uren — auto-berekening uren × uurtarief | 103 |
+| DF2-05 | Rentetype verplaatst van wizard stap 1 naar stap 3 | 103 |
+| DF2-06 | Contactdetails standaard open bij nieuwe betrokkenen in wizard | 103 |
+| DF2-07 | PDF parsing fallback naar Claude native PDF bij scans/afbeeldingen | 103 |
+| DF2-08 | Genereer brief → HTML mail als body met Kesting Legal branding | 103b |
+| DF2-09 | Pipeline step selector op dossier-detail header | 103 |
+
+**Backend:** migratie btw_percentage op invoice_lines (handmatig via SQL), _recalculate_totals herschreven voor per-tariegroep BTW, invoice_parser fallback naar Claude PDF.
+**Frontend:** per-regel BTW dropdown, uren-calculator voorschotnota, incasso step selector, edit button pipeline stappen, contactdetails auto-expand.
+**Gewijzigde bestanden:** 18+ bestanden (models, schemas, service, router, PDF service, factuur template, wizard, DossierHeader, IncassoKostenPanel, hooks, types)
 
 ## Wat er gedaan is (sessie 103b — 23 maart 2026) — DF2-01: Email compose uitbreiden
 

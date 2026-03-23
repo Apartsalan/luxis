@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 100 — AI UX Fase 2 + AI-UX-11)
-**Laatste feature/fix:** Sessie 100 — AI-UX-08 (Nederlandse tekstlabels) + AI-UX-02 ("Wacht op review" indicator) + AI-UX-04 (AI suggestion banner) + AI-UX-11 (Algemene Voorwaarden per client)
+**Laatst bijgewerkt:** 23 maart 2026 (sessie 101 — Uitrolvoorbereiding: QA + infra hardening)
+**Laatste feature/fix:** Sessie 101 — Health endpoint via Caddy, uptime monitoring actief, productie QA pass (alle AI features)
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
@@ -13,6 +13,27 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 101 — 23 maart 2026) — Uitrolvoorbereiding: QA + infra hardening
+
+**Infra fixes:**
+- `/health` endpoint extern beschikbaar gemaakt via Caddyfile (voor uptime monitoring)
+- Caddy container healthcheck gefixt: was perpetueel "unhealthy" door HTTP→HTTPS redirect. Nu via `caddy validate`
+- Alle 5 containers nu healthy: backend, frontend, caddy, db, redis
+- rclone geïnstalleerd op VPS (off-site backup config uitgesteld tot vóór soft launch — CQ-24)
+- Self-hosted uptime monitoring actief: crontab elke 5 min health check met auto-restart bij downtime (CQ-25 ✅)
+- Productie wachtwoord gereset naar Hetbaken-KL-5
+
+**E2E QA check — alle AI features op productie getest:**
+1. ✅ Dashboard AI widget — 6 classificaties, links werken
+2. ✅ Confidence labels — "Aanbevolen" badges zichtbaar
+3. ✅ AI suggestion banner op dossier-detail — inklapbaar, Akkoord/Afwijzen knoppen
+4. ✅ "AI Concept" knop op correspondentie tab — aanwezig
+5. ✅ AV upload op relatie-detail — upload zone werkt
+6. ✅ AI-acties in activity feed — AI/Automatisering badges
+7. ✅ "Wacht op review" indicator op emails — Bot-icoon + "Review" label
+
+**Gewijzigde bestanden:** Caddyfile, docker-compose.prod.yml, LUXIS-ROADMAP.md, SESSION-NOTES.md
 
 ## Wat er gedaan is (sessie 100 — 23 maart 2026) — AI UX Fase 2
 

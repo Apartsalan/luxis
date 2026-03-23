@@ -1,4 +1,9 @@
 {$DOMAIN:luxis.kestinglegal.nl} {
+    # Health check → backend (for uptime monitoring)
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
     # API requests → backend
     handle /api/* {
         reverse_proxy backend:8000

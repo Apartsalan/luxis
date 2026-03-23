@@ -31,7 +31,7 @@ import {
   type SyncedEmailSummary,
 } from "@/hooks/use-email-sync";
 import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
-import { confidenceBadgeClasses } from "@/lib/confidence";
+import { confidenceBadgeClasses, confidenceLabelText } from "@/lib/confidence";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
 import { formatDate, formatDateShort } from "@/lib/utils";
 import { tokenStore } from "@/lib/token-store";
@@ -223,7 +223,7 @@ function ClassificationBadge({ classification }: { classification: Classificatio
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${confidenceColor}`}
-      title={`${classification.category_label} (${Math.round(classification.confidence * 100)}% zekerheid) — ${classification.suggested_action_label}`}
+      title={`${classification.category_label} (${confidenceLabelText(classification.confidence)}) — ${classification.suggested_action_label}`}
     >
       {statusIcon}
       {classification.category_label}

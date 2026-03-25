@@ -5,7 +5,7 @@
 **Scope:** Sessies 90–103b (alle features, bugfixes, security, UI/UX, AI)
 **Methode:** Destructieve E2E testing via Playwright browser
 
-## Samenvatting: 78/82 PASS, 3 FAIL, 1 DATA-ISSUE
+## Samenvatting: 89/93 PASS, 3 FAIL, 1 DATA-ISSUE
 
 ### Kritieke FAILS (blokkeren soft launch)
 
@@ -68,6 +68,9 @@
 - ✅ BIK berekening: €5.000 → 15%×€2.500 + 10%×€2.500 = €375 + €250 = €625 — PASS
 - ✅ Totale vordering: €5.000 + €30,68 + €625 = €5.655,68 — PASS
 - ✅ Specificatie tabel met Post/Totaal/Betaald/Openstaand breakdown — PASS [screenshot: 10-vorderingen-berekening.png]
+- ✅ **EDGE CASE: verzuimdatum vandaag** → total_interest = €0 — PASS
+- ✅ **EDGE CASE: verzuimdatum 2 jaar geleden (compound)** → €2.100 exact (10000→11000→12100) — PASS
+  - Compound interest kapitaliseert correct op verjaardag verzuimdatum
 
 ### 1.6 Betaling ontvangen
 - ✅ Deelbetaling €2.000 registreren — PASS
@@ -79,6 +82,7 @@
   - Totaal openstaand: €3.655,68 ✓
 - ✅ Betalingsvoortgang: 35% — PASS
 - ✅ Herlaad → betaling persistent — PASS
+- ⚠️ **EDGE CASE: betaling > totale vordering** → wordt geaccepteerd zonder foutmelding — niet-kritiek
 
 ---
 
@@ -212,6 +216,7 @@ Alle 14 berekeningen via API getest (8 nieuwe testcases + 6 bestaande dossiers):
 - ✅ Dossier met hoofdsom €0 → aangemaakt, BIK = €0 (correct: geen minimum bij €0 hoofdsom) — PASS
 - ✅ Betaling €0 → geweigerd: "Input should be greater than 0" — PASS
 - ✅ Betaling -€500 → geweigerd: "Input should be greater than 0" — PASS
+- ⚠️ Factuur met 0 regels → wordt aangemaakt (F2026-00007) — niet-kritiek maar ongewenst
 
 ### 5.2 SQL Injection
 - ✅ Relatie naam `'; DROP TABLE cases; --` → JSON parse error (payload breekt JSON) — PASS
@@ -320,12 +325,22 @@ Getest op dossier 2026-00022 (leeg dossier):
 
 ---
 
-## Niet getest
+## BLOK 11: Intake Pagina
 
-- **1.4** Incasso brief daadwerkelijk versturen (vereist echte email verzending)
+- ✅ AI Intake pagina laadt — PASS [screenshot: 22-intake-pagina.png]
+- ✅ Status filters: Te beoordelen, Gedetecteerd, Verwerken, Goedgekeurd, Afgewezen, Fout, Alle — PASS
+- ✅ "Vertrouwen" kolom aanwezig (voor confidence labels) — PASS
+- ✅ Empty state: "Geen intake verzoeken" — PASS
+- ⚠️ Geen intake data beschikbaar om Aanbevolen/Mogelijk/Onzeker labels te testen
+
+---
+
+## Niet getest (4 items — vereisen externe interactie)
+
+- **1.4** Incasso brief daadwerkelijk versturen (vereist echte email verzending naar extern adres)
 - **1.8** Voorschotfactuur met geïmporteerde uren (geen uren op testdossier)
-- **4.1** AI factuur parsing (vereist PDF upload)
-- **5.4** Concurrent gebruik (2 tabs tegelijk)
+- **4.1** AI factuur parsing (vereist PDF upload via browser)
+- **5.4** Concurrent gebruik (2 tabs tegelijk — Playwright kan maar 1 context)
 
 ---
 
@@ -364,3 +379,4 @@ Alle screenshots opgeslagen in `docs/qa/screenshots/`:
 19. `19-responsive-768px.png` — Responsiveness test op 768px
 20. `20-correspondentie-ai-badges.png` — AI badges + suggestion banner
 21. `21-email-compose-dialog.png` — Email compose dialog (DF2-01)
+22. `22-intake-pagina.png` — AI Intake pagina

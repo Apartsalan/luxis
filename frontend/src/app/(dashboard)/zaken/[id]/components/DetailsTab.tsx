@@ -62,6 +62,13 @@ const COLLECTION_STRATEGIES = [
   { value: "gerechtelijk", label: "Gerechtelijk", description: "Direct naar dagvaarding" },
 ];
 
+const INTEREST_TYPES = [
+  { value: "statutory", label: "Wettelijke rente (art. 6:119 BW)" },
+  { value: "commercial", label: "Handelsrente (art. 6:119a BW)" },
+  { value: "government", label: "Overheidsrente (art. 6:119b BW)" },
+  { value: "contractual", label: "Contractuele rente" },
+];
+
 const PROCEDURE_PHASES = [
   "Aangebracht",
   "Dagvaarding uitgebracht",
@@ -109,6 +116,9 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     payment_term_days: zaak.payment_term_days != null ? String(zaak.payment_term_days) : "",
     collection_strategy: zaak.collection_strategy || "",
     debtor_notes: zaak.debtor_notes || "",
+    interest_type: zaak.interest_type || "statutory",
+    contractual_rate: zaak.contractual_rate != null ? String(zaak.contractual_rate) : "",
+    contractual_compound: zaak.contractual_compound ?? true,
   });
 
   // UX-16: Warn on unsaved changes (beforeunload)
@@ -168,6 +178,13 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
             payment_term_days: editForm.payment_term_days ? parseInt(editForm.payment_term_days, 10) : null,
             collection_strategy: editForm.collection_strategy || null,
             debtor_notes: editForm.debtor_notes.trim() || null,
+            interest_type: editForm.interest_type || "statutory",
+            contractual_rate: editForm.interest_type === "contractual" && editForm.contractual_rate
+              ? editForm.contractual_rate
+              : null,
+            contractual_compound: editForm.interest_type === "contractual"
+              ? editForm.contractual_compound
+              : null,
           }),
         },
       });
@@ -193,6 +210,9 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       payment_term_days: zaak.payment_term_days != null ? String(zaak.payment_term_days) : "",
       collection_strategy: zaak.collection_strategy || "",
       debtor_notes: zaak.debtor_notes || "",
+      interest_type: zaak.interest_type || "statutory",
+      contractual_rate: zaak.contractual_rate != null ? String(zaak.contractual_rate) : "",
+      contractual_compound: zaak.contractual_compound ?? true,
     });
     setIsEditing(false);
   };
@@ -404,19 +424,6 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                 )}
               </dd>
             </div>
-            {zaak.contractual_rate && (
-              <div>
-                <dt className="text-xs text-muted-foreground mb-1">
-                  Contractueel rentepercentage
-                </dt>
-                <dd className="text-sm text-foreground">
-                  {zaak.contractual_rate}%
-                  {zaak.contractual_compound
-                    ? " (samengesteld)"
-                    : " (enkelvoudig)"}
-                </dd>
-              </div>
-            )}
             {zaak.assigned_to && (
               <div>
                 <dt className="text-xs text-muted-foreground mb-1">
@@ -614,6 +621,54 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">
+                    Type rente
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={editForm.interest_type}
+                      onChange={(e) => setEditForm(f => ({ ...f, interest_type: e.target.value }))}
+                      className={`${editInputClass} appearance-none pr-8`}
+                    >
+                      {INTEREST_TYPES.map(t => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                {editForm.interest_type === "contractual" && (
+                  <>
+                    <div>
+                      <label className="block text-xs text-muted-foreground mb-1">
+                        Contractueel rentepercentage (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={editForm.contractual_rate}
+                        onChange={(e) => setEditForm(f => ({ ...f, contractual_rate: e.target.value }))}
+                        className={editInputClass}
+                        placeholder="Bijv. 8.00"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        id="contractual_compound"
+                        checked={editForm.contractual_compound}
+                        onChange={(e) => setEditForm(f => ({ ...f, contractual_compound: e.target.checked }))}
+                        className="h-4 w-4 rounded border-input text-primary focus:ring-primary/20"
+                      />
+                      <label htmlFor="contractual_compound" className="text-sm text-foreground">
+                        Samengestelde rente (rente op rente)
+                      </label>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Uurtarief (EUR/uur)
                   </label>
                   <input
@@ -678,6 +733,20 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
               </div>
             ) : (
               <dl className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-1">Type rente</dt>
+                  <dd className="text-sm text-foreground">
+                    {INTEREST_TYPES.find(t => t.value === zaak.interest_type)?.label || "Wettelijke rente"}
+                  </dd>
+                </div>
+                {zaak.interest_type === "contractual" && zaak.contractual_rate != null && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground mb-1">Contractueel rentepercentage</dt>
+                    <dd className="text-sm text-foreground">
+                      {zaak.contractual_rate}%{zaak.contractual_compound ? " (samengesteld)" : " (enkelvoudig)"}
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-xs text-muted-foreground mb-1">Uurtarief</dt>
                   <dd className="text-sm text-foreground">

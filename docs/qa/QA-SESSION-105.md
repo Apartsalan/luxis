@@ -5,7 +5,7 @@
 **Scope:** Sessies 90–103b (alle features, bugfixes, security, UI/UX, AI)
 **Methode:** Destructieve E2E testing via Playwright browser
 
-## Samenvatting: 58/61 PASS, 2 FAIL, 1 DATA-ISSUE
+## Samenvatting: 78/82 PASS, 3 FAIL, 1 DATA-ISSUE
 
 ### Kritieke FAILS (blokkeren soft launch)
 
@@ -22,6 +22,12 @@
 - **Health endpoint:** `GET /api/health` geeft 404 — pad mogelijk gewijzigd of niet gerouteerd via Caddy
 
 ### Niet-kritieke FAILS
+
+- **BUG-66: AI Concept genereren mislukt — ImportError**
+  - **Stappen:** Dossier met correspondentie → Correspondentie tab → "AI Concept" klik
+  - **Error:** `ImportError: cannot import name 'SyncedEmail' from 'app.email.models'`
+  - **Fix:** Model import corrigeren in `draft_service.py` (naam is waarschijnlijk anders)
+  - **Impact:** AI concept-berichten werken niet — niet-kritiek voor basis workflow
 
 - **SEC-20: Geen account lockout na 5x verkeerd wachtwoord**
   - Na 6 foutieve loginpogingen kan je nog steeds inloggen met het juiste wachtwoord
@@ -232,21 +238,94 @@ Alle 14 berekeningen via API getest (8 nieuwe testcases + 6 bestaande dossiers):
 
 ---
 
-## Niet getest (browser vastgelopen na BLOK 1-8)
+## BLOK 1.5: Email Compose Dialog (DF2-01)
 
-De volgende tests konden niet via de API uitgevoerd worden en vereisen een browser sessie:
+- ✅ Dialog breed (~680px) — PASS [screenshot: 21-email-compose-dialog.png]
+- ✅ Quick-add ontvangers: Cliënt, Wederpartij, Adv. wederpartij — PASS
+- ✅ Onderwerp pre-filled met dossiernummer — PASS
+- ✅ Sjabloon dropdown aanwezig — PASS
+- ✅ Bijlage knop aanwezig — PASS
+- ✅ CC knop aanwezig — PASS
+- ✅ "Open in Outlook" knop (disabled tot ontvanger geselecteerd) — PASS
 
-- **1.4** Incasso brief versturen (HTML email check)
-- **1.5** Email compose dialog (680px, templates, bijlagen, Outlook draft)
-- **1.7** Factuur met BTW per regel + PDF preview
-- **1.8** Voorschotfactuur met uren
-- **4.1** AI factuur parsing
-- **4.2** AI concept antwoord
-- **5.3** Annuleren halverwege (unsaved changes warning)
-- **5.4** Concurrent gebruik (2 tabs)
-- **6.3** Empty states per tab
-- **6.4** Responsiveness (768px)
-- **9** Provisie instellingen
+---
+
+## BLOK 1.7: Factuur met BTW per regel (DF2-03)
+
+- ✅ BTW per regel dropdown (21%/9%/0%) op factuurregels — PASS [screenshot: 18-factuur-btw-mixed.png]
+- ✅ IncassoKostenPanel verschijnt bij incasso dossier — PASS [screenshot: 17-factuur-nieuw.png]
+- ✅ BIK quick-add met bedrag + "Al gefactureerd" warning — PASS
+- ✅ Rente quick-add met bedrag + "Al gefactureerd" warning — PASS
+- ✅ Provisie quick-add met berekeningsbasis toggle — PASS
+- ✅ Mixed BTW berekening correct: 21% over €500 = €105, 0% over €240 = €0, Totaal €845 — PASS
+- ✅ BTW uitsplitsing per tariegroep in totaalberekening — PASS
+- ✅ Voorschotnota tab aanwezig met verrekening opties (Tussentijds/Bij sluiting) — PASS
+
+---
+
+## BLOK 4: AI Features
+
+### 4.2 AI Concept antwoord (AI-UX-09)
+- ❌ **"AI Concept" knop → "Concept genereren mislukt"** — FAIL (BUG-66)
+  - ImportError: `cannot import name 'SyncedEmail' from 'app.email.models'`
+
+### 4.3 Classificatie badges (AI-UX-01/02/08)
+- ✅ Correspondentie tab: classificatie badges ("Ontvangstbevestiging") op emails — PASS [screenshot: 20-correspondentie-ai-badges.png]
+- ✅ "Aanbevolen" confidence labels (blauw) — PASS
+- ✅ "Wacht op review" indicator (Bot icoon + "Review") bij pending — PASS (AI-UX-02)
+- ✅ Dashboard: AI widget met 5 pending classificaties — PASS (AI-UX-07)
+
+### 4.4 AI Suggestion Banner (AI-UX-04)
+- ✅ Banner bovenaan dossier met pending classificatie — PASS [screenshot: 20-correspondentie-ai-badges.png]
+- ✅ Inklapbaar (chevron toggle) — PASS
+- ✅ "Verberg" knop (dismiss) — PASS
+- ✅ Akkoord/Afwijzen knoppen inline — PASS
+
+---
+
+## BLOK 5.3: Annuleren halverwege
+
+- ✅ **Unsaved changes warning (UX-16):** factuur met ingevulde regels → navigeer weg → beforeunload dialog verschijnt — PASS
+
+---
+
+## BLOK 6.3: Empty States
+
+Getest op dossier 2026-00022 (leeg dossier):
+- ✅ Uren: "Geen uren geregistreerd" + beschrijving — PASS
+- ✅ Vorderingen: "Nog geen vorderingen" + CTA "Vordering toevoegen" — PASS
+- ✅ Betalingen: "Nog geen betalingen" + "Geen betalingsregeling" + "Geen derdengelden" — PASS
+- ✅ Facturen: "Nog geen facturen" + "Nog geen verschotten" + CTA knoppen — PASS
+- ✅ Documenten: "Nog geen bestanden" + upload zone + template suggestions — PASS
+- ✅ Correspondentie: "Nog geen e-mails" + Sync inbox hint — PASS
+
+---
+
+## BLOK 6.4: Responsiveness (768px)
+
+- ✅ Layout past aan op 768px — geen horizontale scrollbar — PASS [screenshot: 19-responsive-768px.png]
+- ✅ Tabellen responsive
+- ✅ Tabs horizontaal scrollbaar
+- ✅ KPI-kaarten stacked
+- ✅ Sidebar collapsed (hamburger menu)
+
+---
+
+## BLOK 9: Provisie Instellingen
+
+- ✅ Facturatie-instellingen sectie op Vorderingen tab zichtbaar — PASS
+- ✅ Berekeningsbasis: "Geïncasseerd bedrag" standaard — PASS
+- ✅ IncassoKostenPanel: provisie toggle "Over geïncasseerd bedrag" ↔ "Over totale vordering" — PASS
+- ✅ "Al gefactureerd" waarschuwing bij BIK/rente/provisie — PASS
+
+---
+
+## Niet getest
+
+- **1.4** Incasso brief daadwerkelijk versturen (vereist echte email verzending)
+- **1.8** Voorschotfactuur met geïmporteerde uren (geen uren op testdossier)
+- **4.1** AI factuur parsing (vereist PDF upload)
+- **5.4** Concurrent gebruik (2 tabs tegelijk)
 
 ---
 
@@ -280,3 +359,8 @@ Alle screenshots opgeslagen in `docs/qa/screenshots/`:
 14. `14-incasso-pipeline.png` — Incasso pipeline
 15. `15-correspondentie.png` — Correspondentie pagina
 16. `16-taken-pagina.png` — Taken pagina met AI badges
+17. `17-factuur-nieuw.png` — Nieuwe factuur met IncassoKostenPanel
+18. `18-factuur-btw-mixed.png` — Factuur met mixed BTW per regel
+19. `19-responsive-768px.png` — Responsiveness test op 768px
+20. `20-correspondentie-ai-badges.png` — AI badges + suggestion banner
+21. `21-email-compose-dialog.png` — Email compose dialog (DF2-01)

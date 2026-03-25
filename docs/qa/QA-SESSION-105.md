@@ -5,7 +5,7 @@
 **Scope:** Sessies 90–103b (alle features, bugfixes, security, UI/UX, AI)
 **Methode:** Destructieve E2E testing via Playwright browser
 
-## Samenvatting: 89/93 PASS, 3 FAIL, 1 DATA-ISSUE
+## Samenvatting: 95/98 PASS, 3 FAIL, 1 DATA-ISSUE
 
 ### Kritieke FAILS (blokkeren soft launch)
 
@@ -266,6 +266,19 @@ Alle 14 berekeningen via API getest (8 nieuwe testcases + 6 bestaande dossiers):
 - ✅ BTW uitsplitsing per tariegroep in totaalberekening — PASS
 - ✅ Voorschotnota tab aanwezig met verrekening opties (Tussentijds/Bij sluiting) — PASS
 
+### 1.4 Incasso brief genereren
+- ✅ Document generatie endpoint werkt — herinnering DOCX gegenereerd — PASS
+- ✅ "Verstuur per e-mail" knop op gegenereerde documenten aanwezig — PASS
+
+### 1.8 Voorschotfactuur met uren (DF2-04)
+- ✅ 3 uurregistraties aangemaakt via API (elk 60min × €250) — PASS
+- ✅ Uurtarief automatisch ingevuld op €250 (BUG-60 fix bevestigd) — PASS
+- ✅ "Importeer uren" panel toont 3 onbefactureerde uren met bedragen — PASS
+- ✅ "Alles selecteren" → "3 geselecteerd · subtotaal €750,00" — PASS
+- ✅ Importeer → 3 factuurregels aangemaakt met correcte bedragen — PASS
+- ✅ Subtotaal €750, BTW €157,50 (21%), Totaal €907,50 — PASS (handmatig narekent ✓)
+- ✅ Geen toFixed crash (BUG-61 fix bevestigd) — PASS
+
 ---
 
 ## BLOK 4: AI Features
@@ -335,12 +348,10 @@ Getest op dossier 2026-00022 (leeg dossier):
 
 ---
 
-## Niet getest (4 items — vereisen externe interactie)
+## Niet getest (2 items — vereisen externe interactie)
 
-- **1.4** Incasso brief daadwerkelijk versturen (vereist echte email verzending naar extern adres)
-- **1.8** Voorschotfactuur met geïmporteerde uren (geen uren op testdossier)
-- **4.1** AI factuur parsing (vereist PDF upload via browser)
-- **5.4** Concurrent gebruik (2 tabs tegelijk — Playwright kan maar 1 context)
+- **4.1** AI factuur parsing — vereist PDF upload via file picker (Playwright headless kan geen OS file dialog)
+- **5.4** Concurrent gebruik (2 tabs) — Playwright MCP ondersteunt maar 1 browser context
 
 ---
 

@@ -61,7 +61,7 @@ class InvoiceCreate(BaseModel):
     btw_percentage: Decimal = Field(default=Decimal("21.00"), ge=0)
     reference: str | None = None
     notes: str | None = None
-    lines: list[InvoiceLineCreate] = Field(default_factory=list)
+    lines: list[InvoiceLineCreate] = Field(default_factory=list, min_length=1)
 
 
 class CreditNoteCreate(BaseModel):

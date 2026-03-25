@@ -234,6 +234,14 @@ async def create_payment(
     outstanding_interest = max(Decimal("0"), total_interest - prev_interest)
     outstanding_principal = max(Decimal("0"), total_principal - prev_principal)
 
+    # ── Validate: warn if overpayment ──────────────────────────────────
+    total_outstanding = outstanding_costs + outstanding_interest + outstanding_principal
+    if total_outstanding > Decimal("0") and data.amount > total_outstanding:
+        raise BadRequestError(
+            f"Betaling van €{data.amount} is hoger dan het openstaande bedrag "
+            f"van €{total_outstanding}. Pas het bedrag aan."
+        )
+
     # ── Distribute per art. 6:44 BW ──────────────────────────────────
     distribution = distribute_payment(
         payment_amount=data.amount,

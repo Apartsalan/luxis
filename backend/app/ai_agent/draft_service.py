@@ -20,7 +20,7 @@ from app.ai_agent.kimi_client import call_intake_ai
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.cases.models import Case, CaseParty
 from app.collections.models import Claim, Payment
-from app.email.models import SyncedEmail
+from app.email.synced_email_models import SyncedEmail
 from app.relations.models import Contact
 
 logger = logging.getLogger(__name__)

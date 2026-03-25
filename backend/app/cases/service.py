@@ -386,10 +386,11 @@ async def update_case(
             f"Kies uit: {', '.join(INTEREST_TYPES)}"
         )
 
-    # BUG-65: When switching away from contractual interest, reset related fields
+    # BUG-65: When switching away from contractual interest, force-reset related fields
+    # Use direct assignment (not setdefault) because frontend may send null explicitly
     if "interest_type" in update_data and update_data["interest_type"] != "contractual":
-        update_data.setdefault("contractual_rate", None)
-        update_data.setdefault("contractual_compound", False)
+        update_data["contractual_rate"] = None
+        update_data["contractual_compound"] = False
 
     for field, value in update_data.items():
         setattr(case, field, value)

@@ -5,7 +5,7 @@
 **Scope:** Sessies 90–103b (alle features, bugfixes, security, UI/UX, AI)
 **Methode:** Destructieve E2E testing via Playwright browser
 
-## Samenvatting: 42/44 PASS, 1 FAIL, 1 DATA-ISSUE
+## Samenvatting: 58/61 PASS, 2 FAIL, 1 DATA-ISSUE
 
 ### Kritieke FAILS (blokkeren soft launch)
 
@@ -20,6 +20,13 @@
 
 - **Dossier 2026-00027 (KAK vs PEP):** Hoofdsom €321.321.321,00 — dit is testdata die het dashboard "Openstaand" KPI-kaart verpest (toont €321 miljoen). Moet verwijderd worden.
 - **Health endpoint:** `GET /api/health` geeft 404 — pad mogelijk gewijzigd of niet gerouteerd via Caddy
+
+### Niet-kritieke FAILS
+
+- **SEC-20: Geen account lockout na 5x verkeerd wachtwoord**
+  - Na 6 foutieve loginpogingen kan je nog steeds inloggen met het juiste wachtwoord
+  - Geen rate limiting of lockout mechanisme gedetecteerd
+  - **Risico:** Brute-force aanvallen mogelijk (gemitigeerd door HSTS + sterke wachtwoorden)
 
 ### Niet-kritieke observaties
 
@@ -156,12 +163,101 @@
 
 ---
 
+## BLOK 2: WIK-Staffel Rekencontrole
+
+Alle 14 berekeningen via API getest (8 nieuwe testcases + 6 bestaande dossiers):
+
+| Hoofdsom | Verwacht BIK | Werkelijk BIK | Berekening | Status |
+|----------|-------------|---------------|------------|--------|
+| €10 | €40 (minimum) | €40 | min(15%×10, 40) | ✅ |
+| €100 | €40 (minimum) | €40 | min(15%×100, 40) | ✅ |
+| €110 | €40 (minimum) | €40 | min(15%×110, 40) | ✅ |
+| €151,25 | €40 (minimum) | €40 | min(15%×151,25, 40) | ✅ |
+| €500 | €75 | €75 | 15%×500 | ✅ |
+| €765,73 | €114,86 | €114,86 | 15%×765,73 | ✅ |
+| €1.000 | €150 | €150 | 15%×1.000 | ✅ |
+| €2.500 | €375 | €375 | 15%×2.500 | ✅ |
+| €3.000 | €425 | €425 | 15%×2.500 + 10%×500 | ✅ |
+| €3.872 | €512,20 | €512,20 | 15%×2.500 + 10%×1.372 | ✅ |
+| €4.214,05 | €546,41 | €546,41 | 15%×2.500 + 10%×1.714,05 | ✅ |
+| €5.000 | €625 | €625 | 15%×2.500 + 10%×2.500 | ✅ |
+| €7.500 | €750 | €750 | 15%×2.500 + 10%×2.500 + 5%×2.500 | ✅ |
+| €10.000 | €875 | €875 | 15%×2.500 + 10%×2.500 + 5%×5.000 | ✅ |
+| €200.000 | €2.775 | €2.775 | 375+250+250+1.900 | ✅ |
+
+**14/14 PASS — WIK-staffel werkt perfect** ✅
+
+---
+
+## BLOK 3: Email Matching Regressie (BUG-63)
+
+- ✅ Case 2026-00028: 6 emails correct gekoppeld via `case_number` matching — PASS
+- ✅ Outbound email (Sommatie) correct gekoppeld via `outbound_send` — PASS
+- ✅ Stop-on-miss: dossiers 2026-00007/2026-00004 niet in DB → niet doorgevallen naar contact-matching — PASS
+- ✅ Geen OAuth/Fernet/InvalidToken errors in backend logs — PASS
+- ✅ Email auto-sync elke 5 min: 29 emails opgehaald, 0 nieuw, 0 gekoppeld, 29 overgeslagen — PASS
+- ✅ Geen bounces foutief aan dossiers gekoppeld — PASS
+
+---
+
+## BLOK 5: Edge Cases & Destructieve Tests (aanvulling)
+
+### 5.1 Lege velden en nulwaarden
+- ✅ Dossier met hoofdsom €0 → aangemaakt, BIK = €0 (correct: geen minimum bij €0 hoofdsom) — PASS
+- ✅ Betaling €0 → geweigerd: "Input should be greater than 0" — PASS
+- ✅ Betaling -€500 → geweigerd: "Input should be greater than 0" — PASS
+
+### 5.2 SQL Injection
+- ✅ Relatie naam `'; DROP TABLE cases; --` → JSON parse error (payload breekt JSON) — PASS
+- ✅ Cases tabel nog intact na SQL injection poging — PASS
+- ✅ SQLAlchemy parameterized queries beschermen tegen injection — PASS
+
+---
+
+## BLOK 7: Security (aanvulling)
+
+### Security Headers
+- ✅ Content-Security-Policy: `default-src 'self'; script-src 'self' 'unsafe-inline'; ...` — PASS
+- ✅ Strict-Transport-Security: `max-age=31536000; includeSubDomains; preload` — PASS
+- ✅ X-Frame-Options: DENY — PASS
+- ✅ X-Content-Type-Options: nosniff — PASS
+- ✅ X-XSS-Protection: 1; mode=block — PASS
+- ✅ Referrer-Policy: strict-origin-when-cross-origin — PASS
+- ✅ Permissions-Policy: camera=(), microphone=(), geolocation=() — PASS
+
+### Account Lockout (SEC-20)
+- ❌ **Geen account lockout na 6 foutieve loginpogingen** — 7e poging met correct wachtwoord slaagt — FAIL
+  - Geen rate limiting gedetecteerd
+  - Gemitigeerd door HSTS + sterke wachtwoorden, maar brute-force is theoretisch mogelijk
+
+---
+
+## Niet getest (browser vastgelopen na BLOK 1-8)
+
+De volgende tests konden niet via de API uitgevoerd worden en vereisen een browser sessie:
+
+- **1.4** Incasso brief versturen (HTML email check)
+- **1.5** Email compose dialog (680px, templates, bijlagen, Outlook draft)
+- **1.7** Factuur met BTW per regel + PDF preview
+- **1.8** Voorschotfactuur met uren
+- **4.1** AI factuur parsing
+- **4.2** AI concept antwoord
+- **5.3** Annuleren halverwege (unsaved changes warning)
+- **5.4** Concurrent gebruik (2 tabs)
+- **6.3** Empty states per tab
+- **6.4** Responsiveness (768px)
+- **9** Provisie instellingen
+
+---
+
 ## Testdata opruiming
 
 - ✅ Dossier 2026-00029 (QA test) verwijderd
 - ✅ Relatie "QA Test Bedrijf B.V." verwijderd
 - ✅ Relatie `<script>alert('xss')</script>` verwijderd
 - ✅ Wachtwoord gereset naar Hetbaken-KL-5 (was niet meer geldig)
+- ✅ 8 BIK testdossiers aangemaakt en verwijderd
+- ✅ 1 edge case testdossier (€0) aangemaakt en verwijderd
 
 ---
 

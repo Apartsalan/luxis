@@ -1,7 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 maart 2026 (sessie 103 — Demo Feedback Sprint 5 COMPLEET)
+**Laatst bijgewerkt:** 25 maart 2026 (sessie 104 — testprompt voorbereiding)
 **Laatste feature/fix:** Sessie 103 — DF2-01 t/m DF2-09: alle 9 demo feedback punten afgerond
+**Volgende sessie:** 105 — Uitgebreide end-to-end QA van alle wijzigingen sessie 90-103b
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -14,6 +15,15 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 104 — 25 maart 2026) — Testprompt voorbereiding
+
+- Roadmap en session notes gereviewed
+- Alle openstaande bugs gecheckt: GEEN open bugs
+- Uitgebreide QA testprompt geschreven voor sessie 105 (dekt sessies 90-103b)
+- Scope: alle features, bugfixes, security, UI/UX, AI features, email, facturatie, incasso
+
+---
 
 ## Wat er gedaan is (sessie 103 — 23 maart 2026) — Demo Feedback Sprint 5
 

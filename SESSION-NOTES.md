@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 25 maart 2026 (sessie 105 — destructieve QA + bugfixes)
-**Laatste feature/fix:** Sessie 105 — 4 bugs gefixt (BUG-65, BUG-66, overpayment, empty invoice)
-**Volgende sessie:** 106 — Soft launch voorbereiding
+**Laatst bijgewerkt:** 25 maart 2026 (sessie 106 — post-QA verificatie + Stitch MCP setup)
+**Laatste feature/fix:** Sessie 106 — BUG-65 opnieuw gefixt (setdefault→direct assignment), alle 4 fixes geverifieerd op productie
+**Volgende sessie:** 107 — Stitch designs toepassen op Luxis UI
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,34 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 106 — 25 maart 2026) — Post-QA verificatie + Stitch MCP
+
+**Productie-verificatie van sessie 105 bugfixes (4/4 PASS):**
+
+### Verificatie resultaten:
+1. **BUG-65 Rentetype wijzigen:** Eerst FAIL — `setdefault` werkte niet wanneer frontend expliciet `null` stuurt. Gefixt met directe assignment (`update_data["contractual_compound"] = False`), gedeployd, hertest PASS ✅
+2. **BUG-66 AI Concept:** PASS ✅ — Concept gegenereerd op dossier 2026-00028
+3. **Overpayment validatie:** PASS ✅ — €99.999 betaling op €100 vordering correct geweigerd (HTTP 400)
+4. **Empty invoice:** PASS ✅ — Factuur met 0 regels correct geweigerd (HTTP 422, min_length=1)
+
+### Extra fix:
+- `backend/app/cases/service.py` — BUG-65: `setdefault` → directe assignment voor `contractual_compound` en `contractual_rate`
+- Commit: `f831211` — gedeployd op productie
+
+### Stitch MCP:
+- Google Stitch MCP server opgezet (HTTP transport, API key)
+- Config in `.claude.json` (project-level)
+
+### Design rollback tag:
+- Git tag `v0.1.0-pre-redesign` aangemaakt en gepusht — altijd terug naar huidige design mogelijk
+
+### Screenshots:
+- `docs/qa/bug65-fail-500.png` — eerste FAIL
+- `docs/qa/bug65-pass.png` — hertest PASS
+- `docs/qa/bug66-pass.png` — AI Concept werkend
+
+---
 
 ## Wat er gedaan is (sessie 105 — 25 maart 2026) — Destructieve QA + Bugfixes
 

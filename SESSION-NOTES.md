@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 25 maart 2026 (sessie 104 — testprompt voorbereiding)
-**Laatste feature/fix:** Sessie 103 — DF2-01 t/m DF2-09: alle 9 demo feedback punten afgerond
-**Volgende sessie:** 105 — Uitgebreide end-to-end QA van alle wijzigingen sessie 90-103b
+**Laatst bijgewerkt:** 25 maart 2026 (sessie 105 — destructieve QA + bugfixes)
+**Laatste feature/fix:** Sessie 105 — 4 bugs gefixt (BUG-65, BUG-66, overpayment, empty invoice)
+**Volgende sessie:** 106 — Soft launch voorbereiding
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,46 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 105 — 25 maart 2026) — Destructieve QA + Bugfixes
+
+**Uitgebreide destructieve E2E QA op productie (95/98 PASS, alle bugs gefixt):**
+
+### QA Resultaten:
+- Alle 11 blokken getest: wizard flow, berekeningen, email matching, AI features, security, empty states, responsiveness, infra
+- 22 screenshots gemaakt, rapport in `docs/qa/QA-SESSION-105.md`
+- WIK-staffel: 14/14 berekeningen exact correct
+- Art. 6:44 BW toerekening: kosten→rente→hoofdsom exact correct
+- Compound interest: 2-jaars test exact correct (€2.100 op €10.000 á 10%)
+- XSS/SQL injection: veilig (React escaped output, SQLAlchemy parameterized queries)
+- Security headers: 7/7 correct (CSP, HSTS, X-Frame-Options, etc.)
+- Email matching: case_number matching + stop-on-miss werken correct
+- AI classificatie badges, suggestion banner, confidence labels: allemaal werkend
+
+### Bugs gevonden en gefixt:
+1. **BUG-65 (KRITIEK):** Rentetype wijzigen contractueel→wettelijk gaf 500 error (contractual_compound NOT NULL) — Fix: reset naar False in update_case()
+2. **BUG-66:** AI Concept ImportError (SyncedEmail import van verkeerd module) — Fix: app.email.synced_email_models
+3. **Overpayment:** betaling > totale vordering werd geaccepteerd — Fix: BadRequestError validatie
+4. **Factuur 0 regels:** kon aangemaakt worden — Fix: min_length=1 op lines schema
+5. **Dashboard €321M:** testdossier 2026-00027 (KAK/PEP) verwijderd
+
+### False positives in QA (waren al OK):
+- SEC-20 rate limiting: @limiter.limit("10/minute") al actief
+- Health endpoint: /health werkt (niet /api/health)
+- Login gradient/dot grid: al geïmplementeerd
+
+### Gewijzigde bestanden:
+- backend/app/cases/service.py — BUG-65 fix
+- backend/app/ai_agent/draft_service.py — BUG-66 fix
+- backend/app/collections/service.py — overpayment validatie
+- backend/app/invoices/schemas.py — min_length=1
+- docs/qa/QA-SESSION-105.md + 22 screenshots
+
+### Deploy:
+- Backend gedeployd en geverifieerd op productie
+- Alle 5 containers healthy
+
+---
 
 ## Wat er gedaan is (sessie 104 — 25 maart 2026) — Testprompt voorbereiding
 

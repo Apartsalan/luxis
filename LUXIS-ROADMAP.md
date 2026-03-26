@@ -30,6 +30,9 @@
 
 **Rode draad:** Backend is functioneel compleet maar mist router-level tests. Frontend is feature-compleet maar mist TypeScript strictness + redesign. Infra Fase 1 compleet ✅ (CI/CD + backup + security).
 
+**TODO (klein):**
+- ⏳ VPS kernel reboot — upgrade van 6.8.0-90 naar 6.8.0-106 (geconstateerd 26 maart 2026, niet urgent, ~2 min downtime). Doe dit aan het begin van een volgende sessie als eerste actie.
+
 **Roadmap naar ~98% (13-15 sessies):**
 1. Infra hardening (CI/CD ✅, Caddy in repo ✅, backup ✅, security ✅) — 3 sessies — COMPLEET ✅
 2. Backend test coverage (4/7 routers getest ✅, nog 3 routers: collections, email, incasso) — 2 sessies

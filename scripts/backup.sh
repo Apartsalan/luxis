@@ -1,51 +1,54 @@
 #!/bin/bash
-# Daily database backup script for Luxis
-# Runs locally + uploads to off-site storage via rclone
+# Daily backup script for Luxis
+# Backs up: PostgreSQL database + uploads directory
+# Rotation: 7 days local, 90 days off-site (if rclone configured)
 #
-# Setup:
-#   1. Install rclone: curl https://rclone.org/install.sh | sudo bash
-#   2. Configure remote: rclone config (create "luxis-backup" remote)
-#      - Backblaze B2, S3, or any rclone-supported provider
-#   3. Set RCLONE_REMOTE below to your configured remote name
-#   4. Add to crontab: 0 3 * * * /opt/luxis/scripts/backup.sh >> /var/log/luxis-backup.log 2>&1
-#
-# Environment variables (optional):
-#   BACKUP_DIR      — local backup directory (default: /backups/luxis)
-#   RCLONE_REMOTE   — rclone remote name (default: luxis-backup)
-#   RETENTION_DAYS  — local retention in days (default: 30)
+# Crontab (use bash explicitly to avoid permission issues after git pull):
+#   0 3 * * * /bin/bash /opt/luxis/scripts/backup.sh >> /var/log/luxis-backup.log 2>&1
 
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups/luxis}"
 RCLONE_REMOTE="${RCLONE_REMOTE:-luxis-backup}"
-RETENTION_DAYS="${RETENTION_DAYS:-30}"
+RETENTION_DAYS="${RETENTION_DAYS:-7}"
 DATE=$(date +%Y-%m-%d_%H%M)
-CONTAINER="luxis-db"
-FILENAME="luxis_${DATE}.sql.gz"
+CONTAINER_DB="luxis-db"
+CONTAINER_BACKEND="luxis-backend"
+
+DB_FILENAME="luxis_db_${DATE}.sql.gz"
+UPLOADS_FILENAME="luxis_uploads_${DATE}.tar.gz"
 
 mkdir -p "$BACKUP_DIR"
 
-echo "[$(date)] Starting backup..."
+echo "=========================================="
+echo "[$(date)] Starting Luxis backup..."
 
-# Dump database
-docker exec "$CONTAINER" pg_dump -U "${POSTGRES_USER:-luxis}" "${POSTGRES_DB:-luxis}" | gzip > "$BACKUP_DIR/$FILENAME"
+# 1. Database dump
+echo "[$(date)] Dumping PostgreSQL..."
+docker exec "$CONTAINER_DB" pg_dump -U "${POSTGRES_USER:-luxis}" "${POSTGRES_DB:-luxis}" | gzip > "$BACKUP_DIR/$DB_FILENAME"
+DB_SIZE=$(du -h "$BACKUP_DIR/$DB_FILENAME" | cut -f1)
+echo "[$(date)] Database backup: $DB_FILENAME ($DB_SIZE)"
 
-FILESIZE=$(du -h "$BACKUP_DIR/$FILENAME" | cut -f1)
-echo "[$(date)] Local backup created: $FILENAME ($FILESIZE)"
+# 2. Uploads directory (from backend container volume)
+echo "[$(date)] Backing up uploads..."
+docker cp "$CONTAINER_BACKEND":/app/uploads - 2>/dev/null | gzip > "$BACKUP_DIR/$UPLOADS_FILENAME"
+UPLOADS_SIZE=$(du -h "$BACKUP_DIR/$UPLOADS_FILENAME" | cut -f1)
+echo "[$(date)] Uploads backup: $UPLOADS_FILENAME ($UPLOADS_SIZE)"
 
-# Upload to off-site storage (if rclone is configured)
+# 3. Upload to off-site storage (if rclone is configured)
 if command -v rclone &> /dev/null && rclone listremotes 2>/dev/null | grep -q "^${RCLONE_REMOTE}:"; then
-    rclone copy "$BACKUP_DIR/$FILENAME" "${RCLONE_REMOTE}:luxis-backups/" --log-level INFO
-    echo "[$(date)] Off-site upload complete: ${RCLONE_REMOTE}:luxis-backups/$FILENAME"
-
-    # Clean up old off-site backups (keep 90 days remotely)
+    rclone copy "$BACKUP_DIR/$DB_FILENAME" "${RCLONE_REMOTE}:luxis-backups/" --log-level INFO
+    rclone copy "$BACKUP_DIR/$UPLOADS_FILENAME" "${RCLONE_REMOTE}:luxis-backups/" --log-level INFO
+    echo "[$(date)] Off-site upload complete"
     rclone delete "${RCLONE_REMOTE}:luxis-backups/" --min-age 90d --log-level INFO 2>/dev/null || true
 else
-    echo "[$(date)] WARNING: rclone not configured — skipping off-site upload"
-    echo "  Run 'rclone config' to set up remote '${RCLONE_REMOTE}'"
+    echo "[$(date)] WARNING: rclone not configured — local-only backup"
 fi
 
-# Clean up old local backups
-find "$BACKUP_DIR" -name "*.sql.gz" -mtime "+${RETENTION_DAYS}" -delete
+# 4. Rotate old local backups
+find "$BACKUP_DIR" -name "luxis_*.gz" -mtime "+${RETENTION_DAYS}" -delete
+BACKUP_COUNT=$(find "$BACKUP_DIR" -name "luxis_*.gz" | wc -l)
+echo "[$(date)] Local backups retained: $BACKUP_COUNT files (${RETENTION_DAYS}-day rotation)"
 
 echo "[$(date)] Backup completed successfully"
+echo "=========================================="

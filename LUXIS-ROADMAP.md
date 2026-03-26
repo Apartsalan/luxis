@@ -24,7 +24,7 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~88% | 231 endpoints, 25 routers, 34 models, 400 tests. Financial calcs uitstekend getest (edge cases, boundary values). 4 routers nu getest (calendar, settings, search, notifications). GAT: 3 routers (collections, email, incasso) zonder directe router tests (service-level tests bestaan). |
+| Backend (FastAPI) | ~92% | 231 endpoints, 25 routers, 34 models, ~430 tests. Financial calcs uitstekend getest. Alle 7 eerder ongeteste routers nu gedekt (calendar, settings, search, notifications, collections, email, incasso). GAT: ruff format 97 files. |
 | Frontend (Next.js) | ~75% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. GAT: 66x `any` in TypeScript, E2E mist settings/OAuth/docs. Stitch redesign gepland. |
 | Infra/DevOps | ~90% | Docker Compose op Hetzner VPS. Caddy reverse proxy (in repo ✅). SSH deploy key. 43 migraties, RLS, token rotation. CI/CD pipeline ✅ (GitHub Actions: lint, tests, typecheck, build, security + auto-deploy). docker-compose.prod.yml ✅. DEPLOY_SSH_KEY secret ✅. Auto-deploy na groene CI ✅. Backup actief ✅ (DB + uploads, 7-dag rotatie, dagelijks 03:00). fail2ban ✅. unattended-upgrades ✅. GAT: backend tests falen in bare-metal CI (pytest-asyncio). |
 
@@ -35,7 +35,7 @@
 
 **Roadmap naar ~98% (13-15 sessies):**
 1. Infra hardening (CI/CD ✅, Caddy in repo ✅, backup ✅, security ✅) — 3 sessies — COMPLEET ✅
-2. Backend test coverage (4/7 routers getest ✅, nog 3 routers: collections, email, incasso) — 2 sessies
+2. Backend test coverage (7/7 routers getest ✅, 61 nieuwe tests, email import bug gefixt) — COMPLEET ✅
 3. Frontend structureel (TypeScript `any` killen, hooks cleanup) — 2 sessies
 4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies
 5. Frontend E2E + polish (tests na redesign, a11y, performance) — 2 sessies

@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 27 maart 2026 (sessie 109 — Backup + security + backend tests)
-**Laatste feature/fix:** Sessie 109 — Backup, security hardening, 29 nieuwe router tests (calendar, settings, search, notifications)
-**Volgende sessie:** 110 — Fase 2B: Backend test coverage (resterende 3 routers: collections, email, incasso)
+**Laatst bijgewerkt:** 27 maart 2026 (sessie 109 — Backup + security + 61 backend tests + email bugfix)
+**Laatste feature/fix:** Sessie 109 — Backup, security, 61 router tests, email import bugfix, TypeScript any cleanup (T2), hooks cleanup (T3)
+**Volgende sessie:** 110 — Fase 4: Stitch redesign
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -37,11 +37,13 @@
 
 **Infra status:** ~80% → **~90%** (Fase 1 compleet: CI/CD ✅, Caddy ✅, backup ✅, security ✅)
 
-**Backend tests (Fase 2 gestart):**
-- 29 nieuwe tests voor 4 routers: calendar (10), settings (7), search (7), notifications (5)
-- Alle 29 groen ✅
-- Resterende routers zonder directe tests: collections, email, incasso (hebben wel service-level tests)
-- Totaal tests: ~400
+**Backend tests (Fase 2 COMPLEET):**
+- 61 nieuwe tests voor alle 7 eerder ongeteste routers:
+  - calendar (10), settings (7), search (7), notifications (5)
+  - collections (16), email (6), incasso (10)
+- Alle 61 groen ✅
+- Bugfix: `email/router.py` importeerde niet-bestaande `_load_tenant` → `load_tenant`
+- Totaal tests: ~430
 
 **Resterend GAT:** backend tests falen in bare-metal CI (pytest-asyncio), ruff format 97 files
 

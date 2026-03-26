@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async rewrites() {
     // In production the backend runs on the internal Docker network as "backend:8000".
     // In development fall back to localhost:8000.

@@ -25,7 +25,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv pip install --system ".[dev]"
 
       - name: Ruff check
         run: ruff check .
@@ -79,7 +79,7 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv pip install --system ".[dev]"
 
       - name: Run migrations
         run: python -m alembic upgrade head

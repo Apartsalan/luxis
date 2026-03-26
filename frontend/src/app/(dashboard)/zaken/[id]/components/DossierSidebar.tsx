@@ -20,6 +20,7 @@ import { useFinancialSummary } from "@/hooks/use-collections";
 import { useTimeEntrySummary } from "@/hooks/use-time-entries";
 import { useModules } from "@/hooks/use-modules";
 import { useUpdateCase } from "@/hooks/use-cases";
+import type { CaseDetail } from "@/hooks/use-cases";
 import { useBudgetStatus } from "@/hooks/use-invoices";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { STATUS_LABELS, TYPE_LABELS, INTEREST_LABELS } from "../types";
@@ -32,7 +33,7 @@ const BILLING_METHOD_LABELS: Record<string, string> = {
 
 // ── Billing Settings Section ────────────────────────────────────────────────
 
-function BillingSettingsSection({ zaak }: { zaak: any }) {
+function BillingSettingsSection({ zaak }: { zaak: CaseDetail }) {
   const updateCase = useUpdateCase();
   const [editing, setEditing] = useState(false);
   const [billingMethod, setBillingMethod] = useState<string>(
@@ -64,8 +65,8 @@ function BillingSettingsSection({ zaak }: { zaak: any }) {
       });
       toast.success("Facturatie-instellingen opgeslagen");
       setEditing(false);
-    } catch (err: any) {
-      toast.error(err.message || "Opslaan mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
   };
 
@@ -329,7 +330,7 @@ export default function DossierSidebar({
   zaak,
   isIncasso,
 }: {
-  zaak: any;
+  zaak: CaseDetail;
   isIncasso: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(getInitialOpen);
@@ -346,7 +347,7 @@ export default function DossierSidebar({
   };
 
   const currentLawyer = zaak.parties?.find(
-    (p: any) => p.role === "advocaat_wederpartij"
+    (p) => p.role === "advocaat_wederpartij"
   );
 
   // OHW = billable minutes × hourly rate (from time summary)

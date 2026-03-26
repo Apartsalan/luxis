@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useUpdateCase, useAddCaseActivity, useAddCaseParty, useRemoveCaseParty } from "@/hooks/use-cases";
+import type { CaseDetail } from "@/hooks/use-cases";
 import { useRelations } from "@/hooks/use-relations";
 import { useModules } from "@/hooks/use-modules";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
@@ -84,7 +85,7 @@ const PROCEDURE_PHASES = [
   "Afgerond",
 ];
 
-export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: any; initialNoteText?: string; onNoteTextConsumed?: () => void }) {
+export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }: { zaak: CaseDetail; initialNoteText?: string; onNoteTextConsumed?: () => void }) {
   const [noteText, setNoteText] = useState("");
   const addActivity = useAddCaseActivity();
   const updateCase = useUpdateCase();
@@ -98,7 +99,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     search: lawyerSearch || undefined,
     per_page: 5,
   });
-  const currentLawyer = zaak.parties?.find((p: any) => p.role === "advocaat_wederpartij");
+  const currentLawyer = zaak.parties?.find((p) => p.role === "advocaat_wederpartij");
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
@@ -190,8 +191,8 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       });
       setIsEditing(false);
       toast.success("Dossiergegevens opgeslagen");
-    } catch (err: any) {
-      toast.error(err.message || "Opslaan mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
   };
 
@@ -345,8 +346,8 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                                 });
                                 setLawyerSearch("");
                                 toast.success(`${contact.name} toegevoegd als advocaat wederpartij`);
-                              } catch (err: any) {
-                                toast.error(err.message || "Kon advocaat niet toevoegen");
+                              } catch (err: unknown) {
+                                toast.error(err instanceof Error ? err.message : "Kon advocaat niet toevoegen");
                               }
                             }}
                             className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
@@ -819,7 +820,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
           {zaak.recent_activities && zaak.recent_activities.length > 0 ? (
             <div className="relative">
               <div className="absolute left-[2.125rem] top-0 bottom-0 w-px bg-border" />
-              {zaak.recent_activities.slice(0, 6).map((activity: any, idx: number) => {
+              {zaak.recent_activities.slice(0, 6).map((activity, idx: number) => {
                 const Icon =
                   ACTIVITY_ICONS[activity.activity_type] ?? FileText;
                 const colorClass =

@@ -5,11 +5,12 @@ import {
   CASE_STATUS_LABELS as STATUS_LABELS,
   CASE_STATUS_BADGE as STATUS_BADGE,
 } from "@/lib/status-constants";
+import type { CaseSummary } from "@/hooks/use-cases";
 
 interface LinkedCasesSectionProps {
   contactId: string;
   contactName: string;
-  cases: any[] | undefined;
+  cases: CaseSummary[] | undefined;
 }
 
 export function LinkedCasesSection({

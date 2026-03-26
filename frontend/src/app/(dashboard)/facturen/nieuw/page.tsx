@@ -9,8 +9,10 @@ import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoice
 import { useDerdengeldenBalance } from "@/hooks/use-collections";
 import { useRelations } from "@/hooks/use-relations";
 import { useCases, useCase } from "@/hooks/use-cases";
+import type { CaseSummary } from "@/hooks/use-cases";
+import type { Contact } from "@/hooks/use-relations";
 import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries";
-import { useExpenses } from "@/hooks/use-expenses";
+import { useExpenses, type Expense } from "@/hooks/use-expenses";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { IncassoKostenPanel } from "@/components/IncassoKostenPanel";
 
@@ -342,8 +344,8 @@ export default function NieuweFactuurPage() {
         });
         toast.success("Voorschotnota aangemaakt");
         router.push(preselectedCaseId ? `/zaken/${preselectedCaseId}` : `/facturen/${result.id}`);
-      } catch (err: any) {
-        setError(err.message || "Er ging iets mis");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Er ging iets mis");
       }
       return;
     }
@@ -396,8 +398,8 @@ export default function NieuweFactuurPage() {
       });
       toast.success("Factuur aangemaakt");
       router.push(preselectedCaseId ? `/zaken/${preselectedCaseId}` : `/facturen/${result.id}`);
-    } catch (err: any) {
-      setError(err.message || "Er ging iets mis");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Er ging iets mis");
     }
   };
 
@@ -492,7 +494,7 @@ export default function NieuweFactuurPage() {
               contactResults?.items &&
               contactResults.items.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg">
-                  {contactResults.items.map((c: any) => (
+                  {contactResults.items.map((c: Contact) => (
                     <button
                       key={c.id}
                       type="button"
@@ -544,7 +546,7 @@ export default function NieuweFactuurPage() {
               caseResults?.items &&
               caseResults.items.length > 0 && (
                 <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card shadow-lg">
-                  {caseResults.items.map((c: any) => (
+                  {caseResults.items.map((c: CaseSummary) => (
                     <button
                       key={c.id}
                       type="button"
@@ -1008,7 +1010,7 @@ export default function NieuweFactuurPage() {
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Onbefactureerde verschotten
               </p>
-              {expenses.map((expense: any) => (
+              {expenses.map((expense: Expense) => (
                 <button
                   key={expense.id}
                   type="button"

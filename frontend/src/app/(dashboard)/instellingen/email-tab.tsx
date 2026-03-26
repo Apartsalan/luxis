@@ -46,8 +46,8 @@ export function EmailTab() {
         "luxis-email-oauth",
         `width=${width},height=${height},left=${left},top=${top},popup=yes`
       );
-    } catch (err: any) {
-      toast.error(err.message ?? "Kon OAuth niet starten");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kon OAuth niet starten");
     }
   };
 
@@ -55,8 +55,8 @@ export function EmailTab() {
     try {
       await disconnect.mutateAsync();
       toast.success("E-mailaccount ontkoppeld");
-    } catch (err: any) {
-      toast.error(err.message ?? "Ontkoppelen mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Ontkoppelen mislukt");
     }
   };
 
@@ -70,8 +70,8 @@ export function EmailTab() {
       await testEmail.mutateAsync({ email });
       toast.success("Test e-mail verzonden naar " + email);
       setTestAddress("");
-    } catch (err: any) {
-      toast.error(err.message ?? "Test e-mail verzenden mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Test e-mail verzenden mislukt");
     }
   };
 

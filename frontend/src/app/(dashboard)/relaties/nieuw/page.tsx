@@ -123,8 +123,8 @@ export default function NieuweRelatiePage() {
       const result = await createRelation.mutateAsync(data);
       toast.success("Relatie aangemaakt");
       router.push(`/relaties/${result.id}`);
-    } catch (err: any) {
-      setError(err.message || "Er ging iets mis");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Er ging iets mis");
     }
   };
 

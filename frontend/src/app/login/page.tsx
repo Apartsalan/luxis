@@ -65,8 +65,8 @@ export default function LoginPage() {
 
       // Always show success — don't leak whether email exists
       setView("forgot-sent");
-    } catch (err: any) {
-      if (err?.name === "AbortError") {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
         // Timeout — still show success to not leak info, email may still arrive
         setView("forgot-sent");
       } else {

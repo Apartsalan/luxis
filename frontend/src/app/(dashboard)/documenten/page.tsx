@@ -19,6 +19,8 @@ import {
 } from "@/hooks/use-documents";
 import { useDocumentTemplates } from "@/hooks/use-documents";
 import { useCases } from "@/hooks/use-cases";
+import type { CaseSummary } from "@/hooks/use-cases";
+import type { DocxTemplateInfo, DocumentTemplateSummary } from "@/hooks/use-documents";
 
 export default function DocumentenPage() {
   const [tab, setTab] = useState<"docx" | "html">("docx");
@@ -139,7 +141,7 @@ function CasePickerDialog({
         </div>
         <div className="max-h-64 overflow-y-auto p-2">
           {casesData?.items?.length ? (
-            casesData.items.map((c: any) => (
+            casesData.items.map((c: CaseSummary) => (
               <button
                 key={c.id}
                 onClick={() => {
@@ -153,7 +155,7 @@ function CasePickerDialog({
                     {c.case_number}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {c.client_name}{c.opposing_party_name ? ` vs. ${c.opposing_party_name}` : ""}
+                    {c.client?.name}{c.opposing_party?.name ? ` vs. ${c.opposing_party.name}` : ""}
                   </p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -176,7 +178,7 @@ function DocxTemplatesView({
   templates,
   isLoading,
 }: {
-  templates: any[] | undefined;
+  templates: DocxTemplateInfo[] | undefined;
   isLoading: boolean;
 }) {
   const [pickerTemplate, setPickerTemplate] = useState<string | null>(null);
@@ -275,7 +277,7 @@ function HtmlTemplatesView({
   templates,
   isLoading,
 }: {
-  templates: any[] | undefined;
+  templates: DocumentTemplateSummary[] | undefined;
   isLoading: boolean;
 }) {
   if (isLoading) {

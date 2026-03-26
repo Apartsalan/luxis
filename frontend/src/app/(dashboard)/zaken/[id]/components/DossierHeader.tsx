@@ -38,10 +38,14 @@ import {
   getPhaseForStatus,
   getAvailableTransitions,
 } from "@/hooks/use-workflow";
+import type { WorkflowStatus, WorkflowTransition } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
 import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
+import type { PipelineStep } from "@/hooks/use-incasso";
 import { useUpdateCase } from "@/hooks/use-cases";
+import type { CaseDetail } from "@/hooks/use-cases";
+import type { TimerState } from "@/hooks/use-timer";
 import { toast } from "sonner";
 
 // ── VerjaringBadge ──────────────────────────────────────────────────────────
@@ -99,7 +103,7 @@ function VerjaringBadge({
 // ── DossierHeader Props ─────────────────────────────────────────────────────
 
 interface DossierHeaderProps {
-  zaak: any;
+  zaak: CaseDetail;
   isIncasso: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -108,9 +112,9 @@ interface DossierHeaderProps {
   updateStatusPending: boolean;
   statusSuggestion: { status: string; templates: string[] } | null;
   setStatusSuggestion: (v: { status: string; templates: string[] } | null) => void;
-  workflowStatuses: any;
-  workflowTransitions: any;
-  timer: any;
+  workflowStatuses: WorkflowStatus[] | undefined;
+  workflowTransitions: WorkflowTransition[] | undefined;
+  timer: TimerState;
   startTimer: (caseId: string, label: string) => void;
   setCaseEmailOpen: (v: boolean) => void;
   setPhoneNoteText: (v: string) => void;
@@ -138,7 +142,7 @@ export default function DossierHeader({
   // DF2-09: Pipeline step selector for incasso cases
   const { data: pipelineSteps } = useIncassoPipelineSteps(true);
   const updateCase = useUpdateCase();
-  const activeSteps = pipelineSteps?.filter((s: any) => s.is_active) ?? [];
+  const activeSteps = pipelineSteps?.filter((s: PipelineStep) => s.is_active) ?? [];
 
   const handleStepChange = async (stepId: string) => {
     try {
@@ -149,7 +153,7 @@ export default function DossierHeader({
           incasso_step_entered_at: stepId ? new Date().toISOString() : null,
         },
       });
-      const stepName = activeSteps.find((s: any) => s.id === stepId)?.name ?? "Geen";
+      const stepName = activeSteps.find((s: PipelineStep) => s.id === stepId)?.name ?? "Geen";
       toast.success(`Incassostap gewijzigd naar: ${stepName}`);
     } catch {
       toast.error("Kon incassostap niet wijzigen");
@@ -303,7 +307,7 @@ export default function DossierHeader({
                 className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
               >
                 <option value="">Niet toegewezen</option>
-                {activeSteps.map((step: any) => (
+                {activeSteps.map((step: PipelineStep) => (
                   <option key={step.id} value={step.id}>
                     {step.name}
                   </option>

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateCase, useConflictCheck, useAddCaseParty } from "@/hooks/use-cases";
+import type { CaseCreateInput } from "@/hooks/use-cases";
 import { useRelations, useCreateRelation, useCreateContactLink } from "@/hooks/use-relations";
 import { useCreateClaim } from "@/hooks/use-collections";
 import { useModules } from "@/hooks/use-modules";
@@ -412,8 +413,8 @@ function NieuweZaakPage() {
         setShowLawyerDetails(false);
       }
       toast.success(`${data.name} aangemaakt`);
-    } catch (err: any) {
-      toast.error(err.message || "Kon relatie niet aanmaken");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kon relatie niet aanmaken");
     }
   };
 
@@ -660,7 +661,7 @@ function NieuweZaakPage() {
 
     try {
       // 1. Build case data
-      const data: any = {
+      const data: CaseCreateInput = {
         case_type: form.case_type,
         interest_type: form.interest_type,
         client_id: form.client_id,
@@ -766,8 +767,8 @@ function NieuweZaakPage() {
 
       toast.success("Dossier aangemaakt");
       router.push(`/zaken/${result.id}`);
-    } catch (err: any) {
-      setError(err.message || "Er ging iets mis");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Er ging iets mis");
     } finally {
       setIsSubmitting(false);
     }

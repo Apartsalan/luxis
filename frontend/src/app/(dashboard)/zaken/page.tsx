@@ -115,8 +115,8 @@ export default function ZakenPage() {
       setBulkAction("");
       setBulkStatus("");
       refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Er ging iets mis");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Er ging iets mis");
     } finally {
       setBulkLoading(false);
     }
@@ -144,8 +144,8 @@ export default function ZakenPage() {
       URL.revokeObjectURL(url);
       toast.success("Export gedownload");
       setBulkAction("");
-    } catch (err: any) {
-      toast.error(err.message || "Export mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Export mislukt");
     } finally {
       setBulkLoading(false);
     }

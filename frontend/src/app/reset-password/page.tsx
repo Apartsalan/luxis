@@ -59,8 +59,8 @@ function ResetPasswordContent() {
       }
 
       setStep("done");
-    } catch (err: any) {
-      if (err?.name === "AbortError") {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
         setError("De server reageert niet. Probeer het later opnieuw.");
       } else {
         setError("Kan geen verbinding maken met de server.");

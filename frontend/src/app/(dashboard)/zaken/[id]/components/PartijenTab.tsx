@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { AlertTriangle, Building2, User } from "lucide-react";
 import { useConflictCheck } from "@/hooks/use-cases";
+import type { CaseDetail } from "@/hooks/use-cases";
 
-export default function PartijenTab({ zaak }: { zaak: any }) {
+export default function PartijenTab({ zaak }: { zaak: CaseDetail }) {
   const { data: clientConflict } = useConflictCheck(
     zaak.client?.id || undefined,
     "client"
@@ -55,7 +56,7 @@ export default function PartijenTab({ zaak }: { zaak: any }) {
           </Link>
         )}
         {zaak.parties &&
-          zaak.parties.map((party: any) => (
+          zaak.parties.map((party) => (
             <Link
               key={party.id}
               href={`/relaties/${party.contact.id}`}
@@ -91,7 +92,7 @@ export default function PartijenTab({ zaak }: { zaak: any }) {
                 Conflict gedetecteerd — client
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                {zaak.client.name} is in {clientConflict.conflicts.length === 1 ? "een ander dossier" : `${clientConflict.conflicts.length} andere dossiers`} wederpartij:
+                {zaak.client?.name} is in {clientConflict.conflicts.length === 1 ? "een ander dossier" : `${clientConflict.conflicts.length} andere dossiers`} wederpartij:
               </p>
               <ul className="mt-1 space-y-0.5">
                 {clientConflict.conflicts.map((c) => (
@@ -115,7 +116,7 @@ export default function PartijenTab({ zaak }: { zaak: any }) {
                 Conflict gedetecteerd — wederpartij
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                {zaak.opposing_party.name} is in {opponentConflict.conflicts.length === 1 ? "een ander dossier" : `${opponentConflict.conflicts.length} andere dossiers`} client:
+                {zaak.opposing_party?.name} is in {opponentConflict.conflicts.length === 1 ? "een ander dossier" : `${opponentConflict.conflicts.length} andere dossiers`} client:
               </p>
               <ul className="mt-1 space-y-0.5">
                 {opponentConflict.conflicts.map((c) => (

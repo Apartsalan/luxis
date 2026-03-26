@@ -29,6 +29,7 @@ import {
   useSyncedEmailDetail,
   useSaveAttachmentToCase,
   type SyncedEmailSummary,
+  type EmailAttachmentInfo,
 } from "@/hooks/use-email-sync";
 import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
 import { useGenerateDraft, type AiDraft } from "@/hooks/use-ai-draft";
@@ -64,8 +65,8 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
-      toast.error(err.message || "Download mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Download mislukt");
     } finally {
       setDownloadingId(null);
     }
@@ -76,8 +77,8 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
       await saveToCase.mutateAsync({ attachmentId, caseId });
       setSavedIds((prev) => new Set(prev).add(attachmentId));
       toast.success("Bijlage opgeslagen in dossier");
-    } catch (err: any) {
-      toast.error(err.message || "Opslaan mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
   };
 
@@ -146,7 +147,7 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
             {email.attachments.length} bijlage{email.attachments.length > 1 ? "n" : ""}
           </p>
           <div className="flex flex-wrap gap-2">
-            {email.attachments.map((att: any) => (
+            {email.attachments.map((att: EmailAttachmentInfo) => (
               <div key={att.id} className="inline-flex items-center gap-0.5">
                 <button
                   type="button"
@@ -330,8 +331,8 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
       toast.success(
         `Sync klaar: ${stats.new} nieuw, ${stats.linked} gekoppeld`
       );
-    } catch (err: any) {
-      toast.error(err.message ?? "Sync mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Sync mislukt");
     }
   };
 
@@ -355,8 +356,8 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                 try {
                   const result = await generateDraft.mutateAsync({ caseId });
                   setDraft(result);
-                } catch (err: any) {
-                  toast.error(err.message || "Concept genereren mislukt");
+                } catch (err: unknown) {
+                  toast.error(err instanceof Error ? err.message : "Concept genereren mislukt");
                 }
               }}
               disabled={generateDraft.isPending}

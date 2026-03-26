@@ -107,8 +107,8 @@ export function ContactLinks({
       toast.success("Koppeling toegevoegd");
       setDialogOpen(false);
       resetForm();
-    } catch (err: any) {
-      toast.error(err.message || "Kon koppeling niet toevoegen");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kon koppeling niet toevoegen");
     }
   };
 

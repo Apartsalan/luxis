@@ -179,8 +179,8 @@ export default function FactuurDetailPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch (err: any) {
-      toast.error(err.message || "PDF downloaden mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "PDF downloaden mislukt");
     }
   };
 

@@ -51,8 +51,8 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
       });
       toast.success("Provisie-instellingen opgeslagen");
       setEditing(false);
-    } catch (err: any) {
-      toast.error(err.message || "Opslaan mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
   };
 

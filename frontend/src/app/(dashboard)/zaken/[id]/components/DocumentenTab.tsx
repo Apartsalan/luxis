@@ -131,8 +131,8 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
       setSelectedIds(new Set());
       setQuickBillStep("select");
       router.push(`/facturen/${result.id}`);
-    } catch (err: any) {
-      toast.error(err.message || "Factuur aanmaken mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Factuur aanmaken mislukt");
     }
   };
 
@@ -538,8 +538,8 @@ function VerschottenSection({ caseId }: { caseId: string }) {
         tax_type: "belast",
         file_id: "",
       });
-    } catch (err: any) {
-      toast.error(err.message || "Aanmaken mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Aanmaken mislukt");
     }
   };
 
@@ -850,8 +850,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
-    } catch (err: any) {
-      toast.error(err.message || "Preview laden mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Preview laden mislukt");
       setPreviewOpen(false);
     } finally {
       setPreviewLoading(false);
@@ -874,8 +874,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
-    } catch (err: any) {
-      toast.error(err.message || "Preview laden mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Preview laden mislukt");
       setPreviewOpen(false);
     } finally {
       setPreviewLoading(false);
@@ -897,8 +897,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);
-    } catch (err: any) {
-      toast.error(err.message || "Preview laden mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Preview laden mislukt");
       setPreviewOpen(false);
     } finally {
       setPreviewLoading(false);
@@ -910,8 +910,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
       const result = await generateDocx.mutateAsync(templateType);
       triggerDownload(result.blob, result.filename);
       toast.success(`${getTemplateLabel(templateType)} gegenereerd`);
-    } catch (err: any) {
-      toast.error(err.message || "Fout bij genereren document");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Fout bij genereren document");
     }
   };
 
@@ -946,8 +946,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
       toast.success("E-mail verzonden");
       setEmailDialogOpen(false);
       setEmailDoc(null);
-    } catch (err: any) {
-      toast.error(err.message || "Fout bij verzenden e-mail");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Fout bij verzenden e-mail");
     }
   };
 

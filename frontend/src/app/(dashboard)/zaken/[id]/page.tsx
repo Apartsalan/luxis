@@ -178,8 +178,8 @@ export default function ZaakDetailPage() {
         setStatusSuggestion({ status: newStatus, templates: nextTemplates.recommended });
         setTimeout(() => setStatusSuggestion(null), 30000);
       }
-    } catch (err: any) {
-      toast.error(err.message || "Statuswijziging mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Statuswijziging mislukt");
     }
   };
 
@@ -256,8 +256,8 @@ export default function ZaakDetailPage() {
 
       toast.success("E-mail geopend in Outlook");
       setCaseEmailOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "E-mail opstellen mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "E-mail opstellen mislukt");
     }
   };
 

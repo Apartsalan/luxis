@@ -2,9 +2,10 @@
 
 import { Mail, Phone, MapPin, Clock, FileText, Euro } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import type { Contact } from "@/hooks/use-relations";
 
 interface ContactInfoSectionProps {
-  contact: any;
+  contact: Contact;
   editing: boolean;
   editForm: Record<string, string>;
   updateEdit: (field: string, value: string) => void;

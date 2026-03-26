@@ -39,9 +39,9 @@ export function InvoiceUploadZone({ onParsed }: InvoiceUploadZoneProps) {
         const result = await parseInvoice.mutateAsync(file);
         setState("success");
         onParsed(result, file);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setState("error");
-        setErrorMsg(err.message || "Factuur parsing mislukt");
+        setErrorMsg(err instanceof Error ? err.message : "Factuur parsing mislukt");
       }
     },
     [parseInvoice, onParsed]

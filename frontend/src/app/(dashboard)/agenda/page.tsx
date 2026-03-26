@@ -34,7 +34,9 @@ import {
 } from "@/hooks/use-calendar-events";
 import { TASK_TYPE_LABELS } from "@/hooks/use-workflow";
 import { useCases } from "@/hooks/use-cases";
+import type { CaseSummary } from "@/hooks/use-cases";
 import { useRelations } from "@/hooks/use-relations";
+import type { Contact } from "@/hooks/use-relations";
 import { QueryError } from "@/components/query-error";
 
 // ── Dutch day names (week starts Monday) ──────────────────────────────────────
@@ -663,9 +665,9 @@ function EventDialog({
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
                 <option value="">Geen zaak</option>
-                {(cases?.items ?? []).map((c: any) => (
+                {(cases?.items ?? []).map((c: CaseSummary) => (
                   <option key={c.id} value={c.id}>
-                    {c.case_number} — {c.title}
+                    {c.case_number} — {c.description}
                   </option>
                 ))}
               </select>
@@ -680,7 +682,7 @@ function EventDialog({
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
                 <option value="">Geen relatie</option>
-                {(relations?.items ?? []).map((r: any) => (
+                {(relations?.items ?? []).map((r: Contact) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
                   </option>

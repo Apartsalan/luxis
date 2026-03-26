@@ -155,8 +155,8 @@ export default function RelatieDetailPage() {
       await updateRelation.mutateAsync({ id, data });
       toast.success("Relatie bijgewerkt");
       setEditing(false);
-    } catch (err: any) {
-      toast.error(err.message || "Kon niet opslaan");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kon niet opslaan");
     }
   };
 
@@ -232,8 +232,8 @@ export default function RelatieDetailPage() {
       await saveKyc.mutateAsync(data);
       toast.success("WWFT-gegevens opgeslagen");
       setKycEditing(false);
-    } catch (err: any) {
-      toast.error(err.message || "Kon niet opslaan");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kon niet opslaan");
     }
   };
 
@@ -242,8 +242,8 @@ export default function RelatieDetailPage() {
     try {
       await completeKyc.mutateAsync({ id: kycData.id });
       toast.success("KYC verificatie afgerond");
-    } catch (err: any) {
-      toast.error(err.message || "Kon verificatie niet afronden");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kon verificatie niet afronden");
     }
   };
 
@@ -474,8 +474,8 @@ function TermsSection({ contactId, termsFileName }: { contactId: string; termsFi
       setCurrentFile(data.terms_file_name);
       refetch();
       toast.success("Algemene voorwaarden geüpload");
-    } catch (err: any) {
-      toast.error(err.message || "Upload mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Upload mislukt");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -498,8 +498,8 @@ function TermsSection({ contactId, termsFileName }: { contactId: string; termsFi
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (err: any) {
-      toast.error(err.message || "Download mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Download mislukt");
     }
   };
 
@@ -514,8 +514,8 @@ function TermsSection({ contactId, termsFileName }: { contactId: string; termsFi
       setCurrentFile(null);
       refetch();
       toast.success("Algemene voorwaarden verwijderd");
-    } catch (err: any) {
-      toast.error(err.message || "Verwijderen mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Verwijderen mislukt");
     }
   };
 

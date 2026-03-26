@@ -74,7 +74,10 @@ class CaseCreate(BaseModel):
     provisie_percentage: Decimal | None = None
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
-    provisie_base: str = Field(default="collected_amount", description="collected_amount | total_claim")
+    provisie_base: str = Field(
+        default="collected_amount",
+        description="collected_amount | total_claim",
+    )
 
 
 class CaseUpdate(BaseModel):

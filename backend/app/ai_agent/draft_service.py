@@ -124,7 +124,9 @@ async def _gather_case_context(
         "emails": [],
         "claims": [],
         "payments": [],
-        "total_principal": _serialize_decimal(sum((c.principal_amount for c in claims), Decimal("0"))),
+        "total_principal": _serialize_decimal(
+            sum((c.principal_amount for c in claims), Decimal("0"))
+        ),
         "total_paid": _serialize_decimal(sum((p.amount for p in payments), Decimal("0"))),
         "terms_text": terms_text[:3000] if terms_text else None,
     }
@@ -219,7 +221,8 @@ def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
         parts.append("\n--- Recente correspondentie ---")
         for e in context["emails"]:
             direction = "←" if e["direction"] == "inbound" else "→"
-            parts.append(f"{direction} {e.get('date', '?')}: {e.get('subject', '(geen onderwerp)')}")
+            subj = e.get('subject', '(geen onderwerp)')
+            parts.append(f"{direction} {e.get('date', '?')}: {subj}")
             if e.get("snippet"):
                 parts.append(f"  {e['snippet']}")
 
@@ -232,7 +235,11 @@ def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
     if instruction:
         parts.append(f"\n--- Instructie ---\n{instruction}")
     else:
-        parts.append("\n--- Instructie ---\nSchrijf een passend concept-bericht op basis van de huidige dossierstatus en de laatste correspondentie.")
+        parts.append(
+            "\n--- Instructie ---\n"
+            "Schrijf een passend concept-bericht op basis van de huidige"
+            " dossierstatus en de laatste correspondentie."
+        )
 
     return "\n".join(parts)
 

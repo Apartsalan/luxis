@@ -9,7 +9,7 @@ from app.ai_agent.invoice_prompts import (
     INVOICE_PARSE_SYSTEM_PROMPT,
     build_invoice_parse_prompt,
 )
-from app.ai_agent.kimi_client import call_intake_ai, call_claude_with_pdf
+from app.ai_agent.kimi_client import call_claude_with_pdf, call_intake_ai
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 
 logger = logging.getLogger(__name__)

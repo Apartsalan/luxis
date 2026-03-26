@@ -134,10 +134,14 @@ def _claims_table(context: dict) -> str:
         '<table role="presentation" width="100%" cellpadding="6" cellspacing="0" '
         'style="border-collapse:collapse;font-size:13px;margin:16px 0;">'
         "<tr>"
-        '<th style="text-align:left;border-bottom:2px solid #1e293b;padding:8px 6px;">Omschrijving</th>'
-        '<th style="text-align:left;border-bottom:2px solid #1e293b;padding:8px 6px;">Factuurnummer</th>'
-        '<th style="text-align:left;border-bottom:2px solid #1e293b;padding:8px 6px;">Verzuimdatum</th>'
-        '<th style="text-align:right;border-bottom:2px solid #1e293b;padding:8px 6px;">Hoofdsom</th>'
+        '<th style="text-align:left;border-bottom:2px solid #1e293b;'
+        'padding:8px 6px;">Omschrijving</th>'
+        '<th style="text-align:left;border-bottom:2px solid #1e293b;'
+        'padding:8px 6px;">Factuurnummer</th>'
+        '<th style="text-align:left;border-bottom:2px solid #1e293b;'
+        'padding:8px 6px;">Verzuimdatum</th>'
+        '<th style="text-align:right;border-bottom:2px solid #1e293b;'
+        'padding:8px 6px;">Hoofdsom</th>'
         "</tr>"
     )
     for v in rows:
@@ -146,7 +150,8 @@ def _claims_table(context: dict) -> str:
             f'<td style="padding:6px;border-bottom:1px solid #e5e7eb;">{v["beschrijving"]}</td>'
             f'<td style="padding:6px;border-bottom:1px solid #e5e7eb;">{v["factuurnummer"]}</td>'
             f'<td style="padding:6px;border-bottom:1px solid #e5e7eb;">{v["verzuimdatum"]}</td>'
-            f'<td style="padding:6px;border-bottom:1px solid #e5e7eb;text-align:right;">{v["hoofdsom"]}</td>'
+            '<td style="padding:6px;border-bottom:1px solid #e5e7eb;'
+            f'text-align:right;">{v["hoofdsom"]}</td>'
             "</tr>"
         )
     html += "</table>"

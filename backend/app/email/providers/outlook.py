@@ -10,6 +10,7 @@ Permissions: Mail.Read, Mail.ReadWrite, Mail.Send, offline_access, User.Read
 
 import base64
 import logging
+from datetime import UTC, datetime
 from urllib.parse import urlencode
 
 import httpx
@@ -348,7 +349,6 @@ class OutlookProvider(EmailProvider):
         # We return a synthetic ID based on timestamp for tracking
         # The actual message will appear in Sent Items after a short delay
         logger.info(f"Email verzonden via Outlook naar {to}")
-        from datetime import datetime, UTC
         ts = int(datetime.now(UTC).timestamp() * 1000)
         return f"outlook-sent-{ts}-{subject[:30]}"
 

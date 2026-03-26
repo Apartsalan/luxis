@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 26 maart 2026 (sessie 109 — Backup + security hardening)
-**Laatste feature/fix:** Sessie 109 — Backup script verbeterd (DB + uploads), fail2ban geïnstalleerd, security hardening
-**Volgende sessie:** 110 — Fase 2: Backend test coverage (7 routers zonder unit tests)
+**Laatst bijgewerkt:** 27 maart 2026 (sessie 109 — Backup + security + backend tests)
+**Laatste feature/fix:** Sessie 109 — Backup, security hardening, 29 nieuwe router tests (calendar, settings, search, notifications)
+**Volgende sessie:** 110 — Fase 2B: Backend test coverage (resterende 3 routers: collections, email, incasso)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -36,6 +36,13 @@
 - `scripts/backup.sh` — verbeterd met uploads + 7-dag rotatie
 
 **Infra status:** ~80% → **~90%** (Fase 1 compleet: CI/CD ✅, Caddy ✅, backup ✅, security ✅)
+
+**Backend tests (Fase 2 gestart):**
+- 29 nieuwe tests voor 4 routers: calendar (10), settings (7), search (7), notifications (5)
+- Alle 29 groen ✅
+- Resterende routers zonder directe tests: collections, email, incasso (hebben wel service-level tests)
+- Totaal tests: ~400
+
 **Resterend GAT:** backend tests falen in bare-metal CI (pytest-asyncio), ruff format 97 files
 
 **Opmerking:** VPS heeft een pending kernel upgrade (6.8.0-90 → 6.8.0-106). Reboot nodig maar niet urgent.

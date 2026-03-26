@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 26 maart 2026 (sessie 107 — completeness audit + roadmap naar 100%)
-**Laatste feature/fix:** Sessie 107 — Volledige audit backend/frontend/infra, percentages gecorrigeerd, 6-fasen plan naar ~98%
-**Volgende sessie:** 108 — Fase 1A: CI/CD pipeline (GitHub Actions) + Caddy config in repo
+**Laatst bijgewerkt:** 26 maart 2026 (sessie 108 — CI/CD pipeline + Caddy in repo)
+**Laatste feature/fix:** Sessie 108 — CI/CD pipeline (GitHub Actions), deploy workflow, Caddyfile gesynchroniseerd met VPS
+**Volgende sessie:** 109 — Fase 1B: Backup activeren op VPS + DEPLOY_SSH_KEY secret in GitHub
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,39 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 108 — 26 maart 2026) — CI/CD pipeline + Caddy in repo
+
+**Fase 1A van het 6-fasen plan naar ~98% — Infra hardening**
+
+**CI/CD Pipeline (`.github/workflows/ci.yml`):**
+- Bestaande CI had al: backend lint (ruff), backend tests (Postgres 16 + Redis), frontend lint (ESLint), frontend build, security checks
+- Toegevoegd: **frontend-typecheck** job (`tsc --noEmit`) — ontbrekende TypeScript check
+
+**Deploy Workflow (`.github/workflows/deploy.yml`):**
+- Nieuw aangemaakt: auto-deploy na groene CI
+- Trigger: `workflow_run` op CI completion (alleen main branch)
+- SSH naar VPS → git pull → docker compose build → up -d → health checks
+- Concurrency group voorkomt parallelle deploys
+- **ACTION NEEDED:** `DEPLOY_SSH_KEY` secret moet nog in GitHub repo settings gezet worden
+
+**Caddyfile gesynchroniseerd met VPS:**
+- VPS had extra blok voor `app.bespokestaffingsolutions.nl` (reverse proxy naar port 3100) dat niet in repo stond
+- Repo Caddyfile bijgewerkt om exact overeen te komen met VPS versie
+
+**docker-compose.prod.yml:**
+- Bestond al met Caddy service, health checks, resource limits, geen host port mappings — geen wijzigingen nodig
+
+**Gewijzigde bestanden:**
+- `.github/workflows/ci.yml` — frontend-typecheck job toegevoegd
+- `.github/workflows/deploy.yml` — nieuw bestand
+- `Caddyfile` — Bespoke Staffing blok toegevoegd
+- `CLAUDE.md` — pre-mortem regel toegevoegd
+
+**Infra status:** ~70% → **~80%** (CI/CD ✅, Caddy in repo ✅, docker-compose.prod.yml ✅)
+**Resterend voor Fase 1:** backup activeren op VPS, DEPLOY_SSH_KEY in GitHub, security hardening
+
+---
 
 ## Wat er gedaan is (sessie 107 — 26 maart 2026) — Completeness audit + roadmap naar 100%
 

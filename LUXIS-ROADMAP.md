@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 26 maart 2026 (sessie 107 — completeness audit + roadmap naar 100%)
+**Laatst bijgewerkt:** 26 maart 2026 (sessie 108 — CI/CD pipeline + Caddy in repo)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -26,12 +26,12 @@
 |------|--------------|-------------|
 | Backend (FastAPI) | ~85% | 231 endpoints, 25 routers, 34 models, 371 tests. Financial calcs uitstekend getest (edge cases, boundary values). GAT: 7 routers (69 endpoints) zonder directe unit tests (collections, email, incasso, calendar, notifications, settings, search). |
 | Frontend (Next.js) | ~75% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. GAT: 66x `any` in TypeScript, E2E mist settings/OAuth/docs. Stitch redesign gepland. |
-| Infra/DevOps | ~70% | Docker Compose op Hetzner VPS. Caddy reverse proxy (niet in repo). SSH deploy key. 43 migraties, RLS, token rotation. GAT: geen CI/CD, geen docker-compose.prod.yml, backup script niet actief op VPS, Caddy config niet in version control. |
+| Infra/DevOps | ~80% | Docker Compose op Hetzner VPS. Caddy reverse proxy (in repo ✅). SSH deploy key. 43 migraties, RLS, token rotation. CI/CD pipeline ✅ (GitHub Actions: lint, tests, typecheck, build, security + auto-deploy). docker-compose.prod.yml ✅. GAT: backup script niet actief op VPS, DEPLOY_SSH_KEY secret moet in GitHub. |
 
-**Rode draad:** Backend is functioneel compleet maar mist router-level tests. Frontend is feature-compleet maar mist TypeScript strictness + redesign. Infra mist CI/CD en productie-hardening.
+**Rode draad:** Backend is functioneel compleet maar mist router-level tests. Frontend is feature-compleet maar mist TypeScript strictness + redesign. Infra heeft nu CI/CD ✅ — nog backup + final hardening.
 
 **Roadmap naar ~98% (13-15 sessies):**
-1. Infra hardening (CI/CD, Caddy in repo, backup activeren, security) — 3 sessies
+1. Infra hardening (CI/CD ✅, Caddy in repo ✅, backup activeren, security) — 3 sessies (1A done ✅)
 2. Backend test coverage (7 router tests, edge cases) — 2 sessies
 3. Frontend structureel (TypeScript `any` killen, hooks cleanup) — 2 sessies
 4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies

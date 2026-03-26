@@ -66,7 +66,7 @@ interface PaginatedCases {
   pages: number;
 }
 
-interface CaseCreateInput {
+export interface CaseCreateInput {
   case_type: string;
   debtor_type?: string; // 'b2b' | 'b2c'
   description?: string;
@@ -80,6 +80,10 @@ interface CaseCreateInput {
   assigned_to_id?: string;
   date_opened: string;
   budget?: string | number;  // G13
+  hourly_rate?: string | number;
+  payment_term_days?: number;
+  collection_strategy?: string;
+  debtor_notes?: string;
 }
 
 export function useCases(params?: {

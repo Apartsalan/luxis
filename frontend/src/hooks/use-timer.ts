@@ -328,8 +328,8 @@ export function useTimerProvider() {
       toast.success(`${h}:${String(m).padStart(2, "0")} geregistreerd`);
       setTimer(defaultTimer);
       clearStorage();
-    } catch (err: any) {
-      toast.error(err.message || "Opslaan mislukt");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
   }, [timer.seconds, timer.caseId, timer.description, timer.activityType, createMutation]);
 

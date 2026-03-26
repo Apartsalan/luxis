@@ -32,6 +32,7 @@
 
 **TODO (klein):**
 - ⏳ VPS kernel reboot — upgrade van 6.8.0-90 naar 6.8.0-106 (geconstateerd 26 maart 2026, niet urgent, ~2 min downtime). Doe dit aan het begin van een volgende sessie als eerste actie.
+- ⏳ Off-site backup via rclone → Backblaze B2 (~€1/mnd). Backups staan nu alleen op de VPS zelf — bij serververlies ben je alles kwijt. Script is al voorbereid, alleen rclone config + B2 bucket nodig.
 
 **Roadmap naar ~98% (13-15 sessies):**
 1. Infra hardening (CI/CD ✅, Caddy in repo ✅, backup ✅, security ✅) — 3 sessies — COMPLEET ✅

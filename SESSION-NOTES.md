@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 26 maart 2026 (sessie 108 — CI/CD pipeline + Caddy in repo)
-**Laatste feature/fix:** Sessie 108 — CI/CD pipeline (GitHub Actions), deploy workflow, Caddyfile gesynchroniseerd met VPS
-**Volgende sessie:** 109 — Fase 1B: Backup activeren op VPS, security hardening
+**Laatst bijgewerkt:** 26 maart 2026 (sessie 109 — Backup + security hardening)
+**Laatste feature/fix:** Sessie 109 — Backup script verbeterd (DB + uploads), fail2ban geïnstalleerd, security hardening
+**Volgende sessie:** 110 — Fase 2: Backend test coverage (7 routers zonder unit tests)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,32 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 109 — 26 maart 2026) — Backup + security hardening
+
+**Fase 1B van het 6-fasen plan naar ~98% — Infra hardening (FASE 1 COMPLEET)**
+
+**Backup script verbeterd (`scripts/backup.sh`):**
+- Uploads directory backup toegevoegd (docker cp van backend container)
+- Retentie van 30 naar 7 dagen
+- Permission-bug gefixt: crontab gebruikt nu `/bin/bash` prefix (script verloor +x na git pull, 5 dagen geen backups 21-26 maart)
+- Betere logging (separator lines, file counts)
+- Handmatige test succesvol: DB 1.1M + uploads 5.3M
+
+**Security hardening:**
+- fail2ban geïnstalleerd en geconfigureerd (SSH jail: 5 retries, 1 uur ban) — direct 13 IPs gebanned
+- unattended-upgrades was al actief ✅
+- Open ports: 22, 80, 443 + 3100 (Bespoke Recruit, apart project)
+
+**Gewijzigde bestanden:**
+- `scripts/backup.sh` — verbeterd met uploads + 7-dag rotatie
+
+**Infra status:** ~80% → **~90%** (Fase 1 compleet: CI/CD ✅, Caddy ✅, backup ✅, security ✅)
+**Resterend GAT:** backend tests falen in bare-metal CI (pytest-asyncio), ruff format 97 files
+
+**Opmerking:** VPS heeft een pending kernel upgrade (6.8.0-90 → 6.8.0-106). Reboot nodig maar niet urgent.
+
+---
 
 ## Wat er gedaan is (sessie 108 — 26 maart 2026) — CI/CD pipeline + Caddy in repo
 

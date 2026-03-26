@@ -94,6 +94,13 @@ Laat zien:
 
 **Wacht op goedkeuring** voordat je gaat implementeren.
 
+**Pre-mortem (HARDE REGEL bij elk niet-triviaal plan):**
+Voordat je het plan presenteert, voeg een korte pre-mortem sectie toe:
+- **3 redenen waarom dit plan zou kunnen falen** (technisch, UX, of architectureel)
+- **Waarom het toch de juiste aanpak is** (1-2 zinnen per risico)
+- Dit dwingt af dat alternatieven overwogen zijn vóórdat er code geschreven wordt.
+- Niet nodig bij triviale fixes (typos, 1-regelige changes).
+
 ### Stap 3: Bouwen
 
 Pas na goedkeuring implementeren.

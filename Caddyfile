@@ -42,3 +42,21 @@
         }
     }
 }
+
+app.bespokestaffingsolutions.nl {
+    reverse_proxy 172.17.0.1:3100
+
+    tls {
+        on_demand
+    }
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+
+    encode gzip
+}

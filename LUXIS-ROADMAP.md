@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 22 maart 2026 (sessie 98 — UX-22 Design Sprint compleet)
+**Laatst bijgewerkt:** 26 maart 2026 (sessie 107 — completeness audit + roadmap naar 100%)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -24,11 +24,19 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~90% | 120+ endpoints, 15 routers, solide CRUD en business logic, correcte financial calculations. Budget tracking, recurring tasks, document preview endpoints. |
-| Frontend (Next.js) | ~65% | Alle Fase A-E + T1-T3 + F1-F10 + G3/G5/G9/G10/G11/G13/G14 features gebouwd. Budget module, recurring tasks, inline document preview, status-filtered templates, workflow-suggesties, keyboard shortcuts. |
-| Infra/DevOps | ~85% | Docker Compose op Hetzner VPS. Caddy reverse proxy. SSH deploy key geïnstalleerd (sessie 46) — Claude deployt nu autonoom via SSH. Frontend gebruikt relatieve URLs + Next.js rewrites `/api/*` → `backend:8000`. |
+| Backend (FastAPI) | ~85% | 231 endpoints, 25 routers, 34 models, 371 tests. Financial calcs uitstekend getest (edge cases, boundary values). GAT: 7 routers (69 endpoints) zonder directe unit tests (collections, email, incasso, calendar, notifications, settings, search). |
+| Frontend (Next.js) | ~75% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. GAT: 66x `any` in TypeScript, E2E mist settings/OAuth/docs. Stitch redesign gepland. |
+| Infra/DevOps | ~70% | Docker Compose op Hetzner VPS. Caddy reverse proxy (niet in repo). SSH deploy key. 43 migraties, RLS, token rotation. GAT: geen CI/CD, geen docker-compose.prod.yml, backup script niet actief op VPS, Caddy config niet in version control. |
 
-**Rode draad:** De backend is vaak verder dan de frontend. ~40% van de verbeteringen vereist geen backend-werk.
+**Rode draad:** Backend is functioneel compleet maar mist router-level tests. Frontend is feature-compleet maar mist TypeScript strictness + redesign. Infra mist CI/CD en productie-hardening.
+
+**Roadmap naar ~98% (13-15 sessies):**
+1. Infra hardening (CI/CD, Caddy in repo, backup activeren, security) — 3 sessies
+2. Backend test coverage (7 router tests, edge cases) — 2 sessies
+3. Frontend structureel (TypeScript `any` killen, hooks cleanup) — 2 sessies
+4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies
+5. Frontend E2E + polish (tests na redesign, a11y, performance) — 2 sessies
+6. Final hardening (API docs, disaster recovery, runbook) — 1 sessie
 
 ---
 
@@ -274,7 +282,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-61 | `toFixed is not a function` bij factuur uren import — zelfde type als BUG-57 maar op facturen/nieuw pagina. Decimal strings van API niet naar Number() geconverteerd. | Hoog | S | ✅ Gefixt + QA pass (sessie 101+102) |
 | BUG-62 | Dark mode/Systeem knoppen in Instellingen doen niks (tonen alleen toast). Fix: knoppen verwijderd, alleen "Licht" behouden. | Laag | S | ✅ Gefixt + QA pass (sessie 101+102) |
 | BUG-63 | Email matching: emails bij verkeerd dossier. Fix: thread-matching, stop-on-miss, bounce-detectie, referentie matching verwijderd, outbound dedup. QA: alle 7 scenario's PASS. Extra fixes sessie 102: Fernet key derivatie hersteld (sessie 90 regressie), outbound synthetic ID uniek gemaakt met timestamp. | Kritiek | L | ✅ Gefixt + QA pass (sessie 101+102) |
-| BUG-64 | Rentetype (interest_type) niet bewerkbaar na aanmaken dossier — staat alleen in wizard stap 2, niet in DetailsTab bewerkformulier. Moet bewerkbaar zijn incl. contractuele rente velden. | Midden | S | ❌ TODO |
+| BUG-64 | Rentetype (interest_type) niet bewerkbaar na aanmaken dossier — staat alleen in wizard stap 2, niet in DetailsTab bewerkformulier. Moet bewerkbaar zijn incl. contractuele rente velden. | Midden | S | ✅ Gefixt (sessie 104) |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 

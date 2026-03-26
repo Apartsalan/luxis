@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 25 maart 2026 (sessie 106 — post-QA verificatie + Stitch MCP setup)
-**Laatste feature/fix:** Sessie 106 — BUG-65 opnieuw gefixt (setdefault→direct assignment), alle 4 fixes geverifieerd op productie
-**Volgende sessie:** 107 — Stitch designs toepassen op Luxis UI
+**Laatst bijgewerkt:** 26 maart 2026 (sessie 107 — completeness audit + roadmap naar 100%)
+**Laatste feature/fix:** Sessie 107 — Volledige audit backend/frontend/infra, percentages gecorrigeerd, 6-fasen plan naar ~98%
+**Volgende sessie:** 108 — Fase 1A: CI/CD pipeline (GitHub Actions) + Caddy config in repo
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,29 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 107 — 26 maart 2026) — Completeness audit + roadmap naar 100%
+
+**Volledige audit van alle 3 lagen:**
+- Backend: 231 endpoints, 25 routers, 34 models, 371 tests, 59 E2E tests
+- Frontend: 24 pagina's (0 stubs), 29 hooks, 29 componenten, 55 E2E tests
+- Infra: 43 migraties, Dockerfiles met non-root user, RLS, maar geen CI/CD
+
+**Percentages gecorrigeerd:**
+- Backend: 90% → **85%** (7 routers zonder unit tests)
+- Frontend: 65% → **75%** (alle features gebouwd, gat is polish niet functionaliteit)
+- Infra: 85% → **70%** (geen CI/CD, Caddy niet in repo, backup niet actief)
+
+**6-fasen plan geschreven:** `.claude/plans/memoized-forging-lightning.md`
+- 13-15 sessies om alles naar ~98% te krijgen
+- Volgorde: infra → backend tests → frontend types → Stitch redesign → E2E → hardening
+- Stitch redesign als fase 4 (design-onafhankelijk werk eerst)
+
+**Roadmap bijgewerkt** met nieuwe percentages en roadmap naar 98%
+
+**Geen code gewijzigd, geen deploy nodig.**
+
+---
 
 ## Wat er gedaan is (sessie 106 — 25 maart 2026) — Post-QA verificatie + Stitch MCP
 

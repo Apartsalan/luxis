@@ -103,7 +103,7 @@ async def send_case_email(
     Wraps the body in the standard HTML email template, sends via SMTP,
     creates an EmailLog entry, and logs a CaseActivity.
     """
-    from app.documents.docx_service import _load_tenant, _tenant_ctx
+    from app.documents.docx_service import load_tenant, _tenant_ctx
 
     if not is_configured():
         raise BadRequestError(
@@ -122,7 +122,7 @@ async def send_case_email(
         raise NotFoundError("Zaak niet gevonden")
 
     # Build HTML email
-    tenant = await _load_tenant(db, user.tenant_id)
+    tenant = await load_tenant(db, user.tenant_id)
     kantoor = _tenant_ctx(tenant)
 
     import html as _html

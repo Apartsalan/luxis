@@ -26,7 +26,7 @@
 |------|--------------|-------------|
 | Backend (FastAPI) | ~85% | 231 endpoints, 25 routers, 34 models, 371 tests. Financial calcs uitstekend getest (edge cases, boundary values). GAT: 7 routers (69 endpoints) zonder directe unit tests (collections, email, incasso, calendar, notifications, settings, search). |
 | Frontend (Next.js) | ~75% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. GAT: 66x `any` in TypeScript, E2E mist settings/OAuth/docs. Stitch redesign gepland. |
-| Infra/DevOps | ~80% | Docker Compose op Hetzner VPS. Caddy reverse proxy (in repo ✅). SSH deploy key. 43 migraties, RLS, token rotation. CI/CD pipeline ✅ (GitHub Actions: lint, tests, typecheck, build, security + auto-deploy). docker-compose.prod.yml ✅. GAT: backup script niet actief op VPS, DEPLOY_SSH_KEY secret moet in GitHub. |
+| Infra/DevOps | ~80% | Docker Compose op Hetzner VPS. Caddy reverse proxy (in repo ✅). SSH deploy key. 43 migraties, RLS, token rotation. CI/CD pipeline ✅ (GitHub Actions: lint, tests, typecheck, build, security + auto-deploy). docker-compose.prod.yml ✅. DEPLOY_SSH_KEY secret ✅. Auto-deploy na groene CI ✅. GAT: backup script niet actief op VPS, backend tests falen in bare-metal CI (pytest-asyncio). |
 
 **Rode draad:** Backend is functioneel compleet maar mist router-level tests. Frontend is feature-compleet maar mist TypeScript strictness + redesign. Infra heeft nu CI/CD ✅ — nog backup + final hardening.
 

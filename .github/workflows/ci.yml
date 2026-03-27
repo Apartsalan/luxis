@@ -10,7 +10,7 @@ jobs:
   # ── Backend Lint ─────────────────────────────────────────────────────────────
   backend-lint:
     name: Backend Lint
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -33,41 +33,21 @@ jobs:
   # ── Backend Tests ────────────────────────────────────────────────────────────
   backend-test:
     name: Backend Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     continue-on-error: true
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: luxis
-          POSTGRES_PASSWORD: luxis_test_password
-          POSTGRES_DB: luxis_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    defaults:
-      run:
-        working-directory: backend
-    env:
-      DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5432/luxis_test
-      REDIS_URL: redis://localhost:6379/0
-      SECRET_KEY: ci-test-secret-key-not-for-production
-      APP_ENV: test
     steps:
       - uses: actions/checkout@v4
+
+      - name: Start test services
+        run: |
+          docker run -d --name ci-postgres-${{ github.run_id }} \
+            -e POSTGRES_USER=luxis -e POSTGRES_PASSWORD=luxis_test_password -e POSTGRES_DB=luxis_test \
+            -p 5433:5432 --health-cmd "pg_isready -U luxis" --health-interval 5s --health-timeout 3s --health-retries 10 \
+            postgres:16-alpine
+          docker run -d --name ci-redis-${{ github.run_id }} \
+            -p 6380:6379 --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10 \
+            redis:7-alpine
+          sleep 5
 
       - uses: actions/setup-python@v5
         with:
@@ -77,18 +57,36 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
+        working-directory: backend
         run: uv pip install --system ".[dev]"
 
       - name: Run migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5433/luxis_test
+          REDIS_URL: redis://localhost:6380/0
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          APP_ENV: test
         run: python -m alembic upgrade head
 
       - name: Run tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5433/luxis_test
+          REDIS_URL: redis://localhost:6380/0
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          APP_ENV: test
         run: pytest tests/ -v --tb=short
+
+      - name: Cleanup test services
+        if: always()
+        run: |
+          docker rm -f ci-postgres-${{ github.run_id }} ci-redis-${{ github.run_id }} 2>/dev/null || true
 
   # ── Frontend Lint ────────────────────────────────────────────────────────────
   frontend-lint:
     name: Frontend Lint
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -110,7 +108,7 @@ jobs:
   # ── Frontend Type Check ────────────────────────────────────────────────────
   frontend-typecheck:
     name: Frontend Type Check
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -132,7 +130,7 @@ jobs:
   # ── Frontend Build ───────────────────────────────────────────────────────────
   frontend-build:
     name: Frontend Build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -156,7 +154,7 @@ jobs:
   # ── Security Checks ─────────────────────────────────────────────────────────
   security:
     name: Security Checks
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 

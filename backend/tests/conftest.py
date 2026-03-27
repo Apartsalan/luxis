@@ -237,8 +237,15 @@ async def workflow_data(db: AsyncSession, test_tenant: Tenant) -> dict[str, uuid
         ("executie", "Executie", "execution", 80, "#4c1d95", False, False),
         ("betalingsregeling", "Betalingsregeling", "legal", 45, "#0ea5e9", False, False),
         ("conservatoir_beslag", "Conservatoir Beslag", "legal", 58, "#be185d", False, False),
-        ("faillissementsaanvraag", "Faillissementsaanvraag",
-         "execution", 85, "#991b1b", False, False),
+        (
+            "faillissementsaanvraag",
+            "Faillissementsaanvraag",
+            "execution",
+            85,
+            "#991b1b",
+            False,
+            False,
+        ),
         ("betaald", "Betaald", "closed", 90, "#10b981", True, False),
         ("schikking", "Schikking", "closed", 91, "#14b8a6", True, False),
         ("oninbaar", "Oninbaar", "closed", 95, "#6b7280", True, False),
@@ -248,17 +255,19 @@ async def workflow_data(db: AsyncSession, test_tenant: Tenant) -> dict[str, uuid
     for slug, label, phase, sort_order, color, is_terminal, is_initial in statuses_config:
         status_id = uuid.uuid4()
         slug_to_id[slug] = status_id
-        db.add(WorkflowStatus(
-            id=status_id,
-            tenant_id=tenant_id,
-            slug=slug,
-            label=label,
-            phase=phase,
-            sort_order=sort_order,
-            color=color,
-            is_terminal=is_terminal,
-            is_initial=is_initial,
-        ))
+        db.add(
+            WorkflowStatus(
+                id=status_id,
+                tenant_id=tenant_id,
+                slug=slug,
+                label=label,
+                phase=phase,
+                sort_order=sort_order,
+                color=color,
+                is_terminal=is_terminal,
+                is_initial=is_initial,
+            )
+        )
 
     # Create transitions (from_slug, to_slug, debtor_type)
     transitions = [
@@ -295,13 +304,15 @@ async def workflow_data(db: AsyncSession, test_tenant: Tenant) -> dict[str, uuid
     ]
 
     for from_slug, to_slug, debtor_type in transitions:
-        db.add(WorkflowTransition(
-            id=uuid.uuid4(),
-            tenant_id=tenant_id,
-            from_status_id=slug_to_id[from_slug],
-            to_status_id=slug_to_id[to_slug],
-            debtor_type=debtor_type,
-        ))
+        db.add(
+            WorkflowTransition(
+                id=uuid.uuid4(),
+                tenant_id=tenant_id,
+                from_status_id=slug_to_id[from_slug],
+                to_status_id=slug_to_id[to_slug],
+                debtor_type=debtor_type,
+            )
+        )
 
     await db.commit()
     return slug_to_id

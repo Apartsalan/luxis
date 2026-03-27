@@ -29,7 +29,12 @@ def upgrade() -> None:
         sa.Column("provider_attachment_id", sa.String(500), nullable=False),
         sa.Column("filename", sa.String(500), nullable=False),
         sa.Column("stored_filename", sa.String(500), nullable=False),
-        sa.Column("content_type", sa.String(200), nullable=False, server_default="application/octet-stream"),
+        sa.Column(
+            "content_type",
+            sa.String(200),
+            nullable=False,
+            server_default="application/octet-stream",
+        ),
         sa.Column("file_size", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("downloaded_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column(

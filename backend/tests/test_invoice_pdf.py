@@ -84,9 +84,7 @@ async def test_download_invoice_pdf(
 
 
 @pytest.mark.asyncio
-async def test_download_pdf_not_found(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_download_pdf_not_found(client: AsyncClient, auth_headers: dict):
     """Requesting PDF for non-existent invoice should return 404."""
     fake_id = uuid.uuid4()
     resp = await client.get(f"/api/invoices/{fake_id}/pdf", headers=auth_headers)
@@ -103,9 +101,7 @@ async def test_download_pdf_approved_status(
     invoice_id = invoice["id"]
 
     # Advance to approved
-    resp = await client.post(
-        f"/api/invoices/{invoice_id}/approve", headers=auth_headers
-    )
+    resp = await client.post(f"/api/invoices/{invoice_id}/approve", headers=auth_headers)
     assert resp.status_code == 200
 
     resp = await client.get(f"/api/invoices/{invoice_id}/pdf", headers=auth_headers)

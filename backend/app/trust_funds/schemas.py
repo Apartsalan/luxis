@@ -14,14 +14,10 @@ TRANSACTION_STATUSES = ("pending_approval", "approved", "rejected")
 
 
 class TrustTransactionCreate(BaseModel):
-    transaction_type: str = Field(
-        ..., description="deposit or disbursement"
-    )
+    transaction_type: str = Field(..., description="deposit or disbursement")
     amount: Decimal = Field(..., gt=Decimal("0"), decimal_places=2)
     description: str = Field(..., min_length=3)
-    payment_method: str | None = Field(
-        default=None, description="bank, ideal, cash"
-    )
+    payment_method: str | None = Field(default=None, description="bank, ideal, cash")
     reference: str | None = None
     beneficiary_name: str | None = None
     beneficiary_iban: str | None = None

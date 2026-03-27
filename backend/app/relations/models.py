@@ -29,9 +29,7 @@ class Contact(TenantBase):
 
     __tablename__ = "contacts"
 
-    contact_type: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # 'company' or 'person'
+    contact_type: Mapped[str] = mapped_column(String(20), nullable=False)  # 'company' or 'person'
 
     # Shared fields
     name: Mapped[str] = mapped_column(
@@ -99,12 +97,8 @@ class ContactLink(TenantBase):
         UniqueConstraint("tenant_id", "person_id", "company_id", name="uq_contact_link"),
     )
 
-    person_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("contacts.id"), nullable=False
-    )
-    company_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("contacts.id"), nullable=False
-    )
+    person_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("contacts.id"), nullable=False)
+    company_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("contacts.id"), nullable=False)
     role_at_company: Mapped[str | None] = mapped_column(
         String(100), nullable=True
     )  # e.g. "directeur", "contactpersoon"
@@ -112,10 +106,14 @@ class ContactLink(TenantBase):
 
     # Relationships
     person: Mapped["Contact"] = relationship(
-        "Contact", foreign_keys=[person_id], back_populates="company_links",
+        "Contact",
+        foreign_keys=[person_id],
+        back_populates="company_links",
         lazy="selectin",
     )
     company: Mapped["Contact"] = relationship(
-        "Contact", foreign_keys=[company_id], back_populates="person_links",
+        "Contact",
+        foreign_keys=[company_id],
+        back_populates="person_links",
         lazy="selectin",
     )

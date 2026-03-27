@@ -111,8 +111,11 @@ async def _create_synced_email(
 
 @pytest.mark.asyncio
 async def test_get_case_emails(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Getting emails for a case should return only linked emails."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -136,8 +139,11 @@ async def test_get_case_emails(
 
 @pytest.mark.asyncio
 async def test_get_unlinked_emails(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Unlinked endpoint should return emails not linked and not dismissed."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -160,8 +166,11 @@ async def test_get_unlinked_emails(
 
 @pytest.mark.asyncio
 async def test_unlinked_count(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Unlinked count should return the number of unlinked, non-dismissed emails."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -181,8 +190,11 @@ async def test_unlinked_count(
 
 @pytest.mark.asyncio
 async def test_link_email_to_case(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Manually linking an email to a case should succeed."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -205,8 +217,11 @@ async def test_link_email_to_case(
 
 @pytest.mark.asyncio
 async def test_link_nonexistent_email(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Linking a nonexistent email should fail (404)."""
     case = await _create_case(db, test_tenant.id)
@@ -225,8 +240,11 @@ async def test_link_nonexistent_email(
 
 @pytest.mark.asyncio
 async def test_bulk_link_emails(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Bulk linking multiple emails to a case should link all of them."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -255,8 +273,11 @@ async def test_bulk_link_emails(
 
 @pytest.mark.asyncio
 async def test_dismiss_emails(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Dismissing emails should remove them from the unlinked queue."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -285,14 +306,15 @@ async def test_dismiss_emails(
 
 @pytest.mark.asyncio
 async def test_get_email_detail(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Getting email detail should return full body and metadata."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    email = await _create_synced_email(
-        db, test_tenant.id, account.id, subject="Detail test"
-    )
+    email = await _create_synced_email(db, test_tenant.id, account.id, subject="Detail test")
     await db.commit()
 
     resp = await client.get(f"/api/email/messages/{email.id}", headers=auth_headers)
@@ -305,12 +327,11 @@ async def test_get_email_detail(
 
 @pytest.mark.asyncio
 async def test_get_nonexistent_email_detail(
-    client: AsyncClient, auth_headers: dict,
+    client: AsyncClient,
+    auth_headers: dict,
 ):
     """Getting a nonexistent email should return 404."""
-    resp = await client.get(
-        f"/api/email/messages/{uuid.uuid4()}", headers=auth_headers
-    )
+    resp = await client.get(f"/api/email/messages/{uuid.uuid4()}", headers=auth_headers)
     assert resp.status_code == 404
 
 
@@ -319,14 +340,15 @@ async def test_get_nonexistent_email_detail(
 
 @pytest.mark.asyncio
 async def test_list_attachments(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Listing attachments for an email should return all attached files."""
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    email = await _create_synced_email(
-        db, test_tenant.id, account.id, subject="With attachment"
-    )
+    email = await _create_synced_email(db, test_tenant.id, account.id, subject="With attachment")
 
     # Create an attachment record
     attachment = EmailAttachment(
@@ -342,9 +364,7 @@ async def test_list_attachments(
     db.add(attachment)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/email/messages/{email.id}/attachments", headers=auth_headers
-    )
+    resp = await client.get(f"/api/email/messages/{email.id}/attachments", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["attachments"]) == 1
@@ -357,8 +377,11 @@ async def test_list_attachments(
 
 @pytest.mark.asyncio
 async def test_email_tenant_isolation(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Emails from another tenant should not be visible."""
     from app.auth.service import create_access_token, hash_password

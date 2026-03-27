@@ -86,9 +86,7 @@ class Case(TenantBase):
     )  # Whether contractual interest is compound
 
     # Related contacts
-    client_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("contacts.id"), nullable=False
-    )
+    client_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("contacts.id"), nullable=False)
     opposing_party_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("contacts.id"), nullable=True
     )
@@ -114,12 +112,8 @@ class Case(TenantBase):
     date_closed: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Financial summary cache (updated on payment/claim changes)
-    total_principal: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), default=0, nullable=False
-    )
-    total_paid: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), default=0, nullable=False
-    )
+    total_principal: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=0, nullable=False)
+    total_paid: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=0, nullable=False)
 
     # G13: Budget tracking (optional, toggleable via "budget" module)
     budget: Mapped[Decimal | None] = mapped_column(
@@ -127,14 +121,10 @@ class Case(TenantBase):
     )  # Optional budget in euros for this case
 
     # LF-19: Per-case hourly rate (overrides user default)
-    hourly_rate: Mapped[Decimal | None] = mapped_column(
-        Numeric(10, 2), nullable=True
-    )
+    hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
 
     # LF-12: Manual BIK override (None = use WIK-staffel calculation)
-    bik_override: Mapped[Decimal | None] = mapped_column(
-        Numeric(15, 2), nullable=True
-    )
+    bik_override: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
 
     # LF-22: Debtor settings
     payment_term_days: Mapped[int | None] = mapped_column(
@@ -167,7 +157,9 @@ class Case(TenantBase):
         Numeric(15, 2), nullable=True
     )  # Minimumkosten
     provisie_base: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="collected_amount",
+        String(20),
+        nullable=False,
+        default="collected_amount",
         server_default="collected_amount",
     )  # "collected_amount" or "total_claim"
 
@@ -205,12 +197,8 @@ class CaseParty(TenantBase):
 
     __tablename__ = "case_parties"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
-    contact_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("contacts.id"), nullable=False
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
+    contact_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("contacts.id"), nullable=False)
     role: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # deurwaarder, rechtbank, mede-debiteur, advocaat_wederpartij, etc.
@@ -229,12 +217,8 @@ class CaseActivity(TenantBase):
 
     __tablename__ = "case_activities"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=True
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("users.id"), nullable=True)
     activity_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # status_change, note, phone_call, email, document, payment, etc.
@@ -267,9 +251,7 @@ class CaseFile(TenantBase):
         String(20), nullable=True
     )  # inkomend / uitgaand
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    uploaded_by: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False
-    )
+    uploaded_by: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships

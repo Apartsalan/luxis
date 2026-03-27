@@ -276,9 +276,18 @@ ALLOWED_FILE_TYPES = {
 }
 
 ALLOWED_EXTENSIONS = {
-    ".pdf", ".doc", ".docx", ".xls", ".xlsx",
-    ".jpg", ".jpeg", ".png", ".gif",
-    ".txt", ".eml", ".msg",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".txt",
+    ".eml",
+    ".msg",
 }
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB

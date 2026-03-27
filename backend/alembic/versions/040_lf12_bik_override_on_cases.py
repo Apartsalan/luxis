@@ -5,6 +5,7 @@ Revises: 039_lf03_lf19_lf22
 Create Date: 2026-03-16
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op

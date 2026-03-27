@@ -14,20 +14,24 @@ from app.relations.models import Contact
 
 async def _seed_interest_rates(db: AsyncSession) -> None:
     """Seed minimal interest rates needed for payment tests."""
-    db.add(InterestRate(
-        id=uuid.uuid4(),
-        rate_type="statutory",
-        effective_from=date(2024, 1, 1),
-        rate=Decimal("7.00"),
-        source="Test fixture",
-    ))
-    db.add(InterestRate(
-        id=uuid.uuid4(),
-        rate_type="statutory",
-        effective_from=date(2025, 1, 1),
-        rate=Decimal("6.00"),
-        source="Test fixture",
-    ))
+    db.add(
+        InterestRate(
+            id=uuid.uuid4(),
+            rate_type="statutory",
+            effective_from=date(2024, 1, 1),
+            rate=Decimal("7.00"),
+            source="Test fixture",
+        )
+    )
+    db.add(
+        InterestRate(
+            id=uuid.uuid4(),
+            rate_type="statutory",
+            effective_from=date(2025, 1, 1),
+            rate=Decimal("6.00"),
+            source="Test fixture",
+        )
+    )
     await db.commit()
 
 
@@ -76,9 +80,7 @@ async def test_create_arrangement_generates_monthly_installments(
     client: AsyncClient, auth_headers: dict, test_company: Contact
 ):
     """Creating an arrangement should auto-generate installments."""
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     resp = await client.post(
@@ -98,9 +100,7 @@ async def test_create_arrangement_generates_monthly_installments(
     assert Decimal(arr["total_amount"]) == Decimal("3600.00")
 
     # Fetch with installments
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     assert list_resp.status_code == 200
     arrangements = list_resp.json()
     assert len(arrangements) >= 1
@@ -142,9 +142,7 @@ async def test_rounding_difference_on_last_installment(
     )
     assert resp.status_code == 201
 
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     arr = list_resp.json()[0]
     installments = arr["installments"]
     assert len(installments) == 3  # ceil(1000 / 333.34) = 3
@@ -167,9 +165,7 @@ async def test_cannot_create_second_active_arrangement(
     client: AsyncClient, auth_headers: dict, test_company: Contact
 ):
     """Should reject creating a second active arrangement."""
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     payload = {
@@ -201,9 +197,7 @@ async def test_record_installment_payment(
 ):
     """Recording a payment on an installment should update its status."""
     await _seed_interest_rates(db)
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     arr_resp = await client.post(
@@ -220,9 +214,7 @@ async def test_record_installment_payment(
     arr_id = arr_resp.json()["id"]
 
     # Get installments
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     first_inst = list_resp.json()[0]["installments"][0]
     inst_id = first_inst["id"]
 
@@ -243,14 +235,10 @@ async def test_record_installment_payment(
     assert inst_result["payment_id"] is not None
 
     # Check that a Payment was also created
-    payments_resp = await client.get(
-        f"/api/cases/{case_id}/payments", headers=auth_headers
-    )
+    payments_resp = await client.get(f"/api/cases/{case_id}/payments", headers=auth_headers)
     payments = payments_resp.json()
     assert len(payments) >= 1
-    assert any(
-        Decimal(p["amount"]) == Decimal("400.00") for p in payments
-    )
+    assert any(Decimal(p["amount"]) == Decimal("400.00") for p in payments)
 
 
 @pytest.mark.asyncio
@@ -259,9 +247,7 @@ async def test_partial_payment_on_installment(
 ):
     """A payment less than the installment amount should set status partial."""
     await _seed_interest_rates(db)
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     arr_resp = await client.post(
@@ -276,9 +262,7 @@ async def test_partial_payment_on_installment(
     )
     arr_id = arr_resp.json()["id"]
 
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     inst_id = list_resp.json()[0]["installments"][0]["id"]
 
     pay_resp = await client.post(
@@ -302,9 +286,7 @@ async def test_arrangement_auto_completes_when_all_paid(
 ):
     """Arrangement should auto-complete when all installments are paid."""
     await _seed_interest_rates(db)
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     arr_resp = await client.post(
@@ -320,9 +302,7 @@ async def test_arrangement_auto_completes_when_all_paid(
     arr_id = arr_resp.json()["id"]
 
     # Get installments
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     installments = list_resp.json()[0]["installments"]
 
     # Pay both installments
@@ -338,9 +318,7 @@ async def test_arrangement_auto_completes_when_all_paid(
         assert resp.status_code == 200
 
     # Check arrangement is completed
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     assert list_resp.json()[0]["status"] == "completed"
 
 
@@ -348,13 +326,9 @@ async def test_arrangement_auto_completes_when_all_paid(
 
 
 @pytest.mark.asyncio
-async def test_default_arrangement(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_default_arrangement(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Defaulting an arrangement should mark pending installments as missed."""
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     arr_resp = await client.post(
@@ -378,9 +352,7 @@ async def test_default_arrangement(
     assert resp.json()["status"] == "defaulted"
 
     # All installments should be missed
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     for inst in list_resp.json()[0]["installments"]:
         assert inst["status"] == "missed"
 
@@ -389,13 +361,9 @@ async def test_default_arrangement(
 
 
 @pytest.mark.asyncio
-async def test_cancel_arrangement(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_cancel_arrangement(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Cancelling an arrangement should waive all pending installments."""
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     arr_resp = await client.post(
@@ -417,9 +385,7 @@ async def test_cancel_arrangement(
     assert resp.status_code == 200
     assert resp.json()["status"] == "cancelled"
 
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     for inst in list_resp.json()[0]["installments"]:
         assert inst["status"] == "waived"
 
@@ -428,13 +394,9 @@ async def test_cancel_arrangement(
 
 
 @pytest.mark.asyncio
-async def test_waive_installment(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_waive_installment(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Waiving a single installment should set it to waived."""
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     arr_resp = await client.post(
@@ -449,9 +411,7 @@ async def test_waive_installment(
     )
     arr_id = arr_resp.json()["id"]
 
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     inst_id = list_resp.json()[0]["installments"][0]["id"]
 
     resp = await client.patch(
@@ -475,9 +435,7 @@ async def test_mark_overdue_installments(
     """Installments past due_date should be marked overdue by the service."""
     from app.collections.service import mark_overdue_installments
 
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     # Create arrangement with start date in the past
     past_start = date.today() - timedelta(days=60)
@@ -501,9 +459,7 @@ async def test_mark_overdue_installments(
     assert count >= 1
 
     # Verify via API
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     installments = list_resp.json()[0]["installments"]
     overdue_count = sum(1 for i in installments if i["status"] == "overdue")
     assert overdue_count >= 1
@@ -517,9 +473,7 @@ async def test_weekly_frequency_installments(
     client: AsyncClient, auth_headers: dict, test_company: Contact
 ):
     """Weekly frequency should generate installments 7 days apart."""
-    case_id, _ = await _create_case_with_claim(
-        client, auth_headers, str(test_company.id)
-    )
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
 
     start = date.today() + timedelta(days=7)
     resp = await client.post(
@@ -534,9 +488,7 @@ async def test_weekly_frequency_installments(
     )
     assert resp.status_code == 201
 
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/arrangements", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
     installments = list_resp.json()[0]["installments"]
     assert len(installments) == 4
 
@@ -595,8 +547,11 @@ async def test_df11_payment_auto_links_to_first_installment(
         client, auth_headers, str(test_company.id), principal="1200.00"
     )
     arr = await _create_arrangement_for_case(
-        client, auth_headers, case_id,
-        total="1200.00", installment="300.00",
+        client,
+        auth_headers,
+        case_id,
+        total="1200.00",
+        installment="300.00",
     )
     arr_id = arr["id"]
 
@@ -633,8 +588,11 @@ async def test_df11_partial_payment_marks_partial(
         client, auth_headers, str(test_company.id), principal="1200.00"
     )
     arr = await _create_arrangement_for_case(
-        client, auth_headers, case_id,
-        total="1200.00", installment="300.00",
+        client,
+        auth_headers,
+        case_id,
+        total="1200.00",
+        installment="300.00",
     )
     arr_id = arr["id"]
 
@@ -665,8 +623,11 @@ async def test_df11_overpayment_cascades_to_next_installment(
         client, auth_headers, str(test_company.id), principal="1200.00"
     )
     arr = await _create_arrangement_for_case(
-        client, auth_headers, case_id,
-        total="1200.00", installment="300.00",
+        client,
+        auth_headers,
+        case_id,
+        total="1200.00",
+        installment="300.00",
     )
     arr_id = arr["id"]
 
@@ -729,8 +690,11 @@ async def test_df11_full_payment_completes_arrangement(
         client, auth_headers, str(test_company.id), principal="600.00"
     )
     arr = await _create_arrangement_for_case(
-        client, auth_headers, case_id,
-        total="600.00", installment="300.00",
+        client,
+        auth_headers,
+        case_id,
+        total="600.00",
+        installment="300.00",
     )
     arr_id = arr["id"]
 
@@ -767,8 +731,11 @@ async def test_df11_sequential_partial_payments(
         client, auth_headers, str(test_company.id), principal="1200.00"
     )
     arr = await _create_arrangement_for_case(
-        client, auth_headers, case_id,
-        total="1200.00", installment="300.00",
+        client,
+        auth_headers,
+        case_id,
+        total="1200.00",
+        installment="300.00",
     )
     arr_id = arr["id"]
 

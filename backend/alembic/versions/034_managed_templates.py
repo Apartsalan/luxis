@@ -122,18 +122,20 @@ def upgrade() -> None:
                 print(f"WARNING: {fpath} not found, skipping")
                 continue
             file_data = fpath.read_bytes()
-            rows.append({
-                "id": uuid.uuid4(),
-                "tenant_id": tenant_id,
-                "name": name,
-                "description": f"Standaard {name.lower()} sjabloon",
-                "template_key": key,
-                "file_data": file_data,
-                "original_filename": filename,
-                "file_size": len(file_data),
-                "is_builtin": True,
-                "is_active": True,
-            })
+            rows.append(
+                {
+                    "id": uuid.uuid4(),
+                    "tenant_id": tenant_id,
+                    "name": name,
+                    "description": f"Standaard {name.lower()} sjabloon",
+                    "template_key": key,
+                    "file_data": file_data,
+                    "original_filename": filename,
+                    "file_size": len(file_data),
+                    "is_builtin": True,
+                    "is_active": True,
+                }
+            )
 
     if rows:
         op.bulk_insert(managed_table, rows)

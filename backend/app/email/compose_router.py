@@ -129,13 +129,15 @@ async def _resolve_attachments(
             if len(data) > MAX_ATTACHMENT_SIZE:
                 raise BadRequestError(
                     f"Bijlage '{cf.original_filename}' is te groot "
-                    f"({len(data) // (1024*1024)} MB, max 3 MB)"
+                    f"({len(data) // (1024 * 1024)} MB, max 3 MB)"
                 )
-            attachments.append(OutgoingAttachment(
-                filename=cf.original_filename,
-                data=data,
-                content_type=cf.content_type or "application/octet-stream",
-            ))
+            attachments.append(
+                OutgoingAttachment(
+                    filename=cf.original_filename,
+                    data=data,
+                    content_type=cf.content_type or "application/octet-stream",
+                )
+            )
 
     # Inline uploads (base64-encoded)
     if inline_attachments:
@@ -147,13 +149,15 @@ async def _resolve_attachments(
             if len(data) > MAX_ATTACHMENT_SIZE:
                 raise BadRequestError(
                     f"Bijlage '{att.filename}' is te groot "
-                    f"({len(data) // (1024*1024)} MB, max 3 MB)"
+                    f"({len(data) // (1024 * 1024)} MB, max 3 MB)"
                 )
-            attachments.append(OutgoingAttachment(
-                filename=att.filename,
-                data=data,
-                content_type=att.content_type or "application/octet-stream",
-            ))
+            attachments.append(
+                OutgoingAttachment(
+                    filename=att.filename,
+                    data=data,
+                    content_type=att.content_type or "application/octet-stream",
+                )
+            )
 
     if len(attachments) > MAX_ATTACHMENTS:
         raise BadRequestError(f"Maximaal {MAX_ATTACHMENTS} bijlagen toegestaan")
@@ -260,8 +264,11 @@ async def compose_eml_from_case(
 
     # Resolve attachments
     attachments = await _resolve_attachments(
-        db, user.tenant_id, case_id,
-        data.case_file_ids, data.inline_attachments,
+        db,
+        user.tenant_id,
+        case_id,
+        data.case_file_ids,
+        data.inline_attachments,
     )
 
     # Get sender email from connected account (for From header)

@@ -7,13 +7,14 @@ Revision ID: sec13_rls_email_logs
 Revises: sec9b_force_rls
 Create Date: 2026-03-21
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
-revision: str = 'sec13_rls_email_logs'
-down_revision: Union[str, None] = 'sec9b_force_rls'
+revision: str = "sec13_rls_email_logs"
+down_revision: Union[str, None] = "sec9b_force_rls"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

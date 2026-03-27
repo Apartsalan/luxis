@@ -48,9 +48,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"]),
     )
-    op.create_index(
-        "ix_workflow_statuses_tenant_id", "workflow_statuses", ["tenant_id"]
-    )
+    op.create_index("ix_workflow_statuses_tenant_id", "workflow_statuses", ["tenant_id"])
     op.create_index(
         "ix_workflow_statuses_tenant_slug",
         "workflow_statuses",
@@ -65,9 +63,7 @@ def upgrade() -> None:
         sa.Column("tenant_id", sa.Uuid(), nullable=False),
         sa.Column("from_status_id", sa.Uuid(), nullable=False),
         sa.Column("to_status_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "debtor_type", sa.String(10), nullable=False, server_default="both"
-        ),
+        sa.Column("debtor_type", sa.String(10), nullable=False, server_default="both"),
         sa.Column("requires_note", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="true"),
         sa.Column(
@@ -87,9 +83,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["from_status_id"], ["workflow_statuses.id"]),
         sa.ForeignKeyConstraint(["to_status_id"], ["workflow_statuses.id"]),
     )
-    op.create_index(
-        "ix_workflow_transitions_tenant_id", "workflow_transitions", ["tenant_id"]
-    )
+    op.create_index("ix_workflow_transitions_tenant_id", "workflow_transitions", ["tenant_id"])
 
     # ── WorkflowRule (must come before WorkflowTask due to FK) ──────────────
     op.create_table(
@@ -99,9 +93,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("trigger_status_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "debtor_type", sa.String(10), nullable=False, server_default="both"
-        ),
+        sa.Column("debtor_type", sa.String(10), nullable=False, server_default="both"),
         sa.Column("days_delay", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("action_type", sa.String(50), nullable=False),
         sa.Column("action_config", JSONB(), nullable=True),
@@ -144,9 +136,7 @@ def upgrade() -> None:
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("due_date", sa.Date(), nullable=False),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column(
-            "status", sa.String(20), nullable=False, server_default="pending"
-        ),
+        sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
         sa.Column("auto_execute", sa.Boolean(), nullable=False, server_default="false"),
         sa.Column("action_config", JSONB(), nullable=True),
         sa.Column("created_by_rule_id", sa.Uuid(), nullable=True),
@@ -171,9 +161,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_workflow_tasks_tenant_id", "workflow_tasks", ["tenant_id"])
     op.create_index("ix_workflow_tasks_case_id", "workflow_tasks", ["case_id"])
-    op.create_index(
-        "ix_workflow_tasks_status_due", "workflow_tasks", ["status", "due_date"]
-    )
+    op.create_index("ix_workflow_tasks_status_due", "workflow_tasks", ["status", "due_date"])
 
     # ── Seed default statuses + transitions for ALL existing tenants ────────
     _seed_workflow_data()
@@ -325,7 +313,14 @@ def _seed_for_tenant(conn, tenant_id: str) -> None:
         # (trigger_slug, delay_days, action_type, name, debtor_type, action_config)
         ("nieuw", 0, "manual_review", "Beoordeel nieuwe zaak", "both", None),
         ("herinnering", 14, "check_payment", "Check betaling na herinnering", "both", None),
-        ("aanmaning", 14, "send_letter", "Stuur 14-dagenbrief", "b2c", {"template_type": "14_dagenbrief"}),
+        (
+            "aanmaning",
+            14,
+            "send_letter",
+            "Stuur 14-dagenbrief",
+            "b2c",
+            {"template_type": "14_dagenbrief"},
+        ),
         ("aanmaning", 14, "send_letter", "Stuur sommatie", "b2b", {"template_type": "sommatie"}),
         ("14_dagenbrief", 15, "check_payment", "Check betaling na 14-dagenbrief", "b2c", None),
         ("sommatie", 14, "check_payment", "Check betaling na sommatie", "both", None),
@@ -375,11 +370,7 @@ def _seed_for_tenant(conn, tenant_id: str) -> None:
 def downgrade() -> None:
     # Restore 'afgesloten' for cases that were mapped to 'oninbaar'
     conn = op.get_bind()
-    conn.execute(
-        sa.text(
-            "UPDATE cases SET status = 'afgesloten' WHERE status = 'oninbaar'"
-        )
-    )
+    conn.execute(sa.text("UPDATE cases SET status = 'afgesloten' WHERE status = 'oninbaar'"))
 
     op.drop_table("workflow_tasks")
     op.drop_table("workflow_rules")

@@ -92,12 +92,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"]),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"]),
-        sa.ForeignKeyConstraint(
-            ["template_id"], ["document_templates.id"]
-        ),
-        sa.ForeignKeyConstraint(
-            ["generated_by_id"], ["users.id"]
-        ),
+        sa.ForeignKeyConstraint(["template_id"], ["document_templates.id"]),
+        sa.ForeignKeyConstraint(["generated_by_id"], ["users.id"]),
     )
     op.create_index(
         "ix_generated_documents_tenant_id",

@@ -30,9 +30,7 @@ async def get_recent_activity(
     user: User = Depends(get_current_user),
 ):
     """Get the most recent activities across all cases."""
-    return await service.get_recent_activity(
-        db, user.tenant_id, limit
-    )
+    return await service.get_recent_activity(db, user.tenant_id, limit)
 
 
 @router.get("/my-tasks", response_model=list[WorkflowTaskResponse])
@@ -41,9 +39,7 @@ async def get_my_tasks(
     user: User = Depends(get_current_user),
 ):
     """Get open tasks assigned to the current user (due + overdue first)."""
-    tasks = await wf_list_tasks(
-        db, user.tenant_id, assigned_to_id=user.id
-    )
+    tasks = await wf_list_tasks(db, user.tenant_id, assigned_to_id=user.id)
     # Filter to non-completed tasks and sort: overdue first, then due, then pending
     status_order = {"overdue": 0, "due": 1, "pending": 2}
     open_tasks = [t for t in tasks if t.status in ("pending", "due", "overdue")]

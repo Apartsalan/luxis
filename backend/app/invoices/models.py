@@ -52,18 +52,12 @@ class Invoice(TenantBase):
     __tablename__ = "invoices"
 
     # Auto-generated: F2026-00001 for invoices, CN2026-00001 for credit notes
-    invoice_number: Mapped[str] = mapped_column(
-        String(20), nullable=False, unique=True
-    )
+    invoice_number: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
 
     # Type: "invoice" (default) or "credit_note"
-    invoice_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="invoice"
-    )
+    invoice_type: Mapped[str] = mapped_column(String(20), nullable=False, default="invoice")
 
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="concept"
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="concept")
 
     # Link to original invoice (for credit notes only)
     linked_invoice_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -84,23 +78,17 @@ class Invoice(TenantBase):
     paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Financials (calculated from lines)
-    subtotal: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False, default=Decimal("0")
-    )
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0"))
     btw_percentage: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), nullable=False, default=Decimal("21.00")
     )
     btw_amount: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), nullable=False, default=Decimal("0")
     )
-    total: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False, default=Decimal("0")
-    )
+    total: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False, default=Decimal("0"))
 
     # DF-13: Settlement type for voorschotnota — "tussentijds" or "bij_sluiting"
-    settlement_type: Mapped[str | None] = mapped_column(
-        String(20), nullable=True
-    )
+    settlement_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Reference / notes
     reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -156,15 +144,9 @@ class InvoiceLine(TenantBase):
 
     description: Mapped[str] = mapped_column(Text, nullable=False)
 
-    quantity: Mapped[Decimal] = mapped_column(
-        Numeric(10, 2), nullable=False, default=Decimal("1")
-    )
-    unit_price: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
-    line_total: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
+    quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    line_total: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
 
     # DF2-03: Per-line VAT rate
     btw_percentage: Mapped[Decimal] = mapped_column(
@@ -180,9 +162,7 @@ class InvoiceLine(TenantBase):
     )
 
     # Relationships
-    invoice: Mapped["Invoice"] = relationship(
-        "Invoice", back_populates="lines"
-    )
+    invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="lines")
     time_entry: Mapped["TimeEntry | None"] = relationship(  # noqa: F821
         "TimeEntry", lazy="selectin"
     )
@@ -205,9 +185,7 @@ class InvoicePayment(TenantBase):
         Uuid, ForeignKey("invoices.id"), nullable=False, index=True
     )
 
-    amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
 
     payment_date: Mapped[date] = mapped_column(Date, nullable=False)
 
@@ -215,22 +193,14 @@ class InvoicePayment(TenantBase):
         String(30), nullable=False
     )  # bank, ideal, cash, verrekening
 
-    reference: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
+    reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    description: Mapped[str | None] = mapped_column(
-        Text, nullable=True
-    )
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False
-    )
+    created_by: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
 
     # Relationships
-    invoice: Mapped["Invoice"] = relationship(
-        "Invoice", back_populates="payments"
-    )
+    invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="payments")
     creator: Mapped["User"] = relationship(  # noqa: F821
         "User", foreign_keys=[created_by], lazy="selectin"
     )

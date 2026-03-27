@@ -204,7 +204,8 @@ async def conflict_check(
     """
     search_term = f"%{search_query}%"
     result = await db.execute(
-        select(Contact).where(
+        select(Contact)
+        .where(
             Contact.tenant_id == tenant_id,
             Contact.is_active.is_(True),
             or_(
@@ -214,6 +215,7 @@ async def conflict_check(
                 Contact.first_name.ilike(search_term),
                 Contact.last_name.ilike(search_term),
             ),
-        ).order_by(Contact.name)
+        )
+        .order_by(Contact.name)
     )
     return list(result.scalars().all())

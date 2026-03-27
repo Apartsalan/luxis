@@ -110,11 +110,7 @@ async def scan_for_followups(
 
         # Check if case is ready for action (orange or red)
         min_d = step.min_wait_days
-        max_d = (
-            step.max_wait_days
-            if step.max_wait_days > 0
-            else (min_d * 2 if min_d > 0 else 0)
-        )
+        max_d = step.max_wait_days if step.max_wait_days > 0 else (min_d * 2 if min_d > 0 else 0)
 
         if days_in_step < min_d:
             continue  # Still green — not ready
@@ -146,9 +142,7 @@ async def scan_for_followups(
                 f"Geen briefsjabloon beschikbaar — handmatige beoordeling nodig."
             )
 
-        outstanding = Decimal(str(case.total_principal)) - Decimal(
-            str(case.total_paid)
-        )
+        outstanding = Decimal(str(case.total_principal)) - Decimal(str(case.total_paid))
         outstanding = outstanding.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         rec = FollowupRecommendation(
@@ -167,9 +161,7 @@ async def scan_for_followups(
 
     if created:
         await db.flush()
-        logger.info(
-            "Follow-up scan for tenant: %d nieuwe aanbevelingen aangemaakt", created
-        )
+        logger.info("Follow-up scan for tenant: %d nieuwe aanbevelingen aangemaakt", created)
 
     return created
 
@@ -185,9 +177,7 @@ def _rec_to_response(rec: FollowupRecommendation) -> FollowupRecommendationOut:
         case_number=rec.case.case_number if rec.case else "?",
         client_name=rec.case.client.name if rec.case and rec.case.client else None,
         opposing_party_name=(
-            rec.case.opposing_party.name
-            if rec.case and rec.case.opposing_party
-            else None
+            rec.case.opposing_party.name if rec.case and rec.case.opposing_party else None
         ),
         incasso_step_id=rec.incasso_step_id,
         step_name=rec.incasso_step.name if rec.incasso_step else "?",
@@ -232,15 +222,11 @@ async def list_recommendations(
 
     if status_filter:
         query = query.where(FollowupRecommendation.status == status_filter)
-        count_query = count_query.where(
-            FollowupRecommendation.status == status_filter
-        )
+        count_query = count_query.where(FollowupRecommendation.status == status_filter)
 
     if case_id:
         query = query.where(FollowupRecommendation.case_id == case_id)
-        count_query = count_query.where(
-            FollowupRecommendation.case_id == case_id
-        )
+        count_query = count_query.where(FollowupRecommendation.case_id == case_id)
 
     # Order: pending first (by urgency desc, created_at asc), then by created_at desc
     query = query.order_by(
@@ -384,9 +370,7 @@ async def execute_recommendation(
         return None
 
     # Load case with relationships
-    case_result = await db.execute(
-        select(Case).where(Case.id == rec.case_id)
-    )
+    case_result = await db.execute(select(Case).where(Case.id == rec.case_id))
     case = case_result.scalar_one_or_none()
     if not case:
         rec.status = RecommendationStatus.EXECUTED
@@ -397,9 +381,7 @@ async def execute_recommendation(
 
     # Load the step
     step_result = await db.execute(
-        select(IncassoPipelineStep).where(
-            IncassoPipelineStep.id == rec.incasso_step_id
-        )
+        select(IncassoPipelineStep).where(IncassoPipelineStep.id == rec.incasso_step_id)
     )
     step = step_result.scalar_one_or_none()
 
@@ -471,9 +453,7 @@ async def execute_recommendation(
                     )
 
                     if email_log.status == "sent":
-                        execution_parts.append(
-                            f"Email verstuurd naar {case.opposing_party.email}"
-                        )
+                        execution_parts.append(f"Email verstuurd naar {case.opposing_party.email}")
                     else:
                         execution_parts.append("Email verzending mislukt")
                 except Exception as e:
@@ -483,9 +463,7 @@ async def execute_recommendation(
                 execution_parts.append("Geen email verstuurd (geen emailadres wederpartij)")
 
             # Auto-complete pipeline tasks for this step
-            completed = await _auto_complete_tasks(
-                db, tenant_id, case.id, step_id=step.id
-            )
+            completed = await _auto_complete_tasks(db, tenant_id, case.id, step_id=step.id)
             if completed:
                 execution_parts.append(f"{completed} taak/taken afgerond")
 
@@ -510,9 +488,7 @@ async def execute_recommendation(
             db.add(activity)
 
         except Exception as e:
-            logger.error(
-                "Follow-up execution failed for %s: %s", case.case_number, e
-            )
+            logger.error("Follow-up execution failed for %s: %s", case.case_number, e)
             execution_parts.append(f"Fout: {e}")
 
     elif rec.recommended_action == RecommendedAction.ESCALATE:

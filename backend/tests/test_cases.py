@@ -118,9 +118,7 @@ async def test_list_cases_filter_by_type(
 
 
 @pytest.mark.asyncio
-async def test_get_case_detail(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_get_case_detail(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Getting a case by ID should return full detail."""
     # Create case
     payload = {
@@ -156,9 +154,7 @@ async def test_get_case_not_found(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
-async def test_update_case(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_update_case(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Updating case details should work."""
     # Create case
     payload = {
@@ -174,9 +170,7 @@ async def test_update_case(
         "description": "Bijgewerkte beschrijving",
         "reference": "KL-REF-001",
     }
-    response = await client.put(
-        f"/api/cases/{case_id}", json=update_payload, headers=auth_headers
-    )
+    response = await client.put(f"/api/cases/{case_id}", json=update_payload, headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["description"] == "Bijgewerkte beschrijving"
@@ -318,9 +312,7 @@ async def test_remove_case_party(
     party_id = party_response.json()["id"]
 
     # Remove party
-    response = await client.delete(
-        f"/api/cases/{case_id}/parties/{party_id}", headers=auth_headers
-    )
+    response = await client.delete(f"/api/cases/{case_id}/parties/{party_id}", headers=auth_headers)
     assert response.status_code == 204
 
 
@@ -328,9 +320,7 @@ async def test_remove_case_party(
 
 
 @pytest.mark.asyncio
-async def test_add_activity(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_add_activity(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Adding an activity to a case should work."""
     # Create case
     payload = {
@@ -357,9 +347,7 @@ async def test_add_activity(
 
 
 @pytest.mark.asyncio
-async def test_list_activities(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_list_activities(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Listing activities should include creation activity and custom activities."""
     # Create case
     payload = {
@@ -378,9 +366,7 @@ async def test_list_activities(
     )
 
     # List activities
-    response = await client.get(
-        f"/api/cases/{case_id}/activities", headers=auth_headers
-    )
+    response = await client.get(f"/api/cases/{case_id}/activities", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] >= 2  # Creation + note
@@ -390,9 +376,7 @@ async def test_list_activities(
 
 
 @pytest.mark.asyncio
-async def test_delete_case(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_delete_case(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Soft-deleting a case should remove it from active list."""
     # Create case
     payload = {

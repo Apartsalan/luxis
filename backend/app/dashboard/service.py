@@ -54,27 +54,25 @@ async def get_dashboard_summary(
 
     # Cases by status
     result = await db.execute(
-        select(Case.status, func.count(Case.id)).where(
+        select(Case.status, func.count(Case.id))
+        .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-        ).group_by(Case.status)
+        )
+        .group_by(Case.status)
     )
-    cases_by_status = [
-        {"status": row[0], "count": row[1]}
-        for row in result.all()
-    ]
+    cases_by_status = [{"status": row[0], "count": row[1]} for row in result.all()]
 
     # Cases by type
     result = await db.execute(
-        select(Case.case_type, func.count(Case.id)).where(
+        select(Case.case_type, func.count(Case.id))
+        .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-        ).group_by(Case.case_type)
+        )
+        .group_by(Case.case_type)
     )
-    cases_by_type = [
-        {"case_type": row[0], "count": row[1]}
-        for row in result.all()
-    ]
+    cases_by_type = [{"case_type": row[0], "count": row[1]} for row in result.all()]
 
     # Cases opened this month
     today = date.today()
@@ -157,9 +155,7 @@ async def get_recent_activity(
     items = []
     for activity in activities:
         # Fetch the case for case_number
-        case_result = await db.execute(
-            select(Case).where(Case.id == activity.case_id)
-        )
+        case_result = await db.execute(select(Case).where(Case.id == activity.case_id))
         case = case_result.scalar_one_or_none()
 
         # Get user name if available
@@ -167,16 +163,18 @@ async def get_recent_activity(
         if activity.user:
             user_name = activity.user.full_name
 
-        items.append({
-            "id": activity.id,
-            "case_id": activity.case_id,
-            "case_number": case.case_number if case else "?",
-            "activity_type": activity.activity_type,
-            "title": activity.title,
-            "description": activity.description,
-            "user_name": user_name,
-            "created_at": activity.created_at,
-        })
+        items.append(
+            {
+                "id": activity.id,
+                "case_id": activity.case_id,
+                "case_number": case.case_number if case else "?",
+                "activity_type": activity.activity_type,
+                "title": activity.title,
+                "description": activity.description,
+                "user_name": user_name,
+                "created_at": activity.created_at,
+            }
+        )
 
     return {
         "items": items,

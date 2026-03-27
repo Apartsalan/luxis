@@ -62,9 +62,7 @@ async def list_templates(
     user: User = Depends(get_current_user),
 ):
     """DEPRECATED: List HTML document templates. Use /docx/templates instead."""
-    return await service.list_templates(
-        db, user.tenant_id, template_type
-    )
+    return await service.list_templates(db, user.tenant_id, template_type)
 
 
 @router.post(
@@ -93,9 +91,7 @@ async def get_template(
     user: User = Depends(get_current_user),
 ):
     """DEPRECATED: Get HTML template by ID. Use /docx/templates instead."""
-    return await service.get_template(
-        db, user.tenant_id, template_id
-    )
+    return await service.get_template(db, user.tenant_id, template_id)
 
 
 @router.put(
@@ -110,9 +106,7 @@ async def update_template(
     user: User = Depends(get_current_user),
 ):
     """DEPRECATED: Update HTML template. Use .docx templates instead."""
-    return await service.update_template(
-        db, user.tenant_id, template_id, data
-    )
+    return await service.update_template(db, user.tenant_id, template_id, data)
 
 
 @router.delete("/templates/{template_id}", status_code=204, deprecated=True)
@@ -138,9 +132,7 @@ async def list_case_documents(
     user: User = Depends(get_current_user),
 ):
     """List all generated documents for a case."""
-    return await service.list_generated_documents(
-        db, user.tenant_id, case_id
-    )
+    return await service.list_generated_documents(db, user.tenant_id, case_id)
 
 
 @router.post(
@@ -156,9 +148,7 @@ async def generate_document(
     user: User = Depends(get_current_user),
 ):
     """DEPRECATED: Generate HTML document. Use /docx/cases/{case_id}/generate instead."""
-    return await service.generate_document(
-        db, user.tenant_id, case_id, user.id, data
-    )
+    return await service.generate_document(db, user.tenant_id, case_id, user.id, data)
 
 
 @router.get(
@@ -171,9 +161,7 @@ async def get_document(
     user: User = Depends(get_current_user),
 ):
     """Get a generated document by ID."""
-    return await service.get_generated_document(
-        db, user.tenant_id, document_id
-    )
+    return await service.get_generated_document(db, user.tenant_id, document_id)
 
 
 @router.delete("/{document_id}", status_code=204)
@@ -183,9 +171,7 @@ async def delete_document(
     user: User = Depends(get_current_user),
 ):
     """Delete a generated document."""
-    await service.delete_generated_document(
-        db, user.tenant_id, document_id
-    )
+    await service.delete_generated_document(db, user.tenant_id, document_id)
 
 
 # ── Merge Fields Endpoint ──────────────────────────────────────────────────
@@ -207,10 +193,7 @@ async def list_merge_fields(
         {
             "category": cat_key,
             "label": cat_data["label"],
-            "fields": [
-                {"key": key, "label": label}
-                for key, label in cat_data["fields"]
-            ],
+            "fields": [{"key": key, "label": label} for key, label in cat_data["fields"]],
         }
         for cat_key, cat_data in definitions.items()
     ]
@@ -290,14 +273,10 @@ async def preview_document(
     Re-renders the DOCX template with current case data and converts to PDF.
     Returns PDF bytes with Content-Disposition: inline for browser preview.
     """
-    doc = await service.get_generated_document(
-        db, user.tenant_id, document_id
-    )
+    doc = await service.get_generated_document(db, user.tenant_id, document_id)
 
     if not doc.template_type:
-        raise BadRequestError(
-            "Document heeft geen sjabloontype — preview niet mogelijk"
-        )
+        raise BadRequestError("Document heeft geen sjabloontype — preview niet mogelijk")
 
     # Load the case
     result = await db.execute(
@@ -311,9 +290,7 @@ async def preview_document(
         raise NotFoundError("Zaak niet gevonden")
 
     # Re-render and convert to PDF
-    docx_bytes, filename, _, _ = await render_docx(
-        db, user.tenant_id, case, doc.template_type
-    )
+    docx_bytes, filename, _, _ = await render_docx(db, user.tenant_id, case, doc.template_type)
     pdf_bytes = await docx_to_pdf(docx_bytes)
     pdf_filename = filename.replace(".docx", ".pdf")
 
@@ -345,9 +322,7 @@ async def send_document(
     from app.documents.docx_service import _load_tenant, _tenant_ctx
 
     # Load the generated document
-    doc = await service.get_generated_document(
-        db, user.tenant_id, document_id
-    )
+    doc = await service.get_generated_document(db, user.tenant_id, document_id)
 
     if not doc.template_type:
         raise BadRequestError(
@@ -366,9 +341,7 @@ async def send_document(
         raise NotFoundError("Zaak niet gevonden")
 
     # Re-render the DOCX with current case data
-    docx_bytes, filename, _, _ = await render_docx(
-        db, user.tenant_id, case, doc.template_type
-    )
+    docx_bytes, filename, _, _ = await render_docx(db, user.tenant_id, case, doc.template_type)
 
     # Convert to PDF
     pdf_bytes = await docx_to_pdf(docx_bytes)
@@ -384,6 +357,7 @@ async def send_document(
         if data.custom_body:
             # Wrap custom body text in base HTML layout (escape + convert newlines)
             import html as _html
+
             body_html = _html.escape(data.custom_body).replace("\n", "<br>")
             html_body = _render_base(kantoor, body_html)
         else:
@@ -432,9 +406,7 @@ async def send_document(
     await db.refresh(email_log)
 
     if email_log.status == "failed":
-        raise BadRequestError(
-            f"E-mail verzenden mislukt: {email_log.error_message}"
-        )
+        raise BadRequestError(f"E-mail verzenden mislukt: {email_log.error_message}")
 
     return SendDocumentResponse(
         email_log_id=email_log.id,

@@ -48,9 +48,7 @@ async def daily_verjaring_check() -> None:
     try:
         async with async_session() as session:
             # Get all active tenants
-            result = await session.execute(
-                select(Tenant).where(Tenant.is_active.is_(True))
-            )
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
             tenants = list(result.scalars().all())
 
             total_warnings = 0
@@ -60,7 +58,8 @@ async def daily_verjaring_check() -> None:
                     for w in warnings:
                         level = "CRITICAL" if w["is_expired"] else "WARNING"
                         days_info = (
-                            "VERJAARD" if w["is_expired"]
+                            "VERJAARD"
+                            if w["is_expired"]
                             else f"{w['days_remaining']} dagen resterend"
                         )
                         logger.warning(
@@ -71,8 +70,7 @@ async def daily_verjaring_check() -> None:
 
             await session.commit()
             logger.info(
-                "Scheduler: verjaring check complete"
-                " — %d warnings across %d tenants",
+                "Scheduler: verjaring check complete — %d warnings across %d tenants",
                 total_warnings,
                 len(tenants),
             )
@@ -124,9 +122,7 @@ async def email_auto_sync() -> None:
                             f"{stats['new']} nieuw, {stats['linked']} gekoppeld"
                         )
                 except Exception as e:
-                    logger.error(
-                        f"Scheduler: email sync mislukt voor {account.email_address}: {e}"
-                    )
+                    logger.error(f"Scheduler: email sync mislukt voor {account.email_address}: {e}")
 
             await session.commit()
             logger.info(
@@ -149,9 +145,7 @@ async def ai_intake_detection() -> None:
     logger.info("Scheduler: starting AI intake detection")
     try:
         async with async_session() as session:
-            result = await session.execute(
-                select(Tenant).where(Tenant.is_active.is_(True))
-            )
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
             tenants = list(result.scalars().all())
 
             total_detected = 0
@@ -192,9 +186,7 @@ async def ai_email_classification() -> None:
     logger.info("Scheduler: starting AI email classification")
     try:
         async with async_session() as session:
-            result = await session.execute(
-                select(Tenant).where(Tenant.is_active.is_(True))
-            )
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
             tenants = list(result.scalars().all())
 
             total_classified = 0
@@ -232,9 +224,7 @@ async def followup_scan() -> None:
     logger.info("Scheduler: starting follow-up scan")
     try:
         async with async_session() as session:
-            result = await session.execute(
-                select(Tenant).where(Tenant.is_active.is_(True))
-            )
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
             tenants = list(result.scalars().all())
 
             total_created = 0
@@ -356,15 +346,9 @@ def start_scheduler() -> None:
 
     scheduler.start()
     ai_status = (
-        "AI classification every 6 min"
-        if ai_enabled
-        else "AI classification OFF (no API key)"
+        "AI classification every 6 min" if ai_enabled else "AI classification OFF (no API key)"
     )
-    intake_status = (
-        "intake detection every 7 min"
-        if intake_enabled
-        else "intake OFF (no AI key)"
-    )
+    intake_status = "intake detection every 7 min" if intake_enabled else "intake OFF (no AI key)"
     logger.info(
         "Scheduler started: daily jobs at 06:00/06:15 UTC, email sync every 5 min, %s, %s",
         ai_status,

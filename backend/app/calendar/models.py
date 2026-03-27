@@ -11,22 +11,22 @@ from app.shared.models import TenantBase
 
 EVENT_TYPES = (
     "appointment",  # Afspraak
-    "hearing",      # Zitting
-    "deadline",     # Deadline
-    "reminder",     # Herinnering
-    "meeting",      # Vergadering
-    "call",         # Telefoongesprek
-    "other",        # Overig
+    "hearing",  # Zitting
+    "deadline",  # Deadline
+    "reminder",  # Herinnering
+    "meeting",  # Vergadering
+    "call",  # Telefoongesprek
+    "other",  # Overig
 )
 
 EVENT_TYPE_COLORS = {
     "appointment": "#3b82f6",  # blue
-    "hearing": "#ef4444",      # red
-    "deadline": "#f97316",     # orange
-    "reminder": "#eab308",     # yellow
-    "meeting": "#8b5cf6",      # purple
-    "call": "#22c55e",         # green
-    "other": "#6b7280",        # gray
+    "hearing": "#ef4444",  # red
+    "deadline": "#f97316",  # orange
+    "reminder": "#eab308",  # yellow
+    "meeting": "#8b5cf6",  # purple
+    "call": "#22c55e",  # green
+    "other": "#6b7280",  # gray
 }
 
 
@@ -37,16 +37,10 @@ class CalendarEvent(TenantBase):
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    event_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="appointment"
-    )
+    event_type: Mapped[str] = mapped_column(String(30), nullable=False, default="appointment")
 
-    start_time: Mapped[str] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    end_time: Mapped[str] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    start_time: Mapped[str] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_time: Mapped[str] = mapped_column(DateTime(timezone=True), nullable=False)
     all_day: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     location: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -59,13 +53,9 @@ class CalendarEvent(TenantBase):
     )
 
     color: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    reminder_minutes: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=30
-    )
+    reminder_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True, default=30)
 
-    created_by: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False
-    )
+    created_by: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
 
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

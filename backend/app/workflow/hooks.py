@@ -44,24 +44,18 @@ async def _auto_execute_send_email(
     config = task.action_config or {}
     template_type = config.get("template_type")
     if not template_type:
-        logger.warning(
-            f"send_email task {task.id}: geen template_type in action_config"
-        )
+        logger.warning(f"send_email task {task.id}: geen template_type in action_config")
         return
 
     if not smtp_is_configured():
-        logger.warning(
-            f"send_email task {task.id}: SMTP niet geconfigureerd, taak overgeslagen"
-        )
+        logger.warning(f"send_email task {task.id}: SMTP niet geconfigureerd, taak overgeslagen")
         return
 
     # Determine recipient
     recipient_field = config.get("recipient_field", "wederpartij")
     contact = case.opposing_party if recipient_field == "wederpartij" else case.client
     if not contact or not contact.email:
-        logger.warning(
-            f"send_email task {task.id}: geen e-mailadres voor {recipient_field}"
-        )
+        logger.warning(f"send_email task {task.id}: geen e-mailadres voor {recipient_field}")
         return
 
     # Render DOCX
@@ -148,9 +142,7 @@ async def on_status_change(
     """
     from app.workflow.service import evaluate_rules_for_transition
 
-    created_tasks = await evaluate_rules_for_transition(
-        db, tenant_id, case, new_status
-    )
+    created_tasks = await evaluate_rules_for_transition(db, tenant_id, case, new_status)
 
     # Log each auto-created task in the audit trail
     for task in created_tasks:
@@ -181,9 +173,7 @@ async def on_status_change(
             try:
                 await _auto_execute_send_email(db, tenant_id, case, task)
             except Exception:
-                logger.exception(
-                    f"Auto-execute send_email failed for task {task.id}"
-                )
+                logger.exception(f"Auto-execute send_email failed for task {task.id}")
 
     return created_tasks
 
@@ -203,9 +193,7 @@ async def on_payment_received(
     from app.collections.service import get_financial_summary
 
     # Get the case
-    result = await db.execute(
-        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
-    )
+    result = await db.execute(select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id))
     case = result.scalar_one_or_none()
     if case is None:
         return None
@@ -299,9 +287,7 @@ async def on_payment_received(
         )
 
         # Also evaluate rules for the betaald status
-        await on_status_change(
-            db, tenant_id, case, old_status, "betaald"
-        )
+        await on_status_change(db, tenant_id, case, old_status, "betaald")
 
         await db.refresh(case)
         return case
@@ -320,9 +306,7 @@ async def on_derdengelden_deposit(
 
     Logs the deposit in the case audit trail.
     """
-    result = await db.execute(
-        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
-    )
+    result = await db.execute(select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id))
     case = result.scalar_one_or_none()
     if case is None:
         return

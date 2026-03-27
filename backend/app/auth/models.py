@@ -52,13 +52,9 @@ class User(Base, TimestampMixin):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     # Roles: admin, advocaat, medewerker
-    role: Mapped[str] = mapped_column(
-        String(50), default="medewerker"
-    )
+    role: Mapped[str] = mapped_column(String(50), default="medewerker")
     is_active: Mapped[bool] = mapped_column(default=True)
-    default_hourly_rate: Mapped[Decimal | None] = mapped_column(
-        Numeric(10, 2), nullable=True
-    )
+    default_hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     password_reset_token: Mapped[str | None] = mapped_column(
         String(255), unique=True, nullable=True, default=None
     )
@@ -91,13 +87,9 @@ class RefreshToken(Base, TimestampMixin):
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=False, index=True
     )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("tenants.id"), nullable=False
-    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("tenants.id"), nullable=False)
     token_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True, index=True
     )  # SHA-256 hex digest of the JWT
     is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

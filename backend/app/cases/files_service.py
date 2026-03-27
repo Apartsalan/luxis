@@ -62,8 +62,8 @@ async def upload_case_file(
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise ValueError(
-            f"Bestand is te groot ({len(content) // (1024*1024)} MB). "
-            f"Maximum: {MAX_FILE_SIZE // (1024*1024)} MB."
+            f"Bestand is te groot ({len(content) // (1024 * 1024)} MB). "
+            f"Maximum: {MAX_FILE_SIZE // (1024 * 1024)} MB."
         )
 
     # Generate unique stored filename
@@ -91,9 +91,7 @@ async def upload_case_file(
 
     # Re-query with eager load so uploader is available for serialisation (CQ-18)
     result = await db.execute(
-        select(CaseFile)
-        .where(CaseFile.id == case_file.id)
-        .options(selectinload(CaseFile.uploader))
+        select(CaseFile).where(CaseFile.id == case_file.id).options(selectinload(CaseFile.uploader))
     )
     return result.scalar_one()
 
@@ -140,10 +138,7 @@ async def get_case_file(
 def get_file_path(case_file: CaseFile) -> Path:
     """Get the full filesystem path for a CaseFile."""
     return (
-        UPLOADS_BASE
-        / str(case_file.tenant_id)
-        / str(case_file.case_id)
-        / case_file.stored_filename
+        UPLOADS_BASE / str(case_file.tenant_id) / str(case_file.case_id) / case_file.stored_filename
     )
 
 

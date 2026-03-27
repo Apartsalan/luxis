@@ -136,18 +136,18 @@ def calculate_simple_interest(
 
     for seg_start, seg_end, rate in schedule:
         days = (seg_end - seg_start).days
-        interest = _round2(
-            principal * (rate / Decimal("100")) * Decimal(days) / DAYS_IN_YEAR
-        )
+        interest = _round2(principal * (rate / Decimal("100")) * Decimal(days) / DAYS_IN_YEAR)
         total_interest += interest
-        periods.append({
-            "start_date": seg_start,
-            "end_date": seg_end,
-            "days": days,
-            "rate": rate,
-            "principal": principal,
-            "interest": interest,
-        })
+        periods.append(
+            {
+                "start_date": seg_start,
+                "end_date": seg_end,
+                "days": days,
+                "rate": rate,
+                "principal": principal,
+                "interest": interest,
+            }
+        )
 
     return _round2(total_interest), periods
 
@@ -195,20 +195,19 @@ def calculate_compound_interest(
         for seg_start, seg_end, rate in schedule:
             days = (seg_end - seg_start).days
             interest = _round2(
-                current_principal
-                * (rate / Decimal("100"))
-                * Decimal(days)
-                / DAYS_IN_YEAR
+                current_principal * (rate / Decimal("100")) * Decimal(days) / DAYS_IN_YEAR
             )
             year_interest += interest
-            all_periods.append({
-                "start_date": seg_start,
-                "end_date": seg_end,
-                "days": days,
-                "rate": rate,
-                "principal": current_principal,
-                "interest": interest,
-            })
+            all_periods.append(
+                {
+                    "start_date": seg_start,
+                    "end_date": seg_end,
+                    "days": days,
+                    "rate": rate,
+                    "principal": current_principal,
+                    "interest": interest,
+                }
+            )
 
         total_interest += year_interest
 
@@ -293,8 +292,7 @@ async def calculate_case_interest(
 
     if not rate_history:
         raise ValueError(
-            f"Geen rentetarieven gevonden voor type '{interest_type}'. "
-            "Voer eerst de seed-data uit."
+            f"Geen rentetarieven gevonden voor type '{interest_type}'. Voer eerst de seed-data uit."
         )
 
     # Determine calculation function
@@ -321,21 +319,21 @@ async def calculate_case_interest(
         else:
             claim_rate_history = rate_history
 
-        interest, periods = calc_fn(
-            principal, default_dt, calc_date, claim_rate_history
-        )
+        interest, periods = calc_fn(principal, default_dt, calc_date, claim_rate_history)
 
         total_principal += principal
         total_interest += interest
 
-        claim_results.append({
-            "claim_id": claim["id"],
-            "description": claim["description"],
-            "principal_amount": principal,
-            "default_date": default_dt,
-            "total_interest": interest,
-            "periods": periods,
-        })
+        claim_results.append(
+            {
+                "claim_id": claim["id"],
+                "description": claim["description"],
+                "principal_amount": principal,
+                "default_date": default_dt,
+                "total_interest": interest,
+                "periods": periods,
+            }
+        )
 
     return {
         "case_id": case_id,

@@ -45,9 +45,7 @@ async def handle_document_list(
     case_id: str,
 ) -> dict:
     """List all generated documents for a case."""
-    docs = await documents_service.list_generated_documents(
-        db, tenant_id, uuid.UUID(case_id)
-    )
+    docs = await documents_service.list_generated_documents(db, tenant_id, uuid.UUID(case_id))
     return {
         "items": [
             {
@@ -71,9 +69,7 @@ async def handle_template_list(
     template_type: str | None = None,
 ) -> dict:
     """List available document templates."""
-    templates = await documents_service.list_templates(
-        db, tenant_id, template_type=template_type
-    )
+    templates = await documents_service.list_templates(db, tenant_id, template_type=template_type)
     return {
         "items": [
             {

@@ -32,17 +32,13 @@ class Claim(TenantBase):
 
     __tablename__ = "claims"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
 
     description: Mapped[str] = mapped_column(
         String(500), nullable=False
     )  # e.g. "Factuur 2026-001 dd. 15-01-2026"
 
-    principal_amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )  # Hoofdsom
+    principal_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)  # Hoofdsom
 
     default_date: Mapped[date] = mapped_column(
         Date, nullable=False
@@ -52,9 +48,7 @@ class Claim(TenantBase):
         String(100), nullable=True
     )  # Original invoice number
 
-    invoice_date: Mapped[date | None] = mapped_column(
-        Date, nullable=True
-    )  # Original invoice date
+    invoice_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # Original invoice date
 
     rate_basis: Mapped[str] = mapped_column(
         String(10), nullable=False, default="yearly"
@@ -76,13 +70,9 @@ class Payment(TenantBase):
 
     __tablename__ = "payments"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
 
-    amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
 
     payment_date: Mapped[date] = mapped_column(Date, nullable=False)
 
@@ -113,9 +103,7 @@ class PaymentArrangement(TenantBase):
 
     __tablename__ = "payment_arrangements"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
 
     total_amount: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), nullable=False
@@ -139,7 +127,8 @@ class PaymentArrangement(TenantBase):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     installments: Mapped[list["PaymentArrangementInstallment"]] = relationship(
-        back_populates="arrangement", lazy="noload",
+        back_populates="arrangement",
+        lazy="noload",
     )
 
 
@@ -157,16 +146,15 @@ class PaymentArrangementInstallment(TenantBase):
     )
 
     arrangement: Mapped["PaymentArrangement"] = relationship(
-        back_populates="installments", lazy="noload",
+        back_populates="installments",
+        lazy="noload",
     )
 
     installment_number: Mapped[int] = mapped_column(nullable=False)  # 1, 2, 3, ...
 
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
 
-    amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
 
     paid_amount: Mapped[Decimal] = mapped_column(
         Numeric(15, 2), default=Decimal("0"), nullable=False
@@ -194,17 +182,11 @@ class Derdengelden(TenantBase):
 
     __tablename__ = "derdengelden"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
 
-    transaction_type: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # deposit, withdrawal
+    transaction_type: Mapped[str] = mapped_column(String(20), nullable=False)  # deposit, withdrawal
 
-    amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
 
     transaction_date: Mapped[date] = mapped_column(Date, nullable=False)
 
@@ -228,9 +210,7 @@ class InterestRate(Base, TimestampMixin):
 
     __tablename__ = "interest_rates"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
 
     rate_type: Mapped[str] = mapped_column(
         String(30), nullable=False

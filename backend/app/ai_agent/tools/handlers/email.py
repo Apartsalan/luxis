@@ -47,9 +47,7 @@ async def handle_email_unlinked(
     """Get unlinked (not matched to a case) emails."""
     from app.email.sync_service import get_unlinked_emails
 
-    emails, total = await get_unlinked_emails(
-        db, tenant_id, page=page, per_page=per_page
-    )
+    emails, total = await get_unlinked_emails(db, tenant_id, page=page, per_page=per_page)
     return {
         "items": [
             {

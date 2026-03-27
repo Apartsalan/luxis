@@ -35,25 +35,15 @@ class ManagedTemplate(TenantBase):
     )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str | None] = mapped_column(
-        Text, nullable=True
-    )
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     template_key: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # e.g. "sommatie", "aanmaning", "14_dagenbrief"
-    file_data: Mapped[bytes] = mapped_column(
-        LargeBinary, nullable=False
-    )
-    original_filename: Mapped[str] = mapped_column(
-        String(500), nullable=False
-    )
+    file_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
-    is_builtin: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, default=True, nullable=False
-    )
+    is_builtin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class DocumentTemplate(TenantBase):
@@ -71,9 +61,7 @@ class DocumentTemplate(TenantBase):
     template_type: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # 14_dagenbrief, sommatie, renteberekening, dagvaarding, etc.
-    content: Mapped[str] = mapped_column(
-        Text, nullable=False
-    )  # HTML/Jinja2 template content
+    content: Mapped[str] = mapped_column(Text, nullable=False)  # HTML/Jinja2 template content
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
 
     # Relationships
@@ -89,9 +77,7 @@ class GeneratedDocument(TenantBase):
 
     __tablename__ = "generated_documents"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
     template_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("document_templates.id"), nullable=True
     )

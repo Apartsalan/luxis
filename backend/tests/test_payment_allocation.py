@@ -137,8 +137,12 @@ class TestSequentialPaymentAllocation:
         # Payment 1: €1,000
         d1 = _allocate_payment(
             Decimal("1000.00"),
-            total_costs, total_interest, total_principal,
-            cum_costs, cum_interest, cum_principal,
+            total_costs,
+            total_interest,
+            total_principal,
+            cum_costs,
+            cum_interest,
+            cum_principal,
         )
         assert d1["to_costs"] == Decimal("625.00")
         assert d1["to_interest"] == Decimal("300.00")
@@ -151,8 +155,12 @@ class TestSequentialPaymentAllocation:
         # Payment 2: €2,000 — costs and interest already paid
         d2 = _allocate_payment(
             Decimal("2000.00"),
-            total_costs, total_interest, total_principal,
-            cum_costs, cum_interest, cum_principal,
+            total_costs,
+            total_interest,
+            total_principal,
+            cum_costs,
+            cum_interest,
+            cum_principal,
         )
         assert d2["to_costs"] == Decimal("0")
         assert d2["to_interest"] == Decimal("0")
@@ -165,8 +173,12 @@ class TestSequentialPaymentAllocation:
         # Payment 3: €2,925 — remaining principal
         d3 = _allocate_payment(
             Decimal("2925.00"),
-            total_costs, total_interest, total_principal,
-            cum_costs, cum_interest, cum_principal,
+            total_costs,
+            total_interest,
+            total_principal,
+            cum_costs,
+            cum_interest,
+            cum_principal,
         )
         assert d3["to_costs"] == Decimal("0")
         assert d3["to_interest"] == Decimal("0")
@@ -202,8 +214,12 @@ class TestSequentialPaymentAllocation:
         for i in range(7):  # 7 × €100 = €700 > €605 total
             d = _allocate_payment(
                 Decimal("100.00"),
-                total_costs, total_interest, total_principal,
-                cum_costs, cum_interest, cum_principal,
+                total_costs,
+                total_interest,
+                total_principal,
+                cum_costs,
+                cum_interest,
+                cum_principal,
             )
             cum_costs += d["to_costs"]
             cum_interest += d["to_interest"]

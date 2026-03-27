@@ -90,19 +90,23 @@ async def get_contact(
     if contact.contact_type == "person":
         for link in contact.company_links:
             if link.is_active and link.company:
-                linked_companies.append(LinkedContactInfo(
-                    link_id=link.id,
-                    role_at_company=link.role_at_company,
-                    contact=ContactSummary.model_validate(link.company),
-                ))
+                linked_companies.append(
+                    LinkedContactInfo(
+                        link_id=link.id,
+                        role_at_company=link.role_at_company,
+                        contact=ContactSummary.model_validate(link.company),
+                    )
+                )
     elif contact.contact_type == "company":
         for link in contact.person_links:
             if link.is_active and link.person:
-                linked_persons.append(LinkedContactInfo(
-                    link_id=link.id,
-                    role_at_company=link.role_at_company,
-                    contact=ContactSummary.model_validate(link.person),
-                ))
+                linked_persons.append(
+                    LinkedContactInfo(
+                        link_id=link.id,
+                        role_at_company=link.role_at_company,
+                        contact=ContactSummary.model_validate(link.person),
+                    )
+                )
 
     response = ContactDetailResponse.model_validate(contact)
     response.linked_companies = linked_companies

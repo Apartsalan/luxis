@@ -26,9 +26,7 @@ async def get_kyc_for_contact(
     db: AsyncSession = Depends(get_db),
 ):
     """Get KYC verification for a contact. Returns null if not started."""
-    kyc = await kyc_service.get_kyc_for_contact(
-        db, current_user.tenant_id, contact_id
-    )
+    kyc = await kyc_service.get_kyc_for_contact(db, current_user.tenant_id, contact_id)
     return kyc
 
 
@@ -39,9 +37,7 @@ async def get_kyc_status(
     db: AsyncSession = Depends(get_db),
 ):
     """Get lightweight KYC status for a contact (for badges/warnings)."""
-    return await kyc_service.get_kyc_status_for_contact(
-        db, current_user.tenant_id, contact_id
-    )
+    return await kyc_service.get_kyc_status_for_contact(db, current_user.tenant_id, contact_id)
 
 
 @router.post("", response_model=KycResponse, status_code=status.HTTP_201_CREATED)
@@ -51,9 +47,7 @@ async def create_or_update_kyc(
     db: AsyncSession = Depends(get_db),
 ):
     """Create or update KYC verification for a contact (upsert)."""
-    kyc = await kyc_service.create_or_update_kyc(
-        db, current_user.tenant_id, current_user.id, data
-    )
+    kyc = await kyc_service.create_or_update_kyc(db, current_user.tenant_id, current_user.id, data)
     return kyc
 
 
@@ -65,9 +59,7 @@ async def update_kyc(
     db: AsyncSession = Depends(get_db),
 ):
     """Update specific fields of a KYC verification."""
-    kyc = await kyc_service.update_kyc(
-        db, current_user.tenant_id, kyc_id, data
-    )
+    kyc = await kyc_service.update_kyc(db, current_user.tenant_id, kyc_id, data)
     return kyc
 
 
@@ -87,9 +79,7 @@ async def complete_kyc(
     - Risk classification assigned
     - UBO registered (for companies)
     """
-    kyc = await kyc_service.complete_kyc(
-        db, current_user.tenant_id, kyc_id, current_user.id, data
-    )
+    kyc = await kyc_service.complete_kyc(db, current_user.tenant_id, kyc_id, current_user.id, data)
     return kyc
 
 

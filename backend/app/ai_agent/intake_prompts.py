@@ -78,9 +78,6 @@ def build_intake_prompt(
     )
 
     if pdf_text:
-        prompt += (
-            f"\n\n--- Bijlage (PDF factuur) ---\n"
-            f"{pdf_text}"
-        )
+        prompt += f"\n\n--- Bijlage (PDF factuur) ---\n{pdf_text}"
 
     return prompt

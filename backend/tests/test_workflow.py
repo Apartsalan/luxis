@@ -51,9 +51,7 @@ async def _create_case(
 
 
 @pytest.mark.asyncio
-async def test_list_statuses(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_list_statuses(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """List statuses should return all seeded statuses."""
     resp = await client.get("/api/workflow/statuses", headers=auth_headers)
     assert resp.status_code == 200
@@ -65,9 +63,7 @@ async def test_list_statuses(
 
 
 @pytest.mark.asyncio
-async def test_create_status(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_create_status(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """Creating a new status should return 201."""
     payload = {
         "slug": "test_status",
@@ -97,9 +93,7 @@ async def test_create_duplicate_slug_fails(
 
 
 @pytest.mark.asyncio
-async def test_update_status(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_update_status(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """Updating a status should change the specified fields."""
     status_id = str(workflow_data["herinnering"])
     resp = await client.put(
@@ -113,9 +107,7 @@ async def test_update_status(
 
 
 @pytest.mark.asyncio
-async def test_delete_unused_status(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_delete_unused_status(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """Deleting an unused status should succeed (204)."""
     # Create a status that's not used by any case
     create_resp = await client.post(
@@ -133,9 +125,7 @@ async def test_delete_unused_status(
 
 
 @pytest.mark.asyncio
-async def test_list_transitions(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_list_transitions(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """List transitions should return seeded transitions."""
     resp = await client.get("/api/workflow/transitions", headers=auth_headers)
     assert resp.status_code == 200
@@ -189,8 +179,12 @@ async def test_b2b_transitions_include_sommatie(
 
 @pytest.mark.asyncio
 async def test_create_task(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User, workflow_data: dict
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
 ):
     """Creating a task should return 201 with correct fields."""
     case = await _create_case(db, test_tenant.id)
@@ -212,8 +206,12 @@ async def test_create_task(
 
 @pytest.mark.asyncio
 async def test_list_tasks_filter_by_case(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User, workflow_data: dict
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
 ):
     """Filtering tasks by case_id should return only that case's tasks."""
     case_a = await _create_case(db, test_tenant.id, "2026-00001")
@@ -231,16 +229,18 @@ async def test_list_tasks_filter_by_case(
             headers=auth_headers,
         )
 
-    resp = await client.get(
-        f"/api/workflow/tasks?case_id={case_a.id}", headers=auth_headers
-    )
+    resp = await client.get(f"/api/workflow/tasks?case_id={case_a.id}", headers=auth_headers)
     assert len(resp.json()) == 2
 
 
 @pytest.mark.asyncio
 async def test_update_task_to_completed(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User, workflow_data: dict
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
 ):
     """Completing a task should set completed_at."""
     case = await _create_case(db, test_tenant.id)
@@ -269,8 +269,12 @@ async def test_update_task_to_completed(
 
 @pytest.mark.asyncio
 async def test_delete_task(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User, workflow_data: dict
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
 ):
     """Deleting a task should soft-delete it (204)."""
     case = await _create_case(db, test_tenant.id)
@@ -291,16 +295,18 @@ async def test_delete_task(
     assert resp.status_code == 204
 
     # Should not appear in list
-    list_resp = await client.get(
-        f"/api/workflow/tasks?case_id={case.id}", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/workflow/tasks?case_id={case.id}", headers=auth_headers)
     assert len(list_resp.json()) == 0
 
 
 @pytest.mark.asyncio
 async def test_invalid_task_type_rejected(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User, workflow_data: dict
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
 ):
     """Invalid task_type should be rejected (400)."""
     case = await _create_case(db, test_tenant.id)
@@ -322,9 +328,7 @@ async def test_invalid_task_type_rejected(
 
 
 @pytest.mark.asyncio
-async def test_create_rule(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_create_rule(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """Creating a rule should return 201."""
     payload = {
         "name": "Auto-herinnering",
@@ -339,9 +343,7 @@ async def test_create_rule(
 
 
 @pytest.mark.asyncio
-async def test_list_rules(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_list_rules(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """Listing rules after creating one should return it."""
     await client.post(
         "/api/workflow/rules",
@@ -359,9 +361,7 @@ async def test_list_rules(
 
 
 @pytest.mark.asyncio
-async def test_delete_rule(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
+async def test_delete_rule(client: AsyncClient, auth_headers: dict, workflow_data: dict):
     """Deleting a rule should soft-delete it (204)."""
     create_resp = await client.post(
         "/api/workflow/rules",
@@ -383,8 +383,12 @@ async def test_delete_rule(
 
 @pytest.mark.asyncio
 async def test_calendar_events(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User, workflow_data: dict
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
 ):
     """Calendar should return tasks within the date range."""
     case = await _create_case(db, test_tenant.id)
@@ -417,8 +421,12 @@ async def test_calendar_events(
 
 @pytest.mark.asyncio
 async def test_verjaring_check(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User, workflow_data: dict
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
 ):
     """Verjaring check should flag cases approaching 5-year deadline."""
     contact = await _create_contact(db, test_tenant.id)

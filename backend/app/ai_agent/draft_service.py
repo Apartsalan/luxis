@@ -90,24 +90,20 @@ async def _gather_case_context(
 
     # Claims
     claim_result = await db.execute(
-        select(Claim)
-        .where(Claim.case_id == case_id, Claim.tenant_id == tenant_id)
+        select(Claim).where(Claim.case_id == case_id, Claim.tenant_id == tenant_id)
     )
     claims = claim_result.scalars().all()
 
     # Payments
     payment_result = await db.execute(
-        select(Payment)
-        .where(Payment.case_id == case_id, Payment.tenant_id == tenant_id)
+        select(Payment).where(Payment.case_id == case_id, Payment.tenant_id == tenant_id)
     )
     payments = payment_result.scalars().all()
 
     # Client AV (terms)
     terms_text = ""
     if case.client_id:
-        client_result = await db.execute(
-            select(Contact).where(Contact.id == case.client_id)
-        )
+        client_result = await db.execute(select(Contact).where(Contact.id == case.client_id))
         client = client_result.scalar_one_or_none()
         if client and client.terms_file_path:
             terms_text = extract_text_from_pdf(client.terms_file_path)
@@ -132,7 +128,7 @@ async def _gather_case_context(
     }
 
     # Parties
-    for party in (case.parties or []):
+    for party in case.parties or []:
         if party.role == "opposing_party" and party.contact:
             context["opposing_party"] = {
                 "name": party.contact.name,
@@ -157,31 +153,37 @@ async def _gather_case_context(
 
     # Emails
     for e in emails:
-        context["emails"].append({
-            "date": str(e.email_date)[:10] if e.email_date else None,
-            "direction": e.direction,
-            "from": e.from_email,
-            "subject": e.subject,
-            "snippet": (e.snippet or "")[:200],
-        })
+        context["emails"].append(
+            {
+                "date": str(e.email_date)[:10] if e.email_date else None,
+                "direction": e.direction,
+                "from": e.from_email,
+                "subject": e.subject,
+                "snippet": (e.snippet or "")[:200],
+            }
+        )
 
     # Claims
     for c in claims:
-        context["claims"].append({
-            "description": c.description,
-            "principal": _serialize_decimal(c.principal_amount),
-            "invoice_number": c.invoice_number,
-            "invoice_date": str(c.invoice_date) if c.invoice_date else None,
-            "default_date": str(c.default_date) if c.default_date else None,
-        })
+        context["claims"].append(
+            {
+                "description": c.description,
+                "principal": _serialize_decimal(c.principal_amount),
+                "invoice_number": c.invoice_number,
+                "invoice_date": str(c.invoice_date) if c.invoice_date else None,
+                "default_date": str(c.default_date) if c.default_date else None,
+            }
+        )
 
     # Payments
     for p in payments:
-        context["payments"].append({
-            "amount": _serialize_decimal(p.amount),
-            "date": str(p.payment_date) if p.payment_date else None,
-            "description": p.description,
-        })
+        context["payments"].append(
+            {
+                "amount": _serialize_decimal(p.amount),
+                "date": str(p.payment_date) if p.payment_date else None,
+                "description": p.description,
+            }
+        )
 
     return context
 
@@ -221,7 +223,7 @@ def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
         parts.append("\n--- Recente correspondentie ---")
         for e in context["emails"]:
             direction = "←" if e["direction"] == "inbound" else "→"
-            subj = e.get('subject', '(geen onderwerp)')
+            subj = e.get("subject", "(geen onderwerp)")
             parts.append(f"{direction} {e.get('date', '?')}: {subj}")
             if e.get("snippet"):
                 parts.append(f"  {e['snippet']}")

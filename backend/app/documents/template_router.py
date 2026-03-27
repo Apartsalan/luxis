@@ -32,9 +32,7 @@ async def list_templates(
     user: User = Depends(get_current_user),
 ):
     """List all active managed templates for the tenant."""
-    return await template_service.list_managed_templates(
-        db, user.tenant_id
-    )
+    return await template_service.list_managed_templates(db, user.tenant_id)
 
 
 @router.post(
@@ -71,9 +69,7 @@ async def get_template(
     user: User = Depends(get_current_user),
 ):
     """Get a single managed template."""
-    return await template_service.get_managed_template(
-        db, user.tenant_id, template_id
-    )
+    return await template_service.get_managed_template(db, user.tenant_id, template_id)
 
 
 @router.put(
@@ -87,9 +83,7 @@ async def update_template(
     user: User = Depends(get_current_user),
 ):
     """Update template metadata (name, description, key)."""
-    return await template_service.update_template(
-        db, user.tenant_id, template_id, data
-    )
+    return await template_service.update_template(db, user.tenant_id, template_id, data)
 
 
 @router.post(
@@ -103,9 +97,7 @@ async def replace_template_file(
     user: User = Depends(get_current_user),
 ):
     """Replace the .docx file for an existing template."""
-    return await template_service.replace_template_file(
-        db, user.tenant_id, template_id, file
-    )
+    return await template_service.replace_template_file(db, user.tenant_id, template_id, file)
 
 
 @router.delete("/{template_id}", status_code=204)
@@ -115,9 +107,7 @@ async def delete_template(
     user: User = Depends(get_current_user),
 ):
     """Soft-delete a custom template (builtin cannot be deleted)."""
-    await template_service.delete_template(
-        db, user.tenant_id, template_id
-    )
+    await template_service.delete_template(db, user.tenant_id, template_id)
 
 
 @router.get("/{template_id}/download")
@@ -127,20 +117,11 @@ async def download_template(
     user: User = Depends(get_current_user),
 ):
     """Download the original .docx template file."""
-    tpl = await template_service.get_managed_template(
-        db, user.tenant_id, template_id
-    )
+    tpl = await template_service.get_managed_template(db, user.tenant_id, template_id)
     return Response(
         content=tpl.file_data,
-        media_type=(
-            "application/vnd.openxmlformats-officedocument"
-            ".wordprocessingml.document"
-        ),
-        headers={
-            "Content-Disposition": (
-                content_disposition("attachment", tpl.original_filename)
-            )
-        },
+        media_type=("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        headers={"Content-Disposition": (content_disposition("attachment", tpl.original_filename))},
     )
 
 
@@ -159,9 +140,7 @@ async def preview_template(
         _build_renteoverzicht_context,
     )
 
-    tpl = await template_service.get_managed_template(
-        db, user.tenant_id, template_id
-    )
+    tpl = await template_service.get_managed_template(db, user.tenant_id, template_id)
 
     # Load case
     result = await db.execute(
@@ -176,17 +155,11 @@ async def preview_template(
 
     # Build context
     if tpl.template_key == "renteoverzicht":
-        context = await _build_renteoverzicht_context(
-            db, user.tenant_id, case
-        )
+        context = await _build_renteoverzicht_context(db, user.tenant_id, case)
     else:
-        context = await _build_base_context(
-            db, user.tenant_id, case
-        )
+        context = await _build_base_context(db, user.tenant_id, case)
 
-    render_context = {
-        k: v for k, v in context.items() if not k.startswith("_")
-    }
+    render_context = {k: v for k, v in context.items() if not k.startswith("_")}
 
     # Render
     doc = DocxTemplate(io.BytesIO(tpl.file_data))
@@ -196,20 +169,10 @@ async def preview_template(
     doc.save(buffer)
     docx_bytes = buffer.getvalue()
 
-    filename = (
-        f"preview_{tpl.template_key}"
-        f"_{case.case_number}.docx"
-    )
+    filename = f"preview_{tpl.template_key}_{case.case_number}.docx"
 
     return Response(
         content=docx_bytes,
-        media_type=(
-            "application/vnd.openxmlformats-officedocument"
-            ".wordprocessingml.document"
-        ),
-        headers={
-            "Content-Disposition": (
-                content_disposition("attachment", filename)
-            )
-        },
+        media_type=("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        headers={"Content-Disposition": (content_disposition("attachment", filename))},
     )

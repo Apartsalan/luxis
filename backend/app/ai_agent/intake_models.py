@@ -66,9 +66,7 @@ class IntakeRequest(TenantBase):
     invoice_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
     invoice_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    principal_amount: Mapped[Decimal | None] = mapped_column(
-        Numeric(15, 2), nullable=True
-    )
+    principal_amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Client reference (from sender email → known client contact)
@@ -86,18 +84,14 @@ class IntakeRequest(TenantBase):
     has_pdf_data: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Status
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=IntakeStatus.DETECTED
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=IntakeStatus.DETECTED)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Review
     reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True
     )
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Result — references to created entities

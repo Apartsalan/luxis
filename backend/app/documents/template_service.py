@@ -20,9 +20,7 @@ _DOCX_MAGIC = b"PK\x03\x04"
 def _validate_docx_magic(data: bytes) -> None:
     """Verify that file content starts with the DOCX/ZIP magic bytes."""
     if not data.startswith(_DOCX_MAGIC):
-        raise BadRequestError(
-            "Bestand is geen geldig .docx bestand (ongeldige bestandsinhoud)"
-        )
+        raise BadRequestError("Bestand is geen geldig .docx bestand (ongeldige bestandsinhoud)")
 
 
 async def list_managed_templates(
@@ -100,9 +98,7 @@ async def upload_template(
     # Validate filename
     filename = file.filename or "unknown.docx"
     if not any(filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS):
-        raise BadRequestError(
-            "Alleen .docx bestanden zijn toegestaan"
-        )
+        raise BadRequestError("Alleen .docx bestanden zijn toegestaan")
 
     # Read file data
     file_data = await file.read()
@@ -158,9 +154,7 @@ async def replace_template_file(
 
     filename = file.filename or "unknown.docx"
     if not any(filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS):
-        raise BadRequestError(
-            "Alleen .docx bestanden zijn toegestaan"
-        )
+        raise BadRequestError("Alleen .docx bestanden zijn toegestaan")
 
     file_data = await file.read()
     if len(file_data) == 0:
@@ -186,8 +180,6 @@ async def delete_template(
     """Soft-delete a template. Builtin templates cannot be deleted."""
     tpl = await get_managed_template(db, tenant_id, template_id)
     if tpl.is_builtin:
-        raise BadRequestError(
-            "Standaard-sjablonen kunnen niet worden verwijderd"
-        )
+        raise BadRequestError("Standaard-sjablonen kunnen niet worden verwijderd")
     tpl.is_active = False
     await db.flush()

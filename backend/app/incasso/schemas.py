@@ -95,9 +95,7 @@ class BatchPreviewRequest(BaseModel):
     """Request a pre-flight check for a batch action."""
 
     case_ids: list[uuid.UUID]
-    action: str = Field(
-        ..., description="advance_step, generate_document, recalculate_interest"
-    )
+    action: str = Field(..., description="advance_step, generate_document, recalculate_interest")
     target_step_id: uuid.UUID | None = None  # For advance_step
 
 
@@ -125,9 +123,7 @@ class BatchActionRequest(BaseModel):
     """Execute a batch action on selected cases."""
 
     case_ids: list[uuid.UUID]
-    action: str = Field(
-        ..., description="advance_step, generate_document, recalculate_interest"
-    )
+    action: str = Field(..., description="advance_step, generate_document, recalculate_interest")
     target_step_id: uuid.UUID | None = None
     auto_assign_step: bool = False  # Auto-assign first step to unassigned cases
     send_email: bool = False  # Also send generated document via email

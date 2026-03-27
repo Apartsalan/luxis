@@ -88,8 +88,7 @@ async def handle_case_get(
         "client_id": serialize(case.client_id) if hasattr(case, "client_id") else None,
         "client_name": case.client.name if case.client else None,
         "opposing_party_id": (
-            serialize(case.opposing_party_id)
-            if hasattr(case, "opposing_party_id") else None
+            serialize(case.opposing_party_id) if hasattr(case, "opposing_party_id") else None
         ),
         "opposing_party_name": case.opposing_party.name if case.opposing_party else None,
         "assigned_to_name": case.assigned_to.full_name if case.assigned_to else None,
@@ -184,9 +183,7 @@ async def handle_case_add_activity(
         title=title,
         description=description,
     )
-    activity = await cases_service.add_activity(
-        db, tenant_id, uuid.UUID(case_id), user_id, data
-    )
+    activity = await cases_service.add_activity(db, tenant_id, uuid.UUID(case_id), user_id, data)
     return {
         "id": serialize(activity.id),
         "activity_type": activity.activity_type,

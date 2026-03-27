@@ -60,9 +60,7 @@ class FakeEmailProvider(EmailProvider):
     ) -> tuple[list[EmailMessage], str | None]:
         return [], None
 
-    async def get_message(
-        self, access_token: str, message_id: str
-    ) -> EmailMessage:
+    async def get_message(self, access_token: str, message_id: str) -> EmailMessage:
         return EmailMessage(provider_message_id=message_id)
 
     async def send_message(

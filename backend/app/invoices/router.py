@@ -107,9 +107,7 @@ async def update_invoice(
     db: AsyncSession = Depends(get_db),
 ):
     """Update an invoice (concept only)."""
-    return await service.update_invoice(
-        db, current_user.tenant_id, invoice_id, data
-    )
+    return await service.update_invoice(db, current_user.tenant_id, invoice_id, data)
 
 
 @router.delete(
@@ -220,9 +218,7 @@ async def get_incasso_invoice_preview(
     Returns pre-calculated BIK, interest, and provisie amounts plus
     already-invoiced detection to prevent accidental double-billing.
     """
-    return await service.get_incasso_invoice_preview(
-        db, current_user.tenant_id, case_id
-    )
+    return await service.get_incasso_invoice_preview(db, current_user.tenant_id, case_id)
 
 
 # ── Status Transitions ───────────────────────────────────────────────────────
@@ -256,9 +252,7 @@ async def mark_paid(
     db: AsyncSession = Depends(get_db),
 ):
     """Mark an invoice as paid."""
-    return await service.mark_paid(
-        db, current_user.tenant_id, invoice_id, paid_date
-    )
+    return await service.mark_paid(db, current_user.tenant_id, invoice_id, paid_date)
 
 
 @router.post("/{invoice_id}/cancel", response_model=InvoiceResponse)
@@ -310,9 +304,7 @@ async def remove_line(
     db: AsyncSession = Depends(get_db),
 ):
     """Remove a line from a concept invoice."""
-    await service.remove_line(
-        db, current_user.tenant_id, invoice_id, line_id
-    )
+    await service.remove_line(db, current_user.tenant_id, invoice_id, line_id)
 
 
 # ── Invoice Payments ─────────────────────────────────────────────────────────
@@ -345,9 +337,7 @@ async def list_payments(
     db: AsyncSession = Depends(get_db),
 ):
     """List all payments for an invoice."""
-    return await service.list_invoice_payments(
-        db, current_user.tenant_id, invoice_id
-    )
+    return await service.list_invoice_payments(db, current_user.tenant_id, invoice_id)
 
 
 @router.delete(
@@ -361,9 +351,7 @@ async def delete_payment(
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a payment from an invoice."""
-    await service.delete_invoice_payment(
-        db, current_user.tenant_id, invoice_id, payment_id
-    )
+    await service.delete_invoice_payment(db, current_user.tenant_id, invoice_id, payment_id)
 
 
 @router.get(
@@ -376,9 +364,7 @@ async def get_payment_summary(
     db: AsyncSession = Depends(get_db),
 ):
     """Get payment summary for an invoice (total paid, outstanding)."""
-    return await service.get_payment_summary(
-        db, current_user.tenant_id, invoice_id
-    )
+    return await service.get_payment_summary(db, current_user.tenant_id, invoice_id)
 
 
 # ── Invoice PDF ──────────────────────────────────────────────────────────────
@@ -395,9 +381,7 @@ async def download_invoice_pdf(
 
     from app.invoices.invoice_pdf_service import render_invoice_pdf
 
-    pdf_bytes, filename = await render_invoice_pdf(
-        db, current_user.tenant_id, invoice
-    )
+    pdf_bytes, filename = await render_invoice_pdf(db, current_user.tenant_id, invoice)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -458,9 +442,7 @@ async def update_expense(
     db: AsyncSession = Depends(get_db),
 ):
     """Update an expense."""
-    return await service.update_expense(
-        db, current_user.tenant_id, expense_id, data
-    )
+    return await service.update_expense(db, current_user.tenant_id, expense_id, data)
 
 
 @expenses_router.delete(

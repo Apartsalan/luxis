@@ -39,9 +39,7 @@ async def test_list_contacts_filter_by_type(
     client: AsyncClient, auth_headers: dict, test_company: Contact, test_person: Contact
 ):
     """Filtering by contact_type should work."""
-    response = await client.get(
-        "/api/relations?contact_type=company", headers=auth_headers
-    )
+    response = await client.get("/api/relations?contact_type=company", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
@@ -49,13 +47,9 @@ async def test_list_contacts_filter_by_type(
 
 
 @pytest.mark.asyncio
-async def test_list_contacts_search(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_list_contacts_search(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Search by name should filter results."""
-    response = await client.get(
-        "/api/relations?search=Acme", headers=auth_headers
-    )
+    response = await client.get("/api/relations?search=Acme", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
@@ -136,13 +130,9 @@ async def test_create_contact_missing_name(client: AsyncClient, auth_headers: di
 
 
 @pytest.mark.asyncio
-async def test_get_contact_detail(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_get_contact_detail(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Getting a contact by ID should return full detail."""
-    response = await client.get(
-        f"/api/relations/{test_company.id}", headers=auth_headers
-    )
+    response = await client.get(f"/api/relations/{test_company.id}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Acme B.V."
@@ -155,9 +145,7 @@ async def test_get_contact_detail(
 async def test_get_contact_not_found(client: AsyncClient, auth_headers: dict):
     """Non-existent ID should return 404."""
     fake_id = str(uuid.uuid4())
-    response = await client.get(
-        f"/api/relations/{fake_id}", headers=auth_headers
-    )
+    response = await client.get(f"/api/relations/{fake_id}", headers=auth_headers)
     assert response.status_code == 404
 
 
@@ -165,9 +153,7 @@ async def test_get_contact_not_found(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
-async def test_update_contact(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_update_contact(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Updating a contact should change only the provided fields."""
     payload = {
         "name": "Acme International B.V.",
@@ -207,13 +193,9 @@ async def test_update_contact_partial(
 
 
 @pytest.mark.asyncio
-async def test_delete_contact(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_delete_contact(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Deleting a contact should soft-delete it (set is_active=false)."""
-    response = await client.delete(
-        f"/api/relations/{test_company.id}", headers=auth_headers
-    )
+    response = await client.delete(f"/api/relations/{test_company.id}", headers=auth_headers)
     assert response.status_code == 204
 
     # Verify it's gone from the default (active) list
@@ -223,9 +205,7 @@ async def test_delete_contact(
     assert "Acme B.V." not in names
 
     # But should appear when filtering for inactive
-    response = await client.get(
-        "/api/relations?is_active=false", headers=auth_headers
-    )
+    response = await client.get("/api/relations?is_active=false", headers=auth_headers)
     data = response.json()
     assert data["total"] >= 1
     names = [item["name"] for item in data["items"]]
@@ -248,9 +228,7 @@ async def test_create_contact_link(
         "company_id": str(test_company.id),
         "role_at_company": "directeur",
     }
-    response = await client.post(
-        "/api/relations/links", json=payload, headers=auth_headers
-    )
+    response = await client.post("/api/relations/links", json=payload, headers=auth_headers)
     assert response.status_code == 201
     data = response.json()
     assert data["person_id"] == str(test_person.id)
@@ -270,9 +248,7 @@ async def test_create_link_wrong_types(
         "person_id": str(test_company.id),  # Wrong — this is a company
         "company_id": str(test_person.id),  # Wrong — this is a person
     }
-    response = await client.post(
-        "/api/relations/links", json=payload, headers=auth_headers
-    )
+    response = await client.post("/api/relations/links", json=payload, headers=auth_headers)
     assert response.status_code == 409
 
 
@@ -288,14 +264,10 @@ async def test_create_duplicate_link(
         "person_id": str(test_person.id),
         "company_id": str(test_company.id),
     }
-    response1 = await client.post(
-        "/api/relations/links", json=payload, headers=auth_headers
-    )
+    response1 = await client.post("/api/relations/links", json=payload, headers=auth_headers)
     assert response1.status_code == 201
 
-    response2 = await client.post(
-        "/api/relations/links", json=payload, headers=auth_headers
-    )
+    response2 = await client.post("/api/relations/links", json=payload, headers=auth_headers)
     assert response2.status_code == 409
 
 
@@ -316,17 +288,13 @@ async def test_get_contact_with_links(
     await client.post("/api/relations/links", json=payload, headers=auth_headers)
 
     # Check person detail — should show linked company
-    response = await client.get(
-        f"/api/relations/{test_person.id}", headers=auth_headers
-    )
+    response = await client.get(f"/api/relations/{test_person.id}", headers=auth_headers)
     data = response.json()
     assert len(data["linked_companies"]) == 1
     assert data["linked_companies"][0]["contact"]["name"] == "Acme B.V."
 
     # Check company detail — should show linked person
-    response = await client.get(
-        f"/api/relations/{test_company.id}", headers=auth_headers
-    )
+    response = await client.get(f"/api/relations/{test_company.id}", headers=auth_headers)
     data = response.json()
     assert len(data["linked_persons"]) == 1
     assert data["linked_persons"][0]["contact"]["name"] == "Jan de Vries"
@@ -345,21 +313,15 @@ async def test_delete_contact_link(
         "person_id": str(test_person.id),
         "company_id": str(test_company.id),
     }
-    response = await client.post(
-        "/api/relations/links", json=payload, headers=auth_headers
-    )
+    response = await client.post("/api/relations/links", json=payload, headers=auth_headers)
     link_id = response.json()["id"]
 
     # Delete it
-    response = await client.delete(
-        f"/api/relations/links/{link_id}", headers=auth_headers
-    )
+    response = await client.delete(f"/api/relations/links/{link_id}", headers=auth_headers)
     assert response.status_code == 204
 
     # Verify it's gone
-    response = await client.get(
-        f"/api/relations/{test_person.id}", headers=auth_headers
-    )
+    response = await client.get(f"/api/relations/{test_person.id}", headers=auth_headers)
     data = response.json()
     assert len(data["linked_companies"]) == 0
 
@@ -437,15 +399,11 @@ async def test_pagination(client: AsyncClient, auth_headers: dict):
             "contact_type": "company",
             "name": f"Bedrijf {i:03d}",
         }
-        response = await client.post(
-            "/api/relations", json=payload, headers=auth_headers
-        )
+        response = await client.post("/api/relations", json=payload, headers=auth_headers)
         assert response.status_code == 201
 
     # Get page 1 with per_page=2
-    response = await client.get(
-        "/api/relations?page=1&per_page=2", headers=auth_headers
-    )
+    response = await client.get("/api/relations?page=1&per_page=2", headers=auth_headers)
     data = response.json()
     assert data["total"] == 5
     assert len(data["items"]) == 2
@@ -454,9 +412,7 @@ async def test_pagination(client: AsyncClient, auth_headers: dict):
     assert data["pages"] == 3
 
     # Get page 3 (last page with 1 item)
-    response = await client.get(
-        "/api/relations?page=3&per_page=2", headers=auth_headers
-    )
+    response = await client.get("/api/relations?page=3&per_page=2", headers=auth_headers)
     data = response.json()
     assert len(data["items"]) == 1
 
@@ -507,9 +463,7 @@ async def test_tenant_isolation_get_contact_detail(
     test_company: Contact,
 ):
     """Tenant B should get 404 when trying to read Tenant A's contact."""
-    response = await client.get(
-        f"/api/relations/{test_company.id}", headers=second_auth_headers
-    )
+    response = await client.get(f"/api/relations/{test_company.id}", headers=second_auth_headers)
     assert response.status_code == 404
 
 
@@ -535,9 +489,7 @@ async def test_tenant_isolation_delete_contact(
     test_company: Contact,
 ):
     """Tenant B should NOT be able to delete Tenant A's contact."""
-    response = await client.delete(
-        f"/api/relations/{test_company.id}", headers=second_auth_headers
-    )
+    response = await client.delete(f"/api/relations/{test_company.id}", headers=second_auth_headers)
     assert response.status_code == 404
 
 

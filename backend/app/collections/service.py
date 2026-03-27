@@ -40,25 +40,20 @@ async def _refresh_case_financials(
     """Recalculate and update Case.total_principal and Case.total_paid cache."""
     # Sum active claims
     claims = await list_claims(db, tenant_id, case_id)
-    total_principal = sum(
-        (c.principal_amount for c in claims), Decimal("0")
-    )
+    total_principal = sum((c.principal_amount for c in claims), Decimal("0"))
 
     # Sum active payments
     payments = await list_payments(db, tenant_id, case_id)
-    total_paid = sum(
-        (p.amount for p in payments), Decimal("0")
-    )
+    total_paid = sum((p.amount for p in payments), Decimal("0"))
 
     # Update case
-    result = await db.execute(
-        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
-    )
+    result = await db.execute(select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id))
     case = result.scalar_one_or_none()
     if case:
         case.total_principal = total_principal
         case.total_paid = total_paid
         await db.flush()
+
 
 # ── Claims ───────────────────────────────────────────────────────────────────
 
@@ -70,11 +65,13 @@ async def list_claims(
 ) -> list[Claim]:
     """List all active claims for a case."""
     result = await db.execute(
-        select(Claim).where(
+        select(Claim)
+        .where(
             Claim.tenant_id == tenant_id,
             Claim.case_id == case_id,
             Claim.is_active.is_(True),
-        ).order_by(Claim.default_date)
+        )
+        .order_by(Claim.default_date)
     )
     return list(result.scalars().all())
 
@@ -155,11 +152,13 @@ async def list_payments(
 ) -> list[Payment]:
     """List all active payments for a case."""
     result = await db.execute(
-        select(Payment).where(
+        select(Payment)
+        .where(
             Payment.tenant_id == tenant_id,
             Payment.case_id == case_id,
             Payment.is_active.is_(True),
-        ).order_by(Payment.payment_date)
+        )
+        .order_by(Payment.payment_date)
     )
     return list(result.scalars().all())
 
@@ -187,9 +186,7 @@ async def create_payment(
     """
     # ── Calculate outstanding amounts as of payment date ──────────────
     claims = await list_claims(db, tenant_id, case_id)
-    total_principal = sum(
-        (c.principal_amount for c in claims), Decimal("0")
-    )
+    total_principal = sum((c.principal_amount for c in claims), Decimal("0"))
 
     # Interest as of payment date
     if claims:
@@ -204,8 +201,13 @@ async def create_payment(
             for c in claims
         ]
         interest_result = await calculate_case_interest(
-            db, str(case_id), interest_type, contractual_rate,
-            contractual_compound, claim_dicts, data.payment_date,
+            db,
+            str(case_id),
+            interest_type,
+            contractual_rate,
+            contractual_compound,
+            claim_dicts,
+            data.payment_date,
         )
         total_interest = interest_result["total_interest"]
     else:
@@ -220,15 +222,9 @@ async def create_payment(
 
     # Subtract previously allocated amounts from existing payments
     existing_payments = await list_payments(db, tenant_id, case_id)
-    prev_costs = sum(
-        (p.allocated_to_costs for p in existing_payments), Decimal("0")
-    )
-    prev_interest = sum(
-        (p.allocated_to_interest for p in existing_payments), Decimal("0")
-    )
-    prev_principal = sum(
-        (p.allocated_to_principal for p in existing_payments), Decimal("0")
-    )
+    prev_costs = sum((p.allocated_to_costs for p in existing_payments), Decimal("0"))
+    prev_interest = sum((p.allocated_to_interest for p in existing_payments), Decimal("0"))
+    prev_principal = sum((p.allocated_to_principal for p in existing_payments), Decimal("0"))
 
     outstanding_costs = max(Decimal("0"), total_costs - prev_costs)
     outstanding_interest = max(Decimal("0"), total_interest - prev_interest)
@@ -273,7 +269,10 @@ async def create_payment(
     # DF-11: Auto-link payment to installment if active arrangement exists
     if not _skip_installment_link:
         await _auto_link_payment_to_installments(
-            db, tenant_id, case_id, payment,
+            db,
+            tenant_id,
+            case_id,
+            payment,
         )
 
     await _refresh_case_financials(db, tenant_id, case_id)
@@ -369,14 +368,14 @@ async def list_arrangements(
     out = []
     for arr in arrangements:
         installments = sorted(arr.installments, key=lambda i: i.installment_number)
-        out.append({
-            "arrangement": arr,
-            "installments": installments,
-            "paid_count": len([i for i in installments if i.status == "paid"]),
-            "total_paid_amount": sum(
-                (i.paid_amount for i in installments), Decimal("0")
-            ),
-        })
+        out.append(
+            {
+                "arrangement": arr,
+                "installments": installments,
+                "paid_count": len([i for i in installments if i.status == "paid"]),
+                "total_paid_amount": sum((i.paid_amount for i in installments), Decimal("0")),
+            }
+        )
     return out
 
 
@@ -431,9 +430,7 @@ async def create_arrangement(
     num_installments = math.ceil(data.total_amount / data.installment_amount)
 
     # Generate due dates
-    due_dates = _generate_installment_dates(
-        data.start_date, data.frequency, num_installments
-    )
+    due_dates = _generate_installment_dates(data.start_date, data.frequency, num_installments)
 
     # Calculate end_date
     end_date = due_dates[-1] if due_dates else data.start_date
@@ -546,7 +543,11 @@ async def record_installment_payment(
         payment_method=data.payment_method,
     )
     payment = await create_payment(
-        db, tenant_id, case_id, payment_data, user_id,
+        db,
+        tenant_id,
+        case_id,
+        payment_data,
+        user_id,
         interest_type=interest_type,
         contractual_rate=contractual_rate,
         contractual_compound=contractual_compound,
@@ -679,13 +680,13 @@ async def _auto_link_payment_to_installments(
 
     # Get open installments sorted by due_date
     inst_result = await db.execute(
-        select(PaymentArrangementInstallment).where(
+        select(PaymentArrangementInstallment)
+        .where(
             PaymentArrangementInstallment.arrangement_id == arrangement.id,
             PaymentArrangementInstallment.tenant_id == tenant_id,
-            PaymentArrangementInstallment.status.in_(
-                ("pending", "partial", "overdue")
-            ),
-        ).order_by(
+            PaymentArrangementInstallment.status.in_(("pending", "partial", "overdue")),
+        )
+        .order_by(
             PaymentArrangementInstallment.due_date,
             PaymentArrangementInstallment.installment_number,
         )
@@ -735,9 +736,7 @@ async def _check_arrangement_completion(
     )
     installments = list(result.scalars().all())
 
-    all_resolved = all(
-        i.status in ("paid", "waived") for i in installments
-    )
+    all_resolved = all(i.status in ("paid", "waived") for i in installments)
     if all_resolved and installments:
         arr_result = await db.execute(
             select(PaymentArrangement).where(
@@ -779,10 +778,12 @@ async def list_derdengelden(
 ) -> list[Derdengelden]:
     """List derdengelden transactions for a case."""
     result = await db.execute(
-        select(Derdengelden).where(
+        select(Derdengelden)
+        .where(
             Derdengelden.tenant_id == tenant_id,
             Derdengelden.case_id == case_id,
-        ).order_by(Derdengelden.transaction_date.desc())
+        )
+        .order_by(Derdengelden.transaction_date.desc())
     )
     return list(result.scalars().all())
 
@@ -811,9 +812,7 @@ async def create_derdengelden(
     if data.transaction_type == "deposit":
         from app.workflow.hooks import on_derdengelden_deposit
 
-        await on_derdengelden_deposit(
-            db, tenant_id, case_id, data.amount, user_id
-        )
+        await on_derdengelden_deposit(db, tenant_id, case_id, data.amount, user_id)
 
     return transaction
 
@@ -850,9 +849,7 @@ async def list_interest_rates(
     rate_type: str | None = None,
 ) -> list[InterestRate]:
     """List interest rates, optionally filtered by type."""
-    query = select(InterestRate).order_by(
-        InterestRate.rate_type, InterestRate.effective_from
-    )
+    query = select(InterestRate).order_by(InterestRate.rate_type, InterestRate.effective_from)
     if rate_type:
         query = query.where(InterestRate.rate_type == rate_type)
     result = await db.execute(query)

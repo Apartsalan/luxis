@@ -158,9 +158,7 @@ class TestIntakeDetection:
         """Inbound email from a known client (without case link) → detected."""
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         await db.commit()
 
         count = await detect_intake_emails(db, test_tenant.id)
@@ -181,7 +179,9 @@ class TestIntakeDetection:
         client, case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
         await _create_inbound_email(
-            db, test_tenant.id, account.id,
+            db,
+            test_tenant.id,
+            account.id,
             from_email=client.email,
             case_id=case.id,
         )
@@ -197,7 +197,9 @@ class TestIntakeDetection:
         await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
         await _create_inbound_email(
-            db, test_tenant.id, account.id,
+            db,
+            test_tenant.id,
+            account.id,
             from_email="random@stranger.nl",
         )
         await db.commit()
@@ -211,9 +213,7 @@ class TestIntakeDetection:
         """Already processed emails should not be detected again."""
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
 
         # Create existing intake for this email
         existing_intake = IntakeRequest(
@@ -233,9 +233,7 @@ class TestIntakeDetection:
         """Dismissed emails should be skipped."""
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         email.is_dismissed = True
         await db.commit()
 
@@ -260,9 +258,7 @@ class TestIntakeProcessing:
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         intake = IntakeRequest(
             tenant_id=test_tenant.id,
             synced_email_id=email.id,
@@ -292,9 +288,7 @@ class TestIntakeProcessing:
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         intake = IntakeRequest(
             tenant_id=test_tenant.id,
             synced_email_id=email.id,
@@ -322,9 +316,7 @@ class TestIntakeProcessing:
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         intake = IntakeRequest(
             tenant_id=test_tenant.id,
             synced_email_id=email.id,
@@ -346,7 +338,9 @@ class TestIntakeProcessing:
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
         email = await _create_inbound_email(
-            db, test_tenant.id, account.id,
+            db,
+            test_tenant.id,
+            account.id,
             from_email=client.email,
             body="",
         )
@@ -382,9 +376,7 @@ class TestIntakeApprove:
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         intake = IntakeRequest(
             tenant_id=test_tenant.id,
             synced_email_id=email.id,
@@ -412,9 +404,7 @@ class TestIntakeApprove:
         assert result.review_note == "Ziet er goed uit"
 
         # Verify case was created
-        case_result = await db.execute(
-            select(Case).where(Case.id == result.created_case_id)
-        )
+        case_result = await db.execute(select(Case).where(Case.id == result.created_case_id))
         case = case_result.scalar_one()
         assert case.case_type == "incasso"
         assert case.debtor_type == "b2b"
@@ -433,17 +423,13 @@ class TestIntakeApprove:
         assert contact.contact_type == "company"
 
         # Verify claim was created
-        claim_result = await db.execute(
-            select(Claim).where(Claim.case_id == case.id)
-        )
+        claim_result = await db.execute(select(Claim).where(Claim.case_id == case.id))
         claim = claim_result.scalar_one()
         assert claim.principal_amount == Decimal("2500.00")
         assert claim.invoice_number == "F-2026-001"
 
         # Verify email was linked to case
-        email_result = await db.execute(
-            select(SyncedEmail).where(SyncedEmail.id == email.id)
-        )
+        email_result = await db.execute(select(SyncedEmail).where(SyncedEmail.id == email.id))
         updated_email = email_result.scalar_one()
         assert updated_email.case_id == case.id
 
@@ -456,9 +442,7 @@ class TestIntakeApprove:
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         intake = IntakeRequest(
             tenant_id=test_tenant.id,
             synced_email_id=email.id,
@@ -474,9 +458,7 @@ class TestIntakeApprove:
         result = await approve_intake(db, intake.id, test_tenant.id, test_user.id)
         await db.commit()
 
-        case_result = await db.execute(
-            select(Case).where(Case.id == result.created_case_id)
-        )
+        case_result = await db.execute(select(Case).where(Case.id == result.created_case_id))
         case = case_result.scalar_one()
         assert case.debtor_type == "b2c"
 
@@ -498,9 +480,7 @@ class TestIntakeApprove:
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         intake = IntakeRequest(
             tenant_id=test_tenant.id,
             synced_email_id=email.id,
@@ -537,9 +517,7 @@ class TestIntakeReject:
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
-        email = await _create_inbound_email(
-            db, test_tenant.id, account.id, from_email=client.email
-        )
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
         intake = IntakeRequest(
             tenant_id=test_tenant.id,
             synced_email_id=email.id,
@@ -570,15 +548,15 @@ class TestIntakeReject:
 class TestIntakeQueries:
     """Tests for query helpers."""
 
-    async def test_pending_count(
-        self, db: AsyncSession, test_tenant: Tenant, test_user: User
-    ):
+    async def test_pending_count(self, db: AsyncSession, test_tenant: Tenant, test_user: User):
         """pending_intake_count returns correct count."""
         account = await _create_email_account(db, test_tenant.id, test_user.id)
 
         for i in range(3):
             email = await _create_inbound_email(
-                db, test_tenant.id, account.id,
+                db,
+                test_tenant.id,
+                account.id,
                 from_email=f"client{i}@test.nl",
             )
             intake = IntakeRequest(
@@ -592,11 +570,13 @@ class TestIntakeQueries:
         email4 = await _create_inbound_email(
             db, test_tenant.id, account.id, from_email="other@test.nl"
         )
-        db.add(IntakeRequest(
-            tenant_id=test_tenant.id,
-            synced_email_id=email4.id,
-            status=IntakeStatus.APPROVED,
-        ))
+        db.add(
+            IntakeRequest(
+                tenant_id=test_tenant.id,
+                synced_email_id=email4.id,
+                status=IntakeStatus.APPROVED,
+            )
+        )
         await db.commit()
 
         count = await get_pending_intake_count(db, test_tenant.id)
@@ -610,20 +590,22 @@ class TestIntakeQueries:
 
         for status_val in [IntakeStatus.PENDING_REVIEW, IntakeStatus.APPROVED]:
             email = await _create_inbound_email(
-                db, test_tenant.id, account.id,
+                db,
+                test_tenant.id,
+                account.id,
                 from_email=f"{status_val}@test.nl",
             )
-            db.add(IntakeRequest(
-                tenant_id=test_tenant.id,
-                synced_email_id=email.id,
-                status=status_val,
-            ))
+            db.add(
+                IntakeRequest(
+                    tenant_id=test_tenant.id,
+                    synced_email_id=email.id,
+                    status=status_val,
+                )
+            )
         await db.commit()
 
         # Filter pending
-        intakes, total = await get_intake_requests(
-            db, test_tenant.id, status="pending_review"
-        )
+        intakes, total = await get_intake_requests(db, test_tenant.id, status="pending_review")
         assert total == 1
         assert len(intakes) == 1
         assert intakes[0].status == IntakeStatus.PENDING_REVIEW
@@ -730,9 +712,7 @@ class TestIntakeAPI:
     ):
         """POST /api/intake/{id}/approve creates case."""
         # Create client + email + intake in pending_review
-        client_contact, _case = await _create_client_with_case(
-            db, test_tenant.id, test_user.id
-        )
+        client_contact, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
         email = await _create_inbound_email(
             db, test_tenant.id, account.id, from_email=client_contact.email

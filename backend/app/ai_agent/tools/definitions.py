@@ -83,24 +83,20 @@ TOOL_DEFINITIONS: list[dict] = [
             "properties": {
                 "search": {
                     "type": "string",
-                    "description": (
-                        "Zoektekst (zaaknummer, beschrijving,"
-                        " referentie)"
-                    ),
+                    "description": ("Zoektekst (zaaknummer, beschrijving, referentie)"),
                 },
                 "case_type": {
                     "type": "string",
                     "enum": [
-                        "incasso", "insolventie",
-                        "advies", "overig",
+                        "incasso",
+                        "insolventie",
+                        "advies",
+                        "overig",
                     ],
                 },
                 "status": {
                     "type": "string",
-                    "description": (
-                        "Status filter (nieuw, sommatie,"
-                        " betaald, etc.)"
-                    ),
+                    "description": ("Status filter (nieuw, sommatie, betaald, etc.)"),
                 },
                 "client_id": {
                     "type": "string",
@@ -157,22 +153,20 @@ TOOL_DEFINITIONS: list[dict] = [
             "properties": {
                 "client_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van de cliënt (verplicht)"
-                    ),
+                    "description": ("UUID van de cliënt (verplicht)"),
                 },
                 "date_opened": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Openingsdatum (YYYY-MM-DD)"
-                    ),
+                    "description": ("Openingsdatum (YYYY-MM-DD)"),
                 },
                 "case_type": {
                     "type": "string",
                     "enum": [
-                        "incasso", "insolventie",
-                        "advies", "overig",
+                        "incasso",
+                        "insolventie",
+                        "advies",
+                        "overig",
                     ],
                     "default": "incasso",
                 },
@@ -183,28 +177,23 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "description": {
                     "type": "string",
-                    "description": (
-                        "Korte beschrijving van de zaak"
-                    ),
+                    "description": ("Korte beschrijving van de zaak"),
                 },
                 "reference": {
                     "type": "string",
-                    "description": (
-                        "Externe referentie"
-                        " (bijv. klantreferentie)"
-                    ),
+                    "description": ("Externe referentie (bijv. klantreferentie)"),
                 },
                 "opposing_party_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van de wederpartij"
-                    ),
+                    "description": ("UUID van de wederpartij"),
                 },
                 "interest_type": {
                     "type": "string",
                     "enum": [
-                        "statutory", "commercial",
-                        "government", "contractual",
+                        "statutory",
+                        "commercial",
+                        "government",
+                        "contractual",
                     ],
                     "default": "statutory",
                 },
@@ -216,8 +205,7 @@ TOOL_DEFINITIONS: list[dict] = [
     {
         "name": "case_update",
         "description": (
-            "Wijzig velden van een bestaand dossier"
-            " (beschrijving, referentie, wederpartij, etc.)."
+            "Wijzig velden van een bestaand dossier (beschrijving, referentie, wederpartij, etc.)."
         ),
         "input_schema": {
             "type": "object",
@@ -230,15 +218,15 @@ TOOL_DEFINITIONS: list[dict] = [
                 "reference": {"type": "string"},
                 "opposing_party_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van de wederpartij"
-                    ),
+                    "description": ("UUID van de wederpartij"),
                 },
                 "interest_type": {
                     "type": "string",
                     "enum": [
-                        "statutory", "commercial",
-                        "government", "contractual",
+                        "statutory",
+                        "commercial",
+                        "government",
+                        "contractual",
                     ],
                 },
                 "debtor_type": {
@@ -266,17 +254,18 @@ TOOL_DEFINITIONS: list[dict] = [
                 "activity_type": {
                     "type": "string",
                     "enum": [
-                        "note", "phone_call", "email",
-                        "document", "payment",
+                        "note",
+                        "phone_call",
+                        "email",
+                        "document",
+                        "payment",
                         "status_change",
                     ],
                     "description": "Type activiteit",
                 },
                 "title": {
                     "type": "string",
-                    "description": (
-                        "Titel van de activiteit"
-                    ),
+                    "description": ("Titel van de activiteit"),
                 },
                 "description": {
                     "type": "string",
@@ -284,12 +273,13 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
             },
             "required": [
-                "case_id", "activity_type", "title",
+                "case_id",
+                "activity_type",
+                "title",
             ],
         },
         "handler": handle_case_add_activity,
     },
-
     # ── Contacts (Relaties) ──────────────────────────────────────────────
     {
         "name": "contact_lookup",
@@ -304,10 +294,7 @@ TOOL_DEFINITIONS: list[dict] = [
             "properties": {
                 "search": {
                     "type": "string",
-                    "description": (
-                        "Zoektekst (naam, email,"
-                        " KvK-nummer)"
-                    ),
+                    "description": ("Zoektekst (naam, email, KvK-nummer)"),
                 },
                 "contact_type": {
                     "type": "string",
@@ -328,10 +315,7 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "contact_get",
-        "description": (
-            "Haal alle details van één relatie op: adres,"
-            " KvK, BTW, IBAN, etc."
-        ),
+        "description": ("Haal alle details van één relatie op: adres, KvK, BTW, IBAN, etc."),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -346,19 +330,14 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "contact_create",
-        "description": (
-            "Maak een nieuwe relatie aan"
-            " (persoon of bedrijf)."
-        ),
+        "description": ("Maak een nieuwe relatie aan (persoon of bedrijf)."),
         "input_schema": {
             "type": "object",
             "properties": {
                 "contact_type": {
                     "type": "string",
                     "enum": ["company", "person"],
-                    "description": (
-                        "Type: bedrijf of persoon"
-                    ),
+                    "description": ("Type: bedrijf of persoon"),
                 },
                 "name": {
                     "type": "string",
@@ -397,13 +376,11 @@ TOOL_DEFINITIONS: list[dict] = [
         },
         "handler": handle_contact_create,
     },
-
     # ── Collections (Incasso) ────────────────────────────────────────────
     {
         "name": "claim_list",
         "description": (
-            "Lijst alle vorderingen op een dossier"
-            " (bedrag, vervaldatum, factuurnummer)."
+            "Lijst alle vorderingen op een dossier (bedrag, vervaldatum, factuurnummer)."
         ),
         "input_schema": {
             "type": "object",
@@ -433,23 +410,16 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "description": {
                     "type": "string",
-                    "description": (
-                        "Omschrijving van de vordering"
-                    ),
+                    "description": ("Omschrijving van de vordering"),
                 },
                 "principal_amount": {
                     "type": "string",
-                    "description": (
-                        "Hoofdsom als decimaal getal"
-                        " (bijv. '1500.00')"
-                    ),
+                    "description": ("Hoofdsom als decimaal getal (bijv. '1500.00')"),
                 },
                 "default_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Verzuimdatum (YYYY-MM-DD)"
-                    ),
+                    "description": ("Verzuimdatum (YYYY-MM-DD)"),
                 },
                 "invoice_number": {
                     "type": "string",
@@ -458,14 +428,14 @@ TOOL_DEFINITIONS: list[dict] = [
                 "invoice_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Factuurdatum (YYYY-MM-DD)"
-                    ),
+                    "description": ("Factuurdatum (YYYY-MM-DD)"),
                 },
             },
             "required": [
-                "case_id", "description",
-                "principal_amount", "default_date",
+                "case_id",
+                "description",
+                "principal_amount",
+                "default_date",
             ],
         },
         "handler": handle_claim_create,
@@ -487,35 +457,26 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "amount": {
                     "type": "string",
-                    "description": (
-                        "Betaald bedrag als decimaal"
-                        " (bijv. '500.00')"
-                    ),
+                    "description": ("Betaald bedrag als decimaal (bijv. '500.00')"),
                 },
                 "payment_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Betalingsdatum (YYYY-MM-DD)"
-                    ),
+                    "description": ("Betalingsdatum (YYYY-MM-DD)"),
                 },
                 "description": {
                     "type": "string",
-                    "description": (
-                        "Omschrijving"
-                        " (bijv. 'Bankoverschrijving')"
-                    ),
+                    "description": ("Omschrijving (bijv. 'Bankoverschrijving')"),
                 },
                 "payment_method": {
                     "type": "string",
-                    "description": (
-                        "Betaalwijze"
-                        " (bijv. 'bank', 'ideal', 'cash')"
-                    ),
+                    "description": ("Betaalwijze (bijv. 'bank', 'ideal', 'cash')"),
                 },
             },
             "required": [
-                "case_id", "amount", "payment_date",
+                "case_id",
+                "amount",
+                "payment_date",
             ],
         },
         "handler": handle_payment_register,
@@ -523,8 +484,7 @@ TOOL_DEFINITIONS: list[dict] = [
     {
         "name": "payment_list",
         "description": (
-            "Lijst alle betalingen op een dossier met de"
-            " art. 6:44 BW verdeling per betaling."
+            "Lijst alle betalingen op een dossier met de art. 6:44 BW verdeling per betaling."
         ),
         "input_schema": {
             "type": "object",
@@ -557,16 +517,13 @@ TOOL_DEFINITIONS: list[dict] = [
                 "calc_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Berekendate (default: vandaag)"
-                    ),
+                    "description": ("Berekendate (default: vandaag)"),
                 },
             },
             "required": ["case_id"],
         },
         "handler": handle_financial_summary,
     },
-
     # ── Documents ────────────────────────────────────────────────────────
     {
         "name": "document_generate",
@@ -589,9 +546,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "title": {
                     "type": "string",
-                    "description": (
-                        "Optionele aangepaste titel"
-                    ),
+                    "description": ("Optionele aangepaste titel"),
                 },
             },
             "required": ["case_id", "template_id"],
@@ -600,10 +555,7 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "document_list",
-        "description": (
-            "Lijst alle gegenereerde documenten"
-            " voor een dossier."
-        ),
+        "description": ("Lijst alle gegenereerde documenten voor een dossier."),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -618,26 +570,19 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "template_list",
-        "description": (
-            "Lijst beschikbare documenttemplates"
-            " (14-dagenbrief, sommatie, etc.)."
-        ),
+        "description": ("Lijst beschikbare documenttemplates (14-dagenbrief, sommatie, etc.)."),
         "input_schema": {
             "type": "object",
             "properties": {
                 "template_type": {
                     "type": "string",
-                    "description": (
-                        "Filter op type"
-                        " (bijv. '14_dagenbrief')"
-                    ),
+                    "description": ("Filter op type (bijv. '14_dagenbrief')"),
                 },
             },
             "required": [],
         },
         "handler": handle_template_list,
     },
-
     # ── Email ────────────────────────────────────────────────────────────
     {
         "name": "email_compose",
@@ -664,19 +609,18 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "body": {
                     "type": "string",
-                    "description": (
-                        "Email inhoud (HTML)"
-                    ),
+                    "description": ("Email inhoud (HTML)"),
                 },
                 "cc": {
                     "type": "string",
-                    "description": (
-                        "CC adressen, komma-gescheiden"
-                    ),
+                    "description": ("CC adressen, komma-gescheiden"),
                 },
             },
             "required": [
-                "case_id", "to", "subject", "body",
+                "case_id",
+                "to",
+                "subject",
+                "body",
             ],
         },
         "handler": handle_email_compose,
@@ -684,8 +628,7 @@ TOOL_DEFINITIONS: list[dict] = [
     {
         "name": "email_unlinked",
         "description": (
-            "Haal emails op die niet automatisch aan"
-            " een dossier gekoppeld konden worden."
+            "Haal emails op die niet automatisch aan een dossier gekoppeld konden worden."
         ),
         "input_schema": {
             "type": "object",
@@ -703,7 +646,6 @@ TOOL_DEFINITIONS: list[dict] = [
         },
         "handler": handle_email_unlinked,
     },
-
     # ── Invoices (Facturen) ──────────────────────────────────────────────
     {
         "name": "invoice_create",
@@ -716,29 +658,21 @@ TOOL_DEFINITIONS: list[dict] = [
             "properties": {
                 "contact_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van de cliënt/debiteur"
-                    ),
+                    "description": ("UUID van de cliënt/debiteur"),
                 },
                 "invoice_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Factuurdatum (YYYY-MM-DD)"
-                    ),
+                    "description": ("Factuurdatum (YYYY-MM-DD)"),
                 },
                 "due_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Vervaldatum (YYYY-MM-DD)"
-                    ),
+                    "description": ("Vervaldatum (YYYY-MM-DD)"),
                 },
                 "case_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van het dossier (optioneel)"
-                    ),
+                    "description": ("UUID van het dossier (optioneel)"),
                 },
                 "reference": {
                     "type": "string",
@@ -746,9 +680,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "notes": {
                     "type": "string",
-                    "description": (
-                        "Notities op de factuur"
-                    ),
+                    "description": ("Notities op de factuur"),
                 },
                 "btw_percentage": {
                     "type": "string",
@@ -757,17 +689,16 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
             },
             "required": [
-                "contact_id", "invoice_date", "due_date",
+                "contact_id",
+                "invoice_date",
+                "due_date",
             ],
         },
         "handler": handle_invoice_create,
     },
     {
         "name": "invoice_add_line",
-        "description": (
-            "Voeg een factuurregel toe aan een bestaande"
-            " factuur."
-        ),
+        "description": ("Voeg een factuurregel toe aan een bestaande factuur."),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -777,15 +708,11 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "description": {
                     "type": "string",
-                    "description": (
-                        "Omschrijving van de regel"
-                    ),
+                    "description": ("Omschrijving van de regel"),
                 },
                 "unit_price": {
                     "type": "string",
-                    "description": (
-                        "Prijs per eenheid als decimaal"
-                    ),
+                    "description": ("Prijs per eenheid als decimaal"),
                 },
                 "quantity": {
                     "type": "string",
@@ -794,20 +721,17 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "time_entry_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van tijdregistratie"
-                        " (optioneel)"
-                    ),
+                    "description": ("UUID van tijdregistratie (optioneel)"),
                 },
                 "expense_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van onkost (optioneel)"
-                    ),
+                    "description": ("UUID van onkost (optioneel)"),
                 },
             },
             "required": [
-                "invoice_id", "description", "unit_price",
+                "invoice_id",
+                "description",
+                "unit_price",
             ],
         },
         "handler": handle_invoice_add_line,
@@ -815,8 +739,7 @@ TOOL_DEFINITIONS: list[dict] = [
     {
         "name": "invoice_approve",
         "description": (
-            "Keur een concept-factuur goed. Na goedkeuring"
-            " kan de factuur verzonden worden."
+            "Keur een concept-factuur goed. Na goedkeuring kan de factuur verzonden worden."
         ),
         "input_schema": {
             "type": "object",
@@ -832,9 +755,7 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "invoice_send",
-        "description": (
-            "Markeer een goedgekeurde factuur als verzonden."
-        ),
+        "description": ("Markeer een goedgekeurde factuur als verzonden."),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -861,7 +782,6 @@ TOOL_DEFINITIONS: list[dict] = [
         },
         "handler": handle_receivables_list,
     },
-
     # ── Pipeline (Incasso) ───────────────────────────────────────────────
     {
         "name": "pipeline_overview",
@@ -890,30 +810,20 @@ TOOL_DEFINITIONS: list[dict] = [
                 "case_ids": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": (
-                        "Lijst van dossier-UUIDs"
-                    ),
+                    "description": ("Lijst van dossier-UUIDs"),
                 },
                 "action": {
                     "type": "string",
-                    "description": (
-                        "Actie (bijv. 'advance',"
-                        " 'generate_document')"
-                    ),
+                    "description": ("Actie (bijv. 'advance', 'generate_document')"),
                 },
                 "target_step_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van de doelstap"
-                        " (bij 'move')"
-                    ),
+                    "description": ("UUID van de doelstap (bij 'move')"),
                 },
                 "send_email": {
                     "type": "boolean",
                     "default": False,
-                    "description": (
-                        "Verstuur email na actie"
-                    ),
+                    "description": ("Verstuur email na actie"),
                 },
             },
             "required": ["case_ids", "action"],
@@ -922,10 +832,7 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "pipeline_queue_counts",
-        "description": (
-            "Aantal dossiers per pipeline-stap"
-            " (voor dashboard/overzicht)."
-        ),
+        "description": ("Aantal dossiers per pipeline-stap (voor dashboard/overzicht)."),
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -933,7 +840,6 @@ TOOL_DEFINITIONS: list[dict] = [
         },
         "handler": handle_pipeline_queue_counts,
     },
-
     # ── Workflow (Tasks) ─────────────────────────────────────────────────
     {
         "name": "task_create",
@@ -953,10 +859,12 @@ TOOL_DEFINITIONS: list[dict] = [
                     "type": "string",
                     "enum": [
                         "generate_document",
-                        "send_letter", "send_email",
+                        "send_letter",
+                        "send_email",
                         "check_payment",
                         "escalate_status",
-                        "manual_review", "set_deadline",
+                        "manual_review",
+                        "set_deadline",
                         "custom",
                     ],
                     "description": "Type taak",
@@ -968,9 +876,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "due_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Deadline (YYYY-MM-DD)"
-                    ),
+                    "description": ("Deadline (YYYY-MM-DD)"),
                 },
                 "description": {
                     "type": "string",
@@ -978,14 +884,14 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "assigned_to_id": {
                     "type": "string",
-                    "description": (
-                        "UUID van de toegewezen gebruiker"
-                    ),
+                    "description": ("UUID van de toegewezen gebruiker"),
                 },
             },
             "required": [
-                "case_id", "task_type",
-                "title", "due_date",
+                "case_id",
+                "task_type",
+                "title",
+                "due_date",
             ],
         },
         "handler": handle_task_create,
@@ -1001,23 +907,21 @@ TOOL_DEFINITIONS: list[dict] = [
             "properties": {
                 "case_id": {
                     "type": "string",
-                    "description": (
-                        "Filter op dossier UUID"
-                    ),
+                    "description": ("Filter op dossier UUID"),
                 },
                 "status": {
                     "type": "string",
                     "enum": [
-                        "pending", "due", "completed",
-                        "skipped", "overdue",
+                        "pending",
+                        "due",
+                        "completed",
+                        "skipped",
+                        "overdue",
                     ],
                 },
                 "assigned_to_id": {
                     "type": "string",
-                    "description": (
-                        "Filter op toegewezen"
-                        " gebruiker UUID"
-                    ),
+                    "description": ("Filter op toegewezen gebruiker UUID"),
                 },
             },
             "required": [],
@@ -1038,13 +942,10 @@ TOOL_DEFINITIONS: list[dict] = [
         },
         "handler": handle_verjaring_check,
     },
-
     # ── Time Entries (Tijdregistratie) ───────────────────────────────────
     {
         "name": "time_entry_create",
-        "description": (
-            "Registreer gewerkte tijd op een dossier."
-        ),
+        "description": ("Registreer gewerkte tijd op een dossier."),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1060,22 +961,23 @@ TOOL_DEFINITIONS: list[dict] = [
                 "entry_date": {
                     "type": "string",
                     "format": "date",
-                    "description": (
-                        "Datum (default: vandaag)"
-                    ),
+                    "description": ("Datum (default: vandaag)"),
                 },
                 "description": {
                     "type": "string",
-                    "description": (
-                        "Beschrijving van het werk"
-                    ),
+                    "description": ("Beschrijving van het werk"),
                 },
                 "activity_type": {
                     "type": "string",
                     "enum": [
-                        "correspondence", "meeting",
-                        "phone", "research", "court",
-                        "travel", "drafting", "other",
+                        "correspondence",
+                        "meeting",
+                        "phone",
+                        "research",
+                        "court",
+                        "travel",
+                        "drafting",
+                        "other",
                     ],
                     "default": "other",
                 },
@@ -1085,10 +987,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 },
                 "hourly_rate": {
                     "type": "string",
-                    "description": (
-                        "Uurtarief als decimaal"
-                        " (bijv. '250.00')"
-                    ),
+                    "description": ("Uurtarief als decimaal (bijv. '250.00')"),
                 },
             },
             "required": ["case_id", "duration_minutes"],
@@ -1097,25 +996,19 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "unbilled_hours",
-        "description": (
-            "Lijst onbefactureerde uren. Optioneel filteren"
-            " op dossier."
-        ),
+        "description": ("Lijst onbefactureerde uren. Optioneel filteren op dossier."),
         "input_schema": {
             "type": "object",
             "properties": {
                 "case_id": {
                     "type": "string",
-                    "description": (
-                        "Filter op dossier UUID"
-                    ),
+                    "description": ("Filter op dossier UUID"),
                 },
             },
             "required": [],
         },
         "handler": handle_unbilled_hours,
     },
-
     # ── General ──────────────────────────────────────────────────────────
     {
         "name": "dashboard_summary",
@@ -1133,10 +1026,7 @@ TOOL_DEFINITIONS: list[dict] = [
     },
     {
         "name": "global_search",
-        "description": (
-            "Zoek in dossiers, relaties, en documenten"
-            " tegelijk."
-        ),
+        "description": ("Zoek in dossiers, relaties, en documenten tegelijk."),
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1157,8 +1047,7 @@ TOOL_DEFINITIONS: list[dict] = [
     {
         "name": "trust_fund_balance",
         "description": (
-            "Saldo van de derdengeldrekening voor een"
-            " dossier (stortingen, uitkeringen, saldo)."
+            "Saldo van de derdengeldrekening voor een dossier (stortingen, uitkeringen, saldo)."
         ),
         "input_schema": {
             "type": "object",

@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 # ── Legal constraints (hardcoded, not configurable) ─────────────────────────
 
 LEGAL_CONSTRAINTS = {
-    "14_dagenbrief_min_wait": 14,       # Art. 6:96 lid 6 BW: min 14 dagen wachttijd
+    "14_dagenbrief_min_wait": 14,  # Art. 6:96 lid 6 BW: min 14 dagen wachttijd
     "14_dagenbrief_required_b2c": True,  # 14-dagenbrief is verplicht voor B2C
-    "verjaring_years": 5,               # Art. 3:307 BW: 5 jaar verjaring
+    "verjaring_years": 5,  # Art. 3:307 BW: 5 jaar verjaring
 }
 
 WORKFLOW_PHASES = ("minnelijk", "regeling", "gerechtelijk", "executie", "afgerond")

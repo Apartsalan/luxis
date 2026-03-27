@@ -108,8 +108,7 @@ async def _find_case_by_case_number(
 
     if len(case_ids) > 1:
         logger.info(
-            "Meerdere dossiers (%d) gematcht op dossiernummer %s"
-            " — niet auto-gekoppeld",
+            "Meerdere dossiers (%d) gematcht op dossiernummer %s — niet auto-gekoppeld",
             len(case_ids),
             matches,
         )
@@ -149,8 +148,13 @@ async def _find_case_by_thread(
 # ── Bounce / system email detection ──────────────────────────────────────────
 
 _BOUNCE_FROM_LOCALS = {
-    "mailer-daemon", "postmaster", "mail-daemon",
-    "noreply", "no-reply", "auto-reply", "autoreply",
+    "mailer-daemon",
+    "postmaster",
+    "mail-daemon",
+    "noreply",
+    "no-reply",
+    "auto-reply",
+    "autoreply",
 }
 
 _BOUNCE_SUBJECT_RE = re.compile(
@@ -245,8 +249,7 @@ async def _find_case_for_email(
 
     if len(case_ids) > 1:
         logger.info(
-            "Meerdere dossiers (%d) gevonden voor %s"
-            " — niet auto-gekoppeld",
+            "Meerdere dossiers (%d) gevonden voor %s — niet auto-gekoppeld",
             len(case_ids),
             email_addresses,
         )
@@ -284,9 +287,7 @@ async def _get_case_contact_emails(
     emails = []
 
     # Get the case with its relationships
-    result = await db.execute(
-        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
-    )
+    result = await db.execute(select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id))
     case = result.scalar_one_or_none()
     if not case:
         return emails
@@ -358,8 +359,12 @@ async def _download_attachments(
             # Download from provider
             if imap_host:
                 file_bytes = await provider.get_attachment(
-                    access_token, msg.provider_message_id, att.attachment_id,
-                    host=imap_host, port=imap_port, username=imap_username,
+                    access_token,
+                    msg.provider_message_id,
+                    att.attachment_id,
+                    host=imap_host,
+                    port=imap_port,
+                    username=imap_username,
                 )
             else:
                 file_bytes = await provider.get_attachment(
@@ -368,6 +373,7 @@ async def _download_attachments(
 
             # Generate stored filename
             import os
+
             ext = os.path.splitext(att.filename)[1] if att.filename else ""
             stored_filename = f"{uuid.uuid4()}{ext}"
             file_path = storage_dir / stored_filename
@@ -390,9 +396,7 @@ async def _download_attachments(
             downloaded += 1
 
         except Exception as e:
-            logger.error(
-                f"Bijlage '{att.filename}' downloaden mislukt: {e}"
-            )
+            logger.error(f"Bijlage '{att.filename}' downloaden mislukt: {e}")
 
     return downloaded
 
@@ -427,9 +431,7 @@ async def sync_emails_for_account(
 
     # If syncing from a dossier context, build a Gmail query from the case contacts
     if force_case_id and not query:
-        contact_emails = await _get_case_contact_emails(
-            db, account.tenant_id, force_case_id
-        )
+        contact_emails = await _get_case_contact_emails(db, account.tenant_id, force_case_id)
         if contact_emails:
             # Build Gmail query: emails from OR to any contact
             email_parts = []
@@ -437,13 +439,9 @@ async def sync_emails_for_account(
                 email_parts.append(f"from:{email}")
                 email_parts.append(f"to:{email}")
             query = " OR ".join(email_parts)
-            logger.info(
-                f"Dossier-sync query voor case {force_case_id}: {query}"
-            )
+            logger.info(f"Dossier-sync query voor case {force_case_id}: {query}")
         else:
-            logger.warning(
-                f"Geen contact-emailadressen gevonden voor case {force_case_id}"
-            )
+            logger.warning(f"Geen contact-emailadressen gevonden voor case {force_case_id}")
 
     # Fetch messages from provider
     if account.provider == "imap":
@@ -487,9 +485,11 @@ async def sync_emails_for_account(
                         db, account.tenant_id, msg.subject or ""
                     )
                 if link_to:
-                    synced_email = (await db.execute(
-                        select(SyncedEmail).where(SyncedEmail.id == existing_row[0])
-                    )).scalar_one()
+                    synced_email = (
+                        await db.execute(
+                            select(SyncedEmail).where(SyncedEmail.id == existing_row[0])
+                        )
+                    ).scalar_one()
                     synced_email.case_id = link_to
                     synced_email.matched_by = matched_by_val
                     stats["linked"] += 1
@@ -502,6 +502,7 @@ async def sync_emails_for_account(
         # creating a duplicate.
         if msg.from_email and msg.from_email.lower() == account.email_address.lower():
             from sqlalchemy import func as sa_func
+
             dedup_result = await db.execute(
                 select(SyncedEmail).where(
                     SyncedEmail.email_account_id == account.id,
@@ -515,9 +516,7 @@ async def sync_emails_for_account(
                 # Update existing record with real IDs from Graph
                 dedup_match.provider_message_id = msg.provider_message_id
                 dedup_match.provider_thread_id = msg.thread_id
-                logger.info(
-                    f"Dedup merge: updated synthetic ID for '{msg.subject[:50]}'"
-                )
+                logger.info(f"Dedup merge: updated synthetic ID for '{msg.subject[:50]}'")
                 stats["skipped"] += 1
                 continue
 
@@ -553,9 +552,7 @@ async def sync_emails_for_account(
             matched_by = "force_case_id"
         else:
             # Priority 2: thread matching — most reliable
-            case_id = await _find_case_by_thread(
-                db, account.id, msg.thread_id
-            )
+            case_id = await _find_case_by_thread(db, account.id, msg.thread_id)
             if case_id:
                 matched_by = "thread"
 
@@ -583,9 +580,7 @@ async def sync_emails_for_account(
                     # ONLY if no case number was found in the subject
                     # (if a case number was found but dossier doesn't exist,
                     #  we intentionally stop here — don't guess)
-                    case_id = await _find_case_for_email(
-                        db, account.tenant_id, all_addresses
-                    )
+                    case_id = await _find_case_for_email(db, account.tenant_id, all_addresses)
                     if case_id:
                         matched_by = "contact_email"
 
@@ -638,7 +633,12 @@ async def sync_emails_for_account(
     for msg, synced_id in new_emails_with_attachments:
         try:
             downloaded = await _download_attachments(
-                db, provider, access_token, account.tenant_id, synced_id, msg,
+                db,
+                provider,
+                access_token,
+                account.tenant_id,
+                synced_id,
+                msg,
                 **att_kwargs,
             )
             attachments_downloaded += downloaded
@@ -692,9 +692,7 @@ async def _rematch_unlinked_emails(
         matched_by = None
 
         # Priority 1: thread matching
-        case_id = await _find_case_by_thread(
-            db, email.email_account_id, email.provider_thread_id
-        )
+        case_id = await _find_case_by_thread(db, email.email_account_id, email.provider_thread_id)
         if case_id:
             matched_by = "thread"
 
@@ -727,8 +725,7 @@ async def _rematch_unlinked_emails(
 
             if email.email_account:
                 all_addresses = [
-                    a for a in all_addresses
-                    if a != email.email_account.email_address.lower()
+                    a for a in all_addresses if a != email.email_account.email_address.lower()
                 ]
 
             case_id = await _find_case_for_email(db, tenant_id, all_addresses)
@@ -740,8 +737,7 @@ async def _rematch_unlinked_emails(
             email.matched_by = matched_by
             linked_count += 1
             logger.info(
-                f"Re-match: email '{email.subject}' gekoppeld aan case"
-                f" {case_id} via {matched_by}"
+                f"Re-match: email '{email.subject}' gekoppeld aan case {case_id} via {matched_by}"
             )
 
     if linked_count:
@@ -1031,8 +1027,10 @@ async def suggest_cases_for_email(
             # Cases where contact is client or opposing party
             case_result = await db.execute(
                 select(
-                    Case.id, Case.case_number,
-                    Case.description, Case.client_id,
+                    Case.id,
+                    Case.case_number,
+                    Case.description,
+                    Case.client_id,
                     Case.opposing_party_id,
                 ).where(
                     Case.tenant_id == tenant_id,
@@ -1101,9 +1099,9 @@ async def suggest_cases_for_email(
     client_names: dict[str, str] = {}
     if case_ids_to_fetch:
         cn_result = await db.execute(
-            select(Case.id, Contact.display_name).join(
-                Contact, Case.client_id == Contact.id, isouter=True
-            ).where(Case.id.in_(case_ids_to_fetch))
+            select(Case.id, Contact.display_name)
+            .join(Contact, Case.client_id == Contact.id, isouter=True)
+            .where(Case.id.in_(case_ids_to_fetch))
         )
         for row in cn_result.all():
             client_names[str(row[0])] = row[1] or ""

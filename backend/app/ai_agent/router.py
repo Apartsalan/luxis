@@ -84,6 +84,7 @@ async def parse_invoice(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _classification_to_response(c) -> ClassificationResponse:
     """Convert an EmailClassification model to a ClassificationResponse."""
     email = c.synced_email
@@ -103,16 +104,12 @@ def _classification_to_response(c) -> ClassificationResponse:
         confidence=c.confidence,
         reasoning=c.reasoning,
         suggested_action=c.suggested_action,
-        suggested_action_label=ACTION_LABELS.get(
-            c.suggested_action, c.suggested_action
-        ),
+        suggested_action_label=ACTION_LABELS.get(c.suggested_action, c.suggested_action),
         suggested_template_key=c.suggested_template_key,
         suggested_template_name=None,  # Populated separately if needed
         suggested_reminder_days=c.suggested_reminder_days,
         status=c.status,
-        reviewed_by_name=(
-            reviewer.full_name if reviewer else None
-        ),
+        reviewed_by_name=(reviewer.full_name if reviewer else None),
         reviewed_at=c.reviewed_at,
         review_note=c.review_note,
         executed_at=c.executed_at,
@@ -157,9 +154,7 @@ async def get_classification(
     db: AsyncSession = Depends(get_db),
 ):
     """Get a single classification by ID."""
-    c = await get_classification_by_id(
-        db, classification_id, current_user.tenant_id
-    )
+    c = await get_classification_by_id(db, classification_id, current_user.tenant_id)
     if not c:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -178,9 +173,7 @@ async def get_email_classification(
     db: AsyncSession = Depends(get_db),
 ):
     """Get the classification for a specific synced email (if any)."""
-    c = await get_classification_by_email(
-        db, synced_email_id, current_user.tenant_id
-    )
+    c = await get_classification_by_email(db, synced_email_id, current_user.tenant_id)
     if not c:
         return None
     return _classification_to_response(c)
@@ -226,9 +219,7 @@ async def classify_single_email(
         return None
     await db.commit()
     # Refresh to load relationships
-    refreshed = await get_classification_by_id(
-        db, c.id, current_user.tenant_id
-    )
+    refreshed = await get_classification_by_id(db, c.id, current_user.tenant_id)
     return _classification_to_response(refreshed) if refreshed else None
 
 
@@ -253,9 +244,7 @@ async def approve(
             detail="Classificatie niet gevonden of niet in status 'pending'",
         )
     await db.commit()
-    refreshed = await get_classification_by_id(
-        db, c.id, current_user.tenant_id
-    )
+    refreshed = await get_classification_by_id(db, c.id, current_user.tenant_id)
     return _classification_to_response(refreshed)
 
 
@@ -280,9 +269,7 @@ async def reject(
             detail="Classificatie niet gevonden of niet in status 'pending'",
         )
     await db.commit()
-    refreshed = await get_classification_by_id(
-        db, c.id, current_user.tenant_id
-    )
+    refreshed = await get_classification_by_id(db, c.id, current_user.tenant_id)
     return _classification_to_response(refreshed)
 
 
@@ -296,18 +283,14 @@ async def execute(
     db: AsyncSession = Depends(get_db),
 ):
     """Execute an approved classification action."""
-    c = await execute_classification(
-        db, classification_id, current_user.tenant_id, current_user.id
-    )
+    c = await execute_classification(db, classification_id, current_user.tenant_id, current_user.id)
     if not c:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Classificatie niet gevonden of niet in status 'approved'",
         )
     await db.commit()
-    refreshed = await get_classification_by_id(
-        db, c.id, current_user.tenant_id
-    )
+    refreshed = await get_classification_by_id(db, c.id, current_user.tenant_id)
     return _classification_to_response(refreshed)
 
 

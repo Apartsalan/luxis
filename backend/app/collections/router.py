@@ -63,9 +63,7 @@ async def create_claim(
 ):
     """Add a claim to a case."""
     await get_case(db, current_user.tenant_id, case_id)
-    claim = await service.create_claim(
-        db, current_user.tenant_id, case_id, data
-    )
+    claim = await service.create_claim(db, current_user.tenant_id, case_id, data)
     return claim
 
 
@@ -79,9 +77,7 @@ async def update_claim(
 ):
     """Update a claim."""
     await get_case(db, current_user.tenant_id, case_id)
-    claim = await service.update_claim(
-        db, current_user.tenant_id, claim_id, data
-    )
+    claim = await service.update_claim(db, current_user.tenant_id, claim_id, data)
     return claim
 
 
@@ -96,7 +92,9 @@ async def link_invoice_to_claim(
     """Link (or unlink) an uploaded invoice file to a claim."""
     await get_case(db, current_user.tenant_id, case_id)
     claim = await service.update_claim(
-        db, current_user.tenant_id, claim_id,
+        db,
+        current_user.tenant_id,
+        claim_id,
         ClaimUpdate(invoice_file_id=invoice_file_id),
     )
     return claim
@@ -205,7 +203,11 @@ async def create_payment(
     """Register a payment for a case (distributed per art. 6:44 BW)."""
     case = await get_case(db, current_user.tenant_id, case_id)
     return await service.create_payment(
-        db, current_user.tenant_id, case_id, data, current_user.id,
+        db,
+        current_user.tenant_id,
+        case_id,
+        data,
+        current_user.id,
         interest_type=case.interest_type,
         contractual_rate=case.contractual_rate,
         contractual_compound=case.contractual_compound,
@@ -223,9 +225,7 @@ async def update_payment(
 ):
     """Update a payment."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.update_payment(
-        db, current_user.tenant_id, payment_id, data
-    )
+    return await service.update_payment(db, current_user.tenant_id, payment_id, data)
 
 
 @router.delete(
@@ -257,9 +257,7 @@ async def list_arrangements(
 ):
     """List payment arrangements for a case, with installments."""
     await get_case(db, current_user.tenant_id, case_id)
-    results = await service.list_arrangements(
-        db, current_user.tenant_id, case_id
-    )
+    results = await service.list_arrangements(db, current_user.tenant_id, case_id)
     # Convert service dicts to response models
     out = []
     for r in results:
@@ -276,9 +274,7 @@ async def list_arrangements(
                 status=arr.status,
                 notes=arr.notes,
                 created_at=arr.created_at,
-                installments=[
-                    InstallmentResponse.model_validate(i) for i in r["installments"]
-                ],
+                installments=[InstallmentResponse.model_validate(i) for i in r["installments"]],
                 paid_count=r["paid_count"],
                 total_paid_amount=r["total_paid_amount"],
             )
@@ -299,9 +295,7 @@ async def create_arrangement(
 ):
     """Create a payment arrangement with auto-generated installments."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.create_arrangement(
-        db, current_user.tenant_id, case_id, data
-    )
+    return await service.create_arrangement(db, current_user.tenant_id, case_id, data)
 
 
 @router.get(
@@ -316,9 +310,7 @@ async def get_arrangement(
 ):
     """Get a single arrangement with installments."""
     await get_case(db, current_user.tenant_id, case_id)
-    arr = await service.get_arrangement(
-        db, current_user.tenant_id, arrangement_id
-    )
+    arr = await service.get_arrangement(db, current_user.tenant_id, arrangement_id)
     installments = sorted(arr.installments, key=lambda i: i.installment_number)
     from decimal import Decimal
 
@@ -333,13 +325,9 @@ async def get_arrangement(
         status=arr.status,
         notes=arr.notes,
         created_at=arr.created_at,
-        installments=[
-            InstallmentResponse.model_validate(i) for i in installments
-        ],
+        installments=[InstallmentResponse.model_validate(i) for i in installments],
         paid_count=len([i for i in installments if i.status == "paid"]),
-        total_paid_amount=sum(
-            (i.paid_amount for i in installments), Decimal("0")
-        ),
+        total_paid_amount=sum((i.paid_amount for i in installments), Decimal("0")),
     )
 
 
@@ -356,9 +344,7 @@ async def update_arrangement(
 ):
     """Update a payment arrangement."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.update_arrangement(
-        db, current_user.tenant_id, arrangement_id, data
-    )
+    return await service.update_arrangement(db, current_user.tenant_id, arrangement_id, data)
 
 
 @router.post(
@@ -376,8 +362,13 @@ async def record_installment_payment(
     """Record a payment for a specific installment."""
     case = await get_case(db, current_user.tenant_id, case_id)
     return await service.record_installment_payment(
-        db, current_user.tenant_id, case_id, arrangement_id, installment_id,
-        data, current_user.id,
+        db,
+        current_user.tenant_id,
+        case_id,
+        arrangement_id,
+        installment_id,
+        data,
+        current_user.id,
         interest_type=case.interest_type,
         contractual_rate=case.contractual_rate,
         contractual_compound=case.contractual_compound,
@@ -397,9 +388,7 @@ async def default_arrangement(
 ):
     """Mark an arrangement as defaulted (wanprestatie)."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.default_arrangement(
-        db, current_user.tenant_id, arrangement_id
-    )
+    return await service.default_arrangement(db, current_user.tenant_id, arrangement_id)
 
 
 @router.patch(
@@ -414,9 +403,7 @@ async def cancel_arrangement(
 ):
     """Cancel an arrangement."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.cancel_arrangement(
-        db, current_user.tenant_id, arrangement_id
-    )
+    return await service.cancel_arrangement(db, current_user.tenant_id, arrangement_id)
 
 
 @router.patch(
@@ -448,9 +435,7 @@ async def list_derdengelden(
 ):
     """List derdengelden transactions for a case."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.list_derdengelden(
-        db, current_user.tenant_id, case_id
-    )
+    return await service.list_derdengelden(db, current_user.tenant_id, case_id)
 
 
 @router.post(
@@ -479,9 +464,7 @@ async def derdengelden_balance(
 ):
     """Get derdengelden balance for a case."""
     await get_case(db, current_user.tenant_id, case_id)
-    return await service.get_derdengelden_balance(
-        db, current_user.tenant_id, case_id
-    )
+    return await service.get_derdengelden_balance(db, current_user.tenant_id, case_id)
 
 
 # ── Financial Summary ────────────────────────────────────────────────────────

@@ -13,9 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.invoices.models import Invoice
 
 
-async def _next_number(
-    db: AsyncSession, tenant_id: uuid.UUID, prefix: str
-) -> str:
+async def _next_number(db: AsyncSession, tenant_id: uuid.UUID, prefix: str) -> str:
     """Generate the next sequential number for a given prefix.
 
     Uses FOR UPDATE to lock the row with the highest number, preventing

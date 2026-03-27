@@ -12,9 +12,7 @@ import uuid
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
-async def _create_non_admin_user(
-    db: AsyncSession, tenant: Tenant
-) -> tuple[User, dict[str, str]]:
+async def _create_non_admin_user(db: AsyncSession, tenant: Tenant) -> tuple[User, dict[str, str]]:
     """Create a non-admin user and return (user, auth_headers)."""
     user = User(
         id=uuid.uuid4(),
@@ -35,9 +33,7 @@ async def _create_non_admin_user(
 
 
 @pytest.mark.asyncio
-async def test_get_tenant_settings(
-    client: AsyncClient, auth_headers: dict, test_tenant: Tenant
-):
+async def test_get_tenant_settings(client: AsyncClient, auth_headers: dict, test_tenant: Tenant):
     """Any authenticated user can read tenant settings."""
     resp = await client.get("/api/settings/tenant", headers=auth_headers)
     assert resp.status_code == 200
@@ -62,9 +58,7 @@ async def test_get_tenant_settings_non_admin(
 
 
 @pytest.mark.asyncio
-async def test_update_tenant_settings(
-    client: AsyncClient, auth_headers: dict, test_tenant: Tenant
-):
+async def test_update_tenant_settings(client: AsyncClient, auth_headers: dict, test_tenant: Tenant):
     """Admin can update tenant settings."""
     resp = await client.put(
         "/api/settings/tenant",

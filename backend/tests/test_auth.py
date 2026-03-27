@@ -130,9 +130,7 @@ async def test_expired_token_returns_401(client: AsyncClient, test_user: User, t
 
 
 @pytest.mark.asyncio
-async def test_token_with_nonexistent_user_returns_401(
-    client: AsyncClient, test_tenant: Tenant
-):
+async def test_token_with_nonexistent_user_returns_401(client: AsyncClient, test_tenant: Tenant):
     """A token referencing a deleted/non-existent user should return 401."""
     fake_user_id = str(uuid.uuid4())
     token = create_access_token(fake_user_id, str(test_tenant.id))
@@ -179,23 +177,22 @@ async def test_inactive_user_cannot_login(
 
 @pytest.mark.asyncio
 async def test_me_returns_correct_tenant(
-    client: AsyncClient, test_user: User, test_tenant: Tenant,
-    second_user: User, second_tenant: Tenant,
+    client: AsyncClient,
+    test_user: User,
+    test_tenant: Tenant,
+    second_user: User,
+    second_tenant: Tenant,
 ):
     """Each user's /me endpoint should return their own tenant info."""
     # Tenant A
     token_a = create_access_token(str(test_user.id), str(test_tenant.id))
-    resp_a = await client.get(
-        "/api/auth/me", headers={"Authorization": f"Bearer {token_a}"}
-    )
+    resp_a = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {token_a}"})
     assert resp_a.status_code == 200
     assert resp_a.json()["email"] == "lisanne@kestinglegal.nl"
 
     # Tenant B
     token_b = create_access_token(str(second_user.id), str(second_tenant.id))
-    resp_b = await client.get(
-        "/api/auth/me", headers={"Authorization": f"Bearer {token_b}"}
-    )
+    resp_b = await client.get("/api/auth/me", headers={"Authorization": f"Bearer {token_b}"})
     assert resp_b.status_code == 200
     assert resp_b.json()["email"] == "pieter@vandenberg.nl"
 

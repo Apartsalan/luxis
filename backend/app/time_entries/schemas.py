@@ -33,7 +33,9 @@ class TimeEntryCreate(BaseModel):
     )
     billable: bool = True
     billable_minutes: int | None = Field(
-        None, gt=0, description="Te factureren minuten",
+        None,
+        gt=0,
+        description="Te factureren minuten",
     )
     hourly_rate: Decimal | None = Field(None, ge=0, decimal_places=2)
 

@@ -110,9 +110,7 @@ async def create_user(
     from app.shared.exceptions import BadRequestError, ConflictError
 
     if role not in ROLES:
-        raise BadRequestError(
-            f"Ongeldige rol: {role}. Kies uit: {', '.join(ROLES)}"
-        )
+        raise BadRequestError(f"Ongeldige rol: {role}. Kies uit: {', '.join(ROLES)}")
 
     # Check for duplicate email
     existing = await db.execute(select(User).where(User.email == email))
@@ -138,9 +136,7 @@ async def create_password_reset_token(db: AsyncSession, email: str) -> str | Non
     Returns the token if the user exists, None otherwise.
     Caller should NOT reveal whether the email exists.
     """
-    result = await db.execute(
-        select(User).where(User.email == email, User.is_active.is_(True))
-    )
+    result = await db.execute(select(User).where(User.email == email, User.is_active.is_(True)))
     user = result.scalar_one_or_none()
     if user is None:
         return None
@@ -154,18 +150,14 @@ async def create_password_reset_token(db: AsyncSession, email: str) -> str | Non
     return token
 
 
-async def reset_password_with_token(
-    db: AsyncSession, token: str, new_password: str
-) -> bool:
+async def reset_password_with_token(db: AsyncSession, token: str, new_password: str) -> bool:
     """Reset a user's password using a valid reset token.
 
     Returns True on success, False if token is invalid or expired.
     """
     # Hash the incoming token to compare with stored hash
     token_hash = hashlib.sha256(token.encode()).hexdigest()
-    result = await db.execute(
-        select(User).where(User.password_reset_token == token_hash)
-    )
+    result = await db.execute(select(User).where(User.password_reset_token == token_hash))
     user = result.scalar_one_or_none()
     if user is None:
         return False
@@ -217,9 +209,7 @@ async def rotate_refresh_token(
     Raises ValueError if token was already used (possible theft).
     """
     token_hash = _hash_token(old_token)
-    result = await db.execute(
-        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
-    )
+    result = await db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
     rt = result.scalar_one_or_none()
 
     if rt is None:

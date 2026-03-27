@@ -190,8 +190,11 @@ async def test_case_default_billing_method_is_hourly(
 
 @pytest.mark.asyncio
 async def test_create_voorschotnota(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Creating a voorschotnota should return an invoice with type 'voorschotnota'."""
     contact = await _create_contact(db, test_tenant.id)
@@ -207,9 +210,7 @@ async def test_create_voorschotnota(
         "due_date": str(date.today() + timedelta(days=14)),
         "btw_percentage": "21.00",
     }
-    resp = await client.post(
-        "/api/invoices/voorschotnota", json=payload, headers=auth_headers
-    )
+    resp = await client.post("/api/invoices/voorschotnota", json=payload, headers=auth_headers)
     assert resp.status_code == 201
     data = resp.json()
     assert data["invoice_type"] == "voorschotnota"
@@ -224,8 +225,11 @@ async def test_create_voorschotnota(
 
 @pytest.mark.asyncio
 async def test_voorschotnota_numbering(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Multiple voorschotnota's should get incrementing VN-numbers."""
     contact = await _create_contact(db, test_tenant.id)
@@ -242,9 +246,7 @@ async def test_voorschotnota_numbering(
             "due_date": str(date.today() + timedelta(days=14)),
             "btw_percentage": "21.00",
         }
-        resp = await client.post(
-            "/api/invoices/voorschotnota", json=payload, headers=auth_headers
-        )
+        resp = await client.post("/api/invoices/voorschotnota", json=payload, headers=auth_headers)
         assert resp.status_code == 201
         numbers.append(resp.json()["invoice_number"])
 
@@ -258,17 +260,18 @@ async def test_voorschotnota_numbering(
 
 @pytest.mark.asyncio
 async def test_advance_balance_empty(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Advance balance for a case with no voorschotnota's should be zero."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, contact.id)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/advance-balance", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/advance-balance", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert Decimal(str(data["total_advance"])) == Decimal("0.00")
@@ -281,13 +284,19 @@ async def test_advance_balance_empty(
 
 @pytest.mark.asyncio
 async def test_budget_status_green(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Budget status with low usage should be green."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(
-        db, test_tenant.id, test_user.id, contact.id,
+        db,
+        test_tenant.id,
+        test_user.id,
+        contact.id,
         billing_method="budget_cap",
         budget_hours=Decimal("40.00"),
         budget=Decimal("10000.00"),
@@ -308,9 +317,7 @@ async def test_budget_status_green(
     db.add(te)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/budget-status", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/budget-status", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert Decimal(str(data["used_hours"])) == Decimal("2.00")
@@ -321,13 +328,19 @@ async def test_budget_status_green(
 
 @pytest.mark.asyncio
 async def test_budget_status_red_over_90_pct(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Budget status at 95% should be red."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(
-        db, test_tenant.id, test_user.id, contact.id,
+        db,
+        test_tenant.id,
+        test_user.id,
+        contact.id,
         billing_method="budget_cap",
         budget_hours=Decimal("10.00"),
     )
@@ -347,9 +360,7 @@ async def test_budget_status_red_over_90_pct(
     db.add(te)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/budget-status", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/budget-status", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert Decimal(str(data["used_hours"])) == Decimal("9.50")
@@ -358,13 +369,19 @@ async def test_budget_status_red_over_90_pct(
 
 @pytest.mark.asyncio
 async def test_budget_status_orange(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Budget status between 75-90% should be orange."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(
-        db, test_tenant.id, test_user.id, contact.id,
+        db,
+        test_tenant.id,
+        test_user.id,
+        contact.id,
         billing_method="budget_cap",
         budget_hours=Decimal("10.00"),
     )
@@ -384,9 +401,7 @@ async def test_budget_status_orange(
     db.add(te)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/budget-status", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/budget-status", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "orange"
@@ -394,13 +409,19 @@ async def test_budget_status_orange(
 
 @pytest.mark.asyncio
 async def test_budget_status_includes_expenses(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Budget status should include billable expenses in used_amount."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(
-        db, test_tenant.id, test_user.id, contact.id,
+        db,
+        test_tenant.id,
+        test_user.id,
+        contact.id,
         billing_method="budget_cap",
         budget=Decimal("1000.00"),
     )
@@ -418,9 +439,7 @@ async def test_budget_status_includes_expenses(
     db.add(expense)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/budget-status", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/budget-status", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert Decimal(str(data["used_amount"])) == Decimal("85.00")
@@ -431,13 +450,19 @@ async def test_budget_status_includes_expenses(
 
 @pytest.mark.asyncio
 async def test_provisie_basic_calculation(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Provisie = collected * percentage/100, with fixed costs and minimum fee."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(
-        db, test_tenant.id, test_user.id, contact.id,
+        db,
+        test_tenant.id,
+        test_user.id,
+        contact.id,
         provisie_percentage=Decimal("10.00"),
         fixed_case_costs=Decimal("250.00"),
         minimum_fee=Decimal("500.00"),
@@ -454,9 +479,7 @@ async def test_provisie_basic_calculation(
         db.add(payment)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/provisie", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/provisie", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
 
@@ -471,13 +494,19 @@ async def test_provisie_basic_calculation(
 
 @pytest.mark.asyncio
 async def test_provisie_minimum_fee_applies(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """When provisie + fixed_costs < minimum_fee, minimum_fee should apply."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(
-        db, test_tenant.id, test_user.id, contact.id,
+        db,
+        test_tenant.id,
+        test_user.id,
+        contact.id,
         provisie_percentage=Decimal("5.00"),
         fixed_case_costs=Decimal("50.00"),
         minimum_fee=Decimal("500.00"),
@@ -493,9 +522,7 @@ async def test_provisie_minimum_fee_applies(
     db.add(payment)
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/provisie", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/provisie", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
 
@@ -506,22 +533,26 @@ async def test_provisie_minimum_fee_applies(
 
 @pytest.mark.asyncio
 async def test_provisie_no_payments(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession,
-    test_tenant: Tenant, test_user: User,
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
 ):
     """Provisie with no payments should return zero collected amount."""
     contact = await _create_contact(db, test_tenant.id)
     case = await _create_case(
-        db, test_tenant.id, test_user.id, contact.id,
+        db,
+        test_tenant.id,
+        test_user.id,
+        contact.id,
         provisie_percentage=Decimal("10.00"),
         fixed_case_costs=Decimal("0.00"),
         minimum_fee=Decimal("0.00"),
     )
     await db.commit()
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/provisie", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/provisie", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert Decimal(str(data["collected_amount"])) == Decimal("0.00")

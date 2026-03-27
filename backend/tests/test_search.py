@@ -77,9 +77,7 @@ async def test_search_finds_case_by_number(
 
 
 @pytest.mark.asyncio
-async def test_search_empty_result(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_search_empty_result(client: AsyncClient, auth_headers: dict):
     """Search for nonexistent term returns empty results."""
     resp = await client.get("/api/search?q=xyznonexistent123", headers=auth_headers)
     assert resp.status_code == 200
@@ -102,13 +100,15 @@ async def test_search_respects_limit(
     """Search limit parameter caps results."""
     # Create multiple contacts
     for i in range(5):
-        db.add(Contact(
-            id=uuid.uuid4(),
-            tenant_id=test_tenant.id,
-            contact_type="person",
-            name=f"Testpersoon {i}",
-            email=f"test{i}@example.nl",
-        ))
+        db.add(
+            Contact(
+                id=uuid.uuid4(),
+                tenant_id=test_tenant.id,
+                contact_type="person",
+                name=f"Testpersoon {i}",
+                email=f"test{i}@example.nl",
+            )
+        )
     await db.commit()
 
     resp = await client.get("/api/search?q=Testpersoon&limit=2", headers=auth_headers)

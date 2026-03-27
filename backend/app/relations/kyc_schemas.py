@@ -14,9 +14,7 @@ class KycCreate(BaseModel):
     contact_id: uuid.UUID
 
     # Risk
-    risk_level: str | None = Field(
-        None, pattern="^(laag|midden|hoog)$"
-    )
+    risk_level: str | None = Field(None, pattern="^(laag|midden|hoog)$")
     risk_notes: str | None = None
 
     # ID document
@@ -59,9 +57,7 @@ class KycCreate(BaseModel):
 class KycUpdate(BaseModel):
     """Partial update of a KYC verification."""
 
-    risk_level: str | None = Field(
-        None, pattern="^(laag|midden|hoog)$"
-    )
+    risk_level: str | None = Field(None, pattern="^(laag|midden|hoog)$")
     risk_notes: str | None = None
 
     id_type: str | None = Field(

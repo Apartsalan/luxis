@@ -29,9 +29,7 @@ async def _create_contact(db: AsyncSession, tenant_id: uuid.UUID) -> Contact:
     return contact
 
 
-async def _create_case(
-    db: AsyncSession, tenant_id: uuid.UUID, **overrides
-) -> Case:
+async def _create_case(db: AsyncSession, tenant_id: uuid.UUID, **overrides) -> Case:
     client = await _create_contact(db, tenant_id)
     defaults = dict(
         id=uuid.uuid4(),
@@ -154,9 +152,7 @@ async def test_delete_claim(
     )
     claim_id = create_resp.json()["id"]
 
-    del_resp = await client.delete(
-        f"/api/cases/{case.id}/claims/{claim_id}", headers=auth_headers
-    )
+    del_resp = await client.delete(f"/api/cases/{case.id}/claims/{claim_id}", headers=auth_headers)
     assert del_resp.status_code == 204
 
 
@@ -188,7 +184,9 @@ async def test_list_payments(
     await _seed_interest_rates(db)
     case = await _create_case(db, test_tenant.id)
     await client.post(f"/api/cases/{case.id}/claims", json=_claim_payload(), headers=auth_headers)
-    await client.post(f"/api/cases/{case.id}/payments", json=_payment_payload(), headers=auth_headers)
+    await client.post(
+        f"/api/cases/{case.id}/payments", json=_payment_payload(), headers=auth_headers
+    )
 
     resp = await client.get(f"/api/cases/{case.id}/payments", headers=auth_headers)
     assert resp.status_code == 200
@@ -279,9 +277,7 @@ async def test_financial_summary(
 
 
 @pytest.mark.asyncio
-async def test_list_interest_rates(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession
-):
+async def test_list_interest_rates(client: AsyncClient, auth_headers: dict, db: AsyncSession):
     await _seed_interest_rates(db)
     resp = await client.get("/api/interest-rates", headers=auth_headers)
     assert resp.status_code == 200
@@ -309,9 +305,7 @@ async def test_derdengelden_crud(
     )
     assert create_resp.status_code == 201
 
-    list_resp = await client.get(
-        f"/api/cases/{case.id}/derdengelden", headers=auth_headers
-    )
+    list_resp = await client.get(f"/api/cases/{case.id}/derdengelden", headers=auth_headers)
     assert list_resp.status_code == 200
     assert len(list_resp.json()) >= 1
 
@@ -322,9 +316,7 @@ async def test_derdengelden_balance(
 ):
     case = await _create_case(db, test_tenant.id)
 
-    resp = await client.get(
-        f"/api/cases/{case.id}/derdengelden/balance", headers=auth_headers
-    )
+    resp = await client.get(f"/api/cases/{case.id}/derdengelden/balance", headers=auth_headers)
     assert resp.status_code == 200
 
 

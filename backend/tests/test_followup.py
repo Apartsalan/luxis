@@ -113,9 +113,7 @@ async def test_scan_creates_recommendation_for_orange_case(
 ):
     """Case in step >= min_wait_days → recommendation created."""
     step = await _create_step(db, test_tenant.id, min_wait_days=14)
-    await _create_case(
-        db, test_tenant.id, test_user.id, step, days_in_step=16
-    )
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
     await db.commit()
 
     count = await scan_for_followups(db, test_tenant.id)
@@ -123,9 +121,7 @@ async def test_scan_creates_recommendation_for_orange_case(
 
     assert count == 1
     result = await db.execute(
-        select(FollowupRecommendation).where(
-            FollowupRecommendation.tenant_id == test_tenant.id
-        )
+        select(FollowupRecommendation).where(FollowupRecommendation.tenant_id == test_tenant.id)
     )
     rec = result.scalar_one()
     assert rec.recommended_action == RecommendedAction.GENERATE_DOCUMENT
@@ -135,14 +131,10 @@ async def test_scan_creates_recommendation_for_orange_case(
 
 
 @pytest.mark.asyncio
-async def test_scan_skips_green_case(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_scan_skips_green_case(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Case in step < min_wait_days → no recommendation."""
     step = await _create_step(db, test_tenant.id, min_wait_days=14)
-    await _create_case(
-        db, test_tenant.id, test_user.id, step, days_in_step=5
-    )
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=5)
     await db.commit()
 
     count = await scan_for_followups(db, test_tenant.id)
@@ -150,16 +142,10 @@ async def test_scan_skips_green_case(
 
 
 @pytest.mark.asyncio
-async def test_scan_marks_overdue_as_red(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_scan_marks_overdue_as_red(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Case in step >= max_wait_days → urgency 'overdue'."""
-    step = await _create_step(
-        db, test_tenant.id, min_wait_days=14, max_wait_days=28
-    )
-    await _create_case(
-        db, test_tenant.id, test_user.id, step, days_in_step=30
-    )
+    step = await _create_step(db, test_tenant.id, min_wait_days=14, max_wait_days=28)
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=30)
     await db.commit()
 
     count = await scan_for_followups(db, test_tenant.id)
@@ -167,23 +153,17 @@ async def test_scan_marks_overdue_as_red(
 
     assert count == 1
     result = await db.execute(
-        select(FollowupRecommendation).where(
-            FollowupRecommendation.tenant_id == test_tenant.id
-        )
+        select(FollowupRecommendation).where(FollowupRecommendation.tenant_id == test_tenant.id)
     )
     rec = result.scalar_one()
     assert rec.urgency == "overdue"
 
 
 @pytest.mark.asyncio
-async def test_scan_skips_existing_pending(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_scan_skips_existing_pending(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Already has pending recommendation → no duplicate."""
     step = await _create_step(db, test_tenant.id, min_wait_days=14)
-    case = await _create_case(
-        db, test_tenant.id, test_user.id, step, days_in_step=16
-    )
+    case = await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
 
     # Create existing pending recommendation
     rec = FollowupRecommendation(
@@ -210,9 +190,7 @@ async def test_scan_skips_executed_same_step(
 ):
     """Already executed for this step → no duplicate."""
     step = await _create_step(db, test_tenant.id, min_wait_days=14)
-    case = await _create_case(
-        db, test_tenant.id, test_user.id, step, days_in_step=16
-    )
+    case = await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
 
     # Create existing executed recommendation for same step
     rec = FollowupRecommendation(
@@ -235,14 +213,10 @@ async def test_scan_skips_executed_same_step(
 
 
 @pytest.mark.asyncio
-async def test_scan_creates_after_rejected(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_scan_creates_after_rejected(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Rejected recommendation doesn't block new recommendation."""
     step = await _create_step(db, test_tenant.id, min_wait_days=14)
-    case = await _create_case(
-        db, test_tenant.id, test_user.id, step, days_in_step=16
-    )
+    case = await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
 
     # Create rejected recommendation — should NOT block
     rec = FollowupRecommendation(
@@ -268,12 +242,8 @@ async def test_scan_escalate_for_step_without_template(
     db: AsyncSession, test_tenant: Tenant, test_user: User
 ):
     """Step without template_type → ESCALATE action."""
-    step = await _create_step(
-        db, test_tenant.id, min_wait_days=14, template_type=None
-    )
-    await _create_case(
-        db, test_tenant.id, test_user.id, step, days_in_step=16
-    )
+    step = await _create_step(db, test_tenant.id, min_wait_days=14, template_type=None)
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
     await db.commit()
 
     count = await scan_for_followups(db, test_tenant.id)
@@ -281,24 +251,17 @@ async def test_scan_escalate_for_step_without_template(
 
     assert count == 1
     result = await db.execute(
-        select(FollowupRecommendation).where(
-            FollowupRecommendation.tenant_id == test_tenant.id
-        )
+        select(FollowupRecommendation).where(FollowupRecommendation.tenant_id == test_tenant.id)
     )
     rec = result.scalar_one()
     assert rec.recommended_action == RecommendedAction.ESCALATE
 
 
 @pytest.mark.asyncio
-async def test_scan_skips_betaald_case(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_scan_skips_betaald_case(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Case with status 'betaald' is not scanned."""
     step = await _create_step(db, test_tenant.id, min_wait_days=14)
-    await _create_case(
-        db, test_tenant.id, test_user.id, step,
-        days_in_step=16, status="betaald"
-    )
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16, status="betaald")
     await db.commit()
 
     count = await scan_for_followups(db, test_tenant.id)
@@ -306,13 +269,9 @@ async def test_scan_skips_betaald_case(
 
 
 @pytest.mark.asyncio
-async def test_scan_skips_case_without_step(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_scan_skips_case_without_step(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Case without pipeline step is not scanned."""
-    await _create_case(
-        db, test_tenant.id, test_user.id, None, days_in_step=30
-    )
+    await _create_case(db, test_tenant.id, test_user.id, None, days_in_step=30)
     await db.commit()
 
     count = await scan_for_followups(db, test_tenant.id)
@@ -325,7 +284,9 @@ async def test_scan_skips_case_without_step(
 
 
 async def _create_pending_rec(
-    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID,
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
     step_id: uuid.UUID,
 ) -> FollowupRecommendation:
     """Create a pending recommendation for testing."""
@@ -347,18 +308,14 @@ async def _create_pending_rec(
 
 
 @pytest.mark.asyncio
-async def test_approve_recommendation(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_approve_recommendation(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Approve changes status to APPROVED."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
     rec = await _create_pending_rec(db, test_tenant.id, case.id, step.id)
     await db.commit()
 
-    result = await approve_recommendation(
-        db, test_tenant.id, rec.id, test_user.id
-    )
+    result = await approve_recommendation(db, test_tenant.id, rec.id, test_user.id)
     await db.commit()
 
     assert result is not None
@@ -368,18 +325,14 @@ async def test_approve_recommendation(
 
 
 @pytest.mark.asyncio
-async def test_reject_recommendation(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_reject_recommendation(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Reject changes status to REJECTED with note."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
     rec = await _create_pending_rec(db, test_tenant.id, case.id, step.id)
     await db.commit()
 
-    result = await reject_recommendation(
-        db, test_tenant.id, rec.id, test_user.id, "Niet nodig"
-    )
+    result = await reject_recommendation(db, test_tenant.id, rec.id, test_user.id, "Niet nodig")
     await db.commit()
 
     assert result is not None
@@ -392,9 +345,7 @@ async def test_approve_nonexistent_returns_none(
     db: AsyncSession, test_tenant: Tenant, test_user: User
 ):
     """Approve of nonexistent recommendation returns None."""
-    result = await approve_recommendation(
-        db, test_tenant.id, uuid.uuid4(), test_user.id
-    )
+    result = await approve_recommendation(db, test_tenant.id, uuid.uuid4(), test_user.id)
     assert result is None
 
 
@@ -404,9 +355,7 @@ async def test_approve_nonexistent_returns_none(
 
 
 @pytest.mark.asyncio
-async def test_list_with_status_filter(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_list_with_status_filter(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """List recommendations with status filter."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
@@ -438,9 +387,7 @@ async def test_list_with_status_filter(
     await db.commit()
 
     # Filter pending only
-    result = await list_recommendations(
-        db, test_tenant.id, status_filter="pending"
-    )
+    result = await list_recommendations(db, test_tenant.id, status_filter="pending")
     assert result.total == 1
     assert result.items[0].status == "pending"
 
@@ -450,9 +397,7 @@ async def test_list_with_status_filter(
 
 
 @pytest.mark.asyncio
-async def test_stats_counts(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_stats_counts(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Stats endpoint returns correct counts per status."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
@@ -485,14 +430,17 @@ async def test_stats_counts(
 
 
 @pytest.mark.asyncio
-async def test_financial_precision(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_financial_precision(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Outstanding amount uses Decimal, not float."""
     step = await _create_step(db, test_tenant.id, min_wait_days=14)
     await _create_case(
-        db, test_tenant.id, test_user.id, step,
-        days_in_step=16, total_principal=1234.56, total_paid=100.00
+        db,
+        test_tenant.id,
+        test_user.id,
+        step,
+        days_in_step=16,
+        total_principal=1234.56,
+        total_paid=100.00,
     )
     await db.commit()
 
@@ -501,9 +449,7 @@ async def test_financial_precision(
 
     assert count == 1
     result = await db.execute(
-        select(FollowupRecommendation).where(
-            FollowupRecommendation.tenant_id == test_tenant.id
-        )
+        select(FollowupRecommendation).where(FollowupRecommendation.tenant_id == test_tenant.id)
     )
     rec = result.scalar_one()
     assert rec.outstanding_amount == Decimal("1134.56")
@@ -515,9 +461,7 @@ async def test_financial_precision(
 
 
 @pytest.mark.asyncio
-async def test_get_recommendation(
-    db: AsyncSession, test_tenant: Tenant, test_user: User
-):
+async def test_get_recommendation(db: AsyncSession, test_tenant: Tenant, test_user: User):
     """Get a single recommendation with enriched data."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
@@ -538,9 +482,7 @@ async def test_get_recommendation(
 
 
 @pytest.mark.asyncio
-async def test_api_list_followups(
-    client, db: AsyncSession, test_tenant, test_user
-):
+async def test_api_list_followups(client, db: AsyncSession, test_tenant, test_user):
     """GET /api/followup returns paginated recommendations."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
@@ -562,9 +504,7 @@ async def test_api_list_followups(
 
 
 @pytest.mark.asyncio
-async def test_api_stats(
-    client, db: AsyncSession, test_tenant, test_user
-):
+async def test_api_stats(client, db: AsyncSession, test_tenant, test_user):
     """GET /api/followup/stats returns counts."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
@@ -584,9 +524,7 @@ async def test_api_stats(
 
 
 @pytest.mark.asyncio
-async def test_api_approve_and_reject(
-    client, db: AsyncSession, test_tenant, test_user
-):
+async def test_api_approve_and_reject(client, db: AsyncSession, test_tenant, test_user):
     """POST approve and reject endpoints work."""
     step = await _create_step(db, test_tenant.id)
     case = await _create_case(db, test_tenant.id, test_user.id, step)

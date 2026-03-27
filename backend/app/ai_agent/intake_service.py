@@ -48,9 +48,8 @@ async def detect_intake_emails(
     Returns the number of new intake requests created.
     """
     # Already processed email IDs
-    already_processed = (
-        select(IntakeRequest.synced_email_id)
-        .where(IntakeRequest.tenant_id == tenant_id)
+    already_processed = select(IntakeRequest.synced_email_id).where(
+        IntakeRequest.tenant_id == tenant_id
     )
 
     # Find eligible emails
@@ -82,9 +81,7 @@ async def detect_intake_emails(
         )
         .distinct()
     )
-    client_contacts = {
-        c.email.lower(): c for c in client_result.scalars().all() if c.email
-    }
+    client_contacts = {c.email.lower(): c for c in client_result.scalars().all() if c.email}
 
     created = 0
     for email in emails:
@@ -107,7 +104,8 @@ async def detect_intake_emails(
         await db.flush()
         logger.info(
             "Intake detection: %d new intake requests for tenant %s",
-            created, tenant_id,
+            created,
+            tenant_id,
         )
 
     return created
@@ -130,8 +128,7 @@ async def process_intake(
     result = await db.execute(
         select(IntakeRequest)
         .options(
-            selectinload(IntakeRequest.synced_email)
-            .selectinload(SyncedEmail.attachments),
+            selectinload(IntakeRequest.synced_email).selectinload(SyncedEmail.attachments),
         )
         .where(
             IntakeRequest.id == intake_id,
@@ -166,9 +163,7 @@ async def process_intake(
     if email.attachments:
         for att in email.attachments:
             if att.content_type == "application/pdf" or att.filename.lower().endswith(".pdf"):
-                file_path = (
-                    f"{ATTACHMENTS_BASE}/{tenant_id}/{email.id}/{att.stored_filename}"
-                )
+                file_path = f"{ATTACHMENTS_BASE}/{tenant_id}/{email.id}/{att.stored_filename}"
                 extracted = extract_text_from_pdf(file_path)
                 if extracted:
                     pdf_text = extracted
@@ -222,9 +217,7 @@ async def process_intake(
     raw_amount = ai_result.get("principal_amount")
     if raw_amount is not None:
         try:
-            intake.principal_amount = Decimal(str(raw_amount)).quantize(
-                Decimal("0.01")
-            )
+            intake.principal_amount = Decimal(str(raw_amount)).quantize(Decimal("0.01"))
         except (InvalidOperation, ValueError):
             intake.principal_amount = None
 
@@ -251,7 +244,8 @@ async def process_detected_intakes(
     Returns the number successfully processed.
     """
     result = await db.execute(
-        select(IntakeRequest.id).where(
+        select(IntakeRequest.id)
+        .where(
             IntakeRequest.tenant_id == tenant_id,
             IntakeRequest.status == IntakeStatus.DETECTED,
         )
@@ -379,7 +373,9 @@ async def approve_intake(
 
     logger.info(
         "Intake %s approved → case %s, contact %s",
-        intake_id, case_number, debtor_contact.name,
+        intake_id,
+        case_number,
+        debtor_contact.name,
     )
     return intake
 
@@ -443,18 +439,18 @@ async def get_intake_requests(
         .where(IntakeRequest.tenant_id == tenant_id)
     )
     count_query = (
-        select(func.count())
-        .select_from(IntakeRequest)
-        .where(IntakeRequest.tenant_id == tenant_id)
+        select(func.count()).select_from(IntakeRequest).where(IntakeRequest.tenant_id == tenant_id)
     )
 
     if status:
         query = query.where(IntakeRequest.status == status)
         count_query = count_query.where(IntakeRequest.status == status)
 
-    query = query.order_by(
-        IntakeRequest.created_at.desc()
-    ).offset((page - 1) * per_page).limit(per_page)
+    query = (
+        query.order_by(IntakeRequest.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
 
     result = await db.execute(query)
     intakes = list(result.scalars().all())
@@ -555,7 +551,9 @@ async def _find_or_create_debtor(
 
     logger.info(
         "Created debtor contact: %s (%s) for tenant %s",
-        contact.name, contact.id, tenant_id,
+        contact.name,
+        contact.id,
+        tenant_id,
     )
     return contact
 

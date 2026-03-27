@@ -16,14 +16,15 @@ Revises: sec12_refresh_tokens
 Create Date: 2026-03-20
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'sec9_rls_policies'
-down_revision: Union[str, None] = 'sec12_refresh_tokens'
+revision: str = "sec9_rls_policies"
+down_revision: Union[str, None] = "sec12_refresh_tokens"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

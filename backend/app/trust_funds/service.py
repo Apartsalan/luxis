@@ -112,8 +112,7 @@ async def create_transaction(
         balance = await get_balance(db, tenant_id, case_id)
         if balance.available < data.amount:
             raise BadRequestError(
-                f"Onvoldoende saldo. Beschikbaar: {balance.available}, "
-                f"gevraagd: {data.amount}"
+                f"Onvoldoende saldo. Beschikbaar: {balance.available}, gevraagd: {data.amount}"
             )
 
     # Deposits are auto-approved, disbursements need approval
@@ -167,9 +166,7 @@ async def approve_transaction(
 
     # Approver cannot be the creator
     if approver_id == transaction.created_by:
-        raise ForbiddenError(
-            "De aanmaker van een transactie kan deze niet zelf goedkeuren"
-        )
+        raise ForbiddenError("De aanmaker van een transactie kan deze niet zelf goedkeuren")
 
     now = datetime.now(UTC)
 

@@ -103,7 +103,7 @@ async def send_case_email(
     Wraps the body in the standard HTML email template, sends via SMTP,
     creates an EmailLog entry, and logs a CaseActivity.
     """
-    from app.documents.docx_service import load_tenant, _tenant_ctx
+    from app.documents.docx_service import _tenant_ctx, load_tenant
 
     if not is_configured():
         raise BadRequestError(
@@ -126,6 +126,7 @@ async def send_case_email(
     kantoor = _tenant_ctx(tenant)
 
     import html as _html
+
     body_html = _html.escape(data.body).replace("\n", "<br>")
     html_body = _render_base(kantoor, body_html)
 
@@ -170,9 +171,7 @@ async def send_case_email(
     await db.flush()
 
     if email_log.status == "failed":
-        raise BadRequestError(
-            f"E-mail verzenden mislukt: {email_log.error_message}"
-        )
+        raise BadRequestError(f"E-mail verzenden mislukt: {email_log.error_message}")
 
     return SendCaseEmailResponse(
         email_log_id=str(email_log.id),

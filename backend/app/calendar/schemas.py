@@ -20,6 +20,7 @@ EVENT_TYPE_LABELS = {
 
 # ── Brief models ─────────────────────────────────────────────────────────────
 
+
 class CaseBrief(BaseModel):
     id: uuid.UUID
     case_number: str
@@ -39,6 +40,7 @@ class UserBrief(BaseModel):
 
 
 # ── Create / Update ──────────────────────────────────────────────────────────
+
 
 class CalendarEventCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
@@ -69,6 +71,7 @@ class CalendarEventUpdate(BaseModel):
 
 
 # ── Response ─────────────────────────────────────────────────────────────────
+
 
 class CalendarEventResponse(BaseModel):
     id: uuid.UUID

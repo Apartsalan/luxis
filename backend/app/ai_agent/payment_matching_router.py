@@ -123,10 +123,15 @@ async def list_transactions(
 ):
     """List transactions for a specific import."""
     items, total = await list_import_transactions(
-        db, current_user.tenant_id, import_id,
-        page=page, per_page=per_page, unmatched_only=unmatched_only,
+        db,
+        current_user.tenant_id,
+        import_id,
+        page=page,
+        per_page=per_page,
+        unmatched_only=unmatched_only,
     )
     import math
+
     return {
         "items": items,
         "total": total,
@@ -163,7 +168,8 @@ async def list_payment_matches(
 ):
     """List payment matches with optional filters."""
     return await list_matches(
-        db, current_user.tenant_id,
+        db,
+        current_user.tenant_id,
         status_filter=status_filter,
         import_id=import_id,
         case_id=case_id,
@@ -204,9 +210,7 @@ async def approve_payment_match(
     db: AsyncSession = Depends(get_db),
 ):
     """Approve a pending match."""
-    match = await approve_match(
-        db, current_user.tenant_id, match_id, current_user.id
-    )
+    match = await approve_match(db, current_user.tenant_id, match_id, current_user.id)
     if not match:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -226,9 +230,7 @@ async def reject_payment_match(
 ):
     """Reject a pending match."""
     note = body.note if body else None
-    match = await reject_match(
-        db, current_user.tenant_id, match_id, current_user.id, note
-    )
+    match = await reject_match(db, current_user.tenant_id, match_id, current_user.id, note)
     if not match:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -246,9 +248,7 @@ async def execute_payment_match(
     db: AsyncSession = Depends(get_db),
 ):
     """Execute an approved match (create derdengelden + payment)."""
-    match = await execute_match(
-        db, current_user.tenant_id, match_id, current_user.id
-    )
+    match = await execute_match(db, current_user.tenant_id, match_id, current_user.id)
     if not match:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -269,9 +269,7 @@ async def approve_and_execute_payment_match(
     db: AsyncSession = Depends(get_db),
 ):
     """Approve and immediately execute a match (1-click flow)."""
-    match = await approve_and_execute_match(
-        db, current_user.tenant_id, match_id, current_user.id
-    )
+    match = await approve_and_execute_match(db, current_user.tenant_id, match_id, current_user.id)
     if not match:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -291,8 +289,11 @@ async def approve_all_matches(
 ):
     """Approve and execute all pending matches above a confidence threshold."""
     count = await approve_all_pending(
-        db, current_user.tenant_id, current_user.id,
-        import_id=import_id, min_confidence=min_confidence,
+        db,
+        current_user.tenant_id,
+        current_user.id,
+        import_id=import_id,
+        min_confidence=min_confidence,
     )
     await db.commit()
     return {"executed": count}
@@ -307,8 +308,12 @@ async def create_manual_match(
     """Manually match a transaction to a case."""
     try:
         match = await manual_match(
-            db, current_user.tenant_id, current_user.id,
-            body.transaction_id, body.case_id, body.note,
+            db,
+            current_user.tenant_id,
+            current_user.id,
+            body.transaction_id,
+            body.case_id,
+            body.note,
         )
     except ValueError as e:
         raise HTTPException(

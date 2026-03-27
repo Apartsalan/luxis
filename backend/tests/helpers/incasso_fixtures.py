@@ -83,9 +83,7 @@ async def create_incasso_case(
     status: str = "nieuw",
 ) -> Case:
     """Create an incasso case, optionally assigned to a pipeline step."""
-    step_entered = (
-        datetime.now(UTC) - timedelta(days=days_in_step) if step else None
-    )
+    step_entered = datetime.now(UTC) - timedelta(days=days_in_step) if step else None
     case = Case(
         id=uuid.uuid4(),
         tenant_id=tenant_id,

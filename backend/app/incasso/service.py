@@ -135,12 +135,12 @@ async def seed_default_steps(
 
     defaults = [
         {
-            "name": "Aanmaning", "sort_order": 1,
-            "min_wait_days": 0, "max_wait_days": 7,
+            "name": "Aanmaning",
+            "sort_order": 1,
+            "min_wait_days": 0,
+            "max_wait_days": 7,
             "template_type": "aanmaning",
-            "email_subject_template": (
-                "Aanmaning inzake dossier {{ zaak.zaaknummer }}"
-            ),
+            "email_subject_template": ("Aanmaning inzake dossier {{ zaak.zaaknummer }}"),
             "email_body_template": (
                 "Geachte {{ wederpartij.naam }},\n\n"
                 "Bijgaand treft u een aanmaning aan inzake bovengenoemd dossier.\n"
@@ -150,12 +150,12 @@ async def seed_default_steps(
             ),
         },
         {
-            "name": "Sommatie", "sort_order": 2,
-            "min_wait_days": 14, "max_wait_days": 28,
+            "name": "Sommatie",
+            "sort_order": 2,
+            "min_wait_days": 14,
+            "max_wait_days": 28,
             "template_type": "sommatie",
-            "email_subject_template": (
-                "Sommatie inzake dossier {{ zaak.zaaknummer }}"
-            ),
+            "email_subject_template": ("Sommatie inzake dossier {{ zaak.zaaknummer }}"),
             "email_body_template": (
                 "Geachte {{ wederpartij.naam }},\n\n"
                 "Bijgaand treft u een sommatie aan inzake bovengenoemd dossier.\n"
@@ -165,12 +165,12 @@ async def seed_default_steps(
             ),
         },
         {
-            "name": "2e Sommatie", "sort_order": 3,
-            "min_wait_days": 14, "max_wait_days": 28,
+            "name": "2e Sommatie",
+            "sort_order": 3,
+            "min_wait_days": 14,
+            "max_wait_days": 28,
             "template_type": "tweede_sommatie",
-            "email_subject_template": (
-                "Tweede sommatie inzake dossier {{ zaak.zaaknummer }}"
-            ),
+            "email_subject_template": ("Tweede sommatie inzake dossier {{ zaak.zaaknummer }}"),
             "email_body_template": (
                 "Geachte {{ wederpartij.naam }},\n\n"
                 "Ondanks eerdere correspondentie hebben wij nog geen betaling "
@@ -179,17 +179,23 @@ async def seed_default_steps(
             ),
         },
         {
-            "name": "Ingebrekestelling", "sort_order": 4,
-            "min_wait_days": 14, "max_wait_days": 28,
+            "name": "Ingebrekestelling",
+            "sort_order": 4,
+            "min_wait_days": 14,
+            "max_wait_days": 28,
         },
         {
-            "name": "Dagvaarding", "sort_order": 5,
-            "min_wait_days": 14, "max_wait_days": 28,
+            "name": "Dagvaarding",
+            "sort_order": 5,
+            "min_wait_days": 14,
+            "max_wait_days": 28,
             "template_type": "dagvaarding",
         },
         {
-            "name": "Executie", "sort_order": 6,
-            "min_wait_days": 0, "max_wait_days": 0,
+            "name": "Executie",
+            "sort_order": 6,
+            "min_wait_days": 0,
+            "max_wait_days": 0,
         },
     ]
 
@@ -268,7 +274,7 @@ def _case_to_pipeline_item(
         opposing_party_name=case.opposing_party.name if case.opposing_party else None,
         total_principal=Decimal(str(case.total_principal)),
         total_paid=Decimal(str(case.total_paid)),
-        outstanding=outstanding.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+        outstanding=outstanding.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
         days_in_step=days_in_step,
         incasso_step_id=case.incasso_step_id,
         status=case.status,
@@ -369,11 +375,13 @@ async def batch_preview(
         for case in cases:
             # Check blockers
             if case.status in ("betaald", "afgesloten"):
-                blocked.append(BatchBlocker(
-                    case_id=case.id,
-                    case_number=case.case_number,
-                    reason=f"Dossier heeft status '{case.status}'",
-                ))
+                blocked.append(
+                    BatchBlocker(
+                        case_id=case.id,
+                        case_number=case.case_number,
+                        reason=f"Dossier heeft status '{case.status}'",
+                    )
+                )
                 continue
 
             # All non-blocked cases are ready for advance_step
@@ -392,27 +400,28 @@ async def batch_preview(
 
             step = step_map.get(case.incasso_step_id)
             if step and not step.template_type:
-                blocked.append(BatchBlocker(
-                    case_id=case.id,
-                    case_number=case.case_number,
-                    reason=f"Stap '{step.name}' heeft geen briefsjabloon",
-                ))
+                blocked.append(
+                    BatchBlocker(
+                        case_id=case.id,
+                        case_number=case.case_number,
+                        reason=f"Stap '{step.name}' heeft geen briefsjabloon",
+                    )
+                )
                 continue
 
             ready += 1
 
             # Check email readiness (opposing party has email address)
-            if (
-                case.opposing_party
-                and case.opposing_party.email
-            ):
+            if case.opposing_party and case.opposing_party.email:
                 email_ready += 1
             else:
-                email_blocked.append(BatchBlocker(
-                    case_id=case.id,
-                    case_number=case.case_number,
-                    reason="Geen e-mailadres wederpartij",
-                ))
+                email_blocked.append(
+                    BatchBlocker(
+                        case_id=case.id,
+                        case_number=case.case_number,
+                        reason="Geen e-mailadres wederpartij",
+                    )
+                )
 
     elif action == "recalculate_interest":
         for case in cases:
@@ -554,14 +563,16 @@ async def _try_auto_advance(
     # We scope to action_config.source == "pipeline" to avoid blocking
     # on initial case tasks or manually created tasks.
     result = await db.execute(
-        select(WorkflowTask).where(
+        select(WorkflowTask)
+        .where(
             WorkflowTask.tenant_id == tenant_id,
             WorkflowTask.case_id == case.id,
             WorkflowTask.status.in_(["pending", "due", "overdue"]),
             WorkflowTask.is_active.is_(True),
             WorkflowTask.action_config["source"].astext == "pipeline",
             WorkflowTask.action_config["step_id"].astext == str(case.incasso_step_id),
-        ).limit(1)
+        )
+        .limit(1)
     )
     if result.scalar_one_or_none():
         return False  # Still has open pipeline tasks for this step
@@ -713,12 +724,13 @@ async def batch_execute(
 
             try:
                 # Build context once — reused for DOCX archive + HTML email
-                base_context = await build_base_context(
-                    db, tenant_id, case
-                )
+                base_context = await build_base_context(db, tenant_id, case)
 
                 docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
-                    db, tenant_id, case, step.template_type,
+                    db,
+                    tenant_id,
+                    case,
+                    step.template_type,
                     pre_built_context=base_context,
                 )
 
@@ -738,23 +750,14 @@ async def batch_execute(
                 processed += 1
 
                 # Send email if requested
-                if (
-                    send_email
-                    and case.opposing_party
-                    and case.opposing_party.email
-                ):
+                if send_email and case.opposing_party and case.opposing_party.email:
                     try:
                         # Try HTML body (brief as email content, no attachment)
-                        inline_html = render_incasso_email(
-                            step.template_type, base_context
-                        )
+                        inline_html = render_incasso_email(step.template_type, base_context)
 
                         if inline_html:
                             # Brief IS the email body — no PDF attachment
-                            email_subject = (
-                                f"{step.name} inzake dossier "
-                                f"{case.case_number}"
-                            )
+                            email_subject = f"{step.name} inzake dossier {case.case_number}"
                             email_log = await send_with_attachment(
                                 db,
                                 user_id,
@@ -765,18 +768,14 @@ async def batch_execute(
                                 attachments=[],
                                 case_id=case.id,
                                 document_id=doc.id,
-                                recipient_name=(
-                                    case.opposing_party.name or ""
-                                ),
+                                recipient_name=(case.opposing_party.name or ""),
                             )
                         else:
                             # Fallback: PDF as attachment (dagvaarding, etc.)
                             pdf_bytes = await docx_to_pdf(docx_bytes)
                             pdf_filename = filename.replace(".docx", ".pdf")
 
-                            email_subject, email_body = _build_step_email(
-                                step, case, db, tenant_id
-                            )
+                            email_subject, email_body = _build_step_email(step, case, db, tenant_id)
 
                             email_log = await send_with_attachment(
                                 db,
@@ -790,9 +789,7 @@ async def batch_execute(
                                 ],
                                 case_id=case.id,
                                 document_id=doc.id,
-                                recipient_name=(
-                                    case.opposing_party.name or ""
-                                ),
+                                recipient_name=(case.opposing_party.name or ""),
                             )
 
                         if email_log.status == "sent":
@@ -800,14 +797,11 @@ async def batch_execute(
                         else:
                             emails_failed += 1
                             errors.append(
-                                f"{case.case_number}: e-mail mislukt — "
-                                f"{email_log.error_message}"
+                                f"{case.case_number}: e-mail mislukt — {email_log.error_message}"
                             )
                     except Exception as email_exc:
                         emails_failed += 1
-                        errors.append(
-                            f"{case.case_number}: e-mail fout — {email_exc}"
-                        )
+                        errors.append(f"{case.case_number}: e-mail fout — {email_exc}")
                         logger.error(
                             "Batch email failed for %s: %s",
                             case.case_number,
@@ -823,7 +817,10 @@ async def batch_execute(
                 # Try auto-advance (always, even if no tasks were
                 # completed — case may already have all tasks done)
                 advanced = await _try_auto_advance(
-                    db, tenant_id, case, user_id,
+                    db,
+                    tenant_id,
+                    case,
+                    user_id,
                     step_list=steps,
                 )
                 if advanced:
@@ -936,10 +933,7 @@ def _build_step_email(
                 "omschrijving": case.description or "",
             },
             "wederpartij": {
-                "naam": (
-                    case.opposing_party.name
-                    if case.opposing_party else ""
-                ),
+                "naam": (case.opposing_party.name if case.opposing_party else ""),
             },
             "client": {
                 "naam": case.client.name if case.client else "",
@@ -965,9 +959,7 @@ def _build_step_email(
 
     # Fallback: use the generic document_sent template
     kantoor_dict = {"naam": "", "adres": "", "postcode_stad": ""}
-    recipient_name = (
-        case.opposing_party.name if case.opposing_party else ""
-    )
+    recipient_name = case.opposing_party.name if case.opposing_party else ""
     return document_sent(
         kantoor=kantoor_dict,
         recipient_name=recipient_name,

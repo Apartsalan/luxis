@@ -40,9 +40,7 @@ async def get_calendar_events(
     db: AsyncSession = Depends(get_db),
 ):
     """Get calendar events (workflow tasks + KYC reviews) for a date range."""
-    rows = await service.get_calendar_events(
-        db, current_user.tenant_id, date_from, date_to
-    )
+    rows = await service.get_calendar_events(db, current_user.tenant_id, date_from, date_to)
     return [CalendarEvent(**row) for row in rows]
 
 
@@ -56,9 +54,7 @@ async def list_statuses(
     db: AsyncSession = Depends(get_db),
 ):
     """List all workflow statuses for the current tenant."""
-    return await service.list_statuses(
-        db, current_user.tenant_id, active_only=active_only
-    )
+    return await service.list_statuses(db, current_user.tenant_id, active_only=active_only)
 
 
 @router.post(
@@ -83,9 +79,7 @@ async def update_status(
     db: AsyncSession = Depends(get_db),
 ):
     """Update a workflow status."""
-    return await service.update_status(
-        db, current_user.tenant_id, status_id, data
-    )
+    return await service.update_status(db, current_user.tenant_id, status_id, data)
 
 
 @router.delete("/statuses/{status_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -206,9 +200,7 @@ async def update_task(
     db: AsyncSession = Depends(get_db),
 ):
     """Update a workflow task (status, assignee, etc.)."""
-    return await service.update_task(
-        db, current_user.tenant_id, task_id, data
-    )
+    return await service.update_task(db, current_user.tenant_id, task_id, data)
 
 
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -231,9 +223,7 @@ async def list_rules(
     db: AsyncSession = Depends(get_db),
 ):
     """List all workflow rules."""
-    return await service.list_rules(
-        db, current_user.tenant_id, active_only=active_only
-    )
+    return await service.list_rules(db, current_user.tenant_id, active_only=active_only)
 
 
 @router.post(
@@ -258,9 +248,7 @@ async def update_rule(
     db: AsyncSession = Depends(get_db),
 ):
     """Update a workflow rule."""
-    return await service.update_rule(
-        db, current_user.tenant_id, rule_id, data
-    )
+    return await service.update_rule(db, current_user.tenant_id, rule_id, data)
 
 
 @router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)

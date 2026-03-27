@@ -21,33 +21,21 @@ class EmailAccount(TenantBase):
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=False, index=True
     )
-    provider: Mapped[str] = mapped_column(
-        String(20), nullable=False
-    )  # 'gmail' or 'outlook'
+    provider: Mapped[str] = mapped_column(String(20), nullable=False)  # 'gmail' or 'outlook'
     email_address: Mapped[str] = mapped_column(
         String(320), nullable=False
     )  # The connected email address (e.g. arsalanseidony@gmail.nl)
 
     # Encrypted OAuth tokens (Fernet-encrypted bytes)
-    access_token_enc: Mapped[bytes] = mapped_column(
-        LargeBinary, nullable=False
-    )
-    refresh_token_enc: Mapped[bytes] = mapped_column(
-        LargeBinary, nullable=False
-    )
-    token_expiry: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    access_token_enc: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    refresh_token_enc: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    token_expiry: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Scopes granted by the user
-    scopes: Mapped[str | None] = mapped_column(
-        Text, nullable=True
-    )  # Space-separated scopes string
+    scopes: Mapped[str | None] = mapped_column(Text, nullable=True)  # Space-separated scopes string
 
     # Sync state (for M2: inbox sync)
-    last_sync_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sync_cursor: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # Gmail historyId or Outlook deltaLink

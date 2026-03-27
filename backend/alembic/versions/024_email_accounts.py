@@ -42,7 +42,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         # One account per user per provider
-        sa.UniqueConstraint("tenant_id", "user_id", "provider", name="uq_email_account_user_provider"),
+        sa.UniqueConstraint(
+            "tenant_id", "user_id", "provider", name="uq_email_account_user_provider"
+        ),
     )
 
 

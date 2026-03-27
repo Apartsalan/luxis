@@ -171,8 +171,19 @@ def _fmt_date(value: date | str | None) -> str:
     if value is None:
         return ""
     months = [
-        "", "januari", "februari", "maart", "april", "mei", "juni",
-        "juli", "augustus", "september", "oktober", "november", "december",
+        "",
+        "januari",
+        "februari",
+        "maart",
+        "april",
+        "mei",
+        "juni",
+        "juli",
+        "augustus",
+        "september",
+        "oktober",
+        "november",
+        "december",
     ]
     if isinstance(value, str):
         parts = value.split("-")
@@ -245,9 +256,7 @@ def _tenant_ctx(tenant: Tenant | None) -> dict:
 
 async def load_tenant(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant | None:
     """Load the tenant for kantoor merge fields."""
-    result = await db.execute(
-        select(Tenant).where(Tenant.id == tenant_id)
-    )
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     return result.scalar_one_or_none()
 
 
@@ -273,9 +282,7 @@ async def build_base_context(
         tenant_id=tenant_id,
         case_id=case.id,
         interest_type=case.interest_type,
-        contractual_rate=(
-            Decimal(str(case.contractual_rate)) if case.contractual_rate else None
-        ),
+        contractual_rate=(Decimal(str(case.contractual_rate)) if case.contractual_rate else None),
         contractual_compound=case.contractual_compound,
         calc_date=today,
     )
@@ -305,33 +312,24 @@ async def build_base_context(
     ]
 
     # Reference line (only if present)
-    ref_regel = (
-        f"Uw kenmerk: {case.reference}" if case.reference else ""
-    )
+    ref_regel = f"Uw kenmerk: {case.reference}" if case.reference else ""
 
     # Interest type label (available in all templates)
-    rente_type_label = INTEREST_TYPE_LABELS.get(
-        case.interest_type, case.interest_type
-    )
+    rente_type_label = INTEREST_TYPE_LABELS.get(case.interest_type, case.interest_type)
 
     # BTW conditional fields
     has_btw = bik["btw_amount"] > 0
     btw_regel_label = "BTW over BIK (21%)" if has_btw else ""
     btw_regel_bedrag = _fmt_currency(bik["btw_amount"]) if has_btw else ""
     btw_toelichting = (
-        f" (vermeerderd met {_fmt_currency(bik['btw_amount'])} BTW)"
-        if has_btw else ""
+        f" (vermeerderd met {_fmt_currency(bik['btw_amount'])} BTW)" if has_btw else ""
     )
 
     # Payments conditional fields
     total_paid = financieel["total_paid"]
     has_payments = total_paid > 0
-    betalingen_regel_label = (
-        "Af: reeds ontvangen betalingen" if has_payments else ""
-    )
-    betalingen_regel_bedrag = (
-        f"-{_fmt_currency(total_paid)}" if has_payments else ""
-    )
+    betalingen_regel_label = "Af: reeds ontvangen betalingen" if has_payments else ""
+    betalingen_regel_bedrag = f"-{_fmt_currency(total_paid)}" if has_payments else ""
 
     return {
         # Kantoor (tenant)
@@ -375,12 +373,8 @@ async def build_base_context(
         "subtotaal": _fmt_currency(financieel["grand_total"]),
         "betalingen_regel_label": betalingen_regel_label,
         "betalingen_regel_bedrag": betalingen_regel_bedrag,
-        "betalingen_aftrek_label": (
-            "Af: ontvangen betalingen" if has_payments else ""
-        ),
-        "betalingen_aftrek_bedrag": (
-            f"-{_fmt_currency(total_paid)}" if has_payments else ""
-        ),
+        "betalingen_aftrek_label": ("Af: ontvangen betalingen" if has_payments else ""),
+        "betalingen_aftrek_bedrag": (f"-{_fmt_currency(total_paid)}" if has_payments else ""),
         # Raw financials for programmatic access
         "_financieel": financieel,
         "_bik": bik,
@@ -404,14 +398,16 @@ async def _build_renteoverzicht_context(
     for claim_detail in claims_details:
         periods = claim_detail.get("periods", [])
         for p in periods:
-            rente_regels.append({
-                "van": _fmt_date(p.get("start_date")),
-                "tot": _fmt_date(p.get("end_date")),
-                "dagen": str(p.get("days", 0)),
-                "tarief": _fmt_pct(p.get("rate")),
-                "hoofdsom": _fmt_currency(p.get("principal")),
-                "rente": _fmt_currency(p.get("interest")),
-            })
+            rente_regels.append(
+                {
+                    "van": _fmt_date(p.get("start_date")),
+                    "tot": _fmt_date(p.get("end_date")),
+                    "dagen": str(p.get("days", 0)),
+                    "tarief": _fmt_pct(p.get("rate")),
+                    "hoofdsom": _fmt_currency(p.get("principal")),
+                    "rente": _fmt_currency(p.get("interest")),
+                }
+            )
 
     # BIK inclusive fields
     bik = base["_bik"]
@@ -420,16 +416,16 @@ async def _build_renteoverzicht_context(
     bik_incl_bedrag = _fmt_currency(bik["bik_inclusive"]) if has_btw else ""
 
     # Payments heading
-    betalingen_kop = (
-        "Ontvangen betalingen" if base["betalingen"] else "Betalingen"
-    )
+    betalingen_kop = "Ontvangen betalingen" if base["betalingen"] else "Betalingen"
 
-    base.update({
-        "rente_regels": rente_regels,
-        "bik_incl_label": bik_incl_label,
-        "bik_incl_bedrag": bik_incl_bedrag,
-        "betalingen_kop": betalingen_kop,
-    })
+    base.update(
+        {
+            "rente_regels": rente_regels,
+            "bik_incl_label": bik_incl_label,
+            "bik_incl_bedrag": bik_incl_bedrag,
+            "betalingen_kop": betalingen_kop,
+        }
+    )
 
     return base
 
@@ -453,11 +449,13 @@ def get_available_templates() -> list[dict]:
     result = []
     for ttype, filename in TEMPLATE_FILES.items():
         path = TEMPLATES_DIR / filename
-        result.append({
-            "template_type": ttype,
-            "filename": filename,
-            "available": path.exists(),
-        })
+        result.append(
+            {
+                "template_type": ttype,
+                "filename": filename,
+                "available": path.exists(),
+            }
+        )
     return result
 
 
@@ -490,9 +488,7 @@ async def render_docx(
         try:
             tpl = DocxTemplate(io.BytesIO(template_snapshot))
         except Exception as e:
-            raise BadRequestError(
-                f"Fout bij laden sjabloon: {e}"
-            )
+            raise BadRequestError(f"Fout bij laden sjabloon: {e}")
     else:
         # Fallback to disk files
         if template_type not in TEMPLATE_FILES:
@@ -503,10 +499,7 @@ async def render_docx(
             )
         template_path = TEMPLATES_DIR / TEMPLATE_FILES[template_type]
         if not template_path.exists():
-            raise NotFoundError(
-                f"Sjabloonbestand niet gevonden: "
-                f"{template_path}"
-            )
+            raise NotFoundError(f"Sjabloonbestand niet gevonden: {template_path}")
         template_snapshot = template_path.read_bytes()
         tpl = DocxTemplate(str(template_path))
 
@@ -514,16 +507,12 @@ async def render_docx(
     if pre_built_context is not None:
         context = pre_built_context
     elif template_type == "renteoverzicht":
-        context = await _build_renteoverzicht_context(
-            db, tenant_id, case
-        )
+        context = await _build_renteoverzicht_context(db, tenant_id, case)
     else:
         context = await build_base_context(db, tenant_id, case)
 
     # Remove internal keys (prefixed with _)
-    render_context = {
-        k: v for k, v in context.items() if not k.startswith("_")
-    }
+    render_context = {k: v for k, v in context.items() if not k.startswith("_")}
 
     # Render
     try:
@@ -538,8 +527,6 @@ async def render_docx(
 
     # Generate filename
     today_str = date.today().isoformat()
-    filename = (
-        f"{template_type}_{case.case_number}_{today_str}.docx"
-    )
+    filename = f"{template_type}_{case.case_number}_{today_str}.docx"
 
     return docx_bytes, filename, template_type, template_snapshot

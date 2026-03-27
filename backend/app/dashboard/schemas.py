@@ -9,18 +9,21 @@ from pydantic import BaseModel
 
 class CaseStatusCount(BaseModel):
     """Count of cases per status."""
+
     status: str
     count: int
 
 
 class CaseTypeCount(BaseModel):
     """Count of cases per type."""
+
     case_type: str
     count: int
 
 
 class DashboardSummary(BaseModel):
     """Main dashboard KPI summary."""
+
     total_active_cases: int
     total_contacts: int
     total_outstanding: Decimal  # Sum of all open cases' outstanding amounts
@@ -35,6 +38,7 @@ class DashboardSummary(BaseModel):
 
 class RecentActivityItem(BaseModel):
     """A single recent activity for the dashboard feed."""
+
     id: uuid.UUID
     case_id: uuid.UUID
     case_number: str
@@ -49,5 +53,6 @@ class RecentActivityItem(BaseModel):
 
 class RecentActivityResponse(BaseModel):
     """Response for the recent activity feed."""
+
     items: list[RecentActivityItem]
     total: int

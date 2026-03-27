@@ -34,9 +34,7 @@ async def list_pipeline_steps(
     db: AsyncSession = Depends(get_db),
 ):
     """List all incasso pipeline steps for the current tenant."""
-    steps = await service.list_pipeline_steps(
-        db, current_user.tenant_id, active_only=active_only
-    )
+    steps = await service.list_pipeline_steps(db, current_user.tenant_id, active_only=active_only)
     return [service.step_to_response(s) for s in steps]
 
 
@@ -63,9 +61,7 @@ async def update_pipeline_step(
     db: AsyncSession = Depends(get_db),
 ):
     """Update an existing incasso pipeline step."""
-    step = await service.update_pipeline_step(
-        db, current_user.tenant_id, step_id, data
-    )
+    step = await service.update_pipeline_step(db, current_user.tenant_id, step_id, data)
     return service.step_to_response(step)
 
 

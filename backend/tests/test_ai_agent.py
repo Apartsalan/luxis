@@ -158,12 +158,8 @@ async def test_classify_email_creates_record(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
@@ -187,12 +183,8 @@ async def test_classify_email_idempotent(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c1 = await classify_email(db, email.id, test_tenant.id)
@@ -213,12 +205,8 @@ async def test_classify_email_skips_empty_body(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id, body_text=""
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id, body_text="")
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
@@ -235,13 +223,14 @@ async def test_classify_new_emails_batch(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
     # Create 3 inbound emails
     for i in range(3):
         await _create_inbound_email(
-            db, test_tenant.id, account.id, case.id,
+            db,
+            test_tenant.id,
+            account.id,
+            case.id,
             body_text=f"Bericht {i}",
             subject=f"Email {i}",
         )
@@ -264,20 +253,14 @@ async def test_approve_classification(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
     await db.commit()
 
-    approved = await approve_classification(
-        db, c.id, test_tenant.id, test_user.id, note="Akkoord"
-    )
+    approved = await approve_classification(db, c.id, test_tenant.id, test_user.id, note="Akkoord")
     await db.commit()
 
     assert approved is not None
@@ -296,20 +279,14 @@ async def test_reject_classification(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
     await db.commit()
 
-    rejected = await reject_classification(
-        db, c.id, test_tenant.id, test_user.id, note="Verkeerd"
-    )
+    rejected = await reject_classification(db, c.id, test_tenant.id, test_user.id, note="Verkeerd")
     await db.commit()
 
     assert rejected is not None
@@ -326,12 +303,8 @@ async def test_execute_classification(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
@@ -340,9 +313,7 @@ async def test_execute_classification(
     await approve_classification(db, c.id, test_tenant.id, test_user.id)
     await db.commit()
 
-    executed = await execute_classification(
-        db, c.id, test_tenant.id, test_user.id
-    )
+    executed = await execute_classification(db, c.id, test_tenant.id, test_user.id)
     await db.commit()
 
     assert executed is not None
@@ -361,12 +332,8 @@ async def test_execute_wait_and_remind_creates_task(
     mock_ai.return_value = FAKE_AI_RESPONSE  # action=wait_and_remind, days=7
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
@@ -401,11 +368,12 @@ async def test_execute_dismiss_sets_is_dismissed(
     mock_ai.return_value = FAKE_AI_RESPONSE_DISMISS
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
     email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id,
+        db,
+        test_tenant.id,
+        account.id,
+        case.id,
         body_text="Win a free iPhone!",
     )
     await db.commit()
@@ -415,9 +383,7 @@ async def test_execute_dismiss_sets_is_dismissed(
     await approve_classification(db, c.id, test_tenant.id, test_user.id)
     await db.commit()
 
-    executed = await execute_classification(
-        db, c.id, test_tenant.id, test_user.id
-    )
+    executed = await execute_classification(db, c.id, test_tenant.id, test_user.id)
     await db.commit()
 
     assert executed is not None
@@ -437,11 +403,12 @@ async def test_execute_escalate_creates_urgent_task(
     mock_ai.return_value = FAKE_AI_RESPONSE_BETWISTING
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
     email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id,
+        db,
+        test_tenant.id,
+        account.id,
+        case.id,
         body_text="Ik betwist deze vordering volledig.",
     )
     await db.commit()
@@ -490,11 +457,12 @@ async def test_execute_send_template_sends_email(
     mock_send.return_value = mock_email_log
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
     email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id,
+        db,
+        test_tenant.id,
+        account.id,
+        case.id,
         body_text="Ik heb al betaald vorige week.",
     )
     await db.commit()
@@ -508,9 +476,7 @@ async def test_execute_send_template_sends_email(
     await approve_classification(db, c.id, test_tenant.id, test_user.id)
     await db.commit()
 
-    executed = await execute_classification(
-        db, c.id, test_tenant.id, test_user.id
-    )
+    executed = await execute_classification(db, c.id, test_tenant.id, test_user.id)
     await db.commit()
 
     assert executed is not None
@@ -533,20 +499,14 @@ async def test_execute_not_approved_returns_none(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
     await db.commit()
 
-    result = await execute_classification(
-        db, c.id, test_tenant.id, test_user.id
-    )
+    result = await execute_classification(db, c.id, test_tenant.id, test_user.id)
     assert result is None  # Can't execute without approval
 
 
@@ -568,16 +528,15 @@ async def test_multi_tenant_isolation(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     # Create data for tenant A
-    account_a = await _create_email_account(
-        db, test_tenant.id, test_user.id
-    )
+    account_a = await _create_email_account(db, test_tenant.id, test_user.id)
     case_a = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id,
+        db,
+        test_tenant.id,
+        test_company.id,
+        test_company.id,
         case_number="2026-00001",
     )
-    email_a = await _create_inbound_email(
-        db, test_tenant.id, account_a.id, case_a.id
-    )
+    email_a = await _create_inbound_email(db, test_tenant.id, account_a.id, case_a.id)
 
     # Create client contact for tenant B
     from app.relations.models import Contact
@@ -593,16 +552,15 @@ async def test_multi_tenant_isolation(
     await db.flush()
 
     # Create data for tenant B
-    account_b = await _create_email_account(
-        db, second_tenant.id, second_user.id
-    )
+    account_b = await _create_email_account(db, second_tenant.id, second_user.id)
     case_b = await _create_incasso_case(
-        db, second_tenant.id, client_b.id, client_b.id,
+        db,
+        second_tenant.id,
+        client_b.id,
+        client_b.id,
         case_number="2026-00002",
     )
-    email_b = await _create_inbound_email(
-        db, second_tenant.id, account_b.id, case_b.id
-    )
+    email_b = await _create_inbound_email(db, second_tenant.id, account_b.id, case_b.id)
     await db.commit()
 
     # Classify both
@@ -639,18 +597,24 @@ async def test_pending_count(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
 
     # Create 2 emails
     e1 = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id,
-        body_text="Bericht 1", subject="Email 1",
+        db,
+        test_tenant.id,
+        account.id,
+        case.id,
+        body_text="Bericht 1",
+        subject="Email 1",
     )
     e2 = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id,
-        body_text="Bericht 2", subject="Email 2",
+        db,
+        test_tenant.id,
+        account.id,
+        case.id,
+        body_text="Bericht 2",
+        subject="Email 2",
     )
     await db.commit()
 
@@ -671,12 +635,8 @@ async def test_get_classification_by_email(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     await classify_email(db, email.id, test_tenant.id)
@@ -691,9 +651,7 @@ async def test_get_classification_by_email(
 
 
 @pytest.mark.asyncio
-async def test_seed_default_templates(
-    db: AsyncSession, test_tenant: Tenant
-):
+async def test_seed_default_templates(db: AsyncSession, test_tenant: Tenant):
     """seed_default_templates() should create the default templates."""
     created = await seed_default_templates(db, test_tenant.id)
     await db.commit()
@@ -709,9 +667,7 @@ async def test_seed_default_templates(
 
 
 @pytest.mark.asyncio
-async def test_seed_templates_idempotent(
-    db: AsyncSession, test_tenant: Tenant
-):
+async def test_seed_templates_idempotent(db: AsyncSession, test_tenant: Tenant):
     """Seeding templates twice should not create duplicates."""
     first = await seed_default_templates(db, test_tenant.id)
     await db.commit()
@@ -734,20 +690,14 @@ async def test_api_pending_count(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     await classify_email(db, email.id, test_tenant.id)
     await db.commit()
 
-    resp = await client.get(
-        "/api/ai-agent/pending-count", headers=auth_headers
-    )
+    resp = await client.get("/api/ai-agent/pending-count", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["count"] == 1
 
@@ -761,20 +711,14 @@ async def test_api_list_classifications(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     await classify_email(db, email.id, test_tenant.id)
     await db.commit()
 
-    resp = await client.get(
-        "/api/ai-agent/classifications", headers=auth_headers
-    )
+    resp = await client.get("/api/ai-agent/classifications", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 1
@@ -792,12 +736,8 @@ async def test_api_approve_and_execute(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
@@ -824,19 +764,13 @@ async def test_api_approve_and_execute(
 
 @pytest.mark.asyncio
 @patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
-async def test_api_reject(
-    mock_ai, client, db, test_tenant, test_user, test_company, auth_headers
-):
+async def test_api_reject(mock_ai, client, db, test_tenant, test_user, test_company, auth_headers):
     """POST reject via API should set status to rejected."""
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     c = await classify_email(db, email.id, test_tenant.id)
@@ -852,16 +786,12 @@ async def test_api_reject(
 
 
 @pytest.mark.asyncio
-async def test_api_templates(
-    client, db, test_tenant, test_user, auth_headers
-):
+async def test_api_templates(client, db, test_tenant, test_user, auth_headers):
     """GET /api/ai-agent/templates should list seeded templates."""
     await seed_default_templates(db, test_tenant.id)
     await db.commit()
 
-    resp = await client.get(
-        "/api/ai-agent/templates", headers=auth_headers
-    )
+    resp = await client.get("/api/ai-agent/templates", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 6
@@ -869,13 +799,9 @@ async def test_api_templates(
 
 
 @pytest.mark.asyncio
-async def test_api_seed_templates(
-    client, db, test_tenant, test_user, auth_headers
-):
+async def test_api_seed_templates(client, db, test_tenant, test_user, auth_headers):
     """POST /api/ai-agent/templates/seed should seed templates."""
-    resp = await client.post(
-        "/api/ai-agent/templates/seed", headers=auth_headers
-    )
+    resp = await client.post("/api/ai-agent/templates/seed", headers=auth_headers)
     assert resp.status_code == 201
     assert resp.json()["created"] == 6
 
@@ -889,12 +815,8 @@ async def test_api_get_email_classification(
     mock_ai.return_value = FAKE_AI_RESPONSE
 
     account = await _create_email_account(db, test_tenant.id, test_user.id)
-    case = await _create_incasso_case(
-        db, test_tenant.id, test_company.id, test_company.id
-    )
-    email = await _create_inbound_email(
-        db, test_tenant.id, account.id, case.id
-    )
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+    email = await _create_inbound_email(db, test_tenant.id, account.id, case.id)
     await db.commit()
 
     await classify_email(db, email.id, test_tenant.id)
@@ -909,9 +831,7 @@ async def test_api_get_email_classification(
 
 
 @pytest.mark.asyncio
-async def test_api_get_email_classification_none(
-    client, db, test_tenant, test_user, auth_headers
-):
+async def test_api_get_email_classification_none(client, db, test_tenant, test_user, auth_headers):
     """GET /api/ai-agent/email/{id}/classification returns null for unclassified."""
     random_id = uuid.uuid4()
     resp = await client.get(
@@ -923,9 +843,7 @@ async def test_api_get_email_classification_none(
 
 
 @pytest.mark.asyncio
-async def test_api_classification_not_found(
-    client, db, test_tenant, test_user, auth_headers
-):
+async def test_api_classification_not_found(client, db, test_tenant, test_user, auth_headers):
     """GET /api/ai-agent/classifications/{id} returns 404 for non-existent."""
     random_id = uuid.uuid4()
     resp = await client.get(

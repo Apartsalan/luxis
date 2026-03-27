@@ -177,7 +177,7 @@ class TestRabobankCsvParser:
         assert len(result.errors) >= 1
 
     def test_parse_skips_short_rows(self):
-        csv = f"{RABOBANK_HEADER}\n\"too\",\"few\",\"cols\""
+        csv = f'{RABOBANK_HEADER}\n"too","few","cols"'
         result = parse_rabobank_csv(csv)
         assert result.skipped_count == 1
 
@@ -364,8 +364,12 @@ class TestImportService:
         self, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test_statement.csv", RABOBANK_CSV, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test_statement.csv",
+            RABOBANK_CSV,
+            bank="rabobank",
         )
         await db.commit()
 
@@ -380,8 +384,12 @@ class TestImportService:
         self, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", RABOBANK_CSV, bank="unknown_bank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            RABOBANK_CSV,
+            bank="unknown_bank",
         )
         assert stmt_import.status == ImportStatus.FAILED
 
@@ -390,8 +398,12 @@ class TestImportService:
         self, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "empty.csv", "", bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "empty.csv",
+            "",
+            bank="rabobank",
         )
         assert stmt_import.status == ImportStatus.FAILED
 
@@ -403,8 +415,12 @@ class TestMatchGeneration:
     ):
         # Import CSV with matching transaction
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", RABOBANK_CSV, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            RABOBANK_CSV,
+            bank="rabobank",
         )
         await db.flush()
 
@@ -420,8 +436,12 @@ class TestMatchGeneration:
     ):
         """No incasso cases = no matches."""
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", RABOBANK_CSV, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            RABOBANK_CSV,
+            bank="rabobank",
         )
         await db.flush()
 
@@ -435,8 +455,12 @@ class TestMatchWorkflow:
         self, db: AsyncSession, test_tenant: Tenant, test_user: User, incasso_case: Case
     ):
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", RABOBANK_CSV, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            RABOBANK_CSV,
+            bank="rabobank",
         )
         await db.flush()
         await generate_matches(db, test_tenant.id, stmt_import.id)
@@ -459,8 +483,12 @@ class TestMatchWorkflow:
         self, db: AsyncSession, test_tenant: Tenant, test_user: User, incasso_case: Case
     ):
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", RABOBANK_CSV, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            RABOBANK_CSV,
+            bank="rabobank",
         )
         await db.flush()
         await generate_matches(db, test_tenant.id, stmt_import.id)
@@ -484,18 +512,24 @@ class TestMatchWorkflow:
         """Execute should create both a derdengelden deposit and a payment record."""
         # Seed interest rates (required by create_payment)
         for rate_type, rate_val in [("statutory", "6.00"), ("commercial", "11.50")]:
-            db.add(InterestRate(
-                id=uuid.uuid4(),
-                rate_type=rate_type,
-                effective_from=date(2024, 1, 1),
-                rate=Decimal(rate_val),
-                source="Test fixture",
-            ))
+            db.add(
+                InterestRate(
+                    id=uuid.uuid4(),
+                    rate_type=rate_type,
+                    effective_from=date(2024, 1, 1),
+                    rate=Decimal(rate_val),
+                    source="Test fixture",
+                )
+            )
         await db.flush()
 
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", RABOBANK_CSV, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            RABOBANK_CSV,
+            bank="rabobank",
         )
         await db.flush()
         await generate_matches(db, test_tenant.id, stmt_import.id)
@@ -524,24 +558,31 @@ class TestMatchWorkflow:
         row = _make_rabobank_row("+750.00", counterparty_name="Onbekende Betaler")
         csv = f"{RABOBANK_HEADER}\n{row}"
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", csv, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            csv,
+            bank="rabobank",
         )
         await db.flush()
 
         # Get the transaction
         from sqlalchemy import select
+
         txn_result = await db.execute(
-            select(BankTransaction).where(
-                BankTransaction.import_id == stmt_import.id
-            )
+            select(BankTransaction).where(BankTransaction.import_id == stmt_import.id)
         )
         txn = txn_result.scalar_one()
 
         # Manual match
         match = await manual_match(
-            db, test_tenant.id, test_user.id,
-            txn.id, incasso_case.id, note="Handmatig gekoppeld",
+            db,
+            test_tenant.id,
+            test_user.id,
+            txn.id,
+            incasso_case.id,
+            note="Handmatig gekoppeld",
         )
         await db.commit()
 
@@ -555,8 +596,11 @@ class TestMatchWorkflow:
     ):
         with pytest.raises(ValueError, match="Transactie niet gevonden"):
             await manual_match(
-                db, test_tenant.id, test_user.id,
-                uuid.uuid4(), incasso_case.id,
+                db,
+                test_tenant.id,
+                test_user.id,
+                uuid.uuid4(),
+                incasso_case.id,
             )
 
     @pytest.mark.asyncio
@@ -567,23 +611,29 @@ class TestMatchWorkflow:
         row = _make_rabobank_row("+100.00")
         csv = f"{RABOBANK_HEADER}\n{row}"
         stmt_import = await import_bank_statement(
-            db, test_tenant.id, test_user.id,
-            "test.csv", csv, bank="rabobank",
+            db,
+            test_tenant.id,
+            test_user.id,
+            "test.csv",
+            csv,
+            bank="rabobank",
         )
         await db.flush()
 
         from sqlalchemy import select
+
         txn_result = await db.execute(
-            select(BankTransaction).where(
-                BankTransaction.import_id == stmt_import.id
-            )
+            select(BankTransaction).where(BankTransaction.import_id == stmt_import.id)
         )
         txn = txn_result.scalar_one()
 
         with pytest.raises(ValueError, match="Dossier niet gevonden"):
             await manual_match(
-                db, test_tenant.id, test_user.id,
-                txn.id, uuid.uuid4(),
+                db,
+                test_tenant.id,
+                test_user.id,
+                txn.id,
+                uuid.uuid4(),
             )
 
 

@@ -79,9 +79,7 @@ async def approve_followup(
     db: AsyncSession = Depends(get_db),
 ):
     """Approve a pending recommendation."""
-    rec = await approve_recommendation(
-        db, current_user.tenant_id, rec_id, current_user.id
-    )
+    rec = await approve_recommendation(db, current_user.tenant_id, rec_id, current_user.id)
     if not rec:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -101,9 +99,7 @@ async def reject_followup(
 ):
     """Reject a pending recommendation."""
     note = body.note if body else None
-    rec = await reject_recommendation(
-        db, current_user.tenant_id, rec_id, current_user.id, note
-    )
+    rec = await reject_recommendation(db, current_user.tenant_id, rec_id, current_user.id, note)
     if not rec:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -121,9 +117,7 @@ async def execute_followup(
     db: AsyncSession = Depends(get_db),
 ):
     """Execute an approved recommendation."""
-    rec = await execute_recommendation(
-        db, current_user.tenant_id, rec_id, current_user.id
-    )
+    rec = await execute_recommendation(db, current_user.tenant_id, rec_id, current_user.id)
     if not rec:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -134,9 +128,7 @@ async def execute_followup(
     return result
 
 
-@router.post(
-    "/{rec_id}/approve-and-execute", response_model=FollowupRecommendationOut
-)
+@router.post("/{rec_id}/approve-and-execute", response_model=FollowupRecommendationOut)
 async def approve_and_execute_followup(
     rec_id: uuid.UUID,
     current_user: User = Depends(get_current_user),

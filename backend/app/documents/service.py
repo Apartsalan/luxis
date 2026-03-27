@@ -42,6 +42,7 @@ jinja_env = Environment(
 
 # ── Custom Jinja2 Filters ───────────────────────────────────────────────────
 
+
 def _format_currency(value) -> str:
     """Format a Decimal/float as Dutch currency: EUR 1.234,56."""
     if value is None:
@@ -59,8 +60,19 @@ def _format_date_nl(value) -> str:
     if value is None:
         return ""
     months = [
-        "", "januari", "februari", "maart", "april", "mei", "juni",
-        "juli", "augustus", "september", "oktober", "november", "december",
+        "",
+        "januari",
+        "februari",
+        "maart",
+        "april",
+        "mei",
+        "juni",
+        "juli",
+        "augustus",
+        "september",
+        "oktober",
+        "november",
+        "december",
     ]
     if isinstance(value, str):
         # Parse ISO date string
@@ -82,10 +94,14 @@ async def list_templates(
     template_type: str | None = None,
 ) -> list[DocumentTemplate]:
     """List all active templates, optionally filtered by type."""
-    query = select(DocumentTemplate).where(
-        DocumentTemplate.tenant_id == tenant_id,
-        DocumentTemplate.is_active.is_(True),
-    ).order_by(DocumentTemplate.name)
+    query = (
+        select(DocumentTemplate)
+        .where(
+            DocumentTemplate.tenant_id == tenant_id,
+            DocumentTemplate.is_active.is_(True),
+        )
+        .order_by(DocumentTemplate.name)
+    )
 
     if template_type:
         query = query.where(DocumentTemplate.template_type == template_type)
@@ -122,9 +138,7 @@ async def create_template(
     try:
         jinja_env.parse(data.content)
     except Exception as e:
-        raise BadRequestError(
-            f"Ongeldig sjabloon: {e}"
-        )
+        raise BadRequestError(f"Ongeldig sjabloon: {e}")
 
     template = DocumentTemplate(
         tenant_id=tenant_id,
@@ -152,9 +166,7 @@ async def update_template(
         try:
             jinja_env.parse(update_data["content"])
         except Exception as e:
-            raise BadRequestError(
-                f"Ongeldig sjabloon: {e}"
-            )
+            raise BadRequestError(f"Ongeldig sjabloon: {e}")
 
     for field, value in update_data.items():
         setattr(template, field, value)
@@ -216,19 +228,13 @@ async def _build_template_context(
         tenant_id=tenant_id,
         case_id=case.id,
         interest_type=case.interest_type,
-        contractual_rate=(
-            Decimal(str(case.contractual_rate))
-            if case.contractual_rate
-            else None
-        ),
+        contractual_rate=(Decimal(str(case.contractual_rate)) if case.contractual_rate else None),
         contractual_compound=case.contractual_compound,
         calc_date=today,
     )
 
     # Calculate BIK
-    total_principal = sum(
-        c.principal_amount for c in claims
-    )
+    total_principal = sum(c.principal_amount for c in claims)
     bik = calculate_bik(total_principal)
 
     # Build context
@@ -244,9 +250,7 @@ async def _build_template_context(
             "datum_gesloten": case.date_closed,
         },
         "client": _contact_to_dict(client) if client else {},
-        "wederpartij": (
-            _contact_to_dict(wederpartij) if wederpartij else {}
-        ),
+        "wederpartij": (_contact_to_dict(wederpartij) if wederpartij else {}),
         "vorderingen": [
             {
                 "beschrijving": c.description,
@@ -325,18 +329,14 @@ async def generate_document(
         raise NotFoundError("Zaak niet gevonden")
 
     # Build context
-    context = await _build_template_context(
-        db, tenant_id, case, data.extra_context
-    )
+    context = await _build_template_context(db, tenant_id, case, data.extra_context)
 
     # Render template
     try:
         jinja_template = jinja_env.from_string(template.content)
         rendered_html = jinja_template.render(**context)
     except Exception as e:
-        raise BadRequestError(
-            f"Fout bij renderen sjabloon: {e}"
-        )
+        raise BadRequestError(f"Fout bij renderen sjabloon: {e}")
 
     # Determine title
     title = data.title or f"{template.name} - {case.case_number}"
@@ -367,11 +367,13 @@ async def list_generated_documents(
 ) -> list[GeneratedDocument]:
     """List all generated documents for a case."""
     result = await db.execute(
-        select(GeneratedDocument).where(
+        select(GeneratedDocument)
+        .where(
             GeneratedDocument.tenant_id == tenant_id,
             GeneratedDocument.case_id == case_id,
             GeneratedDocument.is_active.is_(True),
-        ).order_by(GeneratedDocument.created_at.desc())
+        )
+        .order_by(GeneratedDocument.created_at.desc())
     )
     return list(result.scalars().all())
 

@@ -223,9 +223,7 @@ async def forgot_password(
 
         if smtp_is_configured():
             html_body = _build_reset_email_html(reset_url)
-            background_tasks.add_task(
-                _send_reset_email_safe, data.email, html_body
-            )
+            background_tasks.add_task(_send_reset_email_safe, data.email, html_body)
             logger.info("Password reset email queued for %s", data.email)
         else:
             logger.warning(
@@ -321,9 +319,7 @@ async def list_users(
     current_user: User = Depends(get_current_user),
 ):
     """List all users in the current tenant."""
-    result = await db.execute(
-        select(User).where(User.tenant_id == current_user.tenant_id)
-    )
+    result = await db.execute(select(User).where(User.tenant_id == current_user.tenant_id))
     return list(result.scalars().all())
 
 
@@ -333,9 +329,7 @@ async def get_tenant(
     current_user: User = Depends(get_current_user),
 ):
     """Get the current user's tenant (office) details."""
-    result = await db.execute(
-        select(Tenant).where(Tenant.id == current_user.tenant_id)
-    )
+    result = await db.execute(select(Tenant).where(Tenant.id == current_user.tenant_id))
     tenant = result.scalar_one_or_none()
     if tenant is None:
         raise HTTPException(status_code=404, detail="Kantoor niet gevonden")
@@ -350,12 +344,18 @@ async def update_tenant(
 ):
     """Update the current user's tenant (office) details. Admin only."""
     allowed_fields = {
-        "name", "kvk_number", "btw_number", "address", "postal_code",
-        "city", "iban", "phone", "email", "modules_enabled",
+        "name",
+        "kvk_number",
+        "btw_number",
+        "address",
+        "postal_code",
+        "city",
+        "iban",
+        "phone",
+        "email",
+        "modules_enabled",
     }
-    result = await db.execute(
-        select(Tenant).where(Tenant.id == admin.tenant_id)
-    )
+    result = await db.execute(select(Tenant).where(Tenant.id == admin.tenant_id))
     tenant = result.scalar_one_or_none()
     if tenant is None:
         raise HTTPException(status_code=404, detail="Kantoor niet gevonden")

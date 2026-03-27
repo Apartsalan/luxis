@@ -1,6 +1,5 @@
 """Tests for AI Agent ToolRegistry."""
 
-
 from app.ai_agent.tools.registry import ToolDefinition, ToolRegistry
 
 # ── Helpers ──────────────────────────────────────────────────────────────

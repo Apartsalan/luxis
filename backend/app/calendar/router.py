@@ -51,9 +51,7 @@ async def create_event(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new calendar event."""
-    return await service.create_event(
-        db, current_user.tenant_id, current_user.id, data
-    )
+    return await service.create_event(db, current_user.tenant_id, current_user.id, data)
 
 
 @router.get("/{event_id}", response_model=CalendarEventResponse)
@@ -74,9 +72,7 @@ async def update_event(
     db: AsyncSession = Depends(get_db),
 ):
     """Update a calendar event."""
-    return await service.update_event(
-        db, current_user.tenant_id, event_id, data
-    )
+    return await service.update_event(db, current_user.tenant_id, event_id, data)
 
 
 @router.delete(

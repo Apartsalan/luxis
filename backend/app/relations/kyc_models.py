@@ -48,9 +48,7 @@ class KycVerification(TenantBase):
     )  # niet_gestart, in_behandeling, voltooid, verlopen
 
     # Risk classification
-    risk_level: Mapped[str | None] = mapped_column(
-        String(20), nullable=True
-    )  # laag, midden, hoog
+    risk_level: Mapped[str | None] = mapped_column(String(20), nullable=True)  # laag, midden, hoog
 
     risk_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -73,28 +71,18 @@ class KycVerification(TenantBase):
     ubo_verified_at: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # PEP (Politically Exposed Person) check
-    pep_checked: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
-    pep_is_pep: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
+    pep_checked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    pep_is_pep: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     pep_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Sanction list check
-    sanctions_checked: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
-    sanctions_hit: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
+    sanctions_checked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sanctions_hit: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     sanctions_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Source of funds verification
     source_of_funds: Mapped[str | None] = mapped_column(Text, nullable=True)
-    source_of_funds_verified: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
-    )
+    source_of_funds_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Verification metadata
     verified_by_id: Mapped[uuid.UUID | None] = mapped_column(

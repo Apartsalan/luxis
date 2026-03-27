@@ -93,9 +93,7 @@ async def test_send_case_email_not_configured(
 
 
 @pytest.mark.asyncio
-async def test_send_case_email_nonexistent_case(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_send_case_email_nonexistent_case(client: AsyncClient, auth_headers: dict):
     """Sending email for nonexistent case returns 404."""
     fake_id = str(uuid.uuid4())
     resp = await client.post(

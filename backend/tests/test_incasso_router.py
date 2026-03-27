@@ -77,9 +77,7 @@ async def test_delete_pipeline_step(client: AsyncClient, auth_headers: dict):
     )
     step_id = create_resp.json()["id"]
 
-    del_resp = await client.delete(
-        f"/api/incasso/pipeline-steps/{step_id}", headers=auth_headers
-    )
+    del_resp = await client.delete(f"/api/incasso/pipeline-steps/{step_id}", headers=auth_headers)
     assert del_resp.status_code == 204
 
 
@@ -88,9 +86,7 @@ async def test_delete_pipeline_step(client: AsyncClient, auth_headers: dict):
 
 @pytest.mark.asyncio
 async def test_seed_default_steps(client: AsyncClient, auth_headers: dict):
-    resp = await client.post(
-        "/api/incasso/pipeline-steps/seed", headers=auth_headers
-    )
+    resp = await client.post("/api/incasso/pipeline-steps/seed", headers=auth_headers)
     assert resp.status_code == 201
     data = resp.json()
     assert len(data) >= 1

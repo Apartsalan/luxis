@@ -92,11 +92,13 @@ async def render_invoice_pdf(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
         pct_label = f"{int(pct)}%" if pct == pct.to_integral_value() else f"{pct}%"
-        btw_groups.append({
-            "tarief": pct_label,
-            "subtotaal": _fmt_currency(group_subtotal),
-            "btw_bedrag": _fmt_currency(group_btw),
-        })
+        btw_groups.append(
+            {
+                "tarief": pct_label,
+                "subtotaal": _fmt_currency(group_subtotal),
+                "btw_bedrag": _fmt_currency(group_btw),
+            }
+        )
 
     # Smart label: single rate = simple, multiple rates = breakdown
     has_mixed_rates = len(btw_groups) > 1
@@ -138,8 +140,6 @@ async def render_invoice_pdf(
     ).write_pdf()
 
     filename = f"{invoice.invoice_number}.pdf"
-    logger.info(
-        "Invoice PDF generated: %s (%d bytes)", filename, len(pdf_bytes)
-    )
+    logger.info("Invoice PDF generated: %s (%d bytes)", filename, len(pdf_bytes))
 
     return pdf_bytes, filename

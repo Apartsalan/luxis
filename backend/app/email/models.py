@@ -14,27 +14,17 @@ class EmailLog(TenantBase):
 
     __tablename__ = "email_logs"
 
-    case_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=True
-    )
+    case_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=True)
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("generated_documents.id"), nullable=True
     )
     template: Mapped[str] = mapped_column(
         String(100), nullable=False
     )  # Which email template was used (e.g. 'document_sent', 'deadline_reminder')
-    recipient: Mapped[str] = mapped_column(
-        String(320), nullable=False
-    )  # Recipient email address
-    subject: Mapped[str] = mapped_column(
-        String(500), nullable=False
-    )
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="sent"
-    )  # sent, failed
-    error_message: Mapped[str | None] = mapped_column(
-        Text, nullable=True
-    )
+    recipient: Mapped[str] = mapped_column(String(320), nullable=False)  # Recipient email address
+    subject: Mapped[str] = mapped_column(String(500), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="sent")  # sent, failed
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

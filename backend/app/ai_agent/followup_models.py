@@ -64,9 +64,7 @@ class FollowupRecommendation(TenantBase):
     recommended_action: Mapped[str] = mapped_column(String(50), nullable=False)
     reasoning: Mapped[str] = mapped_column(Text, nullable=False)
     days_in_step: Mapped[int] = mapped_column(Integer, nullable=False)
-    outstanding_amount: Mapped[Decimal] = mapped_column(
-        Numeric(15, 2), nullable=False
-    )
+    outstanding_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     urgency: Mapped[str] = mapped_column(
         String(20), nullable=False, default="normal"
     )  # "normal" (orange) or "overdue" (red)
@@ -78,15 +76,11 @@ class FollowupRecommendation(TenantBase):
     reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True
     )
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Execution result
-    executed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     execution_result: Mapped[str | None] = mapped_column(Text, nullable=True)
     generated_document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("generated_documents.id"), nullable=True

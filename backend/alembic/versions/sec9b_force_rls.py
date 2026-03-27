@@ -14,13 +14,14 @@ Revision ID: sec9b_force_rls
 Revises: sec9_rls_policies
 Create Date: 2026-03-21
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 
 
-revision: str = 'sec9b_force_rls'
-down_revision: Union[str, None] = 'sec9_rls_policies'
+revision: str = "sec9b_force_rls"
+down_revision: Union[str, None] = "sec9_rls_policies"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -87,8 +88,12 @@ def upgrade() -> None:
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO luxis_app")
 
     # 4. Default privileges for future tables
-    op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO luxis_app")
-    op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO luxis_app")
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO luxis_app"
+    )
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO luxis_app"
+    )
 
     # 5. Force RLS on all tenant tables (applies even to table owner when SET ROLE is used)
     for table in TENANT_TABLES:
@@ -99,8 +104,12 @@ def downgrade() -> None:
     for table in reversed(TENANT_TABLES):
         op.execute(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY")
 
-    op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM luxis_app")
-    op.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE USAGE, SELECT ON SEQUENCES FROM luxis_app")
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM luxis_app"
+    )
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE USAGE, SELECT ON SEQUENCES FROM luxis_app"
+    )
     op.execute("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM luxis_app")
     op.execute("REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM luxis_app")
     op.execute("REVOKE USAGE ON SCHEMA public FROM luxis_app")

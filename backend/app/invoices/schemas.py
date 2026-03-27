@@ -170,9 +170,7 @@ class UserBrief(BaseModel):
 class InvoicePaymentCreate(BaseModel):
     amount: Decimal = Field(..., gt=Decimal("0"), decimal_places=2)
     payment_date: date
-    payment_method: str = Field(
-        ..., description="bank, ideal, cash, verrekening"
-    )
+    payment_method: str = Field(..., description="bank, ideal, cash, verrekening")
     reference: str | None = None
     description: str | None = None
 
@@ -304,14 +302,17 @@ class IncassoBIKPreview(BaseModel):
     is_override: bool
     source: str
 
+
 class IncassoInterestPreview(BaseModel):
     amount: Decimal
     calc_date: str
     source: str
 
+
 class IncassoProvisieOption(BaseModel):
     base_amount: Decimal
     amount: Decimal
+
 
 class IncassoProvisiePreview(BaseModel):
     percentage: Decimal
@@ -321,11 +322,13 @@ class IncassoProvisiePreview(BaseModel):
     fixed_costs: Decimal
     minimum_fee: Decimal
 
+
 class AlreadyInvoicedInfo(BaseModel):
     has_bik_line: bool
     has_provisie_line: bool
     has_rente_line: bool
     invoices: list[str]  # invoice numbers
+
 
 class IncassoInvoicePreviewResponse(BaseModel):
     bik: IncassoBIKPreview

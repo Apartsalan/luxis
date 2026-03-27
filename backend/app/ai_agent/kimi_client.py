@@ -28,9 +28,14 @@ CLASSIFICATION_SCHEMA: dict[str, Any] = {
         "category": {
             "type": "string",
             "enum": [
-                "belofte_tot_betaling", "betwisting", "betalingsregeling_verzoek",
-                "beweert_betaald", "onvermogen", "juridisch_verweer",
-                "ontvangstbevestiging", "niet_gerelateerd",
+                "belofte_tot_betaling",
+                "betwisting",
+                "betalingsregeling_verzoek",
+                "beweert_betaald",
+                "onvermogen",
+                "juridisch_verweer",
+                "ontvangstbevestiging",
+                "niet_gerelateerd",
             ],
         },
         "confidence": {"type": "number"},
@@ -38,8 +43,12 @@ CLASSIFICATION_SCHEMA: dict[str, Any] = {
         "suggested_action": {
             "type": "string",
             "enum": [
-                "wait_and_remind", "escalate", "send_template",
-                "dismiss", "request_proof", "no_action",
+                "wait_and_remind",
+                "escalate",
+                "send_template",
+                "dismiss",
+                "request_proof",
+                "no_action",
             ],
         },
         "suggested_template_key": {"type": ["string", "null"]},
@@ -177,11 +186,13 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
             max_tokens=1024,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
-            tools=[{
-                "name": tool_name,
-                "description": "Extract structured data from the input.",
-                "input_schema": schema,
-            }],
+            tools=[
+                {
+                    "name": tool_name,
+                    "description": "Extract structured data from the input.",
+                    "input_schema": schema,
+                }
+            ],
             tool_choice={"type": "tool", "name": tool_name},
         )
         # With forced tool_choice, the response is guaranteed to be a tool_use block
@@ -256,20 +267,22 @@ async def call_claude_with_pdf(
     # Try structured output first
     schema_info = _detect_schema(system_prompt)
 
-    messages = [{
-        "role": "user",
-        "content": [
-            {
-                "type": "document",
-                "source": {
-                    "type": "base64",
-                    "media_type": "application/pdf",
-                    "data": pdf_b64,
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "document",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "application/pdf",
+                        "data": pdf_b64,
+                    },
                 },
-            },
-            {"type": "text", "text": user_message},
-        ],
-    }]
+                {"type": "text", "text": user_message},
+            ],
+        }
+    ]
 
     if schema_info:
         tool_name, schema = schema_info
@@ -278,11 +291,13 @@ async def call_claude_with_pdf(
             max_tokens=2048,
             system=system_prompt,
             messages=messages,
-            tools=[{
-                "name": tool_name,
-                "description": "Extract structured data from the document.",
-                "input_schema": schema,
-            }],
+            tools=[
+                {
+                    "name": tool_name,
+                    "description": "Extract structured data from the document.",
+                    "input_schema": schema,
+                }
+            ],
             tool_choice={"type": "tool", "name": tool_name},
         )
         for block in response.content:

@@ -143,7 +143,8 @@ def _get_attachments(msg: email_lib.message.Message) -> list[AttachmentInfo]:
 
 
 def _imap_message_to_email(
-    uid: str, raw_bytes: bytes,
+    uid: str,
+    raw_bytes: bytes,
 ) -> EmailMessage | None:
     """Parse raw IMAP message bytes into an EmailMessage."""
     try:
@@ -296,9 +297,7 @@ def _fetch_attachment_from_imap(
                 status, _ = imap.select(try_folder, readonly=True)
                 if status != "OK":
                     continue
-                status, data = imap.search(
-                    None, f'(HEADER Message-ID "{message_id}")'
-                )
+                status, data = imap.search(None, f'(HEADER Message-ID "{message_id}")')
                 if status != "OK" or not data[0]:
                     continue
                 uid = data[0].split()[0]
@@ -380,7 +379,10 @@ class ImapProvider(EmailProvider):
         # Fetch from INBOX
         inbox_msgs = await asyncio.to_thread(
             _fetch_from_imap,
-            host, port, username, access_token,
+            host,
+            port,
+            username,
+            access_token,
             max_results,
         )
         all_messages.extend(inbox_msgs)
@@ -390,15 +392,16 @@ class ImapProvider(EmailProvider):
             try:
                 sent_msgs = await asyncio.to_thread(
                     _fetch_from_imap,
-                    host, port, username, access_token,
+                    host,
+                    port,
+                    username,
+                    access_token,
                     max_results,
                     folder=sent_folder,
                 )
                 all_messages.extend(sent_msgs)
                 if sent_msgs:
-                    logger.info(
-                        f"IMAP: {len(sent_msgs)} berichten uit '{sent_folder}'"
-                    )
+                    logger.info(f"IMAP: {len(sent_msgs)} berichten uit '{sent_folder}'")
                     break  # Found the right sent folder
             except Exception:
                 continue  # Folder doesn't exist, try next
@@ -456,6 +459,10 @@ class ImapProvider(EmailProvider):
         """Download an attachment from IMAP."""
         return await asyncio.to_thread(
             _fetch_attachment_from_imap,
-            host, port, username, access_token,
-            message_id, int(attachment_id),
+            host,
+            port,
+            username,
+            access_token,
+            message_id,
+            int(attachment_id),
         )

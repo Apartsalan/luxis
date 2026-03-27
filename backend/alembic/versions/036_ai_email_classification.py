@@ -91,9 +91,7 @@ def upgrade() -> None:
             nullable=False,
         ),
     )
-    op.create_index(
-        "ix_email_classifications_status", "email_classifications", ["status"]
-    )
+    op.create_index("ix_email_classifications_status", "email_classifications", ["status"])
 
 
 def downgrade() -> None:

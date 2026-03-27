@@ -147,6 +147,7 @@ class TestSerializeNested:
 class TestSerializePydanticModel:
     def test_pydantic_model(self):
         """Objects with model_dump() should be serialized via that method."""
+
         class FakeModel:
             def model_dump(self):
                 return {"id": uuid.uuid4(), "amount": Decimal("100.00")}

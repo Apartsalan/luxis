@@ -80,14 +80,10 @@ class BankStatementImport(TenantBase):
     __tablename__ = "bank_statement_imports"
 
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    bank: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="rabobank"
-    )
+    bank: Mapped[str] = mapped_column(String(50), nullable=False, default="rabobank")
     account_iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
 
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=ImportStatus.PROCESSING
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=ImportStatus.PROCESSING)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Stats
@@ -97,9 +93,7 @@ class BankStatementImport(TenantBase):
     skipped_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     matched_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    imported_by_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("users.id"), nullable=False
-    )
+    imported_by_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
 
     # Relationships
     imported_by: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821
@@ -119,8 +113,10 @@ class BankTransaction(TenantBase):
     __tablename__ = "bank_transactions"
 
     import_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("bank_statement_imports.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        Uuid,
+        ForeignKey("bank_statement_imports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
     # Core transaction data
@@ -157,12 +153,16 @@ class PaymentMatch(TenantBase):
     __tablename__ = "payment_matches"
 
     transaction_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("bank_transactions.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        Uuid,
+        ForeignKey("bank_transactions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        Uuid,
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
     # Match details
@@ -171,21 +171,15 @@ class PaymentMatch(TenantBase):
     match_details: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Review workflow
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=MatchStatus.PENDING
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=MatchStatus.PENDING)
     reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True
     )
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Execution result
-    executed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     payment_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("payments.id"), nullable=True
     )

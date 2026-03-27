@@ -42,9 +42,7 @@ async def send_email(
         aiosmtplib.SMTPException: On SMTP delivery failure.
     """
     if not is_configured():
-        raise RuntimeError(
-            "SMTP niet geconfigureerd. Stel SMTP_HOST en SMTP_FROM in."
-        )
+        raise RuntimeError("SMTP niet geconfigureerd. Stel SMTP_HOST en SMTP_FROM in.")
 
     msg = EmailMessage()
     msg["From"] = settings.smtp_from

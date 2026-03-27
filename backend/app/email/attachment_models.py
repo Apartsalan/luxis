@@ -22,9 +22,7 @@ class EmailAttachment(TenantBase):
     )
 
     # Provider attachment ID (Gmail: attachmentId)
-    provider_attachment_id: Mapped[str] = mapped_column(
-        String(500), nullable=False
-    )
+    provider_attachment_id: Mapped[str] = mapped_column(String(500), nullable=False)
 
     # File metadata
     filename: Mapped[str] = mapped_column(String(500), nullable=False)

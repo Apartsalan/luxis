@@ -27,9 +27,7 @@ FIXED_RATE_4PCT = [(date(2020, 1, 1), Decimal("4.00"))]
 def test_build_rate_schedule_single_rate():
     """Single rate covering the entire period."""
     rates = [(date(2024, 1, 1), Decimal("7.00"))]
-    schedule = build_rate_schedule(
-        date(2024, 6, 15), date(2025, 6, 15), rates
-    )
+    schedule = build_rate_schedule(date(2024, 6, 15), date(2025, 6, 15), rates)
     assert len(schedule) == 1
     assert schedule[0] == (date(2024, 6, 15), date(2025, 6, 15), Decimal("7.00"))
 
@@ -40,9 +38,7 @@ def test_build_rate_schedule_rate_change():
         (date(2024, 1, 1), Decimal("7.00")),
         (date(2025, 1, 1), Decimal("6.00")),
     ]
-    schedule = build_rate_schedule(
-        date(2024, 6, 15), date(2025, 6, 15), rates
-    )
+    schedule = build_rate_schedule(date(2024, 6, 15), date(2025, 6, 15), rates)
     assert len(schedule) == 2
     # First segment: 2024-06-15 to 2025-01-01 at 7%
     assert schedule[0] == (date(2024, 6, 15), date(2025, 1, 1), Decimal("7.00"))
@@ -57,9 +53,7 @@ def test_build_rate_schedule_multiple_changes():
         (date(2024, 7, 1), Decimal("6.00")),
         (date(2025, 1, 1), Decimal("4.00")),
     ]
-    schedule = build_rate_schedule(
-        date(2024, 3, 1), date(2025, 6, 1), rates
-    )
+    schedule = build_rate_schedule(date(2024, 3, 1), date(2025, 6, 1), rates)
     assert len(schedule) == 3
     assert schedule[0][2] == Decimal("7.00")
     assert schedule[1][2] == Decimal("6.00")
@@ -68,9 +62,7 @@ def test_build_rate_schedule_multiple_changes():
 
 def test_build_rate_schedule_empty_range():
     """Same start/end should return empty."""
-    schedule = build_rate_schedule(
-        date(2024, 1, 1), date(2024, 1, 1), FIXED_RATE_6PCT
-    )
+    schedule = build_rate_schedule(date(2024, 1, 1), date(2024, 1, 1), FIXED_RATE_6PCT)
     assert schedule == []
 
 
@@ -83,9 +75,7 @@ def test_simple_interest_full_year_6pct():
     default_date = date(2024, 3, 15)
     calc_date = date(2025, 3, 15)
 
-    total, periods = calculate_simple_interest(
-        principal, default_date, calc_date, FIXED_RATE_6PCT
-    )
+    total, periods = calculate_simple_interest(principal, default_date, calc_date, FIXED_RATE_6PCT)
 
     # 5000 * 0.06 * 365/365 = 300.00
     assert total == Decimal("300.00")
@@ -99,14 +89,11 @@ def test_simple_interest_half_year():
     default_date = date(2024, 1, 1)
     calc_date = date(2024, 7, 1)  # 182 days
 
-    total, periods = calculate_simple_interest(
-        principal, default_date, calc_date, FIXED_RATE_7PCT
-    )
+    total, periods = calculate_simple_interest(principal, default_date, calc_date, FIXED_RATE_7PCT)
 
     # 10000 * 0.07 * 182/365 = 349.04 (rounded)
     expected = _round2(
-        Decimal("10000") * Decimal("7.00") / Decimal("100")
-        * Decimal("182") / Decimal("365")
+        Decimal("10000") * Decimal("7.00") / Decimal("100") * Decimal("182") / Decimal("365")
     )
     assert total == expected
 
@@ -117,14 +104,11 @@ def test_simple_interest_broken_period():
     default_date = date(2025, 1, 1)
     calc_date = date(2025, 4, 1)  # 90 days
 
-    total, periods = calculate_simple_interest(
-        principal, default_date, calc_date, FIXED_RATE_4PCT
-    )
+    total, periods = calculate_simple_interest(principal, default_date, calc_date, FIXED_RATE_4PCT)
 
     # 2500 * 0.04 * 90/365 = 24.66 (rounded)
     expected = _round2(
-        Decimal("2500") * Decimal("4.00") / Decimal("100")
-        * Decimal("90") / Decimal("365")
+        Decimal("2500") * Decimal("4.00") / Decimal("100") * Decimal("90") / Decimal("365")
     )
     assert total == expected
     assert periods[0]["days"] == 90
@@ -140,9 +124,7 @@ def test_simple_interest_rate_change():
     default_date = date(2024, 7, 1)
     calc_date = date(2025, 7, 1)
 
-    total, periods = calculate_simple_interest(
-        principal, default_date, calc_date, rates
-    )
+    total, periods = calculate_simple_interest(principal, default_date, calc_date, rates)
 
     assert len(periods) == 2
     # Period 1: 2024-07-01 to 2025-01-01 = 184 days at 7%
@@ -173,9 +155,7 @@ def test_compound_1_year_equals_simple():
     compound_total, _ = calculate_compound_interest(
         principal, default_date, calc_date, FIXED_RATE_6PCT
     )
-    simple_total, _ = calculate_simple_interest(
-        principal, default_date, calc_date, FIXED_RATE_6PCT
-    )
+    simple_total, _ = calculate_simple_interest(principal, default_date, calc_date, FIXED_RATE_6PCT)
 
     assert compound_total == simple_total == Decimal("300.00")
 
@@ -222,8 +202,7 @@ def test_compound_1_5_years():
     # Remaining 181 days on new principal
     days_rem = (calc_date - date(2025, 1, 1)).days  # 181
     remaining = _round2(
-        new_principal * Decimal("6") / Decimal("100")
-        * Decimal(str(days_rem)) / Decimal("365")
+        new_principal * Decimal("6") / Decimal("100") * Decimal(str(days_rem)) / Decimal("365")
     )
     expected = _round2(year1 + remaining)
     assert total == expected
@@ -278,21 +257,17 @@ def test_compound_rate_change_within_year():
     default_date = date(2024, 6, 15)
     calc_date = date(2025, 6, 15)
 
-    total, periods = calculate_compound_interest(
-        principal, default_date, calc_date, rates
-    )
+    total, periods = calculate_compound_interest(principal, default_date, calc_date, rates)
 
     # Sub-period A: 200 days at 7%
     days_a = (date(2025, 1, 1) - date(2024, 6, 15)).days  # 200
     interest_a = _round2(
-        Decimal("5000") * Decimal("7") / Decimal("100")
-        * Decimal(str(days_a)) / Decimal("365")
+        Decimal("5000") * Decimal("7") / Decimal("100") * Decimal(str(days_a)) / Decimal("365")
     )
     # Sub-period B: 165 days at 6%
     days_b = (date(2025, 6, 15) - date(2025, 1, 1)).days  # 165
     interest_b = _round2(
-        Decimal("5000") * Decimal("6") / Decimal("100")
-        * Decimal(str(days_b)) / Decimal("365")
+        Decimal("5000") * Decimal("6") / Decimal("100") * Decimal(str(days_b)) / Decimal("365")
     )
     expected = _round2(interest_a + interest_b)
 
@@ -324,9 +299,7 @@ def test_compound_real_rates_example():
     default_date = date(2024, 3, 15)
     calc_date = date(2026, 2, 17)
 
-    total, periods = calculate_compound_interest(
-        principal, default_date, calc_date, rates
-    )
+    total, periods = calculate_compound_interest(principal, default_date, calc_date, rates)
 
     # Year 1:
     d = Decimal
@@ -354,9 +327,7 @@ def test_compound_3_years():
     default_date = date(2023, 1, 1)
     calc_date = date(2026, 1, 1)
 
-    total, _ = calculate_compound_interest(
-        principal, default_date, calc_date, FIXED_RATE_6PCT
-    )
+    total, _ = calculate_compound_interest(principal, default_date, calc_date, FIXED_RATE_6PCT)
 
     # Compute expected using actual day counts (2024 is a leap year)
     d = Decimal
@@ -379,13 +350,14 @@ def test_compound_3_years():
 def test_small_principal():
     """Small principal should still calculate correctly."""
     total, _ = calculate_simple_interest(
-        Decimal("50.00"), date(2025, 1, 1), date(2025, 7, 1),
+        Decimal("50.00"),
+        date(2025, 1, 1),
+        date(2025, 7, 1),
         FIXED_RATE_6PCT,
     )
     # 50 * 0.06 * 181/365 = 1.49 (rounded)
     expected = _round2(
-        Decimal("50") * Decimal("6") / Decimal("100")
-        * Decimal("181") / Decimal("365")
+        Decimal("50") * Decimal("6") / Decimal("100") * Decimal("181") / Decimal("365")
     )
     assert total == expected
 
@@ -393,7 +365,9 @@ def test_small_principal():
 def test_very_large_principal():
     """Large principal should not lose precision."""
     total, _ = calculate_simple_interest(
-        Decimal("1000000.00"), date(2025, 1, 1), date(2026, 1, 1),
+        Decimal("1000000.00"),
+        date(2025, 1, 1),
+        date(2026, 1, 1),
         FIXED_RATE_6PCT,
     )
     assert total == Decimal("60000.00")
@@ -402,7 +376,9 @@ def test_very_large_principal():
 def test_single_day_interest():
     """1 day of interest should calculate correctly."""
     total, periods = calculate_simple_interest(
-        Decimal("365000.00"), date(2025, 1, 1), date(2025, 1, 2),
+        Decimal("365000.00"),
+        date(2025, 1, 1),
+        date(2025, 1, 2),
         FIXED_RATE_6PCT,
     )
     # 365000 * 0.06 * 1/365 = 60.00

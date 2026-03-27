@@ -81,8 +81,7 @@ async def get_authorize_url(
     """
     if provider == "gmail" and not settings.google_client_id:
         raise BadRequestError(
-            "Google OAuth is niet geconfigureerd. "
-            "Stel GOOGLE_CLIENT_ID en GOOGLE_CLIENT_SECRET in."
+            "Google OAuth is niet geconfigureerd. Stel GOOGLE_CLIENT_ID en GOOGLE_CLIENT_SECRET in."
         )
     if provider == "outlook" and not settings.microsoft_client_id:
         raise BadRequestError(
@@ -240,9 +239,7 @@ async def disconnect_email(
 # ── Shared callback logic ─────────────────────────────────────────────────────
 
 
-async def _handle_oauth_callback(
-    *, code: str, state: str, db: AsyncSession
-) -> HTMLResponse:
+async def _handle_oauth_callback(*, code: str, state: str, db: AsyncSession) -> HTMLResponse:
     """Shared OAuth callback logic for both Gmail and Outlook.
 
     1. Decodes the state to get user_id + tenant_id + provider
@@ -276,9 +273,7 @@ async def _handle_oauth_callback(
             )
         else:
             hint = "Probeer de verbinding opnieuw. Neem contact op als het blijft falen."
-        return HTMLResponse(
-            _error_html(f"Geen refresh token ontvangen. {hint}")
-        )
+        return HTMLResponse(_error_html(f"Geen refresh token ontvangen. {hint}"))
 
     try:
         from app.middleware.tenant import set_tenant_context
@@ -310,6 +305,7 @@ def _success_html(email: str, provider: str) -> str:
     """HTML page shown after successful OAuth — notifies opener and closes."""
     import html as _html
     import json as _json
+
     safe_email = _html.escape(email)
     safe_provider = _html.escape(provider)
     # JSON-encode for safe JavaScript string embedding
@@ -347,6 +343,7 @@ def _success_html(email: str, provider: str) -> str:
 def _error_html(message: str) -> str:
     """HTML page shown after failed OAuth."""
     import json as _json
+
     # Escape for safe HTML insertion
     safe_msg = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return f"""<!DOCTYPE html>

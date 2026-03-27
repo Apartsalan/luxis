@@ -5,6 +5,7 @@ Revises: 018_case_files
 Create Date: 2026-02-20 16:00:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op

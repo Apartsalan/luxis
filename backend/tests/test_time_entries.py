@@ -154,9 +154,7 @@ async def test_delete_time_entry(
 
 
 @pytest.mark.asyncio
-async def test_delete_nonexistent_entry(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_delete_nonexistent_entry(client: AsyncClient, auth_headers: dict):
     """Deleting a nonexistent entry should return 404."""
     fake_id = str(uuid.uuid4())
     resp = await client.delete(f"/api/time-entries/{fake_id}", headers=auth_headers)
@@ -178,9 +176,7 @@ async def test_filter_by_case(
     await client.post("/api/time-entries", json=_entry_payload(case_a.id), headers=auth_headers)
     await client.post("/api/time-entries", json=_entry_payload(case_b.id), headers=auth_headers)
 
-    resp = await client.get(
-        f"/api/time-entries?case_id={case_a.id}", headers=auth_headers
-    )
+    resp = await client.get(f"/api/time-entries?case_id={case_a.id}", headers=auth_headers)
     assert resp.status_code == 200
     assert len(resp.json()) == 2
 

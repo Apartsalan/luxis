@@ -28,6 +28,7 @@ async def set_tenant_context(db: AsyncSession, tenant_id: str) -> None:
     # Note: SET does not support parameterized queries in PostgreSQL,
     # so we validate the UUID format strictly before interpolation.
     import uuid as _uuid
+
     try:
         validated = str(_uuid.UUID(str(tenant_id)))
     except (ValueError, AttributeError):
@@ -37,9 +38,7 @@ async def set_tenant_context(db: AsyncSession, tenant_id: str) -> None:
     # Switch to non-superuser role so RLS policies are enforced.
     # Check once if the role exists (won't exist in test DBs).
     if not _rls_role_checked:
-        result = await db.execute(
-            text("SELECT 1 FROM pg_roles WHERE rolname = 'luxis_app'")
-        )
+        result = await db.execute(text("SELECT 1 FROM pg_roles WHERE rolname = 'luxis_app'"))
         _rls_role_available = result.scalar() is not None
         _rls_role_checked = True
         if not _rls_role_available:

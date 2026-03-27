@@ -88,9 +88,7 @@ async def conflict_check(
     db: AsyncSession = Depends(get_db),
 ):
     """Check if a contact has conflicting roles in existing cases."""
-    conflicts = await service.conflict_check(
-        db, current_user.tenant_id, contact_id, role
-    )
+    conflicts = await service.conflict_check(db, current_user.tenant_id, contact_id, role)
     return {"conflicts": conflicts, "has_conflict": len(conflicts) > 0}
 
 
@@ -101,9 +99,7 @@ async def create_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new case."""
-    case = await service.create_case(
-        db, current_user.tenant_id, current_user.id, data
-    )
+    case = await service.create_case(db, current_user.tenant_id, current_user.id, data)
     await db.commit()
     await db.refresh(case)
     return case
@@ -118,21 +114,18 @@ async def get_case(
     """Get full case detail with parties and recent activities."""
     # Refresh cached financials to ensure accuracy
     from app.collections.service import _refresh_case_financials
+
     await _refresh_case_financials(db, current_user.tenant_id, case_id)
     await db.commit()
 
     case = await service.get_case(db, current_user.tenant_id, case_id)
 
     # Get recent activities (last 10)
-    activities, _ = await service.list_activities(
-        db, current_user.tenant_id, case_id, per_page=10
-    )
+    activities, _ = await service.list_activities(db, current_user.tenant_id, case_id, per_page=10)
 
     response = CaseDetailResponse.model_validate(case)
     response.parties = [CasePartyResponse.model_validate(p) for p in case.parties]
-    response.recent_activities = [
-        CaseActivityResponse.model_validate(a) for a in activities
-    ]
+    response.recent_activities = [CaseActivityResponse.model_validate(a) for a in activities]
     return response
 
 
@@ -190,9 +183,7 @@ async def add_party(
     db: AsyncSession = Depends(get_db),
 ):
     """Add a party to a case (deurwaarder, rechtbank, etc.)."""
-    party = await service.add_case_party(
-        db, current_user.tenant_id, case_id, data
-    )
+    party = await service.add_case_party(db, current_user.tenant_id, case_id, data)
     await db.commit()
     await db.refresh(party)
     return party
@@ -313,9 +304,7 @@ async def list_files(
     db: AsyncSession = Depends(get_db),
 ):
     """List all uploaded files for a case."""
-    case_files = await files_service.list_case_files(
-        db, current_user.tenant_id, case_id
-    )
+    case_files = await files_service.list_case_files(db, current_user.tenant_id, case_id)
     return [files_service.to_response(f) for f in case_files]
 
 
@@ -356,9 +345,7 @@ async def download_file(
     db: AsyncSession = Depends(get_db),
 ):
     """Download a case file."""
-    case_file = await files_service.get_case_file(
-        db, current_user.tenant_id, case_id, file_id
-    )
+    case_file = await files_service.get_case_file(db, current_user.tenant_id, case_id, file_id)
     if not case_file:
         raise HTTPException(status_code=404, detail="Bestand niet gevonden")
 
@@ -396,9 +383,7 @@ async def preview_file(
     - DOCX: converted to PDF on-the-fly via LibreOffice
     - Other types: returns 415 Unsupported Media Type
     """
-    case_file = await files_service.get_case_file(
-        db, current_user.tenant_id, case_id, file_id
-    )
+    case_file = await files_service.get_case_file(db, current_user.tenant_id, case_id, file_id)
     if not case_file:
         raise HTTPException(status_code=404, detail="Bestand niet gevonden")
 
@@ -419,17 +404,12 @@ async def preview_file(
             filename=case_file.original_filename,
             media_type=case_file.content_type,
             headers={
-                "Content-Disposition": content_disposition(
-                    "inline", case_file.original_filename
-                ),
+                "Content-Disposition": content_disposition("inline", case_file.original_filename),
             },
         )
 
     # DOCX: convert to PDF
-    docx_mime = (
-        "application/vnd.openxmlformats-officedocument"
-        ".wordprocessingml.document"
-    )
+    docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     if case_file.content_type == docx_mime:
         from app.documents.pdf_service import docx_to_pdf
 
@@ -453,9 +433,7 @@ async def delete_file(
     db: AsyncSession = Depends(get_db),
 ):
     """Soft-delete a case file."""
-    case_file = await files_service.get_case_file(
-        db, current_user.tenant_id, case_id, file_id
-    )
+    case_file = await files_service.get_case_file(db, current_user.tenant_id, case_id, file_id)
     if not case_file:
         raise HTTPException(status_code=404, detail="Bestand niet gevonden")
 

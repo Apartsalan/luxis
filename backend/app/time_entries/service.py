@@ -50,9 +50,8 @@ async def list_time_entries(
         query = query.where(TimeEntry.invoiced.is_(invoiced))
     if contact_id is not None:
         from app.cases.models import Case
-        query = query.join(Case, TimeEntry.case_id == Case.id).where(
-            Case.client_id == contact_id
-        )
+
+        query = query.join(Case, TimeEntry.case_id == Case.id).where(Case.client_id == contact_id)
 
     query = query.order_by(TimeEntry.date.desc(), TimeEntry.created_at.desc())
     result = await db.execute(query)
@@ -67,7 +66,8 @@ async def list_unbilled_time_entries(
 ) -> list[TimeEntry]:
     """Get all billable, uninvoiced time entries (ready to be billed)."""
     return await list_time_entries(
-        db, tenant_id,
+        db,
+        tenant_id,
         case_id=case_id,
         billable=True,
         invoiced=False,
@@ -156,7 +156,8 @@ async def get_summary(
 ) -> TimeEntrySummary:
     """Calculate time entry summary with totals and per-case breakdown."""
     entries = await list_time_entries(
-        db, tenant_id,
+        db,
+        tenant_id,
         case_id=case_id,
         user_id=user_id,
         date_from=date_from,
@@ -219,7 +220,8 @@ async def get_my_today(
 ) -> list[TimeEntry]:
     """Get today's time entries for the current user (for timer widget)."""
     return await list_time_entries(
-        db, tenant_id,
+        db,
+        tenant_id,
         user_id=user_id,
         date_from=date.today(),
         date_to=date.today(),
@@ -235,6 +237,7 @@ async def get_invoice_numbers(
     if not entry_ids:
         return {}
     from app.invoices.models import Invoice, InvoiceLine
+
     result = await db.execute(
         select(InvoiceLine.time_entry_id, Invoice.invoice_number)
         .join(Invoice, InvoiceLine.invoice_id == Invoice.id)

@@ -84,8 +84,12 @@ def parse_rabobank_csv(content: str) -> ParseResult:
     first_row = next(reader, None)
     if first_row is None:
         return ParseResult(
-            transactions=[], account_iban=None, total_rows=0,
-            credit_count=0, debit_count=0, skipped_count=0,
+            transactions=[],
+            account_iban=None,
+            total_rows=0,
+            credit_count=0,
+            debit_count=0,
+            skipped_count=0,
             errors=["Leeg CSV-bestand"],
         )
 
@@ -159,16 +163,18 @@ def parse_rabobank_csv(content: str) -> ParseResult:
 
             if is_credit:
                 credit_count += 1
-                transactions.append(ParsedTransaction(
-                    transaction_date=transaction_date,
-                    amount=amount.copy_abs(),
-                    counterparty_name=counterparty_name,
-                    counterparty_iban=counterparty_iban,
-                    description=description,
-                    currency=currency,
-                    entry_date=entry_date,
-                    is_credit=True,
-                ))
+                transactions.append(
+                    ParsedTransaction(
+                        transaction_date=transaction_date,
+                        amount=amount.copy_abs(),
+                        counterparty_name=counterparty_name,
+                        counterparty_iban=counterparty_iban,
+                        description=description,
+                        currency=currency,
+                        entry_date=entry_date,
+                        is_credit=True,
+                    )
+                )
             else:
                 debit_count += 1
                 # Skip debit transactions — not relevant for incasso matching

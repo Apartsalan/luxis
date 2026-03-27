@@ -59,9 +59,7 @@ async def _create_concept_invoice(
     return resp.json()
 
 
-async def _advance_to_sent(
-    client: AsyncClient, auth_headers: dict, invoice_id: str
-) -> dict:
+async def _advance_to_sent(client: AsyncClient, auth_headers: dict, invoice_id: str) -> dict:
     """Advance invoice through concept → approved → sent."""
     await client.post(f"/api/invoices/{invoice_id}/approve", headers=auth_headers)
     resp = await client.post(f"/api/invoices/{invoice_id}/send", headers=auth_headers)
@@ -221,9 +219,7 @@ async def test_cancel_invoice(
     contact = await _create_contact(db, test_tenant.id)
     created = await _create_concept_invoice(client, auth_headers, contact.id)
 
-    resp = await client.post(
-        f"/api/invoices/{created['id']}/cancel", headers=auth_headers
-    )
+    resp = await client.post(f"/api/invoices/{created['id']}/cancel", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "cancelled"
 
@@ -303,9 +299,7 @@ async def test_zero_btw_invoice(
 ):
     """Invoice with 0% BTW should have btw_amount = 0."""
     contact = await _create_contact(db, test_tenant.id)
-    data = await _create_concept_invoice(
-        client, auth_headers, contact.id, btw_percentage="0.00"
-    )
+    data = await _create_concept_invoice(client, auth_headers, contact.id, btw_percentage="0.00")
 
     assert Decimal(data["btw_amount"]) == Decimal("0.00")
     assert Decimal(data["total"]) == Decimal(data["subtotal"])
@@ -349,9 +343,7 @@ async def test_remove_line_from_concept(
     inv_id = created["id"]
     line_id = created["lines"][0]["id"]
 
-    resp = await client.delete(
-        f"/api/invoices/{inv_id}/lines/{line_id}", headers=auth_headers
-    )
+    resp = await client.delete(f"/api/invoices/{inv_id}/lines/{line_id}", headers=auth_headers)
     assert resp.status_code == 204
 
     # Totals should be 0
@@ -402,9 +394,7 @@ async def test_create_credit_note(
             {"description": "Creditering", "quantity": "1", "unit_price": "-250.00"},
         ],
     }
-    resp = await client.post(
-        "/api/invoices/credit-note", json=cn_payload, headers=auth_headers
-    )
+    resp = await client.post("/api/invoices/credit-note", json=cn_payload, headers=auth_headers)
     assert resp.status_code == 201
     data = resp.json()
     assert data["invoice_number"].startswith("CN")
@@ -482,9 +472,7 @@ async def test_payment_summary(
     )
 
     # Check summary
-    resp = await client.get(
-        f"/api/invoices/{inv_id}/payment-summary", headers=auth_headers
-    )
+    resp = await client.get(f"/api/invoices/{inv_id}/payment-summary", headers=auth_headers)
     assert resp.status_code == 200
     summary = resp.json()
     assert Decimal(summary["total_paid"]) == Decimal("200.00")

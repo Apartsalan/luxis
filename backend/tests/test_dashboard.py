@@ -9,13 +9,9 @@ from app.relations.models import Contact
 
 
 @pytest.mark.asyncio
-async def test_dashboard_summary_empty(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_dashboard_summary_empty(client: AsyncClient, auth_headers: dict):
     """Empty tenant should return zero KPIs."""
-    response = await client.get(
-        "/api/dashboard/summary", headers=auth_headers
-    )
+    response = await client.get("/api/dashboard/summary", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total_active_cases"] == 0
@@ -46,25 +42,19 @@ async def test_dashboard_summary_with_cases(
             headers=auth_headers,
         )
 
-    response = await client.get(
-        "/api/dashboard/summary", headers=auth_headers
-    )
+    response = await client.get("/api/dashboard/summary", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total_active_cases"] == 3
     assert data["cases_this_month"] >= 3
 
     # Check breakdown by type
-    type_counts = {
-        t["case_type"]: t["count"] for t in data["cases_by_type"]
-    }
+    type_counts = {t["case_type"]: t["count"] for t in data["cases_by_type"]}
     assert type_counts.get("incasso") == 2
     assert type_counts.get("advies") == 1
 
     # Check breakdown by status (all should be "nieuw")
-    status_counts = {
-        s["status"]: s["count"] for s in data["cases_by_status"]
-    }
+    status_counts = {s["status"]: s["count"] for s in data["cases_by_status"]}
     assert status_counts.get("nieuw") == 3
 
 
@@ -76,21 +66,15 @@ async def test_dashboard_summary_contacts_counted(
     test_person: Contact,
 ):
     """Dashboard should count contacts."""
-    response = await client.get(
-        "/api/dashboard/summary", headers=auth_headers
-    )
+    response = await client.get("/api/dashboard/summary", headers=auth_headers)
     data = response.json()
     assert data["total_contacts"] >= 2
 
 
 @pytest.mark.asyncio
-async def test_recent_activity_empty(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_recent_activity_empty(client: AsyncClient, auth_headers: dict):
     """Empty tenant should have no recent activity."""
-    response = await client.get(
-        "/api/dashboard/recent-activity", headers=auth_headers
-    )
+    response = await client.get("/api/dashboard/recent-activity", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 0
@@ -127,9 +111,7 @@ async def test_recent_activity_with_cases(
         headers=auth_headers,
     )
 
-    response = await client.get(
-        "/api/dashboard/recent-activity", headers=auth_headers
-    )
+    response = await client.get("/api/dashboard/recent-activity", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["total"] >= 2  # At least creation + note

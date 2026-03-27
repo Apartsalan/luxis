@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 # AI call (isolated — easy to mock in tests)
 # ---------------------------------------------------------------------------
 
+
 async def _call_classification_ai(user_message: str) -> dict:
     """Call AI to classify a debtor email.
 
@@ -53,6 +54,7 @@ async def _call_classification_ai(user_message: str) -> dict:
 # ---------------------------------------------------------------------------
 # Classification
 # ---------------------------------------------------------------------------
+
 
 async def classify_email(
     db: AsyncSession,
@@ -78,10 +80,8 @@ async def classify_email(
     result = await db.execute(
         select(SyncedEmail)
         .options(
-            selectinload(SyncedEmail.case)
-            .selectinload(Case.opposing_party),
-            selectinload(SyncedEmail.case)
-            .selectinload(Case.incasso_step),
+            selectinload(SyncedEmail.case).selectinload(Case.opposing_party),
+            selectinload(SyncedEmail.case).selectinload(Case.incasso_step),
         )
         .where(
             SyncedEmail.id == synced_email_id,
@@ -101,8 +101,7 @@ async def classify_email(
     # Get email body (prefer plain text, fall back to stripped HTML)
     body = email.body_text or strip_html(email.body_html) or ""
     logger.info(
-        "Email %s body extraction: body_text=%d chars, body_html=%d chars, "
-        "stripped_body=%d chars",
+        "Email %s body extraction: body_text=%d chars, body_html=%d chars, stripped_body=%d chars",
         synced_email_id,
         len(email.body_text or ""),
         len(email.body_html or ""),
@@ -129,12 +128,8 @@ async def classify_email(
     last_out = last_outbound.scalar_one_or_none()
 
     # Build the prompt with case context
-    outstanding = Decimal(str(case.total_principal)) - Decimal(
-        str(case.total_paid)
-    )
-    opposing_name = (
-        case.opposing_party.name if case.opposing_party else "Onbekend"
-    )
+    outstanding = Decimal(str(case.total_principal)) - Decimal(str(case.total_paid))
+    opposing_name = case.opposing_party.name if case.opposing_party else "Onbekend"
     step_name = case.incasso_step.name if case.incasso_step else None
 
     user_message = build_classification_prompt(
@@ -143,9 +138,7 @@ async def classify_email(
         outstanding_amount=str(outstanding),
         opposing_party_name=opposing_name,
         last_outbound_subject=last_out.subject if last_out else None,
-        last_outbound_date=(
-            last_out.email_date.strftime("%d-%m-%Y") if last_out else None
-        ),
+        last_outbound_date=(last_out.email_date.strftime("%d-%m-%Y") if last_out else None),
         email_subject=email.subject,
         email_from_name=email.from_name,
         email_from_email=email.from_email,
@@ -211,9 +204,8 @@ async def classify_new_emails(
     Returns the number of newly classified emails.
     """
     # Find inbound emails on incasso cases that haven't been classified yet
-    already_classified = (
-        select(EmailClassification.synced_email_id)
-        .where(EmailClassification.tenant_id == tenant_id)
+    already_classified = select(EmailClassification.synced_email_id).where(
+        EmailClassification.tenant_id == tenant_id
     )
 
     result = await db.execute(
@@ -244,6 +236,7 @@ async def classify_new_emails(
 # ---------------------------------------------------------------------------
 # Review (approve / reject)
 # ---------------------------------------------------------------------------
+
 
 async def approve_classification(
     db: AsyncSession,
@@ -305,6 +298,7 @@ async def reject_classification(
 # Execute approved classification
 # ---------------------------------------------------------------------------
 
+
 async def execute_classification(
     db: AsyncSession,
     classification_id: uuid.UUID,
@@ -321,10 +315,8 @@ async def execute_classification(
         select(EmailClassification)
         .options(
             selectinload(EmailClassification.synced_email),
-            selectinload(EmailClassification.case)
-            .selectinload(Case.opposing_party),
-            selectinload(EmailClassification.case)
-            .selectinload(Case.client),
+            selectinload(EmailClassification.case).selectinload(Case.opposing_party),
+            selectinload(EmailClassification.case).selectinload(Case.client),
         )
         .where(
             EmailClassification.id == classification_id,
@@ -347,13 +339,9 @@ async def execute_classification(
             if not template_key:
                 execution_notes.append("Geen template geselecteerd")
             elif not email:
-                execution_notes.append(
-                    "Geen email gekoppeld aan classificatie"
-                )
+                execution_notes.append("Geen email gekoppeld aan classificatie")
             elif not case:
-                execution_notes.append(
-                    "Geen zaak gekoppeld aan classificatie"
-                )
+                execution_notes.append("Geen zaak gekoppeld aan classificatie")
             else:
                 # Find the template
                 tmpl_result = await db.execute(
@@ -365,14 +353,10 @@ async def execute_classification(
                 )
                 template = tmpl_result.scalar_one_or_none()
                 if not template:
-                    execution_notes.append(
-                        f"Template '{template_key}' niet gevonden"
-                    )
+                    execution_notes.append(f"Template '{template_key}' niet gevonden")
                 else:
                     # Get tenant for kantoor context
-                    tenant_result = await db.execute(
-                        select(Tenant).where(Tenant.id == tenant_id)
-                    )
+                    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
                     tenant = tenant_result.scalar_one_or_none()
 
                     # Build Jinja2 context
@@ -390,13 +374,10 @@ async def execute_classification(
                     }
 
                     # Render subject and body (sandboxed to prevent SSTI)
-                    subject = _jinja_env.from_string(
-                        template.subject_template
-                    ).render(tmpl_context)
-                    body_text = _jinja_env.from_string(
-                        template.body_template
-                    ).render(tmpl_context)
+                    subject = _jinja_env.from_string(template.subject_template).render(tmpl_context)
+                    body_text = _jinja_env.from_string(template.body_template).render(tmpl_context)
                     import html as _html
+
                     body_html = _html.escape(body_text).replace("\n", "<br>")
 
                     # Send via email provider / SMTP
@@ -410,21 +391,15 @@ async def execute_classification(
                         attachments=[],
                         case_id=case.id,
                         recipient_name=wederpartij_naam,
-                        sender_name=(
-                            tenant.name if tenant else ""
-                        ),
+                        sender_name=(tenant.name if tenant else ""),
                     )
 
                     if email_log.status == "sent":
                         execution_notes.append(
-                            f"Template '{template.name}' verzonden"
-                            f" naar {email.from_email}"
+                            f"Template '{template.name}' verzonden naar {email.from_email}"
                         )
                     else:
-                        execution_notes.append(
-                            f"Verzending mislukt:"
-                            f" {email_log.error_message}"
-                        )
+                        execution_notes.append(f"Verzending mislukt: {email_log.error_message}")
 
         elif action == "wait_and_remind":
             days = classification.suggested_reminder_days or 7
@@ -435,18 +410,17 @@ async def execute_classification(
                     case_id=case.id,
                     assigned_to_id=user_id,
                     task_type="check_payment",
-                    title=(
-                        f"Herinnering: opvolging email"
-                        f" — {case.case_number}"
-                    ),
+                    title=(f"Herinnering: opvolging email — {case.case_number}"),
                     description=(
                         f"Automatisch aangemaakt door AI classificatie.\n"
                         f"Email van: {email.from_email if email else 'onbekend'}\n"
                         f"Onderwerp: {email.subject if email else 'onbekend'}\n"
-                        f"Categorie: {CATEGORY_LABELS.get(
-                            classification.category,
-                            classification.category,
-                        )}"
+                        f"Categorie: {
+                            CATEGORY_LABELS.get(
+                                classification.category,
+                                classification.category,
+                            )
+                        }"
                     ),
                     due_date=reminder_date,
                     status="pending",
@@ -456,9 +430,7 @@ async def execute_classification(
                     },
                 )
                 db.add(task)
-            execution_notes.append(
-                f"Herinnering gepland over {days} dagen ({reminder_date})"
-            )
+            execution_notes.append(f"Herinnering gepland over {days} dagen ({reminder_date})")
 
         elif action == "escalate":
             if case:
@@ -467,18 +439,17 @@ async def execute_classification(
                     case_id=case.id,
                     assigned_to_id=user_id,
                     task_type="manual_review",
-                    title=(
-                        f"URGENT: Escalatie email beoordelen"
-                        f" — {case.case_number}"
-                    ),
+                    title=(f"URGENT: Escalatie email beoordelen — {case.case_number}"),
                     description=(
                         f"Automatisch geëscaleerd door AI classificatie.\n"
                         f"Email van: {email.from_email if email else 'onbekend'}\n"
                         f"Onderwerp: {email.subject if email else 'onbekend'}\n"
-                        f"Categorie: {CATEGORY_LABELS.get(
-                            classification.category,
-                            classification.category,
-                        )}\n"
+                        f"Categorie: {
+                            CATEGORY_LABELS.get(
+                                classification.category,
+                                classification.category,
+                            )
+                        }\n"
                         f"Reden: {classification.reasoning or 'niet opgegeven'}"
                     ),
                     due_date=date.today(),
@@ -490,9 +461,7 @@ async def execute_classification(
                     },
                 )
                 db.add(task)
-            execution_notes.append(
-                "Geëscaleerd naar advocaat voor beoordeling"
-            )
+            execution_notes.append("Geëscaleerd naar advocaat voor beoordeling")
 
         elif action == "dismiss":
             if email:
@@ -504,9 +473,7 @@ async def execute_classification(
 
         # Log case activity
         if case:
-            category_label = CATEGORY_LABELS.get(
-                classification.category, classification.category
-            )
+            category_label = CATEGORY_LABELS.get(classification.category, classification.category)
             action_label = ACTION_LABELS.get(action, action)
             activity = CaseActivity(
                 tenant_id=tenant_id,
@@ -515,8 +482,7 @@ async def execute_classification(
                 activity_type="ai_action",
                 title=f"AI actie uitgevoerd: {action_label}",
                 description=(
-                    f"Classificatie: {category_label}\n"
-                    f"Resultaat: {'; '.join(execution_notes)}"
+                    f"Classificatie: {category_label}\nResultaat: {'; '.join(execution_notes)}"
                 ),
             )
             db.add(activity)
@@ -528,7 +494,8 @@ async def execute_classification(
     except Exception as e:
         logger.error(
             "Execute classification %s failed: %s",
-            classification_id, e,
+            classification_id,
+            e,
         )
         classification.execution_result = f"Fout: {e}"
 
@@ -539,6 +506,7 @@ async def execute_classification(
 # ---------------------------------------------------------------------------
 # Query helpers
 # ---------------------------------------------------------------------------
+
 
 async def get_classifications(
     db: AsyncSession,
@@ -567,18 +535,16 @@ async def get_classifications(
 
     if status:
         query = query.where(EmailClassification.status == status)
-        count_query = count_query.where(
-            EmailClassification.status == status
-        )
+        count_query = count_query.where(EmailClassification.status == status)
     if case_id:
         query = query.where(EmailClassification.case_id == case_id)
-        count_query = count_query.where(
-            EmailClassification.case_id == case_id
-        )
+        count_query = count_query.where(EmailClassification.case_id == case_id)
 
-    query = query.order_by(
-        EmailClassification.created_at.desc()
-    ).offset((page - 1) * per_page).limit(per_page)
+    query = (
+        query.order_by(EmailClassification.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
 
     result = await db.execute(query)
     classifications = list(result.scalars().all())
@@ -670,9 +636,7 @@ DEFAULT_TEMPLATES = [
         "key": "bevestiging_betaalbelofte",
         "name": "Bevestiging betaalbelofte",
         "category": "belofte_tot_betaling",
-        "subject_template": (
-            "Bevestiging betaalafspraak — {{ zaak.zaaknummer }}"
-        ),
+        "subject_template": ("Bevestiging betaalafspraak — {{ zaak.zaaknummer }}"),
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
             "Wij bevestigen hierbij uw toezegging tot betaling "
@@ -687,9 +651,7 @@ DEFAULT_TEMPLATES = [
         "key": "ontvangst_betwisting",
         "name": "Ontvangstbevestiging betwisting",
         "category": "betwisting",
-        "subject_template": (
-            "Ontvangst uw reactie — {{ zaak.zaaknummer }}"
-        ),
+        "subject_template": ("Ontvangst uw reactie — {{ zaak.zaaknummer }}"),
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
             "Wij hebben uw reactie inzake dossier "
@@ -704,10 +666,7 @@ DEFAULT_TEMPLATES = [
         "key": "ontvangst_regeling_verzoek",
         "name": "Ontvangstbevestiging betalingsregeling",
         "category": "betalingsregeling_verzoek",
-        "subject_template": (
-            "Ontvangst verzoek betalingsregeling — "
-            "{{ zaak.zaaknummer }}"
-        ),
+        "subject_template": ("Ontvangst verzoek betalingsregeling — {{ zaak.zaaknummer }}"),
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
             "Wij hebben uw verzoek tot een betalingsregeling "
@@ -722,9 +681,7 @@ DEFAULT_TEMPLATES = [
         "key": "verzoek_betalingsbewijs",
         "name": "Verzoek betalingsbewijs",
         "category": "beweert_betaald",
-        "subject_template": (
-            "Verzoek betalingsbewijs — {{ zaak.zaaknummer }}"
-        ),
+        "subject_template": ("Verzoek betalingsbewijs — {{ zaak.zaaknummer }}"),
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
             "U geeft aan reeds betaald te hebben inzake dossier "
@@ -741,9 +698,7 @@ DEFAULT_TEMPLATES = [
         "key": "ontvangst_onvermogen",
         "name": "Ontvangstbevestiging onvermogen",
         "category": "onvermogen",
-        "subject_template": (
-            "Ontvangst uw bericht — {{ zaak.zaaknummer }}"
-        ),
+        "subject_template": ("Ontvangst uw bericht — {{ zaak.zaaknummer }}"),
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
             "Wij hebben uw bericht inzake dossier "
@@ -759,9 +714,7 @@ DEFAULT_TEMPLATES = [
         "key": "doorverwijzing_advocaat",
         "name": "Doorverwijzing naar advocaat",
         "category": "juridisch_verweer",
-        "subject_template": (
-            "Uw juridische reactie — {{ zaak.zaaknummer }}"
-        ),
+        "subject_template": ("Uw juridische reactie — {{ zaak.zaaknummer }}"),
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
             "Wij hebben uw juridische reactie inzake dossier "

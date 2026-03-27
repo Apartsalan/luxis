@@ -204,12 +204,14 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
     attachment_list = []
     if email.attachments:
         for a in email.attachments:
-            attachment_list.append(AttachmentInfo(
-                id=str(a.id),
-                filename=a.filename,
-                content_type=a.content_type,
-                file_size=a.file_size,
-            ))
+            attachment_list.append(
+                AttachmentInfo(
+                    id=str(a.id),
+                    filename=a.filename,
+                    content_type=a.content_type,
+                    file_size=a.file_size,
+                )
+            )
 
     return SyncedEmailDetail(
         id=str(email.id),
@@ -273,9 +275,7 @@ async def get_emails_for_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Get all synced emails linked to a specific case."""
-    emails, total = await get_case_emails(
-        db, user.tenant_id, case_id, limit=limit, offset=offset
-    )
+    emails, total = await get_case_emails(db, user.tenant_id, case_id, limit=limit, offset=offset)
     return CaseEmailsResponse(
         emails=[_email_to_summary(e) for e in emails],
         total=total,
@@ -290,9 +290,7 @@ async def get_unlinked(
     db: AsyncSession = Depends(get_db),
 ):
     """Get emails not linked to any case (ongesorteerd queue)."""
-    emails, total = await get_unlinked_emails(
-        db, user.tenant_id, limit=limit, offset=offset
-    )
+    emails, total = await get_unlinked_emails(db, user.tenant_id, limit=limit, offset=offset)
     return CaseEmailsResponse(
         emails=[_email_to_summary(e) for e in emails],
         total=total,
@@ -350,9 +348,7 @@ async def bulk_link(
 ):
     """Link multiple emails to the same case in one request."""
     email_uuids = [uuid.UUID(eid) for eid in data.email_ids]
-    count = await bulk_link_emails(
-        db, user.tenant_id, email_uuids, uuid.UUID(data.case_id)
-    )
+    count = await bulk_link_emails(db, user.tenant_id, email_uuids, uuid.UUID(data.case_id))
     return BulkLinkResponse(success=True, linked_count=count)
 
 
@@ -386,9 +382,7 @@ async def suggest_cases(
 ):
     """Suggest cases for an unlinked email based on contact + reference matching."""
     suggestions = await suggest_cases_for_email(db, user.tenant_id, email_id)
-    return SuggestCasesResponse(
-        suggestions=[CaseSuggestion(**s) for s in suggestions]
-    )
+    return SuggestCasesResponse(suggestions=[CaseSuggestion(**s) for s in suggestions])
 
 
 # ── Attachment schemas ──────────────────────────────────────────────────────
@@ -553,7 +547,9 @@ async def save_attachment_to_case(
 
     logger.info(
         "Saved email attachment %s to case %s as CaseFile %s",
-        attachment_id, case_id, case_file.id,
+        attachment_id,
+        case_id,
+        case_file.id,
     )
 
     return SaveToCaseResponse(

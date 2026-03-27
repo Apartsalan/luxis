@@ -34,12 +34,8 @@ class IncassoPipelineStep(TenantBase):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Email template for batch sending (Jinja2 with {{ zaak.zaaknummer }} etc.)
-    email_subject_template: Mapped[str | None] = mapped_column(
-        String(500), nullable=True
-    )
-    email_body_template: Mapped[str | None] = mapped_column(
-        Text, nullable=True
-    )
+    email_subject_template: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    email_body_template: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationships
     template: Mapped["DocumentTemplate | None"] = relationship(  # noqa: F821

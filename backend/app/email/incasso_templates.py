@@ -109,8 +109,7 @@ style="font-size:12px;color:#6b7280;">
 _base_tpl = _env.from_string(_BASE_EMAIL)
 
 
-def _render_branded(context: dict, betreft: str, content_html: str,
-                    afsluiting_html: str) -> str:
+def _render_branded(context: dict, betreft: str, content_html: str, afsluiting_html: str) -> str:
     """Wrap brief content in the branded email layout."""
     return _base_tpl.render(
         kantoor=context["kantoor"],
@@ -124,6 +123,7 @@ def _render_branded(context: dict, betreft: str, content_html: str,
 
 
 # ── Shared HTML fragments ────────────────────────────────────────────────
+
 
 def _claims_table(context: dict) -> str:
     """Render vorderingen table (4 columns)."""
@@ -179,20 +179,15 @@ def _financial_summary(context: dict, include_payments: bool = True) -> str:
         'border-top:2px solid #1e293b;">'
     )
     html += _summary_row("Hoofdsom", context["totaal_hoofdsom"], bold=True)
-    html += _summary_row(
-        f'Rente t/m {context["vandaag"]}', context["totaal_rente"]
-    )
-    html += _summary_row("Buitengerechtelijke incassokosten (BIK)",
-                         context["bik_bedrag"])
-    html += _summary_row(context["btw_regel_label"],
-                         context["btw_regel_bedrag"])
-    html += _summary_row("Totaal verschuldigd",
-                         context["totaal_verschuldigd"], bold=True)
+    html += _summary_row(f"Rente t/m {context['vandaag']}", context["totaal_rente"])
+    html += _summary_row("Buitengerechtelijke incassokosten (BIK)", context["bik_bedrag"])
+    html += _summary_row(context["btw_regel_label"], context["btw_regel_bedrag"])
+    html += _summary_row("Totaal verschuldigd", context["totaal_verschuldigd"], bold=True)
     if include_payments:
-        html += _summary_row(context["betalingen_aftrek_label"],
-                             context["betalingen_aftrek_bedrag"])
-        html += _summary_row("Totaal openstaand",
-                             context["totaal_openstaand"], bold=True)
+        html += _summary_row(
+            context["betalingen_aftrek_label"], context["betalingen_aftrek_bedrag"]
+        )
+        html += _summary_row("Totaal openstaand", context["totaal_openstaand"], bold=True)
     html += "</table>"
     return html
 
@@ -205,19 +200,15 @@ def _financial_summary_compact(context: dict) -> str:
         'border-top:2px solid #1e293b;">'
     )
     html += _summary_row("Hoofdsom", context["totaal_hoofdsom"], bold=True)
-    html += _summary_row(
-        f'Rente t/m {context["vandaag"]}', context["totaal_rente"]
-    )
-    html += _summary_row("Totaal openstaand",
-                         context["totaal_openstaand"], bold=True)
+    html += _summary_row(f"Rente t/m {context['vandaag']}", context["totaal_rente"])
+    html += _summary_row("Totaal openstaand", context["totaal_openstaand"], bold=True)
     html += "</table>"
     return html
 
 
 def _heading(text: str) -> str:
     return (
-        f'<p style="font-size:15px;font-weight:bold;color:#1e293b;'
-        f'margin:20px 0 8px 0;">{text}</p>'
+        f'<p style="font-size:15px;font-weight:bold;color:#1e293b;margin:20px 0 8px 0;">{text}</p>'
     )
 
 
@@ -270,16 +261,11 @@ def _render_sommatie(ctx: dict) -> str:
         'border-top:2px solid #1e293b;">'
     )
     summary += _summary_row("Hoofdsom", ctx["totaal_hoofdsom"], bold=True)
-    summary += _summary_row(
-        f'Wettelijke rente t/m {ctx["vandaag"]}', ctx["totaal_rente"]
-    )
-    summary += _summary_row("Buitengerechtelijke incassokosten",
-                            ctx["bik_bedrag"])
+    summary += _summary_row(f"Wettelijke rente t/m {ctx['vandaag']}", ctx["totaal_rente"])
+    summary += _summary_row("Buitengerechtelijke incassokosten", ctx["bik_bedrag"])
     summary += _summary_row(ctx["btw_regel_label"], ctx["btw_regel_bedrag"])
-    summary += _summary_row(ctx["betalingen_regel_label"],
-                            ctx["betalingen_regel_bedrag"])
-    summary += _summary_row("Totaal thans verschuldigd",
-                            ctx["totaal_openstaand"], bold=True)
+    summary += _summary_row(ctx["betalingen_regel_label"], ctx["betalingen_regel_bedrag"])
+    summary += _summary_row("Totaal thans verschuldigd", ctx["totaal_openstaand"], bold=True)
     summary += "</table>"
     body += summary
 
@@ -295,11 +281,7 @@ def _render_sommatie(ctx: dict) -> str:
         "<p>Ik vertrouw erop u hiermee voldoende te hebben "
         "ge&iuml;nformeerd en zie uw betaling met spoed tegemoet.</p>"
     )
-    afsluiting = (
-        f"Hoogachtend,<br><br>"
-        f"________________________<br>"
-        f"Namens {ctx['client']['naam']}"
-    )
+    afsluiting = f"Hoogachtend,<br><br>________________________<br>Namens {ctx['client']['naam']}"
     return _render_branded(
         ctx,
         betreft="<strong>Betreft: SOMMATIE &mdash; Laatste aanmaning voor dagvaarding</strong>",
@@ -358,17 +340,11 @@ def _render_14_dagenbrief(ctx: dict) -> str:
         'style="border-collapse:collapse;font-size:13px;margin:16px 0;'
         'border-top:2px solid #1e293b;">'
     )
-    summary += _summary_row("Totaal hoofdsom", ctx["totaal_hoofdsom"],
-                            bold=True)
-    summary += _summary_row(
-        f'Wettelijke rente t/m {ctx["vandaag"]}', ctx["totaal_rente"]
-    )
-    summary += _summary_row(
-        "Buitengerechtelijke incassokosten (BIK)", ctx["bik_bedrag"]
-    )
+    summary += _summary_row("Totaal hoofdsom", ctx["totaal_hoofdsom"], bold=True)
+    summary += _summary_row(f"Wettelijke rente t/m {ctx['vandaag']}", ctx["totaal_rente"])
+    summary += _summary_row("Buitengerechtelijke incassokosten (BIK)", ctx["bik_bedrag"])
     summary += _summary_row(ctx["btw_regel_label"], ctx["btw_regel_bedrag"])
-    summary += _summary_row("Totaal verschuldigd",
-                            ctx["totaal_verschuldigd"], bold=True)
+    summary += _summary_row("Totaal verschuldigd", ctx["totaal_verschuldigd"], bold=True)
     summary += "</table>"
     body += summary
 
@@ -390,11 +366,7 @@ def _render_14_dagenbrief(ctx: dict) -> str:
         "aankondiging rechtsmaatregelen treffen, waarvan de kosten eveneens "
         "voor uw rekening komen.</p>"
     )
-    afsluiting = (
-        f"Hoogachtend,<br><br>"
-        f"________________________<br>"
-        f"Namens {ctx['client']['naam']}"
-    )
+    afsluiting = f"Hoogachtend,<br><br>________________________<br>Namens {ctx['client']['naam']}"
     return _render_branded(
         ctx,
         betreft="<strong>Betreft: Ingebrekestelling en aanmaning tot betaling</strong>",

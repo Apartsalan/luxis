@@ -99,9 +99,7 @@ async def parse_invoice_pdf(file_content: bytes, filename: str) -> dict:
         if pdf_text.strip():
             # Normal path: text-based extraction + AI parsing
             user_message = build_invoice_parse_prompt(pdf_text)
-            raw_result, model_name = await call_intake_ai(
-                INVOICE_PARSE_SYSTEM_PROMPT, user_message
-            )
+            raw_result, model_name = await call_intake_ai(INVOICE_PARSE_SYSTEM_PROMPT, user_message)
         else:
             # DF2-07: Fallback for scanned/image PDFs — send directly to Claude
             logger.info(

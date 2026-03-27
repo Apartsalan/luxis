@@ -26,12 +26,8 @@ class SyncedEmail(TenantBase):
     )
 
     # Provider IDs (for dedup and threading)
-    provider_message_id: Mapped[str] = mapped_column(
-        String(255), nullable=False, index=True
-    )
-    provider_thread_id: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
+    provider_message_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    provider_thread_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Email metadata
     subject: Mapped[str] = mapped_column(String(1000), nullable=False, default="")
@@ -57,9 +53,7 @@ class SyncedEmail(TenantBase):
     # Values: "thread", "case_number", "contact_email", "outbound_send", "force_case_id", None
     matched_by: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
-    email_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    email_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     synced_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

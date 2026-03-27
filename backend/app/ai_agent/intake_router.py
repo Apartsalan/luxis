@@ -187,9 +187,7 @@ async def approve(
 ):
     """Approve an intake request — creates debtor contact + incasso case."""
     note = body.note if body else None
-    intake = await approve_intake(
-        db, intake_id, current_user.tenant_id, current_user.id, note
-    )
+    intake = await approve_intake(db, intake_id, current_user.tenant_id, current_user.id, note)
     if not intake:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -209,9 +207,7 @@ async def reject(
 ):
     """Reject an intake request."""
     note = body.note if body else None
-    intake = await reject_intake(
-        db, intake_id, current_user.tenant_id, current_user.id, note
-    )
+    intake = await reject_intake(db, intake_id, current_user.tenant_id, current_user.id, note)
     if not intake:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

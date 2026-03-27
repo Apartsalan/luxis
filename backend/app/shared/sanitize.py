@@ -40,5 +40,6 @@ def content_disposition(disposition: str, filename: str) -> str:
     ascii_safe = safe.encode("ascii", errors="replace").decode("ascii")
     # UTF-8 encoded version for filename*= (RFC 5987)
     from urllib.parse import quote
+
     utf8_encoded = quote(safe, safe="")
-    return f'{disposition}; filename="{ascii_safe}"; filename*=UTF-8\'\'{utf8_encoded}'
+    return f"{disposition}; filename=\"{ascii_safe}\"; filename*=UTF-8''{utf8_encoded}"

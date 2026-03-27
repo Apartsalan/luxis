@@ -57,61 +57,140 @@ async def generate_case_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
 # ── Task Templates per Case Type (G10) ────────────────────────────────────────
 
 INCASSO_TASKS = [
-    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
-     "description": "Controleer of alle gegevens compleet zijn: "
-     "facturen, contactgegevens wederpartij, renteberekening."},
-    {"title": "Herinnering versturen", "task_type": "send_letter", "days": 3,
-     "description": "Stuur een herinnering naar de debiteur."},
-    {"title": "14-dagenbrief versturen (B2C)", "task_type": "send_letter", "days": 7,
-     "description": "Wettelijk verplichte 14-dagenbrief voor consumenten (B2C)."},
-    {"title": "Controleer betaling na herinnering", "task_type": "check_payment", "days": 14,
-     "description": "Controleer of er een betaling is ontvangen na de herinnering."},
-    {"title": "Sommatie versturen", "task_type": "send_letter", "days": 21,
-     "description": "Stuur een aanmaning/sommatie naar de debiteur."},
-    {"title": "Controleer betaling na sommatie", "task_type": "check_payment", "days": 35,
-     "description": "Controleer of er een betaling is ontvangen na de sommatie."},
-    {"title": "Beoordeel dagvaarding", "task_type": "manual_review", "days": 42,
-     "description": "Beoordeel of dagvaarding nodig is. Neem contact op met de client."},
-    {"title": "Verjaringstermijn controleren", "task_type": "set_deadline", "days": 180,
-     "description": "Controleer de verjaringstermijn en onderneem actie indien nodig."},
+    {
+        "title": "Dossier controleren en compleet maken",
+        "task_type": "manual_review",
+        "days": 1,
+        "description": "Controleer of alle gegevens compleet zijn: "
+        "facturen, contactgegevens wederpartij, renteberekening.",
+    },
+    {
+        "title": "Herinnering versturen",
+        "task_type": "send_letter",
+        "days": 3,
+        "description": "Stuur een herinnering naar de debiteur.",
+    },
+    {
+        "title": "14-dagenbrief versturen (B2C)",
+        "task_type": "send_letter",
+        "days": 7,
+        "description": "Wettelijk verplichte 14-dagenbrief voor consumenten (B2C).",
+    },
+    {
+        "title": "Controleer betaling na herinnering",
+        "task_type": "check_payment",
+        "days": 14,
+        "description": "Controleer of er een betaling is ontvangen na de herinnering.",
+    },
+    {
+        "title": "Sommatie versturen",
+        "task_type": "send_letter",
+        "days": 21,
+        "description": "Stuur een aanmaning/sommatie naar de debiteur.",
+    },
+    {
+        "title": "Controleer betaling na sommatie",
+        "task_type": "check_payment",
+        "days": 35,
+        "description": "Controleer of er een betaling is ontvangen na de sommatie.",
+    },
+    {
+        "title": "Beoordeel dagvaarding",
+        "task_type": "manual_review",
+        "days": 42,
+        "description": "Beoordeel of dagvaarding nodig is. Neem contact op met de client.",
+    },
+    {
+        "title": "Verjaringstermijn controleren",
+        "task_type": "set_deadline",
+        "days": 180,
+        "description": "Controleer de verjaringstermijn en onderneem actie indien nodig.",
+    },
 ]
 
 ADVIES_TASKS = [
-    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
-     "description": "Controleer of alle stukken en gegevens compleet zijn."},
-    {"title": "Juridisch onderzoek", "task_type": "manual_review", "days": 7,
-     "description": "Voer juridisch onderzoek uit en bereid advies voor."},
-    {"title": "Concept advies opstellen", "task_type": "generate_document", "days": 14,
-     "description": "Stel een concept adviesbrief op voor de client."},
-    {"title": "Advies versturen aan client", "task_type": "send_letter", "days": 21,
-     "description": "Verstuur het definitieve advies naar de client."},
+    {
+        "title": "Dossier controleren en compleet maken",
+        "task_type": "manual_review",
+        "days": 1,
+        "description": "Controleer of alle stukken en gegevens compleet zijn.",
+    },
+    {
+        "title": "Juridisch onderzoek",
+        "task_type": "manual_review",
+        "days": 7,
+        "description": "Voer juridisch onderzoek uit en bereid advies voor.",
+    },
+    {
+        "title": "Concept advies opstellen",
+        "task_type": "generate_document",
+        "days": 14,
+        "description": "Stel een concept adviesbrief op voor de client.",
+    },
+    {
+        "title": "Advies versturen aan client",
+        "task_type": "send_letter",
+        "days": 21,
+        "description": "Verstuur het definitieve advies naar de client.",
+    },
 ]
 
 INSOLVENTIE_TASKS = [
-    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
-     "description": "Controleer of alle stukken compleet zijn: "
-     "jaarrekeningen, crediteurenlijst, etc."},
-    {"title": "Beoordeel faillissementsaanvraag of surseance",
-     "task_type": "manual_review", "days": 3,
-     "description": "Beoordeel welke procedure het meest geschikt is."},
-    {"title": "Verzoekschrift opstellen", "task_type": "generate_document", "days": 14,
-     "description": "Stel het verzoekschrift op voor de rechtbank."},
-    {"title": "Indienen bij rechtbank", "task_type": "manual_review", "days": 21,
-     "description": "Dien het verzoekschrift in bij de bevoegde rechtbank."},
+    {
+        "title": "Dossier controleren en compleet maken",
+        "task_type": "manual_review",
+        "days": 1,
+        "description": "Controleer of alle stukken compleet zijn: "
+        "jaarrekeningen, crediteurenlijst, etc.",
+    },
+    {
+        "title": "Beoordeel faillissementsaanvraag of surseance",
+        "task_type": "manual_review",
+        "days": 3,
+        "description": "Beoordeel welke procedure het meest geschikt is.",
+    },
+    {
+        "title": "Verzoekschrift opstellen",
+        "task_type": "generate_document",
+        "days": 14,
+        "description": "Stel het verzoekschrift op voor de rechtbank.",
+    },
+    {
+        "title": "Indienen bij rechtbank",
+        "task_type": "manual_review",
+        "days": 21,
+        "description": "Dien het verzoekschrift in bij de bevoegde rechtbank.",
+    },
 ]
 
 OVERIG_TASKS = [
-    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
-     "description": "Controleer of alle gegevens en stukken compleet zijn."},
-    {"title": "Plan van aanpak bepalen", "task_type": "manual_review", "days": 3,
-     "description": "Bepaal de strategie en het plan van aanpak voor deze zaak."},
+    {
+        "title": "Dossier controleren en compleet maken",
+        "task_type": "manual_review",
+        "days": 1,
+        "description": "Controleer of alle gegevens en stukken compleet zijn.",
+    },
+    {
+        "title": "Plan van aanpak bepalen",
+        "task_type": "manual_review",
+        "days": 3,
+        "description": "Bepaal de strategie en het plan van aanpak voor deze zaak.",
+    },
 ]
 
 DOSSIER_TASKS = [
-    {"title": "Dossier controleren en compleet maken", "task_type": "manual_review", "days": 1,
-     "description": "Controleer of alle gegevens en stukken compleet zijn."},
-    {"title": "Plan van aanpak bepalen", "task_type": "manual_review", "days": 3,
-     "description": "Bepaal de strategie en het plan van aanpak voor deze zaak."},
+    {
+        "title": "Dossier controleren en compleet maken",
+        "task_type": "manual_review",
+        "days": 1,
+        "description": "Controleer of alle gegevens en stukken compleet zijn.",
+    },
+    {
+        "title": "Plan van aanpak bepalen",
+        "task_type": "manual_review",
+        "days": 3,
+        "description": "Bepaal de strategie en het plan van aanpak voor deze zaak.",
+    },
 ]
 
 TASK_TEMPLATES: dict[str, list[dict]] = {
@@ -283,29 +362,24 @@ async def create_case(
     # Validate case_type
     if data.case_type not in CASE_TYPES:
         raise BadRequestError(
-            f"Ongeldig zaaktype: {data.case_type}. "
-            f"Kies uit: {', '.join(CASE_TYPES)}"
+            f"Ongeldig zaaktype: {data.case_type}. Kies uit: {', '.join(CASE_TYPES)}"
         )
 
     # Validate debtor_type
     if data.debtor_type not in DEBTOR_TYPES:
         raise BadRequestError(
-            f"Ongeldig debiteurtype: {data.debtor_type}. "
-            f"Kies uit: {', '.join(DEBTOR_TYPES)}"
+            f"Ongeldig debiteurtype: {data.debtor_type}. Kies uit: {', '.join(DEBTOR_TYPES)}"
         )
 
     # Validate interest_type
     if data.interest_type not in INTEREST_TYPES:
         raise BadRequestError(
-            f"Ongeldig rentetype: {data.interest_type}. "
-            f"Kies uit: {', '.join(INTEREST_TYPES)}"
+            f"Ongeldig rentetype: {data.interest_type}. Kies uit: {', '.join(INTEREST_TYPES)}"
         )
 
     # Contractual rate required for contractual interest
     if data.interest_type == "contractual" and data.contractual_rate is None:
-        raise BadRequestError(
-            "Contractuele rente vereist een tarief (contractual_rate)"
-        )
+        raise BadRequestError("Contractuele rente vereist een tarief (contractual_rate)")
 
     # Generate case number
     case_number = await generate_case_number(db, tenant_id)
@@ -425,9 +499,7 @@ async def update_case_status(
     )
 
     # Trigger automation hooks (task creation + audit trail)
-    await on_status_change(
-        db, tenant_id, case, old_status, data.new_status, user_id
-    )
+    await on_status_change(db, tenant_id, case, old_status, data.new_status, user_id)
 
     return case
 
@@ -525,9 +597,7 @@ async def add_case_party(
 
     # Re-query with explicit eager loading so contact is available for serialisation
     result = await db.execute(
-        select(CaseParty)
-        .where(CaseParty.id == party.id)
-        .options(selectinload(CaseParty.contact))
+        select(CaseParty).where(CaseParty.id == party.id).options(selectinload(CaseParty.contact))
     )
     return result.scalar_one()
 
@@ -600,9 +670,7 @@ async def list_activities(
     total = (await db.execute(count_query)).scalar_one()
 
     query = (
-        query.order_by(CaseActivity.created_at.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
+        query.order_by(CaseActivity.created_at.desc()).offset((page - 1) * per_page).limit(per_page)
     )
 
     result = await db.execute(query)

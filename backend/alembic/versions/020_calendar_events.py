@@ -5,6 +5,7 @@ Revises: 019_time_entry_invoiced, b7e38c3f07cc
 Create Date: 2026-02-20 20:00:00.000000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -39,8 +40,16 @@ def upgrade() -> None:
         sa.Column("reminder_minutes", sa.Integer(), nullable=True, server_default="30"),
         sa.Column("created_by", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            onupdate=sa.func.now(),
+            nullable=False,
+        ),
     )
 
     op.create_index("ix_calendar_events_start_time", "calendar_events", ["start_time"])

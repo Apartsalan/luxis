@@ -12,9 +12,7 @@ from app.relations.models import Contact
 # ── Helper: create a case ────────────────────────────────────────────────────
 
 
-async def _create_case(
-    client: AsyncClient, headers: dict, client_id: str
-) -> dict:
+async def _create_case(client: AsyncClient, headers: dict, client_id: str) -> dict:
     """Create an incasso case and return JSON response."""
     payload = {
         "case_type": "incasso",
@@ -118,9 +116,7 @@ async def test_delete_claim_updates_total_principal(
     assert Decimal(str(resp.json()["total_principal"])) == Decimal("1500.00")
 
     # Delete first claim
-    resp = await client.delete(
-        f"/api/cases/{case_id}/claims/{claim1_id}", headers=auth_headers
-    )
+    resp = await client.delete(f"/api/cases/{case_id}/claims/{claim1_id}", headers=auth_headers)
     assert resp.status_code == 204
 
     # Total should now be 500
@@ -132,9 +128,7 @@ async def test_delete_claim_updates_total_principal(
 
 
 @pytest.mark.asyncio
-async def test_update_claim(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_update_claim(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Should be able to update all claim fields."""
     case = await _create_case(client, auth_headers, str(test_company.id))
     case_id = case["id"]
@@ -173,9 +167,7 @@ async def test_update_claim(
 
 
 @pytest.mark.asyncio
-async def test_update_claim_partial(
-    client: AsyncClient, auth_headers: dict, test_company: Contact
-):
+async def test_update_claim_partial(client: AsyncClient, auth_headers: dict, test_company: Contact):
     """Partial update should only change specified fields."""
     case = await _create_case(client, auth_headers, str(test_company.id))
     case_id = case["id"]

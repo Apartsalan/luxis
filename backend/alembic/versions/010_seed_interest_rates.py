@@ -130,31 +130,37 @@ def upgrade() -> None:
     rows = []
 
     for effective_from_str, rate_str, source in STATUTORY_RATES:
-        rows.append({
-            "id": str(uuid.uuid4()),
-            "rate_type": "statutory",
-            "effective_from": date.fromisoformat(effective_from_str),
-            "rate": Decimal(rate_str),
-            "source": source,
-        })
+        rows.append(
+            {
+                "id": str(uuid.uuid4()),
+                "rate_type": "statutory",
+                "effective_from": date.fromisoformat(effective_from_str),
+                "rate": Decimal(rate_str),
+                "source": source,
+            }
+        )
 
     for effective_from_str, rate_str, source in COMMERCIAL_RATES:
-        rows.append({
-            "id": str(uuid.uuid4()),
-            "rate_type": "commercial",
-            "effective_from": date.fromisoformat(effective_from_str),
-            "rate": Decimal(rate_str),
-            "source": source,
-        })
+        rows.append(
+            {
+                "id": str(uuid.uuid4()),
+                "rate_type": "commercial",
+                "effective_from": date.fromisoformat(effective_from_str),
+                "rate": Decimal(rate_str),
+                "source": source,
+            }
+        )
 
     for effective_from_str, rate_str, source in GOVERNMENT_RATES:
-        rows.append({
-            "id": str(uuid.uuid4()),
-            "rate_type": "government",
-            "effective_from": date.fromisoformat(effective_from_str),
-            "rate": Decimal(rate_str),
-            "source": source,
-        })
+        rows.append(
+            {
+                "id": str(uuid.uuid4()),
+                "rate_type": "government",
+                "effective_from": date.fromisoformat(effective_from_str),
+                "rate": Decimal(rate_str),
+                "source": source,
+            }
+        )
 
     op.bulk_insert(interest_rates, rows)
 

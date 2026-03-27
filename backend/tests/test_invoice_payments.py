@@ -43,15 +43,11 @@ async def create_sent_invoice(
     invoice = response.json()
 
     # Approve
-    response = await client.post(
-        f"/api/invoices/{invoice['id']}/approve", headers=auth_headers
-    )
+    response = await client.post(f"/api/invoices/{invoice['id']}/approve", headers=auth_headers)
     assert response.status_code == 200
 
     # Send
-    response = await client.post(
-        f"/api/invoices/{invoice['id']}/send", headers=auth_headers
-    )
+    response = await client.post(f"/api/invoices/{invoice['id']}/send", headers=auth_headers)
     assert response.status_code == 200
     return response.json()
 
@@ -154,7 +150,9 @@ async def test_overpayment_rejected(
 ):
     """Payment exceeding the outstanding amount should be rejected."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
     # Total is 121.00 (100 + 21% BTW) — try to pay more than that
@@ -180,7 +178,9 @@ async def test_cumulative_overpayment_rejected(
 ):
     """Second payment that would exceed total should be rejected."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
     # Total = 121.00
@@ -238,9 +238,7 @@ async def test_partial_payment_sets_partially_paid(
     )
 
     # Check invoice status
-    response = await client.get(
-        f"/api/invoices/{invoice['id']}", headers=auth_headers
-    )
+    response = await client.get(f"/api/invoices/{invoice['id']}", headers=auth_headers)
     assert response.json()["status"] == "partially_paid"
     assert response.json()["paid_date"] is None
 
@@ -253,7 +251,9 @@ async def test_full_payment_sets_paid(
 ):
     """Paying the full amount should set invoice status to paid."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
     invoice_total = invoice["total"]  # "121.00"
@@ -269,9 +269,7 @@ async def test_full_payment_sets_paid(
         headers=auth_headers,
     )
 
-    response = await client.get(
-        f"/api/invoices/{invoice['id']}", headers=auth_headers
-    )
+    response = await client.get(f"/api/invoices/{invoice['id']}", headers=auth_headers)
     assert response.json()["status"] == "paid"
     assert response.json()["paid_date"] is not None
 
@@ -284,7 +282,9 @@ async def test_multiple_payments_to_fully_paid(
 ):
     """Multiple partial payments summing to total should set status to paid."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
     # Total = 121.00
@@ -374,7 +374,9 @@ async def test_delete_payment(
 ):
     """Deleting a payment should remove it and update the invoice status."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
 
@@ -410,7 +412,9 @@ async def test_delete_payment_reverts_to_partially_paid(
 ):
     """Deleting one of multiple payments should revert to partially_paid."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
     # Total = 121.00
@@ -471,7 +475,9 @@ async def test_payment_summary(
 ):
     """Payment summary should show correct totals."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
     # Total = 121.00
@@ -509,7 +515,9 @@ async def test_payment_summary_empty(
 ):
     """Payment summary with no payments should show full amount outstanding."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
 
@@ -532,7 +540,9 @@ async def test_payment_summary_fully_paid(
 ):
     """Payment summary for a fully paid invoice."""
     invoice = await create_sent_invoice(
-        client, auth_headers, str(test_company.id),
+        client,
+        auth_headers,
+        str(test_company.id),
         lines=[{"description": "Advies", "quantity": "1", "unit_price": "100.00"}],
     )
 

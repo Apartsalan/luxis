@@ -92,13 +92,15 @@ def calculate_bik(
         tier_bik = _round2(applicable * percentage)
         total_bik += tier_bik
 
-        tiers.append({
-            "from": prev_ceiling,
-            "to": ceiling if ceiling is not None else None,
-            "percentage": percentage,
-            "applicable_amount": applicable,
-            "bik": tier_bik,
-        })
+        tiers.append(
+            {
+                "from": prev_ceiling,
+                "to": ceiling if ceiling is not None else None,
+                "percentage": percentage,
+                "applicable_amount": applicable,
+                "bik": tier_bik,
+            }
+        )
 
         remaining -= applicable
         if ceiling is not None:

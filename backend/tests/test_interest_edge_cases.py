@@ -96,8 +96,7 @@ class TestSingleDay:
             FIXED_RATE_6PCT,
         )
         expected = _round2(
-            Decimal("10000") * Decimal("6") / Decimal("100")
-            * Decimal("1") / Decimal("365")
+            Decimal("10000") * Decimal("6") / Decimal("100") * Decimal("1") / Decimal("365")
         )
         assert total == expected
         assert len(periods) == 1
@@ -133,8 +132,7 @@ class TestSingleDay:
             rates,
         )
         expected = _round2(
-            Decimal("10000") * Decimal("6") / Decimal("100")
-            * Decimal("1") / Decimal("365")
+            Decimal("10000") * Decimal("6") / Decimal("100") * Decimal("1") / Decimal("365")
         )
         assert total == expected
 
@@ -159,8 +157,7 @@ class TestLeapYear:
         )
         # 36500 * 0.06 * 2/365 = 12.00
         expected = _round2(
-            Decimal("36500") * Decimal("6") / Decimal("100")
-            * Decimal("2") / Decimal("365")
+            Decimal("36500") * Decimal("6") / Decimal("100") * Decimal("2") / Decimal("365")
         )
         assert total == expected
         assert periods[0]["days"] == 2
@@ -175,8 +172,7 @@ class TestLeapYear:
         )
         # 36500 * 0.06 * 366/365
         expected = _round2(
-            Decimal("36500") * Decimal("6") / Decimal("100")
-            * Decimal("366") / Decimal("365")
+            Decimal("36500") * Decimal("6") / Decimal("100") * Decimal("366") / Decimal("365")
         )
         assert total == expected
         assert periods[0]["days"] == 366
@@ -214,8 +210,7 @@ class TestLeapYear:
         # Year 1: 2024-02-29 → 2025-02-28 = 365 days
         days_y1 = (date(2025, 2, 28) - date(2024, 2, 29)).days  # 365
         y1_interest = _round2(
-            Decimal("5000") * Decimal("6") / Decimal("100")
-            * Decimal(str(days_y1)) / Decimal("365")
+            Decimal("5000") * Decimal("6") / Decimal("100") * Decimal(str(days_y1)) / Decimal("365")
         )
         # Capitalize
         new_principal = principal + y1_interest
@@ -223,8 +218,7 @@ class TestLeapYear:
         # Year 2: 2025-02-28 → 2026-02-28 = 365 days
         days_y2 = (date(2026, 2, 28) - date(2025, 2, 28)).days  # 365
         y2_interest = _round2(
-            new_principal * Decimal("6") / Decimal("100")
-            * Decimal(str(days_y2)) / Decimal("365")
+            new_principal * Decimal("6") / Decimal("100") * Decimal(str(days_y2)) / Decimal("365")
         )
 
         expected = _round2(y1_interest + y2_interest)
@@ -417,8 +411,7 @@ class TestCompoundEdgeCases:
         # Day 1 of year 2: 10600 * 0.06 * 1/365
         y1 = Decimal("600.00")
         y2_day = _round2(
-            Decimal("10600") * Decimal("6") / Decimal("100")
-            * Decimal("1") / Decimal("365")
+            Decimal("10600") * Decimal("6") / Decimal("100") * Decimal("1") / Decimal("365")
         )
         expected = _round2(y1 + y2_day)
         assert total == expected
@@ -434,9 +427,7 @@ class TestCompoundEdgeCases:
         default_date = date(2024, 3, 1)
         calc_date = date(2025, 3, 1)
 
-        total, periods = calculate_compound_interest(
-            principal, default_date, calc_date, rates
-        )
+        total, periods = calculate_compound_interest(principal, default_date, calc_date, rates)
 
         # Year 1 spans 2024-03-01 → 2025-03-01, with rate changes at:
         #   2024-07-01 (8%→7%) and 2025-01-01 (7%→6%)
@@ -551,7 +542,6 @@ class TestRounding:
         )
         # 1234.56 * 0.0525 * 200/365
         expected = _round2(
-            Decimal("1234.56") * Decimal("5.25") / Decimal("100")
-            * Decimal("200") / Decimal("365")
+            Decimal("1234.56") * Decimal("5.25") / Decimal("100") * Decimal("200") / Decimal("365")
         )
         assert total == expected

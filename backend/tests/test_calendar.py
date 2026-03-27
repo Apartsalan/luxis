@@ -157,8 +157,14 @@ async def test_delete_event(client: AsyncClient, auth_headers: dict):
 @pytest.mark.asyncio
 async def test_filter_by_event_type(client: AsyncClient, auth_headers: dict):
     """Filtering by event_type returns only matching events."""
-    await client.post("/api/calendar/events", json=_event_payload(event_type="hearing"), headers=auth_headers)
-    await client.post("/api/calendar/events", json=_event_payload(title="Bellen", event_type="call"), headers=auth_headers)
+    await client.post(
+        "/api/calendar/events", json=_event_payload(event_type="hearing"), headers=auth_headers
+    )
+    await client.post(
+        "/api/calendar/events",
+        json=_event_payload(title="Bellen", event_type="call"),
+        headers=auth_headers,
+    )
 
     resp = await client.get("/api/calendar/events?event_type=hearing", headers=auth_headers)
     assert resp.status_code == 200

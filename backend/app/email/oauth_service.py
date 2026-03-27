@@ -38,9 +38,7 @@ def _get_redis() -> aioredis.Redis:
 
 def _sign_state(payload_b64: str) -> str:
     """Create HMAC signature for OAuth state."""
-    return hmac.new(
-        settings.secret_key.encode(), payload_b64.encode(), hashlib.sha256
-    ).hexdigest()
+    return hmac.new(settings.secret_key.encode(), payload_b64.encode(), hashlib.sha256).hexdigest()
 
 
 def get_provider(provider_name: str) -> EmailProvider:
@@ -58,13 +56,15 @@ async def encode_oauth_state(user_id: str, tenant_id: str, provider: str) -> str
     Stores a single-use nonce in Redis to prevent replay attacks (SEC-21).
     """
     nonce = secrets.token_urlsafe(32)
-    payload = json.dumps({
-        "user_id": user_id,
-        "tenant_id": tenant_id,
-        "provider": provider,
-        "nonce": nonce,
-        "ts": int(time.time()),
-    })
+    payload = json.dumps(
+        {
+            "user_id": user_id,
+            "tenant_id": tenant_id,
+            "provider": provider,
+            "nonce": nonce,
+            "ts": int(time.time()),
+        }
+    )
     payload_b64 = base64.urlsafe_b64encode(payload.encode()).decode()
     sig = _sign_state(payload_b64)
 
@@ -102,9 +102,7 @@ async def decode_oauth_state(state: str) -> dict:
         try:
             deleted = await r.delete(f"{_NONCE_PREFIX}{nonce}")
             if not deleted:
-                raise ValueError(
-                    "OAuth state nonce already used or expired"
-                )
+                raise ValueError("OAuth state nonce already used or expired")
         finally:
             await r.aclose()
 

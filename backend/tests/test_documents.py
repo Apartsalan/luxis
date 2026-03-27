@@ -37,9 +37,7 @@ SAMPLE_TEMPLATE = {
 
 
 @pytest.mark.asyncio
-async def test_create_template(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_create_template(client: AsyncClient, auth_headers: dict):
     """Creating a template should return 201."""
     response = await client.post(
         "/api/documents/templates",
@@ -54,9 +52,7 @@ async def test_create_template(
 
 
 @pytest.mark.asyncio
-async def test_create_template_invalid_jinja(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_create_template_invalid_jinja(client: AsyncClient, auth_headers: dict):
     """Template with invalid Jinja2 syntax should return 400."""
     payload = {
         "name": "Broken template",
@@ -72,9 +68,7 @@ async def test_create_template_invalid_jinja(
 
 
 @pytest.mark.asyncio
-async def test_list_templates(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_list_templates(client: AsyncClient, auth_headers: dict):
     """List templates should work."""
     # Create two templates
     await client.post(
@@ -89,9 +83,7 @@ async def test_list_templates(
     )
 
     # List all
-    response = await client.get(
-        "/api/documents/templates", headers=auth_headers
-    )
+    response = await client.get("/api/documents/templates", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 2
@@ -106,9 +98,7 @@ async def test_list_templates(
 
 
 @pytest.mark.asyncio
-async def test_get_template(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_get_template(client: AsyncClient, auth_headers: dict):
     """Get template by ID should return full content."""
     create_response = await client.post(
         "/api/documents/templates",
@@ -127,9 +117,7 @@ async def test_get_template(
 
 
 @pytest.mark.asyncio
-async def test_update_template(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_update_template(client: AsyncClient, auth_headers: dict):
     """Updating a template should work."""
     create_response = await client.post(
         "/api/documents/templates",
@@ -148,9 +136,7 @@ async def test_update_template(
 
 
 @pytest.mark.asyncio
-async def test_delete_template(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_delete_template(client: AsyncClient, auth_headers: dict):
     """Deleting a template should soft-delete it."""
     create_response = await client.post(
         "/api/documents/templates",
@@ -167,9 +153,7 @@ async def test_delete_template(
 
 
 @pytest.mark.asyncio
-async def test_get_template_not_found(
-    client: AsyncClient, auth_headers: dict
-):
+async def test_get_template_not_found(client: AsyncClient, auth_headers: dict):
     """Non-existent template should return 404."""
     fake_id = str(uuid.uuid4())
     response = await client.get(
@@ -200,9 +184,7 @@ async def test_generate_document(
         "opposing_party_id": str(test_person.id),
         "date_opened": "2026-02-17",
     }
-    case_response = await client.post(
-        "/api/cases", json=case_payload, headers=auth_headers
-    )
+    case_response = await client.post("/api/cases", json=case_payload, headers=auth_headers)
     case_id = case_response.json()["id"]
 
     # Create a template

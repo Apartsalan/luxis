@@ -51,9 +51,9 @@ async def _recalculate_totals(db: AsyncSession, invoice: Invoice) -> None:
     btw_total = Decimal("0.00")
     for btw_pct, group_total in groups:
         subtotal += group_total
-        btw_total += (
-            group_total * btw_pct / Decimal("100")
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        btw_total += (group_total * btw_pct / Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
     invoice.subtotal = subtotal
     invoice.btw_amount = btw_total
@@ -76,9 +76,7 @@ VALID_TRANSITIONS = {
 def _validate_transition(current: str, new: str) -> None:
     allowed = VALID_TRANSITIONS.get(current, set())
     if new not in allowed:
-        raise BadRequestError(
-            f"Ongeldige statuswijziging: {current} → {new}"
-        )
+        raise BadRequestError(f"Ongeldige statuswijziging: {current} → {new}")
 
 
 # ── Invoice CRUD ─────────────────────────────────────────────────────────────
@@ -124,34 +122,33 @@ async def list_invoices(
     total = (await db.execute(count_query)).scalar_one()
     pages = max(1, math.ceil(total / per_page))
 
-    result = await db.execute(
-        query.offset((page - 1) * per_page).limit(per_page)
-    )
+    result = await db.execute(query.offset((page - 1) * per_page).limit(per_page))
     invoices = list(result.scalars().all())
 
     items = []
     for inv in invoices:
-        items.append({
-            "id": inv.id,
-            "invoice_number": inv.invoice_number,
-            "invoice_type": inv.invoice_type or "invoice",
-            "status": inv.status,
-            "contact_id": inv.contact_id,
-            "contact_name": inv.contact.name if inv.contact else None,
-            "case_id": inv.case_id,
-            "case_number": inv.case.case_number if inv.case else None,
-            "linked_invoice_id": inv.linked_invoice_id,
-            "linked_invoice_number": (
-                inv.linked_invoice.invoice_number
-                if inv.linked_invoice else None
-            ),
-            "invoice_date": inv.invoice_date,
-            "due_date": inv.due_date,
-            "subtotal": inv.subtotal,
-            "btw_amount": inv.btw_amount,
-            "total": inv.total,
-            "created_at": inv.created_at,
-        })
+        items.append(
+            {
+                "id": inv.id,
+                "invoice_number": inv.invoice_number,
+                "invoice_type": inv.invoice_type or "invoice",
+                "status": inv.status,
+                "contact_id": inv.contact_id,
+                "contact_name": inv.contact.name if inv.contact else None,
+                "case_id": inv.case_id,
+                "case_number": inv.case.case_number if inv.case else None,
+                "linked_invoice_id": inv.linked_invoice_id,
+                "linked_invoice_number": (
+                    inv.linked_invoice.invoice_number if inv.linked_invoice else None
+                ),
+                "invoice_date": inv.invoice_date,
+                "due_date": inv.due_date,
+                "subtotal": inv.subtotal,
+                "btw_amount": inv.btw_amount,
+                "total": inv.total,
+                "created_at": inv.created_at,
+            }
+        )
 
     return {
         "items": items,
@@ -300,9 +297,7 @@ async def delete_invoice(
     invoice = await get_invoice(db, tenant_id, invoice_id)
 
     if invoice.status not in ("concept", "cancelled"):
-        raise BadRequestError(
-            "Alleen concept- of geannuleerde facturen kunnen worden verwijderd"
-        )
+        raise BadRequestError("Alleen concept- of geannuleerde facturen kunnen worden verwijderd")
 
     invoice.is_active = False
     await db.flush()
@@ -478,13 +473,9 @@ async def add_line(
         raise BadRequestError("Regels kunnen alleen aan conceptfacturen worden toegevoegd")
 
     # Determine next line number
-    max_line = max(
-        (line.line_number for line in invoice.lines), default=0
-    )
+    max_line = max((line.line_number for line in invoice.lines), default=0)
 
-    line_total = (quantity * unit_price).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    line_total = (quantity * unit_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     line = InvoiceLine(
         tenant_id=tenant_id,
@@ -586,10 +577,14 @@ async def list_expenses(
     uninvoiced_only: bool = False,
 ) -> list[Expense]:
     """List expenses, optionally filtered."""
-    query = select(Expense).where(
-        Expense.tenant_id == tenant_id,
-        Expense.is_active.is_(True),
-    ).order_by(Expense.expense_date.desc())
+    query = (
+        select(Expense)
+        .where(
+            Expense.tenant_id == tenant_id,
+            Expense.is_active.is_(True),
+        )
+        .order_by(Expense.expense_date.desc())
+    )
 
     if case_id:
         query = query.where(Expense.case_id == case_id)
@@ -741,9 +736,7 @@ async def get_budget_status(
 
     # Sum billable time entries (hours)
     te_result = await db.execute(
-        select(
-            func.coalesce(func.sum(TimeEntry.duration_minutes), 0)
-        ).where(
+        select(func.coalesce(func.sum(TimeEntry.duration_minutes), 0)).where(
             TimeEntry.tenant_id == tenant_id,
             TimeEntry.case_id == case_id,
             TimeEntry.billable.is_(True),
@@ -776,9 +769,7 @@ async def get_budget_status(
 
     # Sum billable expenses
     exp_result = await db.execute(
-        select(
-            func.coalesce(func.sum(Expense.amount), Decimal("0.00"))
-        ).where(
+        select(func.coalesce(func.sum(Expense.amount), Decimal("0.00"))).where(
             Expense.tenant_id == tenant_id,
             Expense.case_id == case_id,
             Expense.billable.is_(True),
@@ -787,9 +778,7 @@ async def get_budget_status(
     )
     expense_amount = exp_result.scalar_one()
 
-    used_amount = (time_amount + expense_amount).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    used_amount = (time_amount + expense_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     budget_amount = Decimal(str(case.budget)) if case.budget else None
     budget_hours = Decimal(str(case.budget_hours)) if case.budget_hours else None
@@ -799,14 +788,14 @@ async def get_budget_status(
     percentage_hours = None
 
     if budget_amount and budget_amount > 0:
-        percentage_amount = (
-            used_amount / budget_amount * Decimal("100")
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        percentage_amount = (used_amount / budget_amount * Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
     if budget_hours and budget_hours > 0:
-        percentage_hours = (
-            used_hours / budget_hours * Decimal("100")
-        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        percentage_hours = (used_hours / budget_hours * Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
     # Determine status (traffic light)
     max_pct = Decimal("0")
@@ -861,9 +850,7 @@ async def calculate_provisie(
 
     # Sum all incasso payments for this case
     pay_result = await db.execute(
-        select(
-            func.coalesce(func.sum(Payment.amount), Decimal("0.00"))
-        ).where(
+        select(func.coalesce(func.sum(Payment.amount), Decimal("0.00"))).where(
             Payment.tenant_id == tenant_id,
             Payment.case_id == case_id,
         )
@@ -871,9 +858,9 @@ async def calculate_provisie(
     collected_amount = pay_result.scalar_one()
 
     # Calculate provisie
-    provisie_amount = (
-        collected_amount * provisie_pct / Decimal("100")
-    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    provisie_amount = (collected_amount * provisie_pct / Decimal("100")).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
 
     # Total fee = max(provisie + fixed costs, minimum fee)
     provisie_plus_costs = provisie_amount + fixed_costs
@@ -943,8 +930,11 @@ async def get_incasso_invoice_preview(
 
     # Interest calculation
     from app.collections.service import get_financial_summary
+
     fin_summary = await get_financial_summary(
-        db, tenant_id, case_id,
+        db,
+        tenant_id,
+        case_id,
         interest_type=case.interest_type,
         contractual_rate=case.contractual_rate,
         contractual_compound=case.contractual_compound,
@@ -960,12 +950,20 @@ async def get_incasso_invoice_preview(
     provisie_base = case.provisie_base or "collected_amount"
 
     prov_over_collected = (
-        collected_amount * provisie_pct / Decimal("100")
-    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if collected_amount > 0 else Decimal("0.00")
+        (collected_amount * provisie_pct / Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        if collected_amount > 0
+        else Decimal("0.00")
+    )
 
     prov_over_claim = (
-        total_principal * provisie_pct / Decimal("100")
-    ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if total_principal > 0 else Decimal("0.00")
+        (total_principal * provisie_pct / Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        if total_principal > 0
+        else Decimal("0.00")
+    )
 
     # Already invoiced detection
     already_result = await db.execute(

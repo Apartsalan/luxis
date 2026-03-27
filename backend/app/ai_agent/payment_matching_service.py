@@ -150,25 +150,21 @@ async def _load_case_match_data(
             )
         )
         claims = list(claims_result.scalars().all())
-        invoice_numbers = [
-            c.invoice_number for c in claims if c.invoice_number
-        ]
+        invoice_numbers = [c.invoice_number for c in claims if c.invoice_number]
 
         outstanding = Decimal(str(case.total_principal)) - Decimal(str(case.total_paid))
         outstanding = outstanding.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
-        case_data_list.append(CaseMatchData(
-            id=case.id,
-            case_number=case.case_number,
-            opposing_party_name=(
-                case.opposing_party.name if case.opposing_party else None
-            ),
-            opposing_party_iban=(
-                case.opposing_party.iban if case.opposing_party else None
-            ),
-            outstanding_amount=max(Decimal("0"), outstanding),
-            invoice_numbers=invoice_numbers,
-        ))
+        case_data_list.append(
+            CaseMatchData(
+                id=case.id,
+                case_number=case.case_number,
+                opposing_party_name=(case.opposing_party.name if case.opposing_party else None),
+                opposing_party_iban=(case.opposing_party.iban if case.opposing_party else None),
+                outstanding_amount=max(Decimal("0"), outstanding),
+                invoice_numbers=invoice_numbers,
+            )
+        )
 
     return case_data_list
 
@@ -259,18 +255,12 @@ def _match_to_response(match: PaymentMatch) -> PaymentMatchOut:
         counterparty_iban=txn.counterparty_iban if txn else None,
         description=txn.description if txn else None,
         case_number=match.case.case_number if match.case else "?",
-        client_name=(
-            match.case.client.name if match.case and match.case.client else None
-        ),
+        client_name=(match.case.client.name if match.case and match.case.client else None),
         opposing_party_name=(
-            match.case.opposing_party.name
-            if match.case and match.case.opposing_party
-            else None
+            match.case.opposing_party.name if match.case and match.case.opposing_party else None
         ),
         match_method=match.match_method,
-        match_method_label=MATCH_METHOD_LABELS.get(
-            match.match_method, match.match_method
-        ),
+        match_method_label=MATCH_METHOD_LABELS.get(match.match_method, match.match_method),
         confidence=match.confidence,
         match_details=match.match_details,
         status=match.status,
@@ -644,9 +634,7 @@ async def execute_match(
         description=f"Bankimport: {txn.counterparty_name or 'Onbekend'}",
         payment_method="bank",
     )
-    payment = await create_payment(
-        db, tenant_id, match.case_id, payment_data, user_id
-    )
+    payment = await create_payment(db, tenant_id, match.case_id, payment_data, user_id)
     match.payment_id = payment.id
 
     # Mark as executed
@@ -656,7 +644,10 @@ async def execute_match(
 
     logger.info(
         "Match executed: txn %s -> case %s (derdengelden=%s, payment=%s)",
-        txn.id, match.case_id, derdengelden.id, payment.id,
+        txn.id,
+        match.case_id,
+        derdengelden.id,
+        payment.id,
     )
 
     return match

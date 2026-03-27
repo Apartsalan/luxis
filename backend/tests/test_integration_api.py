@@ -242,15 +242,11 @@ async def test_multiple_claims_on_case(
         },
     ]
     for claim in claims:
-        resp = await client.post(
-            f"/api/cases/{case_id}/claims", json=claim, headers=headers
-        )
+        resp = await client.post(f"/api/cases/{case_id}/claims", json=claim, headers=headers)
         assert resp.status_code == 201
 
     # List claims
-    claims_resp = await client.get(
-        f"/api/cases/{case_id}/claims", headers=headers
-    )
+    claims_resp = await client.get(f"/api/cases/{case_id}/claims", headers=headers)
     assert claims_resp.status_code == 200
     assert len(claims_resp.json()) == 3
 
@@ -268,9 +264,7 @@ async def test_multiple_claims_on_case(
     assert len(data["claims"]) == 3
 
     # BIK on total principal
-    bik_resp = await client.get(
-        f"/api/cases/{case_id}/bik", headers=headers
-    )
+    bik_resp = await client.get(f"/api/cases/{case_id}/bik", headers=headers)
     assert bik_resp.status_code == 200
     # €7,000 → 375 + 250 + 5% of 2000 = 625 + 100 = €725
     assert Decimal(bik_resp.json()["bik_exclusive"]) == Decimal("725.00")
@@ -347,9 +341,7 @@ async def test_payment_registration_flow(
     assert pay2_resp.status_code == 201
 
     # List payments
-    payments_resp = await client.get(
-        f"/api/cases/{case_id}/payments", headers=headers
-    )
+    payments_resp = await client.get(f"/api/cases/{case_id}/payments", headers=headers)
     assert payments_resp.status_code == 200
     assert len(payments_resp.json()) == 2
 
@@ -511,9 +503,7 @@ async def test_claim_crud(
     claim_id = create_resp.json()["id"]
 
     # Read (list)
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/claims", headers=headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/claims", headers=headers)
     assert list_resp.status_code == 200
     assert len(list_resp.json()) == 1
 
@@ -534,9 +524,7 @@ async def test_claim_crud(
     assert delete_resp.status_code == 204
 
     # Verify soft-deleted — list should be empty
-    list_resp = await client.get(
-        f"/api/cases/{case_id}/claims", headers=headers
-    )
+    list_resp = await client.get(f"/api/cases/{case_id}/claims", headers=headers)
     assert len(list_resp.json()) == 0
 
 
@@ -653,9 +641,7 @@ async def test_bik_with_btw_api(
     )
 
     # BIK without BTW (default)
-    resp_no_btw = await client.get(
-        f"/api/cases/{case_id}/bik", headers=headers
-    )
+    resp_no_btw = await client.get(f"/api/cases/{case_id}/bik", headers=headers)
     assert Decimal(resp_no_btw.json()["btw_amount"]) == Decimal("0")
 
     # BIK with BTW

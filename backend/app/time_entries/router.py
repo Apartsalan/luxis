@@ -45,9 +45,7 @@ async def list_time_entries(
     )
     # Enrich with invoice numbers for invoiced entries
     invoiced_ids = [e.id for e in entries if e.invoiced]
-    inv_map = await service.get_invoice_numbers(
-        db, current_user.tenant_id, invoiced_ids
-    )
+    inv_map = await service.get_invoice_numbers(db, current_user.tenant_id, invoiced_ids)
     results = []
     for e in entries:
         resp = TimeEntryResponse.model_validate(e)
@@ -67,9 +65,7 @@ async def create_time_entry(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new time entry for the current user."""
-    return await service.create_time_entry(
-        db, current_user.tenant_id, current_user.id, data
-    )
+    return await service.create_time_entry(db, current_user.tenant_id, current_user.id, data)
 
 
 @router.put("/{entry_id}", response_model=TimeEntryResponse)
@@ -80,9 +76,7 @@ async def update_time_entry(
     current_user: User = Depends(get_current_user),
 ):
     """Update a time entry."""
-    return await service.update_time_entry(
-        db, current_user.tenant_id, entry_id, data
-    )
+    return await service.update_time_entry(db, current_user.tenant_id, entry_id, data)
 
 
 @router.delete(
@@ -95,9 +89,7 @@ async def delete_time_entry(
     current_user: User = Depends(get_current_user),
 ):
     """Delete a time entry."""
-    await service.delete_time_entry(
-        db, current_user.tenant_id, entry_id
-    )
+    await service.delete_time_entry(db, current_user.tenant_id, entry_id)
 
 
 @router.get("/unbilled", response_model=list[TimeEntryResponse])
@@ -140,6 +132,4 @@ async def get_my_today(
     current_user: User = Depends(get_current_user),
 ):
     """Get today's time entries for the current user (timer widget)."""
-    return await service.get_my_today(
-        db, current_user.tenant_id, current_user.id
-    )
+    return await service.get_my_today(db, current_user.tenant_id, current_user.id)

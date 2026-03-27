@@ -169,9 +169,7 @@ async def complete_kyc(
             errors.append("UBO-registratie is verplicht voor bedrijven")
 
     if errors:
-        raise BadRequestError(
-            "KYC verificatie is niet volledig: " + "; ".join(errors)
-        )
+        raise BadRequestError("KYC verificatie is niet volledig: " + "; ".join(errors))
 
     kyc.status = "voltooid"
     kyc.verified_by_id = user_id
@@ -212,10 +210,7 @@ async def get_kyc_status_for_contact(
             "is_overdue": False,
         }
 
-    is_overdue = (
-        kyc.next_review_date is not None
-        and kyc.next_review_date < date.today()
-    )
+    is_overdue = kyc.next_review_date is not None and kyc.next_review_date < date.today()
 
     return {
         "has_kyc": True,
@@ -266,9 +261,7 @@ async def get_kyc_dashboard(
 
     for client_id in active_client_ids:
         # Get contact name
-        contact_result = await db.execute(
-            select(Contact).where(Contact.id == client_id)
-        )
+        contact_result = await db.execute(select(Contact).where(Contact.id == client_id))
         contact = contact_result.scalar_one_or_none()
         if not contact:
             continue
@@ -276,38 +269,46 @@ async def get_kyc_dashboard(
         kyc = kyc_records.get(client_id)
 
         if not kyc:
-            without_kyc.append({
-                "contact_id": str(client_id),
-                "contact_name": contact.name,
-                "contact_type": contact.contact_type,
-                "kyc_status": "niet_gestart",
-            })
+            without_kyc.append(
+                {
+                    "contact_id": str(client_id),
+                    "contact_name": contact.name,
+                    "contact_type": contact.contact_type,
+                    "kyc_status": "niet_gestart",
+                }
+            )
         elif kyc.status == "in_behandeling":
-            incomplete.append({
-                "contact_id": str(client_id),
-                "contact_name": contact.name,
-                "contact_type": contact.contact_type,
-                "kyc_status": "in_behandeling",
-            })
+            incomplete.append(
+                {
+                    "contact_id": str(client_id),
+                    "contact_name": contact.name,
+                    "contact_type": contact.contact_type,
+                    "kyc_status": "in_behandeling",
+                }
+            )
         elif kyc.status == "voltooid" and kyc.next_review_date:
             if kyc.next_review_date < today:
-                overdue.append({
-                    "contact_id": str(client_id),
-                    "contact_name": contact.name,
-                    "contact_type": contact.contact_type,
-                    "kyc_status": "verlopen",
-                    "next_review_date": str(kyc.next_review_date),
-                    "days_overdue": (today - kyc.next_review_date).days,
-                })
+                overdue.append(
+                    {
+                        "contact_id": str(client_id),
+                        "contact_name": contact.name,
+                        "contact_type": contact.contact_type,
+                        "kyc_status": "verlopen",
+                        "next_review_date": str(kyc.next_review_date),
+                        "days_overdue": (today - kyc.next_review_date).days,
+                    }
+                )
             elif kyc.next_review_date <= today + timedelta(days=30):
-                upcoming_reviews.append({
-                    "contact_id": str(client_id),
-                    "contact_name": contact.name,
-                    "contact_type": contact.contact_type,
-                    "kyc_status": "voltooid",
-                    "next_review_date": str(kyc.next_review_date),
-                    "days_until_review": (kyc.next_review_date - today).days,
-                })
+                upcoming_reviews.append(
+                    {
+                        "contact_id": str(client_id),
+                        "contact_name": contact.name,
+                        "contact_type": contact.contact_type,
+                        "kyc_status": "voltooid",
+                        "next_review_date": str(kyc.next_review_date),
+                        "days_until_review": (kyc.next_review_date - today).days,
+                    }
+                )
 
     return {
         "without_kyc": without_kyc,

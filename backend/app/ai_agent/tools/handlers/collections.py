@@ -88,7 +88,11 @@ async def handle_payment_register(
         payment_method=payment_method,
     )
     payment = await collections_service.create_payment(
-        db, tenant_id, uuid.UUID(case_id), data, user_id,
+        db,
+        tenant_id,
+        uuid.UUID(case_id),
+        data,
+        user_id,
     )
     return {
         "id": serialize(payment.id),

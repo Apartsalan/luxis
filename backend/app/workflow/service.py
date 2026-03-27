@@ -141,11 +141,13 @@ async def delete_status(
 
     # Check if any active cases use this status
     result = await db.execute(
-        select(Case).where(
+        select(Case)
+        .where(
             Case.tenant_id == tenant_id,
             Case.status == status.slug,
             Case.is_active.is_(True),
-        ).limit(1)
+        )
+        .limit(1)
     )
     if result.scalar_one_or_none():
         raise ConflictError(
@@ -298,11 +300,13 @@ async def validate_transition(
     ):
         # Check if case has ever been in 14_dagenbrief status
         result = await db.execute(
-            select(CaseActivity).where(
+            select(CaseActivity)
+            .where(
                 CaseActivity.case_id == case.id,
                 CaseActivity.activity_type == "status_change",
                 CaseActivity.new_status == "14_dagenbrief",
-            ).limit(1)
+            )
+            .limit(1)
         )
         if not result.scalar_one_or_none():
             errors.append(
@@ -315,11 +319,14 @@ async def validate_transition(
         min_wait = LEGAL_CONSTRAINTS["14_dagenbrief_min_wait"]
         # Find when 14_dagenbrief was set
         result = await db.execute(
-            select(CaseActivity).where(
+            select(CaseActivity)
+            .where(
                 CaseActivity.case_id == case.id,
                 CaseActivity.activity_type == "status_change",
                 CaseActivity.new_status == "14_dagenbrief",
-            ).order_by(CaseActivity.created_at.desc()).limit(1)
+            )
+            .order_by(CaseActivity.created_at.desc())
+            .limit(1)
         )
         activity = result.scalar_one_or_none()
         if activity:
@@ -334,9 +341,7 @@ async def validate_transition(
     # 5. Verjaring warning (advisory, not blocking)
     if hasattr(case, "date_opened") and case.date_opened:
         verjaring_years = LEGAL_CONSTRAINTS["verjaring_years"]
-        verjaring_date = case.date_opened.replace(
-            year=case.date_opened.year + verjaring_years
-        )
+        verjaring_date = case.date_opened.replace(year=case.date_opened.year + verjaring_years)
         days_until_verjaring = (verjaring_date - date.today()).days
         if days_until_verjaring <= 0:
             warnings.append(
@@ -447,8 +452,7 @@ async def create_rule(
     """Create a new workflow rule."""
     if data.action_type not in TASK_TYPES:
         raise BadRequestError(
-            f"Ongeldig actietype: {data.action_type}. "
-            f"Kies uit: {', '.join(TASK_TYPES)}"
+            f"Ongeldig actietype: {data.action_type}. Kies uit: {', '.join(TASK_TYPES)}"
         )
     rule = WorkflowRule(tenant_id=tenant_id, **data.model_dump())
     db.add(rule)
@@ -468,8 +472,7 @@ async def update_rule(
     update_data = data.model_dump(exclude_unset=True)
     if "action_type" in update_data and update_data["action_type"] not in TASK_TYPES:
         raise BadRequestError(
-            f"Ongeldig actietype: {update_data['action_type']}. "
-            f"Kies uit: {', '.join(TASK_TYPES)}"
+            f"Ongeldig actietype: {update_data['action_type']}. Kies uit: {', '.join(TASK_TYPES)}"
         )
     for field, value in update_data.items():
         setattr(rule, field, value)
@@ -542,8 +545,7 @@ async def create_task(
     """Create a workflow task manually."""
     if data.task_type not in TASK_TYPES:
         raise BadRequestError(
-            f"Ongeldig taaktype: {data.task_type}. "
-            f"Kies uit: {', '.join(TASK_TYPES)}"
+            f"Ongeldig taaktype: {data.task_type}. Kies uit: {', '.join(TASK_TYPES)}"
         )
     task = WorkflowTask(tenant_id=tenant_id, **data.model_dump())
     db.add(task)
@@ -566,8 +568,7 @@ async def update_task(
         new_status = update_data["status"]
         if new_status not in TASK_STATUSES:
             raise BadRequestError(
-                f"Ongeldige taakstatus: {new_status}. "
-                f"Kies uit: {', '.join(TASK_STATUSES)}"
+                f"Ongeldige taakstatus: {new_status}. Kies uit: {', '.join(TASK_STATUSES)}"
             )
         if new_status == "completed":
             task.completed_at = datetime.now(UTC)
@@ -671,12 +672,14 @@ async def evaluate_rules_for_transition(
 
     # Find matching rules
     result = await db.execute(
-        select(WorkflowRule).where(
+        select(WorkflowRule)
+        .where(
             WorkflowRule.tenant_id == tenant_id,
             WorkflowRule.trigger_status_id == new_status.id,
             WorkflowRule.is_active.is_(True),
             WorkflowRule.debtor_type.in_([case.debtor_type, "both"]),
-        ).order_by(WorkflowRule.sort_order)
+        )
+        .order_by(WorkflowRule.sort_order)
     )
     matching_rules = list(result.scalars().all())
 
@@ -770,18 +773,18 @@ async def check_verjaring(
 
     warnings = []
     for case in result.scalars().all():
-        verjaring_date = case.date_opened.replace(
-            year=case.date_opened.year + verjaring_years
-        )
+        verjaring_date = case.date_opened.replace(year=case.date_opened.year + verjaring_years)
         days_remaining = (verjaring_date - today).days
-        warnings.append({
-            "case_id": str(case.id),
-            "case_number": case.case_number,
-            "date_opened": case.date_opened.isoformat(),
-            "verjaring_date": verjaring_date.isoformat(),
-            "days_remaining": days_remaining,
-            "is_expired": days_remaining <= 0,
-        })
+        warnings.append(
+            {
+                "case_id": str(case.id),
+                "case_number": case.case_number,
+                "date_opened": case.date_opened.isoformat(),
+                "verjaring_date": verjaring_date.isoformat(),
+                "days_remaining": days_remaining,
+                "is_expired": days_remaining <= 0,
+            }
+        )
 
     return warnings
 
@@ -791,10 +794,10 @@ async def check_verjaring(
 
 # Color mapping for calendar events
 _TASK_COLORS = {
-    "overdue": "#ef4444",   # red
-    "due": "#f59e0b",       # amber
-    "pending": "#3b82f6",   # blue
-    "completed": "#10b981", # green
+    "overdue": "#ef4444",  # red
+    "due": "#f59e0b",  # amber
+    "pending": "#3b82f6",  # blue
+    "completed": "#10b981",  # green
 }
 _KYC_COLOR = "#8b5cf6"  # purple
 
@@ -829,20 +832,22 @@ async def get_calendar_events(
     for task in tasks:
         case = task.case
         assigned_to = task.assigned_to
-        events.append({
-            "id": str(task.id),
-            "title": task.title,
-            "date": task.due_date,
-            "event_type": "task",
-            "status": task.status,
-            "case_id": str(task.case_id),
-            "case_number": case.case_number if case else None,
-            "contact_id": None,
-            "contact_name": None,
-            "assigned_to_name": assigned_to.full_name if assigned_to else None,
-            "task_type": task.task_type,
-            "color": _TASK_COLORS.get(task.status, "#3b82f6"),
-        })
+        events.append(
+            {
+                "id": str(task.id),
+                "title": task.title,
+                "date": task.due_date,
+                "event_type": "task",
+                "status": task.status,
+                "case_id": str(task.case_id),
+                "case_number": case.case_number if case else None,
+                "contact_id": None,
+                "contact_name": None,
+                "assigned_to_name": assigned_to.full_name if assigned_to else None,
+                "task_type": task.task_type,
+                "color": _TASK_COLORS.get(task.status, "#3b82f6"),
+            }
+        )
 
     # ── 2. KYC review deadlines ──────────────────────────────────────────
     kyc_query = (
@@ -863,20 +868,22 @@ async def get_calendar_events(
         contact = kyc.contact
         review_date = kyc.next_review_date
         kyc_status = "overdue" if review_date < today else "pending"
-        events.append({
-            "id": str(kyc.id),
-            "title": f"KYC review: {contact.name}" if contact else "KYC review",
-            "date": review_date,
-            "event_type": "kyc_review",
-            "status": kyc_status,
-            "case_id": None,
-            "case_number": None,
-            "contact_id": str(kyc.contact_id),
-            "contact_name": contact.name if contact else None,
-            "assigned_to_name": None,
-            "task_type": None,
-            "color": _KYC_COLOR,
-        })
+        events.append(
+            {
+                "id": str(kyc.id),
+                "title": f"KYC review: {contact.name}" if contact else "KYC review",
+                "date": review_date,
+                "event_type": "kyc_review",
+                "status": kyc_status,
+                "case_id": None,
+                "case_number": None,
+                "contact_id": str(kyc.contact_id),
+                "contact_name": contact.name if contact else None,
+                "assigned_to_name": None,
+                "task_type": None,
+                "color": _KYC_COLOR,
+            }
+        )
 
     # ── 3. Sort combined list by date ────────────────────────────────────
     events.sort(key=lambda e: e["date"])

@@ -94,9 +94,7 @@ class ArrangementCreate(BaseModel):
 
 
 class ArrangementUpdate(BaseModel):
-    status: str | None = Field(
-        None, pattern="^(active|completed|defaulted|cancelled)$"
-    )
+    status: str | None = Field(None, pattern="^(active|completed|defaulted|cancelled)$")
     notes: str | None = None
 
 

@@ -311,9 +311,7 @@ class OutlookProvider(EmailProvider):
                     "contentType": "HTML",
                     "content": body_html,
                 },
-                "toRecipients": [
-                    {"emailAddress": {"address": addr}} for addr in to
-                ],
+                "toRecipients": [{"emailAddress": {"address": addr}} for addr in to],
             },
             "saveToSentItems": True,
         }
@@ -374,15 +372,11 @@ class OutlookProvider(EmailProvider):
                 "contentType": "HTML",
                 "content": body_html,
             },
-            "toRecipients": [
-                {"emailAddress": {"address": addr}} for addr in to
-            ],
+            "toRecipients": [{"emailAddress": {"address": addr}} for addr in to],
         }
 
         if cc:
-            draft_body["ccRecipients"] = [
-                {"emailAddress": {"address": addr}} for addr in cc
-            ]
+            draft_body["ccRecipients"] = [{"emailAddress": {"address": addr}} for addr in cc]
 
         if attachments:
             draft_body["attachments"] = [
@@ -453,7 +447,8 @@ class OutlookProvider(EmailProvider):
             if resp.status_code != 200:
                 logger.warning(
                     "Bijlagen ophalen mislukt voor message %s: %s",
-                    message_id, resp.status_code,
+                    message_id,
+                    resp.status_code,
                 )
                 return []
 
@@ -469,12 +464,14 @@ class OutlookProvider(EmailProvider):
             if att_type and "itemAttachment" in att_type:
                 continue
 
-            attachments.append(AttachmentInfo(
-                attachment_id=att["id"],
-                filename=att.get("name", "bijlage"),
-                content_type=att.get("contentType", "application/octet-stream"),
-                size=att.get("size", 0),
-            ))
+            attachments.append(
+                AttachmentInfo(
+                    attachment_id=att["id"],
+                    filename=att.get("name", "bijlage"),
+                    content_type=att.get("contentType", "application/octet-stream"),
+                    size=att.get("size", 0),
+                )
+            )
 
         return attachments
 
@@ -490,9 +487,7 @@ class OutlookProvider(EmailProvider):
         """Reply to an existing message via Graph API reply endpoint."""
         reply_body: dict = {
             "message": {
-                "toRecipients": [
-                    {"emailAddress": {"address": addr}} for addr in to
-                ],
+                "toRecipients": [{"emailAddress": {"address": addr}} for addr in to],
             },
             "comment": body_html,
         }

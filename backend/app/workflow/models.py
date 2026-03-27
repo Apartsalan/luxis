@@ -70,9 +70,7 @@ class WorkflowTask(TenantBase):
 
     __tablename__ = "workflow_tasks"
 
-    case_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("cases.id"), nullable=False
-    )
+    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
     assigned_to_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True
     )
@@ -85,9 +83,7 @@ class WorkflowTask(TenantBase):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
-    completed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pending"
@@ -115,9 +111,7 @@ class WorkflowTask(TenantBase):
     assigned_to: Mapped["User | None"] = relationship(  # noqa: F821
         "User", lazy="selectin"
     )
-    created_by_rule: Mapped["WorkflowRule | None"] = relationship(
-        "WorkflowRule", lazy="selectin"
-    )
+    created_by_rule: Mapped["WorkflowRule | None"] = relationship("WorkflowRule", lazy="selectin")
     parent_task: Mapped["WorkflowTask | None"] = relationship(
         "WorkflowTask", remote_side="WorkflowTask.id", lazy="selectin"
     )
@@ -147,14 +141,10 @@ class WorkflowRule(TenantBase):
     action_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     auto_execute: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    assign_to_case_owner: Mapped[bool] = mapped_column(
-        Boolean, default=True, nullable=False
-    )
+    assign_to_case_owner: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships
-    trigger_status: Mapped["WorkflowStatus"] = relationship(
-        "WorkflowStatus", lazy="selectin"
-    )
+    trigger_status: Mapped["WorkflowStatus"] = relationship("WorkflowStatus", lazy="selectin")

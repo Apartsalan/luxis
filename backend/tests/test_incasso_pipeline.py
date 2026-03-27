@@ -137,7 +137,11 @@ class TestBuildStepEmail:
         """When step has email templates, Jinja2 renders case data."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await db.commit()
@@ -156,7 +160,11 @@ class TestBuildStepEmail:
         steps = await create_pipeline_steps(db, test_tenant.id)
         # Dagvaarding (steps[2]) has no email templates
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[2],
         )
         await db.commit()
@@ -184,14 +192,16 @@ class TestCreateTasksForStep:
         """Step with template_type creates a generate_document task."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await db.commit()
 
-        tasks = await _create_tasks_for_step(
-            db, test_tenant.id, case, steps[0]
-        )
+        tasks = await _create_tasks_for_step(db, test_tenant.id, case, steps[0])
         await db.commit()
 
         assert len(tasks) == 1
@@ -228,14 +238,16 @@ class TestCreateTasksForStep:
         await db.flush()
 
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=step,
         )
         await db.commit()
 
-        tasks = await _create_tasks_for_step(
-            db, test_tenant.id, case, step
-        )
+        tasks = await _create_tasks_for_step(db, test_tenant.id, case, step)
         await db.commit()
 
         assert len(tasks) == 1
@@ -253,20 +265,20 @@ class TestAutoCompleteTasks:
         """Only completes pipeline tasks for the given step. Manual tasks untouched."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         # Create pipeline task for step 0 (should be completed)
-        pipeline_task = await create_pipeline_task(
-            db, test_tenant.id, case, steps[0]
-        )
+        pipeline_task = await create_pipeline_task(db, test_tenant.id, case, steps[0])
         # Create manual task (should NOT be completed)
         manual_task = await create_manual_task(db, test_tenant.id, case)
         await db.commit()
 
-        count = await _auto_complete_tasks(
-            db, test_tenant.id, case.id, steps[0].id
-        )
+        count = await _auto_complete_tasks(db, test_tenant.id, case.id, steps[0].id)
         await db.commit()
 
         assert count == 1
@@ -281,18 +293,18 @@ class TestAutoCompleteTasks:
         """Pipeline tasks for a different step are NOT completed."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         # Task for step 1 (Sommatie), but we auto-complete for step 0 (Aanmaning)
-        other_step_task = await create_pipeline_task(
-            db, test_tenant.id, case, steps[1]
-        )
+        other_step_task = await create_pipeline_task(db, test_tenant.id, case, steps[1])
         await db.commit()
 
-        count = await _auto_complete_tasks(
-            db, test_tenant.id, case.id, steps[0].id
-        )
+        count = await _auto_complete_tasks(db, test_tenant.id, case.id, steps[0].id)
         await db.commit()
 
         assert count == 0
@@ -305,14 +317,16 @@ class TestAutoCompleteTasks:
         """No matching tasks → returns 0."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await db.commit()
 
-        count = await _auto_complete_tasks(
-            db, test_tenant.id, case.id, steps[0].id
-        )
+        count = await _auto_complete_tasks(db, test_tenant.id, case.id, steps[0].id)
 
         assert count == 0
 
@@ -326,18 +340,18 @@ class TestTryAutoAdvance:
         """When all pipeline tasks for current step are completed, case advances."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         # Create a completed pipeline task (no open tasks remain)
-        await create_pipeline_task(
-            db, test_tenant.id, case, steps[0], status="completed"
-        )
+        await create_pipeline_task(db, test_tenant.id, case, steps[0], status="completed")
         await db.commit()
 
-        advanced = await _try_auto_advance(
-            db, test_tenant.id, case, test_user.id, step_list=steps
-        )
+        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
         await db.commit()
 
         assert advanced is True
@@ -369,18 +383,18 @@ class TestTryAutoAdvance:
         """Open pipeline tasks block auto-advance."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         # Create an open (pending) pipeline task
-        await create_pipeline_task(
-            db, test_tenant.id, case, steps[0], status="pending"
-        )
+        await create_pipeline_task(db, test_tenant.id, case, steps[0], status="pending")
         await db.commit()
 
-        advanced = await _try_auto_advance(
-            db, test_tenant.id, case, test_user.id, step_list=steps
-        )
+        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
 
         assert advanced is False
         await db.refresh(case)
@@ -392,14 +406,16 @@ class TestTryAutoAdvance:
         """Case on the last step cannot advance further."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[2],  # Dagvaarding = last step
         )
         await db.commit()
 
-        advanced = await _try_auto_advance(
-            db, test_tenant.id, case, test_user.id, step_list=steps
-        )
+        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
 
         assert advanced is False
 
@@ -409,18 +425,18 @@ class TestTryAutoAdvance:
         """Open manual tasks (source=manual) do NOT block auto-advance."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         # Only a manual task open — no pipeline tasks
-        await create_manual_task(
-            db, test_tenant.id, case, title="Bel debiteur", status="pending"
-        )
+        await create_manual_task(db, test_tenant.id, case, title="Bel debiteur", status="pending")
         await db.commit()
 
-        advanced = await _try_auto_advance(
-            db, test_tenant.id, case, test_user.id, step_list=steps
-        )
+        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
         await db.commit()
 
         assert advanced is True  # Manual tasks don't block!
@@ -437,13 +453,16 @@ class TestBatchPreview:
     """Tests for POST /api/incasso/batch/preview — 5 tests."""
 
     async def test_generate_document_ready(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Case with step + template → ready=1."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await db.commit()
@@ -464,12 +483,15 @@ class TestBatchPreview:
         assert len(data["blocked"]) == 0
 
     async def test_generate_document_no_step_needs_assignment(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Case without pipeline step → needs_step_assignment."""
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=None,
         )
         await db.commit()
@@ -489,8 +511,7 @@ class TestBatchPreview:
         assert len(data["needs_step_assignment"]) == 1
 
     async def test_generate_document_no_template_blocked(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Step without template_type → blocked."""
         step = IncassoPipelineStep(
@@ -506,7 +527,11 @@ class TestBatchPreview:
         await db.flush()
 
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=step,
         )
         await db.commit()
@@ -527,16 +552,20 @@ class TestBatchPreview:
         assert "briefsjabloon" in data["blocked"][0]["reason"]
 
     async def test_email_readiness_check(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Opposing party with email → email_ready; without → email_blocked."""
         steps = await create_pipeline_steps(db, test_tenant.id)
 
         # Case with email on opposing party
         case_with_email = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[0], case_number="2026-00010",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[0],
+            case_number="2026-00010",
         )
         # Case without email on opposing party
         no_email_person = Contact(
@@ -549,8 +578,13 @@ class TestBatchPreview:
         db.add(no_email_person)
         await db.flush()
         case_no_email = await create_incasso_case(
-            db, test_tenant.id, test_company, no_email_person, test_user,
-            step=steps[0], case_number="2026-00011",
+            db,
+            test_tenant.id,
+            test_company,
+            no_email_person,
+            test_user,
+            step=steps[0],
+            case_number="2026-00011",
         )
         await db.commit()
 
@@ -570,14 +604,18 @@ class TestBatchPreview:
         assert len(data["email_blocked"]) == 1
 
     async def test_advance_step_skips_closed(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Case with status 'betaald' is blocked for advance_step."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[0], status="betaald",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[0],
+            status="betaald",
         )
         await db.commit()
 
@@ -615,8 +653,7 @@ class TestBatchExecute:
     """Tests for POST /api/incasso/batch — 8 tests."""
 
     async def test_generate_document_without_email(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Generate document only (send_email=false).
 
@@ -624,7 +661,11 @@ class TestBatchExecute:
         """
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await create_pipeline_task(db, test_tenant.id, case, steps[0])
@@ -633,11 +674,13 @@ class TestBatchExecute:
         with (
             patch(
                 "app.incasso.service.render_docx",
-                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+                new_callable=AsyncMock,
+                return_value=_MOCK_DOCX,
             ),
             patch(
                 "app.incasso.service.docx_to_pdf",
-                new_callable=AsyncMock, return_value=_MOCK_PDF,
+                new_callable=AsyncMock,
+                return_value=_MOCK_PDF,
             ),
         ):
             resp = await client.post(
@@ -659,19 +702,22 @@ class TestBatchExecute:
         assert len(data["generated_document_ids"]) == 1
 
         # Verify document in DB
-        result = await db.execute(select(GeneratedDocument).where(
-            GeneratedDocument.case_id == case.id
-        ))
+        result = await db.execute(
+            select(GeneratedDocument).where(GeneratedDocument.case_id == case.id)
+        )
         assert result.scalar_one_or_none() is not None
 
     async def test_generate_document_with_email(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Generate doc + send email. EmailLog created, emails_sent=1."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await create_pipeline_task(db, test_tenant.id, case, steps[0])
@@ -680,11 +726,13 @@ class TestBatchExecute:
         with (
             patch(
                 "app.incasso.service.render_docx",
-                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+                new_callable=AsyncMock,
+                return_value=_MOCK_DOCX,
             ),
             patch(
                 "app.incasso.service.docx_to_pdf",
-                new_callable=AsyncMock, return_value=_MOCK_PDF,
+                new_callable=AsyncMock,
+                return_value=_MOCK_PDF,
             ),
             patch(
                 "app.incasso.service.send_with_attachment",
@@ -708,21 +756,22 @@ class TestBatchExecute:
         assert data["emails_failed"] == 0
 
         # EmailLog should exist
-        result = await db.execute(select(EmailLog).where(
-            EmailLog.case_id == case.id
-        ))
+        result = await db.execute(select(EmailLog).where(EmailLog.case_id == case.id))
         email_log = result.scalar_one_or_none()
         assert email_log is not None
         assert email_log.status == "sent"
 
     async def test_advance_step(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Advance step moves case to target step and creates tasks."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await db.commit()
@@ -755,14 +804,18 @@ class TestBatchExecute:
         assert result.scalar_one_or_none() is not None
 
     async def test_advance_step_skips_closed(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Closed/paid cases are skipped with error."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[0], status="betaald",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[0],
+            status="betaald",
         )
         await db.commit()
 
@@ -783,16 +836,20 @@ class TestBatchExecute:
         assert any("betaald" in e for e in data["errors"])
 
     async def test_multiple_cases_all_processed(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Batch of 3 cases — all processed and auto-advanced."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         cases = []
         for i in range(3):
             c = await create_incasso_case(
-                db, test_tenant.id, test_company, test_person, test_user,
-                step=steps[0], case_number=f"2026-0010{i}",
+                db,
+                test_tenant.id,
+                test_company,
+                test_person,
+                test_user,
+                step=steps[0],
+                case_number=f"2026-0010{i}",
             )
             await create_pipeline_task(db, test_tenant.id, c, steps[0])
             cases.append(c)
@@ -801,11 +858,13 @@ class TestBatchExecute:
         with (
             patch(
                 "app.incasso.service.render_docx",
-                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+                new_callable=AsyncMock,
+                return_value=_MOCK_DOCX,
             ),
             patch(
                 "app.incasso.service.docx_to_pdf",
-                new_callable=AsyncMock, return_value=_MOCK_PDF,
+                new_callable=AsyncMock,
+                return_value=_MOCK_PDF,
             ),
         ):
             resp = await client.post(
@@ -826,19 +885,28 @@ class TestBatchExecute:
         assert len(data["generated_document_ids"]) == 3
 
     async def test_partial_failure_one_case_fails(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """When render_docx raises for one case, others still process."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case_ok = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[0], case_number="2026-00200",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[0],
+            case_number="2026-00200",
         )
         await create_pipeline_task(db, test_tenant.id, case_ok, steps[0])
         case_fail = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[0], case_number="2026-00201",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[0],
+            case_number="2026-00201",
         )
         await create_pipeline_task(db, test_tenant.id, case_fail, steps[0])
         await db.commit()
@@ -856,7 +924,8 @@ class TestBatchExecute:
             patch("app.incasso.service.render_docx", side_effect=_render_docx_maybe_fail),
             patch(
                 "app.incasso.service.docx_to_pdf",
-                new_callable=AsyncMock, return_value=_MOCK_PDF,
+                new_callable=AsyncMock,
+                return_value=_MOCK_PDF,
             ),
         ):
             resp = await client.post(
@@ -876,13 +945,16 @@ class TestBatchExecute:
         assert any("2026-00201" in e for e in data["errors"])
 
     async def test_email_failure_doesnt_block_document(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Email failure doesn't prevent document generation. emails_failed=1."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
             step=steps[0],
         )
         await create_pipeline_task(db, test_tenant.id, case, steps[0])
@@ -891,11 +963,13 @@ class TestBatchExecute:
         with (
             patch(
                 "app.incasso.service.render_docx",
-                new_callable=AsyncMock, return_value=_MOCK_DOCX,
+                new_callable=AsyncMock,
+                return_value=_MOCK_DOCX,
             ),
             patch(
                 "app.incasso.service.docx_to_pdf",
-                new_callable=AsyncMock, return_value=_MOCK_PDF,
+                new_callable=AsyncMock,
+                return_value=_MOCK_PDF,
             ),
             patch(
                 "app.incasso.service.send_with_attachment",
@@ -919,9 +993,7 @@ class TestBatchExecute:
         assert data["emails_failed"] == 1
         assert len(data["generated_document_ids"]) == 1
 
-    async def test_empty_case_ids_returns_400(
-        self, client, auth_headers
-    ):
+    async def test_empty_case_ids_returns_400(self, client, auth_headers):
         """Empty case_ids → 400 error."""
         resp = await client.post(
             "/api/incasso/batch",
@@ -945,18 +1017,27 @@ class TestPipelineOverview:
     """Tests for GET /api/incasso/pipeline — 2 tests."""
 
     async def test_cases_grouped_by_step(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Cases appear in the correct pipeline columns."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[0], case_number="2026-00301",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[0],
+            case_number="2026-00301",
         )
         await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[1], case_number="2026-00302",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[1],
+            case_number="2026-00302",
         )
         await db.commit()
 
@@ -976,14 +1057,18 @@ class TestPipelineOverview:
         assert col_sommatie["count"] == 1
 
     async def test_unassigned_cases(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Cases without a pipeline step appear in unassigned."""
         await create_pipeline_steps(db, test_tenant.id)
         await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=None, case_number="2026-00400",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=None,
+            case_number="2026-00400",
         )
         await db.commit()
 
@@ -1005,9 +1090,7 @@ class TestPipelineOverview:
 class TestQueueCounts:
     """Tests for GET /api/incasso/queues/counts — 3 tests."""
 
-    async def test_empty_returns_zeros(
-        self, client, auth_headers, db, test_tenant
-    ):
+    async def test_empty_returns_zeros(self, client, auth_headers, db, test_tenant):
         """No cases → all counts zero."""
         await create_pipeline_steps(db, test_tenant.id)
         await db.commit()
@@ -1024,14 +1107,19 @@ class TestQueueCounts:
         assert data["action_required"] == 0
 
     async def test_counts_with_data(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Case in first step for 15 days → wik_expired counted."""
         steps = await create_pipeline_steps(db, test_tenant.id)
         await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=steps[0], days_in_step=15, case_number="2026-00500",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=steps[0],
+            days_in_step=15,
+            case_number="2026-00500",
         )
         await db.commit()
 
@@ -1045,14 +1133,18 @@ class TestQueueCounts:
         assert data["wik_expired"] >= 1
 
     async def test_unassigned_in_action_required(
-        self, client, auth_headers, db, test_tenant, test_user,
-        test_company, test_person
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Unassigned case counted in action_required."""
         await create_pipeline_steps(db, test_tenant.id)
         await create_incasso_case(
-            db, test_tenant.id, test_company, test_person, test_user,
-            step=None, case_number="2026-00600",
+            db,
+            test_tenant.id,
+            test_company,
+            test_person,
+            test_user,
+            step=None,
+            case_number="2026-00600",
         )
         await db.commit()
 

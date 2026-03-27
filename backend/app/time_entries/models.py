@@ -35,18 +35,15 @@ class TimeEntry(TenantBase):
     date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     billable_minutes: Mapped[int | None] = mapped_column(
-        Integer, nullable=True,
+        Integer,
+        nullable=True,
         comment="Te factureren minuten (null = gelijk aan duration_minutes)",
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    activity_type: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="other"
-    )
+    activity_type: Mapped[str] = mapped_column(String(30), nullable=False, default="other")
     billable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     invoiced: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
-    hourly_rate: Mapped[Decimal | None] = mapped_column(
-        Numeric(10, 2), nullable=True
-    )
+    hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
 
     # Relationships
     user: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821

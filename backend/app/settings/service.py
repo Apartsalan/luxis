@@ -15,9 +15,7 @@ async def get_tenant_settings(
     tenant_id: uuid.UUID,
 ) -> Tenant:
     """Get tenant profile and settings."""
-    result = await db.execute(
-        select(Tenant).where(Tenant.id == tenant_id)
-    )
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
     tenant = result.scalar_one_or_none()
     if tenant is None:
         raise NotFoundError("Kantoor niet gevonden")

@@ -26,9 +26,7 @@ async def _total_paid(
 ) -> Decimal:
     """Sum all payments for an invoice."""
     result = await db.execute(
-        select(
-            func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))
-        ).where(
+        select(func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))).where(
             InvoicePayment.tenant_id == tenant_id,
             InvoicePayment.invoice_id == invoice_id,
         )
@@ -305,9 +303,7 @@ async def get_receivables(
     sum_90_plus = AgingBucket()
 
     contacts: list[ContactReceivable] = []
-    for data in sorted(
-        contact_map.values(), key=lambda x: x["total_outstanding"], reverse=True
-    ):
+    for data in sorted(contact_map.values(), key=lambda x: x["total_outstanding"], reverse=True):
         total_outstanding += data["total_outstanding"]
         total_overdue += (
             data["days_31_60"]["total"]
@@ -361,9 +357,7 @@ async def get_advance_balance(
     """
     # Find all paid voorschotnota's for this case
     vn_result = await db.execute(
-        select(
-            func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))
-        )
+        select(func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00")))
         .select_from(InvoicePayment)
         .join(Invoice, InvoicePayment.invoice_id == Invoice.id)
         .where(
@@ -377,9 +371,7 @@ async def get_advance_balance(
 
     # Find verrekening payments on regular invoices for this case
     offset_result = await db.execute(
-        select(
-            func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))
-        )
+        select(func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00")))
         .select_from(InvoicePayment)
         .join(Invoice, InvoicePayment.invoice_id == Invoice.id)
         .where(

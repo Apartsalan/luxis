@@ -1,8 +1,6 @@
 """Tests for invoice PDF parsing."""
 
-import json
-from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -11,7 +9,6 @@ from app.ai_agent.invoice_prompts import (
     INVOICE_PARSE_SYSTEM_PROMPT,
     build_invoice_parse_prompt,
 )
-
 
 # ── Unit tests: prompt builder ────────────────────────────────────────────
 
@@ -148,13 +145,22 @@ async def test_parse_invoice_pdf_success():
 
 
 @pytest.mark.asyncio
-async def test_parse_invoice_pdf_empty_text():
-    with patch(
-        "app.ai_agent.invoice_parser.extract_text_from_pdf",
-        return_value="",
+async def test_parse_invoice_pdf_empty_text_falls_back_to_claude():
+    """When PDF text is empty, falls back to Claude native PDF parsing."""
+    mock_result = '{"invoice_number": "TEST-001", "confidence": 0.8}'
+    with (
+        patch(
+            "app.ai_agent.invoice_parser.extract_text_from_pdf",
+            return_value="",
+        ),
+        patch(
+            "app.ai_agent.invoice_parser.call_claude_with_pdf",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ),
     ):
-        with pytest.raises(ValueError, match="Geen tekst gevonden"):
-            await parse_invoice_pdf(b"fake-pdf-bytes", "empty.pdf")
+        result = await parse_invoice_pdf(b"fake-pdf-bytes", "empty.pdf")
+        assert result["model"] == "claude-native-pdf"
 
 
 @pytest.mark.asyncio

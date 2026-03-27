@@ -65,6 +65,11 @@ async def _create_concept_invoice(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(
+    not __import__("pathlib").Path("/opt/luxis/backend/templates/factuur.html").exists()
+    and not __import__("pathlib").Path("templates/factuur.html").exists(),
+    reason="factuur.html template not available in CI",
+)
 async def test_download_invoice_pdf(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):

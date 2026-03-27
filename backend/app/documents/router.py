@@ -319,7 +319,7 @@ async def send_document(
     Re-renders the DOCX template with current case data, converts to PDF,
     and sends as email attachment. Logs the result in email_logs.
     """
-    from app.documents.docx_service import _load_tenant, _tenant_ctx
+    from app.documents.docx_service import _tenant_ctx, load_tenant
 
     # Load the generated document
     doc = await service.get_generated_document(db, user.tenant_id, document_id)
@@ -348,7 +348,7 @@ async def send_document(
     pdf_filename = filename.replace(".docx", ".pdf")
 
     # Build email from template or custom content
-    tenant = await _load_tenant(db, user.tenant_id)
+    tenant = await load_tenant(db, user.tenant_id)
     kantoor = _tenant_ctx(tenant)
 
     if data.custom_subject or data.custom_body:

@@ -33,7 +33,7 @@ async def _auto_execute_send_email(
         template_type: str  — which DOCX template to render
         recipient_field: str — "wederpartij" or "client" (default: "wederpartij")
     """
-    from app.documents.docx_service import _load_tenant, _tenant_ctx, render_docx
+    from app.documents.docx_service import _tenant_ctx, load_tenant, render_docx
     from app.documents.models import GeneratedDocument
     from app.documents.pdf_service import docx_to_pdf
     from app.email.models import EmailLog
@@ -81,7 +81,7 @@ async def _auto_execute_send_email(
     pdf_filename = filename.replace(".docx", ".pdf")
 
     # Build email
-    tenant = await _load_tenant(db, tenant_id)
+    tenant = await load_tenant(db, tenant_id)
     kantoor = _tenant_ctx(tenant)
     subject, html_body = document_sent(
         kantoor=kantoor,

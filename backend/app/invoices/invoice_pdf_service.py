@@ -18,8 +18,8 @@ from app.documents.docx_service import (
     _contact_ctx,
     _fmt_currency,
     _fmt_date,
-    _load_tenant,
     _tenant_ctx,
+    load_tenant,
 )
 from app.invoices.models import Invoice
 
@@ -60,7 +60,7 @@ async def render_invoice_pdf(
     Returns:
         Tuple of (pdf_bytes, filename).
     """
-    tenant = await _load_tenant(db, tenant_id)
+    tenant = await load_tenant(db, tenant_id)
 
     # Build line items context (DF2-03: include per-line BTW)
     regels = [

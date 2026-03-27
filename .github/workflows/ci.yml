@@ -17,18 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Install dependencies
-        run: uv pip install --system ".[dev]"
-
       - name: Ruff check
-        run: ruff check app/
+        run: uvx ruff check app/
 
   # ── Backend Tests ────────────────────────────────────────────────────────────
   backend-test:
@@ -49,16 +42,14 @@ jobs:
             redis:7-alpine
           sleep 5
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Install dependencies
+      - name: Create venv and install dependencies
         working-directory: backend
-        run: uv pip install --system ".[dev]"
+        run: |
+          uv venv .venv
+          uv pip install -p .venv/bin/python ".[dev]"
 
       - name: Run migrations
         working-directory: backend
@@ -67,7 +58,7 @@ jobs:
           REDIS_URL: redis://localhost:6380/0
           SECRET_KEY: ci-test-secret-key-not-for-production
           APP_ENV: test
-        run: python -m alembic upgrade head
+        run: .venv/bin/python -m alembic upgrade head
 
       - name: Run tests
         working-directory: backend
@@ -76,7 +67,7 @@ jobs:
           REDIS_URL: redis://localhost:6380/0
           SECRET_KEY: ci-test-secret-key-not-for-production
           APP_ENV: test
-        run: pytest tests/ -v --tb=short
+        run: .venv/bin/pytest tests/ -v --tb=short
 
       - name: Cleanup test services
         if: always()

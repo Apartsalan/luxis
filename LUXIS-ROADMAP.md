@@ -26,7 +26,7 @@
 |------|--------------|-------------|
 | Backend (FastAPI) | ~92% | 231 endpoints, 25 routers, 34 models, ~430 tests. Financial calcs uitstekend getest. Alle 7 eerder ongeteste routers nu gedekt (calendar, settings, search, notifications, collections, email, incasso). GAT: ruff format 97 files. |
 | Frontend (Next.js) | ~82% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. GAT: E2E mist settings/OAuth/docs. Stitch redesign gepland. |
-| Infra/DevOps | ~90% | Docker Compose op Hetzner VPS. Caddy reverse proxy (in repo ✅). SSH deploy key. 43 migraties, RLS, token rotation. CI/CD pipeline ✅ (GitHub Actions: lint, tests, typecheck, build, security + auto-deploy). docker-compose.prod.yml ✅. DEPLOY_SSH_KEY secret ✅. Auto-deploy na groene CI ✅. Backup actief ✅ (DB + uploads, 7-dag rotatie, dagelijks 03:00). fail2ban ✅. unattended-upgrades ✅. GAT: backend tests falen in bare-metal CI (pytest-asyncio). |
+| Infra/DevOps | ~93% | Docker Compose op Hetzner VPS. Caddy reverse proxy (in repo ✅). SSH deploy key. 43 migraties, RLS, token rotation. CI/CD pipeline ✅ (self-hosted runner op VPS — onbeperkte minuten). docker-compose.prod.yml ✅. Auto-deploy na groene CI ✅. Backup actief ✅ (DB + uploads, 7-dag rotatie, dagelijks 03:00). fail2ban ✅. unattended-upgrades ✅. Kernel 6.8.0-106 ✅. GAT: off-site backup (B2), backend tests falen in CI (pytest-asyncio, continue-on-error). |
 
 **Rode draad:** Backend is functioneel compleet maar mist router-level tests. Frontend is feature-compleet maar mist TypeScript strictness + redesign. Infra Fase 1 compleet ✅ (CI/CD + backup + security).
 

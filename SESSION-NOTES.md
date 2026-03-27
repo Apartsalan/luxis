@@ -45,9 +45,15 @@
 - Bugfix: `email/router.py` importeerde niet-bestaande `_load_tenant` → `load_tenant`
 - Totaal tests: ~430
 
-**Resterend GAT:** backend tests falen in bare-metal CI (pytest-asyncio), ruff format 97 files
+**Self-hosted runner:**
+- GitHub Actions free minutes op → self-hosted runner op VPS opgezet
+- Runner: `luxis-vps`, draait als systemd service onder `github-runner` user
+- Node 22, Python 3.12, uv/uvx geïnstalleerd
+- CI jobs: ruff via `uvx`, backend tests via venv, frontend via system node
+- Deploy job draait direct op VPS (geen SSH meer nodig)
+- Backend Tests: ~19 min (continue-on-error vanwege pytest-asyncio issue)
 
-**Opmerking:** VPS heeft een pending kernel upgrade (6.8.0-90 → 6.8.0-106). Reboot nodig maar niet urgent.
+**Resterend GAT:** off-site backup (B2), backend tests falen in CI (pytest-asyncio), ruff format 97 files
 
 ---
 

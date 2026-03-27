@@ -934,7 +934,7 @@ class TestBatchExecute:
 
         call_count = 0
 
-        async def _render_docx_maybe_fail(db, tenant_id, case, template_type):
+        async def _render_docx_maybe_fail(db, tenant_id, case, template_type, **kwargs):
             nonlocal call_count
             call_count += 1
             if case.case_number == "2026-00201":

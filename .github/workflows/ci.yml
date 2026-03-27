@@ -51,9 +51,10 @@ jobs:
             sleep 2
           done
 
-      - name: Create venv and install dependencies
+      - name: Create fresh venv and install dependencies
         working-directory: backend
         run: |
+          rm -rf .venv
           /usr/local/bin/uv venv .venv
           /usr/local/bin/uv pip install -p .venv/bin/python ".[dev]"
 

@@ -8,11 +8,14 @@ Total: 36 test cases.
 """
 
 import uuid
+from datetime import date
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 from sqlalchemy import select
 
 from app.cases.models import CaseActivity
+from app.collections.models import InterestRate
 from app.documents.models import GeneratedDocument
 from app.email.models import EmailLog
 from app.incasso.models import IncassoPipelineStep
@@ -652,6 +655,20 @@ _MOCK_PDF = b"%PDF-1.4-fake"
 class TestBatchExecute:
     """Tests for POST /api/incasso/batch — 8 tests."""
 
+    @staticmethod
+    async def _seed_rates(db):
+        """Seed interest rates needed for financial summary in document generation."""
+        for rate_type in ("statutory", "commercial"):
+            db.add(
+                InterestRate(
+                    id=uuid.uuid4(),
+                    rate_type=rate_type,
+                    rate=Decimal("7.00"),
+                    effective_from=date(2024, 1, 1),
+                )
+            )
+        await db.flush()
+
     async def test_generate_document_without_email(
         self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
@@ -659,6 +676,7 @@ class TestBatchExecute:
 
         Document created, tasks completed, case advanced.
         """
+        await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
             db,
@@ -711,6 +729,7 @@ class TestBatchExecute:
         self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Generate doc + send email. EmailLog created, emails_sent=1."""
+        await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
             db,
@@ -839,6 +858,7 @@ class TestBatchExecute:
         self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Batch of 3 cases — all processed and auto-advanced."""
+        await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
         cases = []
         for i in range(3):
@@ -888,6 +908,7 @@ class TestBatchExecute:
         self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """When render_docx raises for one case, others still process."""
+        await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
         case_ok = await create_incasso_case(
             db,
@@ -948,6 +969,7 @@ class TestBatchExecute:
         self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
         """Email failure doesn't prevent document generation. emails_failed=1."""
+        await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
             db,

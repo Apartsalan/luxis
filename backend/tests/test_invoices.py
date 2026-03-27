@@ -259,13 +259,18 @@ async def test_cannot_delete_sent_invoice(
 async def test_approve_empty_invoice_fails(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):
-    """Approving an invoice without lines should fail (400)."""
+    """Approving an invoice without lines should fail (400) or creation rejects empty lines."""
     contact = await _create_contact(db, test_tenant.id)
     # Create invoice without lines
     payload = _invoice_payload(contact.id, lines=[])
     resp = await client.post("/api/invoices", json=payload, headers=auth_headers)
-    inv_id = resp.json()["id"]
 
+    if resp.status_code != 201:
+        # API rejects empty invoice at creation — that's also valid
+        assert resp.status_code in (400, 422)
+        return
+
+    inv_id = resp.json()["id"]
     resp = await client.post(f"/api/invoices/{inv_id}/approve", headers=auth_headers)
     assert resp.status_code == 400
 

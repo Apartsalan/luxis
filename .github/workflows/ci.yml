@@ -28,9 +28,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cleanup old test containers
+        run: |
+          docker ps -a --filter "name=ci-postgres" --filter "name=ci-redis" -q | xargs -r docker rm -f 2>/dev/null || true
+
       - name: Start test services
         run: |
-          docker rm -f ci-postgres-${{ github.run_id }} ci-redis-${{ github.run_id }} 2>/dev/null || true
           docker run -d --name ci-postgres-${{ github.run_id }} \
             -e POSTGRES_USER=luxis -e POSTGRES_PASSWORD=luxis_test_password -e POSTGRES_DB=luxis_test \
             -p 5433:5432 postgres:16-alpine

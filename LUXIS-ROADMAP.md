@@ -24,11 +24,11 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~95% | 231 endpoints, 25 routers, 34 models, ~430 tests. Financial calcs uitstekend getest. Alle routers getest. Ruff lint + format clean ✅. GAT: pytest-asyncio CI fix. |
+| Backend (FastAPI) | ~97% | 231 endpoints, 25 routers, 34 models, 684 tests (4 skipped, 1 xfail). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. GAT: zero-BTW bug (xfail). |
 | Frontend (Next.js) | ~85% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). GAT: redesign (backlog). |
-| Infra/DevOps | ~97% | Docker Compose op Hetzner VPS. Caddy ✅. Self-hosted CI runner ✅. Auto-deploy ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. GAT: CI backend tests port-collision fix (gecommit, wacht op verificatie). |
+| Infra/DevOps | ~98% | Docker Compose op Hetzner VPS. Caddy ✅. Self-hosted CI runner ✅. Auto-deploy ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. CI 6/6 groen ✅. |
 
-**Rode draad:** Backend ~95%, Frontend ~85%, Infra ~97%. Fasen 1-3 + 6 compleet, fase 5 deels. Volgende: redesign (backlog) of nieuwe features.
+**Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs). Volgende: redesign (backlog), zero-BTW bugfix, of nieuwe features.
 
 **TODO (klein):**
 - ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109, terminal 3)

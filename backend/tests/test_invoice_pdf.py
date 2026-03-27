@@ -1,6 +1,7 @@
 """Tests for invoice PDF generation endpoint."""
 
 import uuid
+from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
@@ -8,6 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant
 from app.relations.models import Contact
+
+# Skip entire module when factuur.html template is not available (CI without Docker)
+_template_available = (
+    Path("templates/factuur.html").exists()
+    or Path("/opt/luxis/backend/templates/factuur.html").exists()
+)
+pytestmark = pytest.mark.skipif(
+    not _template_available, reason="factuur.html template not available in CI"
+)
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -65,11 +75,6 @@ async def _create_concept_invoice(
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(
-    not __import__("pathlib").Path("/opt/luxis/backend/templates/factuur.html").exists()
-    and not __import__("pathlib").Path("templates/factuur.html").exists(),
-    reason="factuur.html template not available in CI",
-)
 async def test_download_invoice_pdf(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):

@@ -32,7 +32,7 @@
 
 **TODO (klein):**
 - ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109, terminal 3)
-- ⏳ Off-site backup via rclone → Backblaze B2 (~€1/mnd). Backups staan nu alleen op de VPS zelf — bij serververlies ben je alles kwijt. Script is al voorbereid, alleen rclone config + B2 bucket nodig.
+- ✅ Off-site backup via rclone → Backblaze B2 (sessie 109). Bucket: `Luxis-backup`, remote: `luxis-backup`. 90 dagen retentie off-site.
 
 **Roadmap naar ~98% (13-15 sessies):**
 1. Infra hardening (CI/CD ✅, Caddy in repo ✅, backup ✅, security ✅) — 3 sessies — COMPLEET ✅

@@ -10,6 +10,7 @@ set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups/luxis}"
 RCLONE_REMOTE="${RCLONE_REMOTE:-luxis-backup}"
+RCLONE_BUCKET="${RCLONE_BUCKET:-Luxis-backup}"
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 DATE=$(date +%Y-%m-%d_%H%M)
 CONTAINER_DB="luxis-db"
@@ -37,10 +38,10 @@ echo "[$(date)] Uploads backup: $UPLOADS_FILENAME ($UPLOADS_SIZE)"
 
 # 3. Upload to off-site storage (if rclone is configured)
 if command -v rclone &> /dev/null && rclone listremotes 2>/dev/null | grep -q "^${RCLONE_REMOTE}:"; then
-    rclone copy "$BACKUP_DIR/$DB_FILENAME" "${RCLONE_REMOTE}:luxis-backups/" --log-level INFO
-    rclone copy "$BACKUP_DIR/$UPLOADS_FILENAME" "${RCLONE_REMOTE}:luxis-backups/" --log-level INFO
+    rclone copy "$BACKUP_DIR/$DB_FILENAME" "${RCLONE_REMOTE}:${RCLONE_BUCKET}/" --log-level INFO
+    rclone copy "$BACKUP_DIR/$UPLOADS_FILENAME" "${RCLONE_REMOTE}:${RCLONE_BUCKET}/" --log-level INFO
     echo "[$(date)] Off-site upload complete"
-    rclone delete "${RCLONE_REMOTE}:luxis-backups/" --min-age 90d --log-level INFO 2>/dev/null || true
+    rclone delete "${RCLONE_REMOTE}:${RCLONE_BUCKET}/" --min-age 90d --log-level INFO 2>/dev/null || true
 else
     echo "[$(date)] WARNING: rclone not configured — local-only backup"
 fi

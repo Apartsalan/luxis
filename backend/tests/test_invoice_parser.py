@@ -147,7 +147,7 @@ async def test_parse_invoice_pdf_success():
 @pytest.mark.asyncio
 async def test_parse_invoice_pdf_empty_text_falls_back_to_claude():
     """When PDF text is empty, falls back to Claude native PDF parsing."""
-    mock_result = '{"invoice_number": "TEST-001", "confidence": 0.8}'
+    mock_result = {"invoice_number": "TEST-001", "confidence": 0.8}
     with (
         patch(
             "app.ai_agent.invoice_parser.extract_text_from_pdf",

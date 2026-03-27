@@ -64,6 +64,7 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5433/luxis_test
           REDIS_URL: redis://localhost:6380/0
           SECRET_KEY: ci-test-secret-key-not-for-production-32chars!!
+          ANTHROPIC_API_KEY: sk-ant-ci-test-fake-key-not-real
           APP_ENV: test
         run: .venv/bin/pytest tests/ -v --tb=long -x 2>&1 | tee /tmp/pytest-output.txt; exit ${PIPESTATUS[0]}
 

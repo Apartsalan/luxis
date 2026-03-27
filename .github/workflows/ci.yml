@@ -17,11 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
       - name: Ruff check
-        run: uvx ruff check app/
+        run: /usr/local/bin/uvx ruff check app/
 
   # ── Backend Tests ────────────────────────────────────────────────────────────
   backend-test:
@@ -42,14 +39,11 @@ jobs:
             redis:7-alpine
           sleep 5
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
       - name: Create venv and install dependencies
         working-directory: backend
         run: |
-          uv venv .venv
-          uv pip install -p .venv/bin/python ".[dev]"
+          /usr/local/bin/uv venv .venv
+          /usr/local/bin/uv pip install -p .venv/bin/python ".[dev]"
 
       - name: Run migrations
         working-directory: backend

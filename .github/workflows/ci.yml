@@ -24,20 +24,29 @@ jobs:
   backend-test:
     name: Backend Tests
     runs-on: self-hosted
-    continue-on-error: true
+    continue-on-error: false
     steps:
       - uses: actions/checkout@v4
 
       - name: Start test services
         run: |
+          docker rm -f ci-postgres-${{ github.run_id }} ci-redis-${{ github.run_id }} 2>/dev/null || true
           docker run -d --name ci-postgres-${{ github.run_id }} \
             -e POSTGRES_USER=luxis -e POSTGRES_PASSWORD=luxis_test_password -e POSTGRES_DB=luxis_test \
-            -p 5433:5432 --health-cmd "pg_isready -U luxis" --health-interval 5s --health-timeout 3s --health-retries 10 \
-            postgres:16-alpine
+            -p 5433:5432 postgres:16-alpine
           docker run -d --name ci-redis-${{ github.run_id }} \
-            -p 6380:6379 --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10 \
-            redis:7-alpine
-          sleep 5
+            -p 6380:6379 redis:7-alpine
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            if docker exec ci-postgres-${{ github.run_id }} pg_isready -U luxis 2>/dev/null; then
+              echo "Postgres ready"
+              break
+            fi
+            echo "Waiting for Postgres ($i/30)..."
+            sleep 2
+          done
 
       - name: Create venv and install dependencies
         working-directory: backend
@@ -45,23 +54,14 @@ jobs:
           /usr/local/bin/uv venv .venv
           /usr/local/bin/uv pip install -p .venv/bin/python ".[dev]"
 
-      - name: Run migrations
+      - name: Run tests (conftest handles schema)
         working-directory: backend
         env:
           DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5433/luxis_test
           REDIS_URL: redis://localhost:6380/0
           SECRET_KEY: ci-test-secret-key-not-for-production
           APP_ENV: test
-        run: .venv/bin/python -m alembic upgrade head
-
-      - name: Run tests
-        working-directory: backend
-        env:
-          DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5433/luxis_test
-          REDIS_URL: redis://localhost:6380/0
-          SECRET_KEY: ci-test-secret-key-not-for-production
-          APP_ENV: test
-        run: .venv/bin/pytest tests/ -v --tb=short
+        run: .venv/bin/pytest tests/ -v --tb=short -x
 
       - name: Cleanup test services
         if: always()

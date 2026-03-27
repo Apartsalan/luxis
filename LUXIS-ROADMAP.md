@@ -25,10 +25,10 @@
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
 | Backend (FastAPI) | ~95% | 231 endpoints, 25 routers, 34 models, ~430 tests. Financial calcs uitstekend getest. Alle routers getest. Ruff lint + format clean ✅. GAT: pytest-asyncio CI fix. |
-| Frontend (Next.js) | ~82% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. GAT: E2E mist settings/OAuth/docs. Stitch redesign gepland. |
-| Infra/DevOps | ~95% | Docker Compose op Hetzner VPS. Caddy reverse proxy (in repo ✅). Self-hosted CI runner ✅. Auto-deploy ✅. Backup: lokaal + off-site B2 ✅. fail2ban ✅. unattended-upgrades ✅. Kernel 6.8.0-106 ✅. GAT: backend tests falen in CI (pytest-asyncio, continue-on-error). |
+| Frontend (Next.js) | ~85% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). GAT: redesign (backlog). |
+| Infra/DevOps | ~97% | Docker Compose op Hetzner VPS. Caddy ✅. Self-hosted CI runner ✅. Auto-deploy ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. GAT: CI backend tests port-collision fix (gecommit, wacht op verificatie). |
 
-**Rode draad:** Backend ~92%, Frontend ~82%, Infra ~95%. Fasen 1-3 compleet. Volgende: Stitch redesign (fase 4).
+**Rode draad:** Backend ~95%, Frontend ~85%, Infra ~97%. Fasen 1-3 + 6 compleet, fase 5 deels. Volgende: redesign (backlog) of nieuwe features.
 
 **TODO (klein):**
 - ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109, terminal 3)
@@ -39,8 +39,8 @@
 2. Backend test coverage (7/7 routers getest ✅, 61 nieuwe tests, email import bug gefixt) — COMPLEET ✅
 3. Frontend structureel (65x `any` gekilld ✅, hooks cleanup ✅) — COMPLEET ✅
 4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies
-5. Frontend E2E + polish (tests na redesign, a11y, performance) — 2 sessies
-6. Final hardening (API docs, disaster recovery, runbook) — 1 sessie
+5. Frontend E2E + polish (settings + docs E2E ✅, a11y + performance TODO) — deels compleet
+6. Final hardening (API docs ✅, runbook ✅, disaster recovery ✅) — COMPLEET ✅
 
 ---
 

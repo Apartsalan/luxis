@@ -143,48 +143,42 @@ async def get_monthly_stats(
     start_date = start_date.replace(day=1)
 
     # New cases per month
+    opened_month = func.to_char(Case.date_opened, "YYYY-MM").label("month")
     result = await db.execute(
-        select(
-            func.to_char(Case.date_opened, "YYYY-MM"),
-            func.count(Case.id),
-        )
+        select(opened_month, func.count(Case.id))
         .where(
             Case.tenant_id == tenant_id,
             Case.date_opened >= start_date,
         )
-        .group_by(func.to_char(Case.date_opened, "YYYY-MM"))
-        .order_by(func.to_char(Case.date_opened, "YYYY-MM"))
+        .group_by(opened_month)
+        .order_by(opened_month)
     )
     new_cases_by_month = dict(result.all())
 
     # Closed cases per month
+    closed_month = func.to_char(Case.date_closed, "YYYY-MM").label("month")
     result = await db.execute(
-        select(
-            func.to_char(Case.date_closed, "YYYY-MM"),
-            func.count(Case.id),
-        )
+        select(closed_month, func.count(Case.id))
         .where(
             Case.tenant_id == tenant_id,
             Case.date_closed >= start_date,
             Case.date_closed.isnot(None),
         )
-        .group_by(func.to_char(Case.date_closed, "YYYY-MM"))
-        .order_by(func.to_char(Case.date_closed, "YYYY-MM"))
+        .group_by(closed_month)
+        .order_by(closed_month)
     )
     closed_cases_by_month = dict(result.all())
 
     # Payments per month
+    pay_month = func.to_char(Payment.payment_date, "YYYY-MM").label("month")
     result = await db.execute(
-        select(
-            func.to_char(Payment.payment_date, "YYYY-MM"),
-            func.coalesce(func.sum(Payment.amount), 0),
-        )
+        select(pay_month, func.coalesce(func.sum(Payment.amount), 0))
         .where(
             Payment.tenant_id == tenant_id,
             Payment.payment_date >= start_date,
         )
-        .group_by(func.to_char(Payment.payment_date, "YYYY-MM"))
-        .order_by(func.to_char(Payment.payment_date, "YYYY-MM"))
+        .group_by(pay_month)
+        .order_by(pay_month)
     )
     collected_by_month = {row[0]: str(row[1]) for row in result.all()}
 

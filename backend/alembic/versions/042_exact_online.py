@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "042_exact_online"
-down_revision = "041_df12_expense_tax_type_file_id"
+down_revision = "a183ac898ad4"
 branch_labels = None
 depends_on = None
 

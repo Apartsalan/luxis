@@ -466,6 +466,27 @@ async def update_case(
         update_data["contractual_rate"] = None
         update_data["contractual_compound"] = False
 
+    # AUDIT-23: BIK override mag niet hoger dan WIK-staffel bij B2C
+    if "bik_override" in update_data and update_data["bik_override"] is not None:
+        debtor_type = update_data.get("debtor_type", case.debtor_type)
+        if debtor_type == "b2c":
+            from app.collections.wik import calculate_bik
+
+            # Calculate max BIK from claims principal
+            from app.collections.models import Claim
+
+            claims_result = await db.execute(
+                select(func.coalesce(func.sum(Claim.principal_amount), Decimal("0")))
+                .where(Claim.case_id == case_id, Claim.tenant_id == tenant_id)
+            )
+            total_principal = claims_result.scalar() or Decimal("0")
+            max_bik = calculate_bik(total_principal)["bik_inclusive"]
+            if update_data["bik_override"] > max_bik:
+                raise BadRequestError(
+                    f"BIK override (€{update_data['bik_override']}) mag bij B2C niet hoger zijn "
+                    f"dan de WIK-staffel (€{max_bik})"
+                )
+
     for field, value in update_data.items():
         setattr(case, field, value)
 

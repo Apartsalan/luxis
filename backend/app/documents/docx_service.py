@@ -353,7 +353,8 @@ async def build_base_context(
         "wederpartij": _contact_ctx(case.opposing_party),
         # Dates
         "vandaag": _fmt_date(today),
-        "termijn_14_dagen": _fmt_date(today + timedelta(days=14)),
+        # Art. 6:96 lid 6 BW: 14 dagen na ontvangst (dag NA ontvangst, +1 voor postbezorging)
+        "termijn_14_dagen": _fmt_date(today + timedelta(days=15)),
         "termijn_30_dagen": _fmt_date(today + timedelta(days=30)),
         # Financial — interest type label now in base context
         "rente_type_label": rente_type_label,

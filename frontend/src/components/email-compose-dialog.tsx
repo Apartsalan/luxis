@@ -99,6 +99,7 @@ export interface EmailComposeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSend: (data: EmailComposeData) => void;
+  onSendDirect?: (data: EmailComposeData) => void;
   isSending?: boolean;
   defaultTo?: string;
   defaultToName?: string;
@@ -116,6 +117,7 @@ export function EmailComposeDialog({
   open,
   onOpenChange,
   onSend,
+  onSendDirect,
   isSending = false,
   defaultTo = "",
   defaultToName = "",
@@ -354,15 +356,14 @@ export function EmailComposeDialog({
 
   // ── Submit ────────────────────────────────────────────────────────────
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const buildEmailData = (): EmailComposeData | null => {
     const errs: Record<string, string> = {};
     if (!to.trim()) errs.to = "Vul een e-mailadres in";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to.trim())) errs.to = "Ongeldig e-mailadres";
     if (!subject.trim()) errs.subject = "Vul een onderwerp in";
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return null; }
 
-    onSend({
+    return {
       recipient_email: to.trim(),
       recipient_name: toName.trim() || null,
       cc: ccList.length > 0 ? ccList : null,
@@ -371,7 +372,25 @@ export function EmailComposeDialog({
       body_html: templateHtml || null,
       case_file_ids: Array.from(caseFileIds).length > 0 ? Array.from(caseFileIds) : undefined,
       inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
-    });
+    };
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = buildEmailData();
+    if (!data) return;
+    // Primary action: direct send via Graph API if available, otherwise fallback
+    if (onSendDirect) {
+      onSendDirect(data);
+    } else {
+      onSend(data);
+    }
+  };
+
+  const handleOpenInOutlook = () => {
+    const data = buildEmailData();
+    if (!data) return;
+    onSend(data);
   };
 
   const validRecipients = recipients?.filter((r) => r.email) ?? [];
@@ -693,16 +712,19 @@ export function EmailComposeDialog({
               </div>
             )}
 
-            {/* Right: cancel + send */}
+            {/* Right: cancel + outlook + send */}
             <div className="flex items-center gap-2 ml-auto">
               <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenChange(false)} disabled={isSending}>
                 Annuleren
               </Button>
+              {caseId && (
+                <Button type="button" variant="outline" size="sm" disabled={isSending || !to.trim()} className="gap-1.5" onClick={handleOpenInOutlook}>
+                  <ExternalLink className="h-3.5 w-3.5" /> Open in Outlook
+                </Button>
+              )}
               <Button type="submit" size="sm" disabled={isSending || !to.trim()} className="gap-1.5">
                 {isSending ? (
                   <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Bezig...</>
-                ) : caseId ? (
-                  <><ExternalLink className="h-3.5 w-3.5" /> Open in Outlook</>
                 ) : (
                   <><Mail className="h-3.5 w-3.5" /> Versturen</>
                 )}

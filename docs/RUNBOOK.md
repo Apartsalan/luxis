@@ -27,7 +27,7 @@ fail2ban-client status sshd
 
 ## Deploy
 
-Automatisch via GitHub Actions (self-hosted runner op VPS). Na push naar main:
+Automatisch via GitHub Actions (GitHub-hosted runners). Na push naar main:
 1. CI draait (lint, tests, typecheck, build)
 2. Bij succes: auto-deploy
 
@@ -117,6 +117,70 @@ docker exec luxis-backend bash -c "cd /app && tar xzf /tmp/uploads.tar.gz"
 
 ---
 
+## Rollback (slechte deploy terugdraaien)
+
+### Code rollback (geen database wijziging)
+
+```bash
+cd /opt/luxis
+
+# Bekijk recente commits
+git log --oneline -10
+
+# Rollback naar vorige commit
+git checkout HEAD~1
+
+# Rebuild en herstart
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache backend frontend
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Verifieer
+curl -sf https://luxis.kestinglegal.nl/health
+```
+
+### Code + database rollback (migratie terugdraaien)
+
+```bash
+cd /opt/luxis
+
+# 1. Bekijk huidige migratie
+docker compose exec backend python -m alembic current
+
+# 2. Rollback 1 migratie
+docker compose exec backend python -m alembic downgrade -1
+
+# 3. Code terugdraaien
+git checkout HEAD~1
+
+# 4. Rebuild
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache backend
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+### Volledige rollback (database restore van backup)
+
+```bash
+# 1. Stop alles behalve db
+docker compose stop backend frontend celery-worker celery-beat
+
+# 2. Restore database
+LATEST=$(ls -t /backups/luxis/luxis_db_*.sql.gz | head -1)
+docker compose exec db psql -U luxis -c "DROP DATABASE luxis; CREATE DATABASE luxis;"
+gunzip -c "$LATEST" | docker exec -i luxis-db psql -U luxis luxis
+
+# 3. Code terugdraaien naar moment van backup
+git log --oneline --before="<backup datum>"
+git checkout <commit-hash>
+
+# 4. Rebuild en start
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+**Na elke rollback:** verifieer met `curl -sf https://luxis.kestinglegal.nl/health` en log in via de browser.
+
+---
+
 ## Database
 
 ### Migraties draaien
@@ -164,8 +228,7 @@ tail -50 /var/log/luxis-backup.log
 # fail2ban
 journalctl -u fail2ban --since "1 hour ago"
 
-# GitHub Actions runner
-journalctl -u actions.runner.Apartsalan-luxis.luxis-vps.service --since "1 hour ago"
+# GitHub Actions: check via https://github.com/Apartsalan/luxis/actions
 ```
 
 ---
@@ -216,4 +279,4 @@ docker compose logs caddy --tail 30
 - **Domain:** TransIP (transip.nl) — luxis.kestinglegal.nl
 - **Off-site Backup:** Backblaze B2 (backblaze.com) — bucket `Luxis-backup`
 - **CI/CD:** GitHub Actions — github.com/Apartsalan/luxis
-- **Monitoring:** geen (TODO)
+- **Monitoring:** UptimeRobot (https://luxis.kestinglegal.nl/health)

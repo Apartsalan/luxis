@@ -218,12 +218,11 @@ export default function ZaakDetailPage() {
     return recipients;
   }
 
-  const handleSendCaseEmail = async (data: EmailComposeData) => {
+  const handleOpenInOutlook = async (data: EmailComposeData) => {
     const subject = data.custom_subject || `${zaak?.case_number || ""}`;
     const body = data.custom_body || "";
 
     try {
-      // Generate .eml file and open in Outlook desktop
       const res = await api(`/api/email/compose/cases/${id}`, {
         method: "POST",
         body: JSON.stringify({
@@ -243,7 +242,6 @@ export default function ZaakDetailPage() {
         throw new Error(err?.detail ?? "E-mail opstellen mislukt");
       }
 
-      // Download and open the .eml file → Outlook desktop opens it as new email
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -258,6 +256,33 @@ export default function ZaakDetailPage() {
       setCaseEmailOpen(false);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "E-mail opstellen mislukt");
+    }
+  };
+
+  const handleDirectSend = async (data: EmailComposeData) => {
+    const subject = data.custom_subject || `${zaak?.case_number || ""}`;
+    const body = data.custom_body || "";
+
+    try {
+      const res = await api("/api/email/compose/send", {
+        method: "POST",
+        body: JSON.stringify({
+          to: data.recipient_email,
+          subject,
+          body_html: data.body_html || `<p>${body.replace(/\n/g, "<br>")}</p>`,
+          cc: data.cc,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "E-mail verzenden mislukt");
+      }
+
+      toast.success("E-mail verzonden via Outlook");
+      setCaseEmailOpen(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "E-mail verzenden mislukt");
     }
   };
 
@@ -629,7 +654,8 @@ export default function ZaakDetailPage() {
       <EmailComposeDialog
         open={caseEmailOpen}
         onOpenChange={setCaseEmailOpen}
-        onSend={handleSendCaseEmail}
+        onSend={handleOpenInOutlook}
+        onSendDirect={handleDirectSend}
         isSending={sendCaseEmail.isPending}
         title="E-mail opstellen"
         defaultSubject={zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""}

@@ -19,6 +19,11 @@ export interface Classification {
   category_label: string;
   confidence: number;
   reasoning: string;
+  sentiment: string | null;
+
+  // Payment promise (AUDIT-18)
+  promise_date: string | null;
+  promise_amount: string | null;
 
   // Suggested action
   suggested_action: string;
@@ -198,6 +203,31 @@ export function useApproveAndExecuteClassification() {
       queryClient.invalidateQueries({ queryKey: ["ai-pending-count"] });
       queryClient.invalidateQueries({ queryKey: ["workflow-tasks"] });
     },
+  });
+}
+
+// ── Smart Replies (AUDIT-25) ────────────────────────────────────────────────
+
+export interface SmartReply {
+  tone: "mild" | "zakelijk" | "streng";
+  subject: string;
+  body: string;
+}
+
+/**
+ * Generate smart reply suggestions for a classification.
+ */
+export function useSmartReplies(classificationId: string | undefined) {
+  return useQuery<SmartReply[]>({
+    queryKey: ["smart-replies", classificationId],
+    queryFn: async () => {
+      const res = await api(
+        `/api/ai-agent/classifications/${classificationId}/smart-replies`
+      );
+      if (!res.ok) throw new Error("Kon suggesties niet ophalen");
+      return res.json();
+    },
+    enabled: false, // Only fetch when explicitly triggered
   });
 }
 

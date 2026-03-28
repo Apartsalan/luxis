@@ -147,11 +147,13 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            title="Meldingen"
+            aria-label={`Meldingen${unreadCount > 0 ? ` (${unreadCount} ongelezen)` : ""}`}
+            aria-expanded={showNotifications}
+            aria-haspopup="true"
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-4 w-4" aria-hidden="true" />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white" aria-hidden="true">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -249,9 +251,9 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
             <button
               onClick={logout}
               className="ml-1 rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-              title="Uitloggen"
+              aria-label="Uitloggen"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         )}

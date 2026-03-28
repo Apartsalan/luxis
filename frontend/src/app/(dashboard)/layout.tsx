@@ -41,9 +41,9 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background" role="status" aria-label="Laden">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary mx-auto" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary mx-auto" aria-hidden="true" />
           <p className="mt-4 text-sm text-muted-foreground">Laden...</p>
         </div>
       </div>
@@ -56,6 +56,9 @@ export default function DashboardLayout({
   return (
     <BreadcrumbProvider>
       <div className="min-h-screen bg-background">
+        <a href="#main-content" className="skip-to-content">
+          Naar hoofdinhoud
+        </a>
         <AppSidebar
           collapsed={sidebarCollapsed}
           onToggle={toggleSidebar}
@@ -71,7 +74,7 @@ export default function DashboardLayout({
           )}
         >
           <AppHeader onMobileMenuToggle={() => setMobileMenuOpen(true)} />
-          <main className="p-4 sm:p-6">
+          <main id="main-content" className="p-4 sm:p-6">
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>

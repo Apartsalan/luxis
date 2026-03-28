@@ -104,6 +104,8 @@ def _classification_to_response(c) -> ClassificationResponse:
         confidence=c.confidence,
         reasoning=c.reasoning,
         sentiment=getattr(c, "sentiment", None),
+        promise_date=c.promise_date,
+        promise_amount=c.promise_amount,
         suggested_action=c.suggested_action,
         suggested_action_label=ACTION_LABELS.get(c.suggested_action, c.suggested_action),
         suggested_template_key=c.suggested_template_key,

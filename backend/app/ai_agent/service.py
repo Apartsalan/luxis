@@ -662,14 +662,19 @@ DEFAULT_TEMPLATES = [
         "key": "bevestiging_betaalbelofte",
         "name": "Bevestiging betaalbelofte",
         "category": "belofte_tot_betaling",
-        "subject_template": ("Bevestiging betaalafspraak — {{ zaak.zaaknummer }}"),
+        "subject_template": "Bevestiging betaalafspraak — {{ zaak.zaaknummer }}",
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
-            "Wij bevestigen hierbij uw toezegging tot betaling "
+            "Hierbij bevestigen wij uw toezegging tot betaling "
             "inzake dossier {{ zaak.zaaknummer }}.\n\n"
-            "Wij verzoeken u het openstaande bedrag binnen de "
-            "afgesproken termijn te voldoen.\n\n"
-            "Met vriendelijke groet,\n"
+            "Wij vertrouwen erop dat het openstaande bedrag "
+            "binnen de afgesproken termijn op onze rekening "
+            "wordt bijgeschreven. Mocht betaling uitblijven, "
+            "dan behouden wij ons het recht voor om zonder "
+            "nadere aankondiging rechtsmaatregelen te treffen, "
+            "met alle bijkomende kosten van dien.\n\n"
+            "Met vriendelijke groet,\n\n"
+            "mr. L. Kesting\n"
             "{{ kantoor.naam }}"
         ),
     },
@@ -677,14 +682,18 @@ DEFAULT_TEMPLATES = [
         "key": "ontvangst_betwisting",
         "name": "Ontvangstbevestiging betwisting",
         "category": "betwisting",
-        "subject_template": ("Ontvangst uw reactie — {{ zaak.zaaknummer }}"),
+        "subject_template": "Ontvangst uw reactie — {{ zaak.zaaknummer }}",
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
-            "Wij hebben uw reactie inzake dossier "
-            "{{ zaak.zaaknummer }} in goede orde ontvangen.\n\n"
-            "Uw betwisting wordt door onze advocaat beoordeeld. "
+            "Uw reactie inzake dossier {{ zaak.zaaknummer }} "
+            "is in goede orde ontvangen.\n\n"
+            "De inhoud van uw betwisting wordt beoordeeld. "
+            "Wij wijzen u erop dat de vordering gehandhaafd "
+            "blijft zolang geen deugdelijke onderbouwing van "
+            "uw betwisting is ontvangen.\n\n"
             "U ontvangt hierover nader bericht.\n\n"
-            "Met vriendelijke groet,\n"
+            "Met vriendelijke groet,\n\n"
+            "mr. L. Kesting\n"
             "{{ kantoor.naam }}"
         ),
     },
@@ -692,14 +701,17 @@ DEFAULT_TEMPLATES = [
         "key": "ontvangst_regeling_verzoek",
         "name": "Ontvangstbevestiging betalingsregeling",
         "category": "betalingsregeling_verzoek",
-        "subject_template": ("Ontvangst verzoek betalingsregeling — {{ zaak.zaaknummer }}"),
+        "subject_template": "Ontvangst verzoek betalingsregeling — {{ zaak.zaaknummer }}",
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
-            "Wij hebben uw verzoek tot een betalingsregeling "
-            "inzake dossier {{ zaak.zaaknummer }} ontvangen.\n\n"
-            "Uw verzoek wordt beoordeeld. U ontvangt hierover "
-            "zo spoedig mogelijk bericht.\n\n"
-            "Met vriendelijke groet,\n"
+            "Uw verzoek tot een betalingsregeling inzake "
+            "dossier {{ zaak.zaaknummer }} is ontvangen.\n\n"
+            "Uw voorstel wordt beoordeeld. Wij verzoeken u "
+            "in de tussentijd geen verdere betalingsachterstand "
+            "te laten ontstaan. U ontvangt zo spoedig mogelijk "
+            "bericht over ons standpunt.\n\n"
+            "Met vriendelijke groet,\n\n"
+            "mr. L. Kesting\n"
             "{{ kantoor.naam }}"
         ),
     },
@@ -707,16 +719,21 @@ DEFAULT_TEMPLATES = [
         "key": "verzoek_betalingsbewijs",
         "name": "Verzoek betalingsbewijs",
         "category": "beweert_betaald",
-        "subject_template": ("Verzoek betalingsbewijs — {{ zaak.zaaknummer }}"),
+        "subject_template": "Verzoek betalingsbewijs — {{ zaak.zaaknummer }}",
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
             "U geeft aan reeds betaald te hebben inzake dossier "
-            "{{ zaak.zaaknummer }}. Wij hebben deze betaling "
+            "{{ zaak.zaaknummer }}. Deze betaling is door ons "
             "helaas nog niet ontvangen.\n\n"
-            "Wij verzoeken u vriendelijk om een betalingsbewijs "
-            "(bankafschrift of transactiebevestiging) te "
-            "overleggen zodat wij dit kunnen verifiëren.\n\n"
-            "Met vriendelijke groet,\n"
+            "Wij verzoeken u om binnen 5 werkdagen een "
+            "betalingsbewijs (bankafschrift of transactie"
+            "bevestiging) aan te leveren, zodat wij de "
+            "betaling kunnen verifi\u00ebren.\n\n"
+            "Indien wij dit bewijs niet tijdig ontvangen, "
+            "gaan wij ervan uit dat het bedrag onbetaald is "
+            "en wordt de incassoprocedure voortgezet.\n\n"
+            "Met vriendelijke groet,\n\n"
+            "mr. L. Kesting\n"
             "{{ kantoor.naam }}"
         ),
     },
@@ -724,15 +741,20 @@ DEFAULT_TEMPLATES = [
         "key": "ontvangst_onvermogen",
         "name": "Ontvangstbevestiging onvermogen",
         "category": "onvermogen",
-        "subject_template": ("Ontvangst uw bericht — {{ zaak.zaaknummer }}"),
+        "subject_template": "Ontvangst uw bericht — {{ zaak.zaaknummer }}",
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
-            "Wij hebben uw bericht inzake dossier "
-            "{{ zaak.zaaknummer }} ontvangen waarin u aangeeft "
-            "niet in staat te zijn te betalen.\n\n"
-            "Uw situatie wordt door onze advocaat beoordeeld. "
+            "Uw bericht inzake dossier {{ zaak.zaaknummer }} "
+            "is ontvangen, waarin u aangeeft niet in staat "
+            "te zijn om te betalen.\n\n"
+            "Uw financi\u00eble situatie wordt beoordeeld. "
+            "Wij wijzen u erop dat betalingsonmacht op "
+            "zichzelf geen grond is om de vordering te "
+            "be\u00ebindigen. Wij onderzoeken welke "
+            "mogelijkheden er zijn, zoals een betalingsregeling.\n\n"
             "U ontvangt hierover nader bericht.\n\n"
-            "Met vriendelijke groet,\n"
+            "Met vriendelijke groet,\n\n"
+            "mr. L. Kesting\n"
             "{{ kantoor.naam }}"
         ),
     },
@@ -740,15 +762,19 @@ DEFAULT_TEMPLATES = [
         "key": "doorverwijzing_advocaat",
         "name": "Doorverwijzing naar advocaat",
         "category": "juridisch_verweer",
-        "subject_template": ("Uw juridische reactie — {{ zaak.zaaknummer }}"),
+        "subject_template": "Uw juridische reactie — {{ zaak.zaaknummer }}",
         "body_template": (
             "Geachte {{ wederpartij.naam }},\n\n"
-            "Wij hebben uw juridische reactie inzake dossier "
-            "{{ zaak.zaaknummer }} ontvangen.\n\n"
-            "Uw bericht is doorgestuurd naar onze behandelend "
-            "advocaat. U ontvangt hierover zo spoedig mogelijk "
-            "een inhoudelijke reactie.\n\n"
-            "Met vriendelijke groet,\n"
+            "Uw juridisch inhoudelijke reactie inzake dossier "
+            "{{ zaak.zaaknummer }} is ontvangen.\n\n"
+            "Uw stellingen worden door de behandelend advocaat "
+            "beoordeeld. U ontvangt zo spoedig mogelijk een "
+            "inhoudelijke reactie.\n\n"
+            "De incassoprocedure wordt in de tussentijd niet "
+            "opgeschort, tenzij uitdrukkelijk anders wordt "
+            "medegedeeld.\n\n"
+            "Met vriendelijke groet,\n\n"
+            "mr. L. Kesting\n"
             "{{ kantoor.naam }}"
         ),
     },

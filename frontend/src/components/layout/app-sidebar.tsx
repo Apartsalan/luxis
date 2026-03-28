@@ -171,8 +171,9 @@ export function AppSidebar({
             <button
               onClick={onMobileClose}
               className="lg:hidden rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-muted hover:text-sidebar-foreground transition-colors"
+              aria-label="Menu sluiten"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -275,7 +276,7 @@ export function AppSidebar({
               "flex w-full items-center rounded-md text-sm text-sidebar-foreground/50 hover:bg-sidebar-muted hover:text-sidebar-foreground transition-colors",
               collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2"
             )}
-            title={collapsed ? "Menu uitklappen" : "Menu inklappen"}
+            aria-label={collapsed ? "Menu uitklappen" : "Menu inklappen"}
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />

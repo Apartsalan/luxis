@@ -65,7 +65,7 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | # | Item | Effort | Status |
 |---|------|--------|--------|
 | AUDIT-06 | Compose dialog: "Verstuur" als primaire knop (direct send via Graph API), "Open in Outlook" als backup | 1 sessie | ✅ Sessie 110 |
-| AUDIT-07 | Outlook agenda sync via Graph API (CalendarEvents) | 2-3 sessies | ❌ TODO |
+| AUDIT-07 | Outlook agenda sync via Graph API (CalendarEvents) | 2-3 sessies | ✅ Sessie 111 (28 mrt) |
 | AUDIT-08 | Database indices op veelgebruikte filterkolommen (synced_emails.email_date, workflow_tasks.due_date, cases.status+tenant_id) | 1 sessie | ✅ Alle indices bestaan al (sessie 110 geverifieerd) |
 | AUDIT-09 | 14-dagentermijn berekening verifieren (dag NA ontvangst, niet na verzending) | 0.5 sessie | ✅ Gefixt sessie 110 (today+15) |
 | AUDIT-10 | Verjarings-waarschuwing automatiseren (90/60/30 dagen alert) | 1 sessie | ✅ Sessie 110 — scheduler maakt taken aan |

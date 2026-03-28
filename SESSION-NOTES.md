@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 28 maart 2026 (sessie 110 — CI naar GitHub-hosted + zero-BTW bugfix)
-**Laatste feature/fix:** Sessie 110 — GitHub-hosted CI runners, zero-BTW bugfix, deploy via SSH action
-**Volgende sessie:** 111 — Outlook agenda sync via Graph API (AUDIT-07)
+**Laatst bijgewerkt:** 28 maart 2026 (sessie 111 — Outlook agenda sync via Graph API)
+**Laatste feature/fix:** Sessie 111 — Outlook calendar sync (AUDIT-07)
+**Volgende sessie:** 112 — Lisanne overzetten naar M365 (AUDIT-04/05) of volgende audit item
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,36 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 111 — 28 maart 2026) — Outlook agenda sync (AUDIT-07)
+
+**Outlook Calendar Sync gebouwd en gedeployed:**
+- `OutlookProvider` uitgebreid met 4 calendar methods (list/create/update/delete via Graph API calendarView)
+- `Calendars.ReadWrite` scope toegevoegd aan OUTLOOK_SCOPES
+- CalendarEvent model uitgebreid: `provider_event_id`, `provider`, `outlook_change_key` velden + Alembic migratie
+- Nieuwe `sync_service.py`: trekt Outlook events, dedup via changeKey, case matching op dossiernummer
+- 2-way sync: lokale create/update/delete pusht naar Outlook (fire-and-forget)
+- POST `/api/calendar/events/sync` endpoint voor handmatige trigger
+- Scheduler job elke 15 minuten (`calendar_auto_sync`)
+- Frontend: Sync knop met feedback toast, Outlook badge (Cloud icon) op gesyncte events
+- Alle 11 calendar tests groen, frontend build groen, gedeployed op VPS
+
+**Nog te doen (handmatig):**
+- Azure Portal: `Calendars.ReadWrite` als delegated permission toevoegen + admin consent geven
+- Na admin consent: opnieuw inloggen via OAuth OF bestaande tokens worden automatisch vernieuwd
+
+**Bestanden gewijzigd:**
+- `backend/app/email/providers/outlook.py` — calendar methods + scope
+- `backend/app/calendar/models.py` — provider velden
+- `backend/app/calendar/schemas.py` — response schema uitgebreid
+- `backend/app/calendar/service.py` — 2-way sync push
+- `backend/app/calendar/sync_service.py` — NIEUW: sync logica
+- `backend/app/workflow/scheduler.py` — calendar_auto_sync job
+- `backend/alembic/versions/e4186602c947_*.py` — NIEUW: migratie
+- `frontend/src/hooks/use-sync-calendar.ts` — NIEUW: sync hook
+- `frontend/src/hooks/use-calendar-events.ts` — provider types
+- `frontend/src/hooks/use-calendar.ts` — source "outlook"
+- `frontend/src/app/(dashboard)/agenda/page.tsx` — sync knop + badge
 
 ## Wat er gedaan is (sessie 110 — 28 maart 2026) — CI naar GitHub-hosted + zero-BTW bugfix
 

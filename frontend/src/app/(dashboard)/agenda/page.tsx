@@ -20,6 +20,8 @@ import {
   Bell,
   Gavel,
   MoreHorizontal,
+  RefreshCw,
+  Cloud,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCalendarEvents, type CalendarEvent } from "@/hooks/use-calendar";
@@ -32,6 +34,7 @@ import {
   type CalendarEventCreateInput,
   type CalendarEventUpdateInput,
 } from "@/hooks/use-calendar-events";
+import { useSyncCalendar } from "@/hooks/use-sync-calendar";
 import { TASK_TYPE_LABELS } from "@/hooks/use-workflow";
 import { useCases } from "@/hooks/use-cases";
 import type { CaseSummary } from "@/hooks/use-cases";
@@ -205,6 +208,25 @@ export default function AgendaPage() {
     refetch,
   } = useCalendarEvents(dateFrom, dateTo);
 
+  const syncMutation = useSyncCalendar();
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  function handleSync() {
+    setSyncMessage(null);
+    syncMutation.mutate(undefined, {
+      onSuccess: (stats) => {
+        setSyncMessage(
+          `Gesynchroniseerd: ${stats.created} nieuw, ${stats.updated} bijgewerkt, ${stats.deleted} verwijderd`
+        );
+        setTimeout(() => setSyncMessage(null), 5000);
+      },
+      onError: (err) => {
+        setSyncMessage(err instanceof Error ? err.message : "Synchronisatie mislukt");
+        setTimeout(() => setSyncMessage(null), 5000);
+      },
+    });
+  }
+
   const eventsByDate = useMemo(
     () => groupEventsByDate(events ?? []),
     [events]
@@ -328,8 +350,17 @@ export default function AgendaPage() {
             </h2>
           </div>
 
-          {/* Right: view toggle + today button */}
+          {/* Right: sync + view toggle + today button */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleSync}
+              disabled={syncMutation.isPending}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+              title="Outlook agenda synchroniseren"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", syncMutation.isPending && "animate-spin")} />
+              Sync
+            </button>
             <button
               onClick={goToToday}
               className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
@@ -362,6 +393,19 @@ export default function AgendaPage() {
             </div>
           </div>
         </div>
+
+        {/* Sync feedback */}
+        {syncMessage && (
+          <div className={cn(
+            "mx-5 mt-3 px-3 py-2 rounded-lg text-xs font-medium",
+            syncMutation.isError
+              ? "bg-destructive/10 text-destructive"
+              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+          )}>
+            <Cloud className="h-3.5 w-3.5 inline mr-1.5" />
+            {syncMessage}
+          </div>
+        )}
 
         {/* Loading state */}
         {isLoading ? (
@@ -1024,7 +1068,7 @@ function WeekView({
 
 function EventChip({ event }: { event: CalendarEvent }) {
   const timeStr =
-    event.source === "user" && event.start_time && !event.all_day
+    (event.source === "user" || event.source === "outlook") && event.start_time && !event.all_day
       ? formatTime(event.start_time)
       : null;
 
@@ -1038,6 +1082,7 @@ function EventChip({ event }: { event: CalendarEvent }) {
       title={event.title}
     >
       <span className="font-medium text-foreground truncate block">
+        {event.source === "outlook" && <Cloud className="h-3 w-3 inline mr-1 text-blue-500" />}
         {timeStr ? `${timeStr} ${event.title}` : event.title}
       </span>
       {event.case_number && (
@@ -1324,7 +1369,7 @@ function DayDetailEvent({
         : null;
 
   const timeStr =
-    event.source === "user" && event.start_time && !event.all_day
+    (event.source === "user" || event.source === "outlook") && event.start_time && !event.all_day
       ? `${formatTime(event.start_time)} - ${formatTime(event.end_time)}`
       : null;
 
@@ -1353,6 +1398,12 @@ function DayDetailEvent({
             {event.title}
           </p>
           <StatusBadge status={event.status} color={event.color} />
+          {event.source === "outlook" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-500/20 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-400/30">
+              <Cloud className="h-2.5 w-2.5" />
+              Outlook
+            </span>
+          )}
           {taskTypeLabel && (
             <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-600 ring-1 ring-inset ring-slate-500/20">
               {taskTypeLabel}

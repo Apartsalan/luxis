@@ -22,6 +22,8 @@ export interface UserCalendarEvent {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  provider_event_id: string | null;
+  provider: string | null;
   case: { id: string; case_number: string } | null;
   contact: { id: string; name: string } | null;
   creator: { id: string; full_name: string } | null;

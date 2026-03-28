@@ -267,6 +267,60 @@ async def ai_email_classification() -> None:
         logger.exception("Scheduler: AI email classification failed")
 
 
+async def calendar_auto_sync() -> None:
+    """Periodic job: sync Outlook calendars every 15 minutes.
+
+    For each connected Outlook account, syncs events from Outlook to Luxis
+    within a 90-day window (45 days back + 45 days forward).
+    """
+    from app.calendar.sync_service import sync_outlook_events
+    from app.email.oauth_models import EmailAccount
+
+    logger.info("Scheduler: starting calendar auto-sync")
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(EmailAccount).where(
+                    EmailAccount.provider == "outlook",
+                    EmailAccount.refresh_token_enc.isnot(None),
+                )
+            )
+            accounts = list(result.scalars().all())
+
+            if not accounts:
+                logger.debug("Scheduler: geen Outlook accounts voor calendar sync")
+                return
+
+            total_created = 0
+            total_updated = 0
+            for account in accounts:
+                try:
+                    stats = await sync_outlook_events(
+                        session,
+                        account,
+                        account.tenant_id,
+                        account.user_id,
+                    )
+                    total_created += stats["created"]
+                    total_updated += stats["updated"]
+                except Exception as e:
+                    logger.error(
+                        "Scheduler: calendar sync failed for %s: %s",
+                        account.email_address,
+                        e,
+                    )
+
+            await session.commit()
+            if total_created > 0 or total_updated > 0:
+                logger.info(
+                    "Scheduler: calendar sync done — %d created, %d updated",
+                    total_created,
+                    total_updated,
+                )
+    except Exception:
+        logger.exception("Scheduler: calendar auto-sync failed")
+
+
 async def followup_scan() -> None:
     """Periodic job: scan incasso cases for follow-up recommendations.
 
@@ -390,6 +444,15 @@ def start_scheduler() -> None:
             name="AI intake detection",
             replace_existing=True,
         )
+
+    # Every 15 minutes: sync Outlook calendars
+    scheduler.add_job(
+        calendar_auto_sync,
+        IntervalTrigger(minutes=15),
+        id="calendar_auto_sync",
+        name="Auto-sync Outlook calendars",
+        replace_existing=True,
+    )
 
     # Every 30 minutes: follow-up recommendation scan (rules-based, no AI needed)
     scheduler.add_job(

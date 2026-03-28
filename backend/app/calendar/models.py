@@ -59,6 +59,13 @@ class CalendarEvent(TenantBase):
 
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
+    # Outlook sync fields
+    provider_event_id: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, index=True
+    )
+    provider: Mapped[str | None] = mapped_column(String(20), nullable=True)  # "outlook" or None
+    outlook_change_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Relationships
     case = relationship("Case", lazy="selectin")
     contact = relationship("Contact", lazy="selectin")

@@ -16,8 +16,30 @@ from app.calendar.schemas import (
 )
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.shared.exceptions import BadRequestError
 
 router = APIRouter(prefix="/api/calendar/events", tags=["calendar"])
+
+
+@router.post("/sync")
+async def sync_calendar(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually trigger Outlook calendar sync."""
+    from app.calendar.sync_service import sync_outlook_events
+    from app.email.oauth_service import get_email_account
+
+    account = await get_email_account(
+        db, current_user.id, current_user.tenant_id, provider="outlook"
+    )
+    if not account:
+        raise BadRequestError("Geen Outlook-account verbonden")
+
+    stats = await sync_outlook_events(
+        db, account, current_user.tenant_id, current_user.id
+    )
+    return stats
 
 
 @router.get("", response_model=list[CalendarEventResponse])

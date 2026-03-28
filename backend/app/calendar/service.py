@@ -1,5 +1,6 @@
 """Calendar module service — CRUD operations for calendar events."""
 
+import logging
 import uuid
 from datetime import datetime
 
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.calendar.models import EVENT_TYPE_COLORS, CalendarEvent
 from app.calendar.schemas import CalendarEventCreate, CalendarEventUpdate
 from app.shared.exceptions import BadRequestError, NotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 async def list_events(
@@ -92,6 +95,10 @@ async def create_event(
     db.add(event)
     await db.flush()
     await db.refresh(event)
+
+    # Push to Outlook (fire-and-forget)
+    await _try_push_to_outlook(db, tenant_id, user_id, event, action="create")
+
     return event
 
 
@@ -119,6 +126,13 @@ async def update_event(
 
     await db.flush()
     await db.refresh(event)
+
+    # Push update to Outlook if this is a synced event
+    if event.provider == "outlook" and event.provider_event_id:
+        await _try_push_to_outlook(
+            db, tenant_id, event.created_by, event, action="update"
+        )
+
     return event
 
 
@@ -129,5 +143,54 @@ async def delete_event(
 ) -> None:
     """Soft-delete a calendar event."""
     event = await get_event(db, tenant_id, event_id)
+
+    # Delete from Outlook if synced
+    if event.provider == "outlook" and event.provider_event_id:
+        await _try_push_to_outlook(
+            db, tenant_id, event.created_by, event, action="delete"
+        )
+
     event.is_active = False
     await db.flush()
+
+
+async def _try_push_to_outlook(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    event: CalendarEvent,
+    *,
+    action: str,
+) -> None:
+    """Try to push a calendar event change to Outlook. Fire-and-forget."""
+    try:
+        from app.calendar.sync_service import (
+            delete_event_from_outlook,
+            push_event_to_outlook,
+            update_event_in_outlook,
+        )
+        from app.email.oauth_service import get_email_account
+
+        account = await get_email_account(db, user_id, tenant_id, provider="outlook")
+        if not account:
+            return
+
+        if action == "create":
+            event_id, change_key = await push_event_to_outlook(db, account, event)
+            if event_id:
+                event.provider_event_id = event_id
+                event.provider = "outlook"
+                event.outlook_change_key = change_key
+                await db.flush()
+
+        elif action == "update":
+            change_key = await update_event_in_outlook(db, account, event)
+            if change_key:
+                event.outlook_change_key = change_key
+                await db.flush()
+
+        elif action == "delete" and event.provider_event_id:
+            await delete_event_from_outlook(db, account, event.provider_event_id)
+
+    except Exception as e:
+        logger.error("Outlook push (%s) failed for event %s: %s", action, event.id, e)

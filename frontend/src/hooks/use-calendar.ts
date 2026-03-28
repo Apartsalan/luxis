@@ -23,7 +23,7 @@ export interface CalendarEvent {
   task_type: string | null;
   color: string;
   // User event extras
-  source: "workflow" | "user";
+  source: "workflow" | "user" | "outlook";
   start_time: string | null;
   end_time: string | null;
   all_day: boolean;
@@ -93,7 +93,7 @@ function convertUserEvent(e: UserCalendarEvent): CalendarEvent {
     assigned_to_name: e.creator?.full_name ?? null,
     task_type: null,
     color: e.color || "#3b82f6",
-    source: "user",
+    source: e.provider === "outlook" ? "outlook" : "user",
     start_time: e.start_time,
     end_time: e.end_time,
     all_day: e.all_day,

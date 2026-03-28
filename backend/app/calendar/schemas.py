@@ -91,6 +91,9 @@ class CalendarEventResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    provider_event_id: str | None = None
+    provider: str | None = None
+
     case: CaseBrief | None = None
     contact: ContactBrief | None = None
     creator: UserBrief | None = None

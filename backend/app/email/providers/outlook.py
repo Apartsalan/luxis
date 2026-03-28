@@ -39,6 +39,7 @@ OUTLOOK_SCOPES = [
     "https://graph.microsoft.com/Mail.Read",
     "https://graph.microsoft.com/Mail.ReadWrite",
     "https://graph.microsoft.com/Mail.Send",
+    "https://graph.microsoft.com/Calendars.ReadWrite",
     "https://graph.microsoft.com/User.Read",
     "offline_access",
 ]
@@ -510,3 +511,114 @@ class OutlookProvider(EmailProvider):
 
         logger.info(f"Reply verzonden via Outlook op message {message_id}")
         return f"outlook-reply-{message_id[:30]}"
+
+    # ── Calendar methods ────────────────────────────────────────────────────
+
+    async def list_calendar_events(
+        self,
+        access_token: str,
+        start_dt: str,
+        end_dt: str,
+    ) -> list[dict]:
+        """Fetch calendar events from Outlook via calendarView.
+
+        Args:
+            access_token: Valid OAuth access token.
+            start_dt: ISO 8601 start datetime (e.g. "2026-03-01T00:00:00Z").
+            end_dt: ISO 8601 end datetime (e.g. "2026-04-30T23:59:59Z").
+
+        Returns:
+            List of raw Graph API event resource dicts.
+        """
+        headers = {"Authorization": f"Bearer {access_token}"}
+        params = {
+            "startDateTime": start_dt,
+            "endDateTime": end_dt,
+            "$select": (
+                "id,subject,start,end,location,body,isAllDay,"
+                "changeKey,isCancelled,organizer,categories"
+            ),
+            "$top": "100",
+            "$orderby": "start/dateTime",
+        }
+
+        all_events: list[dict] = []
+        url: str | None = f"{GRAPH_API_BASE}/me/calendarView"
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            while url:
+                resp = await client.get(
+                    url,
+                    headers=headers,
+                    params=params if url.startswith(GRAPH_API_BASE) else None,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                all_events.extend(data.get("value", []))
+                url = data.get("@odata.nextLink")
+                params = None  # nextLink includes params
+
+        return all_events
+
+    async def create_calendar_event(
+        self,
+        access_token: str,
+        event_data: dict,
+    ) -> dict:
+        """Create a calendar event in Outlook.
+
+        Args:
+            event_data: Dict with subject, start, end, location, body, isAllDay.
+                        start/end must be dateTimeTimeZone objects:
+                        {"dateTime": "2026-03-28T10:00:00", "timeZone": "Europe/Amsterdam"}
+
+        Returns:
+            Created event dict (includes id, changeKey).
+        """
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{GRAPH_API_BASE}/me/events",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json=event_data,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def update_calendar_event(
+        self,
+        access_token: str,
+        event_id: str,
+        event_data: dict,
+    ) -> dict:
+        """Update a calendar event in Outlook.
+
+        Returns:
+            Updated event dict.
+        """
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.patch(
+                f"{GRAPH_API_BASE}/me/events/{event_id}",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json",
+                },
+                json=event_data,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+    async def delete_calendar_event(
+        self,
+        access_token: str,
+        event_id: str,
+    ) -> None:
+        """Delete a calendar event from Outlook."""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.delete(
+                f"{GRAPH_API_BASE}/me/events/{event_id}",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            resp.raise_for_status()

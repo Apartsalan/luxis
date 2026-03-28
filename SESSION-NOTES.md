@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 27 maart 2026 (sessie 109 — Backup + security + 61 backend tests + email bugfix)
-**Laatste feature/fix:** Sessie 109 — Backup, security, 61 router tests, email import bugfix, TypeScript any cleanup (T2), hooks cleanup (T3)
-**Volgende sessie:** 110 — Fase 4: Stitch redesign (of off-site backup + kernel reboot als opwarmer)
+**Laatst bijgewerkt:** 28 maart 2026 (sessie 109 — mega-sessie: fasen 1-6 + CI groen)
+**Laatste feature/fix:** Sessie 109 — Backup, security, 684 tests, CI 6/6 groen, off-site B2, self-hosted runner, ruff format, runbook, API docs
+**Volgende sessie:** 110 — CI naar GitHub-hosted runners (repo is nu public), zero-BTW bugfix
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅

@@ -31,8 +31,10 @@
 **Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs). Volgende: redesign (backlog), zero-BTW bugfix, of nieuwe features.
 
 **TODO (klein):**
-- ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109, terminal 3)
-- ✅ Off-site backup via rclone → Backblaze B2 (sessie 109). Bucket: `Luxis-backup`, remote: `luxis-backup`. 90 dagen retentie off-site.
+- ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109)
+- ✅ Off-site backup — Backblaze B2, bucket `Luxis-backup`, 90d retentie
+- ⏳ CI terugzetten naar GitHub-hosted runners (repo is nu public — onbeperkte parallel minuten)
+- ⏳ Zero-BTW bug — factuur met btw_percentage=0 berekent toch 21% BTW (xfail in tests)
 
 **Roadmap naar ~98% (13-15 sessies):**
 1. Infra hardening (CI/CD ✅, Caddy in repo ✅, backup ✅, security ✅) — 3 sessies — COMPLEET ✅

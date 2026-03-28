@@ -2,7 +2,7 @@
 
 **Laatst bijgewerkt:** 28 maart 2026 (sessie 110 — CI naar GitHub-hosted + zero-BTW bugfix)
 **Laatste feature/fix:** Sessie 110 — GitHub-hosted CI runners, zero-BTW bugfix, deploy via SSH action
-**Volgende sessie:** 111 — DEPLOY_SSH_KEY secret toevoegen, self-hosted runner opruimen, uitgebreid testen
+**Volgende sessie:** 111 — Outlook agenda sync via Graph API (AUDIT-07)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -80,6 +80,10 @@
 - AUDIT-29: Auto-email bij statuswijziging — was al geïmplementeerd ✅
 
 **Totaal sessie 110: 21 AUDIT items afgevinkt (waarvan 3 al geïmplementeerd bleken)**
+
+**Compliance check review:** B2C guards (14-dagenbrief, BIK-limiet) correct geplaatst. Universele checks (debiteur, vorderingen, verzuimdatum, verjaring) gelden terecht voor B2B + B2C. Geen fixes nodig.
+
+**Alle wijzigingen getest en gedeployed naar productie. Health check OK.**
 
 ---
 

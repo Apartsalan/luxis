@@ -54,6 +54,31 @@
 - AUDIT-16/21/26/27/30 geschrapt (niet relevant voor advocatenkantoor)
 - AUDIT-15/19 op pauze (pas als Lisanne erom vraagt)
 
+**Bugs gefixt tijdens sessie:**
+- MissingGreenlet na Outlook push bij event create (db.refresh na push)
+- PostgreSQL GROUP BY error in monthly stats (func.to_char needs .label())
+
+**Bestanden gewijzigd/nieuw (alle features):**
+- `backend/app/email/providers/outlook.py` — calendar methods + Calendars.ReadWrite scope
+- `backend/app/calendar/models.py` — provider velden
+- `backend/app/calendar/sync_service.py` — NIEUW: Outlook sync logica
+- `backend/app/calendar/service.py` — 2-way sync push + MissingGreenlet fix
+- `backend/app/calendar/router.py` — POST /sync endpoint
+- `backend/app/workflow/scheduler.py` — calendar_auto_sync job (15 min)
+- `backend/app/dashboard/reports_service.py` — NIEUW: KPIs, monthly, phase distribution
+- `backend/app/dashboard/router.py` — reports endpoints
+- `backend/app/ai_agent/models.py` — promise_date + promise_amount velden
+- `backend/app/ai_agent/prompts.py` — betalingsbelofte extractie prompt
+- `backend/app/ai_agent/service.py` — promise parsing
+- `backend/app/ai_agent/smart_reply_service.py` — NIEUW: AI smart replies
+- `backend/app/ai_agent/router.py` — smart-replies endpoint
+- `backend/app/ai_agent/kimi_client.py` — CLASSIFICATION_SCHEMA uitgebreid
+- `frontend/src/app/(dashboard)/rapportages/page.tsx` — NIEUW: rapportages pagina
+- `frontend/src/app/(dashboard)/agenda/page.tsx` — sync knop + Outlook badge
+- `frontend/src/hooks/use-sync-calendar.ts` — NIEUW: sync hook
+- `frontend/src/components/layout/app-sidebar.tsx` — Rapportages link
+- 2 Alembic migraties (calendar provider velden + promise velden)
+
 **Bestanden gewijzigd:**
 - `backend/app/email/providers/outlook.py` — calendar methods + scope
 - `backend/app/calendar/models.py` — provider velden

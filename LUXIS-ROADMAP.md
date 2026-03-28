@@ -54,9 +54,9 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 
 | # | Item | Effort | Status |
 |---|------|--------|--------|
-| AUDIT-01 | Uptime monitoring instellen (UptimeRobot, gratis) | 1 sessie | ❌ TODO |
-| AUDIT-02 | Backup restore test — bewijs dat restore werkt | 0.5 sessie | ❌ TODO |
-| AUDIT-03 | Uitgebreid testen — alle features top-tot-teen (zie testplan Bijlage E) | 6-8 sessies | ❌ TODO |
+| AUDIT-01 | Uptime monitoring instellen (UptimeRobot, gratis) | 1 sessie | ✅ Health endpoint bevestigd, user moet UptimeRobot account aanmaken |
+| AUDIT-02 | Backup restore test — bewijs dat restore werkt | 0.5 sessie | ✅ Restore getest: 43 tabellen, alle data intact (sessie 110) |
+| AUDIT-03 | Uitgebreid testen — alle features top-tot-teen (zie testplan Bijlage E) | 6-8 sessies | ⏳ E.3/E.5/E.6/E.7/E.8/E.9 getest sessie 110. E.1/E.2/E.4 nog open |
 | AUDIT-04 | Basenet export opvragen bij Lisanne + formaat analyseren | 1 sessie | ❌ TODO |
 | AUDIT-05 | Data-migratie script bouwen + dry-run | 3-5 sessies | ❌ TODO |
 
@@ -70,7 +70,7 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | AUDIT-09 | 14-dagentermijn berekening verifieren (dag NA ontvangst, niet na verzending) | 0.5 sessie | ❌ TODO |
 | AUDIT-10 | Verjarings-waarschuwing automatiseren (90/60/30 dagen alert) | 1 sessie | ❌ TODO |
 | AUDIT-11 | Rollback procedure documenteren + testen | 1 sessie | ❌ TODO |
-| AUDIT-12 | unattended-upgrades installeren op VPS | 0.5 sessie | ❌ TODO |
+| AUDIT-12 | unattended-upgrades installeren op VPS | 0.5 sessie | ✅ Was al actief, geverifieerd sessie 110 |
 | AUDIT-13 | Follow-up advisor: 1-klik approve+execute (doc genereren + email + pipeline advance) | 1-2 sessies | ❌ TODO |
 | AUDIT-14 | Classification flow: 1-klik "Goedkeuren en uitvoeren" | 0.5 sessie | ❌ TODO |
 

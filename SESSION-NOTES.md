@@ -42,9 +42,25 @@
 - `backend/tests/test_invoices.py` — xfail verwijderd
 - `LUXIS-ROADMAP.md` — TODO's afgevinkt
 
-**Openstaand:**
-- `DEPLOY_SSH_KEY` secret moet nog toegevoegd worden op GitHub (gh auth login nodig of via browser)
-- Self-hosted runner op VPS kan opgeruimd worden (optioneel)
+**Self-hosted runner opgeruimd:**
+- Service gestopt + gedeïnstalleerd + 2GB vrijgemaakt
+- Runner moet nog verwijderd worden uit GitHub UI (Settings → Actions → Runners)
+
+**AUDIT items afgerond:**
+- AUDIT-01: Health endpoint bevestigd (https://luxis.kestinglegal.nl/health), user moet UptimeRobot account aanmaken
+- AUDIT-02: Backup restore getest — 43 tabellen, alle data intact ✅
+- AUDIT-12: unattended-upgrades actief en werkend, vandaag nog 3 packages geüpgraded ✅
+
+**AUDIT-03 Uitgebreid testen (E-secties):**
+- E.3 Financiële berekeningen: 53/53 unit tests PASS, productie API: rentetarieven (114), vorderingen, facturen OK ✅
+- E.5 Timer: handmatige entry aanmaken + overzicht ophalen ✅
+- E.6 Facturatie: gemengde BTW ✅, goedkeuren ✅, PDF download ✅, zero-BTW bugfix gedeployed ✅
+- E.7 Documenten: 7 DOCX templates, document generatie werkt ✅
+- E.8 Auth: login ✅, foute creds 401 ✅, token refresh ✅, token rotation ✅, wachtwoord wijzigen ✅ (7/7)
+- E.9 Infra: SSL ✅, HSTS ✅, fail2ban ✅, auto-restart ✅, health ✅, backup cron ✅
+- Nog te testen: E.1 (email), E.2 (incasso pipeline), E.4 (AI intake)
+
+**Wachtwoord sync:** Productie wachtwoord gereset (bekende issue, bcrypt hash desync)
 
 ---
 

@@ -65,6 +65,22 @@
 
 **Wachtwoord sync:** Productie wachtwoord gereset (bekende issue, bcrypt hash desync)
 
+**Extra AUDIT items afgerond:**
+- AUDIT-08: Database indices — alle bestonden al ✅
+- AUDIT-09: 14-dagentermijn gecorrigeerd naar today+15 ✅
+- AUDIT-10: Verjarings-waarschuwing — scheduler maakt taken aan bij 90/60/30 dagen ✅
+- AUDIT-11: Rollback procedure gedocumenteerd in RUNBOOK.md ✅
+- AUDIT-13: Follow-up 1-klik — was al geïmplementeerd ✅
+- AUDIT-14: Classification 1-klik approve+execute — nieuw endpoint + UI knop ✅
+- AUDIT-20: Pre-send compliance check — 6 validaties (14-dagen, BIK, debiteur, vorderingen, verzuimdatum, verjaring) ✅
+- AUDIT-22: Auto-update naar opdrachtgever — /client-update endpoint met AI draft ✅
+- AUDIT-23: BIK override validatie — blokkeert bij B2C als hoger dan WIK-staffel ✅
+- AUDIT-24: Griffierechten-tabel — kanton + rechtbank 2026 tarieven ✅
+- AUDIT-28: Sentiment analyse — 5 tonen (meewerkend/neutraal/gefrustreerd/boos/wanhopig) ✅
+- AUDIT-29: Auto-email bij statuswijziging — was al geïmplementeerd ✅
+
+**Totaal sessie 110: 21 AUDIT items afgevinkt (waarvan 3 al geïmplementeerd bleken)**
+
 ---
 
 ## Wat er gedaan is (sessie 109 — 26 maart 2026) — Backup + security hardening

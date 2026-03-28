@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 28 maart 2026 (sessie 111 — Outlook sync + Rapportages + AI features)
-**Laatste feature/fix:** Sessie 111 — AUDIT-07/17/18/25 (calendar sync, rapportages, betalingsbelofte, smart replies)
-**Volgende sessie:** 112 — Lisanne overzetten naar M365 (AUDIT-04/05) of frontend voor AUDIT-18/25
+**Laatst bijgewerkt:** 28 maart 2026 (sessie 112 — Exact Online integratie AUDIT-15)
+**Laatste feature/fix:** Sessie 112 — AUDIT-15 (Exact Online OAuth + sync module)
+**Volgende sessie:** 113 — Lisanne overzetten naar M365 (AUDIT-04/05) of Exact Online app registreren + live testen
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,40 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 112 — 28 maart 2026) — Exact Online integratie (AUDIT-15)
+
+**Exact Online koppeling gebouwd (vereenvoudigd naar 1 sessie):**
+
+Onderzoek afgerond:
+- Exact Online REST API volledig in kaart (OAuth 2.0, NL endpoints, rate limits 60/min + 5000/dag)
+- Endpoints: SalesInvoices, Accounts, BankEntries, VATCodes, GLAccounts, Journals
+- Belangrijke beperking: geen programmatische payment reconciliation via API
+- Scope vereenvoudigd naar eenrichtings-export (zoals BaseNet doet)
+
+Backend gebouwd:
+- `backend/app/exact_online/` — nieuwe module (7 bestanden)
+  - `models.py`: ExactOnlineConnection + ExactSyncLog
+  - `provider.py`: OAuth 2.0 flow + REST API client (NL region start.exactonline.nl)
+  - `sync_service.py`: push contacts → Exact Accounts, invoices → SalesInvoices, payments → BankEntries
+  - `router.py`: authorize, callback, status, disconnect, setup-data, settings, sync, sync-log
+  - `schemas.py`: alle Pydantic schemas
+- `config.py`: 3 nieuwe env vars (EXACT_ONLINE_CLIENT_ID/SECRET/REDIRECT_URI)
+- `main.py`: router geregistreerd
+- Alembic migratie `042_exact_online.py`
+- 17 tests geschreven en groen (models, provider, service, router)
+
+Frontend gebouwd:
+- `exact-tab.tsx`: OAuth popup flow, connectie-status, sync knop, settings dropdowns
+- `use-exact-online.ts`: 6 hooks (status, authorize, disconnect, setupData, updateSettings, sync)
+- Tab toegevoegd aan instellingen pagina
+
+Wat nog nodig is voor live gebruik:
+- Exact Online developer account registreren (betaald abonnement vereist)
+- App registreren in Exact Online App Center
+- Lisanne's Exact Online credentials + division ophalen
+- env vars invullen op VPS
+- Live testen met sandbox/test administratie
 
 ## Wat er gedaan is (sessie 111 — 28 maart 2026) — Outlook agenda sync (AUDIT-07)
 

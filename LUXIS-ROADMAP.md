@@ -78,7 +78,7 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 
 | # | Item | Effort | Status |
 |---|------|--------|--------|
-| AUDIT-15 | Exact Online integratie (boekhouding sync) | 5-8 sessies | ⏸️ Pas als Lisanne erom vraagt |
+| AUDIT-15 | Exact Online integratie (boekhouding sync) | 1 sessie (vereenvoudigd) | ✅ Sessie 112 — OAuth + sync module gebouwd |
 | AUDIT-16 | ~~Online betalen via Mollie/iDEAL~~ | — | ❌ Geschrapt — niet relevant voor advocatenkantoor |
 | AUDIT-17 | Rapport-pagina (management overzichten, omzet, incasso-KPIs) | 2-3 sessies | ✅ Sessie 111 (28 mrt) |
 | AUDIT-18 | Betalingsbelofte-extractie uit debiteur-emails (AI) | 2 sessies | ✅ Sessie 111 (28 mrt) |

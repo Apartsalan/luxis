@@ -19,6 +19,7 @@ import {
   Mail,
   Gavel,
   Banknote,
+  BarChart3,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ const ALL_SECTIONS: NavSection[] = [
       { name: "Bank Import", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
       { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
       { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
+      { name: "Rapportages", href: "/rapportages", icon: BarChart3 },
     ],
   },
   {

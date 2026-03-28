@@ -78,22 +78,22 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 
 | # | Item | Effort | Status |
 |---|------|--------|--------|
-| AUDIT-15 | Exact Online integratie (boekhouding sync) | 5-8 sessies | ❌ TODO |
-| AUDIT-16 | Online betalen via Mollie/iDEAL (payment links in emails) | 3-4 sessies | ❌ TODO |
+| AUDIT-15 | Exact Online integratie (boekhouding sync) | 5-8 sessies | ⏸️ Pas als Lisanne erom vraagt |
+| AUDIT-16 | ~~Online betalen via Mollie/iDEAL~~ | — | ❌ Geschrapt — niet relevant voor advocatenkantoor |
 | AUDIT-17 | Rapport-pagina (management overzichten, omzet, incasso-KPIs) | 2-3 sessies | ❌ TODO |
 | AUDIT-18 | Betalingsbelofte-extractie uit debiteur-emails (AI) | 2 sessies | ❌ TODO |
-| AUDIT-19 | Aangetekend Mailen API integratie (Aangetekend B.V., eIDAS) | 2-3 sessies | ❌ TODO |
+| AUDIT-19 | Aangetekend Mailen API integratie (Aangetekend B.V., eIDAS) | 2-3 sessies | ⏸️ Pas bij hoog volume |
 | AUDIT-20 | Pre-send compliance check (14-dagenbrief validatie, WIK check) | 2 sessies | ✅ Sessie 110 — 6 checks (14-dagen, BIK, debiteur, vorderingen, verzuimdatum, verjaring) |
-| AUDIT-21 | Email analytics (open rate, click rate per template) | 2-3 sessies | ❌ TODO |
+| AUDIT-21 | ~~Email analytics (open rate, click rate)~~ | — | ❌ Geschrapt — juridische brieven, geen marketing |
 | AUDIT-22 | Auto-update naar opdrachtgever (AI draft bij betaling/statuswijziging) | 1-2 sessies | ✅ Sessie 110 — /client-update endpoint |
 | AUDIT-23 | BIK override validatie — mag niet hoger dan WIK-staffel bij B2C | 0.5 sessie | ✅ Sessie 110 |
 | AUDIT-24 | Griffierechten-tabel integreren | 1 sessie | ✅ Sessie 110 — kanton + rechtbank tarieven 2026 |
 | AUDIT-25 | AI smart replies — incasso-specifieke suggesties bij debiteur-emails (3 opties: betalingsregeling/betwisting afhandelen/escaleren) | 2 sessies | ❌ TODO |
-| AUDIT-26 | iDEAL payment link in incasso-emails (Mollie) — debiteur betaalt met 1 klik | 2 sessies | ❌ TODO |
-| AUDIT-27 | Closed-loop betaling: belofte in email → bankbetaling matchen → auto-bevestigingsmail → dossier updaten | 3 sessies | ❌ TODO |
+| AUDIT-26 | ~~iDEAL payment link in incasso-emails~~ | — | ❌ Geschrapt — duplicaat van AUDIT-16 |
+| AUDIT-27 | ~~Closed-loop betaling~~ | — | ❌ Geschrapt — vereist bankfeed, te vroeg |
 | AUDIT-28 | Sentiment/toon analyse op debiteur-emails — boos/meewerkend/wanhopig detectie voor triage | 1 sessie | ✅ Sessie 110 — AI prompt + model + schema + migratie |
 | AUDIT-29 | Workflow auto-email bij statuswijziging — nu alleen taken, optioneel ook email versturen | 1 sessie | ✅ Was al geïmplementeerd (auto_execute send_email hooks) |
-| AUDIT-30 | Client portal — debiteuren kunnen status zien, betalen, betalingsregeling aanvragen | 8-12 sessies | ❌ TODO |
+| AUDIT-30 | ~~Client portal~~ | — | ❌ Geschrapt — debiteuren gebruiken dit niet |
 
 ### Volgorde van aanpak
 

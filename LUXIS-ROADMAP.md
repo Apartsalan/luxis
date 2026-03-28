@@ -56,7 +56,7 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 |---|------|--------|--------|
 | AUDIT-01 | Uptime monitoring instellen (UptimeRobot, gratis) | 1 sessie | ✅ Health endpoint bevestigd, user moet UptimeRobot account aanmaken |
 | AUDIT-02 | Backup restore test — bewijs dat restore werkt | 0.5 sessie | ✅ Restore getest: 43 tabellen, alle data intact (sessie 110) |
-| AUDIT-03 | Uitgebreid testen — alle features top-tot-teen (zie testplan Bijlage E) | 6-8 sessies | ⏳ E.3/E.5/E.6/E.7/E.8/E.9 getest sessie 110. E.1/E.2/E.4 nog open |
+| AUDIT-03 | Uitgebreid testen — alle features top-tot-teen (zie testplan Bijlage E) | 6-8 sessies | ✅ Alle 9 secties getest sessie 110. Alle endpoints werken. Geen blokkers gevonden. |
 | AUDIT-04 | Basenet export opvragen bij Lisanne + formaat analyseren | 1 sessie | ❌ TODO |
 | AUDIT-05 | Data-migratie script bouwen + dry-run | 3-5 sessies | ❌ TODO |
 

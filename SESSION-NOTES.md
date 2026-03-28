@@ -58,7 +58,10 @@
 - E.7 Documenten: 7 DOCX templates, document generatie werkt ✅
 - E.8 Auth: login ✅, foute creds 401 ✅, token refresh ✅, token rotation ✅, wachtwoord wijzigen ✅ (7/7)
 - E.9 Infra: SSL ✅, HSTS ✅, fail2ban ✅, auto-restart ✅, health ✅, backup cron ✅
-- Nog te testen: E.1 (email), E.2 (incasso pipeline), E.4 (AI intake)
+- E.1 Email: 9/9 PASS — OAuth connected, sync 29 emails, dossier-koppeling 6 emails, bijlagen PDF, ongesorteerd 35 ✅
+- E.2 Incasso: 7/7 PASS — 7 stappen, 7 dossiers in pipeline, batch preview, 20 taken, 2 follow-ups, verjaring ✅
+- E.4 AI: Intake endpoints OK (0 pending), 13 classificaties, 6 response templates, payment matching stats ✅
+- **ALLE 9 E-SECTIES GETEST — GEEN BLOKKERS GEVONDEN** ✅
 
 **Wachtwoord sync:** Productie wachtwoord gereset (bekende issue, bcrypt hash desync)
 

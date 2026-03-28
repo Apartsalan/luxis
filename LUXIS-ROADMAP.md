@@ -64,12 +64,12 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 
 | # | Item | Effort | Status |
 |---|------|--------|--------|
-| AUDIT-06 | Compose dialog: "Verstuur" als primaire knop (direct send via Graph API), "Open in Outlook" als backup | 1 sessie | ❌ TODO |
+| AUDIT-06 | Compose dialog: "Verstuur" als primaire knop (direct send via Graph API), "Open in Outlook" als backup | 1 sessie | ✅ Sessie 110 |
 | AUDIT-07 | Outlook agenda sync via Graph API (CalendarEvents) | 2-3 sessies | ❌ TODO |
-| AUDIT-08 | Database indices op veelgebruikte filterkolommen (synced_emails.email_date, workflow_tasks.due_date, cases.status+tenant_id) | 1 sessie | ❌ TODO |
-| AUDIT-09 | 14-dagentermijn berekening verifieren (dag NA ontvangst, niet na verzending) | 0.5 sessie | ❌ TODO |
+| AUDIT-08 | Database indices op veelgebruikte filterkolommen (synced_emails.email_date, workflow_tasks.due_date, cases.status+tenant_id) | 1 sessie | ✅ Alle indices bestaan al (sessie 110 geverifieerd) |
+| AUDIT-09 | 14-dagentermijn berekening verifieren (dag NA ontvangst, niet na verzending) | 0.5 sessie | ✅ Gefixt sessie 110 (today+15) |
 | AUDIT-10 | Verjarings-waarschuwing automatiseren (90/60/30 dagen alert) | 1 sessie | ❌ TODO |
-| AUDIT-11 | Rollback procedure documenteren + testen | 1 sessie | ❌ TODO |
+| AUDIT-11 | Rollback procedure documenteren + testen | 1 sessie | ✅ Gedocumenteerd in RUNBOOK.md sessie 110 |
 | AUDIT-12 | unattended-upgrades installeren op VPS | 0.5 sessie | ✅ Was al actief, geverifieerd sessie 110 |
 | AUDIT-13 | Follow-up advisor: 1-klik approve+execute (doc genereren + email + pipeline advance) | 1-2 sessies | ❌ TODO |
 | AUDIT-14 | Classification flow: 1-klik "Goedkeuren en uitvoeren" | 0.5 sessie | ❌ TODO |
@@ -86,7 +86,7 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | AUDIT-20 | Pre-send compliance check (14-dagenbrief validatie, WIK check) | 2 sessies | ❌ TODO |
 | AUDIT-21 | Email analytics (open rate, click rate per template) | 2-3 sessies | ❌ TODO |
 | AUDIT-22 | Auto-update naar opdrachtgever (AI draft bij betaling/statuswijziging) | 1-2 sessies | ❌ TODO |
-| AUDIT-23 | BIK override validatie — mag niet hoger dan WIK-staffel bij B2C | 0.5 sessie | ❌ TODO |
+| AUDIT-23 | BIK override validatie — mag niet hoger dan WIK-staffel bij B2C | 0.5 sessie | ✅ Sessie 110 |
 | AUDIT-24 | Griffierechten-tabel integreren | 1 sessie | ❌ TODO |
 | AUDIT-25 | AI smart replies — incasso-specifieke suggesties bij debiteur-emails (3 opties: betalingsregeling/betwisting afhandelen/escaleren) | 2 sessies | ❌ TODO |
 | AUDIT-26 | iDEAL payment link in incasso-emails (Mollie) — debiteur betaalt met 1 klik | 2 sessies | ❌ TODO |

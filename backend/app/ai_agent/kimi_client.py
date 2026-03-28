@@ -53,6 +53,8 @@ CLASSIFICATION_SCHEMA: dict[str, Any] = {
         },
         "suggested_template_key": {"type": ["string", "null"]},
         "suggested_reminder_days": {"type": ["integer", "null"]},
+        "promise_date": {"type": ["string", "null"]},
+        "promise_amount": {"type": ["number", "null"]},
     },
     "required": ["category", "confidence", "reasoning", "suggested_action"],
 }

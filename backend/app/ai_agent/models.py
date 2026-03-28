@@ -1,10 +1,11 @@
 """AI Agent models — email classification and response templates."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -114,6 +115,10 @@ class EmailClassification(TenantBase):
     suggested_action: Mapped[str] = mapped_column(String(50), nullable=False)
     suggested_template_key: Mapped[str | None] = mapped_column(String(50), nullable=True)
     suggested_reminder_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Payment promise extraction (AUDIT-18)
+    promise_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    promise_amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
 
     # Human review
     status: Mapped[str] = mapped_column(

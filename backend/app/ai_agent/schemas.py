@@ -1,7 +1,8 @@
 """AI Agent schemas — request/response models for email classification."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -30,6 +31,10 @@ class ClassificationResponse(BaseModel):
     suggested_template_key: str | None = None
     suggested_template_name: str | None = None
     suggested_reminder_days: int | None = None
+
+    # Payment promise (AUDIT-18)
+    promise_date: date | None = None
+    promise_amount: Decimal | None = None
 
     # Review status
     status: str

@@ -25,8 +25,15 @@ Antwoord ALLEEN met valide JSON:
   "sentiment": "<meewerkend|neutraal|gefrustreerd|boos|wanhopig>",
   "suggested_action": "<wait_and_remind|escalate|send_template|dismiss|request_proof|no_action>",
   "suggested_template_key": "<template key of null>",
-  "suggested_reminder_days": <getal of null>
+  "suggested_reminder_days": <getal of null>,
+  "promise_date": "<YYYY-MM-DD of null — alleen bij belofte_tot_betaling>",
+  "promise_amount": <bedrag als getal of null — alleen bij belofte_tot_betaling>
 }
+
+Extra regels voor belofte_tot_betaling:
+- Als de debiteur een datum noemt ("vrijdag", "volgende week", "voor 1 april"), bereken de exacte datum en vul promise_date in
+- Als de debiteur een bedrag noemt ("ik betaal €500", "de helft"), vul promise_amount in
+- Als geen datum of bedrag genoemd wordt, laat ze op null
 
 Regels voor sentiment:
 - meewerkend: debiteur wil betalen, werkt mee

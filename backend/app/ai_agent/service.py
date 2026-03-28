@@ -175,6 +175,23 @@ async def classify_email(
     if sentiment not in valid_sentiments:
         sentiment = "neutraal"
 
+    # Parse promise fields for belofte_tot_betaling (AUDIT-18)
+    promise_date_val = None
+    promise_amount_val = None
+    if category == "belofte_tot_betaling":
+        raw_date = ai_result.get("promise_date")
+        if raw_date:
+            try:
+                promise_date_val = date.fromisoformat(raw_date)
+            except (ValueError, TypeError):
+                logger.warning("Could not parse promise_date: %s", raw_date)
+        raw_amount = ai_result.get("promise_amount")
+        if raw_amount is not None:
+            try:
+                promise_amount_val = Decimal(str(raw_amount))
+            except Exception:
+                logger.warning("Could not parse promise_amount: %s", raw_amount)
+
     classification = EmailClassification(
         tenant_id=tenant_id,
         synced_email_id=synced_email_id,
@@ -186,6 +203,8 @@ async def classify_email(
         suggested_action=action,
         suggested_template_key=ai_result.get("suggested_template_key"),
         suggested_reminder_days=ai_result.get("suggested_reminder_days"),
+        promise_date=promise_date_val,
+        promise_amount=promise_amount_val,
         status=ClassificationStatus.PENDING,
     )
     db.add(classification)

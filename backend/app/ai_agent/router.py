@@ -400,3 +400,30 @@ async def generate_draft_email(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Concept genereren mislukt: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Smart replies (AUDIT-25)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/classifications/{classification_id}/smart-replies")
+async def get_smart_replies(
+    classification_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate 3 AI smart reply suggestions for a classified email."""
+    from app.ai_agent.smart_reply_service import generate_smart_replies
+
+    try:
+        replies = await generate_smart_replies(
+            db, current_user.tenant_id, classification_id
+        )
+        return replies
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Suggesties genereren mislukt: {e}"
+        )

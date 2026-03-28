@@ -98,6 +98,7 @@ async def create_event(
 
     # Push to Outlook (fire-and-forget)
     await _try_push_to_outlook(db, tenant_id, user_id, event, action="create")
+    await db.refresh(event)
 
     return event
 
@@ -132,6 +133,7 @@ async def update_event(
         await _try_push_to_outlook(
             db, tenant_id, event.created_by, event, action="update"
         )
+        await db.refresh(event)
 
     return event
 

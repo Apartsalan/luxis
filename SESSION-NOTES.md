@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 28 maart 2026 (sessie 109 — mega-sessie: fasen 1-6 + CI groen)
-**Laatste feature/fix:** Sessie 109 — Backup, security, 684 tests, CI 6/6 groen, off-site B2, self-hosted runner, ruff format, runbook, API docs
-**Volgende sessie:** 110 — CI naar GitHub-hosted runners (repo is nu public), zero-BTW bugfix
+**Laatst bijgewerkt:** 28 maart 2026 (sessie 110 — CI naar GitHub-hosted + zero-BTW bugfix)
+**Laatste feature/fix:** Sessie 110 — GitHub-hosted CI runners, zero-BTW bugfix, deploy via SSH action
+**Volgende sessie:** 111 — DEPLOY_SSH_KEY secret toevoegen, self-hosted runner opruimen, uitgebreid testen
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,38 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 110 — 28 maart 2026) — CI naar GitHub-hosted + zero-BTW bugfix
+
+**CI naar GitHub-hosted runners:**
+- Alle 6 jobs: `runs-on: self-hosted` → `runs-on: ubuntu-latest`
+- Backend tests: Docker containers vervangen door `services:` blok (Postgres 16 + Redis 7)
+- Absolute paden (`/usr/local/bin/uv`) vervangen door `astral-sh/setup-uv@v4` + `actions/setup-python@v5`
+- Backend lint: `uv pip install --system ".[dev]"` + `ruff check app/`
+- `rm -rf .venv` workaround verwijderd
+- Deploy workflow: `appleboy/ssh-action@v1` i.p.v. lokale executie (vereist `DEPLOY_SSH_KEY` secret)
+
+**Zero-BTW bugfix:**
+- Bug: factuur met `btw_percentage="0.00"` berekende toch 21% BTW
+- Oorzaak: `InvoiceLineCreate.btw_percentage` had default `21.00` — lines erfden niet van invoice
+- Fix: `InvoiceLineCreate.btw_percentage` default → `None`, service erft van invoice-level btw_percentage
+- Gefixt in: `create_invoice`, `create_credit_note`, `add_line` functies
+- `@pytest.mark.xfail` verwijderd, test passed ✅
+
+**Gewijzigde bestanden:**
+- `.github/workflows/ci.yml` — volledig herschreven voor GitHub-hosted runners
+- `.github/workflows/deploy.yml` — herschreven met SSH action
+- `backend/app/invoices/schemas.py` — InvoiceLineCreate.btw_percentage nullable
+- `backend/app/invoices/service.py` — btw inheritance in 3 functies
+- `backend/app/invoices/router.py` — btw_percentage doorgifte
+- `backend/tests/test_invoices.py` — xfail verwijderd
+- `LUXIS-ROADMAP.md` — TODO's afgevinkt
+
+**Openstaand:**
+- `DEPLOY_SSH_KEY` secret moet nog toegevoegd worden op GitHub (gh auth login nodig of via browser)
+- Self-hosted runner op VPS kan opgeruimd worden (optioneel)
+
+---
 
 ## Wat er gedaan is (sessie 109 — 26 maart 2026) — Backup + security hardening
 

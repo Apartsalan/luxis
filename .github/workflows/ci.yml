@@ -10,73 +10,81 @@ jobs:
   # ── Backend Lint ─────────────────────────────────────────────────────────────
   backend-lint:
     name: Backend Lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv pip install --system ".[dev]"
+
       - name: Ruff check
-        run: /usr/local/bin/uvx ruff check app/
+        run: ruff check app/
 
   # ── Backend Tests ────────────────────────────────────────────────────────────
   backend-test:
     name: Backend Tests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     continue-on-error: false
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: luxis
+          POSTGRES_PASSWORD: luxis_test_password
+          POSTGRES_DB: luxis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U luxis"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cleanup old test containers
-        run: |
-          docker ps -a --filter "name=ci-postgres" --filter "name=ci-redis" -q | xargs -r docker rm -f 2>/dev/null || true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Start test services
-        run: |
-          docker run -d --name ci-postgres-${{ github.run_id }} \
-            -e POSTGRES_USER=luxis -e POSTGRES_PASSWORD=luxis_test_password -e POSTGRES_DB=luxis_test \
-            -p 5433:5432 postgres:16-alpine
-          docker run -d --name ci-redis-${{ github.run_id }} \
-            -p 6380:6379 redis:7-alpine
+      - uses: astral-sh/setup-uv@v4
 
-      - name: Wait for Postgres
-        run: |
-          for i in $(seq 1 30); do
-            if docker exec ci-postgres-${{ github.run_id }} pg_isready -U luxis 2>/dev/null; then
-              echo "Postgres ready"
-              break
-            fi
-            echo "Waiting for Postgres ($i/30)..."
-            sleep 2
-          done
+      - name: Install dependencies
+        run: uv pip install --system ".[dev]"
 
-      - name: Create fresh venv and install dependencies
-        working-directory: backend
-        run: |
-          rm -rf .venv
-          /usr/local/bin/uv venv .venv
-          /usr/local/bin/uv pip install -p .venv/bin/python ".[dev]"
-
-      - name: Run tests (conftest handles schema)
-        working-directory: backend
+      - name: Run tests
         env:
-          DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5433/luxis_test
-          REDIS_URL: redis://localhost:6380/0
+          DATABASE_URL: postgresql+asyncpg://luxis:luxis_test_password@localhost:5432/luxis_test
+          REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: ci-test-secret-key-not-for-production-32chars!!
           ANTHROPIC_API_KEY: sk-ant-ci-test-fake-key-not-real
           APP_ENV: test
-        run: .venv/bin/pytest tests/ -v --tb=short 2>&1 | tee /tmp/pytest-output.txt; exit ${PIPESTATUS[0]}
-
-      - name: Cleanup test services
-        if: always()
-        run: |
-          docker rm -f ci-postgres-${{ github.run_id }} ci-redis-${{ github.run_id }} 2>/dev/null || true
+        run: pytest tests/ -v --tb=short
 
   # ── Frontend Lint ────────────────────────────────────────────────────────────
   frontend-lint:
     name: Frontend Lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
@@ -98,7 +106,7 @@ jobs:
   # ── Frontend Type Check ────────────────────────────────────────────────────
   frontend-typecheck:
     name: Frontend Type Check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
@@ -120,7 +128,7 @@ jobs:
   # ── Frontend Build ───────────────────────────────────────────────────────────
   frontend-build:
     name: Frontend Build
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
@@ -144,7 +152,7 @@ jobs:
   # ── Security Checks ─────────────────────────────────────────────────────────
   security:
     name: Security Checks
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 

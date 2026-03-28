@@ -215,6 +215,8 @@ async def create_invoice(
         line_total = (line_data.quantity * line_data.unit_price).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
+        # Lines inherit invoice-level btw_percentage when not explicitly set
+        line_btw = line_data.btw_percentage if line_data.btw_percentage is not None else data.btw_percentage
         line = InvoiceLine(
             tenant_id=tenant_id,
             invoice_id=invoice.id,
@@ -223,7 +225,7 @@ async def create_invoice(
             quantity=line_data.quantity,
             unit_price=line_data.unit_price,
             line_total=line_total,
-            btw_percentage=line_data.btw_percentage,
+            btw_percentage=line_btw,
             time_entry_id=line_data.time_entry_id,
             expense_id=line_data.expense_id,
         )
@@ -355,6 +357,7 @@ async def create_credit_note(
         line_total = (line_data.quantity * line_data.unit_price).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
+        line_btw = line_data.btw_percentage if line_data.btw_percentage is not None else data.btw_percentage
         line = InvoiceLine(
             tenant_id=tenant_id,
             invoice_id=credit_note.id,
@@ -363,7 +366,7 @@ async def create_credit_note(
             quantity=line_data.quantity,
             unit_price=line_data.unit_price,
             line_total=line_total,
-            btw_percentage=line_data.btw_percentage,
+            btw_percentage=line_btw,
         )
         db.add(line)
 
@@ -462,7 +465,7 @@ async def add_line(
     description: str,
     quantity: Decimal,
     unit_price: Decimal,
-    btw_percentage: Decimal = Decimal("21.00"),
+    btw_percentage: Decimal | None = None,
     time_entry_id: uuid.UUID | None = None,
     expense_id: uuid.UUID | None = None,
 ) -> InvoiceLine:
@@ -471,6 +474,10 @@ async def add_line(
 
     if invoice.status != "concept":
         raise BadRequestError("Regels kunnen alleen aan conceptfacturen worden toegevoegd")
+
+    # Inherit invoice-level btw_percentage when not explicitly set
+    if btw_percentage is None:
+        btw_percentage = invoice.btw_percentage
 
     # Determine next line number
     max_line = max((line.line_number for line in invoice.lines), default=0)

@@ -24,17 +24,17 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~97% | 231 endpoints, 25 routers, 34 models, 684 tests (4 skipped, 1 xfail). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. GAT: zero-BTW bug (xfail). |
+| Backend (FastAPI) | ~97% | 231 endpoints, 25 routers, 34 models, 684 tests (4 skipped). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. Zero-BTW bug gefixt ✅. |
 | Frontend (Next.js) | ~85% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). GAT: redesign (backlog). |
-| Infra/DevOps | ~98% | Docker Compose op Hetzner VPS. Caddy ✅. Self-hosted CI runner ✅. Auto-deploy ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. CI 6/6 groen ✅. |
+| Infra/DevOps | ~98% | Docker Compose op Hetzner VPS. Caddy ✅. GitHub-hosted CI runners ✅. Auto-deploy via SSH ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. CI 6/6 groen ✅. |
 
-**Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs). Volgende: redesign (backlog), zero-BTW bugfix, of nieuwe features.
+**Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs). Focus nu: uitgebreid testen → Lisanne overzetten. Geen nieuwe features.
 
 **TODO (klein):**
 - ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109)
 - ✅ Off-site backup — Backblaze B2, bucket `Luxis-backup`, 90d retentie
-- ⏳ CI terugzetten naar GitHub-hosted runners (repo is nu public — onbeperkte parallel minuten)
-- ⏳ Zero-BTW bug — factuur met btw_percentage=0 berekent toch 21% BTW (xfail in tests)
+- ✅ CI terugzetten naar GitHub-hosted runners (sessie 110 — ubuntu-latest, services blok, setup-uv)
+- ✅ Zero-BTW bug gefixt (sessie 110 — lines erven nu invoice btw_percentage, xfail verwijderd)
 
 **Roadmap naar ~98% (13-15 sessies):**
 1. Infra hardening (CI/CD ✅, Caddy in repo ✅, backup ✅, security ✅) — 3 sessies — COMPLEET ✅
@@ -43,6 +43,69 @@
 4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies
 5. Frontend E2E + polish (settings + docs E2E ✅, a11y + performance TODO) — deels compleet
 6. Final hardening (API docs ✅, runbook ✅, disaster recovery ✅) — COMPLEET ✅
+
+---
+
+## Audit 110 — Actiepunten (28 maart 2026)
+
+Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage E (100+ testcases).
+
+### P0 — Blokkerend voor productie
+
+| # | Item | Effort | Status |
+|---|------|--------|--------|
+| AUDIT-01 | Uptime monitoring instellen (UptimeRobot, gratis) | 1 sessie | ❌ TODO |
+| AUDIT-02 | Backup restore test — bewijs dat restore werkt | 0.5 sessie | ❌ TODO |
+| AUDIT-03 | Uitgebreid testen — alle features top-tot-teen (zie testplan Bijlage E) | 6-8 sessies | ❌ TODO |
+| AUDIT-04 | Basenet export opvragen bij Lisanne + formaat analyseren | 1 sessie | ❌ TODO |
+| AUDIT-05 | Data-migratie script bouwen + dry-run | 3-5 sessies | ❌ TODO |
+
+### P1 — Belangrijk voor werkbaarheid
+
+| # | Item | Effort | Status |
+|---|------|--------|--------|
+| AUDIT-06 | Compose dialog: "Verstuur" als primaire knop (direct send via Graph API), "Open in Outlook" als backup | 1 sessie | ❌ TODO |
+| AUDIT-07 | Outlook agenda sync via Graph API (CalendarEvents) | 2-3 sessies | ❌ TODO |
+| AUDIT-08 | Database indices op veelgebruikte filterkolommen (synced_emails.email_date, workflow_tasks.due_date, cases.status+tenant_id) | 1 sessie | ❌ TODO |
+| AUDIT-09 | 14-dagentermijn berekening verifieren (dag NA ontvangst, niet na verzending) | 0.5 sessie | ❌ TODO |
+| AUDIT-10 | Verjarings-waarschuwing automatiseren (90/60/30 dagen alert) | 1 sessie | ❌ TODO |
+| AUDIT-11 | Rollback procedure documenteren + testen | 1 sessie | ❌ TODO |
+| AUDIT-12 | unattended-upgrades installeren op VPS | 0.5 sessie | ❌ TODO |
+| AUDIT-13 | Follow-up advisor: 1-klik approve+execute (doc genereren + email + pipeline advance) | 1-2 sessies | ❌ TODO |
+| AUDIT-14 | Classification flow: 1-klik "Goedkeuren en uitvoeren" | 0.5 sessie | ❌ TODO |
+
+### P2 — Nice-to-have / toekomst
+
+| # | Item | Effort | Status |
+|---|------|--------|--------|
+| AUDIT-15 | Exact Online integratie (boekhouding sync) | 5-8 sessies | ❌ TODO |
+| AUDIT-16 | Online betalen via Mollie/iDEAL (payment links in emails) | 3-4 sessies | ❌ TODO |
+| AUDIT-17 | Rapport-pagina (management overzichten, omzet, incasso-KPIs) | 2-3 sessies | ❌ TODO |
+| AUDIT-18 | Betalingsbelofte-extractie uit debiteur-emails (AI) | 2 sessies | ❌ TODO |
+| AUDIT-19 | Aangetekend Mailen API integratie (Aangetekend B.V., eIDAS) | 2-3 sessies | ❌ TODO |
+| AUDIT-20 | Pre-send compliance check (14-dagenbrief validatie, WIK check) | 2 sessies | ❌ TODO |
+| AUDIT-21 | Email analytics (open rate, click rate per template) | 2-3 sessies | ❌ TODO |
+| AUDIT-22 | Auto-update naar opdrachtgever (AI draft bij betaling/statuswijziging) | 1-2 sessies | ❌ TODO |
+| AUDIT-23 | BIK override validatie — mag niet hoger dan WIK-staffel bij B2C | 0.5 sessie | ❌ TODO |
+| AUDIT-24 | Griffierechten-tabel integreren | 1 sessie | ❌ TODO |
+| AUDIT-25 | AI smart replies — incasso-specifieke suggesties bij debiteur-emails (3 opties: betalingsregeling/betwisting afhandelen/escaleren) | 2 sessies | ❌ TODO |
+| AUDIT-26 | iDEAL payment link in incasso-emails (Mollie) — debiteur betaalt met 1 klik | 2 sessies | ❌ TODO |
+| AUDIT-27 | Closed-loop betaling: belofte in email → bankbetaling matchen → auto-bevestigingsmail → dossier updaten | 3 sessies | ❌ TODO |
+| AUDIT-28 | Sentiment/toon analyse op debiteur-emails — boos/meewerkend/wanhopig detectie voor triage | 1 sessie | ❌ TODO |
+| AUDIT-29 | Workflow auto-email bij statuswijziging — nu alleen taken, optioneel ook email versturen | 1 sessie | ❌ TODO |
+| AUDIT-30 | Client portal — debiteuren kunnen status zien, betalen, betalingsregeling aanvragen | 8-12 sessies | ❌ TODO |
+
+### Volgorde van aanpak
+
+```
+1. AUDIT-01 + AUDIT-02 + AUDIT-12  (infra basics, 1 sessie)
+2. AUDIT-03                         (uitgebreid testen, 6-8 sessies)
+3. AUDIT-06                         (compose dialog fix, 1 sessie)
+4. AUDIT-04 + AUDIT-05              (data-migratie, 4-6 sessies)
+5. GO LIVE — Lisanne begint met nieuwe dossiers in Luxis
+6. P1 items (AUDIT-07 t/m AUDIT-14) na go-live
+7. P2 items op basis van Lisanne's feedback
+```
 
 ---
 

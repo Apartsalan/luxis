@@ -30,7 +30,7 @@ class InvoiceLineCreate(BaseModel):
     description: str = Field(..., min_length=1)
     quantity: Decimal = Field(default=Decimal("1"), gt=0)
     unit_price: Decimal = Field(..., decimal_places=2)
-    btw_percentage: Decimal = Field(default=Decimal("21.00"), ge=0)
+    btw_percentage: Decimal | None = Field(default=None, ge=0)
     time_entry_id: uuid.UUID | None = None
     expense_id: uuid.UUID | None = None
 

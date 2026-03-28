@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     # AI Agent (Moonshot/Kimi API — primary intake model)
     kimi_api_key: str = ""
 
+    # Exact Online
+    exact_online_client_id: str = ""
+    exact_online_client_secret: str = ""
+    exact_online_redirect_uri: str = "https://luxis.kestinglegal.nl/api/exact-online/callback"
+
     # Sentry
     sentry_dsn: str = ""
 

@@ -33,6 +33,7 @@ for _mod in [
     "app.email.models",
     "app.email.oauth_models",
     "app.email.synced_email_models",
+    "app.exact_online.models",
     "app.incasso.models",
     "app.invoices.models",
     "app.relations.kyc_models",

@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 28 maart 2026 (sessie 111 — Outlook agenda sync via Graph API)
-**Laatste feature/fix:** Sessie 111 — Outlook calendar sync (AUDIT-07)
-**Volgende sessie:** 112 — Lisanne overzetten naar M365 (AUDIT-04/05) of volgende audit item
+**Laatst bijgewerkt:** 28 maart 2026 (sessie 111 — Outlook sync + Rapportages + AI features)
+**Laatste feature/fix:** Sessie 111 — AUDIT-07/17/18/25 (calendar sync, rapportages, betalingsbelofte, smart replies)
+**Volgende sessie:** 112 — Lisanne overzetten naar M365 (AUDIT-04/05) of frontend voor AUDIT-18/25
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -29,9 +29,30 @@
 - Frontend: Sync knop met feedback toast, Outlook badge (Cloud icon) op gesyncte events
 - Alle 11 calendar tests groen, frontend build groen, gedeployed op VPS
 
-**Nog te doen (handmatig):**
-- Azure Portal: `Calendars.ReadWrite` als delegated permission toevoegen + admin consent geven
-- Na admin consent: opnieuw inloggen via OAuth OF bestaande tokens worden automatisch vernieuwd
+**Azure Portal Calendars.ReadWrite:** ✅ Toegevoegd + admin consent verleend
+
+**AUDIT-17 — Rapportages pagina gebouwd:**
+- Backend: `/api/reports/kpis`, `/monthly`, `/phase-distribution` endpoints
+- KPIs: openstaand, geïnd, incasso-ratio, gem. doorlooptijd, actieve zaken, achterstallige taken
+- Maandelijkse stats: nieuw/gesloten per maand, geïnd bedrag
+- Pipeline verdeling: zaken per incasso-stap met bedragen
+- Frontend: rapportages pagina met CSS bar charts, KPI cards, periode filter
+- Sidebar: "Rapportages" link onder Financieel
+
+**AUDIT-18 — Betalingsbelofte-extractie:**
+- Classificatie-prompt uitgebreid: extracteert promise_date + promise_amount bij belofte_tot_betaling
+- 2 nieuwe velden op EmailClassification model + Alembic migratie
+- CLASSIFICATION_SCHEMA uitgebreid in kimi_client.py
+
+**AUDIT-25 — AI Smart Replies:**
+- Nieuwe smart_reply_service.py: genereert 3 concept-antwoorden (mild/zakelijk/streng)
+- GET `/api/ai-agent/classifications/{id}/smart-replies` endpoint
+- Context-aware: dossiernummer, openstaand bedrag, classificatie, sentiment
+- Kesting Legal toon + mr. L. Kesting ondertekening
+
+**Roadmap opgeschoond:**
+- AUDIT-16/21/26/27/30 geschrapt (niet relevant voor advocatenkantoor)
+- AUDIT-15/19 op pauze (pas als Lisanne erom vraagt)
 
 **Bestanden gewijzigd:**
 - `backend/app/email/providers/outlook.py` — calendar methods + scope

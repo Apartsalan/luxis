@@ -107,6 +107,9 @@ class EmailClassification(TenantBase):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     reasoning: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
+    # Sentiment (AUDIT-28)
+    sentiment: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     # Suggested action
     suggested_action: Mapped[str] = mapped_column(String(50), nullable=False)
     suggested_template_key: Mapped[str | None] = mapped_column(String(50), nullable=True)

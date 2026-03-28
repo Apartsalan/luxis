@@ -85,14 +85,14 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | AUDIT-19 | Aangetekend Mailen API integratie (Aangetekend B.V., eIDAS) | 2-3 sessies | ❌ TODO |
 | AUDIT-20 | Pre-send compliance check (14-dagenbrief validatie, WIK check) | 2 sessies | ✅ Sessie 110 — 6 checks (14-dagen, BIK, debiteur, vorderingen, verzuimdatum, verjaring) |
 | AUDIT-21 | Email analytics (open rate, click rate per template) | 2-3 sessies | ❌ TODO |
-| AUDIT-22 | Auto-update naar opdrachtgever (AI draft bij betaling/statuswijziging) | 1-2 sessies | ❌ TODO |
+| AUDIT-22 | Auto-update naar opdrachtgever (AI draft bij betaling/statuswijziging) | 1-2 sessies | ✅ Sessie 110 — /client-update endpoint |
 | AUDIT-23 | BIK override validatie — mag niet hoger dan WIK-staffel bij B2C | 0.5 sessie | ✅ Sessie 110 |
 | AUDIT-24 | Griffierechten-tabel integreren | 1 sessie | ✅ Sessie 110 — kanton + rechtbank tarieven 2026 |
 | AUDIT-25 | AI smart replies — incasso-specifieke suggesties bij debiteur-emails (3 opties: betalingsregeling/betwisting afhandelen/escaleren) | 2 sessies | ❌ TODO |
 | AUDIT-26 | iDEAL payment link in incasso-emails (Mollie) — debiteur betaalt met 1 klik | 2 sessies | ❌ TODO |
 | AUDIT-27 | Closed-loop betaling: belofte in email → bankbetaling matchen → auto-bevestigingsmail → dossier updaten | 3 sessies | ❌ TODO |
-| AUDIT-28 | Sentiment/toon analyse op debiteur-emails — boos/meewerkend/wanhopig detectie voor triage | 1 sessie | ❌ TODO |
-| AUDIT-29 | Workflow auto-email bij statuswijziging — nu alleen taken, optioneel ook email versturen | 1 sessie | ❌ TODO |
+| AUDIT-28 | Sentiment/toon analyse op debiteur-emails — boos/meewerkend/wanhopig detectie voor triage | 1 sessie | ✅ Sessie 110 — AI prompt + model + schema + migratie |
+| AUDIT-29 | Workflow auto-email bij statuswijziging — nu alleen taken, optioneel ook email versturen | 1 sessie | ✅ Was al geïmplementeerd (auto_execute send_email hooks) |
 | AUDIT-30 | Client portal — debiteuren kunnen status zien, betalen, betalingsregeling aanvragen | 8-12 sessies | ❌ TODO |
 
 ### Volgorde van aanpak

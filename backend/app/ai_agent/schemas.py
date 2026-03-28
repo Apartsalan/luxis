@@ -22,6 +22,7 @@ class ClassificationResponse(BaseModel):
     category_label: str
     confidence: float
     reasoning: str
+    sentiment: str | None = None
 
     # Suggested action
     suggested_action: str

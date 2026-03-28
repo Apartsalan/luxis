@@ -22,10 +22,18 @@ Antwoord ALLEEN met valide JSON:
   "category": "<een van de 8 categorieën>",
   "confidence": <0.0-1.0>,
   "reasoning": "<1-2 zinnen uitleg in het Nederlands>",
+  "sentiment": "<meewerkend|neutraal|gefrustreerd|boos|wanhopig>",
   "suggested_action": "<wait_and_remind|escalate|send_template|dismiss|request_proof|no_action>",
   "suggested_template_key": "<template key of null>",
   "suggested_reminder_days": <getal of null>
 }
+
+Regels voor sentiment:
+- meewerkend: debiteur wil betalen, werkt mee
+- neutraal: zakelijk, geen duidelijke emotie
+- gefrustreerd: ontevreden maar nog redelijk
+- boos: agressief, dreigend, onredelijk
+- wanhopig: wanhopig, financieel aan de grond
 
 Regels voor suggested_action:
 - belofte_tot_betaling → wait_and_remind, reminder_days op basis van genoemde termijn (standaard 7)

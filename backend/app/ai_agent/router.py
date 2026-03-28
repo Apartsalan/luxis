@@ -103,6 +103,7 @@ def _classification_to_response(c) -> ClassificationResponse:
         category_label=CATEGORY_LABELS.get(c.category, c.category),
         confidence=c.confidence,
         reasoning=c.reasoning,
+        sentiment=getattr(c, "sentiment", None),
         suggested_action=c.suggested_action,
         suggested_action_label=ACTION_LABELS.get(c.suggested_action, c.suggested_action),
         suggested_template_key=c.suggested_template_key,
@@ -323,6 +324,32 @@ async def approve_and_execute(
     await db.commit()
     refreshed = await get_classification_by_id(db, c.id, current_user.tenant_id)
     return _classification_to_response(refreshed)
+
+
+# ---------------------------------------------------------------------------
+# Client update draft (AUDIT-22)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/client-update/{case_id}")
+async def generate_client_update_draft(
+    case_id: uuid.UUID,
+    trigger: str = Query(default="status_change", pattern="^(payment|status_change)$"),
+    details: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate an AI draft update email to the client (opdrachtgever).
+
+    Trigger types:
+    - payment: notification that a payment was received
+    - status_change: notification that the case status changed
+    """
+    from app.ai_agent.draft_service import generate_client_update
+
+    return await generate_client_update(
+        db, current_user.tenant_id, case_id, trigger, details
+    )
 
 
 # ---------------------------------------------------------------------------

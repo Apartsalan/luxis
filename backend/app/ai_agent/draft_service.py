@@ -285,3 +285,39 @@ async def generate_draft(
         "model": model,
         "case_number": context["case_number"],
     }
+
+
+async def generate_client_update(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    trigger: str,
+    details: str | None = None,
+) -> dict:
+    """Generate an AI draft update email to the client (opdrachtgever).
+
+    Called automatically when a payment is received or status changes.
+
+    Args:
+        trigger: "payment" or "status_change"
+        details: Extra context (e.g. "Betaling van €500 ontvangen" or "Status: sommatie → dagvaarding")
+    """
+    instructions = {
+        "payment": (
+            "Schrijf een kort update-bericht naar de OPDRACHTGEVER (cliënt, niet de debiteur). "
+            "Meld dat er een betaling is ontvangen op het dossier. "
+            "Vermeld het bedrag, het resterende openstaande bedrag, en wat de volgende stap is. "
+            "Houd het kort en zakelijk (3-5 zinnen). "
+            f"Extra details: {details or 'geen'}"
+        ),
+        "status_change": (
+            "Schrijf een kort update-bericht naar de OPDRACHTGEVER (cliënt, niet de debiteur). "
+            "Meld dat de status van het incassodossier is gewijzigd. "
+            "Leg kort uit wat de nieuwe status betekent en wat de volgende stap is. "
+            "Houd het kort en zakelijk (3-5 zinnen). "
+            f"Extra details: {details or 'geen'}"
+        ),
+    }
+
+    instruction = instructions.get(trigger, instructions["status_change"])
+    return await generate_draft(db, tenant_id, case_id, instruction)

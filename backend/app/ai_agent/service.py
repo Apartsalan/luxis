@@ -169,6 +169,12 @@ async def classify_email(
     if action not in valid_actions:
         action = "no_action"
 
+    # Validate sentiment
+    valid_sentiments = {"meewerkend", "neutraal", "gefrustreerd", "boos", "wanhopig"}
+    sentiment = ai_result.get("sentiment", "neutraal")
+    if sentiment not in valid_sentiments:
+        sentiment = "neutraal"
+
     classification = EmailClassification(
         tenant_id=tenant_id,
         synced_email_id=synced_email_id,
@@ -176,6 +182,7 @@ async def classify_email(
         category=category,
         confidence=min(max(float(ai_result.get("confidence", 0.5)), 0.0), 1.0),
         reasoning=ai_result.get("reasoning", ""),
+        sentiment=sentiment,
         suggested_action=action,
         suggested_template_key=ai_result.get("suggested_template_key"),
         suggested_reminder_days=ai_result.get("suggested_reminder_days"),

@@ -175,6 +175,33 @@ export function useExecuteClassification() {
 }
 
 /**
+ * Approve AND execute a classification in one step.
+ */
+export function useApproveAndExecuteClassification() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Classification, Error, { id: string; note?: string }>({
+    mutationFn: async ({ id, note }) => {
+      const res = await api(`/api/ai-agent/classifications/${id}/approve-and-execute`, {
+        method: "POST",
+        body: JSON.stringify(note ? { note } : {}),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Goedkeuren en uitvoeren mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["ai-classifications"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-classification-email", data.synced_email_id] });
+      queryClient.invalidateQueries({ queryKey: ["ai-pending-count"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-tasks"] });
+    },
+  });
+}
+
+/**
  * Manually trigger classification for a specific email.
  */
 export function useClassifyEmail() {

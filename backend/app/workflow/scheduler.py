@@ -9,6 +9,8 @@ Uses APScheduler with AsyncIOScheduler, started on FastAPI startup event.
 """
 
 import logging
+import uuid
+from datetime import date
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -40,18 +42,23 @@ async def daily_task_status_update() -> None:
 
 
 async def daily_verjaring_check() -> None:
-    """Daily job: check all tenants for approaching verjaring and create warning tasks."""
+    """Daily job: check all tenants for approaching verjaring and create warning tasks.
+
+    Creates workflow tasks at 90, 60, and 30 day thresholds to ensure timely action.
+    Deduplicates: won't create a task if one already exists for that case+threshold.
+    """
     from app.auth.models import Tenant
+    from app.workflow.models import WorkflowTask
     from app.workflow.service import check_verjaring
 
     logger.info("Scheduler: starting daily verjaring check")
     try:
         async with async_session() as session:
-            # Get all active tenants
             result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
             tenants = list(result.scalars().all())
 
             total_warnings = 0
+            tasks_created = 0
             for tenant in tenants:
                 warnings = await check_verjaring(session, tenant.id)
                 if warnings:
@@ -66,12 +73,61 @@ async def daily_verjaring_check() -> None:
                             f"Scheduler: [{level}] Verjaring zaak {w['case_number']} "
                             f"(tenant {tenant.name}) — {days_info}"
                         )
+
+                        # Create warning tasks at 90/60/30 day thresholds
+                        days = w["days_remaining"]
+                        if days <= 0:
+                            threshold = "verjaard"
+                        elif days <= 30:
+                            threshold = "30_dagen"
+                        elif days <= 60:
+                            threshold = "60_dagen"
+                        elif days <= 90:
+                            threshold = "90_dagen"
+                        else:
+                            continue
+
+                        task_title = (
+                            f"VERJARING: {w['case_number']} — "
+                            + ("VERJAARD! Direct actie vereist" if days <= 0
+                               else f"nog {days} dagen (stuitingshandeling nodig)")
+                        )
+
+                        # Dedup: check if task already exists for this case+threshold
+                        existing = await session.execute(
+                            select(WorkflowTask).where(
+                                WorkflowTask.tenant_id == tenant.id,
+                                WorkflowTask.case_id == uuid.UUID(w["case_id"]),
+                                WorkflowTask.task_type == "verjaring_warning",
+                                WorkflowTask.title.contains(threshold if threshold != "verjaard" else "VERJAARD"),
+                                WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                            )
+                        )
+                        if existing.scalar_one_or_none():
+                            continue
+
+                        task = WorkflowTask(
+                            tenant_id=tenant.id,
+                            case_id=uuid.UUID(w["case_id"]),
+                            task_type="verjaring_warning",
+                            title=task_title,
+                            description=(
+                                f"Verjaringsdatum: {w['verjaring_date']} (Art. 3:307 BW). "
+                                f"Overweeg een stuitingshandeling (aanmaning, dagvaarding)."
+                            ),
+                            due_date=date.today(),
+                            status="overdue" if days <= 0 else "due",
+                        )
+                        session.add(task)
+                        tasks_created += 1
+
                     total_warnings += len(warnings)
 
             await session.commit()
             logger.info(
-                "Scheduler: verjaring check complete — %d warnings across %d tenants",
+                "Scheduler: verjaring check complete — %d warnings, %d tasks created across %d tenants",
                 total_warnings,
+                tasks_created,
                 len(tenants),
             )
     except Exception:

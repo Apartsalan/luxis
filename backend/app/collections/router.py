@@ -491,6 +491,43 @@ async def financial_summary(
     )
 
 
+# ── Pre-send Compliance Check ──────────────────────────────────────────────
+
+
+@router.get("/compliance-check")
+async def compliance_check(
+    case_id: uuid.UUID,
+    document_type: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run pre-send compliance checks for a case before sending documents/emails."""
+    from app.collections.compliance import pre_send_compliance_check
+
+    return await pre_send_compliance_check(
+        db, current_user.tenant_id, case_id, document_type
+    )
+
+
+# ── Griffierechten ─────────────────────────────────────────────────────────
+
+
+@router.get("/griffierecht")
+async def get_griffierecht(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Calculate griffierecht for a case based on total principal."""
+    from app.collections.griffierechten import calculate_griffierecht
+
+    case = await get_case(db, current_user.tenant_id, case_id)
+    claims = await service.list_claims(db, current_user.tenant_id, case_id)
+    total_principal = sum(c.principal_amount for c in claims)
+    is_rp = case.debtor_type == "b2b"
+    return calculate_griffierecht(total_principal, is_rechtspersoon=is_rp)
+
+
 # ── Interest Rates (standalone reference endpoint) ───────────────────────────
 
 

@@ -45,7 +45,7 @@ import { useSendViaProvider } from "@/hooks/use-email-sync";
 import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
 import {
   useClassifications,
-  useApproveClassification,
+  useApproveAndExecuteClassification,
   useRejectClassification,
   type Classification,
 } from "@/hooks/use-ai-agent";
@@ -101,7 +101,7 @@ export default function ZaakDetailPage() {
   // AI-UX-04: pending classifications for this case
   const { data: pendingClassifications } = useClassifications("pending", id, 1, 1);
   const latestPendingClassification = pendingClassifications?.[0] ?? null;
-  const approveClassification = useApproveClassification();
+  const approveClassification = useApproveAndExecuteClassification();
   const rejectClassification = useRejectClassification();
   const [aiBannerCollapsed, setAiBannerCollapsed] = useState(false);
   const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
@@ -486,7 +486,7 @@ export default function ZaakDetailPage() {
                       onClick={() => {
                         approveClassification.mutate(
                           { id: latestPendingClassification.id },
-                          { onSuccess: () => toast.success("Classificatie goedgekeurd") },
+                          { onSuccess: () => toast.success("Classificatie goedgekeurd en uitgevoerd") },
                         );
                       }}
                       disabled={approveClassification.isPending || rejectClassification.isPending}
@@ -497,7 +497,7 @@ export default function ZaakDetailPage() {
                       ) : (
                         <Check className="h-3 w-3" />
                       )}
-                      Akkoord
+                      Akkoord + Uitvoeren
                     </button>
                     <button
                       type="button"

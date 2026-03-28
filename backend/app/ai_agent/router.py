@@ -294,6 +294,37 @@ async def execute(
     return _classification_to_response(refreshed)
 
 
+@router.post(
+    "/classifications/{classification_id}/approve-and-execute",
+    response_model=ClassificationResponse,
+)
+async def approve_and_execute(
+    classification_id: uuid.UUID,
+    body: ClassificationApproveRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve and immediately execute a classification in one step."""
+    note = body.note if body else None
+    c = await approve_classification(
+        db, classification_id, current_user.tenant_id, current_user.id, note
+    )
+    if not c:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Classificatie niet gevonden of niet in status 'pending'",
+        )
+    c = await execute_classification(db, classification_id, current_user.tenant_id, current_user.id)
+    if not c:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Classificatie goedgekeurd maar uitvoeren mislukt",
+        )
+    await db.commit()
+    refreshed = await get_classification_by_id(db, c.id, current_user.tenant_id)
+    return _classification_to_response(refreshed)
+
+
 # ---------------------------------------------------------------------------
 # Seed templates
 # ---------------------------------------------------------------------------

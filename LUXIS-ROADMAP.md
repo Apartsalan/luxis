@@ -81,14 +81,14 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | AUDIT-15 | Exact Online integratie (boekhouding sync) | 1 sessie (vereenvoudigd) | ✅ Sessie 112 — OAuth + sync module gebouwd |
 | AUDIT-16 | ~~Online betalen via Mollie/iDEAL~~ | — | ❌ Geschrapt — niet relevant voor advocatenkantoor |
 | AUDIT-17 | Rapport-pagina (management overzichten, omzet, incasso-KPIs) | 2-3 sessies | ✅ Sessie 111 (28 mrt) |
-| AUDIT-18 | Betalingsbelofte-extractie uit debiteur-emails (AI) | 2 sessies | ✅ Sessie 111 (28 mrt) |
+| AUDIT-18 | Betalingsbelofte-extractie uit debiteur-emails (AI) | 2 sessies | ✅ Backend sessie 111 + Frontend sessie 112 |
 | AUDIT-19 | Aangetekend Mailen API integratie (Aangetekend B.V., eIDAS) | 2-3 sessies | ⏸️ Pas bij hoog volume |
 | AUDIT-20 | Pre-send compliance check (14-dagenbrief validatie, WIK check) | 2 sessies | ✅ Sessie 110 — 6 checks (14-dagen, BIK, debiteur, vorderingen, verzuimdatum, verjaring) |
 | AUDIT-21 | ~~Email analytics (open rate, click rate)~~ | — | ❌ Geschrapt — juridische brieven, geen marketing |
 | AUDIT-22 | Auto-update naar opdrachtgever (AI draft bij betaling/statuswijziging) | 1-2 sessies | ✅ Sessie 110 — /client-update endpoint |
 | AUDIT-23 | BIK override validatie — mag niet hoger dan WIK-staffel bij B2C | 0.5 sessie | ✅ Sessie 110 |
 | AUDIT-24 | Griffierechten-tabel integreren | 1 sessie | ✅ Sessie 110 — kanton + rechtbank tarieven 2026 |
-| AUDIT-25 | AI smart replies — incasso-specifieke suggesties bij debiteur-emails (3 opties: betalingsregeling/betwisting afhandelen/escaleren) | 2 sessies | ✅ Sessie 111 (28 mrt) |
+| AUDIT-25 | AI smart replies — incasso-specifieke suggesties bij debiteur-emails (3 opties: betalingsregeling/betwisting afhandelen/escaleren) | 2 sessies | ✅ Backend sessie 111 + Frontend sessie 112 |
 | AUDIT-26 | ~~iDEAL payment link in incasso-emails~~ | — | ❌ Geschrapt — duplicaat van AUDIT-16 |
 | AUDIT-27 | ~~Closed-loop betaling~~ | — | ❌ Geschrapt — vereist bankfeed, te vroeg |
 | AUDIT-28 | Sentiment/toon analyse op debiteur-emails — boos/meewerkend/wanhopig detectie voor triage | 1 sessie | ✅ Sessie 110 — AI prompt + model + schema + migratie |
@@ -601,7 +601,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | AI-UX-07 | **Dashboard AI widget** — samenvatting "3 dossiers vereisen actie, 2 termijnen verlopen vandaag". | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-08 | **Nederlandse tekstlabels i.p.v. percentages** — "Aanbevolen" (blauw), "Mogelijk" (oranje), "Onzeker" (grijs) i.p.v. "95%". | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-09 | **AI concept-berichten klaarzetten** — bij accepteren schrijft de AI een kant-en-klaar inhoudelijk bericht. Niet een standaard afwijzing, maar een onderbouwd antwoord op basis van ALLE dossiercontext (zie AI-UX-13). Lisanne reviewt en verstuurt. Alleen voor incasso. | ✅ Done (sessie 100, 23 mrt) |
-| AI-UX-10 | **Response templates tailoren** — de 6 standaard antwoord-templates moeten nog afgestemd worden op hoe Kesting Legal communiceert. Input van Arsalan nodig. | ❌ TODO — wacht op input |
+| AI-UX-10 | **Response templates tailoren** — de 6 standaard antwoord-templates afgestemd op Kesting Legal juridische stijl. | ✅ Sessie 112 — professionele juridische toon, mr. L. Kesting signatuur, consequenties bij niet-betaling |
 | AI-UX-11 | **Algemene voorwaarden per cliënt** — upload/opslag van algemene voorwaarden per cliënt (niet van Kesting Legal). AI valt hier op terug bij betwistingen. Per dossier gekoppeld via de cliënt. | ✅ 23 maart 2026 |
 | AI-UX-13 | **AI raadpleegt volledige dossiercontext** — de AI leest ALLES voordat hij een concept schrijft: (1) alle emails in+uit, (2) notities/telefoonnotities in het dossier, (3) contract/overeenkomst PDF, (4) factuur PDF, (5) algemene voorwaarden cliënt, (6) vorderingen + betalingen, (7) activity feed, (8) eerder verzonden brieven. Zonder deze context is de AI te simpel. | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-14 | **Bronvermelding in concept-berichten** — AI verwijst naar specifieke artikelen uit contract/AV, berekent termijnen, citeert relevante correspondentie. Lisanne kan snel checken of het klopt. | ✅ Done (sessie 100, 23 mrt) |

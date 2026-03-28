@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 28 maart 2026 (sessie 112 — Exact Online integratie AUDIT-15)
-**Laatste feature/fix:** Sessie 112 — AUDIT-15 (Exact Online OAuth + sync module)
+**Laatst bijgewerkt:** 28 maart 2026 (sessie 112 — Exact Online + AI features + a11y)
+**Laatste feature/fix:** Sessie 112 — AUDIT-15/18/25 + AI-UX-10 + a11y polish
 **Volgende sessie:** 113 — Lisanne overzetten naar M365 (AUDIT-04/05) of Exact Online app registreren + live testen
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
@@ -49,6 +49,35 @@ Wat nog nodig is voor live gebruik:
 - Lisanne's Exact Online credentials + division ophalen
 - env vars invullen op VPS
 - Live testen met sandbox/test administratie
+
+**AUDIT-18 Frontend: Betalingsbelofte UI gebouwd:**
+- Fix: `_classification_to_response()` stuurt nu `promise_date` + `promise_amount` mee
+- Frontend `Classification` type uitgebreid met `promise_date`, `promise_amount`, `sentiment`
+- Groene betalingsbelofte-banner in ClassificationCard (datum + bedrag, alleen bij belofte_tot_betaling)
+- Sentiment badge naast category label
+
+**AUDIT-25 Frontend: AI Smart Replies UI gebouwd:**
+- `useSmartReplies(classificationId)` hook (lazy fetch)
+- "Concept-antwoord" knop in ClassificationCard
+- 3 AI-gegenereerde replies (mild/zakelijk/streng) met expandable cards
+- Kopieer-naar-klembord functie per antwoord
+- Loading state tijdens generatie
+
+**AI-UX-10: Response templates afgestemd op Kesting Legal:**
+- Alle 6 templates herschreven met professionele juridische toon
+- "mr. L. Kesting" signatuur toegevoegd
+- Consequenties bij niet-betaling expliciet benoemd
+- Betwistingen: vordering gehandhaafd + onderbouwing vragen
+- Betalingsbewijs: 5 werkdagen deadline + voortzetting incassoprocedure
+
+**A11y quick wins ge\u00efmplementeerd:**
+- Skip-to-content link + `id="main-content"` op main element
+- `prefers-reduced-motion` CSS media query (alle animaties uitschakelen)
+- `aria-label` op alle icon-only buttons (bel, uitloggen, sidebar sluiten/inklappen)
+- `aria-expanded` + `aria-haspopup` op notificatie-bel
+- `aria-current="page"` op actieve breadcrumb
+- `role="status"` op loading spinners
+- `aria-hidden="true"` op decoratieve iconen
 
 ## Wat er gedaan is (sessie 111 — 28 maart 2026) — Outlook agenda sync (AUDIT-07)
 

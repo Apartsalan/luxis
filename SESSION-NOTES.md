@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 29 maart 2026 (sessie 113 — Feature & UX Audit)
-**Laatste feature/fix:** Sessie 113 — Feature & UX Audit (7.5/10), FUA-01 t/m FUA-12 op roadmap
-**Volgende sessie:** 114 — FUA-01 (notificatie-backend activeren) of FUA-02/03 (templates + uren afronden)
+**Laatst bijgewerkt:** 30 maart 2026 (sessie 114 — Notificaties + Templates + Timer)
+**Laatste feature/fix:** Sessie 114 — FUA-01/06/11/12 + 9 nieuwe email templates + 7 DOCX templates bijgewerkt
+**Volgende sessie:** 115 — Demo feedback Lisanne + FUA-07/09/13
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,29 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 114 — 30 maart 2026) — Notificaties + Templates + Timer
+
+**FUA-items afgerond:**
+- ✅ FUA-01: Notificatie-backend (model, service, router, migratie 043, scheduler: deadlines + verjaring)
+- ✅ FUA-06: Vergeten-uren waarschuwing op dashboard (amber banner als gisteren 0 uren)
+- ✅ FUA-11: Pauzeknop op timer (amber Pause-knop, resumeTimer hergebruikt)
+- ✅ FUA-12: Engelse termen vertaald ("Word Templates"→"Word-sjablonen", "Pipeline"→"Werkstroom", "Bank Import"→"Bankimport", "Pipeline verdeling"→"Faseverdeling")
+
+**9 nieuwe email templates** (uit Lisanne's BaseNet voorbeelden):
+- reactie_9_3, reactie_20_4, schikkingsvoorstel, engelse_sommatie, reactie_ncnp_9_3, reactie_verlengd_9_3, vaststellingsovereenkomst, faillissement_dreigbrief, bevestiging_sluiting
+
+**Bestaande templates bijgewerkt:**
+- 5 HTML email templates: handtekening → Mevr. mr. L. Kesting + schuldhulpblok + disclaimer
+- 7 DOCX templates: _add_signature() + _add_schuldhulp() helpers, geregenereerd
+
+**Roadmap bijgewerkt:** FUA-02/03/04/05 geschrapt (had ze al / niet nodig), FUA-08/10 niet bouwen
+
+**Overig:** Agent Reach geïnstalleerd (v1.3.0), tooling review (geen nieuwe tools nodig)
+
+**Nog open:** FUA-07 (unified tijdlijn), FUA-09 (agenda-widget), FUA-13 (a11y labels)
+
+---
 
 ## Wat er gedaan is (sessie 113 — 29 maart 2026) — Feature & UX Audit
 

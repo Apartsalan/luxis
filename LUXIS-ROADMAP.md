@@ -644,7 +644,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Item | Effort | Status |
 |---|------|--------|--------|
-| FUA-01 | **Notificatie-backend activeren** — Frontend is 100% klaar (10 types, polling, UI). Backend stub moet echte notificaties genereren bij: deadline <3 dagen, deadline verlopen, verjaring nadert, taak toegewezen. | M (4-6 uur) | ❌ TODO |
+| FUA-01 | **Notificatie-backend activeren** — Model, service, router, migratie 043, scheduler (deadlines + verjaring) | M (4-6 uur) | ✅ Sessie 114 (30 mrt) |
 | FUA-02 | ~~Opdrachtbevestiging DOCX-template~~ | — | ✅ Lisanne heeft dit al |
 | FUA-03 | ~~Uren afronden op 6 minuten~~ | — | ✅ Al gebouwd (BUG-52, sessie 78) — `Math.ceil(seconds / 360) * 6` |
 
@@ -654,7 +654,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 |---|------|--------|--------|
 | FUA-04 | ~~Afsluitbrief DOCX-template~~ | — | ✅ Lisanne heeft dit al |
 | FUA-05 | ~~Incassomachtiging DOCX-template~~ | — | ✅ Niet nodig (bevestigd door gebruiker) |
-| FUA-06 | **"Vergeten uren" waarschuwing op dashboard** — Badge/melding als gisteren 0 registraties. | S (1 uur) | ❌ TODO |
+| FUA-06 | **"Vergeten uren" waarschuwing op dashboard** — Amber banner als gisteren werkdag met 0 uren | S (1 uur) | ✅ Sessie 114 (30 mrt) |
 
 #### Bevestigd om te bouwen
 
@@ -662,8 +662,8 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 |---|------|--------|--------|
 | FUA-07 | **Unified tijdlijn per dossier** — alle activiteit (emails, documenten, betalingen, notities) in één chronologisch overzicht | M (4 uur) | ❌ TODO |
 | FUA-09 | **Agenda-widget op dashboard** — vandaag + morgen events zichtbaar bij inloggen | S (2 uur) | ❌ TODO |
-| FUA-11 | **Pauzeknop op timer** — expliciete pauze/hervat toggle in floating timer | S (1 uur) | ❌ TODO |
-| FUA-12 | **Engelse termen vertalen** — "Word Templates" → "Word-sjablonen", "Billable" → "Declarabel", etc. | S (30 min) | ❌ TODO |
+| FUA-11 | **Pauzeknop op timer** — amber Pause-knop in floating timer | S (1 uur) | ✅ Sessie 114 (30 mrt) |
+| FUA-12 | **Engelse termen vertaald** — Word-sjablonen, Werkstroom, Bankimport, Faseverdeling | S (30 min) | ✅ Sessie 114 (30 mrt) |
 | FUA-13 | **A11y form labels (htmlFor/id)** — formuliervelden koppelen aan labels voor toegankelijkheid | S (2 uur) | ❌ TODO |
 
 #### Niet bouwen (besloten)

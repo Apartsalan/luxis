@@ -1,12 +1,13 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 30 maart 2026 (sessie 114 — Notificaties + Templates + Timer)
-**Laatste feature/fix:** Sessie 114 — FUA-01/06/11/12 + 9 nieuwe email templates + 7 DOCX templates bijgewerkt
-**Volgende sessie:** 115 — Demo feedback Lisanne + FUA-07/09/13
+**Laatst bijgewerkt:** 30 maart 2026 (sessie 115 — Demo Feedback Lisanne)
+**Laatste feature/fix:** Sessie 115 — 11 demo-feedback items verwerkt (DF-01 t/m DF-11)
+**Volgende sessie:** 116 — FUA-07 (unified tijdlijn) + FUA-09 (agenda-widget) + FUA-13 (a11y labels)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
 **LF Sprint:** 22/22 afgerond — SPRINT COMPLEET ✅
+**Demo Feedback Lisanne:** 11/11 COMPLEET ✅
 **Demo feedback sprint:** Sprint 1 (7/20) ✅ + Sprint 2 (11/20) ✅ + Sprint 3 (17/20) ✅ + Sprint 4 (20/20) ✅ — SPRINT COMPLEET ✅
 **UX Review:** 18/18 issues gefixt (UX-1 t/m UX-5 in 79b + UX-6 t/m UX-13 in 80)
 **Security Sprint:** 15/15 COMPLEET ✅ + mega-audit sessie 89-92 (28/30 gefixt, 2 resterend: SEC-16 KDF al gefixt maar niet in audit, SEC-23 idem)
@@ -15,6 +16,47 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 115 — 30 maart 2026) — Demo Feedback Lisanne
+
+**11 demo-feedback items verwerkt:**
+
+1. **DF-01 Mail compose full-screen** — Dialog 95vw/92vh met flex layout, body neemt alle beschikbare ruimte
+2. **DF-02 Mail template bewerkbaar** — Read-only iframe → contentEditable div, edits gaan mee bij verzending
+3. **DF-03 Correspondentie als volledige mailbox** — Nieuwe "Alle e-mails" tab (standaard) + "Ongesorteerd" tab, dossier-badge per email, backend GET /api/email/all endpoint
+4. **DF-04 AI concept assertiever** — Rente+BIK+openstaand bedrag in context, zakelijke/assertieve toon, concrete betalingstermijn
+5. **DF-05 Factuur parsing** — Geen errors in logs, backend hergebouwd met alle dependencies
+6. **DF-06 Document preview** — Betere foutmelding bij 415 (unsupported type), LibreOffice in container hergebouwd
+7. **DF-07 Bestandsnaam aanpasbaar** — PATCH /api/cases/{id}/files/{id} endpoint + inline rename (pencil icon) in DocumentenTab
+8. **DF-08 Rentefrequentie** — Verplaatst van per-claim naar "Rente-instellingen" card, alleen zichtbaar bij contractuele rente
+9. **DF-09 Standaard rente per client** — default_interest_type + default_contractual_rate op Contact model, UI in ContactInfoSection, pre-fill in wizard
+10. **DF-10 Sync error 2026-00048** — Geen bug: dossier mist case_parties. Wederpartij moet worden toegevoegd.
+11. **DF-11 Facturatie-widget weg** — BillingSettingsSection + BudgetProgressBar verwijderd uit dossier sidebar
+
+**Gewijzigde bestanden (frontend):**
+- `email-compose-dialog.tsx` (DF-01, DF-02)
+- `DossierSidebar.tsx` (DF-11)
+- `zaken/nieuw/page.tsx` (DF-08, DF-09)
+- `Step3Vorderingen.tsx`, `Step1Zaakgegevens.tsx` (DF-08)
+- `VorderingenTab.tsx` (DF-08)
+- `DocumentenTab.tsx` (DF-06, DF-07)
+- `use-case-files.ts` (DF-07)
+- `correspondentie/page.tsx` (DF-03)
+- `use-email-sync.ts` (DF-03)
+- `use-relations.ts` (DF-09)
+- `ContactInfoSection.tsx` (DF-09)
+
+**Gewijzigde bestanden (backend):**
+- `ai_agent/draft_service.py` (DF-04)
+- `cases/router.py`, `cases/files_service.py`, `cases/schemas.py` (DF-07)
+- `email/sync_router.py`, `email/sync_service.py` (DF-03)
+- `relations/models.py`, `relations/schemas.py` (DF-09)
+- Migration: `edc1202caef9_add_default_interest_fields_to_contacts.py`
+
+**Openstaande FUA-items voor sessie 116:**
+- FUA-07: Unified tijdlijn per dossier (~4 uur)
+- FUA-09: Agenda-widget op dashboard (~2 uur)
+- FUA-13: A11y form labels (~2 uur)
 
 ## Wat er gedaan is (sessie 114 — 30 maart 2026) — Notificaties + Templates + Timer
 

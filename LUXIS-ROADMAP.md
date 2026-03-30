@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 29 maart 2026 (sessie 113 — Feature & UX Audit)
+**Laatst bijgewerkt:** 30 maart 2026 (sessie 115 — Demo Feedback Lisanne)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -635,6 +635,22 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | TOOL-12 | **Canvas Design skill** | Marketing | Social graphics, LinkedIn visuals zonder designer | ✅ Sessie 96 |
 | TOOL-13 | **Perplexity MCP verwijderen** | Opruimen | Te duur, geen free tier, geen budget | ✅ Sessie 96 |
 | TOOL-14 | **Firecrawl MCP verwijderen** | Opruimen | Credits op, niet vernieuwd | ✅ Sessie 96 |
+
+### Demo Feedback Lisanne (sessie 115, 30 maart 2026)
+
+| # | Item | Status |
+|---|------|--------|
+| DF-01 | **Mail compose full-screen** — dialog 95vw/92vh, flex layout, body neemt alle ruimte | ✅ Sessie 115 |
+| DF-02 | **Mail template bewerkbaar** — iframe → contentEditable div, edits gaan mee bij verzending | ✅ Sessie 115 |
+| DF-03 | **Correspondentie als volledige mailbox** — tabs Alle/Ongesorteerd, dossier-badge per email | ✅ Sessie 115 |
+| DF-04 | **AI concept assertiever** — rente+BIK in context, zakelijke toon, concrete betalingstermijn | ✅ Sessie 115 |
+| DF-05 | **Factuur parsing** — geen errors gevonden, backend hergebouwd met dependencies | ✅ Sessie 115 |
+| DF-06 | **Document preview** — betere foutmelding bij niet-ondersteunde types, LibreOffice rebuild | ✅ Sessie 115 |
+| DF-07 | **Bestandsnaam aanpasbaar** — PATCH endpoint + inline rename UI in DocumentenTab | ✅ Sessie 115 |
+| DF-08 | **Rentefrequentie onder rente-instellingen** — alleen zichtbaar bij contractuele rente | ✅ Sessie 115 |
+| DF-09 | **Standaard rente per client** — default_interest_type op Contact + pre-fill in wizard | ✅ Sessie 115 |
+| DF-10 | **Sync error 2026-00048** — geen bug, dossier mist case_parties (wederpartij toevoegen) | ✅ Sessie 115 |
+| DF-11 | **Facturatie-widget weg** — BillingSettingsSection verwijderd uit dossier sidebar | ✅ Sessie 115 |
 
 ### Feature & UX Audit (sessie 113, 29 maart 2026)
 

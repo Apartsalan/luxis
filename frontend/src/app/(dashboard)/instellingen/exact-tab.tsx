@@ -262,7 +262,7 @@ export function ExactTab() {
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Verkoopjournaal</Label>
+                    <Label htmlFor="settings-sales-journal">Verkoopjournaal</Label>
                     <Select
                       value={localSettings.sales_journal_code}
                       onValueChange={(v) =>
@@ -272,7 +272,7 @@ export function ExactTab() {
                         }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="settings-sales-journal">
                         <SelectValue placeholder="Selecteer journaal" />
                       </SelectTrigger>
                       <SelectContent>
@@ -286,7 +286,7 @@ export function ExactTab() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Bankjournaal</Label>
+                    <Label htmlFor="settings-bank-journal">Bankjournaal</Label>
                     <Select
                       value={localSettings.bank_journal_code}
                       onValueChange={(v) =>
@@ -296,7 +296,7 @@ export function ExactTab() {
                         }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="settings-bank-journal">
                         <SelectValue placeholder="Selecteer journaal" />
                       </SelectTrigger>
                       <SelectContent>
@@ -310,7 +310,7 @@ export function ExactTab() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Omzet-grootboekrekening</Label>
+                    <Label htmlFor="settings-revenue-gl">Omzet-grootboekrekening</Label>
                     <Select
                       value={localSettings.default_revenue_gl}
                       onValueChange={(v) =>
@@ -320,7 +320,7 @@ export function ExactTab() {
                         }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="settings-revenue-gl">
                         <SelectValue placeholder="Selecteer rekening" />
                       </SelectTrigger>
                       <SelectContent>
@@ -334,7 +334,7 @@ export function ExactTab() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Verschotten-grootboekrekening</Label>
+                    <Label htmlFor="settings-expense-gl">Verschotten-grootboekrekening</Label>
                     <Select
                       value={localSettings.default_expense_gl}
                       onValueChange={(v) =>
@@ -344,7 +344,7 @@ export function ExactTab() {
                         }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="settings-expense-gl">
                         <SelectValue placeholder="Selecteer rekening" />
                       </SelectTrigger>
                       <SelectContent>

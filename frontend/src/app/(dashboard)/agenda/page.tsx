@@ -595,10 +595,11 @@ function EventDialog({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Title */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            <label htmlFor="agenda-title" className="block text-xs font-medium text-muted-foreground mb-1.5">
               Titel *
             </label>
             <input
+              id="agenda-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -642,8 +643,9 @@ function EventDialog({
           </div>
 
           {/* All day toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label htmlFor="agenda-all-day" className="flex items-center gap-2 cursor-pointer">
             <input
+              id="agenda-all-day"
               type="checkbox"
               checked={allDay}
               onChange={(e) => setAllDay(e.target.checked)}
@@ -655,10 +657,11 @@ function EventDialog({
           {/* Date / Time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label htmlFor="agenda-start" className="block text-xs font-medium text-muted-foreground mb-1.5">
                 {allDay ? "Startdatum" : "Start"}
               </label>
               <input
+                id="agenda-start"
                 type={allDay ? "date" : "datetime-local"}
                 value={allDay ? startTime.slice(0, 10) : startTime}
                 onChange={(e) => setStartTime(e.target.value)}
@@ -667,10 +670,11 @@ function EventDialog({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label htmlFor="agenda-end" className="block text-xs font-medium text-muted-foreground mb-1.5">
                 {allDay ? "Einddatum" : "Einde"}
               </label>
               <input
+                id="agenda-end"
                 type={allDay ? "date" : "datetime-local"}
                 value={allDay ? endTime.slice(0, 10) : endTime}
                 onChange={(e) => setEndTime(e.target.value)}
@@ -682,12 +686,13 @@ function EventDialog({
 
           {/* Location */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            <label htmlFor="agenda-location" className="block text-xs font-medium text-muted-foreground mb-1.5">
               Locatie
             </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
+                id="agenda-location"
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -700,10 +705,11 @@ function EventDialog({
           {/* Case & Contact pickers */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label htmlFor="agenda-case" className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Zaak
               </label>
               <select
+                id="agenda-case"
                 value={caseId}
                 onChange={(e) => setCaseId(e.target.value)}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -717,10 +723,11 @@ function EventDialog({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              <label htmlFor="agenda-contact" className="block text-xs font-medium text-muted-foreground mb-1.5">
                 Relatie
               </label>
               <select
+                id="agenda-contact"
                 value={contactId}
                 onChange={(e) => setContactId(e.target.value)}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -737,10 +744,11 @@ function EventDialog({
 
           {/* Reminder */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            <label htmlFor="agenda-reminder" className="block text-xs font-medium text-muted-foreground mb-1.5">
               Herinnering
             </label>
             <select
+              id="agenda-reminder"
               value={reminderMinutes ?? ""}
               onChange={(e) =>
                 setReminderMinutes(
@@ -760,10 +768,11 @@ function EventDialog({
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+            <label htmlFor="agenda-description" className="block text-xs font-medium text-muted-foreground mb-1.5">
               Omschrijving
             </label>
             <textarea
+              id="agenda-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}

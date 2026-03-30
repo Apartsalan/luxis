@@ -192,10 +192,11 @@ export default function NieuweRelatiePage() {
         <div className="rounded-xl border border-border bg-card p-6 space-y-4">
           {contactType === "company" ? (
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="rel-name" className="block text-sm font-medium text-foreground">
                 Bedrijfsnaam *
               </label>
               <input
+                id="rel-name"
                 type="text"
                 required
                 value={form.name}
@@ -209,10 +210,11 @@ export default function NieuweRelatiePage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="rel-first_name" className="block text-sm font-medium text-foreground">
                   Voornaam *
                 </label>
                 <input
+                  id="rel-first_name"
                   type="text"
                   required
                   value={form.first_name}
@@ -223,10 +225,11 @@ export default function NieuweRelatiePage() {
                 <FieldError field="first_name" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="rel-last_name" className="block text-sm font-medium text-foreground">
                   Achternaam *
                 </label>
                 <input
+                  id="rel-last_name"
                   type="text"
                   required
                   value={form.last_name}
@@ -241,10 +244,11 @@ export default function NieuweRelatiePage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="rel-email" className="block text-sm font-medium text-foreground">
                 E-mail
               </label>
               <input
+                id="rel-email"
                 type="email"
                 value={form.email}
                 onChange={(e) => updateField("email", e.target.value)}
@@ -254,10 +258,11 @@ export default function NieuweRelatiePage() {
               <FieldError field="email" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="rel-phone" className="block text-sm font-medium text-foreground">
                 Telefoon
               </label>
               <input
+                id="rel-phone"
                 type="tel"
                 value={form.phone}
                 onChange={(e) => updateField("phone", e.target.value)}
@@ -269,10 +274,11 @@ export default function NieuweRelatiePage() {
           {contactType === "company" && (
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="rel-kvk_number" className="block text-sm font-medium text-foreground">
                   KvK-nummer
                 </label>
                 <input
+                  id="rel-kvk_number"
                   type="text"
                   value={form.kvk_number}
                   onChange={(e) => updateField("kvk_number", e.target.value)}
@@ -283,10 +289,11 @@ export default function NieuweRelatiePage() {
                 <FieldError field="kvk_number" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="rel-btw_number" className="block text-sm font-medium text-foreground">
                   BTW-nummer
                 </label>
                 <input
+                  id="rel-btw_number"
                   type="text"
                   value={form.btw_number}
                   onChange={(e) => updateField("btw_number", e.target.value)}
@@ -299,10 +306,11 @@ export default function NieuweRelatiePage() {
 
           <h3 className="pt-2 text-sm font-semibold text-foreground">Bezoekadres</h3>
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="rel-visit_address" className="block text-sm font-medium text-foreground">
               Straat + huisnummer
             </label>
             <input
+              id="rel-visit_address"
               type="text"
               value={form.visit_address}
               onChange={(e) => updateField("visit_address", e.target.value)}
@@ -311,10 +319,11 @@ export default function NieuweRelatiePage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="rel-visit_postcode" className="block text-sm font-medium text-foreground">
                 Postcode
               </label>
               <input
+                id="rel-visit_postcode"
                 type="text"
                 value={form.visit_postcode}
                 onChange={(e) => updateField("visit_postcode", e.target.value)}
@@ -325,10 +334,11 @@ export default function NieuweRelatiePage() {
               <FieldError field="visit_postcode" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="rel-visit_city" className="block text-sm font-medium text-foreground">
                 Plaats
               </label>
               <input
+                id="rel-visit_city"
                 type="text"
                 value={form.visit_city}
                 onChange={(e) => updateField("visit_city", e.target.value)}
@@ -340,10 +350,11 @@ export default function NieuweRelatiePage() {
           <h3 className="pt-2 text-sm font-semibold text-foreground">Postadres</h3>
           <p className="text-xs text-muted-foreground -mt-2">Alleen invullen als dit afwijkt van het bezoekadres</p>
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="rel-postal_address" className="block text-sm font-medium text-foreground">
               Straat + huisnummer
             </label>
             <input
+              id="rel-postal_address"
               type="text"
               value={form.postal_address}
               onChange={(e) => updateField("postal_address", e.target.value)}
@@ -352,10 +363,11 @@ export default function NieuweRelatiePage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="rel-postal_postcode" className="block text-sm font-medium text-foreground">
                 Postcode
               </label>
               <input
+                id="rel-postal_postcode"
                 type="text"
                 value={form.postal_postcode}
                 onChange={(e) => updateField("postal_postcode", e.target.value)}
@@ -366,10 +378,11 @@ export default function NieuweRelatiePage() {
               <FieldError field="postal_postcode" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="rel-postal_city" className="block text-sm font-medium text-foreground">
                 Plaats
               </label>
               <input
+                id="rel-postal_city"
                 type="text"
                 value={form.postal_city}
                 onChange={(e) => updateField("postal_city", e.target.value)}
@@ -379,10 +392,11 @@ export default function NieuweRelatiePage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="rel-notes" className="block text-sm font-medium text-foreground">
               Notities
             </label>
             <textarea
+              id="rel-notes"
               value={form.notes}
               onChange={(e) => updateField("notes", e.target.value)}
               rows={3}

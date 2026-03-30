@@ -77,10 +77,11 @@ export function KantoorTab() {
         </h2>
         <div className="space-y-4 max-w-md">
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="settings-office-name" className="block text-sm font-medium text-foreground">
               Kantoornaam
             </label>
             <input
+              id="settings-office-name"
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -89,10 +90,11 @@ export function KantoorTab() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="settings-kvk-number" className="block text-sm font-medium text-foreground">
                 KvK-nummer
               </label>
               <input
+                id="settings-kvk-number"
                 type="text"
                 value={form.kvk_number}
                 onChange={(e) =>
@@ -102,10 +104,11 @@ export function KantoorTab() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="settings-btw-number" className="block text-sm font-medium text-foreground">
                 BTW-nummer
               </label>
               <input
+                id="settings-btw-number"
                 type="text"
                 value={form.btw_number}
                 onChange={(e) =>
@@ -116,10 +119,11 @@ export function KantoorTab() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="settings-address" className="block text-sm font-medium text-foreground">
               Adres
             </label>
             <input
+              id="settings-address"
               type="text"
               value={form.address}
               onChange={(e) =>
@@ -130,10 +134,11 @@ export function KantoorTab() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="settings-postal-code" className="block text-sm font-medium text-foreground">
                 Postcode
               </label>
               <input
+                id="settings-postal-code"
                 type="text"
                 value={form.postal_code}
                 onChange={(e) =>
@@ -143,10 +148,11 @@ export function KantoorTab() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="settings-city" className="block text-sm font-medium text-foreground">
                 Plaats
               </label>
               <input
+                id="settings-city"
                 type="text"
                 value={form.city}
                 onChange={(e) =>
@@ -180,10 +186,10 @@ export function KantoorTab() {
         </p>
         <div className="max-w-md space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="settings-interest-type" className="block text-sm font-medium text-foreground">
               Standaard rentetype
             </label>
-            <select defaultValue="statutory" className={inputClass}>
+            <select id="settings-interest-type" defaultValue="statutory" className={inputClass}>
               <option value="statutory">
                 Wettelijke rente (art. 6:119 BW)
               </option>

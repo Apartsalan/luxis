@@ -74,10 +74,11 @@ export function ProfielTab({ user }: { user: User | null }) {
         </h2>
         <div className="space-y-4 max-w-md">
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="settings-full-name" className="block text-sm font-medium text-foreground">
               Volledige naam
             </label>
             <input
+              id="settings-full-name"
               type="text"
               value={fullName}
               onChange={(e) => { setFullName(e.target.value); setProfileError(""); }}
@@ -88,10 +89,11 @@ export function ProfielTab({ user }: { user: User | null }) {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="settings-email" className="block text-sm font-medium text-foreground">
               E-mailadres
             </label>
             <input
+              id="settings-email"
               type="email"
               value={user?.email || ""}
               disabled
@@ -102,7 +104,7 @@ export function ProfielTab({ user }: { user: User | null }) {
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="settings-hourly-rate" className="block text-sm font-medium text-foreground">
               Standaard uurtarief
             </label>
             <div className="relative">
@@ -110,6 +112,7 @@ export function ProfielTab({ user }: { user: User | null }) {
                 &euro;
               </span>
               <input
+                id="settings-hourly-rate"
                 type="number"
                 min="0"
                 step="0.01"
@@ -157,11 +160,12 @@ export function ProfielTab({ user }: { user: User | null }) {
         ) : (
           <div className="space-y-4 max-w-md">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="settings-current-password" className="block text-sm font-medium text-foreground">
                 Huidig wachtwoord
               </label>
               <div className="relative">
                 <input
+                  id="settings-current-password"
                   type={showCurrent ? "text" : "password"}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -181,11 +185,12 @@ export function ProfielTab({ user }: { user: User | null }) {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="settings-new-password" className="block text-sm font-medium text-foreground">
                 Nieuw wachtwoord
               </label>
               <div className="relative">
                 <input
+                  id="settings-new-password"
                   type={showNew ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}

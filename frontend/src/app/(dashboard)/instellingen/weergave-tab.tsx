@@ -44,10 +44,11 @@ export function WeergaveTab() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label htmlFor="settings-date-format" className="block text-sm font-medium text-foreground mb-2">
             Datumformaat
           </label>
           <select
+            id="settings-date-format"
             defaultValue="nl"
             className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           >

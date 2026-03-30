@@ -104,8 +104,9 @@ export function TeamTab() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Naam</label>
+                <label htmlFor="settings-invite-name" className="block text-xs font-medium text-foreground mb-1">Naam</label>
                 <input
+                  id="settings-invite-name"
                   type="text"
                   value={inviteForm.full_name}
                   onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
@@ -114,8 +115,9 @@ export function TeamTab() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">E-mail</label>
+                <label htmlFor="settings-invite-email" className="block text-xs font-medium text-foreground mb-1">E-mail</label>
                 <input
+                  id="settings-invite-email"
                   type="email"
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
@@ -124,8 +126,9 @@ export function TeamTab() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-foreground mb-1">Rol</label>
+                <label htmlFor="settings-invite-role" className="block text-xs font-medium text-foreground mb-1">Rol</label>
                 <select
+                  id="settings-invite-role"
                   value={inviteForm.role}
                   onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as any })}
                   className={inputClass}

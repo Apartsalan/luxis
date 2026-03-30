@@ -462,12 +462,13 @@ export default function NieuweFactuurPage() {
 
           {/* Contact search */}
           <div className="relative">
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="inv-contact" className="block text-sm font-medium text-foreground">
               Relatie *
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground mt-0.75" />
               <input
+                id="inv-contact"
                 type="text"
                 placeholder="Zoek relatie..."
                 value={selectedContactName || contactSearch}
@@ -519,12 +520,13 @@ export default function NieuweFactuurPage() {
 
           {/* Case search */}
           <div className="relative">
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="inv-case" className="block text-sm font-medium text-foreground">
               Dossier {invoiceType === "voorschotnota" ? "*" : "(optioneel)"}
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground mt-0.75" />
               <input
+                id="inv-case"
                 type="text"
                 placeholder="Zoek dossier..."
                 value={selectedCaseNumber || caseSearch}
@@ -625,10 +627,11 @@ export default function NieuweFactuurPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="inv-invoice-date" className="block text-sm font-medium text-foreground">
                 Factuurdatum
               </label>
               <input
+                id="inv-invoice-date"
                 type="date"
                 value={form.invoice_date}
                 onChange={(e) => updateField("invoice_date", e.target.value)}
@@ -637,10 +640,11 @@ export default function NieuweFactuurPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="inv-due-date" className="block text-sm font-medium text-foreground">
                 Vervaldatum
               </label>
               <input
+                id="inv-due-date"
                 type="date"
                 value={form.due_date}
                 onChange={(e) => updateField("due_date", e.target.value)}
@@ -652,10 +656,11 @@ export default function NieuweFactuurPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="inv-btw" className="block text-sm font-medium text-foreground">
                 BTW
               </label>
               <select
+                id="inv-btw"
                 value={btwMode}
                 onChange={(e) => {
                   const mode = e.target.value as "21" | "0" | "custom";
@@ -683,10 +688,11 @@ export default function NieuweFactuurPage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="inv-reference" className="block text-sm font-medium text-foreground">
                 Referentie
               </label>
               <input
+                id="inv-reference"
                 type="text"
                 placeholder="Bijv. kenmerk opdrachtgever"
                 value={form.reference}
@@ -697,10 +703,11 @@ export default function NieuweFactuurPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground">
+            <label htmlFor="inv-notes" className="block text-sm font-medium text-foreground">
               Opmerkingen
             </label>
             <textarea
+              id="inv-notes"
               rows={2}
               placeholder="Optionele opmerkingen op de factuur"
               value={form.notes}
@@ -719,11 +726,12 @@ export default function NieuweFactuurPage() {
             {/* DF2-04: Hours-based calculation */}
             {preselectedCase?.hourly_rate && Number(preselectedCase.hourly_rate) > 0 && (
               <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="inv-voorschot-hours" className="block text-sm font-medium text-foreground">
                   Berekenen op basis van uren
                 </label>
                 <div className="flex items-center gap-3">
                   <input
+                    id="inv-voorschot-hours"
                     type="number"
                     step="0.5"
                     min="0"
@@ -748,12 +756,13 @@ export default function NieuweFactuurPage() {
             )}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="inv-voorschot-amount" className="block text-sm font-medium text-foreground">
                   Bedrag (excl. BTW) *
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm mt-0.75">€</span>
                   <input
+                    id="inv-voorschot-amount"
                     type="number"
                     step="0.01"
                     min="0"
@@ -784,10 +793,11 @@ export default function NieuweFactuurPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="inv-voorschot-description" className="block text-sm font-medium text-foreground">
                 Omschrijving (optioneel)
               </label>
               <input
+                id="inv-voorschot-description"
                 type="text"
                 value={voorschotForm.description}
                 onChange={(e) =>
@@ -1211,12 +1221,13 @@ export default function NieuweFactuurPage() {
             </label>
             {verrekenEnabled && (
               <div className="pl-7">
-                <label className="block text-sm font-medium text-foreground mb-1">
+                <label htmlFor="inv-verrekening-amount" className="block text-sm font-medium text-foreground mb-1">
                   Verrekeningsbedrag (excl. BTW)
                 </label>
                 <div className="relative w-48">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">€</span>
                   <input
+                    id="inv-verrekening-amount"
                     type="number"
                     step="0.01"
                     min="0"

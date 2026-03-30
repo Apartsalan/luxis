@@ -361,10 +361,11 @@ export function SjablonenTab() {
 
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
+                <label htmlFor="settings-template-name" className="block text-sm font-medium text-foreground mb-1">
                   Naam
                 </label>
                 <input
+                  id="settings-template-name"
                   value={uploadName}
                   onChange={(e) => setUploadName(e.target.value)}
                   placeholder="Bijv. Aangepaste sommatie"
@@ -374,10 +375,11 @@ export function SjablonenTab() {
 
               {/* Template key */}
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
+                <label htmlFor="settings-template-key" className="block text-sm font-medium text-foreground mb-1">
                   Sjabloontype
                 </label>
                 <select
+                  id="settings-template-key"
                   value={uploadKey}
                   onChange={(e) => setUploadKey(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -393,10 +395,11 @@ export function SjablonenTab() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">
+                <label htmlFor="settings-template-description" className="block text-sm font-medium text-foreground mb-1">
                   Beschrijving (optioneel)
                 </label>
                 <textarea
+                  id="settings-template-description"
                   value={uploadDesc}
                   onChange={(e) => setUploadDesc(e.target.value)}
                   rows={2}

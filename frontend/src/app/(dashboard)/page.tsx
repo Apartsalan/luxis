@@ -266,6 +266,9 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* FUA-06: Forgotten hours warning */}
+      {hasModule("tijdschrijven") && <ForgottenHoursWarning />}
+
       {/* KYC Compliance warnings */}
       {hasModule("wwft") && <KycWarningWidget />}
 
@@ -947,6 +950,52 @@ function KycWarningWidget() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ForgottenHoursWarning() {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ...
+
+  // Skip weekends entirely
+  if (dayOfWeek === 0 || dayOfWeek === 6) return null;
+
+  // Determine the last workday (Monday → check Friday, otherwise yesterday)
+  const lastWorkday = new Date(today);
+  if (dayOfWeek === 1) {
+    lastWorkday.setDate(today.getDate() - 3);
+  } else {
+    lastWorkday.setDate(today.getDate() - 1);
+  }
+
+  const dateStr = `${lastWorkday.getFullYear()}-${String(lastWorkday.getMonth() + 1).padStart(2, "0")}-${String(lastWorkday.getDate()).padStart(2, "0")}`;
+  const dayLabel = lastWorkday.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+
+  const { data: summary } = useTimeEntrySummary({ date_from: dateStr, date_to: dateStr });
+
+  if (!summary || summary.total_minutes > 0) return null;
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3.5">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+        <Clock className="h-4 w-4 text-amber-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-amber-900">
+          Geen uren geschreven op {dayLabel}
+        </p>
+        <p className="text-xs text-amber-700 mt-0.5">
+          Vergeten tijd te registreren? Je kunt alsnog uren invoeren.
+        </p>
+      </div>
+      <Link
+        href={`/uren?date=${dateStr}`}
+        className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+      >
+        <Clock className="h-3.5 w-3.5" />
+        Uren invoeren
+      </Link>
     </div>
   );
 }

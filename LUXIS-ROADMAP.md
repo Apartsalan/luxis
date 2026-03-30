@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 27 maart 2026 (sessie 109 — Backup + security + backend tests)
+**Laatst bijgewerkt:** 29 maart 2026 (sessie 113 — Feature & UX Audit)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -635,6 +635,46 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | TOOL-12 | **Canvas Design skill** | Marketing | Social graphics, LinkedIn visuals zonder designer | ✅ Sessie 96 |
 | TOOL-13 | **Perplexity MCP verwijderen** | Opruimen | Te duur, geen free tier, geen budget | ✅ Sessie 96 |
 | TOOL-14 | **Firecrawl MCP verwijderen** | Opruimen | Credits op, niet vernieuwd | ✅ Sessie 96 |
+
+### Feature & UX Audit (sessie 113, 29 maart 2026)
+
+**Bron:** Volledige feature & UX audit (`docs/research/FEATURE-UX-AUDIT.md`). Score: **7.5/10**. Alle pagina's, modules en workflows doorgelopen vanuit het perspectief van Lisanne.
+
+#### Bouwen — Dagelijks gebruik
+
+| # | Item | Effort | Status |
+|---|------|--------|--------|
+| FUA-01 | **Notificatie-backend activeren** — Frontend is 100% klaar (10 types, polling, UI). Backend stub moet echte notificaties genereren bij: deadline <3 dagen, deadline verlopen, verjaring nadert, taak toegewezen. | M (4-6 uur) | ❌ TODO |
+| FUA-02 | ~~Opdrachtbevestiging DOCX-template~~ | — | ✅ Lisanne heeft dit al |
+| FUA-03 | ~~Uren afronden op 6 minuten~~ | — | ✅ Al gebouwd (BUG-52, sessie 78) — `Math.ceil(seconds / 360) * 6` |
+
+#### Bouwen — Regelmatig gebruik
+
+| # | Item | Effort | Status |
+|---|------|--------|--------|
+| FUA-04 | ~~Afsluitbrief DOCX-template~~ | — | ✅ Lisanne heeft dit al |
+| FUA-05 | ~~Incassomachtiging DOCX-template~~ | — | ✅ Niet nodig (bevestigd door gebruiker) |
+| FUA-06 | **"Vergeten uren" waarschuwing op dashboard** — Badge/melding als gisteren 0 registraties. | S (1 uur) | ❌ TODO |
+
+#### Bespreken met Lisanne — twijfelgevallen
+
+| # | Item | Vraag aan Lisanne |
+|---|------|-------------------|
+| FUA-07 | Unified tijdlijn per dossier | Mis je een gecombineerd overzicht van alles (emails, documenten, betalingen, notities) in één scherm, of werk je prima met de losse tabs? |
+| FUA-08 | Tags/labels op relaties | Heb je behoefte om relaties te categoriseren (bijv. "incassobureau", "vaste cliënt")? Of zoek je altijd op naam? |
+| FUA-09 | Agenda-widget op dashboard | Kijk je 's ochtends in Luxis voor je afspraken, of gebruik je Outlook als primaire agenda? |
+| FUA-10 | Openstaande facturen widget op dashboard | Is de debiteuren-tab voldoende, of wil je verlopen facturen direct op het dashboard zien? |
+| FUA-11 | Pauzeknop op timer | Pauzeer je de timer voor lunch/pauze, of stop je hem en start opnieuw? |
+| FUA-12 | Engelse termen vertalen | Storen "Billable", "Pipeline", "Word Templates" je, of merk je het niet op? |
+
+#### Niet bouwen (besloten)
+
+- ~~Kanban view~~ — niet hoe advocaten werken, Basenet/Kleos heeft het ook niet
+- ~~Archiveren dossiers~~ — status "afgesloten" doet hetzelfde
+- ~~Document editor in browser~~ — Lisanne werkt in Word
+- ~~Subdossiers~~ — te complex voor solo-praktijk
+- ~~CSV import relaties~~ — eenmalig, via migratiescript
+- ~~Cliëntportaal~~ — pas bij meerdere kantoren
 
 ### Code Quality Sprint (sessie 83 audit)
 

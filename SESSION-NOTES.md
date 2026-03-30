@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 28 maart 2026 (sessie 112 — Exact Online + AI features + a11y)
-**Laatste feature/fix:** Sessie 112 — AUDIT-15/18/25 + AI-UX-10 + a11y polish
-**Volgende sessie:** 113 — Lisanne overzetten naar M365 (AUDIT-04/05) of Exact Online app registreren + live testen
+**Laatst bijgewerkt:** 29 maart 2026 (sessie 113 — Feature & UX Audit)
+**Laatste feature/fix:** Sessie 113 — Feature & UX Audit (7.5/10), FUA-01 t/m FUA-12 op roadmap
+**Volgende sessie:** 114 — FUA-01 (notificatie-backend activeren) of FUA-02/03 (templates + uren afronden)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -15,6 +15,32 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 113 — 29 maart 2026) — Feature & UX Audit
+
+**Volledige feature & UX audit uitgevoerd:**
+- Alle 22 frontend pagina's, 45 componenten, 29 hooks doorgelopen
+- Elke module beoordeeld vanuit perspectief Lisanne (solo incasso-advocaat)
+- Concurrentiepositie vs Basenet, Clio, Kleos, Urios beoordeeld
+- 5 dagelijkse workflow-scenario's gesimuleerd
+
+**Resultaat:** Score 7.5/10 — sterker dan initieel beoordeeld na verificatie-ronde
+
+**Correcties na verificatie (eerst gemist, bleek al te bestaan):**
+- Dagvaarding DOCX template, renteoverzicht DOCX, IBAN op relatiepagina, griffierechten-berekening, inline document preview, notificatie-frontend (10 types + polling), timer-pauze bij browser-close
+
+**Op roadmap gezet (FUA-01 t/m FUA-12):**
+- Bouwen: notificatie-backend (FUA-01), opdrachtbevestiging (FUA-02), uren afronden 6min (FUA-03), afsluitbrief (FUA-04), incassomachtiging (FUA-05), vergeten-uren waarschuwing (FUA-06)
+- Bespreken met Lisanne: unified tijdlijn, tags, agenda-widget, facturen-widget, pauzeknop, Engelse termen (FUA-07 t/m FUA-12)
+- Niet bouwen: kanban, archivering, subdossiers, document editor, CSV import, cliëntportaal
+
+**Audit rapport:** `docs/research/FEATURE-UX-AUDIT.md`
+
+**Overig:**
+- Agent Reach geïnstalleerd (v1.3.0) — 6/16 kanalen actief. Twitter/X nog TODO (bird CLI + cookies).
+- Tooling review: huidige setup (Claude Code + sessie 96 tools) is compleet, geen nieuwe tools nodig.
+
+---
 
 ## Wat er gedaan is (sessie 112 — 28 maart 2026) — Exact Online integratie (AUDIT-15)
 

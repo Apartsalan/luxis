@@ -47,7 +47,9 @@ async def daily_verjaring_check() -> None:
     Creates workflow tasks at 90, 60, and 30 day thresholds to ensure timely action.
     Deduplicates: won't create a task if one already exists for that case+threshold.
     """
-    from app.auth.models import Tenant
+    from app.auth.models import Tenant, User
+    from app.notifications.schemas import NotificationCreate
+    from app.notifications.service import create_notification_if_not_exists
     from app.workflow.models import WorkflowTask
     from app.workflow.service import check_verjaring
 
@@ -99,7 +101,9 @@ async def daily_verjaring_check() -> None:
                                 WorkflowTask.tenant_id == tenant.id,
                                 WorkflowTask.case_id == uuid.UUID(w["case_id"]),
                                 WorkflowTask.task_type == "verjaring_warning",
-                                WorkflowTask.title.contains(threshold if threshold != "verjaard" else "VERJAARD"),
+                                WorkflowTask.title.contains(
+                            threshold if threshold != "verjaard" else "VERJAARD"
+                        ),
                                 WorkflowTask.status.in_(["pending", "due", "overdue"]),
                             )
                         )
@@ -121,11 +125,34 @@ async def daily_verjaring_check() -> None:
                         session.add(task)
                         tasks_created += 1
 
+                        # Also create in-app notification for all users
+                        users_result = await session.execute(
+                            select(User).where(
+                                User.tenant_id == tenant.id,
+                                User.is_active.is_(True),
+                            )
+                        )
+                        for u in users_result.scalars().all():
+                            await create_notification_if_not_exists(
+                                session, tenant.id, u.id,
+                                NotificationCreate(
+                                    type="verjaring_warning",
+                                    title=task_title,
+                                    message=(
+                                        f"Verjaringsdatum: {w['verjaring_date']}. "
+                                        f"Overweeg een stuitingshandeling."
+                                    ),
+                                    case_id=uuid.UUID(w["case_id"]),
+                                    case_number=w["case_number"],
+                                ),
+                            )
+
                     total_warnings += len(warnings)
 
             await session.commit()
             logger.info(
-                "Scheduler: verjaring check complete — %d warnings, %d tasks created across %d tenants",
+                "Scheduler: verjaring check — %d warnings, "
+                "%d tasks created across %d tenants",
                 total_warnings,
                 tasks_created,
                 len(tenants),
@@ -359,6 +386,160 @@ async def followup_scan() -> None:
         logger.exception("Scheduler: follow-up scan failed")
 
 
+async def daily_deadline_notifications() -> None:
+    """Daily job: create in-app notifications for approaching/overdue deadlines.
+
+    Checks calendar events of type 'deadline' or 'hearing' within 3 days,
+    and creates notifications. Also creates notifications for overdue tasks.
+    Deduplicates within 24 hours.
+    """
+    from app.auth.models import Tenant, User
+    from app.calendar.models import CalendarEvent
+    from app.notifications.schemas import NotificationCreate
+    from app.notifications.service import create_notification_if_not_exists
+    from app.workflow.models import WorkflowTask
+
+    logger.info("Scheduler: starting deadline notification check")
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
+            tenants = list(result.scalars().all())
+
+            total_created = 0
+            for tenant in tenants:
+                # Get all active users for this tenant
+                users_result = await session.execute(
+                    select(User).where(User.tenant_id == tenant.id, User.is_active.is_(True))
+                )
+                users = list(users_result.scalars().all())
+                if not users:
+                    continue
+
+                today = date.today()
+                from datetime import timedelta
+                three_days = today + timedelta(days=3)
+
+                # 1. Calendar events approaching (within 3 days)
+                from datetime import timedelta as td
+
+                from sqlalchemy import Date, cast
+
+                events_result = await session.execute(
+                    select(CalendarEvent).where(
+                        CalendarEvent.tenant_id == tenant.id,
+                        CalendarEvent.is_active.is_(True),
+                        CalendarEvent.event_type.in_(
+                            ["deadline", "hearing"]
+                        ),
+                        cast(CalendarEvent.start_time, Date) >= today,
+                        cast(CalendarEvent.start_time, Date) <= three_days,
+                    )
+                )
+                events = list(events_result.scalars().all())
+
+                for event in events:
+                    event_date = event.start_time.date()
+                    days_until = (event_date - today).days
+                    if days_until == 0:
+                        label = "vandaag"
+                    elif days_until == 1:
+                        label = "over 1 dag"
+                    else:
+                        label = f"over {days_until} dagen"
+                    notif_type = (
+                        "deadline_overdue"
+                        if days_until == 0
+                        else "deadline_approaching"
+                    )
+                    kind = (
+                        "Zitting"
+                        if event.event_type == "hearing"
+                        else "Deadline"
+                    )
+
+                    for user in users:
+                        created = await create_notification_if_not_exists(
+                            session, tenant.id, user.id,
+                            NotificationCreate(
+                                type=notif_type,
+                                title=f"{event.title} — {label}",
+                                message=(
+                                    f"{kind} op "
+                                    f"{event_date.strftime('%d-%m-%Y')}"
+                                ),
+                                case_id=event.case_id,
+                            ),
+                        )
+                        if created:
+                            total_created += 1
+
+                # 2. Overdue calendar events (past, within 3 days)
+                three_ago = today - td(days=3)
+                overdue_result = await session.execute(
+                    select(CalendarEvent).where(
+                        CalendarEvent.tenant_id == tenant.id,
+                        CalendarEvent.is_active.is_(True),
+                        CalendarEvent.event_type.in_(
+                            ["deadline", "hearing"]
+                        ),
+                        cast(CalendarEvent.start_time, Date) < today,
+                        cast(CalendarEvent.start_time, Date) >= three_ago,
+                    )
+                )
+                overdue_events = list(overdue_result.scalars().all())
+
+                for event in overdue_events:
+                    evt_date = event.start_time.date()
+                    for user in users:
+                        created = await create_notification_if_not_exists(
+                            session, tenant.id, user.id,
+                            NotificationCreate(
+                                type="deadline_overdue",
+                                title=f"VERLOPEN: {event.title}",
+                                message=(
+                                    f"Deadline was op "
+                                    f"{evt_date.strftime('%d-%m-%Y')}"
+                                ),
+                                case_id=event.case_id,
+                            ),
+                        )
+                        if created:
+                            total_created += 1
+
+                # 3. Overdue workflow tasks → notification
+                overdue_tasks = await session.execute(
+                    select(WorkflowTask).where(
+                        WorkflowTask.tenant_id == tenant.id,
+                        WorkflowTask.status == "overdue",
+                        WorkflowTask.is_active.is_(True),
+                    )
+                )
+                for task in overdue_tasks.scalars().all():
+                    target_user = task.assigned_to_id or (users[0].id if users else None)
+                    if not target_user:
+                        continue
+                    created = await create_notification_if_not_exists(
+                        session, tenant.id, target_user,
+                        NotificationCreate(
+                            type="deadline_overdue",
+                            title=f"Taak te laat: {task.title}",
+                            message=f"Deadline was {task.due_date.strftime('%d-%m-%Y')}",
+                            case_id=task.case_id,
+                        ),
+                    )
+                    if created:
+                        total_created += 1
+
+            await session.commit()
+            if total_created > 0:
+                logger.info(
+                    "Scheduler: deadline notifications — %d notificaties aangemaakt",
+                    total_created,
+                )
+    except Exception:
+        logger.exception("Scheduler: deadline notification check failed")
+
+
 async def daily_installment_overdue_check() -> None:
     """Daily job: mark overdue payment arrangement installments.
 
@@ -400,6 +581,15 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=15),
         id="daily_verjaring_check",
         name="Check verjaring for all tenants",
+        replace_existing=True,
+    )
+
+    # Daily at 06:20 UTC: deadline notifications (calendar events + overdue tasks)
+    scheduler.add_job(
+        daily_deadline_notifications,
+        CronTrigger(hour=6, minute=20),
+        id="daily_deadline_notifications",
+        name="Create deadline notifications",
         replace_existing=True,
     )
 

@@ -62,6 +62,51 @@ def _margins(doc):
         s.right_margin = Cm(2.5)
 
 
+def _add_signature(doc, greeting="Hoogachtend,"):
+    """Add Lisanne's full signature block — matches BaseNet style."""
+    _p(doc, "")
+    _p(doc, greeting)
+    _p(doc, "")
+    _p(doc, "Mevr. mr. L. Kesting", bold=True)
+    _p(doc, "INCASSO ADVOCAAT | DEBT COLLECTION ATTORNEY",
+       size=Pt(9), color=RGBColor(0x66, 0x66, 0x66))
+    _p(doc, "")
+    _p(doc, "{{ kantoor.adres }}", size=Pt(9))
+    _p(doc, "{{ kantoor.postcode_stad }}", size=Pt(9))
+    _p(doc, "E: {{ kantoor.email }}", size=Pt(9))
+    _p(doc, "W: www.kestinglegal.nl", size=Pt(9))
+
+
+def _add_schuldhulp(doc):
+    """Wettelijk verplicht schuldhulpblok + disclaimer."""
+    _p(doc, "")
+    _p(doc,
+       "Heeft u financi\u00eble zorgen en ziet u geen uitweg meer? "
+       "Wij informeren u graag over uw rechten als schuldenaar: "
+       "kestinglegal.nl/debiteuren. Voor schuldhulpverlening kunt u "
+       "terecht bij uw gemeente. Heeft u dringend emotionele steun "
+       "nodig? Bel dan gratis en anoniem met Stichting 113 "
+       "Zelfmoordpreventie via 0800-0113 of kijk op www.113.nl.",
+       size=Pt(8), color=RGBColor(0x88, 0x88, 0x88))
+    _p(doc,
+       "Disclaimer - De informatie verzonden met dit bericht is "
+       "uitsluitend bestemd voor de geadresseerde(n) en kan "
+       "persoonlijke of vertrouwelijke informatie bevatten, "
+       "beschermd door een beroepsgeheim.",
+       size=Pt(8), color=RGBColor(0xAA, 0xAA, 0xAA))
+
+
+def _add_betaling_instructie(doc, termijn="2 DAGEN"):
+    """Betalingsinstructie + IBAN derdengelden."""
+    _p(doc,
+       f"Hierbij sommeer ik u andermaal het bovengenoemd totaalbedrag "
+       f"ad {{{{ totaal_openstaand }}}} UITERLIJK BINNEN {termijn} NA "
+       "HEDEN te hebben bijgeschreven op de derdengeldenrekening van "
+       "mijn kantoor IBAN: NL20 RABO 0388 5065 20 t.n.v. Stichting "
+       "Beheer Derdengelden Kesting Legal onder vermelding van het "
+       "kenmerk {{ zaak.zaaknummer }}.")
+
+
 def _add_claims_table(doc):
     """Add a claims table with {%tr %} row loop.
 
@@ -179,13 +224,8 @@ def create_14_dagenbrief():
         "Bij gebreke van tijdige betaling zullen wij zonder nadere aankondiging "
         "rechtsmaatregelen treffen, waarvan de kosten eveneens voor uw rekening komen.")
     _p(doc, "")
-    _p(doc, "Hoogachtend,")
-    _p(doc, "")
-    _p(doc, "________________________")
-    _p(doc, "Namens {{ client.naam }}")
-    _p(doc, "")
-    _p(doc, "Zaaknummer: {{ zaak.zaaknummer }} | Datum: {{ vandaag }}",
-       size=Pt(9), color=RGBColor(0x88, 0x88, 0x88))
+    _add_signature(doc)
+    _add_schuldhulp(doc)
 
     doc.save(str(TEMPLATES_DIR / "14_dagenbrief.docx"))
     print("  14_dagenbrief.docx")
@@ -257,13 +297,8 @@ def create_sommatie():
         "Ik vertrouw erop u hiermee voldoende te hebben ge\u00efnformeerd en zie uw "
         "betaling met spoed tegemoet.")
     _p(doc, "")
-    _p(doc, "Hoogachtend,")
-    _p(doc, "")
-    _p(doc, "________________________")
-    _p(doc, "Namens {{ client.naam }}")
-    _p(doc, "")
-    _p(doc, "Zaaknummer: {{ zaak.zaaknummer }} | Datum: {{ vandaag }}",
-       size=Pt(9), color=RGBColor(0x88, 0x88, 0x88))
+    _add_signature(doc)
+    _add_schuldhulp(doc)
 
     doc.save(str(TEMPLATES_DIR / "sommatie.docx"))
     print("  sommatie.docx")
@@ -380,8 +415,12 @@ def create_renteoverzicht():
     ])
     _p(doc, "")
 
+    _p(doc, "")
+    _p(doc, "Mevr. mr. L. Kesting", bold=True, size=Pt(9))
+    _p(doc, "Kesting Legal | IJsbaanpad 9 | 1076 CV Amsterdam",
+       size=Pt(9), color=RGBColor(0x88, 0x88, 0x88))
     _p(doc,
-       "Berekening gegenereerd door Luxis op {{ vandaag }} | "
+       "Berekening gegenereerd op {{ vandaag }} | "
        "Zaaknummer: {{ zaak.zaaknummer }}",
        size=Pt(9), color=RGBColor(0x88, 0x88, 0x88))
 
@@ -442,9 +481,8 @@ def create_herinnering():
         "{{ kantoor.iban }} t.n.v. {{ kantoor.naam }}, onder vermelding "
         "van zaaknummer {{ zaak.zaaknummer }}.")
     _p(doc, "")
-    _p(doc, "Met vriendelijke groet,")
-    _p(doc, "")
-    _p(doc, "{{ kantoor.naam }}")
+    _add_signature(doc, "Met vriendelijke groet,")
+    _add_schuldhulp(doc)
 
     doc.save(str(TEMPLATES_DIR / "herinnering.docx"))
     print("  herinnering.docx")
@@ -511,9 +549,8 @@ def create_aanmaning():
         "Bij gebreke van tijdige betaling zullen wij zonder nadere "
         "aankondiging rechtsmaatregelen treffen.")
     _p(doc, "")
-    _p(doc, "Hoogachtend,")
-    _p(doc, "")
-    _p(doc, "{{ kantoor.naam }}")
+    _add_signature(doc)
+    _add_schuldhulp(doc)
 
     doc.save(str(TEMPLATES_DIR / "aanmaning.docx"))
     print("  aanmaning.docx")
@@ -581,9 +618,8 @@ def create_tweede_sommatie():
         "(griffierecht, deurwaarderskosten, proceskosten) komen "
         "volledig voor uw rekening.")
     _p(doc, "")
-    _p(doc, "Hoogachtend,")
-    _p(doc, "")
-    _p(doc, "{{ kantoor.naam }}")
+    _add_signature(doc)
+    _add_schuldhulp(doc)
 
     doc.save(str(TEMPLATES_DIR / "tweede_sommatie.docx"))
     print("  tweede_sommatie.docx")
@@ -675,6 +711,10 @@ def create_dagvaarding():
 
     _p(doc, "De kosten van dit exploot zijn: [KOSTEN]",
        size=Pt(9), color=RGBColor(0x88, 0x88, 0x88))
+    _p(doc, "")
+    _p(doc, "Mevr. mr. L. Kesting", bold=True)
+    _p(doc, "Kesting Legal")
+    _p(doc, "Advocaat")
 
     doc.save(str(TEMPLATES_DIR / "dagvaarding.docx"))
     print("  dagvaarding.docx")

@@ -154,6 +154,9 @@ export function EmailComposeDialog({
   const [loadingFiles, setLoadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Template editor ref
+  const templateEditorRef = useRef<HTMLDivElement>(null);
+
   // Other-case picker
   const [showOtherCase, setShowOtherCase] = useState(false);
   const [otherSearch, setOtherSearch] = useState("");
@@ -363,13 +366,16 @@ export function EmailComposeDialog({
     if (!subject.trim()) errs.subject = "Vul een onderwerp in";
     if (Object.keys(errs).length > 0) { setErrors(errs); return null; }
 
+    // Capture latest edits from contentEditable template editor
+    const currentTemplateHtml = templateEditorRef.current?.innerHTML ?? templateHtml;
+
     return {
       recipient_email: to.trim(),
       recipient_name: toName.trim() || null,
       cc: ccList.length > 0 ? ccList : null,
       custom_subject: subject.trim() || null,
-      custom_body: templateHtml ? null : (body.trim() || null),
-      body_html: templateHtml || null,
+      custom_body: currentTemplateHtml ? null : (body.trim() || null),
+      body_html: currentTemplateHtml || null,
       case_file_ids: Array.from(caseFileIds).length > 0 ? Array.from(caseFileIds) : undefined,
       inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
     };
@@ -554,14 +560,18 @@ export function EmailComposeDialog({
                 <span className="text-sm">Sjabloon laden...</span>
               </div>
             ) : templateHtml ? (
-              <div className="rounded-md border overflow-hidden flex-1 min-h-0">
-                <iframe
-                  srcDoc={templateHtml}
-                  className="w-full h-full border-0"
-                  sandbox="allow-same-origin"
-                  title="Sjabloon preview"
-                />
-              </div>
+              <div
+                ref={templateEditorRef}
+                contentEditable
+                suppressContentEditableWarning
+                dangerouslySetInnerHTML={{ __html: templateHtml }}
+                onBlur={() => {
+                  if (templateEditorRef.current) {
+                    setTemplateHtml(templateEditorRef.current.innerHTML);
+                  }
+                }}
+                className="rounded-md border border-input bg-background p-4 text-sm overflow-y-auto flex-1 min-h-0 focus:outline-none focus:ring-1 focus:ring-ring prose prose-sm max-w-none"
+              />
             ) : (
               <Textarea
                 placeholder="Typ uw bericht..."

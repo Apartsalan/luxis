@@ -140,21 +140,6 @@ export function Step3Vorderingen({
                   className={inputClass}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground">
-                  Rentefrequentie
-                </label>
-                <select
-                  value={claim.rate_basis}
-                  onChange={(e) =>
-                    updateClaim(index, "rate_basis", e.target.value)
-                  }
-                  className={inputClass}
-                >
-                  <option value="yearly">Per jaar</option>
-                  <option value="monthly">Per maand</option>
-                </select>
-              </div>
             </div>
           </div>
         ))}

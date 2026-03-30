@@ -202,24 +202,41 @@ export function Step1Zaakgegevens({
           </div>
 
           {form.interest_type === "contractual" && (
-            <div>
-              <label className="block text-sm font-medium text-foreground">
-                Contractueel rentepercentage (%) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                required={form.interest_type === "contractual"}
-                value={form.contractual_rate}
-                onChange={(e) =>
-                  updateField("contractual_rate", e.target.value)
-                }
-                onBlur={() => onBlur?.("contractual_rate")}
-                className={getClass("contractual_rate")}
-                placeholder="Bijv. 8.00"
-              />
-              <FieldError field="contractual_rate" />
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-foreground">
+                  Contractueel rentepercentage (%) *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required={form.interest_type === "contractual"}
+                  value={form.contractual_rate}
+                  onChange={(e) =>
+                    updateField("contractual_rate", e.target.value)
+                  }
+                  onBlur={() => onBlur?.("contractual_rate")}
+                  className={getClass("contractual_rate")}
+                  placeholder="Bijv. 8.00"
+                />
+                <FieldError field="contractual_rate" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground">
+                  Rentefrequentie
+                </label>
+                <select
+                  value={(form as Record<string, string>).rate_basis ?? "yearly"}
+                  onChange={(e) =>
+                    updateField("rate_basis", e.target.value)
+                  }
+                  className={inputClass}
+                >
+                  <option value="yearly">Per jaar</option>
+                  <option value="monthly">Per maand</option>
+                </select>
+              </div>
+            </>
           )}
         </div>
       )}

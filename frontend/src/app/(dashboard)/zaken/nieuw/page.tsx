@@ -310,6 +310,7 @@ function NieuweZaakPage() {
     court_case_number: "",
     interest_type: "statutory",
     contractual_rate: "",
+    rate_basis: "yearly",
     budget: "",
     client_id: prefillClientId,
     opposing_party_id: prefillOpponentId,
@@ -736,7 +737,7 @@ function NieuweZaakPage() {
                 ...(claim.invoice_date && {
                   invoice_date: claim.invoice_date,
                 }),
-                rate_basis: claim.rate_basis,
+                rate_basis: form.interest_type === "contractual" ? form.rate_basis : "yearly",
               },
             });
           } catch {
@@ -1630,21 +1631,6 @@ function NieuweZaakPage() {
                         className={inputClass}
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground">
-                        Rentefrequentie
-                      </label>
-                      <select
-                        value={claim.rate_basis}
-                        onChange={(e) =>
-                          updateClaim(index, "rate_basis", e.target.value)
-                        }
-                        className={inputClass}
-                      >
-                        <option value="yearly">Per jaar</option>
-                        <option value="monthly">Per maand</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
               ))}
@@ -1690,26 +1676,43 @@ function NieuweZaakPage() {
               </div>
 
               {form.interest_type === "contractual" && (
-                <div>
-                  <label className="block text-sm font-medium text-foreground">
-                    Contractueel rentepercentage (%) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required={form.interest_type === "contractual"}
-                    value={form.contractual_rate}
-                    onChange={(e) =>
-                      updateField("contractual_rate", e.target.value)
-                    }
-                    onBlur={() => handleWizardBlur("contractual_rate")}
-                    className={getWizardInputClass("contractual_rate")}
-                    placeholder="Bijv. 8.00"
-                  />
-                  {wizardFieldErrors.contractual_rate && (
-                    <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.contractual_rate}</p>
-                  )}
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground">
+                      Contractueel rentepercentage (%) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required={form.interest_type === "contractual"}
+                      value={form.contractual_rate}
+                      onChange={(e) =>
+                        updateField("contractual_rate", e.target.value)
+                      }
+                      onBlur={() => handleWizardBlur("contractual_rate")}
+                      className={getWizardInputClass("contractual_rate")}
+                      placeholder="Bijv. 8.00"
+                    />
+                    {wizardFieldErrors.contractual_rate && (
+                      <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.contractual_rate}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground">
+                      Rentefrequentie
+                    </label>
+                    <select
+                      value={form.rate_basis}
+                      onChange={(e) =>
+                        updateField("rate_basis", e.target.value)
+                      }
+                      className={inputClass}
+                    >
+                      <option value="yearly">Per jaar</option>
+                      <option value="monthly">Per maand</option>
+                    </select>
+                  </div>
+                </>
               )}
             </div>
           </div>

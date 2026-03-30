@@ -211,21 +211,6 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                 className={inputClass}
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-foreground">
-                Rentefrequentie
-              </label>
-              <select
-                value={form.rate_basis}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, rate_basis: e.target.value }))
-                }
-                className={inputClass}
-              >
-                <option value="yearly">Per jaar</option>
-                <option value="monthly">Per maand</option>
-              </select>
-            </div>
           </div>
           <div className="flex gap-2">
             <button

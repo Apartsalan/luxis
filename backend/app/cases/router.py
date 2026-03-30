@@ -243,6 +243,34 @@ async def add_activity(
     return activity
 
 
+# ── FUA-07: Unified Timeline ─────────────────────────────────────────────────
+
+
+@router.get("/{case_id}/timeline")
+async def case_timeline(
+    case_id: uuid.UUID,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=50, ge=1, le=100),
+    event_type: str | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get unified timeline for a case — all activities, emails, payments, documents, etc."""
+    from app.cases.timeline_service import get_case_timeline
+
+    items, total = await get_case_timeline(
+        db, current_user.tenant_id, case_id,
+        event_type=event_type, page=page, per_page=per_page,
+    )
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": math.ceil(total / per_page) if total > 0 else 0,
+    }
+
+
 # ── Email Attachments (LF-17) ───────────────────────────────────────────────
 
 

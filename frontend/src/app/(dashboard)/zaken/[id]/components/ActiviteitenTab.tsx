@@ -5,25 +5,76 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  CreditCard,
   FileText,
   Loader2,
+  Mail,
+  Paperclip,
   Plus,
   Send,
+  Timer,
+  Upload,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
-import { useCaseActivities, useAddCaseActivity, type CaseActivity } from "@/hooks/use-cases";
+import {
+  useCaseTimeline,
+  useAddCaseActivity,
+  type TimelineItem,
+} from "@/hooks/use-cases";
 import { formatRelativeTime } from "@/lib/utils";
-import { ACTIVITY_ICONS, ACTIVITY_COLORS, ACTIVITY_TYPE_LABELS, renderNoteContent } from "../types";
+import { renderNoteContent } from "../types";
 import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor";
 
 import type { CaseDetail } from "@/hooks/use-cases";
 
+// ── Timeline type config ────────────────────────────────────────────────────
+
+const TIMELINE_ICONS: Record<string, typeof Clock> = {
+  activity: FileText,
+  email: Mail,
+  payment: CreditCard,
+  document: FileText,
+  time_entry: Timer,
+  file: Upload,
+};
+
+const TIMELINE_COLORS: Record<string, string> = {
+  activity: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+  email: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400",
+  payment: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400",
+  document: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400",
+  time_entry: "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400",
+  file: "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40 dark:text-cyan-400",
+};
+
+const TIMELINE_TYPE_LABELS: Record<string, string> = {
+  activity: "Activiteit",
+  email: "E-mail",
+  payment: "Betaling",
+  document: "Document",
+  time_entry: "Uren",
+  file: "Bestand",
+};
+
+const FILTER_TABS = [
+  { key: undefined as string | undefined, label: "Alles" },
+  { key: "activity", label: "Notities" },
+  { key: "email", label: "E-mails" },
+  { key: "document", label: "Documenten" },
+  { key: "payment", label: "Betalingen" },
+  { key: "time_entry", label: "Uren" },
+  { key: "file", label: "Bestanden" },
+];
+
+// ── Component ───────────────────────────────────────────────────────────────
+
 export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<string | undefined>(undefined);
   const [noteText, setNoteText] = useState("");
   const [isAddingNote, setIsAddingNote] = useState(false);
-  const { data, isLoading } = useCaseActivities(zaak.id, page);
+  const { data, isLoading } = useCaseTimeline(zaak.id, page, filter);
   const addActivity = useAddCaseActivity();
 
   const handleAddNote = async () => {
@@ -47,7 +98,7 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
     }
   };
 
-  const activities = data?.items ?? [];
+  const items = data?.items ?? [];
   const totalPages = data?.pages ?? 0;
 
   return (
@@ -104,13 +155,13 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
         )}
       </div>
 
-      {/* Activity timeline */}
+      {/* Timeline */}
       <div className="rounded-xl border border-border bg-card">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <h2 className="text-sm font-semibold text-card-foreground">
-              Alle activiteiten
+              Tijdlijn
             </h2>
             {data && (
               <span className="text-xs text-muted-foreground">
@@ -118,6 +169,24 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
               </span>
             )}
           </div>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex items-center gap-1 px-5 py-2 border-b border-border overflow-x-auto">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.key ?? "all"}
+              type="button"
+              onClick={() => { setFilter(tab.key); setPage(1); }}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors shrink-0 ${
+                filter === tab.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {isLoading ? (
@@ -132,23 +201,18 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
               </div>
             ))}
           </div>
-        ) : activities.length > 0 ? (
+        ) : items.length > 0 ? (
           <div className="relative">
             <div className="absolute left-[2.375rem] top-0 bottom-0 w-px bg-border" />
 
-            {activities.map((activity: CaseActivity) => {
-              const Icon =
-                ACTIVITY_ICONS[activity.activity_type] ?? FileText;
-              const colorClass =
-                ACTIVITY_COLORS[activity.activity_type] ??
-                "bg-muted text-muted-foreground";
-              const typeLabel =
-                ACTIVITY_TYPE_LABELS[activity.activity_type] ??
-                activity.activity_type;
+            {items.map((item: TimelineItem) => {
+              const Icon = TIMELINE_ICONS[item.type] ?? FileText;
+              const colorClass = TIMELINE_COLORS[item.type] ?? "bg-muted text-muted-foreground";
+              const typeLabel = TIMELINE_TYPE_LABELS[item.type] ?? item.type;
 
               return (
                 <div
-                  key={activity.id}
+                  key={`${item.type}-${item.id}`}
                   className="relative flex items-start gap-3 px-5 py-4 hover:bg-muted/30 transition-colors"
                 >
                   <div
@@ -160,36 +224,38 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">
-                          {activity.title}
+                          {item.title}
                         </p>
-                        {activity.description && (
+                        {item.description && (
                           <div className="text-sm text-muted-foreground mt-0.5">
-                            {activity.activity_type === "note"
-                              ? renderNoteContent(activity.description)
-                              : <p className="whitespace-pre-wrap">{activity.description}</p>
+                            {item.type === "activity" && item.subtype === "note"
+                              ? renderNoteContent(item.description)
+                              : <p className="whitespace-pre-wrap line-clamp-2">{item.description}</p>
                             }
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {(activity.activity_type === "ai_action" || activity.activity_type === "automation") && (
-                          <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
-                            AI
-                          </span>
-                        )}
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                          {typeLabel}
-                        </span>
-                      </div>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide shrink-0">
+                        {typeLabel}
+                      </span>
                     </div>
                     <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground/70">
-                      <span>{formatRelativeTime(activity.created_at)}</span>
-                      {activity.user && (
+                      <span>{formatRelativeTime(item.date)}</span>
+                      {"user" in item.metadata && item.metadata.user ? (
                         <>
                           <span>·</span>
-                          <span>{activity.user.full_name}</span>
+                          <span>{String(item.metadata.user)}</span>
                         </>
-                      )}
+                      ) : null}
+                      {"from" in item.metadata && item.metadata.from ? (
+                        <>
+                          <span>·</span>
+                          <span>{String(item.metadata.from)}</span>
+                        </>
+                      ) : null}
+                      {"has_attachments" in item.metadata && item.metadata.has_attachments ? (
+                        <Paperclip className="h-3 w-3" />
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -199,8 +265,8 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
         ) : (
           <EmptyState
             icon={Clock}
-            title="Nog geen activiteiten"
-            description="Voeg een notitie toe om de timeline te starten. Activiteiten zoals e-mails, documenten en statuswijzigingen verschijnen hier automatisch."
+            title="Geen activiteiten"
+            description={filter ? "Geen items gevonden voor dit filter." : "Voeg een notitie toe om de tijdlijn te starten. E-mails, documenten, betalingen en uren verschijnen hier automatisch."}
           />
         )}
 

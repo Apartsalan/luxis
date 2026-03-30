@@ -350,6 +350,40 @@ interface PaginatedActivities {
 }
 
 /** Paginated activities for a case (newest first) */
+// ── FUA-07: Unified Timeline ──────────────────────────────────────────────
+
+export interface TimelineItem {
+  id: string;
+  type: "activity" | "email" | "payment" | "document" | "time_entry" | "file";
+  subtype: string;
+  title: string;
+  description: string | null;
+  date: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface PaginatedTimeline {
+  items: TimelineItem[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+export function useCaseTimeline(caseId: string | undefined, page = 1, eventType?: string) {
+  return useQuery<PaginatedTimeline>({
+    queryKey: ["cases", caseId, "timeline", page, eventType],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(page), per_page: "50" });
+      if (eventType) params.set("event_type", eventType);
+      const res = await api(`/api/cases/${caseId}/timeline?${params}`);
+      if (!res.ok) throw new Error("Fout bij ophalen tijdlijn");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
 export function useCaseActivities(caseId: string | undefined, page = 1) {
   return useQuery<PaginatedActivities>({
     queryKey: ["cases", caseId, "activities", page],

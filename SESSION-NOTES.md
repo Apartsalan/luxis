@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
 **Laatst bijgewerkt:** 30 maart 2026 (sessie 115 — Demo Feedback Lisanne)
-**Laatste feature/fix:** Sessie 115 — 11 demo-feedback items verwerkt (DF-01 t/m DF-11)
-**Volgende sessie:** 116 — FUA-07 (unified tijdlijn) + FUA-09 (agenda-widget) + FUA-13 (a11y labels)
+**Laatste feature/fix:** Sessie 115 — 11 demo-feedback items + 3 FUA-items + factuur parsing fix
+**Volgende sessie:** 116 — TBD (alle audit-items afgerond)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -53,10 +53,12 @@
 - `relations/models.py`, `relations/schemas.py` (DF-09)
 - Migration: `edc1202caef9_add_default_interest_fields_to_contacts.py`
 
-**Openstaande FUA-items voor sessie 116:**
-- FUA-07: Unified tijdlijn per dossier (~4 uur)
-- FUA-09: Agenda-widget op dashboard (~2 uur)
-- FUA-13: A11y form labels (~2 uur)
+**FUA-items ook afgerond in sessie 115:**
+- FUA-07: Unified tijdlijn — backend timeline endpoint + ActiviteitenTab met filter-tabs
+- FUA-09: Agenda-widget — vandaag+morgen events op dashboard
+- FUA-13: A11y labels — 61 form fields over 10 bestanden
+
+**Feature & UX Audit: COMPLEET** — alle items afgerond ✅
 
 ## Wat er gedaan is (sessie 114 — 30 maart 2026) — Notificaties + Templates + Timer
 

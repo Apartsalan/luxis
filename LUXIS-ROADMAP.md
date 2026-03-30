@@ -676,11 +676,11 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 | # | Item | Effort | Status |
 |---|------|--------|--------|
-| FUA-07 | **Unified tijdlijn per dossier** — alle activiteit (emails, documenten, betalingen, notities) in één chronologisch overzicht | M (4 uur) | ❌ TODO |
-| FUA-09 | **Agenda-widget op dashboard** — vandaag + morgen events zichtbaar bij inloggen | S (2 uur) | ❌ TODO |
+| FUA-07 | **Unified tijdlijn per dossier** — alle activiteit (emails, documenten, betalingen, notities) in één chronologisch overzicht | M (4 uur) | ✅ Sessie 115 (30 mrt) |
+| FUA-09 | **Agenda-widget op dashboard** — vandaag + morgen events zichtbaar bij inloggen | S (2 uur) | ✅ Sessie 115 (30 mrt) |
 | FUA-11 | **Pauzeknop op timer** — amber Pause-knop in floating timer | S (1 uur) | ✅ Sessie 114 (30 mrt) |
 | FUA-12 | **Engelse termen vertaald** — Word-sjablonen, Werkstroom, Bankimport, Faseverdeling | S (30 min) | ✅ Sessie 114 (30 mrt) |
-| FUA-13 | **A11y form labels (htmlFor/id)** — formuliervelden koppelen aan labels voor toegankelijkheid | S (2 uur) | ❌ TODO |
+| FUA-13 | **A11y form labels (htmlFor/id)** — formuliervelden koppelen aan labels voor toegankelijkheid | S (2 uur) | ✅ Sessie 115 (30 mrt) |
 
 #### Niet bouwen (besloten)
 

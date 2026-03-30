@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import { useCreateCase, useConflictCheck, useAddCaseParty } from "@/hooks/use-cases";
 import type { CaseCreateInput } from "@/hooks/use-cases";
-import { useRelations, useCreateRelation, useCreateContactLink } from "@/hooks/use-relations";
+import { useRelations, useRelation, useCreateRelation, useCreateContactLink } from "@/hooks/use-relations";
 import { useCreateClaim } from "@/hooks/use-collections";
 import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
@@ -444,6 +444,20 @@ function NieuweZaakPage() {
   const { data: clientKycStatus } = useKycStatus(
     hasModule("wwft") ? form.client_id || undefined : undefined
   );
+
+  // ── Pre-fill interest defaults from client (DF-09) ───────────────────────
+  const { data: selectedClient } = useRelation(form.client_id || undefined);
+  useEffect(() => {
+    if (selectedClient?.default_interest_type && form.interest_type === "statutory") {
+      setForm((prev) => ({
+        ...prev,
+        interest_type: selectedClient.default_interest_type!,
+        ...(selectedClient.default_interest_type === "contractual" && selectedClient.default_contractual_rate
+          ? { contractual_rate: String(selectedClient.default_contractual_rate) }
+          : {}),
+      }));
+    }
+  }, [selectedClient?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   const updateField = (field: string, value: string) => {

@@ -40,6 +40,8 @@ export interface Contact {
   payment_term_days: number | null;
   billing_email: string | null;
   iban: string | null;
+  default_interest_type: string | null;
+  default_contractual_rate: number | null;
   terms_file_name: string | null;
   notes: string | null;
   is_active: boolean;

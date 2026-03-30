@@ -396,8 +396,35 @@ export function ContactInfoSection({
                 placeholder="NL00 BANK 0000 0000 00"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Standaard rentetype</label>
+              <select
+                value={editForm.default_interest_type || ""}
+                onChange={(e) => updateEdit("default_interest_type", e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Geen standaard</option>
+                <option value="statutory">Wettelijke rente (art. 6:119 BW)</option>
+                <option value="commercial">Handelsrente (art. 6:119a BW)</option>
+                <option value="government">Overheidsrente (art. 6:119b BW)</option>
+                <option value="contractual">Contractuele rente</option>
+              </select>
+            </div>
+            {editForm.default_interest_type === "contractual" && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Contractueel rentepercentage (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editForm.default_contractual_rate}
+                  onChange={(e) => updateEdit("default_contractual_rate", e.target.value)}
+                  className={inputClass}
+                  placeholder="Bijv. 8.00"
+                />
+              </div>
+            )}
           </div>
-        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban) ? (
+        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type) ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             {contact.default_hourly_rate && (
               <div>
@@ -421,6 +448,15 @@ export function ContactInfoSection({
               <div>
                 <dt className="text-xs text-muted-foreground">IBAN</dt>
                 <dd className="text-sm font-mono text-foreground">{contact.iban}</dd>
+              </div>
+            )}
+            {contact.default_interest_type && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Standaard rente</dt>
+                <dd className="text-sm font-medium text-foreground">
+                  {{ statutory: "Wettelijke rente", commercial: "Handelsrente", government: "Overheidsrente", contractual: "Contractuele rente" }[contact.default_interest_type] ?? contact.default_interest_type}
+                  {contact.default_interest_type === "contractual" && contact.default_contractual_rate != null && ` (${contact.default_contractual_rate}%)`}
+                </dd>
               </div>
             )}
           </dl>

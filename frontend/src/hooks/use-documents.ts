@@ -51,6 +51,15 @@ const TEMPLATE_TYPE_LABELS: Record<string, string> = {
   tweede_sommatie: "Tweede sommatie",
   dagvaarding: "Dagvaarding",
   renteoverzicht: "Renteoverzicht",
+  reactie_9_3: "Reactie art. 9.3",
+  reactie_20_4: "Reactie art. 20.4",
+  schikkingsvoorstel: "Schikkingsvoorstel",
+  engelse_sommatie: "English Demand",
+  reactie_ncnp_9_3: "Reactie NCNP + 9.3",
+  reactie_verlengd_9_3: "Reactie verlengd abo + 9.3",
+  vaststellingsovereenkomst: "Vaststellingsovereenkomst",
+  faillissement_dreigbrief: "Faillissement (dreiging)",
+  bevestiging_sluiting: "Bevestiging sluiting",
 };
 
 const TEMPLATE_TYPE_DESCRIPTIONS: Record<string, string> = {

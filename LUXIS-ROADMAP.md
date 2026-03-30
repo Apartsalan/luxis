@@ -656,16 +656,20 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | FUA-05 | ~~Incassomachtiging DOCX-template~~ | — | ✅ Niet nodig (bevestigd door gebruiker) |
 | FUA-06 | **"Vergeten uren" waarschuwing op dashboard** — Badge/melding als gisteren 0 registraties. | S (1 uur) | ❌ TODO |
 
-#### Bespreken met Lisanne — twijfelgevallen
+#### Bevestigd om te bouwen
 
-| # | Item | Vraag aan Lisanne |
-|---|------|-------------------|
-| FUA-07 | Unified tijdlijn per dossier | Mis je een gecombineerd overzicht van alles (emails, documenten, betalingen, notities) in één scherm, of werk je prima met de losse tabs? |
-| FUA-08 | Tags/labels op relaties | Heb je behoefte om relaties te categoriseren (bijv. "incassobureau", "vaste cliënt")? Of zoek je altijd op naam? |
-| FUA-09 | Agenda-widget op dashboard | Kijk je 's ochtends in Luxis voor je afspraken, of gebruik je Outlook als primaire agenda? |
-| FUA-10 | Openstaande facturen widget op dashboard | Is de debiteuren-tab voldoende, of wil je verlopen facturen direct op het dashboard zien? |
-| FUA-11 | Pauzeknop op timer | Pauzeer je de timer voor lunch/pauze, of stop je hem en start opnieuw? |
-| FUA-12 | Engelse termen vertalen | Storen "Billable", "Pipeline", "Word Templates" je, of merk je het niet op? |
+| # | Item | Effort | Status |
+|---|------|--------|--------|
+| FUA-07 | **Unified tijdlijn per dossier** — alle activiteit (emails, documenten, betalingen, notities) in één chronologisch overzicht | M (4 uur) | ❌ TODO |
+| FUA-09 | **Agenda-widget op dashboard** — vandaag + morgen events zichtbaar bij inloggen | S (2 uur) | ❌ TODO |
+| FUA-11 | **Pauzeknop op timer** — expliciete pauze/hervat toggle in floating timer | S (1 uur) | ❌ TODO |
+| FUA-12 | **Engelse termen vertalen** — "Word Templates" → "Word-sjablonen", "Billable" → "Declarabel", etc. | S (30 min) | ❌ TODO |
+| FUA-13 | **A11y form labels (htmlFor/id)** — formuliervelden koppelen aan labels voor toegankelijkheid | S (2 uur) | ❌ TODO |
+
+#### Niet bouwen (besloten)
+
+- ~~FUA-08 Tags op relaties~~ — niet nodig
+- ~~FUA-10 Facturen-widget dashboard~~ — debiteuren-tab is voldoende
 
 #### Niet bouwen (besloten)
 

@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  useAllEmails,
   useUnlinkedEmails,
   useUnlinkedCount,
   useSyncEmails,
@@ -52,7 +53,11 @@ function useDebounce(value: string, delay: number) {
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CorrespondentiePage() {
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd">("alle");
+
   // Data hooks
+  const { data: allEmailsData, isLoading: allLoading } = useAllEmails("all", undefined, 200);
   const { data: unlinkedData, isLoading } = useUnlinkedEmails(100);
   const { data: countData } = useUnlinkedCount();
   const syncEmails = useSyncEmails();
@@ -215,11 +220,36 @@ export default function CorrespondentiePage() {
           <h1 className="text-2xl font-bold tracking-tight">
             Correspondentie
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {total === 0
-              ? "Alle e-mails zijn gesorteerd"
-              : `${total} ongesorteerde e-mail${total !== 1 ? "s" : ""}`}
-          </p>
+          <div className="flex items-center gap-1 mt-2">
+            <button
+              onClick={() => { setActiveTab("alle"); setSelectedEmailId(null); setSelectedIds(new Set()); }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                activeTab === "alle"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              Alle e-mails
+              {allEmailsData?.total ? (
+                <span className="ml-1.5 text-xs opacity-70">({allEmailsData.total})</span>
+              ) : null}
+            </button>
+            <button
+              onClick={() => { setActiveTab("ongesorteerd"); setSelectedEmailId(null); setSelectedIds(new Set()); }}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                activeTab === "ongesorteerd"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              Ongesorteerd
+              {total > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-amber-500 text-white text-[10px] font-bold px-1.5">
+                  {total}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -253,6 +283,17 @@ export default function CorrespondentiePage() {
         </div>
       </div>
 
+      {/* Alle e-mails tab */}
+      {activeTab === "alle" && (
+        <AllEmailsView
+          emails={allEmailsData?.emails ?? []}
+          isLoading={allLoading}
+          emailFilter={emailFilter}
+        />
+      )}
+
+      {/* Ongesorteerd tab content */}
+      {activeTab === "ongesorteerd" && <>
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-2">
@@ -535,6 +576,131 @@ export default function CorrespondentiePage() {
           )}
         </div>
       )}
+      </>}
+    </div>
+  );
+}
+
+// ── All Emails View ─────────────────────────────────────────────────────────
+
+function AllEmailsView({
+  emails,
+  isLoading,
+  emailFilter,
+}: {
+  emails: SyncedEmailSummary[];
+  isLoading: boolean;
+  emailFilter: string;
+}) {
+  const filtered = useMemo(() => {
+    if (!emailFilter.trim()) return emails;
+    const q = emailFilter.toLowerCase();
+    return emails.filter(
+      (e) =>
+        e.subject.toLowerCase().includes(q) ||
+        e.from_email.toLowerCase().includes(q) ||
+        e.from_name.toLowerCase().includes(q) ||
+        e.snippet.toLowerCase().includes(q)
+    );
+  }, [emails, emailFilter]);
+
+  const grouped = useMemo(() => {
+    if (filtered.length === 0) return [];
+    const groups: { label: string; emails: typeof filtered }[] = [];
+    let currentLabel = "";
+    for (const email of filtered) {
+      const label = getDateGroupLabel(email.email_date);
+      if (label !== currentLabel) {
+        currentLabel = label;
+        groups.push({ label, emails: [email] });
+      } else {
+        groups[groups.length - 1].emails.push(email);
+      }
+    }
+    return groups;
+  }, [filtered]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (filtered.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+          <Inbox className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="mt-5 text-base font-medium text-foreground">Geen e-mails</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {emailFilter ? "Geen e-mails gevonden voor deze zoekopdracht" : "Er zijn nog geen e-mails gesynchroniseerd"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {grouped.map((group) => (
+        <div key={group.label}>
+          <div className="px-4 py-2 bg-muted/30 border-b border-border">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {group.label}
+            </p>
+          </div>
+          {group.emails.map((email) => (
+            <div
+              key={email.id}
+              className={`flex items-start gap-3 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors border-l-3 ${
+                email.direction === "inbound"
+                  ? "border-l-blue-500 dark:border-l-blue-400"
+                  : "border-l-emerald-500 dark:border-l-emerald-400"
+              }`}
+            >
+              <div className="mt-0.5 shrink-0">
+                {email.direction === "inbound" ? (
+                  <ArrowDownLeft className="h-4 w-4 text-blue-500" />
+                ) : (
+                  <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {email.from_name || email.from_email}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground shrink-0">
+                    {formatRelativeTime(email.email_date)}
+                  </span>
+                  {email.has_attachments && (
+                    <Paperclip className="h-3 w-3 text-muted-foreground shrink-0" />
+                  )}
+                </div>
+                <p className="text-sm text-foreground truncate">{email.subject}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-xs text-muted-foreground truncate flex-1">{email.snippet}</p>
+                  {email.case_number ? (
+                    <a
+                      href={`/zaken/${email.case_id}`}
+                      className="inline-flex items-center gap-1 shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-400/30 hover:bg-emerald-100 transition-colors"
+                    >
+                      <Briefcase className="h-2.5 w-2.5" />
+                      {email.case_number}
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-400/30">
+                      Niet gekoppeld
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }

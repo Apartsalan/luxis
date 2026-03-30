@@ -25,6 +25,7 @@ export interface SyncedEmailSummary {
   attachment_count: number;
   email_date: string;
   case_id: string | null;
+  case_number: string | null;
 }
 
 export interface SyncedEmailDetail extends SyncedEmailSummary {
@@ -109,6 +110,19 @@ export function useCaseEmails(caseId: string | undefined, limit = 50) {
 /**
  * Get unlinked emails (not assigned to any case).
  */
+export function useAllEmails(filter: "all" | "linked" | "unlinked" = "all", search?: string, limit = 50) {
+  return useQuery<CaseEmailsResponse>({
+    queryKey: ["all-emails", filter, search, limit],
+    queryFn: async () => {
+      const params = new URLSearchParams({ filter, limit: String(limit) });
+      if (search) params.set("search", search);
+      const res = await api(`/api/email/all?${params}`);
+      if (!res.ok) throw new Error("Kon e-mails niet ophalen");
+      return res.json();
+    },
+  });
+}
+
 export function useUnlinkedEmails(limit = 50) {
   return useQuery<CaseEmailsResponse>({
     queryKey: ["unlinked-emails", limit],

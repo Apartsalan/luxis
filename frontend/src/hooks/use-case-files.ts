@@ -94,6 +94,26 @@ export function useDeleteCaseFile(caseId: string) {
   });
 }
 
+export function useRenameCaseFile(caseId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ fileId, filename }: { fileId: string; filename: string }) => {
+      const res = await api(`/api/cases/${caseId}/files/${fileId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ original_filename: filename }),
+      });
+      if (!res.ok) throw new Error("Hernoemen mislukt");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["case-files", caseId] });
+      toast.success("Bestandsnaam gewijzigd");
+    },
+  });
+}
+
 // ── Email Attachments (LF-17) ────────────────────────────────────────────
 
 export interface CaseEmailAttachment {

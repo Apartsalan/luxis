@@ -20,6 +20,7 @@ import {
   Image,
   Loader2,
   Mail,
+  Pencil,
   Plus,
   Receipt,
   Save,
@@ -60,6 +61,7 @@ import {
   useCaseFiles,
   useUploadCaseFile,
   useDeleteCaseFile,
+  useRenameCaseFile,
   downloadCaseFile,
   formatFileSize,
   getFileIcon,
@@ -800,7 +802,10 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   const { data: caseFiles, isLoading: filesLoading } = useCaseFiles(caseId);
   const uploadFile = useUploadCaseFile(caseId);
   const deleteCaseFile = useDeleteCaseFile(caseId);
+  const renameCaseFile = useRenameCaseFile(caseId);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   // Email attachments (LF-17)
   const { data: emailAttachments, isLoading: emailAttachmentsLoading } = useCaseEmailAttachments(caseId);
@@ -1332,9 +1337,39 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                            {item.filename}
-                          </p>
+                          {!isEmail && renamingFileId === item.id ? (
+                            <input
+                              autoFocus
+                              type="text"
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && renameValue.trim()) {
+                                  renameCaseFile.mutate(
+                                    { fileId: item.id, filename: renameValue.trim() },
+                                    { onSuccess: () => setRenamingFileId(null) }
+                                  );
+                                }
+                                if (e.key === "Escape") setRenamingFileId(null);
+                              }}
+                              onBlur={() => {
+                                if (renameValue.trim() && renameValue.trim() !== item.filename) {
+                                  renameCaseFile.mutate(
+                                    { fileId: item.id, filename: renameValue.trim() },
+                                    { onSuccess: () => setRenamingFileId(null) }
+                                  );
+                                } else {
+                                  setRenamingFileId(null);
+                                }
+                              }}
+                              className="text-sm font-medium text-foreground bg-background border border-input rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-ring w-full max-w-xs"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                              {item.filename}
+                            </p>
+                          )}
                           {isEmail && (
                             <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-400/30">
                               <Mail className="h-2.5 w-2.5" />
@@ -1391,6 +1426,19 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                           title="Opslaan in dossier"
                         >
                           <Save className="h-4 w-4" />
+                        </button>
+                      )}
+                      {!isEmail && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRenamingFileId(item.id);
+                            setRenameValue(item.filename);
+                          }}
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Hernoemen"
+                        >
+                          <Pencil className="h-4 w-4" />
                         </button>
                       )}
                       {!isEmail && (

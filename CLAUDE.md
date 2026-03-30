@@ -251,6 +251,11 @@ Ga NOOIT door naar de volgende taak met een kapotte vorige taak.
 - Update de header-regels (laatst bijgewerkt, laatste feature/fix, openstaande bugs, volgende sessie).
 - Doe dit VOOR het genereren van de sessie-prompt — de volgende sessie leest deze notes bij start.
 
+**Git tag per sessie (HARDE REGEL):**
+- **VERPLICHT: Aan het einde van ELKE sessie een git tag zetten:** `git tag -a vN-stable -m "Sessie N — [onderwerp]" && git push origin vN-stable`
+- Dit is het vangnet — als een volgende sessie iets kapot maakt, kan altijd worden teruggerold naar de vorige tag.
+- Draai NOOIT `docker image prune` of `docker system prune` op de VPS — vorige images zijn nodig voor rollback.
+
 ## Context Management
 
 **Doel: sessies zo lang mogelijk effectief houden.**

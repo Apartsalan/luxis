@@ -401,17 +401,17 @@ export function EmailComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[640px] max-h-[85vh] overflow-y-auto p-0">
+      <DialogContent className="sm:max-w-[95vw] w-full max-h-[92vh] h-[92vh] p-0 flex flex-col">
         {/* Header */}
-        <DialogHeader className="px-6 pt-5 pb-3">
+        <DialogHeader className="px-6 pt-5 pb-3 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Mail className="h-4 w-4 text-primary" />
             {title}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col">
-          <div className="px-6 space-y-3">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="px-6 space-y-3 shrink-0">
             {/* ── Aan (To) ─────────────────────────────────────────── */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
@@ -547,18 +547,17 @@ export function EmailComposeDialog({
           </div>
 
           {/* ── Body ──────────────────────────────────────────────── */}
-          <div className="px-6 py-2">
+          <div className="px-6 py-2 flex-1 min-h-0 flex flex-col">
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+              <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground flex-1">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-sm">Sjabloon laden...</span>
               </div>
             ) : templateHtml ? (
-              <div className="rounded-md border overflow-hidden">
+              <div className="rounded-md border overflow-hidden flex-1 min-h-0">
                 <iframe
                   srcDoc={templateHtml}
-                  className="w-full border-0"
-                  style={{ height: "280px" }}
+                  className="w-full h-full border-0"
                   sandbox="allow-same-origin"
                   title="Sjabloon preview"
                 />
@@ -568,14 +567,13 @@ export function EmailComposeDialog({
                 placeholder="Typ uw bericht..."
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                rows={8}
-                className="resize-none border-0 shadow-none focus-visible:ring-0 px-0 text-sm"
+                className="resize-none border-0 shadow-none focus-visible:ring-0 px-0 text-sm flex-1"
               />
             )}
           </div>
 
           {/* ── Attachments ───────────────────────────────────────── */}
-          <div className="px-6 pb-3 space-y-2">
+          <div className="px-6 pb-3 space-y-2 shrink-0">
             {/* Attachment chips */}
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
@@ -685,7 +683,7 @@ export function EmailComposeDialog({
           </div>
 
           {/* ── Footer ────────────────────────────────────────────── */}
-          <div className="border-t px-6 py-3 flex items-center justify-between">
+          <div className="border-t px-6 py-3 flex items-center justify-between shrink-0">
             {/* Left: attachments button */}
             {caseId && (
               <div className="flex items-center gap-2">

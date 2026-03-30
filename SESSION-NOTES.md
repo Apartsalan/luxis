@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
 **Laatst bijgewerkt:** 30 maart 2026 (sessie 115 — Demo Feedback Lisanne)
-**Laatste feature/fix:** Sessie 115 — 11 demo-feedback items + 3 FUA-items + factuur parsing fix
-**Volgende sessie:** 116 — TBD (alle audit-items afgerond)
+**Laatste feature/fix:** Sessie 115 — 11 demo-feedback + 3 FUA-items + factuur parsing fix + rollback vangnet
+**Volgende sessie:** 116 — TBD (alle audit-items afgerond, wacht op Lisanne voor M0b/migratie)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅

@@ -45,6 +45,12 @@ import { useInvoices, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hoo
 import { useKycDashboard } from "@/hooks/use-kyc";
 import { usePendingCount, useClassifications, type Classification } from "@/hooks/use-ai-agent";
 import { useFollowupStats } from "@/hooks/use-followup";
+import {
+  useUserCalendarEvents,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPE_COLORS,
+  type UserCalendarEvent,
+} from "@/hooks/use-calendar-events";
 import { confidenceLabelText, confidenceTextColor as confidenceTextCls } from "@/lib/confidence";
 
 interface DashboardSummary {
@@ -277,6 +283,9 @@ export default function DashboardPage() {
 
       {/* My Tasks widget */}
       <MyTasksWidget />
+
+      {/* FUA-09: Agenda widget — today + tomorrow events */}
+      <AgendaWidget />
 
       {/* Module widgets row: Uren + Facturen */}
       {(hasModule("tijdschrijven") || hasModule("facturatie")) && (
@@ -996,6 +1005,139 @@ function ForgottenHoursWarning() {
         <Clock className="h-3.5 w-3.5" />
         Uren invoeren
       </Link>
+    </div>
+  );
+}
+
+// ── FUA-09: Agenda Widget ───────────────────────────────────────────────────
+
+function AgendaWidget() {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const dateFrom = today.toISOString().split("T")[0];
+  const dateTo = tomorrow.toISOString().split("T")[0];
+
+  const { data: events, isLoading } = useUserCalendarEvents(dateFrom, dateTo);
+
+  const todayStr = today.toISOString().split("T")[0];
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+  const todayEvents = (events ?? []).filter(
+    (e) => e.start_time.startsWith(todayStr)
+  );
+  const tomorrowEvents = (events ?? []).filter(
+    (e) => e.start_time.startsWith(tomorrowStr)
+  );
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const renderEvent = (event: UserCalendarEvent) => {
+    const color = event.color || EVENT_TYPE_COLORS[event.event_type] || "#6b7280";
+    return (
+      <div
+        key={event.id}
+        className="flex items-start gap-3 py-2.5"
+      >
+        <div
+          className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-foreground truncate">
+              {event.title}
+            </p>
+            <span className="text-[10px] text-muted-foreground shrink-0">
+              {EVENT_TYPE_LABELS[event.event_type] ?? event.event_type}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {event.all_day ? (
+              <span>Hele dag</span>
+            ) : (
+              <span>{formatTime(event.start_time)} – {formatTime(event.end_time)}</span>
+            )}
+            {event.location && (
+              <span className="truncate">· {event.location}</span>
+            )}
+            {event.case && (
+              <Link
+                href={`/zaken/${event.case.id}`}
+                className="text-primary hover:underline shrink-0"
+              >
+                {event.case.case_number}
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold text-card-foreground">Agenda</h2>
+        </div>
+        <Link
+          href="/agenda"
+          className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+        >
+          Volledig overzicht
+          <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+      <div className="px-5 py-3">
+        {isLoading ? (
+          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4 animate-pulse" />
+            Agenda laden...
+          </div>
+        ) : todayEvents.length === 0 && tomorrowEvents.length === 0 ? (
+          <div className="py-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              Geen afspraken vandaag of morgen
+            </p>
+            <Link
+              href="/agenda"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              <Calendar className="h-3 w-3" />
+              Event toevoegen
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {todayEvents.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  Vandaag
+                </p>
+                <div className="divide-y divide-border/50">
+                  {todayEvents.map(renderEvent)}
+                </div>
+              </div>
+            )}
+            {tomorrowEvents.length > 0 && (
+              <div className={todayEvents.length > 0 ? "mt-3" : ""}>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  Morgen
+                </p>
+                <div className="divide-y divide-border/50">
+                  {tomorrowEvents.map(renderEvent)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

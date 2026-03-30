@@ -220,7 +220,7 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-card-foreground">
-              Pipeline
+              Werkstroom
             </h2>
             <Link
               href="/zaken"

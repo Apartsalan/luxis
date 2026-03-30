@@ -67,7 +67,7 @@ const ALL_SECTIONS: NavSection[] = [
   {
     label: "Financieel",
     items: [
-      { name: "Bank Import", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
+      { name: "Bankimport", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
       { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
       { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
       { name: "Rapportages", href: "/rapportages", icon: BarChart3 },

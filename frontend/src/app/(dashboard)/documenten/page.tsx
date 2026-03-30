@@ -62,7 +62,7 @@ export default function DocumentenPage() {
             }`}
           >
             <FileText className="h-4 w-4" />
-            Word Templates
+            Word-sjablonen
           </button>
           <button
             onClick={() => setTab("html")}

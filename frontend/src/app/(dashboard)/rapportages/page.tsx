@@ -175,7 +175,7 @@ export default function RapportagesPage() {
         <div className="rounded-xl border border-border bg-card">
           <div className="px-5 py-4 border-b border-border">
             <h2 className="text-sm font-semibold text-card-foreground">
-              Pipeline verdeling
+              Faseverdeling
             </h2>
           </div>
           <div className="p-5">

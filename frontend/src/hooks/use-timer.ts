@@ -43,6 +43,7 @@ export interface TimerState {
 interface TimerContextValue {
   timer: TimerState;
   startTimer: (caseId: string, caseName: string) => void;
+  pauseTimer: () => void;
   resumeTimer: () => void;
   stopTimer: () => Promise<void>;
   discardTimer: () => void;
@@ -75,6 +76,7 @@ const defaultTimer: TimerState = {
 export const TimerContext = createContext<TimerContextValue>({
   timer: defaultTimer,
   startTimer: () => {},
+  pauseTimer: () => {},
   resumeTimer: () => {},
   stopTimer: async () => {},
   discardTimer: () => {},
@@ -333,6 +335,15 @@ export function useTimerProvider() {
     }
   }, [timer.seconds, timer.caseId, timer.description, timer.activityType, createMutation]);
 
+  const pauseTimer = useCallback(() => {
+    setTimer((prev) => {
+      if (!prev.running) return prev;
+      const paused: TimerState = { ...prev, running: false };
+      saveToStorage(paused);
+      return paused;
+    });
+  }, []);
+
   const discardTimer = useCallback(() => {
     setTimer(defaultTimer);
     clearStorage();
@@ -364,6 +375,7 @@ export function useTimerProvider() {
   return {
     timer,
     startTimer,
+    pauseTimer,
     resumeTimer,
     stopTimer,
     discardTimer,

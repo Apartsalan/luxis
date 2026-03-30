@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Pause,
   Play,
   Square,
   X,
@@ -168,6 +169,7 @@ function FloatingTimerInner() {
   const {
     timer,
     startTimer,
+    pauseTimer,
     resumeTimer,
     stopTimer,
     discardTimer,
@@ -300,6 +302,13 @@ function FloatingTimerInner() {
         <div className="px-3 pb-3 flex gap-2">
           {timer.running ? (
             <>
+              <button
+                onClick={pauseTimer}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-2.5 py-2 text-xs font-medium text-white hover:bg-amber-600 transition-colors"
+                title="Pauzeer"
+              >
+                <Pause className="h-3 w-3" />
+              </button>
               <button
                 onClick={stopTimer}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors"

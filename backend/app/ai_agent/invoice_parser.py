@@ -106,16 +106,23 @@ async def parse_invoice_pdf(file_content: bytes, filename: str) -> dict:
                 "No text extracted from %s, falling back to Claude native PDF",
                 filename,
             )
-            raw_result = await call_claude_with_pdf(
-                system_prompt=INVOICE_PARSE_SYSTEM_PROMPT,
-                user_message=(
-                    "Dit is een gescande factuur (afbeelding-PDF). "
-                    "Analyseer de afbeelding en extraheer alle velden. "
-                    "Retourneer het resultaat als JSON."
-                ),
-                pdf_path=tmp_path,
-            )
-            model_name = "claude-native-pdf"
+            try:
+                raw_result = await call_claude_with_pdf(
+                    system_prompt=INVOICE_PARSE_SYSTEM_PROMPT,
+                    user_message=(
+                        "Dit is een gescande factuur (afbeelding-PDF). "
+                        "Analyseer de afbeelding en extraheer alle velden. "
+                        "Retourneer het resultaat als JSON."
+                    ),
+                    pdf_path=tmp_path,
+                )
+                model_name = "claude-native-pdf"
+            except Exception as e:
+                logger.error("Claude PDF fallback failed for %s: %s", filename, e)
+                raise ValueError(
+                    "Kan geen tekst uit deze PDF halen. "
+                    "Probeer een PDF met selecteerbare tekst (geen scan/afbeelding)."
+                ) from e
 
         # Validate and clean the result
         cleaned = _validate_and_clean(raw_result)

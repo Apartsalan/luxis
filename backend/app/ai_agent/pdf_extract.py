@@ -29,9 +29,15 @@ def extract_text_from_pdf(file_path: str | Path) -> str:
         return ""
 
     try:
+        # Get page count first to avoid requesting pages beyond the document
+        import pymupdf
+        doc = pymupdf.open(str(file_path))
+        page_count = min(doc.page_count, MAX_PAGES)
+        doc.close()
+
         md_text = pymupdf4llm.to_markdown(
             str(file_path),
-            pages=list(range(MAX_PAGES)),
+            pages=list(range(page_count)),
             show_progress=False,
         )
 

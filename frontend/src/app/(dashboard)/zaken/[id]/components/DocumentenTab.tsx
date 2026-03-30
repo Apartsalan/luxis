@@ -875,7 +875,10 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
         `${apiUrl}/api/cases/${caseId}/files/${fileId}/preview`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (!res.ok) throw new Error("Preview laden mislukt");
+      if (!res.ok) {
+        if (res.status === 415) throw new Error("Dit bestandstype kan niet worden weergegeven. Download het bestand om het te openen.");
+        throw new Error("Preview laden mislukt");
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       setPreviewUrl(url);

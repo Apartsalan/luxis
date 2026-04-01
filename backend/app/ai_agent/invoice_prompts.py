@@ -107,6 +107,7 @@ Regels:
 - De crediteur is de afzender/leverancier (degene die de factuur stuurt)
 - BELANGRIJK: bij bedrijven is "name" ALTIJD de bedrijfs-/handelsnaam (bijv. "Bakkerij De Gouden Krul B.V." of "Schildersbedrijf Jansen"), NIET de persoonsnaam. De persoonsnaam komt in "contact_person".
 - Een eenmanszaak is een bedrijf (type="company"). De handelsnaam is de bedrijfsnaam. Als er een KvK-nummer of BTW-nummer staat, is het ALTIJD een bedrijf.
+- BELANGRIJK: het adresblok op een factuur bevat de debiteur (ontvanger). Als daar een bedrijfsnaam staat gevolgd door "T.a.v." of een postbus, dan is dat bedrijf de debiteur — NIET het email-adres dat elders op de factuur staat. Een email-adres is NOOIT een bedrijfsnaam.
 - Als een factuur alleen een postbus/postadres heeft en geen bezoekadres: zet het postadres in de postal_address velden en laat address/postcode/city op null.
 - Als informatie niet te vinden is, gebruik null en confidence 0.0 voor dat veld
 - Bedragen: gebruik het totaalbedrag inclusief BTW als dat duidelijk is, anders exclusief

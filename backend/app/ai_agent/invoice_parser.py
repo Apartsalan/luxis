@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 # Fields that should be present in a valid response
 EXPECTED_FIELDS = [
     "debtor_name",
+    "debtor_contact_person",
     "debtor_type",
     "debtor_address",
     "debtor_postcode",
@@ -24,7 +25,14 @@ EXPECTED_FIELDS = [
     "debtor_kvk",
     "debtor_email",
     "creditor_name",
+    "creditor_contact_person",
+    "creditor_type",
+    "creditor_address",
+    "creditor_postcode",
+    "creditor_city",
+    "creditor_kvk",
     "creditor_btw",
+    "creditor_email",
     "invoice_number",
     "invoice_date",
     "due_date",
@@ -44,9 +52,11 @@ def _validate_and_clean(raw: dict) -> dict:
         else:
             result[field] = value
 
-    # Ensure debtor_type is valid
+    # Ensure debtor_type and creditor_type are valid
     if result.get("debtor_type") not in ("company", "person", None):
         result["debtor_type"] = None
+    if result.get("creditor_type") not in ("company", "person", None):
+        result["creditor_type"] = None
 
     # Convert principal_amount to precise string via Decimal
     amount = result.get("principal_amount")

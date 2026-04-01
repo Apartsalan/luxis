@@ -476,37 +476,39 @@ function NieuweZaakPage() {
 
   // Auto-select client from search results when AI-parsed
   useEffect(() => {
-    if (
-      aiParsedClient &&
-      clientSearch &&
-      !form.client_id &&
-      clientResults?.items &&
-      clientResults.items.length > 0
-    ) {
-      const match = clientResults.items[0];
-      updateField("client_id", match.id);
-      setClientSearch(match.name);
-      setAiParsedClient(false);
+    if (aiParsedClient && clientSearch && !form.client_id && clientResults?.items) {
+      if (clientResults.items.length > 0) {
+        // Match found — auto-select
+        const match = clientResults.items[0];
+        updateField("client_id", match.id);
+        setClientSearch(match.name);
+        setAiParsedClient(false);
+      } else {
+        // No match — auto-open inline form (already pre-filled by handleInvoiceParsed)
+        setShowNewClient(true);
+        setAiParsedClient(false);
+      }
     }
   }, [aiParsedClient, clientSearch, clientResults, form.client_id]);
 
   // Auto-select opponent from search results when AI-parsed
   useEffect(() => {
-    if (
-      aiParsedOpponent &&
-      opponentSearch &&
-      !form.opposing_party_id &&
-      opponentResults?.items &&
-      opponentResults.items.length > 0
-    ) {
-      const match = opponentResults.items[0];
-      updateField("opposing_party_id", match.id);
-      setOpponentSearch(match.name);
-      setOpponentContactType(match.contact_type);
-      if (!form.debtor_type) {
-        updateField("debtor_type", match.contact_type === "company" ? "b2b" : "b2c");
+    if (aiParsedOpponent && opponentSearch && !form.opposing_party_id && opponentResults?.items) {
+      if (opponentResults.items.length > 0) {
+        // Match found — auto-select
+        const match = opponentResults.items[0];
+        updateField("opposing_party_id", match.id);
+        setOpponentSearch(match.name);
+        setOpponentContactType(match.contact_type);
+        if (!form.debtor_type) {
+          updateField("debtor_type", match.contact_type === "company" ? "b2b" : "b2c");
+        }
+        setAiParsedOpponent(false);
+      } else {
+        // No match — auto-open inline form (already pre-filled by handleInvoiceParsed)
+        setShowNewOpponent(true);
+        setAiParsedOpponent(false);
       }
-      setAiParsedOpponent(false);
     }
   }, [aiParsedOpponent, opponentSearch, opponentResults, form.opposing_party_id, form.debtor_type]);
 
@@ -527,10 +529,46 @@ function NieuweZaakPage() {
       if (data.debtor_name) {
         setOpponentSearch(data.debtor_name);
         setAiParsedOpponent(true);
+        // Pre-fill inline opponent form with all extracted NAW data
+        setNewOpponent({
+          contact_type: data.debtor_type || "company",
+          name: data.debtor_name || "",
+          email: data.debtor_email || "",
+          phone: "",
+          kvk_number: data.debtor_kvk || "",
+          btw_number: "",
+          visit_address: data.debtor_address || "",
+          visit_postcode: data.debtor_postcode || "",
+          visit_city: data.debtor_city || "",
+          postal_address: "",
+          postal_postcode: "",
+          postal_city: "",
+        });
+        if (data.debtor_address || data.debtor_postcode || data.debtor_city) {
+          setShowOpponentDetails(true);
+        }
       }
       if (data.creditor_name) {
         setClientSearch(data.creditor_name);
         setAiParsedClient(true);
+        // Pre-fill inline client form with all extracted NAW data
+        setNewClient({
+          contact_type: data.creditor_type || "company",
+          name: data.creditor_name || "",
+          email: data.creditor_email || "",
+          phone: "",
+          kvk_number: data.creditor_kvk || "",
+          btw_number: data.creditor_btw || "",
+          visit_address: data.creditor_address || "",
+          visit_postcode: data.creditor_postcode || "",
+          visit_city: data.creditor_city || "",
+          postal_address: "",
+          postal_postcode: "",
+          postal_city: "",
+        });
+        if (data.creditor_address || data.creditor_postcode || data.creditor_city) {
+          setShowClientDetails(true);
+        }
       }
 
       // Step 3: Vordering — pre-fill first claim

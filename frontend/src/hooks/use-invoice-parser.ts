@@ -7,6 +7,7 @@ import { tokenStore } from "@/lib/token-store";
 
 export interface InvoiceParseResult {
   debtor_name: string | null;
+  debtor_contact_person: string | null;
   debtor_type: "company" | "person" | null;
   debtor_address: string | null;
   debtor_postcode: string | null;
@@ -14,7 +15,14 @@ export interface InvoiceParseResult {
   debtor_kvk: string | null;
   debtor_email: string | null;
   creditor_name: string | null;
+  creditor_contact_person: string | null;
+  creditor_type: "company" | "person" | null;
+  creditor_address: string | null;
+  creditor_postcode: string | null;
+  creditor_city: string | null;
+  creditor_kvk: string | null;
   creditor_btw: string | null;
+  creditor_email: string | null;
   invoice_number: string | null;
   invoice_date: string | null;
   due_date: string | null;

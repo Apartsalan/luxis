@@ -540,11 +540,11 @@ function NieuweZaakPage() {
           visit_address: data.debtor_address || "",
           visit_postcode: data.debtor_postcode || "",
           visit_city: data.debtor_city || "",
-          postal_address: "",
-          postal_postcode: "",
-          postal_city: "",
+          postal_address: data.debtor_postal_address || "",
+          postal_postcode: data.debtor_postal_postcode || "",
+          postal_city: data.debtor_postal_city || "",
         });
-        if (data.debtor_address || data.debtor_postcode || data.debtor_city) {
+        if (data.debtor_address || data.debtor_postcode || data.debtor_postal_address) {
           setShowOpponentDetails(true);
         }
       }
@@ -562,11 +562,11 @@ function NieuweZaakPage() {
           visit_address: data.creditor_address || "",
           visit_postcode: data.creditor_postcode || "",
           visit_city: data.creditor_city || "",
-          postal_address: "",
-          postal_postcode: "",
-          postal_city: "",
+          postal_address: data.creditor_postal_address || "",
+          postal_postcode: data.creditor_postal_postcode || "",
+          postal_city: data.creditor_postal_city || "",
         });
-        if (data.creditor_address || data.creditor_postcode || data.creditor_city) {
+        if (data.creditor_address || data.creditor_postcode || data.creditor_postal_address) {
           setShowClientDetails(true);
         }
       }

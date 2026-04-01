@@ -12,6 +12,9 @@ export interface InvoiceParseResult {
   debtor_address: string | null;
   debtor_postcode: string | null;
   debtor_city: string | null;
+  debtor_postal_address: string | null;
+  debtor_postal_postcode: string | null;
+  debtor_postal_city: string | null;
   debtor_kvk: string | null;
   debtor_email: string | null;
   creditor_name: string | null;
@@ -20,6 +23,9 @@ export interface InvoiceParseResult {
   creditor_address: string | null;
   creditor_postcode: string | null;
   creditor_city: string | null;
+  creditor_postal_address: string | null;
+  creditor_postal_postcode: string | null;
+  creditor_postal_city: string | null;
   creditor_kvk: string | null;
   creditor_btw: string | null;
   creditor_email: string | null;

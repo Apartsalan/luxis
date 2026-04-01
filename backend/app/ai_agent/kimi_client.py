@@ -1,5 +1,6 @@
-"""Kimi/Moonshot AI client — primary extraction model with Haiku fallback.
+"""AI extraction clients — Gemini Flash primary, Kimi + Haiku fallback.
 
+Gemini Flash 2.5: primary model via Google Generative AI API.
 Kimi 2.5 (moonshot-v1-auto): ~$0.001/call via OpenAI-compatible API.
 Claude Haiku 4.5: ~$0.005/call fallback via Anthropic API.
 
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 KIMI_API_BASE = "https://api.moonshot.ai/v1"
 KIMI_MODEL = "moonshot-v1-auto"
+
+GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
+GEMINI_MODEL = "gemini-2.5-flash"
 
 # ── JSON schemas for structured output (tool_use) ────────────────────────────
 
@@ -135,6 +139,37 @@ def _detect_schema(system_prompt: str) -> tuple[str, dict[str, Any]] | None:
         if keyword.lower() in prompt_lower:
             return schema_pair
     return None
+
+
+async def _call_gemini(system_prompt: str, user_message: str) -> dict:
+    """Call Google Gemini Flash API.
+
+    Uses the generateContent endpoint with JSON response.
+    """
+    if not settings.gemini_api_key:
+        raise ValueError("GEMINI_API_KEY is not configured")
+
+    url = f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent?key={settings.gemini_api_key}"
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            url,
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [
+                    {"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_message}"}]},
+                ],
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "responseMimeType": "application/json",
+                },
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    return _parse_json(raw_text)
 
 
 async def _call_kimi(system_prompt: str, user_message: str) -> dict:
@@ -320,9 +355,18 @@ async def call_claude_with_pdf(
 async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, str]:
     """Call AI for intake extraction. Returns (parsed_result, model_name).
 
-    Tries Kimi 2.5 first (cheaper), falls back to Claude Haiku.
+    Priority: Gemini Flash 2.5 → Kimi 2.5 → Claude Haiku 4.5.
     """
-    # Try Kimi first
+    # Try Gemini first (best instruction following)
+    if settings.gemini_api_key:
+        try:
+            result = await _call_gemini(system_prompt, user_message)
+            logger.info("Intake AI: Gemini Flash extraction successful")
+            return result, "gemini-2.5-flash"
+        except Exception as e:
+            logger.warning("Intake AI: Gemini failed, trying Kimi: %s", e)
+
+    # Fallback to Kimi
     if settings.kimi_api_key:
         try:
             result = await _call_kimi(system_prompt, user_message)
@@ -331,11 +375,11 @@ async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, s
         except Exception as e:
             logger.warning("Intake AI: Kimi failed, falling back to Haiku: %s", e)
 
-    # Fallback to Haiku
+    # Final fallback to Haiku
     try:
         result = await _call_haiku(system_prompt, user_message)
         logger.info("Intake AI: Haiku extraction successful")
         return result, "claude-haiku-4-5"
     except Exception as e:
-        logger.error("Intake AI: both Kimi and Haiku failed: %s", e)
+        logger.error("Intake AI: all providers failed: %s", e)
         raise ValueError(f"All AI providers failed: {e}") from e

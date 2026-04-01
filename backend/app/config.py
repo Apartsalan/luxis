@@ -41,8 +41,11 @@ class Settings(BaseSettings):
     # AI Agent (Anthropic API)
     anthropic_api_key: str = ""
 
-    # AI Agent (Moonshot/Kimi API — primary intake model)
+    # AI Agent (Moonshot/Kimi API — legacy intake model)
     kimi_api_key: str = ""
+
+    # AI Agent (Google Gemini API — primary intake model)
+    gemini_api_key: str = ""
 
     # Exact Online
     exact_online_client_id: str = ""

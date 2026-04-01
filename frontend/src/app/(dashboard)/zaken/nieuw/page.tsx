@@ -15,6 +15,7 @@ import {
   ChevronUp,
   FileText,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateCase, useConflictCheck, useAddCaseParty } from "@/hooks/use-cases";
@@ -25,6 +26,7 @@ import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
 import { InvoiceUploadZone } from "@/components/InvoiceUploadZone";
+import { useParseInvoice } from "@/hooks/use-invoice-parser";
 import type { InvoiceParseResult } from "@/hooks/use-invoice-parser";
 import { tokenStore } from "@/lib/token-store";
 import { ConfidenceDot } from "@/components/cases/wizard/ConfidenceDot";
@@ -38,6 +40,7 @@ interface ClaimForm {
   invoice_number: string;
   invoice_date: string;
   rate_basis: string;
+  invoiceFile: File | null;
 }
 
 const EMPTY_CLAIM: ClaimForm = {
@@ -47,6 +50,7 @@ const EMPTY_CLAIM: ClaimForm = {
   invoice_number: "",
   invoice_date: "",
   rate_basis: "yearly",
+  invoiceFile: null,
 };
 
 interface InlineContact {
@@ -288,6 +292,7 @@ function NieuweZaakPage() {
   const searchParams = useSearchParams();
   const createCase = useCreateCase();
   const createClaim = useCreateClaim();
+  const parseInvoice = useParseInvoice();
   const { hasModule } = useModules();
 
   const prefillClientId = searchParams.get("client_id") || "";
@@ -298,7 +303,7 @@ function NieuweZaakPage() {
   // ── Invoice AI parse state ──────────────────────────────────────────────
   const [invoiceData, setInvoiceData] = useState<InvoiceParseResult | null>(null);
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({});
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  // invoiceFile state removed — files are now stored per-claim in claims[].invoiceFile
 
   // ── Step state ───────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState(1);
@@ -520,8 +525,6 @@ function NieuweZaakPage() {
     (data: InvoiceParseResult, file: File) => {
       setInvoiceData(data);
       setFieldConfidence(data.confidence || {});
-      setInvoiceFile(file);
-
       // Step 1: Zaakgegevens
       if (data.description) updateField("description", data.description);
       if (data.debtor_type) {
@@ -577,7 +580,7 @@ function NieuweZaakPage() {
       }
 
       // Step 3: Vordering — pre-fill first claim
-      const claimUpdates: Partial<ClaimForm> = {};
+      const claimUpdates: Partial<ClaimForm> = { invoiceFile: file };
       if (data.principal_amount != null) {
         claimUpdates.principal_amount = String(data.principal_amount);
       }
@@ -586,13 +589,11 @@ function NieuweZaakPage() {
       if (data.due_date) claimUpdates.default_date = data.due_date;
       if (data.description) claimUpdates.description = data.description;
 
-      if (Object.keys(claimUpdates).length > 0) {
-        setClaims((prev) => {
-          const updated = [...prev];
-          updated[0] = { ...updated[0], ...claimUpdates };
-          return updated;
-        });
-      }
+      setClaims((prev) => {
+        const updated = [...prev];
+        updated[0] = { ...updated[0], ...claimUpdates };
+        return updated;
+      });
 
       toast.success("Factuurgegevens ingevuld");
     },
@@ -780,8 +781,30 @@ function NieuweZaakPage() {
         const filledClaims = claims.filter(
           (c) => c.description && c.principal_amount && c.default_date
         );
+        const token = tokenStore.getAccess();
         for (const claim of filledClaims) {
           try {
+            // Upload invoice file first (if attached), get file_id
+            let invoiceFileId: string | undefined;
+            if (claim.invoiceFile) {
+              try {
+                const formData = new FormData();
+                formData.append("file", claim.invoiceFile);
+                formData.append("description", `Factuur: ${claim.invoiceFile.name}`);
+                const uploadRes = await fetch(`/api/cases/${result.id}/files`, {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${token}` },
+                  body: formData,
+                });
+                if (uploadRes.ok) {
+                  const uploadData = await uploadRes.json();
+                  invoiceFileId = uploadData.id;
+                }
+              } catch {
+                toast.error(`Factuurbestand voor "${claim.description}" kon niet worden geüpload`);
+              }
+            }
+
             await createClaim.mutateAsync({
               caseId: result.id,
               data: {
@@ -794,6 +817,7 @@ function NieuweZaakPage() {
                 ...(claim.invoice_date && {
                   invoice_date: claim.invoice_date,
                 }),
+                ...(invoiceFileId && { invoice_file_id: invoiceFileId }),
                 rate_basis: form.interest_type === "contractual" ? form.rate_basis : "yearly",
               },
             });
@@ -802,24 +826,6 @@ function NieuweZaakPage() {
               `Vordering "${claim.description}" kon niet worden aangemaakt`
             );
           }
-        }
-      }
-
-      // 5. Upload invoice PDF to case documents (if uploaded via AI parse)
-      if (invoiceFile) {
-        try {
-          const formData = new FormData();
-          formData.append("file", invoiceFile);
-          formData.append("description", `Factuur: ${invoiceFile.name}`);
-          const token = tokenStore.getAccess();
-          await fetch(`/api/cases/${result.id}/files`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}` },
-            body: formData,
-          });
-        } catch {
-          // Non-blocking: case is created, file upload is optional
-          toast.error("Factuurbestand kon niet worden gekoppeld aan het dossier");
         }
       }
 
@@ -1737,6 +1743,76 @@ function NieuweZaakPage() {
                         }
                         className={inputClass}
                       />
+                    </div>
+                    {/* Per-claim invoice upload */}
+                    <div className="sm:col-span-2">
+                      {claim.invoiceFile ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{claim.invoiceFile.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setClaims((prev) => {
+                                const updated = [...prev];
+                                updated[index] = { ...updated[index], invoiceFile: null };
+                                return updated;
+                              });
+                            }}
+                            className="ml-auto text-muted-foreground hover:text-destructive shrink-0"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-primary hover:text-primary/80 transition-colors">
+                          <Upload className="h-4 w-4" />
+                          <span>Factuur uploaden (PDF)</span>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.type !== "application/pdf") {
+                                toast.error("Alleen PDF-bestanden zijn toegestaan");
+                                return;
+                              }
+                              if (file.size > 10 * 1024 * 1024) {
+                                toast.error("Bestand mag maximaal 10 MB zijn");
+                                return;
+                              }
+                              // Store file immediately
+                              setClaims((prev) => {
+                                const updated = [...prev];
+                                updated[index] = { ...updated[index], invoiceFile: file };
+                                return updated;
+                              });
+                              // Try AI parse to pre-fill fields
+                              try {
+                                const result = await parseInvoice.mutateAsync(file);
+                                setClaims((prev) => {
+                                  const updated = [...prev];
+                                  const updates: Partial<ClaimForm> = { invoiceFile: file };
+                                  if (result.principal_amount != null)
+                                    updates.principal_amount = String(result.principal_amount);
+                                  if (result.invoice_number) updates.invoice_number = result.invoice_number;
+                                  if (result.invoice_date) updates.invoice_date = result.invoice_date;
+                                  if (result.due_date) updates.default_date = result.due_date;
+                                  if (result.description) updates.description = result.description;
+                                  updated[index] = { ...updated[index], ...updates };
+                                  return updated;
+                                });
+                                toast.success(`Factuurgegevens ingevuld voor vordering ${index + 1}`);
+                              } catch {
+                                // File stored but AI parse failed — user fills in manually
+                                toast.info("Factuur opgeslagen, vul de gegevens handmatig in");
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -5,10 +5,12 @@ import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import {
   Euro,
   FileText,
+  Loader2,
   Pencil,
   Plus,
   Save,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
@@ -22,6 +24,8 @@ import {
   useCaseInterest,
 } from "@/hooks/use-collections";
 import { useCaseFiles } from "@/hooks/use-case-files";
+import { useParseInvoice } from "@/hooks/use-invoice-parser";
+import { tokenStore } from "@/lib/token-store";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 
@@ -33,7 +37,9 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
   const updateClaim = useUpdateClaim();
   const deleteClaim = useDeleteClaim();
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
+  const parseInvoice = useParseInvoice();
   const [showForm, setShowForm] = useState(false);
+  const [claimFile, setClaimFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     description: "",
@@ -59,6 +65,28 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Upload invoice file first if attached
+      let invoiceFileId: string | undefined;
+      if (claimFile) {
+        try {
+          const formData = new FormData();
+          formData.append("file", claimFile);
+          formData.append("description", `Factuur: ${claimFile.name}`);
+          const token = tokenStore.getAccess();
+          const uploadRes = await fetch(`/api/cases/${caseId}/files`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            invoiceFileId = uploadData.id;
+          }
+        } catch {
+          toast.error("Factuurbestand kon niet worden geüpload");
+        }
+      }
+
       await createClaim.mutateAsync({
         caseId,
         data: {
@@ -67,11 +95,13 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
           default_date: form.default_date,
           ...(form.invoice_number && { invoice_number: form.invoice_number }),
           ...(form.invoice_date && { invoice_date: form.invoice_date }),
+          ...(invoiceFileId && { invoice_file_id: invoiceFileId }),
           rate_basis: form.rate_basis,
         },
       });
       toast.success("Vordering toegevoegd");
       setShowForm(false);
+      setClaimFile(null);
       setForm({
         description: "",
         principal_amount: "",
@@ -216,6 +246,64 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
               />
             </div>
           </div>
+          {/* Invoice file upload */}
+          <div>
+            {claimFile ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="truncate">{claimFile.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setClaimFile(null)}
+                  className="ml-auto text-muted-foreground hover:text-destructive shrink-0"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-primary hover:text-primary/80 transition-colors">
+                {parseInvoice.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                <span>{parseInvoice.isPending ? "Factuur analyseren..." : "Factuur uploaden (PDF)"}</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  disabled={parseInvoice.isPending}
+                  onChange={async (ev) => {
+                    const file = ev.target.files?.[0];
+                    if (!file) return;
+                    if (file.type !== "application/pdf") {
+                      toast.error("Alleen PDF-bestanden zijn toegestaan");
+                      return;
+                    }
+                    if (file.size > 10 * 1024 * 1024) {
+                      toast.error("Bestand mag maximaal 10 MB zijn");
+                      return;
+                    }
+                    setClaimFile(file);
+                    try {
+                      const result = await parseInvoice.mutateAsync(file);
+                      setForm((f) => ({
+                        ...f,
+                        ...(result.principal_amount != null && { principal_amount: String(result.principal_amount) }),
+                        ...(result.invoice_number && { invoice_number: result.invoice_number }),
+                        ...(result.invoice_date && { invoice_date: result.invoice_date }),
+                        ...(result.due_date && { default_date: result.due_date }),
+                        ...(result.description && { description: result.description }),
+                      }));
+                      toast.success("Factuurgegevens ingevuld");
+                    } catch {
+                      toast.info("Factuur opgeslagen, vul de gegevens handmatig in");
+                    }
+                  }}
+                />
+              </label>
+            )}
+          </div>
           <div className="flex gap-2">
             <button
               type="submit"
@@ -226,7 +314,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
             </button>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => { setShowForm(false); setClaimFile(null); }}
               className="rounded-lg border border-border px-4 py-2 text-xs font-medium hover:bg-muted"
             >
               Annuleren

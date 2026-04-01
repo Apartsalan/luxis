@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import Link from "next/link";
 import {
   Calendar,
@@ -521,6 +522,8 @@ function EventDialog({
   const [contactId, setContactId] = useState(event?.contact_id ?? "");
   const [reminderMinutes, setReminderMinutes] = useState<number | null>(30);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useUnsavedWarning(!!title || !!description || !!location);
 
   const isSaving =
     createMutation.isPending || updateMutation.isPending;

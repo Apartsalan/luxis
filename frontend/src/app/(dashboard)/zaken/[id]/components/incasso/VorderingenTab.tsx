@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import {
   Euro,
   FileText,
@@ -51,6 +52,9 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     invoice_date: "",
     rate_basis: "yearly",
   });
+
+  useUnsavedWarning(showForm && (!!form.description || !!form.principal_amount));
+  useUnsavedWarning(!!editingId);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

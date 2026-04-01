@@ -246,7 +246,7 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
           )}
         </div>
 
-        {bikManual && (
+        {bikManual && caseData?.interest_type !== "contractual" && (
           <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/20 rounded-lg px-3 py-2 border border-amber-200 dark:border-amber-800">
             Let op: bij een handmatig bedrag is dit technisch geen WIK meer. Het berekende bedrag (WIK-staffel) blijft zichtbaar ter referentie.
           </p>

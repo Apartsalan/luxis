@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import { Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTenant, useUpdateTenant } from "@/hooks/use-settings";
@@ -31,6 +32,16 @@ export function KantoorTab() {
     });
     setInitialized(true);
   }
+
+  const isDirty = initialized && tenant && (
+    form.name !== (tenant.name || "") ||
+    form.kvk_number !== (tenant.kvk_number || "") ||
+    form.btw_number !== (tenant.btw_number || "") ||
+    form.address !== (tenant.address || "") ||
+    form.postal_code !== (tenant.postal_code || "") ||
+    form.city !== (tenant.city || "")
+  );
+  useUnsavedWarning(!!isDirty);
 
   const inputClass =
     "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";

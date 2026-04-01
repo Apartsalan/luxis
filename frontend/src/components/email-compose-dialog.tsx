@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import {
   Mail, Paperclip, Loader2, X, Plus,
   ExternalLink, FileText, Upload, FolderSearch,
@@ -153,6 +154,13 @@ export function EmailComposeDialog({
   const [caseFiles, setCaseFiles] = useState<CaseFileItem[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Warn on unsaved changes
+  const composeDirty = useMemo(
+    () => open && (subject !== defaultSubject || body !== defaultBody || to !== defaultTo || attachments.length > 0),
+    [open, subject, defaultSubject, body, defaultBody, to, defaultTo, attachments.length]
+  );
+  useUnsavedWarning(composeDirty);
 
   // Template editor ref
   const templateEditorRef = useRef<HTMLDivElement>(null);

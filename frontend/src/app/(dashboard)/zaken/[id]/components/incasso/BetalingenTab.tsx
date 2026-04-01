@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import { Loader2, Plus, Receipt } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
@@ -19,6 +20,8 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
     payment_method: "",
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  useUnsavedWarning(showForm && (!!form.amount || !!form.description));
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

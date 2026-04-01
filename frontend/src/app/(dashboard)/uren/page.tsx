@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import { useConfirm } from "@/components/confirm-dialog";
 import Link from "next/link";
 import {
@@ -427,6 +428,8 @@ export default function UrenPage() {
   const [formRate, setFormRate] = useState(defaultRate);
   const [formDiscount, setFormDiscount] = useState(false);
   const [formBillableMinutes, setFormBillableMinutes] = useState("");
+
+  useUnsavedWarning(showForm && (!!formHours || !!formMinutes || !!formDescription));
 
   const resetForm = () => {
     setFormCaseId("");

@@ -1023,8 +1023,12 @@ function NieuweZaakPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      const currentName = clientResults?.items.find(
+                        (c) => c.id === form.client_id
+                      )?.name || prefillClientName || clientSearch;
                       updateField("client_id", "");
-                      setClientSearch("");
+                      setClientSearch(currentName);
+                      setShowNewClient(false);
                     }}
                     className="text-xs text-destructive hover:underline"
                   >
@@ -1259,9 +1263,13 @@ function NieuweZaakPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      const currentName = opponentResults?.items.find(
+                        (c) => c.id === form.opposing_party_id
+                      )?.name || prefillOpponentName || opponentSearch;
                       updateField("opposing_party_id", "");
-                      setOpponentSearch("");
+                      setOpponentSearch(currentName);
                       setOpponentContactType("");
+                      setShowNewOpponent(false);
                     }}
                     className="text-xs text-destructive hover:underline"
                   >

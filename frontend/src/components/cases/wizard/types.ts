@@ -19,6 +19,7 @@ export const EMPTY_CLAIM: ClaimForm = {
 export interface InlineContact {
   contact_type: "company" | "person";
   name: string;
+  contact_person: string;
   email: string;
   phone: string;
   kvk_number: string;
@@ -34,6 +35,7 @@ export interface InlineContact {
 export const EMPTY_INLINE_CONTACT: InlineContact = {
   contact_type: "company",
   name: "",
+  contact_person: "",
   email: "",
   phone: "",
   kvk_number: "",

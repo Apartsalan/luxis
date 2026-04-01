@@ -52,6 +52,7 @@ const EMPTY_CLAIM: ClaimForm = {
 interface InlineContact {
   contact_type: "company" | "person";
   name: string;
+  contact_person: string;
   email: string;
   phone: string;
   kvk_number: string;
@@ -67,6 +68,7 @@ interface InlineContact {
 const EMPTY_INLINE_CONTACT: InlineContact = {
   contact_type: "company",
   name: "",
+  contact_person: "",
   email: "",
   phone: "",
   kvk_number: "",
@@ -375,6 +377,7 @@ function NieuweZaakPage() {
         name: data.name,
       };
       // Only include non-empty optional fields
+      if (data.contact_person) payload.contact_person = data.contact_person;
       if (data.email) payload.email = data.email;
       if (data.phone) payload.phone = data.phone;
       if (data.kvk_number) payload.kvk_number = data.kvk_number;
@@ -533,6 +536,7 @@ function NieuweZaakPage() {
         setNewOpponent({
           contact_type: data.debtor_type || "company",
           name: data.debtor_name || "",
+          contact_person: data.debtor_contact_person || "",
           email: data.debtor_email || "",
           phone: "",
           kvk_number: data.debtor_kvk || "",
@@ -555,6 +559,7 @@ function NieuweZaakPage() {
         setNewClient({
           contact_type: data.creditor_type || "company",
           name: data.creditor_name || "",
+          contact_person: data.creditor_contact_person || "",
           email: data.creditor_email || "",
           phone: "",
           kvk_number: data.creditor_kvk || "",
@@ -1135,6 +1140,20 @@ function NieuweZaakPage() {
                           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                         />
                       </div>
+                      {newClient.contact_type === "company" && (
+                        <input
+                          type="text"
+                          placeholder="Contactpersoon (t.a.v.)"
+                          value={newClient.contact_person}
+                          onChange={(e) =>
+                            setNewClient((c) => ({
+                              ...c,
+                              contact_person: e.target.value,
+                            }))
+                          }
+                          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                        />
+                      )}
                       <InlineContactDetails
                         data={newClient}
                         onChange={(updates) => setNewClient((c) => ({ ...c, ...updates }))}
@@ -1363,6 +1382,20 @@ function NieuweZaakPage() {
                           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                         />
                       </div>
+                      {newOpponent.contact_type === "company" && (
+                        <input
+                          type="text"
+                          placeholder="Contactpersoon (t.a.v.)"
+                          value={newOpponent.contact_person}
+                          onChange={(e) =>
+                            setNewOpponent((c) => ({
+                              ...c,
+                              contact_person: e.target.value,
+                            }))
+                          }
+                          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                        />
+                      )}
                       <InlineContactDetails
                         data={newOpponent}
                         onChange={(updates) => setNewOpponent((c) => ({ ...c, ...updates }))}
@@ -1536,6 +1569,20 @@ function NieuweZaakPage() {
                           className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                         />
                       </div>
+                      {newLawyer.contact_type === "company" && (
+                        <input
+                          type="text"
+                          placeholder="Contactpersoon (t.a.v.)"
+                          value={newLawyer.contact_person}
+                          onChange={(e) =>
+                            setNewLawyer((c) => ({
+                              ...c,
+                              contact_person: e.target.value,
+                            }))
+                          }
+                          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                        />
+                      )}
                       <InlineContactDetails
                         data={newLawyer}
                         onChange={(updates) => setNewLawyer((c) => ({ ...c, ...updates }))}

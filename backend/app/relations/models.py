@@ -41,6 +41,9 @@ class Contact(TenantBase):
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    # Primary contact person (for companies: t.a.v. / aanspreekpunt)
+    contact_person: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Contact info
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)

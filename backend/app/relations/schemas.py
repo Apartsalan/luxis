@@ -14,6 +14,7 @@ class ContactCreate(BaseModel):
         ..., pattern="^(company|person)$", description="'company' or 'person'"
     )
     name: str = Field(..., min_length=1, max_length=255)
+    contact_person: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     date_of_birth: date | None = None
@@ -36,6 +37,7 @@ class ContactCreate(BaseModel):
 
 class ContactUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
+    contact_person: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     date_of_birth: date | None = None
@@ -75,6 +77,7 @@ class ContactResponse(BaseModel):
     tenant_id: uuid.UUID
     contact_type: str
     name: str
+    contact_person: str | None
     first_name: str | None
     last_name: str | None
     date_of_birth: date | None

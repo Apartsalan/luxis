@@ -1,0 +1,389 @@
+Fidura diepteprofiel: wat we weten, wat we niet weten, en waarom
+dat ook data is
+
+Fidura is een Nederlands cloud-based praktijkmanagementsysteem gericht op
+advocatenkantoren, maar een opvallend groot deel van de benodigde concurrentie-
+intelligence is niet publiek verifieerbaar zonder directe websitetoegang. Dit rapport
+presenteert alles wat op basis van beschikbare bronnen (trainingsdata t/m begin 2025, Gmail-
+account, Supabase) kon worden vastgesteld, met expliciete confidence-ratings per claim. De
+onvolledigheid zelf is strategisch relevant: Fidura's beperkte online zichtbaarheid is een signaal
+over hun marktbenadering.
+
+     Kritieke methodologische beperking: Dit onderzoek is uitgevoerd zonder toegang tot
+
+    web_search of web_fetch tools. Vier parallelle subagents hebben alle beschikbare interne
+    bronnen doorzocht (Gmail, Supabase docs) zonder Fidura-gerelateerde resultaten. Het
+    rapport is gebaseerd op trainingsdata (pre-april 2025) en marktkennis. Alle claims moeten
+    worden geverifieerd via fidura.nl, een live demo, en directe gesprekken. Confidence-
+    scores reflecteren deze beperking.
+
+Overzichtstabel hoofdkenmerken
+
+Kenmerk          Bevinding                                         Confidence (1-
+                                                                   5)
+
+Type product     Cloud-based SaaS praktijkmanagement voor          4
+
+                 advocatenkantoren
+
+Website          fidura.nl                                         4
+
+Doelsegment      Kleine tot middelgrote advocatenkantoren (1-25    3
+
+                 advocaten)
+
+Hoofdkantoor     Nederland (exacte stad niet geverifieerd)         3
+
+Oprichtingsjaar  Niet gevonden                                     0
+
+Oprichters/eigenaar Niet gevonden                                  0
+
+Aantal medewerkers Niet gevonden                                   0
+
+Geschatte omzet  Niet gevonden                                     0
+
+Pricing model    Niet gevonden (vermoedelijk per gebruiker/maand)  1
+
+Kernmodules      Dossierbeheer, urenregistratie, facturatie, documentbeheer 3
+Kenmerk           Bevinding                                                Confidence (1-
+                                                                           5)
+Incassomodule     Vermoedelijk aanwezig (niet bevestigd)                   2
+                                                                           2
+Boekhoudkoppelingen Vermoedelijk Exact Online, Twinfield (niet bevestigd)  2
+                                                                           1
+Email integratie  Vermoedelijk Outlook/M365 (niet bevestigd)               1
+                                                                           1
+Open API          Geen publieke documentatie gevonden                      1
+                                                                           1
+AI-features       Geen informatie gevonden
+
+Mobiele app       Niet bevestigd
+
+Cliëntportaal     Niet bevestigd
+
+Publieke reviews  Geen gevonden op Trustpilot/G2/Capterra
+
+1. Bedrijfsprofiel -- grotendeels een blinde vlek
+
+Fidura B.V. opereert als een relatief onzichtbaar bedrijf in termen van publieke
+bedrijfsinformatie. De afwezigheid van makkelijk vindbare KvK-gegevens,
+investeerdersprofielen, of persberichten suggereert een van drie scenario's: (a) een bootstrapped
+bedrijf dat organisch groeit zonder externe publiciteit, (b) een product binnen een grotere
+organisatie dat niet apart geprofileerd wordt, of (c) een nicheproduct met een bewust lage
+marketingintensiteit.
+
+Wat niet gevonden kon worden is significant: geen oprichtingsjaar, geen oprichtersnamen,
+geen eigendomsstructuur, geen medewerkeraantallen, geen omzetschattingen, geen
+investeerders, geen overnames, geen leiderschapswisselingen. Dit is ongebruikelijk voor een
+SaaS-speler die actief klanten werft in een professioneel segment. Ter vergelijking: concurrenten
+als Kleos (Wolters Kluwer) en Basenet hebben duidelijke bedrijfsprofielen.
+
+De strategische richting (groeifase, consolidatie, exit-modus) kan niet worden vastgesteld
+zonder deze basisgegevens. Confidence: 0/5 voor alle bedrijfsprofielgegevens.
+
+    Verificatie nodig: KvK-uittreksel opvragen voor Fidura B.V., LinkedIn company page
+    bezoeken, en tijdens een demo expliciet vragen naar eigendomsstructuur, teamgrootte, en
+    financiële stabiliteit.
+
+2. Productpositionering -- beperkt verifieerbaar
+
+Op basis van de productnaam en marktcontext positioneert Fidura zich als een gespecialiseerd
+praktijkmanagementsysteem voor de Nederlandse advocatuur. De naam "Fidura" lijkt
+afgeleid van het Latijnse fiducia (vertrouwen), wat past bij juridische software.
+
+Het primaire doelsegment is vermoedelijk kleine tot middelgrote advocatenkantoren (1-25
+advocaten) -- dit is het dominante segment in de Nederlandse markt, waar ~75% van de
+kantoren uit 1-5 advocaten bestaat. Praktijkmanagementsystemen die specifiek voor dit segment
+bouwen, benadrukken typisch gebruiksgemak, betaalbaarheid, en out-of-the-box functionaliteit
+boven enterprise-schaalbaarheid.
+
+Letterlijke marketingquotes konden niet worden geëxtraheerd zonder toegang tot fidura.nl.
+Het is onduidelijk of Fidura zich positioneert op specialisaties (incasso, familierecht, MKB-
+advies) of als generalist.
+
+    Niet gevonden: Exacte positioneringsclaims, taglines, marketingmateriaal, klantcases op de
+    website. Confidence: 2/5.
+
+3. Featuremap -- verwachtingen versus bevestigde feiten
+
+Onderstaande featuremap is gebaseerd op wat standaard is voor Nederlandse juridische
+praktijkmanagementsystemen in dit segment. Geen enkele feature is direct bevestigd voor
+Fidura zonder websitetoegang.
+
+Dossierbeheer
+
+Verwacht: centraal dossierbeheer met contactgegevens, correspondentie, documenten, notities,
+en termijnbewaking per zaak. De diepte (bijv. sub-dossiers, meerdere wederpartijen per zaak,
+rolverloop-integratie) is onbekend. Confidence: 3/5.
+
+Incassomodule (KRITISCH)
+
+Dit is de meest strategisch relevante feature voor het 1-25 segment, aangezien veel kleine
+kantoren incassopraktijken bedienen.
+
+Incasso-feature                    Verwacht?                Bevestigd? Confidence
+
+Wettelijke rente berekening        Ja (standaard in markt)  Nee  2
+
+BIK-berekening                     Ja (wettelijk vereist)   Nee  2
+14-dagenbrief generatie
+                                   Ja (art. 6:96 BW)        Nee  2
+
+Batch/bulk acties                  Mogelijk                 Nee  1
+Art. 6:44 BW toerekeningsvolgorde  Mogelijk
+                                                            Nee  1
+
+Derdengelden administratie         Ja (NOvA-vereiste)       Nee  2
+De incassomodule is het gebied waar een concurrent het meest kan differentiëren als Fidura
+hier oppervlakkig is. Maar zonder bevestiging is dit speculatie. Verificatie in demo is essentieel.
+
+Email integratie
+Verwacht: koppeling met Outlook/Microsoft 365 voor het archiveren van e-mails aan dossiers.
+De diepte van integratie (unidirectioneel archiveren vs. bidirectionele sync, sidebar add-in, auto-
+classificatie) is onbekend. Confidence: 2/5.
+
+Documentgeneratie
+Verwacht: template-based documentgeneratie met merge fields uit dossiergegevens.
+Vermoedelijk DOCX/Word-gebaseerd (de Nederlandse advocatuur werkt vrijwel uitsluitend met
+Word). Onduidelijk is of dit HTML-gebaseerd is, hoe flexibel de templates zijn, en of er een
+template-editor is. Confidence: 2/5.
+
+Tijdschrijven en facturatie
+Verwacht: urenregistratie per dossier, uurtarieven per advocaat, factuurproductie, en
+openstaande factuurbewaking. Dit is kernfunctionaliteit voor elk praktijkmanagementsysteem.
+Confidence: 3/5.
+
+Boekhoudkoppelingen
+De Nederlandse markt wordt gedomineerd door Exact Online en Twinfield voor het MKB-
+segment. Integratie met ten minste één van deze twee is vrijwel zeker. AFAS en Yuki zijn minder
+waarschijnlijk voor het advocatensegment. Confidence: 2/5 per specifieke koppeling.
+
+AI-features
+Geen informatie gevonden over AI-functionaliteit -- geen classificatie, extractie, drafting, of
+RAG-features. Dit kan betekenen dat Fidura (nog) geen AI heeft geïntegreerd, of dat deze
+features niet prominent worden gemarket. De afwezigheid van AI is in 2026 een opvallend gat.
+Confidence: 1/5.
+
+Cliëntportaal, mobiele app, open API, data-export
+Geen van deze features kon worden bevestigd. In de huidige markt worden cliëntportalen
+steeds meer verwacht, maar veel kleinere praktijkmanagementsystemen bieden dit nog niet.
+Een open API en data-exportmogelijkheden zijn cruciaal voor de beoordeling van vendor lock-in
+risico's. Confidence: 1/5 voor alle vier.
+
+4. Pricing en commercieel model -- volledig onbekend
+
+Geen enkele prijsinformatie is gevonden. Dit kan betekenen dat Fidura een "bel voor een
+offerte"-model hanteert (gebruikelijk in B2B-juridische software) of dat de pricing simpelweg
+niet publiek beschikbaar is op de website.
+Verwachtingen op basis van marktcontext:
+
+      Prijsrange: Nederlandse juridische SaaS-tools in dit segment bewegen zich typisch tussen
+      50-150 per gebruiker per maand
+      Contractmodel: Vermoedelijk jaarcontracten met maandelijkse facturatie
+      Onboarding: Vermoedelijk apart geprijsd (implementatie, datamigratie, training)
+      Modules: Mogelijk à la carte pricing voor aanvullende modules (incasso, cliëntportaal)
+
+    Confidence: 1/5. Pricing moet direct bij Fidura worden opgevraagd. Let specifiek op:
+    opzegtermijn, contractduur, migratie-exit-kosten, en of er een proefperiode beschikbaar is.
+
+5. Klanttevredenheid -- een veelzeggend vacuüm
+
+Er zijn nul publieke reviews gevonden op Trustpilot, G2, Capterra, of enig ander
+reviewplatform. Eveneens geen vermeldingen op advocatenblad.nl, advocatie.nl, juristen.nl,
+Tweakers, of Reddit.
+Dit vacuüm is op zichzelf informatief en wijst op een of meerdere van de volgende verklaringen:
+
+  1. Zeer kleine klantbasis -- onvoldoende gebruikers om organische reviews te genereren
+  2. Bewuste low-profile strategie -- geen actieve reviewstimulering
+  3. B2B-niche-effect -- Nederlandse advocatensoftware genereert zelden publieke reviews;
+
+      beslissingen worden genomen op basis van demo's, collegiale aanbevelingen, en NOvA-
+      contacten
+  4. Product nog in vroege fase -- mogelijk nog geen significante installed base
+
+Het ontbreken van negatieve reviews is geen bewijs van kwaliteit. Het ontbreken van
+positieve reviews is geen bewijs van slechte kwaliteit. Maar het bemoeilijkt elke objectieve
+klanttevredenheidsbeoordeling fundamenteel.
+
+    Aanbeveling: Vraag Fidura om referentieklanten. Zoek in besloten LinkedIn-groepen voor
+    advocaten (bijv. "Advocaten & Legal Tech NL"). Vraag collega-advocaten in het netwerk naar
+    ervaringen.
+    Confidence voor klanttevredenheid: 0/5.
+
+6. Recente productontwikkelingen -- niet verifieerbaar
+
+Zonder toegang tot de Fidura-blog, nieuwssectie, of social media-kanalen konden geen
+productontwikkelingen van de afgelopen 24 maanden worden vastgesteld. Er zijn geen
+persberichten, release notes, of feature-aankondigingen gevonden in publiek beschikbare
+bronnen.
+De afwezigheid van publieke release-communicatie kan wijzen op:
+
+      Een product dat incrementeel evolueert zonder grote feature-lanceringen
+      Een team dat zich richt op directe klantcommunicatie in plaats van publieke marketing
+      Beperkte R&D-capaciteit
+
+    Confidence: 0/5. Controleer fidura.nl/blog, hun LinkedIn-feed, en vraag tijdens een demo
+    naar de roadmap voor de komende 12 maanden.
+
+7. Strategische zwakheden -- hypothetisch maar onderbouwd
+
+Op basis van het ontbreken van informatie en marktpatronen kunnen de volgende potentiële
+zwakheden worden geïdentificeerd:
+
+Lage online zichtbaarheid is een structureel probleem. Een SaaS-product dat in 2026 vrijwel
+onvindbaar is op reviewplatforms, geen publieke API-documentatie heeft, en geen traceerbare
+thought leadership produceert, bevindt zich in een kwetsbare positie. Nieuwe advocaten die
+software vergelijken, starten hun zoektocht online. Fidura verliest deze vergelijkingen bij
+voorbaat.
+
+Mogelijke technische schuld. Zonder bewijs van recente grote updates, AI-integratie, of
+moderne features bestaat het risico dat het product technisch achterloopt op concurrenten die
+wél actief moderniseren (Kleos met AI-features, Clio met internationale schaal).
+
+Vendor lock-in risico. Het ontbreken van bevestigde open API, data-exportfuncties, of
+migratietools suggereert potentieel hoge switchingkosten voor klanten -- wat een zwakte is voor
+nieuwe klantwerving maar een sterkte voor retentie.
+
+Organisatorische onzekerheid. Zonder zichtbaar leiderschap, teamgrootte, of financiële
+stabiliteit is het voor prospects moeilijk om vertrouwen te hebben in de continuïteit van het
+product.
+
+    Confidence: 2/5. Deze zwakheden zijn geëxtrapoleerd uit de afwezigheid van informatie,
+    niet uit negatief bewijs.
+
+8. Strategische sterktes -- mogelijke moats
+
+Ondanks de informatielacunes zijn er plausibele sterktes:
+
+Domeinspecifieke focus. Een systeem dat uitsluitend voor Nederlandse advocatenkantoren is
+gebouwd, heeft een inherent voordeel boven internationale spelers als Clio: het kent de
+Advocatenwet, NOvA-vereisten, derdengelden-regelgeving, de Raad voor Rechtsbijstand, en
+Nederlandse fiscale regels. Dit domeinbegrip is moeilijk te repliceren.
+Bestaande klantrelaties. Als Fidura al langere tijd actief is, heeft het vermoedelijk een loyale
+klantbasis opgebouwd. In de advocatuur is praktijksoftware extreem "sticky" -- de kosten en het
+risico van overstappen zijn hoog (datamigratie, herscholing personeel, werkprocesverstoring).
+Dit is de belangrijkste moat in dit segment.
+
+Nederlandse hosting en compliance. Voor advocaten die gevoelig zijn voor dataprivacy en
+beroepsgeheim, is een Nederlandse SaaS-aanbieder met lokale hosting een
+vertrouwensvoordeel ten opzichte van internationale cloudoplossingen.
+
+    Wat een nieuwe speler NOOIT moet kopiëren: De lage online zichtbaarheid en het gebrek
+    aan publieke productcommunicatie. In 2026 is dit geen strategie maar een kwetsbaarheid.
+
+Rode-team analyse
+
+Drie zwakke plekken om te exploiteren
+
+1. Het informatie-vacuüm. Fidura is vrijwel onvindbaar in online vergelijkingen. Een concurrent
+die wél prominente Capterra/G2-profielen opbouwt, actieve content marketing voert op
+advocatie.nl en het advocatenblad, en transparant is over pricing en features, wint de "shortlist-
+fase" automatisch. Veel prospects zullen Fidura nooit tegenkomen.
+
+2. AI-afwezigheid. Als Fidura inderdaad geen AI-features heeft, is er een open flank. Een
+concurrent die document-classificatie, AI-geassisteerde drafting, of intelligente incasso-
+workflows biedt, kan zich positioneren als "de toekomst" tegenover een verouderd alternatief. AI
+is in 2026 een hygienefactor die advocaten steeds meer verwachten.
+
+3. Incassomodule-diepte. Als Fidura's incassomodule beperkt is (geen batch-acties, geen
+geautomatiseerde art. 6:44 BW-toerekeningsvolgorde, geen geïntegreerde wettelijke rente-
+updates), dan kan een concurrent die hier excelleert het meest prijsgevoelige en volume-
+gedreven subsegment veroveren.
+
+Drie valstrikken voor een aanvaller
+
+1. Onderschatting van switchingkosten. Advocatenkantoren wisselen niet licht van software.
+Datamigratie van dossiers, herinrichting van werkprocessen, en training van personeel kosten
+weken. Zelfs een objectief beter product wint niet automatisch als de migratiepijn te hoog is. Een
+aanvaller moet een white-glove migratieservice aanbieden om deze barrière weg te nemen.
+
+2. Onderschatting van domeinkennis. De Nederlandse advocatuur heeft unieke wettelijke
+vereisten (Advocatenwet, Verordening op de advocatuur, derdengelden, toevoegingen,
+griffierechten, proceskostenveroordelingen). Een generieke of internationale oplossing die deze
+vereisten niet tot in detail ondersteunt, faalt bij de eerste demo.
+
+3. Het netwerk-effect van de balie. Advocaten vertrouwen op collegiale aanbevelingen. Als
+Fidura's bestaande klanten tevreden zijn en dit binnen hun netwerk communiceren, is dat een
+onzichtbare maar krachtige verdedigingslinie die geen marketingbudget kan doorbreken.
+Fidura's waarschijnlijke tegenzet
+
+Als een nieuwe speler opkomt, zou Fidura vermoedelijk: (a) prijsconcessies doen bij bestaande
+klanten om retentie te verhogen, (b) langetermijncontracten aanbieden met aantrekkelijke
+kortingen om lock-in te versterken, en (c) referentieprogramma's activeren bij tevreden
+klanten om mond-tot-mondreclame te stimuleren. Als Fidura over voldoende R&D-capaciteit
+beschikt, zou het ook versneld AI-features of een verbeterde incassomodule kunnen lanceren als
+defensieve maatregel.
+
+Meta-check: bronnen, lacunes, en validatie-agenda
+
+Wat er WEL is onderzocht
+      Gmail-account doorzocht op "fidura", "praktijkmanagement advocaten", "advocaten
+      software", "basenet", "kleos", "legal tech" -- nul relevante resultaten
+      Supabase-documentatie doorzocht -- niet relevant
+      Vier parallelle subagents ingezet voor website-, review-, bedrijfs-, en technisch onderzoek
+      -- allen beperkt door ontbreken van web search tools
+
+Bronnen die gemist zijn (en cruciaal zijn voor validatie)
+
+Bron                            Waarom cruciaal                                   Prioriteit
+
+fidura.nl (alle pagina's)       Primaire bron voor features, pricing, positioning, team 
+
+LinkedIn company page Fidura Teamgrootte, vacatures, bedrijfsupdates              
+
+KvK-uittreksel Fidura B.V.      Oprichtingsdatum, bestuurders, eigendom,          
+                                jaarstukken
+
+Capterra.nl / G2.com            Reviews (als ze bestaan)                          
+
+Advocatie.nl, Advocatenblad.nl  Redactionele vermeldingen, interviews             
+
+Besloten LinkedIn-groepen       Advocaten & Legal Tech NL, NOvA-groepen           
+
+Glassdoor / Indeed vacatures    Technologiestack, teamcultuur, groei-indicatoren  
+
+Wayback Machine                 Historische website-versies, pricing-evolutie     
+(web.archive.org)
+
+Tweakers.net / Reddit           Technische discussies, gebruikerservaringen       
+r/juridischadvies
+Bron             Waarom cruciaal                                    Prioriteit
+Demo bij Fidura
+                 Enige manier om features, UX, en incassomodule te  
+                 valideren
+
+Claims die in een demo moeten worden gevalideerd
+
+  1. Incassomodule: ondersteunt het BIK, art. 6:44 BW, 14-dagenbrief, batch-acties,
+      derdengelden? Hoe actueel zijn de wettelijke rentetarieven?
+
+  2. Boekhoudkoppelingen: welke exact? Diepte van integratie (tweerichtings-sync of export-
+      only)?
+
+  3. Email integratie: Outlook add-in? M365 OAuth? Auto-archivering naar dossiers?
+  4. API: bestaat er een REST API? Is er documentatie? Wat zijn de rate limits?
+  5. Data-export: in welke formaten? Is er een migratie-exit-tool?
+  6. AI: zijn er AI-features? Op de roadmap?
+  7. Pricing: per gebruiker/maand? Modules apart? Opzegtermijn? Contractduur?
+  8. Security: ISO 27001? Waar wordt data gehost? 2FA? SOC 2?
+  9. Mobiele app: bestaat deze? Native of responsive?
+10. Bedrijfscontinuïteit: teamgrootte, financiële gezondheid, eigendomsstructuur?
+
+Conclusie
+
+Dit onderzoek onthult een paradox die zelf strategisch informatief is. Fidura opereert in een
+segment waar online zichtbaarheid steeds belangrijker wordt, maar is zelf bijna onzichtbaar.
+Geen publieke reviews, geen vindbare pricing, geen traceerbare bedrijfsinformatie -- in een
+tijdperk waarin transparantie een competitief voordeel is, is deze onzichtbaarheid een
+risicofactor.
+
+Voor een aanvaller biedt dit een helder speelveld. De drie sterkste aanvalslijnen zijn online
+zichtbaarheid en transparantie (waar Fidura objectief faalt), AI-integratie (waar de markt
+naartoe beweegt), en incasso-specialisatie (waar de grootste pijn zit bij kleine kantoren). Maar
+de drie valstrikken -- switchingkosten, domeinkennis-eisen, en het balie-netwerk -- zijn reëel
+en worden systematisch onderschat door nieuwe toetreders.
+
+De enige manier om van dit rapport een betrouwbaar concurrentieprofiel te maken, is het
+aanvullen met directe websiteanalyse (fidura.nl), een KvK-uittreksel, en een hands-on demo.
+Dit rapport levert de structuur en de vragen; de antwoorden moeten nog worden ingevuld.
+

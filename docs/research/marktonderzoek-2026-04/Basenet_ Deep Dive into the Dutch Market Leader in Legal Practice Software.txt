@@ -1,0 +1,474 @@
+Basenet: diepteprofiel van Nederlands marktleider in juridische
+praktijksoftware
+
+Basenet is het meest gebruikte praktijkmanagementsysteem voor Nederlandse
+advocatenkantoren, met meer dan 2.000 kantoren Basenet BaseNet als klant BaseNet BaseNet
+en een marktpositie die het zelf omschrijft als "marktleider." Econnect +2 Sinds de overname door
+softwaregroep Blinqx in juni 2023 ondergaat het platform een strategische transformatie onder
+de naam BaseNeQXt, inclusiefAI-integratie en een aanzienlijke prijsverhoging van 40 naar
+69­99 per gebruiker per maand. Het bedrijf staat op een kruispunt: de transitie van
+zelfstandig familiebedrijf naar onderdeel van een grotere softwaregroep brengt zowel
+schaalvoordelen als risico's met zich mee -- van herhaalde storingen tot een mobiele app die
+achterblijft en een eigen e-mailclient die steeds meer wringt met de Microsoft 365-wereld waarin
+advocatenkantoren opereren.
+
+1. Bedrijfsprofiel: van Amsterdams familiebedrijf naar Blinqx-dochter
+
+Oprichting en historie. BaseNet is voortgekomen uit een ICT-bedrijf opgericht door de broers
+Jan en Theo Dorresteijn (via BaseGroup BV). BaseCRM Solutions De oorsprong gaat terug tot 1987
+ PitchBook (eerste automatiseringsoplossingen), het BaseNet-merk ontstond rond 1994,
+ BaseCRM Solutions de B.V.-inschrijving bij KvK dateert van 1996 (KvK-nummer 33282707).
+ Creditsafe Aanvankelijk bouwden de broers CRM-software en websites voor makelaars.
+ BaseCRM Solutions In 2004 richtten zij samen met de NVM de joint venture Realworks BV op
+(makelaarssoftware). BaseCRM Solutions LinkedIn Vanaf 2005 verschoof de focus naar de
+advocatuur LinkedIn -- een branche die BaseNet sindsdien domineert. Het belang in Realworks
+werd in 2016 volledig aan NVM verkocht. Clifton Finance LinkedIn [Confidence: 4/5 -- meerdere
+bronnen bevestigen deze tijdlijn, maar exacte oprichtingsdatum varieert per bron]
+
+Overname door Blinqx. Op 1 juni 2023 werden alle aandelen overgenomen door DIAS Group
+ Clifton Finance Clifton Finance (adviseur verkopende partij: Clifton Finance), dat zich later
+hernoemde tot Blinqx. CEO Ruud Pepping verklaarde: "Als onderdeel van DIAS Group kunnen
+wij onze internationale groeiambities nog beter en effectiever realiseren." LinkedIn LinkedIn De
+broers Dorresteijn reageerden met: "Volharding beloont." Clifton Finance Jan Dorresteijn is
+sindsdien actief met BaseCRM BV, gericht op de medische markt. BaseCRM Solutions
+
+Moederbedrijf Blinqx (opgericht 2019, CEO Ruud van der Kruk) is een softwaregroep met 600+
+medewerkers, BaseNet BaseNet 13 merken in 5 sectoren, DIAS Software en een positie op plek 10
+in de SaaS100 (MT/Sprout). VVP Zustermerken zijn onder meerAllSolutions, Hyarchis,
+Simplicate en HippoLine. Blinqx claimt 200.000+ gebruikers wereldwijd Letselschade BaseNet in
+~35 landen. DIAS Software
+Gegeven          Detail
+
+Rechtsvorm       BaseNet Internet Projects B.V.
+
+KvK              33282707
+
+Hoofdkantoor     Hullenbergweg 109, 1101 CL Amsterdam Creditsafe
+(statutair)
+
+Operationeel kantoor WG-plein 568, 1054 SJ Amsterdam Glassdoor
+
+CEO              Ruud Pepping (professioneel CEO, niet-oprichter)
+
+COO              Nick Pfeyffer
+
+Medewerkers BaseNet ~30­32 (Magnet.me/PitchBook) PitchBook
+
+Geschatte omzet  Niet publiek; bij 2.000 kantoren × gem. 3 gebruikers × 79/mnd  5,7 mln
+                 ARR
+
+Actief in        NL, BE, ES, UK Magnet
+
+[Confidence omzetschatting: 2/5 -- gebaseerd op aannames over gemiddeld aantal gebruikers
+per kantoor]
+
+2. Productpositionering: "het alles-in-één platform voor advocaten"
+
+BaseNet positioneert zich nadrukkelijk als totaaloplossing. Letterlijke marketingquotes van
+basenet.com:
+
+      Tagline: "Voor de advocaat van morgen." BaseNet
+      Kernbelofte: "Het alles-in-één platform voor advocaten" BaseNet BaseNet
+      Missieverklaring: "Advocaten nu en in de toekomst veilig en efficiënt laten werken."
+
+         BaseNet +2
+
+      Cloud-pionier: "BaseNet was in 1995 een van de eerste partijen met een online systeem"
+
+         LinkedIn
+
+      Schaalbaarheid: "Van 1 tot honderden gebruikers, van startende praktijk tot gevestigd
+      allround kantoor." BaseNet
+      Marktleider-claim (LinkedIn): "De marktleider biedt u een compleet software systeem"
+
+         LinkedIn
+
+      Klantquote mr. Koenraad de Klerk, VDTAdvocaten: "De eerste versie van de legal
+      software van BaseNet was zijn concurrenten al ver vooruit: een goed doordachte en
+      uniforme werkwijze voor iedereen." BaseNet +2
+Het primaire doelpubliek is advocatenkantoren van 1 tot circa 50 advocaten in Nederland en
+België. Specialisatiemodules bestaan voor incasso, insolventie (faillissement/WSNP) en
+familierecht (alimentatieberekening via SplitOnline). BaseNet BaseNet De branding rond het
+vernieuwde BaseNeQXt (gelanceerd 18 november 2024) BaseNet benadrukt AI-integratie: "Met
+BaseNeQXt, het totaalplatform van BaseNet met geïntegreerde AI automatisering, richt je je
+dienstverlening optimaal in vanuit één centrale omgeving." BaseNet +2
+
+3. Featuremap: wat zit er werkelijk in het platform
+
+Dossierbeheer
+BaseNet biedt een geïntegreerd DMS (Document Management Systeem) BaseNet met
+mappenstructuur, full-text zoek, versiebeheer, GetApp documentvergelijking, samenvoegen
+van producties, BaseNet en PDF-conversie. BaseNet Documenten worden automatisch
+gekoppeld aan dossiers BaseNet en relaties. BaseNet De conflictcheck op tegenstrijdige
+belangen is ingebouwd in alle pakketten. BaseNet BaseNet Roladministratie (geautomatiseerd
+naar agenda/taken) en workflow management zijn beschikbaar vanaf het Advanced-pakket.
+ BaseNet Archivering met eigen archiefnummers is standaard.
+
+Incassomodule (kritisch onderdeel)
+De incassomodule is uitgebreid gedocumenteerd via de Manula-handleiding en biedt:
+
+      Automatische renteberekening vanaf vervaldatum tot rentedatum Manual
+      WIK-staffel (Wet Incassokosten) als standaardstaffel Manual -- dit is de implementatie van
+      de BIK-regelgeving, hoewel de term "BIK" niet expliciet wordt gebruikt
+      Voorwerk II-staffel voor zaken vóór 1 juli 2012 Basenet
+      Eigen provisiestaffels aanmaakbaar Basenet Manual
+      Betalingsregelingen aanmaken en berekenen Basenet
+      Dagvaardingsworkflow geïntegreerd
+      Batch-import van incassodossiers Manual
+      Automatische documentgeneratie van ingebrekestellingen en sommaties (e-mail, brief,
+      SMS) Basenet
+      Provisieberekening over geïncasseerd bedrag Manual
+      Omzetting incassodossier  urendossier met datumregistratie Manual
+
+Wat ontbreekt of ongedocumenteerd is: er is geen expliciete vermelding van art. 6:44 BW
+(imputatieregels betalingstoerekening) in de publieke documentatie. De "14-dagenbrief" wordt
+niet als specifieke feature benoemd, hoewel automatische ingebrekestellingen wel beschikbaar
+zijn. [Confidence: 3/5 -- de functionaliteit kán achter generieke termen schuilgaan, maar is niet
+expliciet gedocumenteerd]
+
+Derdengelden
+
+Volledig geïntegreerd met eigen administratie, Manula aparte bankboeken, automatische
+koppeling bij import bankmutaties op basis van dossiernummer. BaseNet Manula
+Tussenrekeningen zijn voorgedefinieerd (incasso tussenrekening 2000, tussenrekening incasso
+naar cliënt 2010, nog te ontvangen van derdengelden 2020). Manula
+Derdengeldenadministraties kosten 14/administratie extra per maand. BaseNet
+
+E-mailintegratie: eigen client, géén Outlook
+
+Dit is een fundamenteel architectuurkeuze: BaseNet heeft een eigen ingebouwde e-mailclient
+die Outlook vervangt. De marketingboodschap is expliciet: "In tegenstelling tot generieke e-
+mailapplicaties zoals Outlook, is onze software en het proces volledig afgestemd op de
+advocatuur." Basenet Basenet E-mails worden automatisch aan dossiers gekoppeld, met een
+automatische stopwatch die tijd registreert per e-mail. Basenet De e-mailservers ondersteunen
+IMAPS en IMAP+STARTTLS. Basenet
+
+Er is geen Outlook plugin of add-in, geen Microsoft 365 Exchange sync, en geen OAuth 2.0 e-
+mailauthenticatie gedocumenteerd. De AiOpener-partner biedt een Office 365-koppeling als
+derde partij, maar dit is geen native integratie. Voor videoconferenties worden wel Microsoft
+Teams- en Zoom-links gegenereerd vanuit de agenda. BaseNet
+
+Documentgeneratie
+
+Templates werken in RTF-formaat met Word merge fields (samenvoegvelden). Manula Er is
+geen DOCX native template support gedocumenteerd -- RTF is de standaard. Templates zijn
+instelbaar per gebruiker, afdeling of kantoorbreed. Manula Voor geavanceerde
+documentautomatisering is een koppeling met Docbldr beschikbaar (derde partij). Basenet
+ BaseNet Documentbewerking verloopt via Microsoft Office Online in de browser. Manula
+
+Tijdschrijven en facturatie
+
+Tijdschrijven omvat handmatige invoer, import, en een automatische stopwatch BaseNet (ook
+bij e-mailverwerking). BaseNet Software Finder Facturatie biedt declaratievoorstellen, OHW-
+rapportages, Software Finder afwijkende uurtarieven per dossier/medewerker/periode,
+kantoorkosten, vaste bedragen, voorschotten, verschotten, toevoegingen BaseNet (inclusief
+LAT), factuursplitsing (mediation, echtscheidingen), automatische betalingsherinneringen, en
+creditnota's. Online betaling via Mollie/Wero BaseNet is beschikbaar vanafAdvanced.
+
+Boekhoudkoppeling
+
+Twee koppelingen zijn beschikbaar: Twinfield (live koppeling) en Exact Online BaseNet
+(export koppeling). Beide vereisen een apart contract met de derde partij. AFAS en Yuki worden
+niet ondersteund. BaseNet heeft ook een geïntegreerd boekhoudpakket Basenet (1
+administratie bij Advanced, onbeperkt bij Ultimate).
+AI-features (BaseNeQXt AI)
+
+Ontwikkeld via Qore/AI (Blinqx centrale AI-hub). BaseNet Beschikbare functionaliteiten:
+
+      BaseGPT -- chatfunctie voor juridisch sparren, documenten bevragen BaseNet BaseNet
+      Documentvergelijking -- twee contractversies vergelijken BaseNet BaseNet
+      Automatische samenvattingen op gewenst detailniveau BaseNet BaseNet
+      Tijdlijngeneratie uit documenten binnen datumbereik BaseNet
+      Documentanalyse van omvangrijke dossiers BaseNet
+      Spraak-naar-tekst -- aangekondigd als "binnenkort beschikbaar" BaseNet
+      E-mail concepten genereren (Q1 2026) BaseNet
+
+Prijsmodel is credit-based: BaseNet BaseGPT basis is gratis bij BaseNeQXt, BaseGPT Unlimited
+kost 10/gebruiker/maand, BaseNet credit-bundels van 45 tot 300/maand. Basenet
+
+Cliëntportaal
+
+Beschikbaar in Advanced en Ultimate. Biedt cliënten realtime inzage in dossiervoortgang, met
+controle over zichtbaarheid per document. Basenet Live voorbeeld:
+collect1.clientportal.basenet.nl.
+
+Mobiele app
+
+iOS en Android, Google Play +2 34,8 MB (iOS). Functies: e-mail, documenten, agenda, taken,
+relaties, urenregistratie, Google Play App Store 2FA. BaseNet Software Finder App Store
+beoordeling: 2,8/5 (9 beoordelingen). Kritiek richt zich op "clunky" UI, agenda die alleen list-
+based is (geen week/maandoverzicht), en onmogelijkheid om documenten te bewerken.
+
+ App Store
+
+Open API
+
+Er bestaat een RESTAPI Basenet op api.publish.basenet.nl met een demo-omgeving en WADL-
+specificatie. basenet Functionaliteit omvat data ophalen, records aanmaken en updaten. Basenet
+Authenticatie vereist username, password, partnercode en API URL. Echter: er is geen publieke
+OpenAPI/Swagger documentatie, geen webhooks, geen Zapier/Make/PowerAutomate
+integraties, en de API lijkt primair bedoeld voor partners. VDT Advocaten noemde API-
+uitbreiding als expliciete wens. Blinqx Basenet
+
+Data-export en portabiliteit
+
+BaseNet biedt een "complete backup met één druk op de knop" voor export naar andere
+applicaties of bij praktijkbeëindiging. BaseNet BaseNet De FAQ vermeldt: "Je kunt met een druk
+op de knop een complete back-up maken van al je data." BaseNet Er zijn geen standaard data-
+exportformaten (CSV, XML, JSON) gedocumenteerd, en er zijn geen publieke data-
+eigendomclausules.
+4. Pricing: van 40 in 2017 naar 99 in 2026
+
+Pakket  Prijs/gebruiker/maand (excl. Bevat
+        BTW)
+
+Essentials 69 BaseNet  Basisset: dossier, DMS, e-mail, agenda, tijdschrijven,
+                       facturatie, conflictcheck, app
+
+Advanced 89 BaseNet    + Cliëntportaal, koppelingen, taken, workflow,
+                       roladministratie, 1 administratie, Wero
+
+Ultimate 99 BaseNet    + Onbeperkte administraties, Wwft (Hyarchis), volledige
+                       ontzorging
+
+Contractvoorwaarden: Initieel jaarcontract, BaseNet stilzwijgend verlengd met 12 maanden.
+ BaseNet Opzegtermijn 3 maanden vóór einde contractperiode. Tussentijdse opzegging
+uitgesloten. Bij upgrades of toevoegingen wordt de contractperiode opnieuw verlengd met 12
+maanden. Basenet
+
+Extra kosten: Onboarding/inrichtingskosten zijn verplicht bij nieuwe aansluiting (bedrag niet
+gepubliceerd). Extra administraties kosten 26/maand, derdengeldenadministraties
+14/maand. BaseNet Datamigratie tegen vergoeding. BaseNet Boekhoudkoppelingen
+(Twinfield/Exact) vereisen apart contract. AI-bundels vanaf 10/gebruiker/maand (BaseGPT
+Unlimited) BaseNet BaseNet tot 300/maand (credit-bundels). Basenet
+
+Proefperiode: 30 dagen gratis. BaseNet +3 Migratie naar BaseNet wordt als "kosteloos"
+aangeboden met standaard conversiemodellen voor Advocaat Centraal, CClaw, Cicero, Dlex,
+Kleos, LegalSense en NEXTmatters. BaseNet BaseNet Implementatieduur: gemiddeld 2­3
+weken. BaseNet +2
+
+De prijsontwikkeling is opvallend: in 2017 meldde het Advocatenblad een prijs van
+39,95/gebruiker/maand Het Advocatenblad -- de huidige entryprice van 69 is een stijging van
+73% in negen jaar.
+
+5. Klanttevredenheid: schaars maar overwegend positief, met een rode vlag
+
+Het reviewprobleem
+
+Voor een product met 2.000+ klanten is het aantal onafhankelijke publieke reviews
+uitzonderlijk laag: Capterra heeft 1 review SelectHub (5/5, maar "incentivized" -- de gebruiker
+werd uitgenodigd door BaseNet), Capterra +2 G2 en Trustpilot hebben geen profiel, Reddit en
+Tweakers leveren nul resultaten. De meeste beschikbare reviews zijn testimonials op de eigen
+website.
+Top 5 lofpunten (met bronnen)
+
+  1. Gebruiksvriendelijkheid en intuïtieve interface -- "De gebruiksvriendelijkheid, ik kon er
+      gelijk mee aan de slag zonder dure cursus" (Gabriel V., Capterra). Capterra Capterra
+      "BaseNet -- een alles-in-éénoplossing die intuïtief werkt" (Melissa Köhler, melissupport.nl).
+
+         melissupport Melis Support
+
+  2. Volledig geïntegreerde workflow -- "Wij gebruiken namelijk alle functionaliteiten. Ook
+      extra functionaliteiten zoals Digitaal Ondertekenen en Aangetekend Mailen" Blinqx (mr.
+      Koenraad de Klerk, VDT Advocaten, basenet.com). Basenet
+
+  3. Cloud-based toegankelijkheid -- "Essentieel voor flexibiliteit is altijd en overal bij je data
+      kunnen. Op kantoor, in de trein maar ook tijdens het zeilen" (mr. Jan Gerrit Kroon,
+      basenet.com). Basenet BaseNet
+
+  4. Goede zoekfunctie -- "Een fantastische zoekfunctie heeft" (Melissa Köhler,
+      melissupport.nl). melissupport Melis Support "Zoeken op klantnamen i.p.v. nummers"
+      (Sebastian van den Pauwert, IT-Kieswijzer).
+
+  5. Klantenservice -- "Als we toch een vraag hebben, worden we snel en vriendelijk geholpen
+      door de klantenservice" BaseNet (mr. Jikke Stappaerts-Zijlmans, basenet.com). Basenet
+
+Top 5 klachten (met bronnen)
+
+  1. Herhaalde storingen -- "Vandaag werden wij wéér getroffen door een storing" (Tjip Ridder,
+      LinkedIn, december 2025). Kantoren lagen urenlang stil: "alles plat", "same here".
+       Letselschade Een gebruiker opperde dat "een schadevergoeding op zijn plaats zou zijn,
+      gezien de herhaalde uitval" (letselschade.nu). Opvallend: "Op de publieke kanalen van
+      BaseNet staat geen melding van een actuele storing of incidentrapportage." Letselschade
+
+  2. Geen publieke, bruikbare API -- "Een API is ook belangrijk voor VDT om BaseNet te
+      koppelen aan tools als Microsoft Power BI en interne webportalen" Blinqx (VDTAdvocaten
+      case study, basenet.com). Basenet GetApp bevestigt: "BaseNet does NOT have an API
+      available." GetApp
+
+  3. Mobiele app onderontwikkeld -- "De app is nog niet volledig door-ontwikkeld; je mist
+      functionaliteit als je met een iPad op locatie werkt" (Sebastian van den Pauwert, IT-
+      Kieswijzer, 2018). it-kieswijzer App Store rating: 2,8/5. App Store
+
+  4. "Alles of niets"-model -- Het Advocatenblad noteerde: "De keerzijde van de
+      totaaloplossing die BaseNet biedt, is dat kantoren niet kunnen aankloppen voor alleen een
+      systeemkoppeling. Het is alles of niets." Het Advocatenblad
+
+  5. Geen controle over data-opslaglocatie -- Concurrent Urios stelt: "Bij BaseNet kunt u niet
+      zelf bepalen waar u al uw data en stukken wilt opslaan." Urios Urios biedt actief
+      migratiediensten aan voor BaseNet-klanten (vanaf 750), Urios wat impliceert dat er een
+      stroom van overstappers is. Urios
+6. Recente productontwikkelingen en strategische richting
+
+De afgelopen 24 maanden zijn gedomineerd door drie bewegingen: integratie in Blinqx,
+rebranding naar BaseNeQXt, en AI-toevoeging.
+
+Tijdlijn recente ontwikkelingen:
+
+      Juni 2023: Overname door DIAS Group/Blinqx Blinqx Clifton Finance
+      Januari 2024: AI Hackathon met Blinqx LinkedIn -- ideeën voor documentvergelijking,
+      automatische samenvattingen, juridische vraagbaak LinkedIn
+      November 2024: Lancering BaseNeQXt, rebranding naar "a Blinqx company", BaseNet
+       BaseNet drie nieuwe tariefpakketten BaseNet
+      Q4 2025: BaseGPT lancering, HippoLine BI-koppeling, BaseNet BaseNet Academy
+      (leerplatform)
+      December 2025: Grote storing -- kantoren urenlang plat Letselschade
+      Q1 2026: AI e-mail concepten genereren, inbox-verbeteringen, agenda-updates BaseNet
+
+Strategische richting: BaseNet beweegt naar een AI-first platform binnen het Blinqx-
+ecosysteem. De Qore/AI-hub van Blinqx levert de AI-infrastructuur. BaseNet De BI-koppeling
+met zusterbedrijf HippoLine toont cross-selling binnen de groep. melissupport +2 De
+internationale expansie (België, Spanje, UK) Computable wordt versterkt door de schaal van
+Blinqx. Blinqx +2 De changelog toont wekelijkse updates met bugfixes en kleine verbeteringen
+ Basenet -- een teken van actieve ontwikkeling maar ook van doorlopende kwaliteitsissues.
+
+Roadmap-signalen: Spraak-naar-tekst is "binnenkort beschikbaar." BaseNet Power BI-
+integratie was in de VDT case study als "in ontwikkeling" benoemd. Blinqx Basenet API-
+uitbreiding lijkt op de radar maar zonder concreet tijdpad.
+
+7. Security en compliance: solide basis, enkele blinde vlekken
+
+BaseNet is ISO 27001 gecertificeerd BaseNet BaseNet en werkt samen met Fox-IT voor 24/7
+security monitoring, penetratietests en malicious traffic detectie. Basenet Hosting vindt plaats in
+twee fysiek gescheiden Nederlandse datacenters met redundante verbindingen naar AMS-IX.
+ BaseNet Manula Back-ups worden meerdere keren per dag gemaakt en nagenoeg realtime
+gesynchroniseerd naar een back-uplocatie. Basenet Een waarborgovereenkomst met Stichting
+ITsurance garandeert continuïteit bij discontinuïteit van BaseNet. Manula
+
+Beveiligingsmaatregelen omvatten 2FA via push-notificatie (eigen app), IP-filtering, BaseNet +2
+account lockout na 10 foutieve pogingen, Manula SSL/TLS met 4096 bit RSA, anti-injection, en
+Tor/botnet blokkering. Basenet De Spaanse entiteit BaseNet Internet Services S.L.U. is
+verantwoordelijke voor privacywetgeving.
+Wat ontbreekt: geen SOC 2 of NEN 7510 certificering, geen SSO/SAML ondersteuning
+gedocumenteerd, geen publieke verwerkersovereenkomst-PDF, geen gepubliceerde uptime
+SLA-percentages (ondanks de >99,9% claim), en geen RTO/RPO-specificaties voor disaster
+recovery. [Confidence: 4/5]
+
+8. Strategische sterktes: wat BaseNet goed doet
+
+Diepe domeinkennis. Meer dan 20 jaar focus op uitsluitend de advocatuur BaseNet heeft geleid
+tot een workflow die precies aansluit bij hoe advocaten werken -- van conflictcheck tot
+toevoegingsfacturatie. Dit is een moat die nieuwe toetreders jaren kost om te repliceren.
+
+Netwerkeffecten en switching costs. Met 2.000+ kantoren Basenet en een eigen e-
+mailomgeving is de lock-in substantieel. Overstappen betekent niet alleen datamigratie maar
+ook e-mailmigratie, herinrichting van workflows, en hertraining van personeel. De contractuele
+12-maands verlenging met 3 maanden opzegtermijn versterkt dit. Basenet
+
+Geïntegreerde boekhouding en derdengelden. Weinig concurrenten bieden een volledig
+geïntegreerde boekhouding inclusief derdengelden-administratie, incasso-workflow en
+factuursplitsing -- precies de complexe administratieve noden van een advocatenkantoor.
+
+ISO 27001 + Fox-IT partnerschap. De combinatie van certificering en actieve security
+monitoring door een gerenommeerde partij is een vertrouwenssignaal dat zwaar weegt bij
+advocatenkantoren die met vertrouwelijke data werken.
+
+Blinqx-synergie. De toegang tot groepsbrede AI (Qore/AI), BaseNet BI (HippoLine), en
+compliance (Hyarchis) versnelt de productontwikkeling zonder dat BaseNet alles zelf hoeft te
+bouwen.
+
+9. Strategische zwakheden: waar het platform kwetsbaar is
+
+Eigen e-mailclient als risico. De beslissing om Outlook te vervangen in plaats van te integreren
+was ooit een differentiator. In een wereld waarin Microsoft 365 de standaard is voor
+kantoorautomatisering, wordt dit steeds meer een handicap. Advocaten die met externe partijen
+samenwerken, willen Teams-integratie, gedeelde Outlook-agenda's en Exchange-functionaliteit.
+De AiOpener-workaround voor Office 365 is een lapmiddel, geen oplossing.
+
+RTF-templates in een DOCX-wereld. Het gebruik van RTF als standaard templateformaat voor
+documentgeneratie Manula is een teken van technische schuld. Moderne
+documentautomatisering verwacht DOCX of HTML. De afhankelijkheid van Docbldr voor
+geavanceerde automatisering bevestigt dat het ingebouwde systeem onvoldoende is.
+
+API-tekort. Ondanks het bestaan van een REST API op api.publish.basenet.nl is deze niet
+publiek gedocumenteerd, niet zelf-service, en mist webhooks, OpenAPI-specs, en koppelingen
+met Zapier/Make/PowerAutomate. Dit beperkt de mogelijkheid voor kantoren om BaseNet te
+integreren in bredere IT-ecosystemen.
+
+Uptime-kwetsbaarheid. De storing van december 2025 -- met de omineuze opmerking "wéér"
+ Letselschade -- en het ontbreken van publieke incidentcommunicatie Letselschade ondermijnen
+het >99,9% uptime-verhaal. Voor een platform dat de volledige kantooroperatie draagt, is elke
+minuut downtime direct omzetverlies voor de klant. Letselschade
+
+Beperkte boekhoudkoppelingen. Alleen Twinfield en Exact Online worden ondersteund. AFAS
+(groot in het MKB-segment) en Yuki (populair bij kleinere kantoren) ontbreken volledig.
+
+Prijsstijging zonder duidelijke waardepropositie. Van 40 (2017) naar 69­99 (2026) is een
+stijging van 73­148%. De toevoeging van AI-features rechtvaardigt niet de volledige stijging voor
+kantoren die deze features niet gebruiken. Dit opent de deur voor goedkopere alternatieven.
+
+10. RODE-TEAM SECTIE
+
+Drie zwakke plekken om te exploiteren
+
+1. De Outlook-kloof. BaseNet dwingt advocaten om hun vertrouwde Outlook-omgeving op te
+geven voor een eigen e-mailclient. Een concurrent die native Microsoft 365-integratie biedt --
+met automatische dossierkoppeling ván uit Outlook -- elimineert de grootste adoptiedrempel.
+Elke advocaat die bij een kennismakingsgesprek vraagt "kan ik gewoon Outlook blijven
+gebruiken?" is een prospect dat BaseNet verliest.
+
+2. De API-woestijn. BaseNet's gesloten ecosysteem maakt het onmogelijk voor kantoren om
+Power BI-dashboards, eigen webportalen of workflow-automatisering via Zapier/Make te
+bouwen. Een concurrent met een API-first architectuur en een app-marketplace trekt tech-savvy
+kantoren aan die meer willen dan een monoliet.
+
+3. De prijsschok na overname. De 73­148% prijsstijging na de Blinqx-overname creëert onrust.
+Kantoren op het Essentials-pakket (69) krijgen minder dan wat ze vroeger voor 40 hadden.
+Een concurrent die transparant en betaalbaar prijst -- zeg 49/gebruiker/maand voor een
+vergelijkbare featureset -- vangt ontevreden overstappers op. Urios doet dit al actief met een
+migratiepagina specifiek voor BaseNet-klanten. Urios Urios
+
+Drie valstrikken om te vermijden
+
+1. Onderschat de domeindiepte niet. De incassomodule, derdengelden-administratie,
+toevoegingsfacturatie, Recofa-compliance (insolventie) en conflictcheck zijn niet triviaal na te
+bouwen. Een nieuwe toetreder die "snel een MVP" lanceert zonder deze features wordt door
+advocaten onmiddellijk als onvolwassen afgeserveerd. De advocatuur is conservatief -- het
+product moet op dag één compleet zijn.
+
+2. Kopieer niet de eigen-e-mail-strategie. BaseNet's eigen mailserver was ooit innovatief maar
+is nu een blok aan het been. Een nieuwe speler moet juist wél Outlook integreren, niet
+vervangen.
+
+3. Onderschat de implementatie-relatie niet. BaseNet levert onboarding, migratie en training
+als managed service. De persoonlijke relatie met support en accountmanagement weegt zwaar in
+een branche waar partners graag een telefoonnummer bellen. Een puur self-service model zal
+niet werken in het segment 1­25 advocaten.
+
+Hoe BaseNet een nieuwe concurrent zou neutraliseren
+
+Prijsverlaging voor bedreigde segmenten. BaseNet kan het Essentials-pakket tijdelijk verlagen
+of een "loyalty discount" aanbieden aan kantoren die dreigen over te stappen. De contractuele
+12-maands verlenging en 3 maanden opzegtermijn vertragen overstappers.
+
+Feature-parity afdwingen via Blinqx. Met 600+ medewerkers en 13 merken kan Blinqx snel
+features bouwen of overnemen die een startup introduceert. De AI-integratie via Qore/AI is al
+een voorbeeld van groepsbreed innovatietempo dat een kleinere speler moeilijk kan bijhouden.
+
+Referentieoorlog. BaseNet zal zijn 2.000+ klantenbestand mobiliseren -- testimonials, case
+studies, sprekers op NOvA-events -- om twijfelende kantoren te overtuigen dat de marktleider
+de veiligste keuze is. In een risicomijdende branche is "niemand is ooit ontslagen voor het kiezen
+van BaseNet" een krachtig argument.
+
+Conclusie: een gevestigde marktleider met structurele scheuren
+
+BaseNet is onmiskenbaar de dominante speler in Nederlandse juridische praktijksoftware, met
+een diepte aan domeinkennis en een geïnstalleerde basis die moeilijk te evenaren is. De
+overname door Blinqx brengt schaal en AI-capaciteit, maar ook de onvermijdelijke spanning
+tussen groepsintegratie en productfocus. De meest significante kwetsbaarheden -- het eigen e-
+mailsilo, het API-tekort, de prijsstijging, en de stabiliteitsincidenten -- zijn niet cosmetisch maar
+structureel. Ze weerspiegelen architectuurkeuzes uit een pre-M365-tijdperk die steeds
+moeilijker houdbaar worden. Een nieuwe toetreder die Microsoft-native bouwt, een open API
+biedt, en de domeindiepte respecteert, heeft een reëel aanvalsoppervlak -- mits het geduld en de
+middelen heeft om de switching costs te overwinnen die BaseNet's werkelijke moat vormen.
+

@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 30 maart 2026 (sessie 115 — Demo Feedback Lisanne)
+**Laatst bijgewerkt:** 7 april 2026 (sessie 116 — Marktonderzoek + Go-To-Market shift)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -28,7 +28,9 @@
 | Frontend (Next.js) | ~85% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). GAT: redesign (backlog). |
 | Infra/DevOps | ~98% | Docker Compose op Hetzner VPS. Caddy ✅. GitHub-hosted CI runners ✅. Auto-deploy via SSH ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. CI 6/6 groen ✅. |
 
-**Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs). Focus nu: uitgebreid testen → Lisanne overzetten. Geen nieuwe features.
+**Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs).
+
+**NIEUWE FOCUS (sessie 116, 7 april 2026):** Technisch is Luxis klaar genoeg. De strategische modus verschuift van **bouwen → verkopen**. Doel: eerste 10 betalende klanten binnen 2-3 maanden. Werkverdeling 70% verkopen / 20% bugs / 10% features. Lifestyle business met AI-leverage, doel 100-300 klanten op termijn.
 
 **TODO (klein):**
 - ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109)
@@ -43,6 +45,111 @@
 4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies
 5. Frontend E2E + polish (settings + docs E2E ✅, a11y + performance TODO) — deels compleet
 6. Final hardening (API docs ✅, runbook ✅, disaster recovery ✅) — COMPLEET ✅
+
+---
+
+## Go-To-Market Sprint (sessie 116, 7 april 2026)
+
+**Bron:** Marktonderzoek in `docs/research/marktonderzoek-2026-04/` (7 deep research rapporten + synthese). Strategische beslissing: lifestyle business met AI-leverage, eerste 10 klanten binnen 2-3 maanden.
+
+### Strategische positionering
+
+- **Model:** Lifestyle business. Geen venture, geen investeerders, geen exit. Doel = duurzame cashflow voor Arsalan.
+- **Realistisch ambitieniveau (met AI-leverage):** 100-300 klanten op termijn, €150K-400K/jaar winst.
+- **Moat:** Velocity (uren-niveau response) + Nederlandse incasso-specialisatie + persoonlijke service.
+- **Niet concurreren op:** Feature-breedte vs Clio/Kleos, AI-breedte vs Wolters Kluwer, marktaandeel vs Basenet.
+- **Wel concurreren op:** Incasso-diepte (niemand heeft dit), iteratie-snelheid, persoonlijke support, transparante pricing, anti-lock-in (data-export als feature).
+
+### ICP (Ideal Customer Profile)
+
+**Primair segment:** Solo incasso-advocaten in de Randstad (Amsterdam, Rotterdam, Utrecht, Den Haag)
+
+Waarom dit segment:
+- 3.298 eenpitters in NL totaal, ~35% in Amsterdam
+- Incasso is Luxis' unieke technische moat
+- Solo-advocaten hebben korte beslis-cycli (geen commissie, geen RFP)
+- Randstad = waar Lisanne's netwerk zit (warme intro's)
+- 20-35% werkt nog met Excel/Word (Lexxyn 2021, n=128) → greenfield prospects
+
+**Secundair segment (later):** Ex-Kleos/AdvocaatCentraal gebruikers (trauma-groep, actief zoekend)
+
+### Pricing
+
+| Pakket | Prijs | Doelgroep |
+|--------|-------|-----------|
+| **Founding customer** | €59/mnd per gebruiker, "voor altijd" | Eerste 10 klanten, in ruil voor case study + referentie + feedback |
+| **Standaard** | €79/mnd per gebruiker | Alle klanten daarna |
+
+Positionering:
+- Onder Basenet Essentials (€69) + geen module-kosten
+- Onder Kleos Advanced (€99)
+- Boven "budget" perceptie (niet onder €50)
+- Maandelijks opzegbaar (Basenet heeft 3 maanden opzegtermijn)
+- Alle AI-features inbegrepen (niet apart bijkopen zoals BaseGPT €10/mnd)
+
+### Distributie-strategie (eerste 10 klanten)
+
+| Week | Actie | Target |
+|------|-------|--------|
+| 1-2 | Lisanne's netwerk: 5 introducties via warme intro | 1-2 klanten |
+| 3-4 | LinkedIn persoonlijke outreach (50/week, geen mass templates) | 5 gesprekken/week |
+| 5-6 | Advocatenblad/Advocatie.nl artikel over PMS-gaten voor incasso | Naambekendheid |
+| 7-8 | Recht & ICT beurs OF NOvA event (netwerken, geen stand) | 10 gesprekken → 2 demo's |
+
+**Geen paid ads, geen funnels, geen marketing automation.** Puur persoonlijk contact tot 10 klanten binnen.
+
+### Werkverdeling (HARDE REGEL tot 10 klanten)
+
+- **70% verkopen** — outreach, gesprekken, demo's, onboarding
+- **20% bugs + essentiële features** die bestaande klanten blokkeren
+- **10% nieuwe features** (alleen als directe vraag van klant)
+
+**Timer:** 4 uur/dag verkopen, 2 uur/dag bouwen. Niet andersom. Ochtend is beste verkooptijd.
+
+### Concrete actielijst (sessie 117+)
+
+| # | Actie | Effort | Status |
+|---|-------|--------|--------|
+| GTM-01 | Lisanne vraagt om lijst van 10 introductie-namen | 30 min | ❌ TODO |
+| GTM-02 | Simpele landingspagina luxis.nl (demo-only, geen features-lijst) | 2-4 uur | ❌ TODO |
+| GTM-03 | Pitch van 3 zinnen schrijven en oefenen | 1 uur | ❌ TODO |
+| GTM-04 | LinkedIn outreach template (persoonlijk, geen mass) | 1 uur | ❌ TODO |
+| GTM-05 | 15-min demo-script voor eerste gesprekken | 2 uur | ❌ TODO |
+| GTM-06 | Agenda blokkeren: 4 uur/dag verkopen voor 6 weken | 15 min | ❌ TODO |
+| GTM-07 | Check of Fidura nog bestaat als advocaten-PMS | 30 min | ❌ TODO |
+| GTM-08 | Kleos-migratie landingspagina (wedge voor trauma-groep) | 4-6 uur | ❌ TODO |
+| GTM-09 | Basenet-migratie landingspagina (wedge voor prijsschok) | 4-6 uur | ❌ TODO |
+| GTM-10 | Advocatenblad artikel schrijven over incasso-PMS gaten | 1 dag | ❌ TODO |
+| GTM-11 | 5 advocaten interviewen (niet-Lisanne) voor validatie | 2 weken | ❌ TODO |
+
+### Team-uitbreiding (wanneer)
+
+- **Niet voor 50+ klanten** (€45K+/jaar ARR)
+- **Volgorde:** virtueel assistent (admin, €500-800/mnd) → customer success part-time (bij 100+) → developer pas bij 300+
+- **Niet eerst een developer** — klassieke solo-founder val
+
+### Gedescoped (bewust NIET doen)
+
+- Stitch UI redesign — overbodig pre-PMF
+- Externe security audit — later, bij 50+ klanten
+- Urios/Legalsense/Fidura herdraaien marktonderzoek — wachten tot na 10 echte gesprekken
+- Feature race met Kleos/Clio AI — niet winbaar, niet nodig
+- Aanverwante markten (notarissen, deurwaarders) — venture-denken, blijf bij advocaten
+- Mass email marketing / ads / funnels — niet nodig tot 50+ klanten
+
+### Marktonderzoek: belangrijkste vondsten samengevat
+
+| Vondst | Implicatie voor Luxis |
+|--------|----------------------|
+| 20-35% NL kantoren zonder PMS (~1.500-2.000) | Greenfield = primaire doelgroep, nul switchkosten |
+| Incassomodule is markt-brede witte vlek | Luxis' moat is echt, niet theoretisch |
+| Basenet prijsstijging 73-148% (Blinqx) | Actief ontevreden klanten, wedge moment |
+| Kleos Trustpilot 1,5/5 + "Hotel California" | Trauma-groep actief zoekend, 4 concurrenten hebben al migratiepagina's |
+| Clio heeft geen NL-compliance | Clio geen directe concurrent (tenzij ze lokaliseren) |
+| Fidura mogelijk niet-bestaand als advocaten-PMS | Uit concurrent-lijst schrappen, checken |
+| Luxis TAM ~€3-6M/jaar | Klein voor venture, perfect voor lifestyle |
+
+**Eerlijke caveats (bus-factor, 24/7 support, compliance updates):** bekend en manageable, geen dealbreakers voor gekozen ICP (solo incasso-advocaten).
 
 ---
 

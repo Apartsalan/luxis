@@ -1,8 +1,9 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 30 maart 2026 (sessie 115 — Demo Feedback Lisanne)
+**Laatst bijgewerkt:** 7 april 2026 (sessie 116 — Marktonderzoek + strategische shift naar Go-To-Market)
 **Laatste feature/fix:** Sessie 115 — 11 demo-feedback + 3 FUA-items + factuur parsing fix + rollback vangnet
-**Volgende sessie:** 116 — TBD (alle audit-items afgerond, wacht op Lisanne voor M0b/migratie)
+**Volgende sessie:** 117 — Open: Arsalan beslist bij start waar aan gewerkt wordt (opties: landingspagina, pitch, Lisanne outreach, LinkedIn template, demo-script)
+**Strategische modus:** LIFESTYLE BUSINESS met AI-leverage — focus verschuift van bouwen naar VERKOPEN (70/20/10 regel)
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -16,6 +17,90 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 116 — 7 april 2026) — Marktonderzoek + strategische shift naar Go-To-Market
+
+**Geen code wijzigingen. Strategische sessie.**
+
+### Marktonderzoek gelezen
+7 deep research rapporten (Claude Opus 4.6 + Research mode) + synthese in `docs/research/marktonderzoek-2026-04/`:
+- **Sterk (bruikbaar):** Marktstructuur (5.494 NL kantoren, NOvA-data), Basenet, Kleos, Clio, synthese (`luxis_synthese_9_rapporten.md`)
+- **Zwak (herdraaien als nodig):** Urios, Legalsense, Fidura — geen web search gebruikt, confidence 0-2/5
+- **Kritische vondst:** Fidura bestaat mogelijk niet meer als advocaten-PMS. Volgens marktstructuur-rapport is Fidura omgebouwd tot Legisway (WK) voor bedrijfsjuristen. Synthese heeft dit gemist.
+
+### Belangrijkste marktinzichten
+1. **20-35% van NL kantoren heeft geen PMS** (1.500-2.000 greenfield prospects, nul switchkosten). Bron: Lexxyn Benchmark 2021 (n=128, verouderd maar enige datapunt).
+2. **Incassomodule is markt-brede witte vlek.** Basenet heeft WIK maar geen gedocumenteerde art. 6:44 BW of 14-dagenbrief-automatisering + RTF templates. Kleos NL-versie heeft NUL (geen BIK, geen 14-dagen, geen 6:44 BW, geen batch). Clio heeft niks Nederlands. Luxis is hier 1-tegen-niemand.
+3. **Basenet actief kwetsbaar.** Blinqx overname (juni 2023) → prijsstijging €40 → €69-99 (73-148%). Eigen e-mailclient als lock-in wordt zwakte in M365-wereld. December 2025 storing + géén publieke incident-communicatie. ~200-300 actief zoekende klanten.
+4. **Kleos heeft "trauma-groep".** Ex-AdvocaatCentraal gebruikers gedwongen gemigreerd. Trustpilot 1,5/5 (91% 1-ster). 4 concurrenten (Hammock, Urios, BaseNet, CClaw) hebben al dedicated Kleos-migratiepagina's — bewezen actief zoekende pool.
+5. **NL markt cijfers:** 19.046 advocaten, 5.494 kantoren (1-2-0 2026). 97% in segment 1-25. 1.139 nieuwe stagiairs/jaar. 62% vrouw bij nieuwe beëdigingen. Amsterdam 35,6% van advocaten.
+
+### Strategische beslissing: Lifestyle business met AI-leverage
+
+Arsalan koos expliciet lifestyle, NIET venture scale. Belangrijke nuance: de rapporten gebruikten pre-AI frameworks ("solo-founder kan niet concurreren met 600-persoons team"). In 2026 met Claude/AI-tooling is dat achterhaald. Arsalan heeft Luxis in ~6 weken gebouwd wat incumbents (Basenet vanaf 1994, Kleos 10+ jaar) met honderden mensen deden.
+
+**Moat = velocity.** Arsalan kan in uren deployen wat incumbents maanden kost. Realistische doelen: niet 30-100 klanten (oud lifestyle framework) maar **100-300 klanten**, **€150K-400K/jaar winst**.
+
+### Go-To-Market plan afgesproken
+
+**Pricing**
+- Basis: **€79/gebruiker/maand** (onder Basenet Essentials €69+modules, onder Kleos Advanced €99)
+- **Founding customers**: €59/mnd "voor altijd" voor eerste 10 klanten in ruil voor case study + referenties + feedback
+
+**ICP (Ideal Customer Profile)**
+- **Solo incasso-advocaten in de Randstad**
+- Klein genoeg om niet risico-avers te zijn
+- Incasso = Luxis' technische moat
+- Randstad = waar Lisanne's netwerk zit
+
+**Distributie-strategie (eerste 10 klanten, 2-3 maanden)**
+- Week 1-2: Lisanne's netwerk → 5 introducties → ~1-2 klanten
+- Week 3-4: LinkedIn persoonlijke outreach (50/week, ~5 gesprekken, geen mass templates)
+- Week 5-6: Advocatenblad/Advocatie.nl artikel over incasso-PMS gaten
+- Week 7-8: Recht & ICT beurs of NOvA event
+
+**Werkverdeling (nieuwe prioriteit: 70/20/10)**
+- **70% verkopen** + gesprekken + onboarding
+- **20% bugs** + essentiële features die bestaande klanten blokkeren
+- **10% nieuwe features**
+- Timer-regel: 4 uur/dag verkopen, 2 uur bouwen — tot 10 klanten binnen
+
+**Team-uitbreiding (wanneer)**
+- **Niet voor 50+ klanten** (€45K+/jaar)
+- Volgorde: virtueel assistent (admin) → customer success part-time (bij 100+) → developer pas bij 300+
+- Niet eerst een developer — dat is de klassieke solo-founder val
+
+### Concrete eerste stappen besproken (voor sessie 117)
+1. Lijst maken van 10 mensen via Lisanne
+2. Simpele landingspagina luxis.nl (demo-only, geen features-lijst, geen pricing)
+3. Pitch van 3 zinnen schrijven en oefenen
+4. Agenda blokkeren: 4 uur/dag verkopen voor 6 weken
+
+### Bewust NIET gedaan / gedescoped
+- Urios/Legalsense herdraaien marktonderzoek — wachten tot na eerste 10 gesprekken
+- Stitch UI redesign — descope, niet pre-PMF
+- Externe security audit — niet nu
+- Conflictcheck feature — bestaat al (rapporten wisten dit niet)
+- Feature race met Kleos/Clio — niet winbaar, niet nodig
+- Uitbreiding naar notarissen/deurwaarders — venture-denken, blijf bij advocaten
+
+### Eerlijke caveats
+- TAM ~€3-6M/jaar voor segment 1-25 — klein maar voldoende voor lifestyle
+- Bus-factor (solo): reëel zorg voor advocaten, oplossen met escrow + data-export + transparantie
+- 24/7 beschikbaarheid: onmogelijk solo — ICP kiezen (eenpitters accepteren dit, grote kantoren niet)
+- NL compliance updates (WIK, NOvA, Wwft): moet bijgehouden worden, kost tijd
+
+### Bestanden gewijzigd deze sessie
+- `SESSION-NOTES.md` — deze entry
+- `LUXIS-ROADMAP.md` — Go-To-Market Sprint sectie toegevoegd + header bijgewerkt
+- `docs/prompts/sessie-117.md` — nieuwe prompt voor volgende sessie
+- `docs/research/marktonderzoek-2026-04/` — 7 PDF's geconverteerd naar .txt (al eerder gedaan deze sessie)
+
+### Referenties
+- Synthese: `docs/research/marktonderzoek-2026-04/luxis_synthese_9_rapporten.md`
+- Deep research rapporten: `docs/research/marktonderzoek-2026-04/*.txt`
+
+---
 
 ## Wat er gedaan is (sessie 115 — 30 maart 2026) — Demo Feedback Lisanne
 

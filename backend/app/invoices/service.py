@@ -380,11 +380,22 @@ async def create_credit_note(
     db.add(credit_note)
     await db.flush()
 
-    # Add lines
+    # Add lines.
+    # DF117-17 (Lisanne demo 2026-04-07): credit note line_totals are ALWAYS forced
+    # to be negative so they offset the original invoice in dossier-level totals.
+    # The frontend dialog mirrors the original invoice lines with positive amounts;
+    # accepting that and silently producing positive credit-note totals was the
+    # source of Lisanne's "het wordt niet afgehaald" complaint.
     for i, line_data in enumerate(data.lines, start=1):
-        line_total = (line_data.quantity * line_data.unit_price).quantize(
+        raw_line_total = (line_data.quantity * line_data.unit_price).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
+        # Force negative regardless of input sign (handles both positive and
+        # negative input from clients — old API contract used negative
+        # unit_price, new frontend dialog uses positive)
+        line_total = -abs(raw_line_total)
+        # Keep the displayed unit_price negative as well so detail screens are honest
+        signed_unit_price = -abs(line_data.unit_price)
         line_btw = line_data.btw_percentage if line_data.btw_percentage is not None else data.btw_percentage
         line = InvoiceLine(
             tenant_id=tenant_id,
@@ -392,7 +403,7 @@ async def create_credit_note(
             line_number=i,
             description=line_data.description,
             quantity=line_data.quantity,
-            unit_price=line_data.unit_price,
+            unit_price=signed_unit_price,
             line_total=line_total,
             btw_percentage=line_btw,
         )

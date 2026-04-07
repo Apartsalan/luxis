@@ -103,8 +103,13 @@ export default function FactuurDetailPage() {
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   // Credit note form
+  // DF117-18: each line can be in "calc" mode (quantity × price) or "direct" mode (typed amount).
+  // Direct mode is what Lisanne wants for crediting hours: just type the bedrag without
+  // having to do the math manually.
   const [showCreditNoteForm, setShowCreditNoteForm] = useState(false);
-  const [cnLines, setCnLines] = useState<{ description: string; quantity: string; unit_price: string }[]>([]);
+  const [cnLines, setCnLines] = useState<
+    { description: string; mode: "calc" | "direct"; quantity: string; unit_price: string; amount: string }[]
+  >([]);
 
   // Edit mode (only for concept)
   const [editing, setEditing] = useState(false);
@@ -300,13 +305,20 @@ export default function FactuurDetailPage() {
 
   const startCreditNote = () => {
     if (!factuur) return;
-    // Pre-fill lines from original invoice
+    // Pre-fill lines from original invoice in "calc" mode (quantity × price).
+    // Lines from time entries default to "direct" mode so Lisanne can just type
+    // the credit amount without redoing the math.
     setCnLines(
-      factuur.lines.map((l) => ({
-        description: l.description,
-        quantity: String(l.quantity),
-        unit_price: String(l.unit_price),
-      }))
+      factuur.lines.map((l) => {
+        const isTimeEntry = !!l.time_entry_id;
+        return {
+          description: l.description,
+          mode: isTimeEntry ? ("direct" as const) : ("calc" as const),
+          quantity: String(l.quantity),
+          unit_price: String(l.unit_price),
+          amount: String(l.line_total ?? Number(l.quantity) * Number(l.unit_price)),
+        };
+      })
     );
     setShowCreditNoteForm(true);
   };
@@ -314,12 +326,26 @@ export default function FactuurDetailPage() {
   const handleCreateCreditNote = async () => {
     if (!factuur) return;
     const lines = cnLines
-      .filter((l) => l.description && l.unit_price)
-      .map((l) => ({
-        description: l.description,
-        quantity: l.quantity || "1",
-        unit_price: l.unit_price,
-      }));
+      .filter((l) => {
+        if (!l.description) return false;
+        if (l.mode === "direct") return !!l.amount;
+        return !!l.unit_price;
+      })
+      .map((l) => {
+        if (l.mode === "direct") {
+          // Direct amount: send as quantity=1, unit_price=amount
+          return {
+            description: l.description,
+            quantity: "1",
+            unit_price: l.amount,
+          };
+        }
+        return {
+          description: l.description,
+          quantity: l.quantity || "1",
+          unit_price: l.unit_price,
+        };
+      });
     if (lines.length === 0) {
       toast.error("Voeg minstens één regel toe");
       return;
@@ -341,7 +367,10 @@ export default function FactuurDetailPage() {
   };
 
   const addCnLine = () => {
-    setCnLines([...cnLines, { description: "", quantity: "1", unit_price: "" }]);
+    setCnLines([
+      ...cnLines,
+      { description: "", mode: "calc", quantity: "1", unit_price: "", amount: "" },
+    ]);
   };
 
   const removeCnLine = (idx: number) => {
@@ -350,6 +379,21 @@ export default function FactuurDetailPage() {
 
   const updateCnLine = (idx: number, field: string, value: string) => {
     setCnLines(cnLines.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
+  };
+
+  const toggleCnLineMode = (idx: number) => {
+    setCnLines(
+      cnLines.map((l, i) => {
+        if (i !== idx) return l;
+        const newMode = l.mode === "calc" ? "direct" : "calc";
+        // When switching to direct, pre-fill amount from current quantity × price
+        if (newMode === "direct" && !l.amount) {
+          const calc = (Number(l.quantity || "1") * Number(l.unit_price || "0")).toFixed(2);
+          return { ...l, mode: newMode, amount: calc };
+        }
+        return { ...l, mode: newMode };
+      })
+    );
   };
 
   // ── Loading / Error / Not found ────────────────────────────────────
@@ -960,66 +1004,99 @@ export default function FactuurDetailPage() {
             {/* Lines */}
             <div className="space-y-2">
               {cnLines.map((line, idx) => (
-                <div
-                  key={idx}
-                  className="grid grid-cols-[1fr_80px_120px_auto] gap-2 items-end"
-                >
-                  <div>
-                    {idx === 0 && (
-                      <label className="block text-xs font-medium text-muted-foreground mb-1">
-                        Omschrijving
-                      </label>
+                <div key={idx} className="rounded-md border border-purple-100 bg-white p-3">
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      {idx === 0 && (
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                          Omschrijving
+                        </label>
+                      )}
+                      <input
+                        type="text"
+                        value={line.description}
+                        onChange={(e) =>
+                          updateCnLine(idx, "description", e.target.value)
+                        }
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+                    {line.mode === "calc" ? (
+                      <>
+                        <div className="w-20">
+                          {idx === 0 && (
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">
+                              Aantal
+                            </label>
+                          )}
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={line.quantity}
+                            onChange={(e) =>
+                              updateCnLine(idx, "quantity", e.target.value)
+                            }
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="w-28">
+                          {idx === 0 && (
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">
+                              Prijs
+                            </label>
+                          )}
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={line.unit_price}
+                            onChange={(e) =>
+                              updateCnLine(idx, "unit_price", e.target.value)
+                            }
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-40">
+                        {idx === 0 && (
+                          <label className="block text-xs font-medium text-muted-foreground mb-1">
+                            Bedrag (€)
+                          </label>
+                        )}
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={line.amount}
+                          onChange={(e) =>
+                            updateCnLine(idx, "amount", e.target.value)
+                          }
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        />
+                      </div>
                     )}
-                    <input
-                      type="text"
-                      value={line.description}
-                      onChange={(e) =>
-                        updateCnLine(idx, "description", e.target.value)
-                      }
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
+                    <button
+                      onClick={() => removeCnLine(idx)}
+                      className="rounded-md border border-border p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      title="Verwijderen"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                  <div>
-                    {idx === 0 && (
-                      <label className="block text-xs font-medium text-muted-foreground mb-1">
-                        Aantal
-                      </label>
-                    )}
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      value={line.quantity}
-                      onChange={(e) =>
-                        updateCnLine(idx, "quantity", e.target.value)
-                      }
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleCnLineMode(idx)}
+                      className="text-[11px] font-medium text-purple-600 hover:text-purple-800 transition-colors"
+                    >
+                      {line.mode === "calc"
+                        ? "→ Schakel naar direct bedrag"
+                        : "→ Schakel naar aantal × prijs"}
+                    </button>
                   </div>
-                  <div>
-                    {idx === 0 && (
-                      <label className="block text-xs font-medium text-muted-foreground mb-1">
-                        Prijs
-                      </label>
-                    )}
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={line.unit_price}
-                      onChange={(e) =>
-                        updateCnLine(idx, "unit_price", e.target.value)
-                      }
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <button
-                    onClick={() => removeCnLine(idx)}
-                    className="rounded-md border border-border p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    title="Verwijderen"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
                 </div>
               ))}
             </div>

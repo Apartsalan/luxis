@@ -383,12 +383,50 @@ async def test_cannot_add_line_to_approved(
 async def test_create_credit_note(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):
-    """Creating a credit note should link it to the original invoice."""
+    """Creating a credit note should link it to the original invoice and produce
+    a NEGATIVE total (so it offsets the original in dossier totals)."""
     contact = await _create_contact(db, test_tenant.id)
     created = await _create_concept_invoice(client, auth_headers, contact.id)
     inv_id = created["id"]
 
     # Must be approved/sent first
+    await _advance_to_sent(client, auth_headers, inv_id)
+
+    # User sends POSITIVE amounts (this is what the frontend dialog does — it
+    # mirrors the original invoice lines with their positive values).
+    cn_payload = {
+        "linked_invoice_id": inv_id,
+        "invoice_date": "2026-03-15",
+        "due_date": "2026-04-15",
+        "lines": [
+            {"description": "Creditering", "quantity": "2", "unit_price": "250.00"},
+        ],
+    }
+    resp = await client.post("/api/invoices/credit-note", json=cn_payload, headers=auth_headers)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["invoice_number"].startswith("CN")
+    assert data["invoice_type"] == "credit_note"
+    assert data["linked_invoice_id"] == inv_id
+    # Critical: even though positive amounts were sent, totals must be NEGATIVE
+    # so they offset the original invoice in dossier totals (DF117-17 fix).
+    assert Decimal(data["subtotal"]) == Decimal("-500.00"), \
+        f"Credit note subtotal should be negative, got {data['subtotal']}"
+    assert Decimal(data["btw_amount"]) == Decimal("-105.00"), \
+        f"Credit note BTW should be negative, got {data['btw_amount']}"
+    assert Decimal(data["total"]) == Decimal("-605.00"), \
+        f"Credit note total should be negative, got {data['total']}"
+
+
+@pytest.mark.asyncio
+async def test_credit_note_negative_input_also_works(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Backwards compat: if user sends NEGATIVE amounts (old API behavior),
+    the credit note should still end up with negative totals — not double-negated."""
+    contact = await _create_contact(db, test_tenant.id)
+    created = await _create_concept_invoice(client, auth_headers, contact.id)
+    inv_id = created["id"]
     await _advance_to_sent(client, auth_headers, inv_id)
 
     cn_payload = {
@@ -402,9 +440,79 @@ async def test_create_credit_note(
     resp = await client.post("/api/invoices/credit-note", json=cn_payload, headers=auth_headers)
     assert resp.status_code == 201
     data = resp.json()
-    assert data["invoice_number"].startswith("CN")
-    assert data["invoice_type"] == "credit_note"
-    assert data["linked_invoice_id"] == inv_id
+    # Should be -250 (1 line @ -250), not +250 (double-flipped) and not -500
+    assert Decimal(data["subtotal"]) == Decimal("-250.00")
+
+
+@pytest.mark.asyncio
+async def test_credit_note_offsets_dossier_totals(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Lisanne demo 2026-04-07: a credit note must offset the linked invoice
+    when summing totals on the dossier (DF117-17). Math check via list endpoint:
+
+    invoice €605 + credit note €605 = €0 net
+    """
+    contact = await _create_contact(db, test_tenant.id)
+    created = await _create_concept_invoice(client, auth_headers, contact.id)
+    inv_id = created["id"]
+    await _advance_to_sent(client, auth_headers, inv_id)
+
+    # Full credit
+    cn_payload = {
+        "linked_invoice_id": inv_id,
+        "invoice_date": "2026-03-15",
+        "due_date": "2026-04-15",
+        "lines": [
+            {"description": "Volledige creditering", "quantity": "2", "unit_price": "250.00"},
+        ],
+    }
+    cn_resp = await client.post("/api/invoices/credit-note", json=cn_payload, headers=auth_headers)
+    assert cn_resp.status_code == 201
+
+    # List both — sum should be zero net
+    list_resp = await client.get(
+        f"/api/invoices?contact_id={contact.id}", headers=auth_headers
+    )
+    assert list_resp.status_code == 200
+    items = list_resp.json()["items"]
+    assert len(items) == 2
+    net_total = sum(Decimal(str(i["total"])) for i in items)
+    assert net_total == Decimal("0.00"), \
+        f"Original (€605) + full credit note should net to €0.00, got €{net_total}"
+
+
+@pytest.mark.asyncio
+async def test_credit_note_partial_offsets_dossier_totals(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Partial credit: invoice €605 + credit note for 1 of 2 hours (€302.50)
+    should net to €302.50."""
+    contact = await _create_contact(db, test_tenant.id)
+    created = await _create_concept_invoice(client, auth_headers, contact.id)
+    inv_id = created["id"]
+    await _advance_to_sent(client, auth_headers, inv_id)
+
+    cn_payload = {
+        "linked_invoice_id": inv_id,
+        "invoice_date": "2026-03-15",
+        "due_date": "2026-04-15",
+        "lines": [
+            {"description": "Half crediteren", "quantity": "1", "unit_price": "250.00"},
+        ],
+    }
+    cn_resp = await client.post("/api/invoices/credit-note", json=cn_payload, headers=auth_headers)
+    assert cn_resp.status_code == 201
+    cn_data = cn_resp.json()
+    assert Decimal(cn_data["total"]) == Decimal("-302.50")  # -250 - 21% BTW
+
+    list_resp = await client.get(
+        f"/api/invoices?contact_id={contact.id}", headers=auth_headers
+    )
+    items = list_resp.json()["items"]
+    net_total = sum(Decimal(str(i["total"])) for i in items)
+    assert net_total == Decimal("302.50"), \
+        f"€605 - €302.50 should net to €302.50, got €{net_total}"
 
 
 # ── Expenses CRUD ────────────────────────────────────────────────────────────

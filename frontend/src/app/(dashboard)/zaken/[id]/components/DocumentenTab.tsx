@@ -417,72 +417,135 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
           />
         ) : (
           <div className="space-y-2">
-            {invoices.map((inv) => (
-              <Link
-                key={inv.id}
-                href={`/facturen/${inv.id}?from_case=1`}
-                className="flex items-center justify-between rounded-lg border border-border p-4 hover:border-primary/30 hover:bg-muted/30 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                    <CreditCard className="h-4 w-4 text-primary" />
+            {invoices.map((inv) => {
+              const isCredit = inv.invoice_type === "credit_note";
+              return (
+                <Link
+                  key={inv.id}
+                  href={`/facturen/${inv.id}?from_case=1`}
+                  className={`flex items-center justify-between rounded-lg border p-4 hover:bg-muted/30 transition-all group ${
+                    isCredit
+                      ? "border-purple-200 bg-purple-50/30 hover:border-purple-300"
+                      : "border-border hover:border-primary/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg ${
+                        isCredit ? "bg-purple-100" : "bg-primary/10"
+                      }`}
+                    >
+                      <CreditCard
+                        className={`h-4 w-4 ${isCredit ? "text-purple-700" : "text-primary"}`}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p
+                          className={`text-sm font-medium transition-colors ${
+                            isCredit
+                              ? "text-purple-800"
+                              : "text-foreground group-hover:text-primary"
+                          }`}
+                        >
+                          {inv.invoice_number}
+                        </p>
+                        {isCredit && (
+                          <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-700 ring-1 ring-inset ring-purple-200">
+                            Creditnota
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDateShort(inv.invoice_date)}
+                        {inv.contact_name && ` · ${inv.contact_name}`}
+                        {isCredit && inv.linked_invoice_number && (
+                          <> · credit op {inv.linked_invoice_number}</>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                      {inv.invoice_number}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateShort(inv.invoice_date)}
-                      {inv.contact_name && ` · ${inv.contact_name}`}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                        INVOICE_STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {INVOICE_STATUS_LABELS[inv.status] ?? inv.status}
+                    </span>
+                    <span
+                      className={`text-sm font-semibold tabular-nums ${
+                        isCredit ? "text-red-600" : "text-foreground"
+                      }`}
+                    >
+                      {formatCurrency(inv.total)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const ok = await confirmDelete({ title: "Factuur verwijderen", description: "Weet je zeker dat je deze factuur wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" });
+                        if (ok) {
+                          deleteInvoice.mutate(inv.id, {
+                            onSuccess: () => toast.success("Factuur verwijderd"),
+                            onError: () => toast.error("Fout bij verwijderen factuur"),
+                          });
+                        }
+                      }}
+                      className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Verwijderen"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                      INVOICE_STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {INVOICE_STATUS_LABELS[inv.status] ?? inv.status}
-                  </span>
-                  <span className="text-sm font-semibold text-foreground tabular-nums">
-                    {formatCurrency(inv.total)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const ok = await confirmDelete({ title: "Factuur verwijderen", description: "Weet je zeker dat je deze factuur wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" });
-                      if (ok) {
-                        deleteInvoice.mutate(inv.id, {
-                          onSuccess: () => toast.success("Factuur verwijderd"),
-                          onError: () => toast.error("Fout bij verwijderen factuur"),
-                        });
-                      }
-                    }}
-                    className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-                    title="Verwijderen"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
 
-        {invoices.length > 0 && (
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-            <p className="text-sm text-muted-foreground">
-              {invoices.length} factuur{invoices.length !== 1 ? "en" : ""}
-            </p>
-            <p className="text-sm font-semibold text-foreground tabular-nums">
-              Totaal: {formatCurrency(invoices.reduce((sum, inv) => sum + inv.total, 0))}
-            </p>
-          </div>
-        )}
+        {invoices.length > 0 && (() => {
+          // DF117-17: split out credit notes from regular invoices for clarity
+          const regularInvoices = invoices.filter((i) => i.invoice_type !== "credit_note");
+          const creditNotes = invoices.filter((i) => i.invoice_type === "credit_note");
+          const grossTotal = regularInvoices.reduce((sum, inv) => sum + inv.total, 0);
+          const creditedTotal = creditNotes.reduce((sum, inv) => sum + inv.total, 0); // already negative
+          const netTotal = grossTotal + creditedTotal;
+          const hasCredit = creditNotes.length > 0;
+
+          return (
+            <div className="mt-4 border-t border-border pt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {regularInvoices.length} factuur{regularInvoices.length !== 1 ? "en" : ""}
+                  {hasCredit && (
+                    <>
+                      {" "}
+                      · {creditNotes.length} creditnota{creditNotes.length !== 1 ? "'s" : ""}
+                    </>
+                  )}
+                </p>
+                <p className="text-sm font-semibold text-foreground tabular-nums">
+                  Netto totaal: {formatCurrency(netTotal)}
+                </p>
+              </div>
+              {hasCredit && (
+                <div className="mt-2 space-y-0.5 text-xs">
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Gefactureerd</span>
+                    <span className="tabular-nums">{formatCurrency(grossTotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-red-600">
+                    <span>Gecrediteerd</span>
+                    <span className="tabular-nums">{formatCurrency(creditedTotal)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* DF-12: Verschotten sectie */}

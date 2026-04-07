@@ -165,3 +165,127 @@ async def test_update_contact_default_interest_to_contractual(
     data = response.json()
     assert data["default_interest_type"] == "contractual"
     assert float(data["default_contractual_rate"]) == 10.00
+
+
+# ── DF117-22: BIK inheritance from client ──────────────────────────────────
+
+
+@pytest_asyncio.fixture
+async def bik_amount_client(db: AsyncSession, test_tenant: Tenant) -> Contact:
+    """Client with default fixed BIK override of €500."""
+    contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="company",
+        name="Fixed BIK BV",
+        email="info@fixedbik.nl",
+        default_bik_override=Decimal("500.00"),
+    )
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+    return contact
+
+
+@pytest_asyncio.fixture
+async def bik_pct_client(db: AsyncSession, test_tenant: Tenant) -> Contact:
+    """Client with default BIK percentage of 12.5%."""
+    contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="company",
+        name="Pct BIK BV",
+        email="info@pctbik.nl",
+        default_bik_override_percentage=Decimal("12.50"),
+    )
+    db.add(contact)
+    await db.commit()
+    await db.refresh(contact)
+    return contact
+
+
+@pytest.mark.asyncio
+async def test_case_inherits_fixed_bik_from_client(
+    client: AsyncClient, auth_headers: dict, bik_amount_client: Contact
+):
+    """When client has default_bik_override and case is created without an
+    explicit override, the case should inherit the fixed amount."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(bik_amount_client.id),
+        "date_opened": date.today().isoformat(),
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["bik_override"]) == 500.00
+    assert data.get("bik_override_percentage") is None
+
+
+@pytest.mark.asyncio
+async def test_case_inherits_bik_percentage_from_client(
+    client: AsyncClient, auth_headers: dict, bik_pct_client: Contact
+):
+    """When client has default_bik_override_percentage, the case inherits
+    the percentage and the fixed amount stays None."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(bik_pct_client.id),
+        "date_opened": date.today().isoformat(),
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data.get("bik_override") is None
+    assert float(data["bik_override_percentage"]) == 12.50
+
+
+@pytest.mark.asyncio
+async def test_case_explicit_bik_overrides_client_default(
+    client: AsyncClient, auth_headers: dict, bik_amount_client: Contact
+):
+    """Explicit bik_override on the case wins over client default."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(bik_amount_client.id),
+        "date_opened": date.today().isoformat(),
+        "bik_override": "750.00",
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["bik_override"]) == 750.00
+
+
+@pytest.mark.asyncio
+async def test_case_no_bik_when_client_has_none(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """When client has no default BIK, the case has no override either
+    (falls back to WIK-staffel calculation)."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert data.get("bik_override") is None
+    assert data.get("bik_override_percentage") is None
+
+
+@pytest.mark.asyncio
+async def test_create_contact_with_default_bik_percentage(
+    client: AsyncClient, auth_headers: dict
+):
+    """Creating a contact with default_bik_override_percentage should persist + return."""
+    payload = {
+        "contact_type": "company",
+        "name": "BIK Pct Test",
+        "default_bik_override_percentage": "8.50",
+    }
+    response = await client.post("/api/relations", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["default_bik_override_percentage"]) == 8.50

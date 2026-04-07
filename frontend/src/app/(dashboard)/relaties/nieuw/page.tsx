@@ -30,6 +30,9 @@ export default function NieuweRelatiePage() {
     postal_city: "",
     default_interest_type: "",
     default_contractual_rate: "",
+    default_bik_mode: "wik" as "wik" | "amount" | "percentage",
+    default_bik_override: "",
+    default_bik_override_percentage: "",
     notes: "",
   });
   const [error, setError] = useState("");
@@ -121,6 +124,12 @@ export default function NieuweRelatiePage() {
       ...(form.default_interest_type && { default_interest_type: form.default_interest_type }),
       ...(form.default_interest_type === "contractual" && form.default_contractual_rate && {
         default_contractual_rate: form.default_contractual_rate,
+      }),
+      ...(form.default_bik_mode === "amount" && form.default_bik_override && {
+        default_bik_override: form.default_bik_override,
+      }),
+      ...(form.default_bik_mode === "percentage" && form.default_bik_override_percentage && {
+        default_bik_override_percentage: form.default_bik_override_percentage,
       }),
       ...(form.notes && { notes: form.notes }),
     };
@@ -397,7 +406,7 @@ export default function NieuweRelatiePage() {
             </div>
           </div>
 
-          <h3 className="pt-2 text-sm font-semibold text-foreground">Standaard rente</h3>
+          <h3 className="pt-2 text-sm font-semibold text-foreground">Standaard rente & incassokosten</h3>
           <p className="text-xs text-muted-foreground -mt-2">
             Wordt automatisch overgenomen bij het aanmaken van een nieuw dossier voor deze klant. Per dossier wijzigbaar.
           </p>
@@ -434,6 +443,60 @@ export default function NieuweRelatiePage() {
                   onChange={(e) => updateField("default_contractual_rate", e.target.value)}
                   className={inputClass}
                   placeholder="Bijv. 8.00"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* DF117-22: Standaard incassokosten (BIK) */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="rel-default_bik_mode" className="block text-sm font-medium text-foreground">
+                Standaard incassokosten
+              </label>
+              <select
+                id="rel-default_bik_mode"
+                value={form.default_bik_mode}
+                onChange={(e) => updateField("default_bik_mode", e.target.value)}
+                className={inputClass}
+              >
+                <option value="wik">WIK-staffel (art. 6:96 BW)</option>
+                <option value="amount">Vast bedrag</option>
+                <option value="percentage">Percentage van hoofdsom</option>
+              </select>
+            </div>
+            {form.default_bik_mode === "amount" && (
+              <div>
+                <label htmlFor="rel-default_bik_override" className="block text-sm font-medium text-foreground">
+                  Vast bedrag (€)
+                </label>
+                <input
+                  id="rel-default_bik_override"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.default_bik_override}
+                  onChange={(e) => updateField("default_bik_override", e.target.value)}
+                  className={inputClass}
+                  placeholder="Bijv. 250.00"
+                />
+              </div>
+            )}
+            {form.default_bik_mode === "percentage" && (
+              <div>
+                <label htmlFor="rel-default_bik_override_percentage" className="block text-sm font-medium text-foreground">
+                  Percentage van hoofdsom (%)
+                </label>
+                <input
+                  id="rel-default_bik_override_percentage"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={form.default_bik_override_percentage}
+                  onChange={(e) => updateField("default_bik_override_percentage", e.target.value)}
+                  className={inputClass}
+                  placeholder="Bijv. 10.00"
                 />
               </div>
             )}

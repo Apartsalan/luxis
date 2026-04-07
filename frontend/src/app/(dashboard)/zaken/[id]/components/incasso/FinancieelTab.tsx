@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { useFinancialSummary } from "@/hooks/use-collections";
 import { useCase, useUpdateCase } from "@/hooks/use-cases";
+import { useRelation } from "@/hooks/use-relations";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 
@@ -22,6 +23,7 @@ type BikMode = "wik" | "amount" | "percentage";
 export function FinancieelTab({ caseId }: { caseId: string }) {
   const { data: summary, isLoading, isError, error, refetch } = useFinancialSummary(caseId);
   const { data: caseData } = useCase(caseId);
+  const { data: clientContact } = useRelation(caseData?.client?.id);
   const updateCase = useUpdateCase();
   const [bikMode, setBikMode] = useState<BikMode>("wik");
   const [bikOverride, setBikOverride] = useState<string>("");
@@ -76,6 +78,23 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
   const effectiveBik = bikOverrideAmount !== null && !isNaN(bikOverrideAmount) ? bikOverrideAmount : summary.total_bik;
   const bikDiff = effectiveBik - summary.total_bik;
   const bikManual = bikMode !== "wik";
+
+  // DF117-22: detect when the current case BIK matches the client default
+  // (i.e. it was inherited and not yet overridden on the case).
+  const clientHasBikDefault =
+    clientContact?.default_bik_override != null ||
+    clientContact?.default_bik_override_percentage != null;
+  const isInheritedFromClient =
+    bikSaved &&
+    clientHasBikDefault &&
+    ((bikMode === "percentage" &&
+      caseData?.bik_override_percentage != null &&
+      Number(caseData.bik_override_percentage) ===
+        Number(clientContact?.default_bik_override_percentage)) ||
+      (bikMode === "amount" &&
+        caseData?.bik_override != null &&
+        Number(caseData.bik_override) ===
+          Number(clientContact?.default_bik_override)));
   const effectiveGrandTotal = summary.grand_total + bikDiff;
   const effectiveOutstanding = summary.total_outstanding + bikDiff;
   const effectiveRemainingCosts = summary.remaining_costs + bikDiff;
@@ -208,6 +227,14 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
             </button>
           )}
         </div>
+
+        {/* DF117-22: indicator that BIK is inherited from client default */}
+        {isInheritedFromClient && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+            <span className="font-medium">Overgenomen van klant-standaard.</span>{" "}
+            Wijzig hieronder om voor dit dossier af te wijken.
+          </div>
+        )}
 
         {/* Mode selector */}
         <div className="grid grid-cols-3 gap-2">

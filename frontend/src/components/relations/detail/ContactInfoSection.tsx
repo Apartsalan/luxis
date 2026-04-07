@@ -423,8 +423,50 @@ export function ContactInfoSection({
                 />
               </div>
             )}
+            {/* DF117-22: Standaard incassokosten */}
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Standaard incassokosten</label>
+              <select
+                value={editForm.default_bik_mode || "wik"}
+                onChange={(e) => updateEdit("default_bik_mode", e.target.value)}
+                className={inputClass}
+              >
+                <option value="wik">WIK-staffel (art. 6:96 BW)</option>
+                <option value="amount">Vast bedrag</option>
+                <option value="percentage">Percentage van hoofdsom</option>
+              </select>
+            </div>
+            {editForm.default_bik_mode === "amount" && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Vast bedrag (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={editForm.default_bik_override}
+                  onChange={(e) => updateEdit("default_bik_override", e.target.value)}
+                  className={inputClass}
+                  placeholder="Bijv. 250.00"
+                />
+              </div>
+            )}
+            {editForm.default_bik_mode === "percentage" && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Percentage van hoofdsom (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={editForm.default_bik_override_percentage}
+                  onChange={(e) => updateEdit("default_bik_override_percentage", e.target.value)}
+                  className={inputClass}
+                  placeholder="Bijv. 10.00"
+                />
+              </div>
+            )}
           </div>
-        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type) ? (
+        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null) ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             {contact.default_hourly_rate && (
               <div>
@@ -456,6 +498,16 @@ export function ContactInfoSection({
                 <dd className="text-sm font-medium text-foreground">
                   {{ statutory: "Wettelijke rente", commercial: "Handelsrente", government: "Overheidsrente", contractual: "Contractuele rente" }[contact.default_interest_type] ?? contact.default_interest_type}
                   {contact.default_interest_type === "contractual" && contact.default_contractual_rate != null && ` (${contact.default_contractual_rate}%)`}
+                </dd>
+              </div>
+            )}
+            {(contact.default_bik_override != null || contact.default_bik_override_percentage != null) && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Standaard incassokosten</dt>
+                <dd className="text-sm font-medium text-foreground">
+                  {contact.default_bik_override_percentage != null
+                    ? `${contact.default_bik_override_percentage}% van hoofdsom`
+                    : `€ ${Number(contact.default_bik_override).toFixed(2)} (vast bedrag)`}
                 </dd>
               </div>
             )}

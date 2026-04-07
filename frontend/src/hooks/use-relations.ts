@@ -42,6 +42,8 @@ export interface Contact {
   iban: string | null;
   default_interest_type: string | null;
   default_contractual_rate: number | null;
+  default_bik_override: number | null;
+  default_bik_override_percentage: number | null;
   terms_file_name: string | null;
   notes: string | null;
   is_active: boolean;
@@ -81,6 +83,8 @@ interface ContactCreateInput {
   iban?: string;
   default_interest_type?: string;
   default_contractual_rate?: string | number;
+  default_bik_override?: string | number;
+  default_bik_override_percentage?: string | number;
   notes?: string;
 }
 

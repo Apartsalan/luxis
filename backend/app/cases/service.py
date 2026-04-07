@@ -372,11 +372,20 @@ async def create_case(
             f"Ongeldig debiteurtype: {data.debtor_type}. Kies uit: {', '.join(DEBTOR_TYPES)}"
         )
 
-    # Inherit interest settings from client contact when not explicitly set.
-    # Lisanne demo 2026-04-07: standaard rente per klant moet automatisch overgenomen worden.
+    # Inherit interest + BIK settings from client contact when not explicitly set.
+    # Lisanne demo 2026-04-07: standaard rente (DF117-02) en standaard incassokosten
+    # (DF117-22) per klant moeten automatisch overgenomen worden.
     interest_type = data.interest_type
     contractual_rate = data.contractual_rate
-    if interest_type is None:
+    bik_override = data.bik_override
+    bik_override_percentage = data.bik_override_percentage
+
+    needs_client_lookup = (
+        interest_type is None
+        or (bik_override is None and bik_override_percentage is None)
+    )
+    client = None
+    if needs_client_lookup:
         client_result = await db.execute(
             select(Contact).where(
                 Contact.id == data.client_id,
@@ -384,12 +393,22 @@ async def create_case(
             )
         )
         client = client_result.scalar_one_or_none()
+
+    if interest_type is None:
         if client and client.default_interest_type:
             interest_type = client.default_interest_type
             if interest_type == "contractual" and contractual_rate is None:
                 contractual_rate = client.default_contractual_rate
         else:
             interest_type = "statutory"  # System default fallback
+
+    # DF117-22: BIK inheritance — only inherit when neither field was explicitly set.
+    # Percentage takes precedence over fixed amount (matches the case-level precedence).
+    if bik_override is None and bik_override_percentage is None and client:
+        if client.default_bik_override_percentage is not None:
+            bik_override_percentage = client.default_bik_override_percentage
+        elif client.default_bik_override is not None:
+            bik_override = client.default_bik_override
 
     # Validate interest_type
     if interest_type not in INTEREST_TYPES:
@@ -427,8 +446,8 @@ async def create_case(
         assigned_to_id=data.assigned_to_id or user_id,
         date_opened=data.date_opened,
         budget=data.budget,
-        bik_override=data.bik_override,
-        bik_override_percentage=data.bik_override_percentage,
+        bik_override=bik_override,
+        bik_override_percentage=bik_override_percentage,
         hourly_rate=data.hourly_rate,
         payment_term_days=data.payment_term_days,
         collection_strategy=data.collection_strategy,

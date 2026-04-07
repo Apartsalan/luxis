@@ -1842,6 +1842,15 @@ function NieuweZaakPage() {
                   . Je kan hieronder afwijken voor dit dossier.
                 </div>
               )}
+              {(selectedClient?.default_bik_override != null || selectedClient?.default_bik_override_percentage != null) && (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                  <span className="font-medium">Standaard incassokosten van klant:</span>{" "}
+                  {selectedClient.default_bik_override_percentage != null
+                    ? `${selectedClient.default_bik_override_percentage}% van hoofdsom`
+                    : `€ ${Number(selectedClient.default_bik_override).toFixed(2)} (vast bedrag)`}
+                  . Wordt automatisch toegepast op dit dossier; per dossier wijzigbaar in Vorderingen.
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-foreground">

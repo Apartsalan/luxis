@@ -72,6 +72,14 @@ class Contact(TenantBase):
     # for this contact (Lisanne demo 2026-04-07). Migration edc1202caef9 added the columns.
     default_interest_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
     default_contractual_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    # DF117-22 (Lisanne demo 2026-04-07): default BIK/incassokosten per client.
+    # Same pattern as default_interest_type — when creating a new case for this client,
+    # these are inherited unless explicitly set on the case. Either fixed amount OR
+    # percentage of principal can be set; if both are null, the WIK-staffel default applies.
+    default_bik_override: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    default_bik_override_percentage: Mapped[Decimal | None] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )
 
     # Algemene Voorwaarden (AI-UX-11)
     terms_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)

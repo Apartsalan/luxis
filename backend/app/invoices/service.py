@@ -442,14 +442,102 @@ async def send_invoice(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     invoice_id: uuid.UUID,
+    user_id: uuid.UUID | None = None,
+    *,
+    skip_email: bool = False,
 ) -> Invoice:
-    """Mark an invoice as sent."""
+    """Send an invoice: render to PDF, email it via the connected provider
+    (Outlook/Gmail) or SMTP fallback, then mark the invoice as sent.
+
+    Lisanne demo 2026-04-07 (DF117-13): the previous implementation only flipped
+    the status to "sent" without actually emailing anything — we now actually
+    deliver the PDF to the customer's billing email.
+
+    Args:
+        db: Database session.
+        tenant_id: Tenant scope.
+        invoice_id: Invoice to send.
+        user_id: The lawyer triggering the send (used for OAuth account lookup).
+            When None (e.g. internal calls / legacy callers), email is skipped.
+        skip_email: When True, only the status is updated. Used for tests and
+            for cases where the lawyer explicitly opts out of emailing.
+
+    Returns:
+        The updated Invoice (status="sent").
+
+    Raises:
+        BadRequestError: If the invoice can't transition to "sent" or has no
+            recipient email address.
+    """
     invoice = await get_invoice(db, tenant_id, invoice_id)
     _validate_transition(invoice.status, "sent")
+
+    if not skip_email and user_id is not None:
+        # Determine recipient email: prefer billing_email, fall back to contact.email
+        contact = invoice.contact
+        if contact is None:
+            raise BadRequestError("Factuur heeft geen gekoppelde relatie")
+        recipient = (contact.billing_email or contact.email or "").strip()
+        if not recipient:
+            raise BadRequestError(
+                f"Geen e-mailadres bekend voor {contact.name}. "
+                "Stel een e-mailadres in op de relatie of vul billing_email."
+            )
+
+        # Render PDF
+        from app.invoices.invoice_pdf_service import render_invoice_pdf
+
+        pdf_bytes, pdf_filename = await render_invoice_pdf(db, tenant_id, invoice)
+
+        # Build subject + body
+        subject = f"Factuur {invoice.invoice_number}"
+        recipient_label = contact.name or recipient
+        body_html = _build_invoice_email_body(invoice, recipient_label)
+
+        # Send via unified send service (provider-first, SMTP fallback)
+        from app.email.send_service import send_with_attachment
+
+        email_log = await send_with_attachment(
+            db,
+            user_id,
+            tenant_id,
+            to=recipient,
+            subject=subject,
+            body_html=body_html,
+            attachments=[(pdf_filename, pdf_bytes, "pdf")],
+            case_id=invoice.case_id,
+            recipient_name=recipient_label,
+        )
+        if email_log.status != "sent":
+            raise BadRequestError(
+                f"Verzenden mislukt: {email_log.error_message or 'onbekende fout'}"
+            )
+
     invoice.status = "sent"
     await db.flush()
     await db.refresh(invoice)
     return invoice
+
+
+def _build_invoice_email_body(invoice: Invoice, recipient_name: str) -> str:
+    """Build a friendly Dutch HTML body for the invoice email."""
+    from app.documents.docx_service import _fmt_currency, _fmt_date
+
+    return f"""\
+<p>Geachte {recipient_name},</p>
+
+<p>In de bijlage treft u factuur <strong>{invoice.invoice_number}</strong> aan
+ten bedrage van <strong>{_fmt_currency(invoice.total)}</strong>, met als
+vervaldatum {_fmt_date(invoice.due_date)}.</p>
+
+<p>Wij verzoeken u vriendelijk het bedrag voor de vervaldatum over te maken
+onder vermelding van het factuurnummer.</p>
+
+<p>Heeft u vragen over deze factuur? Neem gerust contact met ons op.</p>
+
+<p>Met vriendelijke groet,<br>
+Kesting Legal</p>
+"""
 
 
 async def mark_paid(

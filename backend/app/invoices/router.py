@@ -239,11 +239,20 @@ async def approve_invoice(
 @router.post("/{invoice_id}/send", response_model=InvoiceResponse)
 async def send_invoice(
     invoice_id: uuid.UUID,
+    skip_email: bool = Query(default=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Mark an invoice as sent."""
-    return await service.send_invoice(db, current_user.tenant_id, invoice_id)
+    """Send an invoice: render PDF, email it via the connected provider, then
+    mark as sent. Use ?skip_email=true to only flip the status (e.g. when
+    Lisanne sent the invoice manually outside Luxis)."""
+    return await service.send_invoice(
+        db,
+        current_user.tenant_id,
+        invoice_id,
+        user_id=current_user.id,
+        skip_email=skip_email,
+    )
 
 
 @router.post("/{invoice_id}/mark-paid", response_model=InvoiceResponse)

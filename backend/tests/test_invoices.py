@@ -60,10 +60,17 @@ async def _create_concept_invoice(
 
 
 async def _advance_to_sent(client: AsyncClient, auth_headers: dict, invoice_id: str) -> dict:
-    """Advance invoice through concept → approved → sent."""
+    """Advance invoice through concept → approved → sent.
+
+    Uses skip_email=true so the test fixtures don't need to set up an OAuth
+    email account or mock the provider. The actual emailing flow is covered
+    by dedicated tests in test_invoice_send_email.py.
+    """
     await client.post(f"/api/invoices/{invoice_id}/approve", headers=auth_headers)
-    resp = await client.post(f"/api/invoices/{invoice_id}/send", headers=auth_headers)
-    assert resp.status_code == 200
+    resp = await client.post(
+        f"/api/invoices/{invoice_id}/send?skip_email=true", headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
     return resp.json()
 
 
@@ -185,8 +192,11 @@ async def test_status_workflow_happy_path(
     assert resp.status_code == 200
     assert resp.json()["status"] == "approved"
 
-    # Send
-    resp = await client.post(f"/api/invoices/{inv_id}/send", headers=auth_headers)
+    # Send (skip_email — actual email-sending flow is covered by
+    # tests/test_invoice_send_email.py)
+    resp = await client.post(
+        f"/api/invoices/{inv_id}/send?skip_email=true", headers=auth_headers
+    )
     assert resp.status_code == 200
     assert resp.json()["status"] == "sent"
 

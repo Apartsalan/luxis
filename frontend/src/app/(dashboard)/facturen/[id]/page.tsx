@@ -211,8 +211,21 @@ export default function FactuurDetailPage() {
         await approveMutation.mutateAsync(id);
         toast.success("Factuur goedgekeurd");
       } else if (next === "sent") {
-        await sendMutation.mutateAsync(id);
-        toast.success("Factuur gemarkeerd als verzonden");
+        // DF117-13: ask the user whether to actually email the invoice or just
+        // flip the status (e.g. when they sent it manually outside Luxis).
+        const recipient =
+          factuur?.contact?.name
+            ? `${factuur.contact.name}`
+            : "de cliënt";
+        const wantsEmail = await confirm({
+          title: "Factuur verzenden",
+          description: `De factuur wordt als PDF gemaild naar ${recipient}. Ga je akkoord?`,
+          confirmText: "Verzenden via e-mail",
+          cancelText: "Annuleren",
+        });
+        if (!wantsEmail) return;
+        await sendMutation.mutateAsync({ id });
+        toast.success("Factuur verzonden");
       } else if (next === "paid") {
         await markPaidMutation.mutateAsync({ id });
         toast.success("Factuur gemarkeerd als betaald");

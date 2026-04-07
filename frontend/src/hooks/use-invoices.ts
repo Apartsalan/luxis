@@ -299,17 +299,18 @@ export function useApproveInvoice() {
 export function useSendInvoice() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const res = await api(`/api/invoices/${id}/send`, { method: "POST" });
+    mutationFn: async ({ id, skipEmail = false }: { id: string; skipEmail?: boolean }) => {
+      const qp = skipEmail ? "?skip_email=true" : "";
+      const res = await api(`/api/invoices/${id}/send${qp}`, { method: "POST" });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || "Verzenden mislukt");
       }
       return res.json();
     },
-    onSuccess: (_, id) => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
-      qc.invalidateQueries({ queryKey: ["invoices", id] });
+      qc.invalidateQueries({ queryKey: ["invoices", variables.id] });
     },
   });
 }

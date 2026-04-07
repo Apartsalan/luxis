@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 april 2026 (sessie 117 — Demo-feedback Lisanne: adres-parsing fix + standaard rente per klant)
-**Laatste feature/fix:** Sessie 117 — invoice address parsing line-based scanner + default interest inheritance Contact→Case
-**Volgende sessie:** 118 — Open: Arsalan beslist bij start (nog in bouw-fase, demos met Lisanne lopen). Geparkeerde demo-items uit sessie 117: incassokosten/provisie zichtbaar op factuur, batch dossier-aanmaak, derdengelden, AI leest AV+docs, creditnota's, facturen-filter, etc.
+**Laatst bijgewerkt:** 7 april 2026 (sessie 117 — MEGA: 19 demo-items afgerond uit Lisanne's demo-feedback)
+**Laatste feature/fix:** Sessie 117 — echte email versturen + AI dossier-context + batch dossier-aanmaak
+**Volgende sessie:** 118 — Open: Arsalan beslist bij start. Nog open uit DF117: derdengelden module (eigen sessie nodig).
 **Strategische modus:** LIFESTYLE BUSINESS met AI-leverage — nog in bouw/validatie-fase met Lisanne, GTM-plan klaar voor later
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
@@ -18,7 +18,132 @@
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
 
-## Wat er gedaan is (sessie 117 — 7 april 2026) — Demo-feedback Lisanne: adres-parsing + standaard rente
+## Wat er gedaan is (sessie 117 — 7 april 2026) — MEGA: 19 demo-items afgerond
+
+**Bron:** demo met Lisanne 7-4-2026 — 21 feedback-punten gecategoriseerd in 7 categorieën, plus 1 nieuw item (DF117-22) toegevoegd tijdens de sessie. Resultaat: **19 van de 22 items gefixt en gedeployed**, 2 geparkeerd (DF117-21 derdengelden = eigen module, DF117-06 samengevoegd met DF117-03), 1 wacht-blocker is vervallen (DF117-20 batch was geblokkeerd door DF117-03 die nu af is — beide opgepakt).
+
+**Commits in deze sessie (10):**
+1. `7b2015c` — feat(intake,relations): adres-parsing + standaard rente per klant met inheritance (DF117-01, DF117-02)
+2. `918eb76` — docs: notes/roadmap update intermezzo
+3. `5415a49` — feat(facturen,uren,docs): 5 quick-wins (DF117-12/14/19/07/08)
+4. `fb3f7e8` — fix(invoices): credit note totals offset original (DF117-16/17/18)
+5. `6c3eed4` — feat(incasso,facturen): BIK percentage + minimum_fee + panel for all cases (DF117-04/05/09)
+6. `018ab67` — feat(relations,cases): default incassokosten per client (DF117-22)
+7. `bb30005` — feat(facturen): inline expense creation + add to existing (DF117-10/11/15)
+8. `44fa79f` — feat(invoices): actually send invoice as PDF via Outlook (DF117-13)
+9. `06ef2bf` — feat(ai-agent): expand draft context with case files + invoices (DF117-03 incl. DF117-06)
+10. `a077a79` — feat(intake): batch-approve multiple intake requests at once (DF117-20)
+
+### Per item samengevat
+
+| ID | Item | Resultaat |
+|---|---|---|
+| DF117-01 | Adres-parsing factuur → dossier | ✅ Line-based scanner herschreven; visit-velden gefilterd uit context |
+| DF117-02 | Standaard rente per klant met inheritance | ✅ DF-09 was half-af; backend velden + create_case inheritance + UI overal |
+| DF117-03 | AI dossier-context bij berichtcompositie | ✅ CaseFiles + invoices in `_gather_case_context`, prompt vermeldt 5 bron-types |
+| DF117-04 | BIK percentage-optie naast vast bedrag | ✅ Nieuwe `bik_override_percentage` veld + 3-mode FinancieelTab |
+| DF117-05 | IncassoKostenPanel voor alle cases | ✅ Verwijderd `case_type === incasso` check; panel hides zelf als irrelevant |
+| DF117-06 | AI leest dossier-documenten | ⏩ Samengevoegd met DF117-03 (zelfde feature) |
+| DF117-07 | Uren toevoegen vanuit dossier-tab | ✅ Inline modal in UrenTab met date/duur/activiteit/billable |
+| DF117-08 | Zoekfunctie documenten-tab | ✅ Search input boven file type filter, zoekt op filename + email subject + from |
+| DF117-09 | Minimum bedrag incassokosten zichtbaar | ✅ Backend `is_minimum_applied` flag + line description "minimumtarief van €X toegepast" |
+| DF117-10 | Verschot in reguliere factuur | ✅ Was al deels gebouwd; count badge toegevoegd voor zichtbaarheid |
+| DF117-11 | Factuur+verschot in 1 flow | ✅ Inline "+ Nieuw verschot" knop met dialog op `/facturen/nieuw` |
+| DF117-12 | Filter facturen-pagina | ✅ Search nu over invoice_number + case_number + contact.name + contact_id filter |
+| DF117-13 | Echte email versturen via Outlook | ✅ `send_invoice` rendert PDF + roept OutlookProvider aan + confirm dialog |
+| DF117-14 | Klik vanuit facturen-overzicht naar dossier | ✅ Dossier-cell is nu Link |
+| DF117-15 | Verschot achteraf op voorschotnota | ✅ "Verschot toevoegen" dialog op invoice detail (concept), 2 tabs (bestaand/nieuw) |
+| DF117-16 | Creditnota visueel duidelijk | ✅ Paarse border + badge + "credit op {origineel}" + rood negatief bedrag |
+| DF117-17 | Creditnota totaal-berekening fixen | ✅ KRITIEKE BUG: backend forceert nu `line_total = -abs(qty*price)` ongeacht input sign |
+| DF117-18 | Creditnota eigen uren: bedrag-optie | ✅ Mode toggle per regel: "calc" of "direct" — uren-lines openen direct in direct mode |
+| DF117-19 | Klik op debiteur → openstaande facturen | ✅ DebiteurenTab linkt naar `/facturen?contact_id=...` met chip-filter |
+| DF117-20 | Batch dossier-aanmaak | ✅ POST `/api/intake/approve-batch` + checkboxes UI + select-all + per-item failure handling |
+| DF117-21 | Derdengelden-rekening + verrekening | ⏸️ Geparkeerd — eigen onderzoekssessie (Stichting Derdengelden, juridische verrekening) |
+| DF117-22 | Standaard incassokosten per klant | ✅ Pattern van DF117-02; Contact velden + create_case inheritance + UI overal |
+
+### Verificatie totaal voor sessie 117
+- **Backend tests:** 75+ tests groen op de gewijzigde modules (cases, relations, invoices, intake, ai_agent, incasso preview, draft context, send email, interest+bik inheritance)
+- **Nieuw aangemaakte test files:**
+  - `test_intake_address_parsing.py` (9 tests)
+  - `test_interest_inheritance.py` (11 tests, incl. BIK inheritance)
+  - `test_incasso_invoice_preview.py` (8 tests)
+  - `test_invoice_send_email.py` (6 tests)
+  - `test_draft_context.py` (6 tests)
+  - + 2 batch-approve tests in `test_intake.py`
+  - + 4 nieuwe credit note tests in `test_invoices.py`
+- **Frontend tsc:** groen
+- **Migraties:** 3 nieuwe (`a1f7c2e9d4b8` postal addresses, `b3c7e1f9a2d4` bik_override_percentage, `c8d2e5b1f6a3` default_bik_to_contacts) — alle toegepast lokaal én op VPS
+- **Deploy:** elke commit gedeployed via SSH, containers healthy
+- **Git tag:** `v117-stable` (zie `Sessie afsluiten` hieronder)
+
+### Bestanden gewijzigd
+
+**Backend:**
+- `backend/app/ai_agent/intake_models.py` — postal_address velden
+- `backend/app/ai_agent/intake_service.py` — mapping uitbreiding
+- `backend/app/ai_agent/invoice_parser.py` — line-based address scanner (significante refactor)
+- `backend/app/ai_agent/intake_router.py` — approve-batch endpoint
+- `backend/app/ai_agent/intake_schemas.py` — batch request/response schemas
+- `backend/app/ai_agent/draft_service.py` — case files + invoices in context, prompt update
+- `backend/app/relations/models.py` — default_interest_*, default_bik_*
+- `backend/app/relations/schemas.py` — alle nieuwe velden
+- `backend/app/cases/models.py` — bik_override_percentage
+- `backend/app/cases/schemas.py` — bik_override_percentage in Create/Update/Response
+- `backend/app/cases/service.py` — interest + BIK inheritance van Contact
+- `backend/app/invoices/service.py` — credit note tekens flippen, send_invoice met PDF + provider, list_invoices contact_id filter
+- `backend/app/invoices/router.py` — contact_id query, skip_email param
+- `backend/app/invoices/schemas.py` — IncassoProvisieOption raw_amount + is_minimum_applied
+- `backend/alembic/versions/` — 3 nieuwe migraties
+
+**Backend tests (nieuw):**
+- `test_intake_address_parsing.py`, `test_interest_inheritance.py`, `test_incasso_invoice_preview.py`, `test_invoice_send_email.py`, `test_draft_context.py`
+
+**Frontend:**
+- `frontend/src/app/(dashboard)/relaties/nieuw/page.tsx` — rente + BIK secties
+- `frontend/src/app/(dashboard)/relaties/[id]/page.tsx` — editForm + save uitbreiding
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — overgenomen-van-klant hint voor rente + BIK
+- `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/FinancieelTab.tsx` — 3-mode BIK selector + indicator
+- `frontend/src/app/(dashboard)/zaken/[id]/components/UrenTab.tsx` — uren toevoegen knop + dialog
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — zoekfunctie + creditnota visueel
+- `frontend/src/app/(dashboard)/facturen/page.tsx` — uitgebreide filter, dossier link, debiteur klik
+- `frontend/src/app/(dashboard)/facturen/nieuw/page.tsx` — inline verschot dialog
+- `frontend/src/app/(dashboard)/facturen/[id]/page.tsx` — creditnota dialog met bedrag-mode, verschot toevoegen, send confirm
+- `frontend/src/app/(dashboard)/intake/page.tsx` — batch checkboxes + action bar
+- `frontend/src/components/IncassoKostenPanel.tsx` — minimum-fee badge + line description, panel hides zelf
+- `frontend/src/components/relations/detail/ContactInfoSection.tsx` — BIK velden in edit + view
+- `frontend/src/hooks/use-relations.ts` — Contact + ContactCreateInput types
+- `frontend/src/hooks/use-cases.ts` — bik_override_percentage in CaseDetail
+- `frontend/src/hooks/use-invoices.ts` — useSendInvoice signature, contact_id filter, IncassoInvoicePreview type
+- `frontend/src/hooks/use-intake.ts` — useBatchApproveIntake hook
+
+### Bekende issues / aandachtspunten
+
+- **VPS deploy** geeft soms een DuplicateColumnError op nieuwe migraties, maar `alembic current` staat altijd op head en de kolommen bestaan. Vermoedelijk draait de backend container bij startup zelf alembic upgrade. Niet kritiek maar volgende sessie even checken.
+- **DF117-21 derdengelden** is bewust geparkeerd: vereist eigen onderzoek (Stichting Derdengelden, juridische verrekeningsregels) — niet zomaar een UI bouwen.
+- **Tests draaien duurt lang** (~2 min voor alle gewijzigde modules samen) — vooral door PDF rendering en de ai_agent fixtures.
+
+### Volgende sessie (118)
+
+Lisanne kan nu:
+- Facturen aanmaken via factuur-upload met volledig adres
+- Standaard rente + BIK per klant instellen, automatisch overgenomen op nieuw dossier
+- Incassokosten als bedrag of percentage op vorderingen
+- Provisie met minimum tarief, zichtbaar op factuur
+- Verschotten direct aanmaken vanuit factuur, of achteraf op voorschotnota
+- Echte email versturen vanuit Luxis met PDF
+- AI berichten laten opstellen die overeenkomsten + AV + facturen kennen
+- 10 binnenkomende incassozaken in 1 keer goedkeuren
+- Creditnota's met correct negatief totaal in dossier-overzicht zien
+
+Wat nog open is:
+- DF117-21 derdengelden module (eigen sessie)
+- Mogelijk nieuwe demo-feedback van Lisanne na deze sessie
+
+Lisanne kan morgen testen wat er allemaal nieuw is. Als er issues zijn → nieuwe DF118-XX entries.
+
+---
+
+## Wat er gedaan is (sessie 117 BEGIN — 7 april 2026) — Demo-feedback Lisanne: adres-parsing + standaard rente
 
 **Bron:** demo met Lisanne 7-4-2026 — 21 feedback-punten gecategoriseerd in 7 categorieën. 2 punten opgepakt deze sessie, rest geparkeerd voor volgende sessies of na overleg met Lisanne.
 

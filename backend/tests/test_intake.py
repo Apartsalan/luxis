@@ -768,3 +768,115 @@ class TestIntakeAPI:
         )
         assert response.status_code == 200
         assert response.json()["status"] == "rejected"
+
+    async def test_batch_approve_three_intakes(
+        self,
+        client,
+        db: AsyncSession,
+        test_tenant: Tenant,
+        test_user: User,
+        auth_headers: dict,
+    ):
+        """DF117-20: POST /api/intake/approve-batch with 3 ids creates 3 cases."""
+        client_contact, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+
+        ids: list[str] = []
+        for i in range(3):
+            email = await _create_inbound_email(
+                db,
+                test_tenant.id,
+                account.id,
+                from_email=client_contact.email,
+                subject=f"Factuur batch {i+1}",
+            )
+            intake = IntakeRequest(
+                tenant_id=test_tenant.id,
+                synced_email_id=email.id,
+                client_contact_id=client_contact.id,
+                debtor_name=f"Batch Debiteur {i+1}",
+                debtor_kvk=f"1000000{i}",  # unique so each becomes a new contact
+                debtor_type="company",
+                principal_amount=Decimal("1500.00"),
+                due_date=date.today(),
+                status=IntakeStatus.PENDING_REVIEW,
+            )
+            db.add(intake)
+            await db.commit()
+            ids.append(str(intake.id))
+
+        # Snapshot existing case count
+        before = (
+            await db.execute(
+                select(Case).where(Case.tenant_id == test_tenant.id, Case.case_type == "incasso")
+            )
+        ).scalars().all()
+        before_count = len(before)
+
+        response = await client.post(
+            "/api/intake/approve-batch",
+            headers=auth_headers,
+            json={"ids": ids, "note": "Batch goedgekeurd"},
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert len(data["approved"]) == 3
+        assert len(data["failed"]) == 0
+        for item in data["approved"]:
+            assert item["status"] == "approved"
+            assert item["created_case_id"] is not None
+
+        after = (
+            await db.execute(
+                select(Case).where(Case.tenant_id == test_tenant.id, Case.case_type == "incasso")
+            )
+        ).scalars().all()
+        assert len(after) == before_count + 3
+
+    async def test_batch_approve_partial_failure(
+        self,
+        client,
+        db: AsyncSession,
+        test_tenant: Tenant,
+        test_user: User,
+        auth_headers: dict,
+    ):
+        """If 1 of 3 ids is invalid, the other 2 should still succeed."""
+        client_contact, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+
+        ids: list[str] = []
+        for i in range(2):
+            email = await _create_inbound_email(
+                db,
+                test_tenant.id,
+                account.id,
+                from_email=client_contact.email,
+                subject=f"Partial {i+1}",
+            )
+            intake = IntakeRequest(
+                tenant_id=test_tenant.id,
+                synced_email_id=email.id,
+                client_contact_id=client_contact.id,
+                debtor_name=f"Partial Debiteur {i+1}",
+                debtor_kvk=f"2000000{i}",
+                debtor_type="company",
+                principal_amount=Decimal("750.00"),
+                due_date=date.today(),
+                status=IntakeStatus.PENDING_REVIEW,
+            )
+            db.add(intake)
+            await db.commit()
+            ids.append(str(intake.id))
+        # Add a non-existent id
+        ids.append(str(uuid.uuid4()))
+
+        response = await client.post(
+            "/api/intake/approve-batch",
+            headers=auth_headers,
+            json={"ids": ids},
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert len(data["approved"]) == 2
+        assert len(data["failed"]) == 1

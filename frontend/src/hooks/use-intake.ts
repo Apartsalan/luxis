@@ -145,6 +145,34 @@ export function useApproveIntake() {
   });
 }
 
+export interface BatchApproveResult {
+  approved: IntakeResponse[];
+  failed: { intake_id: string; error: string }[];
+}
+
+export function useBatchApproveIntake() {
+  const queryClient = useQueryClient();
+
+  return useMutation<BatchApproveResult, Error, { ids: string[]; note?: string }>({
+    mutationFn: async ({ ids, note }) => {
+      const res = await api("/api/intake/approve-batch", {
+        method: "POST",
+        body: JSON.stringify({ ids, ...(note ? { note } : {}) }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Batch-goedkeuren mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["intakes"] });
+      queryClient.invalidateQueries({ queryKey: ["intake-pending-count"] });
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+  });
+}
+
 export function useRejectIntake() {
   const queryClient = useQueryClient();
 

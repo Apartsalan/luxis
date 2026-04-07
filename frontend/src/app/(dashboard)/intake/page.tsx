@@ -5,11 +5,14 @@ import Link from "next/link";
 import {
   Bot,
   ArrowUpRight,
+  Check,
   ChevronLeft,
   ChevronRight,
   Inbox,
+  Loader2,
 } from "lucide-react";
-import { useIntakes } from "@/hooks/use-intake";
+import { toast } from "sonner";
+import { useIntakes, useBatchApproveIntake } from "@/hooks/use-intake";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { confidenceBgColor, confidenceTextColor as sharedConfidenceTextColor, confidenceLabelText } from "@/lib/confidence";
@@ -66,6 +69,11 @@ export default function IntakePage() {
   const [statusFilter, setStatusFilter] = useState("pending_review");
   const [page, setPage] = useState(1);
 
+  // DF117-20: batch selection state. Only available on the pending_review tab
+  // since approve only works for pending intakes anyway.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const batchApprove = useBatchApproveIntake();
+
   const { data, isLoading, isError, error, refetch } = useIntakes(
     statusFilter || undefined,
     page,
@@ -74,6 +82,45 @@ export default function IntakePage() {
 
   const items = data ?? [];
   const hasNextPage = items.length >= PER_PAGE;
+  const batchEligible = statusFilter === "pending_review";
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map((i) => i.id)));
+    }
+  };
+
+  const handleBatchApprove = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      const result = await batchApprove.mutateAsync({
+        ids: Array.from(selectedIds),
+      });
+      const okCount = result.approved.length;
+      const failCount = result.failed.length;
+      if (failCount === 0) {
+        toast.success(`${okCount} dossier${okCount === 1 ? "" : "s"} aangemaakt`);
+      } else {
+        toast.warning(
+          `${okCount} aangemaakt, ${failCount} mislukt: ${result.failed[0]?.error ?? ""}`
+        );
+      }
+      setSelectedIds(new Set());
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Batch-goedkeuren mislukt");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -118,10 +165,58 @@ export default function IntakePage() {
         />
       )}
 
+      {/* DF117-20: Batch action bar — only shown on pending_review tab when items selected */}
+      {batchEligible && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5">
+          <div className="flex items-center gap-3 text-sm">
+            <span className="font-medium text-foreground">
+              {selectedIds.size} {selectedIds.size === 1 ? "verzoek" : "verzoeken"} geselecteerd
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Selectie wissen
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleBatchApprove}
+            disabled={batchApprove.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {batchApprove.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Check className="h-3.5 w-3.5" />
+            )}
+            Goedkeuren ({selectedIds.size})
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-lg border bg-card">
         {/* Table header */}
-        <div className="hidden md:grid grid-cols-[100px_1fr_1fr_140px_100px_90px_80px_40px] gap-2 px-4 py-2.5 border-b text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div
+          className={
+            batchEligible
+              ? "hidden md:grid grid-cols-[40px_100px_1fr_1fr_140px_100px_90px_80px_40px] gap-2 px-4 py-2.5 border-b text-xs font-medium text-muted-foreground uppercase tracking-wider"
+              : "hidden md:grid grid-cols-[100px_1fr_1fr_140px_100px_90px_80px_40px] gap-2 px-4 py-2.5 border-b text-xs font-medium text-muted-foreground uppercase tracking-wider"
+          }
+        >
+          {batchEligible && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={items.length > 0 && selectedIds.size === items.length}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded border-input cursor-pointer"
+                title="Alles selecteren"
+              />
+            </div>
+          )}
           <div>Ontvangen</div>
           <div>Afzender</div>
           <div>Onderwerp</div>
@@ -176,13 +271,38 @@ export default function IntakePage() {
             {items.map((item) => {
               const statusCfg =
                 INTAKE_STATUS_CONFIG[item.status] ?? INTAKE_STATUS_CONFIG.detected;
+              const isSelected = selectedIds.has(item.id);
 
               return (
-                <Link
+                <div
                   key={item.id}
-                  href={`/intake/${item.id}`}
-                  className="grid grid-cols-1 md:grid-cols-[100px_1fr_1fr_140px_100px_90px_80px_40px] gap-1 md:gap-2 px-4 py-3 hover:bg-muted/50 transition-colors group"
+                  className={`relative ${
+                    isSelected ? "bg-primary/5" : "hover:bg-muted/50"
+                  } transition-colors group`}
                 >
+                  {batchEligible && (
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelect(item.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-4 w-4 rounded border-input cursor-pointer"
+                      />
+                    </div>
+                  )}
+                  <Link
+                    href={`/intake/${item.id}`}
+                    className={
+                      batchEligible
+                        ? "grid grid-cols-1 md:grid-cols-[40px_100px_1fr_1fr_140px_100px_90px_80px_40px] gap-1 md:gap-2 px-4 py-3"
+                        : "grid grid-cols-1 md:grid-cols-[100px_1fr_1fr_140px_100px_90px_80px_40px] gap-1 md:gap-2 px-4 py-3"
+                    }
+                  >
+                  {batchEligible && <div className="hidden md:block" />}
                   {/* Ontvangen */}
                   <div className="text-sm text-muted-foreground">
                     {item.email_date
@@ -252,7 +372,8 @@ export default function IntakePage() {
                   <div className="hidden md:flex items-center justify-end">
                     <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                </Link>
+                  </Link>
+                </div>
               );
             })}
           </div>

@@ -67,6 +67,32 @@ class IntakeReviewRequest(BaseModel):
     note: str | None = None
 
 
+class IntakeBatchApproveRequest(BaseModel):
+    """Request body for batch-approving multiple intake requests at once
+    (DF117-20: Lisanne sometimes gets 10 new incassozaken in one go and
+    wants to approve them as a batch)."""
+
+    ids: list[uuid.UUID]
+    note: str | None = None
+
+
+class IntakeBatchApproveResponse(BaseModel):
+    """Response for batch approve: separates successes from failures so the
+    UI can show 'Goedgekeurd: 8/10, mislukt: 2'."""
+
+    approved: list["IntakeResponse"]
+    failed: list["IntakeBatchFailure"]
+
+
+class IntakeBatchFailure(BaseModel):
+    intake_id: uuid.UUID
+    error: str
+
+
+# Resolve forward refs after IntakeResponse is defined further up
+IntakeBatchApproveResponse.model_rebuild()
+
+
 class IntakeUpdateRequest(BaseModel):
     """Request body for updating extracted data before approval."""
 

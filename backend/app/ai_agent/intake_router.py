@@ -7,6 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.intake_models import IntakeStatus
 from app.ai_agent.intake_schemas import (
+    IntakeBatchApproveRequest,
+    IntakeBatchApproveResponse,
+    IntakeBatchFailure,
     IntakePendingCountResponse,
     IntakeResponse,
     IntakeReviewRequest,
@@ -196,6 +199,44 @@ async def approve(
     await db.commit()
     refreshed = await get_intake_by_id(db, intake.id, current_user.tenant_id)
     return _intake_to_response(refreshed)
+
+
+@router.post("/approve-batch", response_model=IntakeBatchApproveResponse)
+async def approve_batch(
+    body: IntakeBatchApproveRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Batch-approve multiple intake requests at once (DF117-20).
+
+    Each intake is processed individually so that one failing intake doesn't
+    block the rest. Successes are committed; failures are returned in the
+    response so the UI can show "Goedgekeurd: 8/10, mislukt: 2".
+    """
+    approved: list[IntakeResponse] = []
+    failed: list[IntakeBatchFailure] = []
+
+    for intake_id in body.ids:
+        try:
+            intake = await approve_intake(
+                db, intake_id, current_user.tenant_id, current_user.id, body.note
+            )
+            if not intake:
+                failed.append(
+                    IntakeBatchFailure(
+                        intake_id=intake_id,
+                        error="Intake niet gevonden of niet in 'pending_review'",
+                    )
+                )
+                continue
+            await db.commit()
+            refreshed = await get_intake_by_id(db, intake.id, current_user.tenant_id)
+            approved.append(_intake_to_response(refreshed))
+        except Exception as e:
+            await db.rollback()
+            failed.append(IntakeBatchFailure(intake_id=intake_id, error=str(e)))
+
+    return IntakeBatchApproveResponse(approved=approved, failed=failed)
 
 
 @router.post("/{intake_id}/reject", response_model=IntakeResponse)

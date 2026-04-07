@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Check, Clock, Plus, Trash2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus, useProvisie } from "@/hooks/use-invoices";
 import { useDerdengeldenBalance } from "@/hooks/use-collections";
@@ -12,7 +12,7 @@ import { useCases, useCase } from "@/hooks/use-cases";
 import type { CaseSummary } from "@/hooks/use-cases";
 import type { Contact } from "@/hooks/use-relations";
 import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries";
-import { useExpenses, type Expense } from "@/hooks/use-expenses";
+import { useExpenses, useCreateExpense, EXPENSE_CATEGORY_LABELS, type Expense } from "@/hooks/use-expenses";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { IncassoKostenPanel } from "@/components/IncassoKostenPanel";
 
@@ -75,6 +75,9 @@ export default function NieuweFactuurPage() {
   const [selectedCaseNumber, setSelectedCaseNumber] = useState("");
   const [showTimeEntries, setShowTimeEntries] = useState(false);
   const [showExpenses, setShowExpenses] = useState(false);
+  // DF117-11: inline expense creation dialog
+  const [showNewExpenseDialog, setShowNewExpenseDialog] = useState(false);
+  const createExpense = useCreateExpense();
   const [selectedTimeEntryIds, setSelectedTimeEntryIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [invoiceFieldErrors, setInvoiceFieldErrors] = useState<Record<string, string>>({});
@@ -909,6 +912,20 @@ export default function NieuweFactuurPage() {
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Importeer verschotten
+                    {expenses && expenses.length > 0 && (
+                      <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary/10 px-1 text-[10px] font-semibold text-primary">
+                        {expenses.length}
+                      </span>
+                    )}
+                  </button>
+                  {/* DF117-11: inline new expense — register and add to invoice in one flow */}
+                  <button
+                    type="button"
+                    onClick={() => setShowNewExpenseDialog(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Nieuw verschot
                   </button>
                 </>
               )}
@@ -1279,6 +1296,183 @@ export default function NieuweFactuurPage() {
           </button>
         </div>
       </form>
+
+      {/* DF117-11: inline new expense dialog */}
+      {showNewExpenseDialog && (
+        <NewExpenseDialog
+          caseId={form.case_id}
+          onClose={() => setShowNewExpenseDialog(false)}
+          onCreated={(expense) => {
+            importExpense(expense);
+            setShowNewExpenseDialog(false);
+            toast.success("Verschot toegevoegd aan factuur");
+          }}
+          createExpense={createExpense}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── DF117-11: inline new expense dialog ─────────────────────────────────────
+
+function NewExpenseDialog({
+  caseId,
+  onClose,
+  onCreated,
+  createExpense,
+}: {
+  caseId: string;
+  onClose: () => void;
+  onCreated: (expense: { id: string; description: string; amount: number; tax_type?: string }) => void;
+  createExpense: ReturnType<typeof useCreateExpense>;
+}) {
+  const [form, setForm] = useState({
+    description: "",
+    amount: "",
+    expense_date: new Date().toISOString().slice(0, 10),
+    category: "griffierecht",
+    tax_type: "onbelast",
+  });
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!form.description.trim()) {
+      setError("Omschrijving is verplicht");
+      return;
+    }
+    const amt = parseFloat(form.amount);
+    if (isNaN(amt) || amt <= 0) {
+      setError("Voer een geldig bedrag in");
+      return;
+    }
+    try {
+      const created = await createExpense.mutateAsync({
+        case_id: caseId || undefined,
+        description: form.description,
+        amount: form.amount,
+        expense_date: form.expense_date,
+        category: form.category,
+        tax_type: form.tax_type,
+        billable: true,
+      });
+      onCreated({
+        id: created.id,
+        description: created.description,
+        amount: Number(created.amount),
+        tax_type: created.tax_type,
+      });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Aanmaken mislukt");
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-card border border-border shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="text-base font-semibold text-foreground">Nieuw verschot toevoegen</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving *</label>
+            <input
+              type="text"
+              required
+              autoFocus
+              value={form.description}
+              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              placeholder="Bijv. Griffierecht kantonrechter"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Bedrag (€) *</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                value={form.amount}
+                onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                placeholder="0.00"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
+              <input
+                type="date"
+                value={form.expense_date}
+                onChange={(e) => setForm((p) => ({ ...p, expense_date: e.target.value }))}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Categorie</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {Object.entries(EXPENSE_CATEGORY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">BTW-status</label>
+              <select
+                value={form.tax_type}
+                onChange={(e) => setForm((p) => ({ ...p, tax_type: e.target.value }))}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="onbelast">Onbelast (geen BTW)</option>
+                <option value="vrijgesteld">Vrijgesteld</option>
+                <option value="belast">Belast (21% BTW)</option>
+              </select>
+            </div>
+          </div>
+          {error && (
+            <div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
+          )}
+          <div className="flex gap-2 pt-2">
+            <button
+              type="submit"
+              disabled={createExpense.isPending}
+              className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {createExpense.isPending ? "Bezig..." : "Toevoegen aan factuur"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Annuleren
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

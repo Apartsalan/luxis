@@ -45,6 +45,7 @@ import {
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
 } from "@/hooks/use-invoices";
+import { useExpenses, useCreateExpense, EXPENSE_CATEGORY_LABELS, type Expense } from "@/hooks/use-expenses";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
@@ -101,6 +102,10 @@ export default function FactuurDetailPage() {
   const deletePayment = useDeleteInvoicePayment();
   const createCreditNote = useCreateCreditNote();
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
+
+  // DF117-15: add expense (verschot) to existing concept invoice / voorschotnota
+  const [showAddExpenseDialog, setShowAddExpenseDialog] = useState(false);
+  const createExpense = useCreateExpense();
 
   // Credit note form
   // DF117-18: each line can be in "calc" mode (quantity × price) or "direct" mode (typed amount).
@@ -775,13 +780,25 @@ export default function FactuurDetailPage() {
             Factuurregels ({factuur.lines.length})
           </h3>
           {isConcept && !editing && (
-            <button
-              onClick={() => setShowLineForm(!showLineForm)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Regel toevoegen
-            </button>
+            <div className="flex items-center gap-2">
+              {/* DF117-15: verschot toevoegen aan voorschotnota of factuur */}
+              {factuur.case_id && (
+                <button
+                  onClick={() => setShowAddExpenseDialog(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Verschot toevoegen
+                </button>
+              )}
+              <button
+                onClick={() => setShowLineForm(!showLineForm)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Regel toevoegen
+              </button>
+            </div>
           )}
         </div>
 
@@ -1366,6 +1383,285 @@ export default function FactuurDetailPage() {
           )}
         </div>
       )}
+
+      {/* DF117-15: Verschot toevoegen dialog (concept invoices/voorschotnota's) */}
+      {showAddExpenseDialog && factuur && (
+        <AddExpenseDialog
+          caseId={factuur.case_id || ""}
+          onClose={() => setShowAddExpenseDialog(false)}
+          createExpense={createExpense}
+          onAdd={async (expense) => {
+            try {
+              await addLineMutation.mutateAsync({
+                invoiceId: id,
+                data: {
+                  description: expense.description,
+                  quantity: "1",
+                  unit_price: String(expense.amount),
+                  btw_percentage:
+                    expense.tax_type === "onbelast" || expense.tax_type === "vrijgesteld"
+                      ? "0.00"
+                      : "21.00",
+                  expense_id: expense.id,
+                },
+              });
+              toast.success("Verschot toegevoegd");
+              setShowAddExpenseDialog(false);
+            } catch (err: unknown) {
+              toast.error(err instanceof Error ? err.message : "Toevoegen mislukt");
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── DF117-15: Add expense to existing invoice dialog ──────────────────────
+
+function AddExpenseDialog({
+  caseId,
+  onClose,
+  onAdd,
+  createExpense,
+}: {
+  caseId: string;
+  onClose: () => void;
+  onAdd: (expense: { id: string; description: string; amount: number; tax_type?: string }) => void;
+  createExpense: ReturnType<typeof useCreateExpense>;
+}) {
+  const [tab, setTab] = useState<"existing" | "new">("existing");
+  const { data: existingExpenses, isLoading } = useExpenses({
+    case_id: caseId || undefined,
+    uninvoiced_only: true,
+    billable_only: true,
+  });
+  const [newForm, setNewForm] = useState({
+    description: "",
+    amount: "",
+    expense_date: new Date().toISOString().slice(0, 10),
+    category: "griffierecht",
+    tax_type: "onbelast",
+  });
+  const [error, setError] = useState("");
+
+  const handleNewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!newForm.description.trim()) {
+      setError("Omschrijving is verplicht");
+      return;
+    }
+    const amt = parseFloat(newForm.amount);
+    if (isNaN(amt) || amt <= 0) {
+      setError("Voer een geldig bedrag in");
+      return;
+    }
+    try {
+      const created = await createExpense.mutateAsync({
+        case_id: caseId || undefined,
+        description: newForm.description,
+        amount: newForm.amount,
+        expense_date: newForm.expense_date,
+        category: newForm.category,
+        tax_type: newForm.tax_type,
+        billable: true,
+      });
+      onAdd({
+        id: created.id,
+        description: created.description,
+        amount: Number(created.amount),
+        tax_type: created.tax_type,
+      });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Aanmaken mislukt");
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-xl bg-card border border-border shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="text-base font-semibold text-foreground">Verschot toevoegen aan factuur</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex border-b border-border">
+          <button
+            type="button"
+            onClick={() => setTab("existing")}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              tab === "existing"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Bestaand verschot
+            {existingExpenses && existingExpenses.length > 0 && (
+              <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary/10 px-1 text-[10px] font-semibold text-primary">
+                {existingExpenses.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("new")}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              tab === "new"
+                ? "text-primary border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Nieuw verschot
+          </button>
+        </div>
+
+        {tab === "existing" ? (
+          <div className="p-5 space-y-2 max-h-96 overflow-y-auto">
+            {isLoading ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">Laden...</div>
+            ) : !existingExpenses || existingExpenses.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Geen onbefactureerde verschotten voor dit dossier
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTab("new")}
+                  className="mt-3 text-xs font-medium text-primary hover:text-primary/80"
+                >
+                  → Maak een nieuw verschot aan
+                </button>
+              </div>
+            ) : (
+              existingExpenses.map((expense: Expense) => (
+                <button
+                  key={expense.id}
+                  type="button"
+                  onClick={() =>
+                    onAdd({
+                      id: expense.id,
+                      description: expense.description,
+                      amount: Number(expense.amount),
+                      tax_type: expense.tax_type,
+                    })
+                  }
+                  className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2.5 text-sm hover:border-primary/30 hover:bg-muted/30 transition-colors text-left"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground truncate">{expense.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {EXPENSE_CATEGORY_LABELS[expense.category] ?? expense.category} ·{" "}
+                      {formatDateShort(expense.expense_date)}
+                    </p>
+                  </div>
+                  <span className="ml-3 font-semibold tabular-nums text-foreground">
+                    {formatCurrency(expense.amount)}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleNewSubmit} className="space-y-4 p-5">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving *</label>
+              <input
+                type="text"
+                required
+                autoFocus
+                value={newForm.description}
+                onChange={(e) => setNewForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Bijv. Griffierecht kantonrechter"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Bedrag (€) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  value={newForm.amount}
+                  onChange={(e) => setNewForm((p) => ({ ...p, amount: e.target.value }))}
+                  placeholder="0.00"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
+                <input
+                  type="date"
+                  value={newForm.expense_date}
+                  onChange={(e) => setNewForm((p) => ({ ...p, expense_date: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Categorie</label>
+                <select
+                  value={newForm.category}
+                  onChange={(e) => setNewForm((p) => ({ ...p, category: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  {Object.entries(EXPENSE_CATEGORY_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">BTW-status</label>
+                <select
+                  value={newForm.tax_type}
+                  onChange={(e) => setNewForm((p) => ({ ...p, tax_type: e.target.value }))}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="onbelast">Onbelast (geen BTW)</option>
+                  <option value="vrijgesteld">Vrijgesteld</option>
+                  <option value="belast">Belast (21% BTW)</option>
+                </select>
+              </div>
+            </div>
+            {error && (
+              <div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
+            )}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="submit"
+                disabled={createExpense.isPending}
+                className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {createExpense.isPending ? "Bezig..." : "Aanmaken en toevoegen"}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                Annuleren
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

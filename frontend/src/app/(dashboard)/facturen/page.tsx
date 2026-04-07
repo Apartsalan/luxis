@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -11,6 +12,7 @@ import {
   Plus,
   Search,
   Users,
+  X,
 } from "lucide-react";
 import {
   useInvoices,
@@ -23,20 +25,47 @@ import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 
 export default function FacturenPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialContactId = searchParams.get("contact_id") || "";
+  const initialContactName = searchParams.get("contact_name") || "";
+
   const [activeTab, setActiveTab] = useState<"facturen" | "debiteuren">("facturen");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [contactId, setContactId] = useState(initialContactId);
+  const [contactName, setContactName] = useState(initialContactName);
   const [page, setPage] = useState(1);
+
+  // When URL changes (e.g. clicking from debiteurenoverzicht), pick it up
+  useEffect(() => {
+    const newContactId = searchParams.get("contact_id") || "";
+    const newContactName = searchParams.get("contact_name") || "";
+    setContactId(newContactId);
+    setContactName(newContactName);
+    if (newContactId) {
+      setActiveTab("facturen");
+      setPage(1);
+    }
+  }, [searchParams]);
 
   const { data, isLoading, isError, error, refetch } = useInvoices({
     page,
     status: status || undefined,
     search: search || undefined,
+    contact_id: contactId || undefined,
   });
 
   const { data: receivables, isLoading: recvLoading } = useReceivables();
 
-  const activeFilters = [status].filter(Boolean).length;
+  const activeFilters = [status, contactId].filter(Boolean).length;
+
+  const clearContactFilter = () => {
+    setContactId("");
+    setContactName("");
+    setPage(1);
+    router.replace("/facturen");
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -96,49 +125,69 @@ export default function FacturenPage() {
       {activeTab === "facturen" && (
         <>
           {/* Filters */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Zoek op factuurnummer..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-              />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
-              >
-                <option value="">Alle statussen</option>
-                {Object.entries(INVOICE_STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {activeFilters > 0 && (
-                <button
-                  onClick={() => {
-                    setStatus("");
-                    setSearch("");
+          <div className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Zoek op factuurnummer, dossier of relatie..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                  className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={status}
+                  onChange={(e) => {
+                    setStatus(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 >
-                  Wis filters
-                </button>
-              )}
+                  <option value="">Alle statussen</option>
+                  {Object.entries(INVOICE_STATUS_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                {activeFilters > 0 && (
+                  <button
+                    onClick={() => {
+                      setStatus("");
+                      setSearch("");
+                      clearContactFilter();
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Wis filters
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Active contact filter chip */}
+            {contactId && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Gefilterd op:</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
+                  <Users className="h-3 w-3" />
+                  {contactName || "Relatie"}
+                  <button
+                    onClick={clearContactFilter}
+                    className="ml-1 rounded-full hover:bg-primary/20 p-0.5 transition-colors"
+                    title="Filter verwijderen"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Table */}
@@ -284,7 +333,16 @@ export default function FacturenPage() {
                           <span className="truncate max-w-[200px] block">{factuur.contact_name ?? "-"}</span>
                         </td>
                         <td className="hidden lg:table-cell px-4 py-3.5 text-sm text-muted-foreground font-mono">
-                          {factuur.case_number ?? "-"}
+                          {factuur.case_id && factuur.case_number ? (
+                            <Link
+                              href={`/zaken/${factuur.case_id}`}
+                              className="hover:text-primary hover:underline transition-colors"
+                            >
+                              {factuur.case_number}
+                            </Link>
+                          ) : (
+                            "-"
+                          )}
                         </td>
                         <td className="hidden md:table-cell px-4 py-3.5 text-sm text-muted-foreground">
                           {formatDateShort(factuur.invoice_date)}
@@ -624,8 +682,9 @@ function DebiteurenTab({
               <tr key={contact.contact_id} className="hover:bg-muted/40 transition-colors">
                 <td className="px-4 py-3.5">
                   <Link
-                    href={`/relaties/${contact.contact_id}`}
+                    href={`/facturen?contact_id=${contact.contact_id}&contact_name=${encodeURIComponent(contact.contact_name)}`}
                     className="text-sm font-medium text-foreground hover:text-primary transition-colors"
+                    title="Bekijk openstaande facturen"
                   >
                     {contact.contact_name}
                   </Link>

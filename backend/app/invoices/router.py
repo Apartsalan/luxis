@@ -48,6 +48,7 @@ async def list_invoices(
     status: str | None = Query(default=None),
     search: str | None = Query(default=None),
     case_id: uuid.UUID | None = Query(default=None),
+    contact_id: uuid.UUID | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -60,6 +61,7 @@ async def list_invoices(
         status=status,
         search=search,
         case_id=case_id,
+        contact_id=contact_id,
     )
 
 

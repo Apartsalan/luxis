@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Euro, Filter } from "lucide-react";
+import { Clock, Euro, Filter, Plus, X } from "lucide-react";
+import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
 import {
   useTimeEntries,
   useTimeEntrySummary,
+  useCreateTimeEntry,
   ACTIVITY_TYPE_LABELS,
   type TimeEntry,
 } from "@/hooks/use-time-entries";
@@ -22,6 +24,7 @@ export default function UrenTab({ caseId }: { caseId: string }) {
   const { data: summary } = useTimeEntrySummary({ case_id: caseId });
   const [billableFilter, setBillableFilter] = useState<"alle" | "declarabel" | "niet-declarabel">("alle");
   const [activityFilter, setActivityFilter] = useState<string>("alle");
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   if (isLoading) {
     return (
@@ -39,6 +42,22 @@ export default function UrenTab({ caseId }: { caseId: string }) {
 
   return (
     <div className="space-y-6">
+      {/* Header with "Uren toevoegen" button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Tijdregistraties</h3>
+        <button
+          onClick={() => setShowAddDialog(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Uren toevoegen
+        </button>
+      </div>
+
+      {showAddDialog && (
+        <AddTimeEntryDialog caseId={caseId} onClose={() => setShowAddDialog(false)} />
+      )}
+
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">
@@ -209,6 +228,160 @@ export default function UrenTab({ caseId }: { caseId: string }) {
         </div>
         );
       })()}
+    </div>
+  );
+}
+
+function AddTimeEntryDialog({ caseId, onClose }: { caseId: string; onClose: () => void }) {
+  const createEntry = useCreateTimeEntry();
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    hours: "",
+    minutes: "",
+    activity_type: "drafting",
+    description: "",
+    billable: true,
+  });
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    const h = parseInt(form.hours || "0", 10);
+    const m = parseInt(form.minutes || "0", 10);
+    const totalMinutes = h * 60 + m;
+    if (totalMinutes <= 0) {
+      setError("Vul een duur in (uren of minuten)");
+      return;
+    }
+
+    try {
+      await createEntry.mutateAsync({
+        case_id: caseId,
+        date: form.date,
+        duration_minutes: totalMinutes,
+        activity_type: form.activity_type,
+        description: form.description || null,
+        billable: form.billable,
+      });
+      toast.success("Uren toegevoegd");
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Kon niet opslaan");
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-xl bg-card border border-border shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="text-base font-semibold text-foreground">Uren toevoegen</h2>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
+            <input
+              type="date"
+              required
+              value={form.date}
+              onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Uren</label>
+              <input
+                type="number"
+                min="0"
+                max="24"
+                placeholder="0"
+                value={form.hours}
+                onChange={(e) => setForm((p) => ({ ...p, hours: e.target.value }))}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Minuten</label>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                step="6"
+                placeholder="0"
+                value={form.minutes}
+                onChange={(e) => setForm((p) => ({ ...p, minutes: e.target.value }))}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Activiteit</label>
+            <select
+              value={form.activity_type}
+              onChange={(e) => setForm((p) => ({ ...p, activity_type: e.target.value }))}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              {Object.entries(ACTIVITY_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              rows={3}
+              placeholder="Wat heb je gedaan?"
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.billable}
+              onChange={(e) => setForm((p) => ({ ...p, billable: e.target.checked }))}
+              className="rounded border-input"
+            />
+            <span className="text-foreground">Declarabel</span>
+          </label>
+          {error && (
+            <div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
+          )}
+          <div className="flex gap-2 pt-2">
+            <button
+              type="submit"
+              disabled={createEntry.isPending}
+              className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {createEntry.isPending ? "Opslaan..." : "Opslaan"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Annuleren
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

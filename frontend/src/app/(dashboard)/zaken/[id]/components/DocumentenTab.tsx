@@ -814,6 +814,9 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   // LF-21: File type filter
   const [fileTypeFilter, setFileTypeFilter] = useState<string>("alle");
 
+  // DF117-08: Search across documents on case-level
+  const [documentSearch, setDocumentSearch] = useState("");
+
   // G11: Inline document preview
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -1240,9 +1243,20 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
             (opt) => opt.value === "alle" || (categoryCounts[opt.value] ?? 0) > 0
           );
 
-          const items = fileTypeFilter === "alle"
+          const searchLower = documentSearch.trim().toLowerCase();
+          let items = fileTypeFilter === "alle"
             ? allItems
             : allItems.filter((item) => getFileCategory(item.content_type) === fileTypeFilter);
+          if (searchLower) {
+            items = items.filter((item) => {
+              if (item.filename.toLowerCase().includes(searchLower)) return true;
+              if (item.type === "email") {
+                if (item.email_subject?.toLowerCase().includes(searchLower)) return true;
+                if (item.email_from?.toLowerCase().includes(searchLower)) return true;
+              }
+              return false;
+            });
+          }
 
           if (loading) {
             return (
@@ -1274,6 +1288,27 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
 
           return (
             <div className="space-y-3">
+              {/* DF117-08: Search input across all documents */}
+              {allItems.length > 0 && (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={documentSearch}
+                    onChange={(e) => setDocumentSearch(e.target.value)}
+                    placeholder="Zoek in documenten op bestandsnaam, e-mail onderwerp of afzender..."
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                  />
+                  {documentSearch && (
+                    <button
+                      onClick={() => setDocumentSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      title="Wis zoekopdracht"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
               {/* LF-21: Bestandstype filter */}
               {visibleOptions.length > 2 && (
                 <div className="flex items-center gap-2 flex-wrap">

@@ -91,8 +91,13 @@ async def list_invoices(
     status: str | None = None,
     search: str | None = None,
     case_id: uuid.UUID | None = None,
+    contact_id: uuid.UUID | None = None,
 ) -> dict:
-    """List invoices with pagination, optional status filter and search."""
+    """List invoices with pagination, optional status filter and search.
+
+    Search now matches against invoice_number, the linked case's case_number,
+    and the linked contact's name (DF117-12).
+    """
     query = (
         select(Invoice)
         .options(selectinload(Invoice.linked_invoice))
@@ -110,14 +115,37 @@ async def list_invoices(
         query = query.where(Invoice.case_id == case_id)
         count_query = count_query.where(Invoice.case_id == case_id)
 
+    if contact_id:
+        query = query.where(Invoice.contact_id == contact_id)
+        count_query = count_query.where(Invoice.contact_id == contact_id)
+
     if status:
         query = query.where(Invoice.status == status)
         count_query = count_query.where(Invoice.status == status)
 
     if search:
         pattern = f"%{search}%"
-        query = query.where(Invoice.invoice_number.ilike(pattern))
-        count_query = count_query.where(Invoice.invoice_number.ilike(pattern))
+        # Match invoice_number OR case.case_number OR contact.name
+        from sqlalchemy import or_
+        from app.cases.models import Case
+        from app.relations.models import Contact
+        search_filter = or_(
+            Invoice.invoice_number.ilike(pattern),
+            Invoice.case_id.in_(
+                select(Case.id).where(
+                    Case.tenant_id == tenant_id,
+                    Case.case_number.ilike(pattern),
+                )
+            ),
+            Invoice.contact_id.in_(
+                select(Contact.id).where(
+                    Contact.tenant_id == tenant_id,
+                    Contact.name.ilike(pattern),
+                )
+            ),
+        )
+        query = query.where(search_filter)
+        count_query = count_query.where(search_filter)
 
     total = (await db.execute(count_query)).scalar_one()
     pages = max(1, math.ceil(total / per_page))

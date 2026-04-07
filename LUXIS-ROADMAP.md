@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 7 april 2026 (sessie 116 — Marktonderzoek + Go-To-Market shift)
+**Laatst bijgewerkt:** 7 april 2026 (sessie 117 — Demo-feedback Lisanne: adres-parsing fix + standaard rente per klant met inheritance)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -756,6 +756,34 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | DF-09 | **Standaard rente per client** — default_interest_type op Contact + pre-fill in wizard | ✅ Sessie 115 |
 | DF-10 | **Sync error 2026-00048** — geen bug, dossier mist case_parties (wederpartij toevoegen) | ✅ Sessie 115 |
 | DF-11 | **Facturatie-widget weg** — BillingSettingsSection verwijderd uit dossier sidebar | ✅ Sessie 115 |
+
+### Demo Feedback Lisanne (sessie 117, 7 april 2026 — 21 punten in 7 categorieën)
+
+Bron: live demo met Lisanne 7-4-2026. Notities gecategoriseerd in 7 groepen. 2 punten opgepakt deze sessie, rest geparkeerd voor volgende sessies of na overleg.
+
+| # | Item | Status |
+|---|------|--------|
+| DF117-01 | **Adres-parsing factuur → dossier** — alleen postcode kwam binnen, niet de straat. Root cause: IntakeRequest miste postal_* velden + AI gaf soms onvolledig adres terug + regex-detector pakte straat als blok-name. Fix: 3 nieuwe velden + line-based block scanner + post-process backfill. 9 nieuwe tests. | ✅ Sessie 117 |
+| DF117-02 | **Standaard rente per klant met inheritance** — DF-09 (sessie 115) bleek half-af: backend Contact had de velden niet, frontend faalde stilzwijgend. Fix: Contact model + schemas + create_case inheritance + nieuwe-relatie form + bewerk-relatie save + nieuw-dossier "overgenomen van klant" hint. 6 nieuwe tests. | ✅ Sessie 117 |
+| DF117-03 | **AI leest algemene voorwaarden voor rente** — op klantniveau geüploade AV moet door AI gelezen worden voor rentepercentage-extractie | ❌ TODO |
+| DF117-04 | **Incassokosten + provisie zichtbaar op factuur naar cliënt** — Vorderingen-tab heeft nu wel BIK + provisie-velden, maar (a) incassokosten alleen als bedrag, niet als percentage en (b) komt niet als regel op de uitgaande factuur. Wat bij debiteur verhaald wordt moet ook bij klant zichtbaar zijn. Wacht op overleg met Lisanne | ❌ TODO |
+| DF117-05 | **Incassokosten achteraf toevoegen in dossier** — UI ontbreekt buiten Vorderingen-tab. Wacht op overleg met Lisanne | ❌ TODO |
+| DF117-06 | **AI leest dossier-documenten voor berichtvoorstel** — overeenkomst client/debiteur moet meegenomen worden in context | ❌ TODO |
+| DF117-07 | **Uren toevoegen vanuit dossier-tab** — kan alleen via Uren-pagina, niet vanuit dossier > tab Uren | ❌ TODO |
+| DF117-08 | **Zoekfunctie documenten-tab** — op dossier-niveau door documenten zoeken | ❌ TODO |
+| DF117-09 | **Minimum bedrag incassokosten bij versturen** — instelbaar minimum zodat provisie niet te laag wordt | ❌ TODO |
+| DF117-10 | **Verschot in reguliere factuur** — nu alleen in dossier-factuur, moet overal | ❌ TODO |
+| DF117-11 | **Factuur+verschot in 1 flow samenvoegen** — nu 2 stappen in dossier, kan in 1 | ❌ TODO |
+| DF117-12 | **Filter op facturen-pagina** — relatie/dossiernummer, zoals andere pagina's | ❌ TODO |
+| DF117-13 | **Goedkeuren → Versturen stuurt geen email** — `send_invoice()` doet nu alleen statuswijziging, moet OutlookProvider integratie | ❌ TODO |
+| DF117-14 | **Klik vanuit facturen-overzicht naar dossier** | ❌ TODO |
+| DF117-15 | **Verschot op voorschotnota achteraf** — bv. griffierecht later toevoegen | ❌ TODO |
+| DF117-16 | **Creditnota visueel duidelijk in dossier** | ❌ TODO |
+| DF117-17 | **Creditnota wordt niet correct van totaal afgehaald** — grondig testen, financial precision | ❌ TODO |
+| DF117-18 | **Creditnota eigen uren: bedrag-optie** — keuze tussen aantal×tarief OF los bedrag | ❌ TODO |
+| DF117-19 | **Klik op debiteur → openstaande facturen direct** — niet de algemene relatie-detail | ❌ TODO |
+| DF117-20 | **Batch dossier-aanmaak** — meerdere zaken tegelijk via email. Afhankelijkheid: DF117-01 t/m DF117-06 moeten eerst af | ❌ TODO (geblokkeerd) |
+| DF117-21 | **Derdengelden-rekening + verrekening met eigen nota** — Lisanne ontvangt op derdengeldrekening, soms doorstorten, soms verrekenen. Vereist eigen module-onderzoek (Stichting Derdengelden, juridische verrekeningsregels) | ❌ TODO (eigen sessie nodig) |
 
 ### Feature & UX Audit (sessie 113, 29 maart 2026)
 

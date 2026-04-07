@@ -1,8 +1,8 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 april 2026 (sessie 116 — Marktonderzoek + strategische shift naar Go-To-Market)
-**Laatste feature/fix:** Sessie 115 — 11 demo-feedback + 3 FUA-items + factuur parsing fix + rollback vangnet
-**Volgende sessie:** 117 — Open: Arsalan beslist bij start waar aan gewerkt wordt (nog in bouw-fase, demos met Lisanne lopen)
+**Laatst bijgewerkt:** 7 april 2026 (sessie 117 — Demo-feedback Lisanne: adres-parsing fix + standaard rente per klant)
+**Laatste feature/fix:** Sessie 117 — invoice address parsing line-based scanner + default interest inheritance Contact→Case
+**Volgende sessie:** 118 — Open: Arsalan beslist bij start (nog in bouw-fase, demos met Lisanne lopen). Geparkeerde demo-items uit sessie 117: incassokosten/provisie zichtbaar op factuur, batch dossier-aanmaak, derdengelden, AI leest AV+docs, creditnota's, facturen-filter, etc.
 **Strategische modus:** LIFESTYLE BUSINESS met AI-leverage — nog in bouw/validatie-fase met Lisanne, GTM-plan klaar voor later
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
@@ -17,6 +17,100 @@
 **UX-22 Design Sprint:** 10/10 COMPLEET ✅ (sessie 97: 8 items + sessie 98: 2 items)
 **UX Quality Sweep:** UX-14 t/m UX-20 COMPLEET ✅ (sessie 98)
 **Backend tests:** BUG-50 gefixt, targeted tests 15/15 pass | **Ruff:** 0 warnings | **Frontend TSC:** pre-existing errors (radix-ui, dompurify types) — niet gerelateerd aan onze changes
+
+## Wat er gedaan is (sessie 117 — 7 april 2026) — Demo-feedback Lisanne: adres-parsing + standaard rente
+
+**Bron:** demo met Lisanne 7-4-2026 — 21 feedback-punten gecategoriseerd in 7 categorieën. 2 punten opgepakt deze sessie, rest geparkeerd voor volgende sessies of na overleg met Lisanne.
+
+### Opgepakt deze sessie
+
+**1. Adres-parsing bij factuur → dossier (Demo punt 1)**
+Lisanne's klacht: bij dossier-aanmaak via factuur kwam alleen de postcode binnen, geen straatnaam. Root cause uitgezocht en gefixt:
+
+- `IntakeRequest` model miste 3 postal-velden (`debtor_postal_address/postcode/city`) → toegevoegd + Alembic migratie `a1f7c2e9d4b8`
+- `process_intake()` mapte het AI-resultaat niet naar postal velden → uitgebreid
+- `_find_or_create_debtor()` zette nooit Contact.postal_* → uitgebreid
+- `invoice_parser._detect_address_blocks()` gebruikte een regex die maar 1-regelige naam accepteerde, waardoor de straat als `name` werd opgepakt → herschreven als line-based scanner die multi-line blocks correct parseert (name + tav + street + postbus + postcode/city)
+- `_post_process()` vult nu lege visit-velden uit gedetecteerde blocks
+- Tests: 9 nieuwe in `test_intake_address_parsing.py` — alle groen
+
+**2. Standaard rente per klant met inheritance (Demo punt 2)**
+Lisanne's wens: per relatie een standaard rentetype instellen, automatisch overgenomen bij nieuw dossier, per dossier wijzigbaar. Bij verkenning bleek dit half-af gebouwd: backend Contact had de velden niet, frontend referenceerde ze stilzwijgend faalend.
+
+- Migratie `edc1202caef9` bestond al sinds 30 maart maar het Contact-model was nooit bijgewerkt → 2 velden toegevoegd (`default_interest_type`, `default_contractual_rate`)
+- `relations/schemas.py`: ContactCreate/Update/Response uitgebreid met Literal validator
+- `cases/schemas.py`: `interest_type` Optional gemaakt (default None i.p.v. "statutory")
+- `cases/service.create_case()`: inheritance-logica toegevoegd — als interest_type None is, laad de client en kopieer `default_interest_type`/`default_contractual_rate` naar de nieuwe case; fallback `statutory` als de client niks heeft
+- Frontend `relaties/nieuw/page.tsx`: nieuwe sectie "Standaard rente" toegevoegd
+- Frontend `relaties/[id]/page.tsx`: editForm init + save uitgebreid (de velden ontbraken, dus wijzigingen verdwenen)
+- Frontend `zaken/nieuw/page.tsx`: zichtbare hint "Standaard rente van klant: …" boven de rente-selector
+- Frontend `use-relations.ts`: ContactCreateInput type uitgebreid
+- Tests: 6 nieuwe in `test_interest_inheritance.py` (4 inheritance-scenarios + 2 contact CRUD) — alle groen
+
+### Verificatie
+- Backend tests: 28 nieuwe + 50 bestaande regressie tests groen (cases, relations, invoice_parser)
+- Frontend `tsc --noEmit`: groen
+- Ruff: geen nieuwe errors in changed files (5 overgebleven errors zijn pre-existing)
+- Migraties toegepast lokaal en op VPS
+- Deploy: backend + frontend rebuild + restart op VPS, beide healthy
+
+### Geparkeerd (uit demo-notities Lisanne) voor volgende sessies
+
+**Cat. 1 — Dossier aanmaken (na overleg met Lisanne):**
+- Punt 3: AI moet algemene voorwaarden lezen voor rentepercentage-extractie
+- Punt 4+5: incassokosten bij dossier-aanmaak + achteraf — INCLUSIEF nieuwe eis: percentage-optie naast vast bedrag, en zichtbaar op factuur naar cliënt (wat bij debiteur verhaald wordt verhaal je ook bij klant). Vorderingen-tab heeft nu wel incassokosten + provisie, maar percentage-input ontbreekt en het komt niet op de factuur
+- Punt 6: AI leest dossier-documenten (overeenkomsten) voor berichtvoorstel-context
+
+**Cat. 2 — Dossier-detail tabs:**
+- Uren toevoegen vanuit dossier-tab (kan nu alleen via Uren-pagina)
+- Zoekfunctie in documenten-tab op dossier-niveau
+
+**Cat. 3 — Facturatie:**
+- Minimum-bedrag incassokosten bij versturen
+- Verschot in reguliere factuur (nu alleen in dossier-factuur)
+- Factuur+verschot samenvoegen in 1 flow
+- Filter op facturen-overzicht (relatie/dossiernummer)
+- "Goedkeuren → Versturen" stuurt nu GEEN echte email — alleen statuswijziging. Moet email-integratie krijgen
+- Klik vanuit facturen-overzicht naar dossier
+- Verschot op voorschotnota achteraf
+
+**Cat. 4 — Creditnota's:**
+- Visueel duidelijk maken in dossier
+- Totaal-berekening fixen + grondig testen (financial precision!)
+- Bij eigen uren credit: keuze tussen aantal×tarief OF los bedrag
+
+**Cat. 5 — Debiteuren:**
+- Klik op debiteur in overzicht → directe lijst met openstaande facturen
+
+**Cat. 6 — Batch-werk:**
+- Batch dossier-aanmaak vanuit meerdere binnenkomende mails. **Afhankelijkheid:** Cat. 1 punten 3-6 moeten eerst af, anders vermenigvuldigt rommel.
+
+**Cat. 7 — Derdengelden (eigen module):**
+- Lisanne ontvangt op derdengeldrekening (los van Kesting). Soms doorstorten, soms verrekenen met eigen nota. Vereist eigen onderzoek + datamodel — niet zomaar toe te voegen
+
+### Bestanden gewijzigd (sessie 117)
+**Backend:**
+- `backend/app/ai_agent/intake_models.py`
+- `backend/app/ai_agent/intake_service.py`
+- `backend/app/ai_agent/invoice_parser.py` (significante refactor _detect_address_blocks)
+- `backend/app/relations/models.py`
+- `backend/app/relations/schemas.py`
+- `backend/app/cases/service.py`
+- `backend/app/cases/schemas.py`
+- `backend/alembic/versions/a1f7c2e9d4b8_add_postal_address_to_intake_requests.py` (nieuw)
+- `backend/tests/test_intake_address_parsing.py` (nieuw)
+- `backend/tests/test_interest_inheritance.py` (nieuw)
+
+**Frontend:**
+- `frontend/src/app/(dashboard)/relaties/nieuw/page.tsx`
+- `frontend/src/app/(dashboard)/relaties/[id]/page.tsx`
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx`
+- `frontend/src/hooks/use-relations.ts`
+
+### Bekende issues / aandachtspunten
+- VPS deploy gaf een DuplicateColumnError op `intake_requests.debtor_postal_address`, maar `alembic current` stond op head en de kolommen bestonden. Vermoedelijk draait de backend container bij startup zelf een `alembic upgrade head`, waarna mijn expliciete tweede call faalde. State is consistent. Volgende sessie: check of de backend startup-script inderdaad alembic draait, en zo ja: skip de expliciete `alembic upgrade` in deploy commando om ruis te voorkomen.
+
+---
 
 ## Wat er gedaan is (sessie 116 — 7 april 2026) — Marktonderzoek + strategische shift naar Go-To-Market
 

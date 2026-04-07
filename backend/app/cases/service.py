@@ -19,6 +19,7 @@ from app.cases.schemas import (
     CaseStatusUpdate,
     CaseUpdate,
 )
+from app.relations.models import Contact
 from app.shared.exceptions import BadRequestError, NotFoundError
 from app.workflow.models import WorkflowTask
 
@@ -371,14 +372,33 @@ async def create_case(
             f"Ongeldig debiteurtype: {data.debtor_type}. Kies uit: {', '.join(DEBTOR_TYPES)}"
         )
 
+    # Inherit interest settings from client contact when not explicitly set.
+    # Lisanne demo 2026-04-07: standaard rente per klant moet automatisch overgenomen worden.
+    interest_type = data.interest_type
+    contractual_rate = data.contractual_rate
+    if interest_type is None:
+        client_result = await db.execute(
+            select(Contact).where(
+                Contact.id == data.client_id,
+                Contact.tenant_id == tenant_id,
+            )
+        )
+        client = client_result.scalar_one_or_none()
+        if client and client.default_interest_type:
+            interest_type = client.default_interest_type
+            if interest_type == "contractual" and contractual_rate is None:
+                contractual_rate = client.default_contractual_rate
+        else:
+            interest_type = "statutory"  # System default fallback
+
     # Validate interest_type
-    if data.interest_type not in INTEREST_TYPES:
+    if interest_type not in INTEREST_TYPES:
         raise BadRequestError(
-            f"Ongeldig rentetype: {data.interest_type}. Kies uit: {', '.join(INTEREST_TYPES)}"
+            f"Ongeldig rentetype: {interest_type}. Kies uit: {', '.join(INTEREST_TYPES)}"
         )
 
     # Contractual rate required for contractual interest
-    if data.interest_type == "contractual" and data.contractual_rate is None:
+    if interest_type == "contractual" and contractual_rate is None:
         raise BadRequestError("Contractuele rente vereist een tarief (contractual_rate)")
 
     # Generate case number
@@ -398,8 +418,8 @@ async def create_case(
         chamber=data.chamber,
         procedure_type=data.procedure_type,
         procedure_phase=data.procedure_phase,
-        interest_type=data.interest_type,
-        contractual_rate=data.contractual_rate,
+        interest_type=interest_type,
+        contractual_rate=contractual_rate,
         contractual_compound=data.contractual_compound,
         client_id=data.client_id,
         opposing_party_id=data.opposing_party_id,
@@ -470,10 +490,9 @@ async def update_case(
     if "bik_override" in update_data and update_data["bik_override"] is not None:
         debtor_type = update_data.get("debtor_type", case.debtor_type)
         if debtor_type == "b2c":
-            from app.collections.wik import calculate_bik
-
             # Calculate max BIK from claims principal
             from app.collections.models import Claim
+            from app.collections.wik import calculate_bik
 
             claims_result = await db.execute(
                 select(func.coalesce(func.sum(Claim.principal_amount), Decimal("0")))

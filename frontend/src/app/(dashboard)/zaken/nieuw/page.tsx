@@ -1834,6 +1834,15 @@ function NieuweZaakPage() {
                 Rente-instellingen
               </h2>
 
+              {selectedClient?.default_interest_type && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
+                  <span className="font-medium">Standaard rente van klant:</span>{" "}
+                  {{ statutory: "Wettelijke rente", commercial: "Handelsrente", government: "Overheidsrente", contractual: "Contractuele rente" }[selectedClient.default_interest_type] ?? selectedClient.default_interest_type}
+                  {selectedClient.default_interest_type === "contractual" && selectedClient.default_contractual_rate != null && ` (${selectedClient.default_contractual_rate}%)`}
+                  . Je kan hieronder afwijken voor dit dossier.
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-foreground">
                   Type rente

@@ -58,6 +58,9 @@ class IntakeRequest(TenantBase):
     debtor_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     debtor_city: Mapped[str | None] = mapped_column(String(255), nullable=True)
     debtor_postcode: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    debtor_postal_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    debtor_postal_postcode: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    debtor_postal_city: Mapped[str | None] = mapped_column(String(255), nullable=True)
     debtor_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default="company"
     )  # 'company' or 'person'

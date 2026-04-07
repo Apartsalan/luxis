@@ -28,6 +28,8 @@ export default function NieuweRelatiePage() {
     postal_address: "",
     postal_postcode: "",
     postal_city: "",
+    default_interest_type: "",
+    default_contractual_rate: "",
     notes: "",
   });
   const [error, setError] = useState("");
@@ -116,6 +118,10 @@ export default function NieuweRelatiePage() {
       ...(form.postal_address && { postal_address: form.postal_address }),
       ...(form.postal_postcode && { postal_postcode: form.postal_postcode }),
       ...(form.postal_city && { postal_city: form.postal_city }),
+      ...(form.default_interest_type && { default_interest_type: form.default_interest_type }),
+      ...(form.default_interest_type === "contractual" && form.default_contractual_rate && {
+        default_contractual_rate: form.default_contractual_rate,
+      }),
       ...(form.notes && { notes: form.notes }),
     };
 
@@ -389,6 +395,48 @@ export default function NieuweRelatiePage() {
                 className={inputClass}
               />
             </div>
+          </div>
+
+          <h3 className="pt-2 text-sm font-semibold text-foreground">Standaard rente</h3>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Wordt automatisch overgenomen bij het aanmaken van een nieuw dossier voor deze klant. Per dossier wijzigbaar.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="rel-default_interest_type" className="block text-sm font-medium text-foreground">
+                Rentetype
+              </label>
+              <select
+                id="rel-default_interest_type"
+                value={form.default_interest_type}
+                onChange={(e) => updateField("default_interest_type", e.target.value)}
+                className={inputClass}
+              >
+                <option value="">Geen standaard (kies per dossier)</option>
+                <option value="statutory">Wettelijke rente (art. 6:119 BW)</option>
+                <option value="commercial">Handelsrente (art. 6:119a BW)</option>
+                <option value="government">Overheidsrente (art. 6:119b BW)</option>
+                <option value="contractual">Contractuele rente</option>
+              </select>
+            </div>
+            {form.default_interest_type === "contractual" && (
+              <div>
+                <label htmlFor="rel-default_contractual_rate" className="block text-sm font-medium text-foreground">
+                  Percentage (%)
+                </label>
+                <input
+                  id="rel-default_contractual_rate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={form.default_contractual_rate}
+                  onChange={(e) => updateField("default_contractual_rate", e.target.value)}
+                  className={inputClass}
+                  placeholder="Bijv. 8.00"
+                />
+              </div>
+            )}
           </div>
 
           <div>

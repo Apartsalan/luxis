@@ -68,6 +68,11 @@ class Contact(TenantBase):
     billing_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
 
+    # Default interest settings — used as defaults when creating a new case
+    # for this contact (Lisanne demo 2026-04-07). Migration edc1202caef9 added the columns.
+    default_interest_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    default_contractual_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+
     # Algemene Voorwaarden (AI-UX-11)
     terms_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     terms_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

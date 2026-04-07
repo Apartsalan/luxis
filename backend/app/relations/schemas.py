@@ -3,8 +3,11 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+InterestType = Literal["statutory", "commercial", "government", "contractual"]
 
 # ── Request Schemas ──────────────────────────────────────────────────────────
 
@@ -32,6 +35,8 @@ class ContactCreate(BaseModel):
     payment_term_days: int | None = None
     billing_email: str | None = None
     iban: str | None = None
+    default_interest_type: InterestType | None = None
+    default_contractual_rate: Decimal | None = None
     notes: str | None = None
 
 
@@ -55,6 +60,8 @@ class ContactUpdate(BaseModel):
     payment_term_days: int | None = None
     billing_email: str | None = None
     iban: str | None = None
+    default_interest_type: InterestType | None = None
+    default_contractual_rate: Decimal | None = None
     notes: str | None = None
 
 
@@ -95,6 +102,8 @@ class ContactResponse(BaseModel):
     payment_term_days: int | None
     billing_email: str | None
     iban: str | None
+    default_interest_type: str | None = None
+    default_contractual_rate: float | None = None
     terms_file_name: str | None = None
     notes: str | None
     is_active: bool

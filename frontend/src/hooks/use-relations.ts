@@ -79,6 +79,8 @@ interface ContactCreateInput {
   payment_term_days?: number;
   billing_email?: string;
   iban?: string;
+  default_interest_type?: string;
+  default_contractual_rate?: string | number;
   notes?: string;
 }
 

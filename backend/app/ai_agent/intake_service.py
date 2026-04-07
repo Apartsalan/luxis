@@ -202,6 +202,9 @@ async def process_intake(
     intake.debtor_address = ai_result.get("debtor_address")
     intake.debtor_city = ai_result.get("debtor_city")
     intake.debtor_postcode = ai_result.get("debtor_postcode")
+    intake.debtor_postal_address = ai_result.get("debtor_postal_address")
+    intake.debtor_postal_postcode = ai_result.get("debtor_postal_postcode")
+    intake.debtor_postal_city = ai_result.get("debtor_postal_city")
     intake.debtor_type = ai_result.get("debtor_type", "company")
     if intake.debtor_type not in ("company", "person"):
         intake.debtor_type = "company"
@@ -544,6 +547,9 @@ async def _find_or_create_debtor(
         visit_address=intake.debtor_address,
         visit_city=intake.debtor_city,
         visit_postcode=intake.debtor_postcode,
+        postal_address=intake.debtor_postal_address,
+        postal_city=intake.debtor_postal_city,
+        postal_postcode=intake.debtor_postal_postcode,
     )
     db.add(contact)
     await db.flush()

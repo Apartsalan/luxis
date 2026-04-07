@@ -50,9 +50,13 @@ class CaseCreate(BaseModel):
     chamber: str | None = None
     procedure_type: str | None = None
     procedure_phase: str | None = None
-    interest_type: str = Field(
-        default="statutory",
-        description="statutory, commercial, government, contractual",
+    interest_type: str | None = Field(
+        default=None,
+        description=(
+            "statutory, commercial, government, contractual. "
+            "If None, inherits from the client contact's default_interest_type "
+            "(falls back to 'statutory' if the client has no default)."
+        ),
     )
     contractual_rate: Decimal | None = None
     contractual_compound: bool = True

@@ -119,6 +119,8 @@ export default function RelatieDetailPage() {
       payment_term_days: contact.payment_term_days?.toString() || "",
       billing_email: contact.billing_email || "",
       iban: contact.iban || "",
+      default_interest_type: contact.default_interest_type || "",
+      default_contractual_rate: contact.default_contractual_rate?.toString() || "",
       notes: contact.notes || "",
     });
     setEditing(true);
@@ -150,6 +152,11 @@ export default function RelatieDetailPage() {
       data.payment_term_days = editForm.payment_term_days ? editForm.payment_term_days : null;
       data.billing_email = editForm.billing_email?.trim() || null;
       data.iban = editForm.iban?.trim() || null;
+      data.default_interest_type = editForm.default_interest_type || null;
+      data.default_contractual_rate =
+        editForm.default_interest_type === "contractual" && editForm.default_contractual_rate
+          ? editForm.default_contractual_rate
+          : null;
       data.notes = editForm.notes?.trim() || null;
 
       await updateRelation.mutateAsync({ id, data });

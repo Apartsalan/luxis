@@ -311,7 +311,9 @@ class IncassoInterestPreview(BaseModel):
 
 class IncassoProvisieOption(BaseModel):
     base_amount: Decimal
-    amount: Decimal
+    amount: Decimal  # Final amount including fixed_costs and minimum_fee
+    raw_amount: Decimal | None = None  # base_amount * percentage (before costs/min)
+    is_minimum_applied: bool = False  # True if minimum_fee forced this amount higher
 
 
 class IncassoProvisiePreview(BaseModel):

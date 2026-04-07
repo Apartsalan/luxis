@@ -75,6 +75,15 @@ export function IncassoKostenPanel({
     setProvisieAmount(total > 0 ? total.toFixed(2) : "0.00");
   }, [provisieBase, provisiePct, preview]);
 
+  // DF117-05: hide the panel entirely when there's nothing relevant to show.
+  // The case must have either a vordering (BIK relevant) or a provisie setting.
+  const hasRelevantData =
+    preview &&
+    (Number(preview.principal) > 0 ||
+      Number(preview.provisie.percentage) > 0 ||
+      Number(preview.provisie.fixed_costs) > 0 ||
+      Number(preview.provisie.minimum_fee) > 0);
+
   if (isLoading) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5 animate-pulse">
@@ -89,6 +98,14 @@ export function IncassoKostenPanel({
   }
 
   if (!preview) return null;
+  if (!hasRelevantData) return null;
+
+  // DF117-09: detect when minimum_fee is currently in play for the active base
+  const activeProvOption =
+    provisieBase === "total_claim"
+      ? preview.provisie.over_claim
+      : preview.provisie.over_collected;
+  const minimumApplied = activeProvOption?.is_minimum_applied ?? false;
 
   const baseLabel =
     provisieBase === "total_claim"
@@ -169,6 +186,12 @@ export function IncassoKostenPanel({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {provisiePct}% over {baseLabel}
               </p>
+              {minimumApplied && (
+                <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+                  <Info className="h-3 w-3" />
+                  Minimumtarief van {formatCurrency(Number(preview.provisie.minimum_fee))} toegepast
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">€</span>
@@ -188,10 +211,16 @@ export function IncassoKostenPanel({
               ) : (
                 <button
                   onClick={() => {
-                    const desc =
+                    const baseDesc =
                       provisieBase === "total_claim"
                         ? `Provisie ${provisiePct}% over totale vordering (${formatCurrency(Number(preview.principal))})`
                         : `Provisie ${provisiePct}% over geincasseerd bedrag (${formatCurrency(Number(preview.collected_amount))})`;
+                    // DF117-09: when the minimum_fee is the binding constraint,
+                    // make that explicit in the line description so the client
+                    // understands why the amount differs from the percentage math.
+                    const desc = minimumApplied
+                      ? `${baseDesc} — minimumtarief van ${formatCurrency(Number(preview.provisie.minimum_fee))} toegepast`
+                      : baseDesc;
                     onAddLine({
                       description: desc,
                       quantity: "1",

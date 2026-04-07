@@ -964,7 +964,16 @@ async def get_incasso_invoice_preview(
     collected_amount = pay_result.scalar_one()
 
     # BIK calculation
-    if case.bik_override is not None:
+    # DF117-04: Three modes — percentage of principal (highest precedence),
+    # fixed override, or default WIK-staffel.
+    if case.bik_override_percentage is not None:
+        bik_pct = Decimal(str(case.bik_override_percentage))
+        bik_amount = (total_principal * bik_pct / Decimal("100")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        bik_is_override = True
+        bik_source = f"{bik_pct}% van hoofdsom (€ {total_principal:,.2f})".replace(",", ".")
+    elif case.bik_override is not None:
         bik_amount = case.bik_override
         bik_is_override = True
         bik_source = "Handmatig ingesteld"
@@ -995,7 +1004,7 @@ async def get_incasso_invoice_preview(
     min_fee = Decimal(str(case.minimum_fee or 0))
     provisie_base = case.provisie_base or "collected_amount"
 
-    prov_over_collected = (
+    prov_over_collected_raw = (
         (collected_amount * provisie_pct / Decimal("100")).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
@@ -1003,12 +1012,28 @@ async def get_incasso_invoice_preview(
         else Decimal("0.00")
     )
 
-    prov_over_claim = (
+    prov_over_claim_raw = (
         (total_principal * provisie_pct / Decimal("100")).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
         if total_principal > 0
         else Decimal("0.00")
+    )
+
+    # DF117-09 (Lisanne demo 2026-04-07): apply minimum_fee to the final amounts
+    # so callers don't have to do max() themselves and can read off whether the
+    # minimum was the binding constraint.
+    prov_over_collected_with_costs = prov_over_collected_raw + fixed_costs
+    prov_over_claim_with_costs = prov_over_claim_raw + fixed_costs
+
+    prov_over_collected = max(prov_over_collected_with_costs, min_fee)
+    prov_over_claim = max(prov_over_claim_with_costs, min_fee)
+
+    over_collected_min_applied = (
+        min_fee > 0 and prov_over_collected_with_costs < min_fee
+    )
+    over_claim_min_applied = (
+        min_fee > 0 and prov_over_claim_with_costs < min_fee
     )
 
     # Already invoiced detection
@@ -1058,10 +1083,14 @@ async def get_incasso_invoice_preview(
             "over_collected": {
                 "base_amount": collected_amount,
                 "amount": prov_over_collected,
+                "raw_amount": prov_over_collected_raw,
+                "is_minimum_applied": over_collected_min_applied,
             },
             "over_claim": {
                 "base_amount": total_principal,
                 "amount": prov_over_claim,
+                "raw_amount": prov_over_claim_raw,
+                "is_minimum_applied": over_claim_min_applied,
             },
             "fixed_costs": fixed_costs,
             "minimum_fee": min_fee,

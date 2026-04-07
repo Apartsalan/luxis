@@ -656,8 +656,18 @@ export interface IncassoInvoicePreview {
   provisie: {
     percentage: number;
     base: string;
-    over_collected: { base_amount: number; amount: number };
-    over_claim: { base_amount: number; amount: number };
+    over_collected: {
+      base_amount: number;
+      amount: number;
+      raw_amount?: number;
+      is_minimum_applied?: boolean;
+    };
+    over_claim: {
+      base_amount: number;
+      amount: number;
+      raw_amount?: number;
+      is_minimum_applied?: boolean;
+    };
     fixed_costs: number;
     minimum_fee: number;
   };

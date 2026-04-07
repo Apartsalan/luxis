@@ -125,6 +125,12 @@ class Case(TenantBase):
 
     # LF-12: Manual BIK override (None = use WIK-staffel calculation)
     bik_override: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    # DF117-04 (Lisanne demo 2026-04-07): BIK as percentage of total principal,
+    # an alternative to the fixed bik_override. If set, takes precedence over the
+    # fixed bik_override; if both are null, the WIK-staffel default is used.
+    bik_override_percentage: Mapped[Decimal | None] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )
 
     # LF-22: Debtor settings
     payment_term_days: Mapped[int | None] = mapped_column(

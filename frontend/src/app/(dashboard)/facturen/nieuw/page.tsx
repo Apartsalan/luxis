@@ -847,8 +847,10 @@ export default function NieuweFactuurPage() {
           </div>
         )}
 
-        {/* Incasso kosten panel — only for incasso cases */}
-        {invoiceType === "factuur" && preselectedCase?.case_type === "incasso" && form.case_id && (
+        {/* Incasso kosten panel — DF117-05 (Lisanne demo 2026-04-07): toon altijd als
+            er een case is gekozen. Het paneel zelf verbergt zichzelf als er geen
+            relevante incasso-instellingen zijn (geen vordering, geen provisie). */}
+        {invoiceType === "factuur" && form.case_id && (
           <IncassoKostenPanel
             caseId={form.case_id}
             onAddLine={(line) => {

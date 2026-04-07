@@ -30,7 +30,7 @@
 
 **Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs).
 
-**NIEUWE FOCUS (sessie 116, 7 april 2026):** Technisch is Luxis klaar genoeg. De strategische modus verschuift van **bouwen → verkopen**. Doel: eerste 10 betalende klanten binnen 2-3 maanden. Werkverdeling 70% verkopen / 20% bugs / 10% features. Lifestyle business met AI-leverage, doel 100-300 klanten op termijn.
+**Strategische modus (sessie 116, 7 april 2026):** Marktonderzoek afgerond, GTM-plan voorbereid. Arsalan is nog in de **bouw/validatie-fase met Lisanne** (demos lopen). Luxis gaat de markt op zodra Lisanne's dagelijkse workflow stabiel draait. Lifestyle business met AI-leverage, doel 100-300 klanten op termijn. Het Go-To-Market plan hieronder is voorbereiding, niet de actieve fase.
 
 **TODO (klein):**
 - ✅ VPS kernel reboot — 6.8.0-106 (gedaan sessie 109)
@@ -48,9 +48,11 @@
 
 ---
 
-## Go-To-Market Sprint (sessie 116, 7 april 2026)
+## Go-To-Market Plan (voorbereid sessie 116, 7 april 2026)
 
-**Bron:** Marktonderzoek in `docs/research/marktonderzoek-2026-04/` (7 deep research rapporten + synthese). Strategische beslissing: lifestyle business met AI-leverage, eerste 10 klanten binnen 2-3 maanden.
+**Status:** Voorbereid, nog niet actief. Arsalan is nog in bouw/validatie-fase met Lisanne. Dit plan wordt actief zodra Lisanne's dagelijkse workflow stabiel draait zonder blokkerende issues.
+
+**Bron:** Marktonderzoek in `docs/research/marktonderzoek-2026-04/` (7 deep research rapporten + synthese). Strategische beslissing: lifestyle business met AI-leverage.
 
 ### Strategische positionering
 
@@ -87,7 +89,7 @@ Positionering:
 - Maandelijks opzegbaar (Basenet heeft 3 maanden opzegtermijn)
 - Alle AI-features inbegrepen (niet apart bijkopen zoals BaseGPT €10/mnd)
 
-### Distributie-strategie (eerste 10 klanten)
+### Distributie-strategie (voor wanneer GTM-fase start)
 
 | Week | Actie | Target |
 |------|-------|--------|
@@ -98,13 +100,9 @@ Positionering:
 
 **Geen paid ads, geen funnels, geen marketing automation.** Puur persoonlijk contact tot 10 klanten binnen.
 
-### Werkverdeling (HARDE REGEL tot 10 klanten)
+### Werkverdeling
 
-- **70% verkopen** — outreach, gesprekken, demo's, onboarding
-- **20% bugs + essentiële features** die bestaande klanten blokkeren
-- **10% nieuwe features** (alleen als directe vraag van klant)
-
-**Timer:** 4 uur/dag verkopen, 2 uur/dag bouwen. Niet andersom. Ochtend is beste verkooptijd.
+Geen vaste percentage-regel. Arsalan bepaalt per sessie wat nodig is. Tijdens de bouw/validatie-fase met Lisanne ligt de focus op bouwen en feedback verwerken. Zodra de GTM-fase actief wordt, verschuift de verdeling naar meer verkopen.
 
 ### Concrete actielijst (sessie 117+)
 

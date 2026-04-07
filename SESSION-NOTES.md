@@ -2,8 +2,8 @@
 
 **Laatst bijgewerkt:** 7 april 2026 (sessie 116 — Marktonderzoek + strategische shift naar Go-To-Market)
 **Laatste feature/fix:** Sessie 115 — 11 demo-feedback + 3 FUA-items + factuur parsing fix + rollback vangnet
-**Volgende sessie:** 117 — Open: Arsalan beslist bij start waar aan gewerkt wordt (opties: landingspagina, pitch, Lisanne outreach, LinkedIn template, demo-script)
-**Strategische modus:** LIFESTYLE BUSINESS met AI-leverage — focus verschuift van bouwen naar VERKOPEN (70/20/10 regel)
+**Volgende sessie:** 117 — Open: Arsalan beslist bij start waar aan gewerkt wordt (nog in bouw-fase, demos met Lisanne lopen)
+**Strategische modus:** LIFESTYLE BUSINESS met AI-leverage — nog in bouw/validatie-fase met Lisanne, GTM-plan klaar voor later
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅
 **Pre-Launch Sprint:** 6/6 taken klaar — SPRINT COMPLEET ✅
@@ -59,11 +59,10 @@ Arsalan koos expliciet lifestyle, NIET venture scale. Belangrijke nuance: de rap
 - Week 5-6: Advocatenblad/Advocatie.nl artikel over incasso-PMS gaten
 - Week 7-8: Recht & ICT beurs of NOvA event
 
-**Werkverdeling (nieuwe prioriteit: 70/20/10)**
-- **70% verkopen** + gesprekken + onboarding
-- **20% bugs** + essentiële features die bestaande klanten blokkeren
-- **10% nieuwe features**
-- Timer-regel: 4 uur/dag verkopen, 2 uur bouwen — tot 10 klanten binnen
+**Werkverdeling**
+- Geen vaste percentage-regel. Arsalan is nog in bouw/validatie-fase met Lisanne (demos lopen).
+- GTM-plan hierboven is voorbereiding voor later, niet voor nu.
+- Wanneer wel verkopen: pas als Lisanne's dagelijkse workflow stabiel draait en er geen blokkerende bugs meer zijn.
 
 **Team-uitbreiding (wanneer)**
 - **Niet voor 50+ klanten** (€45K+/jaar)

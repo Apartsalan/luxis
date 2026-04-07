@@ -1,8 +1,8 @@
-# Sessie 117 — Go-To-Market Start
+# Sessie 117
 
 Repo: `C:\Users\arsal\Documents\luxis`
 Datum vorige sessie: 7 april 2026 (sessie 116)
-Status: Technisch klaar, strategisch omgeschakeld naar verkopen
+Status: Technisch ~97% klaar, nog in bouw/validatie-fase met Lisanne
 
 ---
 
@@ -11,18 +11,16 @@ Status: Technisch klaar, strategisch omgeschakeld naar verkopen
 Gebruik de `luxis-researcher` subagent met deze exacte opdracht:
 
 > "Lees de volgende bestanden en geef een compacte samenvatting (max 300 woorden):
-> 1. `LUXIS-ROADMAP.md` — focus op de sectie **Go-To-Market Sprint (sessie 116, 7 april 2026)** en de status-header bovenaan
-> 2. `SESSION-NOTES.md` — focus op de entry **sessie 116 — Marktonderzoek + strategische shift naar Go-To-Market**
+> 1. `LUXIS-ROADMAP.md` — focus op de status-header bovenaan en de sectie **Go-To-Market Plan (voorbereid sessie 116)**
+> 2. `SESSION-NOTES.md` — focus op de entry **sessie 116 — Marktonderzoek + strategische shift**
 >
 > Geef terug:
-> - De strategische beslissing (lifestyle + AI-leverage)
-> - De ICP (wie is de doelgroep)
-> - De pricing (founding customer + standaard)
-> - De werkverdeling 70/20/10
-> - De GTM-actielijst (GTM-01 t/m GTM-11)
-> - Openstaande concrete stappen voor deze sessie"
+> - Huidige status (bouw/validatie-fase, demos met Lisanne)
+> - Belangrijkste marktinzichten (incasso moat, Basenet kwetsbaar, Kleos trauma-groep)
+> - Het GTM-plan dat klaarstaat voor later (pricing €79/€59, ICP solo incasso Randstad)
+> - Openstaande items of dingen die Arsalan vorige keer noemde"
 
-Lees zelf NIETS anders. Geen code, geen marktonderzoek-rapporten, geen andere docs. Alleen de samenvatting van de subagent.
+Lees zelf NIETS anders bij de start. Geen code, geen marktonderzoek-rapporten, geen andere docs. Alleen de samenvatting van de subagent.
 
 ---
 
@@ -30,44 +28,41 @@ Lees zelf NIETS anders. Geen code, geen marktonderzoek-rapporten, geen andere do
 
 Nadat de subagent klaar is, begroet Arsalan met deze exacte opening:
 
-> "Sessie 117. Ik heb de context geladen: we zitten in de Go-To-Market fase, eerste 10 klanten verkopen tegen €59/mnd founding customer pricing, ICP is solo incasso-advocaten in de Randstad, werkverdeling 70% verkopen / 20% bugs / 10% features.
+> "Sessie 117. Context geladen.
 >
-> Er staan 11 openstaande GTM-acties (GTM-01 t/m GTM-11) in de roadmap. Ik ga NIET beslissen waar we aan werken — dat beslis jij.
+> Status: je bent nog in de bouw/validatie-fase met Lisanne. Technisch zit Luxis op ~97%, de demos met Lisanne lopen, en het marktonderzoek + GTM-plan staat klaar voor wanneer je de markt op gaat — maar dat is nog niet nu.
 >
-> Welke van deze opties wil je nu oppakken?
+> Wat wil je in deze sessie doen? Een paar mogelijkheden:
 >
-> 1. **Lisanne-introducties vragen** (GTM-01) — kort script schrijven om Lisanne om 10 warme intro's te vragen
-> 2. **Landingspagina bouwen** (GTM-02) — simpele luxis.nl met alleen demo-aanvraag
-> 3. **Pitch schrijven** (GTM-03) — 3-zinnen pitch die je kunt gebruiken in gesprekken
-> 4. **LinkedIn outreach template** (GTM-04) — persoonlijk bericht-template voor cold outreach
-> 5. **Demo-script** (GTM-05) — 15-minuten script voor eerste kennismakingsgesprekken
-> 6. **Kleos-migratiepagina** (GTM-08) — wedge voor ex-AdvocaatCentraal trauma-groep
-> 7. **Basenet-migratiepagina** (GTM-09) — wedge voor Blinqx prijsschok klanten
-> 8. **Advocatenblad artikel** (GTM-10) — 1-dag werk om naambekendheid op te bouwen
-> 9. **Fidura check** (GTM-07) — snel verifiëren of Fidura nog bestaat als advocaten-PMS
-> 10. **Iets anders** — niet in de lijst maar wel relevant
+> - **Bouwen aan Luxis** — bugs fixen, features toevoegen op basis van Lisanne's feedback, iets polijsten
+> - **Demo-voorbereiding met Lisanne** — workflow doorlopen, scenario's testen, issues signaleren
+> - **Een specifieke bug of feature** die in je hoofd zit en afgemaakt moet worden
+> - **Iets uit het GTM-plan** — als je toch al wilt beginnen met voorbereiden (landingspagina, pitch, etc.)
+> - **Iets anders** wat ik nu niet op het netvlies heb
 >
-> Wat wil je? En hoe lang heb je vandaag? Dan plan ik het werk daarop."
+> Wat heb je in gedachten?"
 
-**Niet zelf een keuze maken. Niet voorstellen welke optie het beste is. Gewoon wachten op Arsalan's antwoord.**
+**Niet zelf een keuze maken. Niet voorstellen welke optie het beste is. Niet pushen op GTM.** Gewoon wachten op Arsalan's antwoord.
 
 ---
 
 ## Tijdens het werk
 
-Als Arsalan een keuze maakt:
-
 1. **Speel notificatiegeluid** via Bash: `cscript //nologo //e:vbscript "C:\Users\arsal\.claude\notify.vbs"` vóór AskUserQuestion, EnterPlanMode, of wanneer je op input wacht.
 
 2. **Gebruik Plan Mode** (EnterPlanMode) als de taak niet-triviaal is. Pre-mortem: 3 redenen waarom dit plan kan falen + waarom het toch de juiste aanpak is.
 
-3. **Hou je aan de 70/20/10 regel.** Als Arsalan wil coderen terwijl er GTM-werk open staat, herinner hem daaraan. Maar respecteer zijn beslissing als hij zegt "ik wil nu bouwen".
+3. **Geen forced werkverdeling.** Arsalan bepaalt zelf wat hij nodig vindt. Als hij wil bouwen, bouw je. Als hij wil testen, test je. Als hij wil verkopen, helpt je daarmee. Je bent faciliterend, niet sturend.
 
-4. **Geen over-engineering.** Landingspagina = simpel. Pitch = 3 zinnen. Demo-script = 15 min. Dit is marketing, niet productwerk — KISS.
+4. **Verificatie-loop (HARDE REGEL) bij elke implementatie:**
+   - Build check (`tsc --noEmit` of `pytest`)
+   - Visuele check (preview/screenshot)
+   - Functionele check (klik door de flow)
+   - Pas "done" als alle 3 groen zijn
 
-5. **Commit + push na elke afgeronde taak** (conventional commits: `docs(gtm):`, `feat(marketing):`, etc.). Altijd direct `git push origin main` na commit.
+5. **Commit + push na elke afgeronde taak** (conventional commits). Altijd direct `git push origin main` na commit.
 
-6. **Géén deploys nodig** voor deze sessie waarschijnlijk (tenzij landingspagina live moet). Als deploy wel nodig is: `ssh -i ~/.ssh/luxis_deploy root@46.225.115.216` en volg de deploy-regels skill.
+6. **Deploys via SSH** als nodig: `ssh -i ~/.ssh/luxis_deploy root@46.225.115.216` — zie deploy-regels skill.
 
 ---
 
@@ -75,40 +70,38 @@ Als Arsalan een keuze maakt:
 
 Aan het einde van sessie 117:
 
-1. **Update `SESSION-NOTES.md`** met nieuwe entry bovenaan (format: `## Wat er gedaan is (sessie 117 — DATUM) — ONDERWERP`). Update headers (laatst bijgewerkt, volgende sessie).
+1. **Update `SESSION-NOTES.md`** met nieuwe entry bovenaan. Update headers (laatst bijgewerkt, volgende sessie).
 
-2. **Update `LUXIS-ROADMAP.md`** GTM-sectie: markeer afgeronde items als ✅, voeg eventuele nieuwe items toe.
+2. **Update `LUXIS-ROADMAP.md`** — markeer afgeronde items als ✅, voeg eventuele nieuwe items toe (bugs, features, GTM-acties).
 
 3. **Git tag:** `git tag -a v117-stable -m "Sessie 117 — [onderwerp]" && git push origin v117-stable`
 
-4. **Genereer prompt voor sessie 118** in `docs/prompts/sessie-118.md`. Zelfde format als deze prompt: open vraag, laat Arsalan kiezen, geef opties vanuit de openstaande GTM-acties.
+4. **Genereer prompt voor sessie 118** in `docs/prompts/sessie-118.md`. Zelfde format als deze prompt: open vraag, laat Arsalan kiezen.
 
 ---
 
-## Harde regels (uit CLAUDE.md, niet vergeten)
+## Harde regels (uit CLAUDE.md)
 
-- **Dutch UI, English code.** Als je iets bouwt voor de landingspagina: alle gebruikersfacing tekst in het Nederlands.
-- **Lisanne-toets:** "Zou een niet-techneut dit begrijpen?" Zo nee, versimpel.
-- **Product, geen tooltje.** Alles wat je bouwt moet eruit zien alsof het morgen gelanceerd wordt.
-- **Notificatiegeluid afspelen** vóór elke wachtmoment (AskUserQuestion, plan approval, taak-einde).
+- **Dutch UI, English code.** UI-tekst in het Nederlands.
+- **Lisanne-toets:** "Zou zij dit begrijpen zonder uitleg?" Zo nee, versimpel.
+- **Product, geen tooltje.** Alles eruit laten zien alsof het morgen gelanceerd wordt.
+- **Notificatiegeluid afspelen** vóór elke wachtmoment.
 - **Nooit git worktrees** tenzij expliciet gevraagd.
-- **Nooit destructieve acties** (rm -rf, drop database, volume delete) zonder expliciete bevestiging.
-- **Commit + push na elke taak** — nooit alleen commit, altijd direct push.
+- **Nooit destructieve acties** zonder expliciete bevestiging.
+- **Commit + push na elke taak** — nooit alleen commit.
+- **Financial precision:** Decimal + NUMERIC(15,2), nooit float.
 
 ---
 
 ## Wat NIET doen deze sessie
 
-- **Geen nieuwe features bouwen** tenzij direct gevraagd door een bestaande of aanstaande klant
-- **Geen marktonderzoek-rapporten opnieuw draaien** — die zijn afgerond
-- **Geen Urios/Legalsense/Fidura herdraaien** — wachten tot na 10 echte advocaten-gesprekken
-- **Geen Stitch UI redesign** — gedescoped
-- **Geen externe security audit** — niet nu
-- **Geen paid ads, geen funnels, geen marketing automation** — gewoon persoonlijk contact tot 10 klanten
+- **Niet pushen op verkopen.** Arsalan is nog in bouw-fase. Respect daarvoor.
+- **Geen marktonderzoek-rapporten opnieuw draaien** — die zijn afgerond.
 - **Niet zelf beslissen waar we aan werken** — Arsalan beslist. Jij faciliteert.
+- **Geen nieuwe complexe sprints starten** zonder expliciete goedkeuring.
 
 ---
 
 ## Begin NU
 
-Open de chat. Laad context via subagent. Begroet Arsalan met de opening hierboven. Wacht op zijn keuze. Ga aan de slag.
+Open de chat. Laad context via subagent. Begroet Arsalan met de opening hierboven. Wacht op zijn antwoord. Ga aan de slag met wat hij kiest.

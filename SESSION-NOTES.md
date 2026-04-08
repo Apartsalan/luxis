@@ -1,8 +1,50 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 april 2026 (sessie 117 — MEGA: 19 demo-items afgerond uit Lisanne's demo-feedback)
-**Laatste feature/fix:** Sessie 117 — echte email versturen + AI dossier-context + batch dossier-aanmaak
-**Volgende sessie:** 118 — Open: Arsalan beslist bij start. Nog open uit DF117: derdengelden module (eigen sessie nodig).
+**Laatst bijgewerkt:** 8 april 2026 (sessie 118 — DF117-21 derdengelden verrekening + consolidatie)
+**Laatste feature/fix:** Sessie 118 — verrekening derdengelden ↔ eigen factuur met cliënt-toestemming (Voda art. 6.19 lid 5)
+**Volgende sessie:** 119 — Arsalan beslist bij start. Mogelijke vervolgen op DF117-21: top-level "Derdengelden" sidebar-pagina, NOvA-rapporten, SEPA-export voor uitbetalingen.
+
+## Wat er gedaan is (sessie 118 — 8 april 2026) — DF117-21 Derdengelden verrekening + consolidatie
+
+**Doel:** laatste openstaande item uit demo-feedback sessie 117 — verrekening van derdengelden-saldo met de eigen factuur, juridisch correct (Voda art. 6.19 lid 5).
+
+**Onderzoek vooraf (parallel agents):**
+- Voda art. 6.19–6.27 + Roda 32 + tuchtrecht ECLI:NL:TAHVD:2023:38 — verrekening vereist per uitbetaling expliciete schriftelijke toestemming, algemene clausule in opdrachtbevestiging is onvoldoende.
+- Concurrent-analyse Clio / Smokeball / PracticePanther / Legalsense / BaseNet — Clio's per-matter sub-ledger + Smokeball's immutability gekozen als basis.
+- Codebase-discovery: er bestonden TWEE parallelle systemen — `collections.Derdengelden` (oud, simpel) en `trust_funds.TrustTransaction` (nieuw, met 2-director approval). Frontend mixte beide.
+
+**Belangrijke ontdekking:** `backend/app/app/` is een verborgen stale duplicaat van de codebase die NIET door de container wordt gelezen. Eerste ronde edits gingen daar per ongeluk heen — daarna gemigreerd naar de juiste locatie `backend/app/...`. Oude duplicaat staat nog en mag in een volgende sessie opgeruimd worden.
+
+**Commits (4):**
+1. `06479cf` — refactor(trust-funds): drop legacy collections.Derdengelden, unify on trust_funds — verwijdert oude tabel, hernoemt `payment_matches.derdengelden_id` → `trust_transaction_id`, financial_summary leest nu uit trust_funds, bank-import matching maakt trust_funds deposits
+2. `50b6768` — feat(trust-funds): offset trust balance against client invoice with consent — TrustTransaction uitgebreid met `transaction_date` + offset_to_invoice type + consent-velden + reversed_by_id; `create_offset_to_invoice` service + `approve_transaction` boekt InvoicePayment bij final approval; `TRUST_FUNDS_ALLOW_SELF_APPROVAL` env flag (default true voor solo-practice)
+3. `173ea54` — feat(trust-funds): UI for offset-to-invoice flow with consent capture — knop "Verrekenen met factuur" in DerdengeldenTab + nieuwe `OffsetToInvoiceDialog` met factuurkeuze, live preview, gele waarschuwingsbanner, 4 verplichte consent-velden
+4. `3c5644d` — fix(alembic): drop Derdengelden from env.py imports — VPS-startup bleef hangen op import, fix daarna
+
+**Migraties:**
+- `df11801a` — drop legacy `derdengelden` table + rename payment_matches FK
+- `df11802a` — add transaction_date + offset/consent/reversal columns to trust_transactions
+
+**Tests:** 9 nieuwe tests in `backend/tests/test_trust_funds_offset.py` (happy path, consent-validatie, balance/factuur-bedrag guards, cross-client guard, self-approval flag toggle). Bestaande 4-eyes tests aangepast om expliciet `TRUST_FUNDS_ALLOW_SELF_APPROVAL=false` te zetten. payment_matching test bijgewerkt voor `trust_transaction_id`. **64/64 tests groen** (test_trust_funds + test_trust_funds_offset + test_payment_matching).
+
+**Verificatie:**
+- Backend: `from app.main import app` OK, alle nieuwe routes zichtbaar in `/api/trust-funds/...`
+- Frontend: `npx tsc --noEmit` 0 errors
+- VPS: gepushed + gedeployd via SSH, alembic head = `df11802a`, backend + frontend healthy
+
+**Buiten scope (voor latere sessie):**
+- Top-level "Derdengelden" sidebar-pagina met cross-cliënt overzicht
+- NOvA-rapporten (mutatieoverzicht + saldolijst export, CCV-aangifte ondersteuning)
+- SEPA-export voor uitbetalingen / Rabobank-koppeling
+- MT940 bank-import voor Stichting Derdengelden rekening
+- Opruimen `backend/app/app/` stale duplicate directory
+- Tenant-instelling UI voor self-approval flag (alleen env-flag voor nu)
+
+**Bekende issues:**
+- `backend/app/app/` shadow-copy van de codebase staat nog en bevat verouderde versies. NIET door runtime gebruikt maar moet worden verwijderd om verwarring te voorkomen.
+- Bestaande `test_invoice_payments.py` tests waren al gebroken vóór deze sessie — `/api/invoices/{id}/send` vereist nu echte SMTP-config sinds DF117-13. Onze nieuwe offset-tests bypassen `/send` en zetten status direct in DB.
+
+
 **Strategische modus:** LIFESTYLE BUSINESS met AI-leverage — nog in bouw/validatie-fase met Lisanne, GTM-plan klaar voor later
 **Demo Feedback Sprint 5:** 9/9 COMPLEET ✅
 **P1 status:** ALLE 6 ITEMS AFGEROND + QA COMPLEET ✅

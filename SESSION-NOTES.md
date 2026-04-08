@@ -1,8 +1,78 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 8 april 2026 (sessie 119 — Derdengelden afronding: overzicht, NOvA, SEPA, opruimen)
-**Laatste feature/fix:** Sessie 119 — top-level Derdengelden pagina + NOvA CSV exports + SEPA pain.001 export + shadow-copy verwijderd
-**Volgende sessie:** 120 — Arsalan beslist bij start. Mogelijke vervolgen: MT940 bank-import voor Stichting Derdengelden, M0b (Lisanne overzetten naar M365), of nieuwe demo-feedback van Lisanne.
+**Laatst bijgewerkt:** 8 april 2026 (sessie 120 — demo-feedback round 2: creditnota BTW bug + inheritance + derdengelden testdata + disk-crash prevention)
+**Laatste feature/fix:** Sessie 120 — creditnota BTW-bug gefixt, rate_basis + minimum_fee per klant, derdengelden demo-data op prod, 4-layer disk-crash preventie
+**Volgende sessie:** 121 — producten/artikel catalogus import uit Basenet Excel (Lisanne's complete grootboek met 28 items, 4 BTW-regimes, 15 grootboeknummers)
+
+## Wat er gedaan is (sessie 120 — 8 april 2026) — Demo-feedback round 2 + disk crash fix
+
+**Doel:** 2 bugs + 2 kleine inheritance-uitbreidingen + derdengelden testdata klaarzetten voor Arsalan. Tijdens de sessie kwam er ook een VPS-crash tussendoor die gefixt + voorkomen is.
+
+**5 commits:**
+
+1. `7829f40` — fix(invoices): preserve per-line btw_percentage in credit notes
+   - Root cause: frontend credit note dialog kopieerde per-regel BTW niet uit de originele factuur — alles werd geforceerd naar de header-rate
+   - Bij mixed-BTW facturen (bv. 21% honorarium + 0% onbelaste verschotten) kreeg de creditnota dus verkeerde totalen
+   - Fix frontend-only (backend respecteerde per-regel BTW al): `cnLines` state uitgebreid, `startCreditNote` kopieert l.btw_percentage, dialoog toont BTW-dropdown per regel (0/9/21%)
+   - `InvoiceLine` TS interface had `btw_percentage` niet, toegevoegd
+   - Rode regressie-test: €100@21% + €50@0% → credit −€171 (NIET −€181,50)
+
+2. `c52d5af` — feat(relations,cases): rate_basis + minimum_fee inheritance per client
+   - Migratie `df120a`: 2 nieuwe velden op contacts (nullable)
+   - `default_rate_basis` ("yearly"|"monthly") — cascadet bij CLAIM-creatie (rate_basis leeft op claim), fallback "yearly"
+   - `default_minimum_fee` (NUMERIC 15,2) — cascadet bij CASE-creatie (minimum_fee leeft op case)
+   - `ClaimCreate.rate_basis` nu optional (was default="yearly")
+   - 5 nieuwe tests (inheritance + explicit override + no-default cases)
+   - Frontend: nieuw-relatie form + ContactInfoSection uitgebreid met "Periode" dropdown (alleen bij contractuele rente) en "Minimum provisie (€)" in BIK-sectie
+
+3. `eb3c312` — chore(scripts): seed demo trust fund transactions for testing
+   - `scripts/seed_trust_demo.py` — CLI script dat 3 dossiers seed met: approved deposit (30d oud), approved disbursement (10d oud), pending_approval disbursement (vandaag, voor SEPA test)
+   - Fictieve begunstigden uit `FAKE_BENEFICIARIES` lijst
+   - Seed-marker `reference="seed:demo:sessie120"` → `--clean` verwijdert alleen seeds
+   - Safety: refuses bij >50 bestaande trust transactions zonder `--force`, vereist `--confirm-production` bij APP_ENV=production
+   - Prod-run: 3 cliënten × 3 transacties = 9 mutaties geseed
+
+4. `d13c887` — fix(infra): prevent disk-full crash with layered cleanup + monitoring
+   - **Root cause VPS crash**: elke sessie sinds 117 deed `docker compose build --no-cache` → 120GB build-cache opgestapeld → Postgres PANIC "No space left on device" → crash-loop
+   - **4 lagen preventie:**
+     1. Stop `--no-cache` als default (CLAUDE.md + deploy-regels skill)
+     2. `docker image prune -f` na elke deploy (dangling only, tagged rollback images blijven)
+     3. `scripts/disk_guard.sh` — hourly cron: >85% safe prune, >95% emergency prune (nooit tagged images)
+     4. Weekly cron zondag 04:00: `docker builder prune --filter until=168h`
+   - Beide crons geïnstalleerd op VPS, getest met 35% disk (doet niks zoals verwacht)
+   - Logs: `/var/log/luxis-disk.log` + `/var/log/luxis-cleanup.log`
+
+**VPS incident tijdens sessie 120:**
+- Disk was 100% vol (143GB/150GB)
+- Postgres PANIC "could not write to pg_logical/replorigin_checkpoint.tmp"
+- DB crash-loop, unable to reach consistent recovery
+- **Opgelost via Optie A**: `docker image prune -a --filter "until=24h"` (4GB terug) + `docker builder prune -a -f` (119GB terug)
+- Na cleanup: 50G used / 94G free (35%)
+- DB restart → healthy, alembic head = df120a, beide columns bestaan
+- **Productiedata ongeschonden** — PG schreef niet meer, dus geen corruption
+
+**Tests:** 23/23 inheritance + claims tests groen, 1 regressie-test voor creditnota BTW groen
+
+**Migraties:** `df119 → df120a` (alembic head)
+
+**Deployment:** alle 5 commits live op productie, alembic head df120a, beide containers healthy
+
+**Bekende issues (pre-existing, niet door sessie 120 veroorzaakt):**
+- `test_collections_router.py::test_derdengelden_crud` + `test_derdengelden_balance` — testen oude `/api/cases/.../derdengelden` endpoints die in sessie 118 verwijderd zijn (consolidatie naar trust_funds). Deze tests moeten worden opgeruimd.
+- `test_invoice_payments.py` blijft gebroken sinds sessie 118 (send vereist SMTP config)
+
+**Nog open voor Lisanne om te testen:**
+- Creditnota met mixed BTW
+- Rente-periode (jaar/maand) en minimum provisie op klant niveau
+- Derdengelden overzicht (3 cliënten geseed op prod)
+- SEPA export (eerst Stichting Derdengelden bank-gegevens invullen via Instellingen → Kantoor)
+- NOvA CSV exports (mutaties + saldolijst)
+
+**Scope voor sessie 121:** producten-catalogus import uit Basenet Excel (`xls Print scherm - Producten en diensten-08042026_1437.xls`) — 28 items, 4 BTW-regimes, 15+ grootboeknummers. Nieuwe module nodig met CRUD + import + categorie-management + integratie in factuur-aanmaak en verschotten-flow.
+
+**Scope voor sessie 122:** mail-sjablonen replacen door Lisanne's 4 officiële .eml's (SOMMATIE, EENMALIG SCHIKKING, TREFFEN REGELING, VERZOEKSCHRIFT FAILLISSEMENT met concept-PDF bijlage), placeholder-systeem, verweer-bibliotheek (5 .eml's) als AI-inspiratie.
+
+
 
 ## Wat er gedaan is (sessie 119 — 8 april 2026) — Derdengelden afronding
 

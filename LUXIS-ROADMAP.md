@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 8 april 2026 (sessie 119 — Derdengelden afronding: top-level pagina + NOvA CSV exports + SEPA pain.001 export + shadow-copy opgeruimd)
+**Laatst bijgewerkt:** 8 april 2026 (sessie 120 — demo-feedback round 2: creditnota BTW-fix, rate_basis + minimum_fee inheritance, derdengelden testdata, 4-layer disk-crash preventie)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -784,7 +784,25 @@ Bron: live demo met Lisanne 7-4-2026. Notities gecategoriseerd in 7 groepen. 2 p
 | DF117-19 | **Klik op debiteur → openstaande facturen direct** — niet de algemene relatie-detail | ❌ TODO |
 | DF117-20 | **Batch dossier-aanmaak** — meerdere zaken tegelijk via email | ✅ Sessie 117 — POST `/api/intake/approve-batch` met per-item failure handling, frontend checkboxes + select-all + action bar op pending_review tab, 2 nieuwe tests (3 succesvol + partial failure) |
 | DF117-21 | **Derdengelden-rekening + verrekening met eigen nota** — Lisanne ontvangt op derdengeldrekening, soms doorstorten, soms verrekenen. Vereist eigen module-onderzoek (Stichting Derdengelden, juridische verrekeningsregels) | ✅ COMPLEET — Sessie 118: verrekening-flow met cliënt-toestemming (Voda art. 6.19 lid 5) + consolidatie van twee parallelle systemen op `trust_funds`. Sessie 119: top-level `/derdengelden` overzichtspagina (cross-cliënt aggregatie), NOvA mutatieoverzicht + saldolijst CSV exports, SEPA pain.001.001.03 export voor uitbetalingen vanaf Stichting Derdengelden Rabobank-rekening, en `backend/app/app/` shadow-copy verwijderd. 26/26 trust_funds tests groen. Nog open voor latere sessie: MT940 bank-import voor de Stichting Derdengelden rekening (auto-deposits). |
-| DF117-22 | **Standaard incassokosten per klant** — net als de standaard rente per klant (DF117-02): op Contact instelbaar als vast bedrag of percentage van hoofdsom, en automatisch overgenomen bij nieuw dossier (per dossier wijzigbaar). Volgt exact het inheritance-patroon van DF117-02. Backend: 2 nieuwe Contact-velden + migratie + create_case inheritance. Frontend: relaties/nieuw form + ContactInfoSection edit + zaken/nieuw "overgenomen van klant" hint + FinancieelTab indicator | ❌ TODO |
+| DF117-22 | **Standaard incassokosten per klant** — net als de standaard rente per klant (DF117-02): op Contact instelbaar als vast bedrag of percentage van hoofdsom, en automatisch overgenomen bij nieuw dossier (per dossier wijzigbaar). | ✅ Sessie 117 |
+
+### Demo Feedback Lisanne (sessie 120, 8 april 2026 — round 2)
+
+Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd in 3 sessies: 120 (bugs + inheritance + test data), 121 (producten-catalogus), 122 (mail-sjablonen + verweer-bibliotheek).
+
+| # | Item | Status |
+|---|------|--------|
+| DF120-01 | **Creditnota BTW klopt niet** — bij mixed-BTW factuur (bv. 21% honorarium + 0% onbelaste verschotten) werd de credit geforceerd naar één rate. Root cause: frontend stuurde geen per-regel btw_percentage mee. Backend was OK. Fix + regressietest groen. | ✅ Sessie 120 |
+| DF120-02 | **Facturen-overzicht in dossier klopt niet na creditnota** — vermoedelijk symptoom van DF120-01 (verkeerde totalen op credit → verkeerde som op dossier). Bevestigen na Lisanne test. | ⏳ Verificatie na DF120-01 |
+| DF120-03 | **Rente-periode (maand/jaar) op klantniveau** — DF117-02 had rentetype + -percentage per klant, maar periode (yearly/monthly) stond niet op Contact. `default_rate_basis` toegevoegd, cascadet bij claim-creatie. | ✅ Sessie 120 |
+| DF120-04 | **Minimum provisie op klantniveau** — DF117-22 had BIK-override, maar geen minimum. `default_minimum_fee` toegevoegd, cascadet bij case-creatie. | ✅ Sessie 120 |
+| DF120-05 | **Derdengelden testdata voor Arsalan** — seed script dat 3 dossiers × 3 transacties injecteert (approved deposit + approved disbursement + pending disbursement). Cleanup via `--clean`. Gedraaid op productie. | ✅ Sessie 120 |
+| DF120-06 | **VPS disk-full crash preventie** — sessie 120 ontdekt: door `--no-cache` bij elke deploy was `/var/lib/docker` 143GB groot, Postgres crash-loopte met PANIC. 4-layer defense: stop `--no-cache` default + auto-prune na deploy + hourly disk-guard cron + weekly build-cache cleanup. | ✅ Sessie 120 |
+| DF120-07 | **KVK API-koppeling** — Lisanne wil automatisch bedrijfsgegevens ophalen bij ingave van KvK-nummer. Nu alleen handmatig veld. | 📋 Backlog (laag) |
+| DF120-08 | **Producten/artikel-catalogus uit Basenet Excel** — Lisanne's complete grootboek (28 items: honorarium, verschotten, incassokosten, reiskosten, etc) met 4 BTW-regimes en 15+ grootboeknummers. Nieuwe module: CRUD + import uit `.xls` + categorie-management + integratie in factuur- en verschottenflow. Fundament voor latere Exact Online koppeling (grootboeknr al per item gemapt). | 📋 Sessie 121 |
+| DF120-09 | **Mail-sjablonen vervangen door Lisanne's .eml's** — 4 officiële sjablonen (SOMMATIE TOT BETALING, EENMALIG SCHIKKINGSVOORSTEL, TREFFEN REGELING, VERZOEKSCHRIFT FAILLISSEMENT met concept-PDF als bijlage). Placeholders `{dossiernummer}`/`{client}`/`{wederpartij}` automatisch invullen. Bestaande docxtpl-templates vervangen. Klikbaar in Documenten + sjablonen-menu bij compose-mail. | 📋 Sessie 122 |
+| DF120-10 | **Verweer-bibliotheek voor AI inspiratie** — 5 verweer-.eml's (20.4, 9.3 BV's, IVB, etc) opslaan als referentiemateriaal. AI leest deze bij het genereren van reacties op betwistingen. Lisanne kan ze ook handmatig openen. | 📋 Sessie 122 |
+| DF120-11 | **Exact Online koppeling voor facturen** — facturen direct doorboeken naar Exact. Afhankelijk van DF120-08 (grootboeknummers per item). | 📋 Backlog (na sessies 121+122) |
 
 ### Feature & UX Audit (sessie 113, 29 maart 2026)
 

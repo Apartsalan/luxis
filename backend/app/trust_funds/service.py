@@ -14,6 +14,8 @@ transactions. This is logged in both approval slots so the audit trail still
 shows two distinct approval steps.
 """
 
+import csv
+import io
 import os
 import uuid
 from datetime import UTC, date, datetime
@@ -286,6 +288,211 @@ async def list_overview_by_client(
         ),
         clients=clients,
     )
+
+
+# ── NOvA Reports (CSV) ───────────────────────────────────────────────────────
+
+
+def _decimal_for_csv(value: Decimal | None) -> str:
+    if value is None:
+        return ""
+    # Dutch convention: comma decimal separator
+    return f"{value:.2f}".replace(".", ",")
+
+
+async def generate_mutaties_csv(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    date_from: date | None,
+    date_to: date | None,
+) -> str:
+    """Build a NOvA mutatieoverzicht as CSV string for the given period.
+
+    Includes all transactions (deposits, disbursements, offsets) regardless of
+    status — auditors need to see pending and rejected entries too. Reversed
+    transactions are kept for the audit trail (with their reversal pointer).
+    Sorted chronologically by transaction_date then created_at.
+    """
+    query = (
+        select(TrustTransaction)
+        .options(
+            selectinload(TrustTransaction.contact),
+            selectinload(TrustTransaction.case),
+            selectinload(TrustTransaction.target_invoice),
+            selectinload(TrustTransaction.creator),
+            selectinload(TrustTransaction.approver_1),
+            selectinload(TrustTransaction.approver_2),
+        )
+        .where(TrustTransaction.tenant_id == tenant_id)
+    )
+    if date_from is not None:
+        query = query.where(TrustTransaction.transaction_date >= date_from)
+    if date_to is not None:
+        query = query.where(TrustTransaction.transaction_date <= date_to)
+    query = query.order_by(
+        TrustTransaction.transaction_date.asc(),
+        TrustTransaction.created_at.asc(),
+    )
+
+    result = await db.execute(query)
+    transactions = list(result.scalars().all())
+
+    buf = io.StringIO()
+    # Excel/Numbers picks up UTF-8 BOM and renders Dutch chars correctly
+    buf.write("\ufeff")
+    writer = csv.writer(buf, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+    writer.writerow([
+        "datum",
+        "type",
+        "client",
+        "dossier",
+        "omschrijving",
+        "bedrag",
+        "status",
+        "goedgekeurd_door_1",
+        "goedgekeurd_door_1_op",
+        "goedgekeurd_door_2",
+        "goedgekeurd_door_2_op",
+        "verrekende_factuur",
+        "toestemming_datum",
+        "toestemming_methode",
+        "begunstigde",
+        "begunstigde_iban",
+        "referentie",
+        "reversed",
+    ])
+    for tx in transactions:
+        writer.writerow([
+            tx.transaction_date.isoformat(),
+            tx.transaction_type,
+            tx.contact.name if tx.contact else "",
+            tx.case.case_number if tx.case else "",
+            tx.description or "",
+            _decimal_for_csv(tx.amount),
+            tx.status,
+            tx.approver_1.full_name if tx.approver_1 else "",
+            tx.approved_at_1.isoformat() if tx.approved_at_1 else "",
+            tx.approver_2.full_name if tx.approver_2 else "",
+            tx.approved_at_2.isoformat() if tx.approved_at_2 else "",
+            tx.target_invoice.invoice_number if tx.target_invoice else "",
+            tx.consent_received_at.isoformat() if tx.consent_received_at else "",
+            tx.consent_method or "",
+            tx.beneficiary_name or "",
+            tx.beneficiary_iban or "",
+            tx.reference or "",
+            "ja" if tx.reversed_by_id else "",
+        ])
+    return buf.getvalue()
+
+
+async def generate_saldolijst_csv(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    peildatum: date,
+) -> str:
+    """Build a NOvA saldolijst as CSV: balance per client at a specific date.
+
+    Sums approved deposits minus approved debits (non-reversed) where
+    transaction_date <= peildatum, grouped per contact.
+    """
+    debit_types = ("disbursement", "offset_to_invoice")
+
+    deposits_result = await db.execute(
+        select(
+            TrustTransaction.contact_id,
+            func.coalesce(func.sum(TrustTransaction.amount), Decimal("0.00")),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.transaction_type == "deposit",
+            TrustTransaction.status == "approved",
+            TrustTransaction.reversed_by_id.is_(None),
+            TrustTransaction.transaction_date <= peildatum,
+        )
+        .group_by(TrustTransaction.contact_id)
+    )
+    deposits_by_contact: dict[uuid.UUID, Decimal] = dict(deposits_result.all())
+
+    debits_result = await db.execute(
+        select(
+            TrustTransaction.contact_id,
+            func.coalesce(func.sum(TrustTransaction.amount), Decimal("0.00")),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.transaction_type.in_(debit_types),
+            TrustTransaction.status == "approved",
+            TrustTransaction.reversed_by_id.is_(None),
+            TrustTransaction.transaction_date <= peildatum,
+        )
+        .group_by(TrustTransaction.contact_id)
+    )
+    debits_by_contact: dict[uuid.UUID, Decimal] = dict(debits_result.all())
+
+    last_result = await db.execute(
+        select(
+            TrustTransaction.contact_id,
+            func.max(TrustTransaction.transaction_date),
+            func.count(TrustTransaction.case_id.distinct()),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.reversed_by_id.is_(None),
+            TrustTransaction.transaction_date <= peildatum,
+        )
+        .group_by(TrustTransaction.contact_id)
+    )
+    meta_by_contact: dict[uuid.UUID, tuple[date | None, int]] = {
+        row[0]: (row[1], row[2]) for row in last_result.all()
+    }
+
+    contact_ids = set(deposits_by_contact) | set(debits_by_contact)
+    if not contact_ids:
+        contacts_by_id: dict[uuid.UUID, Contact] = {}
+    else:
+        contacts_result = await db.execute(
+            select(Contact).where(
+                Contact.tenant_id == tenant_id, Contact.id.in_(contact_ids)
+            )
+        )
+        contacts_by_id = {c.id: c for c in contacts_result.scalars().all()}
+
+    rows: list[tuple[str, int, Decimal, date | None]] = []
+    for cid in contact_ids:
+        contact = contacts_by_id.get(cid)
+        if contact is None:
+            continue
+        deposits = deposits_by_contact.get(cid, Decimal("0.00"))
+        debits = debits_by_contact.get(cid, Decimal("0.00"))
+        balance = deposits - debits
+        last_date, dossier_count = meta_by_contact.get(cid, (None, 0))
+        rows.append((contact.name, dossier_count, balance, last_date))
+
+    rows.sort(key=lambda r: r[0].lower())
+
+    buf = io.StringIO()
+    buf.write("\ufeff")
+    writer = csv.writer(buf, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+    writer.writerow([
+        "client",
+        "aantal_dossiers",
+        "totaal_saldo",
+        "laatste_mutatie_datum",
+    ])
+    total = Decimal("0.00")
+    for name, dossier_count, balance, last_date in rows:
+        writer.writerow([
+            name,
+            dossier_count,
+            _decimal_for_csv(balance),
+            last_date.isoformat() if last_date else "",
+        ])
+        total += balance
+    writer.writerow([])
+    writer.writerow(["TOTAAL", "", _decimal_for_csv(total), ""])
+    return buf.getvalue()
 
 
 # ── Create Transaction ───────────────────────────────────────────────────────

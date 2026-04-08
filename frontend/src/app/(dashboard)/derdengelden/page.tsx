@@ -5,13 +5,15 @@ import Link from "next/link";
 import {
   PiggyBank,
   Users,
-  Clock,
   Search,
   ChevronDown,
   ChevronRight,
   AlertCircle,
   ArrowUpRight,
+  Download,
+  X,
 } from "lucide-react";
+import { api } from "@/lib/api";
 import {
   useTrustFundsOverview,
   type ClientTrustOverview,
@@ -23,6 +25,9 @@ export default function DerdengeldenPage() {
   const [onlyNonzero, setOnlyNonzero] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [reportDialog, setReportDialog] = useState<
+    null | "mutaties" | "saldolijst"
+  >(null);
 
   const { data, isLoading, isError, error, refetch } =
     useTrustFundsOverview(onlyNonzero);
@@ -57,7 +62,7 @@ export default function DerdengeldenPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
             <PiggyBank className="h-6 w-6 text-primary" />
@@ -66,6 +71,22 @@ export default function DerdengeldenPage() {
           <p className="text-sm text-muted-foreground mt-1">
             Overzicht van saldi per cliënt op de Stichting Derdengelden rekening
           </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setReportDialog("mutaties")}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Mutatieoverzicht
+          </button>
+          <button
+            onClick={() => setReportDialog("saldolijst")}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Saldolijst
+          </button>
         </div>
       </div>
 
@@ -123,6 +144,14 @@ export default function DerdengeldenPage() {
           Alleen cliënten met saldo
         </label>
       </div>
+
+      {/* Report dialog */}
+      {reportDialog && (
+        <ReportDialog
+          kind={reportDialog}
+          onClose={() => setReportDialog(null)}
+        />
+      )}
 
       {/* Client list */}
       <div className="bg-card rounded-lg border border-border overflow-hidden">
@@ -302,6 +331,150 @@ function ClientRow({
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function ReportDialog({
+  kind,
+  onClose,
+}: {
+  kind: "mutaties" | "saldolijst";
+  onClose: () => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const yearStart = today.slice(0, 4) + "-01-01";
+  const [from, setFrom] = useState(yearStart);
+  const [to, setTo] = useState(today);
+  const [peildatum, setPeildatum] = useState(today);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    setError(null);
+    try {
+      const url =
+        kind === "mutaties"
+          ? `/api/trust-funds/reports/mutaties.csv?from=${from}&to=${to}`
+          : `/api/trust-funds/reports/saldolijst.csv?date=${peildatum}`;
+      const res = await api(url);
+      if (!res.ok) {
+        throw new Error(`Download mislukt (${res.status})`);
+      }
+      const blob = await res.blob();
+      const filename =
+        kind === "mutaties"
+          ? `derdengelden-mutaties_${from}_${to}.csv`
+          : `derdengelden-saldolijst_${peildatum}.csv`;
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Onbekende fout");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-card rounded-lg border border-border shadow-xl w-full max-w-md p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              {kind === "mutaties"
+                ? "Mutatieoverzicht downloaden"
+                : "Saldolijst downloaden"}
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {kind === "mutaties"
+                ? "Alle derdengeldenmutaties in de geselecteerde periode (CSV)"
+                : "Saldo per cliënt op de geselecteerde peildatum (CSV)"}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Sluiten"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {kind === "mutaties" ? (
+            <>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Van
+                </label>
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm bg-background"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Tot en met
+                </label>
+                <input
+                  type="date"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm bg-background"
+                />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                Peildatum
+              </label>
+              <input
+                type="date"
+                value={peildatum}
+                onChange={(e) => setPeildatum(e.target.value)}
+                className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm bg-background"
+              />
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <p className="mt-3 text-xs text-destructive">{error}</p>
+        )}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
+          >
+            Annuleren
+          </button>
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-60"
+          >
+            {downloading ? "Bezig..." : "Download CSV"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

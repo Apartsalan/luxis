@@ -837,3 +837,163 @@ async def test_overview_counts_pending_approvals(
     assert data["totals"]["client_count"] == 1
     company = data["clients"][0]
     assert Decimal(company["pending_disbursements"]) == Decimal("1000.00")
+
+
+# ── NOvA CSV Reports ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_mutaties_csv_columns_and_rows(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    case_payload: dict,
+):
+    """Mutatieoverzicht CSV should contain all transactions for the period."""
+    case_id = await create_case(client, auth_headers, case_payload)
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "5000.00",
+            "description": "Eerste storting",
+            "transaction_date": "2026-04-01",
+        },
+        headers=auth_headers,
+    )
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "1500.00",
+            "description": "Tweede storting",
+            "transaction_date": "2026-04-05",
+        },
+        headers=auth_headers,
+    )
+    # Out of range — should NOT appear
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "999.00",
+            "description": "Te oud",
+            "transaction_date": "2026-01-01",
+        },
+        headers=auth_headers,
+    )
+
+    resp = await client.get(
+        "/api/trust-funds/reports/mutaties.csv?from=2026-04-01&to=2026-04-30",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/csv")
+    body = resp.content.decode("utf-8")
+    # BOM
+    assert body.startswith("\ufeff")
+    lines = body.split("\r\n")
+    header = lines[0].lstrip("\ufeff")
+    assert "datum" in header
+    assert "client" in header
+    assert "bedrag" in header
+    # Two in-range rows + header (no out-of-range)
+    data_rows = [ln for ln in lines[1:] if ln.strip()]
+    assert len(data_rows) == 2
+    joined = "\r\n".join(data_rows)
+    assert "Eerste storting" in joined
+    assert "Tweede storting" in joined
+    assert "Te oud" not in joined
+    assert "5000,00" in joined  # Dutch comma decimal
+
+
+@pytest.mark.asyncio
+async def test_saldolijst_csv_balance_at_peildatum(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    """Saldolijst should reflect the balance ON the peildatum, ignoring later mutations."""
+    case_id = await create_case(client, auth_headers, case_payload)
+    # Deposit ON peildatum (counts)
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "3000.00",
+            "description": "Storting voor peildatum",
+            "transaction_date": "2026-03-31",
+        },
+        headers=auth_headers,
+    )
+    # Deposit AFTER peildatum (should NOT count)
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "9999.00",
+            "description": "Te laat",
+            "transaction_date": "2026-05-01",
+        },
+        headers=auth_headers,
+    )
+
+    resp = await client.get(
+        "/api/trust-funds/reports/saldolijst.csv?date=2026-04-15",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    body = resp.content.decode("utf-8")
+    assert "client" in body
+    assert "Acme B.V." in body
+    assert "3000,00" in body
+    assert "9999,00" not in body
+    assert "TOTAAL" in body
+
+
+@pytest.mark.asyncio
+async def test_saldolijst_excludes_pending_and_reversed(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    """Pending disbursements should not affect saldolijst (only approved counted)."""
+    case_id = await create_case(client, auth_headers, case_payload)
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "2000.00",
+            "description": "Storting",
+            "transaction_date": "2026-03-01",
+        },
+        headers=auth_headers,
+    )
+    # Pending disbursement — should NOT be subtracted
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "disbursement",
+            "amount": "500.00",
+            "description": "Uitbetaling",
+            "transaction_date": "2026-03-15",
+            "beneficiary_name": "Jan",
+            "beneficiary_iban": "NL02ABNA0123456789",
+        },
+        headers=auth_headers,
+    )
+
+    resp = await client.get(
+        "/api/trust-funds/reports/saldolijst.csv?date=2026-04-01",
+        headers=auth_headers,
+    )
+    body = resp.content.decode("utf-8")
+    # Saldo blijft 2000 want disbursement is nog niet approved
+    assert "2000,00" in body
+    assert "1500,00" not in body

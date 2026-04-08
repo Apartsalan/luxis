@@ -2,8 +2,10 @@
 
 import math
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
@@ -141,6 +143,51 @@ async def reject_transaction(
         db, current_user.tenant_id, transaction_id, current_user.id
     )
     return transaction
+
+
+# ── NOvA Reports (CSV) ───────────────────────────────────────────────────────
+
+
+@router.get("/reports/mutaties.csv")
+async def download_mutaties_csv(
+    date_from: date | None = Query(default=None, alias="from"),
+    date_to: date | None = Query(default=None, alias="to"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download a NOvA mutatieoverzicht as CSV (semicolon-delimited, UTF-8 BOM)."""
+    csv_text = await service.generate_mutaties_csv(
+        db, current_user.tenant_id, date_from=date_from, date_to=date_to
+    )
+    parts = ["derdengelden-mutaties"]
+    if date_from is not None:
+        parts.append(date_from.isoformat())
+    if date_to is not None:
+        parts.append(date_to.isoformat())
+    filename = "_".join(parts) + ".csv"
+    return Response(
+        content=csv_text.encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/reports/saldolijst.csv")
+async def download_saldolijst_csv(
+    peildatum: date = Query(..., alias="date"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Download a NOvA saldolijst per cliënt at a peildatum, as CSV."""
+    csv_text = await service.generate_saldolijst_csv(
+        db, current_user.tenant_id, peildatum=peildatum
+    )
+    filename = f"derdengelden-saldolijst_{peildatum.isoformat()}.csv"
+    return Response(
+        content=csv_text.encode("utf-8"),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ── Verrekening (Offset to invoice) ──────────────────────────────────────────

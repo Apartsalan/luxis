@@ -11,7 +11,6 @@ from app.auth.models import Tenant, User  # noqa: F401
 from app.cases.models import Case, CaseActivity, CaseParty  # noqa: F401
 from app.collections.models import (  # noqa: F401,E501
     Claim,
-    Derdengelden,
     InterestRate,
     Payment,
     PaymentArrangement,

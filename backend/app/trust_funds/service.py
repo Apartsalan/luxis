@@ -27,12 +27,18 @@ from app.cases.service import get_case
 from app.invoices.models import Invoice, InvoicePayment
 from app.shared.exceptions import BadRequestError, ForbiddenError, NotFoundError
 from app.trust_funds.models import TrustTransaction
+from app.cases.models import Case
+from app.relations.models import Contact
 from app.trust_funds.schemas import (
     CONSENT_METHODS,
     TRANSACTION_TYPES,
+    CaseTrustSummary,
+    ClientTrustOverview,
     EligibleInvoice,
     TrustBalanceSummary,
     TrustOffsetCreate,
+    TrustOverviewResponse,
+    TrustOverviewTotals,
     TrustTransactionCreate,
 )
 
@@ -109,6 +115,176 @@ async def get_balance(
         total_balance=total_balance,
         pending_disbursements=pending_disbursements,
         available=available,
+    )
+
+
+# ── Cross-client Overview ────────────────────────────────────────────────────
+
+
+async def list_overview_by_client(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    only_nonzero: bool = True,
+) -> TrustOverviewResponse:
+    """Aggregate trust balances per client across all their cases.
+
+    Uses the same filter logic as `get_balance()` (approved & non-reversed for
+    balance math, pending for pending_disbursements). Single grouped query per
+    aggregation, Python-side client grouping.
+    """
+    debit_types = ("disbursement", "offset_to_invoice")
+
+    # Per-case approved deposit totals (non-reversed)
+    deposits_result = await db.execute(
+        select(
+            TrustTransaction.case_id,
+            func.coalesce(func.sum(TrustTransaction.amount), Decimal("0.00")),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.transaction_type == "deposit",
+            TrustTransaction.status == "approved",
+            TrustTransaction.reversed_by_id.is_(None),
+        )
+        .group_by(TrustTransaction.case_id)
+    )
+    deposits_by_case: dict[uuid.UUID, Decimal] = dict(deposits_result.all())
+
+    # Per-case approved debit totals (non-reversed)
+    debits_result = await db.execute(
+        select(
+            TrustTransaction.case_id,
+            func.coalesce(func.sum(TrustTransaction.amount), Decimal("0.00")),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.transaction_type.in_(debit_types),
+            TrustTransaction.status == "approved",
+            TrustTransaction.reversed_by_id.is_(None),
+        )
+        .group_by(TrustTransaction.case_id)
+    )
+    debits_by_case: dict[uuid.UUID, Decimal] = dict(debits_result.all())
+
+    # Per-case pending debit totals
+    pending_result = await db.execute(
+        select(
+            TrustTransaction.case_id,
+            func.coalesce(func.sum(TrustTransaction.amount), Decimal("0.00")),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.transaction_type.in_(debit_types),
+            TrustTransaction.status == "pending_approval",
+        )
+        .group_by(TrustTransaction.case_id)
+    )
+    pending_by_case: dict[uuid.UUID, Decimal] = dict(pending_result.all())
+
+    # Per-case last transaction date (any status, non-reversed)
+    last_result = await db.execute(
+        select(
+            TrustTransaction.case_id,
+            func.max(TrustTransaction.transaction_date),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.reversed_by_id.is_(None),
+        )
+        .group_by(TrustTransaction.case_id)
+    )
+    last_date_by_case: dict[uuid.UUID, date] = dict(last_result.all())
+
+    # Tenant-wide pending_approval transaction count (KPI)
+    pending_count_result = await db.execute(
+        select(func.count())
+        .select_from(TrustTransaction)
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.status == "pending_approval",
+        )
+    )
+    pending_approval_count = int(pending_count_result.scalar_one())
+
+    # Load all cases that have any trust transaction, with client
+    case_ids = set(deposits_by_case) | set(debits_by_case) | set(pending_by_case)
+    if not case_ids:
+        return TrustOverviewResponse(
+            totals=TrustOverviewTotals(
+                total_balance=Decimal("0.00"),
+                total_pending_disbursements=Decimal("0.00"),
+                client_count=0,
+                case_count=0,
+                pending_approval_count=pending_approval_count,
+            ),
+            clients=[],
+        )
+
+    cases_result = await db.execute(
+        select(Case, Contact)
+        .join(Contact, Contact.id == Case.client_id)
+        .where(
+            Case.tenant_id == tenant_id,
+            Case.id.in_(case_ids),
+        )
+    )
+    case_rows = cases_result.all()
+
+    # Group cases by contact
+    by_contact: dict[uuid.UUID, tuple[Contact, list[CaseTrustSummary]]] = {}
+    for case, contact in case_rows:
+        deposits = deposits_by_case.get(case.id, Decimal("0.00"))
+        debits = debits_by_case.get(case.id, Decimal("0.00"))
+        pending = pending_by_case.get(case.id, Decimal("0.00"))
+        total_balance = deposits - debits
+
+        if only_nonzero and total_balance == Decimal("0.00") and pending == Decimal("0.00"):
+            continue
+
+        summary = CaseTrustSummary(
+            case_id=case.id,
+            case_number=case.case_number,
+            case_description=case.description,
+            total_balance=total_balance,
+            pending_disbursements=pending,
+            last_transaction_date=last_date_by_case.get(case.id),
+        )
+        if contact.id not in by_contact:
+            by_contact[contact.id] = (contact, [])
+        by_contact[contact.id][1].append(summary)
+
+    clients: list[ClientTrustOverview] = []
+    tenant_total_balance = Decimal("0.00")
+    tenant_total_pending = Decimal("0.00")
+
+    for contact, summaries in by_contact.values():
+        client_balance = sum((s.total_balance for s in summaries), Decimal("0.00"))
+        client_pending = sum((s.pending_disbursements for s in summaries), Decimal("0.00"))
+        clients.append(
+            ClientTrustOverview(
+                contact_id=contact.id,
+                contact_name=contact.name,
+                total_balance=client_balance,
+                pending_disbursements=client_pending,
+                case_count=len(summaries),
+                cases=sorted(summaries, key=lambda c: c.case_number),
+            )
+        )
+        tenant_total_balance += client_balance
+        tenant_total_pending += client_pending
+
+    clients.sort(key=lambda c: c.contact_name.lower())
+
+    return TrustOverviewResponse(
+        totals=TrustOverviewTotals(
+            total_balance=tenant_total_balance,
+            total_pending_disbursements=tenant_total_pending,
+            client_count=len(clients),
+            case_count=sum(c.case_count for c in clients),
+            pending_approval_count=pending_approval_count,
+        ),
+        clients=clients,
     )
 
 

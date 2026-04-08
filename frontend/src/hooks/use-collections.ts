@@ -537,6 +537,52 @@ export function useCreateTrustOffset() {
   });
 }
 
+// ── Derdengelden cross-client overview ───────────────────────────────────────
+
+export interface CaseTrustSummary {
+  case_id: string;
+  case_number: string;
+  case_description: string | null;
+  total_balance: number;
+  pending_disbursements: number;
+  last_transaction_date: string | null;
+}
+
+export interface ClientTrustOverview {
+  contact_id: string;
+  contact_name: string;
+  total_balance: number;
+  pending_disbursements: number;
+  case_count: number;
+  cases: CaseTrustSummary[];
+}
+
+export interface TrustOverviewTotals {
+  total_balance: number;
+  total_pending_disbursements: number;
+  client_count: number;
+  case_count: number;
+  pending_approval_count: number;
+}
+
+export interface TrustOverviewResponse {
+  totals: TrustOverviewTotals;
+  clients: ClientTrustOverview[];
+}
+
+export function useTrustFundsOverview(onlyNonzero: boolean = true) {
+  return useQuery<TrustOverviewResponse>({
+    queryKey: ["trust-funds", "overview", onlyNonzero],
+    queryFn: async () => {
+      const res = await api(
+        `/api/trust-funds/overview?only_nonzero=${onlyNonzero ? "true" : "false"}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch trust fund overview");
+      return res.json();
+    },
+  });
+}
+
 // ── Payment Arrangements Hooks ──────────────────────────────────────────────
 
 export function useArrangements(caseId: string | undefined) {

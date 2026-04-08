@@ -671,3 +671,169 @@ async def test_decimal_precision(
     )
     data = response.json()
     assert Decimal(data["total_balance"]) == Decimal("12345.67")
+
+
+# ── Cross-client Overview ────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_overview_aggregates_per_client(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    test_person: Contact,
+):
+    """Overview should group cases by client and sum balances correctly."""
+    # Two cases for the company (Acme B.V.), one for the person
+    case_company_a = await create_case(
+        client,
+        auth_headers,
+        {
+            "case_type": "advies",
+            "description": "Acme A",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-20",
+        },
+    )
+    case_company_b = await create_case(
+        client,
+        auth_headers,
+        {
+            "case_type": "advies",
+            "description": "Acme B",
+            "client_id": str(test_company.id),
+            "date_opened": "2026-02-20",
+        },
+    )
+    case_person = await create_case(
+        client,
+        auth_headers,
+        {
+            "case_type": "advies",
+            "description": "Jan zaak",
+            "client_id": str(test_person.id),
+            "date_opened": "2026-02-20",
+        },
+    )
+
+    # Deposits
+    for case_id, amount in [
+        (case_company_a, "5000.00"),
+        (case_company_b, "2500.00"),
+        (case_person, "1000.00"),
+    ]:
+        await client.post(
+            f"/api/trust-funds/cases/{case_id}/transactions",
+            json={
+                "transaction_type": "deposit",
+                "amount": amount,
+                "description": "Storting",
+            },
+            headers=auth_headers,
+        )
+
+    response = await client.get("/api/trust-funds/overview", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert Decimal(data["totals"]["total_balance"]) == Decimal("8500.00")
+    assert data["totals"]["client_count"] == 2
+    assert data["totals"]["case_count"] == 3
+
+    clients_by_name = {c["contact_name"]: c for c in data["clients"]}
+    assert "Acme B.V." in clients_by_name
+    assert "Jan de Vries" in clients_by_name
+    assert Decimal(clients_by_name["Acme B.V."]["total_balance"]) == Decimal("7500.00")
+    assert clients_by_name["Acme B.V."]["case_count"] == 2
+    assert Decimal(clients_by_name["Jan de Vries"]["total_balance"]) == Decimal("1000.00")
+
+
+@pytest.mark.asyncio
+async def test_overview_only_nonzero_filter(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    """Cases that net to zero balance should be excluded by default."""
+    case_id = await create_case(client, auth_headers, case_payload)
+
+    # Deposit 1000 then disburse 1000 → net zero
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={"transaction_type": "deposit", "amount": "1000.00", "description": "Storting"},
+        headers=auth_headers,
+    )
+    resp = await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "disbursement",
+            "amount": "1000.00",
+            "description": "Uitbetaling",
+            "beneficiary_name": "Jan",
+            "beneficiary_iban": "NL02ABNA0123456789",
+        },
+        headers=auth_headers,
+    )
+    tx_id = resp.json()["id"]
+
+    # Approve (self-approval allowed in tests)
+    _, headers2 = await create_second_user(db, test_tenant)
+    _, headers3 = await create_third_user(db, test_tenant)
+    await client.post(f"/api/trust-funds/transactions/{tx_id}/approve", headers=headers2)
+    await client.post(f"/api/trust-funds/transactions/{tx_id}/approve", headers=headers3)
+
+    # Default: nonzero filter excludes zero-balance clients
+    resp = await client.get("/api/trust-funds/overview", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["totals"]["client_count"] == 0
+
+    # With only_nonzero=false the client still shows up
+    resp = await client.get(
+        "/api/trust-funds/overview?only_nonzero=false", headers=auth_headers
+    )
+    data = resp.json()
+    assert data["totals"]["client_count"] == 1
+    assert Decimal(data["clients"][0]["total_balance"]) == Decimal("0.00")
+
+
+@pytest.mark.asyncio
+async def test_overview_counts_pending_approvals(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    case_payload: dict,
+):
+    """Pending_approval transactions should be counted in the KPI."""
+    case_id = await create_case(client, auth_headers, case_payload)
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={"transaction_type": "deposit", "amount": "5000.00", "description": "Storting"},
+        headers=auth_headers,
+    )
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "disbursement",
+            "amount": "1000.00",
+            "description": "Uitbetaling",
+            "beneficiary_name": "Jan",
+            "beneficiary_iban": "NL02ABNA0123456789",
+        },
+        headers=auth_headers,
+    )
+
+    resp = await client.get("/api/trust-funds/overview", headers=auth_headers)
+    data = resp.json()
+    assert data["totals"]["pending_approval_count"] == 1
+    assert Decimal(data["totals"]["total_balance"]) == Decimal("5000.00")
+    assert Decimal(data["totals"]["total_pending_disbursements"]) == Decimal("1000.00")
+    # Client still appears because has nonzero balance
+    assert data["totals"]["client_count"] == 1
+    company = data["clients"][0]
+    assert Decimal(company["pending_disbursements"]) == Decimal("1000.00")

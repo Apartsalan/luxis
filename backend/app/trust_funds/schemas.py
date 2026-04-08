@@ -171,3 +171,43 @@ class TrustBalanceSummary(BaseModel):
     total_balance: Decimal
     pending_disbursements: Decimal
     available: Decimal  # total_balance - pending_disbursements
+
+
+# ── Cross-client overview ────────────────────────────────────────────────────
+
+
+class CaseTrustSummary(BaseModel):
+    """Per-case trust balance summary for the cross-client overview."""
+
+    case_id: uuid.UUID
+    case_number: str
+    case_description: str | None
+    total_balance: Decimal
+    pending_disbursements: Decimal
+    last_transaction_date: date | None
+
+
+class ClientTrustOverview(BaseModel):
+    """Aggregated trust balance for one client across all their cases."""
+
+    contact_id: uuid.UUID
+    contact_name: str
+    total_balance: Decimal
+    pending_disbursements: Decimal
+    case_count: int
+    cases: list[CaseTrustSummary]
+
+
+class TrustOverviewTotals(BaseModel):
+    """Tenant-wide trust totals shown at the top of the overview page."""
+
+    total_balance: Decimal
+    total_pending_disbursements: Decimal
+    client_count: int
+    case_count: int
+    pending_approval_count: int
+
+
+class TrustOverviewResponse(BaseModel):
+    totals: TrustOverviewTotals
+    clients: list[ClientTrustOverview]

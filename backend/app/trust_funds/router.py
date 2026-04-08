@@ -15,11 +15,27 @@ from app.trust_funds.schemas import (
     EligibleInvoice,
     TrustBalanceSummary,
     TrustOffsetCreate,
+    TrustOverviewResponse,
     TrustTransactionCreate,
     TrustTransactionRead,
 )
 
 router = APIRouter(prefix="/api/trust-funds", tags=["trust-funds"])
+
+
+# ── Cross-client Overview ────────────────────────────────────────────────────
+
+
+@router.get("/overview", response_model=TrustOverviewResponse)
+async def get_overview(
+    only_nonzero: bool = Query(default=True),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cross-client trust balance overview grouped per client."""
+    return await service.list_overview_by_client(
+        db, current_user.tenant_id, only_nonzero=only_nonzero
+    )
 
 
 # ── Transactions ─────────────────────────────────────────────────────────────

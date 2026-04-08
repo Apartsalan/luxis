@@ -95,18 +95,32 @@ export interface TrustTransactionUser {
   email: string;
 }
 
+export interface TrustInvoiceBrief {
+  id: string;
+  invoice_number: string;
+  total: number;
+  status: string;
+}
+
 export interface DerdengeldenTransaction {
   id: string;
   tenant_id: string;
   case_id: string;
   contact_id: string;
-  transaction_type: "deposit" | "disbursement";
+  transaction_type: "deposit" | "disbursement" | "offset_to_invoice";
   amount: number;
+  transaction_date: string;
   description: string;
   payment_method: string | null;
   reference: string | null;
   beneficiary_name: string | null;
   beneficiary_iban: string | null;
+  target_invoice_id: string | null;
+  consent_received_at: string | null;
+  consent_method: string | null;
+  consent_document_url: string | null;
+  consent_note: string | null;
+  reversed_by_id: string | null;
   status: "pending_approval" | "approved" | "rejected";
   approved_by_1: string | null;
   approved_at_1: string | null;
@@ -115,9 +129,23 @@ export interface DerdengeldenTransaction {
   created_by: string;
   created_at: string;
   updated_at: string;
+  target_invoice: TrustInvoiceBrief | null;
   creator: TrustTransactionUser;
   approver_1: TrustTransactionUser | null;
   approver_2: TrustTransactionUser | null;
+}
+
+export interface EligibleInvoice {
+  id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  total: number;
+  paid: number;
+  outstanding: number;
+  status: string;
+  case_id: string | null;
+  case_number: string | null;
 }
 
 export interface DerdengeldenBalance {
@@ -435,6 +463,8 @@ export function useApproveTrustTransaction() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
+      // Approval of an offset_to_invoice books an invoice payment
+      qc.invalidateQueries({ queryKey: ["invoices"] });
     },
   });
 }
@@ -454,6 +484,55 @@ export function useRejectTrustTransaction() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+}
+
+export function useEligibleInvoicesForOffset(caseId: string | undefined) {
+  return useQuery<EligibleInvoice[]>({
+    queryKey: ["trust-funds", caseId, "eligible-invoices"],
+    queryFn: async () => {
+      const res = await api(`/api/trust-funds/cases/${caseId}/eligible-invoices`);
+      if (!res.ok) throw new Error("Failed to fetch eligible invoices");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+export function useCreateTrustOffset() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      data,
+    }: {
+      caseId: string;
+      data: {
+        amount: string;
+        transaction_date?: string;
+        description: string;
+        target_invoice_id: string;
+        consent_received_at: string;
+        consent_method: "email" | "document" | "mondeling" | "anders";
+        consent_note: string;
+        consent_document_url?: string;
+      };
+    }) => {
+      const res = await api(`/api/trust-funds/cases/${caseId}/offsets`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Verrekening mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
     },
   });
 }

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Scale,
   ShieldCheck,
   Wallet,
   XCircle,
@@ -23,6 +24,7 @@ import {
 } from "@/hooks/use-collections";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { OffsetToInvoiceDialog } from "@/components/derdengelden/OffsetToInvoiceDialog";
 
 export function DerdengeldenTab({ caseId }: { caseId: string }) {
   const { data: txData, isLoading, isError, error, refetch } = useDerdengelden(caseId);
@@ -31,6 +33,7 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
   const approveTx = useApproveTrustTransaction();
   const rejectTx = useRejectTrustTransaction();
   const [showForm, setShowForm] = useState<"deposit" | "disbursement" | null>(null);
+  const [offsetOpen, setOffsetOpen] = useState(false);
   const [form, setForm] = useState({
     amount: "",
     description: "",
@@ -97,6 +100,30 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
     rejected: { label: "Afgewezen", className: "bg-red-50 text-red-700 ring-red-600/20" },
   };
 
+  const TYPE_META: Record<
+    string,
+    { label: string; className: string; icon: typeof ArrowDownLeft; sign: "+" | "-" }
+  > = {
+    deposit: {
+      label: "Storting",
+      className: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+      icon: ArrowDownLeft,
+      sign: "+",
+    },
+    disbursement: {
+      label: "Uitbetaling",
+      className: "bg-blue-50 text-blue-700 ring-blue-600/20",
+      icon: ArrowUpRight,
+      sign: "-",
+    },
+    offset_to_invoice: {
+      label: "Verrekening",
+      className: "bg-violet-50 text-violet-700 ring-violet-600/20",
+      icon: Scale,
+      sign: "-",
+    },
+  };
+
   const pendingCount = transactions.filter((t) => t.status === "pending_approval").length;
 
   return (
@@ -144,7 +171,7 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={() => setShowForm(showForm === "deposit" ? null : "deposit")}
           className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
@@ -159,7 +186,27 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
           <ArrowUpRight className="h-3.5 w-3.5" />
           Uitbetaling
         </button>
+        <button
+          onClick={() => setOffsetOpen(true)}
+          disabled={!balance || balance.available <= 0}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={
+            !balance || balance.available <= 0
+              ? "Geen beschikbaar saldo om te verrekenen"
+              : "Verrekenen met factuur van dezelfde cliënt"
+          }
+        >
+          <Scale className="h-3.5 w-3.5" />
+          Verrekenen met factuur
+        </button>
       </div>
+
+      <OffsetToInvoiceDialog
+        caseId={caseId}
+        open={offsetOpen}
+        onClose={() => setOffsetOpen(false)}
+        availableBalance={balance?.available ?? 0}
+      />
 
       {/* Transaction form */}
       {showForm && (
@@ -326,26 +373,20 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
             <tbody className="divide-y divide-border">
               {transactions.map((tx) => {
                 const badge = STATUS_BADGE[tx.status] || STATUS_BADGE.pending_approval;
+                const meta = TYPE_META[tx.transaction_type] || TYPE_META.deposit;
                 const isDeposit = tx.transaction_type === "deposit";
+                const Icon = meta.icon;
                 return (
                   <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
-                      {formatDateShort(tx.created_at)}
+                      {formatDateShort(tx.transaction_date || tx.created_at)}
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                          isDeposit
-                            ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
-                            : "bg-blue-50 text-blue-700 ring-blue-600/20"
-                        }`}
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${meta.className}`}
                       >
-                        {isDeposit ? (
-                          <ArrowDownLeft className="h-3 w-3" />
-                        ) : (
-                          <ArrowUpRight className="h-3 w-3" />
-                        )}
-                        {isDeposit ? "Storting" : "Uitbetaling"}
+                        <Icon className="h-3 w-3" />
+                        {meta.label}
                       </span>
                     </td>
                     <td
@@ -353,7 +394,7 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
                         isDeposit ? "text-emerald-600" : "text-foreground"
                       }`}
                     >
-                      {isDeposit ? "+" : "-"}
+                      {meta.sign}
                       {formatCurrency(tx.amount)}
                     </td>
                     <td className="hidden md:table-cell px-4 py-3">
@@ -362,6 +403,11 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
                       </p>
                       {tx.beneficiary_name && (
                         <p className="text-xs text-muted-foreground">&rarr; {tx.beneficiary_name}</p>
+                      )}
+                      {tx.target_invoice && (
+                        <p className="text-xs text-violet-700">
+                          → factuur {tx.target_invoice.invoice_number}
+                        </p>
                       )}
                     </td>
                     <td className="px-4 py-3">

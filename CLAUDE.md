@@ -234,7 +234,16 @@ Ga NOOIT door naar de volgende taak met een kapotte vorige taak.
 - **Deploy (autonoom NA groene tests):** build + restart containers na commit+push
 - **Destructieve acties (ALTIJD bevestiging vragen):** volumes verwijderen, database wissen, `rm -rf`, rollback migraties
 - **VERPLICHT: Na elke afgeronde feature die gecommit en gepusht is, deploy AUTOMATISCH via SSH.** Geen deploy-commando meer aan de gebruiker geven — Claude doet het zelf.
-- Deploy commando: `ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && docker compose build --no-cache [service] && docker compose up -d [service]"`
+- **Standaard deploy commando (GEEN `--no-cache`):**
+  ```
+  ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && docker compose build [service] && docker compose up -d [service] && docker image prune -f"
+  ```
+- **`--no-cache` ALLEEN gebruiken wanneer:**
+  - `pyproject.toml` of `package-lock.json` gewijzigd is EN je 100% zeker wilt zijn dat deps opnieuw geïnstalleerd worden
+  - Base image is opgewaardeerd (FROM-regel gewijzigd)
+  - Echte cache-corruption debugging
+  - **Nooit "voor de zekerheid"** — dat vult de disk in sessie-tempo (sessie 120 incident: 120GB build-cache opgestapeld over 4 sessies → Postgres crash-loop)
+- **`docker image prune -f` (zónder `-a`) na elke deploy is VEILIG:** ruimt alleen dangling images op die net door de nieuwe build zijn vervangen. Laat tagged rollback-images met rust.
 - Vermeld na deploy altijd of het backend/frontend/beide was en of er migraties gedraaid zijn.
 
 **Roadmap bijwerken (HARDE REGEL):**
@@ -254,7 +263,13 @@ Ga NOOIT door naar de volgende taak met een kapotte vorige taak.
 **Git tag per sessie (HARDE REGEL):**
 - **VERPLICHT: Aan het einde van ELKE sessie een git tag zetten:** `git tag -a vN-stable -m "Sessie N — [onderwerp]" && git push origin vN-stable`
 - Dit is het vangnet — als een volgende sessie iets kapot maakt, kan altijd worden teruggerold naar de vorige tag.
-- Draai NOOIT `docker image prune` of `docker system prune` op de VPS — vorige images zijn nodig voor rollback.
+- Draai NOOIT `docker image prune -a` of `docker system prune` op de VPS — die verwijderen tagged rollback-images.
+- `docker image prune -f` (zónder `-a`) en `docker builder prune` zijn WEL veilig: zie "Deployment via SSH" hierboven.
+
+**Disk-pressure bewaking:**
+- `scripts/disk_guard.sh` draait elk uur via cron op de VPS. Bij >85% disk: safe prune. Bij >95%: emergency prune (alleen build-cache + dangling, nooit tagged images).
+- Weekly cron op zondag 04:00: `docker builder prune -f --filter "until=168h"` ruimt build-cache ouder dan 7 dagen op.
+- Log: `/var/log/luxis-disk.log` — check periodiek of het "WARNING" of "ALERT" regels heeft.
 
 ## Context Management
 

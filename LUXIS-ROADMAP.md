@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 7 april 2026 (sessie 117 MEGA — 19 demo-items afgerond uit Lisanne's demo-feedback)
+**Laatst bijgewerkt:** 8 april 2026 (sessie 119 — Derdengelden afronding: top-level pagina + NOvA CSV exports + SEPA pain.001 export + shadow-copy opgeruimd)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -783,7 +783,7 @@ Bron: live demo met Lisanne 7-4-2026. Notities gecategoriseerd in 7 groepen. 2 p
 | DF117-18 | **Creditnota eigen uren: bedrag-optie** — keuze tussen aantal×tarief OF los bedrag | ❌ TODO |
 | DF117-19 | **Klik op debiteur → openstaande facturen direct** — niet de algemene relatie-detail | ❌ TODO |
 | DF117-20 | **Batch dossier-aanmaak** — meerdere zaken tegelijk via email | ✅ Sessie 117 — POST `/api/intake/approve-batch` met per-item failure handling, frontend checkboxes + select-all + action bar op pending_review tab, 2 nieuwe tests (3 succesvol + partial failure) |
-| DF117-21 | **Derdengelden-rekening + verrekening met eigen nota** — Lisanne ontvangt op derdengeldrekening, soms doorstorten, soms verrekenen. Vereist eigen module-onderzoek (Stichting Derdengelden, juridische verrekeningsregels) | ✅ Sessie 118 (8 apr) — verrekening-flow met cliënt-toestemming (Voda art. 6.19 lid 5) + consolidatie van twee parallelle systemen op `trust_funds`. Nog open: top-level overzichtspagina, NOvA-rapporten, SEPA-export, opruimen `backend/app/app/` shadow-copy. |
+| DF117-21 | **Derdengelden-rekening + verrekening met eigen nota** — Lisanne ontvangt op derdengeldrekening, soms doorstorten, soms verrekenen. Vereist eigen module-onderzoek (Stichting Derdengelden, juridische verrekeningsregels) | ✅ COMPLEET — Sessie 118: verrekening-flow met cliënt-toestemming (Voda art. 6.19 lid 5) + consolidatie van twee parallelle systemen op `trust_funds`. Sessie 119: top-level `/derdengelden` overzichtspagina (cross-cliënt aggregatie), NOvA mutatieoverzicht + saldolijst CSV exports, SEPA pain.001.001.03 export voor uitbetalingen vanaf Stichting Derdengelden Rabobank-rekening, en `backend/app/app/` shadow-copy verwijderd. 26/26 trust_funds tests groen. Nog open voor latere sessie: MT940 bank-import voor de Stichting Derdengelden rekening (auto-deposits). |
 | DF117-22 | **Standaard incassokosten per klant** — net als de standaard rente per klant (DF117-02): op Contact instelbaar als vast bedrag of percentage van hoofdsom, en automatisch overgenomen bij nieuw dossier (per dossier wijzigbaar). Volgt exact het inheritance-patroon van DF117-02. Backend: 2 nieuwe Contact-velden + migratie + create_case inheritance. Frontend: relaties/nieuw form + ContactInfoSection edit + zaken/nieuw "overgenomen van klant" hint + FinancieelTab indicator | ❌ TODO |
 
 ### Feature & UX Audit (sessie 113, 29 maart 2026)

@@ -1,8 +1,60 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 8 april 2026 (sessie 118 — DF117-21 derdengelden verrekening + consolidatie)
-**Laatste feature/fix:** Sessie 118 — verrekening derdengelden ↔ eigen factuur met cliënt-toestemming (Voda art. 6.19 lid 5)
-**Volgende sessie:** 119 — Arsalan beslist bij start. Mogelijke vervolgen op DF117-21: top-level "Derdengelden" sidebar-pagina, NOvA-rapporten, SEPA-export voor uitbetalingen.
+**Laatst bijgewerkt:** 8 april 2026 (sessie 119 — Derdengelden afronding: overzicht, NOvA, SEPA, opruimen)
+**Laatste feature/fix:** Sessie 119 — top-level Derdengelden pagina + NOvA CSV exports + SEPA pain.001 export + shadow-copy verwijderd
+**Volgende sessie:** 120 — Arsalan beslist bij start. Mogelijke vervolgen: MT940 bank-import voor Stichting Derdengelden, M0b (Lisanne overzetten naar M365), of nieuwe demo-feedback van Lisanne.
+
+## Wat er gedaan is (sessie 119 — 8 april 2026) — Derdengelden afronding
+
+**Doel:** alle resterende derdengelden-werkpunten uit sessie 118 in één sessie afronden zodat Lisanne een volwaardig Stichting Derdengelden beheer-scherm heeft.
+
+**4 onafhankelijke commits:**
+
+1. `5f50f1a` — chore(backend): remove stale shadow-copy `backend/app/app/`
+   - 148 bestanden verwijderd, 0 imports waren nog in gebruik
+   - 15/15 trust_funds tests groen na removal
+
+2. `e787372` — feat(trust-funds): cross-client Derdengelden overview page
+   - Backend: `list_overview_by_client()` + `GET /api/trust-funds/overview` dat per cliënt aggregeert (totaal saldo, pending, dossier-count, last_transaction_date). Hergebruikt dezelfde filter-semantics als `get_balance()`.
+   - Schemas: `ClientTrustOverview`, `CaseTrustSummary`, `TrustOverviewTotals`, `TrustOverviewResponse`
+   - Frontend: nieuwe `/derdengelden` route onder Financieel in sidebar (PiggyBank icon), 4 KPI tiles, zoek+filter, expandable client-rows met deep links naar dossiers
+   - 3 nieuwe tests: aggregate per client, only_nonzero filter, pending count KPI
+
+3. `e8f4f21` — feat(trust-funds): NOvA mutatieoverzicht + saldolijst CSV exports
+   - `GET /api/trust-funds/reports/mutaties.csv?from=&to=` (alle transacties incl pending/rejected/reversed flag, alle goedkeurders, verrekende factuur-velden)
+   - `GET /api/trust-funds/reports/saldolijst.csv?date=` (saldo per cliënt op peildatum, met TOTAAL-regel)
+   - Beide CSV's: semicolon-delimited + UTF-8 BOM + Dutch comma-decimal voor Excel/Numbers
+   - Frontend: 2 download-knoppen rechtsboven met date-range/peildatum modal, blob-download
+   - 3 nieuwe tests
+
+4. `2c43151` — feat(trust-funds): SEPA pain.001 export for approved disbursements
+   - Nieuwe dep: `sepaxml>=2.6.0` (mature MIT lib)
+   - Migratie `df119`: `trust_account_iban/holder/bic` op tenants + `sepa_exported_at/sepa_batch_id` op trust_transactions
+   - Nieuw bestand `backend/app/trust_funds/sepa.py` — `build_sepa_xml()`
+   - Service: `list_sepa_pending()` + `export_sepa_batch()` (atomair markeren zodat zelfde transacties niet 2× kunnen worden geëxporteerd)
+   - Endpoints: `GET /sepa/pending` en `POST /sepa/export`
+   - Settings: `trust_account_*` velden via tenant settings (Pydantic + frontend hook)
+   - Instellingen UI: nieuwe sectie "Stichting Derdengelden" in Kantoor-tab met IBAN/holder/BIC velden (auto-uppercase)
+   - Tweede tab "SEPA-uitbetalingen" op /derdengelden met selecteerbare lijst, datum-picker, totaal-preview en blob-download
+   - 5 nieuwe tests: pending list, export markeert + retourneert XML, rejection van eerder geëxporteerde, missing trust account, pending transactie
+
+**Tests:** 26/26 trust_funds tests groen (15 base + 3 overview + 3 CSV + 5 SEPA). 33/33 trust_funds + settings.
+
+**Migraties:** `df11802a → df119` (alembic head)
+
+**Verificatie:** `npx tsc --noEmit` 0 errors per commit. Backend pytest groen per commit. Alle 4 commits gepushed naar main + gedeployed naar VPS via SSH met `--no-cache` build.
+
+**Bekende issues:**
+- `test_invoice_payments.py` blijft gebroken (pre-existing, sessie 118) — `/api/invoices/{id}/send` vereist echte SMTP, niet gefixt
+- Pre-existing 54 ruff errors in backend/app/main.py imports (sessie 119 voegde geen nieuwe toe)
+
+**Buiten scope (voor latere sessie):**
+- MT940 bank-import voor Stichting Derdengelden rekening (om automatisch deposits aan te maken)
+- IBAN-validatie regex aan de backend kant (frontend doet alleen uppercase)
+- SEPA-batch historie pagina met undo-export functie
+- Self-approval flag via UI ipv env-var
+
+
 
 ## Wat er gedaan is (sessie 118 — 8 april 2026) — DF117-21 Derdengelden verrekening + consolidatie
 

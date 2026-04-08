@@ -1,4 +1,4 @@
-"""Collections module service — Claims, Payments, Arrangements, Derdengelden."""
+"""Collections module service — Claims, Payments, Arrangements."""
 
 import uuid
 from datetime import date
@@ -11,7 +11,6 @@ from app.cases.models import Case
 from app.collections.interest import calculate_case_interest
 from app.collections.models import (
     Claim,
-    Derdengelden,
     InterestRate,
     Payment,
     PaymentArrangement,
@@ -23,7 +22,6 @@ from app.collections.schemas import (
     ArrangementUpdate,
     ClaimCreate,
     ClaimUpdate,
-    DerdengeldenCreate,
     PaymentCreate,
     PaymentUpdate,
     RecordInstallmentPayment,
@@ -768,79 +766,6 @@ async def mark_overdue_installments(db: AsyncSession) -> int:
     return len(installments)
 
 
-# ── Derdengelden ─────────────────────────────────────────────────────────────
-
-
-async def list_derdengelden(
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    case_id: uuid.UUID,
-) -> list[Derdengelden]:
-    """List derdengelden transactions for a case."""
-    result = await db.execute(
-        select(Derdengelden)
-        .where(
-            Derdengelden.tenant_id == tenant_id,
-            Derdengelden.case_id == case_id,
-        )
-        .order_by(Derdengelden.transaction_date.desc())
-    )
-    return list(result.scalars().all())
-
-
-async def create_derdengelden(
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    case_id: uuid.UUID,
-    data: DerdengeldenCreate,
-    user_id: uuid.UUID | None = None,
-) -> Derdengelden:
-    """Register a derdengelden transaction.
-
-    Triggers audit trail logging for deposits.
-    """
-    transaction = Derdengelden(
-        tenant_id=tenant_id,
-        case_id=case_id,
-        **data.model_dump(),
-    )
-    db.add(transaction)
-    await db.flush()
-    await db.refresh(transaction)
-
-    # Workflow hook: log deposit in audit trail
-    if data.transaction_type == "deposit":
-        from app.workflow.hooks import on_derdengelden_deposit
-
-        await on_derdengelden_deposit(db, tenant_id, case_id, data.amount, user_id)
-
-    return transaction
-
-
-async def get_derdengelden_balance(
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    case_id: uuid.UUID,
-) -> dict:
-    """Calculate derdengelden balance for a case."""
-    transactions = await list_derdengelden(db, tenant_id, case_id)
-
-    total_deposits = Decimal("0")
-    total_withdrawals = Decimal("0")
-
-    for t in transactions:
-        if t.transaction_type == "deposit":
-            total_deposits += t.amount
-        else:
-            total_withdrawals += t.amount
-
-    return {
-        "total_deposits": total_deposits,
-        "total_withdrawals": total_withdrawals,
-        "balance": total_deposits - total_withdrawals,
-    }
-
-
 # ── Interest Rates (reference data) ─────────────────────────────────────────
 
 
@@ -871,7 +796,7 @@ async def get_financial_summary(
 ) -> dict:
     """Build a complete financial summary for a case.
 
-    Combines: claims + interest + BIK + payments + derdengelden
+    Combines: claims + interest + BIK + payments + trust funds (derdengelden)
     """
     if calc_date is None:
         calc_date = date.today()
@@ -925,8 +850,10 @@ async def get_financial_summary(
     grand_total = total_principal + total_interest + total_bik
     total_outstanding = grand_total - total_paid
 
-    # Derdengelden
-    derdengelden = await get_derdengelden_balance(db, tenant_id, case_id)
+    # Derdengelden (trust funds)
+    from app.trust_funds.service import get_balance as get_trust_balance
+
+    trust_balance = await get_trust_balance(db, tenant_id, case_id)
 
     return {
         "case_id": str(case_id),
@@ -945,6 +872,6 @@ async def get_financial_summary(
         "grand_total": grand_total,
         "total_paid": total_paid,
         "total_outstanding": total_outstanding,
-        "derdengelden_balance": derdengelden["balance"],
+        "derdengelden_balance": trust_balance.total_balance,
         "interest_details": interest_result,
     }

@@ -142,36 +142,6 @@ class RecordInstallmentPayment(BaseModel):
     notes: str | None = None
 
 
-# ── Derdengelden Schemas ─────────────────────────────────────────────────────
-
-
-class DerdengeldenCreate(BaseModel):
-    transaction_type: str = Field(..., pattern="^(deposit|withdrawal)$")
-    amount: Decimal = Field(..., gt=0, decimal_places=2)
-    transaction_date: date
-    description: str | None = None
-    counterparty: str | None = None
-
-
-class DerdengeldenResponse(BaseModel):
-    id: uuid.UUID
-    case_id: uuid.UUID
-    transaction_type: str
-    amount: Decimal
-    transaction_date: date
-    description: str | None
-    counterparty: str | None
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class DerdengeldenBalance(BaseModel):
-    total_deposits: Decimal
-    total_withdrawals: Decimal
-    balance: Decimal
-
-
 # ── Interest Rate Schemas ────────────────────────────────────────────────────
 
 

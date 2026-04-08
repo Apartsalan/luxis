@@ -97,7 +97,7 @@ class PaymentMatchOut(BaseModel):
     # Execution
     executed_at: datetime | None = None
     payment_id: uuid.UUID | None = None
-    derdengelden_id: uuid.UUID | None = None
+    trust_transaction_id: uuid.UUID | None = None
 
     created_at: datetime
 

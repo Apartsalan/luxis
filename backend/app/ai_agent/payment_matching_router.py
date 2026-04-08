@@ -247,7 +247,7 @@ async def execute_payment_match(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Execute an approved match (create derdengelden + payment)."""
+    """Execute an approved match (create trust fund deposit + payment)."""
     match = await execute_match(db, current_user.tenant_id, match_id, current_user.id)
     if not match:
         raise HTTPException(

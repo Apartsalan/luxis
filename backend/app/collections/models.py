@@ -1,4 +1,4 @@
-"""Collections module models — Claims, Payments, Arrangements, Derdengelden, InterestRate.
+"""Collections module models — Claims, Payments, Arrangements, InterestRate.
 
 This is the core of the incasso system. All financial amounts use
 NUMERIC(15,2) for exact precision — never use float for money.
@@ -171,29 +171,6 @@ class PaymentArrangementInstallment(TenantBase):
     )  # pending | paid | partial | overdue | missed | waived
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-
-class Derdengelden(TenantBase):
-    """Third-party funds (derdengelden) account transactions.
-
-    Money held on behalf of clients, tracked per case.
-    Must always balance: deposits = withdrawals + remaining balance.
-    """
-
-    __tablename__ = "derdengelden"
-
-    case_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("cases.id"), nullable=False)
-
-    transaction_type: Mapped[str] = mapped_column(String(20), nullable=False)  # deposit, withdrawal
-
-    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
-
-    transaction_date: Mapped[date] = mapped_column(Date, nullable=False)
-
-    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
-
-    # Who received/paid (for withdrawals: to client or creditor)
-    counterparty: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class InterestRate(Base, TimestampMixin):

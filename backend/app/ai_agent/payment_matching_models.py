@@ -146,7 +146,7 @@ class PaymentMatch(TenantBase):
     """A proposed match between a bank transaction and an incasso case.
 
     Generated automatically by the matching algorithm, then reviewed
-    by the lawyer. On execution, creates a derdengelden deposit +
+    by the lawyer. On execution, creates a trust fund deposit (derdengelden) +
     payment record with art. 6:44 BW distribution.
     """
 
@@ -183,8 +183,8 @@ class PaymentMatch(TenantBase):
     payment_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("payments.id"), nullable=True
     )
-    derdengelden_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("derdengelden.id"), nullable=True
+    trust_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("trust_transactions.id"), nullable=True
     )
 
     # Relationships

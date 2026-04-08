@@ -31,8 +31,10 @@ from app.ai_agent.payment_matching_schemas import (
 )
 from app.cases.models import Case
 from app.collections.models import Claim
-from app.collections.schemas import DerdengeldenCreate, PaymentCreate
-from app.collections.service import create_derdengelden, create_payment
+from app.collections.schemas import PaymentCreate
+from app.collections.service import create_payment
+from app.trust_funds.schemas import TrustTransactionCreate
+from app.trust_funds.service import create_transaction as create_trust_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +275,7 @@ def _match_to_response(match: PaymentMatch) -> PaymentMatchOut:
         review_note=match.review_note,
         executed_at=match.executed_at,
         payment_id=match.payment_id,
-        derdengelden_id=match.derdengelden_id,
+        trust_transaction_id=match.trust_transaction_id,
         created_at=match.created_at,
     )
 
@@ -586,7 +588,7 @@ async def execute_match(
     """Execute an approved match.
 
     Creates:
-    1. A derdengelden deposit (money received on trust account)
+    1. A trust fund deposit (derdengelden — money received on trust account)
     2. A payment record with art. 6:44 BW distribution
 
     The existing create_payment() handles the art. 6:44 BW distribution
@@ -614,24 +616,27 @@ async def execute_match(
         await db.flush()
         return match
 
-    # 1. Create derdengelden deposit
-    derdengelden_data = DerdengeldenCreate(
+    # 1. Create trust fund deposit (derdengelden)
+    counterparty = txn.counterparty_name or "Onbekend"
+    description = f"Bankimport: {counterparty}"
+    if txn.description:
+        description = f"{description} - {txn.description}"
+    trust_data = TrustTransactionCreate(
         transaction_type="deposit",
         amount=txn.amount,
-        transaction_date=txn.transaction_date,
-        description=f"Bankimport: {txn.counterparty_name or 'Onbekend'} - {txn.description or ''}",
-        counterparty=txn.counterparty_name,
+        description=description,
+        payment_method="bank",
     )
-    derdengelden = await create_derdengelden(
-        db, tenant_id, match.case_id, derdengelden_data, user_id
+    trust_tx = await create_trust_transaction(
+        db, tenant_id, match.case_id, user_id, trust_data
     )
-    match.derdengelden_id = derdengelden.id
+    match.trust_transaction_id = trust_tx.id
 
     # 2. Create payment with art. 6:44 BW distribution
     payment_data = PaymentCreate(
         amount=txn.amount,
         payment_date=txn.transaction_date,
-        description=f"Bankimport: {txn.counterparty_name or 'Onbekend'}",
+        description=f"Bankimport: {counterparty}",
         payment_method="bank",
     )
     payment = await create_payment(db, tenant_id, match.case_id, payment_data, user_id)
@@ -643,10 +648,10 @@ async def execute_match(
     await db.flush()
 
     logger.info(
-        "Match executed: txn %s -> case %s (derdengelden=%s, payment=%s)",
+        "Match executed: txn %s -> case %s (trust_tx=%s, payment=%s)",
         txn.id,
         match.case_id,
-        derdengelden.id,
+        trust_tx.id,
         payment.id,
     )
 

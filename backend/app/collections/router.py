@@ -1,4 +1,4 @@
-"""Collections module endpoints — Claims, Payments, Interest, BIK, Derdengelden."""
+"""Collections module endpoints — Claims, Payments, Interest, BIK."""
 
 import uuid
 from datetime import date
@@ -18,9 +18,6 @@ from app.collections.schemas import (
     ClaimCreate,
     ClaimResponse,
     ClaimUpdate,
-    DerdengeldenBalance,
-    DerdengeldenCreate,
-    DerdengeldenResponse,
     InstallmentResponse,
     InterestRateResponse,
     PaymentCreate,
@@ -422,49 +419,6 @@ async def waive_installment(
     return await service.waive_installment(
         db, current_user.tenant_id, arrangement_id, installment_id
     )
-
-
-# ── Derdengelden ─────────────────────────────────────────────────────────────
-
-
-@router.get("/derdengelden", response_model=list[DerdengeldenResponse])
-async def list_derdengelden(
-    case_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """List derdengelden transactions for a case."""
-    await get_case(db, current_user.tenant_id, case_id)
-    return await service.list_derdengelden(db, current_user.tenant_id, case_id)
-
-
-@router.post(
-    "/derdengelden",
-    response_model=DerdengeldenResponse,
-    status_code=http_status.HTTP_201_CREATED,
-)
-async def create_derdengelden(
-    case_id: uuid.UUID,
-    data: DerdengeldenCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Register a derdengelden transaction."""
-    await get_case(db, current_user.tenant_id, case_id)
-    return await service.create_derdengelden(
-        db, current_user.tenant_id, case_id, data, current_user.id
-    )
-
-
-@router.get("/derdengelden/balance", response_model=DerdengeldenBalance)
-async def derdengelden_balance(
-    case_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get derdengelden balance for a case."""
-    await get_case(db, current_user.tenant_id, case_id)
-    return await service.get_derdengelden_balance(db, current_user.tenant_id, case_id)
 
 
 # ── Financial Summary ────────────────────────────────────────────────────────

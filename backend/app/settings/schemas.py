@@ -17,6 +17,9 @@ class TenantSettingsResponse(BaseModel):
     postal_code: str | None = None
     city: str | None = None
     iban: str | None = None
+    trust_account_iban: str | None = None
+    trust_account_holder: str | None = None
+    trust_account_bic: str | None = None
     phone: str | None = None
     email: str | None = None
     modules_enabled: list[str] = []
@@ -32,6 +35,9 @@ class TenantSettingsUpdate(BaseModel):
     postal_code: str | None = None
     city: str | None = None
     iban: str | None = None
+    trust_account_iban: str | None = None
+    trust_account_holder: str | None = None
+    trust_account_bic: str | None = None
     phone: str | None = None
     email: str | None = None
     modules_enabled: list[str] | None = None

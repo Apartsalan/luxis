@@ -211,3 +211,30 @@ class TrustOverviewTotals(BaseModel):
 class TrustOverviewResponse(BaseModel):
     totals: TrustOverviewTotals
     clients: list[ClientTrustOverview]
+
+
+# ── SEPA export ──────────────────────────────────────────────────────────────
+
+
+class SepaExportRequest(BaseModel):
+    """Request body for generating a SEPA pain.001 batch."""
+
+    transaction_ids: list[uuid.UUID] = Field(..., min_length=1)
+    execution_date: date
+
+
+class SepaPendingTransaction(BaseModel):
+    """A disbursement that is approved and ready for SEPA export."""
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    case_number: str
+    contact_id: uuid.UUID
+    contact_name: str
+    transaction_date: date
+    amount: Decimal
+    description: str
+    beneficiary_name: str | None
+    beneficiary_iban: str | None
+    sepa_exported_at: datetime | None
+    sepa_batch_id: uuid.UUID | None

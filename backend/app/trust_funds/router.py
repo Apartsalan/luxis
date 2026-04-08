@@ -15,6 +15,8 @@ from app.shared.pagination import PaginatedResponse
 from app.trust_funds import service
 from app.trust_funds.schemas import (
     EligibleInvoice,
+    SepaExportRequest,
+    SepaPendingTransaction,
     TrustBalanceSummary,
     TrustOffsetCreate,
     TrustOverviewResponse,
@@ -143,6 +145,49 @@ async def reject_transaction(
         db, current_user.tenant_id, transaction_id, current_user.id
     )
     return transaction
+
+
+# ── SEPA Export ──────────────────────────────────────────────────────────────
+
+
+@router.get("/sepa/pending", response_model=list[SepaPendingTransaction])
+async def list_sepa_pending(
+    include_exported: bool = Query(default=False),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List approved disbursements that can be exported as SEPA batch."""
+    return await service.list_sepa_pending(
+        db, current_user.tenant_id, include_exported=include_exported
+    )
+
+
+@router.post("/sepa/export")
+async def export_sepa_batch(
+    payload: SepaExportRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate a SEPA pain.001.001.03 XML batch and download as file.
+
+    Marks all included transactions as exported. The XML can be uploaded
+    to the bank portal (Rabobank zakelijk for Kesting Legal).
+    """
+    xml_bytes, batch_id = await service.export_sepa_batch(
+        db,
+        current_user.tenant_id,
+        payload.transaction_ids,
+        payload.execution_date,
+    )
+    filename = f"sepa-derdengelden-{payload.execution_date.isoformat()}.xml"
+    return Response(
+        content=xml_bytes,
+        media_type="application/xml",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Sepa-Batch-Id": str(batch_id),
+        },
+    )
 
 
 # ── NOvA Reports (CSV) ───────────────────────────────────────────────────────

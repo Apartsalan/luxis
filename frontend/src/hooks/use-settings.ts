@@ -15,6 +15,9 @@ export interface TenantDetail {
   postal_code: string | null;
   city: string | null;
   iban: string | null;
+  trust_account_iban: string | null;
+  trust_account_holder: string | null;
+  trust_account_bic: string | null;
   phone: string | null;
   email: string | null;
   modules_enabled: string[];
@@ -38,6 +41,9 @@ export interface UpdateTenantData {
   postal_code?: string | null;
   city?: string | null;
   iban?: string | null;
+  trust_account_iban?: string | null;
+  trust_account_holder?: string | null;
+  trust_account_bic?: string | null;
   phone?: string | null;
   email?: string | null;
   modules_enabled?: string[];

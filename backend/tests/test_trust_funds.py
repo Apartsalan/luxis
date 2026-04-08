@@ -997,3 +997,224 @@ async def test_saldolijst_excludes_pending_and_reversed(
     # Saldo blijft 2000 want disbursement is nog niet approved
     assert "2000,00" in body
     assert "1500,00" not in body
+
+
+# ── SEPA Export ──────────────────────────────────────────────────────────────
+
+
+async def _setup_approved_disbursement(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    case_id: str,
+    *,
+    amount: str = "1000.00",
+    beneficiary_name: str = "Jan de Vries",
+    beneficiary_iban: str = "NL02ABNA0123456789",
+) -> str:
+    """Helper: deposit funds, create disbursement, approve with two directors."""
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "10000.00",
+            "description": "Storting voor SEPA test",
+        },
+        headers=auth_headers,
+    )
+    resp = await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "disbursement",
+            "amount": amount,
+            "description": "Uitbetaling derdengelden",
+            "beneficiary_name": beneficiary_name,
+            "beneficiary_iban": beneficiary_iban,
+        },
+        headers=auth_headers,
+    )
+    tx_id = resp.json()["id"]
+    _, h2 = await create_second_user(db, test_tenant)
+    _, h3 = await create_third_user(db, test_tenant)
+    await client.post(f"/api/trust-funds/transactions/{tx_id}/approve", headers=h2)
+    await client.post(f"/api/trust-funds/transactions/{tx_id}/approve", headers=h3)
+    return tx_id
+
+
+async def _set_trust_account(db: AsyncSession, tenant: Tenant) -> None:
+    tenant.trust_account_iban = "NL44RABO0123456789"
+    tenant.trust_account_holder = "Stichting Derdengelden Kesting Legal"
+    tenant.trust_account_bic = "RABONL2U"
+    await db.commit()
+
+
+@pytest.mark.asyncio
+async def test_sepa_pending_lists_approved_disbursements(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    case_id = await create_case(client, auth_headers, case_payload)
+    tx_id = await _setup_approved_disbursement(
+        client, auth_headers, db, test_tenant, case_id
+    )
+
+    resp = await client.get("/api/trust-funds/sepa/pending", headers=auth_headers)
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) == 1
+    assert items[0]["id"] == tx_id
+    assert items[0]["beneficiary_iban"] == "NL02ABNA0123456789"
+    assert items[0]["sepa_exported_at"] is None
+
+
+@pytest.mark.asyncio
+async def test_sepa_export_marks_transactions_and_returns_xml(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    case_id = await create_case(client, auth_headers, case_payload)
+    tx_id = await _setup_approved_disbursement(
+        client, auth_headers, db, test_tenant, case_id, amount="1234.56"
+    )
+    await _set_trust_account(db, test_tenant)
+
+    resp = await client.post(
+        "/api/trust-funds/sepa/export",
+        json={
+            "transaction_ids": [tx_id],
+            "execution_date": "2026-04-15",
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/xml")
+    body = resp.content.decode("utf-8")
+    # Validate key SEPA fields
+    assert "pain.001.001.03" in body
+    assert "<CtrlSum>1234.56</CtrlSum>" in body
+    assert "NL44RABO0123456789" in body  # debtor (initiator)
+    assert "NL02ABNA0123456789" in body  # creditor
+    assert "2026-04-15" in body  # execution date
+    assert "Jan de Vries" in body
+    assert "RABONL2U" in body  # debtor BIC
+
+    # After export, the pending list should be empty
+    resp = await client.get("/api/trust-funds/sepa/pending", headers=auth_headers)
+    assert len(resp.json()) == 0
+
+    # And include_exported should still show it
+    resp = await client.get(
+        "/api/trust-funds/sepa/pending?include_exported=true", headers=auth_headers
+    )
+    items = resp.json()
+    assert len(items) == 1
+    assert items[0]["sepa_exported_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_sepa_export_rejects_already_exported(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    case_id = await create_case(client, auth_headers, case_payload)
+    tx_id = await _setup_approved_disbursement(
+        client, auth_headers, db, test_tenant, case_id
+    )
+    await _set_trust_account(db, test_tenant)
+
+    # First export succeeds
+    resp1 = await client.post(
+        "/api/trust-funds/sepa/export",
+        json={"transaction_ids": [tx_id], "execution_date": "2026-04-15"},
+        headers=auth_headers,
+    )
+    assert resp1.status_code == 200
+
+    # Second export of the same id fails
+    resp2 = await client.post(
+        "/api/trust-funds/sepa/export",
+        json={"transaction_ids": [tx_id], "execution_date": "2026-04-16"},
+        headers=auth_headers,
+    )
+    assert resp2.status_code == 400
+    assert "al opgenomen" in resp2.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_sepa_export_requires_trust_account_settings(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    case_id = await create_case(client, auth_headers, case_payload)
+    tx_id = await _setup_approved_disbursement(
+        client, auth_headers, db, test_tenant, case_id
+    )
+    # Trust account NOT set on tenant
+
+    resp = await client.post(
+        "/api/trust-funds/sepa/export",
+        json={"transaction_ids": [tx_id], "execution_date": "2026-04-15"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400
+    assert "bank-gegevens ontbreken" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_sepa_export_rejects_pending_transaction(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    case_id = await create_case(client, auth_headers, case_payload)
+    # Deposit + pending disbursement (no approval)
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "deposit",
+            "amount": "5000.00",
+            "description": "Storting",
+        },
+        headers=auth_headers,
+    )
+    resp = await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "disbursement",
+            "amount": "1000.00",
+            "description": "Uitbetaling",
+            "beneficiary_name": "Jan",
+            "beneficiary_iban": "NL02ABNA0123456789",
+        },
+        headers=auth_headers,
+    )
+    tx_id = resp.json()["id"]
+    await _set_trust_account(db, test_tenant)
+
+    resp = await client.post(
+        "/api/trust-funds/sepa/export",
+        json={"transaction_ids": [tx_id], "execution_date": "2026-04-15"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400
+    assert "nog niet goedgekeurd" in resp.json()["detail"]

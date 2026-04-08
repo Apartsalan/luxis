@@ -583,6 +583,38 @@ export function useTrustFundsOverview(onlyNonzero: boolean = true) {
   });
 }
 
+// ── SEPA Export ──────────────────────────────────────────────────────────────
+
+export interface SepaPendingTransaction {
+  id: string;
+  case_id: string;
+  case_number: string;
+  contact_id: string;
+  contact_name: string;
+  transaction_date: string;
+  amount: number;
+  description: string;
+  beneficiary_name: string | null;
+  beneficiary_iban: string | null;
+  sepa_exported_at: string | null;
+  sepa_batch_id: string | null;
+}
+
+export function useSepaPending(includeExported: boolean = false) {
+  return useQuery<SepaPendingTransaction[]>({
+    queryKey: ["trust-funds", "sepa", "pending", includeExported],
+    queryFn: async () => {
+      const res = await api(
+        `/api/trust-funds/sepa/pending?include_exported=${
+          includeExported ? "true" : "false"
+        }`
+      );
+      if (!res.ok) throw new Error("Failed to fetch SEPA pending");
+      return res.json();
+    },
+  });
+}
+
 // ── Payment Arrangements Hooks ──────────────────────────────────────────────
 
 export function useArrangements(caseId: string | undefined) {

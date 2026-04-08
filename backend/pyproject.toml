@@ -57,6 +57,9 @@ dependencies = [
 
     # Sentry (optional)
     "sentry-sdk[fastapi]>=2.0.0",
+
+    # SEPA pain.001 XML generation for trust fund disbursements
+    "sepaxml>=2.6.0",
 ]
 
 [project.optional-dependencies]

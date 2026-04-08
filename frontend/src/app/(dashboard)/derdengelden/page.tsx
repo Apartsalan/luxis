@@ -14,14 +14,19 @@ import {
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useTrustFundsOverview,
+  useSepaPending,
   type ClientTrustOverview,
+  type SepaPendingTransaction,
 } from "@/hooks/use-collections";
+import { toast } from "sonner";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 
 export default function DerdengeldenPage() {
+  const [activeTab, setActiveTab] = useState<"overview" | "sepa">("overview");
   const [onlyNonzero, setOnlyNonzero] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -90,6 +95,34 @@ export default function DerdengeldenPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="border-b border-border">
+        <div className="flex gap-6">
+          <TabButton
+            active={activeTab === "overview"}
+            onClick={() => setActiveTab("overview")}
+            label="Cliëntoverzicht"
+          />
+          <TabButton
+            active={activeTab === "sepa"}
+            onClick={() => setActiveTab("sepa")}
+            label="SEPA-uitbetalingen"
+          />
+        </div>
+      </div>
+
+      {/* Report dialog */}
+      {reportDialog && (
+        <ReportDialog
+          kind={reportDialog}
+          onClose={() => setReportDialog(null)}
+        />
+      )}
+
+      {activeTab === "sepa" ? (
+        <SepaTab />
+      ) : (
+        <>
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <KpiCard
@@ -145,14 +178,6 @@ export default function DerdengeldenPage() {
         </label>
       </div>
 
-      {/* Report dialog */}
-      {reportDialog && (
-        <ReportDialog
-          kind={reportDialog}
-          onClose={() => setReportDialog(null)}
-        />
-      )}
-
       {/* Client list */}
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         {isLoading ? (
@@ -174,11 +199,36 @@ export default function DerdengeldenPage() {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
+
+function TabButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`pb-3 -mb-px text-sm font-medium border-b-2 transition-colors ${
+        active
+          ? "border-primary text-foreground"
+          : "border-transparent text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
 function KpiCard({
   label,
@@ -332,6 +382,244 @@ function ClientRow({
         </div>
       )}
     </div>
+  );
+}
+
+function SepaTab() {
+  const qc = useQueryClient();
+  const [includeExported, setIncludeExported] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [executionDate, setExecutionDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [downloading, setDownloading] = useState(false);
+  const { data, isLoading, isError, refetch } = useSepaPending(includeExported);
+
+  const transactions = data || [];
+  const exportable = transactions.filter((t) => !t.sepa_exported_at);
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === exportable.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(exportable.map((t) => t.id)));
+    }
+  };
+
+  const selectedTotal = transactions
+    .filter((t) => selected.has(t.id))
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const handleExport = async () => {
+    if (selected.size === 0) {
+      toast.error("Selecteer minstens één uitbetaling");
+      return;
+    }
+    setDownloading(true);
+    try {
+      const res = await api("/api/trust-funds/sepa/export", {
+        method: "POST",
+        body: JSON.stringify({
+          transaction_ids: Array.from(selected),
+          execution_date: executionDate,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `SEPA-export mislukt (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `sepa-derdengelden-${executionDate}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`${selected.size} uitbetalingen geëxporteerd`);
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["trust-funds", "sepa"] });
+      qc.invalidateQueries({ queryKey: ["trust-funds", "overview"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Onbekende fout");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (isError) {
+    return (
+      <QueryError
+        message="Kan SEPA-uitbetalingen niet laden"
+        onRetry={refetch}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Action bar */}
+      <div className="bg-card rounded-lg border border-border p-4 flex flex-col lg:flex-row gap-4 lg:items-end lg:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">
+            SEPA-batch genereren
+          </h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Selecteer goedgekeurde uitbetalingen, kies de uitvoerdatum en
+            download het XML-bestand voor upload in de Rabobank-portal.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block">
+              Uitvoerdatum
+            </label>
+            <input
+              type="date"
+              value={executionDate}
+              onChange={(e) => setExecutionDate(e.target.value)}
+              className="mt-1 rounded-md border border-border px-3 py-2 text-sm bg-background"
+            />
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={downloading || selected.size === 0}
+            className="rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+          >
+            {downloading
+              ? "Bezig..."
+              : `Download SEPA (${selected.size} geselecteerd${
+                  selected.size > 0 ? ` — ${formatCurrency(selectedTotal)}` : ""
+                })`}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={includeExported}
+            onChange={(e) => setIncludeExported(e.target.checked)}
+            className="h-4 w-4 rounded border-border"
+          />
+          Toon ook reeds geëxporteerde batches
+        </label>
+        {exportable.length > 0 && (
+          <button
+            onClick={toggleAll}
+            className="text-xs text-primary hover:underline"
+          >
+            {selected.size === exportable.length
+              ? "Niets selecteren"
+              : "Alles selecteren"}
+          </button>
+        )}
+      </div>
+
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        {isLoading ? (
+          <div className="p-10 text-center text-muted-foreground text-sm">
+            Laden...
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="p-10 text-center">
+            <PiggyBank className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">
+              Geen uitbetalingen klaar voor SEPA-export.
+            </p>
+            <p className="text-xs text-muted-foreground/60 mt-2">
+              Goedgekeurde uitbetalingen verschijnen hier automatisch.
+            </p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30 text-xs text-muted-foreground">
+              <tr>
+                <th className="w-10 px-3 py-2"></th>
+                <th className="text-left font-medium px-3 py-2">Datum</th>
+                <th className="text-left font-medium px-3 py-2">Cliënt</th>
+                <th className="text-left font-medium px-3 py-2">Begunstigde</th>
+                <th className="text-left font-medium px-3 py-2">IBAN</th>
+                <th className="text-right font-medium px-3 py-2">Bedrag</th>
+                <th className="text-left font-medium px-3 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((tx) => (
+                <SepaRow
+                  key={tx.id}
+                  tx={tx}
+                  selected={selected.has(tx.id)}
+                  onToggle={() => toggleSelect(tx.id)}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SepaRow({
+  tx,
+  selected,
+  onToggle,
+}: {
+  tx: SepaPendingTransaction;
+  selected: boolean;
+  onToggle: () => void;
+}) {
+  const exported = tx.sepa_exported_at !== null;
+  return (
+    <tr
+      className={`border-t border-border ${
+        exported ? "bg-muted/20 text-muted-foreground" : "hover:bg-muted/20"
+      }`}
+    >
+      <td className="px-3 py-2">
+        <input
+          type="checkbox"
+          checked={selected}
+          disabled={exported}
+          onChange={onToggle}
+          className="h-4 w-4 rounded border-border"
+        />
+      </td>
+      <td className="px-3 py-2 whitespace-nowrap">
+        {formatDateShort(tx.transaction_date)}
+      </td>
+      <td className="px-3 py-2">{tx.contact_name}</td>
+      <td className="px-3 py-2">{tx.beneficiary_name || "—"}</td>
+      <td className="px-3 py-2 font-mono text-xs">
+        {tx.beneficiary_iban || "—"}
+      </td>
+      <td className="px-3 py-2 text-right font-medium">
+        {formatCurrency(tx.amount)}
+      </td>
+      <td className="px-3 py-2">
+        {exported ? (
+          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs">
+            Geëxporteerd
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-full bg-emerald-500/10 text-emerald-600 px-2 py-0.5 text-xs">
+            Klaar
+          </span>
+        )}
+      </td>
+    </tr>
   );
 }
 

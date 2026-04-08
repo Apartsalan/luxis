@@ -85,6 +85,13 @@ class TrustTransaction(TenantBase):
         Uuid, ForeignKey("trust_transactions.id"), nullable=True
     )
 
+    # SEPA-export tracking — set when an approved disbursement has been
+    # included in a SEPA pain.001 batch and downloaded for upload to the bank.
+    sepa_exported_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    sepa_batch_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+
     # Approval workflow
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="pending_approval"

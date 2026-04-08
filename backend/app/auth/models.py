@@ -23,6 +23,10 @@ class Tenant(Base, TimestampMixin):
     postal_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    # Stichting Derdengelden — separate bank account for client funds
+    trust_account_iban: Mapped[str | None] = mapped_column(String(34), nullable=True)
+    trust_account_holder: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    trust_account_bic: Mapped[str | None] = mapped_column(String(11), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)

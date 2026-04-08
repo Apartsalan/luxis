@@ -17,6 +17,9 @@ export function KantoorTab() {
     address: "",
     postal_code: "",
     city: "",
+    trust_account_iban: "",
+    trust_account_holder: "",
+    trust_account_bic: "",
   });
   const [initialized, setInitialized] = useState(false);
 
@@ -29,6 +32,9 @@ export function KantoorTab() {
       address: tenant.address || "",
       postal_code: tenant.postal_code || "",
       city: tenant.city || "",
+      trust_account_iban: tenant.trust_account_iban || "",
+      trust_account_holder: tenant.trust_account_holder || "",
+      trust_account_bic: tenant.trust_account_bic || "",
     });
     setInitialized(true);
   }
@@ -39,7 +45,10 @@ export function KantoorTab() {
     form.btw_number !== (tenant.btw_number || "") ||
     form.address !== (tenant.address || "") ||
     form.postal_code !== (tenant.postal_code || "") ||
-    form.city !== (tenant.city || "")
+    form.city !== (tenant.city || "") ||
+    form.trust_account_iban !== (tenant.trust_account_iban || "") ||
+    form.trust_account_holder !== (tenant.trust_account_holder || "") ||
+    form.trust_account_bic !== (tenant.trust_account_bic || "")
   );
   useUnsavedWarning(!!isDirty);
 
@@ -55,6 +64,9 @@ export function KantoorTab() {
         address: form.address || null,
         postal_code: form.postal_code || null,
         city: form.city || null,
+        trust_account_iban: form.trust_account_iban || null,
+        trust_account_holder: form.trust_account_holder || null,
+        trust_account_bic: form.trust_account_bic || null,
       },
       {
         onSuccess: () => toast.success("Kantoorgegevens bijgewerkt"),
@@ -185,6 +197,72 @@ export function KantoorTab() {
             )}
             Opslaan
           </button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="text-base font-semibold text-foreground mb-1">
+          Stichting Derdengelden
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Bankgegevens van je Stichting Derdengelden — gebruikt voor SEPA-uitbetalingen
+          en NOvA-rapportages. Apart van de kantoorrekening hierboven.
+        </p>
+        <div className="space-y-4 max-w-md">
+          <div>
+            <label htmlFor="settings-trust-holder" className="block text-sm font-medium text-foreground">
+              Tenaamstelling
+            </label>
+            <input
+              id="settings-trust-holder"
+              type="text"
+              placeholder="Stichting Derdengelden Kesting Legal"
+              value={form.trust_account_holder}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, trust_account_holder: e.target.value }))
+              }
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="settings-trust-iban" className="block text-sm font-medium text-foreground">
+              IBAN
+            </label>
+            <input
+              id="settings-trust-iban"
+              type="text"
+              placeholder="NL44RABO0123456789"
+              value={form.trust_account_iban}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  trust_account_iban: e.target.value.toUpperCase().replace(/\s/g, ""),
+                }))
+              }
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="settings-trust-bic" className="block text-sm font-medium text-foreground">
+              BIC (optioneel — vereist voor sommige banken)
+            </label>
+            <input
+              id="settings-trust-bic"
+              type="text"
+              placeholder="RABONL2U"
+              value={form.trust_account_bic}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  trust_account_bic: e.target.value.toUpperCase().replace(/\s/g, ""),
+                }))
+              }
+              className={inputClass}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Wijzigingen worden opgeslagen via de knop &ldquo;Opslaan&rdquo; in de bovenste sectie.
+          </p>
         </div>
       </div>
 

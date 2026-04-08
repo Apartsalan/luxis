@@ -27,16 +27,18 @@ from sqlalchemy.orm import selectinload
 
 from app.cases.service import get_case
 from app.invoices.models import Invoice, InvoicePayment
-from app.shared.exceptions import BadRequestError, ForbiddenError, NotFoundError
-from app.trust_funds.models import TrustTransaction
+from app.auth.models import Tenant
 from app.cases.models import Case
 from app.relations.models import Contact
+from app.shared.exceptions import BadRequestError, ForbiddenError, NotFoundError
+from app.trust_funds.models import TrustTransaction
 from app.trust_funds.schemas import (
     CONSENT_METHODS,
     TRANSACTION_TYPES,
     CaseTrustSummary,
     ClientTrustOverview,
     EligibleInvoice,
+    SepaPendingTransaction,
     TrustBalanceSummary,
     TrustOffsetCreate,
     TrustOverviewResponse,
@@ -288,6 +290,129 @@ async def list_overview_by_client(
         ),
         clients=clients,
     )
+
+
+# ── SEPA Export (pain.001.001.03) ────────────────────────────────────────────
+
+
+async def list_sepa_pending(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    include_exported: bool = False,
+) -> list[SepaPendingTransaction]:
+    """List approved disbursements ready for SEPA export.
+
+    By default returns only disbursements that have not yet been included in
+    a SEPA batch. With include_exported=True returns the full history.
+    """
+    query = (
+        select(TrustTransaction)
+        .options(
+            selectinload(TrustTransaction.contact),
+            selectinload(TrustTransaction.case),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.transaction_type == "disbursement",
+            TrustTransaction.status == "approved",
+            TrustTransaction.reversed_by_id.is_(None),
+        )
+    )
+    if not include_exported:
+        query = query.where(TrustTransaction.sepa_exported_at.is_(None))
+    query = query.order_by(TrustTransaction.transaction_date.asc())
+
+    result = await db.execute(query)
+    transactions = list(result.scalars().all())
+
+    return [
+        SepaPendingTransaction(
+            id=tx.id,
+            case_id=tx.case_id,
+            case_number=tx.case.case_number if tx.case else "",
+            contact_id=tx.contact_id,
+            contact_name=tx.contact.name if tx.contact else "",
+            transaction_date=tx.transaction_date,
+            amount=tx.amount,
+            description=tx.description,
+            beneficiary_name=tx.beneficiary_name,
+            beneficiary_iban=tx.beneficiary_iban,
+            sepa_exported_at=tx.sepa_exported_at,
+            sepa_batch_id=tx.sepa_batch_id,
+        )
+        for tx in transactions
+    ]
+
+
+async def export_sepa_batch(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    transaction_ids: list[uuid.UUID],
+    execution_date: date,
+) -> tuple[bytes, uuid.UUID]:
+    """Build a SEPA pain.001 XML batch for the given approved disbursements.
+
+    Validates that:
+    - Tenant has Stichting Derdengelden bank fields configured
+    - All transactions are approved disbursements, non-reversed
+    - None has already been exported in a previous batch
+    - Each has beneficiary name + IBAN
+
+    On success: marks all transactions with sepa_exported_at + sepa_batch_id
+    in the same DB transaction so re-export of the same lines is impossible.
+    Returns (xml_bytes, batch_id).
+    """
+    from app.trust_funds.sepa import build_sepa_xml
+
+    # Load tenant
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
+    if tenant is None:
+        raise NotFoundError("Tenant niet gevonden")
+
+    # Load + validate transactions
+    result = await db.execute(
+        select(TrustTransaction).where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.id.in_(transaction_ids),
+        )
+    )
+    transactions = list(result.scalars().all())
+
+    if len(transactions) != len(set(transaction_ids)):
+        raise BadRequestError("Een of meer geselecteerde transacties niet gevonden")
+
+    for tx in transactions:
+        if tx.transaction_type != "disbursement":
+            raise BadRequestError(
+                f"Alleen uitbetalingen mogen in een SEPA-batch — "
+                f"transactie {tx.id} is type {tx.transaction_type}"
+            )
+        if tx.status != "approved":
+            raise BadRequestError(
+                f"Transactie {tx.id} is nog niet goedgekeurd (status: {tx.status})"
+            )
+        if tx.reversed_by_id is not None:
+            raise BadRequestError(f"Transactie {tx.id} is gestorneerd")
+        if tx.sepa_exported_at is not None:
+            raise BadRequestError(
+                f"Transactie {tx.id} is al opgenomen in een eerdere SEPA-batch "
+                f"({tx.sepa_exported_at.date().isoformat()})"
+            )
+
+    # Generate XML (raises BadRequestError if anything wrong)
+    xml_bytes = build_sepa_xml(tenant, transactions, execution_date)
+
+    # Mark as exported
+    batch_id = uuid.uuid4()
+    now = datetime.now(UTC)
+    for tx in transactions:
+        tx.sepa_exported_at = now
+        tx.sepa_batch_id = batch_id
+
+    await db.flush()
+    return xml_bytes, batch_id
 
 
 # ── NOvA Reports (CSV) ───────────────────────────────────────────────────────

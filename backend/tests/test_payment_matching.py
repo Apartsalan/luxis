@@ -506,10 +506,10 @@ class TestMatchWorkflow:
         await db.commit()
 
     @pytest.mark.asyncio
-    async def test_execute_creates_payment_and_derdengelden(
+    async def test_execute_creates_payment_and_trust_transaction(
         self, db: AsyncSession, test_tenant: Tenant, test_user: User, incasso_case: Case
     ):
-        """Execute should create both a derdengelden deposit and a payment record."""
+        """Execute should create both a trust fund deposit and a payment record."""
         # Seed interest rates (required by create_payment)
         for rate_type, rate_val in [("statutory", "6.00"), ("commercial", "11.50")]:
             db.add(
@@ -547,7 +547,7 @@ class TestMatchWorkflow:
         assert executed is not None
         assert executed.status == MatchStatus.EXECUTED
         assert executed.payment_id is not None
-        assert executed.derdengelden_id is not None
+        assert executed.trust_transaction_id is not None
         await db.commit()
 
     @pytest.mark.asyncio

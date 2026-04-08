@@ -12,7 +12,9 @@ from app.dependencies import get_current_user
 from app.shared.pagination import PaginatedResponse
 from app.trust_funds import service
 from app.trust_funds.schemas import (
+    EligibleInvoice,
     TrustBalanceSummary,
+    TrustOffsetCreate,
     TrustTransactionCreate,
     TrustTransactionRead,
 )
@@ -121,5 +123,47 @@ async def reject_transaction(
     """Reject a pending trust fund transaction."""
     transaction = await service.reject_transaction(
         db, current_user.tenant_id, transaction_id, current_user.id
+    )
+    return transaction
+
+
+# ── Verrekening (Offset to invoice) ──────────────────────────────────────────
+
+
+@router.get(
+    "/cases/{case_id}/eligible-invoices",
+    response_model=list[EligibleInvoice],
+)
+async def list_eligible_invoices(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List open invoices of the case's client that can be offset against
+    the trust balance (verrekening). Cross-case query within the same client.
+    """
+    return await service.list_eligible_invoices_for_offset(
+        db, current_user.tenant_id, case_id
+    )
+
+
+@router.post(
+    "/cases/{case_id}/offsets",
+    response_model=TrustTransactionRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_offset(
+    case_id: uuid.UUID,
+    data: TrustOffsetCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a verrekening (offset) of trust balance against an own invoice.
+
+    Voda art. 6.19 lid 5: requires explicit per-transaction client consent.
+    The actual invoice payment is booked when the offset is fully approved.
+    """
+    transaction = await service.create_offset_to_invoice(
+        db, current_user.tenant_id, case_id, current_user.id, data
     )
     return transaction

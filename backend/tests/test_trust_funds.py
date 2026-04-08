@@ -310,8 +310,13 @@ async def test_creator_cannot_approve_own_transaction(
     auth_headers: dict,
     test_company: Contact,
     case_payload: dict,
+    monkeypatch,
 ):
-    """The creator of a transaction cannot approve it (four-eyes principle)."""
+    """The creator of a transaction cannot approve it (four-eyes principle).
+
+    Tests strict mode (TRUST_FUNDS_ALLOW_SELF_APPROVAL=false).
+    """
+    monkeypatch.setenv("TRUST_FUNDS_ALLOW_SELF_APPROVAL", "false")
     case_id = await create_case(client, auth_headers, case_payload)
 
     # Deposit
@@ -352,8 +357,10 @@ async def test_same_director_cannot_approve_twice(
     test_tenant: Tenant,
     test_company: Contact,
     case_payload: dict,
+    monkeypatch,
 ):
-    """The same director cannot provide both approvals."""
+    """The same director cannot provide both approvals (strict 4-eyes mode)."""
+    monkeypatch.setenv("TRUST_FUNDS_ALLOW_SELF_APPROVAL", "false")
     case_id = await create_case(client, auth_headers, case_payload)
 
     deposit = {"transaction_type": "deposit", "amount": "10000.00", "description": "Storting"}

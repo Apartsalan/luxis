@@ -379,10 +379,12 @@ async def create_case(
     contractual_rate = data.contractual_rate
     bik_override = data.bik_override
     bik_override_percentage = data.bik_override_percentage
+    minimum_fee = data.minimum_fee
 
     needs_client_lookup = (
         interest_type is None
         or (bik_override is None and bik_override_percentage is None)
+        or minimum_fee is None
     )
     client = None
     if needs_client_lookup:
@@ -409,6 +411,10 @@ async def create_case(
             bik_override_percentage = client.default_bik_override_percentage
         elif client.default_bik_override is not None:
             bik_override = client.default_bik_override
+
+    # DF120: minimum_fee inheritance — same pattern as BIK override
+    if minimum_fee is None and client and client.default_minimum_fee is not None:
+        minimum_fee = client.default_minimum_fee
 
     # Validate interest_type
     if interest_type not in INTEREST_TYPES:
@@ -457,7 +463,7 @@ async def create_case(
         budget_hours=data.budget_hours,
         provisie_percentage=data.provisie_percentage,
         fixed_case_costs=data.fixed_case_costs,
-        minimum_fee=data.minimum_fee,
+        minimum_fee=minimum_fee,
     )
     db.add(case)
     await db.flush()

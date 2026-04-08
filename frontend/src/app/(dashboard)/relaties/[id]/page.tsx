@@ -121,6 +121,7 @@ export default function RelatieDetailPage() {
       iban: contact.iban || "",
       default_interest_type: contact.default_interest_type || "",
       default_contractual_rate: contact.default_contractual_rate?.toString() || "",
+      default_rate_basis: contact.default_rate_basis || "",
       default_bik_mode: contact.default_bik_override_percentage != null
         ? "percentage"
         : contact.default_bik_override != null
@@ -128,6 +129,7 @@ export default function RelatieDetailPage() {
           : "wik",
       default_bik_override: contact.default_bik_override?.toString() || "",
       default_bik_override_percentage: contact.default_bik_override_percentage?.toString() || "",
+      default_minimum_fee: contact.default_minimum_fee?.toString() || "",
       notes: contact.notes || "",
     });
     setEditing(true);
@@ -164,6 +166,11 @@ export default function RelatieDetailPage() {
         editForm.default_interest_type === "contractual" && editForm.default_contractual_rate
           ? editForm.default_contractual_rate
           : null;
+      // DF120: rate_basis (yearly/monthly) — only meaningful for contractual interest
+      data.default_rate_basis =
+        editForm.default_interest_type === "contractual" && editForm.default_rate_basis
+          ? editForm.default_rate_basis
+          : null;
       // DF117-22: BIK defaults — only one mode wins (amount XOR percentage XOR wik=both null)
       data.default_bik_override =
         editForm.default_bik_mode === "amount" && editForm.default_bik_override
@@ -173,6 +180,8 @@ export default function RelatieDetailPage() {
         editForm.default_bik_mode === "percentage" && editForm.default_bik_override_percentage
           ? editForm.default_bik_override_percentage
           : null;
+      // DF120: minimum_fee — independent of BIK mode (still applies as floor)
+      data.default_minimum_fee = editForm.default_minimum_fee || null;
       data.notes = editForm.notes?.trim() || null;
 
       await updateRelation.mutateAsync({ id, data });

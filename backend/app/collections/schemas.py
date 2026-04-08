@@ -18,7 +18,9 @@ class ClaimCreate(BaseModel):
     default_date: date
     invoice_number: str | None = None
     invoice_date: date | None = None
-    rate_basis: str = Field(default="yearly", description="monthly or yearly")
+    # DF120: rate_basis is now optional. If omitted, the create_claim service
+    # inherits it from the case's client (default_rate_basis) or falls back to "yearly".
+    rate_basis: str | None = Field(default=None, description="monthly or yearly")
     invoice_file_id: uuid.UUID | None = None
 
 

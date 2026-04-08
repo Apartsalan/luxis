@@ -37,8 +37,10 @@ class ContactCreate(BaseModel):
     iban: str | None = None
     default_interest_type: InterestType | None = None
     default_contractual_rate: Decimal | None = None
+    default_rate_basis: str | None = Field(default=None, pattern="^(yearly|monthly)$")
     default_bik_override: Decimal | None = None
     default_bik_override_percentage: Decimal | None = None
+    default_minimum_fee: Decimal | None = None
     notes: str | None = None
 
 
@@ -64,8 +66,10 @@ class ContactUpdate(BaseModel):
     iban: str | None = None
     default_interest_type: InterestType | None = None
     default_contractual_rate: Decimal | None = None
+    default_rate_basis: str | None = Field(default=None, pattern="^(yearly|monthly)$")
     default_bik_override: Decimal | None = None
     default_bik_override_percentage: Decimal | None = None
+    default_minimum_fee: Decimal | None = None
     notes: str | None = None
 
 
@@ -108,8 +112,10 @@ class ContactResponse(BaseModel):
     iban: str | None
     default_interest_type: str | None = None
     default_contractual_rate: float | None = None
+    default_rate_basis: str | None = None
     default_bik_override: float | None = None
     default_bik_override_percentage: float | None = None
+    default_minimum_fee: float | None = None
     terms_file_name: str | None = None
     notes: str | None
     is_active: bool

@@ -247,3 +247,75 @@ async def test_update_nonexistent_claim_returns_404(
         headers=auth_headers,
     )
     assert resp.status_code == 404
+
+
+# ── DF120: rate_basis inheritance per client ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_claim_inherits_rate_basis_from_client(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db,
+):
+    """DF120 — Lisanne demo 2026-04-08:
+    When a contact has default_rate_basis="monthly", new claims on cases for
+    that client should default to monthly basis (no need to set per claim).
+    """
+    # Set the default on the client
+    test_company.default_rate_basis = "monthly"
+    await db.commit()
+
+    case = await _create_case(client, auth_headers, str(test_company.id))
+    case_id = case["id"]
+
+    # Create a claim WITHOUT specifying rate_basis
+    resp = await client.post(
+        f"/api/cases/{case_id}/claims",
+        json={
+            "description": "Factuur zonder expliciete rate_basis",
+            "principal_amount": "1000.00",
+            "default_date": date.today().isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["rate_basis"] == "monthly"
+
+    # Now create a claim WITH explicit rate_basis — should override
+    resp = await client.post(
+        f"/api/cases/{case_id}/claims",
+        json={
+            "description": "Factuur met expliciete yearly",
+            "principal_amount": "500.00",
+            "default_date": date.today().isoformat(),
+            "rate_basis": "yearly",
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["rate_basis"] == "yearly"
+
+
+@pytest.mark.asyncio
+async def test_claim_falls_back_to_yearly_without_client_default(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+):
+    """When a contact has no default_rate_basis, claims default to yearly."""
+    case = await _create_case(client, auth_headers, str(test_company.id))
+    case_id = case["id"]
+
+    resp = await client.post(
+        f"/api/cases/{case_id}/claims",
+        json={
+            "description": "Factuur zonder klant-default",
+            "principal_amount": "1000.00",
+            "default_date": date.today().isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["rate_basis"] == "yearly"

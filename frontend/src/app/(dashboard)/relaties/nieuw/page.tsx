@@ -30,9 +30,11 @@ export default function NieuweRelatiePage() {
     postal_city: "",
     default_interest_type: "",
     default_contractual_rate: "",
+    default_rate_basis: "",
     default_bik_mode: "wik" as "wik" | "amount" | "percentage",
     default_bik_override: "",
     default_bik_override_percentage: "",
+    default_minimum_fee: "",
     notes: "",
   });
   const [error, setError] = useState("");
@@ -125,12 +127,14 @@ export default function NieuweRelatiePage() {
       ...(form.default_interest_type === "contractual" && form.default_contractual_rate && {
         default_contractual_rate: form.default_contractual_rate,
       }),
+      ...(form.default_rate_basis && { default_rate_basis: form.default_rate_basis }),
       ...(form.default_bik_mode === "amount" && form.default_bik_override && {
         default_bik_override: form.default_bik_override,
       }),
       ...(form.default_bik_mode === "percentage" && form.default_bik_override_percentage && {
         default_bik_override_percentage: form.default_bik_override_percentage,
       }),
+      ...(form.default_minimum_fee && { default_minimum_fee: form.default_minimum_fee }),
       ...(form.notes && { notes: form.notes }),
     };
 
@@ -446,6 +450,23 @@ export default function NieuweRelatiePage() {
                 />
               </div>
             )}
+            {form.default_interest_type === "contractual" && (
+              <div>
+                <label htmlFor="rel-default_rate_basis" className="block text-sm font-medium text-foreground">
+                  Periode
+                </label>
+                <select
+                  id="rel-default_rate_basis"
+                  value={form.default_rate_basis}
+                  onChange={(e) => updateField("default_rate_basis", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Per jaar (standaard)</option>
+                  <option value="yearly">Per jaar</option>
+                  <option value="monthly">Per maand</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* DF117-22: Standaard incassokosten (BIK) */}
@@ -500,6 +521,21 @@ export default function NieuweRelatiePage() {
                 />
               </div>
             )}
+            <div>
+              <label htmlFor="rel-default_minimum_fee" className="block text-sm font-medium text-foreground">
+                Minimum provisie (€)
+              </label>
+              <input
+                id="rel-default_minimum_fee"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.default_minimum_fee}
+                onChange={(e) => updateField("default_minimum_fee", e.target.value)}
+                className={inputClass}
+                placeholder="Leeg = WIK-minimum (€40)"
+              />
+            </div>
           </div>
 
           <div>

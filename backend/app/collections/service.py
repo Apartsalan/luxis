@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.cases.models import Case
 from app.collections.interest import calculate_case_interest
@@ -80,11 +81,31 @@ async def create_claim(
     case_id: uuid.UUID,
     data: ClaimCreate,
 ) -> Claim:
-    """Create a new claim for a case."""
+    """Create a new claim for a case.
+
+    DF120: rate_basis inheritance — when not explicitly set in `data`,
+    inherit from `case.client.default_rate_basis`, fallback "yearly".
+    """
+    payload = data.model_dump()
+    if payload.get("rate_basis") is None:
+        # Look up the case's client to inherit the default rate_basis
+        case_result = await db.execute(
+            select(Case)
+            .options(selectinload(Case.client))
+            .where(Case.id == case_id, Case.tenant_id == tenant_id)
+        )
+        case = case_result.scalar_one_or_none()
+        client_default = (
+            case.client.default_rate_basis
+            if case and case.client and case.client.default_rate_basis
+            else None
+        )
+        payload["rate_basis"] = client_default or "yearly"
+
     claim = Claim(
         tenant_id=tenant_id,
         case_id=case_id,
-        **data.model_dump(),
+        **payload,
     )
     db.add(claim)
     await db.flush()

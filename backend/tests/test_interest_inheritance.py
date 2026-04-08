@@ -289,3 +289,66 @@ async def test_create_contact_with_default_bik_percentage(
     assert response.status_code == 201, response.text
     data = response.json()
     assert float(data["default_bik_override_percentage"]) == 8.50
+
+
+# ── DF120: minimum_fee inheritance from client ───────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_case_inherits_minimum_fee_from_client(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """DF120 — when contact has default_minimum_fee, new cases inherit it."""
+    test_company.default_minimum_fee = Decimal("100.00")
+    await db.commit()
+
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["minimum_fee"]) == 100.00
+
+
+@pytest.mark.asyncio
+async def test_case_minimum_fee_explicit_overrides_client_default(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """An explicit minimum_fee on case create should override the client default."""
+    test_company.default_minimum_fee = Decimal("100.00")
+    await db.commit()
+
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+        "minimum_fee": "75.00",
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["minimum_fee"]) == 75.00
+
+
+@pytest.mark.asyncio
+async def test_case_no_minimum_fee_when_client_has_none(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """No client default → case has no minimum_fee (falls back to system default)."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    assert response.json().get("minimum_fee") is None

@@ -423,6 +423,20 @@ export function ContactInfoSection({
                 />
               </div>
             )}
+            {editForm.default_interest_type === "contractual" && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Periode</label>
+                <select
+                  value={editForm.default_rate_basis || ""}
+                  onChange={(e) => updateEdit("default_rate_basis", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Per jaar (standaard)</option>
+                  <option value="yearly">Per jaar</option>
+                  <option value="monthly">Per maand</option>
+                </select>
+              </div>
+            )}
             {/* DF117-22: Standaard incassokosten */}
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Standaard incassokosten</label>
@@ -465,6 +479,18 @@ export function ContactInfoSection({
                 />
               </div>
             )}
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Minimum provisie (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.default_minimum_fee || ""}
+                onChange={(e) => updateEdit("default_minimum_fee", e.target.value)}
+                className={inputClass}
+                placeholder="Leeg = WIK-minimum (€40)"
+              />
+            </div>
           </div>
         ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null) ? (
           <dl className="grid gap-3 sm:grid-cols-2">

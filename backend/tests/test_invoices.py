@@ -525,6 +525,101 @@ async def test_credit_note_partial_offsets_dossier_totals(
         f"€605 - €302.50 should net to €302.50, got €{net_total}"
 
 
+@pytest.mark.asyncio
+async def test_credit_note_preserves_per_line_btw(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """DF120 — Lisanne demo 2026-04-08:
+    Creditnota mag GEEN BTW rekenen over regels die in de originele factuur
+    0% (onbelaste verschotten) hadden. De per-regel BTW moet behouden blijven.
+
+    Origineel: 1 regel €100 @ 21% + 1 regel €50 @ 0% = €171 totaal
+    Volledige creditnota met correcte per-regel BTW: −€171 (NIET −€181,50)
+    """
+    contact = await _create_contact(db, test_tenant.id)
+
+    # Create an invoice with TWO lines at different BTW rates
+    payload = {
+        "contact_id": str(contact.id),
+        "invoice_date": "2026-03-01",
+        "due_date": "2026-03-31",
+        "btw_percentage": "21.00",  # header default, but per-line overrides
+        "lines": [
+            {
+                "description": "Juridisch advies (belast)",
+                "quantity": "1",
+                "unit_price": "100.00",
+                "btw_percentage": "21.00",
+            },
+            {
+                "description": "Onbelaste verschotten (griffierecht)",
+                "quantity": "1",
+                "unit_price": "50.00",
+                "btw_percentage": "0.00",
+            },
+        ],
+    }
+    resp = await client.post("/api/invoices", json=payload, headers=auth_headers)
+    assert resp.status_code == 201
+    inv = resp.json()
+    # Sanity: original invoice total is €100 + 21% = €121 + €50 = €171
+    assert Decimal(inv["subtotal"]) == Decimal("150.00")
+    assert Decimal(inv["btw_amount"]) == Decimal("21.00")  # only 21 on the 100
+    assert Decimal(inv["total"]) == Decimal("171.00")
+    inv_id = inv["id"]
+
+    await _advance_to_sent(client, auth_headers, inv_id)
+
+    # Create credit note mirroring the original with per-line btw_percentage
+    cn_payload = {
+        "linked_invoice_id": inv_id,
+        "invoice_date": "2026-03-15",
+        "due_date": "2026-04-15",
+        "lines": [
+            {
+                "description": "Creditering advies",
+                "quantity": "1",
+                "unit_price": "100.00",
+                "btw_percentage": "21.00",
+            },
+            {
+                "description": "Creditering verschotten",
+                "quantity": "1",
+                "unit_price": "50.00",
+                "btw_percentage": "0.00",
+            },
+        ],
+    }
+    resp = await client.post(
+        "/api/invoices/credit-note", json=cn_payload, headers=auth_headers
+    )
+    assert resp.status_code == 201
+    cn = resp.json()
+
+    # Critical: credit note totals must mirror the original with CORRECT BTW
+    assert Decimal(cn["subtotal"]) == Decimal("-150.00")
+    assert Decimal(cn["btw_amount"]) == Decimal("-21.00"), \
+        f"BTW on credit note should only be 21% of the €100 line, got {cn['btw_amount']}"
+    assert Decimal(cn["total"]) == Decimal("-171.00"), \
+        f"Credit note total should be exactly -€171.00 (not -€181.50), got {cn['total']}"
+
+    # Per-line verification: second line has 0% BTW preserved
+    cn_lines = cn["lines"]
+    assert len(cn_lines) == 2
+    line_by_desc = {l["description"]: l for l in cn_lines}
+    assert Decimal(line_by_desc["Creditering advies"]["btw_percentage"]) == Decimal("21.00")
+    assert Decimal(line_by_desc["Creditering verschotten"]["btw_percentage"]) == Decimal("0.00")
+
+    # Dossier-level: original (+171) + credit note (-171) = 0 net
+    list_resp = await client.get(
+        f"/api/invoices?contact_id={contact.id}", headers=auth_headers
+    )
+    items = list_resp.json()["items"]
+    assert len(items) == 2
+    net = sum(Decimal(str(i["total"])) for i in items)
+    assert net == Decimal("0.00"), f"Full credit should net to zero, got €{net}"
+
+
 # ── Expenses CRUD ────────────────────────────────────────────────────────────
 
 

@@ -32,6 +32,7 @@ export interface InvoiceLine {
   quantity: number;
   unit_price: number;
   line_total: number;
+  btw_percentage: number;
   time_entry_id: string | null;
   expense_id: string | null;
 }

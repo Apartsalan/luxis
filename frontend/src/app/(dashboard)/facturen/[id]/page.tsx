@@ -113,7 +113,14 @@ export default function FactuurDetailPage() {
   // having to do the math manually.
   const [showCreditNoteForm, setShowCreditNoteForm] = useState(false);
   const [cnLines, setCnLines] = useState<
-    { description: string; mode: "calc" | "direct"; quantity: string; unit_price: string; amount: string }[]
+    {
+      description: string;
+      mode: "calc" | "direct";
+      quantity: string;
+      unit_price: string;
+      amount: string;
+      btw_percentage: string; // DF120: preserve per-line BTW rate from original invoice
+    }[]
   >([]);
 
   // Edit mode (only for concept)
@@ -326,6 +333,8 @@ export default function FactuurDetailPage() {
     // Pre-fill lines from original invoice in "calc" mode (quantity × price).
     // Lines from time entries default to "direct" mode so Lisanne can just type
     // the credit amount without redoing the math.
+    // DF120: preserve per-line btw_percentage so 0% verschotten stay at 0%
+    // when credited (was a bug — everything was forced to the header rate).
     setCnLines(
       factuur.lines.map((l) => {
         const isTimeEntry = !!l.time_entry_id;
@@ -335,6 +344,7 @@ export default function FactuurDetailPage() {
           quantity: String(l.quantity),
           unit_price: String(l.unit_price),
           amount: String(l.line_total ?? Number(l.quantity) * Number(l.unit_price)),
+          btw_percentage: String(l.btw_percentage ?? factuur.btw_percentage),
         };
       })
     );
@@ -356,12 +366,14 @@ export default function FactuurDetailPage() {
             description: l.description,
             quantity: "1",
             unit_price: l.amount,
+            btw_percentage: l.btw_percentage,
           };
         }
         return {
           description: l.description,
           quantity: l.quantity || "1",
           unit_price: l.unit_price,
+          btw_percentage: l.btw_percentage,
         };
       });
     if (lines.length === 0) {
@@ -387,7 +399,14 @@ export default function FactuurDetailPage() {
   const addCnLine = () => {
     setCnLines([
       ...cnLines,
-      { description: "", mode: "calc", quantity: "1", unit_price: "", amount: "" },
+      {
+        description: "",
+        mode: "calc",
+        quantity: "1",
+        unit_price: "",
+        amount: "",
+        btw_percentage: factuur ? String(factuur.btw_percentage) : "21.00",
+      },
     ]);
   };
 
@@ -1108,6 +1127,25 @@ export default function FactuurDetailPage() {
                         />
                       </div>
                     )}
+                    <div className="w-24">
+                      {idx === 0 && (
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                          BTW
+                        </label>
+                      )}
+                      <select
+                        value={line.btw_percentage}
+                        onChange={(e) =>
+                          updateCnLine(idx, "btw_percentage", e.target.value)
+                        }
+                        className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
+                        title="BTW-percentage voor deze regel (overgenomen van origineel)"
+                      >
+                        <option value="0.00">0%</option>
+                        <option value="9.00">9%</option>
+                        <option value="21.00">21%</option>
+                      </select>
+                    </div>
                     <button
                       onClick={() => removeCnLine(idx)}
                       className="rounded-md border border-border p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"

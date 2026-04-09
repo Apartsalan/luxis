@@ -1,8 +1,32 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 8 april 2026 (sessie 120 — demo-feedback round 2: creditnota BTW bug + inheritance + derdengelden testdata + disk-crash prevention)
-**Laatste feature/fix:** Sessie 120 — creditnota BTW-bug gefixt, rate_basis + minimum_fee per klant, derdengelden demo-data op prod, 4-layer disk-crash preventie
+**Laatst bijgewerkt:** 9 april 2026 (sessie 120 — demo-feedback round 2 + E2E test op prod + DF120-12 hotfix)
+**Laatste feature/fix:** Sessie 120 — 7 features end-to-end getest op productie via Playwright + backend API, 1 UI gap gevonden en gefixt (DF120-12: rate_basis + minimum_fee nu ook zichtbaar in read-only contact view)
 **Volgende sessie:** 121 — producten/artikel catalogus import uit Basenet Excel (Lisanne's complete grootboek met 28 items, 4 BTW-regimes, 15 grootboeknummers)
+
+## Wat er gedaan is (sessie 120 — 8-9 april 2026) — Demo-feedback round 2 + disk crash fix + E2E test + DF120-12
+
+**Na de hoofdtaken heb ik op productie alle 7 nieuwe features end-to-end getest** via Playwright (frontend) + backend API calls met een JWT:
+
+| # | Feature | Resultaat |
+|---|---|---|
+| T1 | Creditnota mixed BTW (21% + 0%) | ✅ Totaal −€1.524, BTW −€210 (niet −€275,94), dossier netto €0 |
+| T2 | Rente periode (jaar/maand) per klant | ✅ Save + load werken, claim inheritance: rate_basis=monthly automatisch |
+| T3 | Minimum provisie per klant | ✅ Save + load, case inheritance: minimum_fee=150.00 automatisch |
+| T4 | Derdengelden overzichtspagina | ✅ 3 dossiers bij COLLECT 1 B.V., €15.486,02 totaal, accordion + deep links |
+| T5 | NOvA CSV exports | ✅ mutaties.csv (18 kolommen, UTF-8 BOM, NL decimal) + saldolijst.csv (TOTAAL-regel) |
+| T6 | SEPA pain.001 XML export | ✅ 3 transacties, CtrlSum=5307.97, debtor NL20RABO, idempotentie werkt |
+| T7 | Verrekening derdengelden ↔ factuur | ✅ Offset €1.210 → 2× approve → factuur paid, saldo €6.393 → €5.183 |
+
+**Gevonden tijdens testen + gefixt:**
+- **DF120-12** — read-only view op contact-detail toonde `default_rate_basis` en `default_minimum_fee` niet (alleen in edit-mode). Commit `22996ca` voegt "· per maand" / "· per jaar" toe aan de rente-regel en een nieuwe "Minimum provisie" regel.
+- Deployed via nieuwe deploy-pattern (ZONDER `--no-cache`) — werkte feilloos, auto-prune ruimde 27.85GB op.
+
+**Productie test-data cleanup:** alle tijdens testen aangemaakte facturen/creditnota/case/offset/claim verwijderd. COLLECT contact default_* velden teruggezet naar null. Seed derdengelden data (3 dossiers, €15.486) intact gelaten voor Lisanne. Stichting Derdengelden IBAN (NL20RABO0388506520, BIC RABONL2U) blijft staan — dit was uit Lisanne's echte sommatie-template dus correct.
+
+**Niet getest (buiten scope):**
+- SEPA XML daadwerkelijk uploaden naar Rabobank zakelijk portal (vereist Rabobank-login, XML wel gevalideerd door sepaxml lib)
+- Email versturen (disabled op prod tot M0b voor Lisanne)
 
 ## Wat er gedaan is (sessie 120 — 8 april 2026) — Demo-feedback round 2 + disk crash fix
 

@@ -803,6 +803,7 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF120-09 | **Mail-sjablonen vervangen door Lisanne's .eml's** — 4 officiële sjablonen (SOMMATIE TOT BETALING, EENMALIG SCHIKKINGSVOORSTEL, TREFFEN REGELING, VERZOEKSCHRIFT FAILLISSEMENT met concept-PDF als bijlage). Placeholders `{dossiernummer}`/`{client}`/`{wederpartij}` automatisch invullen. Bestaande docxtpl-templates vervangen. Klikbaar in Documenten + sjablonen-menu bij compose-mail. | 📋 Sessie 122 |
 | DF120-10 | **Verweer-bibliotheek voor AI inspiratie** — 5 verweer-.eml's (20.4, 9.3 BV's, IVB, etc) opslaan als referentiemateriaal. AI leest deze bij het genereren van reacties op betwistingen. Lisanne kan ze ook handmatig openen. | 📋 Sessie 122 |
 | DF120-11 | **Exact Online koppeling voor facturen** — facturen direct doorboeken naar Exact. Afhankelijk van DF120-08 (grootboeknummers per item). | 📋 Backlog (na sessies 121+122) |
+| DF120-12 | **Read-only view contact-detail toonde rate_basis + minimum_fee niet** — tijdens E2E test op prod gevonden: edit-mode werkt, maar de read-only `<dl>` sloeg deze 2 velden over. Fix: "· per maand/jaar" achter rente, "Minimum provisie" regel in `ContactInfoSection.tsx`. | ✅ Sessie 120 (hotfix `22996ca`) |
 
 ### Feature & UX Audit (sessie 113, 29 maart 2026)
 

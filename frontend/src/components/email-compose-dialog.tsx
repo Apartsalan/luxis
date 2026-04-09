@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import {
   Mail, Paperclip, Loader2, X, Plus,
-  ExternalLink, FileText, Upload, FolderSearch,
+  ExternalLink, FileText, Upload, FolderSearch, BookMarked,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -56,11 +56,17 @@ interface TemplateInfo {
   available: boolean;
 }
 
+interface LibraryTemplate {
+  template_key: string;
+  name: string;
+  description: string | null;
+}
+
 interface AttachmentRef {
   id: string;
   filename: string;
   size: number;
-  source: "dossier" | "upload" | "other";
+  source: "dossier" | "upload" | "other" | "library";
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -174,6 +180,12 @@ export function EmailComposeDialog({
   const [loadingOther, setLoadingOther] = useState(false);
   const [loadingOtherFiles, setLoadingOtherFiles] = useState(false);
 
+  // Library templates (render-to-PDF uit sjablonen-bibliotheek)
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryTemplates, setLibraryTemplates] = useState<LibraryTemplate[]>([]);
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [renderingLibraryKey, setRenderingLibraryKey] = useState<string | null>(null);
+
   // Load templates
   useEffect(() => {
     if (open && caseId && templates.length === 0) {
@@ -207,6 +219,8 @@ export function EmailComposeDialog({
       setOtherResults([]);
       setOtherSelected(null);
       setOtherFiles([]);
+      setShowLibrary(false);
+      setRenderingLibraryKey(null);
     }
     onOpenChange(nextOpen);
   };
@@ -315,6 +329,65 @@ export function EmailComposeDialog({
     setAttachments((p) => p.filter((a) => a.id !== id));
     setCaseFileIds((p) => { const n = new Set(p); n.delete(id); return n; });
     setInlineFiles((p) => { const n = new Map(p); n.delete(id); return n; });
+  };
+
+  // ── Library template handlers ────────────────────────────────────────
+
+  const loadLibraryTemplates = async () => {
+    if (libraryTemplates.length > 0) return;
+    setLoadingLibrary(true);
+    try {
+      const res = await api("/api/documents/library-templates");
+      if (res.ok) {
+        const data = (await res.json()) as LibraryTemplate[];
+        setLibraryTemplates(data);
+      }
+    } catch { /* ignore */ }
+    setLoadingLibrary(false);
+  };
+
+  const attachLibraryTemplate = async (tpl: LibraryTemplate) => {
+    if (!caseId) return;
+    // Prevent duplicate attachment of the same template
+    const dupId = `library-${tpl.template_key}`;
+    if (attachments.some((a) => a.id === dupId)) return;
+
+    setRenderingLibraryKey(tpl.template_key);
+    setErrors((p) => ({ ...p, attachments: undefined as unknown as string }));
+    try {
+      const res = await api(`/api/documents/docx/cases/${caseId}/render-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template_type: tpl.template_key }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setErrors((p) => ({ ...p, attachments: body.detail || "Renderen mislukt" }));
+        return;
+      }
+      const data = await res.json() as {
+        filename: string;
+        data_base64: string;
+        content_type: string;
+        size: number;
+      };
+      setInlineFiles((prev) => {
+        const n = new Map(prev);
+        n.set(dupId, {
+          filename: data.filename,
+          data_base64: data.data_base64,
+          content_type: data.content_type,
+        });
+        return n;
+      });
+      setAttachments((prev) => [
+        ...prev,
+        { id: dupId, filename: data.filename, size: data.size, source: "library" },
+      ]);
+    } catch {
+      setErrors((p) => ({ ...p, attachments: "Renderen mislukt (netwerkfout)" }));
+    }
+    setRenderingLibraryKey(null);
   };
 
   // ── Other-case handlers ───────────────────────────────────────────────
@@ -697,6 +770,51 @@ export function EmailComposeDialog({
               </div>
             )}
 
+            {/* Library picker panel */}
+            {showLibrary && (
+              <div className="rounded-md border p-3 space-y-2 bg-muted/20 text-xs">
+                <p className="font-medium text-muted-foreground">Sjablonen-bibliotheek (wordt als PDF bijgevoegd)</p>
+                {loadingLibrary ? (
+                  <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Laden...
+                  </div>
+                ) : libraryTemplates.length === 0 ? (
+                  <p className="text-muted-foreground py-1">Geen sjablonen beschikbaar</p>
+                ) : (
+                  <div className="space-y-0.5 max-h-[180px] overflow-y-auto">
+                    {libraryTemplates.map((tpl) => {
+                      const dupId = `library-${tpl.template_key}`;
+                      const added = attachments.some((a) => a.id === dupId);
+                      const rendering = renderingLibraryKey === tpl.template_key;
+                      return (
+                        <button
+                          key={tpl.template_key}
+                          type="button"
+                          disabled={added || rendering}
+                          onClick={() => attachLibraryTemplate(tpl)}
+                          className={cn(
+                            "w-full flex items-start gap-2 rounded px-2 py-2 text-left hover:bg-muted transition-colors",
+                            (added || rendering) && "opacity-50 cursor-not-allowed",
+                          )}
+                        >
+                          <BookMarked className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{tpl.name}</div>
+                            {tpl.description && (
+                              <div className="text-muted-foreground text-[11px] truncate">{tpl.description}</div>
+                            )}
+                          </div>
+                          {rendering && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />}
+                          {added && <span className="text-primary text-[10px] shrink-0">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <button type="button" onClick={() => setShowLibrary(false)} className="text-muted-foreground hover:text-foreground text-xs">Sluiten</button>
+              </div>
+            )}
+
             {errors.attachments && <p className="text-xs text-destructive">{errors.attachments}</p>}
           </div>
 
@@ -713,14 +831,17 @@ export function EmailComposeDialog({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => { setShowFilePicker(true); setShowOtherCase(false); loadCaseFiles(); }}>
+                    <DropdownMenuItem onClick={() => { setShowFilePicker(true); setShowOtherCase(false); setShowLibrary(false); loadCaseFiles(); }}>
                       <FileText className="h-4 w-4 mr-2" /> Uit dit dossier
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                       <Upload className="h-4 w-4 mr-2" /> Uploaden
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setShowOtherCase(true); setShowFilePicker(false); }}>
+                    <DropdownMenuItem onClick={() => { setShowOtherCase(true); setShowFilePicker(false); setShowLibrary(false); }}>
                       <FolderSearch className="h-4 w-4 mr-2" /> Ander dossier
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setShowLibrary(true); setShowFilePicker(false); setShowOtherCase(false); loadLibraryTemplates(); }}>
+                      <BookMarked className="h-4 w-4 mr-2" /> Uit sjablonen-bibliotheek
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

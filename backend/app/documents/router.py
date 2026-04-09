@@ -32,7 +32,10 @@ from app.documents.schemas import (
     GeneratedDocumentSummary,
     GenerateDocumentRequest,
     GenerateDocxRequest,
+    LibraryTemplate,
     MergeFieldCategory,
+    RenderedPdfAttachment,
+    RenderTemplatePdfRequest,
     SendDocumentRequest,
     SendDocumentResponse,
 )
@@ -44,6 +47,17 @@ from app.shared.exceptions import BadRequestError, NotFoundError
 from app.shared.sanitize import content_disposition
 
 logger = logging.getLogger(__name__)
+
+# Library templates — DOCX templates die Lisanne als PDF-bijlage kan meesturen
+# vanuit de compose-dialog sjablonen-bibliotheek. Uitbreidbaar: voeg nieuwe
+# template_keys + labels toe om ze in de lijst te laten verschijnen.
+LIBRARY_TEMPLATE_KEYS: dict[str, tuple[str, str]] = {
+    "verzoekschrift_faillissement": (
+        "Concept verzoekschrift faillissement",
+        "Concept verzoekschrift tot faillietverklaring (ex. art. 1 Fw) — "
+        "als PDF-bijlage bij de dreigbrief.",
+    ),
+}
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 router.include_router(template_router)
@@ -211,6 +225,78 @@ async def list_docx_templates(
 ):
     """List available .docx template types."""
     return get_available_templates()
+
+
+@router.get(
+    "/library-templates",
+    response_model=list[LibraryTemplate],
+)
+async def list_library_templates(
+    user: User = Depends(get_current_user),
+):
+    """Lijst van bibliotheek-templates die vanuit compose als PDF-bijlage
+    kunnen worden meegestuurd.
+
+    Alleen templates in de whitelist `LIBRARY_TEMPLATE_KEYS` worden getoond.
+    """
+    return [
+        LibraryTemplate(
+            template_key=key,
+            name=name,
+            description=description,
+        )
+        for key, (name, description) in LIBRARY_TEMPLATE_KEYS.items()
+    ]
+
+
+@router.post(
+    "/docx/cases/{case_id}/render-pdf",
+    response_model=RenderedPdfAttachment,
+)
+async def render_template_as_pdf(
+    case_id: uuid.UUID,
+    data: RenderTemplatePdfRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Rendert een DOCX-template met dossierdata en converteert direct naar
+    PDF. Returns base64-encoded PDF bytes klaar voor push naar compose
+    `inline_attachments`.
+
+    Gebruikt voor de sjablonen-bibliotheek flow in de compose-dialog —
+    Lisanne kiest een template, de backend rendert + converteert, en het
+    resultaat wordt als PDF-bijlage meegestuurd (nooit DOCX naar extern).
+    """
+    import base64
+
+    if data.template_type not in LIBRARY_TEMPLATE_KEYS:
+        raise BadRequestError(
+            f"Template '{data.template_type}' is geen bibliotheek-template."
+        )
+
+    result = await db.execute(
+        select(Case).where(
+            Case.id == case_id,
+            Case.tenant_id == user.tenant_id,
+        )
+    )
+    case = result.scalar_one_or_none()
+    if case is None:
+        raise NotFoundError("Zaak niet gevonden")
+
+    docx_bytes, docx_filename, _, _ = await render_docx(
+        db, user.tenant_id, case, data.template_type
+    )
+
+    pdf_bytes = await docx_to_pdf(docx_bytes)
+    pdf_filename = docx_filename.replace(".docx", ".pdf")
+
+    return RenderedPdfAttachment(
+        filename=pdf_filename,
+        data_base64=base64.b64encode(pdf_bytes).decode("ascii"),
+        content_type="application/pdf",
+        size=len(pdf_bytes),
+    )
 
 
 @router.post("/docx/cases/{case_id}/generate")

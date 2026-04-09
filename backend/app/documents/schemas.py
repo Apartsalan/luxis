@@ -133,6 +133,33 @@ class DocxTemplateInfo(BaseModel):
     available: bool
 
 
+class RenderTemplatePdfRequest(BaseModel):
+    template_type: str = Field(
+        ...,
+        description=(
+            "Template key uit TEMPLATE_FILES / managed_templates "
+            "(bijv. 'verzoekschrift_faillissement')."
+        ),
+    )
+
+
+class RenderedPdfAttachment(BaseModel):
+    """PDF-bijlage klaar voor push naar compose inline_attachments."""
+
+    filename: str
+    data_base64: str
+    content_type: str
+    size: int
+
+
+class LibraryTemplate(BaseModel):
+    """Een bibliotheek-template die vanuit compose als PDF-bijlage kan."""
+
+    template_key: str
+    name: str
+    description: str | None = None
+
+
 # ── Merge Fields Schemas ──────────────────────────────────────────────────
 
 

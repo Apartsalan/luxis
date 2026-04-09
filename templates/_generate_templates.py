@@ -720,6 +720,215 @@ def create_dagvaarding():
     print("  dagvaarding.docx")
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# VERZOEKSCHRIFT FAILLISSEMENT (concept — meegestuurd als bijlage bij dreigbrief)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def create_verzoekschrift_faillissement():
+    """Generate concept verzoekschrift tot faillietverklaring.
+
+    Drie secties (op aparte pagina's):
+      1. Begeleidende brief (persoonlijk & vertrouwelijk, sommatie 3 dagen)
+      2. Verzoekschrift ex art. 1 Fw (legal petition)
+      3. Slotpagina met laatste waarschuwing + contact
+    """
+    doc = Document()
+    _margins(doc)
+
+    # ─── Sectie 1: Begeleidende brief ──────────────────────────────────────
+    _p(doc, "PERSOONLIJK & VERTROUWELIJK", bold=True, size=Pt(10))
+    _p(doc, "")
+
+    # Kantoor + wederpartij header
+    _p(doc, "{{ kantoor.naam }}", bold=True)
+    _p(doc, "{{ kantoor.adres }}")
+    _p(doc, "{{ kantoor.postcode_stad }}")
+    _p(doc, "")
+    _p(doc, "{{ wederpartij.naam }}", bold=True)
+    _p(doc, "{{ wederpartij.adres }}")
+    _p(doc, "{{ wederpartij.postcode_stad }}")
+    _p(doc, "")
+    _p(doc, "Datum: {{ vandaag }}")
+    _p(doc, "Onze referentie: {{ zaak.zaaknummer }}")
+    _p(doc, "Inzake: Verzoekschrift faillissement")
+    _p(doc, "")
+
+    _p(doc, "Geachte heer, mevrouw {{ wederpartij.naam }},")
+    _p(doc, "")
+    _p(doc,
+        "{{ client.naam }}, gevestigd te {{ client.postcode_stad }} "
+        "(hierna te noemen: 'cli\u00ebnte') heeft zich tot mij gewend "
+        "aangezien de hieronder vermelde vordering ten hoogte van "
+        "{{ totaal_openstaand }} nog niet door u is voldaan.")
+    _p(doc, "")
+    _p(doc,
+        "Ik stel u hierbij op de hoogte dat de vordering wordt gestuit "
+        "conform artikel 3:317 BW. Het recht op nakoming wordt hiermee "
+        "ondubbelzinnig voorbehouden.")
+    _p(doc, "")
+    _p(doc,
+        "Bijgaand bij deze brief treft u de bijbehorende facturen aan. "
+        "Onderstaand zend ik u een specificatie van uw schuld:")
+    _p(doc, "")
+
+    _add_claims_table(doc)
+    _p(doc, "")
+
+    _add_summary_2col(doc, [
+        ("Hoofdsom", "{{ totaal_hoofdsom }}", True),
+        ("Rente t/m {{ vandaag }}", "{{ totaal_rente }}", False),
+        ("Hoofdsom + rente", "{{ subtotaal }}", False),
+        ("Incassokosten (BIK)", "{{ bik_bedrag }}", False),
+        ("{{ btw_regel_label }}", "{{ btw_regel_bedrag }}", False),
+        ("Totaal verschuldigd", "{{ totaal_verschuldigd }}", True),
+        ("{{ betalingen_aftrek_label }}", "{{ betalingen_aftrek_bedrag }}", False),
+        ("Te voldoen", "{{ totaal_openstaand }}", True),
+    ])
+    _p(doc, "")
+
+    _p(doc,
+        "Indien het voormelde bedrag niet binnen een termijn van "
+        "DRIE DAGEN NA HEDEN NA BETEKENING VOOR 12:00 UUR is bijgeschreven "
+        "op de derdengeldenrekening van mijn kantoor: IBAN NL20 RABO "
+        "0388 5065 20 ten name van Stichting Beheer Derdengelden Kesting "
+        "Legal onder vermelding van het kenmerk {{ zaak.zaaknummer }}, "
+        "dan zal ik cli\u00ebnte adviseren het bij deze brief aangehechte "
+        "concept verzoek tot faillietverklaring in te dienen.")
+    _p(doc, "")
+    _p(doc,
+        "Lagere betalingen dan gevorderd zijn, worden altijd in mindering "
+        "gebracht op eerst de verschenen en gevorderde buitengerechtelijke "
+        "kosten, vervolgens op verschenen rente en als laatste op de "
+        "hoofdsom als gevorderd.")
+    _p(doc, "")
+    _p(doc, "Kosten van de faillissementsaanvraag bedragen EUR 2.195,00.")
+    _p(doc, "")
+    _p(doc,
+        "Voorts wijs ik u erop op voorhand op dat, indien de behandeling "
+        "van de faillissementsaanvraag \u00e9\u00e9n of meerdere malen "
+        "dient te worden aangehouden, \u00e9\u00e9n punt liquidatietarief "
+        "is verschuldigd van \u20ac 412,61 inclusief BTW boven de kosten "
+        "der aanvraag.")
+    _p(doc, "")
+    _p(doc, "In afwachting van uw spoedige betaling.")
+    _p(doc, "")
+
+    _add_signature(doc)
+
+    # ─── Sectie 2: Verzoekschrift ex art. 1 Fw ────────────────────────────
+    doc.add_page_break()
+
+    doc.add_heading("Verzoekschrift tot faillietverklaring (ex. art. 1 Fw)",
+                    level=1)
+    _p(doc, "")
+    _p(doc, "Aan de rechtbank [nader in te vullen]", bold=True)
+    _p(doc, "")
+    _p(doc, "Geeft eerbiedig te kennen:", bold=True)
+    _p(doc, "")
+    _p(doc,
+        "De besloten vennootschap met beperkte aansprakelijkheid "
+        "{{ client.naam }}, gevestigd te {{ client.postcode_stad }}, "
+        "in deze zaak woonplaats kiezende te Amsterdam, ten kantore "
+        "van {{ kantoor.naam }}, van wie tot advocaat wordt gesteld "
+        "Mevr. mr. L. Kesting met het recht van substitutie.")
+    _p(doc, "")
+    _p(doc, "(\u201cverzoeker\u201d)", bold=True)
+    _p(doc, "")
+    _p(doc, "Dit verzoek is gericht tegen:", bold=True)
+    _p(doc, "")
+    _p(doc,
+        "{{ wederpartij.naam }}, woonachtig en/of zaakdoende te "
+        "{{ wederpartij.postcode_stad }}, aan {{ wederpartij.adres }} "
+        "(bijlage 1).")
+    _p(doc, "")
+    _p(doc, "(\u201cverweerder\u201d)", bold=True)
+    _p(doc, "")
+    _p(doc,
+        "Dit rekest strekt tot faillietverklaring van verweerder, "
+        "waartoe verzoeker het navolgende aanvoert:")
+    _p(doc, "")
+
+    _p(doc,
+        "1. Verzoeker heeft een opeisbare vordering uit hoofde van "
+        "geleverde zaken en/of diensten en daarbij horende facturen "
+        "(bijlage 2).")
+    _p(doc,
+        "2. Verweerder blijft ondanks herhaaldelijke sommaties in "
+        "gebreke de verschuldigde bedragen aan verzoeker te voldoen.")
+    _p(doc,
+        "3. De opeisbare vordering van Verzoeker op Verweerder "
+        "bedraagt thans:")
+    _p(doc, "")
+
+    _add_claims_table(doc)
+    _p(doc, "")
+
+    _add_summary_2col(doc, [
+        ("Hoofdsom", "{{ totaal_hoofdsom }}", True),
+        ("Rente", "{{ totaal_rente }}", False),
+        ("Hoofdsom + rente", "{{ subtotaal }}", False),
+        ("Incassokosten", "{{ bik_bedrag }}", False),
+        ("{{ btw_regel_label }}", "{{ btw_regel_bedrag }}", False),
+        ("Totaal", "{{ totaal_verschuldigd }}", True),
+        ("Te voldoen", "{{ totaal_openstaand }}", True),
+    ])
+    _p(doc, "")
+
+    _p(doc,
+        "4. Verweerder laat daarnaast nog \u00e9\u00e9n of meerdere "
+        "vorderingen van \u00e9\u00e9n of meer andere schuldeisers "
+        "onbetaald.")
+    _p(doc,
+        "5. Verweerder verkeert dus in de toestand dat hij heeft "
+        "opgehouden te betalen. Verzoeker is derhalve gerechtigd de "
+        "faillietverklaring van Verweerder te verzoeken.")
+    _p(doc,
+        "6. De kosten van de faillissementsaanvraag bedragen "
+        "\u20ac 2.195,00.")
+    _p(doc,
+        "7. De voornaamste belangen van verweerder zijn gelegen in "
+        "Nederland. Verweerder is woonachtig/zaakdoende/gevestigd te "
+        "{{ wederpartij.postcode_stad }}, zodat Uw Rechtbank bevoegd is.")
+    _p(doc, "")
+
+    _p(doc, "Redenen waarom:", bold=True)
+    _p(doc,
+        "Verzoeker uw Rechtbank verzoekt verweerder in staat van "
+        "faillissement te verklaren.")
+    _p(doc, "")
+    _p(doc, "Mevr. mr. L. Kesting", bold=True)
+    _p(doc, "{{ kantoor.naam }}")
+    _p(doc, "Advocaat")
+
+    # ─── Sectie 3: Slotpagina ─────────────────────────────────────────────
+    doc.add_page_break()
+
+    _p(doc,
+       "U kunt de faillissementszitting nog voorkomen door uiterlijk "
+       "3 dagen voor de door de rechtbank aangekondigde zittingsdatum "
+       "het bedrag van {{ totaal_openstaand }} bij te laten schrijven "
+       "op de derdengeldenrekening van mijn kantoor IBAN NL20 RABO 0388 "
+       "5065 20 t.n.v. Stichting Beheer Derdengelden Kesting Legal "
+       "onder vermelding van het kenmerk {{ zaak.zaaknummer }}.",
+       bold=True)
+    _p(doc, "")
+    _p(doc,
+        "Een deelbetaling zal eerst in mindering strekken op de kosten "
+        "en rente.")
+    _p(doc, "")
+    _p(doc,
+        "Dit dossier is in behandeling bij mevrouw mr. L. Kesting van "
+        "{{ kantoor.naam }} te {{ kantoor.postcode_stad }} aan "
+        "{{ kantoor.adres }}.")
+    _p(doc, "")
+    _p(doc, "E: {{ kantoor.email }} | T: {{ kantoor.telefoon }}",
+       size=Pt(9))
+
+    doc.save(str(TEMPLATES_DIR / "verzoekschrift_faillissement.docx"))
+    print("  verzoekschrift_faillissement.docx")
+
+
 if __name__ == "__main__":
     print("Generating .docx templates...")
     create_herinnering()
@@ -729,4 +938,5 @@ if __name__ == "__main__":
     create_tweede_sommatie()
     create_dagvaarding()
     create_renteoverzicht()
+    create_verzoekschrift_faillissement()
     print("Done!")

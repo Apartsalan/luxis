@@ -46,6 +46,7 @@ TEMPLATE_FILES = {
     "aanmaning": "aanmaning.docx",
     "tweede_sommatie": "tweede_sommatie.docx",
     "dagvaarding": "dagvaarding.docx",
+    "verzoekschrift_faillissement": "verzoekschrift_faillissement.docx",
 }
 
 INTEREST_TYPE_LABELS = {

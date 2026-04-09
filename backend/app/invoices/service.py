@@ -120,8 +120,15 @@ async def list_invoices(
         count_query = count_query.where(Invoice.contact_id == contact_id)
 
     if status:
-        query = query.where(Invoice.status == status)
-        count_query = count_query.where(Invoice.status == status)
+        # Accept either a single status or a comma-separated list
+        # (bijv. "sent,partially_paid,overdue" voor openstaande facturen)
+        statuses = [s.strip() for s in status.split(",") if s.strip()]
+        if len(statuses) == 1:
+            query = query.where(Invoice.status == statuses[0])
+            count_query = count_query.where(Invoice.status == statuses[0])
+        elif len(statuses) > 1:
+            query = query.where(Invoice.status.in_(statuses))
+            count_query = count_query.where(Invoice.status.in_(statuses))
 
     if search:
         pattern = f"%{search}%"

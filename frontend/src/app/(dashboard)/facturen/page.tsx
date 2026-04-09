@@ -29,10 +29,11 @@ export default function FacturenPage() {
   const router = useRouter();
   const initialContactId = searchParams.get("contact_id") || "";
   const initialContactName = searchParams.get("contact_name") || "";
+  const initialStatus = searchParams.get("status") || "";
 
   const [activeTab, setActiveTab] = useState<"facturen" | "debiteuren">("facturen");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(initialStatus);
   const [contactId, setContactId] = useState(initialContactId);
   const [contactName, setContactName] = useState(initialContactName);
   const [page, setPage] = useState(1);
@@ -41,8 +42,10 @@ export default function FacturenPage() {
   useEffect(() => {
     const newContactId = searchParams.get("contact_id") || "";
     const newContactName = searchParams.get("contact_name") || "";
+    const newStatus = searchParams.get("status") || "";
     setContactId(newContactId);
     setContactName(newContactName);
+    setStatus(newStatus);
     if (newContactId) {
       setActiveTab("facturen");
       setPage(1);
@@ -150,6 +153,7 @@ export default function FacturenPage() {
                   className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                 >
                   <option value="">Alle statussen</option>
+                  <option value="sent,partially_paid,overdue">Alleen openstaand</option>
                   {Object.entries(INVOICE_STATUS_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -682,7 +686,7 @@ function DebiteurenTab({
               <tr key={contact.contact_id} className="hover:bg-muted/40 transition-colors">
                 <td className="px-4 py-3.5">
                   <Link
-                    href={`/facturen?contact_id=${contact.contact_id}&contact_name=${encodeURIComponent(contact.contact_name)}`}
+                    href={`/facturen?contact_id=${contact.contact_id}&contact_name=${encodeURIComponent(contact.contact_name)}&status=sent,partially_paid,overdue`}
                     className="text-sm font-medium text-foreground hover:text-primary transition-colors"
                     title="Bekijk openstaande facturen"
                   >

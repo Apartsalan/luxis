@@ -127,6 +127,45 @@ async def test_list_invoices(
 
 
 @pytest.mark.asyncio
+async def test_list_invoices_multi_status_filter(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """DF117-19 — status accepteert comma-gescheiden lijst voor 'openstaand'.
+
+    'sent,partially_paid,overdue' is de frontend-filter voor openstaande
+    facturen. Moet meerdere statussen kunnen matchen via IN ().
+    """
+    contact = await _create_contact(db, test_tenant.id)
+    # 2 concept invoices (mogen NIET terugkomen bij status=sent,...)
+    for _ in range(2):
+        await _create_concept_invoice(client, auth_headers, contact.id)
+
+    # Comma-filter met 1 status — alleen concept match, niet sent
+    resp = await client.get(
+        "/api/invoices?status=sent,partially_paid,overdue",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 0  # geen van de 2 concept invoices matcht
+
+    # Single status blijft werken (backwards compat)
+    resp2 = await client.get(
+        "/api/invoices?status=concept",
+        headers=auth_headers,
+    )
+    assert resp2.status_code == 200
+    assert resp2.json()["total"] == 2
+
+    # Comma-filter mét concept erbij — beide concept invoices matchen
+    resp3 = await client.get(
+        "/api/invoices?status=concept,sent",
+        headers=auth_headers,
+    )
+    assert resp3.status_code == 200
+    assert resp3.json()["total"] == 2
+
+
+@pytest.mark.asyncio
 async def test_get_invoice(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):

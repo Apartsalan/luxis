@@ -933,9 +933,14 @@ def _render_reactie_verlengd_9_3(ctx: dict) -> str:
 def _render_vaststellingsovereenkomst(ctx: dict) -> str:
     """Vaststellingsovereenkomst / treffen van een regeling (Basenet L2).
 
-    Placeholders `[VUL TOTAALBEDRAG IN]` en `[VUL TERMIJNEN IN]` worden
-    door Lisanne handmatig overschreven in de contentEditable body vóór
-    verzenden. Exact 6 genummerde clausules (Basenet-versie).
+    Totaalbedrag = automatisch `totaal_openstaand` (default voor 95% van
+    de VSO's — matcht het volledige openstaand saldo). Lisanne kan dit
+    overschrijven in de compose-editor bij een gereduceerd onderhandeld
+    bedrag.
+
+    Placeholder `[VUL TERMIJNEN IN]` blijft handmatig — komt uit
+    onderhandeling met debiteur, geen deterministische default.
+    Exact 6 genummerde clausules (Basenet-versie).
     """
     zn = ctx["zaak"]["zaaknummer"]
     body = (
@@ -950,11 +955,9 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
         "op deze e-mail.</p>"
         "<p><strong>Vaststellingsovereenkomst in de zin der wet"
         "</strong></p><ol>"
-        "<li>Partijen stellen de vordering in onderhavig dossier "
-        "op een bedrag van "
-        '<mark style="background:#fef3c7;padding:2px 6px;">'
-        "[VUL TOTAALBEDRAG VSO IN]</mark> inclusief rente en "
-        "kosten.</li>"
+        f"<li>Partijen stellen de vordering in onderhavig dossier "
+        f"op een bedrag van <strong>{ctx['totaal_openstaand']}</strong> "
+        "inclusief rente en kosten.</li>"
         "<li>Schuldenaar zal bovengenoemd totaalbedrag voldoen "
         "door betaling in termijnen. De termijnen zijn als volgt, "
         "waarbij elke termijn uiterlijk op de vervaldatum moet "

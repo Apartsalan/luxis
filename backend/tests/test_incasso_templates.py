@@ -120,11 +120,16 @@ def test_render_schikkingsvoorstel_placeholder(mock_context):
 
 
 def test_render_vaststellingsovereenkomst_placeholders(mock_context):
-    """L2 — VSO met 2 placeholders en 2x24 uur akkoord-termijn."""
+    """L2 — VSO: totaalbedrag auto (= totaal_openstaand), termijnen handmatig."""
     html = render_incasso_email("vaststellingsovereenkomst", mock_context)
     _assert_base_nl(html)
-    assert "[VUL TOTAALBEDRAG VSO IN]" in html
+    # Totaalbedrag wordt automatisch gevuld met totaal_openstaand (default
+    # voor 95% van de VSO's — Lisanne kan overschrijven bij onderhandeling)
+    assert "€ 5.956,25" in html  # = totaal_openstaand uit mock_context
+    # Alleen termijnen blijven handmatig (geen deterministische default)
     assert "[VUL TERMIJNEN IN" in html
+    # Auto-fill mag er niet meer zijn
+    assert "[VUL TOTAALBEDRAG" not in html
     assert "2 x 24 uur" in html
     assert "Vaststellingsovereenkomst" in html
 

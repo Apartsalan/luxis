@@ -376,6 +376,44 @@ def _stuiting_blok(ctx: dict) -> str:
     )
 
 
+def _stuiting_blok_en(ctx: dict) -> str:
+    """English interruption of claim (art. 3:317 Dutch Civil Code)."""
+    return (
+        "<p><strong>Interruption of the claim</strong><br>"
+        "I hereby inform you that the claim is interrupted in "
+        "accordance with Article 3:317 of the Dutch Civil Code. The "
+        "right to performance is thereby unambiguously reserved.</p>"
+    )
+
+
+def _betaling_instructie_en(ctx: dict, days: int = 2) -> str:
+    """English payment instruction — derdengelden IBAN + reference."""
+    return (
+        f"<p>I hereby demand that you transfer the total outstanding "
+        f"amount of {ctx['totaal_openstaand']} <strong>WITHIN {days} "
+        "DAYS FROM TODAY</strong> to the third-party account of my "
+        "office:</p>"
+        "<p>IBAN: NL20 RABO 0388 5065 20<br>"
+        "Account holder: Stichting Beheer Derdengelden Kesting Legal<br>"
+        f"Reference: {ctx['zaak']['zaaknummer']}</p>"
+        "<p><strong>Important:</strong> You must include the correct "
+        "case number when making the payment. Please note that only "
+        "full payment via the specified method will halt the "
+        "collection procedure.</p>"
+    )
+
+
+def _betalingsregeling_en_blok(ctx: dict) -> str:
+    """English payment arrangement block."""
+    return (
+        "<p><strong>Payment arrangement</strong><br>"
+        "If, at this stage of the collection process, you wish to "
+        "propose a payment arrangement, please reply to this e-mail "
+        "within the stated deadline. Please note: proposing a payment "
+        "arrangement does not create any rights.</p>"
+    )
+
+
 # ── Template: Aanmaning ──────────────────────────────────────────────────
 
 
@@ -1410,6 +1448,187 @@ def _render_sommatie_drukte(ctx: dict) -> str:
     )
 
 
+# ── Template: English — first demand for payment (Basenet L14) ────────
+
+
+def _render_demand_for_payment_eerste(ctx: dict) -> str:
+    """English first demand for payment (Basenet L14).
+
+    Eerste sommatie in Engels, kort formaat, 3 dagen termijn. Voor
+    internationale debiteuren bij eerste contact.
+    """
+    zn = ctx["zaak"]["zaaknummer"]
+    body = (
+        "<p>Dear sir/madam,</p>"
+        f"<p>My client has requested me to collect the outstanding "
+        f"claim listed below from {ctx['wederpartij']['naam']}. This "
+        "claim has been transferred to my office for further "
+        "processing.</p>"
+        "<p>You currently owe the following amount:</p>"
+    )
+    body += _vordering_table_basenet(ctx)
+    body += "<p><strong>Demand for payment</strong></p>"
+    body += _betaling_instructie_en(ctx, days=3)
+    body += (
+        "<p>Please be advised that only full payment via the "
+        "specified method will ensure that the collection procedure "
+        "is halted. Should you fail to make payment within the given "
+        "deadline, my client has already instructed me to take all "
+        "necessary legal measures against you. Any costs incurred in "
+        "this process will be recovered from you.</p>"
+        "<p>I trust you acknowledge the seriousness of this matter "
+        "and will proceed with payment in a timely manner.</p>"
+    )
+    return _render_branded(
+        ctx,
+        betreft=(
+            f"<strong>DEMAND FOR PAYMENT / {zn} / "
+            f"{ctx['wederpartij']['naam']}</strong>"
+        ),
+        content_html=body,
+        afsluiting_html=_signature(ctx, english=True),
+    )
+
+
+# ── Template: English — demand with interruption + arrangement (L10) ──
+
+
+def _render_demand_for_payment_uitgebreid(ctx: dict) -> str:
+    """English demand with interruption + payment arrangement (Basenet L10).
+
+    Uitgebreide variant: 3 dagen termijn, stuiting art. 3:317 BW, en
+    payment arrangement blok. Voor situaties waar interruption of the
+    statute of limitations nodig is.
+    """
+    zn = ctx["zaak"]["zaaknummer"]
+    body = (
+        "<p>Dear sir/madam,</p>"
+        f"<p>Previously, I contacted you regarding my client's "
+        f"outstanding claim against {ctx['wederpartij']['naam']}. This "
+        "claim has been transferred to my office for collection. To "
+        "date, you have not yet fully complied with your payment "
+        "obligation. As a result, I am compelled to continue the "
+        "collection process.</p>"
+        "<p>The outstanding balance is specified as follows:</p>"
+    )
+    body += _vordering_table_basenet(ctx)
+    body += "<p><strong>Demand for payment</strong></p>"
+    body += _betaling_instructie_en(ctx, days=3)
+    body += (
+        "<p><strong>Consequences of non-payment</strong><br>"
+        "If payment remains outstanding, I will have to advise my "
+        "client to initiate bankruptcy proceedings against you. "
+        "Additionally, on behalf of my client, I hold you liable for "
+        "all damages incurred and to be incurred, including &mdash; "
+        "but not limited to &mdash; legal and attorney fees.</p>"
+    )
+    body += _stuiting_blok_en(ctx)
+    body += _betalingsregeling_en_blok(ctx)
+    return _render_branded(
+        ctx,
+        betreft=(
+            f"<strong>DEMAND FOR PAYMENT / {zn} / "
+            f"{ctx['wederpartij']['naam']}</strong>"
+        ),
+        content_html=body,
+        afsluiting_html=_signature(ctx, english=True),
+    )
+
+
+# ── Template: English — last chance (bankruptcy pending) (L9) ─────────
+
+
+def _render_demand_for_payment_laatste(ctx: dict) -> str:
+    """English last chance demand — bankruptcy petition pending (L9).
+
+    2 dagen termijn. Verzoekschrift is al in voorbereiding.
+    """
+    zn = ctx["zaak"]["zaaknummer"]
+    body = (
+        "<p>Dear sir/madam,</p>"
+        "<p>Previously, I contacted you regarding my client's "
+        "outstanding claim. This claim has been transferred to my "
+        "office for collection.</p>"
+        "<p>Despite multiple reminders, you have not yet fully "
+        "complied with your payment obligation. As previously stated, "
+        "due to non-payment, I have advised my client to file for "
+        "your bankruptcy.</p>"
+        "<p>I have already begun drafting the petition. Once the "
+        "petition is finalized and submitted, the bankruptcy "
+        "proceedings will be initiated.</p>"
+        "<p>The outstanding balance is specified as follows:</p>"
+    )
+    body += _vordering_table_basenet(ctx)
+    body += "<p><strong>Amount to be paid</strong></p>"
+    body += _betaling_instructie_en(ctx, days=2)
+    body += (
+        "<p><strong>Consequences of non-payment</strong><br>"
+        "If payment remains outstanding, I will &mdash; as previously "
+        "announced &mdash; proceed with filing the bankruptcy "
+        "petition with the court. You have already been held liable "
+        "for all damages incurred and yet to be incurred by my "
+        "client, including legal and attorney fees.</p>"
+        "<p>I trust that you recognize the seriousness of the "
+        "situation and will proceed with timely payment.</p>"
+    )
+    return _render_branded(
+        ctx,
+        betreft=(
+            f"<strong>DEMAND FOR PAYMENT / {zn} / "
+            f"{ctx['wederpartij']['naam']}</strong>"
+        ),
+        content_html=body,
+        afsluiting_html=_signature(ctx, english=True),
+    )
+
+
+# ── Template: English — bankruptcy petition attached (L6) ─────────────
+
+
+def _render_demand_for_payment_fai(ctx: dict) -> str:
+    """English demand with bankruptcy petition attached (Basenet L6).
+
+    Zelfde moment als `faillissement_dreigbrief` maar in Engels. 2 dagen
+    termijn. Concept verzoekschrift PDF moet handmatig als bijlage
+    toegevoegd worden via 'Uit sjablonen-bibliotheek'.
+    """
+    zn = ctx["zaak"]["zaaknummer"]
+    body = (
+        "<p>Dear sir/madam,</p>"
+        "<p>In this matter, I have repeatedly and formally demanded "
+        "payment on behalf of my client. To date, you have neither "
+        "made payment nor provided a substantive response. You are "
+        "therefore in default.</p>"
+        "<p>My client has expressly instructed me to prepare and "
+        "file a petition for bankruptcy with the competent court. "
+        "<strong>A copy of the petition is attached.</strong></p>"
+        "<p><strong>Claim</strong></p>"
+        "<p>The outstanding balance is specified as follows:</p>"
+    )
+    body += _vordering_table_basenet(ctx)
+    body += "<p><strong>Amount to be paid</strong></p>"
+    body += _betaling_instructie_en(ctx, days=2)
+    body += (
+        "<p><strong>Consequences of non-payment</strong><br>"
+        "If payment remains outstanding, I will &mdash; as previously "
+        "announced &mdash; proceed with filing the bankruptcy "
+        "petition with the court. You have already been held liable "
+        "for all damages incurred and yet to be incurred by my "
+        "client, including legal and attorney fees.</p>"
+        "<p>I trust that you recognize the seriousness of the "
+        "situation and will proceed with timely payment.</p>"
+    )
+    return _render_branded(
+        ctx,
+        betreft=(
+            f"<strong>DEMAND FOR PAYMENT / {zn} / "
+            f"{ctx['wederpartij']['naam']} / BANKRUPTCY</strong>"
+        ),
+        content_html=body,
+        afsluiting_html=_signature(ctx, english=True),
+    )
+
+
 # ── Public API ───────────────────────────────────────────────────────────
 
 _RENDERERS: dict[str, callable] = {
@@ -1429,6 +1648,10 @@ _RENDERERS: dict[str, callable] = {
     "reactie_20_4": _render_reactie_20_4,
     "schikkingsvoorstel": _render_schikkingsvoorstel,
     "engelse_sommatie": _render_engelse_sommatie,
+    "demand_for_payment_eerste": _render_demand_for_payment_eerste,
+    "demand_for_payment_uitgebreid": _render_demand_for_payment_uitgebreid,
+    "demand_for_payment_laatste": _render_demand_for_payment_laatste,
+    "demand_for_payment_fai": _render_demand_for_payment_fai,
     "reactie_ncnp_9_3": _render_reactie_ncnp_9_3,
     "reactie_verlengd_9_3": _render_reactie_verlengd_9_3,
     "vaststellingsovereenkomst": _render_vaststellingsovereenkomst,

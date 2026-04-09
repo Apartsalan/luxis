@@ -659,6 +659,171 @@ async def test_credit_note_preserves_per_line_btw(
     assert net == Decimal("0.00"), f"Full credit should net to zero, got €{net}"
 
 
+@pytest.mark.asyncio
+async def test_credit_note_three_btw_rates(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """DF117-17 — Drie BTW-regimes tegelijk (21% + 9% + 0%).
+
+    Originele factuur: €100 @ 21% + €100 @ 9% + €100 @ 0% = €330 totaal
+    Volledige creditnota met per-regel BTW: −€330 (NIET −€360 of −€321)
+    """
+    contact = await _create_contact(db, test_tenant.id)
+    payload = {
+        "contact_id": str(contact.id),
+        "invoice_date": "2026-03-01",
+        "due_date": "2026-03-31",
+        "btw_percentage": "21.00",
+        "lines": [
+            {"description": "Advies 21%", "quantity": "1", "unit_price": "100.00", "btw_percentage": "21.00"},
+            {"description": "Service 9%", "quantity": "1", "unit_price": "100.00", "btw_percentage": "9.00"},
+            {"description": "Verschot 0%", "quantity": "1", "unit_price": "100.00", "btw_percentage": "0.00"},
+        ],
+    }
+    resp = await client.post("/api/invoices", json=payload, headers=auth_headers)
+    assert resp.status_code == 201
+    inv = resp.json()
+    # €100 @21 = €121, €100 @9 = €109, €100 @0 = €100 → totaal €330
+    assert Decimal(inv["subtotal"]) == Decimal("300.00")
+    assert Decimal(inv["btw_amount"]) == Decimal("30.00")  # 21 + 9 + 0
+    assert Decimal(inv["total"]) == Decimal("330.00")
+    inv_id = inv["id"]
+
+    await _advance_to_sent(client, auth_headers, inv_id)
+
+    cn_payload = {
+        "linked_invoice_id": inv_id,
+        "invoice_date": "2026-03-15",
+        "due_date": "2026-04-15",
+        "lines": [
+            {"description": "Credit 21%", "quantity": "1", "unit_price": "100.00", "btw_percentage": "21.00"},
+            {"description": "Credit 9%", "quantity": "1", "unit_price": "100.00", "btw_percentage": "9.00"},
+            {"description": "Credit 0%", "quantity": "1", "unit_price": "100.00", "btw_percentage": "0.00"},
+        ],
+    }
+    resp = await client.post("/api/invoices/credit-note", json=cn_payload, headers=auth_headers)
+    assert resp.status_code == 201
+    cn = resp.json()
+    assert Decimal(cn["subtotal"]) == Decimal("-300.00")
+    assert Decimal(cn["btw_amount"]) == Decimal("-30.00")
+    assert Decimal(cn["total"]) == Decimal("-330.00"), \
+        f"3-rate credit must be -€330.00, got {cn['total']}"
+
+    # Dossier nets to €0
+    list_resp = await client.get(
+        f"/api/invoices?contact_id={contact.id}", headers=auth_headers
+    )
+    items = list_resp.json()["items"]
+    assert sum(Decimal(str(i["total"])) for i in items) == Decimal("0.00")
+
+
+@pytest.mark.asyncio
+async def test_credit_note_multiple_partials_offset_correctly(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """DF117-17 — Meerdere deelcreditnotas op 1 invoice moeten stapelen.
+
+    Originele factuur: 4 uren × €100 @ 21% = €484 totaal
+    Deelcreditnota 1: 1 uur → −€121
+    Deelcreditnota 2: 1 uur → −€121
+    Dossier-netto: €484 − €121 − €121 = €242
+    """
+    contact = await _create_contact(db, test_tenant.id)
+    payload = {
+        "contact_id": str(contact.id),
+        "invoice_date": "2026-03-01",
+        "due_date": "2026-03-31",
+        "btw_percentage": "21.00",
+        "lines": [
+            {"description": "4 uren advies", "quantity": "4", "unit_price": "100.00", "btw_percentage": "21.00"},
+        ],
+    }
+    resp = await client.post("/api/invoices", json=payload, headers=auth_headers)
+    inv = resp.json()
+    assert Decimal(inv["total"]) == Decimal("484.00")
+    inv_id = inv["id"]
+    await _advance_to_sent(client, auth_headers, inv_id)
+
+    # Eerste deelcreditnota: 1 uur
+    cn1 = await client.post(
+        "/api/invoices/credit-note",
+        json={
+            "linked_invoice_id": inv_id,
+            "invoice_date": "2026-03-10",
+            "due_date": "2026-04-10",
+            "lines": [
+                {"description": "Credit 1 uur", "quantity": "1", "unit_price": "100.00", "btw_percentage": "21.00"},
+            ],
+        },
+        headers=auth_headers,
+    )
+    assert cn1.status_code == 201
+    assert Decimal(cn1.json()["total"]) == Decimal("-121.00")
+
+    # Tweede deelcreditnota: nog 1 uur
+    cn2 = await client.post(
+        "/api/invoices/credit-note",
+        json={
+            "linked_invoice_id": inv_id,
+            "invoice_date": "2026-03-20",
+            "due_date": "2026-04-20",
+            "lines": [
+                {"description": "Credit nog 1 uur", "quantity": "1", "unit_price": "100.00", "btw_percentage": "21.00"},
+            ],
+        },
+        headers=auth_headers,
+    )
+    assert cn2.status_code == 201
+    assert Decimal(cn2.json()["total"]) == Decimal("-121.00")
+
+    # Dossier-totaal: €484 − €121 − €121 = €242
+    list_resp = await client.get(
+        f"/api/invoices?contact_id={contact.id}", headers=auth_headers
+    )
+    items = list_resp.json()["items"]
+    assert len(items) == 3
+    net = sum(Decimal(str(i["total"])) for i in items)
+    assert net == Decimal("242.00"), \
+        f"Dossier-netto na 2 deelcredits moet €242 zijn, kreeg €{net}"
+
+
+@pytest.mark.asyncio
+async def test_credit_note_on_approved_status_works(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """DF117-17 — Creditnota mag óók op approved (niet alleen sent).
+
+    Lisanne kan een goedgekeurde factuur crediteren vóór versturen
+    (bijv. als ze na approve nog een fout vindt).
+    """
+    contact = await _create_contact(db, test_tenant.id)
+    created = await _create_concept_invoice(client, auth_headers, contact.id)
+    inv_id = created["id"]
+
+    # Approve but DO NOT send
+    resp = await client.post(
+        f"/api/invoices/{inv_id}/approve", headers=auth_headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "approved"
+
+    # Credit note on approved
+    cn_payload = {
+        "linked_invoice_id": inv_id,
+        "invoice_date": "2026-03-15",
+        "due_date": "2026-04-15",
+        "lines": [
+            {"description": "Credit approved factuur", "quantity": "2", "unit_price": "250.00"},
+        ],
+    }
+    resp = await client.post(
+        "/api/invoices/credit-note", json=cn_payload, headers=auth_headers
+    )
+    assert resp.status_code == 201, \
+        f"Credit op approved moet werken, kreeg {resp.status_code}: {resp.json()}"
+    assert Decimal(resp.json()["total"]) == Decimal("-605.00")
+
+
 # ── Expenses CRUD ────────────────────────────────────────────────────────────
 
 

@@ -400,45 +400,54 @@ def _render_aanmaning(ctx: dict) -> str:
 
 
 def _render_sommatie(ctx: dict) -> str:
-    body = (
-        "<p>Geachte heer/mevrouw,</p>"
-        f"<p>Tot mij heeft zich gewend {ctx['client']['naam']} met het "
-        f"verzoek u te sommeren tot betaling van het hierna te noemen bedrag. "
-        f"Tot op heden is betaling, ondanks eerdere aanmaningen, uitgebleven.</p>"
-    )
-    body += _heading("Specificatie vordering")
-    body += _claims_table(ctx)
-    # Sommatie uses betalingen_regel (inline deduction in summary)
-    summary = (
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="border-collapse:collapse;font-size:13px;margin:16px 0;'
-        'border-top:2px solid #1e293b;">'
-    )
-    summary += _summary_row("Hoofdsom", ctx["totaal_hoofdsom"], bold=True)
-    summary += _summary_row(f"Wettelijke rente t/m {ctx['vandaag']}", ctx["totaal_rente"])
-    summary += _summary_row("Buitengerechtelijke incassokosten", ctx["bik_bedrag"])
-    summary += _summary_row(ctx["btw_regel_label"], ctx["btw_regel_bedrag"])
-    summary += _summary_row(ctx["betalingen_regel_label"], ctx["betalingen_regel_bedrag"])
-    summary += _summary_row("Totaal thans verschuldigd", ctx["totaal_openstaand"], bold=True)
-    summary += "</table>"
-    body += summary
+    """Eerste sommatie tot betaling (Basenet L13) — 3 dagen + AV.
 
-    body += _heading("Sommatie")
+    Standaard eerste sommatie na overdracht ter incasso. Verwijst naar
+    Algemene Voorwaarden van cliënt + wettelijke/contractuele rente.
+    """
+    zn = ctx["zaak"]["zaaknummer"]
+    body = (
+        "<p>Geachte heer, mevrouw,</p>"
+        "<p>Cli&euml;nt heeft mij verzocht om onderstaande openstaande "
+        "vordering bij u te incasseren. Deze vordering is ter verdere "
+        "afwikkeling aan mijn kantoor overgedragen.</p>"
+        "<p>Cli&euml;nt hanteert Algemene Voorwaarden, welke van toepassing "
+        "zijn op alle transacties. Primair op grond van die voorwaarden en "
+        "subsidiair op grond van de van toepassing zijnde wettelijke "
+        "bepalingen verhaal ik onderstaand bedrag op u.</p>"
+        "<p>Thans bent u het volgende verschuldigd:</p>"
+    )
+    body += _vordering_table_basenet(ctx)
     body += (
-        f"<p>Ik sommeer u hierbij om het verschuldigde bedrag van "
-        f"<strong>{ctx['totaal_openstaand']}</strong> binnen acht (8) dagen "
-        f"na dagtekening van deze brief over te maken.</p>"
-        "<p>Bij gebreke van tijdige en volledige betaling zal ik, zonder "
-        "nadere aankondiging, overgaan tot het uitbrengen van een dagvaarding. "
-        "De hieraan verbonden kosten (griffierecht, deurwaarderskosten, "
-        "proceskosten) komen volledig voor uw rekening.</p>"
-        "<p>Ik vertrouw erop u hiermee voldoende te hebben "
-        "ge&iuml;nformeerd en zie uw betaling met spoed tegemoet.</p>"
+        "<p><strong>Sommatie tot betaling</strong></p>"
+        f"<p>Ik sommeer u hierbij om het openstaande bedrag van "
+        f"<strong>{ctx['totaal_openstaand']}</strong> "
+        "<strong>BINNEN 3 DAGEN NA HEDEN</strong> bij te schrijven op de "
+        "derdengeldenrekening van mijn kantoor IBAN NL20 RABO 0388 5065 20 "
+        "ten name van Stichting Beheer Derdengelden Kesting Legal onder "
+        f"vermelding van het kenmerk {zn}.</p>"
+        "<p>Ik wijs u erop dat alleen betaling van het volledige bedrag op "
+        "de hiervoor aangegeven wijze ervoor zorgt dat de incassoprocedure "
+        "wordt gestopt. Blijft betaling uit binnen de gestelde termijn, "
+        "dan heeft cli&euml;nt mij reeds verzocht alle rechtsmaatregelen "
+        "tegen u te nemen die nodig worden geacht. De kosten die hiermee "
+        "gepaard gaan, zullen op u worden verhaald.</p>"
+        "<p><strong>Wettelijke of contractuele rente</strong><br>"
+        "Omdat u niet op tijd heeft betaald, moet u ook rente betalen. "
+        "Cli&euml;nt mag deze rente van u eisen op grond van de gesloten "
+        "overeenkomst en van toepassing zijnde Algemene Voorwaarden. De "
+        "rente loopt vanaf het moment dat u de schuld had moeten betalen "
+        "(vervaldatum) tot aan het moment van algehele voldoening.</p>"
+        "<p>Ik vertrouw erop dat u de ernst van de situatie inziet en "
+        "tijdig tot betaling overgaat.</p>"
     )
     body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
-        betreft="<strong>Betreft: SOMMATIE &mdash; Laatste aanmaning voor dagvaarding</strong>",
+        betreft=(
+            f"<strong>SOMMATIE TOT BETALING / {zn} / "
+            f"{ctx['wederpartij']['naam']}</strong>"
+        ),
         content_html=body,
         afsluiting_html=_signature(ctx),
     )
@@ -649,9 +658,14 @@ def _render_reactie_20_4(ctx: dict) -> str:
 
 
 def _render_schikkingsvoorstel(ctx: dict) -> str:
+    """Eenmalig schikkingsvoorstel (Basenet L3) — 24 uur termijn.
+
+    Placeholder `[VUL SCHIKKINGSBEDRAG IN]` wordt door Lisanne handmatig
+    overschreven in de contentEditable body-editor vóór verzenden.
+    """
     zn = ctx["zaak"]["zaaknummer"]
     body = (
-        "<p>,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         "<p>Zoals ik u eerder liet weten heeft cli&euml;nte haar "
         "vordering aan mij uit handen gegeven.</p>"
         "<p>In onderhavige incassoprocedure is het totaal openstaande "
@@ -659,17 +673,20 @@ def _render_schikkingsvoorstel(ctx: dict) -> str:
     )
     body += _vordering_table_basenet(ctx)
     body += (
-        "<p><strong>Eenmalig voorstel</strong><br>"
-        "Ik heb cli&euml;nte bereid gevonden om u een eenmalig "
+        "<p><strong>Eenmalig voorstel</strong></p>"
+        "<p>Ik heb cli&euml;nte bereid gevonden om u een eenmalig "
         "voorstel te doen. Zij is bereid om de zaak te schikken "
-        "tegen&nbsp;betaling van&nbsp;EUR&nbsp;&hellip; door u "
-        "tegen verdere algehele finale kwijting over en weer ten "
-        "aanzien van onderhavige vordering.</p>"
-        "<p>Namens cli&euml;nte sommeer ik u om het openstaande "
-        "bedrag binnen 24 uur na heden bij te schrijven op de "
-        "derdengeldenrekening van mijn kantoor IBAN: NL20 RABO "
-        "0388 5065 20 ten name van Stichting Beheer Derdengelden "
-        f"Kesting Legal onder vermelding van het kenmerk {zn}.</p>"
+        "tegen betaling van "
+        '<mark style="background:#fef3c7;padding:2px 6px;">'
+        "[VUL SCHIKKINGSBEDRAG IN]</mark> door u tegen verdere "
+        "algehele finale kwijting over en weer ten aanzien van "
+        "onderhavige vordering.</p>"
+        "<p>Namens cli&euml;nte sommeer ik u om het voormelde "
+        "bedrag <strong>binnen 24 uur na heden</strong> bij te "
+        "schrijven op de derdengeldenrekening van mijn kantoor "
+        "IBAN: NL20 RABO 0388 5065 20 ten name van Stichting "
+        "Beheer Derdengelden Kesting Legal onder vermelding van "
+        f"het kenmerk {zn}.</p>"
         "<p>Is het bedrag alsdan niet bijgeschreven, dan komt het "
         "aanbod automatisch te vervallen en kan daar zowel in als "
         "buiten rechte geen beroep meer op worden gedaan, laat "
@@ -683,7 +700,10 @@ def _render_schikkingsvoorstel(ctx: dict) -> str:
     body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
-        betreft=f"<strong>EENMALIG SCHIKKINGSVOORSTEL / {zn}</strong>",
+        betreft=(
+            f"<strong>EENMALIG SCHIKKINGSVOORSTEL / {zn} / "
+            f"{ctx['wederpartij']['naam']}</strong>"
+        ),
         content_html=body,
         afsluiting_html=_signature(ctx),
     )
@@ -863,9 +883,15 @@ def _render_reactie_verlengd_9_3(ctx: dict) -> str:
 
 
 def _render_vaststellingsovereenkomst(ctx: dict) -> str:
+    """Vaststellingsovereenkomst / treffen van een regeling (Basenet L2).
+
+    Placeholders `[VUL TOTAALBEDRAG IN]` en `[VUL TERMIJNEN IN]` worden
+    door Lisanne handmatig overschreven in de contentEditable body vóór
+    verzenden. Exact 6 genummerde clausules (Basenet-versie).
+    """
     zn = ctx["zaak"]["zaaknummer"]
     body = (
-        "<p>Geachte heer, mevrouw,</p>"
+        f"<p>Geachte heer, mevrouw {ctx['wederpartij']['naam']},</p>"
         f"<p>Inzake dossier {zn} heeft u in verband met uw "
         "openstaande schuld aangegeven een regeling te willen "
         "treffen. Een regeling wordt aangegaan onder voorbehoud "
@@ -876,39 +902,54 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
         "op deze e-mail.</p>"
         "<p><strong>Vaststellingsovereenkomst in de zin der wet"
         "</strong></p><ol>"
-        f"<li>Partijen stellen de vordering in onderhavig dossier "
-        f"op een bedrag van {ctx['totaal_openstaand']} inclusief "
-        "rente en kosten.</li>"
+        "<li>Partijen stellen de vordering in onderhavig dossier "
+        "op een bedrag van "
+        '<mark style="background:#fef3c7;padding:2px 6px;">'
+        "[VUL TOTAALBEDRAG VSO IN]</mark> inclusief rente en "
+        "kosten.</li>"
         "<li>Schuldenaar zal bovengenoemd totaalbedrag voldoen "
-        "door betaling in termijnen.</li>"
+        "door betaling in termijnen. De termijnen zijn als volgt, "
+        "waarbij elke termijn uiterlijk op de vervaldatum moet "
+        "zijn bijgeschreven:<br>"
+        '<mark style="background:#fef3c7;padding:2px 6px;display:'
+        'inline-block;margin-top:4px;">[VUL TERMIJNEN IN '
+        "&mdash; bijv. &euro; 500 uiterlijk 1-5-2026; &euro; 500 "
+        "uiterlijk 1-6-2026]</mark></li>"
         "<li>De betaling zal uitsluitend geschieden op IBAN: "
         "NL20 RABO 0388 5065 20 ten name van Stichting Beheer "
-        f"Derdengelden Kesting Legal onder vermelding van {zn}.</li>"
+        f"Derdengelden Kesting Legal onder vermelding van het "
+        f"kenmerk {zn}.</li>"
         "<li>Elke betaling strekt allereerst in mindering op de "
-        "kosten, vervolgens de rente en aansluitend de "
-        "hoofdsom.</li>"
+        "kosten, vervolgens de rente en aansluitend de hoofdsom.</li>"
         "<li>Indien de regeling niet stipt wordt nagekomen, "
         "vervalt de regeling in zijn geheel en is het restant "
-        "zonder nadere ingebrekestelling geheel opeisbaar.</li>"
-        "<li>In geval van verzuim geldt een contractuele rente "
-        "van 2% per maand tot de dag der algehele voldoening.</li>"
+        "zonder nadere ingebrekestelling geheel opeisbaar. In "
+        "geval van verzuim geldt een contractuele rente van 2% "
+        "per maand tot de dag der algehele voldoening.</li>"
         "<li>Behoudens effectuering van het bovenstaande verklaren "
-        "partijen over en weer finale kwijting.</li>"
-        "<li>Deze overeenkomst is een vaststellingsovereenkomst "
-        "in de zin van de wet. Op de overeenkomst is Nederlands "
-        "recht van toepassing.</li>"
+        "partijen over en weer met betrekking tot onderhavige "
+        "vordering niets meer van elkaar te vorderen te hebben en "
+        "verlenen partijen elkaar over en weer finale kwijting. "
+        "Deze overeenkomst is een vaststellingsovereenkomst in de "
+        "zin van de wet. Partijen doen afstand van het recht deze "
+        "overeenkomst te ontbinden of te vernietigen. Alleen "
+        "nakoming kan worden gevorderd. Op de overeenkomst is "
+        "Nederlands recht van toepassing.</li>"
         "</ol>"
         "<p><strong>Let op!</strong> Om deze betalingsregeling "
         "definitief te treffen dient u binnen 2 x 24 uur na heden "
-        "uw akkoord te bevestigen door te reageren op deze "
-        "e-mail.</p>"
+        "schriftelijk uw akkoord te geven in reply op deze e-mail. "
+        "Daarna is de regeling getroffen.</p>"
+        "<p>Zonder uw schriftelijke bevestiging is er geen "
+        "regeling getroffen.</p>"
     )
     body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
-            "<strong>Treffen van een regeling "
-            f"(vaststellingsovereenkomst) / {zn}</strong>"
+            "<strong>Treffen van een regeling (aanbod "
+            f"vaststellingsovereenkomst) / {zn} / "
+            f"{ctx['wederpartij']['naam']}</strong>"
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
@@ -919,17 +960,22 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
 
 
 def _render_faillissement_dreigbrief(ctx: dict) -> str:
+    """Verzoekschrift faillissement dreigbrief (Basenet L7) — 2 dagen.
+
+    Let op: het concept verzoekschrift moet Lisanne zelf als PDF-bijlage
+    toevoegen via 'Uit sjablonen-bibliotheek' in de compose-dialog.
+    """
     zn = ctx["zaak"]["zaaknummer"]
     body = (
-        "<p>Geachte heer, mevrouw,</p>"
+        f"<p>Geachte heer, mevrouw {ctx['wederpartij']['naam']},</p>"
         "<p>In onderhavige zaak heb ik u namens cli&euml;nte "
         "herhaaldelijk gesommeerd om tot betaling over te gaan. "
         "Tot op heden heeft u geen betaling verricht. Hierdoor "
         "bent u definitief in verzuim geraakt.</p>"
         "<p>Cli&euml;nte heeft mij uitdrukkelijk verzocht een "
         "verzoek tot faillietverklaring op te stellen en in te "
-        "dienen bij de bevoegde rechtbank. Een kopie van het "
-        "verzoekschrift treft u in de bijlage aan.</p>"
+        "dienen bij de bevoegde rechtbank. <strong>Een kopie van "
+        "het verzoekschrift treft u in de bijlage aan.</strong></p>"
     )
     body += _heading("Vordering")
     body += "<p>Het openstaande saldo is als volgt gespecificeerd:</p>"
@@ -941,19 +987,25 @@ def _render_faillissement_dreigbrief(ctx: dict) -> str:
         "<strong>BINNEN 2 DAGEN NA HEDEN</strong> te hebben "
         "bijgeschreven op de derdengeldenrekening van mijn kantoor "
         "IBAN: NL20 RABO 0388 5065 20 ten name van Stichting "
-        f"Beheer Derdengelden Kesting Legal, kenmerk {zn}.</p>"
+        f"Beheer Derdengelden Kesting Legal onder vermelding van "
+        f"het kenmerk {zn}.</p>"
+        "<p>Let op: U dient bij betaling het juiste dossiernummer "
+        "te vermelden zodat uw betaling correct kan worden "
+        "gealloceerd.</p>"
         "<p><strong>Bij uitblijven van betaling</strong><br>"
-        "Indien betaling wederom uitblijft, zal ik het "
-        "verzoekschrift tot faillietverklaring indienen bij de "
-        "rechtbank. De enige manier om indiening te voorkomen is "
-        "door mij een betalingsbewijs toe te zenden.</p>"
+        "Indien betaling wederom uitblijft, zal ik &mdash; zoals "
+        "reeds aangekondigd &mdash; het verzoekschrift strekkende "
+        "tot faillietverklaring indienen bij de rechtbank. De "
+        "enige manier om indiening te voorkomen is door mij een "
+        "betalingsbewijs toe te zenden.</p>"
     )
     body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
             "<strong>VERZOEKSCHRIFT FAILLISSEMENT (LAATSTE "
-            f"MOGELIJKHEID) / {zn}</strong>"
+            f"MOGELIJKHEID) / {zn} / "
+            f"{ctx['wederpartij']['naam']}</strong>"
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),

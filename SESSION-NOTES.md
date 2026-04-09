@@ -1,8 +1,94 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 9 april 2026 (sessie 120 — demo-feedback round 2 + E2E test op prod + DF120-12 hotfix)
-**Laatste feature/fix:** Sessie 120 — 7 features end-to-end getest op productie via Playwright + backend API, 1 UI gap gevonden en gefixt (DF120-12: rate_basis + minimum_fee nu ook zichtbaar in read-only contact view)
-**Volgende sessie:** 121 — producten/artikel catalogus import uit Basenet Excel (Lisanne's complete grootboek met 28 items, 4 BTW-regimes, 15 grootboeknummers)
+**Laatst bijgewerkt:** 9 april 2026 (sessie 121 — DF120-09 mail-sjablonen: 15 Basenet-templates + concept verzoekschrift PDF flow)
+**Laatste feature/fix:** Sessie 121 — 15 Basenet incasso-templates 1-op-1 overgenomen (11 NL + 4 EN), concept verzoekschrift DOCX→PDF library flow, compose dropdown met 7 groepen + 22 templates, 17 nieuwe render-tests
+**Volgende sessie:** 122 — DF120-08 producten/artikel catalogus import uit Basenet Excel + DF120-10 verweer-bibliotheek voor AI inspiratie
+
+## Wat er gedaan is (sessie 121 — 9 april 2026) — DF120-09 mail-sjablonen volledig
+
+**Ontdekking bij start:** in het `SOMMATIE TOT BETALING _  _.eml` bestand (264KB) zaten niet 4 maar **15 verschillende brieven** achter elkaar geplakt. Arsalan had alles in één export gezet. Scope uitgebreid van "4 core templates" naar "alle 15 briefen uit Basenet". Plan herschreven voordat er code werd geschreven.
+
+### Nieuwe harde regel (in memory)
+
+**Alle externe bestanden altijd PDF, nooit DOCX.** Ontvangers kunnen bewerkbare formats wijzigen — bewijs- en fraude-risico. Email bodies zijn geen "bestanden", die blijven HTML in de mail zelf. Geldt voor alle toekomstige features, niet alleen mail. Opgeslagen in `feedback_externe_bestanden_altijd_pdf.md`.
+
+### Geleverd in 6 batches
+
+**Batch 1 — PDF-bibliotheek infra (commit `4cccc97`)**
+- `templates/verzoekschrift_faillissement.docx` — nieuwe docxtpl template (3 secties: begeleidende brief + verzoekschrift ex art. 1 Fw + slotpagina) via generator functie in `_generate_templates.py`
+- Migratie `df121a_verzoekschrift_template.py` seedt DOCX voor alle tenants in `managed_templates`
+- `TEMPLATE_FILES` in `docx_service.py` uitgebreid met nieuwe key
+- Backend endpoints: `GET /api/documents/library-templates` (whitelist via `LIBRARY_TEMPLATE_KEYS`) + `POST /api/documents/docx/cases/{case_id}/render-pdf` (rendert DOCX met dossierdata → LibreOffice → PDF bytes → base64)
+- Frontend: nieuwe "Uit sjablonen-bibliotheek" optie in compose Bijlage-dropdown. Klik → modal met library templates → selecteer → backend render+PDF → auto-attach aan compose `inlineFiles` state. `LibraryTemplate` schema, `BookMarked` icon, loading state per template key.
+
+**Batch 2 — 4 bestaande templates herschreven (commit `519e47b`)**
+- `_render_sommatie` → L13 (eerste sommatie met AV, 3 dagen, derdengelden IBAN, contractuele rente-blok)
+- `_render_schikkingsvoorstel` → L3 (24 uur termijn, `[VUL SCHIKKINGSBEDRAG IN]` placeholder, aanbod zonder nadelige erkenning)
+- `_render_vaststellingsovereenkomst` → L2 (6 genummerde clausules ipv 8, `[VUL TOTAALBEDRAG VSO IN]` + `[VUL TERMIJNEN IN]` placeholders, 2x24u akkoord-termijn)
+- `_render_faillissement_dreigbrief` → L7 (2 dagen, verwijzing naar concept-verzoekschrift bijlage die Lisanne handmatig toevoegt)
+- Betreft-regels uitgebreid met wederpartij-naam (Basenet: `TEMPLATE / {zaaknummer} / {wederpartij}`)
+
+**Batch 3 — 7 nieuwe NL renderers (commit `5347e96`)**
+- `sommatie_na_reactie` (L1) — 2 dagen, na reactie debiteur, met betalingsregeling-blok
+- `sommatie_eerste_opgave` (L4) — per omgaand, art. 6:44 BW vermelding
+- `niet_voldaan_regeling` (L5) — 2 dagen, opeising na VSO-breuk
+- `sommatie_laatste_voor_fai` (L8) — 2 dagen, "verzoekschrift reeds in opstelling"
+- `wederom_sommatie_inhoudelijk` (L11) — 3 dagen, `[HIER INHOUDELIJKE REACTIE OP VERWEER INVULLEN]` placeholder + stuiting art. 3:317 BW
+- `wederom_sommatie_kort` (L12) — 3 dagen + stuiting, zonder verweer-blok
+- `sommatie_drukte` (L15) — eerste sommatie + drukte-alinea over mail via `incasso@kestinglegal.nl`
+- Nieuwe helper `_stuiting_blok()` hergebruikt in L11, L12, en EN-varianten
+
+**Batch 4 — 4 EN renderers (commit `a21c2b6`)**
+- `demand_for_payment_eerste` (L14) — 3 dagen, kort formaat
+- `demand_for_payment_uitgebreid` (L10) — 3 dagen + interruption art. 3:317 + payment arrangement blok
+- `demand_for_payment_laatste` (L9) — 2 dagen, "petition in preparation"
+- `demand_for_payment_fai` (L6) — 2 dagen, "petition attached" (concept PDF via library)
+- Nieuwe EN helpers: `_stuiting_blok_en()`, `_betaling_instructie_en(days)`, `_betalingsregeling_en_blok()`
+- Bestaande `_render_engelse_sommatie` (9.3 verlengd abonnement) ongemoeid — aparte specifieke use-case
+
+**Batch 5 — Frontend groepering (commit `700c4ac`)**
+- `TEMPLATE_LABELS` uitgebreid van 7 naar 22 entries met Nederlandse labels
+- `TEMPLATE_GROUPS` constante: 7 groepen (Aanmaningen, Eerste sommatie, Na reactie debiteur, Niet-nakoming regeling, Schikking & regeling, Faillissement, English)
+- Dropdown herschreven met shadcn `<SelectGroup>` + `<SelectLabel>` voor visuele groepering, `max-height 420px` met scroll
+- `/api/documents/docx/templates` fetch verwijderd als bron — TEMPLATE_GROUPS is nu direct bron-of-truth. Geen impact op Documenten-tab (die gebruikt hetzelfde endpoint nog steeds voor DOCX-rendering).
+
+**Batch 6 — Tests (commit `56fd97b`)**
+- `backend/tests/test_incasso_templates.py` met **17 tests** — 15 renderers + `_RENDERERS` dict registratie check + unknown-key fallback
+- Per template: zaaknummer in betreft, derdengelden IBAN, correcte termijn, placeholder-markers, schuldhulp-disclaimer (NL) / Yours faithfully (EN)
+- Specifieke assertions: Algemene Voorwaarden (L13), artikel 3:317 BW, art. 6:44 BW, "begun drafting the petition", etc.
+- **Alle 17 nieuwe tests passed + 51 bestaande incasso/email tests groen** — geen regressies door de sommatie-rewrite.
+
+**Batch 7 — Deploy + verificatie**
+- Prod deploy via nieuwe-stijl commando (zonder `--no-cache`, wel `docker image prune -f`) — geen disk issues
+- Alembic head: `df121a` op prod
+- Prod smoke test: `_RENDERERS` bevat 25 keys (14 origineel + 11 nieuw), `/api/documents/library-templates` endpoint bereikbaar (401 zonder auth, correct)
+- 1,21 GB disk opgeschoond door auto-prune na deploy
+
+### Gewijzigde bestanden (sessie 121)
+
+- `backend/app/email/incasso_templates.py` — 11 nieuwe renderers + 4 helpers + `_RENDERERS` dict uitgebreid
+- `backend/app/documents/docx_service.py` — `TEMPLATE_FILES` dict
+- `backend/app/documents/router.py` — `LIBRARY_TEMPLATE_KEYS` + 2 endpoints
+- `backend/app/documents/schemas.py` — `LibraryTemplate`, `RenderTemplatePdfRequest`, `RenderedPdfAttachment` schemas
+- `backend/alembic/versions/df121a_verzoekschrift_template.py` — nieuwe migratie
+- `backend/tests/test_incasso_templates.py` — 17 nieuwe tests
+- `templates/verzoekschrift_faillissement.docx` — nieuwe DOCX template
+- `templates/_generate_templates.py` — generator-functie voor regeneratie
+- `frontend/src/components/email-compose-dialog.tsx` — TEMPLATE_LABELS/GROUPS, SelectGroup dropdown, library picker panel, fetch+attach flow
+
+### Bekende issues (na sessie 121)
+
+- Geen — alle 68 incasso+email tests groen, prod werkt.
+
+### Wat Lisanne kan doen na deze sessie
+
+1. Compose-dialog open → "Sjabloon" dropdown toont 7 groepen met 22 templates
+2. Selecteer bv "Eenmalig schikkingsvoorstel" → body bevat `[VUL SCHIKKINGSBEDRAG IN]` in gele markering
+3. Klik in de mark → overtype met bedrag → body.blur slaat op
+4. Bij faillissement-templates: klik "Bijlage" → "Uit sjablonen-bibliotheek" → "Concept verzoekschrift faillissement" → backend rendert DOCX met dossierdata → converteert naar PDF → verschijnt als bijlage
+5. Versturen — PDF wordt meegestuurd, nooit DOCX (bewijskracht + professioneel)
+
+---
 
 ## Wat er gedaan is (sessie 120 — 8-9 april 2026) — Demo-feedback round 2 + disk crash fix + E2E test + DF120-12
 

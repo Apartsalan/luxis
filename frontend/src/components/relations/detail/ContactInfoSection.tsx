@@ -492,7 +492,7 @@ export function ContactInfoSection({
               />
             </div>
           </div>
-        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null) ? (
+        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null || contact.default_minimum_fee != null) ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             {contact.default_hourly_rate && (
               <div>
@@ -524,6 +524,11 @@ export function ContactInfoSection({
                 <dd className="text-sm font-medium text-foreground">
                   {{ statutory: "Wettelijke rente", commercial: "Handelsrente", government: "Overheidsrente", contractual: "Contractuele rente" }[contact.default_interest_type] ?? contact.default_interest_type}
                   {contact.default_interest_type === "contractual" && contact.default_contractual_rate != null && ` (${contact.default_contractual_rate}%)`}
+                  {contact.default_interest_type === "contractual" && contact.default_rate_basis && (
+                    <span className="text-muted-foreground">
+                      {" "}· {contact.default_rate_basis === "monthly" ? "per maand" : "per jaar"}
+                    </span>
+                  )}
                 </dd>
               </div>
             )}
@@ -534,6 +539,14 @@ export function ContactInfoSection({
                   {contact.default_bik_override_percentage != null
                     ? `${contact.default_bik_override_percentage}% van hoofdsom`
                     : `€ ${Number(contact.default_bik_override).toFixed(2)} (vast bedrag)`}
+                </dd>
+              </div>
+            )}
+            {contact.default_minimum_fee != null && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Minimum provisie</dt>
+                <dd className="text-sm font-medium text-foreground">
+                  € {Number(contact.default_minimum_fee).toFixed(2)}
                 </dd>
               </div>
             )}

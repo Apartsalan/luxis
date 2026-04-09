@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -50,12 +50,6 @@ interface CaseFileItem {
   content_type: string;
 }
 
-interface TemplateInfo {
-  template_type: string;
-  filename: string;
-  available: boolean;
-}
-
 interface LibraryTemplate {
   template_key: string;
   name: string;
@@ -85,14 +79,76 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const TEMPLATE_LABELS: Record<string, string> = {
-  aanmaning: "Aanmaning",
-  sommatie: "Sommatie",
-  tweede_sommatie: "Tweede sommatie",
-  "14_dagenbrief": "14-dagenbrief",
+  // ─── Aanmaningen (pipeline, bestaand) ─────────────────────
   herinnering: "Herinnering",
+  aanmaning: "Aanmaning",
+  "14_dagenbrief": "14-dagenbrief",
+  tweede_sommatie: "Tweede sommatie",
   dagvaarding: "Dagvaarding",
   renteoverzicht: "Renteoverzicht",
+  // ─── Eerste sommatie (NL) ─────────────────────────────────
+  sommatie: "Sommatie tot betaling (eerste, AV)",
+  sommatie_drukte: "Sommatie tot betaling (eerste, met drukte-notitie)",
+  sommatie_eerste_opgave: "Sommatie tot betaling (eerste opgave)",
+  // ─── Na reactie debiteur (NL) ─────────────────────────────
+  sommatie_na_reactie: "Sommatie na reactie debiteur",
+  wederom_sommatie_inhoudelijk: "Wederom sommatie (met verweer-weerlegging)",
+  wederom_sommatie_kort: "Wederom sommatie (kort, zonder verweer)",
+  // ─── Niet-nakoming regeling (NL) ──────────────────────────
+  niet_voldaan_regeling: "Niet voldaan aan regeling — sommatie",
+  // ─── Schikking & regeling (NL) ────────────────────────────
+  schikkingsvoorstel: "Eenmalig schikkingsvoorstel",
+  vaststellingsovereenkomst: "Treffen van een regeling (vaststellingsovereenkomst)",
+  // ─── Faillissement (NL) ───────────────────────────────────
+  sommatie_laatste_voor_fai: "Sommatie laatste mogelijkheid (vóór verzoekschrift)",
+  faillissement_dreigbrief: "Verzoekschrift faillissement (laatste mogelijkheid)",
+  // ─── English ──────────────────────────────────────────────
+  demand_for_payment_eerste: "Demand for payment (first, 3 days)",
+  demand_for_payment_uitgebreid: "Demand for payment (3 days + interruption + arrangement)",
+  demand_for_payment_laatste: "Demand for payment (last chance — bankruptcy pending)",
+  demand_for_payment_fai: "Demand for payment (bankruptcy petition attached)",
+  engelse_sommatie: "Demand for payment (9.3 subscription renewal)",
 };
+
+// Template-groepering voor de dropdown — volgorde bepaalt groep-volgorde.
+// Alle keys moeten bestaan als _RENDERERS entry in backend/app/email/
+// incasso_templates.py — anders mislukt render_template_preview.
+const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
+  {
+    label: "Aanmaningen",
+    keys: ["herinnering", "aanmaning", "14_dagenbrief", "tweede_sommatie"],
+  },
+  {
+    label: "Eerste sommatie",
+    keys: ["sommatie", "sommatie_drukte", "sommatie_eerste_opgave"],
+  },
+  {
+    label: "Na reactie debiteur",
+    keys: ["sommatie_na_reactie", "wederom_sommatie_inhoudelijk", "wederom_sommatie_kort"],
+  },
+  {
+    label: "Niet-nakoming regeling",
+    keys: ["niet_voldaan_regeling"],
+  },
+  {
+    label: "Schikking & regeling",
+    keys: ["schikkingsvoorstel", "vaststellingsovereenkomst"],
+  },
+  {
+    label: "Faillissement",
+    keys: ["sommatie_laatste_voor_fai", "faillissement_dreigbrief"],
+  },
+  {
+    label: "English",
+    keys: [
+      "demand_for_payment_eerste",
+      "demand_for_payment_uitgebreid",
+      "demand_for_payment_laatste",
+      "demand_for_payment_fai",
+      "engelse_sommatie",
+    ],
+  },
+];
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -149,7 +205,6 @@ export function EmailComposeDialog({
   // Template
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [templateHtml, setTemplateHtml] = useState<string | null>(null);
-  const [templates, setTemplates] = useState<TemplateInfo[]>([]);
   const renderTemplate = caseId ? useRenderTemplate(caseId) : null;
 
   // Attachments
@@ -186,15 +241,8 @@ export function EmailComposeDialog({
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [renderingLibraryKey, setRenderingLibraryKey] = useState<string | null>(null);
 
-  // Load templates
-  useEffect(() => {
-    if (open && caseId && templates.length === 0) {
-      api("/api/documents/docx/templates")
-        .then((r) => r.ok ? r.json() : [])
-        .then((data: TemplateInfo[]) => setTemplates(data.filter((t) => t.available)))
-        .catch(() => {});
-    }
-  }, [open, caseId]);
+  // (Template list is hardcoded via TEMPLATE_GROUPS — geen fetch nodig.
+  // De render_template_preview endpoint accepteert elke _RENDERERS key.)
 
   // Reset on open
   const handleOpenChange = (nextOpen: boolean) => {
@@ -606,18 +654,25 @@ export function EmailComposeDialog({
             {errors.subject && <p className="text-xs text-destructive ml-14">{errors.subject}</p>}
 
             {/* ── Template selector ────────────────────────────────── */}
-            {caseId && templates.length > 0 && (
+            {caseId && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground w-12 shrink-0">Sjabloon</span>
                 <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
                   <SelectTrigger className="flex-1 h-8 text-sm">
                     <SelectValue placeholder="Geen sjabloon" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {templates.map((t) => (
-                      <SelectItem key={t.template_type} value={t.template_type}>
-                        {TEMPLATE_LABELS[t.template_type] ?? t.template_type}
-                      </SelectItem>
+                  <SelectContent className="max-h-[420px]">
+                    {TEMPLATE_GROUPS.map((group) => (
+                      <SelectGroup key={group.label}>
+                        <SelectLabel className="text-[11px] uppercase tracking-wide text-muted-foreground/70 pl-2 pt-2">
+                          {group.label}
+                        </SelectLabel>
+                        {group.keys.map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {TEMPLATE_LABELS[key] ?? key}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>

@@ -252,6 +252,18 @@ async def create_invoice(
         )
         # Lines inherit invoice-level btw_percentage when not explicitly set
         line_btw = line_data.btw_percentage if line_data.btw_percentage is not None else data.btw_percentage
+
+        # Resolve product → gl_account_code
+        gl_account_code = None
+        if line_data.product_id:
+            from app.products.service import get_product
+            product = await get_product(db, tenant_id, line_data.product_id)
+            if product:
+                gl_account_code = product.gl_account_code
+                # Auto-fill BTW from product if not explicitly set on line
+                if line_data.btw_percentage is None:
+                    line_btw = product.vat_percentage
+
         line = InvoiceLine(
             tenant_id=tenant_id,
             invoice_id=invoice.id,
@@ -261,6 +273,8 @@ async def create_invoice(
             unit_price=line_data.unit_price,
             line_total=line_total,
             btw_percentage=line_btw,
+            product_id=line_data.product_id,
+            gl_account_code=gl_account_code,
             time_entry_id=line_data.time_entry_id,
             expense_id=line_data.expense_id,
         )
@@ -600,6 +614,7 @@ async def add_line(
     quantity: Decimal,
     unit_price: Decimal,
     btw_percentage: Decimal | None = None,
+    product_id: uuid.UUID | None = None,
     time_entry_id: uuid.UUID | None = None,
     expense_id: uuid.UUID | None = None,
 ) -> InvoiceLine:
@@ -608,6 +623,16 @@ async def add_line(
 
     if invoice.status != "concept":
         raise BadRequestError("Regels kunnen alleen aan conceptfacturen worden toegevoegd")
+
+    # Resolve product → gl_account_code + BTW
+    gl_account_code = None
+    if product_id:
+        from app.products.service import get_product
+        product = await get_product(db, tenant_id, product_id)
+        if product:
+            gl_account_code = product.gl_account_code
+            if btw_percentage is None:
+                btw_percentage = product.vat_percentage
 
     # Inherit invoice-level btw_percentage when not explicitly set
     if btw_percentage is None:
@@ -627,6 +652,8 @@ async def add_line(
         unit_price=unit_price,
         line_total=line_total,
         btw_percentage=btw_percentage,
+        product_id=product_id,
+        gl_account_code=gl_account_code,
         time_entry_id=time_entry_id,
         expense_id=expense_id,
     )

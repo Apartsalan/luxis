@@ -15,12 +15,14 @@ import { useUnbilledTimeEntries, type TimeEntry } from "@/hooks/use-time-entries
 import { useExpenses, useCreateExpense, EXPENSE_CATEGORY_LABELS, type Expense } from "@/hooks/use-expenses";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { IncassoKostenPanel } from "@/components/IncassoKostenPanel";
+import { useProducts } from "@/hooks/use-products";
 
 interface LineItem {
   description: string;
   quantity: string;
   unit_price: string;
   btw_percentage: string;
+  product_id?: string;
   time_entry_id?: string;
   expense_id?: string;
 }
@@ -145,6 +147,9 @@ export default function NieuweFactuurPage() {
     search: caseSearch || undefined,
     per_page: 5,
   });
+
+  // Products catalog for line item dropdown
+  const { data: productsData } = useProducts();
 
   // Unbilled time entries for import (only billable + uninvoiced)
   const { data: unbilledEntries } = useUnbilledTimeEntries(
@@ -395,6 +400,7 @@ export default function NieuweFactuurPage() {
           quantity: l.quantity || "1",
           unit_price: l.unit_price,
           btw_percentage: l.btw_percentage || "21.00",
+          product_id: l.product_id || null,
           time_entry_id: l.time_entry_id || null,
           expense_id: l.expense_id || null,
         })),
@@ -1067,8 +1073,9 @@ export default function NieuweFactuurPage() {
           <div className="space-y-3">
             {/* Header */}
             <div className="grid grid-cols-12 gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
-              <div className="col-span-4">Omschrijving</div>
-              <div className="col-span-2">Aantal</div>
+              <div className="col-span-2">Artikel</div>
+              <div className="col-span-3">Omschrijving</div>
+              <div className="col-span-1">Aantal</div>
               <div className="col-span-2">Prijs</div>
               <div className="col-span-1">BTW</div>
               <div className="col-span-1 text-right">Totaal</div>
@@ -1082,7 +1089,39 @@ export default function NieuweFactuurPage() {
 
               return (
                 <div key={index} className="grid grid-cols-12 gap-2 items-start">
-                  <div className="col-span-4">
+                  <div className="col-span-2">
+                    <select
+                      value={line.product_id || ""}
+                      onChange={(e) => {
+                        const productId = e.target.value;
+                        const product = productsData?.find((p) => p.id === productId);
+                        const updated = [...lines];
+                        updated[index] = {
+                          ...updated[index],
+                          product_id: productId || undefined,
+                        };
+                        if (product) {
+                          if (!updated[index].description) {
+                            updated[index].description = product.name;
+                          }
+                          if (!updated[index].unit_price && product.default_price != null) {
+                            updated[index].unit_price = String(product.default_price);
+                          }
+                          updated[index].btw_percentage = String(product.vat_percentage.toFixed(2));
+                        }
+                        setLines(updated);
+                      }}
+                      className="w-full rounded-lg border border-input bg-background px-2 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+                    >
+                      <option value="">— Vrij</option>
+                      {productsData?.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-3">
                     <input
                       type="text"
                       placeholder="Omschrijving"
@@ -1093,7 +1132,7 @@ export default function NieuweFactuurPage() {
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <input
                       type="number"
                       step="0.01"

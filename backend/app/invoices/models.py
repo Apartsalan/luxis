@@ -153,7 +153,12 @@ class InvoiceLine(TenantBase):
         Numeric(5, 2), nullable=False, default=Decimal("21.00")
     )
 
-    # Optional link to time entry or expense
+    # Optional link to product, time entry, or expense
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("products.id"), nullable=True
+    )
+    gl_account_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     time_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("time_entries.id"), nullable=True
     )
@@ -163,6 +168,9 @@ class InvoiceLine(TenantBase):
 
     # Relationships
     invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="lines")
+    product: Mapped["Product | None"] = relationship(  # noqa: F821
+        "Product", lazy="selectin"
+    )
     time_entry: Mapped["TimeEntry | None"] = relationship(  # noqa: F821
         "TimeEntry", lazy="selectin"
     )

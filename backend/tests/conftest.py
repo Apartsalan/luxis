@@ -36,6 +36,7 @@ for _mod in [
     "app.exact_online.models",
     "app.incasso.models",
     "app.invoices.models",
+    "app.products.models",
     "app.notifications.models",
     "app.relations.kyc_models",
     "app.time_entries.models",

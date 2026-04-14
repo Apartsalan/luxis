@@ -33,6 +33,8 @@ export interface InvoiceLine {
   unit_price: number;
   line_total: number;
   btw_percentage: number;
+  product_id: string | null;
+  gl_account_code: string | null;
   time_entry_id: string | null;
   expense_id: string | null;
 }

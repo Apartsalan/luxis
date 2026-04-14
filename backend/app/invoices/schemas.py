@@ -31,6 +31,7 @@ class InvoiceLineCreate(BaseModel):
     quantity: Decimal = Field(default=Decimal("1"), gt=0)
     unit_price: Decimal = Field(..., decimal_places=2)
     btw_percentage: Decimal | None = Field(default=None, ge=0)
+    product_id: uuid.UUID | None = None
     time_entry_id: uuid.UUID | None = None
     expense_id: uuid.UUID | None = None
 
@@ -44,8 +45,10 @@ class InvoiceLineResponse(BaseModel):
     unit_price: Decimal
     line_total: Decimal
     btw_percentage: Decimal
-    time_entry_id: uuid.UUID | None
-    expense_id: uuid.UUID | None
+    product_id: uuid.UUID | None = None
+    gl_account_code: str | None = None
+    time_entry_id: uuid.UUID | None = None
+    expense_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 

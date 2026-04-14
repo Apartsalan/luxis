@@ -34,6 +34,7 @@ from app.invoices.router import router as invoices_router
 from app.middleware.logging import RequestLoggingMiddleware
 from app.middleware.rate_limit import limiter
 from app.notifications.router import router as notifications_router
+from app.products.router import router as products_router
 from app.relations.kyc_router import router as kyc_router
 from app.relations.router import router as relations_router
 from app.search.router import router as search_router
@@ -133,6 +134,7 @@ app.include_router(followup_router)
 app.include_router(payment_matching_router)
 app.include_router(notifications_router)
 app.include_router(exact_online_router)
+app.include_router(products_router)
 
 
 @app.get("/health")

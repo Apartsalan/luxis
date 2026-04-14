@@ -190,18 +190,22 @@ async def sync_invoice(
     # Build invoice lines
     invoice_lines = []
     for line in invoice.lines:
+        # Use per-line GL account if set (from product catalog), else fallback to default
+        gl_account = line.gl_account_code or conn.default_revenue_gl
         exact_line = {
             "Description": line.description,
             "Quantity": float(line.quantity),
             "UnitPrice": float(line.unit_price),
-            "GLAccount": conn.default_revenue_gl,
+            "GLAccount": gl_account,
         }
-        # Map BTW percentage to a VATCode
-        # Common Dutch codes: 1 = 21%, 2 = 9%, 3 = 0%
-        # These should be fetched from Exact and cached, but for now use description-based lookup
+        # Map BTW percentage to Exact VATCode
         if line.btw_percentage == Decimal("0.00"):
             exact_line["VATCode"] = "0"
-        # Default: let Exact use the account's default VAT code
+        elif line.btw_percentage == Decimal("21.00"):
+            exact_line["VATCode"] = "1"
+        elif line.btw_percentage == Decimal("9.00"):
+            exact_line["VATCode"] = "2"
+        # EU/non-EU: let Exact use the GL account's default VAT code
         invoice_lines.append(exact_line)
 
     invoice_data = {

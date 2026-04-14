@@ -12,6 +12,7 @@ import {
   Puzzle,
   FileText,
   Cloud,
+  Package,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ProfielTab } from "./profiel-tab";
@@ -24,6 +25,7 @@ import { MeldingenTab } from "./meldingen-tab";
 import { SjablonenTab } from "./sjablonen-tab";
 import { WeergaveTab } from "./weergave-tab";
 import { ExactTab } from "./exact-tab";
+import { ProductenTab } from "./producten-tab";
 
 const TABS = [
   { id: "profiel", label: "Profiel", icon: User },
@@ -34,6 +36,7 @@ const TABS = [
   { id: "email", label: "E-mail", icon: Mail },
   { id: "meldingen", label: "Meldingen", icon: Bell },
   { id: "sjablonen", label: "Sjablonen", icon: FileText },
+  { id: "producten", label: "Producten", icon: Package },
   { id: "exact", label: "Exact Online", icon: Cloud },
   { id: "weergave", label: "Weergave", icon: Palette },
 ];
@@ -80,6 +83,7 @@ export default function InstellingenPage() {
           {activeTab === "email" && <EmailTab />}
           {activeTab === "meldingen" && <MeldingenTab />}
           {activeTab === "sjablonen" && <SjablonenTab />}
+          {activeTab === "producten" && <ProductenTab />}
           {activeTab === "exact" && <ExactTab />}
           {activeTab === "weergave" && <WeergaveTab />}
         </div>

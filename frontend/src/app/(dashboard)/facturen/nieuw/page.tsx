@@ -1091,23 +1091,20 @@ export default function NieuweFactuurPage() {
                 <div key={index} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-2">
                     <select
-                      value={line.product_id || ""}
+                      value={line.product_id ?? ""}
                       onChange={(e) => {
-                        const productId = e.target.value;
+                        const productId = e.target.value || undefined;
                         const product = productsData?.find((p) => p.id === productId);
                         const updated = [...lines];
-                        updated[index] = {
-                          ...updated[index],
-                          product_id: productId || undefined,
-                        };
+                        updated[index] = { ...updated[index], product_id: productId };
                         if (product) {
-                          if (!updated[index].description) {
-                            updated[index].description = product.name;
-                          }
-                          if (!updated[index].unit_price && product.default_price != null) {
+                          updated[index].description = product.name;
+                          if (product.default_price != null) {
                             updated[index].unit_price = String(product.default_price);
                           }
-                          updated[index].btw_percentage = String(product.vat_percentage.toFixed(2));
+                          updated[index].btw_percentage = String(
+                            Number(product.vat_percentage).toFixed(2)
+                          );
                         }
                         setLines(updated);
                       }}

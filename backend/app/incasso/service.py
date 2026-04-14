@@ -135,67 +135,32 @@ async def seed_default_steps(
 
     defaults = [
         {
-            "name": "Aanmaning",
+            "name": "Eerste sommatie",
             "sort_order": 1,
             "min_wait_days": 0,
-            "max_wait_days": 7,
-            "template_type": "aanmaning",
-            "email_subject_template": ("Aanmaning inzake dossier {{ zaak.zaaknummer }}"),
-            "email_body_template": (
-                "Geachte {{ wederpartij.naam }},\n\n"
-                "Bijgaand treft u een aanmaning aan inzake bovengenoemd dossier.\n"
-                "Wij verzoeken u het openstaande bedrag binnen de gestelde "
-                "termijn te voldoen.\n\n"
-                "Met vriendelijke groet,\n{{ kantoor.naam }}"
-            ),
+            "max_wait_days": 3,
+            "template_type": "sommatie_drukte",
         },
         {
-            "name": "Sommatie",
+            "name": "Tweede sommatie",
             "sort_order": 2,
-            "min_wait_days": 14,
-            "max_wait_days": 28,
-            "template_type": "sommatie",
-            "email_subject_template": ("Sommatie inzake dossier {{ zaak.zaaknummer }}"),
-            "email_body_template": (
-                "Geachte {{ wederpartij.naam }},\n\n"
-                "Bijgaand treft u een sommatie aan inzake bovengenoemd dossier.\n"
-                "Wij sommeren u het verschuldigde bedrag binnen de gestelde "
-                "termijn te voldoen.\n\n"
-                "Met vriendelijke groet,\n{{ kantoor.naam }}"
-            ),
+            "min_wait_days": 7,
+            "max_wait_days": 14,
+            "template_type": "wederom_sommatie_kort",
         },
         {
-            "name": "2e Sommatie",
+            "name": "Aankondiging faillissement",
             "sort_order": 3,
-            "min_wait_days": 14,
-            "max_wait_days": 28,
-            "template_type": "tweede_sommatie",
-            "email_subject_template": ("Tweede sommatie inzake dossier {{ zaak.zaaknummer }}"),
-            "email_body_template": (
-                "Geachte {{ wederpartij.naam }},\n\n"
-                "Ondanks eerdere correspondentie hebben wij nog geen betaling "
-                "ontvangen. Bijgaand treft u een tweede sommatie aan.\n\n"
-                "Met vriendelijke groet,\n{{ kantoor.naam }}"
-            ),
+            "min_wait_days": 7,
+            "max_wait_days": 14,
+            "template_type": "sommatie_laatste_voor_fai",
         },
         {
-            "name": "Ingebrekestelling",
+            "name": "Faillissement",
             "sort_order": 4,
-            "min_wait_days": 14,
-            "max_wait_days": 28,
-        },
-        {
-            "name": "Dagvaarding",
-            "sort_order": 5,
-            "min_wait_days": 14,
-            "max_wait_days": 28,
-            "template_type": "dagvaarding",
-        },
-        {
-            "name": "Executie",
-            "sort_order": 6,
-            "min_wait_days": 0,
-            "max_wait_days": 0,
+            "min_wait_days": 3,
+            "max_wait_days": 7,
+            "template_type": "faillissement_dreigbrief",
         },
     ]
 

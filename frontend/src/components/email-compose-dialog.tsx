@@ -752,7 +752,23 @@ export function EmailComposeDialog({
                 {attachments.map((att) => (
                   <span key={att.id} className="inline-flex items-center gap-1.5 rounded-md bg-muted/80 px-2.5 py-1 text-xs">
                     <Paperclip className="h-3 w-3 text-muted-foreground" />
-                    <span className="max-w-[140px] truncate">{att.filename}</span>
+                    <button
+                      type="button"
+                      title="Openen"
+                      onClick={() => {
+                        const inline = inlineFiles.get(att.id);
+                        if (inline?.data_base64) {
+                          const blob = new Blob(
+                            [Uint8Array.from(atob(inline.data_base64), (c) => c.charCodeAt(0))],
+                            { type: inline.content_type || "application/pdf" }
+                          );
+                          window.open(URL.createObjectURL(blob), "_blank");
+                        }
+                      }}
+                      className="max-w-[140px] truncate hover:underline hover:text-primary"
+                    >
+                      {att.filename}
+                    </button>
                     <span className="text-muted-foreground">{formatSize(att.size)}</span>
                     <button type="button" onClick={() => removeAttachment(att.id)} className="hover:text-destructive ml-0.5">
                       <X className="h-3 w-3" />

@@ -286,22 +286,45 @@ async def _build_regeling_context(
             "termijnen_tekst": "[VUL TERMIJNEN IN]",
         }
 
-    # Build termijnen tekst
+    # Build termijnen — sorted by due date
     termijnen = sorted(
         arrangement.installments,
         key=lambda i: i.due_date,
     )
-    termijnen_lines = []
-    for inst in termijnen:
-        termijnen_lines.append(
-            f"€ {_fmt_currency(inst.amount)} uiterlijk {_fmt_date(inst.due_date)}"
+
+    # Plain text version (for non-HTML contexts)
+    plain_lines = [
+        f"{_fmt_currency(i.amount)} uiterlijk {_fmt_date(i.due_date)}"
+        for i in termijnen
+    ]
+
+    # HTML table version (for email templates)
+    if termijnen:
+        html = (
+            '<table style="border-collapse:collapse;margin:8px 0;">'
         )
+        for idx, inst in enumerate(termijnen, 1):
+            html += (
+                "<tr>"
+                f'<td style="padding:2px 12px 2px 0;">'
+                f"Termijn {idx}:</td>"
+                f'<td style="padding:2px 12px 2px 0;'
+                f'text-align:right;">'
+                f"{_fmt_currency(inst.amount)}</td>"
+                f'<td style="padding:2px 0;">uiterlijk '
+                f"{_fmt_date(inst.due_date)}</td>"
+                "</tr>"
+            )
+        html += "</table>"
+    else:
+        html = "[VUL TERMIJNEN IN]"
 
     return {
         "actief": True,
         "totaal": _fmt_currency(arrangement.total_amount),
         "frequentie": arrangement.frequency,
-        "termijnen_tekst": "; ".join(termijnen_lines) if termijnen_lines else "[VUL TERMIJNEN IN]",
+        "termijnen_tekst": html,
+        "termijnen_plat": "; ".join(plain_lines) if plain_lines else "[VUL TERMIJNEN IN]",
         "termijnen": [
             {
                 "bedrag": _fmt_currency(i.amount),

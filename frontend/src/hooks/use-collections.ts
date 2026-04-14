@@ -639,7 +639,8 @@ export function useCreateArrangement() {
       caseId: string;
       data: {
         total_amount: string;
-        installment_amount: string;
+        installment_amount?: string;
+        num_installments?: number;
         frequency: string;
         start_date: string;
         notes?: string;

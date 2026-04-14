@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -445,8 +445,20 @@ async def create_arrangement(
     if existing.scalar_one_or_none() is not None:
         raise ConflictError("Er is al een actieve betalingsregeling voor dit dossier")
 
-    # Calculate number of installments
-    num_installments = math.ceil(data.total_amount / data.installment_amount)
+    # Calculate installment_amount or num_installments (one must be provided)
+    if data.num_installments and not data.installment_amount:
+        # User specified number of installments → calculate amount per installment
+        num_installments = data.num_installments
+        installment_amount = (data.total_amount / Decimal(str(num_installments))).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    elif data.installment_amount:
+        installment_amount = data.installment_amount
+        num_installments = math.ceil(data.total_amount / installment_amount)
+    else:
+        raise BadRequestError(
+            "Geef het aantal termijnen of het bedrag per termijn op"
+        )
 
     # Generate due dates
     due_dates = _generate_installment_dates(data.start_date, data.frequency, num_installments)
@@ -458,7 +470,7 @@ async def create_arrangement(
         tenant_id=tenant_id,
         case_id=case_id,
         total_amount=data.total_amount,
-        installment_amount=data.installment_amount,
+        installment_amount=installment_amount,
         frequency=data.frequency,
         start_date=data.start_date,
         end_date=end_date,
@@ -475,7 +487,7 @@ async def create_arrangement(
             # Last installment gets the remainder
             amount = remaining
         else:
-            amount = min(data.installment_amount, remaining)
+            amount = min(installment_amount, remaining)
         remaining -= amount
 
         installment = PaymentArrangementInstallment(

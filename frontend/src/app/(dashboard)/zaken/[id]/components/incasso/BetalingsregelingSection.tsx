@@ -112,7 +112,8 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
         caseId,
         data: {
           total_amount: form.total_amount,
-          installment_amount: form.installment_amount,
+          ...(form.installment_amount && { installment_amount: form.installment_amount }),
+          ...(form.num_installments && { num_installments: parseInt(form.num_installments) }),
           frequency: form.frequency,
           start_date: form.start_date,
           ...(form.notes && { notes: form.notes }),
@@ -247,7 +248,14 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 required
                 value={form.total_amount}
                 onChange={(e) => {
-                  setForm({ ...form, total_amount: e.target.value });
+                  const totalStr = e.target.value;
+                  const total = parseFloat(totalStr);
+                  const num = parseInt(form.num_installments);
+                  const updated: typeof form = { ...form, total_amount: totalStr };
+                  if (num > 0 && total > 0) {
+                    updated.installment_amount = (total / num).toFixed(2);
+                  }
+                  setForm(updated);
                 }}
                 placeholder="0,00"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
@@ -261,7 +269,14 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 min="1"
                 value={form.num_installments}
                 onChange={(e) => {
-                  setForm({ ...form, num_installments: e.target.value });
+                  const numStr = e.target.value;
+                  const num = parseInt(numStr);
+                  const total = parseFloat(form.total_amount);
+                  const updated: typeof form = { ...form, num_installments: numStr };
+                  if (num > 0 && total > 0) {
+                    updated.installment_amount = (total / num).toFixed(2);
+                  }
+                  setForm(updated);
                 }}
                 placeholder="Bijv. 6"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
@@ -273,10 +288,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 type="number"
                 step="0.01"
                 min="0.01"
-                required
                 value={form.installment_amount}
                 onChange={(e) => setForm({ ...form, installment_amount: e.target.value })}
-                placeholder="0,00"
+                placeholder="Wordt automatisch berekend"
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               />
             </div>

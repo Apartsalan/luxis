@@ -89,7 +89,8 @@ class PaymentResponse(BaseModel):
 
 class ArrangementCreate(BaseModel):
     total_amount: Decimal = Field(..., gt=0, decimal_places=2)
-    installment_amount: Decimal = Field(..., gt=0, decimal_places=2)
+    installment_amount: Decimal | None = Field(None, gt=0, decimal_places=2)
+    num_installments: int | None = Field(None, gt=0)
     frequency: str = Field(default="monthly", pattern="^(weekly|monthly|quarterly)$")
     start_date: date
     notes: str | None = None

@@ -1,9 +1,36 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 14 april 2026 (sessie 122 — artikelcatalogus, verweer-bibliotheek, template fixes, Lisanne feedback)
-**Laatste feature/fix:** Sessie 122 — 30 Basenet-artikelen met GL-mapping, verweer-bibliotheek AI, template workflow herstructurering, 10+ bugfixes
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), documenten tab volgorde moet omgedraaid
-**Volgende sessie:** 123 — mailsjablonen-editor, documenten tab herordenen, rente per vordering, factuur-onderbouwing bij sommatie
+**Laatst bijgewerkt:** 14 april 2026 (sessie 123 — documenten tab, rente per vordering, factuur-bijlagen)
+**Laatste feature/fix:** Sessie 123 — DF122-05 DocumentenTab herordend (Brieven/Processtukken), DF122-06 custom rente per vordering, DF122-07 factuur-PDF's auto bijgevoegd bij sommatie
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
+**Volgende sessie:** 124 — DF122-04 mailsjablonen-editor (uitgesteld uit 123)
+
+## Wat er gedaan is (sessie 123 — 14 april 2026) — Documenten tab + rente + factuur-bijlagen
+
+### Samenvatting
+- **DF122-05** — DocumentenTab volgorde omgedraaid: Bestanden bovenaan, Document genereren onderaan. Genereren gesplitst in **Brieven** (herinnering, aanmaning, sommatie, etc.) en **Processtukken** (dagvaarding, verzoekschrift_faillissement). Beide secties hebben eigen aanbevolen/beschikbaar/toon-alle logica.
+- **DF122-06** — Custom rentepercentage per vordering. Nieuw `Claim.interest_rate` veld (NUMERIC(5,2), nullable). Leeg = wettelijke rente (huidig gedrag), ingevuld = override voor die claim. Interest engine (`interest.py::calculate_case_interest`) checkt per-claim override en bouwt een single-rate schedule. Frontend: input-veld in VorderingenTab edit form met placeholder "leeg = wettelijk". Migratie `df123a`.
+- **DF122-07** — Bij template_type=sommatie worden invoice_file_id's van actieve claims automatisch als bijlagen meegestuurd. Deduplicatie met handmatig geselecteerde case_file_ids. Frontend passt `template_type: selectedTemplate` door naar de compose endpoint.
+- **DF122-04 uitgesteld** naar sessie 124 op verzoek van gebruiker.
+
+### Gewijzigde bestanden
+- `backend/app/collections/models.py` — `Claim.interest_rate` kolom
+- `backend/app/collections/schemas.py` — ClaimCreate/Update/Response velden
+- `backend/app/collections/service.py` — dicts voor interest calc uitgebreid
+- `backend/app/collections/interest.py` — per-claim rate override in calculate_case_interest
+- `backend/alembic/versions/df123a_add_interest_rate_to_claims.py` — nieuw
+- `backend/app/email/compose_router.py` — `SOMMATIE_TEMPLATE_TYPES`, template_type veld, invoice_file_id auto-merge
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — herordend + split Brieven/Processtukken
+- `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/VorderingenTab.tsx` — interest_rate input
+- `frontend/src/hooks/use-collections.ts` — Claim type + create/update payloads
+- `frontend/src/hooks/use-email-sync.ts` — template_type in CaseComposeInput
+- `frontend/src/components/email-compose-dialog.tsx` — template_type in EmailComposeData + buildEmailData
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — template_type doorgegeven aan compose endpoint
+
+### Bekende issues / vervolg
+- DF122-04 (mailsjablonen-editor) nog open — architectuur nog niet beslist (tekst-fragmenten in DB + tokens vs full WYSIWYG).
+- Geen nieuwe unit test voor per-claim interest override toegevoegd — bestaande 99 tests passen wel na migratie.
+
 
 ## Wat er gedaan is (sessie 122 — 14 april 2026) — Artikelcatalogus + Lisanne feedback sessie
 

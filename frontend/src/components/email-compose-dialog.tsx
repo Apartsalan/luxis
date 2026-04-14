@@ -127,6 +127,10 @@ const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
     keys: ["sommatie_na_reactie", "wederom_sommatie_inhoudelijk", "wederom_sommatie_kort"],
   },
   {
+    label: "Verweer-reacties",
+    keys: ["reactie_9_3", "reactie_20_4", "reactie_ncnp_9_3", "reactie_verlengd_9_3"],
+  },
+  {
     label: "Niet-nakoming regeling",
     keys: ["niet_voldaan_regeling"],
   },

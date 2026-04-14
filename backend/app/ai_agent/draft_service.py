@@ -16,7 +16,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.ai_agent.defense_library import (
+    format_examples_for_prompt,
+    get_relevant_examples,
+)
 from app.ai_agent.kimi_client import call_intake_ai
+from app.ai_agent.models import EmailClassification
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.cases.files_service import get_file_path
 from app.cases.models import Case, CaseFile, CaseParty
@@ -38,6 +43,9 @@ JE BESCHIKT OVER DE VOLGENDE BRONNEN:
 3. Recente correspondentie — eerdere e-mails in dit dossier
 4. Algemene Voorwaarden van de cliënt — verwijs naar specifieke artikelen waar relevant
 5. Documenten op het dossier — overeenkomsten, contracten, bewijsstukken (PDF excerpts)
+6. Verweer-bibliotheek — voorbeeldreacties op veelvoorkomende verweren van debiteuren. \
+Gebruik deze als INSPIRATIE voor toon, structuur en juridische argumentatie. \
+Kopieer niet letterlijk, maar pas aan op de specifieke feiten van dit dossier.
 
 REGELS:
 - Schrijf formeel maar toegankelijk Nederlands
@@ -171,6 +179,18 @@ async def _gather_case_context(
     )
     case_invoices = list(invoices_result.scalars().all())
 
+    # DF120-10: last email classification for defense library matching
+    classification_result = await db.execute(
+        select(EmailClassification)
+        .where(
+            EmailClassification.case_id == case_id,
+            EmailClassification.tenant_id == tenant_id,
+        )
+        .order_by(EmailClassification.created_at.desc())
+        .limit(1)
+    )
+    last_classification = classification_result.scalar_one_or_none()
+
     # Build context dict
     context = {
         "case_number": case.case_number,
@@ -178,6 +198,9 @@ async def _gather_case_context(
         "case_type": case.case_type,
         "debtor_type": case.debtor_type,
         "description": case.description,
+        "last_classification_category": (
+            last_classification.category if last_classification else None
+        ),
         "opposing_party": None,
         "client": None,
         "emails": [],
@@ -332,6 +355,14 @@ def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
             header += "]"
             parts.append(header)
             parts.append(cf["excerpt"])
+
+    # DF120-10: Defense library — add relevant examples for verweer/betwisting
+    category = context.get("last_classification_category")
+    if category in ("juridisch_verweer", "betwisting"):
+        examples = get_relevant_examples(category=category)
+        defense_text = format_examples_for_prompt(examples)
+        if defense_text:
+            parts.append(f"\n{defense_text}")
 
     # User instruction
     if instruction:

@@ -311,15 +311,30 @@ async def calculate_case_interest(
         principal = Decimal(str(claim["principal_amount"]))
         default_dt = claim["default_date"]
         claim_rate_basis = claim.get("rate_basis", "yearly")
+        claim_override_rate = claim.get("interest_rate")
 
+        # DF122-06: per-claim rate override takes precedence over case-level rate
+        if claim_override_rate is not None:
+            override_rate = Decimal(str(claim_override_rate))
+            if claim_rate_basis == "monthly":
+                override_rate = override_rate * Decimal("12")
+            claim_rate_history = [(date(1900, 1, 1), override_rate)]
+            # Use compound if the case is compound (statutory types always compound);
+            # else honor contractual_compound flag, default to simple for contractual override.
+            if interest_type == "contractual" and not contractual_compound:
+                claim_calc_fn = calculate_simple_interest
+            else:
+                claim_calc_fn = calculate_compound_interest
         # LF-03: If rate_basis is "monthly", convert contractual rate to yearly
-        if interest_type == "contractual" and claim_rate_basis == "monthly":
+        elif interest_type == "contractual" and claim_rate_basis == "monthly":
             effective_rate = contractual_rate * Decimal("12")
             claim_rate_history = [(date(1900, 1, 1), effective_rate)]
+            claim_calc_fn = calc_fn
         else:
             claim_rate_history = rate_history
+            claim_calc_fn = calc_fn
 
-        interest, periods = calc_fn(principal, default_dt, calc_date, claim_rate_history)
+        interest, periods = claim_calc_fn(principal, default_dt, calc_date, claim_rate_history)
 
         total_principal += principal
         total_interest += interest

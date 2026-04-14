@@ -54,6 +54,10 @@ class Claim(TenantBase):
         String(10), nullable=False, default="yearly"
     )  # LF-03: "monthly" or "yearly" — if monthly, rate * 12 for annual calculation
 
+    interest_rate: Mapped[Decimal | None] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )  # DF122-06: optional custom rate (%). NULL = use case-level rate (wettelijk/commercial/etc)
+
     invoice_file_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("case_files.id"), nullable=True
     )  # LF-09: link uploaded invoice PDF to this claim

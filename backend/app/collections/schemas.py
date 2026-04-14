@@ -21,6 +21,8 @@ class ClaimCreate(BaseModel):
     # DF120: rate_basis is now optional. If omitted, the create_claim service
     # inherits it from the case's client (default_rate_basis) or falls back to "yearly".
     rate_basis: str | None = Field(default=None, description="monthly or yearly")
+    # DF122-06: optional per-claim rate override (%). NULL = use case-level rate
+    interest_rate: Decimal | None = Field(None, ge=0, le=100, decimal_places=2)
     invoice_file_id: uuid.UUID | None = None
 
 
@@ -31,6 +33,7 @@ class ClaimUpdate(BaseModel):
     invoice_number: str | None = None
     invoice_date: date | None = None
     rate_basis: str | None = None
+    interest_rate: Decimal | None = Field(None, ge=0, le=100, decimal_places=2)
     invoice_file_id: uuid.UUID | None = None
 
 
@@ -43,6 +46,7 @@ class ClaimResponse(BaseModel):
     invoice_number: str | None
     invoice_date: date | None
     rate_basis: str
+    interest_rate: Decimal | None
     invoice_file_id: uuid.UUID | None
     is_active: bool
     created_at: datetime

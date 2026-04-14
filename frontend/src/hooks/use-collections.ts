@@ -14,6 +14,8 @@ export interface Claim {
   invoice_number: string | null;
   invoice_date: string | null;
   invoice_file_id: string | null;
+  rate_basis?: string;
+  interest_rate?: number | string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -220,7 +222,9 @@ export function useCreateClaim() {
         default_date: string;
         invoice_number?: string;
         invoice_date?: string;
+        invoice_file_id?: string;
         rate_basis?: string;
+        interest_rate?: string;
       };
     }) => {
       const res = await api(`/api/cases/${caseId}/claims`, {
@@ -258,6 +262,7 @@ export function useUpdateClaim() {
         invoice_date?: string | null;
         invoice_file_id?: string | null;
         rate_basis?: string;
+        interest_rate?: string | null;
       };
     }) => {
       const res = await api(`/api/cases/${caseId}/claims/${claimId}`, {

@@ -49,6 +49,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     invoice_date: "",
     invoice_file_id: "",
     rate_basis: "yearly",
+    interest_rate: "",
   });
   const [form, setForm] = useState({
     description: "",
@@ -57,6 +58,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     invoice_number: "",
     invoice_date: "",
     rate_basis: "yearly",
+    interest_rate: "",
   });
 
   useUnsavedWarning(showForm && (!!form.description || !!form.principal_amount));
@@ -97,6 +99,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
           ...(form.invoice_date && { invoice_date: form.invoice_date }),
           ...(invoiceFileId && { invoice_file_id: invoiceFileId }),
           rate_basis: form.rate_basis,
+          ...(form.interest_rate && { interest_rate: form.interest_rate }),
         },
       });
       toast.success("Vordering toegevoegd");
@@ -109,6 +112,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
         invoice_number: "",
         invoice_date: "",
         rate_basis: "yearly",
+        interest_rate: "",
       });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Er ging iets mis");
@@ -125,7 +129,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
     }
   };
 
-  const startEdit = (claim: { id: string; description: string; principal_amount: number; default_date: string; invoice_number: string | null; invoice_date: string | null; invoice_file_id: string | null; rate_basis?: string }) => {
+  const startEdit = (claim: { id: string; description: string; principal_amount: number; default_date: string; invoice_number: string | null; invoice_date: string | null; invoice_file_id: string | null; rate_basis?: string; interest_rate?: number | string | null }) => {
     setEditingId(claim.id);
     setEditForm({
       description: claim.description,
@@ -135,6 +139,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
       invoice_date: claim.invoice_date || "",
       invoice_file_id: claim.invoice_file_id || "",
       rate_basis: claim.rate_basis || "yearly",
+      interest_rate: claim.interest_rate != null ? String(claim.interest_rate) : "",
     });
   };
 
@@ -153,6 +158,7 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
           ...(editForm.invoice_date ? { invoice_date: editForm.invoice_date } : { invoice_date: null }),
           ...(editForm.invoice_file_id ? { invoice_file_id: editForm.invoice_file_id } : { invoice_file_id: null }),
           rate_basis: editForm.rate_basis,
+          interest_rate: editForm.interest_rate ? editForm.interest_rate : null,
         },
       });
       toast.success("Vordering bijgewerkt");
@@ -418,6 +424,16 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                           <option value="yearly">Rente per jaar</option>
                           <option value="monthly">Rente per maand</option>
                         </select>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={editForm.interest_rate}
+                          onChange={(e) => setEditForm((f) => ({ ...f, interest_rate: e.target.value }))}
+                          placeholder="Rente % (leeg = wettelijk)"
+                          className={`${inputClass} mt-1`}
+                        />
                       </td>
                       <td className="px-4 py-2">
                         <input

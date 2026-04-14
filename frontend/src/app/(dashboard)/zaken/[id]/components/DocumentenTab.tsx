@@ -859,7 +859,9 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
 
   // Template filtering by status (T1)
   const [showAllTemplates, setShowAllTemplates] = useState(false);
+  const [showAllProcesstukken, setShowAllProcesstukken] = useState(false);
   const statusTemplates = getTemplatesForStatus(caseStatus ?? "", debtorType);
+  const PROCESSTUK_TYPES = new Set(["dagvaarding", "verzoekschrift_faillissement"]);
 
   // File uploads (E4)
   const { data: caseFiles, isLoading: filesLoading } = useCaseFiles(caseId);
@@ -1045,152 +1047,6 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
   return (
     <div className="space-y-6">
       {ConfirmDialogEl3}
-      {/* Generate from templates (T1: status-filtered) */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-1 text-base font-semibold text-foreground">
-          Document genereren
-        </h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Genereer een Word-document vanuit een template
-        </p>
-
-        {templatesLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Templates laden...
-          </div>
-        ) : (() => {
-          const allAvailable = templates?.filter((t) => t.available) ?? [];
-          const recommendedTypes = new Set(statusTemplates.recommended);
-          const availableTypes = new Set(statusTemplates.available);
-          const recommended = allAvailable.filter((t) => recommendedTypes.has(t.template_type));
-          const other = allAvailable.filter((t) => !recommendedTypes.has(t.template_type) && availableTypes.has(t.template_type));
-          const hidden = allAvailable.filter((t) => !recommendedTypes.has(t.template_type) && !availableTypes.has(t.template_type));
-
-          return (
-            <div className="space-y-4">
-              {/* Aanbevolen templates */}
-              {recommended.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Star className="h-3.5 w-3.5 text-amber-500" />
-                    <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Aanbevolen voor huidige status</span>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {recommended.map((template) => (
-                      <button
-                        key={template.template_type}
-                        onClick={() => handleGenerate(template.template_type)}
-                        disabled={generateDocx.isPending}
-                        className="flex flex-col items-start gap-2 rounded-lg border-2 border-primary/30 bg-primary/5 p-4 text-left hover:border-primary/50 hover:bg-primary/10 transition-all disabled:opacity-50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                            <FileText className="h-4 w-4 text-primary" />
-                          </div>
-                          <span className="text-sm font-medium text-foreground">
-                            {getTemplateLabel(template.template_type)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {getTemplateDescription(template.template_type)}
-                        </p>
-                        <div className="mt-auto flex items-center gap-1 text-xs text-primary font-medium">
-                          <Download className="h-3 w-3" />
-                          {generateDocx.isPending ? "Genereren..." : "Download .docx"}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Overige beschikbare templates */}
-              {other.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {other.map((template) => (
-                    <button
-                      key={template.template_type}
-                      onClick={() => handleGenerate(template.template_type)}
-                      disabled={generateDocx.isPending}
-                      className="flex flex-col items-start gap-2 rounded-lg border border-border p-4 text-left hover:border-primary/30 hover:bg-muted/50 transition-all disabled:opacity-50"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <span className="text-sm font-medium text-foreground">
-                          {getTemplateLabel(template.template_type)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {getTemplateDescription(template.template_type)}
-                      </p>
-                      <div className="mt-auto flex items-center gap-1 text-xs text-primary">
-                        <Download className="h-3 w-3" />
-                        {generateDocx.isPending ? "Genereren..." : "Download .docx"}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Verborgen templates (Toon alle) */}
-              {hidden.length > 0 && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAllTemplates(!showAllTemplates)}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAllTemplates ? "rotate-180" : ""}`} />
-                    {showAllTemplates ? "Verberg" : `Toon alle templates (${hidden.length} meer)`}
-                  </button>
-                  {showAllTemplates && (
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-3">
-                      {hidden.map((template) => (
-                        <button
-                          key={template.template_type}
-                          onClick={() => handleGenerate(template.template_type)}
-                          disabled={generateDocx.isPending}
-                          className="flex flex-col items-start gap-2 rounded-lg border border-dashed border-border p-4 text-left hover:border-primary/30 hover:bg-muted/50 transition-all disabled:opacity-50 opacity-70"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <span className="text-sm font-medium text-foreground">
-                              {getTemplateLabel(template.template_type)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {getTemplateDescription(template.template_type)}
-                          </p>
-                          <div className="mt-auto flex items-center gap-1 text-xs text-muted-foreground">
-                            <Download className="h-3 w-3" />
-                            {generateDocx.isPending ? "Genereren..." : "Download .docx"}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Fallback als er geen templates zijn */}
-              {recommended.length === 0 && other.length === 0 && hidden.length === 0 && (
-                <div className="rounded-lg border border-dashed border-border py-6 text-center">
-                  <FileText className="mx-auto h-6 w-6 text-muted-foreground/30" />
-                  <p className="mt-1.5 text-sm text-muted-foreground">
-                    Geen templates beschikbaar
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </div>
-
       {/* File uploads (E4) */}
       <div className="rounded-xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
@@ -1640,6 +1496,180 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
             ))}
           </div>
         )}
+      </div>
+
+      {/* Generate from templates (T1: status-filtered) — split in Brieven/Processtukken */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-1 text-base font-semibold text-foreground">
+          Document genereren
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Genereer een Word-document vanuit een sjabloon
+        </p>
+
+        {templatesLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Sjablonen laden...
+          </div>
+        ) : (() => {
+          const allAvailable = templates?.filter((t) => t.available) ?? [];
+          const recommendedTypes = new Set(statusTemplates.recommended);
+          const availableTypes = new Set(statusTemplates.available);
+          const isProcesstuk = (type: string) => PROCESSTUK_TYPES.has(type);
+
+          const brieven = allAvailable.filter((t) => !isProcesstuk(t.template_type));
+          const processtukken = allAvailable.filter((t) => isProcesstuk(t.template_type));
+
+          const brievenRecommended = brieven.filter((t) => recommendedTypes.has(t.template_type));
+          const brievenOther = brieven.filter((t) => !recommendedTypes.has(t.template_type) && availableTypes.has(t.template_type));
+          const brievenHidden = brieven.filter((t) => !recommendedTypes.has(t.template_type) && !availableTypes.has(t.template_type));
+
+          const procRecommended = processtukken.filter((t) => recommendedTypes.has(t.template_type));
+          const procOther = processtukken.filter((t) => !recommendedTypes.has(t.template_type) && availableTypes.has(t.template_type));
+          const procHidden = processtukken.filter((t) => !recommendedTypes.has(t.template_type) && !availableTypes.has(t.template_type));
+
+          const renderCard = (template: typeof allAvailable[number], variant: "recommended" | "available" | "hidden") => {
+            const base = "flex flex-col items-start gap-2 rounded-lg p-4 text-left transition-all disabled:opacity-50";
+            const byVariant: Record<typeof variant, string> = {
+              recommended: "border-2 border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10",
+              available: "border border-border hover:border-primary/30 hover:bg-muted/50",
+              hidden: "border border-dashed border-border hover:border-primary/30 hover:bg-muted/50 opacity-70",
+            };
+            const iconBg = variant === "recommended" ? "bg-primary/10" : "bg-muted";
+            const iconColor = variant === "recommended" ? "text-primary" : "text-muted-foreground";
+            const downloadColor = variant === "recommended" ? "text-xs text-primary font-medium" : variant === "hidden" ? "text-xs text-muted-foreground" : "text-xs text-primary";
+            return (
+              <button
+                key={template.template_type}
+                onClick={() => handleGenerate(template.template_type)}
+                disabled={generateDocx.isPending}
+                className={`${base} ${byVariant[variant]}`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconBg}`}>
+                    <FileText className={`h-4 w-4 ${iconColor}`} />
+                  </div>
+                  <span className="text-sm font-medium text-foreground">
+                    {getTemplateLabel(template.template_type)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {getTemplateDescription(template.template_type)}
+                </p>
+                <div className={`mt-auto flex items-center gap-1 ${downloadColor}`}>
+                  <Download className="h-3 w-3" />
+                  {generateDocx.isPending ? "Genereren..." : "Download .docx"}
+                </div>
+              </button>
+            );
+          };
+
+          const hasBrieven = brievenRecommended.length + brievenOther.length + brievenHidden.length > 0;
+          const hasProcesstukken = procRecommended.length + procOther.length + procHidden.length > 0;
+
+          return (
+            <div className="space-y-6">
+              {/* Brieven */}
+              {hasBrieven && (
+                <div>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Brieven
+                  </h3>
+                  <div className="space-y-4">
+                    {brievenRecommended.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Star className="h-3.5 w-3.5 text-amber-500" />
+                          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Aanbevolen voor huidige status</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {brievenRecommended.map((t) => renderCard(t, "recommended"))}
+                        </div>
+                      </div>
+                    )}
+                    {brievenOther.length > 0 && (
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {brievenOther.map((t) => renderCard(t, "available"))}
+                      </div>
+                    )}
+                    {brievenHidden.length > 0 && (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShowAllTemplates(!showAllTemplates)}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAllTemplates ? "rotate-180" : ""}`} />
+                          {showAllTemplates ? "Verberg" : `Toon alle brieven (${brievenHidden.length} meer)`}
+                        </button>
+                        {showAllTemplates && (
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-3">
+                            {brievenHidden.map((t) => renderCard(t, "hidden"))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Processtukken */}
+              {hasProcesstukken && (
+                <div>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Processtukken
+                  </h3>
+                  <div className="space-y-4">
+                    {procRecommended.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Star className="h-3.5 w-3.5 text-amber-500" />
+                          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Aanbevolen voor huidige status</span>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {procRecommended.map((t) => renderCard(t, "recommended"))}
+                        </div>
+                      </div>
+                    )}
+                    {procOther.length > 0 && (
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {procOther.map((t) => renderCard(t, "available"))}
+                      </div>
+                    )}
+                    {procHidden.length > 0 && (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShowAllProcesstukken(!showAllProcesstukken)}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAllProcesstukken ? "rotate-180" : ""}`} />
+                          {showAllProcesstukken ? "Verberg" : `Toon alle processtukken (${procHidden.length} meer)`}
+                        </button>
+                        {showAllProcesstukken && (
+                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-3">
+                            {procHidden.map((t) => renderCard(t, "hidden"))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback */}
+              {!hasBrieven && !hasProcesstukken && (
+                <div className="rounded-lg border border-dashed border-border py-6 text-center">
+                  <FileText className="mx-auto h-6 w-6 text-muted-foreground/30" />
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    Geen sjablonen beschikbaar
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Email compose dialog */}

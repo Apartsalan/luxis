@@ -245,6 +245,19 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                 className={inputClass}
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-foreground">
+                Factuurdatum
+              </label>
+              <input
+                type="date"
+                value={form.invoice_date}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, invoice_date: e.target.value }))
+                }
+                className={inputClass}
+              />
+            </div>
           </div>
           {/* Invoice file upload */}
           <div>
@@ -375,6 +388,13 @@ export function VorderingenTab({ caseId }: { caseId: string }) {
                           onChange={(e) => setEditForm((f) => ({ ...f, invoice_number: e.target.value }))}
                           className={`${inputClass} mt-1`}
                           placeholder="Factuurnummer (optioneel)"
+                        />
+                        <input
+                          type="date"
+                          value={editForm.invoice_date}
+                          onChange={(e) => setEditForm((f) => ({ ...f, invoice_date: e.target.value }))}
+                          className={`${inputClass} mt-1`}
+                          title="Factuurdatum"
                         />
                         {caseFiles && caseFiles.length > 0 && (
                           <select

@@ -16,9 +16,11 @@ from pathlib import Path
 from docxtpl import DocxTemplate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.auth.models import Tenant
 from app.cases.models import Case
+from app.collections.models import PaymentArrangement
 from app.collections.service import (
     get_financial_summary,
     list_claims,
@@ -261,6 +263,55 @@ async def load_tenant(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant | None:
     return result.scalar_one_or_none()
 
 
+async def _build_regeling_context(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> dict:
+    """Build betalingsregeling context for VSO template."""
+    result = await db.execute(
+        select(PaymentArrangement)
+        .where(
+            PaymentArrangement.tenant_id == tenant_id,
+            PaymentArrangement.case_id == case_id,
+            PaymentArrangement.status == "active",
+        )
+        .options(
+            selectinload(PaymentArrangement.installments)
+        )
+    )
+    arrangement = result.scalar_one_or_none()
+    if not arrangement:
+        return {
+            "actief": False,
+            "totaal": "",
+            "termijnen_tekst": "[VUL TERMIJNEN IN]",
+        }
+
+    # Build termijnen tekst
+    termijnen = sorted(
+        arrangement.installments,
+        key=lambda i: i.due_date,
+    )
+    termijnen_lines = []
+    for inst in termijnen:
+        termijnen_lines.append(
+            f"€ {_fmt_currency(inst.amount)} uiterlijk {_fmt_date(inst.due_date)}"
+        )
+
+    return {
+        "actief": True,
+        "totaal": _fmt_currency(arrangement.total_amount),
+        "frequentie": arrangement.frequency,
+        "termijnen_tekst": "; ".join(termijnen_lines) if termijnen_lines else "[VUL TERMIJNEN IN]",
+        "termijnen": [
+            {
+                "bedrag": _fmt_currency(i.amount),
+                "datum": _fmt_date(i.due_date),
+            }
+            for i in termijnen
+        ],
+    }
+
+
 async def build_base_context(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -378,6 +429,8 @@ async def build_base_context(
         "betalingen_regel_bedrag": betalingen_regel_bedrag,
         "betalingen_aftrek_label": ("Af: ontvangen betalingen" if has_payments else ""),
         "betalingen_aftrek_bedrag": (f"-{_fmt_currency(total_paid)}" if has_payments else ""),
+        # Betalingsregeling (active arrangement for VSO template)
+        "regeling": await _build_regeling_context(db, tenant_id, case.id),
         # Raw financials for programmatic access
         "_financieel": financieel,
         "_bik": bik,

@@ -965,10 +965,7 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
         "door betaling in termijnen. De termijnen zijn als volgt, "
         "waarbij elke termijn uiterlijk op de vervaldatum moet "
         "zijn bijgeschreven:<br>"
-        '<mark style="background:#fef3c7;padding:2px 6px;display:'
-        'inline-block;margin-top:4px;">[VUL TERMIJNEN IN '
-        "&mdash; bijv. &euro; 500 uiterlijk 1-5-2026; &euro; 500 "
-        "uiterlijk 1-6-2026]</mark></li>"
+        f'{ctx.get("regeling", {}).get("termijnen_tekst", "[VUL TERMIJNEN IN]")}</li>'
         "<li>De betaling zal uitsluitend geschieden op IBAN: "
         "NL20 RABO 0388 5065 20 ten name van Stichting Beheer "
         f"Derdengelden Kesting Legal onder vermelding van het "

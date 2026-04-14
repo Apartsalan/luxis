@@ -807,6 +807,10 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF122-01 | **Meerdere incasso-workflows** — Nu 1 pipeline per tenant. Nodig: Pipeline-model bovenop stappen, zodat per cliënt/scenario (Incassocenter, Invorderingsbedrijf, Legalwork, Collect 1) een aparte workflow gekozen kan worden. Workflow = eerste sommatie → tweede → aankondiging faillissement → faillissement, met tussendoor verweer-reactie of extra sommatie. | 📋 Backlog |
 | DF122-02 | **Agent SDK integratie** — Claude Agent SDK als autonome incasso-agent. 50+ tools al gedefinieerd in backend. Wacht op M365 email integratie (M0b). | 📋 Backlog (na M365) |
 | DF122-03 | **M365 email forwarding** — BaseNet forwardt kopieën naar M365, Luxis synct van M365. Parallelle werking: oude zaken op BaseNet, nieuwe op Luxis. Filter zodat ongelinkte mails niet zichtbaar. | 📋 Backlog (met Lisanne) |
+| DF122-04 | **Mailsjablonen-editor** — Email templates van hardcoded Python naar DB verhuizen. WYSIWYG editor in Instellingen zodat Lisanne templates zelf kan aanpassen zonder developer. | 📋 Sessie 123 |
+| DF122-05 | **Documenten tab herordenen** — Bestanden (uploads) bovenaan, document genereren onderaan. Split genereren in brieven vs processtukken. | 📋 Sessie 123 |
+| DF122-06 | **Rente per vordering aanpasbaar** — Nu alleen rate_basis (maand/jaar). Moet ook percentage per vordering instelbaar zijn. | 📋 Sessie 123 |
+| DF122-07 | **Factuur-onderbouwing bij eerste sommatie** — Facturen uit dossier als bewijs bij eerste sommatie template tonen. | 📋 Sessie 123 |
 | DF120-12 | **Read-only view contact-detail toonde rate_basis + minimum_fee niet** — tijdens E2E test op prod gevonden: edit-mode werkt, maar de read-only `<dl>` sloeg deze 2 velden over. Fix: "· per maand/jaar" achter rente, "Minimum provisie" regel in `ContactInfoSection.tsx`. | ✅ Sessie 120 (hotfix `22996ca`) |
 
 ### Feature & UX Audit (sessie 113, 29 maart 2026)

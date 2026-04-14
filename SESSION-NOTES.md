@@ -1,8 +1,60 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 9 april 2026 (sessie 121 — DF120-09 mail-sjablonen: 15 Basenet-templates + concept verzoekschrift PDF flow)
-**Laatste feature/fix:** Sessie 121 — 15 Basenet incasso-templates 1-op-1 overgenomen (11 NL + 4 EN), concept verzoekschrift DOCX→PDF library flow, compose dropdown met 7 groepen + 22 templates, 17 nieuwe render-tests
-**Volgende sessie:** 122 — DF120-08 producten/artikel catalogus import uit Basenet Excel + DF120-10 verweer-bibliotheek voor AI inspiratie
+**Laatst bijgewerkt:** 14 april 2026 (sessie 122 — artikelcatalogus, verweer-bibliotheek, template fixes, Lisanne feedback)
+**Laatste feature/fix:** Sessie 122 — 30 Basenet-artikelen met GL-mapping, verweer-bibliotheek AI, template workflow herstructurering, 10+ bugfixes
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), documenten tab volgorde moet omgedraaid
+**Volgende sessie:** 123 — mailsjablonen-editor, documenten tab herordenen, rente per vordering, factuur-onderbouwing bij sommatie
+
+## Wat er gedaan is (sessie 122 — 14 april 2026) — Artikelcatalogus + Lisanne feedback sessie
+
+### Samenvatting
+- **DF120-08**: Producten/artikel-catalogus — 30 Basenet-artikelen met grootboekrekeningen + BTW-codes, CRUD module, seed endpoint, product-dropdown op factuurregels, per-line GL account in Exact Online sync, beheer-pagina in Instellingen. 8 tests.
+- **DF120-10**: Verweer-bibliotheek — 5 verweer-templates als Python module, automatisch geïnjecteerd in AI draft prompt bij juridisch_verweer/betwisting classificatie.
+- **Template herstructurering**: Dropdown nu in workflow-volgorde (1→2→3→4), verweer-reacties als nieuwe groep, NL verweer-labels toegevoegd.
+- **Derdengeldenrekening IBAN**: Aanmaning, tweede sommatie, herinnering gebruiken nu correct NL20 RABO 0388 5065 20 Stichting Beheer Derdengelden.
+- **Subtotaal fix**: Was foutief grand_total (incl. BIK), nu correct hoofdsom + rente.
+- **Signature fix**: Kesting Legal B.V. + KVK + incasso@kestinglegal.nl (geen telefoon).
+- **Betalingsregeling**: Auto-berekening termijnbedrag vanuit aantal termijnen. Termijnen automatisch in VSO template als nette HTML-tabel.
+- **Factuurdatum**: Veld toegevoegd bij vordering aanmaken + bewerken.
+- **Verzoekschrift PDF**: Auto-attach bij faillissement template + route-volgorde bug gefixt (422 error).
+- **Bijlage preview**: Klik op bestandsnaam in compose → opent PDF in nieuw tabblad.
+- **Pipeline seed fix**: Checkt nu alleen actieve stappen, oude inactive verwijderd op prod.
+- **Product prijs reset**: Bij wisselen van artikel reset prijs correct.
+- **Roadmap**: DF122-01 meerdere workflows, DF122-02 Agent SDK, DF122-03 M365 forwarding toegevoegd.
+- **Onderzoek**: Claude Agent SDK vs Managed Agents geëvalueerd. Agent SDK aanbevolen (eigen infra, 50+ tools al klaar).
+- **CQ-24**: Backblaze B2 backup was al compleet — roadmap bijgewerkt.
+
+### Gewijzigde bestanden (key files)
+- `backend/app/products/` — nieuwe module (models, schemas, service, router, seed)
+- `backend/app/ai_agent/defense_library.py` — verweer-bibliotheek
+- `backend/app/ai_agent/draft_service.py` — defense library integratie
+- `backend/app/email/incasso_templates.py` — IBAN fix, signature fix, subtotaal fix, VSO termijnen, template labels
+- `backend/app/documents/docx_service.py` — factuurdatum, betalingsregeling context, subtotaal fix
+- `backend/app/invoices/models.py` + `schemas.py` + `service.py` — product_id + gl_account_code
+- `backend/app/exact_online/sync_service.py` — per-line GL account + VATCode mapping
+- `backend/app/collections/schemas.py` + `service.py` — num_installments auto-calc
+- `backend/app/incasso/service.py` — pipeline seed fix
+- `backend/app/documents/router.py` — library-templates route ordering fix
+- `frontend/src/components/email-compose-dialog.tsx` — verweer-groep, auto-attach, preview, signature
+- `frontend/src/app/(dashboard)/facturen/nieuw/page.tsx` — product dropdown + prijs reset
+- `frontend/src/app/(dashboard)/instellingen/producten-tab.tsx` — productbeheer pagina
+- `frontend/src/hooks/use-products.ts` — products hook
+- `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/VorderingenTab.tsx` — factuurdatum veld
+- `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/BetalingsregelingSection.tsx` — auto-calc
+
+### Bekende issues
+- Product dropdown: soms blijft op "Vrij" (mogelijk browser cache — Ctrl+Shift+R)
+- Documenten tab: bestanden moeten bovenaan, genereren onderaan
+- Rente per vordering niet aanpasbaar (alleen rate_basis)
+- Facturen als onderbouwing bij eerste sommatie ontbreekt
+- Mailsjablonen niet bewerkbaar via UI (hardcoded in Python)
+
+### Volgende sessie (123)
+1. Mailsjablonen-editor — templates van Python naar DB, bewerkbaar via Instellingen
+2. Documenten tab herordenen — bestanden bovenaan, genereren onderaan (split brieven/processtukken)
+3. Rente per vordering aanpasbaar maken
+4. Factuur-onderbouwing bij eerste sommatie template
+5. Product dropdown definitief debuggen
 
 ## Wat er gedaan is (sessie 121 — 9 april 2026) — DF120-09 mail-sjablonen volledig
 

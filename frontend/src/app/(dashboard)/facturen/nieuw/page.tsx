@@ -1099,12 +1099,15 @@ export default function NieuweFactuurPage() {
                         updated[index] = { ...updated[index], product_id: productId };
                         if (product) {
                           updated[index].description = product.name;
-                          if (product.default_price != null) {
-                            updated[index].unit_price = String(product.default_price);
-                          }
+                          updated[index].unit_price = product.default_price != null
+                            ? String(product.default_price) : "";
                           updated[index].btw_percentage = String(
                             Number(product.vat_percentage).toFixed(2)
                           );
+                        } else {
+                          updated[index].description = "";
+                          updated[index].unit_price = "";
+                          updated[index].btw_percentage = "21.00";
                         }
                         setLines(updated);
                       }}

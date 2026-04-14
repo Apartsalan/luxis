@@ -447,7 +447,9 @@ async def build_base_context(
         "totaal_bik": _fmt_currency(financieel["total_bik"]),
         "totaal_verschuldigd": _fmt_currency(financieel["grand_total"]),
         "totaal_openstaand": _fmt_currency(financieel["total_outstanding"]),
-        "subtotaal": _fmt_currency(financieel["grand_total"]),
+        "subtotaal": _fmt_currency(
+            financieel["total_principal"] + financieel["total_interest"]
+        ),
         "betalingen_regel_label": betalingen_regel_label,
         "betalingen_regel_bedrag": betalingen_regel_bedrag,
         "betalingen_aftrek_label": ("Af: ontvangen betalingen" if has_payments else ""),

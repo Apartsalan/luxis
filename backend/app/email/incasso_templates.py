@@ -213,25 +213,35 @@ def _heading(text: str) -> str:
 
 
 def _signature(ctx: dict, english: bool = False) -> str:
-    """Lisanne's full signature block — matches BaseNet style exactly."""
+    """Lisanne's full signature block — matches BaseNet style exactly.
+
+    Incasso emails use incasso@kestinglegal.nl (not kantoor email).
+    No phone number for incasso cases. KVK as B.V.
+    """
     k = ctx["kantoor"]
+    kvk = k.get("kvk", "")
+    kvk_line = f"KVK: {kvk}<br>" if kvk else ""
     if english:
         return (
             "Yours faithfully,<br><br>"
-            "<strong>Mevr. mr. L. Kesting</strong><br>"
+            "<strong>mr. L. Kesting</strong><br>"
             "DEBT COLLECTION ATTORNEY<br><br>"
+            "Kesting Legal B.V.<br>"
             f"{k['adres']}<br>"
             f"{k['postcode_stad']}<br>"
-            f"E: {k['email']}<br>"
+            f"{kvk_line}"
+            "E: incasso@kestinglegal.nl<br>"
             "W: www.kestinglegal.nl"
         )
     return (
         "Hoogachtend,<br><br>"
-        "<strong>Mevr. mr. L. Kesting</strong><br>"
+        "<strong>mr. L. Kesting</strong><br>"
         "INCASSO ADVOCAAT | DEBT COLLECTION ATTORNEY<br><br>"
+        "Kesting Legal B.V.<br>"
         f"{k['adres']}<br>"
         f"{k['postcode_stad']}<br>"
-        f"E: {k['email']}<br>"
+        f"{kvk_line}"
+        "E: incasso@kestinglegal.nl<br>"
         "W: www.kestinglegal.nl"
     )
 
@@ -609,20 +619,11 @@ def _render_herinnering(ctx: dict) -> str:
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
     )
     body += _schuldhulp_disclaimer(ctx)
-    afsluiting = (
-        "Met vriendelijke groet,<br><br>"
-        "<strong>Mevr. mr. L. Kesting</strong><br>"
-        "INCASSO ADVOCAAT | DEBT COLLECTION ATTORNEY<br><br>"
-        f"{ctx['kantoor']['adres']}<br>"
-        f"{ctx['kantoor']['postcode_stad']}<br>"
-        f"E: {ctx['kantoor']['email']}<br>"
-        "W: www.kestinglegal.nl"
-    )
     return _render_branded(
         ctx,
         betreft="<strong>Betreft: Herinnering openstaande vordering</strong>",
         content_html=body,
-        afsluiting_html=afsluiting,
+        afsluiting_html=_signature(ctx),
     )
 
 

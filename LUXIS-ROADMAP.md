@@ -671,7 +671,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | CQ-21 | **Backend .dockerignore** — Created backend/.dockerignore excluding .env, tests, cache, docs. | Infra | ✅ Sessie 92 |
 | CQ-22 | **Container health checks** — Added healthchecks for all 4 services in docker-compose.prod.yml. | Infra | ✅ Sessie 92 |
 | CQ-23 | **Container resource limits** — Added mem_limit + cpus for all services in prod compose. | Infra | ✅ Sessie 92 |
-| CQ-24 | **Off-site backups** — Updated backup.sh with rclone off-site upload support. rclone geïnstalleerd op VPS (sessie 101). Config naar Backblaze B2 nog nodig vóór soft launch. | Infra | ⏳ rclone config vóór soft launch |
+| CQ-24 | **Off-site backups** — rclone → Backblaze B2 bucket `Luxis-backup`. Dagelijkse cron 03:00, DB + uploads, 90d retentie off-site, 7d lokaal. Draait sinds maart 2026. | Infra | ✅ Compleet |
 | CQ-25 | **Uptime monitoring** — Self-hosted health check actief (elke 5 min, auto-restart bij downtime). /health endpoint extern beschikbaar. UptimeRobot (extern) nog opzetten vóór soft launch. | Infra | ⏳ UptimeRobot vóór soft launch |
 | UX-14 | **Responsive tabellen** — overflow-x-auto + min-width op alle tab-tabellen en incasso pipeline. | Frontend | ✅ Sessie 98 |
 | UX-15 | **Form validatie** — inline foutmeldingen op factuur, email compose, betaling, instellingen formulieren. | Frontend | ✅ Sessie 98 |

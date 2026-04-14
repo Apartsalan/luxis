@@ -234,6 +234,7 @@ export default function ZaakDetailPage() {
           body_html: data.body_html,
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,
+          template_type: data.template_type,
         }),
       });
 

@@ -36,6 +36,7 @@ export interface EmailComposeData {
   body_html?: string | null;
   case_file_ids?: string[];
   inline_attachments?: ComposeInlineAttachment[];
+  template_type?: string;
 }
 
 export interface EmailRecipient {
@@ -533,6 +534,7 @@ export function EmailComposeDialog({
       body_html: currentTemplateHtml || null,
       case_file_ids: Array.from(caseFileIds).length > 0 ? Array.from(caseFileIds) : undefined,
       inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
+      template_type: selectedTemplate || undefined,
     };
   };
 

@@ -207,6 +207,7 @@ export interface CaseComposeInput {
   body_html?: string | null;
   case_file_ids?: string[];
   inline_attachments?: ComposeInlineAttachment[];
+  template_type?: string;
 }
 
 export interface CaseComposeResult {

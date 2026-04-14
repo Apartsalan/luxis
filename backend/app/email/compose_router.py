@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.cases.models import Case, CaseActivity, CaseFile
+from app.collections.models import Claim
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.documents.docx_service import build_base_context
@@ -32,6 +33,9 @@ from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import get_email_account, get_provider, get_valid_access_token
 from app.email.providers.base import OutgoingAttachment
 from app.shared.exceptions import BadRequestError, NotFoundError
+
+# DF122-07: templates voor welke we automatisch factuur-PDF's als bijlage toevoegen
+SOMMATIE_TEMPLATE_TYPES = {"sommatie"}
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +79,14 @@ class CaseComposeRequest(BaseModel):
     )
     case_file_ids: list[uuid.UUID] | None = None
     inline_attachments: list[InlineAttachment] | None = None
+    template_type: str | None = Field(
+        default=None,
+        max_length=50,
+        description=(
+            "DF122-07: bij 'sommatie' worden factuur-PDF's van claims "
+            "automatisch als bijlage meegestuurd."
+        ),
+    )
 
 
 class ComposeResponse(BaseModel):
@@ -262,12 +274,31 @@ async def compose_eml_from_case(
     else:
         body_html = ""
 
+    # DF122-07: automatisch factuur-PDF's van claims bijvoegen bij sommatie
+    merged_case_file_ids: list[uuid.UUID] = list(data.case_file_ids or [])
+    if data.template_type in SOMMATIE_TEMPLATE_TYPES:
+        claims_result = await db.execute(
+            select(Claim.invoice_file_id).where(
+                Claim.case_id == case_id,
+                Claim.tenant_id == user.tenant_id,
+                Claim.is_active.is_(True),
+                Claim.invoice_file_id.is_not(None),
+            )
+        )
+        invoice_ids = [row[0] for row in claims_result.all() if row[0] is not None]
+        # Dedupliceer (gebruiker kan zelf ook facturen toevoegen)
+        seen = set(merged_case_file_ids)
+        for inv_id in invoice_ids:
+            if inv_id not in seen:
+                merged_case_file_ids.append(inv_id)
+                seen.add(inv_id)
+
     # Resolve attachments
     attachments = await _resolve_attachments(
         db,
         user.tenant_id,
         case_id,
-        data.case_file_ids,
+        merged_case_file_ids or None,
         data.inline_attachments,
     )
 

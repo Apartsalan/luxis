@@ -128,8 +128,8 @@ async def seed_default_steps(
     db: AsyncSession,
     tenant_id: uuid.UUID,
 ) -> list[IncassoPipelineStep]:
-    """Seed default incasso pipeline steps for a tenant (if none exist)."""
-    existing = await list_pipeline_steps(db, tenant_id, active_only=False)
+    """Seed default incasso pipeline steps for a tenant (if no active ones exist)."""
+    existing = await list_pipeline_steps(db, tenant_id, active_only=True)
     if existing:
         return existing
 

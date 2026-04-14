@@ -430,7 +430,8 @@ def _render_aanmaning(ctx: dict) -> str:
     body += (
         f"<p>Wij sommeren u het bedrag van <strong>{ctx['totaal_openstaand']}"
         f"</strong> uiterlijk {ctx['termijn_14_dagen']} te voldoen op "
-        f"IBAN {ctx['kantoor']['iban']} t.n.v. {ctx['kantoor']['naam']}, "
+        "IBAN NL20 RABO 0388 5065 20 t.n.v. Stichting Beheer "
+        "Derdengelden Kesting Legal, "
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
         "<p>Bij gebreke van tijdige betaling zullen wij zonder nadere "
         "aankondiging rechtsmaatregelen treffen.</p>"
@@ -517,7 +518,8 @@ def _render_tweede_sommatie(ctx: dict) -> str:
         f"<p>Wij sommeren u &mdash; voor de laatste maal &mdash; het bedrag van "
         f"<strong>{ctx['totaal_openstaand']}</strong> uiterlijk "
         f"{ctx['termijn_14_dagen']} te voldoen op "
-        f"IBAN {ctx['kantoor']['iban']} t.n.v. {ctx['kantoor']['naam']}, "
+        "IBAN NL20 RABO 0388 5065 20 t.n.v. Stichting Beheer "
+        "Derdengelden Kesting Legal, "
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
         "<p>Bij gebreke van tijdige betaling zullen wij zonder nadere "
         "aankondiging tot dagvaarding overgaan. De kosten hiervan "
@@ -602,7 +604,8 @@ def _render_herinnering(ctx: dict) -> str:
     body += (
         f"<p>Wij verzoeken u het bedrag van <strong>{ctx['totaal_openstaand']}"
         f"</strong> voor {ctx['termijn_14_dagen']} over te maken op "
-        f"IBAN {ctx['kantoor']['iban']} t.n.v. {ctx['kantoor']['naam']}, "
+        "IBAN NL20 RABO 0388 5065 20 t.n.v. Stichting Beheer "
+        "Derdengelden Kesting Legal, "
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
     )
     body += _schuldhulp_disclaimer(ctx)

@@ -87,13 +87,11 @@ const TEMPLATE_LABELS: Record<string, string> = {
   dagvaarding: "Dagvaarding",
   renteoverzicht: "Renteoverzicht",
   // ─── Eerste sommatie (NL) ─────────────────────────────────
-  sommatie: "Sommatie tot betaling (eerste, AV)",
-  sommatie_drukte: "Sommatie tot betaling (eerste, met drukte-notitie)",
-  sommatie_eerste_opgave: "Sommatie tot betaling (eerste opgave)",
-  // ─── Na reactie debiteur (NL) ─────────────────────────────
-  sommatie_na_reactie: "Sommatie na reactie debiteur",
-  wederom_sommatie_inhoudelijk: "Wederom sommatie (met verweer-weerlegging)",
-  wederom_sommatie_kort: "Wederom sommatie (kort, zonder verweer)",
+  sommatie_drukte: "Eerste sommatie",
+  sommatie_eerste_opgave: "Eerste opgave (aan deurwaarder/derde)",
+  // ─── Tweede sommatie (NL) ────────────────────────────────
+  sommatie_na_reactie: "Tweede sommatie (na reactie debiteur)",
+  wederom_sommatie_kort: "Tweede sommatie (standaard herhaling)",
   // ─── Niet-nakoming regeling (NL) ──────────────────────────
   niet_voldaan_regeling: "Niet voldaan aan regeling — sommatie",
   // ─── Schikking & regeling (NL) ────────────────────────────
@@ -120,32 +118,32 @@ const TEMPLATE_LABELS: Record<string, string> = {
 // incasso_templates.py — anders mislukt render_template_preview.
 const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
   {
-    label: "Aanmaningen",
-    keys: ["herinnering", "aanmaning", "14_dagenbrief", "tweede_sommatie"],
+    label: "1. Eerste sommatie",
+    keys: ["sommatie_drukte"],
   },
   {
-    label: "Eerste sommatie",
-    keys: ["sommatie", "sommatie_drukte", "sommatie_eerste_opgave"],
+    label: "2. Tweede sommatie",
+    keys: ["sommatie_na_reactie", "wederom_sommatie_kort"],
   },
   {
-    label: "Na reactie debiteur",
-    keys: ["sommatie_na_reactie", "wederom_sommatie_inhoudelijk", "wederom_sommatie_kort"],
+    label: "3. Aankondiging faillissement",
+    keys: ["sommatie_laatste_voor_fai"],
+  },
+  {
+    label: "4. Faillissement",
+    keys: ["faillissement_dreigbrief"],
   },
   {
     label: "Verweer-reacties",
     keys: ["reactie_9_3", "reactie_20_4", "reactie_ncnp_9_3", "reactie_verlengd_9_3"],
   },
   {
-    label: "Niet-nakoming regeling",
-    keys: ["niet_voldaan_regeling"],
-  },
-  {
     label: "Schikking & regeling",
-    keys: ["schikkingsvoorstel", "vaststellingsovereenkomst"],
+    keys: ["schikkingsvoorstel", "vaststellingsovereenkomst", "niet_voldaan_regeling"],
   },
   {
-    label: "Faillissement",
-    keys: ["sommatie_laatste_voor_fai", "faillissement_dreigbrief"],
+    label: "Overig",
+    keys: ["herinnering", "aanmaning", "14_dagenbrief", "sommatie_eerste_opgave"],
   },
   {
     label: "English",

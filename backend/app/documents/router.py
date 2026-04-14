@@ -165,6 +165,27 @@ async def generate_document(
     return await service.generate_document(db, user.tenant_id, case_id, user.id, data)
 
 
+# NOTE: library-templates MUST be registered before /{document_id}
+# to prevent FastAPI matching "library-templates" as a UUID param.
+@router.get(
+    "/library-templates",
+    response_model=list[LibraryTemplate],
+)
+async def list_library_templates(
+    user: User = Depends(get_current_user),
+):
+    """Lijst van bibliotheek-templates die vanuit compose als PDF-bijlage
+    kunnen worden meegestuurd."""
+    return [
+        LibraryTemplate(
+            template_key=key,
+            name=name,
+            description=description,
+        )
+        for key, (name, description) in LIBRARY_TEMPLATE_KEYS.items()
+    ]
+
+
 @router.get(
     "/{document_id}",
     response_model=GeneratedDocumentDetail,
@@ -225,28 +246,6 @@ async def list_docx_templates(
 ):
     """List available .docx template types."""
     return get_available_templates()
-
-
-@router.get(
-    "/library-templates",
-    response_model=list[LibraryTemplate],
-)
-async def list_library_templates(
-    user: User = Depends(get_current_user),
-):
-    """Lijst van bibliotheek-templates die vanuit compose als PDF-bijlage
-    kunnen worden meegestuurd.
-
-    Alleen templates in de whitelist `LIBRARY_TEMPLATE_KEYS` worden getoond.
-    """
-    return [
-        LibraryTemplate(
-            template_key=key,
-            name=name,
-            description=description,
-        )
-        for key, (name, description) in LIBRARY_TEMPLATE_KEYS.items()
-    ]
 
 
 @router.post(

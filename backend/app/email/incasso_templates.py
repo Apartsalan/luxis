@@ -291,7 +291,7 @@ def _vordering_table_basenet(ctx: dict) -> str:
         html += (
             "<tr>"
             f'<td style="padding:4px 6px;">{v["factuurnummer"]}</td>'
-            f'<td style="padding:4px 6px;">{v["verzuimdatum"]}</td>'
+            f'<td style="padding:4px 6px;">{v.get("factuurdatum", v["verzuimdatum"])}</td>'
             f'<td style="padding:4px 6px;">{v["verzuimdatum"]}</td>'
             f'<td colspan="2" style="padding:4px 6px;">'
             f'{v["hoofdsom"]}</td>'

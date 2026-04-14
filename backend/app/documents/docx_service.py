@@ -296,6 +296,7 @@ async def build_base_context(
         {
             "beschrijving": c.description,
             "factuurnummer": c.invoice_number or "",
+            "factuurdatum": _fmt_date(c.invoice_date) if c.invoice_date else "",
             "verzuimdatum": _fmt_date(c.default_date),
             "hoofdsom": _fmt_currency(c.principal_amount),
         }

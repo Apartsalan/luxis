@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import {
   Mail, Paperclip, Loader2, X, Plus,
@@ -321,7 +322,7 @@ export function EmailComposeDialog({
         setTemplateHtml(result.body_html);
         if (result.subject && !subject) setSubject(result.subject);
         // Auto-attach verzoekschrift PDF bij faillissement dreigbrief
-        if (val === "faillissement_dreigbrief") {
+        if (val === "faillissement_dreigbrief" && caseId) {
           try {
             const res = await api("/api/documents/library-templates");
             if (res.ok) {
@@ -330,9 +331,13 @@ export function EmailComposeDialog({
               const vz = templates.find(
                 (t) => t.template_key === "verzoekschrift_faillissement"
               );
-              if (vz) attachLibraryTemplate(vz);
+              if (vz) {
+                await attachLibraryTemplate(vz);
+              }
             }
-          } catch { /* verzoekschrift bijlage is nice-to-have */ }
+          } catch {
+            toast.error("Verzoekschrift PDF kon niet worden bijgevoegd");
+          }
         }
       } else {
         setSelectedTemplate("");

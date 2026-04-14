@@ -99,6 +99,11 @@ const TEMPLATE_LABELS: Record<string, string> = {
   // ─── Schikking & regeling (NL) ────────────────────────────
   schikkingsvoorstel: "Eenmalig schikkingsvoorstel",
   vaststellingsovereenkomst: "Treffen van een regeling (vaststellingsovereenkomst)",
+  // ─── Verweer-reacties (NL) ─────────────────────────────────
+  reactie_9_3: "Reactie art. 9.3 (annuleringskosten)",
+  reactie_20_4: "Reactie art. 20.4 (eindafrekening)",
+  reactie_ncnp_9_3: "Reactie NCNP + art. 9.3 (gerechtelijk)",
+  reactie_verlengd_9_3: "Reactie verlengd abonnement + art. 9.3",
   // ─── Faillissement (NL) ───────────────────────────────────
   sommatie_laatste_voor_fai: "Sommatie laatste mogelijkheid (vóór verzoekschrift)",
   faillissement_dreigbrief: "Verzoekschrift faillissement (laatste mogelijkheid)",
@@ -317,6 +322,20 @@ export function EmailComposeDialog({
       if (result.supported && result.body_html) {
         setTemplateHtml(result.body_html);
         if (result.subject && !subject) setSubject(result.subject);
+        // Auto-attach verzoekschrift PDF bij faillissement dreigbrief
+        if (val === "faillissement_dreigbrief") {
+          try {
+            const res = await api("/api/documents/library-templates");
+            if (res.ok) {
+              const templates = (await res.json()) as LibraryTemplate[];
+              setLibraryTemplates(templates);
+              const vz = templates.find(
+                (t) => t.template_key === "verzoekschrift_faillissement"
+              );
+              if (vz) attachLibraryTemplate(vz);
+            }
+          } catch { /* verzoekschrift bijlage is nice-to-have */ }
+        }
       } else {
         setSelectedTemplate("");
         setTemplateHtml(null);

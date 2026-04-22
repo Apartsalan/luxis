@@ -159,14 +159,14 @@ MERGE_FIELD_DEFINITIONS: dict[str, dict] = {
 
 
 def _fmt_currency(value: Decimal | int | float | None) -> str:
-    """Format value as Dutch currency: EUR 1.234,56."""
+    """Format value as Dutch currency: € 1.234,56."""
     if value is None:
-        return "EUR 0,00"
+        return "€ 0,00"
     d = Decimal(str(value))
     formatted = f"{d:,.2f}"
     # 1,234.56 → 1.234,56
     formatted = formatted.replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"EUR {formatted}"
+    return f"€ {formatted}"
 
 
 def _fmt_date(value: date | str | None) -> str:

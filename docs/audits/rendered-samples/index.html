@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="nl"><head><meta charset="utf-8"><title>Luxis Audit — Rendered Samples</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width:900px; margin:40px auto; padding:20px; }
+h1 { color:#1e293b; }
+table { width:100%; border-collapse:collapse; margin-top:20px; }
+th, td { padding:12px; text-align:left; border-bottom:1px solid #e5e7eb; }
+th { background:#f9fafb; }
+a { color:#0284c7; text-decoration:none; font-weight:500; }
+a:hover { text-decoration:underline; }
+.checklist { background:#fef3c7; border-left:4px solid #f59e0b; padding:16px 20px;
+              margin:20px 0; border-radius:6px; }
+.checklist h3 { margin-top:0; }
+code { background:#e5e7eb; padding:2px 6px; border-radius:3px; font-size:13px; }
+</style></head><body>
+<h1>Luxis Audit — Gerendererde brieven</h1>
+<p>Scenario: consument <strong>Jan de Vries</strong> heeft €3.500 schuld bij <strong>Bakkerij Van Dijk VOF</strong>
+(niet-BTW-plichtige VOF). 6 maanden verzuim, ~€ 93 rente, BIK zou €475 excl moeten zijn, +€99,75 BTW = €574,75 incl.
+Totaal verschuldigd (correct) = € 4.168,25.</p>
+
+<div class="checklist">
+  <h3>Waar naar kijken in de PRODUCTIE-versies:</h3>
+  <ol>
+    <li><strong>Valuta</strong>: staat er "EUR 3.500,00" of "€ 3.500,00"? Productie = "EUR".</li>
+    <li><strong>14-dagenbrief</strong>: open het bestand, zoek naar <code>dagtekening</code> — staat er één keer "na ontvangst" (correct) en één keer "na dagtekening" (fout)?</li>
+    <li><strong>BIK-bedrag</strong>: staat er €475 (zonder BTW) of €574,75 (met BTW)? Productie = €475. Maar voor een VOF/consument/stichting MOET het €574,75 zijn.</li>
+    <li><strong>Totaal</strong>: productie telt €3.500 + €93 + €475 = €4.068. Correct = €4.168 (€100 verschil = de ontbrekende BTW).</li>
+    <li><strong>Vorderingen-tabel</strong>: dubbel euro-symbool? (<code>€ EUR 3.500,00</code>?)</li>
+  </ol>
+</div>
+
+<table>
+  <thead><tr><th>Brief</th><th>Wat nu uit Luxis komt</th><th>Hoe het hoort</th></tr></thead>
+  <tbody>
+    <tr><td>Herinnering</td><td><a href='herinnering__PRODUCTIE.html'>PRODUCTIE</a></td><td><a href='herinnering__CORRECT.html'>CORRECT</a></td></tr><tr><td>Aanmaning</td><td><a href='aanmaning__PRODUCTIE.html'>PRODUCTIE</a></td><td><a href='aanmaning__CORRECT.html'>CORRECT</a></td></tr><tr><td>14-dagenbrief (art. 6:96 lid 6 BW)</td><td><a href='14_dagenbrief__PRODUCTIE.html'>PRODUCTIE</a></td><td><a href='14_dagenbrief__CORRECT.html'>CORRECT</a></td></tr><tr><td>Sommatie</td><td><a href='sommatie__PRODUCTIE.html'>PRODUCTIE</a></td><td><a href='sommatie__CORRECT.html'>CORRECT</a></td></tr><tr><td>Tweede sommatie</td><td><a href='tweede_sommatie__PRODUCTIE.html'>PRODUCTIE</a></td><td><a href='tweede_sommatie__CORRECT.html'>CORRECT</a></td></tr>
+  </tbody>
+</table>
+<p style="margin-top:30px;color:#6b7280;font-size:13px;">
+Gerendererd op 22 april 2026 · bron: <code>scripts/render_audit_samples.py</code>
+</p>
+</body></html>

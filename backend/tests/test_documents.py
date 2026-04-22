@@ -322,19 +322,19 @@ class TestFormatCurrency:
     """Test Dutch currency formatting."""
 
     def test_zero(self):
-        assert _fmt_currency(Decimal("0")) == "EUR 0,00"
+        assert _fmt_currency(Decimal("0")) == "€ 0,00"
 
     def test_small_amount(self):
-        assert _fmt_currency(Decimal("40.00")) == "EUR 40,00"
+        assert _fmt_currency(Decimal("40.00")) == "€ 40,00"
 
     def test_thousands(self):
-        assert _fmt_currency(Decimal("1234.56")) == "EUR 1.234,56"
+        assert _fmt_currency(Decimal("1234.56")) == "€ 1.234,56"
 
     def test_large_amount(self):
-        assert _fmt_currency(Decimal("15000.00")) == "EUR 15.000,00"
+        assert _fmt_currency(Decimal("15000.00")) == "€ 15.000,00"
 
     def test_none(self):
-        assert _fmt_currency(None) == "EUR 0,00"
+        assert _fmt_currency(None) == "€ 0,00"
 
     def test_negative(self):
         # Negative amounts should show minus sign

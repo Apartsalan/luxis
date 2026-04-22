@@ -44,15 +44,15 @@ jinja_env = Environment(
 
 
 def _format_currency(value) -> str:
-    """Format a Decimal/float as Dutch currency: EUR 1.234,56."""
+    """Format a Decimal/float as Dutch currency: € 1.234,56."""
     if value is None:
-        return "EUR 0,00"
+        return "€ 0,00"
     d = Decimal(str(value))
     # Format with 2 decimal places
     formatted = f"{d:,.2f}"
     # Convert to Dutch format: 1,234.56 -> 1.234,56
     formatted = formatted.replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"EUR {formatted}"
+    return f"€ {formatted}"
 
 
 def _format_date_nl(value) -> str:

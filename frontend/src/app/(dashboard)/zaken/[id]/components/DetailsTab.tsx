@@ -120,6 +120,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     interest_type: zaak.interest_type || "statutory",
     contractual_rate: zaak.contractual_rate != null ? String(zaak.contractual_rate) : "",
     contractual_compound: zaak.contractual_compound ?? true,
+    nakosten_type: zaak.nakosten_type || "",
   });
 
   // UX-16: Warn on unsaved changes (beforeunload)
@@ -186,6 +187,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
             contractual_compound: editForm.interest_type === "contractual"
               ? editForm.contractual_compound
               : null,
+            nakosten_type: editForm.nakosten_type || null,
           }),
         },
       });
@@ -214,6 +216,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       interest_type: zaak.interest_type || "statutory",
       contractual_rate: zaak.contractual_rate != null ? String(zaak.contractual_rate) : "",
       contractual_compound: zaak.contractual_compound ?? true,
+      nakosten_type: zaak.nakosten_type || "",
     });
     setIsEditing(false);
   };
@@ -670,6 +673,23 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                 )}
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">
+                    Nakosten
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={editForm.nakosten_type}
+                      onChange={(e) => setEditForm(f => ({ ...f, nakosten_type: e.target.value }))}
+                      className={`${editInputClass} appearance-none pr-8`}
+                    >
+                      <option value="">Geen</option>
+                      <option value="zonder_betekening">Zonder betekening (€189)</option>
+                      <option value="met_betekening">Met betekening (€287)</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">
                     Uurtarief (EUR/uur)
                   </label>
                   <input
@@ -748,6 +768,13 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                     </dd>
                   </div>
                 )}
+                <div>
+                  <dt className="text-xs text-muted-foreground mb-1">Nakosten</dt>
+                  <dd className="text-sm text-foreground">
+                    {zaak.nakosten_type === "zonder_betekening" ? "Zonder betekening (€189)" :
+                     zaak.nakosten_type === "met_betekening" ? "Met betekening (€287)" : "-"}
+                  </dd>
+                </div>
                 <div>
                   <dt className="text-xs text-muted-foreground mb-1">Uurtarief</dt>
                   <dd className="text-sm text-foreground">

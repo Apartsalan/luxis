@@ -68,6 +68,7 @@ class CaseCreate(BaseModel):
     budget: Decimal | None = None  # G13: optional budget (requires "budget" module)
     bik_override: Decimal | None = None  # LF-12: manual BIK override
     bik_override_percentage: Decimal | None = None  # DF117-04: BIK as % of principal
+    nakosten_type: str | None = None  # AUD124-03: zonder_betekening / met_betekening
     hourly_rate: Decimal | None = None  # LF-19: per-case hourly rate
     payment_term_days: int | None = None  # LF-22: debtor settings
     collection_strategy: str | None = None
@@ -104,6 +105,7 @@ class CaseUpdate(BaseModel):
     budget: Decimal | None = None  # G13
     bik_override: Decimal | None = None  # LF-12
     bik_override_percentage: Decimal | None = None  # DF117-04
+    nakosten_type: str | None = None  # AUD124-03
     hourly_rate: Decimal | None = None  # LF-19
     payment_term_days: int | None = None  # LF-22
     collection_strategy: str | None = None
@@ -218,6 +220,7 @@ class CaseResponse(BaseModel):
     budget: Decimal | None = None  # G13
     bik_override: Decimal | None = None  # LF-12
     bik_override_percentage: Decimal | None = None  # DF117-04
+    nakosten_type: str | None = None  # AUD124-03
     hourly_rate: Decimal | None = None  # LF-19
     payment_term_days: int | None = None  # LF-22
     collection_strategy: str | None = None

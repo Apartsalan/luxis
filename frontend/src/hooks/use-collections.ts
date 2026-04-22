@@ -83,6 +83,8 @@ export interface FinancialSummary {
   bik_amount: number;
   bik_btw: number;
   total_bik: number;
+  nakosten_type: string | null;
+  total_nakosten: number;
   total_paid_costs: number;
   remaining_costs: number;
   grand_total: number;

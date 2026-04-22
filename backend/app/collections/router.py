@@ -210,6 +210,7 @@ async def create_payment(
         contractual_compound=case.contractual_compound,
         bik_override=case.bik_override,
         include_btw_on_bik=not case.client.is_btw_plichtig,
+        nakosten_type=case.nakosten_type,
     )
 
 
@@ -444,6 +445,7 @@ async def financial_summary(
         as_of,
         bik_override=case.bik_override,
         include_btw_on_bik=not case.client.is_btw_plichtig,
+        nakosten_type=case.nakosten_type,
     )
 
 

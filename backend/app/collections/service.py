@@ -194,6 +194,7 @@ async def create_payment(
     contractual_compound: bool = False,
     bik_override: Decimal | None = None,
     include_btw_on_bik: bool = False,
+    nakosten_type: str | None = None,
     _skip_installment_link: bool = False,
 ) -> Payment:
     """Register a payment for a case.
@@ -251,6 +252,12 @@ async def create_payment(
     else:
         bik_result = calculate_bik(total_principal, include_btw=include_btw_on_bik)
         total_costs = bik_result["bik_inclusive"]
+
+    # AUD124-03: Nakosten
+    from app.collections.nakosten import calculate_nakosten
+
+    total_costs += calculate_nakosten(nakosten_type)
+
     prev_costs = sum((p.allocated_to_costs for p in existing_payments), Decimal("0"))
     prev_interest = sum((p.allocated_to_interest for p in existing_payments), Decimal("0"))
     prev_principal = sum((p.allocated_to_principal for p in existing_payments), Decimal("0"))
@@ -837,6 +844,7 @@ async def get_financial_summary(
     calc_date: date | None = None,
     bik_override: Decimal | None = None,
     include_btw_on_bik: bool = False,
+    nakosten_type: str | None = None,
 ) -> dict:
     """Build a complete financial summary for a case.
 
@@ -893,13 +901,19 @@ async def get_financial_summary(
         bik_exclusive = bik_result["bik_exclusive"]
         bik_btw = bik_result["btw_amount"]
         total_bik = bik_result["bik_inclusive"]
+    # AUD124-03: Nakosten (post-judgment costs)
+    from app.collections.nakosten import calculate_nakosten
+
+    total_nakosten = calculate_nakosten(nakosten_type)
+
     total_paid = sum(p.amount for p in payments)
     total_paid_costs = sum(p.allocated_to_costs for p in payments)
     total_paid_interest = sum(p.allocated_to_interest for p in payments)
     total_paid_principal = sum(p.allocated_to_principal for p in payments)
 
-    # Grand total
-    grand_total = total_principal + total_interest + total_bik
+    # Grand total (BIK + nakosten are both "costs" per art. 6:44 BW)
+    total_costs = total_bik + total_nakosten
+    grand_total = total_principal + total_interest + total_costs
     total_outstanding = grand_total - total_paid
 
     # Derdengelden (trust funds)
@@ -919,8 +933,10 @@ async def get_financial_summary(
         "bik_amount": bik_exclusive,
         "bik_btw": bik_btw,
         "total_bik": total_bik,
+        "nakosten_type": nakosten_type,
+        "total_nakosten": total_nakosten,
         "total_paid_costs": total_paid_costs,
-        "remaining_costs": total_bik - total_paid_costs,
+        "remaining_costs": total_costs - total_paid_costs,
         "grand_total": grand_total,
         "total_paid": total_paid,
         "total_outstanding": total_outstanding,

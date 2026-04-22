@@ -42,6 +42,7 @@ export interface CaseDetail extends CaseSummary {
   contractual_compound: boolean;
   bik_override: number | null;
   bik_override_percentage: number | null;
+  nakosten_type: string | null;
   billing_contact: { id: string; name: string } | null;
   assigned_to: { id: string; full_name: string } | null;
   incasso_step_id: string | null;

@@ -107,10 +107,14 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
     { label: "Hoofdsom", total: summary.total_principal, paid: summary.total_paid_principal, open: summary.remaining_principal },
     { label: "Rente", total: summary.total_interest, paid: summary.total_paid_interest, open: summary.remaining_interest },
     {
-      label: bikOverrideAmount !== null && !isNaN(bikOverrideAmount)
-        ? "Incassokosten (handmatig)"
-        : summary.bik_btw > 0 ? "BIK incl. BTW" : "BIK (art. 6:96 BW)",
-      total: effectiveBik,
+      label: summary.total_nakosten > 0
+        ? (bikOverrideAmount !== null && !isNaN(bikOverrideAmount)
+            ? "Kosten (handm. BIK + nakosten)"
+            : summary.bik_btw > 0 ? "Kosten (BIK incl. BTW + nakosten)" : "Kosten (BIK + nakosten)")
+        : (bikOverrideAmount !== null && !isNaN(bikOverrideAmount)
+            ? "Incassokosten (handmatig)"
+            : summary.bik_btw > 0 ? "BIK incl. BTW" : "BIK (art. 6:96 BW)"),
+      total: effectiveBik + (summary.total_nakosten || 0),
       paid: summary.total_paid_costs,
       open: effectiveRemainingCosts,
     },

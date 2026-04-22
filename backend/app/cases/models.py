@@ -132,6 +132,11 @@ class Case(TenantBase):
         Numeric(5, 2), nullable=True
     )
 
+    # AUD124-03: Nakosten (post-judgment costs)
+    nakosten_type: Mapped[str | None] = mapped_column(
+        String(30), nullable=True, default=None
+    )
+
     # LF-22: Debtor settings
     payment_term_days: Mapped[int | None] = mapped_column(
         Integer, nullable=True

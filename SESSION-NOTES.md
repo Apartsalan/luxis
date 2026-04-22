@@ -1,9 +1,71 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 14 april 2026 (sessie 123 — documenten tab, rente per vordering, factuur-bijlagen)
-**Laatste feature/fix:** Sessie 123 — DF122-05 DocumentenTab herordend (Brieven/Processtukken), DF122-06 custom rente per vordering, DF122-07 factuur-PDF's auto bijgevoegd bij sommatie
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
-**Volgende sessie:** 124 — DF122-04 mailsjablonen-editor (uitgesteld uit 123)
+**Laatst bijgewerkt:** 22 april 2026 (sessie 124 — 4-assige audit met Opus 4.7 + quick wins templates)
+**Laatste feature/fix:** Sessie 124 — 14-dagenbrief "na ontvangst" (HR Arno/RS Bekking), €-symbool i.p.v. EUR, IBAN inline in betaalzin
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + openstaande audit-findings (zie onder)
+**Volgende sessie:** 125 — Audit-findings batch 2: `Contact.is_btw_plichtig` veld + BIK-BTW berekening (Finding #5) en/of rente-na-deelbetaling art. 6:44 BW (Finding #1)
+
+## Wat er gedaan is (sessie 124 — 22 april 2026) — 4-assige audit + template quick wins
+
+### Samenvatting
+- **4-assige code-audit uitgevoerd met Opus 4.7** via 4 parallele subagents (func-tester + security-reviewer):
+  - Audit 1 — financiële correctheid: 3 Critical, 3 High, 3 Medium, 1 Low
+  - Audit 3 — juridische templates: 6 Critical, 7 High, 5 Medium, 3 Low
+  - Audit 4 — multi-tenant isolation: 0 Critical leaks, 4 High, 6 Medium (verdict RISKY)
+  - Audit 5 — security (auth + files): 2 Critical, 11 High, 15 Medium, 9 Low (verdict RISKY)
+- **Verificatie-scripts** gebouwd: `scripts/render_audit_samples.py` rendert 5 kritieke brieven met realistisch scenario (Bakkerij VOF eist €3.500 van Jan de Vries), `scripts/verify_findings.py` extraheert concrete bewijsstukken uit de output.
+- **Quick wins (commit 6fee872) gedeployed:**
+  - 14-dagenbrief laatste alinea: "na dagtekening" → "na ontvangst" (HR Arno/RS Bekking — verkeerde formulering = BIK forfeit risico)
+  - `_fmt_currency`/`_format_currency`: output "EUR 1.234,56" → "€ 1.234,56" (professioneler, Nederlandse standaard)
+  - 14-dagenbrief betaalzin rendert nu IBAN + "Stichting Beheer Derdengelden" + zaaknummer direct inline
+  - Test in `test_documents.py` meegenomen (€-symbool asserties)
+- **Belangrijke les:** subagent-findings eerst verifiëren voordat fixen — finding #3 (handelsrente auto-select) bleek geen bug maar een workflow-vraag (client default_interest_type), dubbel valutasymbool was in de scope niet reproduceerbaar.
+
+### Openstaande audit-findings (niet in deze sessie gefixt)
+Zie `docs/audits/` voor volledige rapporten. Prioriteiten:
+
+**Financieel-juridisch (uit audit-1/3):**
+- **Finding #5 — BIK zonder BTW voor niet-BTW-plichtige cliënten** (Critical): `include_btw=True` wordt nergens in productie gezet. `Contact.is_btw_plichtig` veld ontbreekt. Gevolg: €99,75 te weinig gevorderd per dossier van €3.500 hoofdsom. Fix: veld + pipeline (2-3u).
+- **Finding #1 — Rente op originele hoofdsom na deelbetaling** (Critical, impact klein): `calculate_case_interest` gebruikt altijd `claim.principal_amount`, houdt geen rekening met eerdere payment-allocaties. ~3% afwijking per scenario. Schendt art. 6:44 BW. Fix: payment-history integreren in compound-loop (3-4u).
+- **Finding — Nakosten (€189/€287) ontbreken volledig** (High).
+- **Finding — `bik_override_percentage` wordt genegeerd** in payment-distribution + financial summary (High).
+- **Finding — 14-dagen termijn inconsistent** (14 vs 15 dagen, verzending vs ontvangst) (High).
+- **Finding — Factuur-PDF gating alleen bij exact `sommatie`** (High): `SOMMATIE_TEMPLATE_TYPES = {"sommatie"}` mist sommatie-varianten.
+
+**Multi-tenant (uit audit-4):**
+- **RLS-gap migratie nodig** voor 4 tabellen: `products`, `exact_online_connections`, `exact_sync_log`, `notifications` (High). 30 min fix.
+- **Scheduler bypass RLS** — alle workflow jobs als superuser (High). Defense-in-depth.
+- **`secret_key` default + prod-guard gap** (High).
+
+**Security (uit audit-5):**
+- **Docker-compose default SECRET_KEY omzeilt prod-guard** (Critical). 10 min.
+- **Account lockout = DoS + user enumeration** (Critical). 1-2u.
+- **Workflow/managed-template endpoints niet role-gated** (High) — elke user kan `sommatie.docx` vervangen.
+- **`dangerouslySetInnerHTML` zonder sanitize in compose dialog** (High) — XSS → JWT theft via localStorage.
+- **Case files unencrypted at rest** (High — GDPR + attorney-client privilege).
+- **Fernet-key afgeleid uit SECRET_KEY** (High) — rotation breakt alle OAuth tokens.
+
+### Gewijzigde bestanden
+- `backend/app/email/incasso_templates.py` — 14-dagenbrief laatste alinea herschreven
+- `backend/app/documents/docx_service.py` — `_fmt_currency` gebruikt € i.p.v. EUR
+- `backend/app/documents/service.py` — `_format_currency` gebruikt € i.p.v. EUR
+- `backend/tests/test_documents.py` — currency asserties aangepast
+- `docs/audits/audit-1-financial.md` (nieuw, 12KB) — financiële audit
+- `docs/audits/audit-3-templates.md` (nieuw, 21KB) — template audit
+- `docs/audits/audit-4-multitenant.md` (nieuw) — multi-tenant audit
+- `docs/audits/audit-5-security.md` (nieuw) — security audit
+- `docs/audits/rendered-samples/*.html` — 10 gerendererde brieven (PRODUCTIE vs CORRECT)
+- `scripts/render_audit_samples.py` (nieuw) — herhaalbare render van alle templates
+- `scripts/verify_findings.py` (nieuw) — extraheert concrete bewijsstukken
+
+### Bekende issues
+- **DF122-04 mailsjablonen-editor** (prompt sessie-124.md) is NIET gebouwd deze sessie — user koos voor audit i.p.v. nieuwe feature. Blijft op backlog.
+- BTW-BIK veld (Finding #5) vereist data-migratie (default voor bestaande cliënten) — aandacht in sessie 125.
+
+### Volgende sessie
+Twee opties, user kiest:
+- **125a — BIK-BTW voor niet-BTW-plichtige cliënten** (Finding #5): veld toevoegen op `Contact`, default True (meeste cliënten BTW-plichtig), UI-checkbox, pipeline via `calculate_bik(include_btw=True)`.
+- **125b — Rente-na-deelbetaling volgens art. 6:44** (Finding #1): payment-allocations integreren in `calculate_case_interest` zodat rente over resterende hoofdsom na deelbetaling correct wordt berekend.
 
 ## Wat er gedaan is (sessie 123 — 14 april 2026) — Documenten tab + rente + factuur-bijlagen
 

@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 8 april 2026 (sessie 120 — demo-feedback round 2: creditnota BTW-fix, rate_basis + minimum_fee inheritance, derdengelden testdata, 4-layer disk-crash preventie)
+**Laatst bijgewerkt:** 22 april 2026 (sessie 124 — 4-assige Opus 4.7 audit + template quick wins)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -148,6 +148,65 @@ Geen vaste percentage-regel. Arsalan bepaalt per sessie wat nodig is. Tijdens de
 | Luxis TAM ~€3-6M/jaar | Klein voor venture, perfect voor lifestyle |
 
 **Eerlijke caveats (bus-factor, 24/7 support, compliance updates):** bekend en manageable, geen dealbreakers voor gekozen ICP (solo incasso-advocaten).
+
+---
+
+## Audit 124 — 4-assige Opus 4.7 audit (22 april 2026)
+
+Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5-security}.md`. Rendered brieven: `docs/audits/rendered-samples/index.html`. Totaal: **11 Critical, 18 High, 29 Medium, 14 Low**.
+
+### ✅ Opgelost in sessie 124 (commit `6fee872`)
+- 14-dagenbrief laatste alinea "na dagtekening" → "na ontvangst" (HR Arno/RS Bekking — BIK-forfeit risico)
+- `_fmt_currency` / `_format_currency`: "EUR 1.234,56" → "€ 1.234,56" (Nederlandse standaard)
+- IBAN + Stichting Beheer Derdengelden + zaaknummer direct in betaalzin 14-dagenbrief
+
+### ❌ Open — financieel-juridisch (audit 1 + 3)
+| ID | Bevinding | Sev | Tijd |
+|----|-----------|-----|------|
+| AUD124-01 | BIK zonder BTW voor niet-BTW-plichtige cliënten — `Contact.is_btw_plichtig` veld ontbreekt | Critical | 2-3u |
+| AUD124-02 | Rente op originele hoofdsom na deelbetaling — art. 6:44 BW schending (~3% afwijking) | Critical | 3-4u |
+| AUD124-03 | Nakosten (€189/€287) ontbreken volledig in systeem | High | 2u |
+| AUD124-04 | `bik_override_percentage` genegeerd in payment-distribution + financial summary | High | 1u |
+| AUD124-05 | 14-dagen termijn inconsistent (14 vs 15, verzending vs ontvangst tussen modules) | High | 0.5u |
+| AUD124-06 | Factuur-PDF gating alleen bij exact `sommatie` — 14-dagenbrief + varianten krijgen geen factuur mee | High | 0.5u |
+| AUD124-07 | `_fmt_currency` renderings nog niet 100% € consistent (1x EUR resterend in 14-dagenbrief sample — waarschijnlijk niet-currency context) | Low | 0.2u |
+
+### ❌ Open — multi-tenant (audit 4, verdict RISKY, 0 Critical leaks)
+| ID | Bevinding | Sev | Tijd |
+|----|-----------|-----|------|
+| AUD124-08 | RLS ontbreekt op `products`, `exact_online_connections`, `exact_sync_log`, `notifications` | High | 0.5u |
+| AUD124-09 | Scheduler bypass RLS volledig — alle workflow jobs draaien als superuser | High | 1u |
+| AUD124-10 | `secret_key` default "change-this..." + prod-guard mist `APP_ENV` typo-variants | High | 0.2u |
+| AUD124-11 | `get_current_user` assert `user.tenant_id == jwt.tenant_id` ontbreekt | Med | 0.3u |
+| AUD124-12 | `create_invoice` / FK's accepteren zonder cross-tenant existence check | Med | 1u |
+
+### ❌ Open — security (audit 5, verdict RISKY, 2 Critical)
+| ID | Bevinding | Sev | Tijd |
+|----|-----------|-----|------|
+| AUD124-13 | Docker-compose default `SECRET_KEY=dev-secret-key...` omzeilt prod-guard | Critical | 0.2u |
+| AUD124-14 | Account lockout = DoS + user enumeration (timing side-channel) | Critical | 1-2u |
+| AUD124-15 | Workflow + managed-template write endpoints niet role-gated (elke user kan sommatie.docx vervangen) | High | 0.5u |
+| AUD124-16 | `dangerouslySetInnerHTML` zonder sanitize in `email-compose-dialog.tsx:731` — XSS → JWT theft | High | 0.5u |
+| AUD124-17 | Case files unencrypted at rest (GDPR + attorney-client privilege) | High | 4-8u (LUKS of Fernet per-tenant) |
+| AUD124-18 | Fernet token-key afgeleid uit SECRET_KEY — rotation breakt alle OAuth tokens | High | 0.5u |
+| AUD124-19 | JWT `algorithms=[settings.algorithm]` configurable — niet hardcoded `["HS256"]` | High | 0.2u |
+| AUD124-20 | WeasyPrint onbeperkt `url_fetcher` → SSRF risico | Med | 0.5u |
+| AUD124-21 | Geen `/logout` endpoint (access token 15min valid na logout) | Med | 0.5u |
+| AUD124-22 | `forgot-password` per-IP rate-limit, geen per-email → user-enum | Med | 0.3u |
+| AUD124-23 | Geen audit-trail voor cross-module mutations | Med | 2-3u |
+
+### Nuances (geen bug, overwogen)
+- Finding "handelsrente niet auto-B2B" = geen bug; `cases/service.py:399` gebruikt `client.default_interest_type` als gezet. Workflow-vraag: check of Lisanne's B2B-cliënten correct geconfigureerd zijn.
+- Finding "dubbel valutasymbool €&nbsp;EUR" niet reproduceerbaar in sample-render — opnieuw inspecteren indien DOCX-rendering afwijkt van email.
+
+### Volgorde van aanpak (aanbeveling)
+**Batch 2 (sessie 125-126) — financieel-juridisch rest:** AUD124-01 (BIK-BTW) → AUD124-02 (rente-deelbetaling) → AUD124-06 (factuur-PDF voor 14-dagenbrief). Raakt Lisanne's dagelijkse werk + juridisch fout.
+
+**Batch 3 (sessie 127) — security Criticals + RLS gap:** AUD124-13 (SECRET_KEY), AUD124-14 (lockout), AUD124-08 (RLS). Infra-harden, geen UX-impact.
+
+**Batch 4 (sessie 128) — access control + XSS:** AUD124-15, AUD124-16, AUD124-19.
+
+**Batch 5 (backlog):** rest (Medium/Low, file encryption, audit trail).
 
 ---
 

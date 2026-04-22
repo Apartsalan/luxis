@@ -1,9 +1,37 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 april 2026 (sessie 124 — 4-assige audit met Opus 4.7 + quick wins templates)
-**Laatste feature/fix:** Sessie 124 — 14-dagenbrief "na ontvangst" (HR Arno/RS Bekking), €-symbool i.p.v. EUR, IBAN inline in betaalzin
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + openstaande audit-findings (zie onder)
-**Volgende sessie:** 125 — Audit-findings batch 2: `Contact.is_btw_plichtig` veld + BIK-BTW berekening (Finding #5) en/of rente-na-deelbetaling art. 6:44 BW (Finding #1)
+**Laatst bijgewerkt:** 22 april 2026 (sessie 125 — audit-findings batch 2: financieel-juridisch)
+**Laatste feature/fix:** Sessie 125 — AUD124-02 t/m AUD124-06 gefixt (rente na deelbetaling, nakosten, bik_override_percentage, 14-dagen termijn, factuur-PDF gating)
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + resterende audit-findings (security, RLS)
+**Volgende sessie:** 126 — Security Criticals: AUD124-13 (SECRET_KEY), AUD124-14 (account lockout DoS), AUD124-08 (RLS gap 4 tabellen)
+
+## Wat er gedaan is (sessie 125 — 22 april 2026) — audit-findings batch 2: financieel-juridisch
+
+### Samenvatting
+6 audit-findings opgelost in 3 commits:
+
+1. **AUD124-02 (Critical):** Rente berekend op restant hoofdsom na deelbetaling i.p.v. origineel. Nieuwe `calculate_interest_with_reductions()` functie die de tijdlijn splitst bij betalingen. Compound + simple interest correct. 9 unit tests.
+2. **AUD124-03 (High):** Nakosten (€189/€287) toegevoegd — nieuw `nakosten.py`, Case model veld, integratie in financial summary + payment distribution, dropdown in frontend.
+3. **AUD124-04 (High):** `bik_override_percentage` nu meegenomen in `create_payment`, `get_financial_summary` en `record_installment_payment` (was genegeerd).
+4. **AUD124-05 (High):** 14-dagenbrief min_wait gecorrigeerd van 14 naar 15 dagen (14 dagen NA ontvangst = 15 NA verzending).
+5. **AUD124-06 (High):** Factuur-PDF auto-attach uitgebreid van alleen "sommatie" naar alle sommatie-varianten, 14-dagenbrief, aanmaning en demand_for_payment.
+
+### Gewijzigde bestanden
+- `backend/app/collections/interest.py` — `calculate_interest_with_reductions()`, `_compound_interest_with_reductions()`, `_simple_interest_with_reductions()`, `_build_claim_reductions()`
+- `backend/app/collections/service.py` — payments doorgeven aan interest calc, nakosten + bik_override_percentage support
+- `backend/app/collections/router.py` — bik_override_percentage + nakosten_type doorgeven
+- `backend/app/collections/nakosten.py` — NIEUW
+- `backend/app/cases/models.py` — `nakosten_type` veld
+- `backend/app/cases/schemas.py` — nakosten_type in Create/Update/Response
+- `backend/app/workflow/schemas.py` — min_wait 14→15
+- `backend/app/email/compose_router.py` — AUTO_ATTACH_INVOICE_TYPES uitgebreid
+- `backend/alembic/versions/aud124_03_add_nakosten_type_to_cases.py` — migratie
+- `backend/tests/test_interest.py` — 10 nieuwe tests
+- `backend/tests/test_nakosten.py` — NIEUW (4 tests)
+- `frontend/src/hooks/use-cases.ts` — nakosten_type interface
+- `frontend/src/hooks/use-collections.ts` — FinancialSummary interface
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DetailsTab.tsx` — nakosten dropdown
+- `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/FinancieelTab.tsx` — nakosten in kostenrij
 
 ## Wat er gedaan is (sessie 124 — 22 april 2026) — 4-assige audit + template quick wins
 

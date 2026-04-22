@@ -163,12 +163,12 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 ### ❌ Open — financieel-juridisch (audit 1 + 3)
 | ID | Bevinding | Sev | Tijd |
 |----|-----------|-----|------|
-| AUD124-01 | BIK zonder BTW voor niet-BTW-plichtige cliënten — `Contact.is_btw_plichtig` veld ontbreekt | Critical | 2-3u |
-| AUD124-02 | Rente op originele hoofdsom na deelbetaling — art. 6:44 BW schending (~3% afwijking) | Critical | 3-4u |
-| AUD124-03 | Nakosten (€189/€287) ontbreken volledig in systeem | High | 2u |
-| AUD124-04 | `bik_override_percentage` genegeerd in payment-distribution + financial summary | High | 1u |
-| AUD124-05 | 14-dagen termijn inconsistent (14 vs 15, verzending vs ontvangst tussen modules) | High | 0.5u |
-| AUD124-06 | Factuur-PDF gating alleen bij exact `sommatie` — 14-dagenbrief + varianten krijgen geen factuur mee | High | 0.5u |
+| AUD124-01 | ✅ BIK zonder BTW voor niet-BTW-plichtige cliënten — `Contact.is_btw_plichtig` veld | Critical | 2-3u |
+| AUD124-02 | ✅ Rente op originele hoofdsom na deelbetaling — art. 6:44 BW (sessie 125, 22 apr) | Critical | 3-4u |
+| AUD124-03 | ✅ Nakosten (€189/€287) toegevoegd — dropdown op case detail (sessie 125, 22 apr) | High | 2u |
+| AUD124-04 | ✅ `bik_override_percentage` nu in payment + financial summary (sessie 125, 22 apr) | High | 1u |
+| AUD124-05 | ✅ 14-dagen termijn 14→15 in workflow (sessie 125, 22 apr) | High | 0.5u |
+| AUD124-06 | ✅ Factuur-PDF auto-attach uitgebreid naar alle sommatie-varianten + 14-dagenbrief (sessie 125, 22 apr) | High | 0.5u |
 | AUD124-07 | `_fmt_currency` renderings nog niet 100% € consistent (1x EUR resterend in 14-dagenbrief sample — waarschijnlijk niet-currency context) | Low | 0.2u |
 
 ### ❌ Open — multi-tenant (audit 4, verdict RISKY, 0 Critical leaks)

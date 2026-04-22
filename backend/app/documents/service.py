@@ -223,6 +223,8 @@ async def _build_template_context(
     payments = await list_payments(db, tenant_id, case.id)
 
     # Get financial summary
+    include_btw = not client.is_btw_plichtig if client else False
+
     financieel = await get_financial_summary(
         db=db,
         tenant_id=tenant_id,
@@ -231,11 +233,12 @@ async def _build_template_context(
         contractual_rate=(Decimal(str(case.contractual_rate)) if case.contractual_rate else None),
         contractual_compound=case.contractual_compound,
         calc_date=today,
+        include_btw_on_bik=include_btw,
     )
 
     # Calculate BIK
     total_principal = sum(c.principal_amount for c in claims)
-    bik = calculate_bik(total_principal)
+    bik = calculate_bik(total_principal, include_btw=include_btw)
 
     # Build context
     context = {

@@ -352,6 +352,8 @@ async def build_base_context(
     claims = await list_claims(db, tenant_id, case.id)
     payments = await list_payments(db, tenant_id, case.id)
 
+    include_btw = not case.client.is_btw_plichtig if case.client else False
+
     financieel = await get_financial_summary(
         db=db,
         tenant_id=tenant_id,
@@ -360,10 +362,11 @@ async def build_base_context(
         contractual_rate=(Decimal(str(case.contractual_rate)) if case.contractual_rate else None),
         contractual_compound=case.contractual_compound,
         calc_date=today,
+        include_btw_on_bik=include_btw,
     )
 
     total_principal = sum(c.principal_amount for c in claims)
-    bik = calculate_bik(total_principal)
+    bik = calculate_bik(total_principal, include_btw=include_btw)
 
     # Pre-format claims for template
     vorderingen = [

@@ -1100,7 +1100,8 @@ async def get_incasso_invoice_preview(
         bik_is_override = True
         bik_source = "Handmatig ingesteld"
     else:
-        bik_result = calculate_bik(total_principal)
+        include_btw = not case.client.is_btw_plichtig if case.client else False
+        bik_result = calculate_bik(total_principal, include_btw=include_btw)
         bik_amount = bik_result["bik_exclusive"]
         bik_is_override = False
         bik_source = f"WIK-staffel over € {total_principal:,.2f}".replace(",", ".")
@@ -1108,6 +1109,7 @@ async def get_incasso_invoice_preview(
     # Interest calculation
     from app.collections.service import get_financial_summary
 
+    include_btw_for_summary = not case.client.is_btw_plichtig if case.client else False
     fin_summary = await get_financial_summary(
         db,
         tenant_id,
@@ -1116,6 +1118,7 @@ async def get_incasso_invoice_preview(
         contractual_rate=case.contractual_rate,
         contractual_compound=case.contractual_compound,
         bik_override=case.bik_override,
+        include_btw_on_bik=include_btw_for_summary,
     )
     interest_amount = Decimal(str(fin_summary.get("total_interest", 0)))
     today_str = date.today().isoformat()

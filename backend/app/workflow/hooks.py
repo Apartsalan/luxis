@@ -219,6 +219,7 @@ async def on_payment_received(
             case.interest_type,
             case.contractual_rate,
             case.contractual_compound,
+            include_btw_on_bik=not case.client.is_btw_plichtig if case.client else False,
         )
     except Exception:
         logger.exception(

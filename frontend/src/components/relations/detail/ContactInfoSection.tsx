@@ -491,8 +491,22 @@ export function ContactInfoSection({
                 placeholder="Leeg = WIK-minimum (€40)"
               />
             </div>
+            <div className="sm:col-span-2 pt-1">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editForm.is_btw_plichtig === "true"}
+                  onChange={(e) => updateEdit("is_btw_plichtig", e.target.checked ? "true" : "false")}
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                />
+                <span className="text-sm text-foreground">Cliënt kan BTW verrekenen</span>
+              </label>
+              <p className="text-xs text-muted-foreground mt-1 ml-[26px]">
+                Uitvinken bij VvE, stichting, consumenten, VOF — dan wordt 21% BTW over incassokosten doorbelast aan de debiteur.
+              </p>
+            </div>
           </div>
-        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null || contact.default_minimum_fee != null) ? (
+        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null || contact.default_minimum_fee != null || !contact.is_btw_plichtig) ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             {contact.default_hourly_rate && (
               <div>
@@ -547,6 +561,14 @@ export function ContactInfoSection({
                 <dt className="text-xs text-muted-foreground">Minimum provisie</dt>
                 <dd className="text-sm font-medium text-foreground">
                   € {Number(contact.default_minimum_fee).toFixed(2)}
+                </dd>
+              </div>
+            )}
+            {!contact.is_btw_plichtig && (
+              <div className="sm:col-span-2">
+                <dt className="text-xs text-muted-foreground">BTW op incassokosten</dt>
+                <dd className="text-sm font-medium text-orange-600">
+                  21% BTW wordt doorbelast aan debiteur
                 </dd>
               </div>
             )}

@@ -525,7 +525,8 @@ async def update_case(
                 .where(Claim.case_id == case_id, Claim.tenant_id == tenant_id)
             )
             total_principal = claims_result.scalar() or Decimal("0")
-            max_bik = calculate_bik(total_principal)["bik_inclusive"]
+            include_btw = not case.client.is_btw_plichtig if case.client else False
+            max_bik = calculate_bik(total_principal, include_btw=include_btw)["bik_inclusive"]
             if update_data["bik_override"] > max_bik:
                 raise BadRequestError(
                     f"BIK override (€{update_data['bik_override']}) mag bij B2C niet hoger zijn "

@@ -106,6 +106,22 @@ def test_bik_without_btw():
     assert result["bik_inclusive"] == result["bik_exclusive"]
 
 
+def test_bik_btw_3500_vof_client():
+    """AUD124-01: €3,500 principal, non-VAT client (VOF) → BIK €475 + 21% BTW = €574.75."""
+    result = calculate_bik(Decimal("3500.00"), include_btw=True)
+    assert result["bik_exclusive"] == Decimal("475.00")  # 15% of 2500 + 10% of 1000
+    assert result["btw_amount"] == Decimal("99.75")  # 475 * 0.21
+    assert result["bik_inclusive"] == Decimal("574.75")
+
+
+def test_bik_no_btw_3500_bv_client():
+    """AUD124-01: €3,500 principal, VAT client (BV) → BIK €475, no BTW."""
+    result = calculate_bik(Decimal("3500.00"), include_btw=False)
+    assert result["bik_exclusive"] == Decimal("475.00")
+    assert result["btw_amount"] == Decimal("0")
+    assert result["bik_inclusive"] == Decimal("475.00")
+
+
 def test_bik_zero_principal():
     """Zero principal should return zero BIK."""
     result = calculate_bik(Decimal("0"))

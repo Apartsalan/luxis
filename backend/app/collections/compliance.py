@@ -78,7 +78,8 @@ async def pre_send_compliance_check(
 
     # ── Check 2: BIK override validation (B2C) ────────────────────────
     if is_b2c and case.bik_override is not None:
-        max_bik = calculate_bik(total_principal)["bik_inclusive"]
+        include_btw = not case.client.is_btw_plichtig if case.client else False
+        max_bik = calculate_bik(total_principal, include_btw=include_btw)["bik_inclusive"]
         if case.bik_override > max_bik:
             errors.append(
                 f"BIK override (€{case.bik_override}) overschrijdt de WIK-staffel "

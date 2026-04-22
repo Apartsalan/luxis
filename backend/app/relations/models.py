@@ -88,6 +88,9 @@ class Contact(TenantBase):
     # floor) per client. Inherited on new case unless explicitly set.
     default_minimum_fee: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
 
+    # BTW status — determines whether 21% BTW is added to BIK for this client's cases
+    is_btw_plichtig: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
     # Algemene Voorwaarden (AI-UX-11)
     terms_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     terms_file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -208,7 +208,10 @@ async def create_payment(
     claims = await list_claims(db, tenant_id, case_id)
     total_principal = sum((c.principal_amount for c in claims), Decimal("0"))
 
-    # Interest as of payment date
+    # Fetch existing payments FIRST — needed for correct interest calc
+    existing_payments = await list_payments(db, tenant_id, case_id)
+
+    # Interest as of payment date (with principal reductions from prior payments)
     if claims:
         claim_dicts = [
             {
@@ -221,6 +224,13 @@ async def create_payment(
             }
             for c in claims
         ]
+        payment_dicts = [
+            {
+                "payment_date": p.payment_date,
+                "allocated_to_principal": p.allocated_to_principal,
+            }
+            for p in existing_payments
+        ]
         interest_result = await calculate_case_interest(
             db,
             str(case_id),
@@ -229,6 +239,7 @@ async def create_payment(
             contractual_compound,
             claim_dicts,
             data.payment_date,
+            payments=payment_dicts,
         )
         total_interest = interest_result["total_interest"]
     else:
@@ -240,9 +251,6 @@ async def create_payment(
     else:
         bik_result = calculate_bik(total_principal, include_btw=include_btw_on_bik)
         total_costs = bik_result["bik_inclusive"]
-
-    # Subtract previously allocated amounts from existing payments
-    existing_payments = await list_payments(db, tenant_id, case_id)
     prev_costs = sum((p.allocated_to_costs for p in existing_payments), Decimal("0"))
     prev_interest = sum((p.allocated_to_interest for p in existing_payments), Decimal("0"))
     prev_principal = sum((p.allocated_to_principal for p in existing_payments), Decimal("0"))
@@ -837,8 +845,10 @@ async def get_financial_summary(
     if calc_date is None:
         calc_date = date.today()
 
-    # Get claims
+    # Get claims and payments
     claims = await list_claims(db, tenant_id, case_id)
+    payments = await list_payments(db, tenant_id, case_id)
+
     claim_dicts = [
         {
             "id": str(c.id),
@@ -850,8 +860,15 @@ async def get_financial_summary(
         }
         for c in claims
     ]
+    payment_dicts = [
+        {
+            "payment_date": p.payment_date,
+            "allocated_to_principal": p.allocated_to_principal,
+        }
+        for p in payments
+    ]
 
-    # Calculate interest
+    # Calculate interest (with principal reductions from payments)
     interest_result = await calculate_case_interest(
         db,
         str(case_id),
@@ -860,6 +877,7 @@ async def get_financial_summary(
         contractual_compound,
         claim_dicts,
         calc_date,
+        payments=payment_dicts,
     )
 
     total_principal = interest_result["total_principal"]
@@ -875,9 +893,6 @@ async def get_financial_summary(
         bik_exclusive = bik_result["bik_exclusive"]
         bik_btw = bik_result["btw_amount"]
         total_bik = bik_result["bik_inclusive"]
-
-    # Get payments
-    payments = await list_payments(db, tenant_id, case_id)
     total_paid = sum(p.amount for p in payments)
     total_paid_costs = sum(p.allocated_to_costs for p in payments)
     total_paid_interest = sum(p.allocated_to_interest for p in payments)

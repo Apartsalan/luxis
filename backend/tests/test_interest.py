@@ -8,9 +8,11 @@ from datetime import date
 from decimal import Decimal
 
 from app.collections.interest import (
+    _build_claim_reductions,
     _round2,
     build_rate_schedule,
     calculate_compound_interest,
+    calculate_interest_with_reductions,
     calculate_simple_interest,
 )
 
@@ -449,3 +451,239 @@ def test_rate_basis_yearly_is_default():
 
     # 5000 * 0.06 * 365/365 = 300.00
     assert total == Decimal("300.00")
+
+
+# ── Interest with Principal Reductions (AUD124-02) ─────────────────────────
+
+
+def test_no_reductions_equals_original():
+    """Empty reductions list produces same result as original functions."""
+    principal = Decimal("5000.00")
+    default_date = date(2024, 3, 15)
+    calc_date = date(2026, 3, 15)
+
+    original, _ = calculate_compound_interest(principal, default_date, calc_date, FIXED_RATE_6PCT)
+    with_reductions, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, [], compound=True
+    )
+    assert with_reductions == original
+
+
+def test_simple_interest_single_payment_mid_period():
+    """Simple interest: payment of €1,000 to principal on day 182.
+
+    €5,000 at 6% for 365 days without payment = €300.00
+    With payment on day 182:
+      Segment 1: €5,000 * 6% * 182/365
+      Segment 2: €4,000 * 6% * 183/365
+    Total should be LESS than €300.
+    """
+    principal = Decimal("5000.00")
+    default_date = date(2025, 1, 1)
+    calc_date = date(2026, 1, 1)
+    payment_date = date(2025, 7, 2)  # day 182
+
+    reductions = [(payment_date, Decimal("1000.00"))]
+
+    total, periods = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=False
+    )
+
+    seg1 = _round2(Decimal("5000") * Decimal("6") / Decimal("100") * Decimal("182") / Decimal("365"))
+    seg2 = _round2(Decimal("4000") * Decimal("6") / Decimal("100") * Decimal("183") / Decimal("365"))
+    expected = _round2(seg1 + seg2)
+
+    assert total == expected
+    assert total < Decimal("300.00")
+
+
+def test_compound_payment_before_first_anniversary():
+    """Compound interest: payment mid-year-1 reduces principal for rest of year.
+
+    €5,000 at 6%, default 2024-03-15, payment of €2,000 on 2024-09-15 (day 184).
+    Year 1 (2024-03-15 → 2025-03-15):
+      Seg A: €5,000 * 6% * 184/365
+      Seg B: €3,000 * 6% * 181/365
+      → capitalize sum
+    No year 2.
+    """
+    principal = Decimal("5000.00")
+    default_date = date(2024, 3, 15)
+    calc_date = date(2025, 3, 15)
+    payment_date = date(2024, 9, 15)
+
+    reductions = [(payment_date, Decimal("2000.00"))]
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=True
+    )
+
+    seg_a = _round2(Decimal("5000") * Decimal("6") / Decimal("100") * Decimal("184") / Decimal("365"))
+    seg_b = _round2(Decimal("3000") * Decimal("6") / Decimal("100") * Decimal("181") / Decimal("365"))
+    expected = _round2(seg_a + seg_b)
+
+    assert total == expected
+    assert total < Decimal("300.00")
+
+
+def test_compound_payment_at_anniversary():
+    """Payment exactly at compounding anniversary.
+
+    Year 1 interest on full principal, capitalize.
+    Then payment reduces principal. Year 2 on reduced + capitalized.
+    """
+    principal = Decimal("5000.00")
+    default_date = date(2024, 1, 1)
+    calc_date = date(2026, 1, 1)
+    anniversary = date(2025, 1, 1)
+
+    reductions = [(anniversary, Decimal("2000.00"))]
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=True
+    )
+
+    d = Decimal
+    days_y1 = (date(2025, 1, 1) - date(2024, 1, 1)).days  # 366 (leap)
+    y1 = _round2(d("5000") * d("6") / d("100") * d(str(days_y1)) / d("365"))
+    # Capitalize: 5000 + y1, then reduce by 2000
+    cap_principal = d("5000") + y1 - d("2000")
+    days_y2 = (date(2026, 1, 1) - date(2025, 1, 1)).days  # 365
+    y2 = _round2(cap_principal * d("6") / d("100") * d(str(days_y2)) / d("365"))
+    expected = _round2(y1 + y2)
+
+    assert total == expected
+    # Without payment: year 2 would be on (5000 + y1) = 5301.37...
+    # With payment: year 2 on (5000 + y1 - 2000) = 3301.37... → much less
+    no_payment, _ = calculate_compound_interest(principal, default_date, calc_date, FIXED_RATE_6PCT)
+    assert total < no_payment
+
+
+def test_multiple_payments():
+    """Two payments at different dates, simple interest.
+
+    €10,000 at 6% for 365 days.
+    Payment 1: €3,000 on day 100
+    Payment 2: €2,000 on day 250
+    Segments: 10k*100d, 7k*150d, 5k*115d
+    """
+    principal = Decimal("10000.00")
+    default_date = date(2025, 1, 1)
+    calc_date = date(2026, 1, 1)
+
+    reductions = [
+        (date(2025, 4, 11), Decimal("3000.00")),  # day 100
+        (date(2025, 9, 8), Decimal("2000.00")),   # day 250
+    ]
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=False
+    )
+
+    d = Decimal
+    seg1 = _round2(d("10000") * d("6") / d("100") * d("100") / d("365"))
+    seg2 = _round2(d("7000") * d("6") / d("100") * d("150") / d("365"))
+    seg3 = _round2(d("5000") * d("6") / d("100") * d("115") / d("365"))
+    expected = _round2(seg1 + seg2 + seg3)
+
+    assert total == expected
+    assert total < Decimal("600.00")
+
+
+def test_payment_after_calc_date_ignored():
+    """Payments after calc_date should not affect interest calculation."""
+    principal = Decimal("5000.00")
+    default_date = date(2025, 1, 1)
+    calc_date = date(2025, 7, 1)
+
+    reductions = [(date(2025, 12, 1), Decimal("2000.00"))]
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=False
+    )
+
+    no_reductions, _ = calculate_simple_interest(principal, default_date, calc_date, FIXED_RATE_6PCT)
+    assert total == no_reductions
+
+
+def test_pro_rata_claim_distribution():
+    """Two claims: €3,000 + €7,000. Payment of €500 to principal.
+
+    Claim 1 gets 30% = €150, claim 2 gets 70% = €350.
+    """
+    claims = [
+        {"id": "c1", "principal_amount": Decimal("3000.00")},
+        {"id": "c2", "principal_amount": Decimal("7000.00")},
+    ]
+    payments = [
+        {"payment_date": date(2025, 6, 1), "allocated_to_principal": Decimal("500.00")},
+    ]
+
+    result = _build_claim_reductions(claims, payments)
+
+    assert len(result["c1"]) == 1
+    assert len(result["c2"]) == 1
+    assert result["c1"][0][1] == Decimal("150.00")
+    assert result["c2"][0][1] == Decimal("350.00")
+    assert result["c1"][0][1] + result["c2"][0][1] == Decimal("500.00")
+
+
+def test_pro_rata_rounding_residual():
+    """Pro-rata with rounding: residual goes to last claim.
+
+    3 claims: €1,000 each. Payment of €100 to principal.
+    100/3 = 33.33, 33.33, 33.34 (residual on last)
+    """
+    claims = [
+        {"id": "c1", "principal_amount": Decimal("1000.00")},
+        {"id": "c2", "principal_amount": Decimal("1000.00")},
+        {"id": "c3", "principal_amount": Decimal("1000.00")},
+    ]
+    payments = [
+        {"payment_date": date(2025, 6, 1), "allocated_to_principal": Decimal("100.00")},
+    ]
+
+    result = _build_claim_reductions(claims, payments)
+
+    total_distributed = (
+        sum(r[1] for r in result["c1"])
+        + sum(r[1] for r in result["c2"])
+        + sum(r[1] for r in result["c3"])
+    )
+    assert total_distributed == Decimal("100.00")
+
+
+def test_compound_two_years_with_mid_year_payment():
+    """Compound interest over 2 years with payment in year 1.
+
+    €10,000 at 6%, default 2024-01-01.
+    Payment of €3,000 on 2024-07-01 (day 182 in year 1).
+    Year 1 (2024-01-01 → 2025-01-01, 366 days for leap year):
+      Seg A: €10,000 * 6% * 182/365
+      Seg B: €7,000 * 6% * 184/365
+      → capitalize
+    Year 2 (2025-01-01 → 2026-01-01):
+      Interest on (€7,000 + year1_interest)
+    """
+    principal = Decimal("10000.00")
+    default_date = date(2024, 1, 1)
+    calc_date = date(2026, 1, 1)
+
+    reductions = [(date(2024, 7, 1), Decimal("3000.00"))]
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=True
+    )
+
+    d = Decimal
+    seg_a = _round2(d("10000") * d("6") / d("100") * d("182") / d("365"))
+    seg_b = _round2(d("7000") * d("6") / d("100") * d("184") / d("365"))
+    y1_interest = seg_a + seg_b
+    cap_principal = _round2(d("7000") + y1_interest)
+    days_y2 = (date(2026, 1, 1) - date(2025, 1, 1)).days
+    y2 = _round2(cap_principal * d("6") / d("100") * d(str(days_y2)) / d("365"))
+    expected = _round2(y1_interest + y2)
+
+    assert total == expected
+    no_payment, _ = calculate_compound_interest(principal, default_date, calc_date, FIXED_RATE_6PCT)
+    assert total < no_payment

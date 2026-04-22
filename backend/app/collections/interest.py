@@ -248,6 +248,168 @@ def build_contractual_rate_schedule(
     return [(start, rate)]
 
 
+# ── Interest with Principal Reductions (art. 6:44 BW) ─────────────────────
+
+
+def calculate_interest_with_reductions(
+    principal: Decimal,
+    default_date: date,
+    calc_date: date,
+    rates: list[tuple[date, Decimal]],
+    principal_reductions: list[tuple[date, Decimal]],
+    compound: bool,
+) -> tuple[Decimal, list[dict]]:
+    """Calculate interest accounting for principal reductions from payments.
+
+    After a partial payment reduces the principal (per art. 6:44 BW),
+    subsequent interest accrues only on the remaining balance.
+
+    Args:
+        principal_reductions: sorted list of (payment_date, amount_to_principal)
+            — only reductions BEFORE calc_date are applied.
+    """
+    if not principal_reductions:
+        if compound:
+            return calculate_compound_interest(principal, default_date, calc_date, rates)
+        return calculate_simple_interest(principal, default_date, calc_date, rates)
+
+    relevant = [(d, amt) for d, amt in principal_reductions if default_date < d < calc_date]
+    if not relevant:
+        if compound:
+            return calculate_compound_interest(principal, default_date, calc_date, rates)
+        return calculate_simple_interest(principal, default_date, calc_date, rates)
+
+    if not compound:
+        return _simple_interest_with_reductions(
+            principal, default_date, calc_date, rates, relevant
+        )
+    return _compound_interest_with_reductions(
+        principal, default_date, calc_date, rates, relevant
+    )
+
+
+def _simple_interest_with_reductions(
+    principal: Decimal,
+    default_date: date,
+    calc_date: date,
+    rates: list[tuple[date, Decimal]],
+    reductions: list[tuple[date, Decimal]],
+) -> tuple[Decimal, list[dict]]:
+    """Simple interest split at payment dates — principal decreases, no capitalization."""
+    total_interest = Decimal("0")
+    all_periods: list[dict] = []
+    current_principal = principal
+    segment_start = default_date
+
+    for red_date, red_amount in reductions:
+        if segment_start < red_date:
+            seg_interest, seg_periods = calculate_simple_interest(
+                current_principal, segment_start, red_date, rates
+            )
+            for p in seg_periods:
+                p["principal"] = current_principal
+            total_interest += seg_interest
+            all_periods.extend(seg_periods)
+        current_principal = max(Decimal("0"), current_principal - red_amount)
+        segment_start = red_date
+
+    if segment_start < calc_date and current_principal > Decimal("0"):
+        seg_interest, seg_periods = calculate_simple_interest(
+            current_principal, segment_start, calc_date, rates
+        )
+        for p in seg_periods:
+            p["principal"] = current_principal
+        total_interest += seg_interest
+        all_periods.extend(seg_periods)
+
+    return _round2(total_interest), all_periods
+
+
+def _compound_interest_with_reductions(
+    principal: Decimal,
+    default_date: date,
+    calc_date: date,
+    rates: list[tuple[date, Decimal]],
+    reductions: list[tuple[date, Decimal]],
+) -> tuple[Decimal, list[dict]]:
+    """Compound interest with mid-year principal reductions.
+
+    Compounding years run from default_date anniversary.
+    When a payment falls mid-year, the year is split:
+    interest before payment on old principal, after on reduced.
+    Capitalization still happens at year boundaries.
+    """
+    current_principal = principal
+    total_interest = Decimal("0")
+    all_periods: list[dict] = []
+
+    red_idx = 0
+    year_start = default_date
+
+    while year_start < calc_date and current_principal > Decimal("0"):
+        year_end = _add_years(year_start, 1)
+        is_full_year = year_end <= calc_date
+        period_end = year_end if is_full_year else calc_date
+
+        year_interest = Decimal("0")
+        seg_start = year_start
+
+        while red_idx < len(reductions) and reductions[red_idx][0] <= seg_start:
+            current_principal = max(Decimal("0"), current_principal - reductions[red_idx][1])
+            red_idx += 1
+
+        seg_cursor = seg_start
+        while red_idx < len(reductions) and reductions[red_idx][0] < period_end:
+            red_date, red_amount = reductions[red_idx]
+
+            if seg_cursor < red_date:
+                schedule = build_rate_schedule(seg_cursor, red_date, rates)
+                for s_start, s_end, rate in schedule:
+                    days = (s_end - s_start).days
+                    interest = _round2(
+                        current_principal * (rate / Decimal("100")) * Decimal(days) / DAYS_IN_YEAR
+                    )
+                    year_interest += interest
+                    all_periods.append({
+                        "start_date": s_start,
+                        "end_date": s_end,
+                        "days": days,
+                        "rate": rate,
+                        "principal": current_principal,
+                        "interest": interest,
+                    })
+
+            current_principal = max(Decimal("0"), current_principal - red_amount)
+            seg_cursor = red_date
+            red_idx += 1
+
+        if seg_cursor < period_end and current_principal > Decimal("0"):
+            schedule = build_rate_schedule(seg_cursor, period_end, rates)
+            for s_start, s_end, rate in schedule:
+                days = (s_end - s_start).days
+                interest = _round2(
+                    current_principal * (rate / Decimal("100")) * Decimal(days) / DAYS_IN_YEAR
+                )
+                year_interest += interest
+                all_periods.append({
+                    "start_date": s_start,
+                    "end_date": s_end,
+                    "days": days,
+                    "rate": rate,
+                    "principal": current_principal,
+                    "interest": interest,
+                })
+
+        total_interest += year_interest
+
+        if is_full_year:
+            current_principal = _round2(current_principal + year_interest)
+
+        year_start = period_end
+
+    return _round2(total_interest), all_periods
+
+
 # ── High-Level Case Interest Calculator ──────────────────────────────────────
 
 
@@ -259,6 +421,7 @@ async def calculate_case_interest(
     contractual_compound: bool,
     claims: list[dict],
     calc_date: date,
+    payments: list[dict] | None = None,
 ) -> dict:
     """Calculate total interest for all claims in a case.
 
@@ -295,12 +458,11 @@ async def calculate_case_interest(
             f"Geen rentetarieven gevonden voor type '{interest_type}'. Voer eerst de seed-data uit."
         )
 
-    # Determine calculation function
-    if interest_type == "contractual" and not contractual_compound:
-        calc_fn = calculate_simple_interest
-    else:
-        # All statutory types + contractual with compound = compound
-        calc_fn = calculate_compound_interest
+    # Determine if compound
+    is_compound = not (interest_type == "contractual" and not contractual_compound)
+
+    # Build per-claim principal reductions from payments (pro-rata)
+    claim_reductions = _build_claim_reductions(claims, payments or [])
 
     # Calculate interest per claim
     total_principal = Decimal("0")
@@ -312,6 +474,7 @@ async def calculate_case_interest(
         default_dt = claim["default_date"]
         claim_rate_basis = claim.get("rate_basis", "yearly")
         claim_override_rate = claim.get("interest_rate")
+        claim_id = claim["id"]
 
         # DF122-06: per-claim rate override takes precedence over case-level rate
         if claim_override_rate is not None:
@@ -319,29 +482,27 @@ async def calculate_case_interest(
             if claim_rate_basis == "monthly":
                 override_rate = override_rate * Decimal("12")
             claim_rate_history = [(date(1900, 1, 1), override_rate)]
-            # Use compound if the case is compound (statutory types always compound);
-            # else honor contractual_compound flag, default to simple for contractual override.
-            if interest_type == "contractual" and not contractual_compound:
-                claim_calc_fn = calculate_simple_interest
-            else:
-                claim_calc_fn = calculate_compound_interest
-        # LF-03: If rate_basis is "monthly", convert contractual rate to yearly
+            use_compound = is_compound
         elif interest_type == "contractual" and claim_rate_basis == "monthly":
             effective_rate = contractual_rate * Decimal("12")
             claim_rate_history = [(date(1900, 1, 1), effective_rate)]
-            claim_calc_fn = calc_fn
+            use_compound = is_compound
         else:
             claim_rate_history = rate_history
-            claim_calc_fn = calc_fn
+            use_compound = is_compound
 
-        interest, periods = claim_calc_fn(principal, default_dt, calc_date, claim_rate_history)
+        reductions = claim_reductions.get(claim_id, [])
+        interest, periods = calculate_interest_with_reductions(
+            principal, default_dt, calc_date, claim_rate_history,
+            reductions, use_compound,
+        )
 
         total_principal += principal
         total_interest += interest
 
         claim_results.append(
             {
-                "claim_id": claim["id"],
+                "claim_id": claim_id,
                 "description": claim["description"],
                 "principal_amount": principal,
                 "default_date": default_dt,
@@ -358,3 +519,47 @@ async def calculate_case_interest(
         "total_interest": _round2(total_interest),
         "claims": claim_results,
     }
+
+
+def _build_claim_reductions(
+    claims: list[dict],
+    payments: list[dict],
+) -> dict[str, list[tuple[date, Decimal]]]:
+    """Distribute payment principal allocations pro-rata across claims.
+
+    Returns: {claim_id: [(payment_date, reduction_amount), ...]} sorted by date.
+    """
+    if not payments or not claims:
+        return {}
+
+    total_principal = sum(Decimal(str(c["principal_amount"])) for c in claims)
+    if total_principal <= Decimal("0"):
+        return {}
+
+    result: dict[str, list[tuple[date, Decimal]]] = {c["id"]: [] for c in claims}
+
+    for pmt in payments:
+        allocated = Decimal(str(pmt["allocated_to_principal"]))
+        if allocated <= Decimal("0"):
+            continue
+
+        pmt_date = pmt["payment_date"]
+        distributed = Decimal("0")
+
+        for i, claim in enumerate(claims):
+            claim_principal = Decimal(str(claim["principal_amount"]))
+            is_last = i == len(claims) - 1
+
+            if is_last:
+                share = allocated - distributed
+            else:
+                share = _round2(allocated * claim_principal / total_principal)
+                distributed += share
+
+            if share > Decimal("0"):
+                result[claim["id"]].append((pmt_date, share))
+
+    for claim_id in result:
+        result[claim_id].sort(key=lambda x: x[0])
+
+    return result

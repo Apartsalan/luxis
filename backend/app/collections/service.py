@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.cases.models import Case
-from app.collections.interest import calculate_case_interest
+from app.collections.interest import _round2, calculate_case_interest
 from app.collections.models import (
     Claim,
     InterestRate,
@@ -193,6 +193,7 @@ async def create_payment(
     contractual_rate: Decimal | None = None,
     contractual_compound: bool = False,
     bik_override: Decimal | None = None,
+    bik_override_percentage: Decimal | None = None,
     include_btw_on_bik: bool = False,
     nakosten_type: str | None = None,
     _skip_installment_link: bool = False,
@@ -246,8 +247,10 @@ async def create_payment(
     else:
         total_interest = Decimal("0")
 
-    # BIK costs (LF-12: use override if set, AUD124-01: BTW on BIK)
-    if bik_override is not None:
+    # BIK costs (DF117-04: percentage > fixed override > WIK-staffel, AUD124-01: BTW)
+    if bik_override_percentage is not None:
+        total_costs = _round2(total_principal * bik_override_percentage / Decimal("100"))
+    elif bik_override is not None:
         total_costs = bik_override
     else:
         bik_result = calculate_bik(total_principal, include_btw=include_btw_on_bik)
@@ -561,6 +564,9 @@ async def record_installment_payment(
     contractual_rate: Decimal | None = None,
     contractual_compound: bool = False,
     bik_override: Decimal | None = None,
+    bik_override_percentage: Decimal | None = None,
+    include_btw_on_bik: bool = False,
+    nakosten_type: str | None = None,
 ) -> PaymentArrangementInstallment:
     """Record a payment for a specific installment.
 
@@ -600,6 +606,9 @@ async def record_installment_payment(
         contractual_rate=contractual_rate,
         contractual_compound=contractual_compound,
         bik_override=bik_override,
+        bik_override_percentage=bik_override_percentage,
+        include_btw_on_bik=include_btw_on_bik,
+        nakosten_type=nakosten_type,
         _skip_installment_link=True,  # Already linking manually below
     )
 
@@ -843,6 +852,7 @@ async def get_financial_summary(
     contractual_compound: bool,
     calc_date: date | None = None,
     bik_override: Decimal | None = None,
+    bik_override_percentage: Decimal | None = None,
     include_btw_on_bik: bool = False,
     nakosten_type: str | None = None,
 ) -> dict:
@@ -891,9 +901,13 @@ async def get_financial_summary(
     total_principal = interest_result["total_principal"]
     total_interest = interest_result["total_interest"]
 
-    # Calculate BIK (LF-12: use override if set, AUD124-01: BTW on BIK)
+    # Calculate BIK (DF117-04: percentage > fixed override > WIK-staffel)
     bik_result = calculate_bik(total_principal, include_btw=include_btw_on_bik)
-    if bik_override is not None:
+    if bik_override_percentage is not None:
+        bik_exclusive = _round2(total_principal * bik_override_percentage / Decimal("100"))
+        bik_btw = Decimal("0")
+        total_bik = bik_exclusive
+    elif bik_override is not None:
         bik_exclusive = bik_override
         bik_btw = Decimal("0")
         total_bik = bik_override

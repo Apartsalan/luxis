@@ -209,6 +209,7 @@ async def create_payment(
         contractual_rate=case.contractual_rate,
         contractual_compound=case.contractual_compound,
         bik_override=case.bik_override,
+        bik_override_percentage=case.bik_override_percentage,
         include_btw_on_bik=not case.client.is_btw_plichtig,
         nakosten_type=case.nakosten_type,
     )
@@ -372,6 +373,9 @@ async def record_installment_payment(
         contractual_rate=case.contractual_rate,
         contractual_compound=case.contractual_compound,
         bik_override=case.bik_override,
+        bik_override_percentage=case.bik_override_percentage,
+        include_btw_on_bik=not case.client.is_btw_plichtig,
+        nakosten_type=case.nakosten_type,
     )
 
 
@@ -444,6 +448,7 @@ async def financial_summary(
         case.contractual_compound,
         as_of,
         bik_override=case.bik_override,
+        bik_override_percentage=case.bik_override_percentage,
         include_btw_on_bik=not case.client.is_btw_plichtig,
         nakosten_type=case.nakosten_type,
     )

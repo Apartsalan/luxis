@@ -34,8 +34,23 @@ from app.email.oauth_service import get_email_account, get_provider, get_valid_a
 from app.email.providers.base import OutgoingAttachment
 from app.shared.exceptions import BadRequestError, NotFoundError
 
-# DF122-07: templates voor welke we automatisch factuur-PDF's als bijlage toevoegen
-SOMMATIE_TEMPLATE_TYPES = {"sommatie"}
+# AUD124-06: templates die automatisch factuur-PDF's als bijlage krijgen
+AUTO_ATTACH_INVOICE_TYPES = {
+    "14_dagenbrief",
+    "aanmaning",
+    "sommatie",
+    "sommatie_na_reactie",
+    "sommatie_eerste_opgave",
+    "sommatie_drukte",
+    "tweede_sommatie",
+    "sommatie_laatste_voor_fai",
+    "niet_voldaan_regeling",
+    "faillissement_dreigbrief",
+    "demand_for_payment_eerste",
+    "demand_for_payment_uitgebreid",
+    "demand_for_payment_laatste",
+    "demand_for_payment_fai",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +291,7 @@ async def compose_eml_from_case(
 
     # DF122-07: automatisch factuur-PDF's van claims bijvoegen bij sommatie
     merged_case_file_ids: list[uuid.UUID] = list(data.case_file_ids or [])
-    if data.template_type in SOMMATIE_TEMPLATE_TYPES:
+    if data.template_type in AUTO_ATTACH_INVOICE_TYPES:
         claims_result = await db.execute(
             select(Claim.invoice_file_id).where(
                 Claim.case_id == case_id,

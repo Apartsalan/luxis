@@ -1,9 +1,44 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 april 2026 (sessie 125 — audit-findings batch 2+3: financieel-juridisch + security)
-**Laatste feature/fix:** Sessie 125 — ALLE 23 audit-findings afgehandeld: 18 gefixt, 3 by design/mitigated, 2 deferred
+**Laatst bijgewerkt:** 23 april 2026 (sessie 126 — incasso pipeline overhaul)
+**Laatste feature/fix:** Sessie 126 — Pipeline overhaul: 20 stappen, staphistorie, verweer-tracking, lijstweergave
 **Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
-**Volgende sessie:** 126 — TBD (audit is compleet, nieuwe features of Stitch redesign)
+**Volgende sessie:** 127 — TBD (visuele verificatie pipeline UI, mailsjablonen-editor DF122-04, of Stitch redesign)
+
+## Wat er gedaan is (sessie 126 — 23 april 2026) — Incasso pipeline overhaul
+
+### Samenvatting
+Incasso pipeline volledig overhauled op basis van Lisanne's test feedback en onderzoek naar 10+ incasso-systemen (Payt, Syncasso, iFlow, Intercash, etc.). Pipeline van 4 naar 20 stappen, staphistorie per dossier, verweer-tracking, en lijstweergave als default.
+
+### Wat er gebouwd is
+1. **20 stappen op basis van 4-fasemodel** — minnelijk (14-dagenbrief t/m laatste sommatie), gerechtelijk (verzoekschrift, dagvaarding, vonnis), executie (deurwaarder, beslag), regeling, administratief, afsluiting. Elk met step_category, debtor_type (b2b/b2c/both), is_terminal, is_hold_step.
+2. **CaseStepHistory model** — Audit trail per dossier: entered_at/exited_at, trigger_type (manual/batch/auto_advance/ai_agent), triggered_by, template_sent, email_sent, document_id, notes.
+3. **move_case_to_step()** — Uniforme functie voor ALLE staptransities. Sluit vorige history af, maakt nieuwe aan, update Case positie, logt CaseActivity.
+4. **Verweer-tracking** — has_verweer, verweer_note, verweer_date op Case. Blokkeert auto-advance. Batch preview toont verweer_blocked. Shield-badge in UI.
+5. **3 nieuwe API endpoints** — GET /cases/{id}/step-history, POST /cases/{id}/move-step, POST /cases/{id}/verweer.
+6. **Lijstweergave als default** — Platte tabel met alle dossiers, toggle naar "Per stap" groepering. Category-colored badges.
+7. **Stappenbeheer uitgebreid** — Categorie-dropdown, debiteurtype-dropdown, eindstap/pauzeerstap checkboxes in StappenTab.
+
+### Gewijzigde bestanden
+- `backend/app/incasso/models.py` — IncassoPipelineStep uitgebreid + CaseStepHistory model
+- `backend/app/incasso/schemas.py` — 3 nieuwe schemas + uitgebreide bestaande
+- `backend/app/incasso/service.py` — move_case_to_step(), get_case_step_history(), set_case_verweer(), verweer in batch/auto-advance, seed 20 stappen
+- `backend/app/incasso/router.py` — 3 nieuwe endpoints (step-history, move-step, verweer)
+- `backend/app/cases/models.py` — has_verweer, verweer_note, verweer_date
+- `backend/app/cases/schemas.py` — verweer velden in CaseUpdate/CaseResponse
+- `backend/alembic/versions/s126a_pipeline_overhaul.py` — migratie (applied on dev + VPS)
+- `backend/tests/test_incasso_pipeline.py` — activity_type assertion fix
+- `backend/tests/test_incasso_router.py` — seed step name assertion fix
+- `frontend/src/hooks/use-incasso.ts` — uitgebreide types + 3 nieuwe hooks
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — lijstweergave, category badges, verweer UI, stappenbeheer uitgebreid
+
+### Tests
+- 71 incasso-gerelateerde tests groen (69 passed + 2 fixed)
+- TypeScript compilatie groen (tsc --noEmit)
+
+### Deploy
+- Backend + frontend deployed op VPS
+- Migratie applied via `alembic stamp head` (was al eerder gerund)
 
 ## Wat er gedaan is (sessie 125 — 22 april 2026) — VOLLEDIGE audit-afhandeling
 

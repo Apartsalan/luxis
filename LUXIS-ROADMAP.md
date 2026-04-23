@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 22 april 2026 (sessie 124 — 4-assige Opus 4.7 audit + template quick wins)
+**Laatst bijgewerkt:** 23 april 2026 (sessie 126 — incasso pipeline overhaul: 20 stappen, staphistorie, verweer, lijstweergave)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -24,7 +24,7 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~97% | 231 endpoints, 25 routers, 34 models, 684 tests (4 skipped). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. Zero-BTW bug gefixt ✅. |
+| Backend (FastAPI) | ~97% | 234 endpoints, 25 routers, 35 models, 684 tests (4 skipped). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. Zero-BTW bug gefixt ✅. Pipeline overhaul: 20 stappen, CaseStepHistory, verweer-tracking. |
 | Frontend (Next.js) | ~85% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). GAT: redesign (backlog). |
 | Infra/DevOps | ~98% | Docker Compose op Hetzner VPS. Caddy ✅. GitHub-hosted CI runners ✅. Auto-deploy via SSH ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. CI 6/6 groen ✅. |
 
@@ -861,7 +861,13 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF121-Q1 | **Placeholder-beslissing bespreken met Lisanne** — welke velden moeten auto-gevuld vs handmatig? Nu auto: VSO totaalbedrag (= totaal_openstaand). Nu handmatig: schikkingsbedrag (onderhandeling), VSO-termijnen (betalingsschema), verweer-weerlegging (juridische inhoud). Vragen: (a) moet schikkingsbedrag auto-voorgesteld worden op bijv. 70% van openstaand als start? (b) moet VSO-totaalbedrag auto blijven of toch handmatig voor meer controle? (c) wil ze een andere default voor verweer-weerlegging (bijv. AI-suggestie uit verweer-bibliotheek DF120-10)? | 📋 Te bespreken met Lisanne |
 | DF120-10 | **Verweer-bibliotheek voor AI inspiratie** — 5 verweer-templates (art 20.4, art 9.3, NCNP, stilzwijgende verlenging, English) als Python module. Automatisch geïnjecteerd in AI draft prompt bij juridisch_verweer/betwisting classificatie. | ✅ Sessie 122 |
 | DF120-11 | **Exact Online koppeling voor facturen** — facturen direct doorboeken naar Exact. Afhankelijk van DF120-08 (grootboeknummers per item). | 📋 Backlog (na sessies 121+122) |
-| DF122-01 | **Meerdere incasso-workflows** — Nu 1 pipeline per tenant. Nodig: Pipeline-model bovenop stappen, zodat per cliënt/scenario (Incassocenter, Invorderingsbedrijf, Legalwork, Collect 1) een aparte workflow gekozen kan worden. Workflow = eerste sommatie → tweede → aankondiging faillissement → faillissement, met tussendoor verweer-reactie of extra sommatie. | 📋 Backlog |
+| DF126-01 | **Incasso pipeline overhaul (20 stappen)** — Pipeline uitgebreid van 4 naar 20 stappen op basis van 4-fasemodel (minnelijk → gerechtelijk → executie → afsluiting + regeling/administratief). Nieuwe velden: step_category, debtor_type (b2b/b2c/both), is_terminal, is_hold_step. Seed met 20 default stappen. | ✅ Sessie 126 |
+| DF126-02 | **Staphistorie (CaseStepHistory)** — Audit trail per dossier: elke stapwissel wordt gelogd met entered_at/exited_at, trigger_type (manual/batch/auto_advance/ai_agent), triggered_by, template_sent, email_sent, document_id, notes. Nieuw model + migratie + API endpoint GET /cases/{id}/step-history. | ✅ Sessie 126 |
+| DF126-03 | **Verweer-tracking** — has_verweer, verweer_note, verweer_date op Case model. Blokkeert auto-advance. Batch preview rapporteert verweer_blocked apart. POST /cases/{id}/verweer endpoint. Shield-badge in UI. | ✅ Sessie 126 |
+| DF126-04 | **Lijstweergave incasso** — Default view is nu platte tabel (alle dossiers), toggle naar "Per stap" groepering. Kolommen: dossiernr, cliënt, wederpartij, stap (category-colored badge), type (B2B/B2C), hoofdsom, openstaand, dagen, verweer-badge. | ✅ Sessie 126 |
+| DF126-05 | **move_case_to_step() uniforme functie** — Alle staptransities (batch, auto-advance, handmatig) gaan via 1 functie. Sluit oude CaseStepHistory af, maakt nieuwe aan, update Case positie, logt CaseActivity. | ✅ Sessie 126 |
+| DF126-06 | **Stappenbeheer uitgebreid** — StappenTab nu met categorie-dropdown, debiteurtype-dropdown, eindstap/pauzeerstap checkboxes. Category-badges met kleurcoding per fase. | ✅ Sessie 126 |
+| DF122-01 | **Meerdere incasso-workflows** — Pipeline-model bovenop stappen, zodat per cliënt/scenario een aparte workflow gekozen kan worden. Basis gelegd in DF126-01 (20 stappen + categorieën). | 📋 Backlog (basis gelegd) |
 | DF122-02 | **Agent SDK integratie** — Claude Agent SDK als autonome incasso-agent. 50+ tools al gedefinieerd in backend. Wacht op M365 email integratie (M0b). | 📋 Backlog (na M365) |
 | DF122-03 | **M365 email forwarding** — BaseNet forwardt kopieën naar M365, Luxis synct van M365. Parallelle werking: oude zaken op BaseNet, nieuwe op Luxis. Filter zodat ongelinkte mails niet zichtbaar. | 📋 Backlog (met Lisanne) |
 | DF122-04 | **Mailsjablonen-editor** — Email templates van hardcoded Python naar DB verhuizen. WYSIWYG editor in Instellingen zodat Lisanne templates zelf kan aanpassen zonder developer. | 📋 Sessie 124 (uitgesteld uit 123) |

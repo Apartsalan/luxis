@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.cases.models import Case
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_role
 from app.documents import template_service
 from app.documents.template_schemas import (
     ManagedTemplateResponse,
@@ -46,9 +46,9 @@ async def upload_template(
     template_key: str = Form(...),
     description: str | None = Form(default=None),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_role("admin")),
 ):
-    """Upload a new .docx template."""
+    """Upload a new .docx template (admin only)."""
     return await template_service.upload_template(
         db,
         user.tenant_id,
@@ -80,9 +80,9 @@ async def update_template(
     template_id: uuid.UUID,
     data: ManagedTemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_role("admin")),
 ):
-    """Update template metadata (name, description, key)."""
+    """Update template metadata (admin only)."""
     return await template_service.update_template(db, user.tenant_id, template_id, data)
 
 
@@ -94,9 +94,9 @@ async def replace_template_file(
     template_id: uuid.UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_role("admin")),
 ):
-    """Replace the .docx file for an existing template."""
+    """Replace the .docx file for an existing template (admin only)."""
     return await template_service.replace_template_file(db, user.tenant_id, template_id, file)
 
 
@@ -104,9 +104,9 @@ async def replace_template_file(
 async def delete_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_role("admin")),
 ):
-    """Soft-delete a custom template (builtin cannot be deleted)."""
+    """Soft-delete a custom template (admin only)."""
     await template_service.delete_template(db, user.tenant_id, template_id)
 
 

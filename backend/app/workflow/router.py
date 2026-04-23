@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_role
 from app.workflow import service
 from app.workflow.schemas import (
     AllowedTransitionResponse,
@@ -64,7 +64,7 @@ async def list_statuses(
 )
 async def create_status(
     data: WorkflowStatusCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new workflow status (admin only)."""
@@ -75,20 +75,20 @@ async def create_status(
 async def update_status(
     status_id: uuid.UUID,
     data: WorkflowStatusUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update a workflow status."""
+    """Update a workflow status (admin only)."""
     return await service.update_status(db, current_user.tenant_id, status_id, data)
 
 
 @router.delete("/statuses/{status_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_status(
     status_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Soft-delete a workflow status (fails if in use)."""
+    """Soft-delete a workflow status (admin only)."""
     await service.delete_status(db, current_user.tenant_id, status_id)
 
 
@@ -127,7 +127,7 @@ async def get_allowed_transitions(
 )
 async def create_transition(
     data: WorkflowTransitionCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new transition (admin only)."""
@@ -140,10 +140,10 @@ async def create_transition(
 )
 async def delete_transition(
     transition_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Soft-delete a transition."""
+    """Soft-delete a transition (admin only)."""
     await service.delete_transition(db, current_user.tenant_id, transition_id)
 
 
@@ -233,7 +233,7 @@ async def list_rules(
 )
 async def create_rule(
     data: WorkflowRuleCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new workflow rule (admin only)."""
@@ -244,20 +244,20 @@ async def create_rule(
 async def update_rule(
     rule_id: uuid.UUID,
     data: WorkflowRuleUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update a workflow rule."""
+    """Update a workflow rule (admin only)."""
     return await service.update_rule(db, current_user.tenant_id, rule_id, data)
 
 
 @router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_rule(
     rule_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Soft-delete a workflow rule."""
+    """Soft-delete a workflow rule (admin only)."""
     await service.delete_rule(db, current_user.tenant_id, rule_id)
 
 

@@ -34,7 +34,7 @@ def create_access_token(user_id: str, tenant_id: str) -> str:
         "type": "access",
         "exp": expire,
     }
-    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
 def create_refresh_token(user_id: str, tenant_id: str) -> str:
@@ -46,12 +46,12 @@ def create_refresh_token(user_id: str, tenant_id: str) -> str:
         "exp": expire,
         "jti": str(uuid.uuid4()),
     }
-    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
 def decode_token(token: str) -> dict:
     """Decode and validate a JWT token. Raises JWTError on failure."""
-    return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+    return jwt.decode(token, settings.secret_key, algorithms=["HS256"])
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useRenderTemplate, type ComposeInlineAttachment } from "@/hooks/use-email-sync";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -728,7 +729,7 @@ export function EmailComposeDialog({
                 ref={templateEditorRef}
                 contentEditable
                 suppressContentEditableWarning
-                dangerouslySetInnerHTML={{ __html: templateHtml }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(templateHtml) }}
                 onBlur={() => {
                   if (templateEditorRef.current) {
                     setTemplateHtml(templateEditorRef.current.innerHTML);

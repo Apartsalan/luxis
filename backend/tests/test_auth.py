@@ -121,7 +121,7 @@ async def test_expired_token_returns_401(client: AsyncClient, test_user: User, t
         "type": "access",
         "exp": expire,
     }
-    expired_token = jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+    expired_token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
     response = await client.get(
         "/api/auth/me",
         headers={"Authorization": f"Bearer {expired_token}"},

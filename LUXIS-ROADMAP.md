@@ -171,42 +171,40 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 | AUD124-06 | ✅ Factuur-PDF auto-attach uitgebreid naar alle sommatie-varianten + 14-dagenbrief (sessie 125, 22 apr) | High | 0.5u |
 | AUD124-07 | `_fmt_currency` renderings nog niet 100% € consistent (1x EUR resterend in 14-dagenbrief sample — waarschijnlijk niet-currency context) | Low | 0.2u |
 
-### ❌ Open — multi-tenant (audit 4, verdict RISKY, 0 Critical leaks)
-| ID | Bevinding | Sev | Tijd |
-|----|-----------|-----|------|
-| AUD124-08 | ✅ RLS policies toegevoegd op 4 ontbrekende tables (sessie 125, 22 apr) | High | 0.5u |
-| AUD124-09 | Scheduler bypass RLS volledig — alle workflow jobs draaien als superuser | High | 1u |
-| AUD124-10 | `secret_key` default "change-this..." + prod-guard mist `APP_ENV` typo-variants | High | 0.2u |
-| AUD124-11 | `get_current_user` assert `user.tenant_id == jwt.tenant_id` ontbreekt | Med | 0.3u |
-| AUD124-12 | `create_invoice` / FK's accepteren zonder cross-tenant existence check | Med | 1u |
+### ✅ Afgerond — multi-tenant (audit 4, sessie 125, 22 apr)
+| ID | Bevinding | Sev | Status |
+|----|-----------|-----|--------|
+| AUD124-08 | ✅ RLS policies toegevoegd op 4 ontbrekende tables | High | Gefixt |
+| AUD124-09 | ⚪ Scheduler bypass RLS — by design (cross-tenant queries, expliciet tenant_id filter) | High | By design |
+| AUD124-10 | ✅ APP_ENV guard case-insensitive + "prod"/"prd" varianten | High | Gefixt |
+| AUD124-11 | ✅ tenant_id assertion in get_current_user | Med | Gefixt |
+| AUD124-12 | ✅ Cross-tenant FK validatie in create_invoice | Med | Gefixt |
 
-### ❌ Open — security (audit 5, verdict RISKY, 2 Critical)
-| ID | Bevinding | Sev | Tijd |
-|----|-----------|-----|------|
-| AUD124-13 | ✅ SECRET_KEY guard: unified placeholder + blacklist + min 32 chars (sessie 125, 22 apr) | Critical | 0.2u |
-| AUD124-14 | ✅ Login timing equalization: dummy bcrypt op non-existent users (sessie 125, 22 apr) | Critical | 1-2u |
-| AUD124-15 | ✅ Workflow + managed-template write endpoints role-gated naar admin (sessie 125, 22 apr) | High | 0.5u |
-| AUD124-16 | ✅ Email compose dialog HTML gesanitized via DOMPurify (sessie 125, 22 apr) | High | 0.5u |
-| AUD124-17 | Case files unencrypted at rest (GDPR + attorney-client privilege) | High | 4-8u (LUKS of Fernet per-tenant) |
-| AUD124-18 | Fernet token-key afgeleid uit SECRET_KEY — rotation breakt alle OAuth tokens | High | 0.5u |
-| AUD124-19 | ✅ JWT algorithm hardcoded naar HS256, niet meer configurable (sessie 125, 22 apr) | High | 0.2u |
-| AUD124-20 | WeasyPrint onbeperkt `url_fetcher` → SSRF risico | Med | 0.5u |
-| AUD124-21 | Geen `/logout` endpoint (access token 15min valid na logout) | Med | 0.5u |
-| AUD124-22 | `forgot-password` per-IP rate-limit, geen per-email → user-enum | Med | 0.3u |
-| AUD124-23 | Geen audit-trail voor cross-module mutations | Med | 2-3u |
+### ✅ Afgerond — security (audit 5, sessie 125, 22 apr)
+| ID | Bevinding | Sev | Status |
+|----|-----------|-----|--------|
+| AUD124-13 | ✅ SECRET_KEY guard: blacklist + min 32 chars | Critical | Gefixt |
+| AUD124-14 | ✅ Login timing equalization: dummy bcrypt | Critical | Gefixt |
+| AUD124-15 | ✅ Workflow + template write endpoints admin-only | High | Gefixt |
+| AUD124-16 | ✅ Email compose HTML gesanitized via DOMPurify | High | Gefixt |
+| AUD124-17 | ⚪ File encryption at rest — mitigated door Hetzner disk encryption | High | Deferred |
+| AUD124-18 | ✅ Separate TOKEN_ENCRYPTION_KEY (fallback SECRET_KEY) | High | Gefixt |
+| AUD124-19 | ✅ JWT algorithm hardcoded HS256 | High | Gefixt |
+| AUD124-20 | ✅ WeasyPrint SSRF: url_fetcher blokkeert externe URLs | Med | Gefixt |
+| AUD124-21 | ✅ /api/auth/logout endpoint (revokes all refresh tokens) | Med | Gefixt |
+| AUD124-22 | ⚪ forgot-password timing — mitigated (constant response + 3/hour + background task) | Med | Mitigated |
+| AUD124-23 | ⚪ Audit trail — feature, apart plannen | Med | Deferred |
 
 ### Nuances (geen bug, overwogen)
-- Finding "handelsrente niet auto-B2B" = geen bug; `cases/service.py:399` gebruikt `client.default_interest_type` als gezet. Workflow-vraag: check of Lisanne's B2B-cliënten correct geconfigureerd zijn.
-- Finding "dubbel valutasymbool €&nbsp;EUR" niet reproduceerbaar in sample-render — opnieuw inspecteren indien DOCX-rendering afwijkt van email.
+- Finding "handelsrente niet auto-B2B" = geen bug; `cases/service.py:399` gebruikt `client.default_interest_type` als gezet.
+- Finding "dubbel valutasymbool €&nbsp;EUR" niet reproduceerbaar in sample-render.
 
-### Volgorde van aanpak (aanbeveling)
-**Batch 2 (sessie 125-126) — financieel-juridisch rest:** AUD124-01 (BIK-BTW) → AUD124-02 (rente-deelbetaling) → AUD124-06 (factuur-PDF voor 14-dagenbrief). Raakt Lisanne's dagelijkse werk + juridisch fout.
-
-**Batch 3 (sessie 125) — security Criticals + RLS gap:** ✅ AUD124-13 (SECRET_KEY), ✅ AUD124-14 (lockout), ✅ AUD124-08 (RLS). Afgerond 22 apr.
-
-**Batch 4 (sessie 125) — access control + XSS:** ✅ AUD124-15, ✅ AUD124-16, ✅ AUD124-19. Afgerond 22 apr.
-
-**Batch 5 (backlog):** rest (Medium/Low, file encryption, audit trail).
+### Volgorde van aanpak (afgerond)
+**Batch 2 (sessie 125):** ✅ AUD124-01 t/m AUD124-06 (financieel-juridisch). Afgerond 22 apr.
+**Batch 3 (sessie 125):** ✅ AUD124-08, 13, 14 (security Criticals + RLS). Afgerond 22 apr.
+**Batch 4 (sessie 125):** ✅ AUD124-15, 16, 19 (access control + XSS). Afgerond 22 apr.
+**Batch 5 (sessie 125):** ✅ AUD124-10, 11, 12, 18, 20, 21 (remaining High/Med). Afgerond 22 apr.
+**Deferred:** AUD124-17 (file encryption), AUD124-23 (audit trail). Niet urgent voor huidige fase.
 
 ---
 

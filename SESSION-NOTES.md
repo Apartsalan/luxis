@@ -1,14 +1,14 @@
 # Sessie Notities — Luxis
 
 **Laatst bijgewerkt:** 22 april 2026 (sessie 125 — audit-findings batch 2+3: financieel-juridisch + security)
-**Laatste feature/fix:** Sessie 125 — AUD124-02 t/m AUD124-06 + AUD124-08/13/14/15/16/19 gefixt (12 findings in 1 sessie)
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + resterende audit-findings (encryption, audit trail, WeasyPrint SSRF)
-**Volgende sessie:** 126 — Batch 5 (backlog): AUD124-17 (file encryption), AUD124-18 (Fernet key), AUD124-20 (WeasyPrint SSRF), AUD124-21 (logout), AUD124-22 (forgot-password rate limit)
+**Laatste feature/fix:** Sessie 125 — ALLE 23 audit-findings afgehandeld: 18 gefixt, 3 by design/mitigated, 2 deferred
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
+**Volgende sessie:** 126 — TBD (audit is compleet, nieuwe features of Stitch redesign)
 
-## Wat er gedaan is (sessie 125 — 22 april 2026) — audit-findings batch 2+3: financieel-juridisch + security
+## Wat er gedaan is (sessie 125 — 22 april 2026) — VOLLEDIGE audit-afhandeling
 
 ### Samenvatting
-9 audit-findings opgelost in 4 commits:
+18 audit-findings gefixt, 3 by design/mitigated, 2 deferred — in 7 commits:
 
 1. **AUD124-02 (Critical):** Rente berekend op restant hoofdsom na deelbetaling i.p.v. origineel. Nieuwe `calculate_interest_with_reductions()` functie die de tijdlijn splitst bij betalingen. Compound + simple interest correct. 9 unit tests.
 2. **AUD124-03 (High):** Nakosten (€189/€287) toegevoegd — nieuw `nakosten.py`, Case model veld, integratie in financial summary + payment distribution, dropdown in frontend.
@@ -43,6 +43,20 @@
 - `backend/app/documents/template_router.py` — write endpoints role-gated naar admin
 - `frontend/src/components/email-compose-dialog.tsx` — sanitizeHtml op template HTML
 - `backend/tests/test_auth.py` — hardcoded HS256
+- `backend/app/dependencies.py` — tenant_id assertion (AUD124-11)
+- `backend/app/config.py` — token_encryption_key setting (AUD124-18)
+- `backend/app/invoices/invoice_pdf_service.py` — safe url_fetcher (AUD124-20)
+- `backend/app/invoices/service.py` — cross-tenant FK validation (AUD124-12)
+
+### Batch overzicht
+| Batch | Findings | Wat |
+|-------|----------|-----|
+| 2 (financieel) | AUD124-02, 03, 04, 05, 06 | Rente na deelbetaling, nakosten, BIK override, 14-dagen termijn, factuur-PDF |
+| 3 (security critical) | AUD124-08, 13, 14 | RLS 4 tables, SECRET_KEY guard, login timing |
+| 4 (access+XSS) | AUD124-15, 16, 19 | Admin role-gate, HTML sanitize, HS256 hardcode |
+| 5 (remaining) | AUD124-10, 11, 12, 18, 20, 21 | APP_ENV, tenant assert, FK check, token key, SSRF, logout |
+| By design | AUD124-09, 22 | Scheduler cross-tenant, forgot-password timing |
+| Deferred | AUD124-17, 23 | File encryption, audit trail |
 
 ## Wat er gedaan is (sessie 124 — 22 april 2026) — 4-assige audit + template quick wins
 

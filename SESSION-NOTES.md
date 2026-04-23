@@ -1,9 +1,9 @@
 # Sessie Notities — Luxis
 
 **Laatst bijgewerkt:** 22 april 2026 (sessie 125 — audit-findings batch 2+3: financieel-juridisch + security)
-**Laatste feature/fix:** Sessie 125 — AUD124-02 t/m AUD124-06 + AUD124-08/13/14 gefixt (financieel + security batch)
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + resterende audit-findings (access control, XSS, encryption)
-**Volgende sessie:** 126 — Batch 4: access control + XSS (AUD124-15, AUD124-16, AUD124-19)
+**Laatste feature/fix:** Sessie 125 — AUD124-02 t/m AUD124-06 + AUD124-08/13/14/15/16/19 gefixt (12 findings in 1 sessie)
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + resterende audit-findings (encryption, audit trail, WeasyPrint SSRF)
+**Volgende sessie:** 126 — Batch 5 (backlog): AUD124-17 (file encryption), AUD124-18 (Fernet key), AUD124-20 (WeasyPrint SSRF), AUD124-21 (logout), AUD124-22 (forgot-password rate limit)
 
 ## Wat er gedaan is (sessie 125 — 22 april 2026) — audit-findings batch 2+3: financieel-juridisch + security
 
@@ -39,6 +39,10 @@
 - `docker-compose.yml` — SECRET_KEY placeholder geünificeerd
 - `backend/app/auth/service.py` — dummy bcrypt hash voor timing equalization
 - `backend/alembic/versions/aud124_08_rls_missing_tables.py` — RLS op 4 ontbrekende tables
+- `backend/app/workflow/router.py` — write endpoints role-gated naar admin
+- `backend/app/documents/template_router.py` — write endpoints role-gated naar admin
+- `frontend/src/components/email-compose-dialog.tsx` — sanitizeHtml op template HTML
+- `backend/tests/test_auth.py` — hardcoded HS256
 
 ## Wat er gedaan is (sessie 124 — 22 april 2026) — 4-assige audit + template quick wins
 

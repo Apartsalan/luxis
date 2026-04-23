@@ -185,11 +185,11 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 |----|-----------|-----|------|
 | AUD124-13 | ✅ SECRET_KEY guard: unified placeholder + blacklist + min 32 chars (sessie 125, 22 apr) | Critical | 0.2u |
 | AUD124-14 | ✅ Login timing equalization: dummy bcrypt op non-existent users (sessie 125, 22 apr) | Critical | 1-2u |
-| AUD124-15 | Workflow + managed-template write endpoints niet role-gated (elke user kan sommatie.docx vervangen) | High | 0.5u |
-| AUD124-16 | `dangerouslySetInnerHTML` zonder sanitize in `email-compose-dialog.tsx:731` — XSS → JWT theft | High | 0.5u |
+| AUD124-15 | ✅ Workflow + managed-template write endpoints role-gated naar admin (sessie 125, 22 apr) | High | 0.5u |
+| AUD124-16 | ✅ Email compose dialog HTML gesanitized via DOMPurify (sessie 125, 22 apr) | High | 0.5u |
 | AUD124-17 | Case files unencrypted at rest (GDPR + attorney-client privilege) | High | 4-8u (LUKS of Fernet per-tenant) |
 | AUD124-18 | Fernet token-key afgeleid uit SECRET_KEY — rotation breakt alle OAuth tokens | High | 0.5u |
-| AUD124-19 | JWT `algorithms=[settings.algorithm]` configurable — niet hardcoded `["HS256"]` | High | 0.2u |
+| AUD124-19 | ✅ JWT algorithm hardcoded naar HS256, niet meer configurable (sessie 125, 22 apr) | High | 0.2u |
 | AUD124-20 | WeasyPrint onbeperkt `url_fetcher` → SSRF risico | Med | 0.5u |
 | AUD124-21 | Geen `/logout` endpoint (access token 15min valid na logout) | Med | 0.5u |
 | AUD124-22 | `forgot-password` per-IP rate-limit, geen per-email → user-enum | Med | 0.3u |
@@ -204,7 +204,7 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 
 **Batch 3 (sessie 125) — security Criticals + RLS gap:** ✅ AUD124-13 (SECRET_KEY), ✅ AUD124-14 (lockout), ✅ AUD124-08 (RLS). Afgerond 22 apr.
 
-**Batch 4 (sessie 128) — access control + XSS:** AUD124-15, AUD124-16, AUD124-19.
+**Batch 4 (sessie 125) — access control + XSS:** ✅ AUD124-15, ✅ AUD124-16, ✅ AUD124-19. Afgerond 22 apr.
 
 **Batch 5 (backlog):** rest (Medium/Low, file encryption, audit trail).
 

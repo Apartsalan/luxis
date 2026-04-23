@@ -1,9 +1,9 @@
 """Token encryption — Fernet symmetric encryption for OAuth tokens at rest.
 
-Uses the app's SECRET_KEY to derive a Fernet key via SHA-256.
-This ensures tokens stored in the database are never in plaintext.
+Uses TOKEN_ENCRYPTION_KEY if set, otherwise falls back to SECRET_KEY.
+A separate key allows SECRET_KEY rotation without breaking OAuth tokens.
 
-NOTE: Changing SECRET_KEY invalidates all stored tokens.
+NOTE: Changing the active key invalidates all stored tokens.
 Users will need to re-connect their OAuth email accounts.
 """
 
@@ -14,9 +14,8 @@ from cryptography.fernet import Fernet
 
 from app.config import settings
 
-# Derive a stable Fernet key from the app's secret_key.
-# Fernet requires exactly 32 url-safe base64-encoded bytes.
-_raw = hashlib.sha256(settings.secret_key.encode()).digest()
+_key_source = settings.token_encryption_key or settings.secret_key
+_raw = hashlib.sha256(_key_source.encode()).digest()
 _fernet_key = base64.urlsafe_b64encode(_raw)
 _fernet = Fernet(_fernet_key)
 

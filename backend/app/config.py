@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     # Auth
     secret_key: str = "change-this-to-a-random-string-in-production"
+    token_encryption_key: str = ""
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
     algorithm: str = "HS256"

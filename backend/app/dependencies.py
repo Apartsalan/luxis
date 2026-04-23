@@ -54,6 +54,12 @@ async def get_current_user(
             detail="User not found or inactive",
         )
 
+    if str(user.tenant_id) != tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token tenant mismatch",
+        )
+
     return user
 
 

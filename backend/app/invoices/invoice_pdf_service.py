@@ -23,7 +23,17 @@ from app.documents.docx_service import (
 )
 from app.invoices.models import Invoice
 
+from weasyprint import default_url_fetcher
+
 logger = logging.getLogger(__name__)
+
+
+def _safe_url_fetcher(url: str, timeout: int = 10, ssl_context=None):
+    """URL fetcher that blocks external requests to prevent SSRF."""
+    if url.startswith("file://") or url.startswith("data:"):
+        return default_url_fetcher(url, timeout=timeout, ssl_context=ssl_context)
+    logger.warning("WeasyPrint blocked external URL: %s", url)
+    return {"string": "", "mime_type": "text/plain"}
 
 # Template directory
 _THIS_DIR = Path(__file__).resolve().parent
@@ -137,6 +147,7 @@ async def render_invoice_pdf(
     pdf_bytes = weasyprint.HTML(
         string=html_string,
         base_url=str(TEMPLATES_DIR),
+        url_fetcher=_safe_url_fetcher,
     ).write_pdf()
 
     filename = f"{invoice.invoice_number}.pdf"

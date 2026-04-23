@@ -31,6 +31,7 @@ from app.auth.service import (
     get_user_by_id,
     hash_password,
     reset_password_with_token,
+    revoke_all_refresh_tokens,
     rotate_refresh_token,
     store_refresh_token,
     verify_password,
@@ -144,6 +145,16 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
 
     return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
+
+
+@router.post("/logout", status_code=204)
+async def logout(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Revoke all refresh tokens for the current user."""
+    await revoke_all_refresh_tokens(db, current_user.id)
+    await db.commit()
 
 
 def _build_reset_email_html(reset_url: str) -> str:

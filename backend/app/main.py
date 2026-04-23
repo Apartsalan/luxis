@@ -56,7 +56,8 @@ _BLACKLISTED_KEYS = {
     "secret",
     "password",
 }
-if settings.app_env == "production" and (
+_is_prod = settings.app_env.lower().strip() in {"production", "prod", "prd"}
+if _is_prod and (
     settings.secret_key in _BLACKLISTED_KEYS or len(settings.secret_key) < 32
 ):
     logging.critical(

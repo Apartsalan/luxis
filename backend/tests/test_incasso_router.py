@@ -91,7 +91,7 @@ async def test_seed_default_steps(client: AsyncClient, auth_headers: dict):
     data = resp.json()
     assert len(data) >= 1
     names = [s["name"] for s in data]
-    assert any("erinnering" in n.lower() or "aanmaning" in n.lower() for n in names)
+    assert any("sommatie" in n.lower() or "14-dagenbrief" in n.lower() for n in names)
 
 
 @pytest.mark.asyncio

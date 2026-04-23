@@ -1,7 +1,7 @@
 """Incasso pipeline schemas — Pydantic models for request/response validation."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -15,9 +15,13 @@ class PipelineStepCreate(BaseModel):
     min_wait_days: int = Field(default=0, ge=0)
     max_wait_days: int = Field(default=0, ge=0)
     template_id: uuid.UUID | None = None
-    template_type: str | None = None  # docx template key (e.g. "aanmaning")
+    template_type: str | None = None
     email_subject_template: str | None = None
     email_body_template: str | None = None
+    step_category: str = "minnelijk"
+    debtor_type: str = "both"
+    is_terminal: bool = False
+    is_hold_step: bool = False
 
 
 class PipelineStepUpdate(BaseModel):
@@ -30,6 +34,10 @@ class PipelineStepUpdate(BaseModel):
     is_active: bool | None = None
     email_subject_template: str | None = None
     email_body_template: str | None = None
+    step_category: str | None = None
+    debtor_type: str | None = None
+    is_terminal: bool | None = None
+    is_hold_step: bool | None = None
 
 
 class PipelineStepResponse(BaseModel):
@@ -43,6 +51,10 @@ class PipelineStepResponse(BaseModel):
     template_name: str | None = None
     email_subject_template: str | None = None
     email_body_template: str | None = None
+    step_category: str = "minnelijk"
+    debtor_type: str = "both"
+    is_terminal: bool = False
+    is_hold_step: bool = False
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -65,9 +77,12 @@ class CaseInPipeline(BaseModel):
     outstanding: Decimal
     days_in_step: int
     incasso_step_id: uuid.UUID | None
+    step_name: str | None = None
+    debtor_type: str = "b2b"
+    has_verweer: bool = False
     status: str
-    date_opened: str  # ISO date string
-    deadline_status: str = "gray"  # green | orange | red | gray
+    date_opened: str
+    deadline_status: str = "gray"
 
     model_config = {"from_attributes": True}
 
@@ -84,7 +99,7 @@ class PipelineOverview(BaseModel):
     """Full pipeline view — all steps with their cases."""
 
     columns: list[PipelineColumn]
-    unassigned: list[CaseInPipeline]  # Incasso cases not yet in a pipeline step
+    unassigned: list[CaseInPipeline]
     total_cases: int
 
 
@@ -96,7 +111,7 @@ class BatchPreviewRequest(BaseModel):
 
     case_ids: list[uuid.UUID]
     action: str = Field(..., description="advance_step, generate_document, recalculate_interest")
-    target_step_id: uuid.UUID | None = None  # For advance_step
+    target_step_id: uuid.UUID | None = None
 
 
 class BatchBlocker(BaseModel):
@@ -114,9 +129,10 @@ class BatchPreviewResponse(BaseModel):
     total_selected: int
     ready: int
     blocked: list[BatchBlocker]
-    needs_step_assignment: list[CaseInPipeline]  # Cases not yet in a step
-    email_ready: int = 0  # Cases with opposing party email (for generate_document)
-    email_blocked: list[BatchBlocker] = []  # Cases missing opposing party email
+    needs_step_assignment: list[CaseInPipeline] = []
+    email_ready: int = 0
+    email_blocked: list[BatchBlocker] = []
+    verweer_blocked: int = 0
 
 
 class BatchActionRequest(BaseModel):
@@ -125,8 +141,8 @@ class BatchActionRequest(BaseModel):
     case_ids: list[uuid.UUID]
     action: str = Field(..., description="advance_step, generate_document, recalculate_interest")
     target_step_id: uuid.UUID | None = None
-    auto_assign_step: bool = False  # Auto-assign first step to unassigned cases
-    send_email: bool = False  # Also send generated document via email
+    auto_assign_step: bool = False
+    send_email: bool = False
 
 
 class BatchActionResult(BaseModel):
@@ -136,11 +152,11 @@ class BatchActionResult(BaseModel):
     processed: int
     skipped: int
     errors: list[str]
-    generated_document_ids: list[uuid.UUID] = []  # For generate_document action
-    tasks_auto_completed: int = 0  # Tasks auto-completed after document generation
-    cases_auto_advanced: int = 0  # Cases auto-advanced to next pipeline step
-    emails_sent: int = 0  # Emails successfully sent
-    emails_failed: int = 0  # Emails that failed to send
+    generated_document_ids: list[uuid.UUID] = []
+    tasks_auto_completed: int = 0
+    cases_auto_advanced: int = 0
+    emails_sent: int = 0
+    emails_failed: int = 0
 
 
 # ── Smart Work Queues ────────────────────────────────────────────────────
@@ -149,6 +165,46 @@ class BatchActionResult(BaseModel):
 class QueueCounts(BaseModel):
     """Badge counts for Smart Work Queue tabs."""
 
-    ready_next_step: int = 0  # Cases where days_in_step >= next step's min_wait_days
-    wik_expired: int = 0  # Cases where 14-day WIK deadline has passed
-    action_required: int = 0  # Total needing attention (sum/union of above + unassigned)
+    ready_next_step: int = 0
+    wik_expired: int = 0
+    action_required: int = 0
+
+
+# ── Step History ─────────────────────────────────────────────────────────
+
+
+class CaseStepHistoryResponse(BaseModel):
+    """A single step history entry for the timeline."""
+
+    id: uuid.UUID
+    step_id: uuid.UUID
+    step_name: str
+    step_category: str
+    entered_at: datetime
+    exited_at: datetime | None
+    triggered_by_name: str | None = None
+    trigger_type: str
+    template_sent: bool
+    email_sent: bool
+    document_id: uuid.UUID | None = None
+    notes: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+# ── Move Step / Verweer ──────────────────────────────────────────────────
+
+
+class MoveToStepRequest(BaseModel):
+    """Request to move a case to a specific pipeline step."""
+
+    target_step_id: uuid.UUID
+    notes: str | None = None
+
+
+class SetVerweerRequest(BaseModel):
+    """Toggle verweer (objection) on a case."""
+
+    has_verweer: bool
+    verweer_note: str | None = None
+    verweer_date: date | None = None

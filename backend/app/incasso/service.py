@@ -15,12 +15,13 @@ from app.documents.pdf_service import docx_to_pdf
 from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
 from app.email.templates import _render_base, document_sent
-from app.incasso.models import IncassoPipelineStep
+from app.incasso.models import CaseStepHistory, IncassoPipelineStep
 from app.incasso.schemas import (
     BatchActionResult,
     BatchBlocker,
     BatchPreviewResponse,
     CaseInPipeline,
+    CaseStepHistoryResponse,
     PipelineColumn,
     PipelineOverview,
     PipelineStepCreate,
@@ -134,34 +135,32 @@ async def seed_default_steps(
         return existing
 
     defaults = [
-        {
-            "name": "Eerste sommatie",
-            "sort_order": 1,
-            "min_wait_days": 0,
-            "max_wait_days": 3,
-            "template_type": "sommatie_drukte",
-        },
-        {
-            "name": "Tweede sommatie",
-            "sort_order": 2,
-            "min_wait_days": 7,
-            "max_wait_days": 14,
-            "template_type": "wederom_sommatie_kort",
-        },
-        {
-            "name": "Aankondiging faillissement",
-            "sort_order": 3,
-            "min_wait_days": 7,
-            "max_wait_days": 14,
-            "template_type": "sommatie_laatste_voor_fai",
-        },
-        {
-            "name": "Faillissement",
-            "sort_order": 4,
-            "min_wait_days": 3,
-            "max_wait_days": 7,
-            "template_type": "faillissement_dreigbrief",
-        },
+        # Fase: Minnelijk
+        {"name": "14-dagenbrief", "sort_order": 1, "min_wait_days": 0, "max_wait_days": 14, "template_type": "veertien_dagen_brief", "step_category": "minnelijk", "debtor_type": "b2c"},
+        {"name": "Eerste sommatie", "sort_order": 2, "min_wait_days": 0, "max_wait_days": 7, "template_type": "sommatie_drukte", "step_category": "minnelijk", "debtor_type": "both"},
+        {"name": "Tweede sommatie", "sort_order": 3, "min_wait_days": 7, "max_wait_days": 14, "template_type": "wederom_sommatie_kort", "step_category": "minnelijk", "debtor_type": "both"},
+        {"name": "Ingebrekestelling", "sort_order": 4, "min_wait_days": 7, "max_wait_days": 14, "template_type": "ingebrekestelling", "step_category": "minnelijk", "debtor_type": "both"},
+        {"name": "Laatste sommatie (ank. verzoekschrift)", "sort_order": 5, "min_wait_days": 7, "max_wait_days": 14, "template_type": "sommatie_laatste_voor_fai", "step_category": "minnelijk", "debtor_type": "b2b"},
+        {"name": "Laatste sommatie (ank. dagvaarding)", "sort_order": 6, "min_wait_days": 7, "max_wait_days": 14, "step_category": "minnelijk", "debtor_type": "b2c"},
+        # Fase: Gerechtelijk
+        {"name": "Verzoekschrift faillissement", "sort_order": 7, "min_wait_days": 3, "max_wait_days": 7, "template_type": "faillissement_dreigbrief", "step_category": "gerechtelijk", "debtor_type": "b2b"},
+        {"name": "Dagvaarding", "sort_order": 8, "min_wait_days": 7, "max_wait_days": 14, "step_category": "gerechtelijk", "debtor_type": "b2c"},
+        {"name": "Vonnis", "sort_order": 9, "min_wait_days": 0, "max_wait_days": 0, "step_category": "gerechtelijk", "debtor_type": "both"},
+        # Fase: Executie
+        {"name": "Verstuurd naar deurwaarder", "sort_order": 10, "min_wait_days": 0, "max_wait_days": 0, "step_category": "executie", "debtor_type": "both"},
+        {"name": "Beslag gelegd", "sort_order": 11, "min_wait_days": 0, "max_wait_days": 0, "step_category": "executie", "debtor_type": "both"},
+        # Fase: Regeling (cross-phase)
+        {"name": "Regeling voorgesteld", "sort_order": 12, "min_wait_days": 0, "max_wait_days": 0, "step_category": "regeling", "debtor_type": "both"},
+        {"name": "Betalingsregeling getroffen", "sort_order": 13, "min_wait_days": 0, "max_wait_days": 0, "step_category": "regeling", "debtor_type": "both", "is_hold_step": True},
+        # Administratief (cross-phase)
+        {"name": "Info opgevraagd bij cliënt", "sort_order": 14, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
+        {"name": "Wacht op informatie", "sort_order": 15, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
+        {"name": "Procedure voorgesteld aan cliënt", "sort_order": 16, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
+        {"name": "Cliënt akkoord procedure", "sort_order": 17, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
+        {"name": "On hold", "sort_order": 18, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
+        # Afsluiting
+        {"name": "Betaald", "sort_order": 19, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
+        {"name": "Afgesloten", "sort_order": 20, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
     ]
 
     steps = []
@@ -192,10 +191,183 @@ def step_to_response(step: IncassoPipelineStep) -> PipelineStepResponse:
         template_name=step.template.name if step.template else None,
         email_subject_template=step.email_subject_template,
         email_body_template=step.email_body_template,
+        step_category=step.step_category,
+        debtor_type=step.debtor_type,
+        is_terminal=step.is_terminal,
+        is_hold_step=step.is_hold_step,
         is_active=step.is_active,
         created_at=step.created_at,
         updated_at=step.updated_at,
     )
+
+
+# ── Step Movement & History ──────────────────────────────────────────────
+
+
+async def move_case_to_step(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+    target_step: IncassoPipelineStep,
+    user_id: uuid.UUID | None = None,
+    trigger_type: str = "manual",
+    notes: str | None = None,
+    template_sent: bool = False,
+    email_sent: bool = False,
+    document_id: uuid.UUID | None = None,
+) -> CaseStepHistory:
+    """Move a case to a target pipeline step — single source of truth for all step transitions."""
+    now = datetime.now(UTC)
+    old_step_name = None
+
+    if case.incasso_step_id:
+        result = await db.execute(
+            select(CaseStepHistory)
+            .where(
+                CaseStepHistory.tenant_id == tenant_id,
+                CaseStepHistory.case_id == case.id,
+                CaseStepHistory.step_id == case.incasso_step_id,
+                CaseStepHistory.exited_at.is_(None),
+            )
+            .order_by(CaseStepHistory.entered_at.desc())
+            .limit(1)
+        )
+        current_history = result.scalar_one_or_none()
+        if current_history:
+            current_history.exited_at = now
+            old_step_name = current_history.step.name if current_history.step else None
+
+    history = CaseStepHistory(
+        tenant_id=tenant_id,
+        case_id=case.id,
+        step_id=target_step.id,
+        entered_at=now,
+        triggered_by=user_id,
+        trigger_type=trigger_type,
+        template_sent=template_sent,
+        email_sent=email_sent,
+        document_id=document_id,
+        notes=notes,
+    )
+    db.add(history)
+
+    case.incasso_step_id = target_step.id
+    case.step_entered_at = now
+
+    await db.flush()
+    await db.refresh(history)
+
+    if old_step_name:
+        title = f"Pipeline: {old_step_name} → {target_step.name}"
+        description = f"Verplaatst van '{old_step_name}' naar '{target_step.name}'."
+    else:
+        title = f"Pipeline: toegewezen aan {target_step.name}"
+        description = f"Dossier toegewezen aan stap '{target_step.name}'."
+
+    if trigger_type == "auto_advance":
+        description += " (automatisch doorgeschoven)"
+    elif trigger_type == "batch":
+        description += " (batch actie)"
+
+    activity = CaseActivity(
+        tenant_id=tenant_id,
+        case_id=case.id,
+        user_id=user_id,
+        activity_type="pipeline_change",
+        title=title,
+        description=description,
+    )
+    db.add(activity)
+    await db.flush()
+
+    return history
+
+
+async def get_case_step_history(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> list[CaseStepHistoryResponse]:
+    """Get step history for a case, newest first."""
+    result = await db.execute(
+        select(CaseStepHistory)
+        .where(
+            CaseStepHistory.tenant_id == tenant_id,
+            CaseStepHistory.case_id == case_id,
+        )
+        .order_by(CaseStepHistory.entered_at.desc())
+    )
+    entries = list(result.scalars().all())
+
+    return [
+        CaseStepHistoryResponse(
+            id=entry.id,
+            step_id=entry.step_id,
+            step_name=entry.step.name if entry.step else "Onbekend",
+            step_category=entry.step.step_category if entry.step else "onbekend",
+            entered_at=entry.entered_at,
+            exited_at=entry.exited_at,
+            triggered_by_name=(
+                entry.triggered_by_user.full_name
+                if entry.triggered_by_user
+                else None
+            ),
+            trigger_type=entry.trigger_type,
+            template_sent=entry.template_sent,
+            email_sent=entry.email_sent,
+            document_id=entry.document_id,
+            notes=entry.notes,
+        )
+        for entry in entries
+    ]
+
+
+async def set_case_verweer(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    has_verweer: bool,
+    verweer_note: str | None = None,
+    verweer_date: date | None = None,
+    user_id: uuid.UUID | None = None,
+) -> Case:
+    """Toggle verweer (objection/dispute) on a case."""
+    result = await db.execute(
+        select(Case).where(
+            Case.tenant_id == tenant_id,
+            Case.id == case_id,
+            Case.is_active.is_(True),
+        )
+    )
+    case = result.scalar_one_or_none()
+    if not case:
+        raise NotFoundError("Dossier niet gevonden")
+
+    case.has_verweer = has_verweer
+    case.verweer_note = verweer_note
+    case.verweer_date = verweer_date or (date.today() if has_verweer else None)
+
+    if has_verweer:
+        title = "Verweer geregistreerd"
+        description = "Verweer gemarkeerd."
+        if verweer_note:
+            description += f" Notitie: {verweer_note}"
+    else:
+        title = "Verweer opgeheven"
+        description = "Verweer-markering verwijderd."
+
+    activity = CaseActivity(
+        tenant_id=tenant_id,
+        case_id=case.id,
+        user_id=user_id,
+        activity_type="verweer_change",
+        title=title,
+        description=description,
+    )
+    db.add(activity)
+    await db.flush()
+
+    return case
 
 
 # ── Pipeline Overview ─────────────────────────────────────────────────────
@@ -242,6 +414,9 @@ def _case_to_pipeline_item(
         outstanding=outstanding.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
         days_in_step=days_in_step,
         incasso_step_id=case.incasso_step_id,
+        step_name=step.name if step else None,
+        debtor_type=case.debtor_type,
+        has_verweer=case.has_verweer,
         status=case.status,
         date_opened=case.date_opened.isoformat(),
         deadline_status=_compute_deadline_status(days_in_step, step),
@@ -395,6 +570,8 @@ async def batch_preview(
     else:
         raise BadRequestError(f"Onbekende actie: {action}")
 
+    verweer_count = sum(1 for c in cases if c.has_verweer)
+
     return BatchPreviewResponse(
         action=action,
         total_selected=len(cases),
@@ -403,6 +580,7 @@ async def batch_preview(
         needs_step_assignment=needs_step,
         email_ready=email_ready,
         email_blocked=email_blocked,
+        verweer_blocked=verweer_count,
     )
 
 
@@ -524,6 +702,9 @@ async def _try_auto_advance(
     if case.status in ("betaald", "afgesloten"):
         return False
 
+    if case.has_verweer:
+        return False
+
     # Check for remaining open pipeline tasks for the current step only.
     # We scope to action_config.source == "pipeline" to avoid blocking
     # on initial case tasks or manually created tasks.
@@ -566,27 +747,13 @@ async def _try_auto_advance(
 
     next_step = step_list[current_idx + 1]
     old_step_name = step_list[current_idx].name
-    now = datetime.now(UTC)
 
-    case.incasso_step_id = next_step.id
-    case.step_entered_at = now
-    await db.flush()
-
-    await _create_tasks_for_step(db, tenant_id, case, next_step)
-
-    activity = CaseActivity(
-        tenant_id=tenant_id,
-        case_id=case.id,
-        user_id=None,
-        activity_type="pipeline_advance",
-        title=f"Pipeline: {old_step_name} \u2192 {next_step.name}",
-        description=(
-            f"Automatisch doorgeschoven na voltooiing van alle taken. "
-            f"Vorige stap: {old_step_name}. Nieuwe stap: {next_step.name}."
-        ),
+    await move_case_to_step(
+        db, tenant_id, case, next_step,
+        user_id=user_id,
+        trigger_type="auto_advance",
     )
-    db.add(activity)
-    await db.flush()
+    await _create_tasks_for_step(db, tenant_id, case, next_step)
 
     logger.info(
         "Auto-advanced case %s from '%s' to '%s'",
@@ -648,22 +815,13 @@ async def batch_execute(
                 errors.append(f"{case.case_number}: status '{case.status}' — overgeslagen")
                 continue
 
-            case.incasso_step_id = target_step.id
-            case.step_entered_at = now
+            await move_case_to_step(
+                db, tenant_id, case, target_step,
+                user_id=user_id,
+                trigger_type="batch",
+            )
             processed += 1
 
-            # Audit trail for step assignment
-            activity = CaseActivity(
-                tenant_id=tenant_id,
-                case_id=case.id,
-                user_id=user_id,
-                activity_type="pipeline_change",
-                title=f"Pipeline stap: {target_step.name}",
-                description=f"Dossier verplaatst naar stap '{target_step.name}'.",
-            )
-            db.add(activity)
-
-            # Create tasks for the new step
             await _create_tasks_for_step(db, tenant_id, case, target_step)
 
     elif action == "generate_document":

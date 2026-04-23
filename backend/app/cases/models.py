@@ -174,6 +174,13 @@ class Case(TenantBase):
         server_default="collected_amount",
     )  # "collected_amount" or "total_claim"
 
+    # Verweer (objection/dispute) tracking
+    has_verweer: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+    verweer_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verweer_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Relationships

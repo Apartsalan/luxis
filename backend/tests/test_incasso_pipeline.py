@@ -375,7 +375,7 @@ class TestTryAutoAdvance:
         result = await db.execute(
             select(CaseActivity).where(
                 CaseActivity.case_id == case.id,
-                CaseActivity.activity_type == "pipeline_advance",
+                CaseActivity.activity_type == "pipeline_change",
             )
         )
         assert result.scalar_one_or_none() is not None

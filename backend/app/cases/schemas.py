@@ -121,6 +121,10 @@ class CaseUpdate(BaseModel):
     # DF2-09: Pipeline step assignment from case detail
     incasso_step_id: uuid.UUID | None = None
     incasso_step_entered_at: datetime | None = None
+    # Verweer
+    has_verweer: bool | None = None
+    verweer_note: str | None = None
+    verweer_date: date | None = None
 
 
 class CaseStatusUpdate(BaseModel):
@@ -233,6 +237,9 @@ class CaseResponse(BaseModel):
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
     provisie_base: str = "collected_amount"
+    has_verweer: bool = False
+    verweer_note: str | None = None
+    verweer_date: date | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

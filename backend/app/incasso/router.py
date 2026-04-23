@@ -3,10 +3,13 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
+from app.cases.models import Case
 from app.database import get_db
+from app.shared.exceptions import NotFoundError
 from app.dependencies import get_current_user
 from app.incasso import service
 from app.incasso.schemas import (
@@ -14,11 +17,14 @@ from app.incasso.schemas import (
     BatchActionResult,
     BatchPreviewRequest,
     BatchPreviewResponse,
+    CaseStepHistoryResponse,
+    MoveToStepRequest,
     PipelineOverview,
     PipelineStepCreate,
     PipelineStepResponse,
     PipelineStepUpdate,
     QueueCounts,
+    SetVerweerRequest,
 )
 
 router = APIRouter(prefix="/api/incasso", tags=["incasso"])
@@ -114,6 +120,72 @@ async def get_queue_counts(
 ):
     """Get badge counts for Smart Work Queue tabs."""
     return await service.get_queue_counts(db, current_user.tenant_id)
+
+
+# ── Case Step Operations ─────────────────────────────────────────────────
+
+
+@router.get(
+    "/cases/{case_id}/step-history",
+    response_model=list[CaseStepHistoryResponse],
+)
+async def get_case_step_history(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get step history timeline for a case."""
+    return await service.get_case_step_history(db, current_user.tenant_id, case_id)
+
+
+@router.post("/cases/{case_id}/move-step")
+async def move_case_to_step(
+    case_id: uuid.UUID,
+    data: MoveToStepRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Move a case to a specific pipeline step."""
+    result = await db.execute(
+        select(Case).where(
+            Case.tenant_id == current_user.tenant_id,
+            Case.id == case_id,
+            Case.is_active.is_(True),
+        )
+    )
+    case = result.scalar_one_or_none()
+    if not case:
+        raise NotFoundError("Dossier niet gevonden")
+
+    target_step = await service.get_pipeline_step_by_id(
+        db, current_user.tenant_id, data.target_step_id
+    )
+
+    await service.move_case_to_step(
+        db, current_user.tenant_id, case, target_step,
+        user_id=current_user.id,
+        trigger_type="manual",
+        notes=data.notes,
+    )
+    return {"status": "ok"}
+
+
+@router.post("/cases/{case_id}/verweer")
+async def set_case_verweer(
+    case_id: uuid.UUID,
+    data: SetVerweerRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Toggle verweer (objection/dispute) on a case."""
+    await service.set_case_verweer(
+        db, current_user.tenant_id, case_id,
+        has_verweer=data.has_verweer,
+        verweer_note=data.verweer_note,
+        verweer_date=data.verweer_date,
+        user_id=current_user.id,
+    )
+    return {"status": "ok"}
 
 
 # ── Batch Actions ─────────────────────────────────────────────────────────

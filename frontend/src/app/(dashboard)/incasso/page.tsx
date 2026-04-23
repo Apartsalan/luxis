@@ -25,6 +25,9 @@ import {
   Mail,
   Bot,
   Pencil,
+  List,
+  LayoutGrid,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -123,9 +126,9 @@ function StappenTab() {
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
+  const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "", step_category: "minnelijk", debtor_type: "both", is_terminal: false, is_hold_step: false });
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
+  const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "", step_category: "minnelijk", debtor_type: "both", is_terminal: false, is_hold_step: false });
 
   const activeSteps = useMemo(
     () => (steps ?? []).filter((s) => s.is_active).sort((a, b) => a.sort_order - b.sort_order),
@@ -162,11 +165,15 @@ function StappenTab() {
         template_type: newStep.template_type || null,
         email_subject_template: newStep.email_subject_template.trim() || null,
         email_body_template: newStep.email_body_template.trim() || null,
+        step_category: newStep.step_category,
+        debtor_type: newStep.debtor_type,
+        is_terminal: newStep.is_terminal,
+        is_hold_step: newStep.is_hold_step,
       },
       {
         onSuccess: () => {
           toast.success("Stap toegevoegd");
-          setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
+          setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "", step_category: "minnelijk", debtor_type: "both", is_terminal: false, is_hold_step: false });
           setShowAddForm(false);
         },
       }
@@ -203,6 +210,10 @@ function StappenTab() {
       template_type: step.template_type || "",
       email_subject_template: step.email_subject_template || "",
       email_body_template: step.email_body_template || "",
+      step_category: step.step_category || "minnelijk",
+      debtor_type: step.debtor_type || "both",
+      is_terminal: step.is_terminal || false,
+      is_hold_step: step.is_hold_step || false,
     });
   };
 
@@ -216,6 +227,10 @@ function StappenTab() {
         template_type: editForm.template_type || null,
         email_subject_template: editForm.email_subject_template.trim() || null,
         email_body_template: editForm.email_body_template.trim() || null,
+        step_category: editForm.step_category,
+        debtor_type: editForm.debtor_type,
+        is_terminal: editForm.is_terminal,
+        is_hold_step: editForm.is_hold_step,
       },
       {
         onSuccess: () => {
@@ -283,9 +298,11 @@ function StappenTab() {
             <tr className="border-b border-border bg-muted/50">
               <th className="w-10 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">#</th>
               <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Naam</th>
-              <th className="w-24 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Min. dagen</th>
-              <th className="w-24 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase" title="Grens voor rode status (te laat)">Grens rood</th>
-              <th className="w-48 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Briefsjabloon</th>
+              <th className="w-28 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Categorie</th>
+              <th className="w-20 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Type</th>
+              <th className="w-20 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Min. d</th>
+              <th className="w-20 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase" title="Grens voor rode status (te laat)">Max. d</th>
+              <th className="w-40 px-3 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase">Briefsjabloon</th>
               <th className="w-32 px-3 py-2.5 text-right text-xs font-medium text-muted-foreground uppercase">Acties</th>
             </tr>
           </thead>
@@ -310,6 +327,38 @@ function StappenTab() {
                     >
                       {step.name}
                     </span>
+                  )}
+                </td>
+                <td className="px-3 py-2.5">
+                  {editingId === step.id ? (
+                    <select
+                      value={editForm.step_category}
+                      onChange={(e) => setEditForm((f) => ({ ...f, step_category: e.target.value }))}
+                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                    >
+                      {STEP_CATEGORIES.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[step.step_category] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>
+                      {STEP_CATEGORIES.find((c) => c.value === step.step_category)?.label || step.step_category}
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2.5">
+                  {editingId === step.id ? (
+                    <select
+                      value={editForm.debtor_type}
+                      onChange={(e) => setEditForm((f) => ({ ...f, debtor_type: e.target.value }))}
+                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                    >
+                      <option value="both">Beide</option>
+                      <option value="b2b">B2B</option>
+                      <option value="b2c">B2C</option>
+                    </select>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{step.debtor_type === "both" ? "Beide" : step.debtor_type.toUpperCase()}</span>
                   )}
                 </td>
                 <td className="px-3 py-2.5">
@@ -425,11 +474,25 @@ function StappenTab() {
                   </div>
                 </td>
               </tr>
-              {/* Email template fields — shown when editing a step with a template */}
-              {editingId === step.id && editForm.template_type && (
+              {/* Extra fields — shown when editing */}
+              {editingId === step.id && (
                 <tr className="border-b border-border last:border-0 bg-muted/20">
-                  <td colSpan={6} className="px-6 py-3">
+                  <td colSpan={8} className="px-6 py-3">
                     <div className="space-y-3">
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={editForm.is_terminal} onChange={(e) => setEditForm((f) => ({ ...f, is_terminal: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                          <span className="text-sm text-foreground">Eindstap</span>
+                          <span className="text-[10px] text-muted-foreground">(betaald/afgesloten)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={editForm.is_hold_step} onChange={(e) => setEditForm((f) => ({ ...f, is_hold_step: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                          <span className="text-sm text-foreground">Pauzeerstap</span>
+                          <span className="text-[10px] text-muted-foreground">(regeling, wacht op info)</span>
+                        </label>
+                      </div>
+                      {editForm.template_type && (
+                      <>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         <Mail className="h-3.5 w-3.5" />
                         E-mail template (optioneel)
@@ -461,6 +524,8 @@ function StappenTab() {
                       <p className="text-[11px] text-muted-foreground">
                         Variabelen: {"{{ zaak.zaaknummer }}"}, {"{{ wederpartij.naam }}"}, {"{{ kantoor.naam }}"}, {"{{ schuldeiser.naam }}"}, {"{{ hoofdsom }}"}, {"{{ openstaand }}"}. Leeg = standaard e-mail template.
                       </p>
+                      </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -484,6 +549,18 @@ function StappenTab() {
                     autoFocus
                     onKeyDown={(e) => e.key === "Enter" && handleAdd()}
                   />
+                </td>
+                <td className="px-3 py-2.5">
+                  <select value={newStep.step_category} onChange={(e) => setNewStep((f) => ({ ...f, step_category: e.target.value }))} className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20">
+                    {STEP_CATEGORIES.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                  </select>
+                </td>
+                <td className="px-3 py-2.5">
+                  <select value={newStep.debtor_type} onChange={(e) => setNewStep((f) => ({ ...f, debtor_type: e.target.value }))} className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20">
+                    <option value="both">Beide</option>
+                    <option value="b2b">B2B</option>
+                    <option value="b2c">B2C</option>
+                  </select>
                 </td>
                 <td className="px-3 py-2.5">
                   <input
@@ -534,7 +611,7 @@ function StappenTab() {
                     <button
                       onClick={() => {
                         setShowAddForm(false);
-                        setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "" });
+                        setNewStep({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "", step_category: "minnelijk", debtor_type: "both", is_terminal: false, is_hold_step: false });
                       }}
                       className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
                       title="Annuleren"
@@ -577,6 +654,7 @@ function WerkstroomTab() {
   const [targetStepId, setTargetStepId] = useState<string | null>(null);
   const [sendEmail, setSendEmail] = useState(true);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
+  const [viewMode, setViewMode] = useState<"list" | "grouped">("list");
 
   const allCases = useMemo(() => {
     if (!pipeline) return [];
@@ -733,8 +811,9 @@ function WerkstroomTab() {
 
   return (
     <div className="space-y-4">
-      {/* Summary bar + queue filters */}
+      {/* Summary bar + queue filters + view toggle */}
       <div className="space-y-3">
+        <div className="flex items-center gap-2 flex-wrap justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           {queueTabs.map((tab) => (
             <button
@@ -765,10 +844,122 @@ function WerkstroomTab() {
             </button>
           ))}
         </div>
+        <div className="flex items-center rounded-lg border border-border overflow-hidden">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === "list" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          >
+            <List className="h-3.5 w-3.5" />
+            Lijst
+          </button>
+          <button
+            onClick={() => setViewMode("grouped")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${viewMode === "grouped" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            Per stap
+          </button>
+        </div>
+        </div>
       </div>
 
-      {/* Pipeline columns */}
-      {pipeline.columns.map((col) => {
+      {/* List view */}
+      {viewMode === "list" && (
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="w-10 px-3 py-2 text-left">
+                    <button onClick={() => {
+                      const filtered = allCases.filter(filterCase);
+                      const allSelected = filtered.every((c) => selectedIds.has(c.id));
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (allSelected) filtered.forEach((c) => next.delete(c.id));
+                        else filtered.forEach((c) => next.add(c.id));
+                        return next;
+                      });
+                    }}>
+                      {allCases.filter(filterCase).length > 0 && allCases.filter(filterCase).every((c) => selectedIds.has(c.id)) ? (
+                        <CheckSquare className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Square className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Dossiernr.</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Cli&euml;nt</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Wederpartij</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Stap</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Type</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Hoofdsom</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Openstaand</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Dagen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allCases.filter(filterCase).map((c) => {
+                  const isSelected = selectedIds.has(c.id);
+                  return (
+                    <tr
+                      key={c.id}
+                      className={`border-b border-border last:border-0 cursor-pointer transition-colors ${isSelected ? "bg-primary/5" : "hover:bg-muted/30"}`}
+                      onClick={() => toggleSelect(c.id)}
+                    >
+                      <td className="px-3 py-2">
+                        {isSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={`inline-block h-2 w-2 rounded-full shrink-0 ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.dot ?? DEADLINE_STYLES.gray.dot}`} />
+                          {c.case_number}
+                          {c.has_verweer && (
+                            <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400" title="Verweer">
+                              <Shield className="h-2.5 w-2.5" />
+                            </span>
+                          )}
+                          {aiCaseIds.has(c.id) && (
+                            <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-100 dark:bg-violet-900/30 px-1 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400" title="AI-suggestie">
+                              <Bot className="h-2.5 w-2.5" />
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{c.client_name}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{c.opposing_party_name || "—"}</td>
+                      <td className="px-3 py-2">
+                        {c.step_name ? (
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[stepLookup.get(c.incasso_step_id ?? "")?.step_category ?? ""] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>
+                            {c.step_name}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Geen</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-xs text-muted-foreground">{c.debtor_type === "b2b" ? "B2B" : c.debtor_type === "b2c" ? "B2C" : "—"}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono">{formatCurrency(c.total_principal)}</td>
+                      <td className="px-3 py-2 text-right font-mono">
+                        <span className={c.outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}>
+                          {formatCurrency(c.outstanding)}
+                        </span>
+                      </td>
+                      <td className={`px-3 py-2 text-right font-medium ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.text ?? "text-muted-foreground"}`}>
+                        {c.days_in_step}d
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Grouped view (per step) */}
+      {viewMode === "grouped" && pipeline.columns.map((col) => {
         const filteredCases = col.cases.filter(filterCase);
         if (queueFilter !== "all" && filteredCases.length === 0) return null;
 
@@ -784,14 +975,15 @@ function WerkstroomTab() {
         );
       })}
 
-      {/* Unassigned cases */}
-      {pipeline.unassigned.length > 0 && (queueFilter === "all" || queueFilter === "action_required") && (
+      {/* Unassigned cases (grouped view only — already included in list view) */}
+      {viewMode === "grouped" && pipeline.unassigned.length > 0 && (queueFilter === "all" || queueFilter === "action_required") && (
         <PipelineColumnView
           column={{
             step: {
               id: "unassigned", name: "Zonder stap", sort_order: 999, min_wait_days: 0, max_wait_days: 0,
               template_id: null, template_type: null, template_name: null,
               email_subject_template: null, email_body_template: null,
+              step_category: "administratief", debtor_type: "both", is_terminal: false, is_hold_step: false,
               is_active: true, created_at: "", updated_at: "",
             },
             cases: pipeline.unassigned,
@@ -1004,6 +1196,11 @@ function PipelineColumnView({
                         title={DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.label ?? ""}
                       />
                       {c.case_number}
+                      {c.has_verweer && (
+                        <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400" title="Verweer">
+                          <Shield className="h-2.5 w-2.5" />
+                        </span>
+                      )}
                       {aiCaseIds.has(c.id) && (
                         <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-100 dark:bg-violet-900/30 px-1 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400" title="AI-suggestie wacht op review">
                           <Bot className="h-2.5 w-2.5" />
@@ -1186,6 +1383,16 @@ function PreFlightDialog({
               </div>
             )}
 
+            {/* Verweer warning */}
+            {preview.verweer_blocked > 0 && (
+              <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-3">
+                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                  <Shield className="h-4 w-4" />
+                  {preview.verweer_blocked} dossier(s) met verweer — worden niet automatisch doorgeschoven.
+                </p>
+              </div>
+            )}
+
             {/* Needs step assignment (only show for non-advance_step actions) */}
             {action !== "advance_step" && preview.needs_step_assignment.length > 0 && (
               <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-3">
@@ -1229,6 +1436,24 @@ function PreFlightDialog({
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
+
+const STEP_CATEGORIES = [
+  { value: "minnelijk", label: "Minnelijk" },
+  { value: "gerechtelijk", label: "Gerechtelijk" },
+  { value: "executie", label: "Executie" },
+  { value: "regeling", label: "Regeling" },
+  { value: "administratief", label: "Administratief" },
+  { value: "afsluiting", label: "Afsluiting" },
+] as const;
+
+const CATEGORY_STYLES: Record<string, string> = {
+  minnelijk: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  gerechtelijk: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  executie: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  regeling: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+  administratief: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  afsluiting: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+};
 
 const DEADLINE_STYLES: Record<DeadlineStatus, { dot: string; text: string; label: string }> = {
   green:  { dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", label: "Wachtperiode" },

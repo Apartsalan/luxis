@@ -16,6 +16,10 @@ export interface PipelineStep {
   template_name: string | null;
   email_subject_template: string | null;
   email_body_template: string | null;
+  step_category: string;
+  debtor_type: string;
+  is_terminal: boolean;
+  is_hold_step: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -33,6 +37,9 @@ export interface CaseInPipeline {
   outstanding: number;
   days_in_step: number;
   incasso_step_id: string | null;
+  step_name: string | null;
+  debtor_type: string;
+  has_verweer: boolean;
   status: string;
   date_opened: string;
   deadline_status: DeadlineStatus;
@@ -64,6 +71,22 @@ export interface BatchPreviewResponse {
   needs_step_assignment: CaseInPipeline[];
   email_ready: number;
   email_blocked: BatchBlocker[];
+  verweer_blocked: number;
+}
+
+export interface CaseStepHistory {
+  id: string;
+  step_id: string;
+  step_name: string;
+  step_category: string;
+  entered_at: string;
+  exited_at: string | null;
+  triggered_by_name: string | null;
+  trigger_type: string;
+  template_sent: boolean;
+  email_sent: boolean;
+  document_id: string | null;
+  notes: string | null;
 }
 
 export interface BatchActionResult {
@@ -109,6 +132,10 @@ export function useCreatePipelineStep() {
       template_type?: string | null;
       email_subject_template?: string | null;
       email_body_template?: string | null;
+      step_category?: string;
+      debtor_type?: string;
+      is_terminal?: boolean;
+      is_hold_step?: boolean;
     }) => {
       const res = await api("/api/incasso/pipeline-steps", {
         method: "POST",
@@ -143,6 +170,10 @@ export function useUpdatePipelineStep() {
       is_active?: boolean;
       email_subject_template?: string | null;
       email_body_template?: string | null;
+      step_category?: string;
+      debtor_type?: string;
+      is_terminal?: boolean;
+      is_hold_step?: boolean;
     }) => {
       const res = await api(`/api/incasso/pipeline-steps/${id}`, {
         method: "PUT",
@@ -275,6 +306,79 @@ export function useBatchExecute() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incasso-pipeline"] });
       queryClient.invalidateQueries({ queryKey: ["incasso-queue-counts"] });
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+  });
+}
+
+// ── Step History & Case Operations ──────────────────────────────────────
+
+export function useCaseStepHistory(caseId: string | null) {
+  return useQuery<CaseStepHistory[]>({
+    queryKey: ["case-step-history", caseId],
+    queryFn: async () => {
+      const res = await api(`/api/incasso/cases/${caseId}/step-history`);
+      if (!res.ok) throw new Error("Fout bij ophalen staphistorie");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+export function useMoveToStep() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      case_id: string;
+      target_step_id: string;
+      notes?: string;
+    }) => {
+      const res = await api(`/api/incasso/cases/${data.case_id}/move-step`, {
+        method: "POST",
+        body: JSON.stringify({
+          target_step_id: data.target_step_id,
+          notes: data.notes,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Fout bij verplaatsen");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incasso-pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["case-step-history"] });
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+  });
+}
+
+export function useSetVerweer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      case_id: string;
+      has_verweer: boolean;
+      verweer_note?: string;
+      verweer_date?: string;
+    }) => {
+      const res = await api(`/api/incasso/cases/${data.case_id}/verweer`, {
+        method: "POST",
+        body: JSON.stringify({
+          has_verweer: data.has_verweer,
+          verweer_note: data.verweer_note,
+          verweer_date: data.verweer_date,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Fout bij verweer instellen");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incasso-pipeline"] });
       queryClient.invalidateQueries({ queryKey: ["cases"] });
     },
   });

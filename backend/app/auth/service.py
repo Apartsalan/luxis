@@ -15,6 +15,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+_DUMMY_HASH = bcrypt.hashpw(b"dummy-timing-equalization", bcrypt.gensalt()).decode("utf-8")
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -63,6 +65,7 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> User
     result = await db.execute(select(User).where(User.email == email, User.is_active.is_(True)))
     user = result.scalar_one_or_none()
     if user is None:
+        verify_password(password, _DUMMY_HASH)
         return None
 
     # Check if account is locked

@@ -50,11 +50,17 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
-# SEC-4: Refuse to start in production with default SECRET_KEY
-_default_key = "change-this-to-a-random-string-in-production"
-if settings.app_env == "production" and settings.secret_key == _default_key:
+_BLACKLISTED_KEYS = {
+    "change-this-to-a-random-string-in-production",
+    "dev-secret-key-change-in-production",
+    "secret",
+    "password",
+}
+if settings.app_env == "production" and (
+    settings.secret_key in _BLACKLISTED_KEYS or len(settings.secret_key) < 32
+):
     logging.critical(
-        "FATAL: SECRET_KEY is the default placeholder. "
+        "FATAL: SECRET_KEY is a default placeholder or too short (min 32 chars). "
         "Set a strong random SECRET_KEY in production!"
     )
     sys.exit(1)

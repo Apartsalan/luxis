@@ -228,6 +228,22 @@ async def create_invoice(
     data: InvoiceCreate,
 ) -> Invoice:
     """Create a new invoice with lines."""
+    from app.cases.models import Case
+    from app.contacts.models import Contact
+
+    if data.contact_id:
+        r = await db.execute(
+            select(Contact).where(Contact.id == data.contact_id, Contact.tenant_id == tenant_id)
+        )
+        if r.scalar_one_or_none() is None:
+            raise NotFoundError("Relatie niet gevonden")
+    if data.case_id:
+        r = await db.execute(
+            select(Case).where(Case.id == data.case_id, Case.tenant_id == tenant_id)
+        )
+        if r.scalar_one_or_none() is None:
+            raise NotFoundError("Dossier niet gevonden")
+
     invoice_number = await next_invoice_number(db, tenant_id)
 
     invoice = Invoice(

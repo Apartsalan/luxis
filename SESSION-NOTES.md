@@ -1,20 +1,23 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 22 april 2026 (sessie 125 — audit-findings batch 2: financieel-juridisch)
-**Laatste feature/fix:** Sessie 125 — AUD124-02 t/m AUD124-06 gefixt (rente na deelbetaling, nakosten, bik_override_percentage, 14-dagen termijn, factuur-PDF gating)
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + resterende audit-findings (security, RLS)
-**Volgende sessie:** 126 — Security Criticals: AUD124-13 (SECRET_KEY), AUD124-14 (account lockout DoS), AUD124-08 (RLS gap 4 tabellen)
+**Laatst bijgewerkt:** 22 april 2026 (sessie 125 — audit-findings batch 2+3: financieel-juridisch + security)
+**Laatste feature/fix:** Sessie 125 — AUD124-02 t/m AUD124-06 + AUD124-08/13/14 gefixt (financieel + security batch)
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?) + resterende audit-findings (access control, XSS, encryption)
+**Volgende sessie:** 126 — Batch 4: access control + XSS (AUD124-15, AUD124-16, AUD124-19)
 
-## Wat er gedaan is (sessie 125 — 22 april 2026) — audit-findings batch 2: financieel-juridisch
+## Wat er gedaan is (sessie 125 — 22 april 2026) — audit-findings batch 2+3: financieel-juridisch + security
 
 ### Samenvatting
-6 audit-findings opgelost in 3 commits:
+9 audit-findings opgelost in 4 commits:
 
 1. **AUD124-02 (Critical):** Rente berekend op restant hoofdsom na deelbetaling i.p.v. origineel. Nieuwe `calculate_interest_with_reductions()` functie die de tijdlijn splitst bij betalingen. Compound + simple interest correct. 9 unit tests.
 2. **AUD124-03 (High):** Nakosten (€189/€287) toegevoegd — nieuw `nakosten.py`, Case model veld, integratie in financial summary + payment distribution, dropdown in frontend.
 3. **AUD124-04 (High):** `bik_override_percentage` nu meegenomen in `create_payment`, `get_financial_summary` en `record_installment_payment` (was genegeerd).
 4. **AUD124-05 (High):** 14-dagenbrief min_wait gecorrigeerd van 14 naar 15 dagen (14 dagen NA ontvangst = 15 NA verzending).
 5. **AUD124-06 (High):** Factuur-PDF auto-attach uitgebreid van alleen "sommatie" naar alle sommatie-varianten, 14-dagenbrief, aanmaning en demand_for_payment.
+6. **AUD124-13 (Critical):** SECRET_KEY prod-guard: docker-compose placeholder geünificeerd met config.py default, blacklist van common placeholders + min 32 chars check.
+7. **AUD124-08 (High):** RLS policies toegevoegd op 4 ontbrekende tenant-scoped tables (products, exact_online_connections, exact_sync_log, notifications).
+8. **AUD124-14 (Critical):** Login timing side-channel dicht: dummy bcrypt hash bij niet-bestaande gebruikers, zodat response-tijd niet lekt of een account bestaat.
 
 ### Gewijzigde bestanden
 - `backend/app/collections/interest.py` — `calculate_interest_with_reductions()`, `_compound_interest_with_reductions()`, `_simple_interest_with_reductions()`, `_build_claim_reductions()`
@@ -32,6 +35,10 @@
 - `frontend/src/hooks/use-collections.ts` — FinancialSummary interface
 - `frontend/src/app/(dashboard)/zaken/[id]/components/DetailsTab.tsx` — nakosten dropdown
 - `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/FinancieelTab.tsx` — nakosten in kostenrij
+- `backend/app/main.py` — SECRET_KEY blacklist + min length check
+- `docker-compose.yml` — SECRET_KEY placeholder geünificeerd
+- `backend/app/auth/service.py` — dummy bcrypt hash voor timing equalization
+- `backend/alembic/versions/aud124_08_rls_missing_tables.py` — RLS op 4 ontbrekende tables
 
 ## Wat er gedaan is (sessie 124 — 22 april 2026) — 4-assige audit + template quick wins
 

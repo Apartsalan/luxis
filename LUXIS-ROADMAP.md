@@ -174,7 +174,7 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 ### ❌ Open — multi-tenant (audit 4, verdict RISKY, 0 Critical leaks)
 | ID | Bevinding | Sev | Tijd |
 |----|-----------|-----|------|
-| AUD124-08 | RLS ontbreekt op `products`, `exact_online_connections`, `exact_sync_log`, `notifications` | High | 0.5u |
+| AUD124-08 | ✅ RLS policies toegevoegd op 4 ontbrekende tables (sessie 125, 22 apr) | High | 0.5u |
 | AUD124-09 | Scheduler bypass RLS volledig — alle workflow jobs draaien als superuser | High | 1u |
 | AUD124-10 | `secret_key` default "change-this..." + prod-guard mist `APP_ENV` typo-variants | High | 0.2u |
 | AUD124-11 | `get_current_user` assert `user.tenant_id == jwt.tenant_id` ontbreekt | Med | 0.3u |
@@ -183,8 +183,8 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 ### ❌ Open — security (audit 5, verdict RISKY, 2 Critical)
 | ID | Bevinding | Sev | Tijd |
 |----|-----------|-----|------|
-| AUD124-13 | Docker-compose default `SECRET_KEY=dev-secret-key...` omzeilt prod-guard | Critical | 0.2u |
-| AUD124-14 | Account lockout = DoS + user enumeration (timing side-channel) | Critical | 1-2u |
+| AUD124-13 | ✅ SECRET_KEY guard: unified placeholder + blacklist + min 32 chars (sessie 125, 22 apr) | Critical | 0.2u |
+| AUD124-14 | ✅ Login timing equalization: dummy bcrypt op non-existent users (sessie 125, 22 apr) | Critical | 1-2u |
 | AUD124-15 | Workflow + managed-template write endpoints niet role-gated (elke user kan sommatie.docx vervangen) | High | 0.5u |
 | AUD124-16 | `dangerouslySetInnerHTML` zonder sanitize in `email-compose-dialog.tsx:731` — XSS → JWT theft | High | 0.5u |
 | AUD124-17 | Case files unencrypted at rest (GDPR + attorney-client privilege) | High | 4-8u (LUKS of Fernet per-tenant) |
@@ -202,7 +202,7 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 ### Volgorde van aanpak (aanbeveling)
 **Batch 2 (sessie 125-126) — financieel-juridisch rest:** AUD124-01 (BIK-BTW) → AUD124-02 (rente-deelbetaling) → AUD124-06 (factuur-PDF voor 14-dagenbrief). Raakt Lisanne's dagelijkse werk + juridisch fout.
 
-**Batch 3 (sessie 127) — security Criticals + RLS gap:** AUD124-13 (SECRET_KEY), AUD124-14 (lockout), AUD124-08 (RLS). Infra-harden, geen UX-impact.
+**Batch 3 (sessie 125) — security Criticals + RLS gap:** ✅ AUD124-13 (SECRET_KEY), ✅ AUD124-14 (lockout), ✅ AUD124-08 (RLS). Afgerond 22 apr.
 
 **Batch 4 (sessie 128) — access control + XSS:** AUD124-15, AUD124-16, AUD124-19.
 

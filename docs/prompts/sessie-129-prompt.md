@@ -40,7 +40,13 @@ Plan:
 3. Draai de eerste /ultrareview op het meest kritische deel (financiele berekeningen)
 4. Resultaten documenteren en eventuele findings fixen
 
-## Taak 3: Volgende feature (als taak 1+2 groen zijn)
+## Taak 3: BUG-70 — AI drafts persistent maken
+
+AI-gegenereerde berichten (smart replies) verdwijnen bij navigatie/refresh. Elke keer opnieuw genereren kost API-credits.
+
+Fix: sla gegenereerde drafts op in de backend zodat ze bewaard blijven. Onderzoek eerst hoe smart replies nu werken (frontend state only?) en ontwerp een oplossing (DB tabel, veld op classificatie, of cache).
+
+## Taak 4: Volgende feature (als taak 1-3 groen zijn)
 Check de roadmap voor de volgende prioriteit. Kandidaten:
 - DF122-04: mailsjablonen-editor
 - BIK-BTW voor niet-BTW-plichtige clienten (AUD124-01)

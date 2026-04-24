@@ -213,6 +213,10 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 2. **Auth + multi-tenant isolatie** — RLS, JWT, tenant scoping
 3. **Incasso pipeline** — 20 stappen, batch acties, state machine
 
+### 📋 Gepland — BUG-70: AI smart replies / drafts niet persistent
+
+AI-gegenereerde berichten (smart replies, AI drafts) verdwijnen bij navigatie of page refresh. Elke keer opnieuw genereren kost API-credits en is niet gebruiksvriendelijk. Fix: gegenereerde drafts opslaan in backend (DB tabel of als veld op classificatie) zodat ze bewaard blijven en niet opnieuw gegenereerd hoeven te worden. Prioriteit: **Hoog** (kost geld + slechte UX).
+
 ---
 
 ## Audit 110 — Actiepunten (28 maart 2026)

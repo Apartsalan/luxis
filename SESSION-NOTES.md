@@ -1,9 +1,37 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 23 april 2026 (sessie 126 — incasso pipeline overhaul)
-**Laatste feature/fix:** Sessie 126 — Pipeline overhaul: 20 stappen, staphistorie, verweer-tracking, lijstweergave
+**Laatst bijgewerkt:** 24 april 2026 (sessie 127 — 5 pipeline UI issues gefixt)
+**Laatste feature/fix:** Sessie 127 — 5 pipeline UI issues: verweer-knop, staphistorie tab, seed idempotent, add form, dropdown
 **Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
-**Volgende sessie:** 127 — TBD (visuele verificatie pipeline UI, mailsjablonen-editor DF122-04, of Stitch redesign)
+**Volgende sessie:** 128 — TBD (mailsjablonen-editor DF122-04, Stitch redesign, of volgende feature)
+
+## Wat er gedaan is (sessie 127 — 24 april 2026) — 5 Pipeline UI Issues
+
+### Samenvatting
+5 UI issues uit sessie 126 visuele test gefixt. Alle issues waren frontend wiring (hooks/endpoints bestonden al) + 1 backend seed fix. Deployed en visueel geverifieerd op productie.
+
+### Wat er gefixt is
+1. **BUG-65: "Markeer verweer" knop** — Amber Shield-knop toegevoegd aan floating action bar op /incasso. Promise.allSettled voor batch, lokale loading state, per-case success/fail toast.
+2. **BUG-66: Staphistorie tab** — Nieuw StaphistorieTab component met verticale timeline op zaakdetail. Stap naam, categorie badge, actief-indicator, duur, enter/exit datum, trigger type, template/email indicators, notities. Alleen bij incasso dossiers.
+3. **BUG-67: Seed idempotent** — `seed_default_steps()` checkt nu per naam of stap al bestaat. Voegt alleen ontbrekende toe met sort_order na hoogste bestaande. Bestaande stappen blijven intact.
+4. **BUG-68: Add form checkboxes** — Expanded row onder add-stap formulier met is_terminal/is_hold_step checkboxes en email template subject/body velden.
+5. **BUG-69: Briefsjabloon dropdown** — Dropdown combineert managed templates (DB) + template_types uit bestaande stappen. 5 ontbrekende keys (`veertien_dagen_brief`, `sommatie_drukte`, `wederom_sommatie_kort`, `ingebrekestelling`, `sommatie_laatste_voor_fai`) toegevoegd aan beide label maps.
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — verweer-knop, dropdown fix, add form expanded row
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — staphistorie tab + import
+- `frontend/src/app/(dashboard)/zaken/[id]/components/StaphistorieTab.tsx` — **NIEUW** — timeline component
+- `frontend/src/hooks/use-documents.ts` — 5 missing keys in TEMPLATE_TYPE_LABELS
+- `frontend/src/hooks/use-managed-templates.ts` — 5 missing keys in TEMPLATE_KEY_LABELS
+- `backend/app/incasso/service.py` — seed_default_steps() idempotent gemaakt
+
+### Tests
+- `tsc --noEmit` — PASS (na Fragment fix voor twee sibling `<tr>` elementen)
+- Visueel geverifieerd op productie: verweer-knop (amber), staphistorie tab (empty state), add form checkboxes, dropdown labels correct
+
+### Deploy
+- 2 commits: `9aa3239` (5 fixes) + `df1bd7f` (template label fix)
+- Deployed: frontend + backend op VPS
 
 ## Wat er gedaan is (sessie 126 — 23 april 2026) — Incasso pipeline overhaul
 

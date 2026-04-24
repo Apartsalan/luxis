@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 23 april 2026 (sessie 126 — incasso pipeline overhaul: 20 stappen, staphistorie, verweer, lijstweergave)
+**Laatst bijgewerkt:** 24 april 2026 (sessie 127 — 5 pipeline UI issues gefixt)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -514,6 +514,11 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-62 | Dark mode/Systeem knoppen in Instellingen doen niks (tonen alleen toast). Fix: knoppen verwijderd, alleen "Licht" behouden. | Laag | S | ✅ Gefixt + QA pass (sessie 101+102) |
 | BUG-63 | Email matching: emails bij verkeerd dossier. Fix: thread-matching, stop-on-miss, bounce-detectie, referentie matching verwijderd, outbound dedup. QA: alle 7 scenario's PASS. Extra fixes sessie 102: Fernet key derivatie hersteld (sessie 90 regressie), outbound synthetic ID uniek gemaakt met timestamp. | Kritiek | L | ✅ Gefixt + QA pass (sessie 101+102) |
 | BUG-64 | Rentetype (interest_type) niet bewerkbaar na aanmaken dossier — staat alleen in wizard stap 2, niet in DetailsTab bewerkformulier. Moet bewerkbaar zijn incl. contractuele rente velden. | Midden | S | ✅ Gefixt (sessie 104) |
+| BUG-65 | Geen "Markeer verweer" knop in floating action bar — backend endpoint + useSetVerweer hook bestaan, geen UI-knop op /incasso bij selectie | Midden | S | ✅ Gefixt (24 apr, sessie 127) |
+| BUG-66 | Staphistorie niet op zaakdetail — useCaseStepHistory hook + API bestaan, geen timeline UI op /zaken/[id] | Midden | S | ✅ Gefixt (24 apr, sessie 127) |
+| BUG-67 | Seed voegt geen stappen toe als er al stappen bestaan — `if existing: return existing` skipt alle nieuwe default stappen | Midden | S | ✅ Gefixt (24 apr, sessie 127) |
+| BUG-68 | Add form mist eindstap/pauzeerstap checkboxes + email template velden | Laag | S | ✅ Gefixt (24 apr, sessie 127) |
+| BUG-69 | Briefsjabloon dropdown mist seed template_types — bestaande waarden niet in dropdown, reset naar "Geen" bij edit | Laag | S | ✅ Gefixt (24 apr, sessie 127) |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 
@@ -867,6 +872,11 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF126-04 | **Lijstweergave incasso** — Default view is nu platte tabel (alle dossiers), toggle naar "Per stap" groepering. Kolommen: dossiernr, cliënt, wederpartij, stap (category-colored badge), type (B2B/B2C), hoofdsom, openstaand, dagen, verweer-badge. | ✅ Sessie 126 |
 | DF126-05 | **move_case_to_step() uniforme functie** — Alle staptransities (batch, auto-advance, handmatig) gaan via 1 functie. Sluit oude CaseStepHistory af, maakt nieuwe aan, update Case positie, logt CaseActivity. | ✅ Sessie 126 |
 | DF126-06 | **Stappenbeheer uitgebreid** — StappenTab nu met categorie-dropdown, debiteurtype-dropdown, eindstap/pauzeerstap checkboxes. Category-badges met kleurcoding per fase. | ✅ Sessie 126 |
+| DF127-01 | **"Markeer verweer" batch knop** — Amber Shield-knop in floating action bar op /incasso. Promise.allSettled voor parallelle calls, lokale loading state, per-case error reporting. | ✅ Sessie 127 |
+| DF127-02 | **Staphistorie tab op zaakdetail** — StaphistorieTab component met verticale timeline (stap naam, categorie badge, actief-indicator, duur, trigger type, template/email indicators, notities). Alleen zichtbaar bij incasso dossiers. | ✅ Sessie 127 |
+| DF127-03 | **Seed idempotent** — seed_default_steps() voegt nu alleen ontbrekende stappen toe (check by name). Bestaande stappen blijven intact, nieuwe krijgen sort_order na hoogste bestaande. | ✅ Sessie 127 |
+| DF127-04 | **Add form uitgebreid** — Expanded row onder add-stap formulier met is_terminal/is_hold_step checkboxes en email template subject/body velden. | ✅ Sessie 127 |
+| DF127-05 | **Briefsjabloon dropdown compleet** — Combineert managed templates (DB) + template_types uit bestaande stappen. 5 ontbrekende keys toegevoegd aan beide label maps (TEMPLATE_TYPE_LABELS + TEMPLATE_KEY_LABELS). | ✅ Sessie 127 |
 | DF122-01 | **Meerdere incasso-workflows** — Pipeline-model bovenop stappen, zodat per cliënt/scenario een aparte workflow gekozen kan worden. Basis gelegd in DF126-01 (20 stappen + categorieën). | 📋 Backlog (basis gelegd) |
 | DF122-02 | **Agent SDK integratie** — Claude Agent SDK als autonome incasso-agent. 50+ tools al gedefinieerd in backend. Wacht op M365 email integratie (M0b). | 📋 Backlog (na M365) |
 | DF122-03 | **M365 email forwarding** — BaseNet forwardt kopieën naar M365, Luxis synct van M365. Parallelle werking: oude zaken op BaseNet, nieuwe op Luxis. Filter zodat ongelinkte mails niet zichtbaar. | 📋 Backlog (met Lisanne) |

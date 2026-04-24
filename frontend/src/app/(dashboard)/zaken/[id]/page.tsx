@@ -42,7 +42,10 @@ import {
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
-import { useSendViaProvider } from "@/hooks/use-email-sync";
+import { useSendViaProvider, useSyncedEmailDetail } from "@/hooks/use-email-sync";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
+import { formatCurrency } from "@/lib/utils";
 import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
 import {
   useClassifications,
@@ -107,6 +110,11 @@ export default function ZaakDetailPage() {
   const rejectClassification = useRejectClassification();
   const [aiBannerCollapsed, setAiBannerCollapsed] = useState(false);
   const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
+  const [emailBodyExpanded, setEmailBodyExpanded] = useState(false);
+  const { data: classificationEmail, isLoading: classificationEmailLoading } = useSyncedEmailDetail(
+    latestPendingClassification?.synced_email_id
+  );
+  const { data: pipelineSteps } = useIncassoPipelineSteps(true);
 
   // Set breadcrumb label to case number
   useBreadcrumbs(zaak ? [{ segment: id, label: zaak.case_number }] : []);
@@ -428,7 +436,7 @@ export default function ZaakDetailPage() {
         setPhoneNoteText={setPhoneNoteText}
       />
 
-      {/* AI-UX-04: AI suggestion banner */}
+      {/* AI-UX-04: AI suggestion banner — redesigned for clarity */}
       {!aiBannerDismissed && (latestPendingClassification || followupRec) && (
         <div className="rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
           {/* Header — clickable to collapse */}
@@ -445,6 +453,11 @@ export default function ZaakDetailPage() {
               <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
                 AI
               </span>
+              {aiBannerCollapsed && latestPendingClassification && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  — {latestPendingClassification.category_label}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -466,100 +479,257 @@ export default function ZaakDetailPage() {
           {/* Content — collapsible */}
           {!aiBannerCollapsed && (
             <div className="px-4 pb-4 space-y-3">
-              {/* Pending classification */}
-              {latestPendingClassification && (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {latestPendingClassification.category_label}
-                      </p>
-                      <span className={`shrink-0 text-[10px] font-medium ${confidenceTextCls(latestPendingClassification.confidence)}`}>
-                        {confidenceLabelText(latestPendingClassification.confidence)}
-                      </span>
+              {/* Pending classification — enriched */}
+              {latestPendingClassification && (() => {
+                const cls = latestPendingClassification;
+                const ACTION_DESCRIPTIONS: Record<string, string> = {
+                  escalate: "Er wordt een taak aangemaakt voor handmatige beoordeling door de advocaat.",
+                  wait_and_remind: "Er wordt een herinnering ingepland om over enkele dagen de betaling te controleren.",
+                  send_template: "Er wordt automatisch een antwoord verstuurd op basis van een sjabloon.",
+                  dismiss: "De e-mail wordt als niet-relevant gemarkeerd.",
+                  request_proof: "Er wordt een e-mail verstuurd met het verzoek om betalingsbewijs.",
+                  no_action: "Er is geen actie nodig — de e-mail is ter kennisgeving.",
+                };
+                return (
+                  <div className="rounded-lg border border-border bg-card overflow-hidden">
+                    {/* Email context */}
+                    <div className="px-4 py-3 border-b border-border bg-muted/30">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          E-mail van <span className="font-medium text-foreground">{cls.email_from}</span>
+                        </span>
+                        {cls.email_date && (
+                          <span>· {new Date(cls.email_date).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}</span>
+                        )}
+                      </div>
+                      {cls.email_subject && (
+                        <p className="mt-1 text-sm text-foreground font-medium pl-5.5 truncate">
+                          &ldquo;{cls.email_subject}&rdquo;
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab("correspondentie");
+                        }}
+                        className="mt-1 text-[11px] text-primary hover:underline pl-5.5"
+                      >
+                        Bekijk in correspondentie →
+                      </button>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground truncate pl-5.5">
-                      {latestPendingClassification.suggested_action_label}
-                      {latestPendingClassification.email_subject && ` — "${latestPendingClassification.email_subject}"`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        approveClassification.mutate(
-                          { id: latestPendingClassification.id },
-                          { onSuccess: () => toast.success("Classificatie goedgekeurd en uitgevoerd") },
-                        );
-                      }}
-                      disabled={approveClassification.isPending || rejectClassification.isPending}
-                      className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-[11px] font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                    >
-                      {approveClassification.isPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Check className="h-3 w-3" />
-                      )}
-                      Akkoord + Uitvoeren
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        rejectClassification.mutate(
-                          { id: latestPendingClassification.id },
-                          { onSuccess: () => toast.success("Classificatie afgewezen") },
-                        );
-                      }}
-                      disabled={approveClassification.isPending || rejectClassification.isPending}
-                      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 transition-colors"
-                    >
-                      {rejectClassification.isPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <X className="h-3 w-3" />
-                      )}
-                      Afwijzen
-                    </button>
-                  </div>
-                </div>
-              )}
 
-              {/* Followup recommendation */}
-              {followupRec && (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {followupRec.action_label}
-                      </p>
+                    {/* Expandable email body */}
+                    <div className="border-b border-border">
+                      <button
+                        type="button"
+                        onClick={() => setEmailBodyExpanded(!emailBodyExpanded)}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-xs text-primary hover:bg-muted/20 transition-colors"
+                      >
+                        {emailBodyExpanded ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        )}
+                        {emailBodyExpanded ? "Verberg e-mail" : "Toon volledige e-mail"}
+                      </button>
+
+                      {emailBodyExpanded && (
+                        <div className="px-4 pb-3">
+                          {classificationEmailLoading ? (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              E-mail laden...
+                            </div>
+                          ) : classificationEmail ? (
+                            <div className="rounded-md border border-border bg-muted/20 p-3 max-h-[300px] overflow-y-auto">
+                              {classificationEmail.body_html ? (
+                                <div
+                                  className="prose prose-sm max-w-none text-foreground"
+                                  dangerouslySetInnerHTML={{
+                                    __html: sanitizeHtml(classificationEmail.body_html),
+                                  }}
+                                />
+                              ) : (
+                                <pre className="text-sm text-foreground whitespace-pre-wrap font-sans">
+                                  {classificationEmail.body_text}
+                                </pre>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground py-2">
+                              E-mail kon niet geladen worden.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground truncate pl-5.5">
+
+                    {/* Classification + action */}
+                    <div className="px-4 py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-semibold text-foreground">
+                          {cls.category_label}
+                        </span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${confidenceTextCls(cls.confidence)} bg-current/10`}>
+                          {confidenceLabelText(cls.confidence)} ({Math.round(cls.confidence * 100)}%)
+                        </span>
+                      </div>
+
+                      {/* AI reasoning */}
+                      {cls.reasoning && (
+                        <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+                          {cls.reasoning}
+                        </p>
+                      )}
+
+                      {/* AI sources — what the AI used */}
+                      <div className="mb-2">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                          Bronnen gebruikt door AI
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            Dossier {zaak?.case_number}
+                          </span>
+
+                          {isIncasso && zaak?.incasso_step_id && (() => {
+                            const step = pipelineSteps?.find((s: { id: string }) => s.id === zaak.incasso_step_id);
+                            return step ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                Stap: {step.name}
+                              </span>
+                            ) : null;
+                          })()}
+
+                          {isIncasso && zaak && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab("vorderingen")}
+                              className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                            >
+                              Openstaand: {formatCurrency(
+                                (Number(zaak.total_principal) || 0) - (Number(zaak.total_paid) || 0)
+                              )}
+                            </button>
+                          )}
+
+                          {zaak?.opposing_party && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              Debiteur: {zaak.opposing_party.name}
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab("correspondentie")}
+                            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            <Mail className="h-2.5 w-2.5" />
+                            Inkomende e-mail
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* What will happen */}
+                      <div className="rounded-md bg-muted/50 px-3 py-2 mb-3">
+                        <p className="text-xs text-foreground">
+                          <span className="font-medium">Aanbevolen actie:</span>{" "}
+                          {cls.suggested_action_label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {ACTION_DESCRIPTIONS[cls.suggested_action] ?? ""}
+                        </p>
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            approveClassification.mutate(
+                              { id: cls.id },
+                              { onSuccess: () => toast.success("Classificatie goedgekeurd en uitgevoerd") },
+                            );
+                          }}
+                          disabled={approveClassification.isPending || rejectClassification.isPending}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                        >
+                          {approveClassification.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
+                          Akkoord + Uitvoeren
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            rejectClassification.mutate(
+                              { id: cls.id },
+                              { onSuccess: () => toast.success("Classificatie afgewezen") },
+                            );
+                          }}
+                          disabled={approveClassification.isPending || rejectClassification.isPending}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50 transition-colors"
+                        >
+                          {rejectClassification.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <X className="h-3 w-3" />
+                          )}
+                          Afwijzen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Followup recommendation — enriched */}
+              {followupRec && (
+                <div className="rounded-lg border border-border bg-card overflow-hidden">
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Zap className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                      <span className="text-sm font-semibold text-foreground">
+                        {followupRec.action_label}
+                      </span>
+                      {followupRec.urgency_label && (
+                        <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                          {followupRec.urgency_label}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                       {followupRec.reasoning}
                     </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        approveAndExecuteFollowup.mutate(
-                          { id: followupRec.id },
-                          { onSuccess: () => toast.success("Aanbeveling uitgevoerd") },
-                        );
-                      }}
-                      disabled={approveAndExecuteFollowup.isPending}
-                      className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-2.5 py-1.5 text-[11px] font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      Uitvoeren
-                    </button>
-                    <Link
-                      href="/followup"
-                      className="text-[11px] text-muted-foreground hover:text-foreground hover:underline"
-                    >
-                      Details
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          approveAndExecuteFollowup.mutate(
+                            { id: followupRec.id },
+                            { onSuccess: () => toast.success("Aanbeveling uitgevoerd") },
+                          );
+                        }}
+                        disabled={approveAndExecuteFollowup.isPending}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                      >
+                        {approveAndExecuteFollowup.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3 w-3" />
+                        )}
+                        Uitvoeren
+                      </button>
+                      <Link
+                        href="/followup"
+                        className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+                      >
+                        Details bekijken
+                      </Link>
+                    </div>
                   </div>
                 </div>
               )}

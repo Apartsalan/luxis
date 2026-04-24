@@ -206,6 +206,13 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 **Batch 5 (sessie 125):** ✅ AUD124-10, 11, 12, 18, 20, 21 (remaining High/Med). Afgerond 22 apr.
 **Deferred:** AUD124-17 (file encryption), AUD124-23 (audit trail). Niet urgent voor huidige fase.
 
+### 📋 Gepland — /ultrareview (Claude Code multi-agent cloud review)
+
+3 gratis reviews beschikbaar (geldig tot 5 mei 2026, daarna $5-20 per run). Prioriteit:
+1. **Financiele module** — interest.py, wik.py, payment_distribution.py (meest kritisch)
+2. **Auth + multi-tenant isolatie** — RLS, JWT, tenant scoping
+3. **Incasso pipeline** — 20 stappen, batch acties, state machine
+
 ---
 
 ## Audit 110 — Actiepunten (28 maart 2026)

@@ -1,4 +1,4 @@
-Sessie 129 — Visueel testen AI banner + volgende taak
+Sessie 129 — Visueel testen AI banner + /ultrareview plannen
 Repo: C:\Users\arsal\Documents\luxis
 
 ## Context laden bij start
@@ -27,7 +27,20 @@ Dit is gecommit (`74605cf`) en deployed naar productie, maar nog NIET visueel ge
 ### Als er bugs zijn:
 Fix ze direct, commit, push, deploy.
 
-## Taak 2: Volgende feature (als taak 1 groen is)
+## Taak 2: /ultrareview plannen
+
+Claude Code heeft een `/ultrareview` commando — multi-agent cloud code review ($5-20 per run, 3 gratis tot 5 mei 2026).
+
+Plan:
+1. Voeg "/ultrareview" toe aan de roadmap als gepland item
+2. Bepaal welke 3 delen van de codebase het meest baat hebben bij een deep review:
+   - Financiele module (interest.py, wik.py, payment_distribution.py)
+   - Auth + multi-tenant isolatie
+   - Incasso pipeline (20 stappen, batch acties, state machine)
+3. Draai de eerste /ultrareview op het meest kritische deel (financiele berekeningen)
+4. Resultaten documenteren en eventuele findings fixen
+
+## Taak 3: Volgende feature (als taak 1+2 groen zijn)
 Check de roadmap voor de volgende prioriteit. Kandidaten:
 - DF122-04: mailsjablonen-editor
 - BIK-BTW voor niet-BTW-plichtige clienten (AUD124-01)

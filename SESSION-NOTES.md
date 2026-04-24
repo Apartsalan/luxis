@@ -3,7 +3,7 @@
 **Laatst bijgewerkt:** 24 april 2026 (sessie 128 — AI banner: uitklapbaar emailbericht + klikbare bronnen)
 **Laatste feature/fix:** Sessie 128 — AI-suggestie banner redesign: uitklapbaar emailbericht, klikbare bronnen
 **Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
-**Volgende sessie:** 129 — Visueel testen AI banner op productie + volgende feature
+**Volgende sessie:** 129 — Visueel testen AI banner op productie + /ultrareview plannen + volgende feature
 
 ## Wat er gedaan is (sessie 128 — 24 april 2026) — AI Banner Redesign
 

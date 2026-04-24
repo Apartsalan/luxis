@@ -762,7 +762,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 | AI-UX-01 | **AI badges op email-rijen** — classificatie-badge (categorie + confidence) direct zichtbaar in de correspondentie email-lijst, niet alleen na klikken in detail-panel. | ✅ Done (sessie 99, 22 mrt) |
 | AI-UX-02 | **"Wacht op review" indicator** — visuele hint op emails die nog op AI-review wachten (icoontje of kleur). | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-03 | **AI suggesties in Mijn Taken** — AI-secties met paarse AI-badge, tonen altijd (ook als lege state). Geen aparte AI-pagina. | ✅ Done (sessie 99, 22 mrt) |
-| AI-UX-04 | **AI suggestion banner op dossier** — bovenaan dossier-detail een inklapbare kaart met de huidige AI-suggestie + Accepteren/Afwijzen. | ✅ Done (sessie 100, 23 mrt) |
+| AI-UX-04 | **AI suggestion banner op dossier** — bovenaan dossier-detail een inklapbare kaart met de huidige AI-suggestie + Accepteren/Afwijzen. Uitgebreid sessie 128: uitklapbaar emailbericht + klikbare bronnen. | ✅ Done (sessie 100, 23 mrt) · ✅ Uitgebreid (sessie 128, 24 apr) |
 | AI-UX-05 | **AI indicators op incasso pipeline** — AI-badge op dossier-kaarten in de pipeline ("Termijn verloopt morgen", "Actie voorgesteld"). | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-06 | **AI in activity feed** — AI-acties in dezelfde tijdlijn als menselijke acties, met AI-badge/avatar. | ✅ Done (sessie 100, 23 mrt) |
 | AI-UX-07 | **Dashboard AI widget** — samenvatting "3 dossiers vereisen actie, 2 termijnen verlopen vandaag". | ✅ Done (sessie 100, 23 mrt) |

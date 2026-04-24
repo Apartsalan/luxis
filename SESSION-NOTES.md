@@ -1,9 +1,35 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 24 april 2026 (sessie 127 — 5 pipeline UI issues gefixt)
-**Laatste feature/fix:** Sessie 127 — 5 pipeline UI issues: verweer-knop, staphistorie tab, seed idempotent, add form, dropdown
+**Laatst bijgewerkt:** 24 april 2026 (sessie 128 — AI banner: uitklapbaar emailbericht + klikbare bronnen)
+**Laatste feature/fix:** Sessie 128 — AI-suggestie banner redesign: uitklapbaar emailbericht, klikbare bronnen
 **Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
-**Volgende sessie:** 128 — TBD (mailsjablonen-editor DF122-04, Stitch redesign, of volgende feature)
+**Volgende sessie:** 129 — Visueel testen AI banner op productie + volgende feature
+
+## Wat er gedaan is (sessie 128 — 24 april 2026) — AI Banner Redesign
+
+### Samenvatting
+AI-suggestie banner op zaakdetailpagina uitgebreid met twee nieuwe features:
+1. **Uitklapbaar emailbericht** — volledige email inline lezen via "Toon volledige e-mail" toggle (sanitized HTML, max-height 300px scrollbaar)
+2. **Klikbare bronnen** — pill-badges tonen welke data de AI gebruikte (dossier, stap, openstaand bedrag, debiteur, email). Klikbare bronnen navigeren naar juiste tab.
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — banner redesign (255 insertions, 85 deletions)
+
+### Nieuwe imports/hooks gebruikt
+- `useSyncedEmailDetail` — haalt volledige email body op
+- `sanitizeHtml` — XSS-veilige HTML rendering
+- `useIncassoPipelineSteps` — pipeline stap namen voor bronnen
+- `formatCurrency` — bedragen formatteren
+
+### Status
+- TypeScript: groen (tsc --noEmit)
+- Deploy: frontend deployed naar productie
+- Visueel testen: **NOG NIET GEDAAN** — moet in sessie 129 op productie getest worden met een zaak die pending AI classificatie heeft
+
+### Bekende aandachtspunten
+- Testen met case-2026-00048 of ander dossier met pending AI classificatie
+- Controleer dat email body goed rendert (HTML + plain text fallback)
+- Controleer dat bronnen-pills correct navigeren naar vorderingen/correspondentie tabs
 
 ## Wat er gedaan is (sessie 127 — 24 april 2026) — 5 Pipeline UI Issues
 

@@ -40,6 +40,7 @@ import {
   useBatchPreview,
   useBatchExecute,
   useIncassoQueueCounts,
+  useSetVerweer,
   type PipelineStep,
   type CaseInPipeline,
   type DeadlineStatus,
@@ -135,17 +136,22 @@ function StappenTab() {
     [steps]
   );
 
-  // Dynamic template options from managed templates (deduplicated by template_key)
+  // Dynamic template options: managed templates + template types already used by steps
   const templateTypeOptions = useMemo(() => {
     const seen = new Set<string>();
-    return (managedTemplates ?? [])
-      .filter((t) => {
-        if (seen.has(t.template_key)) return false;
-        seen.add(t.template_key);
-        return true;
-      })
-      .map((t) => ({ value: t.template_key, label: getTemplateKeyLabel(t.template_key) }));
-  }, [managedTemplates]);
+    const options: { value: string; label: string }[] = [];
+    for (const t of managedTemplates ?? []) {
+      if (seen.has(t.template_key)) continue;
+      seen.add(t.template_key);
+      options.push({ value: t.template_key, label: getTemplateKeyLabel(t.template_key) });
+    }
+    for (const s of steps ?? []) {
+      if (!s.template_type || seen.has(s.template_type)) continue;
+      seen.add(s.template_type);
+      options.push({ value: s.template_type, label: getTemplateKeyLabel(s.template_type) });
+    }
+    return options;
+  }, [managedTemplates, steps]);
 
   const handleSeed = () => {
     seedSteps.mutate(undefined, {
@@ -535,6 +541,7 @@ function StappenTab() {
 
             {/* Add step row */}
             {showAddForm && (
+              <>
               <tr className="border-b border-border bg-primary/5">
                 <td className="px-3 py-2.5 text-muted-foreground">
                   {activeSteps.length + 1}
@@ -621,6 +628,61 @@ function StappenTab() {
                   </div>
                 </td>
               </tr>
+              {/* Extra fields for add form */}
+              <tr className="border-b border-border bg-primary/5">
+                <td colSpan={8} className="px-6 py-3">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={newStep.is_terminal} onChange={(e) => setNewStep((f) => ({ ...f, is_terminal: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                        <span className="text-sm text-foreground">Eindstap</span>
+                        <span className="text-[10px] text-muted-foreground">(betaald/afgesloten)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={newStep.is_hold_step} onChange={(e) => setNewStep((f) => ({ ...f, is_hold_step: e.target.checked }))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+                        <span className="text-sm text-foreground">Pauzeerstap</span>
+                        <span className="text-[10px] text-muted-foreground">(regeling, wacht op info)</span>
+                      </label>
+                    </div>
+                    {newStep.template_type && (
+                    <>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      <Mail className="h-3.5 w-3.5" />
+                      E-mail template (optioneel)
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        E-mail onderwerp
+                      </label>
+                      <input
+                        type="text"
+                        value={newStep.email_subject_template}
+                        onChange={(e) => setNewStep((f) => ({ ...f, email_subject_template: e.target.value }))}
+                        placeholder="Bijv. Aanmaning inzake dossier {{ zaak.zaaknummer }}"
+                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-foreground mb-1">
+                        E-mail bericht
+                      </label>
+                      <textarea
+                        value={newStep.email_body_template}
+                        onChange={(e) => setNewStep((f) => ({ ...f, email_body_template: e.target.value }))}
+                        placeholder={"Geachte {{ wederpartij.naam }},\n\nBijgaand treft u aan...\n\nMet vriendelijke groet,\n{{ kantoor.naam }}"}
+                        rows={4}
+                        className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 resize-y"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Variabelen: {"{{ zaak.zaaknummer }}"}, {"{{ wederpartij.naam }}"}, {"{{ kantoor.naam }}"}, {"{{ schuldeiser.naam }}"}, {"{{ hoofdsom }}"}, {"{{ openstaand }}"}. Leeg = standaard e-mail template.
+                    </p>
+                    </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+              </>
             )}
           </tbody>
         </table>
@@ -637,6 +699,7 @@ function WerkstroomTab() {
   const { data: queueCounts } = useIncassoQueueCounts();
   const batchPreview = useBatchPreview();
   const batchExecute = useBatchExecute();
+  const setVerweer = useSetVerweer();
 
   // AI-UX-05: pending classifications per case
   const { data: pendingClassifications } = useClassifications("pending", undefined, 1, 100);
@@ -744,6 +807,30 @@ function WerkstroomTab() {
       action,
       target_step_id: action === "advance_step" && steps ? steps[0].id : undefined,
     });
+  };
+
+  const [verweerLoading, setVerweerLoading] = useState(false);
+  const handleBatchVerweer = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setVerweerLoading(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((caseId) =>
+          setVerweer.mutateAsync({ case_id: caseId, has_verweer: true })
+        )
+      );
+      const succeeded = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
+      if (failed === 0) {
+        toast.success(`${succeeded} dossier(s) als verweer gemarkeerd`);
+      } else {
+        toast.warning(`${succeeded} gelukt, ${failed} mislukt`);
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setVerweerLoading(false);
+    }
   };
 
   const handleExecuteBatch = () => {
@@ -1024,6 +1111,14 @@ function WerkstroomTab() {
           >
             <Calculator className="h-3.5 w-3.5" />
             Herbereken rente
+          </button>
+          <button
+            onClick={handleBatchVerweer}
+            disabled={verweerLoading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            Markeer verweer
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}

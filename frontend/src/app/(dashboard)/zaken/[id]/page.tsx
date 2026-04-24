@@ -19,6 +19,7 @@ import {
   Mail,
   Receipt,
   Users,
+  Workflow,
   X,
   Zap,
 } from "lucide-react";
@@ -63,6 +64,7 @@ import { FacturenTab, DocumentenTab } from "./components/DocumentenTab";
 import CorrespondentieTab from "./components/CorrespondentieTab";
 import ActiviteitenTab from "./components/ActiviteitenTab";
 import PartijenTab from "./components/PartijenTab";
+import { StaphistorieTab } from "./components/StaphistorieTab";
 import DossierSidebar from "./components/DossierSidebar";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -292,7 +294,7 @@ export default function ZaakDetailPage() {
   const isIncasso = hasModule("incasso") && zaak?.case_type === "incasso";
   const tabIds = [
     "overzicht", "taken", "uren",
-    ...(isIncasso ? ["vorderingen", "betalingen", "derdengelden"] : []),
+    ...(isIncasso ? ["vorderingen", "betalingen", "staphistorie"] : []),
     "facturen", "documenten", "correspondentie", "activiteiten", "partijen",
   ];
 
@@ -394,6 +396,7 @@ export default function ZaakDetailPage() {
       ? [
           { id: "vorderingen", label: "Vorderingen", icon: Euro },
           { id: "betalingen", label: "Betalingen", icon: Receipt },
+          { id: "staphistorie", label: "Staphistorie", icon: Workflow },
         ]
       : []),
     { id: "facturen", label: "Facturen", icon: CreditCard },
@@ -617,6 +620,11 @@ export default function ZaakDetailPage() {
             {isIncasso && activeTab === "betalingen" && (
               <ErrorBoundary key="betalingen" fallback={<TabErrorFallback tabName="Betalingen" />}>
                 <BetalingenDerdengeldenTab caseId={id} />
+              </ErrorBoundary>
+            )}
+            {isIncasso && activeTab === "staphistorie" && (
+              <ErrorBoundary key="staphistorie" fallback={<TabErrorFallback tabName="Staphistorie" />}>
+                <StaphistorieTab caseId={id} />
               </ErrorBoundary>
             )}
             {activeTab === "facturen" && (

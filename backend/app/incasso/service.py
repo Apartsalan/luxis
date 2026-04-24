@@ -129,10 +129,9 @@ async def seed_default_steps(
     db: AsyncSession,
     tenant_id: uuid.UUID,
 ) -> list[IncassoPipelineStep]:
-    """Seed default incasso pipeline steps for a tenant (if no active ones exist)."""
+    """Seed default incasso pipeline steps for a tenant. Adds only missing steps (by name)."""
     existing = await list_pipeline_steps(db, tenant_id, active_only=True)
-    if existing:
-        return existing
+    existing_names = {s.name for s in existing}
 
     defaults = [
         # Fase: Minnelijk
@@ -163,16 +162,23 @@ async def seed_default_steps(
         {"name": "Afgesloten", "sort_order": 20, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
     ]
 
-    steps = []
+    max_order = max((s.sort_order for s in existing), default=0)
+    new_steps = []
     for d in defaults:
+        if d["name"] in existing_names:
+            continue
+        max_order += 1
+        d["sort_order"] = max_order
         step = IncassoPipelineStep(tenant_id=tenant_id, **d)
         db.add(step)
-        steps.append(step)
+        new_steps.append(step)
 
-    await db.flush()
-    for step in steps:
-        await db.refresh(step)
-    return steps
+    if new_steps:
+        await db.flush()
+        for step in new_steps:
+            await db.refresh(step)
+
+    return list(existing) + new_steps
 
 
 # ── Pipeline Step Response Helper ─────────────────────────────────────────

@@ -218,6 +218,21 @@ async def classify_email(
         classification.confidence * 100,
         action,
     )
+
+    # Emit event for the orchestrator
+    from app.ai_agent.events import EMAIL_CLASSIFIED, event_bus
+
+    await event_bus.emit(
+        EMAIL_CLASSIFIED,
+        db=db,
+        tenant_id=tenant_id,
+        classification_id=classification.id,
+        case_id=case.id,
+        category=category,
+        confidence=classification.confidence,
+        synced_email_id=synced_email_id,
+    )
+
     return classification
 
 

@@ -76,3 +76,43 @@ class PendingCountResponse(BaseModel):
     """Response for the pending classification count endpoint."""
 
     count: int
+
+
+# ---------------------------------------------------------------------------
+# AI Draft schemas
+# ---------------------------------------------------------------------------
+
+
+class AIDraftResponse(BaseModel):
+    """Response schema for an AI-generated draft."""
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    case_number: str
+    classification_id: uuid.UUID | None = None
+
+    subject: str
+    body: str
+    tone: str
+    sources: list[dict] | None = None
+    reasoning: str | None = None
+
+    status: str
+    generated_at: datetime
+    reviewed_at: datetime | None = None
+    reviewed_by_name: str | None = None
+    sent_at: datetime | None = None
+
+    model_used: str | None = None
+    instruction: str | None = None
+
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AIDraftUpdateRequest(BaseModel):
+    """Request body for updating a draft status."""
+
+    status: str | None = None
+    note: str | None = None

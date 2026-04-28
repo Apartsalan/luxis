@@ -21,7 +21,7 @@ from app.ai_agent.defense_library import (
     get_relevant_examples,
 )
 from app.ai_agent.kimi_client import call_intake_ai
-from app.ai_agent.models import EmailClassification
+from app.ai_agent.models import AIDraft, DraftStatus, EmailClassification
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.cases.files_service import get_file_path
 from app.cases.models import Case, CaseFile, CaseParty
@@ -416,6 +416,104 @@ async def generate_draft(
         "model": model,
         "case_number": context["case_number"],
     }
+
+
+async def generate_and_persist_draft(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    instruction: str | None = None,
+    classification_id: uuid.UUID | None = None,
+) -> AIDraft:
+    """Generate an AI draft and persist it in the database.
+
+    Returns the saved AIDraft record. Idempotent per classification_id:
+    if a draft already exists for the given classification, returns it.
+    """
+    if classification_id:
+        existing = await db.execute(
+            select(AIDraft).where(
+                AIDraft.classification_id == classification_id,
+                AIDraft.tenant_id == tenant_id,
+            )
+        )
+        found = existing.scalar_one_or_none()
+        if found:
+            logger.info("Draft already exists for classification %s — skipping", classification_id)
+            return found
+
+    result = await generate_draft(db, tenant_id, case_id, instruction)
+
+    draft = AIDraft(
+        tenant_id=tenant_id,
+        case_id=case_id,
+        classification_id=classification_id,
+        subject=result.get("subject", ""),
+        body=result.get("body", ""),
+        tone=result.get("tone", "formeel"),
+        sources=result.get("sources"),
+        reasoning=result.get("reasoning"),
+        status=DraftStatus.GENERATED,
+        model_used=result.get("model"),
+        instruction=instruction,
+    )
+    db.add(draft)
+    await db.flush()
+    await db.refresh(draft)
+
+    logger.info("Persisted AI draft %s for case %s", draft.id, result.get("case_number"))
+    return draft
+
+
+async def get_drafts_for_case(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> list[AIDraft]:
+    """Get all drafts for a case, newest first."""
+    result = await db.execute(
+        select(AIDraft)
+        .where(AIDraft.case_id == case_id, AIDraft.tenant_id == tenant_id)
+        .order_by(AIDraft.generated_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_draft_by_id(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    draft_id: uuid.UUID,
+) -> AIDraft | None:
+    """Get a single draft by ID."""
+    result = await db.execute(
+        select(AIDraft).where(AIDraft.id == draft_id, AIDraft.tenant_id == tenant_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_draft_status(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    new_status: str,
+    user_id: uuid.UUID | None = None,
+) -> AIDraft | None:
+    """Update draft status (approve, discard, sent)."""
+    from datetime import UTC, datetime
+
+    draft = await get_draft_by_id(db, tenant_id, draft_id)
+    if not draft:
+        return None
+
+    draft.status = new_status
+    if new_status in (DraftStatus.REVIEWED, DraftStatus.APPROVED):
+        draft.reviewed_at = datetime.now(UTC)
+        draft.reviewed_by_id = user_id
+    elif new_status == DraftStatus.SENT:
+        draft.sent_at = datetime.now(UTC)
+
+    await db.flush()
+    return draft
 
 
 async def generate_client_update(

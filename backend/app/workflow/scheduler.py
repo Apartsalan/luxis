@@ -653,6 +653,11 @@ def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    # Register orchestrator event handlers
+    from app.ai_agent.orchestrator import register_handlers
+
+    register_handlers()
+
     scheduler.start()
     ai_status = (
         "AI classification every 6 min" if ai_enabled else "AI classification OFF (no API key)"

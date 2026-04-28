@@ -1,11 +1,12 @@
 """AI Agent models — email classification and response templates."""
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
 from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -42,6 +43,16 @@ class ClassificationStatus(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
     EXECUTED = "executed"
+
+
+class DraftStatus(StrEnum):
+    """Status of an AI-generated draft through the review workflow."""
+
+    GENERATED = "generated"
+    REVIEWED = "reviewed"
+    APPROVED = "approved"
+    SENT = "sent"
+    DISCARDED = "discarded"
 
 
 # Default mapping: category → suggested action
@@ -161,3 +172,45 @@ class ResponseTemplate(TenantBase):
         # Each tenant can have one template per key
         {"comment": "AI response templates per tenant"},
     )
+
+
+class AIDraft(TenantBase):
+    """AI-generated draft email, persisted for review by the lawyer."""
+
+    __tablename__ = "ai_drafts"
+
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("cases.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    classification_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("email_classifications.id", ondelete="SET NULL"), nullable=True
+    )
+
+    subject: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    tone: Mapped[str] = mapped_column(String(20), nullable=False, default="formeel")
+    sources: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=DraftStatus.GENERATED
+    )
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=True
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    model_used: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    case: Mapped["Case"] = relationship("Case", lazy="selectin")  # noqa: F821
+    classification: Mapped["EmailClassification | None"] = relationship(
+        "EmailClassification", lazy="selectin"
+    )
+    reviewed_by: Mapped["User | None"] = relationship("User", lazy="selectin")  # noqa: F821

@@ -75,6 +75,15 @@ async def handle_email_classified(
     For categories that need a response: auto-generate a draft and create a notification.
     Draft is saved to DB (fixes BUG-70). Never auto-sends.
     """
+    # AUTO-DRAFT DISABLED: draft quality needs improvement before enabling.
+    # Event bus + infrastructure stays intact. Remove this return to re-enable.
+    logger.info(
+        "Orchestrator: auto-draft disabled — skipping draft for %s (case %s)",
+        CATEGORY_LABELS.get(category, category),
+        case_id,
+    )
+    return
+
     category_label = CATEGORY_LABELS.get(category, category)
 
     if category not in DRAFT_CATEGORIES:

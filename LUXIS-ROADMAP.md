@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 24 april 2026 (sessie 127 — 5 pipeline UI issues gefixt)
+**Laatst bijgewerkt:** 29 april 2026 (sessie 129 — Orchestrator + Event Bus + AIDraft model, BUG-70 fix)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -213,9 +213,9 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 2. **Auth + multi-tenant isolatie** — RLS, JWT, tenant scoping
 3. **Incasso pipeline** — 20 stappen, batch acties, state machine
 
-### 📋 Gepland — BUG-70: AI smart replies / drafts niet persistent
+### ✅ Gefixt — BUG-70: AI smart replies / drafts niet persistent (sessie 129)
 
-AI-gegenereerde berichten (smart replies, AI drafts) verdwijnen bij navigatie of page refresh. Elke keer opnieuw genereren kost API-credits en is niet gebruiksvriendelijk. Fix: gegenereerde drafts opslaan in backend (DB tabel of als veld op classificatie) zodat ze bewaard blijven en niet opnieuw gegenereerd hoeven te worden. Prioriteit: **Hoog** (kost geld + slechte UX).
+AIDraft model + `ai_drafts` tabel. Drafts worden nu persistent opgeslagen in DB met status workflow (generated → reviewed → approved → sent / discarded). CRUD endpoints: POST generate, GET list/detail, PATCH status. Auto-draft via orchestrator gebouwd maar DISABLED (kwaliteit onvoldoende, kost API credits). Handmatige draft generatie werkt en persisteert.
 
 ---
 
@@ -889,7 +889,7 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF127-04 | **Add form uitgebreid** — Expanded row onder add-stap formulier met is_terminal/is_hold_step checkboxes en email template subject/body velden. | ✅ Sessie 127 |
 | DF127-05 | **Briefsjabloon dropdown compleet** — Combineert managed templates (DB) + template_types uit bestaande stappen. 5 ontbrekende keys toegevoegd aan beide label maps (TEMPLATE_TYPE_LABELS + TEMPLATE_KEY_LABELS). | ✅ Sessie 127 |
 | DF122-01 | **Meerdere incasso-workflows** — Pipeline-model bovenop stappen, zodat per cliënt/scenario een aparte workflow gekozen kan worden. Basis gelegd in DF126-01 (20 stappen + categorieën). | 📋 Backlog (basis gelegd) |
-| DF122-02 | **Agent SDK integratie** — Claude Agent SDK als autonome incasso-agent. 50+ tools al gedefinieerd in backend. Wacht op M365 email integratie (M0b). | 📋 Backlog (na M365) |
+| DF122-02 | **AI Orchestrator** — Event bus + orchestrator gebouwd (sessie 129). State machine + LLM hybrid. Auto-draft disabled (kwaliteit). Agent SDK geëvalueerd en uitgesteld naar fase 3 (200+ cases). Custom Python approach voor v1. | ✅ Basis gebouwd (sessie 129), auto-draft disabled |
 | DF122-03 | **M365 email forwarding** — BaseNet forwardt kopieën naar M365, Luxis synct van M365. Parallelle werking: oude zaken op BaseNet, nieuwe op Luxis. Filter zodat ongelinkte mails niet zichtbaar. | 📋 Backlog (met Lisanne) |
 | DF122-04 | **Mailsjablonen-editor** — Email templates van hardcoded Python naar DB verhuizen. WYSIWYG editor in Instellingen zodat Lisanne templates zelf kan aanpassen zonder developer. | 📋 Sessie 124 (uitgesteld uit 123) |
 | DF122-05 | **Documenten tab herordenen** — Bestanden (uploads) bovenaan, document genereren onderaan. Split genereren in brieven vs processtukken. | ✅ Sessie 123 |

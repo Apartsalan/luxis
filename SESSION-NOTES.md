@@ -1,9 +1,47 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 24 april 2026 (sessie 128 — AI banner: uitklapbaar emailbericht + klikbare bronnen)
-**Laatste feature/fix:** Sessie 128 — AI-suggestie banner redesign: uitklapbaar emailbericht, klikbare bronnen
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?)
-**Volgende sessie:** 129 — Visueel testen AI banner op productie + /ultrareview plannen + volgende feature
+**Laatst bijgewerkt:** 29 april 2026 (sessie 129 — Orchestrator + Event Bus + AIDraft model)
+**Laatste feature/fix:** Sessie 129 — Event bus, orchestrator, AIDraft persistent model (BUG-70 fix), auto-draft disabled
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), AI banner visuele test nog niet gedaan
+**Volgende sessie:** 130 — Draft kwaliteit verbeteren + visueel testen AI banner
+
+## Wat er gedaan is (sessie 129 — 29 april 2026) — Orchestrator + Event Bus + AIDraft
+
+### Samenvatting
+Architecturele fundering voor AI-agent gebouwd: event bus, orchestrator, persistent drafts. Auto-draft generatie direct weer uitgeschakeld (kwaliteit nog niet goed genoeg, kost API credits).
+
+1. **Event Bus** (`events.py`) — In-process async pub/sub. Events: EMAIL_CLASSIFIED, PAYMENT_RECEIVED, STEP_CHANGED, DEADLINE_REACHED, TASK_COMPLETED. Singleton pattern, geen externe dependencies.
+2. **Orchestrator** (`orchestrator.py`) — Luistert naar events, triggert acties. EMAIL_CLASSIFIED handler gebouwd maar DISABLED (early return). Per-categorie draft instructies gedefinieerd.
+3. **AIDraft model + migratie** — Persistent opslag voor AI drafts (fixes BUG-70). Status workflow: generated → reviewed → approved → sent / discarded. Migratie `s129a_ai_drafts`.
+4. **Draft service uitgebreid** — `generate_and_persist_draft()`, `get_drafts_for_case()`, `get_draft_by_id()`, `update_draft_status()`.
+5. **Router endpoints** — GET/PATCH/POST voor drafts. Handmatige draft generatie werkt en persisteert.
+6. **Event emission** — `classify_email()` emit EMAIL_CLASSIFIED na classificatie.
+7. **Orchestrator registratie** — `register_handlers()` aangeroepen in scheduler startup.
+8. **Auto-draft DISABLED** — Early return in orchestrator. Infra intact, kan met 1 regel weer aan.
+
+### HARDE REGEL vastgelegd
+- Pipeline stappen op schema (herinnering, aanmaning, sommatie) → mogen auto-verzenden
+- Reactie op inbound email → AI bereidt alles voor, Lisanne keurt goed en verstuurt
+
+### Gewijzigde bestanden
+- `backend/app/ai_agent/events.py` — **NIEUW** — event bus
+- `backend/app/ai_agent/orchestrator.py` — **NIEUW** — event handler
+- `backend/app/ai_agent/models.py` — AIDraft model + DraftStatus enum
+- `backend/app/ai_agent/schemas.py` — AIDraftResponse + AIDraftUpdateRequest
+- `backend/app/ai_agent/draft_service.py` — persist + CRUD functies
+- `backend/app/ai_agent/router.py` — draft endpoints
+- `backend/app/ai_agent/service.py` — event emission na classificatie
+- `backend/app/workflow/scheduler.py` — orchestrator registratie
+- `backend/alembic/versions/s129a_ai_drafts.py` — **NIEUW** — migratie
+
+### Bekende issues
+- Auto-draft uitgeschakeld (kwaliteit onvoldoende)
+- AI banner visuele test nog niet gedaan (Playwright browser lock in sessie)
+- Draft kwaliteit moet verbeteren voor auto-draft weer aan kan
+
+### Volgende sessie
+- Draft kwaliteit verbeteren (betere prompts, context, tone)
+- Visueel testen AI banner op productie (case-2026-00048)
 
 ## Wat er gedaan is (sessie 128 — 24 april 2026) — AI Banner Redesign
 

@@ -318,9 +318,7 @@ async def seed_default_transitions(
     """Seed default transitions for Lisanne's incasso workflow."""
     import json as _json
 
-    steps = await list_pipeline_steps(db, tenant_id, active_only=True)
-    if not steps:
-        steps = await seed_default_steps(db, tenant_id)
+    steps = await seed_default_steps(db, tenant_id)
 
     step_map = {s.name: s.id for s in steps}
 

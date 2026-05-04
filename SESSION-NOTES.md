@@ -1,9 +1,45 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 4 mei 2026 (sessie 130 — Pipeline stappen email preview + ultrareview)
-**Laatste feature/fix:** Sessie 130 — Click-to-expand email preview in Stappen beheren
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), AI banner visuele test nog niet gedaan, pipeline stappen tonen placeholder i.p.v. echte templates
-**Volgende sessie:** 131 — Email templates koppelen aan pipeline stappen (echte templates uit incasso_templates.py)
+**Laatst bijgewerkt:** 4 mei 2026 (sessie 131 — Step Transitions branching workflow)
+**Laatste feature/fix:** Sessie 131 — Branching workflow (step_transitions tabel + UI) voor incasso pipeline
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), AI banner visuele test nog niet gedaan
+**Volgende sessie:** 132 — Unified template editor UI (email + brief templates op 1 plek beheren)
+
+## Wat er gedaan is (sessie 131 — 4 mei 2026) — Step Transitions branching workflow
+
+### Samenvatting
+Incasso pipeline was lineair (sort_order = volgende stap). Nu branching: elke stap kan meerdere uitgangen hebben op basis van trigger (timeout, verweer debiteur, betaling, handmatig). Volledige stack gebouwd: model → migratie → schemas → service → router → frontend hooks → UI.
+
+### Wat er gebouwd is
+1. `StepTransition` model in `backend/app/incasso/models.py` — from_step, to_step, trigger_type, condition (JSON), priority, is_default, label
+2. Alembic migratie `s131a_step_transitions.py` — tabel + RLS policy + indexes
+3. Schemas: TransitionCreate, TransitionUpdate, TransitionResponse in `schemas.py`
+4. Service: CRUD + `seed_default_transitions()` (21 standaard overgangen voor Lisanne's workflow)
+5. Router: 5 endpoints (`GET/POST/PUT/DELETE /api/incasso/transitions` + `POST /seed`)
+6. Frontend hooks: `useStepTransitions`, `useCreateTransition`, `useUpdateTransition`, `useDeleteTransition`, `useSeedTransitions`
+7. Frontend UI: `TransitionsSection` component in expanded step row (onder email preview)
+8. Nieuwe stap "Verweer beantwoorden" (administratief, is_hold_step=true) toegevoegd aan seed data
+
+### Bugs gefixt
+- RLS policy gebruikte `app.current_tenant_id` i.p.v. `app.current_tenant` → 500 errors op transitions endpoints
+- `seed_default_transitions` sloeg step-seeding over als er al 1+ stappen bestonden → geen transitions aangemaakt
+
+### Niet afgerond (→ sessie 132)
+- Unified template editor UI (1 plek om email + brief templates te beheren)
+- Executielogica voor transitions (auto-advance op basis van triggers) — bewust uitgesteld
+
+### Gewijzigde bestanden
+- `backend/app/incasso/models.py` — StepTransition model
+- `backend/app/incasso/schemas.py` — 3 transition schemas
+- `backend/app/incasso/service.py` — CRUD + seed + "Verweer beantwoorden" stap
+- `backend/app/incasso/router.py` — 5 transition endpoints
+- `backend/alembic/versions/s131a_step_transitions.py` — migratie
+- `backend/alembic/env.py` — StepTransition import
+- `frontend/src/hooks/use-incasso.ts` — 5 hooks + StepTransition interface
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — TransitionsSection UI
+
+### Bekende issues
+- Geen
 
 ## Wat er gedaan is (sessie 130 — 4 mei 2026) — Pipeline email preview + ultrareview
 

@@ -60,7 +60,7 @@ def upgrade() -> None:
         """
         CREATE POLICY tenant_isolation_step_transitions
         ON step_transitions
-        USING (tenant_id = current_setting('app.current_tenant_id')::uuid)
+        USING (tenant_id = current_setting('app.current_tenant')::uuid)
         """
     )
 

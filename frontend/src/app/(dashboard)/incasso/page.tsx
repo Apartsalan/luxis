@@ -127,6 +127,7 @@ function StappenTab() {
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "", step_category: "minnelijk", debtor_type: "both", is_terminal: false, is_hold_step: false });
   const [showAddForm, setShowAddForm] = useState(false);
   const [newStep, setNewStep] = useState({ name: "", min_wait_days: 0, max_wait_days: 0, template_type: "", email_subject_template: "", email_body_template: "", step_category: "minnelijk", debtor_type: "both", is_terminal: false, is_hold_step: false });
@@ -209,6 +210,7 @@ function StappenTab() {
 
   const handleStartEdit = (step: PipelineStep) => {
     setEditingId(step.id);
+    setExpandedId(null);
     setEditForm({
       name: step.name,
       min_wait_days: step.min_wait_days,
@@ -328,9 +330,10 @@ function StappenTab() {
                     />
                   ) : (
                     <span
-                      className="cursor-pointer hover:text-primary transition-colors"
-                      onClick={() => handleStartEdit(step)}
+                      className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
+                      onClick={() => setExpandedId(expandedId === step.id ? null : step.id)}
                     >
+                      <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${expandedId === step.id ? "rotate-180" : ""}`} />
                       {step.name}
                     </span>
                   )}
@@ -480,6 +483,37 @@ function StappenTab() {
                   </div>
                 </td>
               </tr>
+              {/* Email preview — shown when expanded (not editing) */}
+              {expandedId === step.id && editingId !== step.id && (
+                <tr className="border-b border-border last:border-0 bg-blue-50/50 dark:bg-blue-900/10">
+                  <td colSpan={8} className="px-6 py-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        <Mail className="h-3.5 w-3.5" />
+                        E-mail sjabloon
+                      </div>
+                      {step.email_subject_template || step.email_body_template ? (
+                        <>
+                          {step.email_subject_template && (
+                            <div>
+                              <span className="text-[11px] font-medium text-muted-foreground">Onderwerp:</span>
+                              <p className="text-sm text-foreground mt-0.5">{step.email_subject_template}</p>
+                            </div>
+                          )}
+                          {step.email_body_template && (
+                            <div>
+                              <span className="text-[11px] font-medium text-muted-foreground">Bericht:</span>
+                              <pre className="mt-0.5 whitespace-pre-wrap text-sm text-foreground bg-background border border-border rounded-md px-3 py-2 max-h-[300px] overflow-y-auto font-sans">{step.email_body_template}</pre>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">Geen e-mail sjabloon ingesteld. Klik op het potloodje om er een toe te voegen.</p>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )}
               {/* Extra fields — shown when editing */}
               {editingId === step.id && (
                 <tr className="border-b border-border last:border-0 bg-muted/20">
@@ -497,11 +531,9 @@ function StappenTab() {
                           <span className="text-[10px] text-muted-foreground">(regeling, wacht op info)</span>
                         </label>
                       </div>
-                      {editForm.template_type && (
-                      <>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                         <Mail className="h-3.5 w-3.5" />
-                        E-mail template (optioneel)
+                        E-mail template
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1">
@@ -523,15 +555,13 @@ function StappenTab() {
                           value={editForm.email_body_template}
                           onChange={(e) => setEditForm((f) => ({ ...f, email_body_template: e.target.value }))}
                           placeholder={"Geachte {{ wederpartij.naam }},\n\nBijgaand treft u aan...\n\nMet vriendelijke groet,\n{{ kantoor.naam }}"}
-                          rows={4}
+                          rows={6}
                           className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20 resize-y"
                         />
                       </div>
                       <p className="text-[11px] text-muted-foreground">
                         Variabelen: {"{{ zaak.zaaknummer }}"}, {"{{ wederpartij.naam }}"}, {"{{ kantoor.naam }}"}, {"{{ schuldeiser.naam }}"}, {"{{ hoofdsom }}"}, {"{{ openstaand }}"}. Leeg = standaard e-mail template.
                       </p>
-                      </>
-                      )}
                     </div>
                   </td>
                 </tr>

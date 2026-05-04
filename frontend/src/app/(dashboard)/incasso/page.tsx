@@ -41,9 +41,14 @@ import {
   useBatchExecute,
   useIncassoQueueCounts,
   useSetVerweer,
+  useStepTransitions,
+  useCreateTransition,
+  useDeleteTransition,
+  useSeedTransitions,
   type PipelineStep,
   type CaseInPipeline,
   type DeadlineStatus,
+  type StepTransition,
 } from "@/hooks/use-incasso";
 import {
   useDocxTemplates,
@@ -483,7 +488,7 @@ function StappenTab() {
                   </div>
                 </td>
               </tr>
-              {/* Email preview — shown when expanded (not editing) */}
+              {/* Email preview + transitions — shown when expanded (not editing) */}
               {expandedId === step.id && editingId !== step.id && (
                 <tr className="border-b border-border last:border-0 bg-blue-50/50 dark:bg-blue-900/10">
                   <td colSpan={8} className="px-6 py-3">
@@ -511,6 +516,7 @@ function StappenTab() {
                         <p className="text-sm text-muted-foreground italic">Geen e-mail sjabloon ingesteld. Klik op het potloodje om er een toe te voegen.</p>
                       )}
                     </div>
+                    <TransitionsSection step={step} allSteps={activeSteps} />
                   </td>
                 </tr>
               )}
@@ -717,6 +723,216 @@ function StappenTab() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ── Transitions Section (within expanded step row) ─────────────────────
+
+const TRIGGER_LABELS: Record<string, string> = {
+  timeout: "Timeout (wachttijd)",
+  debtor_response: "Verweer debiteur",
+  manual: "Handmatig",
+  payment: "Betaling",
+};
+
+const TRIGGER_ICONS: Record<string, string> = {
+  timeout: "⏱",
+  debtor_response: "💬",
+  manual: "🔧",
+  payment: "💰",
+};
+
+function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: PipelineStep[] }) {
+  const { data: transitions, isLoading } = useStepTransitions(step.id);
+  const createTransition = useCreateTransition();
+  const deleteTransition = useDeleteTransition();
+  const seedTransitions = useSeedTransitions();
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTransition, setNewTransition] = useState({
+    trigger_type: "timeout" as string,
+    to_step_id: "",
+    days: 14,
+    is_default: false,
+    label: "",
+  });
+
+  const handleAdd = () => {
+    if (!newTransition.to_step_id) {
+      toast.error("Selecteer een doelstap");
+      return;
+    }
+    const condition = newTransition.trigger_type === "timeout" ? { days: newTransition.days } : null;
+    createTransition.mutate(
+      {
+        from_step_id: step.id,
+        to_step_id: newTransition.to_step_id,
+        trigger_type: newTransition.trigger_type,
+        condition,
+        is_default: newTransition.is_default,
+        label: newTransition.label.trim() || null,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Overgang toegevoegd");
+          setShowAddForm(false);
+          setNewTransition({ trigger_type: "timeout", to_step_id: "", days: 14, is_default: false, label: "" });
+        },
+      }
+    );
+  };
+
+  const handleDelete = async (t: StepTransition) => {
+    if (!await confirm({ title: "Overgang verwijderen", description: `"${t.label || t.to_step_name}" verwijderen?`, variant: "destructive", confirmText: "Verwijderen" })) return;
+    deleteTransition.mutate(t.id, {
+      onSuccess: () => toast.success("Overgang verwijderd"),
+    });
+  };
+
+  const otherSteps = allSteps.filter((s) => s.id !== step.id);
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/50">
+      {ConfirmDialog}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <ArrowRight className="h-3.5 w-3.5" />
+          Overgangen vanuit deze stap
+        </div>
+        {(!transitions || transitions.length === 0) && !isLoading && (
+          <button
+            onClick={() => seedTransitions.mutate(undefined, { onSuccess: () => toast.success("Standaard overgangen aangemaakt") })}
+            disabled={seedTransitions.isPending}
+            className="text-xs text-primary hover:underline disabled:opacity-50"
+          >
+            {seedTransitions.isPending ? "Bezig..." : "Standaard overgangen aanmaken"}
+          </button>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-2">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Laden...</span>
+        </div>
+      ) : transitions && transitions.length > 0 ? (
+        <div className="space-y-1">
+          {transitions.map((t) => (
+            <div key={t.id} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 group">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-base">{TRIGGER_ICONS[t.trigger_type] || "→"}</span>
+                <span className="text-muted-foreground">
+                  {t.label || TRIGGER_LABELS[t.trigger_type]}
+                  {t.condition?.days && ` (${t.condition.days}d)`}
+                </span>
+                <span className="text-muted-foreground">→</span>
+                <span className="font-medium text-foreground">{t.to_step_name}</span>
+                {t.is_default && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-primary/10 text-primary rounded">standaard</span>
+                )}
+              </div>
+              <button
+                onClick={() => handleDelete(t)}
+                className="opacity-0 group-hover:opacity-100 rounded-md p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-all"
+                title="Verwijderen"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic py-1">Geen overgangen geconfigureerd.</p>
+      )}
+
+      {/* Add form */}
+      {showAddForm ? (
+        <div className="mt-2 p-3 border border-border rounded-lg bg-background space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-0.5">Trigger</label>
+              <select
+                value={newTransition.trigger_type}
+                onChange={(e) => setNewTransition((f) => ({ ...f, trigger_type: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+              >
+                {Object.entries(TRIGGER_LABELS).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-muted-foreground mb-0.5">Doelstap</label>
+              <select
+                value={newTransition.to_step_id}
+                onChange={(e) => setNewTransition((f) => ({ ...f, to_step_id: e.target.value }))}
+                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+              >
+                <option value="">— Kies stap —</option>
+                {otherSteps.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {newTransition.trigger_type === "timeout" && (
+            <div className="w-32">
+              <label className="block text-[11px] font-medium text-muted-foreground mb-0.5">Wachtdagen</label>
+              <input
+                type="number"
+                min={1}
+                value={newTransition.days}
+                onChange={(e) => setNewTransition((f) => ({ ...f, days: parseInt(e.target.value) || 1 }))}
+                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={newTransition.is_default}
+                onChange={(e) => setNewTransition((f) => ({ ...f, is_default: e.target.checked }))}
+                className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <span className="text-xs text-foreground">Standaard overgang</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Label (optioneel)"
+              value={newTransition.label}
+              onChange={(e) => setNewTransition((f) => ({ ...f, label: e.target.value }))}
+              className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={handleAdd}
+              disabled={createTransition.isPending}
+              className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {createTransition.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              Toevoegen
+            </button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          <Plus className="h-3 w-3" />
+          Overgang toevoegen
+        </button>
+      )}
     </div>
   );
 }

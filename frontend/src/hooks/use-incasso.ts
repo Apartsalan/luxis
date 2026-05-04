@@ -107,6 +107,22 @@ export interface QueueCounts {
   action_required: number;
 }
 
+export interface StepTransition {
+  id: string;
+  from_step_id: string;
+  from_step_name: string;
+  to_step_id: string;
+  to_step_name: string;
+  trigger_type: "timeout" | "debtor_response" | "manual" | "payment";
+  condition: { days?: number } | null;
+  priority: number;
+  is_default: boolean;
+  label: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Pipeline Steps Hooks ─────────────────────────────────────────────────
 
 export function useIncassoPipelineSteps(activeOnly = true) {
@@ -380,6 +396,118 @@ export function useSetVerweer() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incasso-pipeline"] });
       queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+  });
+}
+
+// ── Step Transitions Hooks ──────────────────────────────────────────────
+
+export function useStepTransitions(fromStepId?: string) {
+  return useQuery<StepTransition[]>({
+    queryKey: ["step-transitions", fromStepId],
+    queryFn: async () => {
+      const params = fromStepId ? `?from_step_id=${fromStepId}` : "";
+      const res = await api(`/api/incasso/transitions${params}`);
+      if (!res.ok) throw new Error("Fout bij ophalen overgangen");
+      return res.json();
+    },
+    enabled: !!fromStepId,
+  });
+}
+
+export function useCreateTransition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      from_step_id: string;
+      to_step_id: string;
+      trigger_type: string;
+      condition?: { days?: number } | null;
+      priority?: number;
+      is_default?: boolean;
+      label?: string | null;
+    }) => {
+      const res = await api("/api/incasso/transitions", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Fout bij aanmaken overgang");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["step-transitions"] });
+    },
+  });
+}
+
+export function useUpdateTransition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...data
+    }: {
+      id: string;
+      to_step_id?: string;
+      trigger_type?: string;
+      condition?: { days?: number } | null;
+      priority?: number;
+      is_default?: boolean;
+      label?: string | null;
+      is_active?: boolean;
+    }) => {
+      const res = await api(`/api/incasso/transitions/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Fout bij bijwerken overgang");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["step-transitions"] });
+    },
+  });
+}
+
+export function useDeleteTransition() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api(`/api/incasso/transitions/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Fout bij verwijderen overgang");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["step-transitions"] });
+    },
+  });
+}
+
+export function useSeedTransitions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await api("/api/incasso/transitions/seed", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Fout bij aanmaken standaard overgangen");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["step-transitions"] });
     },
   });
 }

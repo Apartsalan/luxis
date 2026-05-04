@@ -15,7 +15,7 @@ from app.documents.pdf_service import docx_to_pdf
 from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
 from app.email.templates import _render_base, document_sent
-from app.incasso.models import CaseStepHistory, IncassoPipelineStep
+from app.incasso.models import CaseStepHistory, IncassoPipelineStep, StepTransition
 from app.incasso.schemas import (
     BatchActionResult,
     BatchBlocker,
@@ -28,6 +28,9 @@ from app.incasso.schemas import (
     PipelineStepResponse,
     PipelineStepUpdate,
     QueueCounts,
+    TransitionCreate,
+    TransitionResponse,
+    TransitionUpdate,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
 from app.workflow.models import WorkflowTask
@@ -156,10 +159,11 @@ async def seed_default_steps(
         {"name": "Wacht op informatie", "sort_order": 15, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
         {"name": "Procedure voorgesteld aan cliënt", "sort_order": 16, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
         {"name": "Cliënt akkoord procedure", "sort_order": 17, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
-        {"name": "On hold", "sort_order": 18, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
+        {"name": "Verweer beantwoorden", "sort_order": 18, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
+        {"name": "On hold", "sort_order": 19, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
         # Afsluiting
-        {"name": "Betaald", "sort_order": 19, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
-        {"name": "Afgesloten", "sort_order": 20, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
+        {"name": "Betaald", "sort_order": 20, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
+        {"name": "Afgesloten", "sort_order": 21, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
     ]
 
     max_order = max((s.sort_order for s in existing), default=0)
@@ -179,6 +183,208 @@ async def seed_default_steps(
             await db.refresh(step)
 
     return list(existing) + new_steps
+
+
+# ── Step Transition CRUD ──────────────────────────────────────────────────
+
+
+async def list_transitions(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    from_step_id: uuid.UUID | None = None,
+    active_only: bool = True,
+) -> list[StepTransition]:
+    """List transitions, optionally filtered by source step."""
+
+    query = select(StepTransition).where(StepTransition.tenant_id == tenant_id)
+    if from_step_id:
+        query = query.where(StepTransition.from_step_id == from_step_id)
+    if active_only:
+        query = query.where(StepTransition.is_active.is_(True))
+    query = query.order_by(StepTransition.priority)
+    result = await db.execute(query)
+    return list(result.scalars().all())
+
+
+async def get_transition_by_id(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    transition_id: uuid.UUID,
+) -> StepTransition:
+    """Get a single transition by ID."""
+    result = await db.execute(
+        select(StepTransition).where(
+            StepTransition.tenant_id == tenant_id,
+            StepTransition.id == transition_id,
+        )
+    )
+    t = result.scalar_one_or_none()
+    if not t:
+        raise NotFoundError("Overgang niet gevonden")
+    return t
+
+
+async def create_transition(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    data: TransitionCreate,
+) -> StepTransition:
+    """Create a new step transition."""
+    import json as _json
+
+    await get_pipeline_step_by_id(db, tenant_id, data.from_step_id)
+    await get_pipeline_step_by_id(db, tenant_id, data.to_step_id)
+
+    t = StepTransition(
+        tenant_id=tenant_id,
+        from_step_id=data.from_step_id,
+        to_step_id=data.to_step_id,
+        trigger_type=data.trigger_type,
+        condition=_json.dumps(data.condition) if data.condition else None,
+        priority=data.priority,
+        is_default=data.is_default,
+        label=data.label,
+    )
+    db.add(t)
+    await db.flush()
+    await db.refresh(t)
+    return t
+
+
+async def update_transition(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    transition_id: uuid.UUID,
+    data: TransitionUpdate,
+) -> StepTransition:
+    """Update an existing transition."""
+    import json as _json
+
+    t = await get_transition_by_id(db, tenant_id, transition_id)
+    updates = data.model_dump(exclude_unset=True)
+    if "condition" in updates:
+        updates["condition"] = _json.dumps(updates["condition"]) if updates["condition"] else None
+    for field, value in updates.items():
+        setattr(t, field, value)
+    await db.flush()
+    await db.refresh(t)
+    return t
+
+
+async def delete_transition(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    transition_id: uuid.UUID,
+) -> None:
+    """Hard-delete a transition."""
+    t = await get_transition_by_id(db, tenant_id, transition_id)
+    await db.delete(t)
+    await db.flush()
+
+
+def transition_to_response(t: StepTransition) -> TransitionResponse:
+    """Convert StepTransition model to response schema."""
+    import json as _json
+
+    condition = None
+    if t.condition:
+        try:
+            condition = _json.loads(t.condition)
+        except (ValueError, TypeError):
+            condition = None
+
+    return TransitionResponse(
+        id=t.id,
+        from_step_id=t.from_step_id,
+        from_step_name=t.from_step.name if t.from_step else "Onbekend",
+        to_step_id=t.to_step_id,
+        to_step_name=t.to_step.name if t.to_step else "Onbekend",
+        trigger_type=t.trigger_type,
+        condition=condition,
+        priority=t.priority,
+        is_default=t.is_default,
+        label=t.label,
+        is_active=t.is_active,
+        created_at=t.created_at,
+        updated_at=t.updated_at,
+    )
+
+
+async def seed_default_transitions(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> list[StepTransition]:
+    """Seed default transitions for Lisanne's incasso workflow."""
+    import json as _json
+
+    steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+    if not steps:
+        steps = await seed_default_steps(db, tenant_id)
+
+    step_map = {s.name: s.id for s in steps}
+
+    existing = await list_transitions(db, tenant_id, active_only=False)
+    existing_keys = {
+        (t.from_step_id, t.to_step_id, t.trigger_type) for t in existing
+    }
+
+    defaults = [
+        # Main escalation path (timeout)
+        ("14-dagenbrief", "Eerste sommatie", "timeout", {"days": 14}, True, "WIK-termijn verstreken"),
+        ("Eerste sommatie", "Tweede sommatie", "timeout", {"days": 7}, True, "Geen reactie na 7 dagen"),
+        ("Tweede sommatie", "Ingebrekestelling", "timeout", {"days": 14}, True, "Geen reactie na 14 dagen"),
+        ("Ingebrekestelling", "Laatste sommatie (ank. verzoekschrift)", "timeout", {"days": 14}, True, "Geen reactie na 14 dagen"),
+        ("Laatste sommatie (ank. verzoekschrift)", "Verzoekschrift faillissement", "timeout", {"days": 14}, True, "Geen reactie → faillissementsrekest"),
+        ("Laatste sommatie (ank. dagvaarding)", "Dagvaarding", "timeout", {"days": 14}, True, "Geen reactie → dagvaarding"),
+        # Debtor response → verweer
+        ("Eerste sommatie", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
+        ("Tweede sommatie", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
+        ("Ingebrekestelling", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
+        ("Laatste sommatie (ank. verzoekschrift)", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
+        ("Laatste sommatie (ank. dagvaarding)", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
+        # Payment → betaald
+        ("Eerste sommatie", "Betaald", "payment", None, False, "Betaling ontvangen"),
+        ("Tweede sommatie", "Betaald", "payment", None, False, "Betaling ontvangen"),
+        ("Ingebrekestelling", "Betaald", "payment", None, False, "Betaling ontvangen"),
+        ("Laatste sommatie (ank. verzoekschrift)", "Betaald", "payment", None, False, "Betaling ontvangen"),
+        ("Laatste sommatie (ank. dagvaarding)", "Betaald", "payment", None, False, "Betaling ontvangen"),
+        ("Verzoekschrift faillissement", "Betaald", "payment", None, False, "Betaling ontvangen"),
+        # Manual detours
+        ("Eerste sommatie", "Regeling voorgesteld", "manual", None, False, "Regeling voorstellen"),
+        ("Tweede sommatie", "Regeling voorgesteld", "manual", None, False, "Regeling voorstellen"),
+        ("Ingebrekestelling", "Regeling voorgesteld", "manual", None, False, "Regeling voorstellen"),
+        ("Regeling voorgesteld", "Betalingsregeling getroffen", "manual", None, True, "Regeling geaccepteerd"),
+    ]
+
+    new_transitions = []
+    for from_name, to_name, trigger, cond, is_def, lbl in defaults:
+        from_id = step_map.get(from_name)
+        to_id = step_map.get(to_name)
+        if not from_id or not to_id:
+            continue
+        if (from_id, to_id, trigger) in existing_keys:
+            continue
+
+        t = StepTransition(
+            tenant_id=tenant_id,
+            from_step_id=from_id,
+            to_step_id=to_id,
+            trigger_type=trigger,
+            condition=_json.dumps(cond) if cond else None,
+            priority=len(new_transitions),
+            is_default=is_def,
+            label=lbl,
+        )
+        db.add(t)
+        new_transitions.append(t)
+
+    if new_transitions:
+        await db.flush()
+        for t in new_transitions:
+            await db.refresh(t)
+
+    return list(existing) + new_transitions
 
 
 # ── Pipeline Step Response Helper ─────────────────────────────────────────

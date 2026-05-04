@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import User
 from app.cases.models import Case
 from app.database import get_db
-from app.shared.exceptions import NotFoundError
 from app.dependencies import get_current_user
 from app.incasso import service
 from app.incasso.schemas import (
@@ -25,7 +24,11 @@ from app.incasso.schemas import (
     PipelineStepUpdate,
     QueueCounts,
     SetVerweerRequest,
+    TransitionCreate,
+    TransitionResponse,
+    TransitionUpdate,
 )
+from app.shared.exceptions import NotFoundError
 
 router = APIRouter(prefix="/api/incasso", tags=["incasso"])
 
@@ -96,6 +99,77 @@ async def seed_pipeline_steps(
     """Seed default incasso pipeline steps (if none exist)."""
     steps = await service.seed_default_steps(db, current_user.tenant_id)
     return [service.step_to_response(s) for s in steps]
+
+
+# ── Step Transitions CRUD ─────────────────────────────────────────────────
+
+
+@router.get("/transitions", response_model=list[TransitionResponse])
+async def list_transitions(
+    from_step_id: uuid.UUID | None = Query(default=None),
+    active_only: bool = Query(default=True),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List step transitions, optionally filtered by source step."""
+    transitions = await service.list_transitions(
+        db, current_user.tenant_id, from_step_id=from_step_id, active_only=active_only
+    )
+    return [service.transition_to_response(t) for t in transitions]
+
+
+@router.post(
+    "/transitions",
+    response_model=TransitionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_transition(
+    data: TransitionCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new step transition."""
+    t = await service.create_transition(db, current_user.tenant_id, data)
+    return service.transition_to_response(t)
+
+
+@router.put("/transitions/{transition_id}", response_model=TransitionResponse)
+async def update_transition(
+    transition_id: uuid.UUID,
+    data: TransitionUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an existing step transition."""
+    t = await service.update_transition(db, current_user.tenant_id, transition_id, data)
+    return service.transition_to_response(t)
+
+
+@router.delete(
+    "/transitions/{transition_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_transition(
+    transition_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a step transition."""
+    await service.delete_transition(db, current_user.tenant_id, transition_id)
+
+
+@router.post(
+    "/transitions/seed",
+    response_model=list[TransitionResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def seed_transitions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Seed default transitions for the incasso workflow."""
+    transitions = await service.seed_default_transitions(db, current_user.tenant_id)
+    return [service.transition_to_response(t) for t in transitions]
 
 
 # ── Pipeline Overview ─────────────────────────────────────────────────────

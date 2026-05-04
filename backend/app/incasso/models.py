@@ -56,6 +56,44 @@ class IncassoPipelineStep(TenantBase):
     )
 
 
+class StepTransition(TenantBase):
+    """Defines a conditional transition between two pipeline steps."""
+
+    __tablename__ = "step_transitions"
+
+    from_step_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("incasso_pipeline_steps.id"), nullable=False, index=True
+    )
+    to_step_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("incasso_pipeline_steps.id"), nullable=False
+    )
+    trigger_type: Mapped[str] = mapped_column(
+        String(30), nullable=False
+    )
+    condition: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )
+    priority: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    is_default: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+    label: Mapped[str | None] = mapped_column(
+        String(100), nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, server_default="true"
+    )
+
+    from_step: Mapped["IncassoPipelineStep"] = relationship(
+        "IncassoPipelineStep", foreign_keys=[from_step_id], lazy="selectin"
+    )
+    to_step: Mapped["IncassoPipelineStep"] = relationship(
+        "IncassoPipelineStep", foreign_keys=[to_step_id], lazy="selectin"
+    )
+
+
 class CaseStepHistory(TenantBase):
     """Tracks every step entry/exit for a case — audit trail for the pipeline."""
 

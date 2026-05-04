@@ -3,8 +3,9 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ── Pipeline Step ─────────────────────────────────────────────────────────
 
@@ -55,6 +56,55 @@ class PipelineStepResponse(BaseModel):
     debtor_type: str = "both"
     is_terminal: bool = False
     is_hold_step: bool = False
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Step Transitions ─────────────────────────────────────────────────────
+
+
+class TransitionCreate(BaseModel):
+    from_step_id: uuid.UUID
+    to_step_id: uuid.UUID
+    trigger_type: str = Field(..., pattern=r"^(timeout|debtor_response|manual|payment)$")
+    condition: dict[str, Any] | None = None
+    priority: int = Field(default=0, ge=0)
+    is_default: bool = False
+    label: str | None = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_condition(self) -> "TransitionCreate":
+        if self.trigger_type == "timeout" and (not self.condition or "days" not in self.condition):
+            raise ValueError("Timeout transitions require condition.days")
+        return self
+
+
+class TransitionUpdate(BaseModel):
+    to_step_id: uuid.UUID | None = None
+    trigger_type: str | None = Field(
+        default=None, pattern=r"^(timeout|debtor_response|manual|payment)$"
+    )
+    condition: dict[str, Any] | None = None
+    priority: int | None = Field(default=None, ge=0)
+    is_default: bool | None = None
+    label: str | None = Field(default=None, max_length=100)
+    is_active: bool | None = None
+
+
+class TransitionResponse(BaseModel):
+    id: uuid.UUID
+    from_step_id: uuid.UUID
+    from_step_name: str
+    to_step_id: uuid.UUID
+    to_step_name: str
+    trigger_type: str
+    condition: dict[str, Any] | None = None
+    priority: int
+    is_default: bool
+    label: str | None = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 29 april 2026 (sessie 129 — Orchestrator + Event Bus + AIDraft model, BUG-70 fix)
+**Laatst bijgewerkt:** 4 mei 2026 (sessie 130 — Pipeline email preview + ultrareview)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

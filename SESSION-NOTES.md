@@ -1,9 +1,36 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 29 april 2026 (sessie 129 — Orchestrator + Event Bus + AIDraft model)
-**Laatste feature/fix:** Sessie 129 — Event bus, orchestrator, AIDraft persistent model (BUG-70 fix), auto-draft disabled
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), AI banner visuele test nog niet gedaan
-**Volgende sessie:** 130 — Draft kwaliteit verbeteren + visueel testen AI banner
+**Laatst bijgewerkt:** 4 mei 2026 (sessie 130 — Pipeline stappen email preview + ultrareview)
+**Laatste feature/fix:** Sessie 130 — Click-to-expand email preview in Stappen beheren
+**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), AI banner visuele test nog niet gedaan, pipeline stappen tonen placeholder i.p.v. echte templates
+**Volgende sessie:** 131 — Email templates koppelen aan pipeline stappen (echte templates uit incasso_templates.py)
+
+## Wat er gedaan is (sessie 130 — 4 mei 2026) — Pipeline email preview + ultrareview
+
+### Samenvatting
+Twee taken: (1) /ultrareview op 3 modules gelanceerd — alle 3 gecrasht door server-side rate limiting (GitHub issue ingediend). (2) Click-to-expand email preview gebouwd in Stappen beheren. Maar: placeholder tekst i.p.v. echte templates getoond. Kernprobleem voor sessie 131: de 25 email templates uit `incasso_templates.py` moeten zichtbaar worden per pipeline stap.
+
+### Wat er gebouwd is
+1. **Click-to-expand email preview** — Pipeline stappen in "Stappen beheren" zijn klikbaar. Klik op een stap → toont email onderwerp + body preview onder de rij (blauwe achtergrond, chevron animatie).
+2. **Email template velden altijd zichtbaar in edit mode** — Voorheen alleen bij bepaalde template types, nu altijd.
+3. **Ultrareview branches** — 3 branches aangemaakt voor scoped reviews (ai-agent, financial, email). Alle reviews gecrasht door rate limiting. Branches opgeruimd.
+4. **GitHub issue ingediend** — Bug report voor ultrareview rate limiting + credit restore verzoek.
+
+### Niet afgerond (→ sessie 131)
+- Pipeline stappen tonen placeholder tekst, niet de echte email templates uit `incasso_templates.py`
+- Slechts 6 pipeline stappen actief, maar 25 email templates bestaan
+- Preview UX moet ontworpen worden: templates zijn dynamisch (case context nodig), hoe toon je dat in settings?
+- AI draft kwaliteit verbeteren (oorspronkelijk sessie 130 doel, niet gestart)
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — click-to-expand preview, chevron, email preview row
+- `LUXIS-ROADMAP.md` — updates
+- `SESSION-NOTES.md` — sessie 130 entry
+
+### Bekende issues
+- Ultrareview 3 credits verloren door server crash (GitHub issue open)
+- Pipeline stappen email preview toont placeholder, niet echte templates
+- AI banner visuele test nog steeds niet gedaan
 
 ## Wat er gedaan is (sessie 129 — 29 april 2026) — Orchestrator + Event Bus + AIDraft
 

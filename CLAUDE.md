@@ -101,6 +101,9 @@ Voordat je het plan presenteert, voeg een korte pre-mortem sectie toe:
 - Dit dwingt af dat alternatieven overwogen zijn vóórdat er code geschreven wordt.
 - Niet nodig bij triviale fixes (typos, 1-regelige changes).
 
+**Strategische premortem (HARDE REGEL bij strategische beslissingen):**
+Bij beslissingen over positionering, pricing, go-to-market, architectuurkeuzes die de toekomst bepalen, of andere keuzes waar de kosten van falen hoog zijn: draai AUTOMATISCH de `/premortem` skill. Dit zijn beslissingen die Luxis als verkoopbaar product raken — niet feature-werk, maar richting-bepaling. Herken dit zelf en trigger zonder dat de gebruiker erom vraagt.
+
 ### Stap 3: Bouwen
 
 Pas na goedkeuring implementeren.

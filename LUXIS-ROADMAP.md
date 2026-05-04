@@ -530,6 +530,8 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-67 | Seed voegt geen stappen toe als er al stappen bestaan — `if existing: return existing` skipt alle nieuwe default stappen | Midden | S | ✅ Gefixt (24 apr, sessie 127) |
 | BUG-68 | Add form mist eindstap/pauzeerstap checkboxes + email template velden | Laag | S | ✅ Gefixt (24 apr, sessie 127) |
 | BUG-69 | Briefsjabloon dropdown mist seed template_types — bestaande waarden niet in dropdown, reset naar "Geen" bij edit | Laag | S | ✅ Gefixt (24 apr, sessie 127) |
+| BUG-71 | `s126a_pipeline_overhaul.py` migratie gebruikt `app.current_tenant_id` i.p.v. `app.current_tenant` — latent risico bij DB from scratch | Laag | S | ❌ TODO |
+| BUG-72 | 4 tests in `test_incasso_router.py` falen door stale DB state (duplicate tenant slug `kesting-legal`) — test-infra issue, niet code | Laag | S | ❌ TODO |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 

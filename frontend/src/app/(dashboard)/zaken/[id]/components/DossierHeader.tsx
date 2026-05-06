@@ -41,7 +41,7 @@ import {
 import type { WorkflowStatus, WorkflowTransition } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
-import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
+import { useIncassoPipelineSteps, useGenerateDraftForCase } from "@/hooks/use-incasso";
 import type { PipelineStep } from "@/hooks/use-incasso";
 import { useUpdateCase } from "@/hooks/use-cases";
 import type { CaseDetail } from "@/hooks/use-cases";
@@ -142,6 +142,7 @@ export default function DossierHeader({
   // DF2-09: Pipeline step selector for incasso cases
   const { data: pipelineSteps } = useIncassoPipelineSteps(true);
   const updateCase = useUpdateCase();
+  const generateDraft = useGenerateDraftForCase();
   const activeSteps = pipelineSteps?.filter((s: PipelineStep) => s.is_active) ?? [];
 
   const handleStepChange = async (stepId: string) => {
@@ -296,7 +297,7 @@ export default function DossierHeader({
 
           {/* DF2-09: Pipeline step selector */}
           {activeSteps.length > 0 && (
-            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border">
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border flex-wrap">
               <span className="text-xs text-muted-foreground whitespace-nowrap">
                 Incassostap:
               </span>
@@ -313,6 +314,25 @@ export default function DossierHeader({
                   </option>
                 ))}
               </select>
+              {zaak.incasso_step_id && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const r = await generateDraft.mutateAsync(zaak.id);
+                      toast.success(r.message || "Concept klaargezet in Taken");
+                    } catch (e) {
+                      const msg = e instanceof Error ? e.message : "Fout bij genereren concept";
+                      toast.error(msg);
+                    }
+                  }}
+                  disabled={generateDraft.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 text-primary px-3 py-1.5 text-xs font-medium hover:bg-primary/20 disabled:opacity-50"
+                  title="AI genereert concept-email voor de huidige stap"
+                >
+                  {generateDraft.isPending ? "Bezig..." : "Concept genereren"}
+                </button>
+              )}
             </div>
           )}
 

@@ -246,6 +246,37 @@ export function useSeedPipelineSteps() {
   });
 }
 
+// ── Manual draft trigger (sessie 133) ────────────────────────────────────
+
+export interface GenerateDraftResponse {
+  draft_id: string;
+  case_id: string;
+  subject: string;
+  model_used: string | null;
+  status: string;
+  message: string;
+}
+
+export function useGenerateDraftForCase() {
+  const queryClient = useQueryClient();
+  return useMutation<GenerateDraftResponse, Error, string>({
+    mutationFn: async (caseId: string) => {
+      const res = await api(`/api/incasso/cases/${caseId}/generate-draft`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Fout bij genereren concept");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-drafts"] });
+    },
+  });
+}
+
 // ── Pipeline Overview Hook ───────────────────────────────────────────────
 
 export function useIncassoPipeline() {

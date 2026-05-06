@@ -298,3 +298,51 @@ async def batch_execute(
         data.auto_assign_step,
         data.send_email,
     )
+
+
+# ── Manual draft trigger (sessie 133) ─────────────────────────────────────
+
+
+@router.post("/cases/{case_id}/generate-draft", status_code=status.HTTP_201_CREATED)
+async def generate_draft_for_current_step(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Genereer handmatig een AI-draft voor de huidige stap van een dossier.
+
+    Werkt altijd, ongeacht tenant.pipeline_auto_drafts_enabled flag. De draft
+    wordt opgeslagen in `ai_drafts` en er komt een task in `/taken` queue.
+    """
+    from app.incasso.automation_service import generate_draft_for_step
+
+    case = (await db.execute(
+        select(Case).where(
+            Case.tenant_id == current_user.tenant_id,
+            Case.id == case_id,
+        )
+    )).scalar_one_or_none()
+    if not case:
+        raise NotFoundError("Dossier niet gevonden")
+    if not case.incasso_step_id:
+        raise NotFoundError("Dossier heeft geen actieve incasso-stap")
+
+    # Voor manual trigger: target_step = huidige stap (genereer draft voor wat NU staat)
+    draft = await generate_draft_for_step(
+        db,
+        tenant_id=current_user.tenant_id,
+        case_id=case_id,
+        target_step_id=case.incasso_step_id,
+        rule_match=None,
+        create_workflow_task=True,
+    )
+    await db.commit()
+
+    return {
+        "draft_id": str(draft.id),
+        "case_id": str(case_id),
+        "subject": draft.subject,
+        "model_used": draft.model_used,
+        "status": draft.status,
+        "message": "Concept klaargezet in /taken voor review.",
+    }

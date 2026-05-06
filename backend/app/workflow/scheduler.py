@@ -561,6 +561,83 @@ async def daily_installment_overdue_check() -> None:
         logger.exception("Scheduler: installment overdue check failed")
 
 
+async def daily_pipeline_auto_drafts() -> None:
+    """Daily job: evalueer timeout-rules + genereer AI-drafts per tenant.
+
+    Sessie 133. Alleen tenants met `pipeline_auto_drafts_enabled=true` worden
+    verwerkt. Per tenant max DAILY_DRAFT_RATE_LIMIT drafts (sanity guard).
+    Manual trigger via endpoint blijft altijd werken — deze flag stuurt alleen
+    de batch-modus aan.
+    """
+    from sqlalchemy import text as _sql_text
+
+    from app.auth.models import Tenant
+    from app.incasso.automation_service import (
+        DAILY_DRAFT_RATE_LIMIT,
+        count_drafts_today,
+        evaluate_timeout_rules,
+        generate_draft_for_step,
+    )
+
+    logger.info("Scheduler: starting daily pipeline auto-drafts")
+    try:
+        async with async_session() as session:
+            tenants_result = await session.execute(
+                select(Tenant).where(
+                    Tenant.is_active.is_(True),
+                    Tenant.pipeline_auto_drafts_enabled.is_(True),
+                )
+            )
+            tenants = list(tenants_result.scalars().all())
+            if not tenants:
+                logger.info("Scheduler: pipeline auto-drafts — geen tenants met flag aan")
+                return
+
+            total_drafts = 0
+            for tenant in tenants:
+                await session.execute(_sql_text(f"SET app.current_tenant = '{tenant.id}'"))
+                already_today = await count_drafts_today(session, tenant.id)
+                budget = max(0, DAILY_DRAFT_RATE_LIMIT - already_today)
+                if budget <= 0:
+                    logger.warning(
+                        "Scheduler: tenant %s heeft daily-draft limiet bereikt",
+                        tenant.name,
+                    )
+                    continue
+
+                matches = await evaluate_timeout_rules(session, tenant.id)
+                generated = 0
+                for m in matches[:budget]:
+                    try:
+                        await generate_draft_for_step(
+                            session,
+                            tenant_id=tenant.id,
+                            case_id=m.case_id,
+                            target_step_id=m.to_step_id,
+                            rule_match=m,
+                            create_workflow_task=True,
+                        )
+                        await session.commit()
+                        generated += 1
+                    except Exception:
+                        await session.rollback()
+                        logger.exception(
+                            "Scheduler: draft-generatie faalde voor case %s (tenant %s)",
+                            m.case_id, tenant.name,
+                        )
+                logger.info(
+                    "Scheduler: tenant=%s matches=%d drafts_generated=%d",
+                    tenant.name, len(matches), generated,
+                )
+                total_drafts += generated
+            logger.info(
+                "Scheduler: pipeline auto-drafts — %d tenants, %d drafts gegenereerd",
+                len(tenants), total_drafts,
+            )
+    except Exception:
+        logger.exception("Scheduler: pipeline auto-drafts faalde")
+
+
 def start_scheduler() -> None:
     """Start the APScheduler with daily + periodic jobs."""
     if scheduler.running:
@@ -599,6 +676,15 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=30),
         id="daily_installment_overdue_check",
         name="Mark overdue payment arrangement installments",
+        replace_existing=True,
+    )
+
+    # Daily at 08:00 UTC: incasso pipeline auto-drafts (alleen tenants met flag aan).
+    scheduler.add_job(
+        daily_pipeline_auto_drafts,
+        CronTrigger(hour=8, minute=0),
+        id="daily_pipeline_auto_drafts",
+        name="Generate incasso pipeline AI drafts (per-tenant flag)",
         replace_existing=True,
     )
 

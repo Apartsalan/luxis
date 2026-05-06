@@ -36,6 +36,11 @@ class Tenant(Base, TimestampMixin):
         server_default="{}",
         default=list,
     )
+    # Sessie 133: feature flag voor automatische AI-drafts via daily scheduler.
+    # Default false — manual trigger werkt altijd, ongeacht deze flag.
+    pipeline_auto_drafts_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
 
     users: Mapped[list["User"]] = relationship("User", back_populates="tenant")
 

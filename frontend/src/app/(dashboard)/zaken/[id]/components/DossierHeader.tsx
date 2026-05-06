@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -143,6 +144,7 @@ export default function DossierHeader({
   const { data: pipelineSteps } = useIncassoPipelineSteps(true);
   const updateCase = useUpdateCase();
   const generateDraft = useGenerateDraftForCase();
+  const router = useRouter();
   const activeSteps = pipelineSteps?.filter((s: PipelineStep) => s.is_active) ?? [];
 
   const handleStepChange = async (stepId: string) => {
@@ -320,7 +322,9 @@ export default function DossierHeader({
                   onClick={async () => {
                     try {
                       const r = await generateDraft.mutateAsync(zaak.id);
-                      toast.success(r.message || "Concept klaargezet in Taken");
+                      toast.success("Concept klaar — opent voor review");
+                      // Open de compose-dialog direct met de nieuwe draft
+                      router.replace(`/zaken/${zaak.id}?draft=${r.draft_id}`);
                     } catch (e) {
                       const msg = e instanceof Error ? e.message : "Fout bij genereren concept";
                       toast.error(msg);

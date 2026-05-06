@@ -1,13 +1,12 @@
-Start een nieuwe werksessie. Lees ALLEEN de essentiële bestanden om snel op snelheid te komen.
+Start een nieuwe werksessie.
 
 Stappen:
 
-1. **Lees** `SESSION-NOTES.md` — wat er vorige sessie gedaan is + volgende stap
-2. **Lees** `CLAUDE.md` — werkafspraken en architectuur
-3. **Lees** `LUXIS-ROADMAP.md` — huidige status en prioriteiten
-4. **NIET** de hele codebase scannen. Lees pas code als je een specifieke taak gaat uitvoeren.
-5. **Geef een korte samenvatting**:
+1. **`/effort max`** — zet reasoning op maximum voor deze sessie (voorkomt 0-reasoning beurten door adaptive thinking)
+2. **Lees** via `luxis-researcher` subagent: SESSION-NOTES.md (wat vorige sessie deed + volgende stap) en LUXIS-ROADMAP.md (status + prioriteiten). NIET zelf lezen — subagent houdt context schoon.
+3. **NIET** de hele codebase scannen. Lees pas code bij specifieke taak.
+4. **Geef korte samenvatting**:
    - "Vorige sessie: [wat er gedaan is]"
    - "Volgende stap: [wat er nu moet gebeuren]"
    - "Klaar om te beginnen."
-6. **Wacht op de gebruiker** om te vertellen wat de prioriteit is voor deze sessie.
+5. **Wacht op gebruiker** voor prioriteit deze sessie.

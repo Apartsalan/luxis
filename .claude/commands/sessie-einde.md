@@ -36,39 +36,42 @@ Update ook de header-regels (laatst bijgewerkt, laatste feature/fix, openstaande
 
 Gebruik de `luxis-researcher` subagent om LUXIS-ROADMAP.md en SESSION-NOTES.md te lezen voor actuele status.
 
-Genereer een COMPLETE prompt die de volgende Claude kan copy-pasten. Format:
+Genereer een COMPLETE prompt die de volgende Claude kan copy-pasten.
+
+**VERPLICHT: Prompt begint ALTIJD met het opstart-commando:**
+```
+cd luxis && claude --dangerously-skip-permissions
+```
+Dit is de eerste regel van elke sessie-prompt. De gebruiker kopieert dit in PowerShell om Claude Code te openen met permission bypass.
+
+**Daarna het sessie-prompt format:**
 
 ```
-Repo: C:\Users\arsal\Documents\luxis
+cd luxis && claude --dangerously-skip-permissions
 
-## Bestanden lezen bij start
-Gebruik de `luxis-researcher` subagent om te lezen:
-- LUXIS-ROADMAP.md (status + planning)
-- SESSION-NOTES.md (laatste 2 sessies)
-- [andere relevante docs voor de taak]
+Sessie N — [onderwerp]
 
-## Context
-- Sessienummer en datum laatste sessie
-- Huidige teststatus (backend tests, E2E tests, ruff)
-- Wat er in de vorige sessie is afgerond
-- Bekende issues
+## Context laden bij start
+Gebruik de luxis-researcher subagent:
+"Lees LUXIS-ROADMAP.md (sectie [relevant]) en SESSION-NOTES.md (sessie N-1). Geef compacte samenvatting."
 
 ## Taak
-[Concrete beschrijving van wat de volgende sessie moet doen]
-[Betrokken bestanden met paden]
-[Bekende bugs/context relevant voor de taak]
+[Concrete beschrijving — wat moet er gebouwd/gefixt worden]
+[Startpunt: welk bestand/functie, maar ALLEEN als het niet obvious is]
 
 ## Verificatie
 - Backend: `docker compose exec backend pytest tests/ -v`
 - Lint: `docker compose exec backend ruff check app/`
-- E2E: `cd frontend && npx playwright test`
 - Build: `cd frontend && npm run build`
 
-## Commit-instructies
-Na afronding: commit + push naar main met conventional commit message.
+## Constraints (wat NIET doen)
+[Expliciet benoemen wat buiten scope is]
+
+## Commit
+Commit + push naar main met conventional commit message. Deploy automatisch via SSH.
 ```
 
-De prompt moet LEAN zijn (<50KB met gevraagde bestanden). Verwijs naar docs/ bestanden i.p.v. alles in de prompt te zetten.
+De prompt moet LEAN zijn (<50KB). Verwijs naar docs/ bestanden i.p.v. alles erin te zetten.
 
 ## Stap 4: Deploy-commando
 

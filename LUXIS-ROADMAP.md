@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 4 mei 2026 (sessie 131 — Step Transitions branching workflow)
+**Laatst bijgewerkt:** 6 mei 2026 (sessie 132 — Claude Code setup optimalisatie)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -532,6 +532,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-69 | Briefsjabloon dropdown mist seed template_types — bestaande waarden niet in dropdown, reset naar "Geen" bij edit | Laag | S | ✅ Gefixt (24 apr, sessie 127) |
 | BUG-71 | `s126a_pipeline_overhaul.py` migratie gebruikt `app.current_tenant_id` i.p.v. `app.current_tenant` — latent risico bij DB from scratch | Laag | S | ❌ TODO |
 | BUG-72 | 4 tests in `test_incasso_router.py` falen door stale DB state (duplicate tenant slug `kesting-legal`) — test-infra issue, niet code | Laag | S | ❌ TODO |
+| SEC-01 | AgentShield security scan (`npx ecc-agentshield scan`) — one-time audit van Claude Code config + MCP permissions + hook veiligheid | Laag | S | ❌ TODO |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 

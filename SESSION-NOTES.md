@@ -1,9 +1,43 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 4 mei 2026 (sessie 131 — Step Transitions branching workflow)
-**Laatste feature/fix:** Sessie 131 — Branching workflow (step_transitions tabel + UI) voor incasso pipeline
+**Laatst bijgewerkt:** 6 mei 2026 (sessie 132 — Claude Code setup optimalisatie)
+**Laatste feature/fix:** Sessie 132 — CLAUDE.md trim + Boris Cherny best practices implementatie
 **Openstaande bugs:** product dropdown werkt soms niet (browser cache?), AI banner visuele test nog niet gedaan
-**Volgende sessie:** 132 — Unified template editor UI (email + brief templates op 1 plek beheren)
+**Volgende sessie:** 133 — Unified template editor UI (email + brief templates op 1 plek beheren)
+
+## Wat er gedaan is (sessie 132 — 4-6 mei 2026) — Claude Code setup optimalisatie
+
+### Samenvatting
+Research + implementatie van Boris Cherny (head of Claude Code) best practices. YouTube video geanalyseerd, setup geoptimaliseerd, blueprint gemaakt voor ander project.
+
+### Wat er gedaan is
+1. YouTube transcript MCP tool getest (werkt, video was geo-restricted → fallback via Tavily search)
+2. Boris Cherny video + 13-tips + community best practices geanalyseerd
+3. CLAUDE.md getrimd: 337 → 130 regels (deploy/disk/sessie details → skills/commands)
+4. effortLevel → "max" in user settings (voorkomt 0-reasoning beurten door adaptive thinking)
+5. `/sessie-start` updated met `/effort max` als eerste stap
+6. `/handoff` command aangemaakt (context-overdracht bij volle context)
+7. Pre-allowed permissions uitgebreid: 30+ MCP tools + extra bash commands
+8. `/sessie-einde` prompt format updated: begint nu met `cd luxis && claude --dangerously-skip-permissions`
+9. Ultrareview issue #55968 onderzocht — bekend probleem, geen oplossing, Anthropic reageert niet
+10. Complete Claude Code setup blueprint gemaakt (generiek, voor ander project)
+11. Level 5→10 roadmap uitgewerkt (Agent Teams, Ralph loops, Routines, Headless, Multi-model)
+12. Hermes Agent (Nous Research) onderzocht — zelf-lerend agent framework
+
+### Gewijzigde bestanden
+- `CLAUDE.md` — getrimd van 337 naar 130 regels
+- `.claude/commands/sessie-start.md` — /effort max toegevoegd
+- `.claude/commands/sessie-einde.md` — prompt format met opstart-commando
+- `.claude/commands/handoff.md` — nieuw
+- `.claude/settings.json` — MCP tools + extra bash permissions
+- `~/.claude/settings.json` — effortLevel: max
+
+### Bekende issues
+- Ultrareview crasht (server-side rate limit) — GitHub issue #55968
+- Geen code changes deze sessie, alleen config/docs
+
+### Volgende sessie
+- Unified template editor UI (email + brief templates op 1 plek beheren)
 
 ## Wat er gedaan is (sessie 131 — 4 mei 2026) — Step Transitions branching workflow
 

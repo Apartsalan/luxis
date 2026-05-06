@@ -533,6 +533,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-71 | `s126a_pipeline_overhaul.py` migratie gebruikt `app.current_tenant_id` i.p.v. `app.current_tenant` — latent risico bij DB from scratch | Laag | S | ❌ TODO |
 | BUG-72 | 4 tests in `test_incasso_router.py` falen door stale DB state (duplicate tenant slug `kesting-legal`) — test-infra issue, niet code | Laag | S | ❌ TODO |
 | SEC-01 | AgentShield security scan (`npx ecc-agentshield scan`) — one-time audit van Claude Code config + MCP permissions + hook veiligheid | Laag | S | ❌ TODO |
+| BUG-73 | "Concept genereren" knop in dossier-header werkt niet zoals verwacht — Lisanne klikt op knop, krijgt geen visueel resultaat. Backend genereert wel een AIDraft (200 OK + draft_id), maar de compose-dialog opent niet automatisch op productie. Onderzoek: `router.replace(?draft=X)` triggert mogelijk geen `useEffect` re-run; of `useSearchParams` returnt stale waarde; of er is een caching/build-issue. Reproductie: dossier 2026-00049 op stap "Eerste sommatie", klik Concept genereren. Sessie 134 oppakken. | Hoog | S-M | ❌ TODO |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 
@@ -624,8 +625,18 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 5. ✅ **Deadline kleuren per stap** — Groen/oranje/rood kleurcodering per dossier in pipeline. Gebouwd sessie 23.
 6. ✅ **Instelbare dagen per stap** — `max_wait_days` per pipeline-stap. "Min. dagen" + "Grens rood" kolommen. Gebouwd sessie 23.
 7. ✅ **Step Transitions (branching workflow)** — `step_transitions` tabel: elke stap kan meerdere uitgangen hebben op basis van trigger (timeout/verweer/betaling/handmatig). 21 standaard overgangen geseeded. UI in expanded step row. Nieuwe stap "Verweer beantwoorden". Gebouwd sessie 131.
+8. ✅ **Pivot naar lineair pipeline + automation rules** — Sessie 133. Branching state-machine vervangen door Lisanne's officiele 14 stappen (5 hoofdpad + 6 tussenstappen + 1 verweer + 2 afsluit). 6 .eml sjablonen + verzoekschrift DOCX geïmporteerd. AI-prompt module + defense_library voor verweer-respons. Manual + scheduled draft-generation. Bron: `docs/lisanne-incasso-workflow.md`.
+9. ✅ **End-to-end AI draft flow** — Sessie 133. "Concept genereren" knop in dossier → AI draft → `/taken` queue → klik "Bekijk concept" → opent in dossier → versturen via Outlook → auto step-advance.
+10. ✅ **Mail-pagina** — Sessie 133. Sidebar `Correspondentie` → `Mail`. "Nieuwe mail" knop voor free-compose zonder dossier-context.
 
 **Flow:** Batch selectie → genereer brieven → email via Outlook → taken afgevinkt → pipeline doorgeschoven → deadline kleuren updaten
+
+### Geplande verbeteringen (P2, niet bouwen tot expliciet groen licht)
+
+- **Mail-pagina dossier-zoekveld in compose-dialog** — Bovenaan compose-dialog zoekveld voor dossier (op cliëntnaam, debiteurnaam, dossiernummer, email). Na keuze laadt sjablonen + bestanden + AV + eerdere correspondentie van dat dossier. Free-compose blijft mogelijk bij leeg laten. Pre-fill bij geselecteerde gelinkte mail. Reply auto-locked met ontkoppel-link. Patroon B uit onderzoek sessie 133 (Clio/MyCase). Werk: ~2 uur. Bron: `docs/lisanne-incasso-workflow.md` + onderzoek 12 advocatentools.
+- **Email-trigger detectie** — Inkomende mail van debiteur → auto status "Verweer beantwoorden" + AI draft via verweer-bibliotheek.
+- **Tenant-instelling UI** — `pipeline_auto_drafts_enabled` flag aan/uit per tenant via Instellingen-pagina.
+- **TransitionsSection vervangen** — UI in pipeline-page renamen naar "Automatische regels" paneel (cosmetic, sessie 131-restant).
 
 **QA & Testdekking (sessie 28):**
 - ✅ **35 backend integration tests** — `test_incasso_pipeline.py`: deadline kleuren, email templates, auto-complete (BUG-29 regressie), auto-advance, batch preview, batch execute (met/zonder email, partial failure, edge cases), pipeline overview, queue counts. Alle 35 PASSED.

@@ -154,18 +154,15 @@ async def gather_case_context(
 
     Lazy-imports modellen om circulaire dependencies te vermijden bij module-load.
     """
-    from app.cases.models import CaseParty
     from app.collections.models import Claim, Payment
 
     case = (await db.execute(
         select(Case).where(Case.tenant_id == tenant_id, Case.id == case_id)
     )).scalar_one()
 
-    parties = (await db.execute(
-        select(CaseParty).where(CaseParty.tenant_id == tenant_id, CaseParty.case_id == case_id)
-    )).scalars().all()
-    client_party = next((p for p in parties if p.role == "client"), None)
-    debtor_party = next((p for p in parties if p.role == "opposing_party"), None)
+    # Case heeft client + opposing_party als directe relations (selectin loaded)
+    client_contact = case.client
+    debtor_contact = case.opposing_party
 
     claims = (await db.execute(
         select(Claim).where(Claim.tenant_id == tenant_id, Claim.case_id == case_id)
@@ -174,37 +171,45 @@ async def gather_case_context(
         select(Payment).where(Payment.tenant_id == tenant_id, Payment.case_id == case_id)
     )).scalars().all()
 
-    hoofdsom = sum((c.principal_amount or Decimal("0.00") for c in claims), Decimal("0.00"))
-    rente = sum((c.interest_amount or Decimal("0.00") for c in claims), Decimal("0.00"))
-    bik = sum((c.collection_costs or Decimal("0.00") for c in claims), Decimal("0.00"))
-    total_paid = sum((p.amount or Decimal("0.00") for p in payments), Decimal("0.00"))
-    btw = (bik * Decimal("0.21")).quantize(Decimal("0.01"))
+    # Bedragen-tabel — pragmatisch: Claim heeft alleen principal_amount,
+    # rente + BIK worden elders berekend (interest.py + wik.py). Voor MVP
+    # gebruiken we case.total_principal/total_paid (cached) en laten rente/BIK/BTW
+    # op 0 staan zodat Lisanne ze handmatig in de compose-dialog kan zetten.
+    hoofdsom = sum(
+        (c.principal_amount or Decimal("0.00") for c in claims), Decimal("0.00")
+    ) or (case.total_principal or Decimal("0.00"))
+    rente = Decimal("0.00")
+    bik = Decimal("0.00")
+    btw = Decimal("0.00")
+    total_paid = sum(
+        (p.amount or Decimal("0.00") for p in payments), Decimal("0.00")
+    ) or (case.total_paid or Decimal("0.00"))
     totaal = (hoofdsom + rente + bik + btw).quantize(Decimal("0.01"))
     te_voldoen = (totaal - total_paid).quantize(Decimal("0.01"))
 
     return {
         "case_data": {
             "case_number": case.case_number,
-            "reference": case.reference or case.case_number,
-            "debtor_type": case.debtor_type or "b2b",
+            "reference": getattr(case, "reference", None) or case.case_number,
+            "debtor_type": getattr(case, "debtor_type", None) or "b2b",
             "opened_at": case.date_opened.isoformat() if case.date_opened else "",
         },
         "client_data": {
-            "name": client_party.contact_name if client_party else "?",
-            "address": client_party.contact_address if client_party else "",
-            "coc_number": client_party.contact_coc_number if client_party else None,
+            "name": client_contact.name if client_contact else "?",
+            "address": (client_contact.visit_address or client_contact.postal_address or "") if client_contact else "",
+            "coc_number": client_contact.kvk_number if client_contact else None,
         },
         "debtor_data": {
-            "name": debtor_party.contact_name if debtor_party else "?",
-            "address": debtor_party.contact_address if debtor_party else "",
-            "contact_person": debtor_party.contact_name if debtor_party else "",
-            "email": debtor_party.contact_email if debtor_party else "",
+            "name": debtor_contact.name if debtor_contact else "?",
+            "address": (debtor_contact.visit_address or debtor_contact.postal_address or "") if debtor_contact else "",
+            "contact_person": debtor_contact.name if debtor_contact else "",
+            "email": debtor_contact.email if debtor_contact else "",
         },
         "invoices": [
             {
                 "number": c.invoice_number or "?",
                 "date": c.invoice_date.isoformat() if c.invoice_date else "",
-                "due_date": c.due_date.isoformat() if c.due_date else "",
+                "due_date": c.default_date.isoformat() if c.default_date else "",
                 "amount": str(c.principal_amount or Decimal("0.00")),
             }
             for c in claims

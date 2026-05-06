@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { useConfirm } from "@/components/confirm-dialog";
 import {
   Gavel,
@@ -1246,7 +1247,13 @@ function WerkstroomTab() {
                       <td className="px-3 py-2 font-mono text-xs">
                         <span className="inline-flex items-center gap-1.5">
                           <span className={`inline-block h-2 w-2 rounded-full shrink-0 ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.dot ?? DEADLINE_STYLES.gray.dot}`} />
-                          {c.case_number}
+                          <Link
+                            href={`/zaken/${c.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline"
+                          >
+                            {c.case_number}
+                          </Link>
                           {c.has_verweer && (
                             <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400" title="Verweer">
                               <Shield className="h-2.5 w-2.5" />
@@ -1536,7 +1543,13 @@ function PipelineColumnView({
                         className={`inline-block h-2 w-2 rounded-full shrink-0 ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.dot ?? DEADLINE_STYLES.gray.dot}`}
                         title={DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.label ?? ""}
                       />
-                      {c.case_number}
+                      <Link
+                        href={`/zaken/${c.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-primary hover:underline"
+                      >
+                        {c.case_number}
+                      </Link>
                       {c.has_verweer && (
                         <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400" title="Verweer">
                           <Shield className="h-2.5 w-2.5" />

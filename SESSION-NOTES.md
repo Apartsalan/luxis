@@ -1,9 +1,73 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 mei 2026 (sessie 132 — Claude Code setup optimalisatie)
-**Laatste feature/fix:** Sessie 132 — CLAUDE.md trim + Boris Cherny best practices implementatie
-**Openstaande bugs:** product dropdown werkt soms niet (browser cache?), AI banner visuele test nog niet gedaan
-**Volgende sessie:** 133 — Unified template editor UI (email + brief templates op 1 plek beheren)
+**Laatst bijgewerkt:** 6 mei 2026 (sessie 133 — Pivot incasso pipeline + AI draft engine + Mail-pagina)
+**Laatste feature/fix:** Sessie 133 — End-to-end AI draft flow (pivot van branching state machine naar lineair pipeline + automation rules), Lisanne's officiële 14 stappen + 6 .eml sjablonen + verzoekschrift DOCX, manual + scheduled draft-generation, Mail-pagina free-compose
+**Openstaande bugs:** BUG-73 (Concept genereren knop opent compose-dialog niet automatisch op productie — backend werkt, frontend router.replace niet), BUG-71/72 (laag), SEC-01 (laag)
+**Volgende sessie:** 134 — Fix BUG-73 (Concept-knop opent dialog niet) + email-trigger detectie (verweer auto-detect)
+
+## Wat er gedaan is (sessie 133 — 6 mei 2026) — Pivot incasso pipeline + AI draft engine + Mail-pagina
+
+### Samenvatting
+Diepgaande pivot van incasso-architectuur op basis van marktonderzoek (Clio, Smokeball, Filevine, FICO): van branching state machine naar lineaire pipeline + losse automation rules. Lisanne's officiële 14 stappen + 6 .eml sjablonen + verzoekschrift DOCX bron geïmporteerd. AI-prompt module gekoppeld aan defense_library voor verweer-respons. Manual + scheduled draft-generation engine gebouwd. End-to-end flow: Concept genereren → /taken queue → versturen via Outlook → auto step-advance. Mail-pagina free-compose toegevoegd.
+
+### Wat er gedaan is
+1. **Onderzoek workflow patterns** (general-purpose agent, 13+ bronnen): branching state machine = anti-pattern voor business apps; marktleiders gebruiken lineair pipeline + automation rules
+2. **Workflow vastgelegd** in `docs/lisanne-incasso-workflow.md` als bron van waarheid + memory pointer
+3. **Migration s133a**: action-veld toegevoegd aan step_transitions (advance_to_step, jump_to_step, pause, notify_lawyer)
+4. **Migration s133b**: alle pipeline-stappen behalve Lisanne's 14 op is_active=false
+5. **Migration s133c**: tenant.pipeline_auto_drafts_enabled flag (default false)
+6. **Seed herwerkt**: 14 Lisanne-stappen (5 hoofdpad + 1 verweer + 6 tussen + 2 afsluit), automation rules met juiste actions
+7. **Email sjablonen geïmporteerd**: 6 .eml uit `templates/lisanne/` → IncassoPipelineStep.email_*_template
+8. **Verzoekschrift DOCX**: `Template Verzoekschrift Bijlage.docx` als ManagedTemplate (`verzoekschrift_bijlage`)
+9. **AI-prompts module**: `incasso_email_prompts.py` strict template-driven, koppelt defense_library (5 verweer-templates: annuleringskosten 9.3, afrekening 20.4, NCNP, verlengd abonnement, English renewal)
+10. **Automation engine**: `automation_service.py` met evaluate_timeout_rules + gather_case_context + generate_draft_for_step + _create_review_task
+11. **Manual trigger endpoint**: `POST /api/incasso/cases/{id}/generate-draft` (werkt altijd, ongeacht flag)
+12. **Daily scheduler** @ 08:00 UTC, alleen voor tenants met flag aan, max 50 drafts/dag
+13. **"Concept genereren" knop** in DossierHeader naast incassostap-selector
+14. **Advance-after-send endpoint**: `POST /api/incasso/cases/{id}/advance-after-send` markeert AIDraft sent + sluit task af + voert advance_to_step rule uit
+15. **/taken UI**: review_ai_draft tasks krijgen "Bekijk concept" knop → deeplink `/zaken/{id}?draft=X`
+16. **Dossier auto-open compose**: `?draft=X` query → fetch AIDraft → open EmailComposeDialog pre-filled
+17. **Mail-pagina**: sidebar `Correspondentie` → `Mail`, "Nieuwe mail" knop voor free-compose (caseId=undefined)
+18. **Sessie-start command** uitgebreid met module/route scan + harde regel "geen 'bouw X' zonder Glob check"
+19. **Alignment script** (sort_order + days) gerund op dev + prod
+20. **Bug fixes**: gather_case_context gebruikt nu juiste velden (case.client/opposing_party + Contact-velden, default_date i.p.v. due_date), case_number in /incasso werkstroom is clickable Link
+
+### Gewijzigde bestanden
+- `backend/alembic/versions/s133a_automation_rules_action.py` — nieuw
+- `backend/alembic/versions/s133b_align_to_lisanne_only.py` — nieuw
+- `backend/alembic/versions/s133c_pipeline_auto_drafts_flag.py` — nieuw
+- `backend/app/incasso/models.py` — StepTransition + action veld
+- `backend/app/incasso/schemas.py` — TransitionCreate/Update/Response + action
+- `backend/app/incasso/service.py` — seed herwerkt naar Lisanne's lijst
+- `backend/app/incasso/router.py` — generate-draft + advance-after-send endpoints
+- `backend/app/incasso/automation_service.py` — nieuw, complete engine
+- `backend/app/auth/models.py` — Tenant.pipeline_auto_drafts_enabled
+- `backend/app/ai_agent/incasso_email_prompts.py` — nieuw, strict template prompts
+- `backend/app/workflow/scheduler.py` — daily_pipeline_auto_drafts job
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — case_number clickable Link
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — ?draft=X auto-open
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DossierHeader.tsx` — Concept-knop
+- `frontend/src/app/(dashboard)/taken/page.tsx` — Bekijk concept knop voor review_ai_draft
+- `frontend/src/app/(dashboard)/correspondentie/page.tsx` — page titel Mail + Nieuwe mail knop + free-compose handler
+- `frontend/src/components/layout/app-sidebar.tsx` — Correspondentie → Mail
+- `frontend/src/hooks/use-incasso.ts` — useGenerateDraftForCase
+- `frontend/src/hooks/use-workflow.ts` — review_ai_draft label
+- `scripts/import_lisanne_email_templates.py` — nieuw
+- `scripts/import_lisanne_verzoekschrift_template.py` — nieuw
+- `scripts/align_lisanne_pipeline_order.py` — nieuw
+- `templates/lisanne/` — 5 .eml + 1 .docx + 1 .pdf concept (Lisanne's bron-templates)
+- `docs/lisanne-incasso-workflow.md` — nieuw, bron van waarheid
+
+### Bekende issues
+- **BUG-73 (Hoog)** — "Concept genereren" knop in dossier-header werkt niet zoals verwacht: backend genereert AIDraft (200 OK), maar compose-dialog opent niet automatisch op productie. router.replace(?draft=X) triggert mogelijk geen useEffect re-run, of useSearchParams returnt stale waarde. Workaround: navigate naar /taken → "Bekijk concept" knop werkt wel.
+- BUG-71/72 (Laag) — onveranderd
+- SEC-01 (Laag) — onveranderd
+
+### Volgende sessie
+- **BUG-73 fix** — Concept-knop opent dialog niet automatisch. Onderzoek: useSearchParams stale-issue, of moet refetch trigger forceren. Mogelijk via key-prop op dialog of explicit fetchAIDraft+setOpen i.p.v. via URL-state.
+- **Email-trigger detectie** — inkomende mail van debiteur → auto status "Verweer beantwoorden" + AI draft via verweer-bibliotheek (M2+ email-sync hook gebruiken)
+- **Tenant-instelling UI** — pipeline_auto_drafts_enabled flag aan/uit via Instellingen
+- **Mail-pagina dossier-picker** (sessie 134/135) — bovenaan compose-dialog dossier-zoekveld
 
 ## Wat er gedaan is (sessie 132 — 4-6 mei 2026) — Claude Code setup optimalisatie
 

@@ -40,14 +40,14 @@ Genereer een COMPLETE prompt die de volgende Claude kan copy-pasten.
 
 **VERPLICHT: Prompt begint ALTIJD met het opstart-commando:**
 ```
-cd luxis && claude --dangerously-skip-permissions
+cd Documents\luxis && claude --dangerously-skip-permissions
 ```
 Dit is de eerste regel van elke sessie-prompt. De gebruiker kopieert dit in PowerShell om Claude Code te openen met permission bypass.
 
 **Daarna het sessie-prompt format:**
 
 ```
-cd luxis && claude --dangerously-skip-permissions
+cd Documents\luxis && claude --dangerously-skip-permissions
 
 Sessie N — [onderwerp]
 

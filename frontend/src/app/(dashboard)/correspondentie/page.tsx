@@ -35,6 +35,8 @@ import {
   type CaseSuggestion,
 } from "@/hooks/use-email-sync";
 import { useCases } from "@/hooks/use-cases";
+import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRelativeTime } from "@/lib/utils";
@@ -70,6 +72,32 @@ export default function CorrespondentiePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [emailFilter, setEmailFilter] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
+  const [showComposeDialog, setShowComposeDialog] = useState(false);
+
+  // Free-compose verzending via OutlookProvider (geen dossier-context)
+  const handleFreeComposeSend = async (data: EmailComposeData) => {
+    const subject = data.custom_subject || "";
+    const body = data.custom_body || "";
+    try {
+      const res = await api("/api/email/compose/send", {
+        method: "POST",
+        body: JSON.stringify({
+          to: data.recipient_email,
+          subject,
+          body_html: data.body_html || `<p>${body.replace(/\n/g, "<br>")}</p>`,
+          cc: data.cc,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "E-mail verzenden mislukt");
+      }
+      toast.success("E-mail verzonden via Outlook");
+      setShowComposeDialog(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "E-mail verzenden mislukt");
+    }
+  };
   const debouncedSearch = useDebounce(caseSearch, 300);
 
   // Case search for manual linking
@@ -218,7 +246,7 @@ export default function CorrespondentiePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Correspondentie
+            Mail
           </h1>
           <div className="flex items-center gap-1 mt-2">
             <button
@@ -270,6 +298,13 @@ export default function CorrespondentiePage() {
             )}
           </div>
           <Button
+            size="sm"
+            onClick={() => setShowComposeDialog(true)}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Nieuwe mail
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={handleSync}
@@ -282,6 +317,22 @@ export default function CorrespondentiePage() {
           </Button>
         </div>
       </div>
+
+      {/* Free-compose dialog (zonder dossier-context) */}
+      {showComposeDialog && (
+        <EmailComposeDialog
+          open={showComposeDialog}
+          onOpenChange={setShowComposeDialog}
+          title="Nieuwe e-mail"
+          onSend={async (data) => {
+            // Free-compose: gebruik direct-send via OutlookProvider
+            await handleFreeComposeSend(data);
+          }}
+          onSendDirect={async (data) => {
+            await handleFreeComposeSend(data);
+          }}
+        />
+      )}
 
       {/* Alle e-mails tab */}
       {activeTab === "alle" && (

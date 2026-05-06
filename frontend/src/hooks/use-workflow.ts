@@ -109,6 +109,7 @@ export const TASK_TYPE_LABELS: Record<string, string> = {
   escalate_status: "Status escaleren",
   manual_review: "Handmatige beoordeling",
   set_deadline: "Deadline instellen",
+  review_ai_draft: "Concept-mail reviewen",
   custom: "Eigen taak",
 };
 

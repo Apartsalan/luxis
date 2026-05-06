@@ -240,6 +240,20 @@ function TaskRow({
             {task.description}
           </p>
         )}
+
+        {/* review_ai_draft: deeplink naar dossier met draft-id, opent compose-dialog */}
+        {task.task_type === "review_ai_draft" && task.action_config &&
+          typeof (task.action_config as { draft_id?: unknown }).draft_id === "string" && (
+            <div className="mt-2">
+              <Link
+                href={`/zaken/${task.case_id}?draft=${(task.action_config as { draft_id: string }).draft_id}`}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Bekijk concept
+              </Link>
+            </div>
+          )}
       </div>
 
       {/* Skip button */}

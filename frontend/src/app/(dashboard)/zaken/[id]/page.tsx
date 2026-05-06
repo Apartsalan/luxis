@@ -209,6 +209,56 @@ export default function ZaakDetailPage() {
   const sendCaseEmail = useSendCaseEmail(id);
   const sendViaProvider = useSendViaProvider(id);
 
+  // ── AI-draft auto-open via ?draft=X query (sessie 133) ─────────────────
+  const draftIdFromQuery = searchParams?.get("draft") ?? null;
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [draftSubject, setDraftSubject] = useState<string>("");
+  const [draftBody, setDraftBody] = useState<string>("");
+
+  useEffect(() => {
+    if (!draftIdFromQuery) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api(`/api/ai/drafts/${draftIdFromQuery}`);
+        if (!res.ok) throw new Error("Concept niet gevonden");
+        const d = await res.json();
+        if (cancelled) return;
+        setActiveDraftId(draftIdFromQuery);
+        setDraftSubject(d.subject || "");
+        setDraftBody(d.body || "");
+        setCaseEmailOpen(true);
+      } catch {
+        toast.error("Kon AI-concept niet laden");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [draftIdFromQuery]);
+
+  const handleDraftSendComplete = async () => {
+    if (!activeDraftId) return;
+    try {
+      const res = await api(`/api/incasso/cases/${id}/advance-after-send`, {
+        method: "POST",
+        body: JSON.stringify({ draft_id: activeDraftId }),
+      });
+      if (res.ok) {
+        const r = await res.json();
+        if (r.advanced) {
+          toast.success(`Dossier naar volgende stap: ${r.to_step_name}`);
+        }
+      }
+    } catch {
+      // Silent — email was wel verzonden
+    } finally {
+      setActiveDraftId(null);
+      setDraftSubject("");
+      setDraftBody("");
+      // Verwijder ?draft=X uit URL
+      router.replace(`/zaken/${id}`);
+    }
+  };
+
   function buildDossierRecipients(z: typeof zaak): EmailRecipient[] {
     if (!z) return [];
     const recipients: EmailRecipient[] = [];
@@ -265,6 +315,7 @@ export default function ZaakDetailPage() {
 
       toast.success("E-mail geopend in Outlook");
       setCaseEmailOpen(false);
+      if (activeDraftId) await handleDraftSendComplete();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "E-mail opstellen mislukt");
     }
@@ -292,6 +343,7 @@ export default function ZaakDetailPage() {
 
       toast.success("E-mail verzonden via Outlook");
       setCaseEmailOpen(false);
+      if (activeDraftId) await handleDraftSendComplete();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "E-mail verzenden mislukt");
     }
@@ -832,12 +884,25 @@ export default function ZaakDetailPage() {
       {/* Freestanding email compose dialog (F11) */}
       <EmailComposeDialog
         open={caseEmailOpen}
-        onOpenChange={setCaseEmailOpen}
+        onOpenChange={(open) => {
+          setCaseEmailOpen(open);
+          if (!open && activeDraftId) {
+            setActiveDraftId(null);
+            setDraftSubject("");
+            setDraftBody("");
+            router.replace(`/zaken/${id}`);
+          }
+        }}
         onSend={handleOpenInOutlook}
         onSendDirect={handleDirectSend}
         isSending={sendCaseEmail.isPending}
-        title="E-mail opstellen"
-        defaultSubject={zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""}
+        title={activeDraftId ? "AI-concept reviewen & versturen" : "E-mail opstellen"}
+        defaultSubject={
+          activeDraftId
+            ? draftSubject
+            : zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""
+        }
+        defaultBody={activeDraftId ? draftBody : ""}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
         caseId={id}
       />

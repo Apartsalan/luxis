@@ -3,6 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Query, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -345,4 +346,96 @@ async def generate_draft_for_current_step(
         "model_used": draft.model_used,
         "status": draft.status,
         "message": "Concept klaargezet in /taken voor review.",
+    }
+
+
+# ── Advance-after-send (sessie 133) ───────────────────────────────────────
+
+
+class AdvanceAfterSendRequest(BaseModel):
+    draft_id: uuid.UUID
+
+
+@router.post("/cases/{case_id}/advance-after-send")
+async def advance_after_send(
+    case_id: uuid.UUID,
+    data: AdvanceAfterSendRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Markeer AI-draft als verzonden + advance dossier naar volgende stap.
+
+    Wordt aangeroepen door de frontend NA succesvolle email-verzending. Voert
+    de `advance_to_step` rule uit (default timeout-rule op huidige stap),
+    markeert de bijbehorende workflow_task als afgerond en zet de AIDraft
+    status op `sent`.
+    """
+    from datetime import UTC, datetime
+    from app.ai_agent.draft_service import DraftStatus, get_draft_by_id, update_draft_status
+    from app.incasso.models import StepTransition
+    from app.workflow.models import WorkflowTask
+
+    draft = await get_draft_by_id(db, current_user.tenant_id, data.draft_id)
+    if not draft:
+        raise NotFoundError("Concept niet gevonden")
+    if str(draft.case_id) != str(case_id):
+        raise NotFoundError("Concept hoort niet bij dit dossier")
+
+    # Markeer draft als verzonden
+    await update_draft_status(
+        db, current_user.tenant_id, draft.id, DraftStatus.SENT, user_id=current_user.id
+    )
+
+    # Sluit gekoppelde workflow_task af (review_ai_draft task in /taken)
+    task_result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == current_user.tenant_id,
+            WorkflowTask.case_id == case_id,
+            WorkflowTask.task_type == "review_ai_draft",
+            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+        )
+    )
+    for task in task_result.scalars().all():
+        cfg = task.action_config or {}
+        if cfg.get("draft_id") == str(draft.id):
+            task.status = "completed"
+            task.completed_at = datetime.now(UTC)
+
+    # Advance to next step volgens default timeout-rule
+    case = (await db.execute(
+        select(Case).where(
+            Case.tenant_id == current_user.tenant_id,
+            Case.id == case_id,
+        )
+    )).scalar_one_or_none()
+    if not case or not case.incasso_step_id:
+        await db.commit()
+        return {"advanced": False, "reason": "Dossier heeft geen actieve stap"}
+
+    rule = (await db.execute(
+        select(StepTransition).where(
+            StepTransition.tenant_id == current_user.tenant_id,
+            StepTransition.from_step_id == case.incasso_step_id,
+            StepTransition.is_active.is_(True),
+            StepTransition.is_default.is_(True),
+            StepTransition.trigger_type == "timeout",
+            StepTransition.action == "advance_to_step",
+        )
+    )).scalars().first()
+
+    if not rule:
+        await db.commit()
+        return {
+            "advanced": False,
+            "reason": "Geen default advance-rule gevonden voor huidige stap",
+        }
+
+    case.incasso_step_id = rule.to_step_id
+    case.step_entered_at = datetime.now(UTC)
+    await db.commit()
+
+    return {
+        "advanced": True,
+        "to_step_id": str(rule.to_step_id),
+        "to_step_name": rule.to_step.name if rule.to_step else None,
     }

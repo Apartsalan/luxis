@@ -60,7 +60,7 @@ const ALL_SECTIONS: NavSection[] = [
       { name: "Relaties", href: "/relaties", icon: Users },
       { name: "Dossiers", href: "/zaken", icon: Briefcase },
       { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
-      { name: "Correspondentie", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
+      { name: "Mail", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
       { name: "Agenda", href: "/agenda", icon: Calendar },
       { name: "Documenten", href: "/documenten", icon: FileText },
     ],

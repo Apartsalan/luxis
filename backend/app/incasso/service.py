@@ -136,34 +136,28 @@ async def seed_default_steps(
     existing = await list_pipeline_steps(db, tenant_id, active_only=True)
     existing_names = {s.name for s in existing}
 
+    # Lisanne's officiële incasso-workflow (sessie 133, bron: docs/lisanne-incasso-workflow.md).
+    # Hoofdpad = lineair, 4 dagen tussen stappen. Tussenstappen = handmatig.
+    # B2C-pad (dagvaarding/vonnis) komt later — niet in deze seed.
     defaults = [
-        # Fase: Minnelijk
-        {"name": "14-dagenbrief", "sort_order": 1, "min_wait_days": 0, "max_wait_days": 14, "template_type": "veertien_dagen_brief", "step_category": "minnelijk", "debtor_type": "b2c"},
-        {"name": "Eerste sommatie", "sort_order": 2, "min_wait_days": 0, "max_wait_days": 7, "template_type": "sommatie_drukte", "step_category": "minnelijk", "debtor_type": "both"},
-        {"name": "Tweede sommatie", "sort_order": 3, "min_wait_days": 7, "max_wait_days": 14, "template_type": "wederom_sommatie_kort", "step_category": "minnelijk", "debtor_type": "both"},
-        {"name": "Ingebrekestelling", "sort_order": 4, "min_wait_days": 7, "max_wait_days": 14, "template_type": "ingebrekestelling", "step_category": "minnelijk", "debtor_type": "both"},
-        {"name": "Laatste sommatie (ank. verzoekschrift)", "sort_order": 5, "min_wait_days": 7, "max_wait_days": 14, "template_type": "sommatie_laatste_voor_fai", "step_category": "minnelijk", "debtor_type": "b2b"},
-        {"name": "Laatste sommatie (ank. dagvaarding)", "sort_order": 6, "min_wait_days": 7, "max_wait_days": 14, "step_category": "minnelijk", "debtor_type": "b2c"},
-        # Fase: Gerechtelijk
-        {"name": "Verzoekschrift faillissement", "sort_order": 7, "min_wait_days": 3, "max_wait_days": 7, "template_type": "faillissement_dreigbrief", "step_category": "gerechtelijk", "debtor_type": "b2b"},
-        {"name": "Dagvaarding", "sort_order": 8, "min_wait_days": 7, "max_wait_days": 14, "step_category": "gerechtelijk", "debtor_type": "b2c"},
-        {"name": "Vonnis", "sort_order": 9, "min_wait_days": 0, "max_wait_days": 0, "step_category": "gerechtelijk", "debtor_type": "both"},
-        # Fase: Executie
-        {"name": "Verstuurd naar deurwaarder", "sort_order": 10, "min_wait_days": 0, "max_wait_days": 0, "step_category": "executie", "debtor_type": "both"},
-        {"name": "Beslag gelegd", "sort_order": 11, "min_wait_days": 0, "max_wait_days": 0, "step_category": "executie", "debtor_type": "both"},
-        # Fase: Regeling (cross-phase)
-        {"name": "Regeling voorgesteld", "sort_order": 12, "min_wait_days": 0, "max_wait_days": 0, "step_category": "regeling", "debtor_type": "both"},
-        {"name": "Betalingsregeling getroffen", "sort_order": 13, "min_wait_days": 0, "max_wait_days": 0, "step_category": "regeling", "debtor_type": "both", "is_hold_step": True},
-        # Administratief (cross-phase)
-        {"name": "Info opgevraagd bij cliënt", "sort_order": 14, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
-        {"name": "Wacht op informatie", "sort_order": 15, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
-        {"name": "Procedure voorgesteld aan cliënt", "sort_order": 16, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
-        {"name": "Cliënt akkoord procedure", "sort_order": 17, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
-        {"name": "Verweer beantwoorden", "sort_order": 18, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
-        {"name": "On hold", "sort_order": 19, "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
+        # Hoofdpad (B2B verzoekschrift faillissement)
+        {"name": "Eerste sommatie", "min_wait_days": 0, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
+        {"name": "Tweede sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
+        {"name": "Derde sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
+        {"name": "Sommatie laatste mogelijkheid", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "b2b"},
+        {"name": "Verzoekschrift faillissement", "min_wait_days": 4, "max_wait_days": 4, "step_category": "gerechtelijk", "debtor_type": "b2b"},
+        # Auto-trigger status
+        {"name": "Verweer beantwoorden", "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
+        # Tussenstappen (handmatig door Lisanne)
+        {"name": "Opvragen stukken bij cliënt", "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
+        {"name": "Voorstel dagvaarding", "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
+        {"name": "Treffen van regeling", "min_wait_days": 0, "max_wait_days": 0, "step_category": "regeling", "debtor_type": "both"},
+        {"name": "Bijhouden regeling", "min_wait_days": 0, "max_wait_days": 0, "step_category": "regeling", "debtor_type": "both", "is_hold_step": True},
+        {"name": "Akkoord dagvaarden", "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both"},
+        {"name": "On hold", "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
         # Afsluiting
-        {"name": "Betaald", "sort_order": 20, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
-        {"name": "Afgesloten", "sort_order": 21, "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
+        {"name": "Betaald", "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
+        {"name": "Afgesloten", "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
     ]
 
     max_order = max((s.sort_order for s in existing), default=0)
@@ -241,6 +235,7 @@ async def create_transition(
         from_step_id=data.from_step_id,
         to_step_id=data.to_step_id,
         trigger_type=data.trigger_type,
+        action=data.action,
         condition=_json.dumps(data.condition) if data.condition else None,
         priority=data.priority,
         is_default=data.is_default,
@@ -301,6 +296,7 @@ def transition_to_response(t: StepTransition) -> TransitionResponse:
         to_step_id=t.to_step_id,
         to_step_name=t.to_step.name if t.to_step else "Onbekend",
         trigger_type=t.trigger_type,
+        action=t.action,
         condition=condition,
         priority=t.priority,
         is_default=t.is_default,
@@ -327,36 +323,38 @@ async def seed_default_transitions(
         (t.from_step_id, t.to_step_id, t.trigger_type) for t in existing
     }
 
-    defaults = [
-        # Main escalation path (timeout)
-        ("14-dagenbrief", "Eerste sommatie", "timeout", {"days": 14}, True, "WIK-termijn verstreken"),
-        ("Eerste sommatie", "Tweede sommatie", "timeout", {"days": 7}, True, "Geen reactie na 7 dagen"),
-        ("Tweede sommatie", "Ingebrekestelling", "timeout", {"days": 14}, True, "Geen reactie na 14 dagen"),
-        ("Ingebrekestelling", "Laatste sommatie (ank. verzoekschrift)", "timeout", {"days": 14}, True, "Geen reactie na 14 dagen"),
-        ("Laatste sommatie (ank. verzoekschrift)", "Verzoekschrift faillissement", "timeout", {"days": 14}, True, "Geen reactie → faillissementsrekest"),
-        ("Laatste sommatie (ank. dagvaarding)", "Dagvaarding", "timeout", {"days": 14}, True, "Geen reactie → dagvaarding"),
-        # Debtor response → verweer
-        ("Eerste sommatie", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
-        ("Tweede sommatie", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
-        ("Ingebrekestelling", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
-        ("Laatste sommatie (ank. verzoekschrift)", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
-        ("Laatste sommatie (ank. dagvaarding)", "Verweer beantwoorden", "debtor_response", None, False, "Verweer ontvangen"),
-        # Payment → betaald
-        ("Eerste sommatie", "Betaald", "payment", None, False, "Betaling ontvangen"),
-        ("Tweede sommatie", "Betaald", "payment", None, False, "Betaling ontvangen"),
-        ("Ingebrekestelling", "Betaald", "payment", None, False, "Betaling ontvangen"),
-        ("Laatste sommatie (ank. verzoekschrift)", "Betaald", "payment", None, False, "Betaling ontvangen"),
-        ("Laatste sommatie (ank. dagvaarding)", "Betaald", "payment", None, False, "Betaling ontvangen"),
-        ("Verzoekschrift faillissement", "Betaald", "payment", None, False, "Betaling ontvangen"),
-        # Manual detours
-        ("Eerste sommatie", "Regeling voorgesteld", "manual", None, False, "Regeling voorstellen"),
-        ("Tweede sommatie", "Regeling voorgesteld", "manual", None, False, "Regeling voorstellen"),
-        ("Ingebrekestelling", "Regeling voorgesteld", "manual", None, False, "Regeling voorstellen"),
-        ("Regeling voorgesteld", "Betalingsregeling getroffen", "manual", None, True, "Regeling geaccepteerd"),
-    ]
+    # Lisanne's automation rules (sessie 133).
+    # Schema: (from_step, to_step, trigger_type, action, condition, is_default, label)
+    main_path = ["Eerste sommatie", "Tweede sommatie", "Derde sommatie", "Sommatie laatste mogelijkheid", "Verzoekschrift faillissement"]
+
+    defaults: list[tuple[str, str, str, str, dict | None, bool, str]] = []
+
+    # 1. Hoofdpad: 4 dagen timeout → advance naar volgende stap
+    for i in range(len(main_path) - 1):
+        defaults.append((
+            main_path[i], main_path[i + 1],
+            "timeout", "advance_to_step", {"days": 4}, True,
+            "Geen reactie na 4 dagen",
+        ))
+
+    # 2. Email-reactie debiteur (op elke hoofdpad-stap) → jump naar Verweer beantwoorden
+    for step_name in main_path:
+        defaults.append((
+            step_name, "Verweer beantwoorden",
+            "debtor_response", "jump_to_step", None, False,
+            "Verweer ontvangen — pauzeer hoofdpad",
+        ))
+
+    # 3. Betaling ontvangen (op elke hoofdpad-stap) → jump naar Betaald
+    for step_name in main_path:
+        defaults.append((
+            step_name, "Betaald",
+            "payment", "jump_to_step", None, False,
+            "Betaling ontvangen",
+        ))
 
     new_transitions = []
-    for from_name, to_name, trigger, cond, is_def, lbl in defaults:
+    for from_name, to_name, trigger, action, cond, is_def, lbl in defaults:
         from_id = step_map.get(from_name)
         to_id = step_map.get(to_name)
         if not from_id or not to_id:
@@ -369,6 +367,7 @@ async def seed_default_transitions(
             from_step_id=from_id,
             to_step_id=to_id,
             trigger_type=trigger,
+            action=action,
             condition=_json.dumps(cond) if cond else None,
             priority=len(new_transitions),
             is_default=is_def,

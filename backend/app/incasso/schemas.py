@@ -66,10 +66,15 @@ class PipelineStepResponse(BaseModel):
 # ── Step Transitions ─────────────────────────────────────────────────────
 
 
+_TRIGGER_PATTERN = r"^(timeout|debtor_response|manual|payment)$"
+_ACTION_PATTERN = r"^(advance_to_step|jump_to_step|pause|notify_lawyer)$"
+
+
 class TransitionCreate(BaseModel):
     from_step_id: uuid.UUID
     to_step_id: uuid.UUID
-    trigger_type: str = Field(..., pattern=r"^(timeout|debtor_response|manual|payment)$")
+    trigger_type: str = Field(..., pattern=_TRIGGER_PATTERN)
+    action: str = Field(default="advance_to_step", pattern=_ACTION_PATTERN)
     condition: dict[str, Any] | None = None
     priority: int = Field(default=0, ge=0)
     is_default: bool = False
@@ -84,9 +89,8 @@ class TransitionCreate(BaseModel):
 
 class TransitionUpdate(BaseModel):
     to_step_id: uuid.UUID | None = None
-    trigger_type: str | None = Field(
-        default=None, pattern=r"^(timeout|debtor_response|manual|payment)$"
-    )
+    trigger_type: str | None = Field(default=None, pattern=_TRIGGER_PATTERN)
+    action: str | None = Field(default=None, pattern=_ACTION_PATTERN)
     condition: dict[str, Any] | None = None
     priority: int | None = Field(default=None, ge=0)
     is_default: bool | None = None
@@ -101,6 +105,7 @@ class TransitionResponse(BaseModel):
     to_step_id: uuid.UUID
     to_step_name: str
     trigger_type: str
+    action: str
     condition: dict[str, Any] | None = None
     priority: int
     is_default: bool

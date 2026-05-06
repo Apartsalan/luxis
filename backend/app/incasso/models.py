@@ -57,7 +57,15 @@ class IncassoPipelineStep(TenantBase):
 
 
 class StepTransition(TenantBase):
-    """Defines a conditional transition between two pipeline steps."""
+    """Automation rule attached to a pipeline step.
+
+    Sessie 133: omgevormd van branching-graaf-edge naar automation rule.
+    Tabelnaam blijft `step_transitions` voor backward-compat — de UI presenteert
+    deze records nu als "Automatische regels" en niet meer als pipeline-edges.
+
+    Pattern: lineaire pipeline (sort_order op IncassoPipelineStep) + losse rules
+    die acties triggeren bij events (timeout, debtor_response, payment, etc).
+    """
 
     __tablename__ = "step_transitions"
 
@@ -69,7 +77,11 @@ class StepTransition(TenantBase):
     )
     trigger_type: Mapped[str] = mapped_column(
         String(30), nullable=False
-    )
+    )  # timeout, debtor_response, payment, manual
+    action: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="advance_to_step",
+        server_default="advance_to_step",
+    )  # advance_to_step, jump_to_step, pause, notify_lawyer
     condition: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )

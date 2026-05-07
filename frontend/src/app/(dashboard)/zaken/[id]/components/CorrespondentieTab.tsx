@@ -454,7 +454,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                 {draft.body}
               </pre>
             </div>
-            {draft.sources.length > 0 && (
+            {Array.isArray(draft.sources) && draft.sources.length > 0 && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">Bronnen</p>
                 <div className="flex flex-wrap gap-1.5">

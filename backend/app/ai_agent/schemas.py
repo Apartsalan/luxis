@@ -94,7 +94,7 @@ class AIDraftResponse(BaseModel):
     subject: str
     body: str
     tone: str
-    sources: list[dict] | None = None
+    sources: dict | list[dict] | None = None
     reasoning: str | None = None
 
     status: str

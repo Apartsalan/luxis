@@ -1,9 +1,9 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 mei 2026 (sessie 134 — BUG-73 fix + HTML email-templates + email-trigger detectie)
-**Laatste feature/fix:** Sessie 134 — BUG-73 vol gefixt (5 keten-bugs), HTML email-templates met Kesting Legal logo + handtekening, server-side renderer met genormaliseerde tabel-styling, "Bekijk concept" in dossier-Taken-tab, email-trigger detectie voor verweer-flow
-**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag)
-**Volgende sessie:** 135 — Tester nodig: end-to-end verweer-flow (inkomende mail → auto-classify → pipeline-switch → AI draft) + factuur-tabel edge cases (meerdere facturen, lange namen)
+**Laatst bijgewerkt:** 7 mei 2026 (sessie 134 — BUG-73 + HTML emails + email-trigger + UI-cleanup + send-fix)
+**Laatste feature/fix:** Sessie 134 — BUG-73 vol gefixt, HTML email-templates met logo+handtekening, server-side renderer + genormaliseerde tabel-styling, schoon subjects/body (geen interne labels naar wederpartij), email-trigger verweer-flow (mock getest), legacy banners verwijderd, send 422 fix
+**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag), inbound mail seidony@kestinglegal.nl werkt niet via huidige DNS (Wix UI beperkt voor subdomein-MX → Cloudflare migratie nodig)
+**Volgende sessie:** 135 — Cloudflare DNS migratie + subdomein `mail.kestinglegal.nl` voor M365 → echte e2e mail-flow + factuur-tabel edge cases
 
 ## Wat er gedaan is (sessie 134 — 7 mei 2026) — BUG-73 fix + HTML email-templates + email-trigger detectie
 
@@ -55,15 +55,36 @@ BUG-73 bleek geen 1 bug maar een keten van 5 issues (URL-state, AI fallback, end
 - `scripts/import_lisanne_email_templates.py` — parse HTML + embed logo
 - `templates/lisanne/_kesting_logo.b64` — nieuw
 
+### Aanvullende fixes na sessie-einde-update (zelfde sessie 134, doorlopend)
+- **Send-fix** (c0cfbeb): `/api/email/compose/send` verwachtte `to: list[str]` maar frontend stuurde string → 422 → "[object Object]" toast. Beide pages.tsx (zaken + correspondentie) wrap nu `to: [adres]`. Error-formatter toont validation-list als leesbare string.
+- **Subject labels strippen** (658476c): subjects bevatten interne labels `(GEEN VERWEER)`, `(INDIEN WEL VERWEER)`, `(LAATSTE MOGELIJKHEID)`. Niet voor wederpartij. SUBJECT_OVERRIDES per stap (SOMMATIE TOT BETALING / TWEEDE SOMMATIE / DERDE SOMMATIE / LAATSTE SOMMATIE / VERZOEKSCHRIFT FAILLISSEMENT / REACTIE OP UW VERWEER) + body regex strip.
+- **UI cleanup** (d9c7e20): legacy AI-suggestie banner + FollowupRecommendation banner verwijderd uit dossier-page (-301 regels JSX). Pipeline /taken queue is nu enige bron van waarheid voor AI-acties. Hooks blijven draaien (data fetched) maar geen UI weergave — opruimen volgende sessie.
+
+### Email-trigger end-to-end getest (mock-flow)
+Pipeline-logica bewezen via DB-injectie van fake `synced_email`:
+- Inbound mail (case_number match) + classify-trigger met category=juridisch_verweer
+- Pipeline switched: Eerste sommatie → Verweer beantwoorden ✓
+- AI draft via Gemini (na 1 retry op 503): subject "REACTIE OP UW VERWEER / 2026-00049 / 2026-00049"
+- WorkflowTask aangemaakt in /taken queue ✓
+- Draft body bevat correcte aanhef + cliëntnaam + dossiernummer
+
+Echte mail-flow naar `seidony@kestinglegal.nl` werkt NIET via huidige DNS:
+- MX wijst naar BaseNet (mx1.basenet.nl), BaseNet kent alleen lisanne@/kesting@ — seidony@ wordt gedropt of catch-all
+- Pogingen tot subdomein-MX `mail.kestinglegal.nl` via Wix DNS gestrand: Wix UI laat geen subdomein-MX toevoegen (alleen hoofddomein-MX via "Email provider koppel"-flow)
+- Tijdens debug toegevoegd record `kestinglegal.nl MX 20 → kestinglegal-nl.mail.protection.outlook.com` op hoofddomein → meteen verwijderd, BaseNet (prio 10) is weer enige MX
+- DNS-cache toont nog korte tijd beide MX's, propageert binnen 5 min
+
 ### Bekende issues
 - Factuur-tabel: 2e factuur-rij in template wordt niet ingevuld als template-rij format afwijkt (alleen colspan="2" rijen worden gevuld). Edge case bij meer dan 1 factuur.
-- "Te voldoen" rij gebruikt `<b>` wrappers — regex aangepast om dit te matchen, werkt nu.
 - AI provider 503/parse failures: Gemini → Kimi → Sonnet fallback chain, allemaal robuust met retry + tool_use.
+- Inbound mail naar `seidony@kestinglegal.nl` werkt niet (MX bij BaseNet, seidony niet als mailbox bekend bij BaseNet). Voor echte e2e mail-flow nodig: Cloudflare DNS overzetten + subdomein `mail.kestinglegal.nl` met eigen MX → M365.
 
-### Volgende sessie
-1. End-to-end test verweer-flow: stuur test-email vanuit eigen account naar lisanne@ met "betwist factuur" tekst → verifieer auto-classify + step-switch + draft generated
-2. Factuur-tabel edge cases: meer dan 1 factuur, lege invoice_number, factuur zonder due_date
-3. Optioneel: BUG-71/72 review, SEC-01 (HTTPS-only cookies)
+### Volgende sessie (135)
+1. **DNS migratie naar Cloudflare** (eenmalig ~30 min): kestinglegal.nl nameservers van Wix → Cloudflare. Daarna subdomein `mail.kestinglegal.nl` MX/CNAME/SPF toevoegen via Cloudflare. Microsoft seidony@ alias `seidony@mail.kestinglegal.nl`. Test inbound mail vanuit hotmail naar nieuw adres → moet aankomen in M365 inbox + Luxis sync pikt op.
+2. **End-to-end echte mail-flow** (na Cloudflare): stuur echte mail van hotmail naar `seidony@mail.kestinglegal.nl` met onderwerp "2026-00049" + verweer-tekst → wacht op classify-scheduler → check pipeline-switch automatisch.
+3. **Factuur-tabel edge cases**: 2+ facturen in dossier → meerdere rijen renderer fix.
+4. **Cleanup ongebruikte hooks** in zaken/[id]/page.tsx (useFollowupForCase, useClassifications, useSyncedEmailDetail, sanitizeHtml import) — werden gebruikt door verwijderde banners.
+5. Optioneel: BUG-71/72 review, SEC-01.
 
 ## Wat er gedaan is (sessie 133 — 6 mei 2026) — Pivot incasso pipeline + AI draft engine + Mail-pagina
 

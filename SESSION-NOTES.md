@@ -1,9 +1,69 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 6 mei 2026 (sessie 133 — Pivot incasso pipeline + AI draft engine + Mail-pagina)
-**Laatste feature/fix:** Sessie 133 — End-to-end AI draft flow (pivot van branching state machine naar lineair pipeline + automation rules), Lisanne's officiële 14 stappen + 6 .eml sjablonen + verzoekschrift DOCX, manual + scheduled draft-generation, Mail-pagina free-compose
-**Openstaande bugs:** BUG-73 (Concept genereren knop opent compose-dialog niet automatisch op productie — backend werkt, frontend router.replace niet), BUG-71/72 (laag), SEC-01 (laag)
-**Volgende sessie:** 134 — Fix BUG-73 (Concept-knop opent dialog niet) + email-trigger detectie (verweer auto-detect)
+**Laatst bijgewerkt:** 7 mei 2026 (sessie 134 — BUG-73 fix + HTML email-templates + email-trigger detectie)
+**Laatste feature/fix:** Sessie 134 — BUG-73 vol gefixt (5 keten-bugs), HTML email-templates met Kesting Legal logo + handtekening, server-side renderer met genormaliseerde tabel-styling, "Bekijk concept" in dossier-Taken-tab, email-trigger detectie voor verweer-flow
+**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag)
+**Volgende sessie:** 135 — Tester nodig: end-to-end verweer-flow (inkomende mail → auto-classify → pipeline-switch → AI draft) + factuur-tabel edge cases (meerdere facturen, lange namen)
+
+## Wat er gedaan is (sessie 134 — 7 mei 2026) — BUG-73 fix + HTML email-templates + email-trigger detectie
+
+### Samenvatting
+BUG-73 bleek geen 1 bug maar een keten van 5 issues (URL-state, AI fallback, endpoint path, Pydantic schema, dialog state-reset). Alle gefixt + Concept-knop opent nu betrouwbaar. Daarna upgrade naar HTML emails: server-side renderer vervangt placeholders in template HTML, alle 6 templates hebben nu identieke tabel-styling, Kesting Legal logo embedded als base64 (geen externe BaseNet CDN). Email-trigger detectie: inkomende mail debiteur → classifier → als verweer + dossier in hoofdpad → auto-switch naar 'Verweer beantwoorden' + AI draft via verweer-bibliotheek.
+
+### Wat er gedaan is
+
+**BUG-73 keten (5 fixes):**
+1. URL-state replaced door direct setState in parent — `useSearchParams` updatet niet betrouwbaar na `router.replace` in Next.js 15
+2. AI fallback chain: Sonnet 4.5 voor draft (Haiku te zwak voor instruction-following), Gemini retry-on-503, max_tokens 8192→16384
+3. Frontend riep `/api/ai/drafts/X` aan, backend prefix is `/api/ai-agent` — gefixt
+4. `AIDraftResponse.sources` typed als `list[dict]` maar automation_service slaat dict op — schema accepteert nu beide
+5. EmailComposeDialog reset alleen op Radix `onOpenChange`, niet op parent-controlled `open` — useEffect toegevoegd
+
+**HTML email-templates:**
+6. Migration `1f7244b8d57e`: `email_body_template_html` op IncassoPipelineStep + `body_html` op AIDraft
+7. Seed-script parsed nu HTML uit .eml + vervangt BaseNet logo URL door embedded data:image/png;base64
+8. `_kesting_logo.b64` in `templates/lisanne/` (~6KB)
+9. Server-side `html_renderer.py`: regex replacements voor (invullen gegevens cliënt), kenmerk, factuur-rijen, bedragen-tabel, Te-voldoen zin
+10. AI alleen voor subject + plain body (kort, betrouwbaar) — body_html komt van server
+11. `_normalize_table_styling`: alle templates krijgen identieke tabel-layout (Verdana 12px, padding 2px 6px, width 500px)
+12. `sanitizeOutgoingHtml` in frontend: laat data: URLs en inline `style` toe (logo + typografie)
+13. EmailComposeDialog accepteert `defaultBodyHtml` prop, init templateHtml bij open
+
+**Andere fixes:**
+14. "Bekijk concept" knop in dossier-Taken-tab (TijdregistratieTab) — heropent dialog via parent callback ipv URL-roundtrip
+15. Page.tsx exposeert `openDraftDialog(draftId)` voor herbruik tussen manual + task-deeplink
+16. Email-trigger detectie: nieuwe `trigger_defense_response_for_email()` in automation_service + tweede handler op EMAIL_CLASSIFIED event-bus
+17. `generate_draft_for_step` accepteert nu `incoming_defense` param
+
+### Gewijzigde bestanden
+- `backend/alembic/versions/1f7244b8d57e_add_html_body_fields_to_incasso_step_.py` — nieuw
+- `backend/app/ai_agent/incasso_email_prompts.py` — body_html prompt + drop body_html eis
+- `backend/app/ai_agent/kimi_client.py` — INCASSO_DRAFT_SCHEMA + Sonnet fallback + Gemini retry + max_tokens 16384
+- `backend/app/ai_agent/models.py` — AIDraft.body_html
+- `backend/app/ai_agent/router.py` — `_draft_to_response` lekt body_html
+- `backend/app/ai_agent/schemas.py` — `dict | list[dict]` voor sources, body_html field
+- `backend/app/ai_agent/orchestrator.py` — handle_email_classified_pipeline handler
+- `backend/app/incasso/models.py` — IncassoPipelineStep.email_body_template_html
+- `backend/app/incasso/automation_service.py` — incoming_defense param + trigger_defense_response_for_email
+- `backend/app/incasso/html_renderer.py` — nieuw, server-side template-fill + table normalize
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — openDraftDialog callback + draftBodyHtml state
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DossierHeader.tsx` — onGenerateDraft prop ipv eigen mutation
+- `frontend/src/app/(dashboard)/zaken/[id]/components/TijdregistratieTab.tsx` — onOpenDraft prop + Bekijk concept knop
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — Array.isArray check op draft.sources
+- `frontend/src/components/email-compose-dialog.tsx` — defaultBodyHtml + reset useEffect + sanitizeOutgoingHtml
+- `frontend/src/lib/sanitize.ts` — sanitizeOutgoingHtml voor uitgaande drafts (data: URL + style attr)
+- `scripts/import_lisanne_email_templates.py` — parse HTML + embed logo
+- `templates/lisanne/_kesting_logo.b64` — nieuw
+
+### Bekende issues
+- Factuur-tabel: 2e factuur-rij in template wordt niet ingevuld als template-rij format afwijkt (alleen colspan="2" rijen worden gevuld). Edge case bij meer dan 1 factuur.
+- "Te voldoen" rij gebruikt `<b>` wrappers — regex aangepast om dit te matchen, werkt nu.
+- AI provider 503/parse failures: Gemini → Kimi → Sonnet fallback chain, allemaal robuust met retry + tool_use.
+
+### Volgende sessie
+1. End-to-end test verweer-flow: stuur test-email vanuit eigen account naar lisanne@ met "betwist factuur" tekst → verifieer auto-classify + step-switch + draft generated
+2. Factuur-tabel edge cases: meer dan 1 factuur, lege invoice_number, factuur zonder due_date
+3. Optioneel: BUG-71/72 review, SEC-01 (HTTPS-only cookies)
 
 ## Wat er gedaan is (sessie 133 — 6 mei 2026) — Pivot incasso pipeline + AI draft engine + Mail-pagina
 

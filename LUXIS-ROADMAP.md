@@ -533,7 +533,10 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-71 | `s126a_pipeline_overhaul.py` migratie gebruikt `app.current_tenant_id` i.p.v. `app.current_tenant` — latent risico bij DB from scratch | Laag | S | ❌ TODO |
 | BUG-72 | 4 tests in `test_incasso_router.py` falen door stale DB state (duplicate tenant slug `kesting-legal`) — test-infra issue, niet code | Laag | S | ❌ TODO |
 | SEC-01 | AgentShield security scan (`npx ecc-agentshield scan`) — one-time audit van Claude Code config + MCP permissions + hook veiligheid | Laag | S | ❌ TODO |
-| BUG-73 | "Concept genereren" knop in dossier-header werkt niet zoals verwacht — Lisanne klikt op knop, krijgt geen visueel resultaat. Backend genereert wel een AIDraft (200 OK + draft_id), maar de compose-dialog opent niet automatisch op productie. Onderzoek: `router.replace(?draft=X)` triggert mogelijk geen `useEffect` re-run; of `useSearchParams` returnt stale waarde; of er is een caching/build-issue. Reproductie: dossier 2026-00049 op stap "Eerste sommatie", klik Concept genereren. Sessie 134 oppakken. | Hoog | S-M | ❌ TODO |
+| BUG-73 | "Concept genereren" knop opende compose-dialog niet | Hoog | S-M | ✅ Gefixt (7 mei, sessie 134) — bleek 5 keten-bugs: useSearchParams stale na router.replace → direct setState; AI fallback chain (Sonnet voor draft, Gemini retry); endpoint path `/api/ai-agent` ipv `/api/ai`; AIDraftResponse.sources schema dict\|list; EmailComposeDialog reset alleen op Radix onOpenChange |
+| BUG-74 | "Bekijk concept" knop ontbrak in dossier-Taken-tab — review_ai_draft tasks niet heropenbaar binnen dossier | Middel | S | ✅ Gefixt (7 mei, sessie 134) — TijdregistratieTab krijgt onOpenDraft callback van page.tsx |
+| FEAT-EML-01 | HTML email-templates met logo + handtekening + genormaliseerde tabel-layout over alle 6 sjablonen — server-side renderer ipv AI voor HTML opmaak | Middel | M | ✅ Gebouwd (7 mei, sessie 134) |
+| FEAT-EML-02 | Email-trigger detectie voor verweer-flow — inkomende mail → classify → als juridisch_verweer/betwisting + dossier in hoofdpad → auto-switch naar 'Verweer beantwoorden' + AI draft via verweer-bibliotheek | Hoog | M | ✅ Gebouwd (7 mei, sessie 134) — moet nog end-to-end getest |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 

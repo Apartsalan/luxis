@@ -84,6 +84,21 @@ INTAKE_SCHEMA: dict[str, Any] = {
     "required": ["debtor_name", "debtor_type", "confidence", "reasoning"],
 }
 
+INCASSO_DRAFT_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "subject": {
+            "type": "string",
+            "description": "Gepersonaliseerde Betreft-regel voor de email.",
+        },
+        "body": {
+            "type": "string",
+            "description": "Volledige email-body als plain text. Gebruik \\n voor regelovergangen.",
+        },
+    },
+    "required": ["subject", "body"],
+}
+
 INVOICE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -128,7 +143,8 @@ INVOICE_SCHEMA: dict[str, Any] = {
 _PROMPT_SCHEMA_MAP = {
     "classificeert": ("extract_classification", CLASSIFICATION_SCHEMA),
     "incassodossier willen aanmaken": ("extract_intake", INTAKE_SCHEMA),
-    "PDF-facturen": ("extract_invoice", INVOICE_SCHEMA),
+    "pdf-facturen": ("extract_invoice", INVOICE_SCHEMA),
+    "email-assistent": ("generate_incasso_email", INCASSO_DRAFT_SCHEMA),
 }
 
 
@@ -162,6 +178,7 @@ async def _call_gemini(system_prompt: str, user_message: str) -> dict:
                 "generationConfig": {
                     "temperature": 0.1,
                     "responseMimeType": "application/json",
+                    "maxOutputTokens": 8192,
                 },
             },
         )
@@ -195,6 +212,7 @@ async def _call_kimi(system_prompt: str, user_message: str) -> dict:
                 ],
                 "temperature": 0.1,
                 "response_format": {"type": "json_object"},
+                "max_tokens": 8192,
             },
         )
         response.raise_for_status()
@@ -220,7 +238,7 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
         tool_name, schema = schema_info
         response = await client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=1024,
+            max_tokens=8192,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
             tools=[

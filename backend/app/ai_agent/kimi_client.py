@@ -170,35 +170,46 @@ def _detect_schema(system_prompt: str) -> tuple[str, dict[str, Any]] | None:
 
 
 async def _call_gemini(system_prompt: str, user_message: str) -> dict:
-    """Call Google Gemini Flash API.
+    """Call Google Gemini Flash API met retry-on-503.
 
-    Uses the generateContent endpoint with JSON response.
+    Uses the generateContent endpoint met JSON response.
+    Gemini geeft soms transient 503 — 1x retry na 2s lost dat meestal op.
     """
     if not settings.gemini_api_key:
         raise ValueError("GEMINI_API_KEY is not configured")
 
     url = f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent?key={settings.gemini_api_key}"
+    payload = {
+        "contents": [
+            {"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_message}"}]},
+        ],
+        "generationConfig": {
+            "temperature": 0.1,
+            "responseMimeType": "application/json",
+            "maxOutputTokens": 16384,
+        },
+    }
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(
-            url,
-            headers={"Content-Type": "application/json"},
-            json={
-                "contents": [
-                    {"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_message}"}]},
-                ],
-                "generationConfig": {
-                    "temperature": 0.1,
-                    "responseMimeType": "application/json",
-                    "maxOutputTokens": 16384,
-                },
-            },
-        )
-        response.raise_for_status()
-        data = response.json()
-
-    raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    return _parse_json(raw_text)
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    url, headers={"Content-Type": "application/json"}, json=payload
+                )
+                response.raise_for_status()
+                data = response.json()
+            raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            return _parse_json(raw_text)
+        except httpx.HTTPStatusError as e:
+            last_exc = e
+            if e.response.status_code in (503, 429, 500) and attempt == 0:
+                logger.warning("Gemini %s — retry in 2s", e.response.status_code)
+                import asyncio as _asyncio
+                await _asyncio.sleep(2)
+                continue
+            raise
+    raise last_exc  # type: ignore[misc]
 
 
 async def _call_kimi(system_prompt: str, user_message: str) -> dict:
@@ -235,21 +246,26 @@ async def _call_kimi(system_prompt: str, user_message: str) -> dict:
 
 
 async def _call_haiku(system_prompt: str, user_message: str) -> dict:
-    """Call Claude Haiku as fallback using tool_use for structured output.
+    """Call Claude Haiku (or Sonnet bij complexe schemas) als fallback met tool_use.
 
     AI-TECH-03: Uses tool_use with forced tool_choice to guarantee valid JSON.
     Falls back to plain text + _parse_json if schema detection fails.
+    Voor incasso-draft generatie wordt Sonnet 4.5 gebruikt — Haiku kopieert
+    HTML-sjablonen letterlijk in plaats van placeholders te vervangen.
     """
     if not settings.anthropic_api_key:
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
     schema_info = _detect_schema(system_prompt)
+    # Draft-generatie heeft een complexer prompt + grote HTML-output — Sonnet hier
+    is_draft = bool(schema_info and schema_info[0] == "generate_incasso_email")
+    model_name = "claude-sonnet-4-5-20250514" if is_draft else "claude-haiku-4-5"
 
     if schema_info:
         tool_name, schema = schema_info
         response = await client.messages.create(
-            model="claude-haiku-4-5",
+            model=model_name,
             max_tokens=16384,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
@@ -405,11 +421,14 @@ async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, s
         except Exception as e:
             logger.warning("Intake AI: Kimi failed, falling back to Haiku: %s", e)
 
-    # Final fallback to Haiku
+    # Final fallback to Anthropic (Sonnet voor draft, Haiku voor rest)
     try:
         result = await _call_haiku(system_prompt, user_message)
-        logger.info("Intake AI: Haiku extraction successful")
-        return result, "claude-haiku-4-5"
+        schema_info = _detect_schema(system_prompt)
+        is_draft = bool(schema_info and schema_info[0] == "generate_incasso_email")
+        model_name = "claude-sonnet-4-5" if is_draft else "claude-haiku-4-5"
+        logger.info("Intake AI: %s extraction successful", model_name)
+        return result, model_name
     except Exception as e:
         logger.error("Intake AI: all providers failed: %s", e)
         raise ValueError(f"All AI providers failed: {e}") from e

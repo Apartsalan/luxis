@@ -120,17 +120,6 @@ def build_user_prompt(
         "",
         f"**Body template (plain text):**\n```\n{template_body}\n```",
         "",
-        *(
-            [
-                "**Body template (HTML — LEIDEND, neem alle tags inclusief <table>, <img>, "
-                "<style> letterlijk over):**",
-                "",
-                f"```html\n{template_body_html}\n```",
-                "",
-            ]
-            if template_body_html
-            else []
-        ),
         "### Dossier-context",
         "",
         f"- Dossiernummer: {case_data.get('case_number', '?')}",
@@ -215,28 +204,9 @@ def build_user_prompt(
         "",
         "### Output",
         "",
-        "Genereer JSON met `subject`, `body` (plain text) en `body_html` (HTML).",
-        "",
-        "**Voor `body_html`:**",
-        "1. Behoud de HTML-structuur EXACT: alle <table>, <tr>, <td>, <img>, "
-        "<span style=...>, <strong>, ondertekening, disclaimer.",
-        "2. VUL placeholder-tekst in met dossier-data — laat NIETS staan zoals:",
-        "   - '(invullen gegevens cliënt)' → vervang met de werkelijke cliëntnaam.",
-        "   - 'SOMMATIE TOT BETALING / /' (lege /) → vervang lege plekken met "
-        "kenmerk + dossiernummer.",
-        "   - 'Geachte heer mevrouw,' → vervang met 'Geachte heer/mevrouw [Naam],' "
-        "of behoud generiek als naam onbekend.",
-        "   - Lege <td>-cellen in factuur-tabel → vul met factuurnummer, datum, "
-        "vervaldatum, bedrag.",
-        "   - Lege bedrag-cellen (€ leeg) → vul met de juiste bedragen uit de tabel hierboven.",
-        "   - 'kenmerk:' regel → vul kenmerk in.",
-        "3. Body_html MOET een ANDERE inhoud hebben dan het sjabloon — als je "
-        "exact het sjabloon teruggeeft heeft de gebruiker er niets aan.",
-        "4. Behoud handtekening, logo (<img>), disclaimer en 113-paragraaf IDENTIEK.",
-        "",
-        "**Voor `body`:** identieke inhoud als plain text (zonder HTML-tags).",
-        "",
-        "**VERZIN GEEN HTML** — als HTML-sjabloon ontbreekt, geef `body_html` als lege string.",
+        "Genereer JSON met `subject` en `body` (plain text). Volg het sjabloon "
+        "LETTERLIJK behalve de plekken die je moet invullen met dossier-data "
+        "(cliëntnaam, kenmerk, factuur-rijen, bedragen).",
     ])
 
     return "\n".join(sections)

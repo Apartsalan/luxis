@@ -95,20 +95,8 @@ INCASSO_DRAFT_SCHEMA: dict[str, Any] = {
             "type": "string",
             "description": "Volledige email-body als plain text. Gebruik \\n voor regelovergangen.",
         },
-        "body_html": {
-            "type": "string",
-            "description": (
-                "Volledige email-body als HTML, gebaseerd op het HTML-sjabloon maar "
-                "met dossier-data INGEVULD. Behoud alle <table>, <tr>, <td>, <img>, "
-                "<span style>, <strong>, handtekening en disclaimer. Vervang "
-                "placeholders zoals '(invullen gegevens cliënt)', lege <td>-cellen "
-                "in de factuur-tabel, '€ ' zonder bedrag, en lege Betreft-velden "
-                "door de werkelijke dossier-data. Geef NIET het sjabloon letterlijk "
-                "terug — vul het in."
-            ),
-        },
     },
-    "required": ["subject", "body", "body_html"],
+    "required": ["subject", "body"],
 }
 
 INVOICE_SCHEMA: dict[str, Any] = {

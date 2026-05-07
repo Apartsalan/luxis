@@ -322,9 +322,12 @@ async def generate_draft_for_step(
     # Roep AI aan
     result, model_name = await call_intake_ai(system_prompt, user_prompt)
 
+    from app.incasso.html_renderer import render_template_html
+
     subject = result.get("subject", "") or template_subject
     body = result.get("body", "") or template_body
-    body_html = result.get("body_html", "") or template_body_html or None
+    # AI returnt geen body_html — server rendert HTML uit template + dossier-context
+    body_html = render_template_html(template_body_html, **context) if template_body_html else None
 
     # Sla AIDraft op
     draft = AIDraft(

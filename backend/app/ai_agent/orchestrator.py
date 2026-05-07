@@ -161,8 +161,46 @@ async def handle_email_classified(
         )
 
 
+async def handle_email_classified_pipeline(
+    *,
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    classification_id: uuid.UUID,  # noqa: ARG001
+    case_id: uuid.UUID,  # noqa: ARG001
+    category: str,
+    confidence: float,  # noqa: ARG001
+    synced_email_id: uuid.UUID,
+) -> None:
+    """Pipeline-switch handler (sessie 134): verweer-email → Verweer beantwoorden.
+
+    Hook in op classified events. Als category is verweer + dossier zit in
+    hoofdpad-stap, switch naar 'Verweer beantwoorden' + genereer AI draft op
+    basis van TWEEDE SOMMATIE INDIEN WEL VERWEER sjabloon + defense_library.
+    """
+    try:
+        from app.incasso.automation_service import trigger_defense_response_for_email
+
+        draft = await trigger_defense_response_for_email(
+            db,
+            tenant_id=tenant_id,
+            synced_email_id=synced_email_id,
+            classification_category=category,
+        )
+        if draft:
+            logger.info(
+                "Pipeline: verweer-trigger fired voor email %s → draft %s",
+                synced_email_id, draft.id,
+            )
+    except Exception:
+        logger.exception(
+            "Pipeline: verweer-trigger faalde voor email %s",
+            synced_email_id,
+        )
+
+
 def register_handlers(bus: EventBus | None = None) -> None:
     """Register all orchestrator handlers on the event bus."""
     target = bus or event_bus
     target.on(EMAIL_CLASSIFIED, handle_email_classified)
+    target.on(EMAIL_CLASSIFIED, handle_email_classified_pipeline)
     logger.info("Orchestrator: all handlers registered")

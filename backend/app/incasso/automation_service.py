@@ -268,6 +268,7 @@ async def generate_draft_for_step(
     *,
     rule_match: RuleMatch | None = None,
     create_workflow_task: bool = True,
+    incoming_defense: str | None = None,
 ) -> "AIDraft":
     """Genereer AI-draft voor (case, target_step) en sla op in ai_drafts.
 
@@ -304,6 +305,8 @@ async def generate_draft_for_step(
 
     # Verzamel dossier-context
     context = await gather_case_context(db, tenant_id, case_id)
+    if incoming_defense:
+        context["incoming_defense"] = incoming_defense
 
     # Bouw prompt
     system_prompt, user_prompt = build_full_prompt(
@@ -364,6 +367,115 @@ async def generate_draft_for_step(
             reason=rule_match.reason if rule_match else "Handmatig getriggerd",
         )
 
+    return draft
+
+
+# ── Email-event trigger (sessie 134) ───────────────────────────────────────
+
+
+# Stappen waarop binnenkomende verweer-email een pipeline-switch triggert.
+# Andere stappen ("Verweer beantwoorden", "Opvragen stukken", etc.) zijn al
+# verweer-flow — niet opnieuw triggeren.
+_HOOFDPAD_STEPS_FOR_DEFENSE = {
+    "Eerste sommatie",
+    "Tweede sommatie",
+    "Derde sommatie",
+    "Sommatie laatste mogelijkheid",
+    "Verzoekschrift faillissement",
+}
+
+# Categorieen die als verweer worden gezien — alleen deze triggeren switch.
+_DEFENSE_CATEGORIES = {"juridisch_verweer", "betwisting"}
+
+
+async def trigger_defense_response_for_email(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    synced_email_id: uuid.UUID,
+    classification_category: str,
+) -> "AIDraft | None":
+    """Hook na email-classificatie: verweer detecteerd → switch case + draft.
+
+    Wordt aangeroepen NA `classify_email`. Als de email is geclassificeerd als
+    verweer EN het dossier zit in een hoofdpad-stap, dan:
+      1. Set case.incasso_step_id naar 'Verweer beantwoorden'
+      2. Genereer AI draft op basis van TWEEDE SOMMATIE INDIEN WEL VERWEER met
+         incoming_defense=email body + defense_library voorbeelden
+      3. Maak WorkflowTask in /taken queue zodat Lisanne het ziet
+
+    Returns de AIDraft of None als geen actie nodig.
+    """
+    from app.ai_agent.models import AIDraft  # noqa: F401
+    from app.email.synced_email_models import SyncedEmail
+
+    if classification_category not in _DEFENSE_CATEGORIES:
+        return None
+
+    synced = (await db.execute(
+        select(SyncedEmail).where(
+            SyncedEmail.id == synced_email_id,
+            SyncedEmail.tenant_id == tenant_id,
+        )
+    )).scalar_one_or_none()
+    if not synced or not synced.case_id:
+        return None
+    if synced.direction != "inbound":
+        return None
+
+    case = (await db.execute(
+        select(Case).where(Case.id == synced.case_id, Case.tenant_id == tenant_id)
+    )).scalar_one_or_none()
+    if not case or not case.incasso_step_id:
+        return None
+
+    current_step = (await db.execute(
+        select(IncassoPipelineStep).where(
+            IncassoPipelineStep.id == case.incasso_step_id,
+            IncassoPipelineStep.tenant_id == tenant_id,
+        )
+    )).scalar_one_or_none()
+    if not current_step or current_step.name not in _HOOFDPAD_STEPS_FOR_DEFENSE:
+        logger.info(
+            "Email %s op case %s: stap '%s' is geen hoofdpad — geen pipeline-switch",
+            synced_email_id, case.case_number,
+            current_step.name if current_step else "?",
+        )
+        return None
+
+    verweer_step = (await db.execute(
+        select(IncassoPipelineStep).where(
+            IncassoPipelineStep.tenant_id == tenant_id,
+            IncassoPipelineStep.name == "Verweer beantwoorden",
+            IncassoPipelineStep.is_active.is_(True),
+        )
+    )).scalar_one_or_none()
+    if not verweer_step:
+        logger.warning(
+            "Tenant %s mist 'Verweer beantwoorden' stap — kan niet switchen",
+            tenant_id,
+        )
+        return None
+
+    # Switch case naar verweer
+    case.incasso_step_id = verweer_step.id
+    case.incasso_step_entered_at = datetime.now(UTC)
+    await db.flush()
+    logger.info(
+        "Case %s: switch %s → Verweer beantwoorden (verweer-email %s)",
+        case.case_number, current_step.name, synced_email_id,
+    )
+
+    # Genereer draft met incoming verweer-tekst
+    defense_text = (synced.body_text or synced.snippet or "")[:8000]
+    draft = await generate_draft_for_step(
+        db,
+        tenant_id=tenant_id,
+        case_id=case.id,
+        target_step_id=verweer_step.id,
+        rule_match=None,
+        create_workflow_task=True,
+        incoming_defense=defense_text,
+    )
     return draft
 
 

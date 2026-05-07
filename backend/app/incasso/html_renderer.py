@@ -33,13 +33,17 @@ def _fmt_eur(value: Decimal | float | int | None) -> str:
 def _fill_amount_cell(html: str, label: str, amount_str: str) -> str:
     """Vervang lege bedrag-cel naast `label` met het bedrag.
 
-    Matcht: <td>...Label</td><td>...€</td><td>&nbsp;</td>
+    Matcht: <td>...Label...</td><td>...€...</td><td>&nbsp;</td> waarbij
+    er ook <b>/<strong>/<span> wrappers tussen mogen zitten (Lisanne's
+    "Te voldoen" rij gebruikt <b>).
     """
+    inner_open = r"(?:<(?:span|b|strong|u)[^>]*>)*"
+    inner_close = r"(?:</(?:span|b|strong|u)>)*"
     pattern = re.compile(
-        r"(<td[^>]*>(?:<span[^>]*>)*\s*"
+        r"(<td[^>]*>" + inner_open + r"\s*"
         + re.escape(label)
-        + r"\s*(?:</span>)*</td>"
-        + r"\s*<td[^>]*>(?:<span[^>]*>)*€(?:</span>)*</td>"
+        + r"\s*" + inner_close + r"</td>"
+        + r"\s*<td[^>]*>" + inner_open + r"\s*€\s*" + inner_close + r"</td>"
         + r"\s*<td[^>]*>)(?:&nbsp;|\s*)(</td>)",
         re.DOTALL,
     )

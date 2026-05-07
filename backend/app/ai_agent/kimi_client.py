@@ -98,10 +98,13 @@ INCASSO_DRAFT_SCHEMA: dict[str, Any] = {
         "body_html": {
             "type": "string",
             "description": (
-                "Volledige email-body als HTML, identiek aan het HTML-sjabloon maar met "
-                "dossier-specifieke velden ingevuld. Behoud alle <table>, <tr>, <td>, "
-                "<img>, <strong>, <span style=\"...\">, en handtekening-blokken. "
-                "Vul alleen tekst-content in cellen aan."
+                "Volledige email-body als HTML, gebaseerd op het HTML-sjabloon maar "
+                "met dossier-data INGEVULD. Behoud alle <table>, <tr>, <td>, <img>, "
+                "<span style>, <strong>, handtekening en disclaimer. Vervang "
+                "placeholders zoals '(invullen gegevens cliënt)', lege <td>-cellen "
+                "in de factuur-tabel, '€ ' zonder bedrag, en lege Betreft-velden "
+                "door de werkelijke dossier-data. Geef NIET het sjabloon letterlijk "
+                "terug — vul het in."
             ),
         },
     },

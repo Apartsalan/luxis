@@ -254,6 +254,35 @@ export function EmailComposeDialog({
   // (Template list is hardcoded via TEMPLATE_GROUPS — geen fetch nodig.
   // De render_template_preview endpoint accepteert elke _RENDERERS key.)
 
+  // BUG-73 fix: reset on parent-controlled open change (handleOpenChange wordt
+  // niet aangeroepen wanneer parent zelf `open` van false → true zet).
+  useEffect(() => {
+    if (!open) return;
+    setTo(defaultTo);
+    setToName(defaultToName);
+    setCcList([]);
+    setCcInput("");
+    setShowCc(false);
+    setSubject(defaultSubject);
+    setBody(defaultBody);
+    setSelectedChip(null);
+    setErrors({});
+    setSelectedTemplate("");
+    setTemplateHtml(null);
+    setAttachments([]);
+    setInlineFiles(new Map());
+    setCaseFileIds(new Set());
+    setShowFilePicker(false);
+    setShowOtherCase(false);
+    setOtherSearch("");
+    setOtherResults([]);
+    setOtherSelected(null);
+    setOtherFiles([]);
+    setShowLibrary(false);
+    setRenderingLibraryKey(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultSubject, defaultBody, defaultTo, defaultToName]);
+
   // Reset on open
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {

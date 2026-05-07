@@ -97,6 +97,44 @@ def _fill_invoice_rows(html: str, invoices: list[dict[str, Any]]) -> str:
     return empty_row_pattern.sub(_replace, html)
 
 
+_TD_STYLE = "padding:2px 6px;vertical-align:top"
+_TABLE_STYLE = "width:500px;border-collapse:collapse;font-family:Verdana,Geneva,sans-serif;font-size:12px"
+
+
+def _normalize_table_styling(html: str) -> str:
+    """Geef alle <table>/<td>-tags identieke inline styling.
+
+    Lisanne's .eml-templates gebruiken inconsistente tabel-stijlen (1e
+    sommatie heeft padding+class, andere niet). Deze functie maakt alles
+    visueel hetzelfde groot en uitgelijnd.
+    """
+    # Wrap <table width="500"...> met uniform style. Behoud bestaande width
+    # attribute, vervang/voeg inline style toe.
+    def _table_repl(match: re.Match[str]) -> str:
+        attrs = match.group(1)
+        # Strip existing inline style + class
+        attrs = re.sub(r'\s+style="[^"]*"', "", attrs)
+        attrs = re.sub(r'\s+class="[^"]*"', "", attrs)
+        return f'<table{attrs} style="{_TABLE_STYLE}">'
+
+    html = re.sub(
+        r'<table((?:\s+[a-z-]+="[^"]*")*?\s+width="500"(?:\s+[a-z-]+="[^"]*")*?)\s*>',
+        _table_repl,
+        html,
+    )
+
+    # <td> zonder style krijgt uniform padding. <td> met bestaande
+    # padding:.100px... krijgt ook normalisatie (anders verschillen 1e en 2e).
+    def _td_repl(match: re.Match[str]) -> str:
+        attrs = match.group(1)
+        # Strip existing style attr (verwijdert padding:.100px)
+        attrs = re.sub(r'\s+style="[^"]*"', "", attrs)
+        return f'<td{attrs} style="{_TD_STYLE}">'
+
+    html = re.sub(r"<td((?:\s+[a-z-]+=\"[^\"]*\")*)\s*>", _td_repl, html)
+    return html
+
+
 def render_template_html(
     template_html: str,
     *,
@@ -179,5 +217,8 @@ def render_template_html(
 
     # Factuur-rijen
     html = _fill_invoice_rows(html, invoices)
+
+    # Normaliseer tabel-styling voor alle templates (1e/2e/3e sommatie etc.)
+    html = _normalize_table_styling(html)
 
     return html

@@ -220,7 +220,7 @@ export default function ZaakDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api(`/api/ai/drafts/${draftIdFromQuery}`);
+        const res = await api(`/api/ai-agent/drafts/${draftIdFromQuery}`);
         if (!res.ok) throw new Error("Concept niet gevonden");
         const d = await res.json();
         if (cancelled) return;
@@ -242,7 +242,7 @@ export default function ZaakDetailPage() {
   const handleGenerateDraft = async () => {
     try {
       const r = await generateDraft.mutateAsync(id);
-      const res = await api(`/api/ai/drafts/${r.draft_id}`);
+      const res = await api(`/api/ai-agent/drafts/${r.draft_id}`);
       if (!res.ok) throw new Error("Concept niet gevonden");
       const d = await res.json();
       setActiveDraftId(r.draft_id);

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -42,7 +41,7 @@ import {
 import type { WorkflowStatus, WorkflowTransition } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
-import { useIncassoPipelineSteps, useGenerateDraftForCase } from "@/hooks/use-incasso";
+import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
 import type { PipelineStep } from "@/hooks/use-incasso";
 import { useUpdateCase } from "@/hooks/use-cases";
 import type { CaseDetail } from "@/hooks/use-cases";
@@ -119,6 +118,8 @@ interface DossierHeaderProps {
   startTimer: (caseId: string, label: string) => void;
   setCaseEmailOpen: (v: boolean) => void;
   setPhoneNoteText: (v: string) => void;
+  onGenerateDraft: () => Promise<void> | void;
+  isGeneratingDraft: boolean;
 }
 
 export default function DossierHeader({
@@ -137,14 +138,14 @@ export default function DossierHeader({
   startTimer,
   setCaseEmailOpen,
   setPhoneNoteText,
+  onGenerateDraft,
+  isGeneratingDraft,
 }: DossierHeaderProps) {
   const [renteDialogOpen, setRenteDialogOpen] = useState(false);
 
   // DF2-09: Pipeline step selector for incasso cases
   const { data: pipelineSteps } = useIncassoPipelineSteps(true);
   const updateCase = useUpdateCase();
-  const generateDraft = useGenerateDraftForCase();
-  const router = useRouter();
   const activeSteps = pipelineSteps?.filter((s: PipelineStep) => s.is_active) ?? [];
 
   const handleStepChange = async (stepId: string) => {
@@ -319,22 +320,12 @@ export default function DossierHeader({
               {zaak.incasso_step_id && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    try {
-                      const r = await generateDraft.mutateAsync(zaak.id);
-                      toast.success("Concept klaar — opent voor review");
-                      // Open de compose-dialog direct met de nieuwe draft
-                      router.replace(`/zaken/${zaak.id}?draft=${r.draft_id}`);
-                    } catch (e) {
-                      const msg = e instanceof Error ? e.message : "Fout bij genereren concept";
-                      toast.error(msg);
-                    }
-                  }}
-                  disabled={generateDraft.isPending}
+                  onClick={() => { void onGenerateDraft(); }}
+                  disabled={isGeneratingDraft}
                   className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 text-primary px-3 py-1.5 text-xs font-medium hover:bg-primary/20 disabled:opacity-50"
                   title="AI genereert concept-email voor de huidige stap"
                 >
-                  {generateDraft.isPending ? "Bezig..." : "Concept genereren"}
+                  {isGeneratingDraft ? "Bezig..." : "Concept genereren"}
                 </button>
               )}
             </div>

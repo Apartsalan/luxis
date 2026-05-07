@@ -44,7 +44,7 @@ import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 import { useSendViaProvider, useSyncedEmailDetail } from "@/hooks/use-email-sync";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
+import { useIncassoPipelineSteps, useGenerateDraftForCase } from "@/hooks/use-incasso";
 import { formatCurrency } from "@/lib/utils";
 import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
 import {
@@ -234,6 +234,27 @@ export default function ZaakDetailPage() {
     })();
     return () => { cancelled = true; };
   }, [draftIdFromQuery]);
+
+  // BUG-73 fix (sessie 134): directe trigger ipv router.replace(?draft=X)
+  // useSearchParams updatet niet altijd betrouwbaar na router.replace in Next.js 15,
+  // dus we openen de dialog direct via state.
+  const generateDraft = useGenerateDraftForCase();
+  const handleGenerateDraft = async () => {
+    try {
+      const r = await generateDraft.mutateAsync(id);
+      const res = await api(`/api/ai/drafts/${r.draft_id}`);
+      if (!res.ok) throw new Error("Concept niet gevonden");
+      const d = await res.json();
+      setActiveDraftId(r.draft_id);
+      setDraftSubject(d.subject || "");
+      setDraftBody(d.body || "");
+      setCaseEmailOpen(true);
+      toast.success("Concept klaar — opent voor review");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Fout bij genereren concept";
+      toast.error(msg);
+    }
+  };
 
   const handleDraftSendComplete = async () => {
     if (!activeDraftId) return;
@@ -486,6 +507,8 @@ export default function ZaakDetailPage() {
         startTimer={startTimer}
         setCaseEmailOpen={setCaseEmailOpen}
         setPhoneNoteText={setPhoneNoteText}
+        onGenerateDraft={handleGenerateDraft}
+        isGeneratingDraft={generateDraft.isPending}
       />
 
       {/* AI-UX-04: AI suggestion banner — redesigned for clarity */}

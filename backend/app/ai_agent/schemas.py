@@ -93,6 +93,7 @@ class AIDraftResponse(BaseModel):
 
     subject: str
     body: str
+    body_html: str | None = None
     tone: str
     sources: dict | list[dict] | None = None
     reasoning: str | None = None

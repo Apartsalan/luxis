@@ -95,8 +95,17 @@ INCASSO_DRAFT_SCHEMA: dict[str, Any] = {
             "type": "string",
             "description": "Volledige email-body als plain text. Gebruik \\n voor regelovergangen.",
         },
+        "body_html": {
+            "type": "string",
+            "description": (
+                "Volledige email-body als HTML, identiek aan het HTML-sjabloon maar met "
+                "dossier-specifieke velden ingevuld. Behoud alle <table>, <tr>, <td>, "
+                "<img>, <strong>, <span style=\"...\">, en handtekening-blokken. "
+                "Vul alleen tekst-content in cellen aan."
+            ),
+        },
     },
-    "required": ["subject", "body"],
+    "required": ["subject", "body", "body_html"],
 }
 
 INVOICE_SCHEMA: dict[str, Any] = {
@@ -178,7 +187,7 @@ async def _call_gemini(system_prompt: str, user_message: str) -> dict:
                 "generationConfig": {
                     "temperature": 0.1,
                     "responseMimeType": "application/json",
-                    "maxOutputTokens": 8192,
+                    "maxOutputTokens": 16384,
                 },
             },
         )
@@ -212,7 +221,7 @@ async def _call_kimi(system_prompt: str, user_message: str) -> dict:
                 ],
                 "temperature": 0.1,
                 "response_format": {"type": "json_object"},
-                "max_tokens": 8192,
+                "max_tokens": 16384,
             },
         )
         response.raise_for_status()
@@ -238,7 +247,7 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
         tool_name, schema = schema_info
         response = await client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=8192,
+            max_tokens=16384,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
             tools=[

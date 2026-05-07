@@ -96,6 +96,7 @@ def build_user_prompt(
     av_text: str | None = None,
     incoming_defense: str | None = None,
     prior_correspondence: list[dict[str, Any]] | None = None,
+    template_body_html: str | None = None,
 ) -> str:
     """Construeer de user-prompt voor een incasso-stap.
 
@@ -117,8 +118,19 @@ def build_user_prompt(
         "",
         f"**Subject template:**\n```\n{template_subject}\n```",
         "",
-        f"**Body template:**\n```\n{template_body}\n```",
+        f"**Body template (plain text):**\n```\n{template_body}\n```",
         "",
+        *(
+            [
+                "**Body template (HTML — LEIDEND, neem alle tags inclusief <table>, <img>, "
+                "<style> letterlijk over):**",
+                "",
+                f"```html\n{template_body_html}\n```",
+                "",
+            ]
+            if template_body_html
+            else []
+        ),
         "### Dossier-context",
         "",
         f"- Dossiernummer: {case_data.get('case_number', '?')}",
@@ -203,7 +215,12 @@ def build_user_prompt(
         "",
         "### Output",
         "",
-        "Genereer JSON met `subject` en `body`. Volg het sjabloon LETTERLIJK behalve de plekken die je moet invullen.",
+        "Genereer JSON met `subject`, `body` (plain text) en `body_html` (HTML).",
+        "- `body_html` MOET de complete HTML-sjabloon overnemen (alle <table>, <tr>, <td>, "
+        "<img>, <span style=...>, <strong>, handtekening, disclaimer) en alleen de "
+        "tekst-content in cellen aanvullen met dossier-data.",
+        "- `body` is dezelfde inhoud als plain text (Outlook fallback).",
+        "- VERZIN GEEN HTML — als HTML-sjabloon ontbreekt, geef `body_html` als lege string.",
     ])
 
     return "\n".join(sections)

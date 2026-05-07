@@ -36,6 +36,7 @@ class IncassoPipelineStep(TenantBase):
 
     email_subject_template: Mapped[str | None] = mapped_column(String(500), nullable=True)
     email_body_template: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email_body_template_html: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     step_category: Mapped[str] = mapped_column(
         String(30), nullable=False, default="minnelijk", server_default="minnelijk"

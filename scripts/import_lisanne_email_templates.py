@@ -16,6 +16,7 @@ Run: docker compose exec backend python scripts/import_lisanne_email_templates.p
 
 import asyncio
 import email
+import re
 import sys
 from email import policy
 from pathlib import Path
@@ -44,37 +45,67 @@ EMAIL_MAPPING: dict[str, list[str]] = {
 }
 
 
-def parse_eml(path: Path) -> tuple[str, str]:
-    """Parse .eml file, return (subject, body_text). Probeert utf-8, valt terug op cp1252."""
+_LOGO_B64_PATH = Path(__file__).resolve().parents[1] / "templates" / "lisanne" / "_kesting_logo.b64"
+
+
+def _load_logo_data_url() -> str | None:
+    """Return data:image/png;base64,XXX or None if logo file missing."""
+    if not _LOGO_B64_PATH.exists():
+        return None
+    b64 = _LOGO_B64_PATH.read_text().strip()
+    return f"data:image/png;base64,{b64}"
+
+
+def _decode_part(part) -> str:
+    try:
+        return part.get_content()
+    except (LookupError, UnicodeDecodeError):
+        raw = part.get_payload(decode=True)
+        if isinstance(raw, bytes):
+            for enc in ("utf-8", "cp1252", "iso-8859-1"):
+                try:
+                    return raw.decode(enc)
+                except UnicodeDecodeError:
+                    continue
+            return raw.decode("utf-8", errors="replace")
+        return str(raw)
+
+
+_BASENET_LOGO_RE = re.compile(
+    r'(?P<full><img[^>]*src=")https?://static\.basenet\.nl/cms/[^"]*("[^>]*>)',
+    re.IGNORECASE,
+)
+
+
+def _swap_basenet_logo(html: str, data_url: str | None) -> str:
+    """Vervang BaseNet logo-URLs door inline data-URL of verwijder ze."""
+    if not data_url:
+        return _BASENET_LOGO_RE.sub("", html)
+    return _BASENET_LOGO_RE.sub(rf'\g<full>{data_url}\2', html)
+
+
+def parse_eml(path: Path) -> tuple[str, str, str]:
+    """Parse .eml file, return (subject, body_text, body_html). Probeert utf-8, valt terug op cp1252."""
     with open(path, "rb") as fp:
         msg = email.message_from_binary_file(fp, policy=policy.default)
 
     subject = msg["subject"] or ""
 
-    body_part = msg.get_body(preferencelist=("plain", "html"))
-    if not body_part:
-        return subject, ""
+    plain_part = msg.get_body(preferencelist=("plain",))
+    html_part = msg.get_body(preferencelist=("html",))
 
-    # email lib heeft vaak charset-issues bij Outlook .eml. Probeer raw payload + decoderen.
-    try:
-        body = body_part.get_content()
-    except (LookupError, UnicodeDecodeError):
-        raw = body_part.get_payload(decode=True)
-        if isinstance(raw, bytes):
-            for enc in ("utf-8", "cp1252", "iso-8859-1"):
-                try:
-                    body = raw.decode(enc)
-                    break
-                except UnicodeDecodeError:
-                    continue
-            else:
-                body = raw.decode("utf-8", errors="replace")
-        else:
-            body = str(raw)
+    body = _decode_part(plain_part) if plain_part else ""
+    body_html = _decode_part(html_part) if html_part else ""
 
     # Fix common cp1252 mojibake → utf-8 chars
-    body = body.replace("�", "ë")  # replacement char → ë (cliënt context)
-    return subject, body
+    body = body.replace("�", "ë")
+    body_html = body_html.replace("�", "ë")
+
+    # Swap externe BaseNet logo door embedded data-URL
+    if body_html:
+        body_html = _swap_basenet_logo(body_html, _load_logo_data_url())
+
+    return subject, body, body_html
 
 
 async def main() -> int:
@@ -82,15 +113,18 @@ async def main() -> int:
         print(f"FOUT: template-folder niet gevonden: {TEMPLATE_DIR}")
         return 1
 
-    parsed: dict[str, tuple[str, str]] = {}
+    parsed: dict[str, tuple[str, str, str]] = {}
     for filename in EMAIL_MAPPING:
         path = TEMPLATE_DIR / filename
         if not path.exists():
             print(f"WAARSCHUWING: bestand ontbreekt: {filename}")
             continue
-        subject, body = parse_eml(path)
-        parsed[filename] = (subject, body)
-        print(f"  geparsed {filename}: subject={subject!r}, body={len(body)} chars")
+        subject, body, body_html = parse_eml(path)
+        parsed[filename] = (subject, body, body_html)
+        print(
+            f"  geparsed {filename}: subject={subject!r}, "
+            f"plain={len(body)} chars, html={len(body_html)} chars"
+        )
 
     if not parsed:
         print("FOUT: geen sjablonen geparsed")
@@ -114,11 +148,12 @@ async def main() -> int:
             for filename, step_names in EMAIL_MAPPING.items():
                 if filename not in parsed:
                     continue
-                subject, body = parsed[filename]
+                subject, body, body_html = parsed[filename]
                 for step in steps:
                     if step.name in step_names:
                         step.email_subject_template = subject
                         step.email_body_template = body
+                        step.email_body_template_html = body_html or None
                         updated += 1
 
             await session.commit()

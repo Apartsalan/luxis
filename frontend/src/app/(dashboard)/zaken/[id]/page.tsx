@@ -214,6 +214,7 @@ export default function ZaakDetailPage() {
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [draftSubject, setDraftSubject] = useState<string>("");
   const [draftBody, setDraftBody] = useState<string>("");
+  const [draftBodyHtml, setDraftBodyHtml] = useState<string>("");
 
   useEffect(() => {
     if (!draftIdFromQuery) return;
@@ -227,6 +228,7 @@ export default function ZaakDetailPage() {
         setActiveDraftId(draftIdFromQuery);
         setDraftSubject(d.subject || "");
         setDraftBody(d.body || "");
+        setDraftBodyHtml(d.body_html || "");
         setCaseEmailOpen(true);
       } catch {
         toast.error("Kon AI-concept niet laden");
@@ -248,6 +250,7 @@ export default function ZaakDetailPage() {
       setActiveDraftId(r.draft_id);
       setDraftSubject(d.subject || "");
       setDraftBody(d.body || "");
+      setDraftBodyHtml(d.body_html || "");
       setCaseEmailOpen(true);
       toast.success("Concept klaar — opent voor review");
     } catch (e) {
@@ -275,6 +278,7 @@ export default function ZaakDetailPage() {
       setActiveDraftId(null);
       setDraftSubject("");
       setDraftBody("");
+      setDraftBodyHtml("");
       // Verwijder ?draft=X uit URL
       router.replace(`/zaken/${id}`);
     }
@@ -913,6 +917,7 @@ export default function ZaakDetailPage() {
             setActiveDraftId(null);
             setDraftSubject("");
             setDraftBody("");
+            setDraftBodyHtml("");
             router.replace(`/zaken/${id}`);
           }
         }}
@@ -926,6 +931,7 @@ export default function ZaakDetailPage() {
             : zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""
         }
         defaultBody={activeDraftId ? draftBody : ""}
+        defaultBodyHtml={activeDraftId ? draftBodyHtml : ""}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
         caseId={id}
       />

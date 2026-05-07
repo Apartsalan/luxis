@@ -42,3 +42,55 @@ export function sanitizeHtml(dirty: string): string {
     ALLOW_DATA_ATTR: false,
   });
 }
+
+/**
+ * Sanitize HTML for outgoing email drafts that the user will send.
+ * Less strict than sanitizeHtml because:
+ * - The user authored / curated the content (no untrusted source)
+ * - Inline `style` is needed to preserve template typography/layout
+ * - `data:image` IMG src is needed for embedded logos
+ *
+ * External http(s) IMG src is still stripped via the global afterSanitizeAttributes
+ * hook above — so even outgoing drafts cannot leak via tracker pixels. We only
+ * re-allow `data:` URIs by setting them back when present.
+ */
+export function sanitizeOutgoingHtml(dirty: string): string {
+  // Snapshot data: src values before global hook strips them, then restore.
+  const dataSrcMap = new Map<string, string>();
+  const tmp = document.createElement("div");
+  tmp.innerHTML = dirty;
+  let counter = 0;
+  for (const img of Array.from(tmp.querySelectorAll("img"))) {
+    const src = img.getAttribute("src") || "";
+    if (src.startsWith("data:")) {
+      const token = `__LUXIS_DATA_SRC_${counter++}__`;
+      dataSrcMap.set(token, src);
+      img.setAttribute("data-luxis-token", token);
+    }
+  }
+  const cleaned = DOMPurify.sanitize(tmp.innerHTML, {
+    ALLOWED_TAGS: [
+      "p", "br", "b", "i", "u", "strong", "em", "a", "ul", "ol", "li",
+      "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre", "code",
+      "table", "thead", "tbody", "tr", "th", "td", "img", "span", "div",
+      "hr", "sub", "sup", "html", "head", "body", "meta", "style",
+    ],
+    ALLOWED_ATTR: [
+      "href", "src", "alt", "title", "class", "target", "rel", "style",
+      "width", "height", "colspan", "rowspan", "border", "cellpadding",
+      "cellspacing", "data-luxis-token",
+    ],
+    ALLOW_DATA_ATTR: true,
+  });
+  // Restore data: src on tokenised images
+  if (dataSrcMap.size === 0) return cleaned;
+  const out = document.createElement("div");
+  out.innerHTML = cleaned;
+  for (const img of Array.from(out.querySelectorAll("img[data-luxis-token]"))) {
+    const token = img.getAttribute("data-luxis-token") || "";
+    const src = dataSrcMap.get(token);
+    if (src) img.setAttribute("src", src);
+    img.removeAttribute("data-luxis-token");
+  }
+  return out.innerHTML;
+}

@@ -292,6 +292,7 @@ async def generate_draft_for_step(
 
     template_subject = target_step.email_subject_template or ""
     template_body = target_step.email_body_template or ""
+    template_body_html = target_step.email_body_template_html or ""
     if not template_body:
         logger.warning(
             "Stap '%s' heeft geen email-sjabloon — draft-generatie overgeslagen",
@@ -309,6 +310,7 @@ async def generate_draft_for_step(
         step_name=target_step.name,
         template_subject=template_subject,
         template_body=template_body,
+        template_body_html=template_body_html or None,
         **context,
     )
 
@@ -322,6 +324,7 @@ async def generate_draft_for_step(
 
     subject = result.get("subject", "") or template_subject
     body = result.get("body", "") or template_body
+    body_html = result.get("body_html", "") or template_body_html or None
 
     # Sla AIDraft op
     draft = AIDraft(
@@ -329,6 +332,7 @@ async def generate_draft_for_step(
         case_id=case_id,
         subject=subject,
         body=body,
+        body_html=body_html,
         tone="formeel",
         sources={
             "step_name": target_step.name,

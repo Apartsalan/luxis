@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
-import { sanitizeHtml } from "@/lib/sanitize";
+import { sanitizeOutgoingHtml } from "@/lib/sanitize";
 import { useRenderTemplate, type ComposeInlineAttachment } from "@/hooks/use-email-sync";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -178,6 +178,7 @@ export interface EmailComposeDialogProps {
   defaultToName?: string;
   defaultSubject?: string;
   defaultBody?: string;
+  defaultBodyHtml?: string;
   attachmentName?: string;
   title?: string;
   recipients?: EmailRecipient[];
@@ -196,6 +197,7 @@ export function EmailComposeDialog({
   defaultToName = "",
   defaultSubject = "",
   defaultBody = "",
+  defaultBodyHtml = "",
   attachmentName,
   title = "Nieuwe e-mail",
   recipients,
@@ -268,7 +270,7 @@ export function EmailComposeDialog({
     setSelectedChip(null);
     setErrors({});
     setSelectedTemplate("");
-    setTemplateHtml(null);
+    setTemplateHtml(defaultBodyHtml || null);
     setAttachments([]);
     setInlineFiles(new Map());
     setCaseFileIds(new Set());
@@ -281,7 +283,7 @@ export function EmailComposeDialog({
     setShowLibrary(false);
     setRenderingLibraryKey(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, defaultSubject, defaultBody, defaultTo, defaultToName]);
+  }, [open, defaultSubject, defaultBody, defaultBodyHtml, defaultTo, defaultToName]);
 
   // Reset on open
   const handleOpenChange = (nextOpen: boolean) => {
@@ -758,7 +760,7 @@ export function EmailComposeDialog({
                 ref={templateEditorRef}
                 contentEditable
                 suppressContentEditableWarning
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(templateHtml) }}
+                dangerouslySetInnerHTML={{ __html: sanitizeOutgoingHtml(templateHtml) }}
                 onBlur={() => {
                   if (templateEditorRef.current) {
                     setTemplateHtml(templateEditorRef.current.innerHTML);

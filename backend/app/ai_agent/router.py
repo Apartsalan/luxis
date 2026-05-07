@@ -391,6 +391,7 @@ def _draft_to_response(d) -> AIDraftResponse:
         classification_id=d.classification_id,
         subject=d.subject,
         body=d.body,
+        body_html=d.body_html,
         tone=d.tone,
         sources=d.sources,
         reasoning=d.reasoning,

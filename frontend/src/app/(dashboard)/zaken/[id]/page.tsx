@@ -362,7 +362,7 @@ export default function ZaakDetailPage() {
       const res = await api("/api/email/compose/send", {
         method: "POST",
         body: JSON.stringify({
-          to: data.recipient_email,
+          to: [data.recipient_email],
           subject,
           body_html: data.body_html || `<p>${body.replace(/\n/g, "<br>")}</p>`,
           cc: data.cc,
@@ -371,7 +371,13 @@ export default function ZaakDetailPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.detail ?? "E-mail verzenden mislukt");
+        const detail = err?.detail;
+        const msg = typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+            ? detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(", ")
+            : "E-mail verzenden mislukt";
+        throw new Error(msg);
       }
 
       toast.success("E-mail verzonden via Outlook");

@@ -44,6 +44,32 @@ EMAIL_MAPPING: dict[str, list[str]] = {
     "TWEEDE SOMMATIE INDIEN WEL VERWEER.eml": ["Verweer beantwoorden"],
 }
 
+# Per-stap clean subjects — vervangt interne labels uit .eml met
+# professionele tekst voor wederpartij. Ondersteunt placeholders / / die
+# door html_renderer.py + AI ingevuld worden met kenmerk + dossiernummer.
+SUBJECT_OVERRIDES: dict[str, str] = {
+    "Eerste sommatie": "SOMMATIE TOT BETALING / / ",
+    "Tweede sommatie": "TWEEDE SOMMATIE / / ",
+    "Derde sommatie": "DERDE SOMMATIE / / ",
+    "Sommatie laatste mogelijkheid": "LAATSTE SOMMATIE / / ",
+    "Verzoekschrift faillissement": "VERZOEKSCHRIFT FAILLISSEMENT / / ",
+    "Verweer beantwoorden": "REACTIE OP UW VERWEER / / ",
+}
+
+# Body-content interne labels die uit body_text en body_html gestript worden.
+# Wederpartij ziet niets dat verwijst naar Lisanne's interne sjabloonnaam.
+_INTERNE_LABELS_RE = re.compile(
+    r"\s*\((?:GEEN\s+VERWEER|INDIEN\s+WEL\s+VERWEER|LAATSTE\s+MOGELIJKHEID)\)",
+    re.IGNORECASE,
+)
+
+
+def _clean_internal_labels(text: str) -> str:
+    """Strip interne sjabloon-labels uit body-tekst."""
+    if not text:
+        return text
+    return _INTERNE_LABELS_RE.sub("", text)
+
 
 _LOGO_B64_CANDIDATES = [
     Path("/app/templates/lisanne/_kesting_logo.b64"),  # container mount
@@ -152,12 +178,18 @@ async def main() -> int:
             for filename, step_names in EMAIL_MAPPING.items():
                 if filename not in parsed:
                     continue
-                subject, body, body_html = parsed[filename]
+                _, body, body_html = parsed[filename]
+                # Strip interne labels uit body
+                body_clean = _clean_internal_labels(body)
+                body_html_clean = _clean_internal_labels(body_html) if body_html else ""
                 for step in steps:
                     if step.name in step_names:
-                        step.email_subject_template = subject
-                        step.email_body_template = body
-                        step.email_body_template_html = body_html or None
+                        # Schone subject per stap (overschrijft .eml subject)
+                        step.email_subject_template = SUBJECT_OVERRIDES.get(
+                            step.name, "SOMMATIE TOT BETALING / / "
+                        )
+                        step.email_body_template = body_clean
+                        step.email_body_template_html = body_html_clean or None
                         updated += 1
 
             await session.commit()

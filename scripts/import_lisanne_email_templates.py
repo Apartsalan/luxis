@@ -45,15 +45,19 @@ EMAIL_MAPPING: dict[str, list[str]] = {
 }
 
 
-_LOGO_B64_PATH = Path(__file__).resolve().parents[1] / "templates" / "lisanne" / "_kesting_logo.b64"
+_LOGO_B64_CANDIDATES = [
+    Path("/app/templates/lisanne/_kesting_logo.b64"),  # container mount
+    Path(__file__).resolve().parents[1] / "templates" / "lisanne" / "_kesting_logo.b64",  # host
+]
 
 
 def _load_logo_data_url() -> str | None:
     """Return data:image/png;base64,XXX or None if logo file missing."""
-    if not _LOGO_B64_PATH.exists():
-        return None
-    b64 = _LOGO_B64_PATH.read_text().strip()
-    return f"data:image/png;base64,{b64}"
+    for path in _LOGO_B64_CANDIDATES:
+        if path.exists():
+            b64 = path.read_text().strip()
+            return f"data:image/png;base64,{b64}"
+    return None
 
 
 def _decode_part(part) -> str:

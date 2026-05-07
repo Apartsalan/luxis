@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Eye,
   Loader2,
   Plus,
 } from "lucide-react";
@@ -22,7 +23,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { formatDateShort } from "@/lib/utils";
 import { TASK_STATUS_BADGE } from "../types";
 
-export default function TijdregistratieTab({ caseId }: { caseId: string }) {
+export default function TijdregistratieTab({
+  caseId,
+  onOpenDraft,
+}: {
+  caseId: string;
+  onOpenDraft?: (draftId: string) => void;
+}) {
   const { user } = useAuth();
   const { data: tasksData, isLoading } = useWorkflowTasks({ case_id: caseId });
   const completeTask = useCompleteTask();
@@ -303,6 +310,23 @@ export default function TijdregistratieTab({ caseId }: { caseId: string }) {
                         {TASK_TYPE_LABELS[task.task_type] ?? task.task_type}
                       </span>
                     </div>
+                    {/* review_ai_draft: heropent compose-dialog via parent callback */}
+                    {task.task_type === "review_ai_draft" &&
+                      task.action_config &&
+                      typeof (task.action_config as { draft_id?: unknown }).draft_id === "string" && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onOpenDraft?.(
+                              (task.action_config as { draft_id: string }).draft_id
+                            )
+                          }
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary text-primary-foreground px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Bekijk concept
+                        </button>
+                      )}
                   </div>
                   <button
                     onClick={() => handleSkip(task.id)}

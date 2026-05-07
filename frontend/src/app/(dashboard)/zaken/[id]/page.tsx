@@ -241,17 +241,25 @@ export default function ZaakDetailPage() {
   // useSearchParams updatet niet altijd betrouwbaar na router.replace in Next.js 15,
   // dus we openen de dialog direct via state.
   const generateDraft = useGenerateDraftForCase();
-  const handleGenerateDraft = async () => {
+  const openDraftDialog = async (draftId: string) => {
     try {
-      const r = await generateDraft.mutateAsync(id);
-      const res = await api(`/api/ai-agent/drafts/${r.draft_id}`);
+      const res = await api(`/api/ai-agent/drafts/${draftId}`);
       if (!res.ok) throw new Error("Concept niet gevonden");
       const d = await res.json();
-      setActiveDraftId(r.draft_id);
+      setActiveDraftId(draftId);
       setDraftSubject(d.subject || "");
       setDraftBody(d.body || "");
       setDraftBodyHtml(d.body_html || "");
       setCaseEmailOpen(true);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Concept niet gevonden";
+      toast.error(msg);
+    }
+  };
+  const handleGenerateDraft = async () => {
+    try {
+      const r = await generateDraft.mutateAsync(id);
+      await openDraftDialog(r.draft_id);
       toast.success("Concept klaar — opent voor review");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Fout bij genereren concept";
@@ -853,7 +861,7 @@ export default function ZaakDetailPage() {
             )}
             {activeTab === "taken" && (
               <ErrorBoundary key="taken" fallback={<TabErrorFallback tabName="Taken" />}>
-                <TijdregistratieTab caseId={id} />
+                <TijdregistratieTab caseId={id} onOpenDraft={openDraftDialog} />
               </ErrorBoundary>
             )}
             {activeTab === "uren" && (

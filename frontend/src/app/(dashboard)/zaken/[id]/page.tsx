@@ -42,19 +42,10 @@ import {
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
-import { useSendViaProvider, useSyncedEmailDetail } from "@/hooks/use-email-sync";
-import { sanitizeHtml } from "@/lib/sanitize";
+import { useSendViaProvider } from "@/hooks/use-email-sync";
 import { useIncassoPipelineSteps, useGenerateDraftForCase } from "@/hooks/use-incasso";
 import { formatCurrency } from "@/lib/utils";
-import { useFollowupForCase, useApproveAndExecuteFollowup } from "@/hooks/use-followup";
-import {
-  useClassifications,
-  useApproveAndExecuteClassification,
-  useRejectClassification,
-  type Classification,
-} from "@/hooks/use-ai-agent";
 import { api } from "@/lib/api";
-import { confidenceLabelText, confidenceTextColor as confidenceTextCls } from "@/lib/confidence";
 import { STATUS_LABELS } from "./types";
 
 // ── Tab components ───────────────────────────────────────────────────────────
@@ -99,21 +90,6 @@ export default function ZaakDetailPage() {
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: workflowTransitions } = useWorkflowTransitions();
 
-  const { data: followupData } = useFollowupForCase(id);
-  const followupRec = followupData?.items?.[0] ?? null;
-  const approveAndExecuteFollowup = useApproveAndExecuteFollowup();
-
-  // AI-UX-04: pending classifications for this case
-  const { data: pendingClassifications } = useClassifications("pending", id, 1, 1);
-  const latestPendingClassification = pendingClassifications?.[0] ?? null;
-  const approveClassification = useApproveAndExecuteClassification();
-  const rejectClassification = useRejectClassification();
-  const [aiBannerCollapsed, setAiBannerCollapsed] = useState(false);
-  const [aiBannerDismissed, setAiBannerDismissed] = useState(false);
-  const [emailBodyExpanded, setEmailBodyExpanded] = useState(false);
-  const { data: classificationEmail, isLoading: classificationEmailLoading } = useSyncedEmailDetail(
-    latestPendingClassification?.synced_email_id
-  );
   const { data: pipelineSteps } = useIncassoPipelineSteps(true);
 
   // Set breadcrumb label to case number

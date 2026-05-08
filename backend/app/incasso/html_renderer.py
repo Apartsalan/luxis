@@ -171,6 +171,24 @@ def _normalize_table_styling(html: str) -> str:
     return html
 
 
+def render_subject(template_subject: str, *, case_number: str, kenmerk: str) -> str:
+    """Vul `SUBJECT_OVERRIDES`-template `... / / ` met kenmerk + dossiernummer.
+
+    Templates volgen format `<TYPE> / / ` (twee slashes met dubbele spatie of
+    enkele spatie). Server rendert deze altijd zelf — AI maakt soms fouten
+    met de structuur (bv. contactnaam in 2e slot in plaats van dossiernummer).
+    """
+    if not template_subject:
+        return ""
+    out = template_subject.rstrip()
+    out = re.sub(r"\s*/\s*/\s*$", f" / {kenmerk} / {case_number}", out)
+    if "/ /" in out:
+        out = out.replace("/ /", f"/ {kenmerk} / {case_number}", 1)
+    if "/  /" in out:
+        out = out.replace("/  /", f"/ {kenmerk} / {case_number}", 1)
+    return out.strip()
+
+
 def _extract_weerlegging(ai_body: str) -> str | None:
     """Extract de weerlegging-paragraaf uit AI's plain text body.
 

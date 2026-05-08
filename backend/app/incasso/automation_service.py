@@ -141,6 +141,33 @@ async def evaluate_timeout_rules(
 # ── Helpers voor draft-generator ──────────────────────────────────────────
 
 
+def _extract_pdf_text(path: str, max_chars: int = 8000) -> str | None:
+    """Extract text from PDF at given path. Returns None bij fouten of leeg."""
+    try:
+        import pymupdf
+    except ImportError:
+        logger.warning("pymupdf niet beschikbaar — AV-text extractie uitgeschakeld")
+        return None
+    try:
+        doc = pymupdf.open(path)
+    except Exception as e:
+        logger.warning(f"AV PDF kan niet geopend worden ({path}): {e}")
+        return None
+    try:
+        parts: list[str] = []
+        total = 0
+        for page in doc:
+            text = page.get_text("text") or ""
+            parts.append(text)
+            total += len(text)
+            if total >= max_chars:
+                break
+        result = "\n".join(parts).strip()
+        return result[:max_chars] if result else None
+    finally:
+        doc.close()
+
+
 async def gather_case_context(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -187,6 +214,16 @@ async def gather_case_context(
     totaal = (hoofdsom + rente + bik + btw).quantize(Decimal("0.01"))
     te_voldoen = (totaal - total_paid).quantize(Decimal("0.01"))
 
+    # Algemene Voorwaarden van cliënt — lees PDF en extract tekst voor AI
+    av_text: str | None = None
+    if client_contact and client_contact.terms_file_path:
+        av_text = _extract_pdf_text(client_contact.terms_file_path)
+        if av_text:
+            logger.info(
+                "Case %s: AV-text geladen voor %s (%d chars)",
+                case.case_number, client_contact.name, len(av_text),
+            )
+
     return {
         "case_data": {
             "case_number": case.case_number,
@@ -225,7 +262,7 @@ async def gather_case_context(
             "door_ons_ontvangen": total_paid,
             "te_voldoen": te_voldoen,
         },
-        "av_text": None,
+        "av_text": av_text,
         "incoming_defense": None,
         "prior_correspondence": [],
     }
@@ -325,9 +362,17 @@ async def generate_draft_for_step(
     # Roep AI aan
     result, model_name = await call_intake_ai(system_prompt, user_prompt)
 
-    from app.incasso.html_renderer import render_template_html
+    from app.incasso.html_renderer import render_template_html, render_subject
 
-    subject = result.get("subject", "") or template_subject
+    # Subject altijd server-side renderen — AI maakt soms fouten met de
+    # `/ kenmerk / dossiernummer` structuur (zet bv. contactnaam in plaats
+    # van dossiernummer in 2e slot).
+    case_data = context.get("case_data", {})
+    subject = render_subject(
+        template_subject,
+        case_number=str(case_data.get("case_number") or ""),
+        kenmerk=str(case_data.get("reference") or case_data.get("case_number") or ""),
+    )
     body = result.get("body", "") or template_body
     # AI returnt geen body_html — server rendert HTML uit template + dossier-context.
     # ai_body wordt meegegeven zodat XXX-placeholder (Verweer beantwoorden) gevuld
@@ -440,11 +485,19 @@ async def trigger_defense_response_for_email(
             IncassoPipelineStep.tenant_id == tenant_id,
         )
     )).scalar_one_or_none()
-    if not current_step or current_step.name not in _HOOFDPAD_STEPS_FOR_DEFENSE:
+    # Drie scenario's:
+    #   A. Hoofdpad-stap → switch naar Verweer beantwoorden + draft
+    #   B. Al in Verweer beantwoorden → nieuwe draft (re-trigger op vervolgreactie)
+    #   C. Andere zijpad-stap → niets doen
+    if not current_step:
+        return None
+
+    is_hoofdpad = current_step.name in _HOOFDPAD_STEPS_FOR_DEFENSE
+    is_already_verweer = current_step.name == "Verweer beantwoorden"
+    if not (is_hoofdpad or is_already_verweer):
         logger.info(
-            "Email %s op case %s: stap '%s' is geen hoofdpad — geen pipeline-switch",
-            synced_email_id, case.case_number,
-            current_step.name if current_step else "?",
+            "Email %s op case %s: stap '%s' is geen hoofdpad/verweer — geen actie",
+            synced_email_id, case.case_number, current_step.name,
         )
         return None
 
@@ -462,14 +515,22 @@ async def trigger_defense_response_for_email(
         )
         return None
 
-    # Switch case naar verweer
-    case.incasso_step_id = verweer_step.id
-    case.incasso_step_entered_at = datetime.now(UTC)
-    await db.flush()
-    logger.info(
-        "Case %s: switch %s → Verweer beantwoorden (verweer-email %s)",
-        case.case_number, current_step.name, synced_email_id,
-    )
+    if is_hoofdpad:
+        # Switch case naar verweer (alleen vanuit hoofdpad)
+        case.incasso_step_id = verweer_step.id
+        case.incasso_step_entered_at = datetime.now(UTC)
+        await db.flush()
+    else:
+        logger.info(
+            "Case %s al in Verweer beantwoorden — vervolgreactie %s, "
+            "regenereer draft zonder stap-switch",
+            case.case_number, synced_email_id,
+        )
+    if is_hoofdpad:
+        logger.info(
+            "Case %s: switch %s → Verweer beantwoorden (verweer-email %s)",
+            case.case_number, current_step.name, synced_email_id,
+        )
 
     # Genereer draft met incoming verweer-tekst
     defense_text = (synced.body_text or synced.snippet or "")[:8000]

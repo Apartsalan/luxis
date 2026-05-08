@@ -5,6 +5,7 @@ from decimal import Decimal
 from app.incasso.html_renderer import (
     _extract_weerlegging,
     _fill_invoice_rows,
+    render_subject,
     render_template_html,
 )
 
@@ -206,6 +207,37 @@ def test_totaalbedrag_amount_filled():
     )
     assert "1.687,36" in out
     assert "totaalbedrag van <strong>€&nbsp;</strong>" not in out
+
+
+def test_render_subject_fills_placeholders():
+    out = render_subject(
+        "REACTIE OP UW VERWEER / / ",
+        case_number="2026-00049",
+        kenmerk="2026-00049",
+    )
+    assert out == "REACTIE OP UW VERWEER / 2026-00049 / 2026-00049"
+
+
+def test_render_subject_with_kenmerk():
+    out = render_subject(
+        "SOMMATIE TOT BETALING / / ",
+        case_number="2026-00049",
+        kenmerk="REF-123",
+    )
+    assert out == "SOMMATIE TOT BETALING / REF-123 / 2026-00049"
+
+
+def test_render_subject_handles_double_space():
+    out = render_subject(
+        "TWEEDE SOMMATIE /  / ",
+        case_number="2026-00049",
+        kenmerk="REF-123",
+    )
+    assert out == "TWEEDE SOMMATIE / REF-123 / 2026-00049"
+
+
+def test_render_subject_empty_returns_empty():
+    assert render_subject("", case_number="X", kenmerk="X") == ""
 
 
 def test_more_invoices_than_slots_truncates():

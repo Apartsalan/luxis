@@ -2,7 +2,11 @@
 
 from decimal import Decimal
 
-from app.incasso.html_renderer import _fill_invoice_rows, render_template_html
+from app.incasso.html_renderer import (
+    _extract_weerlegging,
+    _fill_invoice_rows,
+    render_template_html,
+)
 
 
 _SAMPLE_TEMPLATE = """
@@ -131,6 +135,77 @@ def test_lone_comma_template_without_contact_uses_generic():
         amounts={},
     )
     assert "Geachte heer/mevrouw," in out
+
+
+_XXX_TEMPLATE = """
+<html><body>
+<p>Hierbij voorzie ik u van een inhoudelijke reactie, waarin ik uw stellingen weerleg.&nbsp;<br>
+<br>
+XXX<br>
+<br>
+Indien ondanks deze correspondentie betaling uitblijft, ben ik genoodzaakt het incassotraject voort te zetten.</p>
+<p>totaalbedrag van <strong>€&nbsp;</strong> uiterlijk binnen 3 dagen.</p>
+</body></html>
+"""
+
+
+def test_extract_weerlegging_finds_text_between_markers():
+    ai_body = (
+        "Hierbij voorzie ik u van een inhoudelijke reactie, waarin ik uw stellingen weerleg.\n\n"
+        "U heeft gesteld dat het abonnement is opgezegd.\n\n"
+        "Indien ondanks deze correspondentie betaling uitblijft."
+    )
+    out = _extract_weerlegging(ai_body)
+    assert out == "U heeft gesteld dat het abonnement is opgezegd."
+
+
+def test_extract_weerlegging_returns_none_without_markers():
+    assert _extract_weerlegging("just some random text") is None
+    assert _extract_weerlegging("") is None
+
+
+def test_xxx_placeholder_replaced_with_ai_weerlegging():
+    ai_body = (
+        "stellingen weerleg.\n\nU heeft gesteld dat het abonnement is opgezegd. "
+        "Cliënte heeft geen tijdige opzegging ontvangen.\n\n"
+        "Indien ondanks deze correspondentie betaling uitblijft."
+    )
+    out = render_template_html(
+        _XXX_TEMPLATE,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"contact_person": "Test"},
+        client_data={"name": "BV"},
+        invoices=[],
+        amounts={"te_voldoen": Decimal("1687.36")},
+        ai_body=ai_body,
+    )
+    assert "XXX" not in out
+    assert "abonnement is opgezegd" in out
+
+
+def test_xxx_unchanged_when_no_ai_body():
+    out = render_template_html(
+        _XXX_TEMPLATE,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"contact_person": "Test"},
+        client_data={"name": "BV"},
+        invoices=[],
+        amounts={"te_voldoen": Decimal("1687.36")},
+    )
+    assert "XXX" in out
+
+
+def test_totaalbedrag_amount_filled():
+    out = render_template_html(
+        _XXX_TEMPLATE,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"contact_person": "Test"},
+        client_data={"name": "BV"},
+        invoices=[],
+        amounts={"te_voldoen": Decimal("1687.36")},
+    )
+    assert "1.687,36" in out
+    assert "totaalbedrag van <strong>€&nbsp;</strong>" not in out
 
 
 def test_more_invoices_than_slots_truncates():

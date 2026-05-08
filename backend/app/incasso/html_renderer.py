@@ -171,6 +171,40 @@ def _normalize_table_styling(html: str) -> str:
     return html
 
 
+def _extract_weerlegging(ai_body: str) -> str | None:
+    """Extract de weerlegging-paragraaf uit AI's plain text body.
+
+    De Verweer-beantwoorden template heeft een 'XXX' placeholder tussen de zin
+    'stellingen weerleg.' en 'Indien ondanks deze correspondentie'. AI vult
+    deze sectie in plain text — extract zodat we het ook in HTML kunnen
+    plaatsen.
+    """
+    if not ai_body:
+        return None
+    start_marker = "stellingen weerleg."
+    start_idx = ai_body.find(start_marker)
+    if start_idx < 0:
+        return None
+    start = start_idx + len(start_marker)
+    end_markers = ("Indien ondanks deze correspondentie", "\nVordering\n", "\nVordering\r")
+    end = len(ai_body)
+    for m in end_markers:
+        i = ai_body.find(m, start)
+        if i >= 0 and i < end:
+            end = i
+    text = ai_body[start:end].strip()
+    return text or None
+
+
+def _plain_to_html_paragraph(text: str) -> str:
+    """Plain-text weerlegging → HTML met span/br matching template-stijl."""
+    span_open = '<span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">'
+    span_close = "</span></span>"
+    html_text = text.replace("\r\n", "\n").replace("\r", "\n")
+    html_text = html_text.replace("\n", "<br>\n")
+    return f"{span_open}{html_text}{span_close}"
+
+
 def render_template_html(
     template_html: str,
     *,
@@ -179,6 +213,7 @@ def render_template_html(
     client_data: dict[str, Any],
     invoices: list[dict[str, Any]],
     amounts: dict[str, Decimal],
+    ai_body: str | None = None,
     **_: Any,
 ) -> str:
     """Render the HTML template met dossier-data ingevuld.
@@ -252,14 +287,35 @@ def render_template_html(
     html = _fill_amount_cell(html, "Te voldoen", _fmt_eur(amounts.get("te_voldoen")))
 
     # Specifieke openstaand-bedrag in zin
+    te_voldoen_str = _fmt_eur(amounts.get("te_voldoen"))
     html = html.replace(
         "openstaande bedrag van <strong>€&nbsp;</strong>",
-        f"openstaande bedrag van <strong>€&nbsp;{_fmt_eur(amounts.get('te_voldoen'))}</strong>",
+        f"openstaande bedrag van <strong>€&nbsp;{te_voldoen_str}</strong>",
     )
     html = html.replace(
         "openstaande bedrag van € ",
-        f"openstaande bedrag van € {_fmt_eur(amounts.get('te_voldoen'))} ",
+        f"openstaande bedrag van € {te_voldoen_str} ",
     )
+    # Sommatie-zin: "totaalbedrag van € uiterlijk binnen ..." mist bedrag
+    html = re.sub(
+        r"totaalbedrag van\s*<strong>€&nbsp;</strong>",
+        f"totaalbedrag van <strong>€&nbsp;{te_voldoen_str}</strong>",
+        html,
+    )
+    html = re.sub(
+        r"totaalbedrag van\s*€\s+(uiterlijk|binnen)",
+        rf"totaalbedrag van € {te_voldoen_str} \1",
+        html,
+    )
+
+    # XXX-placeholder in Verweer beantwoorden template: vervang met AI weerlegging
+    if ai_body and "XXX" in html:
+        weerlegging = _extract_weerlegging(ai_body)
+        if weerlegging:
+            weerlegging_html = _plain_to_html_paragraph(weerlegging)
+            html = html.replace("XXX<br>", weerlegging_html + "<br>", 1)
+            if "XXX" in html:
+                html = html.replace("XXX", weerlegging_html, 1)
 
     # Factuur-rijen
     html = _fill_invoice_rows(html, invoices)

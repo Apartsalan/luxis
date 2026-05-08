@@ -329,8 +329,14 @@ async def generate_draft_for_step(
 
     subject = result.get("subject", "") or template_subject
     body = result.get("body", "") or template_body
-    # AI returnt geen body_html — server rendert HTML uit template + dossier-context
-    body_html = render_template_html(template_body_html, **context) if template_body_html else None
+    # AI returnt geen body_html — server rendert HTML uit template + dossier-context.
+    # ai_body wordt meegegeven zodat XXX-placeholder (Verweer beantwoorden) gevuld
+    # kan worden met de AI-gegenereerde weerlegging.
+    body_html = (
+        render_template_html(template_body_html, ai_body=body, **context)
+        if template_body_html
+        else None
+    )
 
     # Sla AIDraft op
     draft = AIDraft(

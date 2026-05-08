@@ -210,9 +210,19 @@ def render_template_html(
     html = html.replace("(invullen gegevens client)", client_name or "(cliënt)")
 
     # Aanhef met contactpersoon-naam (alleen als bekend)
+    greeting_text = f"Geachte heer/mevrouw {contact}" if contact else "Geachte heer/mevrouw"
     if contact:
-        html = html.replace("Geachte heer mevrouw,", f"Geachte heer/mevrouw {contact},")
-        html = html.replace("Geachte heer mevrouw", f"Geachte heer/mevrouw {contact}")
+        html = html.replace("Geachte heer mevrouw,", f"{greeting_text},")
+        html = html.replace("Geachte heer mevrouw", greeting_text)
+    # Twee templates (Verweer beantwoorden + Aankondiging faillissement) bevatten
+    # geen "Geachte heer/mevrouw" in de HTML body — alleen een lone `,<br>` na
+    # de Betreft-tabel. Injecteer greeting voor de eerste lone-comma in een span.
+    html = re.sub(
+        r'(<span[^>]*>(?:\s*<span[^>]*>)?\s*),<br>',
+        rf'\1{greeting_text},<br>',
+        html,
+        count=1,
+    )
 
     # Kenmerk in IBAN-instructie
     html = html.replace(

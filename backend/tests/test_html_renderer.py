@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from app.incasso.html_renderer import _fill_invoice_rows
+from app.incasso.html_renderer import _fill_invoice_rows, render_template_html
 
 
 _SAMPLE_TEMPLATE = """
@@ -71,6 +71,66 @@ def test_empty_invoice_fields_no_crash():
 def test_no_invoices_returns_template_unchanged():
     out = _fill_invoice_rows(_SAMPLE_TEMPLATE, [])
     assert out == _SAMPLE_TEMPLATE
+
+
+_LONE_COMMA_TEMPLATE = """
+<html><body>
+<table><tr><td>Betreft</td><td>WEDEROM SOMMATIE TOT BETALING / / </td></tr></table>
+<p><br>
+<span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">,<br>
+<br>
+Eerder heb ik u aangeschreven.</span></span></p>
+</body></html>
+"""
+
+_NORMAL_GREETING_TEMPLATE = """
+<html><body>
+<p><span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">Geachte heer mevrouw,<br>
+<br>
+Eerder heb ik u aangeschreven.</span></span></p>
+</body></html>
+"""
+
+
+def test_lone_comma_template_gets_greeting_injected():
+    """Verweer beantwoorden + Aankondiging faillissement templates missen
+    'Geachte heer/mevrouw' — moeten injectie krijgen voor lone-comma."""
+    out = render_template_html(
+        _LONE_COMMA_TEMPLATE,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"contact_person": "J. Jansen"},
+        client_data={"name": "Test BV"},
+        invoices=[],
+        amounts={},
+    )
+    assert "Geachte heer/mevrouw J. Jansen,<br>" in out
+    # Geen lone comma meer
+    assert "sans-serif;\">,<br>" not in out
+
+
+def test_normal_template_greeting_replaced_with_contact():
+    out = render_template_html(
+        _NORMAL_GREETING_TEMPLATE,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"contact_person": "J. Jansen"},
+        client_data={"name": "Test BV"},
+        invoices=[],
+        amounts={},
+    )
+    assert "Geachte heer/mevrouw J. Jansen," in out
+    assert "Geachte heer mevrouw," not in out
+
+
+def test_lone_comma_template_without_contact_uses_generic():
+    out = render_template_html(
+        _LONE_COMMA_TEMPLATE,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"contact_person": ""},
+        client_data={"name": "Test BV"},
+        invoices=[],
+        amounts={},
+    )
+    assert "Geachte heer/mevrouw," in out
 
 
 def test_more_invoices_than_slots_truncates():

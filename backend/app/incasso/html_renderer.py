@@ -296,15 +296,18 @@ def render_template_html(
         "openstaande bedrag van € ",
         f"openstaande bedrag van € {te_voldoen_str} ",
     )
-    # Sommatie-zin: "totaalbedrag van € uiterlijk binnen ..." mist bedrag
+    # Sommatie-zin: "totaalbedrag van € uiterlijk binnen ..." mist bedrag.
+    # Templates gebruiken &nbsp; tussen 'van' en '€' en tussen '€' en het lege
+    # bedrag-veld. Match beide varianten (met en zonder &nbsp;).
+    _ws = r"(?:\s|&nbsp;)+"
     html = re.sub(
-        r"totaalbedrag van\s*<strong>€&nbsp;</strong>",
+        rf"totaalbedrag van{_ws}<strong>€&nbsp;</strong>",
         f"totaalbedrag van <strong>€&nbsp;{te_voldoen_str}</strong>",
         html,
     )
     html = re.sub(
-        r"totaalbedrag van\s*€\s+(uiterlijk|binnen)",
-        rf"totaalbedrag van € {te_voldoen_str} \1",
+        rf"totaalbedrag van{_ws}€{_ws}(uiterlijk|binnen)",
+        rf"totaalbedrag van&nbsp;€&nbsp;{te_voldoen_str} \1",
         html,
     )
 

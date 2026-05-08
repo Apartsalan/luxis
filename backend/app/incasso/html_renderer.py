@@ -62,39 +62,75 @@ def _fill_invoice_rows(html: str, invoices: list[dict[str, Any]]) -> str:
     Lisanne's template bevat na de header (Factuurnummer | Datum | Vervaldatum |
     Bedrag) een aantal lege <tr>-rijen voor factuurregels. We vullen ze in
     volgorde met de eerste N facturen.
+
+    Matcht twee rij-formats die in templates voorkomen:
+    - 4-cell met colspan="2" op laatste cel (1e factuur-slot)
+    - 5-cell zonder colspan (slot 2-N)
+    Output behoudt het oorspronkelijke format zodat tabel-layout intact blijft.
     """
     if not invoices:
         return html
 
-    # Find the table after "Factuurnummer" header and replace empty rows
-    # Pattern: <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-    empty_row_pattern = re.compile(
-        r'(<tr>\s*'
+    # Pattern A: 4-cell met colspan="2" op laatste cel
+    pattern_4cell = (
+        r'<tr>\s*'
         r'<td[^>]*>&nbsp;</td>\s*'
         r'<td[^>]*>&nbsp;</td>\s*'
         r'<td[^>]*>&nbsp;</td>\s*'
         r'<td[^>]*colspan="2"[^>]*>&nbsp;</td>\s*'
-        r'</tr>)',
+        r'</tr>'
+    )
+    # Pattern B: 5-cell zonder colspan
+    pattern_5cell = (
+        r'<tr>\s*'
+        r'<td[^>]*>&nbsp;</td>\s*'
+        r'<td[^>]*>&nbsp;</td>\s*'
+        r'<td[^>]*>&nbsp;</td>\s*'
+        r'<td[^>]*>&nbsp;</td>\s*'
+        r'<td[^>]*>&nbsp;</td>\s*'
+        r'</tr>'
+    )
+    combined = re.compile(
+        f"(?P<colspan>{pattern_4cell})|(?P<flat>{pattern_5cell})",
         re.DOTALL,
     )
 
-    # Vervang de eerste N lege rijen met factuur-data
+    span_open = '<span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">'
+    span_close = "</span></span>"
+    cell_style = 'style="padding:.100px .100px .100px .100px"'
+
     rows_iter = iter(invoices)
+
     def _replace(match: re.Match[str]) -> str:
         try:
             inv = next(rows_iter)
         except StopIteration:
             return match.group(0)
+        number = inv.get("number") or ""
+        date = inv.get("date") or ""
+        due = inv.get("due_date") or ""
+        amount = f"€ {_fmt_eur(inv.get('amount'))}"
+        if match.group("colspan"):
+            return (
+                "<tr>"
+                f'<td {cell_style}>{span_open}{number}{span_close}</td>'
+                f'<td {cell_style}>{span_open}{date}{span_close}</td>'
+                f'<td {cell_style}>{span_open}{due}{span_close}</td>'
+                f'<td colspan="2" {cell_style}>{span_open}{amount}{span_close}</td>'
+                "</tr>"
+            )
+        # 5-cell format: split bedrag in valuta-cel + getal-cel
         return (
             "<tr>"
-            f'<td style="padding:.100px .100px .100px .100px"><span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">{inv.get("number") or ""}</span></span></td>'
-            f'<td style="padding:.100px .100px .100px .100px"><span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">{inv.get("date") or ""}</span></span></td>'
-            f'<td style="padding:.100px .100px .100px .100px"><span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">{inv.get("due_date") or ""}</span></span></td>'
-            f'<td colspan="2" style="padding:.100px .100px .100px .100px"><span style="font-size:12px;"><span style="font-family:Verdana,Geneva,sans-serif;">€ {_fmt_eur(inv.get("amount"))}</span></span></td>'
+            f'<td {cell_style}>{span_open}{number}{span_close}</td>'
+            f'<td {cell_style}>{span_open}{date}{span_close}</td>'
+            f'<td {cell_style}>{span_open}{due}{span_close}</td>'
+            f'<td {cell_style}>{span_open}€{span_close}</td>'
+            f'<td {cell_style}>{span_open}{_fmt_eur(inv.get("amount"))}{span_close}</td>'
             "</tr>"
         )
 
-    return empty_row_pattern.sub(_replace, html)
+    return combined.sub(_replace, html)
 
 
 _TD_STYLE = "padding:2px 6px;vertical-align:top"

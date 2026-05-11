@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 11 mei 2026 (sessie 135 — E2E mail-flow live + factuur/greeting/XXX/AV fixes)
+**Laatst bijgewerkt:** 11 mei 2026 (sessie 136 — Claude Sonnet draft + AV PDF native + 7 incasso-fixes + Seidony genormaliseerd)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

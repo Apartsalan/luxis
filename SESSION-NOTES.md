@@ -1,9 +1,67 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 mei 2026 (sessie 135 — E2E mail-flow live + factuur/greeting/XXX/AV fixes)
-**Laatste feature/fix:** Sessie 135 — `*.onmicrosoft.com` alias als test-route, echte E2E mail-flow werkt (hotmail → Outlook → Luxis sync → classify → pipeline switch + auto-draft). Factuur-renderer matcht nu 5-cel rij-format, lone-comma templates krijgen greeting injected, XXX-placeholder vervangen met AI weerlegging, totaalbedrag-zin gevuld, subject server-side gerendererd, AV-PDF van cliënt geladen via PyMuPDF, re-trigger draft op vervolg-verweer in Verweer-stap, prompt verbeterd voor library-match + AV-citation.
-**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag), Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (geen Premium-route), TWEEDE SOMMATIE GEEN VERWEER template heeft hardcoded "Seidony" greeting
-**Volgende sessie:** 136 — Bespreek AV-strategie met Lisanne (welke AV per cliënt = leverancier-klant AV, niet incasso-AV), plan registrar-transfer Wix → TransIP, fix hardcoded Seidony in Tweede sommatie template
+**Laatst bijgewerkt:** 11 mei 2026 (sessie 136 — Claude Sonnet draft + AV PDF native + 7 incasso-fixes)
+**Laatste feature/fix:** Sessie 136 — Incasso-draft model geswitcht naar Claude Sonnet 4.6 met native AV-PDF input (lost AV-truncatie op). Daarna 7 productie-bugs gefixt op live test 2026-00049: Sonnet model ID, incoming_defense auto-load bij Verweer manual trigger, subject single-slot bij kenmerk==case_number, contact_person via ContactLink async resolve (MissingGreenlet), B2B aanhef zonder bedrijfsnaam, capitalize lowercase last_name, body Betreft dedupe, IBAN-kenmerk ensure case_number. Frontend: nieuwe contactpersoon aanmaken vanuit koppel-dialog (was alleen zoeken). Seidony hardcoded greeting in TWEEDE SOMMATIE template via import-script genormaliseerd + re-import gedraaid. AVG-compliance plan opgesteld als backlog voor verkoop aan andere kantoren.
+**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag), Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen)
+**Volgende sessie:** 137 — Wix → TransIP registrar-transfer plan documenteren + voorbereiden, daarna eventueel BUG-71/72 cleanup of nieuwe feature
+
+## Wat er gedaan is (sessie 136 — 11 mei 2026) — Claude Sonnet draft + AV PDF native + 7 incasso-fixes
+
+### Samenvatting
+Diagnose AV-citatie issue: Gemini Flash 2.5 ongeschikt voor juridische kwaliteit (matig op Harvey BigLaw, vooral breed niet diep). Switch naar Claude Sonnet 4.6 als primary voor incasso-draft generatie, met native PDF input via `call_claude_with_pdf` voor Verweer beantwoorden stap. Lost AV-truncatie probleem op (was 2000 chars in prompt + 8000 chars extract — nu hele PDF rechtstreeks naar Sonnet). Kostenprojectie: €13/maand bij 300 drafts. Eerst Sonnet model-ID fout (claude-sonnet-4-5-20250514 niet meer beschikbaar) → fix naar claude-sonnet-4-6. Daarna 7 productie-bugs uit live tests op 2026-00049: incoming_defense ontbrak bij manual trigger (auto-load laatste inbound), subject dubbel "/ 2026-00049 / 2026-00049" (3 lagen fix: render_subject + render_template_html kenmerk-fallback + body dedupe regex), greeting "[BedrijfBV]" (contact_person check + B2B-prompt), MissingGreenlet bij lazy load person_links (async query met selectinload), capitalize lowercase namen, IBAN-kenmerk leeg (server-side ensure helper). Frontend bonus: "Nieuw aanmaken" tab in ContactLinks-dialog — was alleen zoeken-op-bestaande, nu kan persoon ter plekke worden toegevoegd + gekoppeld. Tot slot: hardcoded "Geachte heer, mevrouw Seidony," in TWEEDE SOMMATIE template genormaliseerd via import-script (regex `Geachte heer,? mevrouw <Naam>,` → `Geachte heer mevrouw,`), re-import live. AVG-compliance plan voor commerciële verkoop opgesteld als backlog (`project_avg_compliance_backlog.md`).
+
+### Wat er gedaan is
+
+**AI-model strategie + draft pad (`backend/app/ai_agent/kimi_client.py`, `backend/app/incasso/automation_service.py`):**
+1. Onderzoek Gemini Flash vs Sonnet voor juridische taken — Sonnet wint op diepte/precisie (Harvey BigLaw, 2026 benchmarks)
+2. Nieuwe `call_draft_ai()` met routing: Sonnet primary → Gemini fallback → Haiku last-resort
+3. PDF-pad: bij `av_pdf_path` argument → `call_claude_with_pdf` met Sonnet native PDF input
+4. Token-cost logging per Sonnet-call (kosten per draft loggen voor monitoring)
+5. Model-ID fix: `claude-sonnet-4-5-20250514` (retired) → `claude-sonnet-4-6` (geverifieerd via Anthropic models list)
+6. `gather_case_context` exposeert nu zowel `av_text` (text-extract fallback) als `av_pdf_path` (native pad)
+7. `generate_draft_for_step` routeert Verweer beantwoorden + AV-PDF aanwezig → PDF-pad. Andere stappen plain Sonnet
+8. PDF-extract limiet 8000 → 50000 chars voor non-Sonnet fallback
+9. `incasso_email_prompts.py` truncate 2000 → volledig av_text doorgegeven
+
+**Live-test fixes (sessie 136 cycles op 2026-00049):**
+10. Manual draft-trigger bij Verweer beantwoorden zonder `incoming_defense` → auto-load laatste inbound SyncedEmail uit case-correspondentie als verweer-tekst
+11. `_resolve_contact_person` async helper via expliciete ContactLink-query (MissingGreenlet bug bij lazy `person_links`)
+12. `_capitalize_name` helper: lowercase last_name (bv. "peterson") → "Peterson" — alleen wanneer naam volledig lowercase
+13. B2B aanhef: `contact_type` doorgegeven aan prompt + expliciete regel "bij bedrijf-debiteur geen naam in aanhef"
+14. Subject single-slot bij `kenmerk==case_number`: 3 fix-lagen — `render_subject` (header), `render_template_html` (body-HTML), `_dedupe_subject_slots` regex (body plain text als vangnet)
+15. IBAN-kenmerk altijd `case_number` invullen: `html_renderer` + `_ensure_iban_kenmerk` server-side body post-process
+16. Test-bestand `tests/test_resolve_contact_person.py` met 7 scenarios (None/persoon/bedrijf-zonder-link/met-link/inactive/voorkeur-rol/capitalize)
+
+**Frontend ContactLinks-dialog (`frontend/src/components/relations/contact-links.tsx`):**
+17. Tab-switch "Bestaande zoeken" vs "Nieuw aanmaken"
+18. Create-mode form: voornaam/achternaam/email/telefoon bij persoon, bedrijfsnaam bij bedrijf
+19. `handleCreateAndLink`: `useCreateRelation` → `useCreateContactLink` in één flow
+20. "Geen resultaten" toont quick-link naar create-mode met pre-filled naam uit search
+
+**Hardcoded Seidony-fix (`scripts/import_lisanne_email_templates.py`):**
+21. `_GREETING_NAME_RE` regex strip `Geachte heer,? mevrouw <Naam>,` → `Geachte heer mevrouw,`
+22. Re-import gedraaid op VPS → 6 stappen voor Kesting Legal tenant ge-update
+23. Geverifieerd: 0 rows met "Seidony" in incasso_pipeline_steps templates
+
+**AVG-compliance backlog (`memory/project_avg_compliance_backlog.md`):**
+24. 4-fase plan voor verkoop aan andere kantoren: DPA Anthropic → EU-residency via AWS Bedrock → tiered AI per tenant → lokaal LLM optie
+25. USP voor verkoop: "EU-data, geen training, DPA inbegrepen"
+
+### Verifieerd
+
+- 72/72 unit tests groen (test_html_renderer + test_incasso_pipeline + test_incasso_router + test_resolve_contact_person)
+- Multiple REPL-checks: dedupe regex (6 scenarios), IBAN-kenmerk regex (5 scenarios), capitalize (4 scenarios), render_template_html (3 reference scenarios)
+- Live E2E test 2026-00049 over meerdere iteraties — uiteindelijke draft kwaliteit advocatenkantoor-niveau met art 9.3 + art 4.1 + art 6.1 letterlijke AV-citaten
+- SQL-check op live DB na Seidony-fix: 0 rows met Seidony in templates
+- 8 commits gepushed naar main, alle backend-deploys via SSH gedraaid + container healthy
+
+### Bekende issues / openstaand voor sessie 137
+
+- **Wix-blokkade**: registrar-transfer naar TransIP plannen + uitvoeren (5-8 dagen). Niet acuut, alias-route werkt.
+- **AVG-compliance**: backlog voor commerciële verkoop, geen haast. Trigger bij eerste lead.
+- **BUG-71/72**: laag-prioriteit, geen impact op live gebruik.
+
+
 
 ## Wat er gedaan is (sessie 135 — 8-11 mei 2026) — E2E mail-flow live + renderer/prompt fixes
 

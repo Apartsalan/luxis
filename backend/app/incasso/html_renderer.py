@@ -290,14 +290,17 @@ def render_template_html(
         count=1,
     )
 
-    # Kenmerk in IBAN-instructie
+    # Kenmerk in IBAN-instructie — ALTIJD case_number gebruiken (debiteur moet
+    # ergens op betalen). Externe cliënt-reference (raw_ref) zou ook kunnen maar
+    # dossiernummer is veilig altijd-aanwezig en uniek.
+    iban_kenmerk = kenmerk or case_number
     html = html.replace(
         "onder vermelding van het kenmerk&nbsp;",
-        f"onder vermelding van het kenmerk&nbsp;{kenmerk}",
+        f"onder vermelding van het kenmerk&nbsp;{iban_kenmerk}",
     )
     html = html.replace(
         "onder vermelding van het kenmerk ",
-        f"onder vermelding van het kenmerk {kenmerk} ",
+        f"onder vermelding van het kenmerk {iban_kenmerk} ",
     )
 
     # Dossiernummer in onderwerpregel-instructie

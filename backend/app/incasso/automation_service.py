@@ -185,6 +185,27 @@ def _dedupe_subject_slots(body: str) -> str:
     return pattern.sub(r"/ \1", body)
 
 
+def _ensure_iban_kenmerk(body: str, case_number: str) -> str:
+    """Vul leeg kenmerk in IBAN-betalingsinstructie met dossiernummer.
+
+    AI laat soms kenmerk leeg na 'onder vermelding van het kenmerk'
+    (resultaat van prompt-instructie 'kenmerk = (geen)'). Voor betaling
+    is dossiernummer als kenmerk verplicht — anders kan debiteur niet
+    correct overmaken. Server-side vangnet vervangt lege vermeldingen.
+    """
+    import re
+    if not body or not case_number:
+        return body
+    # Patroon: "kenmerk" gevolgd door whitespace, dan punt/komma/einde-regel
+    # zonder iets ertussen → invoegen case_number.
+    body = re.sub(
+        r"(onder vermelding van het kenmerk)\s*([.,\n])",
+        rf"\1 {case_number}\2",
+        body,
+    )
+    return body
+
+
 def _capitalize_name(name: str) -> str:
     """Capitalize eerste letter als naam helemaal lowercase ingevoerd is.
 
@@ -506,9 +527,11 @@ async def generate_draft_for_step(
         kenmerk=str(case_data.get("reference") or ""),
     )
     body = result.get("body", "") or template_body
-    # Server-side fix: dedupliceer "/ X / X" in Betreft-regel van body
-    # wanneer AI ondanks prompt-instructie het dossiernummer dubbel plakt.
+    # Server-side fixes:
+    # 1. Dedupe "/ X / X" in Betreft-regel
+    # 2. Vul leeg kenmerk in IBAN-betalingsinstructie met case_number
     body = _dedupe_subject_slots(body)
+    body = _ensure_iban_kenmerk(body, str(case_data.get("case_number") or ""))
     # AI returnt geen body_html — server rendert HTML uit template + dossier-context.
     # ai_body wordt meegegeven zodat XXX-placeholder (Verweer beantwoorden) gevuld
     # kan worden met de AI-gegenereerde weerlegging.

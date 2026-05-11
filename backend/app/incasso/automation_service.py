@@ -214,14 +214,17 @@ async def gather_case_context(
     totaal = (hoofdsom + rente + bik + btw).quantize(Decimal("0.01"))
     te_voldoen = (totaal - total_paid).quantize(Decimal("0.01"))
 
-    # Algemene Voorwaarden van cliënt — lees PDF en extract tekst voor AI
+    # Algemene Voorwaarden van cliënt — pad voor Sonnet native PDF input,
+    # tekst-extract als fallback voor Gemini/Haiku-pad.
     av_text: str | None = None
+    av_pdf_path: str | None = None
     if client_contact and client_contact.terms_file_path:
-        av_text = _extract_pdf_text(client_contact.terms_file_path)
+        av_pdf_path = client_contact.terms_file_path
+        av_text = _extract_pdf_text(client_contact.terms_file_path, max_chars=50000)
         if av_text:
             logger.info(
-                "Case %s: AV-text geladen voor %s (%d chars)",
-                case.case_number, client_contact.name, len(av_text),
+                "Case %s: AV geladen voor %s (PDF=%s, %d chars text-fallback)",
+                case.case_number, client_contact.name, av_pdf_path, len(av_text),
             )
 
     return {
@@ -263,6 +266,7 @@ async def gather_case_context(
             "te_voldoen": te_voldoen,
         },
         "av_text": av_text,
+        "av_pdf_path": av_pdf_path,
         "incoming_defense": None,
         "prior_correspondence": [],
     }
@@ -317,7 +321,7 @@ async def generate_draft_for_step(
     """
     from app.ai_agent.draft_service import DraftStatus
     from app.ai_agent.incasso_email_prompts import build_full_prompt
-    from app.ai_agent.kimi_client import call_intake_ai
+    from app.ai_agent.kimi_client import call_draft_ai
     from app.ai_agent.models import AIDraft
 
     # Pak target step (= stap waarvoor we draft genereren)
@@ -345,6 +349,14 @@ async def generate_draft_for_step(
     if incoming_defense:
         context["incoming_defense"] = incoming_defense
 
+    # AV-PDF pad alleen bij Verweer beantwoorden — daar moet AI citeren uit AV.
+    # Andere stappen (sommaties zonder verweer) hebben AV niet nodig.
+    av_pdf_path = context.pop("av_pdf_path", None)
+    use_pdf_route = (
+        av_pdf_path is not None
+        and target_step.name == "Verweer beantwoorden"
+    )
+
     # Bouw prompt
     system_prompt, user_prompt = build_full_prompt(
         step_name=target_step.name,
@@ -355,12 +367,16 @@ async def generate_draft_for_step(
     )
 
     logger.info(
-        "Generating AI draft for case=%s step=%s (prompt %d chars)",
-        case_id, target_step.name, len(user_prompt),
+        "Generating AI draft for case=%s step=%s (prompt %d chars, pdf_route=%s)",
+        case_id, target_step.name, len(user_prompt), use_pdf_route,
     )
 
-    # Roep AI aan
-    result, model_name = await call_intake_ai(system_prompt, user_prompt)
+    # Roep AI aan — Sonnet primary, met PDF bij verweer-stap
+    result, model_name = await call_draft_ai(
+        system_prompt,
+        user_prompt,
+        av_pdf_path=av_pdf_path if use_pdf_route else None,
+    )
 
     from app.incasso.html_renderer import render_template_html, render_subject
 

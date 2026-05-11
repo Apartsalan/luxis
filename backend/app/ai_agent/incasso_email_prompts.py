@@ -168,11 +168,14 @@ def build_user_prompt(
     ])
 
     if av_text:
+        # AV-text volledig meegeven — Sonnet kan 200K context aan, Gemini Flash 1M.
+        # Voor PDF-pad (Sonnet+native PDF) wordt deze sectie naast PDF gestuurd
+        # als fallback, prompt-cost blijft verwaarloosbaar (~10K tokens).
         sections.extend([
             "",
-            "### Algemene Voorwaarden van cliënt (referentie bij verweer)",
+            "### Algemene Voorwaarden van cliënt (referentie bij verweer — zoek artikelnummer + citaat)",
             "",
-            av_text[:2000] + ("..." if len(av_text) > 2000 else ""),
+            av_text,
         ])
 
     if incoming_defense:

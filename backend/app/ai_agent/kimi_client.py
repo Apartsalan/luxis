@@ -1,10 +1,16 @@
-"""AI extraction clients — Gemini Flash primary, Kimi + Haiku fallback.
+"""AI extraction clients — model routing per taak.
 
-Gemini Flash 2.5: primary model via Google Generative AI API.
-Kimi 2.5 (moonshot-v1-auto): ~$0.001/call via OpenAI-compatible API.
-Claude Haiku 4.5: ~$0.005/call fallback via Anthropic API.
+INTAKE / CLASSIFICATIE / INVOICE (high volume, pattern matching):
+  Gemini Flash 2.5 → Kimi 2.5 → Claude Haiku 4.5
+  Goedkoop, snel, JSON-output betrouwbaar via tool_use.
 
-AI-TECH-03: Haiku uses tool_use as structured output — guarantees valid JSON.
+DRAFT GENERATIE (juridische kwaliteit kritiek — emails naar wederpartij):
+  Claude Sonnet 4.6 → Gemini Flash 2.5 → Claude Haiku 4.5
+  Sonnet excelleert in Nederlandse juridische taal + AV-citaten.
+  Bij Verweer beantwoorden + AV-PDF beschikbaar: native PDF input
+  (lost truncatie-probleem op, Sonnet leest PDF direct).
+
+AI-TECH-03: Tool_use forced as structured output → guarantees valid JSON.
 """
 
 import json
@@ -23,6 +29,13 @@ KIMI_MODEL = "moonshot-v1-auto"
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 GEMINI_MODEL = "gemini-2.5-flash"
+
+CLAUDE_SONNET_MODEL = "claude-sonnet-4-5-20250514"
+CLAUDE_HAIKU_MODEL = "claude-haiku-4-5"
+
+# Kosten per 1M tokens (Sonnet 4.5) — voor cost-logging per draft
+SONNET_INPUT_PRICE_PER_M = 3.0
+SONNET_OUTPUT_PRICE_PER_M = 15.0
 
 # ── JSON schemas for structured output (tool_use) ────────────────────────────
 
@@ -285,6 +298,70 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
     return _parse_json(raw_text)
 
 
+async def _call_sonnet(system_prompt: str, user_message: str) -> dict:
+    """Call Claude Sonnet 4.5 met tool_use voor structured JSON output.
+
+    Gebruikt voor incasso-draft generatie — Nederlandse juridische taal +
+    AV-citaten kwaliteit beter dan Gemini Flash (Harvey BigLaw Bench).
+    Logs token-usage voor cost-monitoring per draft.
+    """
+    if not settings.anthropic_api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    schema_info = _detect_schema(system_prompt)
+
+    if schema_info:
+        tool_name, schema = schema_info
+        response = await client.messages.create(
+            model=CLAUDE_SONNET_MODEL,
+            max_tokens=16384,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+            tools=[
+                {
+                    "name": tool_name,
+                    "description": "Generate structured email draft.",
+                    "input_schema": schema,
+                }
+            ],
+            tool_choice={"type": "tool", "name": tool_name},
+        )
+        _log_sonnet_cost(response, "Sonnet draft")
+        for block in response.content:
+            if block.type == "tool_use":
+                return block.input  # type: ignore[return-value]
+        logger.warning("Sonnet: no tool_use block in response, fallback to text")
+
+    # Fallback: plain text JSON
+    response = await client.messages.create(
+        model=CLAUDE_SONNET_MODEL,
+        max_tokens=16384,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_message}],
+    )
+    _log_sonnet_cost(response, "Sonnet text-fallback")
+    raw_text = response.content[0].text.strip()
+    return _parse_json(raw_text)
+
+
+def _log_sonnet_cost(response: Any, label: str) -> None:
+    """Log Sonnet token-usage en geschatte kosten per call."""
+    usage = getattr(response, "usage", None)
+    if not usage:
+        return
+    in_tokens = getattr(usage, "input_tokens", 0)
+    out_tokens = getattr(usage, "output_tokens", 0)
+    cost_usd = (
+        in_tokens * SONNET_INPUT_PRICE_PER_M / 1_000_000
+        + out_tokens * SONNET_OUTPUT_PRICE_PER_M / 1_000_000
+    )
+    logger.info(
+        "%s: tokens in=%d out=%d cost=$%.4f",
+        label, in_tokens, out_tokens, cost_usd,
+    )
+
+
 def _parse_json(raw_text: str) -> dict:
     """Parse JSON from AI response, handling markdown code blocks."""
     try:
@@ -419,4 +496,61 @@ async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, s
         return result, model_name
     except Exception as e:
         logger.error("Intake AI: all providers failed: %s", e)
+        raise ValueError(f"All AI providers failed: {e}") from e
+
+
+async def call_draft_ai(
+    system_prompt: str,
+    user_message: str,
+    av_pdf_path: str | None = None,
+) -> tuple[dict, str]:
+    """Call AI for incasso draft generation. Sonnet primary for legal quality.
+
+    Priority: Claude Sonnet 4.6 → Gemini Flash 2.5 → Claude Haiku 4.5.
+    Bij `av_pdf_path` gegeven: native Sonnet PDF input — leest AV-PDF direct
+    zonder text-extract truncatie (voor Verweer beantwoorden met AV-citatie).
+
+    Returns (parsed_result, model_name).
+    """
+    # PDF-pad: native Sonnet PDF voor AV-citaat accuracy
+    if av_pdf_path and settings.anthropic_api_key:
+        try:
+            result = await call_claude_with_pdf(
+                system_prompt, user_message, av_pdf_path,
+                model=CLAUDE_SONNET_MODEL,
+            )
+            logger.info("Draft AI: Sonnet+PDF generation successful")
+            return result, "claude-sonnet-4-5+pdf"
+        except Exception as e:
+            logger.warning(
+                "Draft AI: Sonnet+PDF failed, fallback naar plain Sonnet: %s", e
+            )
+
+    # Sonnet primary (geen PDF, of PDF-pad gefaald)
+    if settings.anthropic_api_key:
+        try:
+            result = await _call_sonnet(system_prompt, user_message)
+            logger.info("Draft AI: Sonnet generation successful")
+            return result, "claude-sonnet-4-5"
+        except Exception as e:
+            logger.warning("Draft AI: Sonnet failed, fallback naar Gemini: %s", e)
+
+    # Gemini fallback
+    if settings.gemini_api_key:
+        try:
+            result = await _call_gemini(system_prompt, user_message)
+            logger.info("Draft AI: Gemini fallback successful")
+            return result, "gemini-2.5-flash"
+        except Exception as e:
+            logger.warning(
+                "Draft AI: Gemini failed, last-resort Haiku: %s", e
+            )
+
+    # Last resort
+    try:
+        result = await _call_haiku(system_prompt, user_message)
+        logger.info("Draft AI: Haiku last-resort successful")
+        return result, CLAUDE_HAIKU_MODEL
+    except Exception as e:
+        logger.error("Draft AI: all providers failed: %s", e)
         raise ValueError(f"All AI providers failed: {e}") from e

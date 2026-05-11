@@ -1,9 +1,57 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 mei 2026 (sessie 134 — BUG-73 + HTML emails + email-trigger + UI-cleanup + send-fix)
-**Laatste feature/fix:** Sessie 134 — BUG-73 vol gefixt, HTML email-templates met logo+handtekening, server-side renderer + genormaliseerde tabel-styling, schoon subjects/body (geen interne labels naar wederpartij), email-trigger verweer-flow (mock getest), legacy banners verwijderd, send 422 fix
-**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag), inbound mail seidony@kestinglegal.nl werkt niet via huidige DNS (Wix UI beperkt voor subdomein-MX → Cloudflare migratie nodig)
-**Volgende sessie:** 135 — Cloudflare DNS migratie + subdomein `mail.kestinglegal.nl` voor M365 → echte e2e mail-flow + factuur-tabel edge cases
+**Laatst bijgewerkt:** 11 mei 2026 (sessie 135 — E2E mail-flow live + factuur/greeting/XXX/AV fixes)
+**Laatste feature/fix:** Sessie 135 — `*.onmicrosoft.com` alias als test-route, echte E2E mail-flow werkt (hotmail → Outlook → Luxis sync → classify → pipeline switch + auto-draft). Factuur-renderer matcht nu 5-cel rij-format, lone-comma templates krijgen greeting injected, XXX-placeholder vervangen met AI weerlegging, totaalbedrag-zin gevuld, subject server-side gerendererd, AV-PDF van cliënt geladen via PyMuPDF, re-trigger draft op vervolg-verweer in Verweer-stap, prompt verbeterd voor library-match + AV-citation.
+**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag), Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (geen Premium-route), TWEEDE SOMMATIE GEEN VERWEER template heeft hardcoded "Seidony" greeting
+**Volgende sessie:** 136 — Bespreek AV-strategie met Lisanne (welke AV per cliënt = leverancier-klant AV, niet incasso-AV), plan registrar-transfer Wix → TransIP, fix hardcoded Seidony in Tweede sommatie template
+
+## Wat er gedaan is (sessie 135 — 8-11 mei 2026) — E2E mail-flow live + renderer/prompt fixes
+
+### Samenvatting
+Cloudflare-migratie kapot gegaan: Wix free-tier blokkeert nameserver-wijziging voor kestinglegal.nl, ook met Premium geen route. Alternatief gevonden: M365 tenant heeft gratis `*.onmicrosoft.com` subdomein, alias `ArsalanSeidony@KestingLegal019.onmicrosoft.com` toegevoegd aan seidony mailbox → inbound mail vanuit hotmail werkt direct, Luxis OutlookProvider synct die mailbox. E2E flow getest live: hotmail → onmicrosoft alias → Luxis sync → AI classify (Gemini Flash) → pipeline switch → AIDraft + WorkflowTask gegenereerd. Daarna 5 bugs gevonden in rendered concept en gefixt: factuur-tabel matchte alleen 4-cel-colspan rij (5-cel rijen niet gevuld), 2 templates misten "Geachte heer/mevrouw" in HTML, XXX-placeholder werd niet door AI weerlegging vervangen in HTML, sommatie-zin "totaalbedrag van € uiterlijk" miste bedrag, subject ging mis bij `/ kenmerk / dossiernummer` formatting. Prompt verbeterd zodat AI eerst library-match doet (verlengd_abonnement etc.) en bij concrete tegenwerping AV-bepaling citeert. AV-PDF van cliënt nu geladen via PyMuPDF (8000 chars) en doorgegeven aan AI als referentie. Re-trigger draft op vervolg-verweer in Verweer-stap toegevoegd.
+
+### Wat er gedaan is
+
+**E2E mail-flow infrastructuur:**
+1. Wix-blokkade onderzocht en bevestigd: nameserver-wijziging niet toegestaan, ook met Premium (bron: Wix support + Cloudflare community)
+2. Alternatief: M365 tenant heeft gratis `KestingLegal019.onmicrosoft.com` subdomein
+3. Alias `ArsalanSeidony@KestingLegal019.onmicrosoft.com` toegevoegd aan `seidony@kestinglegal.nl` mailbox
+4. E2E getest live: hotmail → alias → sync → match dossier 2026-00049 op subject → classify "betwisting 95% escalate" → pipeline switch → AIDraft + Task
+
+**Renderer-fixes (`backend/app/incasso/html_renderer.py`):**
+5. Factuur-tabel matcht nu ook 5-cel rijen zonder colspan (was alleen 1e factuur ingevuld bij 2+ facturen)
+6. Lone-comma greeting injectie voor templates zonder "Geachte heer/mevrouw" in HTML (TWEEDE SOMMATIE INDIEN WEL VERWEER + SOMMATIE AANKONDIGING FAILLISSEMENT)
+7. XXX-placeholder in HTML vervangen met AI-gegenereerde weerlegging (extract uit plain body tussen "stellingen weerleg." en "Indien ondanks deze correspondentie")
+8. Sommatie-zin "totaalbedrag van € uiterlijk" gevuld met te-voldoen bedrag (regex match met `&nbsp;`)
+9. Subject server-side gerendererd via `render_subject()` — vervangt `/ /` placeholder met `kenmerk / case_number`
+
+**Prompt-verbeteringen (`backend/app/ai_agent/incasso_email_prompts.py`):**
+10. Verweer beantwoorden prompt: 6 verplichte stappen — analyse kernverweer, matching tegen 5 library voorbeelden met trefwoorden, letterlijk kopiëren bij match, AV-bepaling citeren bij concrete tegenwerping, placeholder alleen bij geen library- EN geen AV-match
+
+**AV-integratie (`backend/app/incasso/automation_service.py`):**
+11. `_extract_pdf_text()` helper via PyMuPDF
+12. `gather_case_context()` laadt nu AV-PDF van `Contact.terms_file_path` voor cliënt (max 8000 chars)
+
+**Pipeline-trigger uitbreiding (`backend/app/incasso/automation_service.py`):**
+13. `trigger_defense_response_for_email` ondersteunt nu 2 scenario's: hoofdpad-stap → switch + draft, of al in Verweer beantwoorden → re-genereer draft zonder stap-switch
+
+**Cleanup + spook-data:**
+14. Verwijderd ongebruikte hooks/imports uit `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` (-25 regels)
+15. Spook-claim "factuurtje € 10,00 1992-01-01" uit dossier 2026-00049 verwijderd (test-artefact)
+
+### Verifieerd
+
+- pytest tests/test_html_renderer.py: 17/17 groen
+- pytest tests/test_incasso_router.py tests/test_incasso_pipeline.py: 45/45 groen (regressie)
+- Frontend tsc --noEmit: schoon
+- Productie E2E mail-flow: live getest met 2 wederpartij-reacties + 1 Lisanne-verzending
+- AV-PDF loading: bevestigd via log "AV-text geladen voor COLLECT 1 B.V. (8000 chars)"
+
+### Bekende issues / openstaand voor sessie 136
+
+- **AV-data**: COLLECT 1's geuploade AV is incasso-AV (Collect 1 ↔ haar cliënten), niet leverancier-klant AV. Voor zinvolle AV-citation moet AV per cliënt de relatie cliënt ↔ debiteur betreffen. Bespreken met Lisanne.
+- **Hardcoded "Seidony"** in TWEEDE SOMMATIE GEEN VERWEER template — greeting "Geachte heer, mevrouw Seidony,<br>" zit letterlijk in Lisanne's eml. Fix: import script greeting-tekst normaliseren.
+- **Wix-blokkade**: registrar-transfer naar TransIP plannen (5-8 dagen). Niet acuut, alias-route werkt.
 
 ## Wat er gedaan is (sessie 134 — 7 mei 2026) — BUG-73 fix + HTML email-templates + email-trigger detectie
 

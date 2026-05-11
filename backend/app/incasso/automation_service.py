@@ -348,6 +348,33 @@ async def generate_draft_for_step(
     context = await gather_case_context(db, tenant_id, case_id)
     if incoming_defense:
         context["incoming_defense"] = incoming_defense
+    elif target_step.name == "Verweer beantwoorden":
+        # Manual trigger op verweer-stap zonder explicit incoming_defense:
+        # haal automatisch laatste inbound email op uit case-correspondentie.
+        # AI kan anders niets weerleggen want hij weet niet wat debiteur stelde.
+        from app.email.synced_email_models import SyncedEmail
+
+        last_inbound = (await db.execute(
+            select(SyncedEmail).where(
+                SyncedEmail.tenant_id == tenant_id,
+                SyncedEmail.case_id == case_id,
+                SyncedEmail.direction == "inbound",
+            ).order_by(SyncedEmail.email_date.desc()).limit(1)
+        )).scalar_one_or_none()
+        if last_inbound:
+            context["incoming_defense"] = (
+                last_inbound.body_text or last_inbound.snippet or ""
+            )[:8000]
+            logger.info(
+                "Case %s: incoming_defense auto-geladen uit SyncedEmail %s (%d chars)",
+                case_id, last_inbound.id, len(context["incoming_defense"]),
+            )
+        else:
+            logger.warning(
+                "Case %s: Verweer beantwoorden zonder inbound email — "
+                "AI kan niet weerleggen zonder verweer-tekst",
+                case_id,
+            )
 
     # AV-PDF pad alleen bij Verweer beantwoorden — daar moet AI citeren uit AV.
     # Andere stappen (sommaties zonder verweer) hebben AV niet nodig.

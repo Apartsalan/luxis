@@ -210,12 +210,23 @@ def test_totaalbedrag_amount_filled():
 
 
 def test_render_subject_fills_placeholders():
+    """Bij kenmerk == case_number → enkel slot (geen dubbele vermelding)."""
     out = render_subject(
         "REACTIE OP UW VERWEER / / ",
         case_number="2026-00049",
         kenmerk="2026-00049",
     )
-    assert out == "REACTIE OP UW VERWEER / 2026-00049 / 2026-00049"
+    assert out == "REACTIE OP UW VERWEER / 2026-00049"
+
+
+def test_render_subject_kenmerk_empty_only_case_number():
+    """Bij kenmerk leeg → alleen case_number slot."""
+    out = render_subject(
+        "EERSTE SOMMATIE / / ",
+        case_number="2026-00049",
+        kenmerk="",
+    )
+    assert out == "EERSTE SOMMATIE / 2026-00049"
 
 
 def test_render_subject_with_kenmerk():

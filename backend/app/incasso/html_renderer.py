@@ -177,15 +177,24 @@ def render_subject(template_subject: str, *, case_number: str, kenmerk: str) -> 
     Templates volgen format `<TYPE> / / ` (twee slashes met dubbele spatie of
     enkele spatie). Server rendert deze altijd zelf — AI maakt soms fouten
     met de structuur (bv. contactnaam in 2e slot in plaats van dossiernummer).
+
+    Bij kenmerk leeg OF gelijk aan case_number → alleen één slot tonen
+    (voorkomt dubbele vermelding `... / 2026-00049 / 2026-00049`).
     """
     if not template_subject:
         return ""
     out = template_subject.rstrip()
-    out = re.sub(r"\s*/\s*/\s*$", f" / {kenmerk} / {case_number}", out)
+    if not kenmerk or kenmerk == case_number:
+        replacement = f" / {case_number}"
+        inline_replacement = f"/ {case_number}"
+    else:
+        replacement = f" / {kenmerk} / {case_number}"
+        inline_replacement = f"/ {kenmerk} / {case_number}"
+    out = re.sub(r"\s*/\s*/\s*$", replacement, out)
     if "/ /" in out:
-        out = out.replace("/ /", f"/ {kenmerk} / {case_number}", 1)
+        out = out.replace("/ /", inline_replacement, 1)
     if "/  /" in out:
-        out = out.replace("/  /", f"/ {kenmerk} / {case_number}", 1)
+        out = out.replace("/  /", inline_replacement, 1)
     return out.strip()
 
 

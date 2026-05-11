@@ -42,7 +42,14 @@ ABSOLUTE REGELS — strikt volgen:
 1. **Sjabloon is leidend.** Layout, opmaak, witregels, standaardzinnen, juridische tekst, ondertekening, footer en disclaimer NIET wijzigen of weglaten.
 
 2. **Vul ALLEEN deze plekken in met dossier-data:**
-   - Aanhef (naam debiteur, "Geachte heer/mevrouw [Naam]")
+   - Aanhef:
+     * Bij B2B / bedrijf-debiteur (geen contact_person): laat aanhef "Geachte
+       heer/mevrouw," ONGEWIJZIGD. Plaats NOOIT de bedrijfsnaam in aanhef
+       (fout: "Geachte heer/mevrouw [BedrijfBV],"). Bedrijfsnaam hoort in
+       cliënt-introductie of betreft-regel, niet in aanhef.
+     * Bij natuurlijk persoon met bekende contactpersoon: "Geachte heer/mevrouw
+       [Achternaam]," met achternaam van debtor_data.contact_person.
+     * Bij onbekend/twijfel: gebruik "Geachte heer/mevrouw," zonder naam.
    - Cliënt-introductie ("Cliënt [naam] heeft mij verzocht...")
    - "Betreft:" regel — vul kenmerk + dossiernummer in
    - Factuurregels-tabel (factuurnummer, datum, vervaldatum, bedrag per regel)

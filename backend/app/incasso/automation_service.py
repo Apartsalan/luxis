@@ -168,6 +168,23 @@ def _extract_pdf_text(path: str, max_chars: int = 8000) -> str | None:
         doc.close()
 
 
+def _dedupe_subject_slots(body: str) -> str:
+    """Vervang dubbele slot-vermelding in Betreft-regel: '/ X / X' → '/ X'.
+
+    AI volgt niet altijd prompt-instructie dat kenmerk == dossiernummer
+    slechts één slot moet zijn. Server-side regex als vangnet — patroon
+    '/ <token> / <token>' waar beide tokens identiek zijn wordt vervangen
+    door '/ <token>'. Werkt alleen op identieke tokens, dus bij ECHT
+    verschillend kenmerk + dossiernummer blijft '/ REF-123 / 2026-00049'
+    onaangetast.
+    """
+    import re
+    if not body:
+        return body
+    pattern = re.compile(r"/\s*([^\s/][^\s/]*)\s*/\s*\1(?!\S)")
+    return pattern.sub(r"/ \1", body)
+
+
 async def _resolve_contact_person(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -473,9 +490,12 @@ async def generate_draft_for_step(
     subject = render_subject(
         template_subject,
         case_number=str(case_data.get("case_number") or ""),
-        kenmerk=str(case_data.get("reference") or case_data.get("case_number") or ""),
+        kenmerk=str(case_data.get("reference") or ""),
     )
     body = result.get("body", "") or template_body
+    # Server-side fix: dedupliceer "/ X / X" in Betreft-regel van body
+    # wanneer AI ondanks prompt-instructie het dossiernummer dubbel plakt.
+    body = _dedupe_subject_slots(body)
     # AI returnt geen body_html — server rendert HTML uit template + dossier-context.
     # ai_body wordt meegegeven zodat XXX-placeholder (Verweer beantwoorden) gevuld
     # kan worden met de AI-gegenereerde weerlegging.

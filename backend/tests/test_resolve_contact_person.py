@@ -12,8 +12,25 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant
-from app.incasso.automation_service import _resolve_contact_person
+from app.incasso.automation_service import (
+    _capitalize_name,
+    _resolve_contact_person,
+)
 from app.relations.models import Contact, ContactLink
+
+
+def test_capitalize_name_lowercase_becomes_proper():
+    assert _capitalize_name("peterson") == "Peterson"
+
+
+def test_capitalize_name_mixed_unchanged():
+    """Naam met al een hoofdletter ergens → onveranderd."""
+    assert _capitalize_name("Peterson") == "Peterson"
+    assert _capitalize_name("de Vries") == "de Vries"  # V is upper, dus unchanged
+
+
+def test_capitalize_name_empty_returns_empty():
+    assert _capitalize_name("") == ""
 
 
 @pytest.mark.asyncio
@@ -72,9 +89,9 @@ async def test_resolve_bedrijf_met_link_returns_persoon_naam(
         id=uuid.uuid4(),
         tenant_id=test_tenant.id,
         contact_type="person",
-        name="Piet Pietersen",
+        name="Piet pietersen",
         first_name="Piet",
-        last_name="Pietersen",
+        last_name="pietersen",
     )
     db.add_all([bedrijf, persoon])
     await db.flush()

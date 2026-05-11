@@ -185,6 +185,19 @@ def _dedupe_subject_slots(body: str) -> str:
     return pattern.sub(r"/ \1", body)
 
 
+def _capitalize_name(name: str) -> str:
+    """Capitalize eerste letter als naam helemaal lowercase ingevoerd is.
+
+    'peterson' → 'Peterson'. 'de Vries' (al gemixt) → 'De Vries'.
+    'Peterson' (al goed) → onveranderd.
+    """
+    if not name:
+        return name
+    if name == name.lower():
+        return name[:1].upper() + name[1:]
+    return name
+
+
 async def _resolve_contact_person(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -202,7 +215,7 @@ async def _resolve_contact_person(
         return ""
     contact_type = getattr(contact, "contact_type", "")
     if contact_type == "person":
-        return contact.last_name or contact.name or ""
+        return _capitalize_name(contact.last_name or contact.name or "")
     if contact_type == "company":
         from app.relations.models import Contact, ContactLink
 
@@ -227,7 +240,7 @@ async def _resolve_contact_person(
         )).scalar_one_or_none()
         if not person:
             return ""
-        return person.last_name or person.name or ""
+        return _capitalize_name(person.last_name or person.name or "")
     return ""
 
 

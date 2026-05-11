@@ -252,20 +252,24 @@ def render_template_html(
         return ""
 
     case_number = str(case_data.get("case_number") or "")
-    kenmerk = str(case_data.get("reference") or case_number)
+    raw_ref = str(case_data.get("reference") or "")
+    kenmerk = raw_ref if raw_ref and raw_ref != case_number else ""
     client_name = str(client_data.get("name") or "")
     contact = debtor_data.get("contact_person") or ""
 
     html = template_html
 
-    # Subject-regel binnen body: "SOMMATIE TOT BETALING / /" → "SOMMATIE TOT BETALING / kenmerk / dossiernummer"
-    # (Lisanne's templates hebben " / / " met spaties tussen slashes)
+    # Subject-regel binnen body: "SOMMATIE TOT BETALING / /" → vul kenmerk + dossiernummer.
+    # Bij kenmerk leeg (of gelijk aan case_number): enkel slot, anders dubbel slot.
+    subject_replacement = (
+        f" / {kenmerk} / {case_number}" if kenmerk else f" / {case_number}"
+    )
     for tag in ("SOMMATIE TOT BETALING", "TWEEDE SOMMATIE", "WEDEROM SOMMATIE",
                 "SOMMATIE AANKONDIGING FAILLISSEMENT", "VERZOEKSCHRIFT FAILLISSEMENT",
                 "SOMMATIE TOT BETALING (LAATSTE MOGELIJKHEID)"):
         # Generieke patronen met of zonder spaties tussen slashes
-        html = html.replace(f"{tag} / /", f"{tag} / {kenmerk} / {case_number}")
-        html = html.replace(f"{tag} /  /", f"{tag} / {kenmerk} / {case_number}")
+        html = html.replace(f"{tag} / /", f"{tag}{subject_replacement}")
+        html = html.replace(f"{tag} /  /", f"{tag}{subject_replacement}")
 
     # Cliëntnaam
     html = html.replace("(invullen gegevens cliënt)", client_name or "(cliënt)")

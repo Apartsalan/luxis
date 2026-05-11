@@ -25,6 +25,7 @@ import {
   useSearchRelations,
   useCreateContactLink,
   useDeleteContactLink,
+  useCreateRelation,
 } from "@/hooks/use-relations";
 
 const ROLE_OPTIONS = [
@@ -49,12 +50,18 @@ export function ContactLinks({
 }: ContactLinksProps) {
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mode, setMode] = useState<"search" | "create">("search");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedName, setSelectedName] = useState("");
   const [role, setRole] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const searchRef = useRef<HTMLDivElement>(null);
 
   const isPerson = contactType === "person";
@@ -76,6 +83,7 @@ export function ContactLinks({
   );
   const createLink = useCreateContactLink();
   const deleteLink = useDeleteContactLink();
+  const createRelation = useCreateRelation();
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -131,6 +139,46 @@ export function ContactLinks({
     setSelectedName("");
     setRole("");
     setShowResults(false);
+    setMode("search");
+    setNewFirstName("");
+    setNewLastName("");
+    setNewCompanyName("");
+    setNewEmail("");
+    setNewPhone("");
+  };
+
+  const handleCreateAndLink = async () => {
+    const isPersonCreate = !isPerson; // creating opposite type
+    const name = isPersonCreate
+      ? `${newFirstName.trim()} ${newLastName.trim()}`.trim()
+      : newCompanyName.trim();
+    if (!name) {
+      toast.error(
+        isPersonCreate
+          ? "Vul minimaal voor- of achternaam in"
+          : "Vul een bedrijfsnaam in"
+      );
+      return;
+    }
+    try {
+      const created = await createRelation.mutateAsync({
+        contact_type: isPersonCreate ? "person" : "company",
+        name,
+        first_name: isPersonCreate ? (newFirstName.trim() || undefined) : undefined,
+        last_name: isPersonCreate ? (newLastName.trim() || undefined) : undefined,
+        email: newEmail.trim() || undefined,
+        phone: newPhone.trim() || undefined,
+      });
+      const data = isPerson
+        ? { person_id: contactId, company_id: created.id, role_at_company: role?.trim() || null }
+        : { person_id: created.id, company_id: contactId, role_at_company: role?.trim() || null };
+      await createLink.mutateAsync(data);
+      toast.success("Nieuwe relatie aangemaakt en gekoppeld");
+      setDialogOpen(false);
+      resetForm();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kon relatie niet aanmaken");
+    }
   };
 
   // Filter out already-linked contacts from search results
@@ -252,8 +300,40 @@ export function ContactLinks({
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            {/* Search or selected */}
-            {selectedId ? (
+            {/* Mode tabs */}
+            <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("search");
+                }}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  mode === "search"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Bestaande zoeken
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("create");
+                  setSelectedId(null);
+                  setSelectedName("");
+                }}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  mode === "create"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Nieuw aanmaken
+              </button>
+            </div>
+
+            {/* Search mode: bestaande zoeken/selecteren */}
+            {mode === "search" && (selectedId ? (
               <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
                 <div className="flex items-center gap-2">
                   <div
@@ -341,12 +421,104 @@ export function ContactLinks({
                         </button>
                       ))
                     ) : !searching ? (
-                      <p className="px-3 py-3 text-sm text-muted-foreground text-center">
-                        Geen resultaten gevonden
-                      </p>
+                      <div className="px-3 py-3 text-center space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          Geen resultaten gevonden
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMode("create");
+                            // Pre-fill name from search query
+                            if (isPerson) {
+                              setNewCompanyName(search);
+                            } else {
+                              const parts = search.trim().split(/\s+/);
+                              setNewFirstName(parts[0] || "");
+                              setNewLastName(parts.slice(1).join(" ") || "");
+                            }
+                          }}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          + Nieuwe {isPerson ? "bedrijf" : "persoon"} aanmaken
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                 )}
+              </div>
+            ))}
+
+            {/* Create mode: nieuwe relatie aanmaken */}
+            {mode === "create" && (
+              <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+                {isPerson ? (
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Bedrijfsnaam *
+                    </label>
+                    <input
+                      type="text"
+                      value={newCompanyName}
+                      onChange={(e) => setNewCompanyName(e.target.value)}
+                      placeholder="Bedrijfsnaam"
+                      className={inputClass}
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Voornaam
+                      </label>
+                      <input
+                        type="text"
+                        value={newFirstName}
+                        onChange={(e) => setNewFirstName(e.target.value)}
+                        placeholder="Voornaam"
+                        className={inputClass}
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Achternaam *
+                      </label>
+                      <input
+                        type="text"
+                        value={newLastName}
+                        onChange={(e) => setNewLastName(e.target.value)}
+                        placeholder="Achternaam"
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Email (optioneel)
+                  </label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="email@voorbeeld.nl"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Telefoon (optioneel)
+                  </label>
+                  <input
+                    type="tel"
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    placeholder="06-12345678"
+                    className={inputClass}
+                  />
+                </div>
               </div>
             )}
 
@@ -382,11 +554,21 @@ export function ContactLinks({
               </button>
               <button
                 type="button"
-                onClick={handleAdd}
-                disabled={!selectedId || createLink.isPending}
+                onClick={mode === "create" ? handleCreateAndLink : handleAdd}
+                disabled={
+                  mode === "create"
+                    ? (
+                        (isPerson ? !newCompanyName.trim() : !newLastName.trim() && !newFirstName.trim())
+                        || createRelation.isPending
+                        || createLink.isPending
+                      )
+                    : !selectedId || createLink.isPending
+                }
                 className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
-                {createLink.isPending ? "Toevoegen..." : "Toevoegen"}
+                {(createLink.isPending || createRelation.isPending)
+                  ? "Toevoegen..."
+                  : mode === "create" ? "Aanmaken & koppelen" : "Toevoegen"}
               </button>
             </div>
           </div>

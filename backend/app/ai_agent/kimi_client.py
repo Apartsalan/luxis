@@ -30,7 +30,7 @@ KIMI_MODEL = "moonshot-v1-auto"
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 GEMINI_MODEL = "gemini-2.5-flash"
 
-CLAUDE_SONNET_MODEL = "claude-sonnet-4-5-20250514"
+CLAUDE_SONNET_MODEL = "claude-sonnet-4-6"
 CLAUDE_HAIKU_MODEL = "claude-haiku-4-5"
 
 # Kosten per 1M tokens (Sonnet 4.5) — voor cost-logging per draft
@@ -261,7 +261,7 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
     schema_info = _detect_schema(system_prompt)
     # Draft-generatie heeft een complexer prompt + grote HTML-output — Sonnet hier
     is_draft = bool(schema_info and schema_info[0] == "generate_incasso_email")
-    model_name = "claude-sonnet-4-5-20250514" if is_draft else "claude-haiku-4-5"
+    model_name = CLAUDE_SONNET_MODEL if is_draft else CLAUDE_HAIKU_MODEL
 
     if schema_info:
         tool_name, schema = schema_info
@@ -289,7 +289,7 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
 
     # Fallback: plain text response (no schema detected or tool_use failed)
     response = await client.messages.create(
-        model="claude-haiku-4-5",
+        model=CLAUDE_HAIKU_MODEL,
         max_tokens=1024,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
@@ -379,7 +379,7 @@ async def call_claude_with_pdf(
     system_prompt: str,
     user_message: str,
     pdf_path: str,
-    model: str = "claude-sonnet-4-5-20250514",
+    model: str = CLAUDE_SONNET_MODEL,
 ) -> dict:
     """AI-TECH-02: Send a PDF directly to Claude for deep analysis.
 
@@ -491,7 +491,7 @@ async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, s
         result = await _call_haiku(system_prompt, user_message)
         schema_info = _detect_schema(system_prompt)
         is_draft = bool(schema_info and schema_info[0] == "generate_incasso_email")
-        model_name = "claude-sonnet-4-5" if is_draft else "claude-haiku-4-5"
+        model_name = CLAUDE_SONNET_MODEL if is_draft else CLAUDE_HAIKU_MODEL
         logger.info("Intake AI: %s extraction successful", model_name)
         return result, model_name
     except Exception as e:
@@ -520,7 +520,7 @@ async def call_draft_ai(
                 model=CLAUDE_SONNET_MODEL,
             )
             logger.info("Draft AI: Sonnet+PDF generation successful")
-            return result, "claude-sonnet-4-5+pdf"
+            return result, f"{CLAUDE_SONNET_MODEL}+pdf"
         except Exception as e:
             logger.warning(
                 "Draft AI: Sonnet+PDF failed, fallback naar plain Sonnet: %s", e
@@ -531,7 +531,7 @@ async def call_draft_ai(
         try:
             result = await _call_sonnet(system_prompt, user_message)
             logger.info("Draft AI: Sonnet generation successful")
-            return result, "claude-sonnet-4-5"
+            return result, CLAUDE_SONNET_MODEL
         except Exception as e:
             logger.warning("Draft AI: Sonnet failed, fallback naar Gemini: %s", e)
 

@@ -51,7 +51,9 @@ ABSOLUTE REGELS — strikt volgen:
        [Achternaam]," met achternaam van debtor_data.contact_person.
      * Bij onbekend/twijfel: gebruik "Geachte heer/mevrouw," zonder naam.
    - Cliënt-introductie ("Cliënt [naam] heeft mij verzocht...")
-   - "Betreft:" regel — vul kenmerk + dossiernummer in
+   - "Betreft:" regel — vul kenmerk + dossiernummer in. LET OP: als kenmerk
+     gelijk is aan dossiernummer (of kenmerk ontbreekt), schrijf dan ALLEEN
+     `/ <dossiernummer>` één keer. NOOIT `/ 2026-00049 / 2026-00049` (dubbel).
    - Factuurregels-tabel (factuurnummer, datum, vervaldatum, bedrag per regel)
    - Bedragen-tabel (hoofdsom, rente, incassokosten, BTW, totaal, voldaan, te voldoen)
    - Te-voldoen bedrag in zin "openstaande bedrag van €..."
@@ -144,7 +146,9 @@ def build_user_prompt(
         "",
         f"- Naam: {debtor_data.get('name', '?')}",
         f"- Adres: {debtor_data.get('address', '?')}",
-        f"- Contactpersoon: {debtor_data.get('contact_person', '—')}",
+        f"- Type: {debtor_data.get('contact_type', 'company')} "
+        f"({'bedrijf — gebruik GEEN naam in aanhef' if debtor_data.get('contact_type') == 'company' else 'natuurlijk persoon'})",
+        f"- Contactpersoon: {debtor_data.get('contact_person') or '— (geen, gebruik generieke aanhef)'}",
         f"- Email: {debtor_data.get('email', '—')}",
         "",
         "### Openstaande facturen",

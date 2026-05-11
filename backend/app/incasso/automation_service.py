@@ -242,7 +242,18 @@ async def gather_case_context(
         "debtor_data": {
             "name": debtor_contact.name if debtor_contact else "?",
             "address": (debtor_contact.visit_address or debtor_contact.postal_address or "") if debtor_contact else "",
-            "contact_person": debtor_contact.name if debtor_contact else "",
+            # contact_person ALLEEN bij natuurlijk persoon-debiteur; bij bedrijf
+            # zonder gekoppelde persoon → leeg, AI mag dan geen naam in aanhef
+            # plaatsen (geen "Geachte heer/mevrouw [BedrijfBV]," fout).
+            "contact_person": (
+                (debtor_contact.last_name or debtor_contact.name or "")
+                if debtor_contact and getattr(debtor_contact, "contact_type", "") == "person"
+                else ""
+            ),
+            "contact_type": (
+                getattr(debtor_contact, "contact_type", "company")
+                if debtor_contact else "company"
+            ),
             "email": debtor_contact.email if debtor_contact else "",
         },
         "invoices": [

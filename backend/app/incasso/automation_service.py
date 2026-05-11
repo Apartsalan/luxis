@@ -168,12 +168,17 @@ def _extract_pdf_text(path: str, max_chars: int = 8000) -> str | None:
         doc.close()
 
 
-def _resolve_contact_person(contact: Any) -> str:
+async def _resolve_contact_person(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    contact: Any,
+) -> str:
     """Bepaal contactpersoon-naam voor in aanhef.
 
     - Persoon-debiteur: eigen achternaam (of volledige naam).
-    - Bedrijf-debiteur: eerste actieve ContactLink.person achternaam.
-      Voorkeur volgorde: rol "Contactpersoon" > eerste actieve link.
+    - Bedrijf-debiteur: eerste actieve ContactLink.person achternaam,
+      explicit geladen via async query (lazy loading werkt niet in async
+      context — backend CLAUDE.md). Voorkeur rol "Contactpersoon".
     - Anders (onbekend / geen link): leeg → AI gebruikt generieke aanhef.
     """
     if not contact:
@@ -182,16 +187,27 @@ def _resolve_contact_person(contact: Any) -> str:
     if contact_type == "person":
         return contact.last_name or contact.name or ""
     if contact_type == "company":
-        # person_links is via relations.models Contact.person_links (lazy=selectin)
-        links = getattr(contact, "person_links", None) or []
-        active = [l for l in links if getattr(l, "is_active", True)]
-        if not active:
+        from app.relations.models import Contact, ContactLink
+
+        links = (await db.execute(
+            select(ContactLink).where(
+                ContactLink.tenant_id == tenant_id,
+                ContactLink.company_id == contact.id,
+                ContactLink.is_active.is_(True),
+            )
+        )).scalars().all()
+        if not links:
             return ""
         preferred = next(
-            (l for l in active if (l.role_at_company or "").lower() == "contactpersoon"),
-            active[0],
+            (l for l in links if (l.role_at_company or "").lower() == "contactpersoon"),
+            links[0],
         )
-        person = getattr(preferred, "person", None)
+        person = (await db.execute(
+            select(Contact).where(
+                Contact.tenant_id == tenant_id,
+                Contact.id == preferred.person_id,
+            )
+        )).scalar_one_or_none()
         if not person:
             return ""
         return person.last_name or person.name or ""
@@ -220,6 +236,9 @@ async def gather_case_context(
     # Case heeft client + opposing_party als directe relations (selectin loaded)
     client_contact = case.client
     debtor_contact = case.opposing_party
+
+    # Contactpersoon voor aanhef — bij bedrijf via ContactLink async query
+    contact_person_name = await _resolve_contact_person(db, tenant_id, debtor_contact)
 
     claims = (await db.execute(
         select(Claim).where(Claim.tenant_id == tenant_id, Claim.case_id == case_id)
@@ -278,10 +297,7 @@ async def gather_case_context(
         "debtor_data": {
             "name": debtor_contact.name if debtor_contact else "?",
             "address": (debtor_contact.visit_address or debtor_contact.postal_address or "") if debtor_contact else "",
-            # contact_person: bij persoon-debiteur = eigen achternaam;
-            # bij bedrijf-debiteur = gekoppelde contactpersoon via ContactLink
-            # (eerste actieve link, bij voorkeur rol "Contactpersoon"); anders leeg.
-            "contact_person": _resolve_contact_person(debtor_contact),
+            "contact_person": contact_person_name,
             "contact_type": (
                 getattr(debtor_contact, "contact_type", "company")
                 if debtor_contact else "company"

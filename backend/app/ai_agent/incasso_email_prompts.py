@@ -132,7 +132,7 @@ def build_user_prompt(
         "### Dossier-context",
         "",
         f"- Dossiernummer: {case_data.get('case_number', '?')}",
-        f"- Kenmerk: {case_data.get('reference', case_data.get('case_number', '?'))}",
+        f"- Kenmerk: {case_data.get('reference') or '(geen — gebruik alleen dossiernummer in Betreft)'}",
         f"- Type: {case_data.get('debtor_type', 'b2b')}",
         f"- Openingsdatum: {case_data.get('opened_at', '?')}",
         "",

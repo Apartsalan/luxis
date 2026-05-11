@@ -168,6 +168,36 @@ def _extract_pdf_text(path: str, max_chars: int = 8000) -> str | None:
         doc.close()
 
 
+def _resolve_contact_person(contact: Any) -> str:
+    """Bepaal contactpersoon-naam voor in aanhef.
+
+    - Persoon-debiteur: eigen achternaam (of volledige naam).
+    - Bedrijf-debiteur: eerste actieve ContactLink.person achternaam.
+      Voorkeur volgorde: rol "Contactpersoon" > eerste actieve link.
+    - Anders (onbekend / geen link): leeg → AI gebruikt generieke aanhef.
+    """
+    if not contact:
+        return ""
+    contact_type = getattr(contact, "contact_type", "")
+    if contact_type == "person":
+        return contact.last_name or contact.name or ""
+    if contact_type == "company":
+        # person_links is via relations.models Contact.person_links (lazy=selectin)
+        links = getattr(contact, "person_links", None) or []
+        active = [l for l in links if getattr(l, "is_active", True)]
+        if not active:
+            return ""
+        preferred = next(
+            (l for l in active if (l.role_at_company or "").lower() == "contactpersoon"),
+            active[0],
+        )
+        person = getattr(preferred, "person", None)
+        if not person:
+            return ""
+        return person.last_name or person.name or ""
+    return ""
+
+
 async def gather_case_context(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -227,10 +257,16 @@ async def gather_case_context(
                 case.case_number, client_contact.name, av_pdf_path, len(av_text),
             )
 
+    # Reference (kenmerk): alleen meegeven als != case_number, anders leeg.
+    # Voorkomt dat AI dubbele vermelding "/ 2026-00049 / 2026-00049" schrijft
+    # in Betreft-regel van body wanneer kenmerk = dossiernummer.
+    raw_reference = getattr(case, "reference", None)
+    reference_value = raw_reference if raw_reference and raw_reference != case.case_number else ""
+
     return {
         "case_data": {
             "case_number": case.case_number,
-            "reference": getattr(case, "reference", None) or case.case_number,
+            "reference": reference_value,
             "debtor_type": getattr(case, "debtor_type", None) or "b2b",
             "opened_at": case.date_opened.isoformat() if case.date_opened else "",
         },
@@ -242,14 +278,10 @@ async def gather_case_context(
         "debtor_data": {
             "name": debtor_contact.name if debtor_contact else "?",
             "address": (debtor_contact.visit_address or debtor_contact.postal_address or "") if debtor_contact else "",
-            # contact_person ALLEEN bij natuurlijk persoon-debiteur; bij bedrijf
-            # zonder gekoppelde persoon → leeg, AI mag dan geen naam in aanhef
-            # plaatsen (geen "Geachte heer/mevrouw [BedrijfBV]," fout).
-            "contact_person": (
-                (debtor_contact.last_name or debtor_contact.name or "")
-                if debtor_contact and getattr(debtor_contact, "contact_type", "") == "person"
-                else ""
-            ),
+            # contact_person: bij persoon-debiteur = eigen achternaam;
+            # bij bedrijf-debiteur = gekoppelde contactpersoon via ContactLink
+            # (eerste actieve link, bij voorkeur rol "Contactpersoon"); anders leeg.
+            "contact_person": _resolve_contact_person(debtor_contact),
             "contact_type": (
                 getattr(debtor_contact, "contact_type", "company")
                 if debtor_contact else "company"

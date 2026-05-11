@@ -63,12 +63,24 @@ _INTERNE_LABELS_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Aanhef-normalisatie: Lisanne testte templates ooit naar Arsalan
+# (seidony@kestinglegal.nl) waardoor "Geachte heer, mevrouw Seidony," in
+# de body bleef hangen. Normaliseer alle `Geachte heer,? mevrouw <Naam>,`
+# patronen naar `Geachte heer mevrouw,` zodat html_renderer.py de juiste
+# contactpersoon-naam kan injecteren bij elke draft.
+_GREETING_NAME_RE = re.compile(
+    r"Geachte\s+heer,?\s*mevrouw\s+[A-Za-zÀ-ÖØ-öø-ÿ]+,",
+    re.IGNORECASE,
+)
+
 
 def _clean_internal_labels(text: str) -> str:
-    """Strip interne sjabloon-labels uit body-tekst."""
+    """Strip interne sjabloon-labels + normaliseer naam-injecties uit body."""
     if not text:
         return text
-    return _INTERNE_LABELS_RE.sub("", text)
+    text = _INTERNE_LABELS_RE.sub("", text)
+    text = _GREETING_NAME_RE.sub("Geachte heer mevrouw,", text)
+    return text
 
 
 _LOGO_B64_CANDIDATES = [

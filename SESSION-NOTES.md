@@ -1,9 +1,63 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 mei 2026 (sessie 138 — Lisanne demo bug-bash, 23 fixes)
-**Laatste feature/fix:** Sessie 138 — 23 demo-bugs door tijdens live-sessie met Lisanne. Hoofdthema's: dossier-aanmaak wizard (klikbare partijen, advocatenkantoor-flow, inline contactpersoon, rente-cascade per maand, inline rente-uitleg), relaties-pagina (sorteerbare kolommen, delete-blokkade bij gekoppelde dossiers, schema `created_at`/`visit_city` fix, twee aparte minimum-velden), concept-mail naar wederpartij (kenmerk = dossiernummer i.p.v. klant-referentie, bedragen via `get_financial_summary`, NL-datumformaat, alleen achternaam in aanhef, lege factuur-placeholder-rijen weg, Rente-cel server-side rendered), BIK-percentage bodem (nieuw `bik_minimum_fee` veld op klant + case, los van `minimum_fee` voor provisie), nieuwe voetnoot in alle mails+sjablonen (HTML+plain+DOCX+managed_templates). Live geverifieerd via Playwright op productie.
-**Openstaande bugs:** DF138-04 aanhef-veld "De heer/Mevrouw/Onbekend" op contactpersoon (schema change, niet gedaan), DF138-bulk-delete bij dossiers/relaties lijsten, DF138-sort-persistence (sortering onthouden tussen pagina-bezoeken), tussenvoegsels (de/van/van der) gaan verloren bij achternaam-extractie als `last_name` veld leeg is. Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen).
-**Volgende sessie:** 139 — DF138-04 aanhef-veld bouwen (Contact.salutation enum: mr/mrs/unknown), bulk-delete + sort-persistence op lijsten, eventueel Wix→TransIP registrar-transfer als Lisanne beschikbaar is.
+**Laatst bijgewerkt:** 13 mei 2026 (sessie 139 — aanhef-veld + bulk-delete + sort-persist)
+**Laatste feature/fix:** Sessie 139 — drie UX-verbeteringen uit Lisanne's demo: aanhef-enum (`Contact.salutation` mr/mrs/unknown) wordt nu door AI-prompt én HTML-renderer gebruikt voor "Geachte heer Seidony," / "Geachte mevrouw Seidony," / generiek; bulk-delete toolbar op dossiers + relaties (relaties kreeg ook checkboxes per rij + select-all + confirm-dialog destructive variant + mixed-result toast); sort-persist via URL search params op relaties (`?sort_by=&sort_dir=`) zodat browser-back en direct-links de sortering bewaren. Alle drie live geverifieerd via Playwright op productie.
+**Openstaande bugs:** Tussenvoegsels (de/van/van der) gaan verloren bij achternaam-extractie als `last_name` veld leeg is — opgelost door `last_name` expliciet in te vullen; salutation-dropdown lost het gokwerk voor heer/mevrouw op. Sort-persist alleen op relaties — dossiers heeft nog geen sortering. Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen).
+**Volgende sessie:** 140 — nieuwe demo-feedback van Lisanne verzamelen (volgende live-sessie), Wix→TransIP registrar-transfer plannen, eventueel sortering op dossiers-pagina toevoegen voor consistentie met relaties.
+
+## Wat er gedaan is (sessie 139 — 13 mei 2026) — Aanhef + bulk-delete + sort-persist
+
+### Samenvatting
+
+**DF138-04 — Aanhef-veld (`Contact.salutation` mr|mrs|unknown):**
+- Migratie `df139a_contact_salutation`: `salutation` String(10) NOT NULL met server_default 'unknown'
+- Pydantic `ContactCreate`/`ContactUpdate`/`ContactResponse` met `Salutation` literal type
+- UI: dropdown "Aanhef" (Onbekend / De heer / Mevrouw) bij person in zowel `relaties/nieuw` als detail-edit (`ContactInfoSection`). Bedrijven krijgen het veld niet getoond (alleen zinvol bij persoon)
+- `_resolve_contact_person` returnt nu tuple `(achternaam, salutation)`. Bij bedrijf-debiteur wordt salutation van de gelinkte contactpersoon meegenomen
+- `gather_case_context` voegt `debtor_data['salutation']` toe; AI-prompt instructie expliciet: mr+naam → "Geachte heer X,", mrs+naam → "Geachte mevrouw X,", unknown OF geen naam → "Geachte heer/mevrouw,"
+- `html_renderer.render_template_html` past zelfde mapping toe op de HTML-aanhef (vervangt template-placeholder "Geachte heer mevrouw" + "Geachte heer/mevrouw")
+- Geverifieerd op productie: dossier 2026-00062 (J.H.Verkeer&Security BV → Arsalan Seidony), salutation = mr → mail toont "Geachte heer Seidony,"
+
+**DF138-bulk-delete — Bulk-toolbar met verwijder-knop:**
+- Dossiers (`zaken/page.tsx`): bestaande bulk-toolbar had al "Status wijzigen" + "Exporteren"; "Verwijderen" knop toegevoegd, destructive styling. Sequentiële DELETE per id, gemixt-resultaat toast (X succes / Y mislukt)
+- Relaties (`relaties/page.tsx`): had geen checkboxes — toegevoegd select-all in header + checkbox per rij + bulk-toolbar bij selectie. Confirm-dialog destructive variant met titel "X relaties verwijderen?". DELETE 409 (gekoppeld aan dossier) wordt afgevangen en eerste foutmelding in toast getoond zodat Lisanne weet welke regel het tegenhoudt
+- Beide schermen gebruiken `useConfirm` hook uit `confirm-dialog.tsx`
+- Geverifieerd: 30 → 28 relaties via bulk-delete van 2 test-contacten
+
+**DF138-sort-persist — URL-based sortering:**
+- `relaties/page.tsx` leest sortBy/sortDir uit `useSearchParams()` met whitelist-validation (alleen `name|contact_type|visit_city|email|created_at`, default `name asc`)
+- `toggleSort` doet `router.replace(${pathname}?sort_by=X&sort_dir=Y, { scroll: false })` en reset page-state naar 1
+- Geverifieerd: klik "Aangemaakt" → URL `?sort_by=created_at&sort_dir=desc` → klik relatie → browser-back → URL behoudt query string, sortering staat nog actief
+- Dossiers-pagina overgeslagen (geen bestaande sortering, conform constraints)
+
+### Gewijzigde bestanden
+
+**Backend:**
+- `backend/alembic/versions/df139a_contact_salutation.py` (nieuw)
+- `backend/app/relations/models.py` (salutation kolom)
+- `backend/app/relations/schemas.py` (Salutation literal + Create/Update/Response)
+- `backend/app/incasso/automation_service.py` (`_resolve_contact_person` returnt tuple; gather_case_context met debtor_salutation)
+- `backend/app/incasso/html_renderer.py` (aanhef-mapping met salutation)
+- `backend/app/ai_agent/incasso_email_prompts.py` (prompt-instructie + debtor_data context)
+
+**Frontend:**
+- `frontend/src/hooks/use-relations.ts` (Salutation type + Contact + ContactCreateInput)
+- `frontend/src/app/(dashboard)/relaties/nieuw/page.tsx` (dropdown bij person)
+- `frontend/src/app/(dashboard)/relaties/[id]/page.tsx` (editForm salutation init + save-payload)
+- `frontend/src/components/relations/detail/ContactInfoSection.tsx` (Aanhef dropdown in edit-mode)
+- `frontend/src/app/(dashboard)/zaken/page.tsx` (verwijder-knop in bulk-toolbar + handler + useConfirm)
+- `frontend/src/app/(dashboard)/relaties/page.tsx` (checkboxes + bulk-toolbar + sort-persist via URL params)
+
+### Bekende issues
+
+- Bestaande contacten hebben `salutation='unknown'` na migratie — Lisanne moet handmatig per persoon op "De heer"/"Mevrouw" zetten voor de juiste aanhef. Acceptabel: dit is een eenmalige actie op de relevante contactpersonen.
+- Sort-persist via `router.replace` — wijzigingen tonen niet in browser-history (geen navigation). Bij browser-back gaat de hele relaties-pagina-bezoek terug, niet alleen een sort-step. Dat is door design correct voor "sortering onthouden bij terugnavigatie vanaf detail-pagina".
+
+### Volgende sessie
+
+- Wachten op nieuwe Lisanne-feedback uit volgende demo
+- Optioneel: dossier-sortering toevoegen voor consistentie met relaties (vergt backend whitelist net als bij contacts)
+- Wix→TransIP registrar-transfer (afhankelijk van Lisanne)
 
 ## Wat er gedaan is (sessie 138 — 13 mei 2026) — Lisanne demo bug-bash (23 fixes)
 

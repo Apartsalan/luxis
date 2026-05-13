@@ -922,7 +922,7 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF138-01 | **Data-loss bij partij-wijzigen in nieuw-dossier wizard** — naam-pills van cliënt/wederpartij/advocaat klikbaar → opent relatie-detail in nieuw tab; "Wijzigen" hernoemd naar "Andere kiezen" | ✅ Sessie 138 |
 | DF138-02 | **Advocaat wederpartij mist kantoor-flow** — selector Advocatenkantoor/Persoon + 3-veld grid + contactpersoon-veld (default = kantoor) | ✅ Sessie 138 |
 | DF138-03 | **"Minimumkosten" label verwarrend in dossier** — hernoemd naar "Minimum provisie" met uitleg-regel | ✅ Sessie 138 |
-| DF138-04 | **Aanhef-veld "De heer/Mevrouw" op contactpersoon** — `Contact.salutation` enum + frontend dropdown + AI-prompt update | 📋 Backlog (schema change) |
+| DF138-04 | **Aanhef-veld "De heer/Mevrouw" op contactpersoon** — `Contact.salutation` enum (mr/mrs/unknown), migratie `df139a_salutation`, dropdown in `relaties/nieuw` & detail-edit; `_resolve_contact_person` returnt (achternaam, salutation); AI-prompt + HTML-renderer maken "Geachte heer X" / "Geachte mevrouw X" / generiek | ✅ Sessie 139 |
 | DF138-05 | **Verkeerd kenmerk in concept-mail** — `case.reference` (klant-kenmerk) niet meer doorgegeven aan AI/subject-render; alleen dossiernummer | ✅ Sessie 138 |
 | DF138-06 | **Concept-mail toonde alleen hoofdsom** — `gather_case_context` gebruikt nu `get_financial_summary` voor rente + BIK + BTW | ✅ Sessie 138 |
 | DF138-07 | **Datums in mail US-format** — server-side naar DD-MM-JJJJ + prompt-instructie | ✅ Sessie 138 |
@@ -942,8 +942,8 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF138-21 | **Rente € 0,00 hardcoded in pipeline-template** — body_template + HTML-cellen leeggemaakt; `html_renderer.render_template_html` roept nu `_fill_amount_cell` aan voor label "Rente" met `amounts.rente` | ✅ Sessie 138 |
 | DF138-22 | **Volledige naam in aanhef** — `_resolve_contact_person` extract nu alleen laatste woord wanneer `last_name` leeg is en `name` de volledige naam bevat. Tussenvoegsels gaan dan verloren — vul `last_name` expliciet in op de relatie voor "Geachte heer/mevrouw de Vries" | ✅ Sessie 138 (met caveat) |
 | DF138-23 | **Lege factuur-placeholder-rijen in mail-template** — `_fill_invoice_rows` strijkt overgebleven placeholder-rijen weg na vullen met factuurdata | ✅ Sessie 138 |
-| DF138-bulk-delete | **Bulk-actie toolbar op dossiers/relaties** — checkboxes per rij bestaan, maar geen verwijder-knop bij selectie | 📋 Backlog |
-| DF138-sort-persist | **Sortering onthouden tussen pagina-bezoeken** — URL-search-params of localStorage voor sortBy/sortDir | 📋 Backlog |
+| DF138-bulk-delete | **Bulk-actie toolbar op dossiers/relaties** — dossiers: verwijder-knop in bestaande toolbar; relaties: nieuwe checkboxes + select-all + bulk-toolbar. Sequential DELETE met mixed-resultaat toast (typisch 409 bij dossier-koppeling). Confirm-dialog destructive variant via `useConfirm` hook | ✅ Sessie 139 |
+| DF138-sort-persist | **Sortering onthouden tussen pagina-bezoeken** — URL search params `?sort_by=&sort_dir=` op relaties; `useSearchParams` leest, `router.replace` schrijft. Browser-back en directe links bewaren sortering | ✅ Sessie 139 (alleen relaties — dossiers heeft nog geen sortering) |
 
 ### Feature & UX Audit (sessie 113, 29 maart 2026)
 

@@ -311,6 +311,9 @@ def render_template_html(
 
     # Bedragen-tabel
     html = _fill_amount_cell(html, "Hoofdsom", _fmt_eur(amounts.get("hoofdsom")))
+    # DF138-21: Rente expliciet invullen — hardcoded 0,00 in template is
+    # weggehaald, server-side renderer vult nu de berekende waarde in.
+    html = _fill_amount_cell(html, "Rente", _fmt_eur(amounts.get("rente")))
     html = _fill_amount_cell(html, "Hoofdsom + rente", _fmt_eur(amounts.get("hoofdsom_plus_rente")))
     html = _fill_amount_cell(html, "Incassokosten", _fmt_eur(amounts.get("incassokosten")))
     html = _fill_amount_cell(html, "BTW&nbsp;21%", _fmt_eur(amounts.get("btw")))

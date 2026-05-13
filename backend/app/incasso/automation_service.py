@@ -279,6 +279,7 @@ async def gather_case_context(
     Lazy-imports modellen om circulaire dependencies te vermijden bij module-load.
     """
     from app.collections.models import Claim, Payment
+    from app.collections.service import get_financial_summary
 
     case = (await db.execute(
         select(Case).where(Case.tenant_id == tenant_id, Case.id == case_id)
@@ -294,25 +295,54 @@ async def gather_case_context(
     claims = (await db.execute(
         select(Claim).where(Claim.tenant_id == tenant_id, Claim.case_id == case_id)
     )).scalars().all()
-    payments = (await db.execute(
-        select(Payment).where(Payment.tenant_id == tenant_id, Payment.case_id == case_id)
-    )).scalars().all()
 
-    # Bedragen-tabel — pragmatisch: Claim heeft alleen principal_amount,
-    # rente + BIK worden elders berekend (interest.py + wik.py). Voor MVP
-    # gebruiken we case.total_principal/total_paid (cached) en laten rente/BIK/BTW
-    # op 0 staan zodat Lisanne ze handmatig in de compose-dialog kan zetten.
-    hoofdsom = sum(
-        (c.principal_amount or Decimal("0.00") for c in claims), Decimal("0.00")
-    ) or (case.total_principal or Decimal("0.00"))
-    rente = Decimal("0.00")
-    bik = Decimal("0.00")
-    btw = Decimal("0.00")
-    total_paid = sum(
-        (p.amount or Decimal("0.00") for p in payments), Decimal("0.00")
-    ) or (case.total_paid or Decimal("0.00"))
-    totaal = (hoofdsom + rente + bik + btw).quantize(Decimal("0.01"))
-    te_voldoen = (totaal - total_paid).quantize(Decimal("0.01"))
+    # DF138-06: bedragen via get_financial_summary (rente + BIK + BTW correct,
+    # zelfde bron als de UI in dossier-detail). Eerder stonden rente/BIK/BTW
+    # hardcoded op 0 als MVP-schortje — gevolg: mail aan wederpartij toonde
+    # alleen hoofdsom en miste vervallen rente en incassokosten.
+    include_btw_on_bik = (
+        not client_contact.is_btw_plichtig if client_contact is not None else False
+    )
+    try:
+        summary = await get_financial_summary(
+            db,
+            tenant_id,
+            case_id,
+            case.interest_type,
+            case.contractual_rate,
+            case.contractual_compound,
+            bik_override=case.bik_override,
+            bik_override_percentage=case.bik_override_percentage,
+            include_btw_on_bik=include_btw_on_bik,
+        )
+        hoofdsom = summary["total_principal"]
+        rente = summary["total_interest"]
+        bik = summary["bik_amount"]
+        btw = summary["bik_btw"]
+        total_paid = summary["total_paid"]
+        totaal = summary["grand_total"].quantize(Decimal("0.01"))
+        te_voldoen = summary["total_outstanding"].quantize(Decimal("0.01"))
+    except Exception:
+        # Fail-safe: bij berekeningsfout vallen we terug op hoofdsom-only zodat
+        # draft-generatie niet volledig faalt. Wordt gelogd voor opvolg.
+        logger.exception(
+            "Case %s: get_financial_summary mislukt — fallback naar hoofdsom-only",
+            case.case_number,
+        )
+        payments = (await db.execute(
+            select(Payment).where(Payment.tenant_id == tenant_id, Payment.case_id == case_id)
+        )).scalars().all()
+        hoofdsom = sum(
+            (c.principal_amount or Decimal("0.00") for c in claims), Decimal("0.00")
+        ) or (case.total_principal or Decimal("0.00"))
+        rente = Decimal("0.00")
+        bik = Decimal("0.00")
+        btw = Decimal("0.00")
+        total_paid = sum(
+            (p.amount or Decimal("0.00") for p in payments), Decimal("0.00")
+        ) or (case.total_paid or Decimal("0.00"))
+        totaal = (hoofdsom + rente + bik + btw).quantize(Decimal("0.01"))
+        te_voldoen = (totaal - total_paid).quantize(Decimal("0.01"))
 
     # Algemene Voorwaarden van cliënt — pad voor Sonnet native PDF input,
     # tekst-extract als fallback voor Gemini/Haiku-pad.
@@ -327,11 +357,11 @@ async def gather_case_context(
                 case.case_number, client_contact.name, av_pdf_path, len(av_text),
             )
 
-    # Reference (kenmerk): alleen meegeven als != case_number, anders leeg.
-    # Voorkomt dat AI dubbele vermelding "/ 2026-00049 / 2026-00049" schrijft
-    # in Betreft-regel van body wanneer kenmerk = dossiernummer.
-    raw_reference = getattr(case, "reference", None)
-    reference_value = raw_reference if raw_reference and raw_reference != case.case_number else ""
+    # DF138-05: Reference (kenmerk) NIET gebruiken in mail aan wederpartij.
+    # case.reference is de KLANT-referentie en hoort alleen in communicatie met
+    # de cliënt (bv. factuur naar cliënt). Pipeline-mails gaan naar debiteur,
+    # daar gebruiken we uitsluitend ons eigen dossiernummer als kenmerk.
+    reference_value = ""
 
     return {
         "case_data": {

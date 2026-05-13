@@ -1,13 +1,19 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 mei 2026 (sessie 139 — aanhef-veld + bulk-delete + sort-persist)
-**Laatste feature/fix:** Sessie 139 — drie UX-verbeteringen uit Lisanne's demo: aanhef-enum (`Contact.salutation` mr/mrs/unknown) wordt nu door AI-prompt én HTML-renderer gebruikt voor "Geachte heer Seidony," / "Geachte mevrouw Seidony," / generiek; bulk-delete toolbar op dossiers + relaties (relaties kreeg ook checkboxes per rij + select-all + confirm-dialog destructive variant + mixed-result toast); sort-persist via URL search params op relaties (`?sort_by=&sort_dir=`) zodat browser-back en direct-links de sortering bewaren. Alle drie live geverifieerd via Playwright op productie.
-**Openstaande bugs:** Tussenvoegsels (de/van/van der) gaan verloren bij achternaam-extractie als `last_name` veld leeg is — opgelost door `last_name` expliciet in te vullen; salutation-dropdown lost het gokwerk voor heer/mevrouw op. Sort-persist alleen op relaties — dossiers heeft nog geen sortering. Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen).
-**Volgende sessie:** 140 — nieuwe demo-feedback van Lisanne verzamelen (volgende live-sessie), Wix→TransIP registrar-transfer plannen, eventueel sortering op dossiers-pagina toevoegen voor consistentie met relaties.
+**Laatst bijgewerkt:** 13 mei 2026 (sessie 139 — aanhef + bulk-delete + sort-persist + dossier-sortering + AV-versies)
+**Laatste feature/fix:** Sessie 139 — vijf verbeteringen: (1) aanhef-enum `Contact.salutation` (mr/mrs/unknown) in AI-prompt + HTML-renderer; (2) bulk-delete toolbar op dossiers + relaties met confirm-dialog destructive en mixed-result toast; (3) sort-persist via URL params op relaties; (4) sorteerbare kolom-headers + URL-persist op dossiers (case_number, status, type, hoofdsom, geopend); (5) AV-versies per cliënt met smart-default — nieuwe `contact_terms` tabel met label + valid_from/to, `case.contact_terms_id` FK, `gather_case_context` kiest versie op factuur-datum, data-migratie van bestaande `terms_file_path` naar "Huidige versie / altijd geldig". Alles live geverifieerd via Playwright op productie.
+**Openstaande bugs:** Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen). Tussenvoegsels in achternaam: workaround via expliciet `last_name` veld; salutation lost het heer/mevrouw-gokwerk op. Dossier-detail/wizard heeft nog geen UI om handmatig AV-versie te kiezen (smart-default werkt wel autonoom op factuur-datum).
+**Volgende sessie:** 140 — nieuwe demo-feedback van Lisanne verzamelen, Wix→TransIP registrar-transfer plannen, eventueel AV-versie dropdown op dossier-detail/wizard (override smart-default).
 
-## Wat er gedaan is (sessie 139 — 13 mei 2026) — Aanhef + bulk-delete + sort-persist
+## Wat er gedaan is (sessie 139 — 13 mei 2026) — Aanhef + bulk-delete + sort-persist + dossier-sortering + AV-versies
 
 ### Samenvatting
+
+**Dossier-sortering (#1):** sorteerbare kolom-headers op zaken-pagina via `CaseSortHeader` met chevron-indicator op Dossier (case_number), Type, Status, Hoofdsom, Geopend. Backend `list_cases` krijgt `sort_by`/`sort_dir` met whitelist (case_number/status/case_type/date_opened/total_principal/total_paid); onbekende waardes vallen terug op `date_opened desc`. URL-persist via `useSearchParams` + `router.replace` zelfde patroon als DF138-sort-persist op relaties. Geverifieerd: klik Hoofdsom → URL `?sort_by=total_principal&sort_dir=desc`, eerste rij = € 100.000.
+
+**AV-versies per cliënt (#2):** nieuwe tabel `contact_terms` (id, contact_id, file_path, file_name, label, valid_from, valid_to, uploaded_by). `case.contact_terms_id` FK optioneel. Cliënt-detail UI vervangen: versie-lijst met inline upload-form (file + label + geldigheidsperiode), per-versie download/edit/delete knoppen + confirm-dialog destructive. `gather_case_context` kiest AV-versie via: (1) `case.contact_terms_id` expliciet, (2) smart-default op eerste factuur-datum via `select_terms_for_date()`, (3) legacy fallback `contact.terms_file_path`. Data-migratie zet bestaande single-file kolommen over naar "Huidige versie / altijd geldig" rij. Migratie `df139b_contact_terms`. Geverifieerd op productie: Incassocenter B.V. AV staat als versie met label "Huidige versie" en periode "Altijd geldig"; upload-form en edit-form werken. Dossier-UI voor handmatige versie-keuze nog te bouwen (smart-default werkt al autonoom).
+
+
 
 **DF138-04 — Aanhef-veld (`Contact.salutation` mr|mrs|unknown):**
 - Migratie `df139a_contact_salutation`: `salutation` String(10) NOT NULL met server_default 'unknown'

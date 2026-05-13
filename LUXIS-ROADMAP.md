@@ -915,6 +915,36 @@ Na de derdengelden-afronding kwam Lisanne met nieuwe feedback. Geclassificeerd i
 | DF122-07 | **Factuur-onderbouwing bij eerste sommatie** — Facturen uit dossier als bewijs bij eerste sommatie template tonen. | ✅ Sessie 123 (auto-bijlage bij template_type=sommatie) |
 | DF120-12 | **Read-only view contact-detail toonde rate_basis + minimum_fee niet** — tijdens E2E test op prod gevonden: edit-mode werkt, maar de read-only `<dl>` sloeg deze 2 velden over. Fix: "· per maand/jaar" achter rente, "Minimum provisie" regel in `ContactInfoSection.tsx`. | ✅ Sessie 120 (hotfix `22996ca`) |
 
+### Demo Feedback Lisanne (sessie 138, 13 mei 2026 — 23 fixes tijdens live demo)
+
+| # | Item | Status |
+|---|------|--------|
+| DF138-01 | **Data-loss bij partij-wijzigen in nieuw-dossier wizard** — naam-pills van cliënt/wederpartij/advocaat klikbaar → opent relatie-detail in nieuw tab; "Wijzigen" hernoemd naar "Andere kiezen" | ✅ Sessie 138 |
+| DF138-02 | **Advocaat wederpartij mist kantoor-flow** — selector Advocatenkantoor/Persoon + 3-veld grid + contactpersoon-veld (default = kantoor) | ✅ Sessie 138 |
+| DF138-03 | **"Minimumkosten" label verwarrend in dossier** — hernoemd naar "Minimum provisie" met uitleg-regel | ✅ Sessie 138 |
+| DF138-04 | **Aanhef-veld "De heer/Mevrouw" op contactpersoon** — `Contact.salutation` enum + frontend dropdown + AI-prompt update | 📋 Backlog (schema change) |
+| DF138-05 | **Verkeerd kenmerk in concept-mail** — `case.reference` (klant-kenmerk) niet meer doorgegeven aan AI/subject-render; alleen dossiernummer | ✅ Sessie 138 |
+| DF138-06 | **Concept-mail toonde alleen hoofdsom** — `gather_case_context` gebruikt nu `get_financial_summary` voor rente + BIK + BTW | ✅ Sessie 138 |
+| DF138-07 | **Datums in mail US-format** — server-side naar DD-MM-JJJJ + prompt-instructie | ✅ Sessie 138 |
+| DF138-08 | **Relaties tonen vandaag als aangemaakt** — `ContactSummary` schema miste `created_at`/`visit_city`; frontend kreeg `undefined` → `Intl.DateTimeFormat` viel terug op vandaag | ✅ Sessie 138 |
+| DF138-09 | **Relatie verwijderen "doet niets"** — soft-delete werkt, maar relatie bleef zichtbaar in dossiers. `delete_contact` blokkeert nu met 409 + duidelijke melding bij koppeling aan actief dossier | ✅ Sessie 138 |
+| DF138-10 | **Geen sortering op relaties-lijst** — sorteerbare kolom-koppen (Relatie/Contact/Plaats/Aangemaakt) met chevron-indicator; backend whitelist | ✅ Sessie 138 |
+| DF138-11 | **Inline contactpersoon bij Bedrijf-aanmaak** — naam + e-mail veld onder bedrijf-blok; maakt direct Person + ContactLink | ✅ Sessie 138 |
+| DF138-12 | **Info-box rente onduidelijk zonder klant-default** — grijze box "Geen rente-default — wettelijke rente toegepast, stel in op klantkaart" wanneer alleen BIK% gezet | ✅ Sessie 138 |
+| DF138-13 | **Rentefrequentie (per maand/jaar) cascadet niet** — `default_rate_basis` toegevoegd aan cascade in wizard useEffect + info-box toont nu "per maand/per jaar" | ✅ Sessie 138 |
+| DF138-14 | **Minimum bij BIK-percentage niet toegepast** — `get_financial_summary` + `get_incasso_invoice_preview` checken nu `case.bik_minimum_fee` als bodem | ✅ Sessie 138 |
+| DF138-15 | **Oude voetnoot in mails en sjablonen** — `email/incasso_templates.py` ("en/of" → "en / of"), `templates/_generate_templates.py` (volledige disclaimer), DOCX-bestanden geregenereerd, `scripts/reseed_builtin_templates.py` (nieuw) — 8 managed_templates rijen opnieuw gevuld | ✅ Sessie 138 |
+| DF138-16 | **Aparte velden voor provisie-minimum en BIK-minimum** — `default_bik_minimum_fee` op Contact + `bik_minimum_fee` op Case (migratie `df138a_bik_min` met data-migratie); cascade in `create_case`; backend BIK-berekening gebruikt nieuw veld | ✅ Sessie 138 |
+| DF138-17 | **Uitleg-suffix bij BIK-bedrag overbodig** — `— minimumtarief van € X toegepast` uit `bik_source` weggehaald | ✅ Sessie 138 |
+| DF138-18 | **`default_bik_minimum_fee` niet opgeslagen vanuit klant-detail** — `relaties/[id]/page.tsx` init editForm + save-payload missten het veld; UI toonde wel, DB bleef NULL | ✅ Sessie 138 |
+| DF138-19 | **Frontend negeerde BIK-bodem in dossier Vorderingen-tab** — `FinancieelTab.tsx` deed client-side `pct * principal` en overschreef `summary.total_bik`; nu past frontend ook `case.bik_minimum_fee` toe | ✅ Sessie 138 |
+| DF138-20 | **Pipeline-step body had oude voetnoot** — SQL UPDATE op `email_body_template` + Python regex-fix voor `email_body_template_html` (Eerste sommatie) | ✅ Sessie 138 |
+| DF138-21 | **Rente € 0,00 hardcoded in pipeline-template** — body_template + HTML-cellen leeggemaakt; `html_renderer.render_template_html` roept nu `_fill_amount_cell` aan voor label "Rente" met `amounts.rente` | ✅ Sessie 138 |
+| DF138-22 | **Volledige naam in aanhef** — `_resolve_contact_person` extract nu alleen laatste woord wanneer `last_name` leeg is en `name` de volledige naam bevat. Tussenvoegsels gaan dan verloren — vul `last_name` expliciet in op de relatie voor "Geachte heer/mevrouw de Vries" | ✅ Sessie 138 (met caveat) |
+| DF138-23 | **Lege factuur-placeholder-rijen in mail-template** — `_fill_invoice_rows` strijkt overgebleven placeholder-rijen weg na vullen met factuurdata | ✅ Sessie 138 |
+| DF138-bulk-delete | **Bulk-actie toolbar op dossiers/relaties** — checkboxes per rij bestaan, maar geen verwijder-knop bij selectie | 📋 Backlog |
+| DF138-sort-persist | **Sortering onthouden tussen pagina-bezoeken** — URL-search-params of localStorage voor sortBy/sortDir | 📋 Backlog |
+
 ### Feature & UX Audit (sessie 113, 29 maart 2026)
 
 **Bron:** Volledige feature & UX audit (`docs/research/FEATURE-UX-AUDIT.md`). Score: **7.5/10**. Alle pagina's, modules en workflows doorgelopen vanuit het perspectief van Lisanne.

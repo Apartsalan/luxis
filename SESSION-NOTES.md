@@ -1,9 +1,97 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 mei 2026 (sessie 137 — bug cleanup + workflow UI + compose dossier-zoek)
-**Laatste feature/fix:** Sessie 137 — Bug cleanup (BUG-71 RLS policy fix via nieuwe migratie bug71_csh; BUG-72 niet meer reproduceerbaar; AUD124-07 EUR→€ + Dutch format in workflow/hooks). Workflow-UI quick wins: TransitionsSection hernoemd naar "Automatische regels" (incl. labels/toasts); tenant-toggle `pipeline_auto_drafts_enabled` bedienbaar via Instellingen → Workflow → Automatiseringsregels. SEC-01 AgentShield scan gedraaid → deny-list uitgebreid (rm-rf varianten, curl|sh, mkfs, force push main, docker volume rm) + 3 sub-agents model frontmatter. Mail-compose grote feature: dossier-zoekveld bovenaan compose-dialog voor free-compose flow (Mail-pagina) — search → kies dossier → auto-load templates/files/library + recipient prefill van opposing_party/client. Ontkoppel-link. CLAUDE.md verscherpt (fail-loud + conflict-resolutie). Mail-issue Lisanne uitgezocht: MX wijst nog naar BaseNet (M0a alias-strategie), Outlook moet handmatig op BaseNet IMAP — niet via auto-discover die M365 kiest.
-**Openstaande bugs:** SEC-01 (28 HIGH AgentShield findings zijn inherent aan dev workflow — Bash docker/python/ssh broad permissions nodig), Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen)
-**Volgende sessie:** 138 — Wix → TransIP registrar-transfer plan documenteren + uitvoeren (5-8 dagen propagatie), of M365 M0b (Lisanne mailbox overzetten) wanneer Lisanne beschikbaar.
+**Laatst bijgewerkt:** 13 mei 2026 (sessie 138 — Lisanne demo bug-bash, 23 fixes)
+**Laatste feature/fix:** Sessie 138 — 23 demo-bugs door tijdens live-sessie met Lisanne. Hoofdthema's: dossier-aanmaak wizard (klikbare partijen, advocatenkantoor-flow, inline contactpersoon, rente-cascade per maand, inline rente-uitleg), relaties-pagina (sorteerbare kolommen, delete-blokkade bij gekoppelde dossiers, schema `created_at`/`visit_city` fix, twee aparte minimum-velden), concept-mail naar wederpartij (kenmerk = dossiernummer i.p.v. klant-referentie, bedragen via `get_financial_summary`, NL-datumformaat, alleen achternaam in aanhef, lege factuur-placeholder-rijen weg, Rente-cel server-side rendered), BIK-percentage bodem (nieuw `bik_minimum_fee` veld op klant + case, los van `minimum_fee` voor provisie), nieuwe voetnoot in alle mails+sjablonen (HTML+plain+DOCX+managed_templates). Live geverifieerd via Playwright op productie.
+**Openstaande bugs:** DF138-04 aanhef-veld "De heer/Mevrouw/Onbekend" op contactpersoon (schema change, niet gedaan), DF138-bulk-delete bij dossiers/relaties lijsten, DF138-sort-persistence (sortering onthouden tussen pagina-bezoeken), tussenvoegsels (de/van/van der) gaan verloren bij achternaam-extractie als `last_name` veld leeg is. Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen).
+**Volgende sessie:** 139 — DF138-04 aanhef-veld bouwen (Contact.salutation enum: mr/mrs/unknown), bulk-delete + sort-persistence op lijsten, eventueel Wix→TransIP registrar-transfer als Lisanne beschikbaar is.
+
+## Wat er gedaan is (sessie 138 — 13 mei 2026) — Lisanne demo bug-bash (23 fixes)
+
+### Samenvatting
+
+**Dossier-wizard (DF138-01 t/m -03, -11, -12, -13):**
+- Partij-pills (cliënt/wederpartij/advocaat) klikbaar → opent relatie-detail in nieuw tab; "Wijzigen" hernoemd naar "Andere kiezen" (voorkomt data-loss-perceptie)
+- Advocaat-blok krijgt Advocatenkantoor/Persoon selector + 3-veld grid + contactpersoon-veld (default = kantoor)
+- "Minimumkosten" label hernoemd naar "Minimum provisie" in dossier-Facturatie-instellingen (consistent met klantkaart)
+- Inline contactpersoon: bij Bedrijf-aanmaak in nieuw-dossier wizard verschijnt sub-blok naam + e-mail; maakt direct Person Contact + ContactLink
+- Info-box bij rente-instellingen toont ook bij klant **zonder** rente-default ("valt terug op wettelijke rente, stel in op klantkaart")
+- `default_rate_basis` cascadet nu mee (per maand/per jaar)
+
+**Concept-mail / pipeline-flow (DF138-05 t/m -08, -19 t/m -23):**
+- `case.reference` (klant-kenmerk) wordt niet meer doorgegeven — alleen eigen dossiernummer in mail naar wederpartij
+- Bedragen via `get_financial_summary` i.p.v. hardcoded `Decimal("0.00")` voor rente/BIK/BTW
+- Datums in NL-format (DD-MM-JJJJ) i.p.v. ISO; prompt-instructie expliciet over datum-formaat
+- `ContactSummary` schema kreeg `created_at` + `visit_city` (frontend kreeg `undefined` → toonde vandaag voor iedereen)
+- BIK-percentage in `FinancieelTab.tsx`: client-side berekening past nu de `bik_minimum_fee`-bodem toe (was alleen backend)
+- Pipeline-step `email_body_template` had oude voetnoot + hardcoded `Rente € 0,00` — SQL UPDATE op alle 6 steps + Python regex-fix voor HTML-variant
+- `html_renderer.render_template_html` roept nu `_fill_amount_cell` aan voor "Rente" label
+- `_resolve_contact_person` pakt nu alleen het laatste woord uit `name` als `last_name` leeg is (geen "Geachte heer/mevrouw Arsalan Seidony")
+- `_fill_invoice_rows` strijkt overgebleven lege placeholder-rijen weg
+
+**Relaties (DF138-09, -10, -18):**
+- `delete_contact` blokkeert met `ConflictError` (409) als nog gekoppeld aan actieve dossiers via `client_id`/`opposing_party_id`/CaseParty
+- Sorteerbare kolom-headers (Relatie / Contact / Plaats / Aangemaakt) met chevron-indicator; backend `list_contacts` ondersteunt `sort_by`/`sort_dir` via whitelist
+- `relaties/[id]/page.tsx` save-payload nam `default_bik_minimum_fee` niet mee — UI toonde veld, gebruiker typte 40 in, opslaan leek te lukken, DB bleef NULL
+
+**Aparte BIK-minimum (DF138-14, -16, -17):**
+- Initieel `minimum_fee` als BIK-bodem gebruikt — Lisanne vroeg om scheiding. Nieuw `default_bik_minimum_fee` op Contact + `bik_minimum_fee` op Case (migratie `df138a_bik_min`), met data-migratie die bestaande `minimum_fee` kopieert
+- `get_financial_summary` + `get_incasso_invoice_preview` gebruiken `case.bik_minimum_fee` als bodem voor BIK-percentage. Bron-tekst "minimumtarief van € X toegepast" weer weggehaald op Lisanne's verzoek
+
+**Voetnoot (DF138-15):**
+- `email/incasso_templates.py`: "en/of" → "en / of"
+- `templates/_generate_templates.py`: korte stub disclaimer uitgebreid naar volledige tekst → DOCX-files in repo opnieuw gegenereerd via containerized run
+- `scripts/reseed_builtin_templates.py` (nieuw, raw SQL): pusht bijgewerkte DOCX-bytes naar `managed_templates` rijen op productie (8 builtin sjablonen)
+
+**Live geverifieerd via Playwright (productie dossier 2026-00062):**
+- Aanhef "Geachte heer/mevrouw Seidony" ✓
+- Rente regel toont € 33,42 (= 245,17 − 211,75) ✓
+- Voetnoot bevat "kestinglegal.nl/debiteuren" + "Stichting 113 Zelfmoordpreventie" + nieuwe disclaimer ✓
+- BIK Incassokosten € 40,00 (bodem actief — 15% van € 211,75 = € 31,76 → opgehoogd) ✓
+- Geen lege factuur-placeholder-rijen meer tussen factuur en bedragen-tabel ✓
+
+### Gewijzigde bestanden
+
+**Backend:**
+- `backend/alembic/versions/df138a_bik_minimum_fee.py` (nieuw)
+- `backend/app/relations/models.py` + `schemas.py` + `service.py` + `router.py`
+- `backend/app/cases/models.py` + `schemas.py` + `service.py`
+- `backend/app/collections/service.py` (BIK-bodem in `get_financial_summary`)
+- `backend/app/invoices/service.py` (BIK-bodem in `get_incasso_invoice_preview`)
+- `backend/app/incasso/automation_service.py` (gather_case_context bedragen + reference + datums + lastname extractie)
+- `backend/app/incasso/html_renderer.py` (Rente-cel fill, factuur-placeholders strip)
+- `backend/app/email/incasso_templates.py` (voetnoot disclaimer-fix)
+- `backend/app/ai_agent/incasso_email_prompts.py` (datum-format instructie)
+
+**Frontend:**
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` (partij-pills, advocaat-blok, inline contactpersoon, rate_basis cascade)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/FinancieelTab.tsx` (BIK-bodem client-side)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/incasso/ProvisieSettingsSection.tsx` (label "Minimum provisie")
+- `frontend/src/app/(dashboard)/relaties/page.tsx` (sorteerbare kolommen)
+- `frontend/src/app/(dashboard)/relaties/[id]/page.tsx` (delete error message, BIK-min veld save)
+- `frontend/src/app/(dashboard)/relaties/nieuw/page.tsx` (BIK-min veld + uitleg)
+- `frontend/src/components/relations/detail/ContactInfoSection.tsx` (twee minimum-velden)
+- `frontend/src/components/cases/wizard/types.ts` (linked_person_name/email)
+- `frontend/src/hooks/use-relations.ts` (sort types + delete error parse + default_bik_minimum_fee)
+- `frontend/src/hooks/use-cases.ts` (bik_minimum_fee)
+
+**Templates + scripts:**
+- `templates/_generate_templates.py` + `templates/*.docx` (8 DOCX bestanden geregenereerd)
+- `scripts/reseed_builtin_templates.py` (nieuw)
+- `scripts/fix_pipeline_footer_and_rente.sql` (nieuw)
+- `scripts/fix_pipeline_html_footer.sql` + `fix_pipeline_html_footer.py` (nieuw)
+- `scripts/fix_pipeline_rente_html.py` (nieuw)
+
+### Bekende issues
+
+- **DF138-04** — Aanhef veld "De heer/Mevrouw/Onbekend" op contactpersoon. Vereist DB-schema change op contacts. Niet gedaan.
+- **DF138-bulk-delete** — Lijsten hebben checkboxes maar geen bulk-actie-toolbar.
+- **DF138-sort-persistence** — Sort wordt niet onthouden tussen pagina-bezoeken (URL params of localStorage).
+- **Tussenvoegsels** — `_last_name_from_full("Jan de Vries")` retourneert "Vries". Voor correcte tussenvoegsels moet `last_name` veld expliciet ingevuld zijn op de relatie.
+- **2026-00058** — Dit dossier heeft `bik_minimum_fee = NULL` omdat het werd aangemaakt vóór de cascade-fix (DF138-18). Bestaande dossiers met cascade-issue moeten handmatig in DB worden bijgewerkt.
+
+### Volgende sessie
+
+DF138-04 implementeren (Contact.salutation enum + frontend dropdown + AI-prompt update), bulk-delete + sort-persistence op lijsten. Plus Wix→TransIP transfer plan als Lisanne tijd heeft.
 
 ## Wat er gedaan is (sessie 137 — 13 mei 2026) — Bug cleanup + workflow UI + compose dossier-zoek
 

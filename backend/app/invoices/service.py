@@ -1109,8 +1109,21 @@ async def get_incasso_invoice_preview(
         bik_amount = (total_principal * bik_pct / Decimal("100")).quantize(
             Decimal("0.01"), rounding=ROUND_HALF_UP
         )
+        # DF138-14: minimum_fee van klant geldt ook als bodem voor BIK-percentage
+        # (zelfde veld als 'Minimum provisie' op klantkaart). Voorkomt dat bij
+        # lage hoofdsom een onrealistisch laag BIK-bedrag wordt berekend (15%
+        # van € 100 = € 15 terwijl wettelijk minimum € 40 is).
+        case_min_fee = Decimal(str(case.minimum_fee or 0))
+        bik_min_applied = False
+        if case_min_fee > 0 and bik_amount < case_min_fee:
+            bik_amount = case_min_fee
+            bik_min_applied = True
         bik_is_override = True
         bik_source = f"{bik_pct}% van hoofdsom (€ {total_principal:,.2f})".replace(",", ".")
+        if bik_min_applied:
+            bik_source += (
+                f" — minimumtarief van € {case_min_fee:.2f} toegepast".replace(",", ".")
+            )
     elif case.bik_override is not None:
         bik_amount = case.bik_override
         bik_is_override = True

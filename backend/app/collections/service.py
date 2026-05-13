@@ -905,6 +905,20 @@ async def get_financial_summary(
     bik_result = calculate_bik(total_principal, include_btw=include_btw_on_bik)
     if bik_override_percentage is not None:
         bik_exclusive = _round2(total_principal * bik_override_percentage / Decimal("100"))
+        # DF138-14: minimum_fee van klant geldt ook als bodem voor BIK-percentage.
+        # Voorkomt dat bij lage hoofdsom een onrealistisch laag BIK-bedrag wordt
+        # berekend (15% van € 100 = € 15 terwijl wettelijk minimum € 40 is).
+        case_min_fee_result = await db.execute(
+            select(Case.minimum_fee).where(
+                Case.id == case_id, Case.tenant_id == tenant_id
+            )
+        )
+        case_min_fee_raw = case_min_fee_result.scalar()
+        case_min_fee = (
+            Decimal(str(case_min_fee_raw)) if case_min_fee_raw is not None else Decimal("0")
+        )
+        if case_min_fee > 0 and bik_exclusive < case_min_fee:
+            bik_exclusive = case_min_fee
         bik_btw = Decimal("0")
         total_bik = bik_exclusive
     elif bik_override is not None:

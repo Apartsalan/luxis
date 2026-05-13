@@ -492,7 +492,7 @@ function NieuweZaakPage() {
     hasModule("wwft") ? form.client_id || undefined : undefined
   );
 
-  // ── Pre-fill interest defaults from client (DF-09) ───────────────────────
+  // ── Pre-fill interest defaults from client (DF-09 + DF138-13) ────────────
   const { data: selectedClient } = useRelation(form.client_id || undefined);
   useEffect(() => {
     if (selectedClient?.default_interest_type && form.interest_type === "statutory") {
@@ -501,6 +501,11 @@ function NieuweZaakPage() {
         interest_type: selectedClient.default_interest_type!,
         ...(selectedClient.default_interest_type === "contractual" && selectedClient.default_contractual_rate
           ? { contractual_rate: String(selectedClient.default_contractual_rate) }
+          : {}),
+        // DF138-13: ook rate_basis (per jaar/per maand) overnemen — een klant
+        // met contractuele rente '2% per maand' moet niet op 'per jaar' staan.
+        ...(selectedClient.default_rate_basis
+          ? { rate_basis: selectedClient.default_rate_basis }
           : {}),
       }));
     }
@@ -1966,7 +1971,7 @@ function NieuweZaakPage() {
                 <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
                   <span className="font-medium">Standaard rente van klant:</span>{" "}
                   {{ statutory: "Wettelijke rente", commercial: "Handelsrente", government: "Overheidsrente", contractual: "Contractuele rente" }[selectedClient.default_interest_type] ?? selectedClient.default_interest_type}
-                  {selectedClient.default_interest_type === "contractual" && selectedClient.default_contractual_rate != null && ` (${selectedClient.default_contractual_rate}%)`}
+                  {selectedClient.default_interest_type === "contractual" && selectedClient.default_contractual_rate != null && ` (${selectedClient.default_contractual_rate}%${selectedClient.default_rate_basis === "monthly" ? " per maand" : " per jaar"})`}
                   . Je kan hieronder afwijken voor dit dossier.
                 </div>
               ) : selectedClient ? (

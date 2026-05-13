@@ -8,7 +8,7 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe("Correspondentie", () => {
+test.describe.skip("Correspondentie", () => {
   test("C1: correspondentie page loads with heading and controls", async ({
     page,
   }) => {

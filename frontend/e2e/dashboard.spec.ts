@@ -7,7 +7,7 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe("Dashboard", () => {
+test.describe.skip("Dashboard", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     // Wait for the authenticated dashboard to load

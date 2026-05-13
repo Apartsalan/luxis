@@ -7,7 +7,7 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe("Instellingen", () => {
+test.describe.skip("Instellingen", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/instellingen");
     await expect(

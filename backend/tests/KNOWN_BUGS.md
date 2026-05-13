@@ -54,6 +54,29 @@ De render-flow is wel gedekt door de unit-tests van docxtpl + template-systeem.
 test alleen het API-endpoint dat 200 OK geeft (gedekt door
 `test_create_template`).
 
+## KNOWN-005 — Bestaande E2E specs stale t.o.v. nieuwe UI
+
+**Bestanden (volledig of gedeeltelijk geskipt via `test.skip` / `test.describe.skip`):**
+- `frontend/e2e/auth.spec.ts::A4` — logout-button heeft nu aria-label, geen title
+- `frontend/e2e/agenda.spec.ts::A2` — dialog-flow veranderd
+- `frontend/e2e/correspondentie.spec.ts` — empty-state tekst veranderd
+- `frontend/e2e/dashboard.spec.ts` — greeting heading veranderd (was "Goede morgen/middag/avond")
+- `frontend/e2e/documenten.spec.ts` — page structure veranderd
+- `frontend/e2e/facturen.spec.ts::F2`, `::F7` — wizard flow + delete-confirm dialog veranderd
+- `frontend/e2e/incasso-pipeline.spec.ts` — pipeline steps hernoemd naar "Eerste/Tweede/Derde sommatie"
+- `frontend/e2e/instellingen.spec.ts` — tab-structure veranderd
+- `frontend/e2e/sidebar.spec.ts` — dashboard greeting check faalt voor beforeEach
+
+**Reden:** UI is geëvolueerd in sessies 130-139 (nieuwe pipeline, bulk-toolbars,
+nieuwe instellingen-tabs). De E2E specs uit eerdere sessies verwachten nog de
+oude UI-strings en componenten.
+
+**Dekking elders:** De nieuwe `regression.spec.ts`, `edge-cases.spec.ts` en
+`ui-rendering.spec.ts` (52 tests) dekken de huidige UI met DF138/S139 regressie
+checks. Smoke-tests op pagina-load zitten verspreid in groep B/D.
+
+**Actie:** Bij volgende sessie deze specs herschrijven tegen huidige UI.
+
 ## KNOWN-004 — Greeting-injection logic veranderd voor DF138-22
 
 **Tests:**

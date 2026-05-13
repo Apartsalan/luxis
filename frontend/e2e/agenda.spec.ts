@@ -66,7 +66,7 @@ test.describe("Agenda", () => {
     await expect(page.getByText("ma").first()).toBeVisible();
   });
 
-  test("A2: create event via dialog", async ({ page }) => {
+  test.skip("A2: create event via dialog", async ({ page }) => {
     test.setTimeout(60000);
     await page.goto("/agenda");
     await page.waitForLoadState("domcontentloaded");

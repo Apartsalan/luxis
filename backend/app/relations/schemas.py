@@ -137,7 +137,9 @@ class ContactSummary(BaseModel):
     email: str | None
     phone: str | None
     kvk_number: str | None
+    visit_city: str | None = None
     is_active: bool
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 

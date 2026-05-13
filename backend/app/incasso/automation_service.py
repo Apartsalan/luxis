@@ -363,12 +363,15 @@ async def gather_case_context(
     # daar gebruiken we uitsluitend ons eigen dossiernummer als kenmerk.
     reference_value = ""
 
+    def _fmt_nl_date(d: date | None) -> str:
+        return d.strftime("%d-%m-%Y") if d else ""
+
     return {
         "case_data": {
             "case_number": case.case_number,
             "reference": reference_value,
             "debtor_type": getattr(case, "debtor_type", None) or "b2b",
-            "opened_at": case.date_opened.isoformat() if case.date_opened else "",
+            "opened_at": _fmt_nl_date(case.date_opened),
         },
         "client_data": {
             "name": client_contact.name if client_contact else "?",
@@ -388,8 +391,8 @@ async def gather_case_context(
         "invoices": [
             {
                 "number": c.invoice_number or "?",
-                "date": c.invoice_date.isoformat() if c.invoice_date else "",
-                "due_date": c.default_date.isoformat() if c.default_date else "",
+                "date": _fmt_nl_date(c.invoice_date),
+                "due_date": _fmt_nl_date(c.default_date),
                 "amount": str(c.principal_amount or Decimal("0.00")),
             }
             for c in claims

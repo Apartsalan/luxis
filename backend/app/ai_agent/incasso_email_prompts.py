@@ -78,7 +78,13 @@ ABSOLUTE REGELS — strikt volgen:
    - Als waarde `0`: schrijf `€ 0,00`.
    - Geen valutaformaat anders dan Euro.
 
-6. **Output:** uitsluitend JSON met:
+6. **Datum-formatting:**
+   - Nederlands formaat: `DD-MM-JJJJ` (bv. `13-05-2026`), of voltijds Nederlands
+     met maandnaam in het Nederlands (bv. `13 mei 2026`). NOOIT US-format
+     (`05/13/2026`, `May 13, 2026`) of ISO (`2026-05-13`).
+     Datums in de dossier-context staan al in NL-format — neem ze letterlijk over.
+
+7. **Output:** uitsluitend JSON met:
    ```json
    {
      "subject": "string — gepersonaliseerde Betreft-regel",

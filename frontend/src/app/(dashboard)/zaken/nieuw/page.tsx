@@ -368,7 +368,7 @@ function NieuweZaakPage() {
   const [newOpponent, setNewOpponent] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT });
   const [showOpponentDetails, setShowOpponentDetails] = useState(true);
   const [showNewLawyer, setShowNewLawyer] = useState(false);
-  const [newLawyer, setNewLawyer] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT, contact_type: "person" });
+  const [newLawyer, setNewLawyer] = useState<InlineContact>({ ...EMPTY_INLINE_CONTACT, contact_type: "company" });
   const [showLawyerDetails, setShowLawyerDetails] = useState(true);
 
   // ── Inline contact creation handler ──────────────────────────────────────
@@ -418,7 +418,7 @@ function NieuweZaakPage() {
         setSelectedLawyer({ id: result.id, name: result.name });
         setLawyerSearch(result.name);
         setShowNewLawyer(false);
-        setNewLawyer({ ...EMPTY_INLINE_CONTACT, contact_type: "person" });
+        setNewLawyer({ ...EMPTY_INLINE_CONTACT, contact_type: "company" });
         setShowLawyerDetails(false);
       }
       toast.success(`${data.name} aangemaakt`);
@@ -1020,12 +1020,17 @@ function NieuweZaakPage() {
               </label>
               {form.client_id ? (
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="rounded-lg bg-primary/10 px-3 py-1.5 text-sm text-primary font-medium">
+                  <Link
+                    href={`/relaties/${form.client_id}`}
+                    target="_blank"
+                    className="rounded-lg bg-primary/10 px-3 py-1.5 text-sm text-primary font-medium hover:bg-primary/20 transition-colors"
+                    title="Open relatie in nieuw tabblad om te bewerken"
+                  >
                     {clientResults?.items.find((c) => c.id === form.client_id)
                       ?.name ||
                       prefillClientName ||
                       "Geselecteerd"}
-                  </span>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => {
@@ -1036,9 +1041,9 @@ function NieuweZaakPage() {
                       setClientSearch(currentName);
                       setShowNewClient(false);
                     }}
-                    className="text-xs text-destructive hover:underline"
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                   >
-                    Wijzigen
+                    Andere kiezen
                   </button>
                 </div>
               ) : (
@@ -1259,13 +1264,18 @@ function NieuweZaakPage() {
               </label>
               {form.opposing_party_id ? (
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="rounded-lg bg-warning/10 px-3 py-1.5 text-sm text-warning font-medium">
+                  <Link
+                    href={`/relaties/${form.opposing_party_id}`}
+                    target="_blank"
+                    className="rounded-lg bg-warning/10 px-3 py-1.5 text-sm text-warning font-medium hover:bg-warning/20 transition-colors"
+                    title="Open relatie in nieuw tabblad om te bewerken"
+                  >
                     {opponentResults?.items.find(
                       (c) => c.id === form.opposing_party_id
                     )?.name ||
                       prefillOpponentName ||
                       "Geselecteerd"}
-                  </span>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => {
@@ -1277,9 +1287,9 @@ function NieuweZaakPage() {
                       setOpponentContactType("");
                       setShowNewOpponent(false);
                     }}
-                    className="text-xs text-destructive hover:underline"
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                   >
-                    Wijzigen
+                    Andere kiezen
                   </button>
                 </div>
               ) : (
@@ -1477,18 +1487,23 @@ function NieuweZaakPage() {
               </label>
               {selectedLawyer ? (
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm text-violet-700 font-medium">
+                  <Link
+                    href={`/relaties/${selectedLawyer.id}`}
+                    target="_blank"
+                    className="rounded-lg bg-violet-50 px-3 py-1.5 text-sm text-violet-700 font-medium hover:bg-violet-100 transition-colors"
+                    title="Open relatie in nieuw tabblad om te bewerken"
+                  >
                     {selectedLawyer.name}
-                  </span>
+                  </Link>
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedLawyer(null);
                       setLawyerSearch("");
                     }}
-                    className="text-xs text-destructive hover:underline"
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                   >
-                    Wijzigen
+                    Andere kiezen
                   </button>
                 </div>
               ) : (
@@ -1557,10 +1572,23 @@ function NieuweZaakPage() {
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <select
+                          value={newLawyer.contact_type}
+                          onChange={(e) =>
+                            setNewLawyer((c) => ({
+                              ...c,
+                              contact_type: e.target.value as any,
+                            }))
+                          }
+                          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                        >
+                          <option value="company">Advocatenkantoor</option>
+                          <option value="person">Persoon</option>
+                        </select>
                         <input
                           type="text"
-                          placeholder="Naam *"
+                          placeholder={newLawyer.contact_type === "company" ? "Naam kantoor *" : "Naam advocaat *"}
                           value={newLawyer.name}
                           onChange={(e) =>
                             setNewLawyer((c) => ({
@@ -1586,7 +1614,7 @@ function NieuweZaakPage() {
                       {newLawyer.contact_type === "company" && (
                         <input
                           type="text"
-                          placeholder="Contactpersoon (t.a.v.)"
+                          placeholder="Contactpersoon (behandelend advocaat)"
                           value={newLawyer.contact_person}
                           onChange={(e) =>
                             setNewLawyer((c) => ({

@@ -110,7 +110,7 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
-                Minimumkosten (€)
+                Minimum provisie (€)
               </label>
               <input
                 type="number"
@@ -121,6 +121,9 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
                 placeholder="0.00"
                 className={inputClass}
               />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Bodembedrag voor je eigen factuur naar de cli&euml;nt
+              </p>
             </div>
           </div>
 
@@ -197,7 +200,7 @@ export function ProvisieSettingsSection({ caseId }: { caseId: string }) {
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Minimumkosten</dt>
+              <dt className="text-xs text-muted-foreground">Minimum provisie</dt>
               <dd className="text-sm font-medium text-foreground mt-0.5">
                 {zaak?.minimum_fee != null ? formatCurrency(zaak.minimum_fee) : "—"}
               </dd>

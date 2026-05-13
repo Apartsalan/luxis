@@ -78,7 +78,7 @@ def _add_signature(doc, greeting="Hoogachtend,"):
 
 
 def _add_schuldhulp(doc):
-    """Wettelijk verplicht schuldhulpblok + disclaimer."""
+    """Wettelijk verplicht schuldhulpblok + disclaimer (DF138-15: volledige tekst)."""
     _p(doc, "")
     _p(doc,
        "Heeft u financi\u00eble zorgen en ziet u geen uitweg meer? "
@@ -89,10 +89,18 @@ def _add_schuldhulp(doc):
        "Zelfmoordpreventie via 0800-0113 of kijk op www.113.nl.",
        size=Pt(8), color=RGBColor(0x88, 0x88, 0x88))
     _p(doc,
-       "Disclaimer - De informatie verzonden met dit bericht is "
-       "uitsluitend bestemd voor de geadresseerde(n) en kan "
+       "Disclaimer - De informatie verzonden met dit e-mailbericht "
+       "is uitsluitend bestemd voor de geadresseerde(n) en kan "
        "persoonlijke of vertrouwelijke informatie bevatten, "
-       "beschermd door een beroepsgeheim.",
+       "beschermd door een beroepsgeheim. Gebruik van deze "
+       "informatie door anderen dan de geadresseerde(n) en "
+       "gebruik door hen die niet gerechtigd zijn van deze "
+       "informatie kennis te nemen, is verboden. Indien u niet "
+       "de geadresseerde bent of niet gerechtigd bent tot "
+       "kennisneming, is openbaarmaking, vermenigvuldiging, "
+       "verspreiding en / of verstrekking van deze informatie "
+       "aan derden niet toegestaan en wordt u verzocht dit "
+       "bericht terug te sturen en het origineel te vernietigen.",
        size=Pt(8), color=RGBColor(0xAA, 0xAA, 0xAA))
 
 

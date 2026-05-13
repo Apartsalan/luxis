@@ -271,7 +271,7 @@ def _schuldhulp_disclaimer(ctx: dict) -> str:
         "informatie kennis te nemen, is verboden. Indien u niet "
         "de geadresseerde bent of niet gerechtigd bent tot "
         "kennisneming, is openbaarmaking, vermenigvuldiging, "
-        "verspreiding en/of verstrekking van deze informatie "
+        "verspreiding en / of verstrekking van deze informatie "
         "aan derden niet toegestaan en wordt u verzocht dit "
         "bericht terug te sturen en het origineel te vernietigen."
         "</p>"

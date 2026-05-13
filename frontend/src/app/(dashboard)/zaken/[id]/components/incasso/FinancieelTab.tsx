@@ -72,7 +72,17 @@ export function FinancieelTab({ caseId }: { caseId: string }) {
   } else if (bikMode === "percentage" && bikPercentage !== "") {
     const pct = parseFloat(bikPercentage);
     if (!isNaN(pct) && summary.total_principal > 0) {
-      bikOverrideAmount = Math.round(summary.total_principal * pct) / 100;
+      let computed = Math.round(summary.total_principal * pct) / 100;
+      // DF138-19: pas dezelfde bodem toe als backend zodat de UI niet
+      // € 31,76 toont terwijl het werkelijk gevorderde bedrag het
+      // minimum (bijv. € 40) is. Backend doet dit ook in get_financial_summary.
+      const bikMin = caseData?.bik_minimum_fee != null
+        ? Number(caseData.bik_minimum_fee)
+        : 0;
+      if (bikMin > 0 && computed < bikMin) {
+        computed = bikMin;
+      }
+      bikOverrideAmount = computed;
     }
   }
   const effectiveBik = bikOverrideAmount !== null && !isNaN(bikOverrideAmount) ? bikOverrideAmount : summary.total_bik;

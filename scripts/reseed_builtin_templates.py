@@ -1,21 +1,19 @@
 """Re-seed builtin managed_templates from /app/templates/*.docx.
 
-Run after regenerating DOCX files (templates/_generate_templates.py). The
-initial seed happens in migration 034; later schema/footer changes in the
-DOCX source require this script to push the new bytes to all tenants.
+Pure raw SQL via SQLAlchemy text() — geen ORM imports zodat het script
+losstaat van het volledige model-bootstrap proces. Gebruikt de bestaande
+DATABASE_URL uit de backend-omgeving.
 
 Usage (inside backend container):
-    python -m scripts.reseed_builtin_templates
+    python /app/reseed_templates.py
 """
 
 import asyncio
+import os
 from pathlib import Path
 
-from sqlalchemy import update
-from sqlalchemy.ext.asyncio import async_sessionmaker
-
-from app.database import engine
-from app.documents.models import ManagedTemplate
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 TEMPLATES_DIR = Path("/app/templates")
 
@@ -32,28 +30,31 @@ BUILTIN = {
 
 
 async def main() -> None:
-    SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
-    async with SessionLocal() as db:
-        total = 0
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        raise SystemExit("DATABASE_URL ontbreekt in omgeving")
+    engine = create_async_engine(db_url)
+    total = 0
+    async with engine.begin() as conn:
         for key, filename in BUILTIN.items():
             fpath = TEMPLATES_DIR / filename
             if not fpath.exists():
                 print(f"  - {key}: file ontbreekt ({fpath})")
                 continue
             data = fpath.read_bytes()
-            stmt = (
-                update(ManagedTemplate)
-                .where(
-                    ManagedTemplate.template_key == key,
-                    ManagedTemplate.is_builtin.is_(True),
-                )
-                .values(file_data=data, file_size=len(data))
+            result = await conn.execute(
+                text(
+                    "UPDATE managed_templates "
+                    "SET file_data = :d, file_size = :s, updated_at = now() "
+                    "WHERE template_key = :k AND is_builtin = true"
+                ),
+                {"d": data, "s": len(data), "k": key},
             )
-            result = await db.execute(stmt)
-            total += result.rowcount or 0
-            print(f"  - {key}: {result.rowcount or 0} rij(en) bijgewerkt")
-        await db.commit()
-        print(f"Klaar: {total} builtin-template rij(en) opnieuw geseed.")
+            count = result.rowcount or 0
+            total += count
+            print(f"  - {key}: {count} rij(en) bijgewerkt")
+    print(f"Klaar: {total} builtin-template rij(en) opnieuw geseed.")
+    await engine.dispose()
 
 
 if __name__ == "__main__":

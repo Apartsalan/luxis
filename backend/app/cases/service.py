@@ -470,6 +470,7 @@ async def create_case(
         client_id=data.client_id,
         opposing_party_id=data.opposing_party_id,
         billing_contact_id=data.billing_contact_id,
+        contact_terms_id=data.contact_terms_id,
         assigned_to_id=data.assigned_to_id or user_id,
         date_opened=data.date_opened,
         budget=data.budget,

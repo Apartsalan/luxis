@@ -6,8 +6,14 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.relations.models import Contact, ContactLink
-from app.relations.schemas import ContactCreate, ContactLinkCreate, ContactUpdate
+from app.relations.models import Contact, ContactLink, ContactTerms
+from app.relations.schemas import (
+    ContactCreate,
+    ContactLinkCreate,
+    ContactTermsCreate,
+    ContactTermsUpdate,
+    ContactUpdate,
+)
 from app.shared.exceptions import ConflictError, NotFoundError
 
 # ── Contact CRUD ─────────────────────────────────────────────────────────────
@@ -247,6 +253,160 @@ async def delete_contact_link(
 
     await db.delete(link)
     await db.flush()
+
+
+# ── Contact Terms (AV-versies) ───────────────────────────────────────────────
+
+
+async def list_contact_terms(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    contact_id: uuid.UUID,
+) -> list[ContactTerms]:
+    """Alle AV-versies van een cliënt, gesorteerd op valid_from desc (NULL onderaan)."""
+    result = await db.execute(
+        select(ContactTerms)
+        .where(
+            ContactTerms.tenant_id == tenant_id,
+            ContactTerms.contact_id == contact_id,
+        )
+        .order_by(ContactTerms.valid_from.desc().nulls_last(), ContactTerms.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_contact_terms(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    terms_id: uuid.UUID,
+) -> ContactTerms:
+    """Eén AV-versie ophalen. Raises NotFoundError als niet bestaat."""
+    result = await db.execute(
+        select(ContactTerms).where(
+            ContactTerms.id == terms_id,
+            ContactTerms.tenant_id == tenant_id,
+        )
+    )
+    terms = result.scalar_one_or_none()
+    if terms is None:
+        raise NotFoundError("AV-versie niet gevonden")
+    return terms
+
+
+async def create_contact_terms(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    contact_id: uuid.UUID,
+    file_path: str,
+    file_name: str,
+    metadata: ContactTermsCreate,
+    uploaded_by_id: uuid.UUID | None = None,
+) -> ContactTerms:
+    """Maak nieuwe AV-versie. Caller is verantwoordelijk voor file-upload op disk."""
+    # Verifieer dat contact bestaat (raises NotFoundError indien niet)
+    await get_contact(db, tenant_id, contact_id)
+
+    terms = ContactTerms(
+        tenant_id=tenant_id,
+        contact_id=contact_id,
+        file_path=file_path,
+        file_name=file_name,
+        label=metadata.label,
+        valid_from=metadata.valid_from,
+        valid_to=metadata.valid_to,
+        uploaded_by_id=uploaded_by_id,
+    )
+    db.add(terms)
+    await db.flush()
+    await db.refresh(terms)
+    return terms
+
+
+async def update_contact_terms(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    terms_id: uuid.UUID,
+    data: ContactTermsUpdate,
+) -> ContactTerms:
+    """Update metadata (label, geldigheid) — file zelf wijzigt niet."""
+    terms = await get_contact_terms(db, tenant_id, terms_id)
+    payload = data.model_dump(exclude_unset=True)
+    for field, value in payload.items():
+        setattr(terms, field, value)
+    await db.flush()
+    await db.refresh(terms)
+    return terms
+
+
+async def delete_contact_terms(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    terms_id: uuid.UUID,
+) -> str:
+    """Verwijder AV-versie + retourneert file_path zodat caller bestand kan opruimen.
+
+    Cases die naar deze versie verwezen krijgen `contact_terms_id = NULL`
+    via ON DELETE SET NULL is niet ingesteld; we doen handmatige cleanup
+    door eerst alle cases bij te werken.
+    """
+    from app.cases.models import Case
+
+    terms = await get_contact_terms(db, tenant_id, terms_id)
+    file_path = terms.file_path
+
+    # Cases die hiernaar wijzen → contact_terms_id leegmaken
+    await db.execute(
+        select(Case).where(
+            Case.tenant_id == tenant_id,
+            Case.contact_terms_id == terms_id,
+        )
+    )
+    from sqlalchemy import update as sa_update
+
+    await db.execute(
+        sa_update(Case)
+        .where(Case.tenant_id == tenant_id, Case.contact_terms_id == terms_id)
+        .values(contact_terms_id=None)
+    )
+
+    await db.delete(terms)
+    await db.flush()
+    return file_path
+
+
+def select_terms_for_date(
+    versions: list[ContactTerms],
+    target_date: "date | None",
+) -> ContactTerms | None:
+    """Kies de AV-versie die geldig is op `target_date`.
+
+    Match-logica:
+    1. valid_from <= target_date AND (valid_to IS NULL OR valid_to >= target_date)
+    2. Geen match: pak versie met valid_from NULL (= "altijd geldig" / migratie)
+    3. Geen match: pak meest recente versie (op valid_from desc, dan created_at desc)
+    4. Geen versies: None
+
+    `target_date` NULL → ook fallback naar "altijd geldig" of meest recente.
+    """
+    if not versions:
+        return None
+
+    if target_date is not None:
+        for v in versions:
+            if v.valid_from is None:
+                continue
+            if v.valid_from <= target_date and (
+                v.valid_to is None or v.valid_to >= target_date
+            ):
+                return v
+
+    # Fallback 1: versie met valid_from NULL (= "altijd geldig")
+    null_from = next((v for v in versions if v.valid_from is None), None)
+    if null_from is not None:
+        return null_from
+
+    # Fallback 2: meest recente (versions is al gesorteerd valid_from desc)
+    return versions[0]
 
 
 # ── Conflict Check ───────────────────────────────────────────────────────────

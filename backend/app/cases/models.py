@@ -94,6 +94,14 @@ class Case(TenantBase):
         Uuid, ForeignKey("contacts.id"), nullable=True
     )  # F7: alternate billing contact (if different from client)
 
+    # S140: AV-versie die op dit dossier van toepassing is. NULL = geen
+    # expliciete keuze; gather_case_context valt terug op smart-default
+    # (versie geldig bij eerste factuur) en uiteindelijk op contact.terms_file_path
+    # voor backwards-compat.
+    contact_terms_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("contact_terms.id"), nullable=True
+    )
+
     # Assigned to
     assigned_to_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("users.id"), nullable=True

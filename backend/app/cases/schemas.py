@@ -63,6 +63,7 @@ class CaseCreate(BaseModel):
     client_id: uuid.UUID
     opposing_party_id: uuid.UUID | None = None
     billing_contact_id: uuid.UUID | None = None
+    contact_terms_id: uuid.UUID | None = None  # S140: AV-versie keuze (optioneel)
     assigned_to_id: uuid.UUID | None = None
     date_opened: date
     budget: Decimal | None = None  # G13: optional budget (requires "budget" module)
@@ -102,6 +103,7 @@ class CaseUpdate(BaseModel):
     contractual_compound: bool | None = None
     opposing_party_id: uuid.UUID | None = None
     billing_contact_id: uuid.UUID | None = None
+    contact_terms_id: uuid.UUID | None = None  # S140
     assigned_to_id: uuid.UUID | None = None
     budget: Decimal | None = None  # G13
     bik_override: Decimal | None = None  # LF-12
@@ -218,6 +220,7 @@ class CaseResponse(BaseModel):
     opposing_party: ContactBrief | None
     billing_contact: ContactBrief | None
     assigned_to: UserBrief | None
+    contact_terms_id: uuid.UUID | None = None  # S140
     incasso_step_id: uuid.UUID | None = None
     date_opened: date
     date_closed: date | None

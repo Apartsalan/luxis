@@ -16,6 +16,8 @@ import {
   Upload,
   X,
   Check,
+  Plus,
+  Edit2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,6 +25,16 @@ import {
   useUpdateRelation,
   useDeleteRelation,
 } from "@/hooks/use-relations";
+import {
+  useContactTerms,
+  useUploadContactTerms,
+  useUpdateContactTerms,
+  useDeleteContactTerms,
+  downloadContactTermsFile,
+  type ContactTerms,
+  type ContactTermsCreate,
+  type ContactTermsUpdate,
+} from "@/hooks/use-contact-terms";
 import { useCases } from "@/hooks/use-cases";
 import { useModules } from "@/hooks/use-modules";
 import { useKyc, useSaveKyc, useCompleteKyc, type KycFormData } from "@/hooks/use-kyc";
@@ -482,131 +494,338 @@ export default function RelatieDetailPage() {
 
 // ── Algemene Voorwaarden Section ─────────────────────────────────────────────
 
-function TermsSection({ contactId, termsFileName }: { contactId: string; termsFileName?: string | null }) {
-  const [uploading, setUploading] = useState(false);
-  const [currentFile, setCurrentFile] = useState(termsFileName);
-  const { data: contact, refetch } = useRelation(contactId);
+function TermsSection({ contactId, termsFileName: _legacyFileName }: { contactId: string; termsFileName?: string | null }) {
+  const { data: versions = [], isLoading } = useContactTerms(contactId);
+  const uploadMutation = useUploadContactTerms(contactId);
+  const updateMutation = useUpdateContactTerms(contactId);
+  const deleteMutation = useDeleteContactTerms(contactId);
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
-  // Sync with contact data
-  useEffect(() => {
-    if (contact) setCurrentFile(contact.terms_file_name);
-  }, [contact?.terms_file_name]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
+  const handleDownload = async (termsId: string, fileName: string) => {
     try {
-      const token = tokenStore.getAccess();
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(`/api/relations/${contactId}/terms`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.detail || "Upload mislukt");
-      }
-      const data = await res.json();
-      setCurrentFile(data.terms_file_name);
-      refetch();
-      toast.success("Algemene voorwaarden geüpload");
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Upload mislukt");
-    } finally {
-      setUploading(false);
-      e.target.value = "";
-    }
-  };
-
-  const handleDownload = async () => {
-    try {
-      const token = tokenStore.getAccess();
-      const res = await fetch(`/api/relations/${contactId}/terms`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Download mislukt");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = currentFile || "voorwaarden.pdf";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await downloadContactTermsFile(contactId, termsId, fileName);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Download mislukt");
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (termsId: string, label: string | null) => {
+    const ok = await confirm({
+      title: `AV-versie "${label || "(geen label)"}" verwijderen?`,
+      description:
+        "Dossiers die naar deze versie verwezen krijgen 'geen versie gekoppeld' (terugval op smart-default).",
+      confirmText: "Verwijderen",
+      variant: "destructive",
+    });
+    if (!ok) return;
     try {
-      const token = tokenStore.getAccess();
-      const res = await fetch(`/api/relations/${contactId}/terms`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Verwijderen mislukt");
-      setCurrentFile(null);
-      refetch();
-      toast.success("Algemene voorwaarden verwijderd");
+      await deleteMutation.mutateAsync(termsId);
+      toast.success("AV-versie verwijderd");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Verwijderen mislukt");
     }
   };
 
+  const formatPeriod = (vf: string | null, vt: string | null) => {
+    if (!vf && !vt) return "Altijd geldig";
+    const fmt = (d: string | null) =>
+      d ? new Date(d).toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" }) : null;
+    const from = fmt(vf);
+    const to = fmt(vt);
+    if (from && to) return `${from} t/m ${to}`;
+    if (from) return `Vanaf ${from}`;
+    return `T/m ${to}`;
+  };
+
   return (
     <div className="rounded-xl border border-border bg-card p-5">
-      <h3 className="text-sm font-semibold text-card-foreground mb-3">
-        Algemene Voorwaarden
-      </h3>
+      {ConfirmDialogEl}
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-card-foreground">
+          Algemene Voorwaarden
+        </h3>
+        {!showUploadForm && (
+          <button
+            type="button"
+            onClick={() => setShowUploadForm(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+          >
+            <Plus className="h-3 w-3" />
+            Nieuwe versie
+          </button>
+        )}
+      </div>
 
-      {currentFile ? (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <File className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-sm text-foreground truncate">{currentFile}</span>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="rounded-md p-1.5 hover:bg-muted transition-colors"
-              title="Downloaden"
-            >
-              <Download className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-            <label className="rounded-md p-1.5 hover:bg-muted transition-colors cursor-pointer" title="Vervangen">
-              <Upload className="h-3.5 w-3.5 text-muted-foreground" />
-              <input type="file" accept=".pdf,.docx,.doc" onChange={handleUpload} className="hidden" />
-            </label>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="rounded-md p-1.5 hover:bg-destructive/10 transition-colors"
-              title="Verwijderen"
-            >
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-            </button>
-          </div>
-        </div>
+      {showUploadForm && (
+        <TermsUploadForm
+          onCancel={() => setShowUploadForm(false)}
+          onSubmit={async (data) => {
+            try {
+              await uploadMutation.mutateAsync(data);
+              toast.success("AV-versie geüpload");
+              setShowUploadForm(false);
+            } catch (err: unknown) {
+              toast.error(err instanceof Error ? err.message : "Upload mislukt");
+            }
+          }}
+          uploading={uploadMutation.isPending}
+        />
+      )}
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Versies laden...</p>
+      ) : versions.length === 0 ? (
+        !showUploadForm && (
+          <p className="text-sm text-muted-foreground">
+            Nog geen algemene voorwaarden geüpload. Klik &lsquo;Nieuwe versie&rsquo; om te beginnen.
+          </p>
+        )
       ) : (
-        <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/20 px-4 py-6 cursor-pointer hover:bg-muted/40 transition-colors">
-          {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : (
-            <Upload className="h-4 w-4 text-muted-foreground" />
-          )}
-          <span className="text-sm text-muted-foreground">
-            {uploading ? "Uploaden..." : "Upload algemene voorwaarden (PDF, DOCX)"}
-          </span>
-          <input type="file" accept=".pdf,.docx,.doc" onChange={handleUpload} className="hidden" disabled={uploading} />
-        </label>
+        <div className="space-y-2">
+          {versions.map((v) => (
+            <div key={v.id}>
+              {editingId === v.id ? (
+                <TermsEditForm
+                  version={v}
+                  onCancel={() => setEditingId(null)}
+                  onSubmit={async (data) => {
+                    try {
+                      await updateMutation.mutateAsync({ termsId: v.id, data });
+                      toast.success("AV-versie bijgewerkt");
+                      setEditingId(null);
+                    } catch (err: unknown) {
+                      toast.error(err instanceof Error ? err.message : "Bijwerken mislukt");
+                    }
+                  }}
+                  saving={updateMutation.isPending}
+                />
+              ) : (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <File className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {v.label || "(geen label)"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {formatPeriod(v.valid_from, v.valid_to)} · {v.file_name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleDownload(v.id, v.file_name)}
+                      className="rounded-md p-1.5 hover:bg-muted transition-colors"
+                      title="Downloaden"
+                    >
+                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(v.id)}
+                      className="rounded-md p-1.5 hover:bg-muted transition-colors"
+                      title="Bewerken"
+                    >
+                      <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(v.id, v.label)}
+                      className="rounded-md p-1.5 hover:bg-destructive/10 transition-colors"
+                      title="Verwijderen"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
+  );
+}
+
+function TermsUploadForm({
+  onCancel,
+  onSubmit,
+  uploading,
+}: {
+  onCancel: () => void;
+  onSubmit: (data: ContactTermsCreate) => Promise<void>;
+  uploading: boolean;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [label, setLabel] = useState("");
+  const [validFrom, setValidFrom] = useState("");
+  const [validTo, setValidTo] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) {
+      toast.error("Selecteer een bestand");
+      return;
+    }
+    await onSubmit({
+      file,
+      label: label || undefined,
+      valid_from: validFrom || undefined,
+      valid_to: validTo || undefined,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="mb-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-1">
+          Bestand (PDF, DOCX)
+        </label>
+        <input
+          type="file"
+          accept=".pdf,.docx,.doc"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="block w-full text-xs text-foreground file:mr-2 file:rounded-md file:border-0 file:bg-background file:px-2 file:py-1 file:text-xs file:font-medium hover:file:bg-muted"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-1">
+          Label
+        </label>
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Bijv. AV 2025-01 of v3.2"
+          className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
+            Geldig vanaf
+          </label>
+          <input
+            type="date"
+            value={validFrom}
+            onChange={(e) => setValidFrom(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
+            Geldig t/m
+          </label>
+          <input
+            type="date"
+            value={validTo}
+            onChange={(e) => setValidTo(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Laat data leeg voor &laquo;altijd geldig&raquo;. AI gebruikt automatisch de versie die geldig is
+        op de factuur-datum van het dossier.
+      </p>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={uploading || !file}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        >
+          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+          Uploaden
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={uploading}
+          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function TermsEditForm({
+  version,
+  onCancel,
+  onSubmit,
+  saving,
+}: {
+  version: ContactTerms;
+  onCancel: () => void;
+  onSubmit: (data: ContactTermsUpdate) => Promise<void>;
+  saving: boolean;
+}) {
+  const [label, setLabel] = useState(version.label ?? "");
+  const [validFrom, setValidFrom] = useState(version.valid_from ?? "");
+  const [validTo, setValidTo] = useState(version.valid_to ?? "");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSubmit({
+      label: label || null,
+      valid_from: validFrom || null,
+      valid_to: validTo || null,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+      <div>
+        <label className="block text-xs font-medium text-muted-foreground mb-1">Label</label>
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Geldig vanaf</label>
+          <input
+            type="date"
+            value={validFrom}
+            onChange={(e) => setValidFrom(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Geldig t/m</label>
+          <input
+            type="date"
+            value={validTo}
+            onChange={(e) => setValidTo(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        >
+          {saving ? "Opslaan..." : "Opslaan"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={saving}
+          className="rounded-md border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+        >
+          Annuleren
+        </button>
+      </div>
+    </form>
   );
 }

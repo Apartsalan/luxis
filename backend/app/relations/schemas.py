@@ -162,6 +162,36 @@ class ContactLinkResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ContactTermsResponse(BaseModel):
+    """Versie-row van algemene voorwaarden op een cliënt."""
+
+    id: uuid.UUID
+    contact_id: uuid.UUID
+    file_name: str
+    label: str | None
+    valid_from: date | None
+    valid_to: date | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContactTermsCreate(BaseModel):
+    """Metadata bij upload van nieuwe AV-versie (file komt via multipart)."""
+
+    label: str | None = Field(default=None, max_length=100)
+    valid_from: date | None = None
+    valid_to: date | None = None
+
+
+class ContactTermsUpdate(BaseModel):
+    """Bewerk metadata van bestaande AV-versie (file niet wijzigbaar)."""
+
+    label: str | None = Field(default=None, max_length=100)
+    valid_from: date | None = None
+    valid_to: date | None = None
+
+
 class LinkedContactInfo(BaseModel):
     """Contact summary with link metadata (link_id, role)."""
 

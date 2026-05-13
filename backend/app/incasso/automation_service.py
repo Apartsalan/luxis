@@ -366,18 +366,61 @@ async def gather_case_context(
         totaal = (hoofdsom + rente + bik + btw).quantize(Decimal("0.01"))
         te_voldoen = (totaal - total_paid).quantize(Decimal("0.01"))
 
-    # Algemene Voorwaarden van cliënt — pad voor Sonnet native PDF input,
-    # tekst-extract als fallback voor Gemini/Haiku-pad.
+    # Algemene Voorwaarden van cliënt — versie-aware (S140):
+    # 1. case.contact_terms_id expliciet gezet → die versie
+    # 2. Smart-default: versie geldig bij datum eerste factuur
+    # 3. Fallback: contact.terms_file_path (legacy single-file kolom)
     av_text: str | None = None
     av_pdf_path: str | None = None
-    if client_contact and client_contact.terms_file_path:
-        av_pdf_path = client_contact.terms_file_path
-        av_text = _extract_pdf_text(client_contact.terms_file_path, max_chars=50000)
-        if av_text:
-            logger.info(
-                "Case %s: AV geladen voor %s (PDF=%s, %d chars text-fallback)",
-                case.case_number, client_contact.name, av_pdf_path, len(av_text),
-            )
+    av_file_name: str | None = None
+    if client_contact:
+        from app.relations.service import list_contact_terms, select_terms_for_date
+
+        terms_path: str | None = None
+        chosen_label: str | None = None
+        if case.contact_terms_id is not None:
+            from app.relations.models import ContactTerms
+
+            terms_row = (
+                await db.execute(
+                    select(ContactTerms).where(
+                        ContactTerms.tenant_id == tenant_id,
+                        ContactTerms.id == case.contact_terms_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if terms_row is not None:
+                terms_path = terms_row.file_path
+                av_file_name = terms_row.file_name
+                chosen_label = terms_row.label or "(geen label)"
+        else:
+            # Smart-default: kies versie op basis van eerste factuur-datum
+            target_date = None
+            if claims:
+                invoice_dates = [c.invoice_date for c in claims if c.invoice_date is not None]
+                if invoice_dates:
+                    target_date = min(invoice_dates)
+            versions = await list_contact_terms(db, tenant_id, client_contact.id)
+            chosen = select_terms_for_date(versions, target_date)
+            if chosen is not None:
+                terms_path = chosen.file_path
+                av_file_name = chosen.file_name
+                chosen_label = chosen.label or "(geen label)"
+
+        # Fallback voor cliënten zonder versie-rij: legacy single-file kolom.
+        if not terms_path and client_contact.terms_file_path:
+            terms_path = client_contact.terms_file_path
+            av_file_name = client_contact.terms_file_name
+            chosen_label = "legacy single-file"
+
+        if terms_path:
+            av_pdf_path = terms_path
+            av_text = _extract_pdf_text(terms_path, max_chars=50000)
+            if av_text:
+                logger.info(
+                    "Case %s: AV geladen voor %s (versie='%s', PDF=%s, %d chars text-fallback)",
+                    case.case_number, client_contact.name, chosen_label, av_pdf_path, len(av_text),
+                )
 
     # DF138-05: Reference (kenmerk) NIET gebruiken in mail aan wederpartij.
     # case.reference is de KLANT-referentie en hoort alleen in communicatie met

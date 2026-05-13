@@ -3,9 +3,10 @@
 import math
 import os
 import uuid
+from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,6 +23,9 @@ from app.relations.schemas import (
     ContactLinkResponse,
     ContactResponse,
     ContactSummary,
+    ContactTermsCreate,
+    ContactTermsResponse,
+    ContactTermsUpdate,
     ContactUpdate,
     LinkedContactInfo,
 )
@@ -186,25 +190,39 @@ async def conflict_check(
     )
 
 
-# ── Algemene Voorwaarden (AI-UX-11) ─────────────────────────────────────────
+# ── Algemene Voorwaarden — versie-aware (S140) ──────────────────────────────
 
 TERMS_BASE = Path("/app/uploads/terms")
 ALLOWED_TERMS_EXT = {".pdf", ".docx", ".doc"}
 MAX_TERMS_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-@router.post("/{contact_id}/terms", status_code=status.HTTP_200_OK)
-async def upload_terms(
+@router.get("/{contact_id}/terms", response_model=list[ContactTermsResponse])
+async def list_terms(
     contact_id: uuid.UUID,
-    file: UploadFile,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Upload algemene voorwaarden (AV) for a contact."""
-    contact = await service.get_contact(db, current_user.tenant_id, contact_id)
-    if not contact:
-        raise HTTPException(status_code=404, detail="Relatie niet gevonden")
+    """Lijst van alle AV-versies van een cliënt."""
+    versions = await service.list_contact_terms(db, current_user.tenant_id, contact_id)
+    return [ContactTermsResponse.model_validate(v) for v in versions]
 
+
+@router.post(
+    "/{contact_id}/terms",
+    response_model=ContactTermsResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_terms(
+    contact_id: uuid.UUID,
+    file: UploadFile,
+    label: str | None = Form(default=None),
+    valid_from: date | None = Form(default=None),
+    valid_to: date | None = Form(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload nieuwe AV-versie. Metadata via form-fields naast multipart file."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="Bestandsnaam is verplicht")
 
@@ -219,67 +237,104 @@ async def upload_terms(
     if len(content) > MAX_TERMS_SIZE:
         raise HTTPException(status_code=400, detail="Bestand te groot (max 10 MB)")
 
-    # Store file
+    # Store file met unieke naam per versie (UUID-prefix), zodat oudere
+    # versies naast nieuwe op disk kunnen bestaan.
     tenant_dir = TERMS_BASE / str(current_user.tenant_id)
     tenant_dir.mkdir(parents=True, exist_ok=True)
-    storage_name = f"{contact_id}{ext}"
+    version_id = uuid.uuid4()
+    storage_name = f"{contact_id}_{version_id}{ext}"
     file_path = tenant_dir / storage_name
     file_path.write_bytes(content)
 
-    # Update contact
-    contact.terms_file_path = str(file_path)
-    contact.terms_file_name = file.filename
-    await db.commit()
+    metadata = ContactTermsCreate(label=label, valid_from=valid_from, valid_to=valid_to)
+    try:
+        terms = await service.create_contact_terms(
+            db,
+            current_user.tenant_id,
+            contact_id,
+            file_path=str(file_path),
+            file_name=file.filename,
+            metadata=metadata,
+            uploaded_by_id=current_user.id,
+        )
+        await db.commit()
+    except Exception:
+        if file_path.exists():
+            file_path.unlink()
+        raise
 
-    return {
-        "terms_file_name": file.filename,
-        "message": "Algemene voorwaarden geüpload",
-    }
+    return ContactTermsResponse.model_validate(terms)
 
 
-@router.get("/{contact_id}/terms")
-async def download_terms(
+@router.get("/{contact_id}/terms/{terms_id}/file")
+async def download_terms_version(
     contact_id: uuid.UUID,
+    terms_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Download algemene voorwaarden (AV) for a contact."""
-    contact = await service.get_contact(db, current_user.tenant_id, contact_id)
-    if not contact:
-        raise HTTPException(status_code=404, detail="Relatie niet gevonden")
+    """Download bestand van specifieke AV-versie."""
+    terms = await service.get_contact_terms(db, current_user.tenant_id, terms_id)
+    if terms.contact_id != contact_id:
+        raise HTTPException(status_code=404, detail="AV-versie hoort niet bij deze cliënt")
 
-    if not contact.terms_file_path:
-        raise HTTPException(status_code=404, detail="Geen algemene voorwaarden geüpload")
-
-    file_path = Path(contact.terms_file_path)
+    file_path = Path(terms.file_path)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Bestand niet gevonden")
 
     return FileResponse(
         path=str(file_path),
-        filename=contact.terms_file_name or "voorwaarden.pdf",
+        filename=terms.file_name,
         media_type="application/octet-stream",
     )
 
 
-@router.delete("/{contact_id}/terms", status_code=status.HTTP_200_OK)
-async def delete_terms(
+@router.put(
+    "/{contact_id}/terms/{terms_id}",
+    response_model=ContactTermsResponse,
+)
+async def update_terms_version(
     contact_id: uuid.UUID,
+    terms_id: uuid.UUID,
+    data: ContactTermsUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete algemene voorwaarden (AV) for a contact."""
-    contact = await service.get_contact(db, current_user.tenant_id, contact_id)
-    if not contact:
-        raise HTTPException(status_code=404, detail="Relatie niet gevonden")
+    """Update metadata (label, valid_from, valid_to) van AV-versie."""
+    terms = await service.get_contact_terms(db, current_user.tenant_id, terms_id)
+    if terms.contact_id != contact_id:
+        raise HTTPException(status_code=404, detail="AV-versie hoort niet bij deze cliënt")
+    updated = await service.update_contact_terms(db, current_user.tenant_id, terms_id, data)
+    await db.commit()
+    return ContactTermsResponse.model_validate(updated)
 
-    if contact.terms_file_path:
-        file_path = Path(contact.terms_file_path)
-        if file_path.exists():
-            file_path.unlink()
 
-    contact.terms_file_path = None
-    contact.terms_file_name = None
+@router.delete(
+    "/{contact_id}/terms/{terms_id}",
+    status_code=status.HTTP_200_OK,
+)
+async def delete_terms_version(
+    contact_id: uuid.UUID,
+    terms_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Verwijder AV-versie. Dossiers die hiernaar wezen krijgen contact_terms_id=NULL."""
+    terms = await service.get_contact_terms(db, current_user.tenant_id, terms_id)
+    if terms.contact_id != contact_id:
+        raise HTTPException(status_code=404, detail="AV-versie hoort niet bij deze cliënt")
+
+    file_path_str = await service.delete_contact_terms(db, current_user.tenant_id, terms_id)
     await db.commit()
 
-    return {"message": "Algemene voorwaarden verwijderd"}
+    # File pas verwijderen na succesvolle DB-commit
+    if file_path_str:
+        file_path = Path(file_path_str)
+        if file_path.exists():
+            try:
+                file_path.unlink()
+            except OSError:
+                # Bestand kan al weg zijn, geen probleem
+                pass
+
+    return {"message": "AV-versie verwijderd"}

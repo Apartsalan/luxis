@@ -126,6 +126,39 @@ class Contact(TenantBase):
     )
 
 
+class ContactTerms(TenantBase):
+    """Versie van algemene voorwaarden bij een cliënt-contact.
+
+    Eén cliënt kan meerdere AV-versies hebben (oude facturen vallen onder
+    oude versie). Bij dossier-aanmaak wordt automatisch de versie gekozen
+    waarvan `valid_from <= factuur-datum AND (valid_to >= factuur-datum
+    OR valid_to IS NULL)`; Lisanne kan handmatig overrulen via
+    `case.contact_terms_id`.
+
+    `valid_from` NULL betekent "altijd geldig" — fallback voor cliënten
+    met maar één AV-bestand of bij data-migratie van oude single-file
+    velden.
+    """
+
+    __tablename__ = "contact_terms"
+
+    contact_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("contacts.id"), nullable=False, index=True
+    )
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    label: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    valid_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    valid_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    uploaded_by_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+
+    contact: Mapped["Contact"] = relationship(
+        "Contact",
+        foreign_keys=[contact_id],
+        lazy="selectin",
+    )
+
+
 class ContactLink(TenantBase):
     """Links a person contact to a company contact (e.g. employee, director)."""
 

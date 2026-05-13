@@ -155,7 +155,7 @@ def upgrade() -> None:
     op.execute("""
         CREATE POLICY tenant_isolation_case_step_history
         ON case_step_history
-        USING (tenant_id = current_setting('app.current_tenant_id')::uuid)
+        USING (tenant_id = current_setting('app.current_tenant')::uuid)
     """)
 
 

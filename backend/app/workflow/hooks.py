@@ -21,6 +21,13 @@ from app.workflow.models import WorkflowStatus, WorkflowTask
 logger = logging.getLogger(__name__)
 
 
+def _fmt_eur(value: Decimal | int | float) -> str:
+    """Format Decimal/float as Dutch currency: € 1.234,56."""
+    d = Decimal(str(value))
+    formatted = f"{d:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"€ {formatted}"
+
+
 async def _auto_execute_send_email(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -250,7 +257,7 @@ async def on_payment_received(
                 activity_type="automation",
                 title="Zaak volledig betaald — handmatige statuswijziging nodig",
                 description=(
-                    f"Totaal openstaand: EUR 0,00. "
+                    f"Totaal openstaand: € 0,00. "
                     f"Automatische transitie naar 'betaald' niet "
                     f"mogelijk vanuit status '{old_status}'. "
                     f"Wijzig de status handmatig."
@@ -274,7 +281,7 @@ async def on_payment_received(
             title=f"Status automatisch gewijzigd: {old_status} \u2192 betaald",
             description=(
                 f"Zaak automatisch op 'betaald' gezet na ontvangst betaling van "
-                f"EUR {payment_amount:,.2f}. Totaal openstaand: EUR 0,00."
+                f"{_fmt_eur(payment_amount)}. Totaal openstaand: € 0,00."
             ),
             old_status=old_status,
             new_status="betaald",
@@ -317,7 +324,7 @@ async def on_derdengelden_deposit(
         case_id=case_id,
         user_id=user_id,
         activity_type="derdengelden",
-        title=f"Derdengelden ontvangen: EUR {amount:,.2f}",
+        title=f"Derdengelden ontvangen: {_fmt_eur(amount)}",
         description=f"Storting op derdengeldenrekening voor zaak {case.case_number}.",
     )
     db.add(activity)

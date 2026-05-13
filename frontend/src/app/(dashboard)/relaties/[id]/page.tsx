@@ -201,8 +201,9 @@ export default function RelatieDetailPage() {
       await deleteRelation.mutateAsync(id);
       toast.success("Relatie verwijderd");
       router.push("/relaties");
-    } catch {
-      toast.error("Kon de relatie niet verwijderen");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Kon de relatie niet verwijderen";
+      toast.error(msg);
     }
   };
 

@@ -14,21 +14,68 @@ import {
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
   Briefcase,
 } from "lucide-react";
-import { useRelations } from "@/hooks/use-relations";
+import { useRelations, type RelationSortField, type SortDir } from "@/hooks/use-relations";
 import { formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+
+function SortHeader({
+  label,
+  field,
+  activeField,
+  direction,
+  onToggle,
+}: {
+  label: string;
+  field: RelationSortField;
+  activeField: RelationSortField;
+  direction: SortDir;
+  onToggle: (field: RelationSortField) => void;
+}) {
+  const active = activeField === field;
+  const Icon = active ? (direction === "asc" ? ChevronUp : ChevronDown) : ArrowUpDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <span>{label}</span>
+      <Icon className={`h-3.5 w-3.5 ${active ? "opacity-100" : "opacity-50"}`} />
+    </button>
+  );
+}
 
 export default function RelatiesPage() {
   const [search, setSearch] = useState("");
   const [contactType, setContactType] = useState("");
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<RelationSortField>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const toggleSort = (field: RelationSortField) => {
+    if (sortBy === field) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      // Datumkolommen openen logischer op nieuwste eerst.
+      setSortDir(field === "created_at" ? "desc" : "asc");
+    }
+    setPage(1);
+  };
 
   const { data, isLoading, isError, error, refetch } = useRelations({
     page,
     search: search || undefined,
     contact_type: contactType || undefined,
+    sort_by: sortBy,
+    sort_dir: sortDir,
   });
 
   return (
@@ -199,17 +246,41 @@ export default function RelatiesPage() {
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Relatie
+                  <th className="px-4 py-3.5 text-left">
+                    <SortHeader
+                      label="Relatie"
+                      field="name"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Contact
+                  <th className="px-4 py-3.5 text-left">
+                    <SortHeader
+                      label="Contact"
+                      field="email"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
-                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Plaats
+                  <th className="hidden lg:table-cell px-4 py-3.5 text-left">
+                    <SortHeader
+                      label="Plaats"
+                      field="visit_city"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
-                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Aangemaakt
+                  <th className="hidden md:table-cell px-4 py-3.5 text-left">
+                    <SortHeader
+                      label="Aangemaakt"
+                      field="created_at"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
                   <th className="px-4 py-3.5 w-10" />
                 </tr>

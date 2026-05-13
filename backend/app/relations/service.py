@@ -13,6 +13,15 @@ from app.shared.exceptions import ConflictError, NotFoundError
 # ── Contact CRUD ─────────────────────────────────────────────────────────────
 
 
+_SORTABLE_CONTACT_COLUMNS = {
+    "name": Contact.name,
+    "contact_type": Contact.contact_type,
+    "visit_city": Contact.visit_city,
+    "email": Contact.email,
+    "created_at": Contact.created_at,
+}
+
+
 async def list_contacts(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -22,8 +31,10 @@ async def list_contacts(
     contact_type: str | None = None,
     search: str | None = None,
     is_active: bool = True,
+    sort_by: str = "name",
+    sort_dir: str = "asc",
 ) -> tuple[list[Contact], int]:
-    """List contacts with optional filtering and pagination.
+    """List contacts with optional filtering, sorting and pagination.
 
     Returns: (contacts, total_count)
     """
@@ -50,8 +61,16 @@ async def list_contacts(
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar_one()
 
-    # Apply pagination
-    query = query.order_by(Contact.name).offset((page - 1) * per_page).limit(per_page)
+    # Sortering met whitelist — onbekende kolom valt terug op naam.
+    sort_col = _SORTABLE_CONTACT_COLUMNS.get(sort_by, Contact.name)
+    direction = sort_col.desc() if sort_dir == "desc" else sort_col.asc()
+    # Secundaire sortering op naam zodat rijen met gelijke sorteer-waarde
+    # (bv. lege plaats, identieke datum) consistent ordenen.
+    query = (
+        query.order_by(direction.nulls_last(), Contact.name.asc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
 
     result = await db.execute(query)
     contacts = list(result.scalars().all())
@@ -122,7 +141,48 @@ async def delete_contact(
     tenant_id: uuid.UUID,
     contact_id: uuid.UUID,
 ) -> None:
-    """Soft-delete a contact by setting is_active=False."""
+    """Soft-delete a contact by setting is_active=False.
+
+    DF138-09: blokkeer delete als de relatie nog gekoppeld is aan actieve
+    dossiers. Soft-delete alleen verbergt de relatie uit zoek/lijst, maar
+    in een dossier blijft de partij zichtbaar via de FK — dat is verwarrend:
+    de gebruiker drukt 'Verwijderen' en denkt 'het werkt niet'. Beter
+    duidelijke melding teruggeven zodat eerst de koppeling wordt opgelost.
+    """
+    from app.cases.models import Case, CaseParty
+
+    # Tel actieve dossiers waar deze relatie cliënt of wederpartij is
+    case_link_count = await db.scalar(
+        select(func.count())
+        .select_from(Case)
+        .where(
+            Case.tenant_id == tenant_id,
+            Case.is_active.is_(True),
+            or_(
+                Case.client_id == contact_id,
+                Case.opposing_party_id == contact_id,
+            ),
+        )
+    )
+    # Plus tel actieve dossiers via CaseParty (extra partijen, bv. advocaat)
+    party_link_count = await db.scalar(
+        select(func.count(func.distinct(CaseParty.case_id)))
+        .select_from(CaseParty)
+        .join(Case, CaseParty.case_id == Case.id)
+        .where(
+            CaseParty.tenant_id == tenant_id,
+            CaseParty.contact_id == contact_id,
+            Case.is_active.is_(True),
+        )
+    )
+    total_links = (case_link_count or 0) + (party_link_count or 0)
+    if total_links > 0:
+        dossier_woord = "dossier" if total_links == 1 else "dossiers"
+        raise ConflictError(
+            f"Deze relatie is nog gekoppeld aan {total_links} actief {dossier_woord}. "
+            f"Sluit eerst het dossier of vervang de partij voordat je de relatie verwijdert."
+        )
+
     contact = await get_contact(db, tenant_id, contact_id)
     contact.is_active = False
     await db.flush()

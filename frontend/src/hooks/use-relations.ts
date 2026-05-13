@@ -94,23 +94,32 @@ interface ContactCreateInput {
   notes?: string;
 }
 
+export type RelationSortField = "name" | "contact_type" | "visit_city" | "email" | "created_at";
+export type SortDir = "asc" | "desc";
+
 export function useRelations(params?: {
   page?: number;
   per_page?: number;
   search?: string;
   contact_type?: string;
+  sort_by?: RelationSortField;
+  sort_dir?: SortDir;
 }) {
   const page = params?.page ?? 1;
   const per_page = params?.per_page ?? 20;
   const search = params?.search ?? "";
   const contact_type = params?.contact_type ?? "";
+  const sort_by: RelationSortField = params?.sort_by ?? "name";
+  const sort_dir: SortDir = params?.sort_dir ?? "asc";
 
   return useQuery<PaginatedContacts>({
-    queryKey: ["relations", { page, per_page, search, contact_type }],
+    queryKey: ["relations", { page, per_page, search, contact_type, sort_by, sort_dir }],
     queryFn: async () => {
       const queryParams = new URLSearchParams({
         page: String(page),
         per_page: String(per_page),
+        sort_by,
+        sort_dir,
       });
       if (search) queryParams.set("search", search);
       if (contact_type) queryParams.set("contact_type", contact_type);
@@ -193,7 +202,16 @@ export function useDeleteRelation() {
       const res = await api(`/api/relations/${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed to delete relation");
+      if (!res.ok) {
+        let detail = "Verwijderen mislukt";
+        try {
+          const body = await res.json();
+          if (typeof body?.detail === "string") detail = body.detail;
+        } catch {
+          // body niet JSON — gebruik generieke melding
+        }
+        throw new Error(detail);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["relations"] });

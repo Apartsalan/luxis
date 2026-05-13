@@ -40,10 +40,15 @@ async def list_contacts(
     contact_type: str | None = Query(default=None, pattern="^(company|person)$"),
     search: str | None = Query(default=None),
     is_active: bool = Query(default=True),
+    sort_by: str = Query(
+        default="name",
+        pattern="^(name|contact_type|visit_city|email|created_at)$",
+    ),
+    sort_dir: str = Query(default="asc", pattern="^(asc|desc)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List contacts with pagination and filtering."""
+    """List contacts with pagination, filtering and sorting."""
     contacts, total = await service.list_contacts(
         db,
         current_user.tenant_id,
@@ -52,6 +57,8 @@ async def list_contacts(
         contact_type=contact_type,
         search=search,
         is_active=is_active,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
     )
 
     return PaginatedResponse(

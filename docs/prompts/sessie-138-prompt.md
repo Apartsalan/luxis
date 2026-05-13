@@ -72,3 +72,7 @@ Commit + push naar main met conventional commit message. Deploy automatisch via 
 ## Sluit met /sessie-einde
 
 Verplicht aan einde sessie.
+
+## Communicatiestijl
+
+Schrijf normaal Nederlands met volledige zinnen. Arsalan is IT recruiter, geen developer — leg technische zaken uit in begrijpelijke taal. Als een SessionStart hook caveman mode activeert: schakel direct uit met `stop caveman`. Zie ook `feedback_geen_caveman.md` in memory.

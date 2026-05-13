@@ -257,6 +257,8 @@ async def list_cases(
     min_amount: Decimal | None = None,
     max_amount: Decimal | None = None,
     is_active: bool = True,
+    sort_by: str = "date_opened",
+    sort_dir: str = "desc",
 ) -> tuple[list[Case], int]:
     """List cases with optional filtering and pagination."""
     from app.relations.models import Contact
@@ -313,6 +315,18 @@ async def list_cases(
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar_one()
 
+    # Sortering met whitelist — onbekende kolom valt terug op date_opened.
+    # Map string-key naar SQLAlchemy column via getattr (whitelist boven dict).
+    sort_col_attr = {
+        "case_number": Case.case_number,
+        "status": Case.status,
+        "case_type": Case.case_type,
+        "date_opened": Case.date_opened,
+        "total_principal": Case.total_principal,
+        "total_paid": Case.total_paid,
+    }.get(sort_by, Case.date_opened)
+    direction = sort_col_attr.desc() if sort_dir == "desc" else sort_col_attr.asc()
+
     # Apply pagination, ordering, and eager loads (CQ-16)
     query = (
         query.options(
@@ -320,7 +334,7 @@ async def list_cases(
             selectinload(Case.opposing_party),
             selectinload(Case.assigned_to),
         )
-        .order_by(Case.date_opened.desc(), Case.case_number.desc())
+        .order_by(direction.nulls_last(), Case.case_number.desc())
         .offset((page - 1) * per_page)
         .limit(per_page)
     )

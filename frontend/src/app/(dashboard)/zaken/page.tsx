@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Plus,
   Search,
@@ -17,8 +18,11 @@ import {
   X,
   Loader2,
   Trash2,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
 } from "lucide-react";
-import { useCases } from "@/hooks/use-cases";
+import { useCases, type CaseSortField, type CaseSortDir } from "@/hooks/use-cases";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useModules } from "@/hooks/use-modules";
 import { useUsers } from "@/hooks/use-users";
@@ -35,7 +39,60 @@ import { QueryError } from "@/components/query-error";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
+const CASE_SORT_FIELDS: ReadonlySet<CaseSortField> = new Set([
+  "case_number",
+  "status",
+  "case_type",
+  "date_opened",
+  "total_principal",
+  "total_paid",
+]);
+
+function CaseSortHeader({
+  label,
+  field,
+  activeField,
+  direction,
+  onToggle,
+  align = "left",
+}: {
+  label: string;
+  field: CaseSortField;
+  activeField: CaseSortField;
+  direction: CaseSortDir;
+  onToggle: (field: CaseSortField) => void;
+  align?: "left" | "right";
+}) {
+  const active = activeField === field;
+  const Icon = active ? (direction === "asc" ? ChevronUp : ChevronDown) : ArrowUpDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+      } ${align === "right" ? "flex-row-reverse" : ""}`}
+    >
+      <span>{label}</span>
+      <Icon className={`h-3.5 w-3.5 ${active ? "opacity-100" : "opacity-50"}`} />
+    </button>
+  );
+}
+
 export default function ZakenPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // DF139-sort-cases: sort_by/sort_dir uit URL lezen zodat browser-back en
+  // directe links de sortering bewaren. Default 'date_opened desc' (=oude
+  // gedrag voor backwards-compat).
+  const sortByRaw = searchParams.get("sort_by") as CaseSortField | null;
+  const sortDirRaw = searchParams.get("sort_dir") as CaseSortDir | null;
+  const sortBy: CaseSortField =
+    sortByRaw && CASE_SORT_FIELDS.has(sortByRaw) ? sortByRaw : "date_opened";
+  const sortDir: CaseSortDir = sortDirRaw === "asc" ? "asc" : "desc";
+
   const [search, setSearch] = useState("");
   const [caseType, setCaseType] = useState("");
   const [status, setStatus] = useState("");
@@ -53,6 +110,24 @@ export default function ZakenPage() {
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: users } = useUsers();
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
+
+  const toggleSort = (field: CaseSortField) => {
+    let newDir: CaseSortDir;
+    if (sortBy === field) {
+      newDir = sortDir === "asc" ? "desc" : "asc";
+    } else {
+      // Numerieke + datum-kolommen openen logischer op grootste/nieuwste eerst.
+      newDir =
+        field === "date_opened" || field === "total_principal" || field === "total_paid"
+          ? "desc"
+          : "asc";
+    }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sort_by", field);
+    params.set("sort_dir", newDir);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    setPage(1);
+  };
 
   // Build status labels from workflow API, fallback to hardcoded
   const dynamicStatusLabels: Record<string, string> = workflowStatuses
@@ -76,6 +151,8 @@ export default function ZakenPage() {
     assigned_to_id: assignedTo || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
+    sort_by: sortBy,
+    sort_dir: sortDir,
   });
 
   const activeFilters = [caseType, status, assignedTo, dateFrom, dateTo].filter(Boolean).length;
@@ -506,14 +583,32 @@ export default function ZakenPage() {
                       {allSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4" />}
                     </button>
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Dossier
+                  <th className="px-4 py-3.5 text-left">
+                    <CaseSortHeader
+                      label="Dossier"
+                      field="case_number"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Type
+                  <th className="px-4 py-3.5 text-left">
+                    <CaseSortHeader
+                      label="Type"
+                      field="case_type"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Status
+                  <th className="px-4 py-3.5 text-left">
+                    <CaseSortHeader
+                      label="Status"
+                      field="status"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Client
@@ -523,16 +618,29 @@ export default function ZakenPage() {
                   </th>
                   {hasModule("incasso") && (
                     <>
-                      <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Hoofdsom
+                      <th className="px-4 py-3.5 text-right">
+                        <CaseSortHeader
+                          label="Hoofdsom"
+                          field="total_principal"
+                          activeField={sortBy}
+                          direction={sortDir}
+                          onToggle={toggleSort}
+                          align="right"
+                        />
                       </th>
                       <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Openstaand
                       </th>
                     </>
                   )}
-                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Geopend
+                  <th className="px-4 py-3.5 text-left">
+                    <CaseSortHeader
+                      label="Geopend"
+                      field="date_opened"
+                      activeField={sortBy}
+                      direction={sortDir}
+                      onToggle={toggleSort}
+                    />
                   </th>
                   <th className="px-4 py-3.5 w-10" />
                 </tr>

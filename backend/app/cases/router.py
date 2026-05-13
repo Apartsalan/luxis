@@ -50,6 +50,8 @@ async def list_cases(
     min_amount: Decimal | None = Query(default=None, ge=0),
     max_amount: Decimal | None = Query(default=None, ge=0),
     is_active: bool = Query(default=True),
+    sort_by: str = Query(default="date_opened"),
+    sort_dir: str = Query(default="desc", pattern="^(asc|desc)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -69,6 +71,8 @@ async def list_cases(
         min_amount=min_amount,
         max_amount=max_amount,
         is_active=is_active,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
     )
 
     return PaginatedResponse(

@@ -93,6 +93,15 @@ export interface CaseCreateInput {
   debtor_notes?: string;
 }
 
+export type CaseSortField =
+  | "case_number"
+  | "status"
+  | "case_type"
+  | "date_opened"
+  | "total_principal"
+  | "total_paid";
+export type CaseSortDir = "asc" | "desc";
+
 export function useCases(params?: {
   page?: number;
   per_page?: number;
@@ -105,6 +114,8 @@ export function useCases(params?: {
   date_to?: string;
   min_amount?: number;
   max_amount?: number;
+  sort_by?: CaseSortField;
+  sort_dir?: CaseSortDir;
 }) {
   const page = params?.page ?? 1;
   const per_page = params?.per_page ?? 20;
@@ -117,13 +128,17 @@ export function useCases(params?: {
   const date_to = params?.date_to ?? "";
   const min_amount = params?.min_amount;
   const max_amount = params?.max_amount;
+  const sort_by: CaseSortField = params?.sort_by ?? "date_opened";
+  const sort_dir: CaseSortDir = params?.sort_dir ?? "desc";
 
   return useQuery<PaginatedCases>({
-    queryKey: ["cases", { page, per_page, case_type, status, search, client_id, assigned_to_id, date_from, date_to, min_amount, max_amount }],
+    queryKey: ["cases", { page, per_page, case_type, status, search, client_id, assigned_to_id, date_from, date_to, min_amount, max_amount, sort_by, sort_dir }],
     queryFn: async () => {
       const queryParams = new URLSearchParams({
         page: String(page),
         per_page: String(per_page),
+        sort_by,
+        sort_dir,
       });
       if (case_type) queryParams.set("case_type", case_type);
       if (status) queryParams.set("status", status);

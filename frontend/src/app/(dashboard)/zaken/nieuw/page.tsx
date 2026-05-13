@@ -67,6 +67,8 @@ interface InlineContact {
   postal_address: string;
   postal_postcode: string;
   postal_city: string;
+  linked_person_name: string;
+  linked_person_email: string;
 }
 
 const EMPTY_INLINE_CONTACT: InlineContact = {
@@ -83,6 +85,8 @@ const EMPTY_INLINE_CONTACT: InlineContact = {
   postal_address: "",
   postal_postcode: "",
   postal_city: "",
+  linked_person_name: "",
+  linked_person_email: "",
 };
 
 // ── Stepper Component ────────────────────────────────────────────────────────
@@ -381,8 +385,12 @@ function NieuweZaakPage() {
         contact_type: data.contact_type,
         name: data.name,
       };
-      // Only include non-empty optional fields
-      if (data.contact_person) payload.contact_person = data.contact_person;
+      // Only include non-empty optional fields. DF138-11: bij bedrijf-relaties
+      // gebruikt de wizard linked_person_name als bron voor het t.a.v.-tekstveld
+      // én voor de gekoppelde Person — gebruiker hoeft de naam maar één keer
+      // in te tikken.
+      const contactPersonText = (data.contact_person || data.linked_person_name || "").trim();
+      if (contactPersonText) payload.contact_person = contactPersonText;
       if (data.email) payload.email = data.email;
       if (data.phone) payload.phone = data.phone;
       if (data.kvk_number) payload.kvk_number = data.kvk_number;
@@ -395,6 +403,37 @@ function NieuweZaakPage() {
       if (data.postal_city) payload.postal_city = data.postal_city;
 
       const result = await createRelation.mutateAsync(payload as any);
+
+      // DF138-11: ingebedde contactpersoon. Wanneer een bedrijf-relatie is
+      // aangemaakt met daaronder een contactpersoon, maak dan direct ook de
+      // Person-relatie aan en leg de ContactLink — Lisanne hoeft niet eerst
+      // op te slaan en daarna apart een persoon te koppelen.
+      if (data.contact_type === "company" && data.linked_person_name.trim()) {
+        try {
+          const personPayload: Record<string, unknown> = {
+            contact_type: "person",
+            name: data.linked_person_name.trim(),
+          };
+          if (data.linked_person_email.trim()) {
+            personPayload.email = data.linked_person_email.trim();
+          }
+          const personResult = await createRelation.mutateAsync(personPayload as any);
+          await createContactLink.mutateAsync({
+            person_id: personResult.id,
+            company_id: result.id,
+            role_at_company: null,
+          });
+        } catch (linkErr: unknown) {
+          // Bedrijf is wel aangemaakt — meld alleen de gefaalde sub-actie en
+          // ga door met selectie zodat de gebruiker niet vastloopt.
+          toast.error(
+            linkErr instanceof Error
+              ? `Bedrijf aangemaakt, maar contactpersoon koppelen mislukt: ${linkErr.message}`
+              : "Bedrijf aangemaakt, maar contactpersoon koppelen mislukt"
+          );
+        }
+      }
+
       if (role === "client") {
         updateField("client_id", result.id);
         setClientSearch(result.name);
@@ -550,6 +589,8 @@ function NieuweZaakPage() {
           postal_address: data.debtor_postal_address || "",
           postal_postcode: data.debtor_postal_postcode || "",
           postal_city: data.debtor_postal_city || "",
+          linked_person_name: "",
+          linked_person_email: "",
         });
         if (data.debtor_address || data.debtor_postcode || data.debtor_postal_address) {
           setShowOpponentDetails(true);
@@ -573,6 +614,8 @@ function NieuweZaakPage() {
           postal_address: data.creditor_postal_address || "",
           postal_postcode: data.creditor_postal_postcode || "",
           postal_city: data.creditor_postal_city || "",
+          linked_person_name: "",
+          linked_person_email: "",
         });
         if (data.creditor_address || data.creditor_postcode || data.creditor_postal_address) {
           setShowClientDetails(true);
@@ -1156,18 +1199,37 @@ function NieuweZaakPage() {
                         />
                       </div>
                       {newClient.contact_type === "company" && (
-                        <input
-                          type="text"
-                          placeholder="Contactpersoon (t.a.v.)"
-                          value={newClient.contact_person}
-                          onChange={(e) =>
-                            setNewClient((c) => ({
-                              ...c,
-                              contact_person: e.target.value,
-                            }))
-                          }
-                          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                        />
+                        <div className="space-y-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            Contactpersoon (optioneel) — wordt direct gekoppeld aan het bedrijf
+                          </p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <input
+                              type="text"
+                              placeholder="Naam contactpersoon"
+                              value={newClient.linked_person_name}
+                              onChange={(e) =>
+                                setNewClient((c) => ({
+                                  ...c,
+                                  linked_person_name: e.target.value,
+                                }))
+                              }
+                              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                            />
+                            <input
+                              type="email"
+                              placeholder="E-mail contactpersoon"
+                              value={newClient.linked_person_email}
+                              onChange={(e) =>
+                                setNewClient((c) => ({
+                                  ...c,
+                                  linked_person_email: e.target.value,
+                                }))
+                              }
+                              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                            />
+                          </div>
+                        </div>
                       )}
                       <InlineContactDetails
                         data={newClient}
@@ -1407,18 +1469,37 @@ function NieuweZaakPage() {
                         />
                       </div>
                       {newOpponent.contact_type === "company" && (
-                        <input
-                          type="text"
-                          placeholder="Contactpersoon (t.a.v.)"
-                          value={newOpponent.contact_person}
-                          onChange={(e) =>
-                            setNewOpponent((c) => ({
-                              ...c,
-                              contact_person: e.target.value,
-                            }))
-                          }
-                          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                        />
+                        <div className="space-y-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            Contactpersoon (optioneel) — wordt direct gekoppeld aan het bedrijf
+                          </p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <input
+                              type="text"
+                              placeholder="Naam contactpersoon"
+                              value={newOpponent.linked_person_name}
+                              onChange={(e) =>
+                                setNewOpponent((c) => ({
+                                  ...c,
+                                  linked_person_name: e.target.value,
+                                }))
+                              }
+                              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                            />
+                            <input
+                              type="email"
+                              placeholder="E-mail contactpersoon"
+                              value={newOpponent.linked_person_email}
+                              onChange={(e) =>
+                                setNewOpponent((c) => ({
+                                  ...c,
+                                  linked_person_email: e.target.value,
+                                }))
+                              }
+                              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                            />
+                          </div>
+                        </div>
                       )}
                       <InlineContactDetails
                         data={newOpponent}
@@ -1612,18 +1693,37 @@ function NieuweZaakPage() {
                         />
                       </div>
                       {newLawyer.contact_type === "company" && (
-                        <input
-                          type="text"
-                          placeholder="Contactpersoon (behandelend advocaat)"
-                          value={newLawyer.contact_person}
-                          onChange={(e) =>
-                            setNewLawyer((c) => ({
-                              ...c,
-                              contact_person: e.target.value,
-                            }))
-                          }
-                          className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                        />
+                        <div className="space-y-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            Behandelend advocaat (optioneel) — wordt direct gekoppeld aan het kantoor
+                          </p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <input
+                              type="text"
+                              placeholder="Naam advocaat"
+                              value={newLawyer.linked_person_name}
+                              onChange={(e) =>
+                                setNewLawyer((c) => ({
+                                  ...c,
+                                  linked_person_name: e.target.value,
+                                }))
+                              }
+                              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                            />
+                            <input
+                              type="email"
+                              placeholder="E-mail advocaat"
+                              value={newLawyer.linked_person_email}
+                              onChange={(e) =>
+                                setNewLawyer((c) => ({
+                                  ...c,
+                                  linked_person_email: e.target.value,
+                                }))
+                              }
+                              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                            />
+                          </div>
+                        </div>
                       )}
                       <InlineContactDetails
                         data={newLawyer}
@@ -1862,14 +1962,28 @@ function NieuweZaakPage() {
                 Rente-instellingen
               </h2>
 
-              {selectedClient?.default_interest_type && (
+              {selectedClient?.default_interest_type ? (
                 <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary">
                   <span className="font-medium">Standaard rente van klant:</span>{" "}
                   {{ statutory: "Wettelijke rente", commercial: "Handelsrente", government: "Overheidsrente", contractual: "Contractuele rente" }[selectedClient.default_interest_type] ?? selectedClient.default_interest_type}
                   {selectedClient.default_interest_type === "contractual" && selectedClient.default_contractual_rate != null && ` (${selectedClient.default_contractual_rate}%)`}
                   . Je kan hieronder afwijken voor dit dossier.
                 </div>
-              )}
+              ) : selectedClient ? (
+                <div className="rounded-lg bg-muted/40 border border-border px-3 py-2 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Geen rente-default op deze klant.</span>{" "}
+                  Dit dossier valt terug op wettelijke rente. Pas hieronder aan
+                  voor dit dossier, of stel een standaard rente in op{" "}
+                  <Link
+                    href={`/relaties/${selectedClient.id}`}
+                    target="_blank"
+                    className="underline hover:text-foreground"
+                  >
+                    de klantkaart
+                  </Link>
+                  {" "}(dit is iets anders dan de incassokosten hieronder).
+                </div>
+              ) : null}
               {(selectedClient?.default_bik_override != null || selectedClient?.default_bik_override_percentage != null) && (
                 <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
                   <span className="font-medium">Standaard incassokosten van klant:</span>{" "}

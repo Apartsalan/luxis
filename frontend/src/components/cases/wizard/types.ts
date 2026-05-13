@@ -30,6 +30,13 @@ export interface InlineContact {
   postal_address: string;
   postal_postcode: string;
   postal_city: string;
+  // DF138-11: ingebedde contactpersoon. Wanneer contact_type=company en
+  // linked_person_name is gevuld, maakt de wizard direct ook een Person
+  // contact aan en koppelt hem aan dit bedrijf via ContactLink — zodat de
+  // gebruiker niet eerst de relatie hoeft op te slaan en daarna handmatig
+  // een contactpersoon hoeft toe te voegen.
+  linked_person_name: string;
+  linked_person_email: string;
 }
 
 export const EMPTY_INLINE_CONTACT: InlineContact = {
@@ -46,4 +53,6 @@ export const EMPTY_INLINE_CONTACT: InlineContact = {
   postal_address: "",
   postal_postcode: "",
   postal_city: "",
+  linked_person_name: "",
+  linked_person_email: "",
 };

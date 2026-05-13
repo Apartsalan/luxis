@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Plus,
   Search,
@@ -60,24 +61,45 @@ function SortHeader({
   );
 }
 
+const SORT_FIELDS: ReadonlySet<RelationSortField> = new Set([
+  "name",
+  "contact_type",
+  "visit_city",
+  "email",
+  "created_at",
+]);
+
 export default function RelatiesPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // DF138-sort-persist: sortBy/sortDir uit URL lezen zodat browser-back en
+  // directe links de sortering bewaren. Standaard 'name asc' als geen URL.
+  const sortByRaw = searchParams.get("sort_by") as RelationSortField | null;
+  const sortDirRaw = searchParams.get("sort_dir") as SortDir | null;
+  const sortBy: RelationSortField = sortByRaw && SORT_FIELDS.has(sortByRaw) ? sortByRaw : "name";
+  const sortDir: SortDir = sortDirRaw === "desc" ? "desc" : "asc";
+
   const [search, setSearch] = useState("");
   const [contactType, setContactType] = useState("");
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<RelationSortField>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const toggleSort = (field: RelationSortField) => {
+    let newDir: SortDir;
     if (sortBy === field) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
+      newDir = sortDir === "asc" ? "desc" : "asc";
     } else {
-      setSortBy(field);
       // Datumkolommen openen logischer op nieuwste eerst.
-      setSortDir(field === "created_at" ? "desc" : "asc");
+      newDir = field === "created_at" ? "desc" : "asc";
     }
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sort_by", field);
+    params.set("sort_dir", newDir);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setPage(1);
   };
 

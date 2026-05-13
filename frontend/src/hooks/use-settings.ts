@@ -21,6 +21,7 @@ export interface TenantDetail {
   phone: string | null;
   email: string | null;
   modules_enabled: string[];
+  pipeline_auto_drafts_enabled: boolean;
 }
 
 export interface UpdateProfileData {
@@ -47,6 +48,7 @@ export interface UpdateTenantData {
   phone?: string | null;
   email?: string | null;
   modules_enabled?: string[];
+  pipeline_auto_drafts_enabled?: boolean;
 }
 
 // ── Hooks ────────────────────────────────────────────────────────────────────

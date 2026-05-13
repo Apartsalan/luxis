@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GripVertical, ToggleLeft, ToggleRight, ChevronRight, Clock, AlertTriangle, GitBranch } from "lucide-react";
+import { GripVertical, ToggleLeft, ToggleRight, ChevronRight, Clock, AlertTriangle, GitBranch, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   useWorkflowStatuses,
@@ -14,6 +14,7 @@ import {
   type WorkflowStatus as WFStatus,
   type WorkflowRule,
 } from "@/hooks/use-workflow";
+import { useTenant, useUpdateTenant } from "@/hooks/use-settings";
 
 const PHASE_BADGE_CLASSES: Record<string, string> = {
   minnelijk: "bg-blue-50 text-blue-700 ring-blue-600/20",
@@ -87,22 +88,87 @@ export function WorkflowTab() {
         <StatusesSection statuses={statuses ?? []} transitions={transitions ?? []} />
       )}
       {activeSection === "rules" && (
-        <RulesSection
-          rules={rules ?? []}
-          statuses={statuses ?? []}
-          onToggleRule={(id, active) =>
-            updateRule.mutate(
-              { id, data: { is_active: active } },
-              {
-                onSuccess: () =>
-                  toast.success(
-                    active ? "Regel geactiveerd" : "Regel gedeactiveerd"
-                  ),
-              }
-            )
-          }
-        />
+        <>
+          <AutoDraftsToggle />
+          <RulesSection
+            rules={rules ?? []}
+            statuses={statuses ?? []}
+            onToggleRule={(id, active) =>
+              updateRule.mutate(
+                { id, data: { is_active: active } },
+                {
+                  onSuccess: () =>
+                    toast.success(
+                      active ? "Regel geactiveerd" : "Regel gedeactiveerd"
+                    ),
+                }
+              )
+            }
+          />
+        </>
       )}
+    </div>
+  );
+}
+
+// ── Auto-drafts toggle ──────────────────────────────────────────────────────
+
+function AutoDraftsToggle() {
+  const { data: tenant, isLoading } = useTenant();
+  const updateTenant = useUpdateTenant();
+
+  if (isLoading || !tenant) {
+    return <div className="rounded-xl border border-border bg-card p-6 h-24 skeleton" />;
+  }
+
+  const enabled = tenant.pipeline_auto_drafts_enabled;
+
+  const handleToggle = () => {
+    const next = !enabled;
+    updateTenant.mutate(
+      { pipeline_auto_drafts_enabled: next },
+      {
+        onSuccess: () =>
+          toast.success(
+            next
+              ? "Automatische concepten ingeschakeld"
+              : "Automatische concepten uitgeschakeld"
+          ),
+        onError: (e) =>
+          toast.error(e instanceof Error ? e.message : "Bijwerken mislukt"),
+      }
+    );
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">
+              Automatische AI-concepten voor incasso-pipeline
+            </h2>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Genereer automatisch een conceptbrief zodra een dossier klaar is voor
+            een volgende incassostap. De scheduler draait elke ochtend en zet
+            klaar wat verstuurd kan worden — jij hoeft alleen nog te reviewen.
+          </p>
+        </div>
+        <button
+          onClick={handleToggle}
+          disabled={updateTenant.isPending}
+          className="shrink-0 mt-0.5 disabled:opacity-50"
+          title={enabled ? "Uitschakelen" : "Inschakelen"}
+        >
+          {enabled ? (
+            <ToggleRight className="h-7 w-7 text-primary" />
+          ) : (
+            <ToggleLeft className="h-7 w-7 text-muted-foreground" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }

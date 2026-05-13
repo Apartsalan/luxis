@@ -23,6 +23,7 @@ class TenantSettingsResponse(BaseModel):
     phone: str | None = None
     email: str | None = None
     modules_enabled: list[str] = []
+    pipeline_auto_drafts_enabled: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -41,3 +42,4 @@ class TenantSettingsUpdate(BaseModel):
     phone: str | None = None
     email: str | None = None
     modules_enabled: list[str] | None = None
+    pipeline_auto_drafts_enabled: bool | None = None

@@ -777,7 +777,7 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
       },
       {
         onSuccess: () => {
-          toast.success("Overgang toegevoegd");
+          toast.success("Regel toegevoegd");
           setShowAddForm(false);
           setNewTransition({ trigger_type: "timeout", to_step_id: "", days: 14, is_default: false, label: "" });
         },
@@ -786,9 +786,9 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
   };
 
   const handleDelete = async (t: StepTransition) => {
-    if (!await confirm({ title: "Overgang verwijderen", description: `"${t.label || t.to_step_name}" verwijderen?`, variant: "destructive", confirmText: "Verwijderen" })) return;
+    if (!await confirm({ title: "Regel verwijderen", description: `"${t.label || t.to_step_name}" verwijderen?`, variant: "destructive", confirmText: "Verwijderen" })) return;
     deleteTransition.mutate(t.id, {
-      onSuccess: () => toast.success("Overgang verwijderd"),
+      onSuccess: () => toast.success("Regel verwijderd"),
     });
   };
 
@@ -800,15 +800,15 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
           <ArrowRight className="h-3.5 w-3.5" />
-          Overgangen vanuit deze stap
+          Automatische regels
         </div>
         {(!transitions || transitions.length === 0) && !isLoading && (
           <button
-            onClick={() => seedTransitions.mutate(undefined, { onSuccess: () => toast.success("Standaard overgangen aangemaakt") })}
+            onClick={() => seedTransitions.mutate(undefined, { onSuccess: () => toast.success("Standaard regels aangemaakt") })}
             disabled={seedTransitions.isPending}
             className="text-xs text-primary hover:underline disabled:opacity-50"
           >
-            {seedTransitions.isPending ? "Bezig..." : "Standaard overgangen aanmaken"}
+            {seedTransitions.isPending ? "Bezig..." : "Standaard regels aanmaken"}
           </button>
         )}
       </div>
@@ -845,7 +845,7 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
           ))}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground italic py-1">Geen overgangen geconfigureerd.</p>
+        <p className="text-xs text-muted-foreground italic py-1">Geen regels geconfigureerd.</p>
       )}
 
       {/* Add form */}
@@ -898,7 +898,7 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
                 onChange={(e) => setNewTransition((f) => ({ ...f, is_default: e.target.checked }))}
                 className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
               />
-              <span className="text-xs text-foreground">Standaard overgang</span>
+              <span className="text-xs text-foreground">Standaardregel</span>
             </label>
             <input
               type="text"
@@ -931,7 +931,7 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
           className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary hover:underline"
         >
           <Plus className="h-3 w-3" />
-          Overgang toevoegen
+          Regel toevoegen
         </button>
       )}
     </div>

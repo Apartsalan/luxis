@@ -637,9 +637,9 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 ### Geplande verbeteringen (P2, niet bouwen tot expliciet groen licht)
 
 - **Mail-pagina dossier-zoekveld in compose-dialog** — Bovenaan compose-dialog zoekveld voor dossier (op cliëntnaam, debiteurnaam, dossiernummer, email). Na keuze laadt sjablonen + bestanden + AV + eerdere correspondentie van dat dossier. Free-compose blijft mogelijk bij leeg laten. Pre-fill bij geselecteerde gelinkte mail. Reply auto-locked met ontkoppel-link. Patroon B uit onderzoek sessie 133 (Clio/MyCase). Werk: ~2 uur. Bron: `docs/lisanne-incasso-workflow.md` + onderzoek 12 advocatentools.
-- **Email-trigger detectie** — Inkomende mail van debiteur → auto status "Verweer beantwoorden" + AI draft via verweer-bibliotheek.
-- **Tenant-instelling UI** — `pipeline_auto_drafts_enabled` flag aan/uit per tenant via Instellingen-pagina.
-- **TransitionsSection vervangen** — UI in pipeline-page renamen naar "Automatische regels" paneel (cosmetic, sessie 131-restant).
+- ✅ **Email-trigger detectie** — Inkomende mail van debiteur → auto status "Verweer beantwoorden" + AI draft via verweer-bibliotheek. Gebouwd sessie 134.
+- ✅ **Tenant-instelling UI** — `pipeline_auto_drafts_enabled` flag aan/uit per tenant via Instellingen → Workflow → Automatiseringsregels. Gebouwd sessie 137.
+- ✅ **TransitionsSection vervangen** — UI in pipeline-page hernaamd naar "Automatische regels" paneel. Gebouwd sessie 137.
 
 **QA & Testdekking (sessie 28):**
 - ✅ **35 backend integration tests** — `test_incasso_pipeline.py`: deadline kleuren, email templates, auto-complete (BUG-29 regressie), auto-advance, batch preview, batch execute (met/zonder email, partial failure, edge cases), pipeline overview, queue counts. Alle 35 PASSED.

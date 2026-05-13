@@ -100,12 +100,17 @@ def _fill_invoice_rows(html: str, invoices: list[dict[str, Any]]) -> str:
     cell_style = 'style="padding:.100px .100px .100px .100px"'
 
     rows_iter = iter(invoices)
+    leftover_placeholders = False
 
     def _replace(match: re.Match[str]) -> str:
+        nonlocal leftover_placeholders
         try:
             inv = next(rows_iter)
         except StopIteration:
-            return match.group(0)
+            # DF138-23: niet meer factuur-data — markeer en strip later om
+            # geen lege placeholder-rijen in de uiteindelijke mail te tonen.
+            leftover_placeholders = True
+            return ""
         number = inv.get("number") or ""
         date = inv.get("date") or ""
         due = inv.get("due_date") or ""
@@ -130,7 +135,13 @@ def _fill_invoice_rows(html: str, invoices: list[dict[str, Any]]) -> str:
             "</tr>"
         )
 
-    return combined.sub(_replace, html)
+    html = combined.sub(_replace, html)
+    # Veiligheidsnet: als templates extra lege placeholders bevatten die niet
+    # door de iterator zijn vervangen, strip ze alsnog.
+    if leftover_placeholders:
+        html = re.sub(pattern_4cell, "", html, flags=re.DOTALL)
+        html = re.sub(pattern_5cell, "", html, flags=re.DOTALL)
+    return html
 
 
 _TD_STYLE = "padding:2px 6px;vertical-align:top"

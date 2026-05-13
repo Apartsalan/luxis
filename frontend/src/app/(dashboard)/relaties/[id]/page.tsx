@@ -104,6 +104,7 @@ export default function RelatieDetailPage() {
       name: contact.name || "",
       first_name: contact.first_name || "",
       last_name: contact.last_name || "",
+      salutation: contact.salutation || "unknown",
       date_of_birth: contact.date_of_birth || "",
       email: contact.email || "",
       phone: contact.phone || "",
@@ -148,6 +149,7 @@ export default function RelatieDetailPage() {
         data.last_name = editForm.last_name;
         data.name = `${editForm.first_name} ${editForm.last_name}`.trim();
         data.date_of_birth = editForm.date_of_birth || null;
+        data.salutation = editForm.salutation || "unknown";
       }
       data.email = editForm.email?.trim() || null;
       data.phone = editForm.phone?.trim() || null;

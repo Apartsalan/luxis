@@ -40,6 +40,13 @@ class Contact(TenantBase):
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # DF138-04: aanhef voor mail-generatie. 'mr' = heer, 'mrs' = mevrouw,
+    # 'unknown' = geen voorkeur → AI gebruikt "Geachte heer/mevrouw,".
+    # Alleen zinvol bij contact_type='person', maar veld geldt voor alle rows
+    # (default 'unknown') zodat het schema uniform blijft.
+    salutation: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="unknown", server_default="unknown"
+    )
 
     # Primary contact person (for companies: t.a.v. / aanspreekpunt)
     contact_person: Mapped[str | None] = mapped_column(String(255), nullable=True)

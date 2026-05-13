@@ -267,6 +267,9 @@ def render_template_html(
     kenmerk = raw_ref if raw_ref and raw_ref != case_number else ""
     client_name = str(client_data.get("name") or "")
     contact = debtor_data.get("contact_person") or ""
+    # DF138-04: salutation bepaalt of we "heer", "mevrouw" of "heer/mevrouw"
+    # gebruiken in de aanhef. Default 'unknown' → generieke aanhef zonder naam.
+    salutation = (debtor_data.get("salutation") or "unknown").lower()
 
     html = template_html
 
@@ -286,11 +289,24 @@ def render_template_html(
     html = html.replace("(invullen gegevens cliënt)", client_name or "(cliënt)")
     html = html.replace("(invullen gegevens client)", client_name or "(cliënt)")
 
-    # Aanhef met contactpersoon-naam (alleen als bekend)
-    greeting_text = f"Geachte heer/mevrouw {contact}" if contact else "Geachte heer/mevrouw"
-    if contact:
-        html = html.replace("Geachte heer mevrouw,", f"{greeting_text},")
-        html = html.replace("Geachte heer mevrouw", greeting_text)
+    # Aanhef: combineer salutation + contactpersoon-naam.
+    # - mr  + naam → "Geachte heer Seidony"
+    # - mrs + naam → "Geachte mevrouw Seidony"
+    # - unknown OF geen naam → "Geachte heer/mevrouw"
+    if salutation == "mr" and contact:
+        greeting_text = f"Geachte heer {contact}"
+    elif salutation == "mrs" and contact:
+        greeting_text = f"Geachte mevrouw {contact}"
+    elif contact:
+        # salutation onbekend maar wel naam → toch generiek (geen gok)
+        greeting_text = "Geachte heer/mevrouw"
+    else:
+        greeting_text = "Geachte heer/mevrouw"
+    # Vervang varianten van de template-aanhef
+    html = html.replace("Geachte heer mevrouw,", f"{greeting_text},")
+    html = html.replace("Geachte heer mevrouw", greeting_text)
+    html = html.replace("Geachte heer/mevrouw,", f"{greeting_text},")
+    html = html.replace("Geachte heer/mevrouw", greeting_text)
     # Twee templates (Verweer beantwoorden + Aankondiging faillissement) bevatten
     # geen "Geachte heer/mevrouw" in de HTML body — alleen een lone `,<br>` na
     # de Betreft-tabel. Injecteer greeting voor de eerste lone-comma in een span.

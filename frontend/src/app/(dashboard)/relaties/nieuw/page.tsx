@@ -18,6 +18,7 @@ export default function NieuweRelatiePage() {
     name: "",
     first_name: "",
     last_name: "",
+    salutation: "unknown" as "mr" | "mrs" | "unknown",
     email: "",
     phone: "",
     kvk_number: "",
@@ -113,6 +114,7 @@ export default function NieuweRelatiePage() {
       ...(contactType === "person" && {
         first_name: form.first_name,
         last_name: form.last_name,
+        salutation: form.salutation,
       }),
       ...(form.email && { email: form.email }),
       ...(form.phone && { phone: form.phone }),
@@ -229,38 +231,58 @@ export default function NieuweRelatiePage() {
               <FieldError field="name" />
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="rel-first_name" className="block text-sm font-medium text-foreground">
-                  Voornaam *
-                </label>
-                <input
-                  id="rel-first_name"
-                  type="text"
-                  required
-                  value={form.first_name}
-                  onChange={(e) => updateField("first_name", e.target.value)}
-                  onBlur={() => handleBlur("first_name")}
-                  className={getInputClass("first_name")}
-                />
-                <FieldError field="first_name" />
+            <>
+              <div className="grid gap-4 sm:grid-cols-[160px_1fr_1fr]">
+                <div>
+                  <label htmlFor="rel-salutation" className="block text-sm font-medium text-foreground">
+                    Aanhef
+                  </label>
+                  <select
+                    id="rel-salutation"
+                    value={form.salutation}
+                    onChange={(e) => updateField("salutation", e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="unknown">Onbekend</option>
+                    <option value="mr">De heer</option>
+                    <option value="mrs">Mevrouw</option>
+                  </select>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Gebruikt in mail-aanhef
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="rel-first_name" className="block text-sm font-medium text-foreground">
+                    Voornaam *
+                  </label>
+                  <input
+                    id="rel-first_name"
+                    type="text"
+                    required
+                    value={form.first_name}
+                    onChange={(e) => updateField("first_name", e.target.value)}
+                    onBlur={() => handleBlur("first_name")}
+                    className={getInputClass("first_name")}
+                  />
+                  <FieldError field="first_name" />
+                </div>
+                <div>
+                  <label htmlFor="rel-last_name" className="block text-sm font-medium text-foreground">
+                    Achternaam *
+                  </label>
+                  <input
+                    id="rel-last_name"
+                    type="text"
+                    required
+                    value={form.last_name}
+                    onChange={(e) => updateField("last_name", e.target.value)}
+                    onBlur={() => handleBlur("last_name")}
+                    className={getInputClass("last_name")}
+                  />
+                  <FieldError field="last_name" />
+                </div>
               </div>
-              <div>
-                <label htmlFor="rel-last_name" className="block text-sm font-medium text-foreground">
-                  Achternaam *
-                </label>
-                <input
-                  id="rel-last_name"
-                  type="text"
-                  required
-                  value={form.last_name}
-                  onChange={(e) => updateField("last_name", e.target.value)}
-                  onBlur={() => handleBlur("last_name")}
-                  className={getInputClass("last_name")}
-                />
-                <FieldError field="last_name" />
-              </div>
-            </div>
+            </>
           )}
 
           <div className="grid gap-4 sm:grid-cols-2">

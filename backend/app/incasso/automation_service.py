@@ -236,21 +236,25 @@ async def _resolve_contact_person(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     contact: Any,
-) -> str:
-    """Bepaal contactpersoon-naam voor in aanhef.
+) -> tuple[str, str]:
+    """Bepaal contactpersoon-achternaam + aanhef voor in mail-aanhef.
 
-    - Persoon-debiteur: eigen achternaam (of volledige naam).
-    - Bedrijf-debiteur: eerste actieve ContactLink.person achternaam,
-      explicit geladen via async query (lazy loading werkt niet in async
-      context — backend CLAUDE.md). Voorkeur rol "Contactpersoon".
-    - Anders (onbekend / geen link): leeg → AI gebruikt generieke aanhef.
+    Returnt tuple (achternaam, salutation):
+    - Persoon-debiteur: eigen achternaam (of volledige naam) + eigen salutation.
+    - Bedrijf-debiteur: eerste actieve ContactLink.person achternaam +
+      salutation van die persoon. Voorkeur rol "Contactpersoon".
+    - Anders (onbekend / geen link): ("", "unknown") → AI gebruikt generieke
+      aanhef.
+
+    Salutation is altijd één van: 'mr', 'mrs', 'unknown' (default 'unknown').
     """
     if not contact:
-        return ""
+        return "", "unknown"
     contact_type = getattr(contact, "contact_type", "")
     if contact_type == "person":
         last = contact.last_name or _last_name_from_full(contact.name or "")
-        return _capitalize_name(last)
+        salutation = getattr(contact, "salutation", None) or "unknown"
+        return _capitalize_name(last), salutation
     if contact_type == "company":
         from app.relations.models import Contact, ContactLink
 
@@ -262,7 +266,7 @@ async def _resolve_contact_person(
             )
         )).scalars().all()
         if not links:
-            return ""
+            return "", "unknown"
         preferred = next(
             (l for l in links if (l.role_at_company or "").lower() == "contactpersoon"),
             links[0],
@@ -274,10 +278,11 @@ async def _resolve_contact_person(
             )
         )).scalar_one_or_none()
         if not person:
-            return ""
+            return "", "unknown"
         last = person.last_name or _last_name_from_full(person.name or "")
-        return _capitalize_name(last)
-    return ""
+        salutation = getattr(person, "salutation", None) or "unknown"
+        return _capitalize_name(last), salutation
+    return "", "unknown"
 
 
 async def gather_case_context(
@@ -304,8 +309,10 @@ async def gather_case_context(
     client_contact = case.client
     debtor_contact = case.opposing_party
 
-    # Contactpersoon voor aanhef — bij bedrijf via ContactLink async query
-    contact_person_name = await _resolve_contact_person(db, tenant_id, debtor_contact)
+    # Contactpersoon + aanhef voor aanhef — bij bedrijf via ContactLink async query
+    contact_person_name, debtor_salutation = await _resolve_contact_person(
+        db, tenant_id, debtor_contact
+    )
 
     claims = (await db.execute(
         select(Claim).where(Claim.tenant_id == tenant_id, Claim.case_id == case_id)
@@ -397,6 +404,7 @@ async def gather_case_context(
             "name": debtor_contact.name if debtor_contact else "?",
             "address": (debtor_contact.visit_address or debtor_contact.postal_address or "") if debtor_contact else "",
             "contact_person": contact_person_name,
+            "salutation": debtor_salutation,
             "contact_type": (
                 getattr(debtor_contact, "contact_type", "company")
                 if debtor_contact else "company"

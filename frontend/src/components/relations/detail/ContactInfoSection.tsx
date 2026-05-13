@@ -40,34 +40,50 @@ export function ContactInfoSection({
                 />
               </div>
             ) : (
-              <div className="grid gap-4 grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                    Voornaam
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.first_name}
-                    onChange={(e) =>
-                      updateEdit("first_name", e.target.value)
-                    }
-                    className={inputClass}
-                  />
+              <>
+                <div className="grid gap-4 grid-cols-[140px_1fr_1fr]">
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Aanhef
+                    </label>
+                    <select
+                      value={editForm.salutation || "unknown"}
+                      onChange={(e) => updateEdit("salutation", e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="unknown">Onbekend</option>
+                      <option value="mr">De heer</option>
+                      <option value="mrs">Mevrouw</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Voornaam
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.first_name}
+                      onChange={(e) =>
+                        updateEdit("first_name", e.target.value)
+                      }
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Achternaam
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.last_name}
+                      onChange={(e) =>
+                        updateEdit("last_name", e.target.value)
+                      }
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                    Achternaam
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.last_name}
-                    onChange={(e) =>
-                      updateEdit("last_name", e.target.value)
-                    }
-                    className={inputClass}
-                  />
-                </div>
-              </div>
+              </>
             )}
             {contact.contact_type === "person" && (
               <div>

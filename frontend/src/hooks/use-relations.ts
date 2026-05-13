@@ -19,12 +19,15 @@ export interface LinkedContactInfo {
   contact: ContactSummary;
 }
 
+export type Salutation = "mr" | "mrs" | "unknown";
+
 export interface Contact {
   id: string;
   contact_type: "company" | "person";
   name: string;
   first_name: string | null;
   last_name: string | null;
+  salutation: Salutation;
   date_of_birth: string | null;
   email: string | null;
   phone: string | null;
@@ -70,6 +73,7 @@ interface ContactCreateInput {
   name: string;
   first_name?: string;
   last_name?: string;
+  salutation?: Salutation;
   date_of_birth?: string;
   email?: string;
   phone?: string;

@@ -42,14 +42,15 @@ ABSOLUTE REGELS — strikt volgen:
 1. **Sjabloon is leidend.** Layout, opmaak, witregels, standaardzinnen, juridische tekst, ondertekening, footer en disclaimer NIET wijzigen of weglaten.
 
 2. **Vul ALLEEN deze plekken in met dossier-data:**
-   - Aanhef:
-     * Bij B2B / bedrijf-debiteur (geen contact_person): laat aanhef "Geachte
-       heer/mevrouw," ONGEWIJZIGD. Plaats NOOIT de bedrijfsnaam in aanhef
-       (fout: "Geachte heer/mevrouw [BedrijfBV],"). Bedrijfsnaam hoort in
+   - Aanhef — gebruik `debtor_data.salutation` ('mr' / 'mrs' / 'unknown') in
+     combinatie met `debtor_data.contact_person` (achternaam, kan leeg zijn):
+     * salutation = 'mr'  + contact_person → "Geachte heer [Achternaam],"
+     * salutation = 'mrs' + contact_person → "Geachte mevrouw [Achternaam],"
+     * salutation = 'unknown' OF contact_person leeg → "Geachte heer/mevrouw,"
+       (ZONDER naam — ook bij bedrijf-debiteur).
+     * NOOIT de bedrijfsnaam in aanhef plaatsen (fout:
+       "Geachte heer/mevrouw [BedrijfBV],"). Bedrijfsnaam hoort in
        cliënt-introductie of betreft-regel, niet in aanhef.
-     * Bij natuurlijk persoon met bekende contactpersoon: "Geachte heer/mevrouw
-       [Achternaam]," met achternaam van debtor_data.contact_person.
-     * Bij onbekend/twijfel: gebruik "Geachte heer/mevrouw," zonder naam.
    - Cliënt-introductie ("Cliënt [naam] heeft mij verzocht...")
    - "Betreft:" regel — vul kenmerk + dossiernummer in. LET OP: als kenmerk
      gelijk is aan dossiernummer (of kenmerk ontbreekt), schrijf dan ALLEEN
@@ -153,8 +154,10 @@ def build_user_prompt(
         f"- Naam: {debtor_data.get('name', '?')}",
         f"- Adres: {debtor_data.get('address', '?')}",
         f"- Type: {debtor_data.get('contact_type', 'company')} "
-        f"({'bedrijf — gebruik GEEN naam in aanhef' if debtor_data.get('contact_type') == 'company' else 'natuurlijk persoon'})",
-        f"- Contactpersoon: {debtor_data.get('contact_person') or '— (geen, gebruik generieke aanhef)'}",
+        f"({'bedrijf — gebruik GEEN bedrijfsnaam in aanhef' if debtor_data.get('contact_type') == 'company' else 'natuurlijk persoon'})",
+        f"- Contactpersoon (achternaam): {debtor_data.get('contact_person') or '— (geen, gebruik generieke aanhef)'}",
+        f"- Aanhef (salutation): {debtor_data.get('salutation', 'unknown')} "
+        f"({'heer' if debtor_data.get('salutation') == 'mr' else 'mevrouw' if debtor_data.get('salutation') == 'mrs' else 'onbekend — generieke aanhef'})",
         f"- Email: {debtor_data.get('email', '—')}",
         "",
         "### Openstaande facturen",

@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 InterestType = Literal["statutory", "commercial", "government", "contractual"]
+Salutation = Literal["mr", "mrs", "unknown"]
 
 # ── Request Schemas ──────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ class ContactCreate(BaseModel):
     contact_person: str | None = None
     first_name: str | None = None
     last_name: str | None = None
+    salutation: Salutation = "unknown"
     date_of_birth: date | None = None
     email: str | None = None
     phone: str | None = None
@@ -51,6 +53,7 @@ class ContactUpdate(BaseModel):
     contact_person: str | None = None
     first_name: str | None = None
     last_name: str | None = None
+    salutation: Salutation | None = None
     date_of_birth: date | None = None
     email: str | None = None
     phone: str | None = None
@@ -99,6 +102,7 @@ class ContactResponse(BaseModel):
     contact_person: str | None
     first_name: str | None
     last_name: str | None
+    salutation: str = "unknown"
     date_of_birth: date | None
     email: str | None
     phone: str | None

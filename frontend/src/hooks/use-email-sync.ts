@@ -251,9 +251,10 @@ export interface RenderTemplateResult {
 /**
  * Render an incasso template as HTML for email body preview.
  */
-export function useRenderTemplate(caseId: string) {
+export function useRenderTemplate(caseId: string | undefined) {
   return useMutation<RenderTemplateResult, Error, { template_type: string }>({
     mutationFn: async (data) => {
+      if (!caseId) throw new Error("Geen dossier geselecteerd");
       const res = await api(
         `/api/email/compose/cases/${caseId}/render-template`,
         { method: "POST", body: JSON.stringify(data) },

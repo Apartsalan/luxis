@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import {
   Mail, Paperclip, Loader2, X, Plus,
-  ExternalLink, FileText, Upload, FolderSearch, BookMarked,
+  ExternalLink, FileText, Upload, FolderSearch, BookMarked, Search, Briefcase,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -214,10 +214,25 @@ export function EmailComposeDialog({
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Internal case selection (free-compose dossier-zoek)
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [selectedCaseInfo, setSelectedCaseInfo] = useState<{
+    case_number: string;
+    description: string;
+  } | null>(null);
+  const [caseSearch, setCaseSearch] = useState("");
+  const [caseSearchResults, setCaseSearchResults] = useState<
+    { id: string; case_number: string; description: string }[]
+  >([]);
+  const [loadingCaseSearch, setLoadingCaseSearch] = useState(false);
+
+  // effectiveCaseId: prop (when opened from a case) OR runtime selection
+  const effectiveCaseId = caseId ?? selectedCaseId ?? undefined;
+
   // Template
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [templateHtml, setTemplateHtml] = useState<string | null>(null);
-  const renderTemplate = caseId ? useRenderTemplate(caseId) : null;
+  const renderTemplate = useRenderTemplate(effectiveCaseId);
 
   // Attachments
   const [attachments, setAttachments] = useState<AttachmentRef[]>([]);
@@ -282,6 +297,13 @@ export function EmailComposeDialog({
     setOtherFiles([]);
     setShowLibrary(false);
     setRenderingLibraryKey(null);
+    // Reset internal case selection (only when no prop caseId)
+    if (!caseId) {
+      setSelectedCaseId(null);
+      setSelectedCaseInfo(null);
+      setCaseSearch("");
+      setCaseSearchResults([]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultSubject, defaultBody, defaultBodyHtml, defaultTo, defaultToName]);
 
@@ -310,8 +332,76 @@ export function EmailComposeDialog({
       setOtherFiles([]);
       setShowLibrary(false);
       setRenderingLibraryKey(null);
+      // Reset internal case selection on close (only when no prop caseId)
+      if (!caseId) {
+        setSelectedCaseId(null);
+        setSelectedCaseInfo(null);
+        setCaseSearch("");
+        setCaseSearchResults([]);
+      }
     }
     onOpenChange(nextOpen);
+  };
+
+  // ── Case-search handlers (free-compose dossier-zoek) ──────────────────
+
+  const runCaseSearch = async () => {
+    if (!caseSearch.trim()) return;
+    setLoadingCaseSearch(true);
+    try {
+      const res = await api(`/api/cases?search=${encodeURIComponent(caseSearch.trim())}&per_page=10`);
+      if (res.ok) {
+        const data = await res.json();
+        const items = (data.items ?? data) as { id: string; case_number: string; description?: string }[];
+        setCaseSearchResults(
+          items.map((c) => ({
+            id: c.id,
+            case_number: c.case_number,
+            description: c.description || "",
+          })),
+        );
+      }
+    } catch {
+      toast.error("Zoeken mislukt");
+    }
+    setLoadingCaseSearch(false);
+  };
+
+  const selectCase = async (c: { id: string; case_number: string; description: string }) => {
+    setSelectedCaseId(c.id);
+    setSelectedCaseInfo({ case_number: c.case_number, description: c.description });
+    setCaseSearchResults([]);
+    setCaseSearch("");
+    // Fetch debtor email to pre-fill recipient (only if user hasn't typed one)
+    if (!to.trim()) {
+      try {
+        const res = await api(`/api/cases/${c.id}`);
+        if (res.ok) {
+          const d = await res.json();
+          // Prefer opposing party (debtor), fall back to client
+          const party = d.opposing_party || d.client;
+          if (party?.email) {
+            setTo(party.email);
+            setToName(party.name || "");
+          }
+        }
+      } catch {
+        /* ignore — user can fill in manually */
+      }
+    }
+  };
+
+  const unlinkCase = () => {
+    setSelectedCaseId(null);
+    setSelectedCaseInfo(null);
+    setSelectedTemplate("");
+    setTemplateHtml(null);
+    setCaseFiles([]);
+    setCaseFileIds(new Set());
+    // Remove attachments coming from the linked case
+    setAttachments((prev) => prev.filter((a) => a.source !== "dossier" && a.source !== "library"));
+    setShowFilePicker(false);
+    setShowLibrary(false);
   };
 
   // ── Recipient handlers ────────────────────────────────────────────────
@@ -343,7 +433,7 @@ export function EmailComposeDialog({
   // ── Template handlers ─────────────────────────────────────────────────
 
   const handleTemplateSelect = async (val: string) => {
-    if (!val || !caseId || !renderTemplate) {
+    if (!val || !effectiveCaseId || !renderTemplate) {
       setSelectedTemplate("");
       setTemplateHtml(null);
       return;
@@ -355,7 +445,7 @@ export function EmailComposeDialog({
         setTemplateHtml(result.body_html);
         if (result.subject && !subject) setSubject(result.subject);
         // Auto-attach verzoekschrift PDF bij faillissement dreigbrief
-        if (val === "faillissement_dreigbrief" && caseId) {
+        if (val === "faillissement_dreigbrief" && effectiveCaseId) {
           try {
             const res = await api("/api/documents/library-templates");
             if (res.ok) {
@@ -385,10 +475,10 @@ export function EmailComposeDialog({
   // ── File picker handlers ──────────────────────────────────────────────
 
   const loadCaseFiles = async () => {
-    if (!caseId) return;
+    if (!effectiveCaseId) return;
     setLoadingFiles(true);
     try {
-      const res = await api(`/api/cases/${caseId}/files`);
+      const res = await api(`/api/cases/${effectiveCaseId}/files`);
       if (res.ok) {
         const data = await res.json();
         setCaseFiles(data.items ?? data);
@@ -454,7 +544,7 @@ export function EmailComposeDialog({
   };
 
   const attachLibraryTemplate = async (tpl: LibraryTemplate) => {
-    if (!caseId) return;
+    if (!effectiveCaseId) return;
     // Prevent duplicate attachment of the same template
     const dupId = `library-${tpl.template_key}`;
     if (attachments.some((a) => a.id === dupId)) return;
@@ -462,7 +552,7 @@ export function EmailComposeDialog({
     setRenderingLibraryKey(tpl.template_key);
     setErrors((p) => ({ ...p, attachments: undefined as unknown as string }));
     try {
-      const res = await api(`/api/documents/docx/cases/${caseId}/render-pdf`, {
+      const res = await api(`/api/documents/docx/cases/${effectiveCaseId}/render-pdf`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ template_type: tpl.template_key }),
@@ -509,7 +599,7 @@ export function EmailComposeDialog({
       if (res.ok) {
         const data = await res.json();
         setOtherResults(((data.items ?? data) as { id: string; case_number: string; description?: string }[])
-          .filter((c) => c.id !== caseId)
+          .filter((c) => c.id !== effectiveCaseId)
           .map((c) => ({ id: c.id, case_number: c.case_number, description: c.description || "" })));
       }
     } catch { /* ignore */ }
@@ -607,6 +697,83 @@ export function EmailComposeDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="px-6 space-y-3 shrink-0">
+            {/* ── Dossier-zoek (free-compose only) ──────────────────── */}
+            {!caseId && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground w-12 shrink-0">Dossier</span>
+                  {selectedCaseInfo ? (
+                    <div className="flex-1 flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5">
+                      <Briefcase className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-sm font-medium text-foreground">{selectedCaseInfo.case_number}</span>
+                      {selectedCaseInfo.description && (
+                        <span className="text-xs text-muted-foreground truncate">{selectedCaseInfo.description}</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={unlinkCase}
+                        className="ml-auto text-xs text-muted-foreground hover:text-destructive"
+                        title="Ontkoppelen"
+                      >
+                        Ontkoppel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+                      <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Zoek op dossiernummer, cliëntnaam of debiteur..."
+                        value={caseSearch}
+                        onChange={(e) => setCaseSearch(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            runCaseSearch();
+                          }
+                        }}
+                        className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                      />
+                      {loadingCaseSearch && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                      {caseSearch.trim() && !loadingCaseSearch && (
+                        <button
+                          type="button"
+                          onClick={runCaseSearch}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Zoeken
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Search results */}
+                {!selectedCaseInfo && caseSearchResults.length > 0 && (
+                  <div className="ml-14 rounded-md border border-border bg-background max-h-[180px] overflow-y-auto">
+                    {caseSearchResults.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => selectCase(c)}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-muted text-sm border-b border-border last:border-0"
+                      >
+                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-medium">{c.case_number}</span>
+                        {c.description && (
+                          <span className="text-xs text-muted-foreground truncate">{c.description}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!selectedCaseInfo && (
+                  <p className="ml-14 text-[11px] text-muted-foreground">
+                    Optioneel — kies een dossier om sjablonen, bestanden en eerdere correspondentie te laden. Leeg laten voor vrije e-mail.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* ── Aan (To) ─────────────────────────────────────────── */}
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
@@ -714,7 +881,7 @@ export function EmailComposeDialog({
             {errors.subject && <p className="text-xs text-destructive ml-14">{errors.subject}</p>}
 
             {/* ── Template selector ────────────────────────────────── */}
-            {caseId && (
+            {effectiveCaseId && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground w-12 shrink-0">Sjabloon</span>
                 <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
@@ -813,7 +980,7 @@ export function EmailComposeDialog({
             )}
 
             {/* Legacy indicator */}
-            {attachmentName && !caseId && (
+            {attachmentName && !effectiveCaseId && (
               <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-xs">
                 <Paperclip className="h-3 w-3 text-muted-foreground" />
                 <span className="text-muted-foreground">Bijlage: <span className="font-medium text-foreground">{attachmentName}</span></span>
@@ -952,7 +1119,7 @@ export function EmailComposeDialog({
           {/* ── Footer ────────────────────────────────────────────── */}
           <div className="border-t px-6 py-3 flex items-center justify-between shrink-0">
             {/* Left: attachments button */}
-            {caseId && (
+            {effectiveCaseId && (
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -985,7 +1152,7 @@ export function EmailComposeDialog({
               <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenChange(false)} disabled={isSending}>
                 Annuleren
               </Button>
-              {caseId && (
+              {effectiveCaseId && (
                 <Button type="button" variant="outline" size="sm" disabled={isSending || !to.trim()} className="gap-1.5" onClick={handleOpenInOutlook}>
                   <ExternalLink className="h-3.5 w-3.5" /> Open in Outlook
                 </Button>

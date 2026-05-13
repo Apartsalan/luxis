@@ -18,10 +18,18 @@ import {
   ChevronDown,
   ArrowUpDown,
   Briefcase,
+  CheckSquare,
+  Square,
+  Trash2,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useRelations, type RelationSortField, type SortDir } from "@/hooks/use-relations";
 import { formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { useConfirm } from "@/components/confirm-dialog";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 function SortHeader({
   label,
@@ -58,6 +66,9 @@ export default function RelatiesPage() {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<RelationSortField>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const toggleSort = (field: RelationSortField) => {
     if (sortBy === field) {
@@ -78,8 +89,75 @@ export default function RelatiesPage() {
     sort_dir: sortDir,
   });
 
+  const allIds = data?.items?.map((c) => c.id) ?? [];
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(allIds));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const ok = await confirm({
+      title: `${selectedIds.size} ${selectedIds.size === 1 ? "relatie" : "relaties"} verwijderen?`,
+      description:
+        "Relaties die aan een actief dossier gekoppeld zijn worden overgeslagen. Deze actie kan niet ongedaan worden gemaakt.",
+      confirmText: "Verwijderen",
+      cancelText: "Annuleren",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setBulkLoading(true);
+    const ids = Array.from(selectedIds);
+    let success = 0;
+    let failed = 0;
+    let firstError = "";
+    for (const id of ids) {
+      try {
+        const res = await api(`/api/relations/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          success++;
+        } else {
+          failed++;
+          if (!firstError) {
+            try {
+              const body = await res.json();
+              if (typeof body?.detail === "string") firstError = body.detail;
+            } catch {
+              // body niet JSON — laat generieke melding staan
+            }
+          }
+        }
+      } catch {
+        failed++;
+      }
+    }
+    if (failed === 0) {
+      toast.success(`${success} ${success === 1 ? "relatie" : "relaties"} verwijderd`);
+    } else if (success === 0) {
+      toast.error(firstError || `Verwijderen mislukt voor alle ${failed} relaties`);
+    } else {
+      toast.warning(`${success} verwijderd, ${failed} mislukt${firstError ? ` — ${firstError}` : ""}`);
+    }
+    setSelectedIds(new Set());
+    setBulkLoading(false);
+    refetch();
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {ConfirmDialogEl}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -158,6 +236,31 @@ export default function RelatiesPage() {
           </button>
         </div>
       </div>
+
+      {/* Bulk action toolbar */}
+      {someSelected && (
+        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+          <span className="text-sm font-medium text-primary">
+            {selectedIds.size} {selectedIds.size === 1 ? "relatie" : "relaties"} geselecteerd
+          </span>
+          <div className="h-4 w-px bg-primary/20" />
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkLoading}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Verwijderen
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="ml-auto rounded-md p-1 text-primary/60 hover:text-primary transition-colors"
+            aria-label="Selectie wissen"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       {isError ? (
@@ -246,6 +349,19 @@ export default function RelatiesPage() {
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="w-10 px-4 py-3.5">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Selecteer alle relaties"
+                    >
+                      {allSelected ? (
+                        <CheckSquare className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Square className="h-4 w-4" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3.5 text-left">
                     <SortHeader
                       label="Relatie"
@@ -291,6 +407,22 @@ export default function RelatiesPage() {
                     key={contact.id}
                     className="group hover:bg-muted/40 transition-colors"
                   >
+                    <td className="w-10 px-4 py-3.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelect(contact.id);
+                        }}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={`Selecteer relatie ${contact.name}`}
+                      >
+                        {selectedIds.has(contact.id) ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Square className="h-4 w-4" />
+                        )}
+                      </button>
+                    </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-3">
                         <div

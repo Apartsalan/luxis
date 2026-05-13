@@ -16,8 +16,10 @@ import {
   ArrowRight,
   X,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { useCases } from "@/hooks/use-cases";
+import { useConfirm } from "@/components/confirm-dialog";
 import { useModules } from "@/hooks/use-modules";
 import { useUsers } from "@/hooks/use-users";
 import { useWorkflowStatuses } from "@/hooks/use-workflow";
@@ -50,6 +52,7 @@ export default function ZakenPage() {
   const { hasModule } = useModules();
   const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: users } = useUsers();
+  const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   // Build status labels from workflow API, fallback to hardcoded
   const dynamicStatusLabels: Record<string, string> = workflowStatuses
@@ -122,6 +125,43 @@ export default function ZakenPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const ok = await confirm({
+      title: `${selectedIds.size} ${selectedIds.size === 1 ? "dossier" : "dossiers"} verwijderen?`,
+      description:
+        "Geselecteerde dossiers worden verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+      confirmText: "Verwijderen",
+      cancelText: "Annuleren",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setBulkLoading(true);
+    const ids = Array.from(selectedIds);
+    let success = 0;
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        const res = await api(`/api/cases/${id}`, { method: "DELETE" });
+        if (res.ok) success++;
+        else failed++;
+      } catch {
+        failed++;
+      }
+    }
+    if (failed === 0) {
+      toast.success(`${success} ${success === 1 ? "dossier" : "dossiers"} verwijderd`);
+    } else if (success === 0) {
+      toast.error(`Verwijderen mislukt voor alle ${failed} dossiers`);
+    } else {
+      toast.warning(`${success} verwijderd, ${failed} mislukt`);
+    }
+    setSelectedIds(new Set());
+    setBulkAction("");
+    setBulkLoading(false);
+    refetch();
+  };
+
   const handleExport = async () => {
     setBulkLoading(true);
     try {
@@ -153,6 +193,7 @@ export default function ZakenPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {ConfirmDialogEl}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -311,6 +352,14 @@ export default function ZakenPage() {
           >
             {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
             Exporteren
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkLoading}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Verwijderen
           </button>
           <button
             onClick={() => { setSelectedIds(new Set()); setBulkAction(""); }}

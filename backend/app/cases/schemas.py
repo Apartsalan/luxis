@@ -80,6 +80,7 @@ class CaseCreate(BaseModel):
     provisie_percentage: Decimal | None = None
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
+    bik_minimum_fee: Decimal | None = None
     provisie_base: str = Field(
         default="collected_amount",
         description="collected_amount | total_claim",
@@ -117,6 +118,7 @@ class CaseUpdate(BaseModel):
     provisie_percentage: Decimal | None = None
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
+    bik_minimum_fee: Decimal | None = None
     provisie_base: str | None = None  # "collected_amount" or "total_claim"
     # DF2-09: Pipeline step assignment from case detail
     incasso_step_id: uuid.UUID | None = None
@@ -236,6 +238,7 @@ class CaseResponse(BaseModel):
     provisie_percentage: Decimal | None = None
     fixed_case_costs: Decimal | None = None
     minimum_fee: Decimal | None = None
+    bik_minimum_fee: Decimal | None = None
     provisie_base: str = "collected_amount"
     has_verweer: bool = False
     verweer_note: str | None = None

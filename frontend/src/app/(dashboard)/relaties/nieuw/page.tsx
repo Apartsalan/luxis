@@ -35,6 +35,7 @@ export default function NieuweRelatiePage() {
     default_bik_override: "",
     default_bik_override_percentage: "",
     default_minimum_fee: "",
+    default_bik_minimum_fee: "",
     notes: "",
   });
   const [error, setError] = useState("");
@@ -135,6 +136,7 @@ export default function NieuweRelatiePage() {
         default_bik_override_percentage: form.default_bik_override_percentage,
       }),
       ...(form.default_minimum_fee && { default_minimum_fee: form.default_minimum_fee }),
+      ...(form.default_bik_minimum_fee && { default_bik_minimum_fee: form.default_bik_minimum_fee }),
       ...(form.notes && { notes: form.notes }),
     };
 
@@ -533,8 +535,29 @@ export default function NieuweRelatiePage() {
                 value={form.default_minimum_fee}
                 onChange={(e) => updateField("default_minimum_fee", e.target.value)}
                 className={inputClass}
-                placeholder="Leeg = WIK-minimum (€40)"
+                placeholder="Leeg = geen bodem"
               />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Bodem voor eigen factuur naar de cli&euml;nt (honorarium)
+              </p>
+            </div>
+            <div>
+              <label htmlFor="rel-default_bik_minimum_fee" className="block text-sm font-medium text-foreground">
+                Minimum incassokosten (€)
+              </label>
+              <input
+                id="rel-default_bik_minimum_fee"
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.default_bik_minimum_fee}
+                onChange={(e) => updateField("default_bik_minimum_fee", e.target.value)}
+                className={inputClass}
+                placeholder="Leeg = geen bodem"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Bodem voor BIK bij percentage-instelling. Wordt gevorderd van de debiteur.
+              </p>
             </div>
           </div>
 

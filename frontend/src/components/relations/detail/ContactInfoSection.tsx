@@ -488,8 +488,26 @@ export function ContactInfoSection({
                 value={editForm.default_minimum_fee || ""}
                 onChange={(e) => updateEdit("default_minimum_fee", e.target.value)}
                 className={inputClass}
-                placeholder="Leeg = WIK-minimum (€40)"
+                placeholder="Leeg = geen bodem"
               />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Bodem voor eigen factuur naar cli&euml;nt (honorarium)
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Minimum incassokosten (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editForm.default_bik_minimum_fee || ""}
+                onChange={(e) => updateEdit("default_bik_minimum_fee", e.target.value)}
+                className={inputClass}
+                placeholder="Leeg = geen bodem"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Bodem voor BIK-percentage. Wordt gevorderd van de debiteur.
+              </p>
             </div>
             <div className="sm:col-span-2 pt-1">
               <label className="flex items-center gap-2.5 cursor-pointer">
@@ -506,7 +524,7 @@ export function ContactInfoSection({
               </p>
             </div>
           </div>
-        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null || contact.default_minimum_fee != null || !contact.is_btw_plichtig) ? (
+        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null || contact.default_minimum_fee != null || contact.default_bik_minimum_fee != null || !contact.is_btw_plichtig) ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             {contact.default_hourly_rate && (
               <div>
@@ -561,6 +579,14 @@ export function ContactInfoSection({
                 <dt className="text-xs text-muted-foreground">Minimum provisie</dt>
                 <dd className="text-sm font-medium text-foreground">
                   € {Number(contact.default_minimum_fee).toFixed(2)}
+                </dd>
+              </div>
+            )}
+            {contact.default_bik_minimum_fee != null && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Minimum incassokosten</dt>
+                <dd className="text-sm font-medium text-foreground">
+                  € {Number(contact.default_bik_minimum_fee).toFixed(2)}
                 </dd>
               </div>
             )}

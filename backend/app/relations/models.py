@@ -84,9 +84,14 @@ class Contact(TenantBase):
     default_bik_override_percentage: Mapped[Decimal | None] = mapped_column(
         Numeric(5, 2), nullable=True
     )
-    # DF120 (Lisanne demo 2026-04-08): default minimum provisie (incassokosten
-    # floor) per client. Inherited on new case unless explicitly set.
+    # DF120 (Lisanne demo 2026-04-08): default minimum provisie — alléén bodem
+    # voor het honorarium dat aan de cliënt wordt gefactureerd. NIET voor BIK.
     default_minimum_fee: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    # DF138-16: aparte bodem voor BIK-percentage berekening. Geldt voor de
+    # incassokosten die van de debiteur worden gevorderd (vordering + mail).
+    # Apart van default_minimum_fee zodat factuur naar cliënt en vordering aan
+    # debiteur onafhankelijk gestuurd kunnen worden.
+    default_bik_minimum_fee: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
 
     # BTW status — determines whether 21% BTW is added to BIK for this client's cases
     is_btw_plichtig: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

@@ -41,6 +41,7 @@ class ContactCreate(BaseModel):
     default_bik_override: Decimal | None = None
     default_bik_override_percentage: Decimal | None = None
     default_minimum_fee: Decimal | None = None
+    default_bik_minimum_fee: Decimal | None = None
     is_btw_plichtig: bool = True
     notes: str | None = None
 
@@ -71,6 +72,7 @@ class ContactUpdate(BaseModel):
     default_bik_override: Decimal | None = None
     default_bik_override_percentage: Decimal | None = None
     default_minimum_fee: Decimal | None = None
+    default_bik_minimum_fee: Decimal | None = None
     is_btw_plichtig: bool | None = None
     notes: str | None = None
 
@@ -118,6 +120,7 @@ class ContactResponse(BaseModel):
     default_bik_override: float | None = None
     default_bik_override_percentage: float | None = None
     default_minimum_fee: float | None = None
+    default_bik_minimum_fee: float | None = None
     is_btw_plichtig: bool = True
     terms_file_name: str | None = None
     notes: str | None

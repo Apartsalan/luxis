@@ -166,7 +166,10 @@ class Case(TenantBase):
     )  # Vaste dossierkosten
     minimum_fee: Mapped[Decimal | None] = mapped_column(
         Numeric(15, 2), nullable=True
-    )  # Minimumkosten
+    )  # DF138: bodem voor honorarium-factuur naar cliënt (provisie-minimum)
+    bik_minimum_fee: Mapped[Decimal | None] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )  # DF138-16: bodem voor BIK-percentage berekening (vordering aan debiteur)
     provisie_base: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

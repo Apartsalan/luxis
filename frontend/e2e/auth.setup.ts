@@ -12,7 +12,7 @@ const authFile = "e2e/.auth/user.json";
 setup("authenticate", async ({ page }) => {
   await page.goto("/login");
 
-  await page.locator("#email").fill("lisanne@kestinglegal.nl");
+  await page.locator("#email").fill("e2e-test@kestinglegal.nl");
   await page.locator("#password").fill("testpassword123");
   await page.getByRole("button", { name: "Inloggen" }).click();
 

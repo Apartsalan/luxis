@@ -5,7 +5,6 @@ import uuid
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, LargeBinary, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database import Base, TimestampMixin
 from app.shared.models import TenantBase
 
 

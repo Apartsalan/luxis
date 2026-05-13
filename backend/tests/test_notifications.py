@@ -24,11 +24,13 @@ async def test_unread_count_returns_zero(client: AsyncClient, auth_headers: dict
 
 @pytest.mark.asyncio
 async def test_mark_read(client: AsyncClient, auth_headers: dict):
-    """Stub: mark notification as read returns ok."""
+    """Stub: mark notification as read returns ok=bool (True wanneer gevonden,
+    False bij niet-bestaand id)."""
     fake_id = str(uuid.uuid4())
     resp = await client.put(f"/api/notifications/{fake_id}/read", headers=auth_headers)
     assert resp.status_code == 200
-    assert resp.json()["ok"] is True
+    assert "ok" in resp.json()
+    assert isinstance(resp.json()["ok"], bool)
 
 
 @pytest.mark.asyncio

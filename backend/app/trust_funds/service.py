@@ -25,10 +25,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.cases.service import get_case
-from app.invoices.models import Invoice, InvoicePayment
 from app.auth.models import Tenant
 from app.cases.models import Case
+from app.cases.service import get_case
+from app.invoices.models import Invoice, InvoicePayment
 from app.relations.models import Contact
 from app.shared.exceptions import BadRequestError, ForbiddenError, NotFoundError
 from app.trust_funds.models import TrustTransaction

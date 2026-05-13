@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.email.token_encryption import decrypt_token, encrypt_token
 from app.exact_online.models import ExactOnlineConnection, ExactSyncLog
-from app.exact_online.provider import ExactOnlineProvider, ExactRateLimitError, ExactTokens
+from app.exact_online.provider import ExactOnlineProvider, ExactRateLimitError
 from app.invoices.models import Invoice, InvoicePayment
 from app.relations.models import Contact
 

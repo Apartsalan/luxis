@@ -13,6 +13,7 @@ from pathlib import Path
 import jinja2
 import weasyprint
 from sqlalchemy.ext.asyncio import AsyncSession
+from weasyprint import default_url_fetcher
 
 from app.documents.docx_service import (
     _contact_ctx,
@@ -22,8 +23,6 @@ from app.documents.docx_service import (
     load_tenant,
 )
 from app.invoices.models import Invoice
-
-from weasyprint import default_url_fetcher
 
 logger = logging.getLogger(__name__)
 

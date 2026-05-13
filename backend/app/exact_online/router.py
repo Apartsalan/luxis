@@ -34,7 +34,6 @@ from app.exact_online.sync_service import (
     get_valid_token,
     sync_all,
     sync_invoice,
-    sync_payment,
 )
 from app.invoices.models import Invoice
 from app.shared.exceptions import BadRequestError, NotFoundError

@@ -3,12 +3,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.cases.models import Case, CaseActivity, CaseFile
-from app.collections.models import Claim, Payment
+from app.cases.models import CaseActivity, CaseFile
+from app.collections.models import Payment
 from app.documents.models import GeneratedDocument
 from app.email.synced_email_models import SyncedEmail
 from app.time_entries.models import TimeEntry

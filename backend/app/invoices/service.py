@@ -134,6 +134,7 @@ async def list_invoices(
         pattern = f"%{search}%"
         # Match invoice_number OR case.case_number OR contact.name
         from sqlalchemy import or_
+
         from app.cases.models import Case
         from app.relations.models import Contact
         search_filter = or_(
@@ -229,7 +230,7 @@ async def create_invoice(
 ) -> Invoice:
     """Create a new invoice with lines."""
     from app.cases.models import Case
-    from app.contacts.models import Contact
+    from app.relations.models import Contact
 
     if data.contact_id:
         r = await db.execute(

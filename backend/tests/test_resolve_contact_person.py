@@ -38,7 +38,8 @@ async def test_resolve_empty_when_contact_is_none(
     db: AsyncSession, test_tenant: Tenant
 ):
     result = await _resolve_contact_person(db, test_tenant.id, None)
-    assert result == ""
+    name = result[0] if isinstance(result, tuple) else result
+    assert name == ""
 
 
 @pytest.mark.asyncio
@@ -56,7 +57,8 @@ async def test_resolve_persoon_returns_last_name(
     db.add(persoon)
     await db.commit()
     result = await _resolve_contact_person(db, test_tenant.id, persoon)
-    assert result == "de Vries"
+    name = result[0] if isinstance(result, tuple) else result
+    assert name == "de Vries"
 
 
 @pytest.mark.asyncio
@@ -72,7 +74,8 @@ async def test_resolve_bedrijf_zonder_link_returns_empty(
     db.add(bedrijf)
     await db.commit()
     result = await _resolve_contact_person(db, test_tenant.id, bedrijf)
-    assert result == ""
+    name = result[0] if isinstance(result, tuple) else result
+    assert name == ""
 
 
 @pytest.mark.asyncio
@@ -106,7 +109,8 @@ async def test_resolve_bedrijf_met_link_returns_persoon_naam(
     db.add(link)
     await db.commit()
     result = await _resolve_contact_person(db, test_tenant.id, bedrijf)
-    assert result == "Pietersen"
+    name = result[0] if isinstance(result, tuple) else result
+    assert name == "Pietersen"
 
 
 @pytest.mark.asyncio
@@ -138,7 +142,8 @@ async def test_resolve_bedrijf_inactive_link_skipped(
     db.add(link)
     await db.commit()
     result = await _resolve_contact_person(db, test_tenant.id, bedrijf)
-    assert result == ""
+    name = result[0] if isinstance(result, tuple) else result
+    assert name == ""
 
 
 @pytest.mark.asyncio
@@ -182,4 +187,5 @@ async def test_resolve_bedrijf_voorkeur_rol_contactpersoon(
     ])
     await db.commit()
     result = await _resolve_contact_person(db, test_tenant.id, bedrijf)
-    assert result == "Contactnaam"
+    name = result[0] if isinstance(result, tuple) else result
+    assert name == "Contactnaam"

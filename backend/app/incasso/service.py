@@ -1010,8 +1010,6 @@ async def batch_execute(
     emails_sent = 0
     emails_failed = 0
 
-    now = datetime.now(UTC)
-
     if action == "advance_step":
         if not target_step_id:
             raise BadRequestError("Geen doelstap opgegeven")

@@ -371,6 +371,7 @@ async def advance_after_send(
     status op `sent`.
     """
     from datetime import UTC, datetime
+
     from app.ai_agent.draft_service import DraftStatus, get_draft_by_id, update_draft_status
     from app.incasso.models import StepTransition
     from app.workflow.models import WorkflowTask

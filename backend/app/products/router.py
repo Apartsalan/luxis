@@ -5,8 +5,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_current_user
 from app.database import get_db
+from app.dependencies import get_current_user
 from app.products import service
 from app.products.schemas import ProductCreate, ProductResponse, ProductUpdate
 from app.products.seed import seed_products

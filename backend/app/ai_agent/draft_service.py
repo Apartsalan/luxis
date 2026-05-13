@@ -141,9 +141,9 @@ async def _gather_case_context(
     )
     case_files = list(case_files_result.scalars().all())
     # Hard cap: at most 5 files, ~2000 chars each, to keep prompt size sane
-    MAX_FILES = 5
-    MAX_CHARS_PER_FILE = 2000
-    for cf in case_files[:MAX_FILES]:
+    max_files = 5
+    max_chars_per_file = 2000
+    for cf in case_files[:max_files]:
         if not cf.content_type or "pdf" not in cf.content_type.lower():
             continue
         try:
@@ -158,7 +158,7 @@ async def _gather_case_context(
                     "filename": cf.original_filename,
                     "description": cf.description,
                     "direction": cf.document_direction,
-                    "excerpt": text[:MAX_CHARS_PER_FILE],
+                    "excerpt": text[:max_chars_per_file],
                 }
             )
         except Exception as e:

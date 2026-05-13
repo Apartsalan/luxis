@@ -56,3 +56,9 @@ coverage.xml
 frontend/e2e/.auth/
 frontend/test-results/
 frontend/playwright-report/
+.playwright-mcp/
+test-results/
+playwright-report/
+frontend/e2e/.auth/
+*.png
+*.jpeg

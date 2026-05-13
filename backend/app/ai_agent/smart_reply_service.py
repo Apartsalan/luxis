@@ -13,8 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai_agent.kimi_client import call_intake_ai
 from app.ai_agent.models import EmailClassification
 from app.ai_agent.prompts import strip_html
-from app.cases.models import Case
-from app.email.synced_email_models import SyncedEmail
 from app.shared.exceptions import NotFoundError
 
 logger = logging.getLogger(__name__)

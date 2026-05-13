@@ -6,7 +6,8 @@ to automated actions without external dependencies (no Redis/Celery).
 
 import logging
 from collections import defaultdict
-from typing import Any, Callable, Coroutine
+from collections.abc import Callable, Coroutine
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

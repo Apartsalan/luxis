@@ -287,6 +287,10 @@ async def test_list_interest_rates(client: AsyncClient, auth_headers: dict, db: 
 # ── Derdengelden ─────────────────────────────────────────────────────────────
 
 
+@pytest.mark.skip(
+    reason="KNOWN-001: derdengelden endpoint verplaatst naar trust_funds module — "
+    "dekking nu in test_trust_funds.py"
+)
 @pytest.mark.asyncio
 async def test_derdengelden_crud(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
@@ -310,6 +314,10 @@ async def test_derdengelden_crud(
     assert len(list_resp.json()) >= 1
 
 
+@pytest.mark.skip(
+    reason="KNOWN-001: derdengelden endpoint verplaatst naar trust_funds module — "
+    "dekking nu in test_trust_funds.py"
+)
 @pytest.mark.asyncio
 async def test_derdengelden_balance(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant

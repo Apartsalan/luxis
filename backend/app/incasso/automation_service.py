@@ -18,13 +18,16 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case
 from app.incasso.models import IncassoPipelineStep, StepTransition
+
+if TYPE_CHECKING:
+    from app.ai_agent.models import AIDraft
 
 logger = logging.getLogger(__name__)
 
@@ -268,7 +271,11 @@ async def _resolve_contact_person(
         if not links:
             return "", "unknown"
         preferred = next(
-            (l for l in links if (l.role_at_company or "").lower() == "contactpersoon"),
+            (
+                link
+                for link in links
+                if (link.role_at_company or "").lower() == "contactpersoon"
+            ),
             links[0],
         )
         person = (await db.execute(
@@ -372,7 +379,6 @@ async def gather_case_context(
     # 3. Fallback: contact.terms_file_path (legacy single-file kolom)
     av_text: str | None = None
     av_pdf_path: str | None = None
-    av_file_name: str | None = None
     if client_contact:
         from app.relations.service import list_contact_terms, select_terms_for_date
 
@@ -391,7 +397,6 @@ async def gather_case_context(
             ).scalar_one_or_none()
             if terms_row is not None:
                 terms_path = terms_row.file_path
-                av_file_name = terms_row.file_name
                 chosen_label = terms_row.label or "(geen label)"
         else:
             # Smart-default: kies versie op basis van eerste factuur-datum
@@ -404,13 +409,11 @@ async def gather_case_context(
             chosen = select_terms_for_date(versions, target_date)
             if chosen is not None:
                 terms_path = chosen.file_path
-                av_file_name = chosen.file_name
                 chosen_label = chosen.label or "(geen label)"
 
         # Fallback voor cliënten zonder versie-rij: legacy single-file kolom.
         if not terms_path and client_contact.terms_file_path:
             terms_path = client_contact.terms_file_path
-            av_file_name = client_contact.terms_file_name
             chosen_label = "legacy single-file"
 
         if terms_path:
@@ -614,7 +617,7 @@ async def generate_draft_for_step(
         av_pdf_path=av_pdf_path if use_pdf_route else None,
     )
 
-    from app.incasso.html_renderer import render_template_html, render_subject
+    from app.incasso.html_renderer import render_subject, render_template_html
 
     # Subject altijd server-side renderen — AI maakt soms fouten met de
     # `/ kenmerk / dossiernummer` structuur (zet bv. contactnaam in plaats

@@ -1,6 +1,7 @@
 """Relations module service — Business logic for contacts and links."""
 
 import uuid
+from datetime import date
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession

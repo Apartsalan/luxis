@@ -8,7 +8,7 @@
 import { type Page, type APIRequestContext } from "@playwright/test";
 
 const API_URL = "http://localhost:8000";
-const DEFAULT_EMAIL = "lisanne@kestinglegal.nl";
+const DEFAULT_EMAIL = "e2e-test@kestinglegal.nl";
 const DEFAULT_PASSWORD = "testpassword123";
 
 /**

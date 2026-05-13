@@ -219,6 +219,19 @@ def _capitalize_name(name: str) -> str:
     return name
 
 
+def _last_name_from_full(full: str) -> str:
+    """Pak alleen het laatste woord als achternaam.
+
+    Sommige contacten hebben `last_name` leeg en alles in `name` staan
+    ('Arsalan Seidony'). De aanhef moet 'Geachte heer/mevrouw Seidony'
+    worden, niet 'Geachte heer/mevrouw Arsalan Seidony'.
+    """
+    if not full:
+        return ""
+    parts = full.strip().split()
+    return parts[-1] if parts else full
+
+
 async def _resolve_contact_person(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -236,7 +249,8 @@ async def _resolve_contact_person(
         return ""
     contact_type = getattr(contact, "contact_type", "")
     if contact_type == "person":
-        return _capitalize_name(contact.last_name or contact.name or "")
+        last = contact.last_name or _last_name_from_full(contact.name or "")
+        return _capitalize_name(last)
     if contact_type == "company":
         from app.relations.models import Contact, ContactLink
 
@@ -261,7 +275,8 @@ async def _resolve_contact_person(
         )).scalar_one_or_none()
         if not person:
             return ""
-        return _capitalize_name(person.last_name or person.name or "")
+        last = person.last_name or _last_name_from_full(person.name or "")
+        return _capitalize_name(last)
     return ""
 
 

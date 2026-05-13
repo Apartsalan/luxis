@@ -72,9 +72,10 @@ Na goedkeuring.
 
 ## Kwaliteitsstandaard
 
-- Nooit "done" zonder bewijs (build/test/handmatige check)
+- Nooit "done" zonder bewijs (build/test/handmatige check). "Migration completed" is fout als records geskipt zijn. "Tests pass" is fout als tests geskipt zijn. Surface uncertainty, niet verbergen.
 - Bugs: EERST rode test → fix → groen. Triviale bugs direct.
 - Elegantie overwegen bij non-triviale changes, niet over-engineeren
+- Conflicterende patronen niet middelen — kies één (recentste/meest getest), licht toe waarom, flag andere voor cleanup.
 - Na correctie: les noteren in CLAUDE.md of memory
 - Minimale impact, root causes fixen, geen workarounds
 

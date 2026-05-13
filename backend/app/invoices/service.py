@@ -1111,18 +1111,13 @@ async def get_incasso_invoice_preview(
         )
         # DF138-16: aparte BIK-minimum (case.bik_minimum_fee) als bodem voor
         # het BIK-percentage. Los van het provisie-minimum (minimum_fee), dat
-        # alleen op de eigen factuur naar de cliënt geldt.
+        # alleen op de eigen factuur naar de cliënt geldt. Niet expliciet
+        # uitleggen in bik_source — bedrag verschijnt gewoon als € X.
         case_bik_min = Decimal(str(case.bik_minimum_fee or 0))
-        bik_min_applied = False
         if case_bik_min > 0 and bik_amount < case_bik_min:
             bik_amount = case_bik_min
-            bik_min_applied = True
         bik_is_override = True
         bik_source = f"{bik_pct}% van hoofdsom (€ {total_principal:,.2f})".replace(",", ".")
-        if bik_min_applied:
-            bik_source += (
-                f" — minimumtarief van € {case_bik_min:.2f} toegepast".replace(",", ".")
-            )
     elif case.bik_override is not None:
         bik_amount = case.bik_override
         bik_is_override = True

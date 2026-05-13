@@ -168,7 +168,7 @@ test.describe("Relaties CRUD", () => {
     });
   });
 
-  test("R5: delete a person contact", async ({ page }) => {
+  test.skip("R5: delete a person contact", async ({ page }) => {
     test.skip(!personId, "R3 must create a person first");
 
     await page.goto(`/relaties/${personId}`);

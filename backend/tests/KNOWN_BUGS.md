@@ -66,6 +66,9 @@ test alleen het API-endpoint dat 200 OK geeft (gedekt door
 - `frontend/e2e/incasso-pipeline.spec.ts` — pipeline steps hernoemd naar "Eerste/Tweede/Derde sommatie"
 - `frontend/e2e/instellingen.spec.ts` — tab-structure veranderd
 - `frontend/e2e/sidebar.spec.ts` — dashboard greeting check faalt voor beforeEach
+- `frontend/e2e/relaties.spec.ts::R5` — delete-confirm dialog is nu custom React component (geen `window.confirm`), `page.on('dialog')` werkt niet meer
+- `frontend/e2e/tijdregistratie.spec.ts::T5` — zelfde delete-confirm dialog issue
+- `frontend/e2e/zaken.spec.ts::Z3` — dossier-wizard client-search input is verplaatst naar later stap, niet zichtbaar zonder voorafgaande stap-navigatie
 
 **Reden:** UI is geëvolueerd in sessies 130-139 (nieuwe pipeline, bulk-toolbars,
 nieuwe instellingen-tabs). De E2E specs uit eerdere sessies verwachten nog de

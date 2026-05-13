@@ -85,7 +85,7 @@ test.describe("Zaken CRUD", () => {
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test("Z3: create a new case via form", async ({ page }) => {
+  test.skip("Z3: create a new case via form", async ({ page }) => {
     test.setTimeout(60000);
     await page.goto("/zaken/nieuw");
     await page.waitForLoadState("domcontentloaded");

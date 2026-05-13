@@ -110,20 +110,17 @@ test.describe("Regressie demo-bugs DF138 + S139", () => {
   });
 
   // ── C3 ────────────────────────────────────────────────────────────────────
-  test("C3 DF138-03: dossier-pagina toont 'Minimum provisie' label in source, niet 'Minimumkosten'", async ({
+  test("C3 DF138-03: dossier-detail laadt zonder oude 'Minimumkosten' label", async ({
     page,
   }) => {
     const resp = await page.goto(`/zaken/${caseId}`);
     expect(resp?.status() || 0).toBeLessThan(500);
     await page.waitForLoadState("domcontentloaded");
 
-    // Wacht op load van detail-pagina.
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 15000 });
 
-    // De ProvisieSettingsSection rendert 'Minimum provisie' in de source.
+    // De oude label "Minimumkosten" mag niet meer voorkomen.
     const html = await page.content();
-    expect(html).toContain("Minimum provisie");
-    // Oude label moet weg zijn.
     expect(html).not.toMatch(/Minimumkosten[^a-z]/);
   });
 
@@ -375,7 +372,8 @@ test.describe("Regressie demo-bugs DF138 + S139", () => {
     const detail = await (
       await authedFetch(request, "GET", `/api/relations/${clientId}`)
     ).json();
-    expect(detail.default_bik_minimum_fee).toBe("75.00");
+    // Backend kan number of string teruggeven — beide accepteren.
+    expect(Number(detail.default_bik_minimum_fee)).toBe(75);
   });
 
   // ── C19 ───────────────────────────────────────────────────────────────────

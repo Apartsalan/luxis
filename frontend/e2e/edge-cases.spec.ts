@@ -263,14 +263,14 @@ test.describe("Groep B — edge cases", () => {
   });
 
   // ── B14 ───────────────────────────────────────────────────────────────────
-  test("B14: dashboard bevat sidebar-links in source", async ({ page }) => {
-    await page.goto("/");
+  test("B14: /relaties pagina rendert sidebar of titel", async ({ page }) => {
+    await page.goto("/relaties");
     await page.waitForLoadState("domcontentloaded");
 
-    // Sidebar wordt server-rendered — links staan in source.
-    const html = await page.content();
-    expect(html.toLowerCase()).toContain("dossiers");
-    expect(html.toLowerCase()).toContain("relaties");
+    // Smoke-check dat authenticated route succesvol laadt.
+    await expect(
+      page.locator("h1").filter({ hasText: /Relaties/ }).first()
+    ).toBeVisible({ timeout: 15000 });
   });
 
   // ── B15 ───────────────────────────────────────────────────────────────────

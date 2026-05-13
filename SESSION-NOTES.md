@@ -1,9 +1,69 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 11 mei 2026 (sessie 136 — Claude Sonnet draft + AV PDF native + 7 incasso-fixes)
-**Laatste feature/fix:** Sessie 136 — Incasso-draft model geswitcht naar Claude Sonnet 4.6 met native AV-PDF input (lost AV-truncatie op). Daarna 7 productie-bugs gefixt op live test 2026-00049: Sonnet model ID, incoming_defense auto-load bij Verweer manual trigger, subject single-slot bij kenmerk==case_number, contact_person via ContactLink async resolve (MissingGreenlet), B2B aanhef zonder bedrijfsnaam, capitalize lowercase last_name, body Betreft dedupe, IBAN-kenmerk ensure case_number. Frontend: nieuwe contactpersoon aanmaken vanuit koppel-dialog (was alleen zoeken). Seidony hardcoded greeting in TWEEDE SOMMATIE template via import-script genormaliseerd + re-import gedraaid. AVG-compliance plan opgesteld als backlog voor verkoop aan andere kantoren.
-**Openstaande bugs:** BUG-71/72 (laag), SEC-01 (laag), Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen)
-**Volgende sessie:** 137 — Wix → TransIP registrar-transfer plan documenteren + voorbereiden, daarna eventueel BUG-71/72 cleanup of nieuwe feature
+**Laatst bijgewerkt:** 13 mei 2026 (sessie 137 — bug cleanup + workflow UI + compose dossier-zoek)
+**Laatste feature/fix:** Sessie 137 — Bug cleanup (BUG-71 RLS policy fix via nieuwe migratie bug71_csh; BUG-72 niet meer reproduceerbaar; AUD124-07 EUR→€ + Dutch format in workflow/hooks). Workflow-UI quick wins: TransitionsSection hernoemd naar "Automatische regels" (incl. labels/toasts); tenant-toggle `pipeline_auto_drafts_enabled` bedienbaar via Instellingen → Workflow → Automatiseringsregels. SEC-01 AgentShield scan gedraaid → deny-list uitgebreid (rm-rf varianten, curl|sh, mkfs, force push main, docker volume rm) + 3 sub-agents model frontmatter. Mail-compose grote feature: dossier-zoekveld bovenaan compose-dialog voor free-compose flow (Mail-pagina) — search → kies dossier → auto-load templates/files/library + recipient prefill van opposing_party/client. Ontkoppel-link. CLAUDE.md verscherpt (fail-loud + conflict-resolutie). Mail-issue Lisanne uitgezocht: MX wijst nog naar BaseNet (M0a alias-strategie), Outlook moet handmatig op BaseNet IMAP — niet via auto-discover die M365 kiest.
+**Openstaande bugs:** SEC-01 (28 HIGH AgentShield findings zijn inherent aan dev workflow — Bash docker/python/ssh broad permissions nodig), Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen)
+**Volgende sessie:** 138 — Wix → TransIP registrar-transfer plan documenteren + uitvoeren (5-8 dagen propagatie), of M365 M0b (Lisanne mailbox overzetten) wanneer Lisanne beschikbaar.
+
+## Wat er gedaan is (sessie 137 — 13 mei 2026) — Bug cleanup + workflow UI + compose dossier-zoek
+
+### Samenvatting
+
+**Bug cleanup (3 stuks):**
+- **BUG-71** — s126a_pipeline_overhaul migratie gebruikte `app.current_tenant_id` i.p.v. `app.current_tenant` voor RLS policy case_step_history. Origineel file gefixt + nieuwe data-migratie `bug71_csh` recreëert policy op bestaande DBs. Toegepast op prod, geverifieerd via `pg_policy`.
+- **BUG-72** — 4 falende tests in test_incasso_router.py — niet meer reproduceerbaar, 10/10 passed. Conftest `DROP SCHEMA public CASCADE` dekt stale-state issue al af.
+- **AUD124-07** — workflow/hooks.py 3x `EUR 1,234.56` (US format) in CaseActivity description/title. Nieuwe `_fmt_eur` helper → `€ 1.234,56` Dutch format. 14-dagenbrief letter zelf was al €; bug zat alleen in audit-note header van rendered sample.
+
+**Workflow-UI quick wins (2 stuks):**
+- **TransitionsSection rename** — frontend/src/app/(dashboard)/incasso/page.tsx — "Overgangen vanuit deze stap" → "Automatische regels". Toast/label-text mee: "Overgang verwijderen" → "Regel verwijderen", "Standaard overgang" → "Standaardregel", etc.
+- **Tenant toggle pipeline_auto_drafts_enabled** — backend-veld bestond, frontend UI ontbrak. Schemas TenantSettingsResponse/Update geüpdatet, use-settings hook + workflow-tab kreeg toggle in sectie "Automatiseringsregels" (boven rules-lijst). Admin-only via require_role.
+
+**SEC-01 AgentShield scan:**
+- `npx ecc-agentshield scan` — 60 findings (0 critical, 28 high, 7 medium, 25 low)
+- 28 HIGH zijn inherent aan Luxis dev workflow (Bash docker/python/ssh broad permissions zijn nodig voor deploy/test)
+- Actie: deny-list uitgebreid met rm-rf varianten, `curl * | sh *`, `mkfs`, `sudo`, `git push --force origin main`, `docker volume rm`, etc.
+- 3 sub-agents (func-tester, security-reviewer, tech-tester) kregen `model: sonnet` frontmatter
+- Rescan: 60 → 55 findings, medium 7 → 5, low 25 → 22
+
+**Mail-compose dossier-zoekveld (grote feature ~2u):**
+- `frontend/src/components/email-compose-dialog.tsx` + `hooks/use-email-sync.ts`
+- `useRenderTemplate` accepteert nu `string | undefined` voor caseId (fix rules-of-hooks violation in compose-dialog die hook conditioneel callte)
+- Nieuwe state `selectedCaseId` / `selectedCaseInfo` + `effectiveCaseId = caseId ?? selectedCaseId`
+- Alle `caseId` body-refs vervangen door `effectiveCaseId` (template-selector, file-pickers, library, footer-knoppen)
+- UI: nieuwe "Dossier" rij bovenaan dialog (alleen bij free-compose; verborgen wanneer prop.caseId aanwezig). Search via `/api/cases?search=` → klik resultaat → case-koppeling + recipient pre-fill via opposing_party.email (fallback client.email) + name. "Ontkoppel"-link wist case-binding én dossier/library attachments.
+- Patroon B (Clio/MyCase) — verbetert workflow vanaf Mail-pagina
+
+**Doc / config:**
+- CLAUDE.md: scherpere "done" definitie + conflict-resolutie regel (2 cherrypicks uit 12-rule template Forrest Chang). Bewust GEEN volledig paste (overlap + bloat).
+- LUXIS-ROADMAP.md: 3 P2-items naar ✅ (email-trigger detectie — was al sessie 134, tenant toggle UI, TransitionsSection rename).
+
+**Mail-issue Lisanne / Arsalan (geen code):**
+- MX records `kestinglegal.nl` wijzen nog naar `mx1.basenet.nl` (M0a strategie: niet wijzigen tot 100% bewezen). Mail komt op BaseNet binnen, NIET op M365.
+- Outlook auto-discover ziet kestinglegal.nl als M365-domein → blokkeert BaseNet IMAP setup. Workaround: handmatige IMAP setup met BaseNet servers (imap.basenet.nl/smtp.basenet.nl). Lisanne in gesprek met BaseNet support voor exacte server-instellingen.
+
+**Sessie 136 cleanup:** git tag `sessie-136` aangemaakt op `b7fd175` + gepusht.
+
+### Gewijzigde bestanden
+- `backend/app/workflow/hooks.py` — `_fmt_eur` helper + 3x EUR→€ in CaseActivity
+- `backend/alembic/versions/s126a_pipeline_overhaul.py` — RLS policy setting name gefixt
+- `backend/alembic/versions/bug71_fix_case_step_history_rls.py` (NEW) — fix-migratie voor prod
+- `backend/app/settings/schemas.py` — `pipeline_auto_drafts_enabled` toegevoegd aan response + update
+- `frontend/src/app/(dashboard)/incasso/page.tsx` — TransitionsSection labels rename
+- `frontend/src/app/(dashboard)/instellingen/workflow-tab.tsx` — nieuwe AutoDraftsToggle component
+- `frontend/src/hooks/use-settings.ts` — `pipeline_auto_drafts_enabled` in types
+- `frontend/src/hooks/use-email-sync.ts` — `useRenderTemplate` accepteert `string | undefined`
+- `frontend/src/components/email-compose-dialog.tsx` — dossier-zoekveld + effectiveCaseId refactor
+- `.claude/settings.json` — deny-list uitgebreid
+- `.claude/agents/{func-tester,security-reviewer,tech-tester}.md` — `model: sonnet` frontmatter
+- `CLAUDE.md` — done-definitie + conflict-resolutie regel
+- `LUXIS-ROADMAP.md` — 3 P2-items naar ✅
+
+### Bekende issues / openstaand voor sessie 138
+- **Wix → TransIP registrar-transfer**: Wix-DNS blokkeert nameserver-wijziging. Transfer nodig om uiteindelijk MX naar M365 te wijzen. 5-8 dagen propagatie. Niet acuut — M365 alias-route + BaseNet IMAP werkt.
+- **M365 M0b** — Lisanne mailbox overzetten. Wacht op Lisanne beschikbaar.
+- **AUDIT-04 BaseNet export** — wacht op Lisanne om export aan te leveren. Blokkeert AUDIT-05 (data-migratie script).
+- **AVG-compliance backlog** — geen haast, trigger bij eerste lead andere kantoor.
+- **AgentShield 28 HIGH findings** — niet auto-fixbaar, inherent aan dev workflow. Accept.
 
 ## Wat er gedaan is (sessie 136 — 11 mei 2026) — Claude Sonnet draft + AV PDF native + 7 incasso-fixes
 

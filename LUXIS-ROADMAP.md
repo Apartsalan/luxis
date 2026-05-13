@@ -169,7 +169,7 @@ Volledige rapporten: `docs/audits/audit-{1-financial,3-templates,4-multitenant,5
 | AUD124-04 | ✅ `bik_override_percentage` nu in payment + financial summary (sessie 125, 22 apr) | High | 1u |
 | AUD124-05 | ✅ 14-dagen termijn 14→15 in workflow (sessie 125, 22 apr) | High | 0.5u |
 | AUD124-06 | ✅ Factuur-PDF auto-attach uitgebreid naar alle sommatie-varianten + 14-dagenbrief (sessie 125, 22 apr) | High | 0.5u |
-| AUD124-07 | `_fmt_currency` renderings nog niet 100% € consistent (1x EUR resterend in 14-dagenbrief sample — waarschijnlijk niet-currency context) | Low | 0.2u |
+| AUD124-07 | ✅ `_fmt_currency` consistent — 14-dagenbrief letter was al €; gefixt: 3x EUR→€ + Dutch format in workflow/hooks.py CaseActivity (sessie 137, 13 mei) | Low | 0.2u |
 
 ### ✅ Afgerond — multi-tenant (audit 4, sessie 125, 22 apr)
 | ID | Bevinding | Sev | Status |
@@ -530,9 +530,9 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-67 | Seed voegt geen stappen toe als er al stappen bestaan — `if existing: return existing` skipt alle nieuwe default stappen | Midden | S | ✅ Gefixt (24 apr, sessie 127) |
 | BUG-68 | Add form mist eindstap/pauzeerstap checkboxes + email template velden | Laag | S | ✅ Gefixt (24 apr, sessie 127) |
 | BUG-69 | Briefsjabloon dropdown mist seed template_types — bestaande waarden niet in dropdown, reset naar "Geen" bij edit | Laag | S | ✅ Gefixt (24 apr, sessie 127) |
-| BUG-71 | `s126a_pipeline_overhaul.py` migratie gebruikt `app.current_tenant_id` i.p.v. `app.current_tenant` — latent risico bij DB from scratch | Laag | S | ❌ TODO |
-| BUG-72 | 4 tests in `test_incasso_router.py` falen door stale DB state (duplicate tenant slug `kesting-legal`) — test-infra issue, niet code | Laag | S | ❌ TODO |
-| SEC-01 | AgentShield security scan (`npx ecc-agentshield scan`) — one-time audit van Claude Code config + MCP permissions + hook veiligheid | Laag | S | ❌ TODO |
+| BUG-71 | `s126a_pipeline_overhaul.py` migratie gebruikt `app.current_tenant_id` i.p.v. `app.current_tenant` — latent risico bij DB from scratch | Laag | S | ✅ Gefixt (13 mei, sessie 137) — origineel file + nieuwe data-migratie `bug71_csh` recreëert policy op prod |
+| BUG-72 | 4 tests in `test_incasso_router.py` falen door stale DB state (duplicate tenant slug `kesting-legal`) — test-infra issue, niet code | Laag | S | ✅ Niet meer reproduceerbaar (13 mei, sessie 137) — conftest DROP SCHEMA CASCADE dekt het al |
+| SEC-01 | AgentShield security scan (`npx ecc-agentshield scan`) — one-time audit van Claude Code config + MCP permissions + hook veiligheid | Laag | S | ✅ Uitgevoerd (13 mei, sessie 137) — deny-list uitgebreid, 3 sub-agents model frontmatter; 28 HIGH zijn inherent aan dev workflow (Bash docker/python/ssh broad permissions), accept |
 | BUG-73 | "Concept genereren" knop opende compose-dialog niet | Hoog | S-M | ✅ Gefixt (7 mei, sessie 134) — bleek 5 keten-bugs: useSearchParams stale na router.replace → direct setState; AI fallback chain (Sonnet voor draft, Gemini retry); endpoint path `/api/ai-agent` ipv `/api/ai`; AIDraftResponse.sources schema dict\|list; EmailComposeDialog reset alleen op Radix onOpenChange |
 | BUG-74 | "Bekijk concept" knop ontbrak in dossier-Taken-tab — review_ai_draft tasks niet heropenbaar binnen dossier | Middel | S | ✅ Gefixt (7 mei, sessie 134) — TijdregistratieTab krijgt onOpenDraft callback van page.tsx |
 | FEAT-EML-01 | HTML email-templates met logo + handtekening + genormaliseerde tabel-layout over alle 6 sjablonen — server-side renderer ipv AI voor HTML opmaak | Middel | M | ✅ Gebouwd (7 mei, sessie 134) |
@@ -636,7 +636,7 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 ### Geplande verbeteringen (P2, niet bouwen tot expliciet groen licht)
 
-- **Mail-pagina dossier-zoekveld in compose-dialog** — Bovenaan compose-dialog zoekveld voor dossier (op cliëntnaam, debiteurnaam, dossiernummer, email). Na keuze laadt sjablonen + bestanden + AV + eerdere correspondentie van dat dossier. Free-compose blijft mogelijk bij leeg laten. Pre-fill bij geselecteerde gelinkte mail. Reply auto-locked met ontkoppel-link. Patroon B uit onderzoek sessie 133 (Clio/MyCase). Werk: ~2 uur. Bron: `docs/lisanne-incasso-workflow.md` + onderzoek 12 advocatentools.
+- ✅ **Mail-pagina dossier-zoekveld in compose-dialog** — Search bovenaan compose, klik dossier → koppelt + recipient pre-fill van opposing_party/client, sjablonen/files/library beschikbaar via dropdowns. "Ontkoppel" link maakt binding ongedaan. `useRenderTemplate` accepteert nu `string | undefined`. Gebouwd sessie 137 (13 mei).
 - ✅ **Email-trigger detectie** — Inkomende mail van debiteur → auto status "Verweer beantwoorden" + AI draft via verweer-bibliotheek. Gebouwd sessie 134.
 - ✅ **Tenant-instelling UI** — `pipeline_auto_drafts_enabled` flag aan/uit per tenant via Instellingen → Workflow → Automatiseringsregels. Gebouwd sessie 137.
 - ✅ **TransitionsSection vervangen** — UI in pipeline-page hernaamd naar "Automatische regels" paneel. Gebouwd sessie 137.

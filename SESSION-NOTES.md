@@ -1,9 +1,92 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 14 mei 2026 (sessie 140 — Playwright cleanup + KNOWN_BUGS opruimen + invoice_lines migratie)
-**Laatste feature/fix:** Sessie 140 — test-suite onderhoud: (1) 13 stale Playwright E2E specs herschreven tegen huidige UI (KNOWN-005); (2) Alembic-migratie `df140a_invoice_lines_btw` voegt ontbrekende `btw_percentage` kolom toe — unblockt facturen create/list endpoints; (3) KNOWN-001 derdengelden dead-code tests verwijderd; (4) KNOWN-004 html_renderer greeting tests geüpdate aan nieuwe salutation-format; (5) KNOWN-002+003 root-cause gecorrigeerd (conftest setup_database fixture intermittent failure i.p.v. de oorspronkelijke verkeerde redenen). Demo-feedback Lisanne ontvangen — 7 punten genoteerd voor onderzoek in sessie 141.
-**Openstaande bugs:** AI-overlap onderzoek nodig (concept-genereren vs correspondentie-AI-antwoord — zit waarschijnlijk in 2 plekken die geconsolideerd moeten); mail-sync werkt niet; geen meldingen/dashboard-actie meer; status blijft op 1e sommatie na versturen; tijdstempels overal alleen datum (moeten ook tijd in HH:MM tonen). Conftest refactor opgeschoven (memory project_user_todos.md).
-**Volgende sessie:** 141 — ONDERZOEK (geen build): in kaart brengen waar AI-functies leven (concept-genereren, correspondentie-antwoord, mail-classificatie). Bevindingen terugkoppelen aan Arsalan vóór bouw-beslissingen.
+**Laatst bijgewerkt:** 14 mei 2026 (sessie 141 — onderzoek demo-feedback + S142/S143/S144 quick wins)
+**Laatste feature/fix:** Sessie 141 — gecombineerd onderzoek + bouw: (1) docs/onderzoek-ai-overlap-S141.md met 7-punten-analyse + ASCII-architectuur-diagram; (2) S142 quick wins: `formatDateTime` helper + datum+tijd op CorrespondentieTab/Dashboard/Staphistorie, sync-toast geeft nu nuttige feedback ("X mails in Ongesorteerd" i.p.v. "0 nieuw 0 gekoppeld"), disclaimer-positie in `incasso_templates.py` 19 call sites gerefactord — disclaimer staat nu onder handtekening; (3) S143 pipeline-fix: `create_case` wijst incasso-cases automatisch toe aan stap 1 + 42 bestaande dossiers via `backfill_incasso_first_step.py` script hersteld + batch_execute skipt nu open `review_ai_draft` tasks zodat `_try_auto_advance` doorgaat; (4) S144 mail-matching: `_find_case_by_case_number` scant nu subject+body i.p.v. alleen subject, sidebar-badge `unlinked-count` wordt vol rood bij >5, dashboard "Actie nodig"-widget heeft Ongesorteerd-row bovenaan. Alembic-fix tijdens deploy: `df140a_invoice_lines_btw` migration was nooit gestamped → backend restart-loopte → `alembic stamp` opgelost.
+**Openstaande bugs:** Bel-icon toont 403 ongelezen notifications niet (frontend-rendering bug, vereist Lisanne devtools-check 15 min); AI-flows nog steeds 3 systemen — `draft_service.py` en `smart_reply_service.py` slaan `incasso_templates._render_branded()` pijplijn over, layout afwijkend van pipeline-batch; logo gebruikt nog externe URL i.p.v. data-URL; foto in handtekening niet nodig (Lisanne S141 bevestigd). Conftest refactor opgeschoven (memory project_user_todos.md).
+**Volgende sessie:** 142+ overgeslagen naar S145 — UnifiedDraftService + dynamisch email-adres op `case_type`. Doel: `draft_service.py` + `smart_reply_service.py` routeren via `incasso_templates._render_branded()` zodat alle AI-gegenereerde concepten dezelfde branded layout krijgen als de pipeline-batch. Plus: incasso → `incasso@kestinglegal.nl`, dossier/advies → `kesting@kestinglegal.nl` in handtekening dynamisch.
+
+## Wat er gedaan is (sessie 141 — 14 mei 2026) — Onderzoek demo-feedback + S142/S143/S144 quick wins
+
+### Samenvatting
+
+**Onderzoek (docs/onderzoek-ai-overlap-S141.md):** 7 punten uit demo S140 geanalyseerd. Vier punten (4+5+6+7) zijn één onderliggend probleem: AI-acties versnipperd over UI sinds commit `d9c7e20` (S134) banners verborg "om Lisanne niet te overspoelen", maar nu is er niks meer. Plus concrete vondst: `draft_service.py` en `smart_reply_service.py` slaan `incasso_templates.py` render-pijplijn over — alleen `automation_service.py:620` (batch-flow) gebruikt de branded layout. Dat verklaart Lisanne's observatie dat gegenereerde concepten er anders uitzien dan sjablonen. Rapport bevat ASCII-diagram huidige (3 endpoints, 3 prompt-sources, 3 sjabloon-bronnen) vs voorgestelde (1 endpoint POST /api/ai/draft met intent next_step/reply_to_email/free_compose, 1 `managed_templates` bron, 1 render-pijplijn).
+
+**Productie-diagnose tijdens onderzoek:**
+- Mail-sync: draait elke 5 min (last 4 min geleden), tokens OK. 143 emails, 87 unlinked (60%) — auto-koppeling structureel faalt door multi-dossier afzender-match
+- Notifications: 403 in DB, alle 403 ongelezen, alle voor Lisanne, alle type `deadline_overdue` (geen draft_ready/email_received) — frontend toont ze niet
+- Pipeline-step: 45/48 incasso-dossiers (94%) hebben geen `incasso_step_id` — `create_case` bug, nooit ingesteld
+- AI-drafts: 18 'generated' status + 1 'sent' — drafts worden gemaakt, niet zichtbaar voor Lisanne
+- workflow_tasks: 9 `review_ai_draft` overdue + 7 skipped + 1 pending + 1 completed (allemaal voor case 2026-00062)
+
+**S142 — Quick wins (commit `87a9e2f`):**
+- `formatDateTime(date, "short"|"long")` helper in `frontend/src/lib/utils.ts`
+- 7 componenten gemigreerd waar backend timestamp levert: CorrespondentieTab (email-lijst + email-detail), Dashboard recente activiteit, StaphistorieTab. `date_opened` velden ongemoeid (`Date`-type zonder tijdcomponent — `formatDate` blijft)
+- `buildSyncToastMessage()` helper geeft duidelijke melding: "Geen nieuwe e-mails" / "X nieuwe e-mails gekoppeld" / "X opgehaald — Y in Ongesorteerd". Vervangt "0 nieuw, 0 gekoppeld" op CorrespondentieTab + correspondentie-pagina
+- `_BASE_EMAIL` template heeft nieuwe `{{ disclaimer }}` slot na `{{ afsluiting }}`. `_render_branded()` accepteert `disclaimer_html` param. 19 call sites gerefactord via éénmalig Python-script: `body += _schuldhulp_disclaimer(ctx)` → `disclaimer_html=_schuldhulp_disclaimer(ctx)` parameter. Test-assertie in `_assert_base_nl` verifieert dat disclaimer NA handtekening staat (regression-guard)
+
+**S143 — Pipeline-step bug (commits `86d4375` + `e52b1ec`):**
+- `cases/service.py::create_case`: voor `case_type == "incasso"` fetch eerste pipeline-stap via `list_pipeline_steps`, roep `move_case_to_step` aan met `trigger_type="auto"`. Dit creëert ook CaseStepHistory + activity-log
+- `incasso/service.py`: nieuwe `_skip_review_drafts_for_step()` helper. Aangeroepen in `batch_execute()` na `_auto_complete_tasks`, voor `_try_auto_advance`. Marks open `review_ai_draft` tasks for current step as `'skipped'`. Reden: batch verstuurt via template (geen AI-draft), open review-tasks blokkeren anders auto-advance
+- `backend/scripts/backfill_incasso_first_step.py`: éénmalig script met `--dry-run` flag. Vindt incasso-cases met `status='nieuw' AND incasso_step_id IS NULL`, wijst toe aan eerste pipeline-stap via `move_case_to_step(trigger_type="backfill")`. Uitgevoerd op productie: **42 cases hersteld**. Resultaat: 45/45 incasso-cases hebben nu een step
+
+**S144 — Mail-matching slimmer (commit `8e84221`):**
+- `sync_service.py::_find_case_by_case_number` neemt nu `text: str` i.p.v. `subject: str`. Caller bouwt searchable_text via `_build_searchable_text(subject, body_text, body_html, snippet)`. Dossiernummers in mail-bodies worden nu gevonden, niet alleen in onderwerp. Bounce-detectie blijft subject-only
+- Sidebar-badge (`app-sidebar.tsx`): `unlinked-count` badge wordt prominent rood (`bg-red-500` + `text-white`) bij `> 5`, anders subtiel (`bg-red-500/20` + `text-red-400`). Andere badges ongemoeid
+- Dashboard "Actie nodig"-widget: bovenaan "Ongesorteerd — X e-mails wachten op koppeling" rij met click-door naar `/correspondentie?filter=unlinked`. Toont alleen wanneer `unlinkedCount > 0`
+
+**Productie-incident tijdens deploy:** Alembic `df140a_invoice_lines_btw` migration was nooit op `alembic_version` gestamped (artefact uit S140 bd95288), backend restart-loopte met `DuplicateColumnError` op btw_percentage. Opgelost met `docker compose run --rm --no-deps backend python -m alembic stamp df140a_invoice_lines_btw`. Site ~2 min down.
+
+**Lisanne beslissingen tijdens sessie:**
+- Geen aparte foto van Lisanne nodig — Kesting Legal logo zit al goed in templates
+- Email-adres dynamisch: `case_type == "incasso"` → `incasso@kestinglegal.nl`, dossier/advies → `kesting@kestinglegal.nl`
+- Concept-knop op Correspondentie-tab definitief weg (Optie A) — alle AI-generatie via toekomstige CaseActionFeed op Overzicht-tab
+- Mail-matching drempels: 90% match = auto, 60-90% = suggesties, lager = ongesorteerd
+
+### Gewijzigde bestanden
+
+**Backend:**
+- `backend/app/cases/service.py` (create_case wijst incasso-case toe aan stap 1)
+- `backend/app/incasso/service.py` (nieuwe `_skip_review_drafts_for_step`, batch_execute roept hem aan)
+- `backend/app/email/incasso_templates.py` (`_BASE_EMAIL` heeft `{{ disclaimer }}` slot, `_render_branded` neemt `disclaimer_html`, 19 call sites gerefactord)
+- `backend/app/email/sync_service.py` (`_find_case_by_case_number` scant nu searchable_text incl. body, 4 call sites)
+- `backend/tests/test_incasso_templates.py` (`_assert_base_nl` verifieert disclaimer NA handtekening)
+- `backend/scripts/backfill_incasso_first_step.py` (nieuw — éénmalig backfill-script)
+
+**Frontend:**
+- `frontend/src/lib/utils.ts` (`formatDateTime` helper toegevoegd)
+- `frontend/src/hooks/use-email-sync.ts` (`buildSyncToastMessage` helper, `SyncResponse` geëxporteerd)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` (datum+tijd, sync-toast helper)
+- `frontend/src/app/(dashboard)/zaken/[id]/components/StaphistorieTab.tsx` (lokale formatter vervangen door centrale)
+- `frontend/src/app/(dashboard)/correspondentie/page.tsx` (sync-toast helper)
+- `frontend/src/app/(dashboard)/page.tsx` (datum+tijd activiteit, Ongesorteerd-rij in Actie-nodig widget)
+- `frontend/src/components/layout/app-sidebar.tsx` (prominente badge bij >5 unlinked)
+
+**Docs:**
+- `docs/onderzoek-ai-overlap-S141.md` (nieuw — onderzoeksrapport met 4 commits geüpdatet)
+
+### Bekende issues
+
+- **Bel-icon toont 403 ongelezen notifications niet** — frontend rendering of polling-bug, vereist Lisanne devtools-check (~15 min)
+- **AI-flows nog 3 systemen** — `draft_service.py` + `smart_reply_service.py` slaan `incasso_templates._render_branded()` over. UnifiedDraftService gepland S145
+- **Logo gebruikt externe URL** in `_BASE_EMAIL:35-36` (`https://kestinglegal.nl/logo.png`) — commit `c8c6039` beloofde data-URL maar nooit gemigreerd. Risico: mailclients blokkeren remote images
+- **Notificatie-types beperkt** — alleen `deadline_overdue` wordt aangemaakt. Geen `email_received`, `draft_ready`, `classification_done`. Lisanne ervaart "geen meldingen" deels hierdoor
+- Conftest refactor (`KNOWN-002 + KNOWN-003`) opgeschoven — memory `project_user_todos.md`
+
+### Volgende sessie
+
+**S145 — UnifiedDraftService backend + dynamisch email-adres op case_type**
+
+Doel: alle 3 AI-flows (incasso-stap / context-draft / smart-reply) routeren via `incasso_templates._render_branded()` zodat layout consistent is. Eerste stap richting CaseActionFeed widget (S146-147).
+
+Scope:
+- Nieuw `app/ai_agent/unified_draft_service.py` met intents `next_step` / `reply_to_email` / `free_compose`
+- Nieuw endpoint `POST /api/ai/draft` (body: `{case_id, intent, tone?}`)
+- AI-prompts: altijd plain body terug, geen raw HTML. HTML-wrap server-side via `incasso_templates._render_branded()`
+- `_signature()` in `incasso_templates.py`: email-regel dynamisch op `Case.case_type` (`incasso` → `incasso@`, anders `kesting@`)
+- Logo embedden als data-URL via bestaand `templates/lisanne/_kesting_logo.b64`
+- Bestaande 3 endpoints behouden (deprecate, niet meteen verwijderen — UnifiedDraftService draait parallel)
+
+
 
 ## Wat er gedaan is (sessie 140 — 14 mei 2026) — Playwright cleanup + KNOWN_BUGS opruimen + invoice_lines migratie
 

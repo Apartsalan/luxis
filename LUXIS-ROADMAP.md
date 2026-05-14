@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 14 mei 2026 (sessie 140 — Playwright cleanup + KNOWN_BUGS opruimen + invoice_lines.btw migratie)
+**Laatst bijgewerkt:** 14 mei 2026 (sessie 141 — onderzoek demo-feedback + S142/S143/S144 quick wins live)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -537,6 +537,21 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | BUG-74 | "Bekijk concept" knop ontbrak in dossier-Taken-tab — review_ai_draft tasks niet heropenbaar binnen dossier | Middel | S | ✅ Gefixt (7 mei, sessie 134) — TijdregistratieTab krijgt onOpenDraft callback van page.tsx |
 | FEAT-EML-01 | HTML email-templates met logo + handtekening + genormaliseerde tabel-layout over alle 6 sjablonen — server-side renderer ipv AI voor HTML opmaak | Middel | M | ✅ Gebouwd (7 mei, sessie 134) |
 | FEAT-EML-02 | Email-trigger detectie voor verweer-flow — inkomende mail → classify → als juridisch_verweer/betwisting + dossier in hoofdpad → auto-switch naar 'Verweer beantwoorden' + AI draft via verweer-bibliotheek | Hoog | M | ✅ Gebouwd (7 mei, sessie 134) — moet nog end-to-end getest |
+| BUG-75 | Tijdstempels overal alleen datum, geen tijd in HH:MM (Lisanne demo S140) | Laag | S | ✅ Gefixt (14 mei, sessie 141 — S142) — `formatDateTime` helper, 7 componenten gemigreerd waar backend timestamp levert |
+| BUG-76 | Sync-toast geeft "0 nieuw, 0 gekoppeld" zonder context (Lisanne ervaart als kapot) | Midden | S | ✅ Gefixt (14 mei, sessie 141 — S142) — `buildSyncToastMessage` helper toont nu nuttige melding incl. verwijzing naar Ongesorteerd |
+| BUG-77 | Disclaimer (schuldhulpblok + juridisch) staat in incasso-templates boven handtekening i.p.v. eronder (Lisanne demo S140) | Hoog | M | ✅ Gefixt (14 mei, sessie 141 — S142) — `_BASE_EMAIL` heeft nieuwe `{{ disclaimer }}` slot na `{{ afsluiting }}`, 19 call sites gerefactord, regression-test toegevoegd |
+| BUG-78 | `create_case` zet `incasso_step_id` nooit op stap 1 — 42 van 45 incasso-cases bleven zonder pipeline-stap, blokkeerden batch + auto-advance | Hoog | M | ✅ Gefixt (14 mei, sessie 141 — S143) — auto-toewijzen aan eerste pipeline-stap voor `case_type='incasso'` + backfill-script 42 cases hersteld |
+| BUG-79 | Batch_execute completeerde alleen `generate_document`/`send_letter` tasks — open `review_ai_draft` tasks blokkeerden `_try_auto_advance` (Lisanne "status blijft op 1e sommatie") | Hoog | S | ✅ Gefixt (14 mei, sessie 141 — S143) — nieuwe `_skip_review_drafts_for_step` helper marks open review-tasks als 'skipped' na succesvolle send |
+| BUG-80 | Dossiernummer-matching scant alleen onderwerp, mist nummers in mail-body (replies waar wederpartij `Re:` zonder kenmerk hergebruikt) | Midden | S | ✅ Gefixt (14 mei, sessie 141 — S144) — `_find_case_by_case_number` neemt `text` parameter, callers passeren `_build_searchable_text(subject, body_text, body_html, snippet)` |
+| BUG-81 | Ongesorteerd-mails niet zichtbaar voor Lisanne — sidebar-badge te subtiel bij hogere aantallen, geen dashboard-prompt | Midden | S | ✅ Gefixt (14 mei, sessie 141 — S144) — badge vol rood bij >5, "Ongesorteerd"-row bovenaan dashboard "Actie nodig"-widget |
+| BUG-82 | Backend restart-loop na deploy: Alembic `df140a_invoice_lines_btw` migration nooit gestamped, kolom bestond al → `DuplicateColumnError` elke startup | Hoog | XS | ✅ Gefixt (14 mei, sessie 141) — `alembic stamp df140a_invoice_lines_btw` op productie uitgevoerd |
+| BUG-83 | Bel-icon toont 403 ongelezen notifications (productie-DB) niet in UI — frontend rendering/polling-bug, niet onderzocht | Midden | XS-S | 🔵 Open — vereist Lisanne devtools-check (~15 min) |
+| BUG-84 | Notification-types beperkt — alleen `deadline_overdue` wordt aangemaakt. Geen `email_received`, `draft_ready`, `classification_done` → Lisanne ervaart "geen meldingen" | Midden | M | 🔵 Open — onderdeel CaseActionFeed S146-147 |
+| FEAT-AI-01 | UnifiedDraftService: één endpoint POST /api/ai/draft met intents `next_step`/`reply_to_email`/`free_compose`. Alle 3 flows routeren via `incasso_templates._render_branded()` — `draft_service.py` en `smart_reply_service.py` slaan deze pijplijn nu over, gevolg: gegenereerde concepten missen logo/handtekening/footer | Hoog | L | 🟢 Gepland S145 |
+| FEAT-AI-02 | Email-adres in `_signature()` dynamisch op `Case.case_type` — incasso → `incasso@kestinglegal.nl`, dossier/advies → `kesting@kestinglegal.nl` | Midden | S | 🟢 Gepland S145 (samen met FEAT-AI-01) |
+| FEAT-AI-03 | Logo embedden als data-URL via `templates/lisanne/_kesting_logo.b64` i.p.v. externe URL — voorkomt mailclient remote-image blocking | Laag | S | 🟢 Gepland S145 |
+| FEAT-AI-04 | CaseActionFeed widget op Overzicht-tab — één plek met kaart-types: concept klaar, antwoord van wederpartij, volgende pipeline-stap. Vervangt 3 verspreide plekken (DossierHeader banner 30s auto-hide, TijdregistratieTab review_ai_draft, CorrespondentieTab smart-reply). Concept-knop op Correspondentie-tab gaat weg (Lisanne S141 Optie A bevestigd) | Hoog | L (2 sessies) | 🟢 Gepland S146-S147 |
+| FEAT-MAIL-01 | Slimmere mail-matching: bij multi-dossier afzender niet weigeren maar suggereren — drempels 90% auto / 60-90% suggestie-popup / <60% Ongesorteerd. ML-score op laatste-activiteit + recent-uitgaande-mail-match | Hoog | M | 🟢 Gepland S148 (Lisanne drempels bevestigd S141) |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 

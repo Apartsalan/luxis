@@ -82,6 +82,13 @@ Ons kenmerk: {{ zaak.zaaknummer }}
 {{ afsluiting }}
 </td></tr>
 
+{% if disclaimer %}
+<!-- Disclaimer (onder handtekening) -->
+<tr><td style="padding:0 32px;">
+{{ disclaimer }}
+</td></tr>
+{% endif %}
+
 <!-- Footer -->
 <tr><td style="padding:24px 32px 32px 32px;border-top:1px solid #e5e7eb;\
 margin-top:24px;">
@@ -109,8 +116,19 @@ style="font-size:12px;color:#6b7280;">
 _base_tpl = _env.from_string(_BASE_EMAIL)
 
 
-def _render_branded(context: dict, betreft: str, content_html: str, afsluiting_html: str) -> str:
-    """Wrap brief content in the branded email layout."""
+def _render_branded(
+    context: dict,
+    betreft: str,
+    content_html: str,
+    afsluiting_html: str,
+    disclaimer_html: str = "",
+) -> str:
+    """Wrap brief content in the branded email layout.
+
+    The disclaimer (schuldhulpblok + juridische disclaimer) is rendered
+    AFTER the signature, at the very bottom of the email, per Lisanne's
+    request (sessie 141).
+    """
     return _base_tpl.render(
         kantoor=context["kantoor"],
         wederpartij=context["wederpartij"],
@@ -119,6 +137,7 @@ def _render_branded(context: dict, betreft: str, content_html: str, afsluiting_h
         betreft_regel=Markup(betreft),
         content=Markup(content_html),
         afsluiting=Markup(afsluiting_html),
+        disclaimer=Markup(disclaimer_html) if disclaimer_html else "",
     )
 
 
@@ -446,12 +465,12 @@ def _render_aanmaning(ctx: dict) -> str:
         "<p>Bij gebreke van tijdige betaling zullen wij zonder nadere "
         "aankondiging rechtsmaatregelen treffen.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft="<strong>Betreft: Aanmaning tot betaling</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -500,7 +519,6 @@ def _render_sommatie(ctx: dict) -> str:
         "<p>Ik vertrouw erop dat u de ernst van de situatie inziet en "
         "tijdig tot betaling overgaat.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -509,6 +527,7 @@ def _render_sommatie(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -536,12 +555,12 @@ def _render_tweede_sommatie(ctx: dict) -> str:
         "(griffierecht, deurwaarderskosten, proceskosten) komen "
         "volledig voor uw rekening.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft="<strong>Betreft: TWEEDE SOMMATIE &mdash; Laatste gelegenheid</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -592,12 +611,12 @@ def _render_14_dagenbrief(ctx: dict) -> str:
         "aankondiging rechtsmaatregelen treffen, waarvan de kosten eveneens "
         "voor uw rekening komen.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft="<strong>Betreft: Ingebrekestelling en aanmaning tot betaling</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -621,12 +640,12 @@ def _render_herinnering(ctx: dict) -> str:
         "Derdengelden Kesting Legal, "
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft="<strong>Betreft: Herinnering openstaande vordering</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -663,12 +682,12 @@ def _render_reactie_9_3(ctx: dict) -> str:
     body += _vordering_table_basenet(ctx)
     body += _betaling_instructie(ctx)
     body += _betalingsregeling_blok(ctx)
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -700,12 +719,12 @@ def _render_reactie_20_4(ctx: dict) -> str:
     body += _vordering_table_basenet(ctx)
     body += _betaling_instructie(ctx)
     body += _betalingsregeling_blok(ctx)
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -752,7 +771,6 @@ def _render_schikkingsvoorstel(ctx: dict) -> str:
         "Ik verzoek u mij in dat kader het betalingsbewijs toe "
         "te sturen.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -761,6 +779,7 @@ def _render_schikkingsvoorstel(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -875,12 +894,12 @@ def _render_reactie_ncnp_9_3(ctx: dict) -> str:
     body += _vordering_table_basenet(ctx)
     body += _betaling_instructie(ctx)
     body += _betalingsregeling_blok(ctx)
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -925,12 +944,12 @@ def _render_reactie_verlengd_9_3(ctx: dict) -> str:
     body += _vordering_table_basenet(ctx)
     body += _betaling_instructie(ctx)
     body += _betalingsregeling_blok(ctx)
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -998,7 +1017,6 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
         "<p>Zonder uw schriftelijke bevestiging is er geen "
         "regeling getroffen.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1008,6 +1026,7 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1054,7 +1073,6 @@ def _render_faillissement_dreigbrief(ctx: dict) -> str:
         "enige manier om indiening te voorkomen is door mij een "
         "betalingsbewijs toe te zenden.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1064,6 +1082,7 @@ def _render_faillissement_dreigbrief(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1123,7 +1142,6 @@ def _render_sommatie_na_reactie(ctx: dict) -> str:
     body += "<p><strong>Te betalen</strong></p>"
     body += _betaling_instructie(ctx, termijn="2 DAGEN")
     body += _betalingsregeling_blok(ctx)
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1132,6 +1150,7 @@ def _render_sommatie_na_reactie(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1164,7 +1183,6 @@ def _render_sommatie_eerste_opgave(ctx: dict) -> str:
         f"{zn}.</p>"
         "<p>Een betaalbewijs zie ik wel per omgaand tegemoet.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1173,6 +1191,7 @@ def _render_sommatie_eerste_opgave(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1211,7 +1230,6 @@ def _render_niet_voldaan_regeling(ctx: dict) -> str:
         "<p>Ik vertrouw erop dat u tijdig aan uw verplichtingen "
         "voldoet.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1220,6 +1238,7 @@ def _render_niet_voldaan_regeling(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1270,7 +1289,6 @@ def _render_sommatie_laatste_voor_fai(ctx: dict) -> str:
         "waaronder begrepen de proces- en advocaatkosten, houd ik "
         "u reeds aansprakelijk.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1279,6 +1297,7 @@ def _render_sommatie_laatste_voor_fai(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1331,7 +1350,6 @@ def _render_wederom_sommatie_inhoudelijk(ctx: dict) -> str:
         "advocaatkosten.</p>"
     )
     body += _stuiting_blok(ctx)
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1340,6 +1358,7 @@ def _render_wederom_sommatie_inhoudelijk(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1385,7 +1404,6 @@ def _render_wederom_sommatie_kort(ctx: dict) -> str:
         "advocaatkosten.</p>"
     )
     body += _stuiting_blok(ctx)
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1394,6 +1412,7 @@ def _render_wederom_sommatie_kort(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1443,7 +1462,6 @@ def _render_sommatie_drukte(ctx: dict) -> str:
         "<p>Ik vertrouw erop dat u de ernst van de situatie inziet "
         "en tijdig tot betaling overgaat.</p>"
     )
-    body += _schuldhulp_disclaimer(ctx)
     return _render_branded(
         ctx,
         betreft=(
@@ -1452,6 +1470,7 @@ def _render_sommatie_drukte(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 

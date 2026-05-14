@@ -31,6 +31,7 @@ import {
   useBulkLinkEmails,
   useDismissEmails,
   useLinkEmail,
+  buildSyncToastMessage,
   type SyncedEmailSummary,
   type CaseSuggestion,
 } from "@/hooks/use-email-sync";
@@ -171,7 +172,7 @@ export default function CorrespondentiePage() {
       { maxResults: 100 },
       {
         onSuccess: (data) => {
-          toast.success(`Sync voltooid: ${data.new} nieuw, ${data.linked} gekoppeld`);
+          toast.success(buildSyncToastMessage(data));
         },
         onError: (err) => {
           toast.error(`Sync mislukt: ${err.message}`);

@@ -27,6 +27,7 @@ import {
   useCaseEmails,
   useSyncEmails,
   useSyncedEmailDetail,
+  buildSyncToastMessage,
   useSaveAttachmentToCase,
   type SyncedEmailSummary,
   type EmailAttachmentInfo,
@@ -35,7 +36,7 @@ import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
 import { useGenerateDraft, type AiDraft } from "@/hooks/use-ai-draft";
 import { confidenceBadgeClasses, confidenceLabelText } from "@/lib/confidence";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
-import { formatDate, formatDateShort } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { tokenStore } from "@/lib/token-store";
 
 // ── Email Detail Panel ──────────────────────────────────────────────────────
@@ -132,7 +133,7 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
           )}
           <div className="flex gap-2">
             <span className="font-medium w-12">Datum:</span>
-            <span>{formatDate(email.email_date)}</span>
+            <span>{formatDateTime(email.email_date, "long")}</span>
           </div>
         </div>
       </div>
@@ -328,9 +329,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
   const handleSync = async () => {
     try {
       const stats = await syncEmails.mutateAsync({ caseId });
-      toast.success(
-        `Sync klaar: ${stats.new} nieuw, ${stats.linked} gekoppeld`
-      );
+      toast.success(buildSyncToastMessage(stats));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Sync mislukt");
     }
@@ -552,7 +551,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                           {item.direction === "inbound" ? item.from : item.to}
                         </p>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDateShort(item.date)}
+                          {formatDateTime(item.date, "short")}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">

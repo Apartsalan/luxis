@@ -85,6 +85,13 @@ def _assert_base_nl(html: str) -> None:
     assert "Stichting Beheer Derdengelden" in html, "stichting missing"
     assert "Hoogachtend" in html, "NL signature missing"
     assert "schuldenaar" in html.lower(), "schuldhulp block missing"
+    # Lisanne S141: disclaimer MOET onder handtekening staan.
+    signature_pos = html.find("Hoogachtend")
+    disclaimer_pos = html.find("financi&euml;le zorgen")
+    assert disclaimer_pos > signature_pos, (
+        "Disclaimer (schuldhulpblok) moet NA de handtekening komen, "
+        f"maar staat op pos {disclaimer_pos} terwijl handtekening op {signature_pos} staat"
+    )
 
 
 def _assert_base_en(html: str) -> None:

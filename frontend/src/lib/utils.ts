@@ -49,6 +49,39 @@ export function formatDateShort(date: string | Date): string {
 }
 
 /**
+ * Format a date with time in Dutch locale.
+ *
+ * Variants:
+ * - "long": "17 februari 2026 14:30"
+ * - "short": "17-02-2026 14:30"
+ */
+export function formatDateTime(
+  date: string | Date,
+  variant: "long" | "short" = "short",
+): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (variant === "long") {
+    const datePart = new Intl.DateTimeFormat("nl-NL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(d);
+    const timePart = new Intl.DateTimeFormat("nl-NL", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+    return `${datePart} ${timePart}`;
+  }
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d).replace(", ", " ");
+}
+
+/**
  * Format a date as relative time in Dutch.
  * Examples: "Zojuist", "5 min geleden", "2 uur geleden", "Gisteren 14:30", "17 feb"
  */

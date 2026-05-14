@@ -3,6 +3,7 @@
 import { Loader2, Clock, ArrowRight, FileText, Mail, Bot, User } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { useCaseStepHistory, type CaseStepHistory } from "@/hooks/use-incasso";
+import { formatDateTime } from "@/lib/utils";
 
 const CATEGORY_STYLES: Record<string, string> = {
   minnelijk: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -19,16 +20,6 @@ const TRIGGER_LABELS: Record<string, { label: string; icon: typeof User }> = {
   auto: { label: "Automatisch", icon: Bot },
   seed: { label: "Standaard", icon: ArrowRight },
 };
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function formatDuration(entered: string, exited: string | null): string {
   const start = new Date(entered).getTime();
@@ -110,12 +101,12 @@ export function StaphistorieTab({ caseId }: { caseId: string }) {
                 <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {formatDate(entry.entered_at)}
+                    {formatDateTime(entry.entered_at, "short")}
                   </span>
                   {entry.exited_at && (
                     <span className="flex items-center gap-1">
                       <ArrowRight className="h-3 w-3" />
-                      {formatDate(entry.exited_at)}
+                      {formatDateTime(entry.exited_at, "short")}
                     </span>
                   )}
                   <span className="flex items-center gap-1">

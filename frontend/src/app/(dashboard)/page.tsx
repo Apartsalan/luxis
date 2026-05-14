@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { formatCurrency, formatDateShort, formatDateTime } from "@/lib/utils";
 import {
   CASE_STATUS_LABELS as STATUS_LABELS,
   CASE_STATUS_BADGE as STATUS_BADGE_CLASSES,
@@ -399,7 +399,7 @@ export default function DashboardPage() {
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {item.case_number} ·{" "}
-                          {formatDateShort(item.created_at)}
+                          {formatDateTime(item.created_at, "short")}
                         </p>
                       </div>
                     </Link>

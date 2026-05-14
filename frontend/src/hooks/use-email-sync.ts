@@ -50,11 +50,32 @@ export interface CaseSuggestion {
   confidence: "high" | "medium";
 }
 
-interface SyncResponse {
+export interface SyncResponse {
   fetched: number;
   new: number;
   linked: number;
   skipped: number;
+}
+
+/**
+ * Build a useful toast message from sync stats.
+ *
+ * Replaces the unhelpful "0 nieuw, 0 gekoppeld" with something that
+ * explains what happened — including pointing to Ongesorteerd when
+ * mails are fetched but not auto-linked.
+ */
+export function buildSyncToastMessage(stats: SyncResponse): string {
+  if (stats.new === 0) {
+    return "Geen nieuwe e-mails gevonden.";
+  }
+  if (stats.linked === stats.new) {
+    return `${stats.new} nieuwe e-mail${stats.new === 1 ? "" : "s"} gekoppeld aan dossiers.`;
+  }
+  if (stats.linked === 0) {
+    return `${stats.new} nieuwe e-mail${stats.new === 1 ? "" : "s"} opgehaald — geen automatisch gekoppeld. Bekijk in Ongesorteerd.`;
+  }
+  const unlinked = stats.new - stats.linked;
+  return `${stats.new} nieuwe e-mails — ${stats.linked} gekoppeld, ${unlinked} in Ongesorteerd.`;
 }
 
 // ── Hooks ────────────────────────────────────────────────────────────────────

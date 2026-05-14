@@ -85,50 +85,53 @@ test.describe("Zaken CRUD", () => {
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test.skip("Z3: create a new case via form", async ({ page }) => {
+  test("Z3: create a new case via wizard", async ({ page }) => {
     test.setTimeout(60000);
     await page.goto("/zaken/nieuw");
     await page.waitForLoadState("domcontentloaded");
 
-    // Wait for the form to be ready
+    // Wait for the wizard to be ready
     await expect(
       page.locator("h1").filter({ hasText: "Nieuw dossier" })
     ).toBeVisible({ timeout: 15000 });
 
-    // Change case type to "advies" (for 7-tab detail page)
+    // ── Step 1 ─ pick "Advies" so non-incasso (2-step wizard, 7-tab detail) ──
     await page
-      .locator("label:has-text('Dossiertype') ~ select")
+      .locator("label:has-text('Dossiertype') + select")
       .first()
       .selectOption("advies");
 
-    // Search for client
+    // Navigate to step 2
+    await page.getByRole("button", { name: /Volgende/ }).click({ force: true });
+
+    // ── Step 2 ─ Client selection ──
     const clientSearchInput = page.getByPlaceholder("Zoek een client...");
+    await expect(clientSearchInput).toBeVisible({ timeout: 10000 });
     await clientSearchInput.fill("E2E ZaakClient");
 
-    // Wait for dropdown results and click the matching contact
-    const clientOption = page.locator("button", {
-      hasText: "E2E ZaakClient B.V.",
-    });
-    await clientOption.first().click({ timeout: 10000 });
+    // Click matching contact in dropdown
+    await page
+      .getByRole("button", { name: /E2E ZaakClient B\.V\./ })
+      .first()
+      .click({ force: true, timeout: 10000 });
 
-    // Verify client is selected (shown as a badge, not the search input)
-    await expect(page.getByText("E2E ZaakClient B.V.")).toBeVisible();
+    // Toast appears immediately after submit — listen before nav completes
+    const toastPromise = page.getByText("Dossier aangemaakt").waitFor({
+      state: "visible",
+      timeout: 10000,
+    }).catch(() => null);
 
-    // Submit
-    await page.getByRole("button", { name: "Dossier aanmaken" }).click();
+    await page.getByRole("button", { name: "Dossier aanmaken" }).click({ force: true });
 
-    // Wait for redirect to detail page (UUID in URL)
+    // Wait for redirect to detail page (toast race is best-effort)
     await page.waitForURL(/\/zaken\/[a-f0-9-]+$/, { timeout: 30000 });
+    await toastPromise;
 
-    // Extract case ID from URL
     caseId = page.url().split("/zaken/")[1];
 
-    // Case number should be visible in the h1
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10000 });
-
-    // Toast notification
-    await expect(page.getByText("Dossier aangemaakt")).toBeVisible({
-      timeout: 5000,
+    // Case number should be visible in the h1 (format: YYYY-NNNNN)
+    await expect(page.locator("h1").first()).toContainText(/\d{4}-\d+/, {
+      timeout: 10000,
     });
   });
 
@@ -256,11 +259,13 @@ test.describe("Zaken CRUD", () => {
       timeout: 15000,
     });
 
-    // Register dialog handler BEFORE clicking delete
-    page.on("dialog", (dialog) => dialog.accept());
-
-    // Click delete button (Trash2 icon with title "Verwijderen")
+    // Open the React AlertDialog (replaces window.confirm)
     await page.getByTitle("Verwijderen").click({ force: true });
+
+    // Confirm via alertdialog
+    const dialog = page.getByRole("alertdialog");
+    await dialog.waitFor({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "Verwijderen", exact: true }).click({ force: true });
 
     // Should redirect to zaken list
     await page.waitForURL("**/zaken", { timeout: 10000 });

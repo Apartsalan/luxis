@@ -68,7 +68,7 @@ test alleen het API-endpoint dat 200 OK geeft (gedekt door
 - `frontend/e2e/sidebar.spec.ts` — dashboard greeting check faalt voor beforeEach — **STATUS: GEFIXT** — beforeEach gebruikt nu sidebar Dashboard-link i.p.v. greeting heading
 - `frontend/e2e/relaties.spec.ts::R5` — delete-confirm dialog is nu custom React component (geen `window.confirm`), `page.on('dialog')` werkt niet meer — **STATUS: GEFIXT** — `page.on("dialog")` vervangen door `page.getByRole("alertdialog")` patroon
 - `frontend/e2e/tijdregistratie.spec.ts::T5` — zelfde delete-confirm dialog issue — **STATUS: GEFIXT** — `page.on("dialog")` vervangen door `page.getByRole("alertdialog")` patroon
-- `frontend/e2e/zaken.spec.ts::Z3` — dossier-wizard client-search input is verplaatst naar later stap, niet zichtbaar zonder voorafgaande stap-navigatie
+- `frontend/e2e/zaken.spec.ts::Z3` — dossier-wizard client-search input is verplaatst naar later stap, niet zichtbaar zonder voorafgaande stap-navigatie — **STATUS: GEFIXT** — Z3 navigeert nu eerst stap 1 (case_type="advies") → klikt "Volgende" → client-search verschijnt in stap 2; toast-assertie gebruikt waitFor pre-redirect; Z8 ook geüpgraded naar AlertDialog patroon
 
 **Reden:** UI is geëvolueerd in sessies 130-139 (nieuwe pipeline, bulk-toolbars,
 nieuwe instellingen-tabs). De E2E specs uit eerdere sessies verwachten nog de

@@ -168,7 +168,7 @@ test.describe("Relaties CRUD", () => {
     });
   });
 
-  test.skip("R5: delete a person contact", async ({ page }) => {
+  test("R5: delete a person contact", async ({ page }) => {
     test.skip(!personId, "R3 must create a person first");
 
     await page.goto(`/relaties/${personId}`);
@@ -179,11 +179,13 @@ test.describe("Relaties CRUD", () => {
       page.locator("h1").filter({ hasText: "Jan E2ETestpersoon" })
     ).toBeVisible({ timeout: 10000 });
 
-    // Register dialog handler BEFORE clicking delete
-    page.on("dialog", (dialog) => dialog.accept());
+    // Open the React AlertDialog (replaces window.confirm)
+    await page.getByTitle("Verwijderen").click({ force: true });
 
-    // Click delete button
-    await page.getByTitle("Verwijderen").click();
+    // Confirm in the alertdialog
+    const dialog = page.getByRole("alertdialog");
+    await dialog.waitFor({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "Verwijderen", exact: true }).click({ force: true });
 
     // Should redirect to relaties list
     await page.waitForURL("**/relaties", { timeout: 10000 });

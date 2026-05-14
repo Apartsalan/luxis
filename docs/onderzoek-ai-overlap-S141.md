@@ -510,9 +510,13 @@ Te bewaren na akkoord op dit rapport:
 
 **Volgende stap:** Arsalan reviewt deze tweede rapportversie, geeft per punt akkoord (en eventueel scope-aanpassingen), daarna pas bouw in S142+.
 
-### Open vragen aan Lisanne (verzamel voor S142)
+### Beslissingen Arsalan (sessie 141)
 
-1. Handtekening-foto: heeft Lisanne een foto-bestand of moet de BaseNet-CDN-link blijven werken?
-2. Email-adres in handtekening: `kesting@kestinglegal.nl` of `incasso@kestinglegal.nl`?
-3. Concept-knop op Correspondentie-tab: definitief weg, of als snelle "antwoord opstellen"-knop behouden naast het CaseActionFeed?
-4. Suggestie-flow bij multi-dossier email: drempel voor auto-koppelen? (bijvoorbeeld 90% match = auto, 60-90% = suggestie, lager = ongesorteerd)
+1. **Handtekening-foto:** Geen aparte foto van Lisanne nodig. Het Kesting Legal logo staat al in de huidige gegenereerde mails (header bovenaan + ook onderaan) — dat is correct. Sjabloon-trouw blijven is voldoende.
+2. **Email-adres in handtekening:** dynamisch op basis van `Case.case_type` veld (bestaat al). `case_type == "incasso"` → `incasso@kestinglegal.nl`. `case_type in ("dossier", "advies")` → `kesting@kestinglegal.nl`.
+3. **Concept-knop op Correspondentie-tab:** Definitief weg (Optie A). Alle concept-generatie gaat via CaseActionFeed op Overzicht-tab. Geen shortcut-knop, geen sticky banner over tabs heen — gewoon één plek.
+4. **Suggestie-flow drempels:** 90% match = auto-koppelen, 60-90% = suggereren (1-klik bevestigen), onder 60% = ongesorteerd.
+
+**Wat dit betekent voor de scope van S145:**
+- Layout-fixes klein: alleen disclaimer-positie (`_BASE_EMAIL` template aanpassen + 40 call sites) + email-adres dynamisch op `case_type`. Geen foto-toevoeging, geen logo-data-URL migratie nodig.
+- Hoofdwerk blijft: `draft_service.py` en `smart_reply_service.py` moeten dezelfde `incasso_templates._render_branded()` render-pijplijn gaan gebruiken als de batch-flow. Dán komt het logo + handtekening + correcte volgorde overal automatisch goed.

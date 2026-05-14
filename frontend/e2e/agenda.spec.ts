@@ -66,7 +66,7 @@ test.describe("Agenda", () => {
     await expect(page.getByText("ma").first()).toBeVisible();
   });
 
-  test.skip("A2: create event via dialog", async ({ page }) => {
+  test("A2: create event via dialog", async ({ page }) => {
     test.setTimeout(60000);
     await page.goto("/agenda");
     await page.waitForLoadState("domcontentloaded");
@@ -76,10 +76,10 @@ test.describe("Agenda", () => {
       page.locator("h1").filter({ hasText: "Agenda" })
     ).toBeVisible({ timeout: 15000 });
 
-    // Click "Nieuw event"
+    // Open the dialog via "Nieuw event"
     await page.getByRole("button", { name: /Nieuw event/ }).click({ force: true });
 
-    // Wait for dialog to appear (the dialog heading "Nieuw event")
+    // Dialog header
     await expect(
       page.locator("h2").filter({ hasText: "Nieuw event" })
     ).toBeVisible({ timeout: 5000 });
@@ -88,21 +88,24 @@ test.describe("Agenda", () => {
     const titleInput = page.getByPlaceholder(/Bijv\. Overleg met/);
     await titleInput.fill("E2E Test Afspraak");
 
-    // Submit the form (button text is "Opslaan" or "Aanmaken")
-    await page.getByRole("button", { name: /Opslaan|Aanmaken/ }).click({ force: true });
+    // Submit "Aanmaken" — capture the POST response so we can clean up by ID
+    const responsePromise = page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/calendar/events") &&
+        resp.request().method() === "POST" &&
+        resp.ok()
+    );
+    await page.getByRole("button", { name: "Aanmaken", exact: true }).click({ force: true });
+    const response = await responsePromise;
+    const created = (await response.json()) as { id: string };
+    eventId = created.id;
 
-    // Dialog should close
+    // Dialog should close after submit
     await expect(
       page.locator("h2").filter({ hasText: "Nieuw event" })
     ).not.toBeVisible({ timeout: 10000 });
 
-    // Click on today's date number to open the day detail panel
-    // Today is highlighted — find it by the special styling or just look for the date
-    const todayNum = new Date().getDate().toString();
-    // The today cell has special styling — click on it
-    await page.locator(`[class*="bg-primary"]`).filter({ hasText: todayNum }).first().click({ force: true });
-
-    // The day detail panel should show our event
+    // The new event should appear somewhere in the calendar grid
     await expect(
       page.getByText("E2E Test Afspraak").first()
     ).toBeVisible({ timeout: 10000 });

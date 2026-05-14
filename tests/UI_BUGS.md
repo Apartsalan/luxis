@@ -3,41 +3,25 @@
 Bugs ontdekt tijdens herschrijven van stale Playwright specs (sessie 2026-05-14).
 Niet gefixt — uitscope. Documenteer hier voor later.
 
-## BUG-001 — Backend: invoice_lines.btw_percentage kolom ontbreekt
+## BUG-001 — Backend: invoice_lines.btw_percentage kolom ontbreekt — OPGELOST
 
-**Symptoom:** `GET /api/invoices` en `POST /api/invoices` geven HTTP 500
-`Internal Server Error`.
+**Symptoom:** `GET /api/invoices` en `POST /api/invoices` geven HTTP 500.
 
-**Error in backend logs:**
-```
-sqlalchemy.exc.ProgrammingError: <class 'asyncpg.exceptions.UndefinedColumnError'>:
-column invoice_lines.btw_percentage does not exist
-```
+**Fix:** Alembic-migratie `backend/alembic/versions/df140a_invoice_lines_btw.py`
+voegt de kolom toe met default 21.00.
 
-**Oorzaak:** Het SQLAlchemy model `app/invoices/models.py` declareert
-`btw_percentage` op `InvoiceLine` (regel 152) maar er is geen Alembic-migratie
-die deze kolom toevoegt aan de bestaande `invoice_lines` tabel. Migratie
-`015_invoices.py` creëert de tabel zonder deze kolom.
+## BUG-003 — Send-invoice endpoint vereist SMTP + email_logs
 
-**Impact op E2E:**
-- `facturen.spec.ts::F2` (create invoice via form) — BLOCKED
-- `facturen.spec.ts::F3-F6` (auto-skip omdat F2 niet slaagt)
-- `facturen.spec.ts::F7` (delete concept invoice) — BLOCKED, gebruikt API
-  helper `createInvoice` die ook 500 geeft
+`POST /api/invoices/{id}/send` probeert echt een PDF-e-mail te versturen via
+SMTP. Test-omgeving heeft geen SMTP_HOST/SMTP_FROM én de `email_logs` tabel
+ontbreekt in dev-DB.
 
-**Reproductie:**
-```bash
-curl -X POST http://localhost:8000/api/invoices \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{"contact_id":"<UUID>","invoice_date":"2026-05-14","due_date":"2026-06-13","btw_percentage":"21.00","lines":[{"description":"Test","quantity":"1","unit_price":"100.00"}]}'
-# → Internal Server Error
-```
+**Impact op E2E:** `facturen.spec.ts::F5` (send invoice) en `::F6`
+(register payment, hangt af van F5) zijn geskipt — niet in KNOWN-005, dus
+out-of-scope voor playwright-cleanup goal.
 
-**Voorgestelde fix (backend):** nieuwe Alembic-migratie die
-`btw_percentage NUMERIC(5,2) NOT NULL DEFAULT 21.00` toevoegt aan
-`invoice_lines`. Tegelijkertijd checken of `invoices.btw_percentage` consistent
-is en of de model-defaults aansluiten op de DB.
+**Voorgestelde fix:** mock email provider in test-env, of `email_logs`
+migratie + SMTP-mock injection.
 
 ## BUG-002 — Taken-pagina maakt geseede taken onzichtbaar bij veel openstaande items
 

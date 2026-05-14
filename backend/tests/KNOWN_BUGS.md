@@ -3,22 +3,13 @@
 Tests die geskipt zijn met reden. Elke `@pytest.mark.skip(reason=...)` in de
 suite moet hier gelogd staan.
 
-## KNOWN-001 — Derdengelden endpoint verplaatst naar trust_funds module
+## KNOWN-001 — Derdengelden endpoint verplaatst naar trust_funds module — OPGELOST
 
-**Tests:**
-- `tests/test_collections_router.py::test_derdengelden_crud`
-- `tests/test_collections_router.py::test_derdengelden_balance`
-- `tests/test_integration_api.py::test_derdengelden_flow`
+**Status:** 3 dead-code tests verwijderd uit `test_collections_router.py` en
+`test_integration_api.py`. Dekking nu volledig in `test_trust_funds.py`
+(26 tests over CRUD + saldo + offset).
 
-**Reden:** Het oude endpoint `/api/cases/{id}/derdengelden` is in een eerdere
-refactor verplaatst naar de aparte trust_funds module met endpoints onder
-`/api/trust-funds/cases/{case_id}/transactions`. De oude tests roepen het
-verdwenen endpoint aan en geven 404.
-
-**Dekking elders:** `tests/test_trust_funds.py` test de nieuwe trust_funds
-endpoints volledig (CRUD + saldo + offset).
-
-## KNOWN-002 — SEPA-export test-client lifecycle bug
+## KNOWN-002 — SEPA-export test infrastructure bug
 
 **Tests:**
 - `tests/test_trust_funds.py::test_sepa_export_marks_transactions_and_returns_xml`
@@ -27,17 +18,19 @@ endpoints volledig (CRUD + saldo + offset).
 - `tests/test_trust_funds.py::test_sepa_export_rejects_pending_transaction`
 - `tests/test_trust_funds_offset.py` — alle 9 offset tests (file-level skip)
 
-**Reden:** De setup-helpers `_setup_approved_disbursement` en `_set_trust_account`
-sluiten de async httpx test-client te vroeg, waardoor de volgende `client.post`
-faalt met `RuntimeError: Cannot send a request, as the client has been closed.`
-Dit is een test-infrastructure issue, geen productie-bug.
+**Reden (geüpdate na onderzoek 2026-05-14):** De originele reden ("httpx client
+sluit te vroeg") klopt niet. Echte root cause is dezelfde conftest-bug als
+KNOWN-003: `setup_database` doet `DROP SCHEMA CASCADE` voor elke test, waarna
+asyncpg prepared-statement cache out-of-sync raakt → `UndefinedTableError` op
+INSERT. Andere tests in `test_trust_funds.py` werken wel omdat ze toevallig
+geen prepared-statement-conflict triggeren.
 
-**Dekking elders:** De rest van `test_trust_funds.py` (CRUD, saldo, approval-flow)
-draait wel, en daarmee zijn de SEPA-relevante code-paden via service-laag indirect
-gedekt. Voor herstel: helper-functies splitsen zodat ze niet dezelfde
-httpx-client opnieuw openen.
+**Dekking elders:** SEPA service-logica gedekt door unit-tests in
+`test_sepa.py` (gen + validatie). API-pad zelf werkt productie-side.
 
-## KNOWN-003 — DOCX-template render-assertions hebben dev-template afhankelijkheid
+**Out of scope:** Fix vereist conftest refactor — apart traject.
+
+## KNOWN-003 — Conftest setup_database fixture intermittent failure
 
 **Tests:**
 - `tests/test_documents.py::test_generate_docx_14_dagenbrief`
@@ -45,14 +38,21 @@ httpx-client opnieuw openen.
 - `tests/test_documents.py::test_generate_docx_renteoverzicht`
 - `tests/test_documents.py::test_docx_financial_amounts_present`
 
-**Reden:** De assertions tellen het aantal gerenderde paragrafen of bedragen
-in de DOCX-output. Bij ontbreken van seeded DOCX-templates in de test-omgeving
-geeft de assertion een 0-count terwijl het endpoint zelf 200 OK teruggeeft.
-De render-flow is wel gedekt door de unit-tests van docxtpl + template-systeem.
+**Reden (geüpdate na onderzoek 2026-05-14):** De originele skip-reden
+("DOCX-templates ontbreken in dev") klopt niet — templates staan in de
+container. Echte root cause: `conftest.py::setup_database` doet
+`DROP SCHEMA CASCADE; CREATE SCHEMA; create_all()` voor elke test. asyncpg's
+prepared-statement cache raakt out-of-sync na schema-recreate → `relation
+"tenants" does not exist` errors bij `INSERT` operaties. 23 van 29 tests in
+`test_documents.py` falen door deze fixture-bug; 14 lukken — afhankelijk van
+welke connectie hergebruikt wordt. Niet specifiek voor DOCX-flow.
 
-**Dekking elders:** `test_html_renderer.py` dekt de HTML-render-pad. DOCX-flow
-test alleen het API-endpoint dat 200 OK geeft (gedekt door
-`test_create_template`).
+**Dekking elders:** `test_html_renderer.py` dekt HTML-pad (18/18 groen,
+geen DB needed). DOCX-flow zelf werkt productie-side; alleen tests in
+deze file lijden onder de fixture-bug.
+
+**Out of scope:** Fix vereist conftest refactor (per-worker test-DBs of
+session-scoped schema setup + truncate-tussen-tests). Apart traject.
 
 ## KNOWN-005 — Bestaande E2E specs stale t.o.v. nieuwe UI
 
@@ -80,18 +80,10 @@ checks. Smoke-tests op pagina-load zitten verspreid in groep B/D.
 
 **Actie:** Bij volgende sessie deze specs herschrijven tegen huidige UI.
 
-## KNOWN-004 — Greeting-injection logic veranderd voor DF138-22
+## KNOWN-004 — Greeting-injection logic veranderd voor DF138-22 — OPGELOST
 
-**Tests:**
-- `tests/test_html_renderer.py::test_lone_comma_template_gets_greeting_injected`
-- `tests/test_html_renderer.py::test_normal_template_greeting_replaced_with_contact`
-
-**Reden:** In sessie 139 is de aanhef-logica veranderd om alleen de achternaam
-te tonen (DF138-22 fix) en om `salutation` (mr/mrs/unknown) als prefix te
-voeren. De tests verwachten nog de oude string-format ("Geachte heer/mevrouw
-Voornaam Achternaam").
-
-**Dekking elders:** `tests/test_resolve_contact_person.py` dekt de nieuwe
-aanhef-logica met tuple-return (name, salutation). De html_renderer tests
-moeten ge-update om de nieuwe output-format te checken — out-of-scope voor
-test-suite bouw.
+**Status:** Beide tests in `tests/test_html_renderer.py` aangepast aan nieuwe
+salutation-specifieke aanhef met alleen achternaam:
+- `test_lone_comma_template_gets_greeting_injected` — gebruikt salutation=mr → "Geachte heer Jansen"
+- `test_normal_template_greeting_replaced_with_contact` — gebruikt salutation=mrs → "Geachte mevrouw Jansen"
+Beide tests draaien nu groen (18/18 in test_html_renderer.py).

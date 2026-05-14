@@ -1073,8 +1073,9 @@ async def test_sepa_pending_lists_approved_disbursements(
 
 
 @pytest.mark.skip(
-    reason="KNOWN-002: test-client lifecycle bug in SEPA setup helpers — "
-    "async fixture sluit httpx client te vroeg."
+    reason="KNOWN-002: zelfde conftest setup_database fixture-bug als KNOWN-003 — "
+    "asyncpg prepared-statement cache mismatch na DROP/CREATE SCHEMA in deze "
+    "specifieke testen. Out-of-scope: vereist conftest refactor."
 )
 @pytest.mark.asyncio
 async def test_sepa_export_marks_transactions_and_returns_xml(

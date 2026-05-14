@@ -99,40 +99,37 @@ Eerder heb ik u aangeschreven.</span></span></p>
 """
 
 
-@pytest.mark.skip(
-    reason="KNOWN-004: greeting-injection logic veranderd in sessie 139 — "
-    "test verwacht oude string-format, actual output gebruikt nieuwe NL aanhef."
-)
 def test_lone_comma_template_gets_greeting_injected():
     """Verweer beantwoorden + Aankondiging faillissement templates missen
-    'Geachte heer/mevrouw' — moeten injectie krijgen voor lone-comma."""
+    'Geachte heer/mevrouw' — moeten injectie krijgen voor lone-comma.
+
+    DF138-22: aanhef is salutation-specifiek (mr/mrs) + alleen achternaam.
+    """
     out = render_template_html(
         _LONE_COMMA_TEMPLATE,
         case_data={"case_number": "2026-00049"},
-        debtor_data={"contact_person": "J. Jansen"},
+        debtor_data={"contact_person": "Jansen", "salutation": "mr"},
         client_data={"name": "Test BV"},
         invoices=[],
         amounts={},
     )
-    assert "Geachte heer/mevrouw J. Jansen,<br>" in out
+    assert "Geachte heer Jansen,<br>" in out
     # Geen lone comma meer
     assert "sans-serif;\">,<br>" not in out
 
 
-@pytest.mark.skip(
-    reason="KNOWN-004: greeting-replacement logic veranderd in sessie 139 voor "
-    "DF138-22 (alleen-achternaam aanhef). Test verwacht oude string-format."
-)
 def test_normal_template_greeting_replaced_with_contact():
+    """DF138-22: 'Geachte heer mevrouw,' wordt vervangen door
+    salutation-specifieke aanhef met alleen achternaam."""
     out = render_template_html(
         _NORMAL_GREETING_TEMPLATE,
         case_data={"case_number": "2026-00049"},
-        debtor_data={"contact_person": "J. Jansen"},
+        debtor_data={"contact_person": "Jansen", "salutation": "mrs"},
         client_data={"name": "Test BV"},
         invoices=[],
         amounts={},
     )
-    assert "Geachte heer/mevrouw J. Jansen," in out
+    assert "Geachte mevrouw Jansen," in out
     assert "Geachte heer mevrouw," not in out
 
 

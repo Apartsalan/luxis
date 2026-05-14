@@ -284,50 +284,6 @@ async def test_list_interest_rates(client: AsyncClient, auth_headers: dict, db: 
     assert len(resp.json()) >= 1
 
 
-# ── Derdengelden ─────────────────────────────────────────────────────────────
-
-
-@pytest.mark.skip(
-    reason="KNOWN-001: derdengelden endpoint verplaatst naar trust_funds module — "
-    "dekking nu in test_trust_funds.py"
-)
-@pytest.mark.asyncio
-async def test_derdengelden_crud(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
-):
-    case = await _create_case(db, test_tenant.id)
-
-    create_resp = await client.post(
-        f"/api/cases/{case.id}/derdengelden",
-        json={
-            "amount": "1500.00",
-            "transaction_type": "deposit",
-            "transaction_date": date.today().isoformat(),
-            "description": "Ontvangst derdengelden",
-        },
-        headers=auth_headers,
-    )
-    assert create_resp.status_code == 201
-
-    list_resp = await client.get(f"/api/cases/{case.id}/derdengelden", headers=auth_headers)
-    assert list_resp.status_code == 200
-    assert len(list_resp.json()) >= 1
-
-
-@pytest.mark.skip(
-    reason="KNOWN-001: derdengelden endpoint verplaatst naar trust_funds module — "
-    "dekking nu in test_trust_funds.py"
-)
-@pytest.mark.asyncio
-async def test_derdengelden_balance(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
-):
-    case = await _create_case(db, test_tenant.id)
-
-    resp = await client.get(f"/api/cases/{case.id}/derdengelden/balance", headers=auth_headers)
-    assert resp.status_code == 200
-
-
 # ── Tenant isolation ─────────────────────────────────────────────────────────
 
 

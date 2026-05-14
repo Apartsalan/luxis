@@ -491,8 +491,11 @@ async def test_list_docx_templates(
 
 
 @pytest.mark.skip(
-    reason="KNOWN-003: DOCX-render-assertions checken count() op gegenereerde "
-    "content die in dev-omgeving leeg blijft door ontbrekende DOCX-templates."
+    reason="KNOWN-003: conftest setup_database fixture geeft intermittent "
+    "'relation tenants does not exist' bij parallel test execution — "
+    "asyncpg prepared-statement cache mismatch na DROP/CREATE SCHEMA. "
+    "Affects 23/29 tests in test_documents.py. Out-of-scope: vereist "
+    "conftest refactor naar per-worker test-DBs of session-scoped setup."
 )
 @pytest.mark.asyncio
 async def test_generate_docx_14_dagenbrief(
@@ -548,7 +551,7 @@ async def test_generate_docx_14_dagenbrief(
 # ── Docx generation: sommatie ────────────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="KNOWN-003: DOCX-template afhankelijkheid in dev")
+@pytest.mark.skip(reason="KNOWN-003: zelfde conftest setup_database issue")
 @pytest.mark.asyncio
 async def test_generate_docx_sommatie(
     client: AsyncClient,
@@ -592,7 +595,7 @@ async def test_generate_docx_sommatie(
 # ── Docx generation: renteoverzicht ──────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="KNOWN-003: DOCX-template afhankelijkheid in dev")
+@pytest.mark.skip(reason="KNOWN-003: zelfde conftest setup_database issue")
 @pytest.mark.asyncio
 async def test_generate_docx_renteoverzicht(
     client: AsyncClient,
@@ -686,7 +689,7 @@ async def test_generate_docx_nonexistent_case(
 # ── Docx: financial accuracy ─────────────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="KNOWN-003: DOCX-template afhankelijkheid in dev")
+@pytest.mark.skip(reason="KNOWN-003: zelfde conftest setup_database issue")
 @pytest.mark.asyncio
 async def test_docx_financial_amounts_present(
     client: AsyncClient,

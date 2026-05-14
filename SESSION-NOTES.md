@@ -1,9 +1,70 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 13 mei 2026 (sessie 139 — aanhef + bulk-delete + sort-persist + dossier-sortering + AV-versies)
-**Laatste feature/fix:** Sessie 139 — vijf verbeteringen: (1) aanhef-enum `Contact.salutation` (mr/mrs/unknown) in AI-prompt + HTML-renderer; (2) bulk-delete toolbar op dossiers + relaties met confirm-dialog destructive en mixed-result toast; (3) sort-persist via URL params op relaties; (4) sorteerbare kolom-headers + URL-persist op dossiers (case_number, status, type, hoofdsom, geopend); (5) AV-versies per cliënt met smart-default — nieuwe `contact_terms` tabel met label + valid_from/to, `case.contact_terms_id` FK, `gather_case_context` kiest versie op factuur-datum, data-migratie van bestaande `terms_file_path` naar "Huidige versie / altijd geldig". Alles live geverifieerd via Playwright op productie.
-**Openstaande bugs:** Wix-DNS blokkeert nameserver-wijziging kestinglegal.nl (registrar-transfer naar TransIP nog te plannen). Tussenvoegsels in achternaam: workaround via expliciet `last_name` veld; salutation lost het heer/mevrouw-gokwerk op. Dossier-detail/wizard heeft nog geen UI om handmatig AV-versie te kiezen (smart-default werkt wel autonoom op factuur-datum).
-**Volgende sessie:** 140 — nieuwe demo-feedback van Lisanne verzamelen, Wix→TransIP registrar-transfer plannen, eventueel AV-versie dropdown op dossier-detail/wizard (override smart-default).
+**Laatst bijgewerkt:** 14 mei 2026 (sessie 140 — Playwright cleanup + KNOWN_BUGS opruimen + invoice_lines migratie)
+**Laatste feature/fix:** Sessie 140 — test-suite onderhoud: (1) 13 stale Playwright E2E specs herschreven tegen huidige UI (KNOWN-005); (2) Alembic-migratie `df140a_invoice_lines_btw` voegt ontbrekende `btw_percentage` kolom toe — unblockt facturen create/list endpoints; (3) KNOWN-001 derdengelden dead-code tests verwijderd; (4) KNOWN-004 html_renderer greeting tests geüpdate aan nieuwe salutation-format; (5) KNOWN-002+003 root-cause gecorrigeerd (conftest setup_database fixture intermittent failure i.p.v. de oorspronkelijke verkeerde redenen). Demo-feedback Lisanne ontvangen — 7 punten genoteerd voor onderzoek in sessie 141.
+**Openstaande bugs:** AI-overlap onderzoek nodig (concept-genereren vs correspondentie-AI-antwoord — zit waarschijnlijk in 2 plekken die geconsolideerd moeten); mail-sync werkt niet; geen meldingen/dashboard-actie meer; status blijft op 1e sommatie na versturen; tijdstempels overal alleen datum (moeten ook tijd in HH:MM tonen). Conftest refactor opgeschoven (memory project_user_todos.md).
+**Volgende sessie:** 141 — ONDERZOEK (geen build): in kaart brengen waar AI-functies leven (concept-genereren, correspondentie-antwoord, mail-classificatie). Bevindingen terugkoppelen aan Arsalan vóór bouw-beslissingen.
+
+## Wat er gedaan is (sessie 140 — 14 mei 2026) — Playwright cleanup + KNOWN_BUGS opruimen + invoice_lines migratie
+
+### Samenvatting
+
+**KNOWN-005 (Playwright stale specs):** 13 E2E specs herschreven tegen huidige UI. Suite: 71→98 passed, 35→4 skipped, 0 failed. Per-spec details:
+- `auth.spec.ts::A4` — logout via `getByRole("button", { name: "Uitloggen" })` (aria-label)
+- `agenda.spec.ts::A2` — submit-knop "Aanmaken", event-ID via response capture voor cleanup
+- `correspondentie.spec.ts` — h1 nu "Mail" met tab-structuur (Alle e-mails + Ongesorteerd)
+- `dashboard.spec.ts` — describe.skip weg, user-naam check "E2E"
+- `documenten.spec.ts` — h1 "Sjablonen" met Word/HTML tabs
+- `facturen.spec.ts::F2+F7` — backend-blocker (btw_percentage) opgelost; F7 met React AlertDialog
+- `incasso-pipeline.spec.ts` — "Per stap" view + nieuwe sommatie-namen
+- `instellingen.spec.ts` — tab-sidebar Profiel/Kantoor/etc, scope op `main nav`
+- `sidebar.spec.ts` — beforeEach gebruikt Dashboard-link
+- `relaties.spec.ts::R5` + `tijdregistratie.spec.ts::T5` + `zaken.spec.ts::Z8` — `getByRole("alertdialog")` patroon i.p.v. `page.on("dialog")`
+- `zaken.spec.ts::Z3` — 2-stappen wizard (case_type → Volgende → client-selector)
+
+**Alembic-migratie df140a_invoice_lines_btw:** `InvoiceLine` model declareerde `btw_percentage NUMERIC(5,2) NOT NULL` (DF2-03 per-line VAT) maar geen migratie had de kolom toegevoegd. Gevolg: GET/POST `/api/invoices` gaven 500 `UndefinedColumnError`. Migratie voegt kolom toe met DEFAULT 21.00 (NL standaard).
+
+**KNOWN_BUGS opgeruimd:**
+- **KNOWN-001 OPGELOST** — derdengelden dead-code tests (`test_collections_router.py` + `test_integration_api.py`) verwijderd; dekking volledig in `test_trust_funds.py` (26 tests)
+- **KNOWN-004 OPGELOST** — `test_lone_comma_template_gets_greeting_injected` + `test_normal_template_greeting_replaced_with_contact` aangepast aan nieuwe salutation-specifieke aanhef met alleen achternaam; 18/18 in test_html_renderer.py groen
+- **KNOWN-002 + KNOWN-003 GECORRIGEERD** — originele skip-redenen ("templates ontbreken" / "httpx client te vroeg gesloten") klopten niet. Echte root cause: `conftest.py::setup_database` doet `DROP SCHEMA CASCADE` per test → asyncpg prepared-statement cache out-of-sync → `UndefinedTableError` op INSERT. Affects ~30 tests in test_documents + test_trust_funds. Fix vereist conftest refactor (per-worker DBs of session-scoped setup + TRUNCATE) — toegevoegd aan memory project_user_todos.md voor latere sessie
+
+**Demo-bugs van Lisanne (sessie 141 onderzoek):**
+- Tijdstempels: overal datum, geen tijd in HH:MM — wil tijd zien bij activiteit/mail-binnenkomst
+- Mail-sync werkt niet
+- Status blijft op 1e sommatie na versturen (pop-up zegt "ga naar 2e" maar transitie gebeurt niet)
+- Geen meldingen meer (notificaties weg)
+- Concept-klaar / concept-tijd niet geobserveerd
+- Niks komt naar voren op dossier (dashboard-actie/widget weg)
+- AI-overlap: concept-genereren vs correspondentie-AI-antwoord (mild/streng/gebalanceerd) lijken aparte systemen die geconsolideerd moeten worden met dezelfde sjablonen
+
+### Gewijzigde bestanden
+
+**Backend:**
+- `backend/alembic/versions/df140a_invoice_lines_btw.py` (nieuw)
+- `backend/tests/KNOWN_BUGS.md` (KNOWN-001/002/003/004 statussen + root-cause)
+- `backend/tests/test_collections_router.py` (-2 dead-code tests)
+- `backend/tests/test_integration_api.py` (-1 dead-code test)
+- `backend/tests/test_html_renderer.py` (greeting tests salutation-aware)
+- `backend/tests/test_documents.py` (skip-redenen geüpdate)
+- `backend/tests/test_trust_funds.py` (skip-reden geüpdate)
+
+**Frontend:**
+- `frontend/e2e/auth.spec.ts` + `agenda.spec.ts` + `correspondentie.spec.ts` + `dashboard.spec.ts` + `documenten.spec.ts` + `facturen.spec.ts` + `incasso-pipeline.spec.ts` + `instellingen.spec.ts` + `sidebar.spec.ts` + `relaties.spec.ts` + `tijdregistratie.spec.ts` + `taken.spec.ts` + `zaken.spec.ts` — alle KNOWN-005 specs herschreven
+
+**Docs:**
+- `tests/UI_BUGS.md` (nieuw — BUG-001 invoice_lines opgelost, BUG-002 taken pagination, BUG-003 SMTP/email_logs)
+- memory `project_user_todos.md` (conftest refactor TODO)
+
+### Bekende issues
+
+- Conftest fixture-bug (KNOWN-002 + KNOWN-003) — ~30 tests intermittent fail. Fix gepland in volgende sessie via session-scoped setup + TRUNCATE per test
+- Taken-pagina pagination (BUG-002) — nieuwe taken verdwijnen tussen 140+ openstaande; UI moet refetch+scroll naar nieuwe rij
+- SMTP/email_logs (BUG-003) — `POST /api/invoices/{id}/send` faalt door ontbrekende `email_logs` tabel + SMTP-config; F5/F6 E2E specs geskipt
+
+### Volgende sessie
+
+Sessie 141 — ONDERZOEK naar AI-functies. Geen bouw. Demo-feedback Lisanne in kaart brengen: waar leeft elke AI-functie, welke overlap, welke sjablonen worden waar gebruikt. Bevindingen terugkoppelen aan Arsalan vóór bouw-beslissingen.
 
 ## Wat er gedaan is (sessie 139 — 13 mei 2026) — Aanhef + bulk-delete + sort-persist + dossier-sortering + AV-versies
 

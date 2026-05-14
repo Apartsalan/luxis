@@ -7,10 +7,10 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe.skip("Dashboard", () => {
+test.describe("Dashboard", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    // Wait for the authenticated dashboard to load
+    // Wait for the authenticated dashboard to load (greeting heading "Goedemorgen/Goedemiddag/Goedenavond")
     await expect(
       page.getByRole("heading", { level: 1 })
     ).toContainText(/Goede(morgen|middag|navond)/, { timeout: 20000 });
@@ -19,10 +19,10 @@ test.describe.skip("Dashboard", () => {
   test("D1: dashboard shows greeting with user name", async ({ page }) => {
     const heading = page.getByRole("heading", { level: 1 });
 
-    // Should contain the user's first name
-    await expect(heading).toContainText("Lisanne");
+    // Should contain the e2e user's first name ("E2E Test User" → "E2E")
+    await expect(heading).toContainText("E2E");
 
-    // Date should be visible somewhere on the page
+    // Date should be visible somewhere on the page (Dutch month names)
     const dateRegex = /\d{1,2}\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s+\d{4}/;
     await expect(page.getByText(dateRegex).first()).toBeVisible();
   });

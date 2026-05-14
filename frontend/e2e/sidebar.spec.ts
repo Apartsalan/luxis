@@ -7,13 +7,13 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe.skip("Sidebar Navigation", () => {
+test.describe("Sidebar Navigation", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    // Wait for dashboard to confirm auth
+    // Confirm auth by checking that the Dashboard sidebar link is visible
     await expect(
-      page.getByRole("heading", { level: 1 })
-    ).toContainText(/Goede(morgen|middag|navond)/, { timeout: 20000 });
+      page.getByRole("link", { name: "Dashboard", exact: true })
+    ).toBeVisible({ timeout: 20000 });
   });
 
   test("S1: sidebar shows all core navigation items", async ({ page }) => {

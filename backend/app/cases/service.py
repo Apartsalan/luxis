@@ -508,6 +508,25 @@ async def create_case(
     # G10: Create initial task templates based on case type
     await _create_initial_tasks(db, tenant_id, case, user_id)
 
+    # S143: Incasso-dossiers krijgen automatisch de eerste pipeline-stap
+    # toegewezen. Zonder dit verschijnen ze niet in de incasso-pagina batch-
+    # toolbar en blokkeert auto-advance op een lege step-id. Per Lisanne S141
+    # demo: 42 van 45 incasso-dossiers waren nooit aan een stap toegewezen.
+    if case.case_type == "incasso":
+        from app.incasso.service import list_pipeline_steps, move_case_to_step
+
+        steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+        first_step = min(steps, key=lambda s: s.sort_order) if steps else None
+        if first_step:
+            await move_case_to_step(
+                db,
+                tenant_id,
+                case,
+                first_step,
+                user_id=user_id,
+                trigger_type="auto",
+            )
+
     return case
 
 

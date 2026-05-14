@@ -890,6 +890,44 @@ async def _auto_complete_tasks(
     return len(tasks)
 
 
+async def _skip_review_drafts_for_step(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    step_id: uuid.UUID,
+) -> int:
+    """Skip open review_ai_draft tasks voor de huidige step.
+
+    Wordt aangeroepen door batch_execute na succesvolle email-verzending.
+    Reden: batch verstuurt via template (geen AI-draft), dus eventuele open
+    'review_ai_draft' tasks zijn moot. Zonder dit blokkeren ze auto-advance.
+
+    Status 'skipped' (niet 'completed') geeft aan dat de AI-draft niet via
+    review werd afgehandeld maar via batch.
+    """
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.case_id == case_id,
+            WorkflowTask.task_type == "review_ai_draft",
+            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+            WorkflowTask.is_active.is_(True),
+            WorkflowTask.action_config["source"].astext == "pipeline",
+            WorkflowTask.action_config["step_id"].astext == str(step_id),
+        )
+    )
+    tasks = list(result.scalars().all())
+    now = datetime.now(UTC)
+    for task in tasks:
+        task.status = "skipped"
+        task.completed_at = now
+
+    if tasks:
+        await db.flush()
+
+    return len(tasks)
+
+
 async def _try_auto_advance(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -1143,6 +1181,14 @@ async def batch_execute(
                     db, tenant_id, case.id, case.incasso_step_id
                 )
                 tasks_auto_completed += completed_count
+
+                # S143: Skip eventuele open review_ai_draft tasks voor deze step.
+                # Batch verstuurt via template (geen AI-draft), dus de review-
+                # tasks zijn moot. Zonder dit blokkeren ze _try_auto_advance.
+                if case.incasso_step_id:
+                    await _skip_review_drafts_for_step(
+                        db, tenant_id, case.id, case.incasso_step_id
+                    )
 
                 # Try auto-advance (always, even if no tasks were
                 # completed — case may already have all tasks done)

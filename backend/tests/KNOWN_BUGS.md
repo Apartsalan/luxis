@@ -57,7 +57,7 @@ test alleen het API-endpoint dat 200 OK geeft (gedekt door
 ## KNOWN-005 — Bestaande E2E specs stale t.o.v. nieuwe UI
 
 **Bestanden (volledig of gedeeltelijk geskipt via `test.skip` / `test.describe.skip`):**
-- `frontend/e2e/auth.spec.ts::A4` — logout-button heeft nu aria-label, geen title
+- `frontend/e2e/auth.spec.ts::A4` — logout-button heeft nu aria-label, geen title — **STATUS: GEFIXT** — selector vervangen door `getByRole("button", { name: "Uitloggen" })`
 - `frontend/e2e/agenda.spec.ts::A2` — dialog-flow veranderd
 - `frontend/e2e/correspondentie.spec.ts` — empty-state tekst veranderd
 - `frontend/e2e/dashboard.spec.ts` — greeting heading veranderd (was "Goede morgen/middag/avond")

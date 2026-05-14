@@ -72,14 +72,14 @@ test.describe("Authentication", () => {
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test.skip("A4: logout clears session and redirects to login", async ({
+  test("A4: logout clears session and redirects to login", async ({
     page,
   }) => {
     // Login via the real form
     await loginViaForm(page);
 
-    // Click logout button
-    await page.getByLabel("Uitloggen").click({ force: true });
+    // Click logout button (aria-label="Uitloggen")
+    await page.getByRole("button", { name: "Uitloggen" }).click({ force: true });
 
     // Should redirect to login
     await page.waitForURL("**/login", { timeout: 10000 });

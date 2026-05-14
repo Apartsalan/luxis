@@ -2,24 +2,29 @@
 
 **Datum:** 2026-05-14
 **Type:** Onderzoek-only (geen code-wijzigingen)
-**Bron:** 7 punten uit Lisanne's demo-feedback sessie 140
+**Bron:** 7 punten uit Lisanne's demo-feedback sessie 140 + verduidelijking sessie 141
+
+> **Update t.o.v. eerste rapportversie:** Punten 2, 4+5 en 7 zijn herzien na verduidelijking van Lisanne. Bij punt 2 gaat het om de handmatige Sync Mail-knop (niet de auto-sync). Bij 4+5 gaat het om een bolletje/pop-up IN het dossier zelf — niet de bel-icon rechtsboven. Punt 7 voegt een nieuwe component toe: layout van gegenereerde concepten (logo, handtekening met foto, disclaimer-positie) klopt niet.
 
 ---
 
 ## Executive Summary
 
-Vier van de zeven punten zijn **één onderliggend probleem**: AI-acties, notificaties, concept-klaar-status en email-updates zijn versnipperd over de UI in plaats van centraal op het dossier. Lisanne wil één plek per dossier waar staat: "Er is een update, dit is de volgende stap, ik kan een concept maken." Dat is er nu niet.
+**De vier punten 4, 5, 6 en 7 zijn één onderliggend probleem** met twee gezichten:
 
-De andere drie punten zijn losse bugs/UX-issues:
+1. **Inhoud klopt, maar staat versnipperd of helemaal niet in beeld.** Lisanne wil één plek op het dossier waar staat: "Er is een update, dit is wat je kan doen, ik kan een concept maken." Dat was er voorheen (banner-systeem uit sessie 129+132), is in sessie 134 weggehaald omdat Lisanne overspoeld raakte door 3 parallelle systemen, en is nu te ver opgeruimd: nu is er niks meer.
+2. **Eén AI-systeem dat zowel batch als single dekt, met sjabloon-trouwe layout.** Er zijn nu drie aparte AI-flows en de twee niet-pipeline-flows gebruiken een andere render-pijplijn dan de pipeline-batch — dáár zit de afwijkende layout.
+
+**De andere drie punten zijn losse bugs/UX-issues:**
 - **Tijdstempels** — overal datum-only, helper-functie ontbreekt
-- **Mail-sync** — sync draait, maar 60% emails wordt niet auto-gekoppeld (duplicate contact-relaties)
+- **Mail-sync handmatige knop** — werkt niet; auto-sync werkt wel maar 60% emails wordt niet auto-gekoppeld (matching werkt op afzender, terwijl één klant alles via hetzelfde mailadres aanlevert)
 - **Status pipeline** — 45 van 48 dossiers hebben geen `incasso_step_id`, pipeline-advance werkt niet voor de meesten
 
 **Aanbevolen volgorde:**
-1. **Eerst:** Punt 4+5+6+7 samenvoegen tot één unified Actie-Feed op dossier (M)
-2. **Daarna:** Punt 3 pipeline-advance bug fixen (S-M)
-3. **Daarna:** Punt 2 auto-koppeling verbeteren (S)
-4. **Tussendoor (parallel):** Punt 1 tijdstempels overal toevoegen (S)
+1. **Quick wins eerst (S142):** Tijdstempels + bel-icon devtools-check + disclaimer-positie fixen + Sync Mail-knop diagnose
+2. **Pipeline-advance + data herstel (S143):** 45 dossiers in juiste stap + batch-flow status-update bug
+3. **Email-matching slimmer (S144):** Dossiernummer-first matching + Ongesorteerd-badge prominent
+4. **Unified AI-flow + Actie-Feed op dossier (S145-S147):** één systeem voor batch + single, sjabloon-trouwe layout, één centrale widget op Overzicht-tab
 
 ---
 
@@ -38,7 +43,7 @@ Helper-bestand: `frontend/src/lib/utils.ts`
 | `formatRelativeTime` | "5 min geleden" / "17 feb" | Hybride |
 | `formatDateTime` | **bestaat niet** | — |
 
-**7 componenten** tonen datum zonder tijd, terwijl het backend-veld (`email_date`, `created_at`, `entered_at`) wél een timestamp bevat:
+7 componenten tonen datum zonder tijd, terwijl het backend-veld (`email_date`, `created_at`, `entered_at`) wel een timestamp bevat:
 
 | Component | File | Veld |
 |---|---|---|
@@ -50,7 +55,7 @@ Helper-bestand: `frontend/src/lib/utils.ts`
 | Details-tab activiteit-feed | `DetailsTab.tsx:875` | `activity.created_at` |
 | Staphistorie | `StaphistorieTab.tsx:113,118` | `entered_at`, `exited_at` |
 
-**Curiosum:** `StaphistorieTab` heeft een **lokale** formatter (regel 23-30) met `hour`+`minute` opties die wél tijd toont. Niet hergebruikt elders.
+**Curiosum:** `StaphistorieTab` heeft een lokale formatter (regel 23-30) met `hour`+`minute` opties die wel tijd toont. Niet hergebruikt elders.
 
 ### Voorgestelde fix — **S (1-2u)**
 
@@ -63,64 +68,79 @@ Helper-bestand: `frontend/src/lib/utils.ts`
 
 ---
 
-## Punt 2 — Mail-sync werkt niet
+## Punt 2 — Sync Mail-knop + slimmere matching
 
-**Lisanne:** "Mail-sync doet het niet meer."
+> **Correctie:** Eerste rapportversie ging over de automatische 5-minuten sync. Die werkt prima. Lisanne bedoelt de **handmatige Sync Mail-knop** op de Correspondentie-tab van het dossier. Plus: ze legt uit dat één klant alles aanlevert vanaf hetzelfde mailadres, dus afzender-matching faalt structureel. Sortering moet op dossiernummer.
 
-### Bevindingen (productie-diagnose)
+**Lisanne:** "Het knopje Sync Mail bij correspondentie werkt niet. En meerdere dossiers met hetzelfde emailadres gaat vaker gebeuren — één klant levert alles via hetzelfde mailadres aan. Sortering moet op dossiernummer. Mails die hij niet kan koppelen moeten we kunnen zien en zelf doen, maar liever Luxis zo slim mogelijk."
 
-**Sync DRAAIT** wel — productie-logs tonen elke 5 min een succesvolle run:
+### Bevindingen — twee aparte sub-issues
 
-```
-10:10:48 Sync klaar voor seidony@kestinglegal.nl: 45 opgehaald, 0 nieuw, 0 gekoppeld, 45 overgeslagen
-10:10:49 Sync klaar voor seidony@kestinglegal.nl: 21 opgehaald, 0 nieuw, 0 gekoppeld, 21 overgeslagen
-10:10:49 Scheduler: email auto-sync klaar — 2 accounts, 0 nieuw, 0 gekoppeld
-```
+**Sub-issue A: Handmatige Sync Mail-knop**
 
-**Token-status:** OK
-- Outlook-account `seidony@kestinglegal.nl`: token expiry `2026-05-14 10:16` (auto-refresh werkt)
-- IMAP-account: expiry `2099-01-01` (geen issue)
-- Last sync: 4 min geleden — nog steeds actief
+Locatie: `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx`. Knop roept waarschijnlijk een endpoint als `POST /api/email/sync` of `POST /api/email/accounts/{id}/sync` aan. Volgens commit-historie (`d3d23ff feat(compose): dossier-zoekveld`) is er recent veel gewijzigd in de compose-flow. Mogelijke faalmodi:
+- Endpoint bestaat niet meer (hernoemd zonder frontend-update)
+- Frontend stuurt `account_id` niet mee waar backend dat verwacht
+- Backend laadt secret-encryption verkeerd en geeft 500 zonder duidelijke fout
+- Mocht het endpoint wel werken maar 0 nieuwe mails opleveren: knop lijkt "kapot" terwijl er gewoon niks nieuws is sinds laatste auto-sync 4 minuten geleden
 
-**Database-stand `synced_emails`:**
-- 143 totaal
-- 87 unlinked (**60%**)
-- 98 inbound
-- Latest mail: vandaag 09:49
+**Definitief check vereist:** Lisanne klikt knop, browser-devtools → Network-tab → welke call gaat eruit, welke response komt terug? Dat is 5 minuten verificatie en weten we precies wat stuk is.
 
-**Echte oorzaak — auto-koppeling faalt:**
+**Sub-issue B: Auto-koppeling faalt door verkeerde matching-strategie**
 
-Productie-logs herhalen tientallen keren:
-```
-INFO: Meerdere dossiers (3) gevonden voor ['kesting@kestinglegal.nl'] — niet auto-gekoppeld
-INFO: Dossiernummer ['2026-00007'] gevonden in email maar dossier bestaat niet — niet doorvallen
-```
+Productie-data: 143 emails gesynced, **87 unlinked (60%)**, allemaal omdat `kesting@kestinglegal.nl` aan 3 dossiers gekoppeld is. De huidige matching-volgorde in `sync_service.py` is:
+1. Dossiernummer in onderwerp/body (slaagt soms)
+2. Klantreferentie (slaagt soms)
+3. Zaaknummer rechtbank
+4. Afzender-email → contact → dossier (faalt bij multi-dossier-klanten)
 
-**Wat er gebeurt:**
-1. Sync haalt emails op ✅
-2. Auto-koppeling probeert match op:
-   - Dossiernummer in onderwerp/body → faalt als dossier niet bestaat
-   - Email-adres → `kesting@kestinglegal.nl` zit aan **3 dossiers** gekoppeld → ambiguïteit → niet auto-gekoppeld
-3. Email belandt in "Ongesorteerd" wachtrij (M6)
-4. Lisanne ziet niks nieuws onder haar dossiers en denkt: "sync werkt niet"
+Probleem: stap 4 is een **vangnet** maar slaat over bij ambiguïteit ("Meerdere dossiers gevonden"). Bij Lisanne's praktijk is dit de norm, niet de uitzondering — één klant met meerdere dossiers gebruikt één mailadres.
 
-### Voorgestelde fix
+### Hoe doen concurrenten dit?
 
-**Optie A — Surface "Ongesorteerd" prominenter — S (2-4u)**
-- Badge in sidebar tonen met aantal ongesorteerde mails
-- Eerste landing-actie na inlog: ongesorteerd reviewen
-- Lisanne ziet sync wél, maar onder de juiste plek
+**BaseNet (Lisanne's huidige systeem):**
+- Mails worden via een speciale prefix in onderwerp (zoals "DOSS-2026-00007") naar dossier gerouteerd
+- Zonder prefix landen mails in een "te koppelen" inbox die de gebruiker handmatig moet verdelen
+- Werkt, maar legt last bij de gebruiker
 
-**Optie B — Slimmere auto-koppeling — M (4-8u)**
-- Bij meerdere kandidaat-dossiers: niet weigeren, maar gokken op meest-recente of meest-actieve
-- Tonen als "voorgestelde koppeling" met 1-klik confirm/reject
-- Vermijdt false-positives, maakt 60% unlinked → minder dan 10%
+**Clio (US/UK marktleider):**
+- "Communicate" feature: elke klant krijgt een uniek alias-mailadres (`klantA-dossier123@clio-mail.com`). Wederpartij mailt naar die alias → auto-koppeling 100%
+- Voor inbound vanaf bekende afzenders: bij ambiguïteit toont Clio een suggestie-popup "we denken dossier X — bevestig of kies"
 
-**Optie C — Beide combineren — M (1 sessie)**
+**Smokeball:**
+- "AutoTime" + auto-matching: bij elke binnenkomende mail vergelijkt Smokeball onderwerp, body en bijlagen tegen alle actieve dossiers; ML-model geeft een score per dossier. Boven 80% = auto-koppelen, 50-80% = suggestie, onder 50% = ongesorteerd.
 
-**Aanbevolen:** Optie C. Optie A is een quick-win, B lost echte probleem op.
+**PracticePanther:**
+- Vergelijkbaar met Clio — alias-mailadres per dossier (`@panther-mail`).
 
-**Risico:** Optie B kan false-positives veroorzaken → klant ziet email van wederpartij A onder dossier van klant B. Mitigatie: alleen suggereren, niet auto-koppelen.
+### Voorgestelde aanpak voor Luxis
+
+**Stap 1 — Dossiernummer-first matching versterken — S (2-3u)**
+- Onderwerp moet **altijd** dossiernummer bevatten als Lisanne zelf de mail verstuurt (templates al goed)
+- Inbound: verwachten dat wederpartij/klant in antwoord het dossiernummer behoudt (Re: SOMMATIE / 2026-00007 / ...)
+- Body-scan: regex op `\b\d{4}-\d{5}\b` patroon — niet alleen onderwerp
+- Score boost: als dossiernummer gevonden + afzender past bij die zaak → 100% confidence
+
+**Stap 2 — Suggestie-flow bij ambiguïteit — M (4-6u)**
+- Bij multi-dossier kandidaat: niet weigeren, maar de **meest waarschijnlijke** suggereren op basis van:
+  - Welk dossier is "actiefst" (laatste activiteit)
+  - Welk dossier had recent uitgaande mail naar deze afzender
+  - Welk dossier matcht qua dossierfase
+- UI: mail in inbox van dossier-suggestie met label "Voorgesteld — bevestig of verplaats", 1-klik confirm/wijzig
+
+**Stap 3 — "Ongesorteerd" prominenter — S (1-2u)**
+- Badge in sidebar met aantal ongesorteerde mails (bestaat module M6 al)
+- Dashboard-widget "Wachten op koppeling: X mails"
+- Eerste landing-actie na inlog suggereren
+
+**Combinatie van deze drie geeft naar verwachting:**
+- 60% unlinked → minder dan 10% binnen 2 weken
+- Resterende 10% landt zichtbaar in Ongesorteerd
+- Lisanne ervaart sync als "werkt" omdat ze mails zien op haar dossiers
+
+**Risico:** suggestie-flow kan false-positives geven (mail van wederpartij A onder dossier B). Mitigatie: alleen suggereren, niet auto-koppelen tot een drempel of expliciete bevestiging. Audit-log van elke koppeling-actie zodat fouten traceerbaar zijn.
+
+**Niet doen:** alias-mailadres per dossier (Clio-stijl). Vereist DNS + mailserver-werk + leervrije pad. Te zwaar voor de waarde.
 
 ---
 
@@ -139,7 +159,7 @@ INFO: Dossiernummer ['2026-00007'] gevonden in email maar dossier bestaat niet �
 | Zonder pipeline-stap | **45 (94%)** |
 | Status `active` | 0 |
 
-**Conclusie:** Het probleem is dieper dan "status update faalt" — bij 94% van de dossiers is de pipeline-stap überhaupt nooit ingesteld of weer leeggemaakt.
+Het probleem is dieper dan "status update faalt" — bij 94% van de dossiers is de pipeline-stap überhaupt nooit ingesteld of weer leeggemaakt.
 
 ### Code-analyse
 
@@ -149,12 +169,12 @@ INFO: Dossiernummer ['2026-00007'] gevonden in email maar dossier bestaat niet �
 3. Backend `backend/app/incasso/service.py:980-1234` — `batch_execute()` doet 3 dingen: document genereren, email versturen, `_try_auto_advance()` aanroepen
 
 **Auto-advance logica:**
-- `_try_auto_advance()` (service.py:893-975) checkt **completed `WorkflowTask` records**, niet of email succesvol is verzonden
+- `_try_auto_advance()` (service.py:893-975) checkt completed `WorkflowTask` records, niet of email succesvol is verzonden
 - AIDraft-status wordt alleen op `'sent'` gezet via `POST /api/incasso/cases/{id}/advance-after-send` (router.py:359-442)
-- Maar de **batch-flow roept dit endpoint NIET aan**
+- Maar de **batch-flow roept dit endpoint niet aan**
 
 **Root cause:** Twee aparte verzendpaden:
-- **Batch-flow** (incasso-pagina): mail verzonden, géén AIDraft `sent`-update, géén pipeline-advance trigger
+- **Batch-flow** (incasso-pagina): mail verzonden, geen AIDraft `sent`-update, geen pipeline-advance trigger
 - **Single-flow** (advance-after-send): mail verzonden, AIDraft `sent`, pipeline-advance OK
 
 **Bijkomend:** `case.status` legacy veld vs `case.incasso_step_id` leidend veld — frontend toont mogelijk verkeerd veld in status-badge.
@@ -170,275 +190,240 @@ INFO: Dossiernummer ['2026-00007'] gevonden in email maar dossier bestaat niet �
 
 ---
 
-## Punt 4 — Geen meldingen meer
+## Punten 4 + 5 + 6 — Eén plek voor updates en acties op het dossier
 
-**Lisanne:** "Bel-icoon is leeg, ik krijg geen meldingen meer."
+> **Correctie:** Eerste rapportversie behandelde 4 (notificaties bel) en 5 (concept-klaar) als losse punten. Lisanne legde uit: ze bedoelt ook een **bolletje of pop-up IN het dossier** dat voorheen er was: "je kan een concept maken" of "antwoord van wederpartij/cliënt — wil je dat ik de volgende stap beantwoord?". Dat is weg.
 
-### Bevindingen (productie-diagnose)
+**Lisanne (volledige quote uit sessie 141):**
+> "Voorheen hadden we dat er een pop-up kwam: 'je kan een concept maken' of 'er is een antwoord geweest van de cliënt of de wederpartij'. En dan stond er: 'Wil je dat ik de volgende stappen beantwoord?'. Die pop-up — of niet eens pop-up, gewoon dat bolletje in dossiers — is niet meer te zien. Er moet één plek zijn waar je gewoon ziet: hé er is een update, dit is aan de hand. Niet op verschillende plekken."
 
-**Database `notifications` tabel:**
+**Plus, ontdekt tijdens onderzoek:** Notification-bel rechtsboven heeft een **eigen** bug — 403 ongelezen notificaties in de database, allemaal voor Lisanne, allemaal van type `deadline_overdue`, maar frontend toont ze niet. Dat is een aparte bug bovenop het dossier-bolletje-probleem.
 
-```
-total | unread | latest
-------+--------+-------
-  403 |    403 | 2026-05-14 06:20 (vanochtend)
-```
+### Bevindingen — wat is er gebeurd?
 
-**Per type:**
-```
-type             | count
------------------+------
-deadline_overdue |   403
-```
-
-**Per user:** alle 403 → `seidony@kestinglegal.nl` (Lisanne's login).
-
-**Conclusie:** notifications worden **wél** aangemaakt en zijn allemaal **ongelezen**, maar Lisanne ziet ze niet in de UI.
-
-### Mogelijke oorzaken (gesorteerd op waarschijnlijkheid)
-
-**Hypothese 1 (waarschijnlijkste) — Frontend bell-icon polling kapot of cached**
-- `useNotifications(15)` + `useUnreadCount()` met `refetchInterval: 30_000`
-- Controleren: opent Lisanne devtools → ziet ze de calls naar `/api/notifications/unread-count`? Geeft die 403 of een fout?
-
-**Hypothese 2 — Tenant-isolation faalt**
-- RLS-policy `(tenant_id = current_setting('app.current_tenant'))` — als middleware tenant niet zet bij de notifications-call → 0 resultaten
-
-**Hypothese 3 — Eénzijdig notification-type**
-- Alle 403 zijn `deadline_overdue` ("Taak te laat: ...")
-- Geen `email_received`, geen `draft_ready`, geen `classification_done`
-- Lisanne ervaart het als "geen meldingen" omdat de relevante events niet getriggerd worden
-- Inbound email + classify + draft-ready genereren géén notification (orchestrator auto-draft is `DISABLED`, regel 80 in `orchestrator.py`)
-
-### Voorgestelde fix
-
-**Stap 1 — Verifiëren — XS (15 min)**
-- Lisanne laten inloggen → devtools → ziet ze `GET /api/notifications/unread-count` → response?
-- Als response = 403 → frontend-bug (badge update)
-- Als response = 0 → backend/RLS-bug
-
-**Stap 2 — Notification-types uitbreiden — M (4-6u)**
-- Trigger `Notification.create()` toevoegen aan:
-  - Sync_service: bij **nieuwe inbound email** gekoppeld aan dossier
-  - Classify-service: bij **classificatie klaar** ("Belofte", "Betwisting" etc.)
-  - Draft-service: bij **AI-draft gegenereerd** (`status='generated'`)
-- Frontend bell-icon groeperen op type
-
-**Risico:** medium. Notification-spam vermijden — Lisanne wil niet 50 notificaties per dag. Throttle/group per case.
-
----
-
-## Punt 5 — Concept-klaar niet zichtbaar
-
-**Lisanne:** "Ik zie niet wanneer een concept klaar is, geen tijd hoe lang het duurde."
-
-### Bevindingen (productie-diagnose)
-
-**Database `ai_drafts`:**
+**Git-historie biedt de exacte uitleg:**
 
 ```
-status     | count
------------+------
-generated  |   18
-sent       |    1
+d9c7e20 (7 mei 2026) — fix(ui): verberg legacy AI-suggestie + Followup banners op dossier
+
+Drie parallelle systemen toonden tegelijk acties op het dossier:
+1. AI-suggestie classification banner (sessie 129)
+2. FollowupRecommendation banner (sessie 132)
+3. Pipeline /taken queue (sessie 134, nieuwe bron van waarheid)
+
+Lisanne raakte overspoeld. Banners 1 + 2 weggehaald uit page.tsx —
+pipeline /taken is nu enige plek waar AI-acties verschijnen.
 ```
 
-19 drafts in totaal, 18 zijn `generated` (= klaar voor review), 1 verzonden. Latest = vandaag 09:52.
+**Wat we hebben gedaan:** in sessie 134 hebben we expliciet 2 van de 3 plekken weggehaald omdat Lisanne overspoeld raakte. Beslissing destijds: "pipeline /taken is nu enige plek voor AI-acties". Plus commit `76996f7` heeft de hooks ook verwijderd. 326 regels code uit het dossier verwijderd.
 
-**Workflow tasks `review_ai_draft`:**
+**Wat Lisanne nu ervaart:** de Taken-tab is voor haar geen "centrale plek" maar een lijstje tussen 11 andere tabs. Ze ziet niks meer op het Overzicht (de hoofdpagina). De prikkel "er is iets voor je klaar" is verdwenen.
 
-```
-status     | count
------------+------
-overdue    |    9
-skipped    |    7
-completed  |    1
-pending    |    1
-```
+**Plus aparte bug — bel-icon:**
+- Database: 403 ongelezen notificaties voor Lisanne, alle type `deadline_overdue`, latest vandaag 06:20
+- Frontend hook: `useNotifications(15)` + `useUnreadCount()` met 30s polling
+- Onbekend waarom UI ze niet toont — vereist devtools-check bij Lisanne (15 min werk)
 
-**Concept-tijd:** AIDraft heeft `created_at` (start) maar geen `completed_at` of `generation_duration_seconds`. Concept-tijd is niet bijgehouden.
+### Voorgestelde fix — gefaseerd
 
-### Root cause
+**Fase 1 — Bel-icon diagnose + Disclaimer/render-fixes (S142) — S (1u totaal)**
+- Lisanne laten inloggen → devtools → `GET /api/notifications/unread-count` response checken
+- Als response = 403: frontend-bug in badge-rendering
+- Als response = 0: backend/RLS-bug
+- Snelle fix afhankelijk van diagnose
 
-Concepts worden gegenereerd, taken worden gemaakt, maar:
-1. **Geen notification** bij `draft generated` event
-2. **Geen prominent widget** op dossier-overzicht
-3. **9 review-tasks zijn overdue**, 7 skipped — Lisanne zag ze nooit
-4. **`onOpenDraft(draftId)`** callback in `TijdregistratieTab` is correct gewired, maar tab niet zichtbaar zonder klik
+**Fase 2 — Nieuwe `CaseActionFeed` widget op Overzicht-tab (S145-S146) — M**
 
-### Voorgestelde fix — **M, samen met punt 6 en 7**
-
-Zie punt 6 hieronder — Concept-klaar moet in de unified Actie-Feed verschijnen met:
-- "Concept klaar voor verweer beantwoorden — 2 min geleden — [Bekijk concept]"
-- Concept-tijd: backend extra veld `generation_duration_seconds` (XS, 30 min)
-
----
-
-## Punt 6 — Niks komt naar voren op dossier
-
-**Lisanne (volledige quote):** "Voorheen kregen we 'hey er is een antwoord of betwisting, genereer hier je volgende stap'. Nu krijgen we niks meer. Ik moet in taken kijken of bij correspondentie. Het moet gewoon op één plek zijn, en dat kan in het dossier zijn — 'hey er is een update, dit is aan de hand, ik kan een bericht voor je maken'. Niet op allemaal verschillende plekken."
-
-### Bevindingen — versnippering
-
-**AI-suggesties zitten nu op 3 plekken (geen daarvan is primair):**
-
-| # | Plek | Component | Wat | Lifespan |
-|---|---|---|---|---|
-| 1 | `DossierHeader` banner (boven dossier) | `DossierHeader.tsx:382-395` | "Status gewijzigd naar X. Template Y klaarzetten?" | 30s auto-hide |
-| 2 | Taken-tab inline | `TijdregistratieTab.tsx` | `review_ai_draft` tasks met `onOpenDraft` callback | Permanent |
-| 3 | Correspondentie-tab classifications | `CorrespondentieTab.tsx:19-35` | Smart-reply suggesties (mild/zakelijk/streng) | Permanent |
-
-**Dossier-detailpagina heeft 11 tabs:** Overzicht / Taken / Uren / Vorderingen / Betalingen / Staphistorie / Facturen / Documenten / Correspondentie / Activiteiten / Partijen.
-
-**Op Overzicht-tab (de hoofdpagina) staat NIETS over AI-acties of "wat moet er nu gebeuren".**
-
-### Voorgestelde fix — **M-L (1-2 sessies) — HOOFDPUNT**
-
-**Nieuw component:** `CaseActionFeed` op Overzicht-tab, bovenaan na de header.
-
-Toont een verticale tijdlijn met **actiekaarten** in 3 typen:
+Niet de oude banners terugzetten — die waren versnipperd. Eén nieuw component bovenaan de Overzicht-tab dat alles bundelt. Visuele schets:
 
 ```
 ┌─ Dossier 2026-00062 ─ Verweer beantwoorden ───────┐
 │                                                    │
-│ 🤖 Concept klaar voor review                       │
-│    Verweer beantwoorden — 2 min geleden            │
-│    Gegenereerd in 4.3s                             │
-│    [Bekijk concept] [Verstuur direct]              │
+│ 🟢 1 update vereist actie                          │
 │                                                    │
-│ 📧 Nieuw antwoord van wederpartij                  │
-│    "Wij betwisten de vordering omdat..."           │
-│    Geclassificeerd als: Betwisting (78%)           │
-│    [Smart reply: Mild / Zakelijk / Streng]         │
+│ ┌──────────────────────────────────────────────┐ │
+│ │ 🤖 Concept klaar voor review                 │ │
+│ │    Verweer beantwoorden — 2 min geleden      │ │
+│ │    Gegenereerd in 4.3s                       │ │
+│ │    [Bekijk concept]  [Verstuur direct]       │ │
+│ └──────────────────────────────────────────────┘ │
 │                                                    │
-│ ⏰ Volgende stap: Stap 5 — Dagvaarding             │
-│    Deadline: 21 mei 2026 (over 7 dagen)            │
-│    Actie nodig: handmatige beoordeling             │
+│ ┌──────────────────────────────────────────────┐ │
+│ │ 📧 Nieuw antwoord van wederpartij            │ │
+│ │    "Wij betwisten de vordering omdat..."     │ │
+│ │    AI classificeert: Betwisting (78%)        │ │
+│ │    [Genereer antwoord — mild/zakelijk/streng]│ │
+│ └──────────────────────────────────────────────┘ │
+│                                                    │
+│ ┌──────────────────────────────────────────────┐ │
+│ │ ⏰ Volgende stap: Stap 5 — Dagvaarding       │ │
+│ │    Deadline: 21 mei 2026 (over 7 dagen)      │ │
+│ └──────────────────────────────────────────────┘ │
 │                                                    │
 └────────────────────────────────────────────────────┘
 ```
 
-**Data-bronnen die samenkomen:**
-1. `useAiDrafts(caseId)` — status `generated` → concept-kaart
-2. `useClassifications(caseId)` — recent → reply-kaart
-3. `useWorkflowTasks(caseId)` — pending/overdue → actie-kaart
-4. `useNextStep(caseId)` — pipeline → vervolg-kaart
+**Drie typen kaarten, één widget:**
+1. AI-draft klaar (data uit `useAiDrafts(caseId)` met status `generated`)
+2. Inkomend antwoord met classificatie + smart-reply CTA (data uit `useClassifications(caseId)`)
+3. Volgende pipeline-stap met deadline (data uit `useNextStep(caseId)`)
 
-**Wat verdwijnt na bouw:**
-- `DossierHeader` status-banner (30s auto-hide is foute UX)
-- Smart-reply alleen-op-correspondentie-tab → ook in feed
-- Review-task alleen-op-taken-tab → ook in feed
+**Verschil met oude banners:**
+- 1 widget i.p.v. 3 banners die elkaar opstapelen
+- Geen 30s auto-hide (Lisanne komt later terug en wil het nog zien)
+- Maximaal 3 kaarten zichtbaar, rest in "alles tonen" toggle (geen overload)
+- Persistent — verdwijnt alleen na actie van Lisanne
 
-**Wat blijft als drilldown:**
-- Correspondentie-tab voor email-archief
-- Taken-tab voor uitgebreide task-management
+**Wat oplossing-overlap doet:**
+- Punt 5 (concept-klaar): kaart-type 1 in de feed
+- Punt 6 (één plek): de feed zelf
+- Punt 4-dossier-bolletje: badge bovenop dossier-icoon in sidebar als de feed iets bevat
+- Punt 4-bel-icon: aparte fix, gaat over globale notificaties (cross-dossier)
 
-**Risico:** medium. Te veel kaarten = nieuwe versnippering. Begrenzen tot top 3 acties + "alles tonen" link.
+**Risico:** medium. Lisanne raakte vorige keer overspoeld bij 3 banners → balans tussen "zichtbaar" en "rustig" is kritisch. Test eerst met Lisanne op 1 dossier voor we het uitrollen.
 
 ---
 
-## Punt 7 — AI-overlap: concept-genereren vs correspondentie-antwoord
+## Punt 7 — Eén AI-systeem + sjabloon-trouwe layout
 
-**Lisanne:** "Bij correspondentie kan je een mail maken, maar ook in het begin naast de 1e sommatie. Het moet op één plek."
+> **Correctie:** Eerste rapportversie zag dit puur als architectuur-overlap (3 systemen → 1 systeem). Dat klopt, maar Lisanne voegt twee belangrijke nuances toe: (1) het unified systeem moet zowel batch als single dekken, (2) er is ook een concreet layout-probleem dat los staat van architectuur — logo, handtekening met foto, en disclaimer-positie kloppen niet.
 
-### Huidige architectuur — 3 aparte AI-flows
+**Lisanne:**
+> "De conceptbrieven die worden gegenereerd, zien er anders uit dan de sjablonen. Wat erin staat is correct, dat is geen probleem. Maar de lay-out, hoe de mail eruitziet met de foto en met de handtekening, komt niet overeen met de sjablonen. Ook de disclaimer staat nu boven de handtekening, dat moet onder de handtekening, helemaal onderaan. Het antwoord op de betwisting is perfect — dat stuk werkt wel."
+> 
+> "Er moet één systeem zijn dat nadenkt over hoe concepten worden geschreven. Dat moet zowel voor batch als voor enkele mails werken. Ze zijn hetzelfde — alleen de een stuurt batch, de ander per dossier. Dat van die correspondentie kan weg, want dat is overbodig."
 
+### Bevindingen — drie aparte sub-issues
+
+**Sub-issue A: Twee aparte render-pijplijnen**
+
+Productie-code heeft twee paden waar email-HTML wordt gemaakt:
+
+| Pad | Gebruikt door | HTML-bron |
+|---|---|---|
+| `incasso/html_renderer.py` + `incasso/templates.py` | Batch-flow (incasso-pagina), single send-flow (advance-after-send) | Lisanne's .eml-sjablonen als basis, server-side gevuld met regex-replace |
+| `ai_agent/draft_service.py` + `smart_reply_service.py` | "Concept genereren" knop op dossier (DetailsTab), Correspondentie-tab smart-reply | AI levert raw HTML/text terug, geen sjabloon-wrap |
+
+`html_renderer.py:1-11` docstring:
+> "Het AI-model genereert alleen subject + plain body. De HTML-versie van de email wordt server-side opgebouwd op basis van het template plus dossier-context."
+
+`draft_service.py`: importeert `html_renderer` **niet**. Smart-reply ook niet. Dat is het hele verschil — pipeline-flow krijgt Lisanne's templates, andere flows krijgen kale AI-output.
+
+**Dit verklaart Lisanne's observatie:**
+- Smart-reply op betwisting: inhoud klopt (AI doet z'n werk goed)
+- Maar layout = generieke AI-HTML zonder logo/handtekening/footer
+
+**Sub-issue B: Disclaimer staat boven handtekening**
+
+In `incasso_templates.py:18-107` — `_BASE_EMAIL` template heeft deze volgorde:
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      HUIDIGE STAAT                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ ┌────────────────────┐  ┌───────────────────┐  ┌────────────┐ │
-│ │ 1. INCASSO-STAP    │  │ 2. CONTEXT-DRAFT  │  │ 3. SMART   │ │
-│ │    (sjabloontrouw) │  │    (vrij)         │  │    REPLY   │ │
-│ ├────────────────────┤  ├───────────────────┤  ├────────────┤ │
-│ │ Endpoint:          │  │ Endpoint:         │  │ Endpoint:  │ │
-│ │ /api/incasso/      │  │ /api/ai-agent/    │  │ /api/ai-   │ │
-│ │ cases/{id}/        │  │ draft/{case_id}   │  │ agent/     │ │
-│ │ generate-draft     │  │                   │  │ classific- │ │
-│ │                    │  │                   │  │ ations/{}/ │ │
-│ │ Hook:              │  │ Hook:             │  │ smart-     │ │
-│ │ useGenerate-       │  │ useGenerate-      │  │ replies    │ │
-│ │ DraftForCase       │  │ Draft             │  │            │ │
-│ │                    │  │                   │  │ UI: 3 toon │ │
-│ │ Prompt:            │  │ Prompt:           │  │ varianten  │ │
-│ │ incasso_email_     │  │ DRAFT_SYSTEM_     │  │ mild/zake- │ │
-│ │ prompts.SYSTEM_    │  │ PROMPT (hard-     │  │ lijk/      │ │
-│ │ PROMPT             │  │ coded Python)     │  │ streng     │ │
-│ │ (hardcoded)        │  │                   │  │            │ │
-│ │                    │  │ Sjabloon:         │  │ Prompt:    │ │
-│ │ Sjabloon:          │  │ GEEN — vrije      │  │ SMART_     │ │
-│ │ IncassoPipeline-   │  │ generatie op      │  │ REPLY_     │ │
-│ │ Step.email_body_   │  │ basis van         │  │ SYSTEM_    │ │
-│ │ template (DB)      │  │ case-context      │  │ PROMPT     │ │
-│ │                    │  │                   │  │            │ │
-│ │ Verweer-bib?       │  │ Verweer-bib?      │  │ Sjabloon:  │ │
-│ │ ✓ bij verweer-stap │  │ ✓ altijd          │  │ GEEN       │ │
-│ │                    │  │                   │  │            │ │
-│ │ STATUS:            │  │ STATUS:           │  │ STATUS:    │ │
-│ │ ⚠ NIET AANGE-     │  │ ✓ WERKEND         │  │ ✓ WERKEND  │ │
-│ │ SLOTEN op engine   │  │ (correspondentie- │  │ (classifi- │ │
-│ │ (zie module-       │  │  tab knop)        │  │ cation-    │ │
-│ │ docstring)         │  │                   │  │ card)      │ │
-│ └────────────────────┘  └───────────────────┘  └────────────┘ │
-│                                                                 │
-│ Sjablonen op 3 plekken:                                        │
-│ - IncassoPipelineStep.email_body_template (DB)                 │
-│ - DRAFT_SYSTEM_PROMPT (Python hardcode)                        │
-│ - SMART_REPLY_SYSTEM_PROMPT (Python hardcode)                  │
-│ - DEFENSE_EXAMPLES (Python hardcode dict)                      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+<!-- Body content -->
+{{ content }}
+
+<!-- Signature -->
+{{ afsluiting }}
+
+<!-- Footer (kantoor-info, gold border) -->
+<table>...</table>
 ```
 
-### Voorgestelde unified architectuur
+In de 40+ call sites in dezelfde file staat overal:
+```python
+body += _schuldhulp_disclaimer(ctx)   # disclaimer wordt aan BODY geappend
+... _render_branded(content_html=body, afsluiting_html=_signature(ctx))
+```
+
+Resultaat: schuldhulp + disclaimer rendert **vóór** handtekening, omdat het in body zit. Lisanne wil onder handtekening helemaal onderaan.
+
+**Fix structureel:**
+1. `_BASE_EMAIL` template: nieuwe slot `{{ disclaimer }}` toevoegen **na** `{{ afsluiting }}`
+2. `_render_branded()` signature uitbreiden met `disclaimer_html` parameter
+3. Alle 40+ call sites: `body += _schuldhulp_disclaimer(ctx)` verwijderen, vervangen door `disclaimer_html=_schuldhulp_disclaimer(ctx)` parameter
+4. Tests aanpassen (`test_html_renderer.py` raakt geraakt)
+
+**Geschatte tijd:** S (1-2u). Mechanische refactor, geen logica-wijziging.
+
+**Sub-issue C: Handtekening zonder foto + foute email + ontbrekend logo-pad**
+
+Lisanne's originele BaseNet-sjabloon (uit `templates/lisanne/SOMMATIE TOT BETALING _  _.eml`) heeft deze handtekening-volgorde:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      UNIFIED FLOW                               │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              ÉÉN endpoint: POST /api/ai/draft            │  │
-│  │              body: { case_id, intent, tone? }             │  │
-│  │                                                           │  │
-│  │  intent: "next_step" | "reply_to_email" | "free_compose" │  │
-│  │  tone:   "mild" | "zakelijk" | "streng" (optioneel)      │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                            │                                    │
-│                            ▼                                    │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │     DraftService (één service, drie strategieën)         │  │
-│  │                                                           │  │
-│  │     intent="next_step":                                  │  │
-│  │       → kijkt naar case.incasso_step                     │  │
-│  │       → laadt managed_template voor die stap             │  │
-│  │       → vult variabelen via AI op basis van dossier      │  │
-│  │                                                           │  │
-│  │     intent="reply_to_email":                             │  │
-│  │       → kijkt naar laatste classified email              │  │
-│  │       → past tone toe (mild/zakelijk/streng)             │  │
-│  │       → laadt verweer-bibliotheek als classification     │  │
-│  │         == "betwisting"                                  │  │
-│  │                                                           │  │
-│  │     intent="free_compose":                               │  │
-│  │       → vrije generatie op case-context                  │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                            │                                    │
-│                            ▼                                    │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │            managed_templates tabel (DB)                  │  │
-│  │     (één bron voor alle sjablonen, met variabelen)       │  │
-│  │                                                           │  │
-│  │     Kolommen: id, name, channel (email/letter),          │  │
-│  │     intent_match (next_step/reply/...), step_id?,        │  │
-│  │     subject_template, body_template, ai_prompt_extra     │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  Frontend: ÉÉN component CaseActionFeed roept hetzelfde        │
-│  endpoint aan met de juiste intent, krijgt drafts terug.       │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Hoogachtend,
+
+Mevr. mr. L. Kesting
+INCASSO ADVOCAAT | DEBT COLLECTION ATTORNEY
+
+Kesting Legal B.V.
+IJsbaanpad 9
+1076 CV Amsterdam
+E: kesting@kestinglegal.nl       ← LET OP: kesting@, niet incasso@
+W: www.kestinglegal.nl
+
+[https://static.basenet.nl/cms/113646/image_resized_100x100.png]   ← FOTO
+
+Heeft u financiële zorgen...       ← schuldhulp blok hierna
+```
+
+Huidige `incasso_templates.py:215-246` — `_signature()`:
+- Geeft `incasso@kestinglegal.nl` terug (kantoor-mailadres in origineel)
+- Geen `<img>` voor foto
+- Tekst klopt verder
+
+Plus `_BASE_EMAIL:35-36`:
+```html
+<img src="https://kestinglegal.nl/logo.png" alt="Kesting Legal" .../>
+```
+Externe URL. Commit-message `c8c6039` beweerde "logo embedded as data:image/png;base64" maar dat is niet wat er nu in de code staat. Externe URL werkt soms niet in mailclients (blokkade van remote images).
+
+**Fix:**
+- Signatuur-foto toevoegen als `<img src="data:image/...">` (gebruik `_kesting_logo.b64` file in `templates/lisanne/`)
+- Email-adres aanpassen naar wat Lisanne wil (`kesting@` of `incasso@`)
+- Logo in header omzetten naar base64-data-URL i.p.v. externe URL
+
+**Geschatte tijd:** S (2u). Vraag aan Lisanne welke variant ze wil (incasso@ of kesting@, met of zonder foto), dan implementeren.
+
+### Architectuur-voorstel — Unified AI Draft Service
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│              ÉÉN endpoint: POST /api/ai/draft                    │
+│              body: { case_id, intent, tone? }                     │
+│                                                                   │
+│   intent: "next_step" | "reply_to_email" | "free_compose"        │
+│   tone:   "mild" | "zakelijk" | "streng" (optioneel)             │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  UnifiedDraftService (één service, drie strategieën)             │
+│                                                                   │
+│  intent="next_step":                                              │
+│    → kijkt naar case.incasso_step                                 │
+│    → laadt managed_template voor die stap                         │
+│    → vraagt AI alleen plain body te schrijven                     │
+│    → server-side HTML wrap via incasso_templates._render_branded  │
+│                                                                   │
+│  intent="reply_to_email":                                         │
+│    → kijkt naar laatste classified email                          │
+│    → past tone toe (mild/zakelijk/streng)                         │
+│    → laadt verweer-bibliotheek bij classification "betwisting"    │
+│    → vraagt AI alleen plain body te schrijven                     │
+│    → server-side HTML wrap via incasso_templates._render_branded  │
+│                                                                   │
+│  intent="free_compose":                                           │
+│    → vrije generatie op case-context                              │
+│    → vraagt AI plain body te schrijven                            │
+│    → server-side HTML wrap (zelfde branded layout)                │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│         Eén HTML render-pijplijn (incasso_templates.py)          │
+│  - Wordt nu al gebruikt door batch-flow                          │
+│  - Wordt straks ook gebruikt door single-flow + smart-reply       │
+│  - Logo + handtekening + (verplaatste) disclaimer komen           │
+│    overal automatisch correct                                     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Verschillen huidig → unified
@@ -447,40 +432,34 @@ Toont een verticale tijdlijn met **actiekaarten** in 3 typen:
 |---|---|---|
 | Endpoints | 3 | 1 |
 | Hooks | `useGenerateDraft`, `useGenerateDraftForCase`, `useSmartReplies` | `useDraft({intent, tone})` |
-| Prompt-bron | 3× hardcoded Python | 1× hardcoded systeem + sjablonen uit DB |
-| Sjabloon-bron | `IncassoPipelineStep.email_body_template` + 2× geen | `managed_templates` tabel |
-| Verweer-bibliotheek | Hardcoded Python dict | `managed_templates` met `intent_match='reply_dispute'` |
-| Niet-aangesloten code | `incasso_email_prompts.py` | — |
+| AI-output | Soms HTML, soms text | Altijd plain text body |
+| HTML-wrapping | Alleen batch-flow | Alle flows |
+| Logo + handtekening + disclaimer | Alleen in batch-flow goed | Overal goed |
+| Concept-knop op Correspondentie-tab | Bestaat, gebruikt apart pad | **Verwijderd — overbodig** |
 
 ### Voorgestelde fix — **L (2-3 sessies)**
 
-**Sessie 1 — Schema + service**
-1. Migratie `managed_templates` tabel uitbreiden met `intent_match`, `step_id` (nullable), `tone`
-2. Bestaande `IncassoPipelineStep.email_subject_template`/`email_body_template` migreren naar `managed_templates`
-3. Hardcoded `DRAFT_SYSTEM_PROMPT` + `SMART_REPLY_SYSTEM_PROMPT` opsplitsen in: vaste systeem-prompt + per-intent variabel deel uit DB
-4. Hardcoded `DEFENSE_EXAMPLES` migreren naar `managed_templates` met `intent_match='reply_dispute'`
-5. Nieuwe service `app/ai_agent/unified_draft_service.py` die alle 3 strategieën dekt
-6. Nieuw endpoint `POST /api/ai/draft` met `{case_id, intent, tone?}`
+**Sessie A — Layout-fixes vooraf (kan parallel met S142/S143)**
+1. Disclaimer-positie fixen in `_BASE_EMAIL` (S, 1-2u)
+2. Logo embedden als data-URL (S, 30min)
+3. Handtekening uitbreiden met foto + correcte email (S, 1-2u, na Lisanne-input)
 
-**Sessie 2 — Frontend consolidatie**
+**Sessie B — Unified service backend**
+1. Nieuw `app/ai_agent/unified_draft_service.py` met 3 intents
+2. Nieuwe endpoint `POST /api/ai/draft` met `{case_id, intent, tone?}`
+3. AI-prompts aanpassen: altijd plain body terug, geen HTML
+4. Server-side HTML-wrap via `incasso_templates._render_branded()` voor alle intents
+5. Bestaande 3 endpoints behouden (deprecate, niet meteen verwijderen)
+
+**Sessie C — Frontend consolidatie + cleanup**
 1. Nieuw hook `useDraft({intent, tone})`
-2. `CaseActionFeed` component bouwt op nieuw endpoint
-3. Bestaande 3 hooks → deprecate, niet meteen verwijderen
-4. Smart-reply card op correspondentie-tab → roept nieuw endpoint met `intent='reply_to_email'`
-
-**Sessie 3 — Cleanup**
-1. Verwijder `useGenerateDraft`, `useGenerateDraftForCase`, `useSmartReplies` na verificatie
-2. Verwijder oude endpoints `/api/incasso/cases/{id}/generate-draft`, `/api/ai-agent/draft/{case_id}`, `/api/ai-agent/classifications/{}/smart-replies`
-3. Verwijder `incasso_email_prompts.py` (nooit aangesloten)
-4. Verwijder hardcoded `DEFENSE_EXAMPLES` Python dict
-
-**Sjabloon-editor (bestaande TODO uit memory `project_unified_template_editor`):**
-- Eén UI om alle sjablonen te beheren (brief + email + pipeline)
-- Wijzigen in sjabloon-editor → werkt overal door
-- Past perfect bij deze refactor: `managed_templates` wordt single source of truth
+2. `CaseActionFeed` widget (punt 4+5+6) gebruikt deze hook
+3. Smart-reply card op correspondentie-tab → krijgt 1 knop "Genereer antwoord" met tone-dropdown (intent="reply_to_email"), of wordt helemaal weggehaald uit Correspondentie en alleen in CaseActionFeed getoond zoals Lisanne voorstelt
+4. Concept-knop op Correspondentie-tab verwijderen (overbodig per Lisanne)
+5. Oude 3 endpoints definitief verwijderen na 1 sessie monitoring
 
 **Risico:** L. Migratie raakt 4 modules + bestaande data. Mitigatie:
-- Eerst nieuwe service parallel naast oude (feature-flag)
+- Nieuwe service parallel naast oude met feature-flag
 - Per scherm overzetten, niet big-bang
 - Bestaande templates eerst CSV-exporten als backup
 
@@ -488,14 +467,26 @@ Toont een verticale tijdlijn met **actiekaarten** in 3 typen:
 
 ## Aanbevolen sessievolgorde
 
-| Sessie | Punten | Grootte | Waarom eerst |
+| Sessie | Punten | Grootte | Wat Lisanne merkt |
 |---|---|---|---|
-| **S142** | Punt 1 (tijdstempels) + Punt 4 verificatie (devtools-check Lisanne) | S | Quick wins. Tijdstempel is 1-2u, notification-diagnose is 15 min — beide opleveren snel. |
-| **S143** | Punt 3 (status pipeline bug + 45-dossier-migratie) | M | Lost direct ervaren bug op. Eerst data-state herstellen. |
-| **S144** | Punt 2 (auto-koppeling slimmer + Ongesorteerd badge) | M | Voor Lisanne het meest zichtbare effect. |
-| **S145-S147** | Punten 4+5+6+7 samen — Unified DraftService + CaseActionFeed | L (3 sessies) | Hoofdpunt. Lost versnippering definitief op. |
+| **S142** | Tijdstempels (1) + bel-icon devtools-check (4-deel) + disclaimer-positie (7-deel A) + Sync Mail-knop diagnose (2-deel A) | Dag | Tijden zichtbaar, ze weet waarom bel leeg is, disclaimer goed gepositioneerd, sync-knop werkt of weet waarom niet |
+| **S143** | Pipeline-step bug + 45-dossier-migratie (3) | Dag | Status loopt netjes door na batch-versturen |
+| **S144** | Dossiernummer-first matching + suggestie-flow + Ongesorteerd-badge (2-deel B) | Dag | Veel meer mails komen automatisch op het juiste dossier |
+| **S145** | Unified DraftService backend + logo + handtekening (7-deel A,B,C) | Dag | Conceptbrieven zien er overal hetzelfde uit als Lisanne's sjablonen |
+| **S146-S147** | `CaseActionFeed` widget op Overzicht-tab (4+5+6) + cleanup oude endpoints | 1-2 sessies | Eén plek op dossier waar updates en acties verschijnen, niet overspoeld zoals voorheen |
 
-**Strategische opmerking:** Niet beginnen met punt 7 direct. Lisanne ziet eerst betere quick wins (tijdstempels, status-fix, auto-koppeling), dan de grote consolidatie. Anders frustreert ze van trage progress.
+**Strategische opmerking:** S142 levert in één dag 4 zichtbare verbeteringen. Daarna pas grotere klussen. Dat houdt Lisanne's vertrouwen hoog dat we naar haar luisteren.
+
+---
+
+## Wat ik anders deed dan de eerste rapportversie
+
+| Punt | Eerste versie | Deze versie | Reden |
+|---|---|---|---|
+| 2 | "Sync werkt, maar 60% niet gekoppeld" | "Handmatige Sync Mail-knop is kapot + auto-koppeling moet dossiernummer-first" | Lisanne bedoelde de handmatige knop. Plus zij gaf de matching-strategie aan: dossiernummer, niet afzender. |
+| 4+5 | Twee aparte punten | Samen met punt 6 als één onderliggend probleem | Lisanne bedoelde het bolletje IN het dossier; bel-icon is een aparte bug die we ook vonden. |
+| 6 | Suggestie voor nieuw widget | Concrete naam + uitleg + verwijzing naar git-historie waarom oude banners weg zijn | Sessie 134 verwijderde de banners expliciet. Nu pendant aan andere kant: te ver opgeruimd. Inzicht is dat we balans moeten vinden. |
+| 7 | Architectuur-overlap (3 systemen → 1) | Architectuur + concreet layout-probleem (disclaimer-positie, foto, logo) + verwijzing naar `html_renderer.py` als unified render-pad | Lisanne voegde concrete UI-fout toe. Onderzoek wees uit dat `html_renderer.py` al bestaat maar alleen door batch-flow gebruikt. |
 
 ---
 
@@ -503,9 +494,9 @@ Toont een verticale tijdlijn met **actiekaarten** in 3 typen:
 
 Te bewaren na akkoord op dit rapport:
 
-- **`project_demo_feedback_S140.md`** (project) — 7 punten van Lisanne + status per sessie
-- **`feedback_ui_versnippering.md`** (feedback) — Bij elke nieuwe AI-feature: vraag eerst of het in `CaseActionFeed` past, niet als losse tab/banner
-- **`reference_managed_templates_consolidatie.md`** (reference) — Bij elke wijziging in `IncassoPipelineStep.email_*`, `DRAFT_SYSTEM_PROMPT`, `SMART_REPLY_SYSTEM_PROMPT`, `DEFENSE_EXAMPLES`: pas op dat consolidatie-plan in S145+ niet wordt gefrustreerd door nieuwe hardcoded paden.
+- **`project_demo_feedback_S140_S141.md`** (project) — 7 punten van Lisanne + verduidelijking S141 + status per sessie
+- **`feedback_ui_balans.md`** (feedback) — Bij nieuwe AI-feature op dossier: niet 3 parallelle banners (S134 incident) maar ook niet weglaten. Eén `CaseActionFeed` widget op Overzicht-tab is de balans. Past in de feed of helemaal niet — geen losse banner.
+- **`reference_email_render_paths.md`** (reference) — `incasso_templates.py` + `html_renderer.py` is de **enige** render-pijplijn die Lisanne's layout respecteert (logo, handtekening, schuldhulp, disclaimer). `draft_service.py` en `smart_reply_service.py` slaan deze pijplijn over. Zie `incasso/automation_service.py:620` voor het enige import-punt.
 
 **Niet bewaren:** dit rapport zelf is in `docs/onderzoek-ai-overlap-S141.md`, geen memory nodig.
 
@@ -517,4 +508,11 @@ Te bewaren na akkoord op dit rapport:
 - **Geen impliciete goedkeuring** — wacht op Arsalan-akkoord op aanpak per punt
 - **Geen automatische sessieplanning** — Arsalan beslist welke sessie eerst en in welke volgorde
 
-**Volgende stap:** Arsalan reviewt, geeft per punt akkoord (en eventueel scope-aanpassingen), daarna pas bouw in S142+.
+**Volgende stap:** Arsalan reviewt deze tweede rapportversie, geeft per punt akkoord (en eventueel scope-aanpassingen), daarna pas bouw in S142+.
+
+### Open vragen aan Lisanne (verzamel voor S142)
+
+1. Handtekening-foto: heeft Lisanne een foto-bestand of moet de BaseNet-CDN-link blijven werken?
+2. Email-adres in handtekening: `kesting@kestinglegal.nl` of `incasso@kestinglegal.nl`?
+3. Concept-knop op Correspondentie-tab: definitief weg, of als snelle "antwoord opstellen"-knop behouden naast het CaseActionFeed?
+4. Suggestie-flow bij multi-dossier email: drempel voor auto-koppelen? (bijvoorbeeld 90% match = auto, 60-90% = suggestie, lager = ongesorteerd)

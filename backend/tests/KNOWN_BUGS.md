@@ -64,7 +64,7 @@ test alleen het API-endpoint dat 200 OK geeft (gedekt door
 - `frontend/e2e/documenten.spec.ts` — page structure veranderd — **STATUS: GEFIXT** — h1 nu "Sjablonen" met tabs Word-sjablonen + HTML Sjablonen
 - `frontend/e2e/facturen.spec.ts::F2`, `::F7` — wizard flow + delete-confirm dialog veranderd
 - `frontend/e2e/incasso-pipeline.spec.ts` — pipeline steps hernoemd naar "Eerste/Tweede/Derde sommatie"
-- `frontend/e2e/instellingen.spec.ts` — tab-structure veranderd
+- `frontend/e2e/instellingen.spec.ts` — tab-structure veranderd — **STATUS: GEFIXT** — nieuwe tab-sidebar (Profiel/Kantoor/Modules/etc); tenant + KvK staan nu in inputs binnen Kantoor-tab; tests scopen op `main nav` om bell-icon te vermijden
 - `frontend/e2e/sidebar.spec.ts` — dashboard greeting check faalt voor beforeEach — **STATUS: GEFIXT** — beforeEach gebruikt nu sidebar Dashboard-link i.p.v. greeting heading
 - `frontend/e2e/relaties.spec.ts::R5` — delete-confirm dialog is nu custom React component (geen `window.confirm`), `page.on('dialog')` werkt niet meer
 - `frontend/e2e/tijdregistratie.spec.ts::T5` — zelfde delete-confirm dialog issue

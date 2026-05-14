@@ -46,8 +46,10 @@ async def create_sent_invoice(
     response = await client.post(f"/api/invoices/{invoice['id']}/approve", headers=auth_headers)
     assert response.status_code == 200
 
-    # Send
-    response = await client.post(f"/api/invoices/{invoice['id']}/send", headers=auth_headers)
+    # Send (skip_email=true: SMTP niet geconfigureerd in tests)
+    response = await client.post(
+        f"/api/invoices/{invoice['id']}/send?skip_email=true", headers=auth_headers
+    )
     assert response.status_code == 200
     return response.json()
 

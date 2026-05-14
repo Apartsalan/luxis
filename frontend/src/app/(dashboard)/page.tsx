@@ -45,6 +45,7 @@ import { useInvoices, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hoo
 import { useKycDashboard } from "@/hooks/use-kyc";
 import { usePendingCount, useClassifications, type Classification } from "@/hooks/use-ai-agent";
 import { useFollowupStats } from "@/hooks/use-followup";
+import { useUnlinkedCount } from "@/hooks/use-email-sync";
 import {
   useUserCalendarEvents,
   EVENT_TYPE_LABELS,
@@ -106,6 +107,9 @@ function getFirstName(fullName: string): string {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { hasModule } = useModules();
+  // S144: ongesorteerde-mail-teller voor "Actie nodig"-widget
+  const { data: unlinkedCountData } = useUnlinkedCount();
+  const unlinkedCount = unlinkedCountData?.count ?? 0;
 
   const {
     data: summary,
@@ -311,6 +315,23 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="divide-y divide-border">
+                {/* S144: Ongesorteerde mails prominent bovenaan */}
+                {unlinkedCount > 0 && (
+                  <Link
+                    href="/correspondentie?filter=unlinked"
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800">
+                        Ongesorteerd
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {unlinkedCount} {unlinkedCount === 1 ? "e-mail wacht" : "e-mails wachten"} op koppeling
+                      </span>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </Link>
+                )}
                 {summary?.cases_by_status?.some(
                   (s) =>
                     (s.status === "sommatie" ||

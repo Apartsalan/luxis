@@ -77,19 +77,23 @@ def _build_searchable_text(
 async def _find_case_by_case_number(
     db: AsyncSession,
     tenant_id: uuid.UUID,
-    subject: str,
+    text: str,
 ) -> tuple[uuid.UUID | None, str | None, bool]:
-    """Scan subject for case numbers like "2026-00012".
+    """Scan text (subject + optionally body) for case numbers like "2026-00012".
+
+    S144: callers passeren nu full searchable text (subject + body + snippet)
+    zodat dossiernummers in reply-bodies ook gevonden worden, niet alleen
+    in onderwerp.
 
     Returns (case_id, matched_by, has_case_number):
       - (uuid, "case_number", True) — matched to an active case
       - (None, None, True)          — case number found but dossier doesn't exist
       - (None, None, False)         — no case number found in text
     """
-    if not subject:
+    if not text:
         return None, None, False
 
-    matches = CASE_NUMBER_RE.findall(subject)
+    matches = CASE_NUMBER_RE.findall(text)
     if not matches:
         return None, None, False
 
@@ -482,7 +486,11 @@ async def sync_emails_for_account(
                 matched_by_val = "force_case_id" if force_case_id else None
                 if not link_to:
                     link_to, matched_by_val, _ = await _find_case_by_case_number(
-                        db, account.tenant_id, msg.subject or ""
+                        db,
+                        account.tenant_id,
+                        _build_searchable_text(
+                            msg.subject, msg.body_text, msg.body_html, msg.snippet
+                        ),
                     )
                 if link_to:
                     synced_email = (
@@ -568,9 +576,13 @@ async def sync_emails_for_account(
                     matched_by = cn_matched_by
                 # Bounce without a link → leave unlinked, auto-dismiss
             elif not case_id:
-                # Priority 4: case number in subject
+                # Priority 4: case number in subject + body (S144)
                 cn_case_id, cn_matched_by, has_case_number = await _find_case_by_case_number(
-                    db, account.tenant_id, msg.subject or ""
+                    db,
+                    account.tenant_id,
+                    _build_searchable_text(
+                        msg.subject, msg.body_text, msg.body_html, msg.snippet
+                    ),
                 )
                 if cn_case_id:
                     case_id = cn_case_id
@@ -696,10 +708,14 @@ async def _rematch_unlinked_emails(
         if case_id:
             matched_by = "thread"
 
-        # Priority 2: case number in subject
+        # Priority 2: case number in subject + body (S144)
         if not case_id:
             cn_case_id, cn_matched_by, has_case_number = await _find_case_by_case_number(
-                db, tenant_id, email.subject or ""
+                db,
+                tenant_id,
+                _build_searchable_text(
+                    email.subject, email.body_text, email.body_html, email.snippet
+                ),
             )
             if cn_case_id:
                 case_id = cn_case_id

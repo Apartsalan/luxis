@@ -251,7 +251,16 @@ export function AppSidebar({
                         <>
                           <span className="flex-1">{item.name}</span>
                           {badgeCount > 0 && (
-                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500/20 px-1.5 text-[10px] font-semibold text-red-400">
+                            <span
+                              className={cn(
+                                "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold",
+                                // S144: bij meer dan 5 ongesorteerde mails
+                                // prominenter rood — niet missen.
+                                item.badge === "unlinked-count" && badgeCount > 5
+                                  ? "bg-red-500 text-white"
+                                  : "bg-red-500/20 text-red-400"
+                              )}
+                            >
                               {badgeCount > 99 ? "99+" : badgeCount}
                             </span>
                           )}

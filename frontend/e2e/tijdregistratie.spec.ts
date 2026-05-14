@@ -197,7 +197,7 @@ test.describe("Tijdregistratie CRUD", () => {
     await expect(page.getByText("E2E gewijzigde omschrijving")).toBeVisible();
   });
 
-  test.skip("T5: delete time entry", async ({ page }) => {
+  test("T5: delete time entry", async ({ page }) => {
     await page.goto("/uren");
     await page.waitForLoadState("domcontentloaded");
 
@@ -210,14 +210,13 @@ test.describe("Tijdregistratie CRUD", () => {
       page.getByText("E2E gewijzigde omschrijving")
     ).toBeVisible({ timeout: 10000 });
 
-    // Register dialog handler just in case
-    page.on("dialog", (dialog) => dialog.accept());
+    // Trigger the React AlertDialog (icon button with title="Verwijderen")
+    await page.getByTitle("Verwijderen").first().click({ force: true });
 
-    // Click the delete button (only one entry exists)
-    await page
-      .getByRole("button", { name: "Verwijderen" })
-      .first()
-      .click({ force: true });
+    // Confirm in the alertdialog
+    const dialog = page.getByRole("alertdialog");
+    await dialog.waitFor({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "Verwijderen", exact: true }).click({ force: true });
 
     // Toast
     await expect(page.getByText("Verwijderd")).toBeVisible({ timeout: 5000 });

@@ -7,27 +7,27 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe.skip("Documenten", () => {
+test.describe("Documenten", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/documenten");
+    // Heading is now "Sjablonen"
     await expect(
-      page.getByRole("heading", { name: /Document/i })
+      page.locator("h1").filter({ hasText: "Sjablonen" })
     ).toBeVisible({ timeout: 20000 });
   });
 
-  test("DOC1: documents page loads", async ({ page }) => {
-    // Page should show some content — either templates list or empty state
-    const hasTemplates = await page
-      .getByText(/template|sjabloon/i)
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
-    const hasEmpty = await page
-      .getByText(/geen.*document|nog geen/i)
-      .first()
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
+  test("DOC1: documents page loads with template tabs", async ({ page }) => {
+    // Tabs for Word + HTML templates
+    await expect(
+      page.getByRole("button", { name: /Word-sjablonen/ })
+    ).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("button", { name: /HTML Sjablonen/ })
+    ).toBeVisible({ timeout: 10000 });
 
-    expect(hasTemplates || hasEmpty).toBeTruthy();
+    // Subtitle reference to dossier-generatie
+    await expect(
+      page.getByText(/documentsjablonen|dossiergeneratie/i).first()
+    ).toBeVisible();
   });
 });

@@ -61,7 +61,7 @@ test alleen het API-endpoint dat 200 OK geeft (gedekt door
 - `frontend/e2e/agenda.spec.ts::A2` — dialog-flow veranderd
 - `frontend/e2e/correspondentie.spec.ts` — empty-state tekst veranderd — **STATUS: GEFIXT** — h1 nu "Mail", tab-buttons toegevoegd, C2 schakelt naar Ongesorteerd-tab
 - `frontend/e2e/dashboard.spec.ts` — greeting heading veranderd (was "Goede morgen/middag/avond") — **STATUS: GEFIXT** — describe.skip verwijderd, user-naam check aangepast naar "E2E" (e2e-test user full_name = "E2E Test User")
-- `frontend/e2e/documenten.spec.ts` — page structure veranderd
+- `frontend/e2e/documenten.spec.ts` — page structure veranderd — **STATUS: GEFIXT** — h1 nu "Sjablonen" met tabs Word-sjablonen + HTML Sjablonen
 - `frontend/e2e/facturen.spec.ts::F2`, `::F7` — wizard flow + delete-confirm dialog veranderd
 - `frontend/e2e/incasso-pipeline.spec.ts` — pipeline steps hernoemd naar "Eerste/Tweede/Derde sommatie"
 - `frontend/e2e/instellingen.spec.ts` — tab-structure veranderd

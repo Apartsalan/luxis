@@ -59,7 +59,7 @@ test alleen het API-endpoint dat 200 OK geeft (gedekt door
 **Bestanden (volledig of gedeeltelijk geskipt via `test.skip` / `test.describe.skip`):**
 - `frontend/e2e/auth.spec.ts::A4` — logout-button heeft nu aria-label, geen title — **STATUS: GEFIXT** — selector vervangen door `getByRole("button", { name: "Uitloggen" })`
 - `frontend/e2e/agenda.spec.ts::A2` — dialog-flow veranderd
-- `frontend/e2e/correspondentie.spec.ts` — empty-state tekst veranderd
+- `frontend/e2e/correspondentie.spec.ts` — empty-state tekst veranderd — **STATUS: GEFIXT** — h1 nu "Mail", tab-buttons toegevoegd, C2 schakelt naar Ongesorteerd-tab
 - `frontend/e2e/dashboard.spec.ts` — greeting heading veranderd (was "Goede morgen/middag/avond") — **STATUS: GEFIXT** — describe.skip verwijderd, user-naam check aangepast naar "E2E" (e2e-test user full_name = "E2E Test User")
 - `frontend/e2e/documenten.spec.ts` — page structure veranderd
 - `frontend/e2e/facturen.spec.ts::F2`, `::F7` — wizard flow + delete-confirm dialog veranderd

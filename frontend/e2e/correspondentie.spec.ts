@@ -8,16 +8,24 @@
 
 import { test, expect } from "@playwright/test";
 
-test.describe.skip("Correspondentie", () => {
+test.describe("Correspondentie", () => {
   test("C1: correspondentie page loads with heading and controls", async ({
     page,
   }) => {
     await page.goto("/correspondentie");
 
-    // Page heading
+    // Page heading — renamed to "Mail"
     await expect(
-      page.locator("h1").filter({ hasText: "Correspondentie" })
+      page.locator("h1").filter({ hasText: "Mail" })
     ).toBeVisible({ timeout: 15000 });
+
+    // Tab buttons
+    await expect(
+      page.getByRole("button", { name: /Alle e-mails/ })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /Ongesorteerd/ })
+    ).toBeVisible();
 
     // Search input
     await expect(
@@ -35,19 +43,20 @@ test.describe.skip("Correspondentie", () => {
 
     // Wait for page to load
     await expect(
-      page.locator("h1").filter({ hasText: "Correspondentie" })
+      page.locator("h1").filter({ hasText: "Mail" })
     ).toBeVisible({ timeout: 15000 });
 
-    // Either:
-    // - Empty state: "Alles gesorteerd" or "Alle e-mails zijn gesorteerd"
-    // - Email list: at least one email item (has direction icons)
-    const emptyState = page.getByText("Alles gesorteerd");
-    const emailList = page.getByText(/ongesorteerde e-mail/);
-    const allSorted = page.getByText("Alle e-mails zijn gesorteerd");
+    // Switch to "Ongesorteerd" tab to check the EmptyState component
+    await page.getByRole("button", { name: /Ongesorteerd/ }).click({ force: true });
 
-    // One of these should be visible within 10 seconds
+    // Either:
+    // - Empty state "Alles gesorteerd" (no unsorted emails)
+    // - Email list rendered (at least one card)
+    const emptyState = page.getByText("Alles gesorteerd");
+    const emailCount = page.getByText(/e-mails?$/i);
+
     await expect(
-      emptyState.or(emailList).or(allSorted)
+      emptyState.or(emailCount)
     ).toBeVisible({ timeout: 10000 });
   });
 });

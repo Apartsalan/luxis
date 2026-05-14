@@ -38,3 +38,19 @@ curl -X POST http://localhost:8000/api/invoices \
 `btw_percentage NUMERIC(5,2) NOT NULL DEFAULT 21.00` toevoegt aan
 `invoice_lines`. Tegelijkertijd checken of `invoices.btw_percentage` consistent
 is en of de model-defaults aansluiten op de DB.
+
+## BUG-002 — Taken-pagina maakt geseede taken onzichtbaar bij veel openstaande items
+
+**Symptoom:** `frontend/e2e/taken.spec.ts::T2` en `::T3` falen omdat de net
+aangemaakte taak ("E2E Test Taak" / "E2E Afrond Taak") niet zichtbaar is op
+de `/taken` pagina. Pagina toont 140+ openstaande taken; de nieuwe entry
+verdwijnt door pagination/sortering.
+
+**Impact op E2E:** beide tests zijn nu geskipt (flaky-not-stale-spec).
+
+**Voorgestelde fix:**
+- UI: na "Taak aangemaakt" toast bovenaan lijst tonen, of refetch met
+  scroll-to-new-item.
+- Tests: stricter filter toepassen (alleen geseede dossiernummer) of via
+  detail-pagina valideren in plaats van /taken lijst.
+

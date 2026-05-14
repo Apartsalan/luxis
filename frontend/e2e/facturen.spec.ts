@@ -78,6 +78,8 @@ test.describe("Facturen CRUD", () => {
     ).toBeVisible();
   });
 
+  // BLOCKED: backend mist `invoice_lines.btw_percentage` kolom — POST /api/invoices
+  // geeft 500. Wachten op backend-migratie (zie tests/UI_BUGS.md). UI-flow is up-to-date.
   test.skip("F2: create invoice via form", async ({ page }) => {
     test.setTimeout(60000);
     await page.goto("/facturen/nieuw");

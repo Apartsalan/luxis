@@ -63,10 +63,11 @@ async def backfill(dry_run: bool) -> None:
 
     for tenant in tenants:
         async with async_session() as session:
+            # SET LOCAL ondersteunt geen parameters; UUID is veilig direct
+            # te interpoleren (gevalideerd type uit DB).
             from sqlalchemy import text
             await session.execute(
-                text("SET LOCAL app.current_tenant = :tid"),
-                {"tid": str(tenant.id)},
+                text(f"SET LOCAL app.current_tenant = '{tenant.id}'")
             )
 
             # Vind incasso-cases zonder step

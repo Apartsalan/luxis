@@ -14,6 +14,7 @@ from app.ai_agent.followup_router import router as followup_router
 from app.ai_agent.intake_router import router as intake_router
 from app.ai_agent.payment_matching_router import router as payment_matching_router
 from app.ai_agent.router import router as ai_agent_router
+from app.ai_agent.unified_router import router as ai_unified_router
 from app.auth.router import router as auth_router
 from app.auth.router import users_router
 from app.calendar.router import router as calendar_router
@@ -137,6 +138,7 @@ app.include_router(email_compose_router)
 app.include_router(search_router)
 app.include_router(incasso_router)
 app.include_router(ai_agent_router)
+app.include_router(ai_unified_router)
 app.include_router(intake_router)
 app.include_router(followup_router)
 app.include_router(payment_matching_router)

@@ -293,6 +293,38 @@ def _signature(ctx: dict, english: bool = False) -> str:
     )
 
 
+def _schuldhulp_disclaimer_en(ctx: dict) -> str:
+    """English translation of the schuldhulp + legal disclaimer block.
+    Used by all demand_for_payment_* + engelse_sommatie templates so they
+    carry the same footer obligations as the NL incasso mails (S145 Arsalan)."""
+    return (
+        '<p style="font-size:11px;color:#6b7280;margin-top:24px;'
+        'border-top:1px solid #e5e7eb;padding-top:16px;">'
+        "Are you in financial difficulty and do you see no way out? "
+        "We are happy to inform you about your rights as a debtor: "
+        '<a href="https://kestinglegal.nl/debiteuren" '
+        'style="color:#c4a44c;">kestinglegal.nl/debiteuren</a>. '
+        "For debt counselling you can contact your local municipality. "
+        "If you urgently need emotional support, call Stichting 113 "
+        "Suicide Prevention free of charge and anonymously on "
+        "0800-0113 or visit "
+        '<a href="http://www.113.nl" style="color:#c4a44c;">'
+        "www.113.nl</a>.</p>"
+        '<p style="font-size:10px;color:#9ca3af;margin-top:12px;">'
+        "Disclaimer &mdash; The information transmitted in this e-mail "
+        "message is intended solely for the addressee(s) and may contain "
+        "personal or confidential information, protected by professional "
+        "secrecy. Use of this information by anyone other than the "
+        "addressee(s), or by those who are not entitled to take note of "
+        "this information, is prohibited. If you are not the addressee or "
+        "are not entitled to receive this information, disclosure, "
+        "reproduction, distribution and/or provision of this information "
+        "to third parties is not permitted, and you are requested to "
+        "return this message and destroy the original."
+        "</p>"
+    )
+
+
 def _schuldhulp_disclaimer(ctx: dict) -> str:
     """Wettelijk verplicht schuldhulpblok + disclaimer — matches BaseNet."""
     return (
@@ -871,6 +903,7 @@ def _render_engelse_sommatie(ctx: dict) -> str:
         betreft=f"<strong>DEMAND FOR PAYMENT / {zn}</strong>",
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
+        disclaimer_html=_schuldhulp_disclaimer_en(ctx),
     )
 
 
@@ -1137,6 +1170,7 @@ def _render_bevestiging_sluiting(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx),
+        disclaimer_html=_schuldhulp_disclaimer(ctx),
     )
 
 
@@ -1541,6 +1575,7 @@ def _render_demand_for_payment_eerste(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
+        disclaimer_html=_schuldhulp_disclaimer_en(ctx),
     )
 
 
@@ -1586,6 +1621,7 @@ def _render_demand_for_payment_uitgebreid(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
+        disclaimer_html=_schuldhulp_disclaimer_en(ctx),
     )
 
 
@@ -1633,6 +1669,7 @@ def _render_demand_for_payment_laatste(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
+        disclaimer_html=_schuldhulp_disclaimer_en(ctx),
     )
 
 
@@ -1680,6 +1717,7 @@ def _render_demand_for_payment_fai(ctx: dict) -> str:
         ),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
+        disclaimer_html=_schuldhulp_disclaimer_en(ctx),
     )
 
 

@@ -26,6 +26,21 @@ from app.email.providers.base import (
 
 logger = logging.getLogger(__name__)
 
+
+def _to_html_entities(html: str) -> str:
+    """Replace non-ASCII characters with HTML numeric entities.
+
+    Microsoft Graph API generates outgoing emails with Content-Type
+    charset=Windows-1252 even when the JSON body is UTF-8. The recipient's
+    mail client then mis-decodes UTF-8 bytes (€, ë, é) as Windows-1252,
+    producing mojibake ('â,¬', 'cliÃ«nte'). Converting non-ASCII chars to
+    HTML entities ('&#8364;', 'cli&#235;nte') sidesteps the charset mismatch
+    entirely — entities render identically under any charset.
+    """
+    if not html:
+        return ""
+    return html.encode("ascii", "xmlcharrefreplace").decode("ascii")
+
 # Microsoft Identity Platform endpoints
 # Using tenant-specific endpoint (not /common) because we have a single-tenant app
 MICROSOFT_AUTH_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize"
@@ -295,6 +310,10 @@ class OutlookProvider(EmailProvider):
         The message appears in the user's Sent Items folder automatically.
         Supports file attachments inline via contentBytes (max ~4MB per attachment).
         """
+        # S145: convert non-ASCII chars to HTML entities to avoid Graph's
+        # Windows-1252 charset header from corrupting € / ë / é etc.
+        body_html = _to_html_entities(body_html)
+
         if reply_to_message_id:
             return await self._reply_to_message(
                 access_token,
@@ -367,6 +386,9 @@ class OutlookProvider(EmailProvider):
             Tuple of (draft_id, web_link). web_link is the Outlook Web App
             URL to open the draft directly.
         """
+        # S145: HTML-entity escape non-ASCII (zie _to_html_entities).
+        body_html = _to_html_entities(body_html)
+
         draft_body: dict = {
             "subject": subject,
             "body": {

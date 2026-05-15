@@ -1,9 +1,96 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 14 mei 2026 (sessie 141 — onderzoek demo-feedback + S142/S143/S144 quick wins)
-**Laatste feature/fix:** Sessie 141 — gecombineerd onderzoek + bouw: (1) docs/onderzoek-ai-overlap-S141.md met 7-punten-analyse + ASCII-architectuur-diagram; (2) S142 quick wins: `formatDateTime` helper + datum+tijd op CorrespondentieTab/Dashboard/Staphistorie, sync-toast geeft nu nuttige feedback ("X mails in Ongesorteerd" i.p.v. "0 nieuw 0 gekoppeld"), disclaimer-positie in `incasso_templates.py` 19 call sites gerefactord — disclaimer staat nu onder handtekening; (3) S143 pipeline-fix: `create_case` wijst incasso-cases automatisch toe aan stap 1 + 42 bestaande dossiers via `backfill_incasso_first_step.py` script hersteld + batch_execute skipt nu open `review_ai_draft` tasks zodat `_try_auto_advance` doorgaat; (4) S144 mail-matching: `_find_case_by_case_number` scant nu subject+body i.p.v. alleen subject, sidebar-badge `unlinked-count` wordt vol rood bij >5, dashboard "Actie nodig"-widget heeft Ongesorteerd-row bovenaan. Alembic-fix tijdens deploy: `df140a_invoice_lines_btw` migration was nooit gestamped → backend restart-loopte → `alembic stamp` opgelost.
-**Openstaande bugs:** Bel-icon toont 403 ongelezen notifications niet (frontend-rendering bug, vereist Lisanne devtools-check 15 min); AI-flows nog steeds 3 systemen — `draft_service.py` en `smart_reply_service.py` slaan `incasso_templates._render_branded()` pijplijn over, layout afwijkend van pipeline-batch; logo gebruikt nog externe URL i.p.v. data-URL; foto in handtekening niet nodig (Lisanne S141 bevestigd). Conftest refactor opgeschoven (memory project_user_todos.md).
-**Volgende sessie:** 142+ overgeslagen naar S145 — UnifiedDraftService + dynamisch email-adres op `case_type`. Doel: `draft_service.py` + `smart_reply_service.py` routeren via `incasso_templates._render_branded()` zodat alle AI-gegenereerde concepten dezelfde branded layout krijgen als de pipeline-batch. Plus: incasso → `incasso@kestinglegal.nl`, dossier/advies → `kesting@kestinglegal.nl` in handtekening dynamisch.
+**Laatst bijgewerkt:** 15 mei 2026 (sessie 145 — UnifiedDraftService + BaseNet-stijl templates + mojibake-fix)
+**Laatste feature/fix:** Sessie 145 — (1) UnifiedDraftService + POST /api/ai/draft endpoint (intents next_step/reply_to_email/free_compose) routeert AI-concepten via `incasso_templates._render_branded()`; (2) logo nu data-URL embedded (`_kesting_logo.b64`) i.p.v. externe URL; (3) handtekening email-adres dynamisch op `case_type`: incasso → `Incasso@kestinglegal.nl`, anders → `kesting@kestinglegal.nl`; (4) schuldhulp+disclaimer in ALLE incasso-mails inclusief NL én Engelse vertaling (`_schuldhulp_disclaimer_en`); (5) volledig herontwerp `_BASE_EMAIL` + alle helpers naar BaseNet-stijl pixel-perfect: Verdana 12px overal (was 10-15px mix), geen gouden header bovenaan, geen kantoor/wederpartij/datum-blokken, "Mevr. mr. L. Kesting" handtekening met embedded 100×100 logo, schuldhulp en disclaimer 12px zwart cursief; (6) tenant-data ingevuld op productie (address/postal_code/city/phone/email/iban waren NULL); (7) mojibake-fix `_to_html_entities()` in OutlookProvider — non-ASCII chars (€, ë) → numeric entities omdat Graph API outgoing eml met Windows-1252 charset header genereert. AI Concept-knop op Correspondentie weer verwijderd (S141 afspraak gehandhaafd). CI fix: `factuur.html` lookup checkte op directory bestaan, maar dir bestond met andere files — nu check op specifiek bestand.
+**Openstaande bugs:** Bel-icon toont 403 ongelezen notifications niet (BUG-83, vereist Lisanne devtools-check 15 min); notification-types beperkt (BUG-84, alleen `deadline_overdue` — geen `email_received`/`draft_ready`/`classification_done`); UnifiedDraftService draait parallel naast oude `/api/ai-agent/draft` + smart-replies — frontend migratie pas in S146-147 (CaseActionFeed).
+**Volgende sessie:** S146 — CaseActionFeed widget op Overzicht-tab dossier. Centrale plek voor alle AI-acties (drafts, classificaties, smart-replies). Vervangt versnipperde UI (popups, banners). Plus uitbreiding notification-types `email_received`/`draft_ready`/`classification_done` zodat bel-icon zinvolle meldingen toont. Vereist research naar UX-patroon (HubSpot Activity Feed, Notion Inbox).
+
+## Wat er gedaan is (sessie 145 — 15 mei 2026) — UnifiedDraftService + BaseNet-stijl templates + mojibake-fix
+
+### Samenvatting
+
+**FEAT-AI-01 — UnifiedDraftService + endpoint (commits `f7e213c`, `d64a7ba`, `db4c45b`):**
+- Nieuwe `backend/app/ai_agent/unified_draft_service.py`: `DraftIntent` StrEnum (NEXT_STEP / REPLY_TO_EMAIL / FREE_COMPOSE), `generate_unified_draft()` laadt case, bouwt per-intent prompt met expliciete "GEEN HTML"-regel, roept `call_intake_ai`, wrapt AI plain body via `_render_branded()` met logo + handtekening + disclaimer. AIDraft persisted met body=plain + body_html=branded wrap. Defensive: `build_base_context` faalt → body_html=None met warning, body altijd gevuld. AI HTML → `strip_html` safety net.
+- Nieuwe `backend/app/ai_agent/unified_router.py`: `POST /api/ai/draft` body `{case_id, intent, tone?, source_email_id?, instruction?}` → `AIDraftResponse`. Geregistreerd in `main.py`.
+- 13 tests in `tests/test_unified_draft_service.py` — happy-path per intent, email-switch, data-URL aanwezig, graceful fallback bij context build failure, ValueError bij ontbrekende source_email_id.
+
+**FEAT-AI-02 + FEAT-AI-03 — Logo data-URL + dynamisch email-adres (commit `f7e213c`):**
+- `_LOGO_DATA_URL` constant: leest `_kesting_logo.b64` (repo-root + Docker mount + CI checkout via parents[2/3] fallback).
+- `_BASE_EMAIL` template: `<img src="{{ logo_data_url }}">` i.p.v. externe URL.
+- `_signature(ctx)` leest `ctx["zaak"]["type"]`: incasso → `Incasso@kestinglegal.nl` (hoofdletter I, BaseNet stijl), anders → `kesting@kestinglegal.nl`. Beide NL+EN takken aangepast.
+
+**Schuldhulp+disclaimer in alle incasso-mails NL+EN (commit `caecbdb`):**
+- Nieuwe `_schuldhulp_disclaimer_en(ctx)` met Engelse vertaling van schuldhulpblok (113 suicide prevention) + juridische disclaimer (professional secrecy).
+- `bevestiging_sluiting` krijgt NL disclaimer. `demand_for_payment_*` (4x) + `engelse_sommatie` krijgen EN disclaimer. Alle 25 templates compliant.
+
+**Frontend revert AI Concept-knop (commit `531da60`):**
+- S141 afspraak was: knop op Correspondentie-tab definitief weg. Eerste implementatie migreerde alleen het endpoint i.p.v. de knop te verwijderen. Corrigeerd: `useGenerateDraft` import + state + button + preview-blok verwijderd uit `CorrespondentieTab.tsx`. UnifiedDraftService backend blijft voor CaseActionFeed S146-147.
+
+**BaseNet-stijl pixel-perfect (commits `3733235` + `69be2a6`):**
+- Arsalan vergeleek REACTIE OP UW VERWEER eml (BaseNet) met Luxis output. Verschillen: gouden header met logo bovenaan (Luxis) vs geen header (BaseNet); 5 font-sizes (10/11/12/13/15px) vs alleen 12px; kantoor/wederpartij/datum-blokken bovenaan vs alleen Betreft-tabel.
+- `_BASE_EMAIL` herschreven: start direct met Betreft-tabel (Verdana 12px), body in 12px, handtekening met logo onderaan, schuldhulp+disclaimer 12px zwart. Geen gouden top-banner meer.
+- `_signature`: "Mevr. mr. L. Kesting" (was "mr."), geen KVK-regel (BaseNet has it niet), logo 100×100 inline via data-URL onderaan handtekening.
+- `_claims_table`, `_vordering_table_basenet`, `_financial_summary`, `_financial_summary_compact`: 12px Verdana, padding 2px 6px, vertical-align:top, geen border-bottom.
+- `_heading`: simpele `<p><strong>...</strong></p>` (was 15px slate met margin/color).
+- `_schuldhulp_disclaimer` + EN-versie: 12px zwart, `<em>` voor disclaimer (cursief BaseNet stijl), geen border-top, geen colored links.
+- `_vordering_table_basenet`: €-symbool eigen kolom (BaseNet structuur), extra lege rij vóór "Te voldoen", "Te voldoen" bold via `<b>`.
+
+**Tenant-data ingevuld op productie (handmatige SQL via SSH):**
+- `Tenant.address`, `postal_code`, `city`, `phone`, `email`, `iban` waren NULL. Ingevuld: IJsbaanpad 9 / 1076 CV / Amsterdam / 06-22184090 / kesting@kestinglegal.nl / NL20RABO0388506520. Maakte kantoor-info zichtbaar in templates (eerder leeg).
+
+**Mojibake-fix outbound email (commit `1a7b328`):**
+- Lisanne's verzonden mails toonden `â,¬` i.p.v. €, `cliÃ«nte` i.p.v. cliënte bij ontvangers. Root cause: Microsoft Graph API genereert outgoing eml met `Content-Type: text/html; charset=Windows-1252` ondanks UTF-8 JSON body — ontvanger decodeert UTF-8 bytes als Windows-1252.
+- Fix in `backend/app/email/providers/outlook.py`: `_to_html_entities(html)` converteert non-ASCII chars naar HTML numeric entities via `html.encode('ascii', 'xmlcharrefreplace').decode('ascii')`. Toegepast op `send_message` + `create_draft` (`_reply_to_message` krijgt al escaped HTML door cascade). 7 unit tests in `tests/test_outlook_encoding.py`.
+
+**CI fix template-lookup (commit `3072e1a`):**
+- CI faalde op alle template-tests + invoice-tests. Root cause: `factuur.html` en `_kesting_logo.b64` staan op repo-root `templates/`, niet in `backend/templates/`. Docker mount koppelt `./templates:/app/templates`, dus in container werkt het. CI checkout heeft `backend/templates/` mét andere HTML files (14_dagenbrief.html etc.) — `path.exists()` op directory niveau gaf False positive.
+- Fix: zoek nu specifiek op het verwachte bestand (`factuur.html`, `_kesting_logo.b64`) bij directory-walk. Auto-deploy via GitHub Actions weer functioneel.
+
+**Memory-updates:**
+- `feedback_s141_afspraken.md` — AI Concept-knop Correspondentie permanent weg (S141 expliciete beslissing, miss in eerste S145 implementatie)
+- `reference_auto_deploy.md` — auto-deploy via GitHub Actions sinds S110, niet handmatig SSH'en bij elke push tenzij CI faalt
+
+### Gewijzigde bestanden
+
+**Backend:**
+- `backend/app/ai_agent/unified_draft_service.py` (nieuw — 320 regels, UnifiedDraftService + intent prompts)
+- `backend/app/ai_agent/unified_router.py` (nieuw — endpoint POST /api/ai/draft)
+- `backend/app/main.py` (registreer ai_unified_router)
+- `backend/app/email/incasso_templates.py` (volledige herontwerp: `_BASE_EMAIL` BaseNet-stijl, `_signature` met logo + dynamisch email, `_schuldhulp_disclaimer` + `_schuldhulp_disclaimer_en` 12px zwart, `_vordering_table_basenet` BaseNet structuur, `bevestiging_sluiting` + 5 EN templates krijgen disclaimer)
+- `backend/app/email/providers/outlook.py` (`_to_html_entities` helper, toegepast op send_message + create_draft)
+- `backend/app/invoices/invoice_pdf_service.py` (templates lookup robuust: check specifiek bestand)
+
+**Tests:**
+- `backend/tests/test_unified_draft_service.py` (nieuw — 13 tests)
+- `backend/tests/test_outlook_encoding.py` (nieuw — 7 tests)
+- `backend/tests/test_incasso_templates.py` (`_assert_base_nl` aangepast: data-URL check, `Incasso@` hoofdletter, "Mevr. mr. L. Kesting", IBAN/Stichting-checks uit footer verwijderd — BaseNet heeft die niet als footer)
+
+**Frontend:**
+- `frontend/src/hooks/use-ai-draft.ts` (endpoint switch naar `/api/ai/draft`, type uitbreidingen body_html/model_used) — hook blijft bestaan voor S146-147 CaseActionFeed
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` (AI Concept-knop + preview-blok verwijderd per S141)
+- `.gitignore` (preview HTML + eml test-artefacten)
+
+### Bekende issues
+
+- **BUG-83: bel-icon toont 403 ongelezen notifications niet** (Midden) — frontend rendering/polling-bug, vereist Lisanne devtools-check. Status: nog niet onderzocht.
+- **BUG-84: notification-types beperkt** (Midden) — alleen `deadline_overdue` wordt aangemaakt. Geen `email_received`/`draft_ready`/`classification_done`. Onderdeel van CaseActionFeed S146-147.
+- **Parallelle AI-systemen:** UnifiedDraftService draait nu naast oude `/api/ai-agent/draft` + smart-replies endpoints. Geen kruisreferenties, geen storingen, maar code-duplicatie. Cleanup gepland na CaseActionFeed migratie.
+
+### Volgende sessie
+
+**S146 — CaseActionFeed widget op Overzicht-tab dossier** (gepland)
+
+Doel: centrale plek voor alle AI-acties (drafts, classificaties, smart-replies, deadline-meldingen) op dossier-niveau. Vervangt versnipperde UI (pop-ups, banners op Correspondentie). Gebruikt UnifiedDraftService backend.
+
+Onderdelen:
+1. Notification-types uitbreiden (`email_received`, `draft_ready`, `classification_done`)
+2. CaseActionFeed component (HubSpot Activity Feed-stijl) — chronologische lijst met acties
+3. Bel-icon koppelen aan notification-stream (lost BUG-83 op)
+4. Frontend migratie van oude AI-banners naar CaseActionFeed
+
+Vereist research: UX-patroon (HubSpot, Notion Inbox, Clio Manage Activity). Pre-mortem doen.
+
+---
 
 ## Wat er gedaan is (sessie 141 — 14 mei 2026) — Onderzoek demo-feedback + S142/S143/S144 quick wins
 

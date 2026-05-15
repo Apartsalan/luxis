@@ -34,11 +34,19 @@ def _safe_url_fetcher(url: str, timeout: int = 10, ssl_context=None):
     logger.warning("WeasyPrint blocked external URL: %s", url)
     return {"string": "", "mime_type": "text/plain"}
 
-# Template directory
+# Template directory — try in order: backend/templates (rare), Docker mount,
+# then repo-root templates/ (where the files actually live).
 _THIS_DIR = Path(__file__).resolve().parent
-TEMPLATES_DIR = _THIS_DIR.parents[1] / "templates"
-if not TEMPLATES_DIR.exists():
-    TEMPLATES_DIR = Path("/app/templates")
+for _candidate in (
+    _THIS_DIR.parents[1] / "templates",   # backend/templates (does not exist)
+    Path("/app/templates"),                # Docker mount
+    _THIS_DIR.parents[2] / "templates",   # repo-root templates/ (CI + local)
+):
+    if _candidate.exists():
+        TEMPLATES_DIR = _candidate
+        break
+else:
+    TEMPLATES_DIR = _THIS_DIR.parents[1] / "templates"  # nominal fallback
 
 # Jinja2 environment for HTML templates
 _jinja_env = jinja2.Environment(

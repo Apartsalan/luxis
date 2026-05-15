@@ -16,14 +16,22 @@ from markupsafe import Markup
 _env = Environment(undefined=StrictUndefined, autoescape=True)
 
 # Logo embedded as data-URL so external image-blocking (Outlook/Gmail) doesn't
-# strip it. The .b64 file is plain base64 of templates/lisanne/logo.
-# Path: app/email/incasso_templates.py → parents[2] = backend root (= /app in container).
-_LOGO_B64_PATH = Path(__file__).resolve().parents[2] / "templates" / "lisanne" / "_kesting_logo.b64"
-try:
-    _LOGO_B64 = _LOGO_B64_PATH.read_text(encoding="utf-8").strip()
-    _LOGO_DATA_URL = f"data:image/png;base64,{_LOGO_B64}"
-except FileNotFoundError:
-    _LOGO_DATA_URL = "https://kestinglegal.nl/logo.png"
+# strip it. Search both `parents[2]/templates/` (Docker: backend root mapped to
+# /app, with /app/templates volume mount) and `parents[3]/templates/` (CI/local:
+# repo root, templates/ lives at repo root not under backend/).
+_LOGO_B64 = ""
+_BASE = Path(__file__).resolve()
+for _candidate in (
+    _BASE.parents[2] / "templates" / "lisanne" / "_kesting_logo.b64",
+    _BASE.parents[3] / "templates" / "lisanne" / "_kesting_logo.b64",
+):
+    if _candidate.exists():
+        _LOGO_B64 = _candidate.read_text(encoding="utf-8").strip()
+        break
+
+_LOGO_DATA_URL = (
+    f"data:image/png;base64,{_LOGO_B64}" if _LOGO_B64 else "https://kestinglegal.nl/logo.png"
+)
 
 # ── Branded base layout ──────────────────────────────────────────────────
 

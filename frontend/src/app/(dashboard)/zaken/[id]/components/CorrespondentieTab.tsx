@@ -431,7 +431,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                 AI
               </span>
               <span className="text-[10px] text-muted-foreground">
-                {draft.tone} · {draft.model}
+                {draft.tone} · {draft.model_used ?? draft.model ?? "AI"}
               </span>
             </div>
             <button
@@ -449,9 +449,20 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Bericht</p>
-              <pre className="text-sm text-foreground whitespace-pre-wrap font-sans bg-card rounded-lg border border-border p-3 max-h-[300px] overflow-y-auto">
-                {draft.body}
-              </pre>
+              {draft.body_html ? (
+                <div className="bg-card rounded-lg border border-border max-h-[400px] overflow-y-auto">
+                  <iframe
+                    title="Concept preview"
+                    srcDoc={draft.body_html}
+                    className="w-full min-h-[300px]"
+                    sandbox=""
+                  />
+                </div>
+              ) : (
+                <pre className="text-sm text-foreground whitespace-pre-wrap font-sans bg-card rounded-lg border border-border p-3 max-h-[300px] overflow-y-auto">
+                  {draft.body}
+                </pre>
+              )}
             </div>
             {Array.isArray(draft.sources) && draft.sources.length > 0 && (
               <div>

@@ -185,7 +185,7 @@ async def test_next_step_intent_persists_draft_with_branded_html(
     assert "Tweede alinea." in draft.body_html
     # case_type=incasso → handtekening toont incasso@kestinglegal.nl
     # (note: kantoor-footer mag wél kantoor-email tonen; check signature line specifiek)
-    assert "E: incasso@kestinglegal.nl" in draft.body_html
+    assert "E: Incasso@kestinglegal.nl" in draft.body_html
     assert "E: kesting@kestinglegal.nl" not in draft.body_html
     # Schuldhulp disclaimer present (incasso case)
     assert "schuldenaar" in draft.body_html.lower()
@@ -214,7 +214,7 @@ async def test_free_compose_for_advies_uses_kantoor_email(
     assert draft.body_html is not None
     # Handtekening switcht: non-incasso case → kesting@kestinglegal.nl in signature line
     assert "E: kesting@kestinglegal.nl" in draft.body_html
-    assert "E: incasso@kestinglegal.nl" not in draft.body_html
+    assert "E: Incasso@kestinglegal.nl" not in draft.body_html
     # Non-incasso case → geen schuldhulp disclaimer
     assert "schuldenaar" not in draft.body_html.lower()
 

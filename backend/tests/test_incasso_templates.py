@@ -77,12 +77,10 @@ def mock_context() -> dict:
 
 
 def _assert_base_nl(html: str) -> None:
-    """Basisassertions voor elke NL template."""
+    """Basisassertions voor elke NL template (BaseNet-stijl, S145)."""
     assert html, "renderer returned None/empty"
-    assert len(html) > 1000, f"html too small: {len(html)} bytes"
+    assert len(html) > 500, f"html too small: {len(html)} bytes"
     assert "2026-00042" in html, "zaaknummer not in output"
-    assert "NL20 RABO 0388 5065 20" in html, "derdengelden IBAN missing"
-    assert "Stichting Beheer Derdengelden" in html, "stichting missing"
     assert "Hoogachtend" in html, "NL signature missing"
     assert "schuldenaar" in html.lower(), "schuldhulp block missing"
     # S145: logo moet als embedded data-URL renderen, niet als externe URL.
@@ -90,9 +88,10 @@ def _assert_base_nl(html: str) -> None:
     assert "https://kestinglegal.nl/logo.png" not in html, (
         "externe logo URL gebruikt — moet data-URL zijn"
     )
-    # S145: handtekening email-adres moet komen uit case_type.
-    # Default in fixtures is incasso → incasso@kestinglegal.nl
-    assert "incasso@kestinglegal.nl" in html, "incasso-email ontbreekt in handtekening"
+    # S145: BaseNet stijl email-adres (hoofdletter I): Incasso@kestinglegal.nl
+    assert "Incasso@kestinglegal.nl" in html, "incasso-email ontbreekt in handtekening"
+    # S145: handtekening met "Mevr. mr. L. Kesting"
+    assert "Mevr. mr. L. Kesting" in html, "naam ontbreekt in handtekening"
     # Lisanne S141: disclaimer MOET onder handtekening staan.
     signature_pos = html.find("Hoogachtend")
     disclaimer_pos = html.find("financi&euml;le zorgen")
@@ -103,13 +102,13 @@ def _assert_base_nl(html: str) -> None:
 
 
 def _assert_base_en(html: str) -> None:
-    """Basisassertions voor elke EN template."""
+    """Basisassertions voor elke EN template (BaseNet-stijl, S145)."""
     assert html, "renderer returned None/empty"
-    assert len(html) > 1000, f"html too small: {len(html)} bytes"
+    assert len(html) > 500, f"html too small: {len(html)} bytes"
     assert "2026-00042" in html, "zaaknummer not in output"
-    assert "NL20 RABO 0388 5065 20" in html, "derdengelden IBAN missing"
-    assert "Stichting Beheer Derdengelden" in html, "stichting missing"
     assert "Yours faithfully" in html, "EN signature missing"
+    assert "data:image/png;base64," in html, "logo ontbreekt als data-URL"
+    assert "Mevr. mr. L. Kesting" in html, "naam ontbreekt in handtekening"
 
 
 # ── Herschreven templates (Batch 2) ──────────────────────────────────────
@@ -314,7 +313,7 @@ def test_signature_uses_incasso_email_for_incasso_case():
         "zaak": {"type": "incasso"},
     }
     sig = _signature(ctx)
-    assert "incasso@kestinglegal.nl" in sig
+    assert "Incasso@kestinglegal.nl" in sig
     assert "kesting@kestinglegal.nl" not in sig
 
 
@@ -329,7 +328,7 @@ def test_signature_uses_kantoor_email_for_other_case_types():
         }
         sig = _signature(ctx)
         assert "kesting@kestinglegal.nl" in sig, f"kantoor-email mist voor case_type={case_type}"
-        assert "incasso@kestinglegal.nl" not in sig, f"incasso-email lekt voor case_type={case_type}"
+        assert "Incasso@kestinglegal.nl" not in sig, f"incasso-email lekt voor case_type={case_type}"
 
 
 def test_signature_defaults_to_incasso_when_type_missing():
@@ -341,7 +340,7 @@ def test_signature_defaults_to_incasso_when_type_missing():
         "zaak": {},
     }
     sig = _signature(ctx)
-    assert "incasso@kestinglegal.nl" in sig
+    assert "Incasso@kestinglegal.nl" in sig
 
 
 def test_signature_english_respects_case_type():
@@ -356,5 +355,5 @@ def test_signature_english_respects_case_type():
         "kantoor": {"adres": "IJsbaanpad 9", "postcode_stad": "1076 CV Amsterdam", "kvk": "12345678"},
         "zaak": {"type": "advies"},
     }
-    assert "incasso@kestinglegal.nl" in _signature(ctx_incasso, english=True)
+    assert "Incasso@kestinglegal.nl" in _signature(ctx_incasso, english=True)
     assert "kesting@kestinglegal.nl" in _signature(ctx_advies, english=True)

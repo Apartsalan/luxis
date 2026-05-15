@@ -62,3 +62,9 @@ playwright-report/
 frontend/e2e/.auth/
 *.png
 *.jpeg
+
+# Test/preview artifacts (S145)
+*.eml
+preview_*.html
+luxis_template.html
+reactie_verweer.html

@@ -39,97 +39,44 @@ _BASE_EMAIL = """\
 <!DOCTYPE html>
 <html lang="nl">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:0;background-color:#ffffff;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" \
-style="background-color:#ffffff;">
-<tr><td align="center" style="padding:0;">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0" \
-style="max-width:600px;width:100%;font-family:Arial,Helvetica,sans-serif;\
-color:#1a1a1a;line-height:1.6;font-size:14px;">
+<body style="margin:0;padding:0;font-family:Verdana,Geneva,sans-serif;\
+font-size:12px;color:#000000;line-height:1.4;">
 
-<!-- Header -->
-<tr><td style="padding:24px 32px 16px 32px;border-bottom:3px solid #c4a44c;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+<!-- Betreft-regel (Basenet stijl: 2-koloms tabel) -->
+<table border="0" cellpadding="0" cellspacing="0" width="100%" \
+style="font-family:Verdana,Geneva,sans-serif;font-size:12px;">
 <tr>
-<td style="vertical-align:middle;">
-<img src="{{ logo_data_url }}" alt="Kesting Legal" \
-style="max-width:180px;height:auto;display:block;" />
-</td>
+<td width="60" style="padding:2px 6px;vertical-align:top;">Betreft:</td>
+<td style="padding:2px 6px;vertical-align:top;">{{ betreft_regel }}</td>
 </tr>
+{% if zaak.referentie_regel %}
+<tr>
+<td width="60" style="padding:2px 6px;vertical-align:top;">&nbsp;</td>
+<td style="padding:2px 6px;vertical-align:top;">{{ zaak.referentie_regel }}</td>
+</tr>
+{% endif %}
 </table>
-</td></tr>
 
-<!-- Kantoor address block -->
-<tr><td style="padding:24px 32px 0 32px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" \
-style="font-size:13px;color:#4b5563;">
-<tr><td>
-<strong>{{ kantoor.naam }}</strong><br>
-{{ kantoor.adres }}<br>
-{{ kantoor.postcode_stad }}<br>
-{% if kantoor.telefoon %}Tel: {{ kantoor.telefoon }}<br>{% endif %}
-</td></tr>
-</table>
-</td></tr>
-
-<!-- Recipient address block -->
-<tr><td style="padding:20px 32px 0 32px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" \
-style="font-size:14px;">
-<tr><td>
-<strong>{{ wederpartij.naam }}</strong><br>
-{% if wederpartij.adres %}{{ wederpartij.adres }}<br>{% endif %}
-{% if wederpartij.postcode_stad %}{{ wederpartij.postcode_stad }}{% endif %}
-</td></tr>
-</table>
-</td></tr>
-
-<!-- Date + reference -->
-<tr><td style="padding:20px 32px 0 32px;font-size:14px;">
-{{ vandaag }}<br><br>
-{{ betreft_regel }}<br>
-Ons kenmerk: {{ zaak.zaaknummer }}
-{% if zaak.referentie_regel %}<br>{{ zaak.referentie_regel }}{% endif %}
-</td></tr>
+<p>&nbsp;</p>
 
 <!-- Body content -->
-<tr><td style="padding:20px 32px 0 32px;">
+<div style="font-family:Verdana,Geneva,sans-serif;font-size:12px;">
 {{ content }}
-</td></tr>
+</div>
 
-<!-- Signature -->
-<tr><td style="padding:24px 32px 0 32px;font-size:14px;">
+<!-- Handtekening (inline, met logo) -->
+<p style="font-family:Verdana,Geneva,sans-serif;font-size:12px;">
 {{ afsluiting }}
-</td></tr>
+</p>
 
 {% if disclaimer %}
-<!-- Disclaimer (onder handtekening) -->
-<tr><td style="padding:0 32px;">
+<!-- Schuldhulp + juridische disclaimer -->
+<div style="font-family:Verdana,Geneva,sans-serif;font-size:11px;color:#000000;\
+margin-top:16px;">
 {{ disclaimer }}
-</td></tr>
+</div>
 {% endif %}
 
-<!-- Footer -->
-<tr><td style="padding:24px 32px 32px 32px;border-top:1px solid #e5e7eb;\
-margin-top:24px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" \
-style="font-size:12px;color:#6b7280;">
-<tr><td>
-<strong>{{ kantoor.naam }}</strong><br>
-{{ kantoor.adres }}{% if kantoor.postcode_stad %} &middot; \
-{{ kantoor.postcode_stad }}{% endif %}<br>
-{% if kantoor.telefoon %}Tel: {{ kantoor.telefoon }}{% endif %}\
-{% if kantoor.telefoon and kantoor.email %} &middot; {% endif %}\
-{% if kantoor.email %}{{ kantoor.email }}{% endif %}
-{% if kantoor.kvk %}<br>KvK: {{ kantoor.kvk }}{% endif %}
-{% if kantoor.iban %}<br>IBAN: {{ kantoor.iban }}{% endif %}
-</td></tr>
-</table>
-</td></tr>
-
-</table>
-</td></tr>
-</table>
 </body>
 </html>"""
 
@@ -253,43 +200,46 @@ def _heading(text: str) -> str:
 
 
 def _signature(ctx: dict, english: bool = False) -> str:
-    """Lisanne's full signature block — matches BaseNet style exactly.
+    """Lisanne's BaseNet-style signature with inline logo (100x100 data-URL).
 
-    Email-adres switcht op case_type: 'incasso' → incasso@kestinglegal.nl,
+    Email-adres switcht op case_type: 'incasso' → Incasso@kestinglegal.nl,
     andere zaaktypes (faillissement, advies, etc.) → kesting@kestinglegal.nl.
-    KVK as B.V.
+    Geen kvk-regel — niet in BaseNet origineel. Logo onderaan via _LOGO_DATA_URL.
     """
     k = ctx["kantoor"]
-    kvk = k.get("kvk", "")
-    kvk_line = f"KVK: {kvk}<br>" if kvk else ""
-
     case_type = (ctx.get("zaak") or {}).get("type", "incasso")
     email_addr = (
-        "incasso@kestinglegal.nl" if case_type == "incasso" else "kesting@kestinglegal.nl"
+        "Incasso@kestinglegal.nl" if case_type == "incasso" else "kesting@kestinglegal.nl"
+    )
+
+    logo_html = (
+        f'<br><br><img src="{_LOGO_DATA_URL}" alt="Kesting Legal" '
+        'style="height:100px;width:100px;border:0;display:block;">'
+        if _LOGO_DATA_URL.startswith("data:") else ""
     )
 
     if english:
         return (
             "Yours faithfully,<br><br>"
-            "<strong>mr. L. Kesting</strong><br>"
-            "DEBT COLLECTION ATTORNEY<br><br>"
+            "<strong>Mevr. mr. L. Kesting</strong><br>"
+            "<strong>DEBT COLLECTION ATTORNEY</strong><br><br>"
             "Kesting Legal B.V.<br>"
-            f"{k['adres']}<br>"
-            f"{k['postcode_stad']}<br>"
-            f"{kvk_line}"
+            f"{k.get('adres', '')}<br>"
+            f"{k.get('postcode_stad', '')}<br>"
             f"E: {email_addr}<br>"
             "W: www.kestinglegal.nl"
+            f"{logo_html}"
         )
     return (
         "Hoogachtend,<br><br>"
-        "<strong>mr. L. Kesting</strong><br>"
-        "INCASSO ADVOCAAT | DEBT COLLECTION ATTORNEY<br><br>"
+        "<strong>Mevr. mr. L. Kesting</strong><br>"
+        "<strong>INCASSO ADVOCAAT | DEBT COLLECTION ATTORNEY</strong><br><br>"
         "Kesting Legal B.V.<br>"
-        f"{k['adres']}<br>"
-        f"{k['postcode_stad']}<br>"
-        f"{kvk_line}"
+        f"{k.get('adres', '')}<br>"
+        f"{k.get('postcode_stad', '')}<br>"
         f"E: {email_addr}<br>"
         "W: www.kestinglegal.nl"
+        f"{logo_html}"
     )
 
 

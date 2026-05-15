@@ -8,10 +8,22 @@ Supported template types: aanmaning, sommatie, tweede_sommatie, 14_dagenbrief,
 herinnering.  All others return None → caller falls back to PDF attachment.
 """
 
+from pathlib import Path
+
 from jinja2 import Environment, StrictUndefined
 from markupsafe import Markup
 
 _env = Environment(undefined=StrictUndefined, autoescape=True)
+
+# Logo embedded as data-URL so external image-blocking (Outlook/Gmail) doesn't
+# strip it. The .b64 file is plain base64 of templates/lisanne/logo.
+# Path: app/email/incasso_templates.py → parents[2] = backend root (= /app in container).
+_LOGO_B64_PATH = Path(__file__).resolve().parents[2] / "templates" / "lisanne" / "_kesting_logo.b64"
+try:
+    _LOGO_B64 = _LOGO_B64_PATH.read_text(encoding="utf-8").strip()
+    _LOGO_DATA_URL = f"data:image/png;base64,{_LOGO_B64}"
+except FileNotFoundError:
+    _LOGO_DATA_URL = "https://kestinglegal.nl/logo.png"
 
 # ── Branded base layout ──────────────────────────────────────────────────
 
@@ -32,7 +44,7 @@ color:#1a1a1a;line-height:1.6;font-size:14px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 <tr>
 <td style="vertical-align:middle;">
-<img src="https://kestinglegal.nl/logo.png" alt="Kesting Legal" \
+<img src="{{ logo_data_url }}" alt="Kesting Legal" \
 style="max-width:180px;height:auto;display:block;" />
 </td>
 </tr>
@@ -138,6 +150,7 @@ def _render_branded(
         content=Markup(content_html),
         afsluiting=Markup(afsluiting_html),
         disclaimer=Markup(disclaimer_html) if disclaimer_html else "",
+        logo_data_url=_LOGO_DATA_URL,
     )
 
 
@@ -234,12 +247,19 @@ def _heading(text: str) -> str:
 def _signature(ctx: dict, english: bool = False) -> str:
     """Lisanne's full signature block — matches BaseNet style exactly.
 
-    Incasso emails use incasso@kestinglegal.nl (not kantoor email).
-    No phone number for incasso cases. KVK as B.V.
+    Email-adres switcht op case_type: 'incasso' → incasso@kestinglegal.nl,
+    andere zaaktypes (faillissement, advies, etc.) → kesting@kestinglegal.nl.
+    KVK as B.V.
     """
     k = ctx["kantoor"]
     kvk = k.get("kvk", "")
     kvk_line = f"KVK: {kvk}<br>" if kvk else ""
+
+    case_type = (ctx.get("zaak") or {}).get("type", "incasso")
+    email_addr = (
+        "incasso@kestinglegal.nl" if case_type == "incasso" else "kesting@kestinglegal.nl"
+    )
+
     if english:
         return (
             "Yours faithfully,<br><br>"
@@ -249,7 +269,7 @@ def _signature(ctx: dict, english: bool = False) -> str:
             f"{k['adres']}<br>"
             f"{k['postcode_stad']}<br>"
             f"{kvk_line}"
-            "E: incasso@kestinglegal.nl<br>"
+            f"E: {email_addr}<br>"
             "W: www.kestinglegal.nl"
         )
     return (
@@ -260,7 +280,7 @@ def _signature(ctx: dict, english: bool = False) -> str:
         f"{k['adres']}<br>"
         f"{k['postcode_stad']}<br>"
         f"{kvk_line}"
-        "E: incasso@kestinglegal.nl<br>"
+        f"E: {email_addr}<br>"
         "W: www.kestinglegal.nl"
     )
 

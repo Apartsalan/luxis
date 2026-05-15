@@ -85,6 +85,14 @@ def _assert_base_nl(html: str) -> None:
     assert "Stichting Beheer Derdengelden" in html, "stichting missing"
     assert "Hoogachtend" in html, "NL signature missing"
     assert "schuldenaar" in html.lower(), "schuldhulp block missing"
+    # S145: logo moet als embedded data-URL renderen, niet als externe URL.
+    assert "data:image/png;base64," in html, "logo ontbreekt als data-URL"
+    assert "https://kestinglegal.nl/logo.png" not in html, (
+        "externe logo URL gebruikt — moet data-URL zijn"
+    )
+    # S145: handtekening email-adres moet komen uit case_type.
+    # Default in fixtures is incasso → incasso@kestinglegal.nl
+    assert "incasso@kestinglegal.nl" in html, "incasso-email ontbreekt in handtekening"
     # Lisanne S141: disclaimer MOET onder handtekening staan.
     signature_pos = html.find("Hoogachtend")
     disclaimer_pos = html.find("financi&euml;le zorgen")
@@ -292,3 +300,61 @@ def test_render_unknown_returns_none(mock_context):
     """Onbekende template_type moet None returnen (fallback signal)."""
     result = render_incasso_email("does_not_exist_xyz", mock_context)
     assert result is None
+
+
+# ── S145: signature email-adres switcht op case_type ────────────────────
+
+
+def test_signature_uses_incasso_email_for_incasso_case():
+    """case_type='incasso' → incasso@kestinglegal.nl."""
+    from app.email.incasso_templates import _signature
+
+    ctx = {
+        "kantoor": {"adres": "IJsbaanpad 9", "postcode_stad": "1076 CV Amsterdam", "kvk": "12345678"},
+        "zaak": {"type": "incasso"},
+    }
+    sig = _signature(ctx)
+    assert "incasso@kestinglegal.nl" in sig
+    assert "kesting@kestinglegal.nl" not in sig
+
+
+def test_signature_uses_kantoor_email_for_other_case_types():
+    """case_type≠incasso (faillissement, advies, etc.) → kesting@kestinglegal.nl."""
+    from app.email.incasso_templates import _signature
+
+    for case_type in ("faillissement", "advies", "procedure"):
+        ctx = {
+            "kantoor": {"adres": "IJsbaanpad 9", "postcode_stad": "1076 CV Amsterdam", "kvk": "12345678"},
+            "zaak": {"type": case_type},
+        }
+        sig = _signature(ctx)
+        assert "kesting@kestinglegal.nl" in sig, f"kantoor-email mist voor case_type={case_type}"
+        assert "incasso@kestinglegal.nl" not in sig, f"incasso-email lekt voor case_type={case_type}"
+
+
+def test_signature_defaults_to_incasso_when_type_missing():
+    """Geen zaak.type → default incasso@kestinglegal.nl (backwards compat)."""
+    from app.email.incasso_templates import _signature
+
+    ctx = {
+        "kantoor": {"adres": "IJsbaanpad 9", "postcode_stad": "1076 CV Amsterdam", "kvk": "12345678"},
+        "zaak": {},
+    }
+    sig = _signature(ctx)
+    assert "incasso@kestinglegal.nl" in sig
+
+
+def test_signature_english_respects_case_type():
+    """English signature must also switch email on case_type."""
+    from app.email.incasso_templates import _signature
+
+    ctx_incasso = {
+        "kantoor": {"adres": "IJsbaanpad 9", "postcode_stad": "1076 CV Amsterdam", "kvk": "12345678"},
+        "zaak": {"type": "incasso"},
+    }
+    ctx_advies = {
+        "kantoor": {"adres": "IJsbaanpad 9", "postcode_stad": "1076 CV Amsterdam", "kvk": "12345678"},
+        "zaak": {"type": "advies"},
+    }
+    assert "incasso@kestinglegal.nl" in _signature(ctx_incasso, english=True)
+    assert "kesting@kestinglegal.nl" in _signature(ctx_advies, english=True)

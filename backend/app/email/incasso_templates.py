@@ -71,8 +71,7 @@ style="font-family:Verdana,Geneva,sans-serif;font-size:12px;">
 
 {% if disclaimer %}
 <!-- Schuldhulp + juridische disclaimer -->
-<div style="font-family:Verdana,Geneva,sans-serif;font-size:11px;color:#000000;\
-margin-top:16px;">
+<div style="font-family:Verdana,Geneva,sans-serif;font-size:12px;color:#000000;">
 {{ disclaimer }}
 </div>
 {% endif %}
@@ -113,32 +112,28 @@ def _render_branded(
 
 
 def _claims_table(context: dict) -> str:
-    """Render vorderingen table (4 columns)."""
+    """Render vorderingen table (BaseNet-stijl: 12px Verdana, geen borders)."""
     rows = context.get("vorderingen", [])
     if not rows:
         return ""
     html = (
-        '<table role="presentation" width="100%" cellpadding="6" cellspacing="0" '
-        'style="border-collapse:collapse;font-size:13px;margin:16px 0;">'
+        '<table width="500" cellpadding="0" cellspacing="0" '
+        'style="width:500px;border-collapse:collapse;'
+        'font-family:Verdana,Geneva,sans-serif;font-size:12px;margin:16px 0;">'
         "<tr>"
-        '<th style="text-align:left;border-bottom:2px solid #1e293b;'
-        'padding:8px 6px;">Omschrijving</th>'
-        '<th style="text-align:left;border-bottom:2px solid #1e293b;'
-        'padding:8px 6px;">Factuurnummer</th>'
-        '<th style="text-align:left;border-bottom:2px solid #1e293b;'
-        'padding:8px 6px;">Verzuimdatum</th>'
-        '<th style="text-align:right;border-bottom:2px solid #1e293b;'
-        'padding:8px 6px;">Hoofdsom</th>'
+        '<td style="padding:2px 6px;vertical-align:top;"><b>Omschrijving</b></td>'
+        '<td style="padding:2px 6px;vertical-align:top;"><b>Factuurnummer</b></td>'
+        '<td style="padding:2px 6px;vertical-align:top;"><b>Verzuimdatum</b></td>'
+        '<td style="padding:2px 6px;vertical-align:top;"><b>Hoofdsom</b></td>'
         "</tr>"
     )
     for v in rows:
         html += (
             "<tr>"
-            f'<td style="padding:6px;border-bottom:1px solid #e5e7eb;">{v["beschrijving"]}</td>'
-            f'<td style="padding:6px;border-bottom:1px solid #e5e7eb;">{v["factuurnummer"]}</td>'
-            f'<td style="padding:6px;border-bottom:1px solid #e5e7eb;">{v["verzuimdatum"]}</td>'
-            '<td style="padding:6px;border-bottom:1px solid #e5e7eb;'
-            f'text-align:right;">{v["hoofdsom"]}</td>'
+            f'<td style="padding:2px 6px;vertical-align:top;">{v["beschrijving"]}</td>'
+            f'<td style="padding:2px 6px;vertical-align:top;">{v["factuurnummer"]}</td>'
+            f'<td style="padding:2px 6px;vertical-align:top;">{v["verzuimdatum"]}</td>'
+            f'<td style="padding:2px 6px;vertical-align:top;">{v["hoofdsom"]}</td>'
             "</tr>"
         )
     html += "</table>"
@@ -146,24 +141,24 @@ def _claims_table(context: dict) -> str:
 
 
 def _summary_row(label: str, value: str, bold: bool = False) -> str:
-    """Single row for the financial summary table."""
+    """Single row for the financial summary table (BaseNet stijl, 12px)."""
     if not label and not value:
         return ""
     weight = "font-weight:bold;" if bold else ""
     return (
         "<tr>"
-        f'<td style="padding:4px 6px;{weight}">{label}</td>'
-        f'<td style="padding:4px 6px;text-align:right;{weight}">{value}</td>'
+        f'<td style="padding:2px 6px;{weight}">{label}</td>'
+        f'<td style="padding:2px 6px;text-align:right;{weight}">{value}</td>'
         "</tr>"
     )
 
 
 def _financial_summary(context: dict, include_payments: bool = True) -> str:
-    """Render the 2-column financial summary table."""
+    """Render the 2-column financial summary table (BaseNet stijl)."""
     html = (
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="border-collapse:collapse;font-size:13px;margin:16px 0;'
-        'border-top:2px solid #1e293b;">'
+        '<table width="500" cellpadding="0" cellspacing="0" '
+        'style="width:500px;border-collapse:collapse;'
+        'font-family:Verdana,Geneva,sans-serif;font-size:12px;margin:16px 0;">'
     )
     html += _summary_row("Hoofdsom", context["totaal_hoofdsom"], bold=True)
     html += _summary_row(f"Rente t/m {context['vandaag']}", context["totaal_rente"])
@@ -180,11 +175,11 @@ def _financial_summary(context: dict, include_payments: bool = True) -> str:
 
 
 def _financial_summary_compact(context: dict) -> str:
-    """Compact summary: only hoofdsom + rente + openstaand."""
+    """Compact summary (BaseNet stijl): hoofdsom + rente + openstaand."""
     html = (
-        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-        'style="border-collapse:collapse;font-size:13px;margin:16px 0;'
-        'border-top:2px solid #1e293b;">'
+        '<table width="500" cellpadding="0" cellspacing="0" '
+        'style="width:500px;border-collapse:collapse;'
+        'font-family:Verdana,Geneva,sans-serif;font-size:12px;margin:16px 0;">'
     )
     html += _summary_row("Hoofdsom", context["totaal_hoofdsom"], bold=True)
     html += _summary_row(f"Rente t/m {context['vandaag']}", context["totaal_rente"])
@@ -194,9 +189,8 @@ def _financial_summary_compact(context: dict) -> str:
 
 
 def _heading(text: str) -> str:
-    return (
-        f'<p style="font-size:15px;font-weight:bold;color:#1e293b;margin:20px 0 8px 0;">{text}</p>'
-    )
+    """BaseNet stijl heading: 12px bold zwart, gewoon <p><strong>."""
+    return f"<p><strong>{text}</strong></p>"
 
 
 def _signature(ctx: dict, english: bool = False) -> str:
@@ -244,23 +238,19 @@ def _signature(ctx: dict, english: bool = False) -> str:
 
 
 def _schuldhulp_disclaimer_en(ctx: dict) -> str:
-    """English translation of the schuldhulp + legal disclaimer block.
-    Used by all demand_for_payment_* + engelse_sommatie templates so they
-    carry the same footer obligations as the NL incasso mails (S145 Arsalan)."""
+    """EN schuldhulp + legal disclaimer (BaseNet stijl: 12px Verdana zwart)."""
     return (
-        '<p style="font-size:11px;color:#6b7280;margin-top:24px;'
-        'border-top:1px solid #e5e7eb;padding-top:16px;">'
+        "<p>"
         "Are you in financial difficulty and do you see no way out? "
         "We are happy to inform you about your rights as a debtor: "
-        '<a href="https://kestinglegal.nl/debiteuren" '
-        'style="color:#c4a44c;">kestinglegal.nl/debiteuren</a>. '
+        '<a href="https://kestinglegal.nl/debiteuren">kestinglegal.nl/debiteuren</a>. '
         "For debt counselling you can contact your local municipality. "
         "If you urgently need emotional support, call Stichting 113 "
         "Suicide Prevention free of charge and anonymously on "
         "0800-0113 or visit "
-        '<a href="http://www.113.nl" style="color:#c4a44c;">'
-        "www.113.nl</a>.</p>"
-        '<p style="font-size:10px;color:#9ca3af;margin-top:12px;">'
+        '<a href="http://www.113.nl">www.113.nl</a>.'
+        "</p>"
+        "<p><em>"
         "Disclaimer &mdash; The information transmitted in this e-mail "
         "message is intended solely for the addressee(s) and may contain "
         "personal or confidential information, protected by professional "
@@ -271,26 +261,24 @@ def _schuldhulp_disclaimer_en(ctx: dict) -> str:
         "reproduction, distribution and/or provision of this information "
         "to third parties is not permitted, and you are requested to "
         "return this message and destroy the original."
-        "</p>"
+        "</em></p>"
     )
 
 
 def _schuldhulp_disclaimer(ctx: dict) -> str:
-    """Wettelijk verplicht schuldhulpblok + disclaimer — matches BaseNet."""
+    """NL schuldhulp + juridische disclaimer (BaseNet stijl: 12px Verdana zwart)."""
     return (
-        '<p style="font-size:11px;color:#6b7280;margin-top:24px;'
-        'border-top:1px solid #e5e7eb;padding-top:16px;">'
+        "<p>"
         "Heeft u financi&euml;le zorgen en ziet u geen uitweg meer? "
         "Wij informeren u graag over uw rechten als schuldenaar: "
-        '<a href="https://kestinglegal.nl/debiteuren" '
-        'style="color:#c4a44c;">kestinglegal.nl/debiteuren</a>. '
+        '<a href="https://kestinglegal.nl/debiteuren">kestinglegal.nl/debiteuren</a>. '
         "Voor schuldhulpverlening kunt u terecht bij uw gemeente. "
         "Heeft u dringend emotionele steun nodig? Bel dan gratis "
         "en anoniem met Stichting 113 Zelfmoordpreventie via "
         "0800-0113 of kijk op "
-        '<a href="http://www.113.nl" style="color:#c4a44c;">'
-        "www.113.nl</a>.</p>"
-        '<p style="font-size:10px;color:#9ca3af;margin-top:12px;">'
+        '<a href="http://www.113.nl">www.113.nl</a>.'
+        "</p>"
+        "<p><em>"
         "Disclaimer - De informatie verzonden met dit e-mailbericht "
         "is uitsluitend bestemd voor de geadresseerde(n) en kan "
         "persoonlijke of vertrouwelijke informatie bevatten, "
@@ -303,7 +291,7 @@ def _schuldhulp_disclaimer(ctx: dict) -> str:
         "verspreiding en / of verstrekking van deze informatie "
         "aan derden niet toegestaan en wordt u verzocht dit "
         "bericht terug te sturen en het origineel te vernietigen."
-        "</p>"
+        "</em></p>"
     )
 
 
@@ -314,32 +302,40 @@ def _vordering_table_basenet(ctx: dict) -> str:
     + samenvattingsregels (hoofdsom, rente, BIK, BTW, totaal, voldaan, te voldoen)
     """
     rows = ctx.get("vorderingen", [])
+    # BaseNet: 12px Verdana, vertical-align:top, padding:2px 6px
+    cell_style = 'style="padding:2px 6px;vertical-align:top;"'
     html = (
-        '<table role="presentation" width="500" cellpadding="4" '
-        'cellspacing="0" style="border-collapse:collapse;font-size:13px;'
-        'margin:16px 0;">'
+        '<table width="500" cellpadding="0" cellspacing="0" '
+        'style="width:500px;border-collapse:collapse;'
+        'font-family:Verdana,Geneva,sans-serif;font-size:12px;margin:16px 0;">'
         "<tr>"
-        '<td style="padding:4px 6px;"><strong>Factuurnummer</strong></td>'
-        '<td style="padding:4px 6px;"><strong>Datum</strong></td>'
-        '<td style="padding:4px 6px;"><strong>Vervaldatum</strong></td>'
-        '<td colspan="2" style="padding:4px 6px;">'
-        "<strong>Bedrag</strong></td>"
+        f"<td {cell_style}><b>Factuurnummer</b></td>"
+        f"<td {cell_style}><b>Datum</b></td>"
+        f"<td {cell_style}><b>Vervaldatum</b></td>"
+        f'<td colspan="2" {cell_style}><b>Bedrag</b></td>'
         "</tr>"
     )
     for v in rows:
+        bedrag = v["hoofdsom"].replace("&euro;", "€")
         html += (
             "<tr>"
-            f'<td style="padding:4px 6px;">{v["factuurnummer"]}</td>'
-            f'<td style="padding:4px 6px;">{v.get("factuurdatum", v["verzuimdatum"])}</td>'
-            f'<td style="padding:4px 6px;">{v["verzuimdatum"]}</td>'
-            f'<td colspan="2" style="padding:4px 6px;">'
-            f'{v["hoofdsom"]}</td>'
+            f'<td {cell_style}>{v["factuurnummer"]}</td>'
+            f'<td {cell_style}>{v.get("factuurdatum", v["verzuimdatum"])}</td>'
+            f'<td {cell_style}>{v["verzuimdatum"]}</td>'
+            f'<td colspan="2" {cell_style}>{bedrag}</td>'
             "</tr>"
         )
-    # Empty rows for spacing
-    html += '<tr><td colspan="5">&nbsp;</td></tr>'
-    # Summary rows
-    summary_rows = [
+    # Empty row for spacing
+    html += '<tr><td colspan="5" style="padding:2px 6px;">&nbsp;</td></tr>'
+    # Summary rows: split € symbol off so it gets a separate column (BaseNet)
+    def _split_eur(amount: str) -> tuple[str, str]:
+        """('€ 211,75', ' 211,75') style split."""
+        s = (amount or "").replace("&euro;", "€").strip()
+        if s.startswith("€"):
+            return ("€", s[1:].strip())
+        return ("€", s)
+
+    summary_rows: list[tuple[str, str, bool]] = [
         ("Hoofdsom", ctx["totaal_hoofdsom"], False),
         ("Rente", ctx["totaal_rente"], False),
         ("Hoofdsom + rente", ctx["subtotaal"], False),
@@ -354,18 +350,21 @@ def _vordering_table_basenet(ctx: dict) -> str:
         ("Voldaan bij klant", ctx.get("betalingen_aftrek_bedrag", ""), False)
     )
     summary_rows.append(
-        ("Door ons ontvangen", ctx.get("betalingen_aftrek_bedrag", ""), False)
+        ("Door ons ontvangen", "", False)
     )
-    summary_rows.append(("", "", False))  # empty row
-    summary_rows.append(
-        ("<strong>Te voldoen</strong>", f"<strong>{ctx['totaal_openstaand']}</strong>", True)
-    )
-    for label, value, _bold in summary_rows:
+    # BaseNet: lege rij vóór totaalbedrag
+    summary_rows.append(("", "", False))
+    summary_rows.append(("Te voldoen", ctx["totaal_openstaand"], True))
+
+    for label, value, bold in summary_rows:
+        eur, num = _split_eur(value)
+        label_html = f"<b>{label}</b>" if bold else label
+        num_html = f"<b>{num}</b>" if bold else num
         html += (
             "<tr>"
-            f'<td colspan="3" style="padding:2px 6px;">{label}</td>'
-            f'<td style="padding:2px 6px;">&euro;</td>'
-            f'<td style="padding:2px 6px;">{value}</td>'
+            f'<td colspan="3" {cell_style}>{label_html}</td>'
+            f"<td {cell_style}>{eur}</td>"
+            f"<td {cell_style}>{num_html}</td>"
             "</tr>"
         )
     html += "</table>"

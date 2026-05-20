@@ -26,6 +26,9 @@ export type NotificationType =
   | "email_sent"
   | "email_failed"
   | "verjaring_warning"
+  | "email_received"
+  | "ai_draft_ready"
+  | "classification_done"
   | "system";
 
 export const NOTIFICATION_TYPE_CONFIG: Record<
@@ -41,6 +44,9 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
   email_sent: { label: "E-mail verzonden", icon: "mail", color: "emerald" },
   email_failed: { label: "E-mail mislukt", icon: "mail-x", color: "red" },
   verjaring_warning: { label: "Verjaring nadert", icon: "alert-circle", color: "red" },
+  email_received: { label: "Nieuwe email", icon: "mail", color: "blue" },
+  ai_draft_ready: { label: "AI-concept klaar", icon: "sparkles", color: "violet" },
+  classification_done: { label: "Antwoord geclassificeerd", icon: "tag", color: "amber" },
   system: { label: "Systeem", icon: "info", color: "gray" },
 };
 

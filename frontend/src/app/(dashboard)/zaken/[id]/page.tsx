@@ -61,6 +61,7 @@ import PartijenTab from "./components/PartijenTab";
 import { StaphistorieTab } from "./components/StaphistorieTab";
 import DossierSidebar from "./components/DossierSidebar";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { CaseActionFeed } from "@/components/case-action-feed/CaseActionFeed";
 
 function TabErrorFallback({ tabName }: { tabName: string }) {
   return (
@@ -539,6 +540,7 @@ export default function ZaakDetailPage() {
           <div className="mt-6">
             {activeTab === "overzicht" && (
               <ErrorBoundary key="overzicht" fallback={<TabErrorFallback tabName="Overzicht" />}>
+                <CaseActionFeed caseId={id} onNavigate={setActiveTab} />
                 <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />
               </ErrorBoundary>
             )}

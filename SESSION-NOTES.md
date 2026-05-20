@@ -1,9 +1,92 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 15 mei 2026 (sessie 145 — UnifiedDraftService + BaseNet-stijl templates + mojibake-fix)
-**Laatste feature/fix:** Sessie 145 — (1) UnifiedDraftService + POST /api/ai/draft endpoint (intents next_step/reply_to_email/free_compose) routeert AI-concepten via `incasso_templates._render_branded()`; (2) logo nu data-URL embedded (`_kesting_logo.b64`) i.p.v. externe URL; (3) handtekening email-adres dynamisch op `case_type`: incasso → `Incasso@kestinglegal.nl`, anders → `kesting@kestinglegal.nl`; (4) schuldhulp+disclaimer in ALLE incasso-mails inclusief NL én Engelse vertaling (`_schuldhulp_disclaimer_en`); (5) volledig herontwerp `_BASE_EMAIL` + alle helpers naar BaseNet-stijl pixel-perfect: Verdana 12px overal (was 10-15px mix), geen gouden header bovenaan, geen kantoor/wederpartij/datum-blokken, "Mevr. mr. L. Kesting" handtekening met embedded 100×100 logo, schuldhulp en disclaimer 12px zwart cursief; (6) tenant-data ingevuld op productie (address/postal_code/city/phone/email/iban waren NULL); (7) mojibake-fix `_to_html_entities()` in OutlookProvider — non-ASCII chars (€, ë) → numeric entities omdat Graph API outgoing eml met Windows-1252 charset header genereert. AI Concept-knop op Correspondentie weer verwijderd (S141 afspraak gehandhaafd). CI fix: `factuur.html` lookup checkte op directory bestaan, maar dir bestond met andere files — nu check op specifiek bestand.
-**Openstaande bugs:** Bel-icon toont 403 ongelezen notifications niet (BUG-83, vereist Lisanne devtools-check 15 min); notification-types beperkt (BUG-84, alleen `deadline_overdue` — geen `email_received`/`draft_ready`/`classification_done`); UnifiedDraftService draait parallel naast oude `/api/ai-agent/draft` + smart-replies — frontend migratie pas in S146-147 (CaseActionFeed).
-**Volgende sessie:** S146 — CaseActionFeed widget op Overzicht-tab dossier. Centrale plek voor alle AI-acties (drafts, classificaties, smart-replies). Vervangt versnipperde UI (popups, banners). Plus uitbreiding notification-types `email_received`/`draft_ready`/`classification_done` zodat bel-icon zinvolle meldingen toont. Vereist research naar UX-patroon (HubSpot Activity Feed, Notion Inbox).
+**Laatst bijgewerkt:** 20 mei 2026 (sessie 146 — CaseActionFeed widget + notification-types + UX-verfijning + productie-cleanup)
+**Laatste feature/fix:** Sessie 146 — (1) CaseActionFeed widget op Overzicht-tab dossier met 4 kaart-types (DraftReady/EmailReceived/Classification/Deadline), filter Wachtend/Afgehandeld/Alles, max 3 zichtbaar + Toon-alle toggle, deadlines bovenaan, 30s polling + window-focus refetch; (2) 3 nieuwe notification-types met hooks in sync_service / unified_draft_service / ai_agent service, dedup per type (5/10/60 min) via `_notify_all_tenant_users`; (3) `create_notification_if_not_exists` dedup uitgebreid met `task_id` zodat verschillende tasks op zelfde case niet collapseren; (4) scheduler deadline_overdue window verlengd naar 30 dagen + task_id meegegeven; (5) cleanup parallelle AI-entries — "Bekijk concept" knoppen uit /taken en TijdregistratieTab weggehaald, CaseActionFeed is enige entry-point; (6) UX-verfijning widget: refresh-knop, vriendelijke lege staat met groene checkmark, klikbare hint naar afgehandelde berichten; (7) backfill script voor pre-S146 drafts (1 per case, idempotent); (8) productie-cleanup: 468 duplicate deadline notifications mark-as-read, 4 ai_draft_ready backfilled, 1 email_received test-trigger geverifieerd via Playwright.
+**Openstaande bugs:** UnifiedDraftService draait parallel naast oude `/api/ai-agent/draft` + smart-replies — frontend migratie in volgende sessies; bestaande pre-S146 deadline_overdue notifications hebben `task_id = NULL` (cleanup deduped op (user,case) als fallback).
+**Volgende sessie:** S147 — Snooze-functionaliteit (24u/3d/1w) op CaseActionFeed kaarten OF deprecatie oude `/api/ai-agent/draft` endpoint + verwijdering smart-replies UI (memory feedback_s141 — geen parallelle entries). Plus M0b voorbereiding (Lisanne overzetten naar M365) als prioriteit verschuift.
+
+## Wat er gedaan is (sessie 146 — 20 mei 2026) — CaseActionFeed widget + notification-types + UX-verfijning + productie-cleanup
+
+### Samenvatting
+
+**FEAT-AI-04 — CaseActionFeed widget (commits `b87f0f2`, `e0a0dab`):**
+- Nieuwe widget bovenaan Overzicht-tab dossier vervangt 3 weggehaalde banners uit S134.
+- 4 kaart-types: DraftReady (open Taken), EmailReceived (open Correspondentie), ClassificationDone (open Correspondentie), Deadline (naar Pipeline). Routes pas op de juiste tabs via `onNavigate` callback.
+- Filter: Wachtend (default, alleen actionable + unread) / Afgehandeld / Alles. Max 3 zichtbaar + "Toon alle" toggle. Deadlines altijd bovenaan.
+- 30s polling + refetch-on-window-focus. Geen WebSocket (S148+ backlog).
+- Dismiss = `PUT /api/notifications/:id/read` (mark-as-read, geen hard delete = audit trail).
+- UX-verfijning (commit `e0a0dab`): refresh-knop in header, vriendelijke lege staat ("Niets meer te doen — goed bezig!" + groene checkmark), klikbare hint naar Alles bij lege Wachtend met afgehandelde berichten.
+- Files: `frontend/src/components/case-action-feed/CaseActionFeed.tsx`, `frontend/src/hooks/use-case-action-feed.ts`, mount in `zaken/[id]/page.tsx`.
+
+**BUG-84 fix — Notification-types backend (commit `439100f`):**
+- 3 nieuwe types met dedup-window per use case: `email_received` (60 min, inbound mails gekoppeld aan dossier), `ai_draft_ready` (5 min, hergebruik bestaande type uit orchestrator), `classification_done` (10 min, post-EmailClassification).
+- Hooks toegevoegd op 3 plekken: `email/sync_service.py` (na succesvolle case-koppeling, alleen inbound + niet-bounce), `ai_agent/unified_draft_service.py` (na draft persist), `ai_agent/service.py` (na classification persist).
+- Notificaties gaan via nieuwe helper `_notify_all_tenant_users` naar elke actieve user (zelfde patroon als verjaring/deadline scheduler). Try/except wrappers zodat een notification-fout nooit de hoofdflow stopt.
+- Frontend `NotificationType` uitgebreid met 3 nieuwe waarden + bijbehorende NOTIFICATION_TYPE_CONFIG entries (mail/sparkles/tag icons).
+- 5 nieuwe unit tests in `tests/test_notifications_service.py` (creation per type, dedup binnen window, tenant isolation). Bestaande 5 notification-tests blijven groen.
+
+**Duplicate deadline fix (commit `122fed9`):**
+- `create_notification_if_not_exists` dedup uitgebreid: nu ook op `task_id` zodat verschillende tasks op zelfde case niet collapseren. Voorheen kreeg Lisanne 3+ identieke "Taak te laat" kaarten per case.
+- Scheduler `notify_overdue_workflow_tasks` window verlengd van 24u → 30 dagen + task_id meegegeven aan `NotificationCreate`. Zolang taak open is, één notification i.p.v. dagelijks nieuwe.
+- Nieuwe test `test_dedup_distinguishes_tasks_on_same_case` verifieert dat 2 tasks op zelfde case 2 notifications geven, herhaling per task dedupt.
+
+**Cleanup parallelle AI-entries (commit `122fed9`):**
+- Memory `feedback_s141_afspraken`: "geen parallelle entry-points naast CaseActionFeed". Inline "Bekijk concept" knoppen verwijderd uit:
+  - `frontend/src/app/(dashboard)/taken/page.tsx` — review_ai_draft taak toont nu geen AI-shortcut meer
+  - `frontend/src/app/(dashboard)/zaken/[id]/components/TijdregistratieTab.tsx` — `onOpenDraft` prop volledig verwijderd
+- URL deeplink `?draft=...` blijft werken via `openDraftDialog` in page.tsx (backwards-compat).
+- DossierHeader + CorrespondentieTab waren al gecleaned in S134/S141 — geen extra werk.
+
+**Backfill script (commit `7789c03`):**
+- `backend/scripts/backfill_draft_ready_notifications.py` maakt voor elke `AIDraft.status='generated'` zonder bestaande `ai_draft_ready` notification één aan, maar **alleen de meest recente draft per case** (anders 7+ identieke kaarten per dossier).
+- Idempotent: skipt drafts die al een notification hebben. Modelimports vóór query (anders mapper-init fout). `--dry-run` flag.
+
+**Productie-cleanup (eenmalige acties via SSH):**
+- Backfill draaide op productie: 19 drafts gevonden over 4 dossiers → 4 nieuwe ai_draft_ready notifications (1 per case).
+- SQL cleanup van duplicate deadlines: 468 van 480 ongelezen `deadline_overdue` records mark-as-read (behoud nieuwste per (user, case) als fallback omdat oude records `task_id = NULL` hebben).
+- Resultaat: ongelezen-bel ging van 481 → 16 (12 deadline + 4 draft).
+
+**End-to-end Playwright test productie (na alle commits):**
+- Login als `seidony@kestinglegal.nl` via UI (memory `user_login`).
+- Widget rendert bovenaan Overzicht-tab op dossier 2026-00062, 0 console errors/warnings.
+- Filter switch werkt (Wachtend/Afgehandeld/Alles), dismiss-knop werkt (3→2 cards live).
+- Bel-icon synchroon: 481 → 480 na dismiss.
+- "Bekijk concept" verwijderd op /taken + zaken/[id] Taken-tab.
+- email_received notification getriggerd op echte inbound mail van `arsalanir@hotmail.com` → verschijnt in widget onder Alles-filter.
+- Lege staat (na dismiss laatste card): groene checkmark + hint "Bekijk 5 afgehandeld berichten" werkt klikbaar.
+- Screenshots: `s146-caseactionfeed-prod.png`, `s146-final-prod.png`, `s146-empty-state.png`.
+
+### Gewijzigde bestanden
+
+**Backend:**
+- `backend/app/notifications/service.py` — 3 nieuwe `create_*_notification` functies + `_notify_all_tenant_users` helper, type constants, dedup uitgebreid met `task_id`
+- `backend/app/email/sync_service.py` — hook na `db.flush()` voor `email_received` op gekoppelde inbound mails
+- `backend/app/ai_agent/unified_draft_service.py` — hook na draft persist voor `ai_draft_ready`
+- `backend/app/ai_agent/service.py` — hook na classification persist voor `classification_done`
+- `backend/app/workflow/scheduler.py` — deadline_overdue notification krijgt `task_id` + window 30 dagen
+- `backend/tests/test_notifications_service.py` (nieuw) — 6 unit tests
+- `backend/scripts/backfill_draft_ready_notifications.py` (nieuw) — eenmalige backfill, 1-per-case filter
+
+**Frontend:**
+- `frontend/src/components/case-action-feed/CaseActionFeed.tsx` (nieuw — 4 cards + filter + refresh + lege staat)
+- `frontend/src/hooks/use-case-action-feed.ts` (nieuw — useCaseActionFeed + useDismissFeedItem)
+- `frontend/src/hooks/use-notifications.ts` — 3 nieuwe `NotificationType` waarden + config entries
+- `frontend/src/app/(dashboard)/zaken/[id]/page.tsx` — mount CaseActionFeed op Overzicht-tab + onNavigate, verwijder `onOpenDraft` prop
+- `frontend/src/app/(dashboard)/taken/page.tsx` — "Bekijk concept" knop verwijderd
+- `frontend/src/app/(dashboard)/zaken/[id]/components/TijdregistratieTab.tsx` — `onOpenDraft` prop weg + Eye import weg + inline knop weg
+
+### Bekende issues
+
+- UnifiedDraftService draait parallel naast oude `/api/ai-agent/draft` + smart-replies — frontend migratie in S147+ (memory `feedback_s141_afspraken`).
+- Pre-S146 `deadline_overdue` notifications hebben `task_id = NULL`. Cleanup deduped op (user, case) als fallback. Nieuwe scheduler-runs geven wel task_id mee — dus nieuwe duplicates uitgesloten.
+- 12 ongelezen deadlines + 4 ai_draft_ready resterend op productie (16 totaal in bel-badge "9+"). Lisanne kan via X-knop verder opruimen.
+
+### Volgende sessie
+
+S147 — keuze:
+1. **Snooze-functionaliteit** op CaseActionFeed kaarten (24u/3d/1w). Vereist nieuw `snooze_until` veld op notifications, migratie, UI menu per kaart.
+2. **Deprecatie oude AI-endpoints** — `/api/ai-agent/draft` + smart-replies UI cleanup. Memory zegt: geen parallelle entries. Backend hooks blijven via UnifiedDraftService.
+3. **M0b voorbereiding** — Lisanne overzetten naar M365 (wacht op Lisanne, dependency voor AI Incasso Agent).
 
 ## Wat er gedaan is (sessie 145 — 15 mei 2026) — UnifiedDraftService + BaseNet-stijl templates + mojibake-fix
 

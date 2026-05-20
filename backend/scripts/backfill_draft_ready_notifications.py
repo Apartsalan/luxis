@@ -85,8 +85,21 @@ async def main(dry_run: bool) -> int:
             )
             .order_by(AIDraft.created_at.desc())
         )
-        drafts = list(result.scalars().all())
-        print(f"Found {len(drafts)} drafts in generated state since {cutoff:%Y-%m-%d}")
+        all_drafts = list(result.scalars().all())
+
+        # Only keep the most recent draft per case — older drafts would just
+        # flood CaseActionFeed with 7+ identical "draft ready" cards.
+        seen_cases: set = set()
+        drafts: list[AIDraft] = []
+        for d in all_drafts:
+            if d.case_id in seen_cases:
+                continue
+            seen_cases.add(d.case_id)
+            drafts.append(d)
+        print(
+            f"Found {len(all_drafts)} drafts in generated state since {cutoff:%Y-%m-%d} "
+            f"— backfilling only the most recent {len(drafts)} (1 per case)."
+        )
 
         for draft in drafts:
             case: Case | None = draft.case

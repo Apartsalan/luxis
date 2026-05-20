@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  CheckCircle2,
   Mail,
+  RefreshCw,
   Sparkles,
   Tag,
   X,
@@ -44,11 +46,15 @@ interface CaseActionFeedProps {
 export function CaseActionFeed({ caseId, onNavigate }: CaseActionFeedProps) {
   const [filter, setFilter] = useState<FeedFilter>("wachtend");
   const [showAll, setShowAll] = useState(false);
-  const { items, isLoading } = useCaseActionFeed({ caseId, filter });
+  const { items, isLoading, refetch } = useCaseActionFeed({ caseId, filter });
+  // Counts in other filters so we can hint the user when "Wachtend" is empty
+  // but there are still items under "Afgehandeld" / "Alles".
+  const allFeed = useCaseActionFeed({ caseId, filter: "alles" });
   const dismiss = useDismissFeedItem();
 
   if (isLoading) return null;
-  if (items.length === 0 && filter === "wachtend") return null;
+  // Hide entirely on a fresh case with zero activity ever
+  if (items.length === 0 && allFeed.items.length === 0) return null;
 
   // Deadline cards always first; rest sorted by created_at desc (already from API)
   const sorted = [...items].sort((a, b) => {
@@ -74,22 +80,45 @@ export function CaseActionFeed({ caseId, onNavigate }: CaseActionFeedProps) {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1 rounded-md bg-muted p-0.5">
-          <FilterTab active={filter === "wachtend"} onClick={() => setFilter("wachtend")}>
-            Wachtend
-          </FilterTab>
-          <FilterTab active={filter === "afgehandeld"} onClick={() => setFilter("afgehandeld")}>
-            Afgehandeld
-          </FilterTab>
-          <FilterTab active={filter === "alles"} onClick={() => setFilter("alles")}>
-            Alles
-          </FilterTab>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md bg-muted p-0.5">
+            <FilterTab active={filter === "wachtend"} onClick={() => setFilter("wachtend")}>
+              Wachtend
+            </FilterTab>
+            <FilterTab active={filter === "afgehandeld"} onClick={() => setFilter("afgehandeld")}>
+              Afgehandeld
+            </FilterTab>
+            <FilterTab active={filter === "alles"} onClick={() => setFilter("alles")}>
+              Alles
+            </FilterTab>
+          </div>
+          <button
+            type="button"
+            onClick={() => { refetch(); allFeed.refetch(); }}
+            aria-label="Verversen"
+            title="Verversen"
+            className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
       {sorted.length === 0 ? (
-        <div className="px-5 py-6 text-center text-sm text-muted-foreground">
-          Niets om af te handelen.
+        <div className="flex flex-col items-center justify-center px-5 py-8 text-center">
+          <CheckCircle2 className="mb-2 h-8 w-8 text-emerald-500" />
+          <p className="text-sm font-medium text-foreground">
+            {filter === "wachtend" ? "Niets meer te doen — goed bezig!" : "Geen berichten."}
+          </p>
+          {filter === "wachtend" && allFeed.items.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setFilter("alles")}
+              className="mt-2 text-xs text-primary hover:underline"
+            >
+              Bekijk {allFeed.items.length} afgehandeld bericht{allFeed.items.length === 1 ? "" : "en"}
+            </button>
+          )}
         </div>
       ) : (
         <ul className="divide-y divide-border">

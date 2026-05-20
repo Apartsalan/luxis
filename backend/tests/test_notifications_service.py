@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import Tenant, User
 from app.cases.models import Case
 from app.notifications.models import Notification
+from app.notifications.schemas import NotificationCreate
 from app.notifications.service import (
     NOTIF_AI_DRAFT_READY,
     NOTIF_CLASSIFICATION_DONE,
@@ -27,6 +28,7 @@ from app.notifications.service import (
     create_classification_done_notification,
     create_draft_ready_notification,
     create_email_received_notification,
+    create_notification_if_not_exists,
 )
 from app.relations.models import Contact
 
@@ -169,6 +171,68 @@ async def test_create_classification_done_notification(
     notif = result.scalar_one()
     assert "streng" in notif.title
     assert "Pietersen" in notif.message
+
+
+@pytest.mark.asyncio
+async def test_dedup_distinguishes_tasks_on_same_case(
+    db: AsyncSession, test_user: User, test_tenant: Tenant
+):
+    """Two overdue tasks on the same case must yield two notifications.
+
+    Before the S146 fix, dedup only matched on (tenant, user, type, case_id),
+    so different tasks collapsed into one notification.
+    """
+    case = await _make_case(db, test_tenant.id, "2026-00050")
+    task_a = uuid.uuid4()
+    task_b = uuid.uuid4()
+
+    first = await create_notification_if_not_exists(
+        db,
+        test_tenant.id,
+        test_user.id,
+        NotificationCreate(
+            type="deadline_overdue",
+            title="Taak te laat: A",
+            message="Deadline was 15-05-2026",
+            case_id=case.id,
+            task_id=task_a,
+        ),
+        dedup_hours=24 * 30,
+    )
+    second = await create_notification_if_not_exists(
+        db,
+        test_tenant.id,
+        test_user.id,
+        NotificationCreate(
+            type="deadline_overdue",
+            title="Taak te laat: B",
+            message="Deadline was 16-05-2026",
+            case_id=case.id,
+            task_id=task_b,
+        ),
+        dedup_hours=24 * 30,
+    )
+    # Same task again — must dedup
+    duplicate = await create_notification_if_not_exists(
+        db,
+        test_tenant.id,
+        test_user.id,
+        NotificationCreate(
+            type="deadline_overdue",
+            title="Taak te laat: A",
+            message="Deadline was 15-05-2026",
+            case_id=case.id,
+            task_id=task_a,
+        ),
+        dedup_hours=24 * 30,
+    )
+    await db.flush()
+
+    assert first is not None
+    assert second is not None
+    assert duplicate is None
+    count = await _count(db, test_tenant.id, "deadline_overdue")
+    assert count == 2
 
 
 @pytest.mark.asyncio

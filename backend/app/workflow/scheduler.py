@@ -518,6 +518,10 @@ async def daily_deadline_notifications() -> None:
                     target_user = task.assigned_to_id or (users[0].id if users else None)
                     if not target_user:
                         continue
+                    # Dedup per (user, case, task) — and use a long window so
+                    # an unresolved overdue task doesn't spawn a fresh notification
+                    # every day. Once the task is closed it disappears from the
+                    # overdue list, so the long window has no negative effect.
                     created = await create_notification_if_not_exists(
                         session, tenant.id, target_user,
                         NotificationCreate(
@@ -525,7 +529,9 @@ async def daily_deadline_notifications() -> None:
                             title=f"Taak te laat: {task.title}",
                             message=f"Deadline was {task.due_date.strftime('%d-%m-%Y')}",
                             case_id=task.case_id,
+                            task_id=task.id,
                         ),
+                        dedup_hours=24 * 30,
                     )
                     if created:
                         total_created += 1

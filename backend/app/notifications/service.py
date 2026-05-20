@@ -46,20 +46,24 @@ async def create_notification_if_not_exists(
 ) -> Notification | None:
     """Create a notification only if a similar one doesn't already exist within dedup_hours.
 
-    Deduplicates on (tenant_id, user_id, type, case_id) within the time window.
+    Deduplicates on (tenant_id, user_id, type, case_id) — and on task_id when set,
+    so different tasks on the same case don't collapse into one notification.
     Returns the notification if created, None if deduplicated.
     """
     cutoff = datetime.now(UTC) - timedelta(hours=dedup_hours)
-    stmt = select(Notification).where(
-        and_(
-            Notification.tenant_id == tenant_id,
-            Notification.user_id == user_id,
-            Notification.type == data.type,
-            (Notification.case_id == data.case_id) if data.case_id
-            else Notification.case_id.is_(None),
-            Notification.created_at >= cutoff,
-        )
-    ).limit(1)
+    where_clauses = [
+        Notification.tenant_id == tenant_id,
+        Notification.user_id == user_id,
+        Notification.type == data.type,
+        Notification.created_at >= cutoff,
+    ]
+    if data.case_id:
+        where_clauses.append(Notification.case_id == data.case_id)
+    else:
+        where_clauses.append(Notification.case_id.is_(None))
+    if data.task_id:
+        where_clauses.append(Notification.task_id == data.task_id)
+    stmt = select(Notification).where(and_(*where_clauses)).limit(1)
     result = await db.execute(stmt)
     existing = result.scalar_one_or_none()
     if existing:

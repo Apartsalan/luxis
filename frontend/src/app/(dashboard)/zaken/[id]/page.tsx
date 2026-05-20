@@ -546,7 +546,7 @@ export default function ZaakDetailPage() {
             )}
             {activeTab === "taken" && (
               <ErrorBoundary key="taken" fallback={<TabErrorFallback tabName="Taken" />}>
-                <TijdregistratieTab caseId={id} onOpenDraft={openDraftDialog} />
+                <TijdregistratieTab caseId={id} />
               </ErrorBoundary>
             )}
             {activeTab === "uren" && (

@@ -321,4 +321,23 @@ async def generate_unified_draft(
         model,
         "yes" if body_html else "no",
     )
+
+    # Notify tenant users that the AI draft is ready (CaseActionFeed S146)
+    try:
+        from app.notifications.service import create_draft_ready_notification
+
+        preview = (strip_html(body) if body else "").strip()
+        await create_draft_ready_notification(
+            db,
+            tenant_id,
+            case.id,
+            case.case_number,
+            intent.value,
+            preview,
+        )
+    except Exception:
+        logger.exception(
+            "Notification voor ai_draft_ready mislukt — draft is wel opgeslagen"
+        )
+
     return draft

@@ -627,6 +627,33 @@ async def sync_emails_for_account(
         if msg.has_attachments and msg.attachments:
             new_emails_with_attachments.append((msg, synced.id))
 
+        # Notify tenant users when an inbound email lands on a case
+        # (skip bounces and outbound mails — those aren't actionable)
+        if case_id and direction == "inbound" and not is_bounce:
+            try:
+                from app.cases.models import Case as _Case
+                from app.notifications.service import (
+                    create_email_received_notification,
+                )
+
+                case_row = await db.execute(
+                    select(_Case.case_number).where(_Case.id == case_id)
+                )
+                case_number_val = case_row.scalar_one_or_none()
+                from_label = msg.from_name or msg.from_email or "(onbekend)"
+                await create_email_received_notification(
+                    db,
+                    account.tenant_id,
+                    case_id,
+                    case_number_val,
+                    from_label,
+                    msg.subject or "",
+                )
+            except Exception:
+                logger.exception(
+                    "Notification voor email_received mislukt — sync gaat door"
+                )
+
     # Update last sync timestamp
     account.last_sync_at = datetime.now(UTC)
     await db.flush()

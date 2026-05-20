@@ -7,6 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.notifications.models import Notification
 from app.notifications.schemas import NotificationCreate
 
+# Notification type constants — keep in sync with frontend CaseActionFeed
+NOTIF_EMAIL_RECEIVED = "email_received"
+NOTIF_AI_DRAFT_READY = "ai_draft_ready"
+NOTIF_CLASSIFICATION_DONE = "classification_done"
+NOTIF_DEADLINE_OVERDUE = "deadline_overdue"
+
 
 async def create_notification(
     db: AsyncSession,
@@ -135,6 +141,143 @@ async def mark_all_read(
     result = await db.execute(stmt)
     await db.flush()
     return result.rowcount
+
+
+async def _notify_all_tenant_users(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    data: NotificationCreate,
+    *,
+    dedup_minutes: int = 60,
+) -> int:
+    """Create the same notification for every active user in the tenant, deduped per user.
+
+    Returns the number of new notifications actually created.
+    """
+    from app.auth.models import User
+
+    users_result = await db.execute(
+        select(User.id).where(User.tenant_id == tenant_id, User.is_active.is_(True))
+    )
+    user_ids = [row[0] for row in users_result.all()]
+    if not user_ids:
+        return 0
+
+    cutoff = datetime.now(UTC) - timedelta(minutes=dedup_minutes)
+    created = 0
+    for user_id in user_ids:
+        stmt = select(Notification.id).where(
+            and_(
+                Notification.tenant_id == tenant_id,
+                Notification.user_id == user_id,
+                Notification.type == data.type,
+                (Notification.case_id == data.case_id) if data.case_id
+                else Notification.case_id.is_(None),
+                Notification.created_at >= cutoff,
+                # Dedup on title too so different drafts/emails don't collide
+                Notification.title == data.title,
+            )
+        ).limit(1)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing:
+            continue
+        await create_notification(db, tenant_id, user_id, data)
+        created += 1
+    return created
+
+
+async def create_email_received_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    case_number: str | None,
+    from_label: str,
+    subject: str,
+) -> int:
+    """Notify all tenant users that a new inbound email was linked to a case.
+
+    Deduped per (user, case, subject) within 60 minutes — protects against
+    duplicate sync runs creating duplicate notifications for the same message.
+    """
+    subject_clean = (subject or "(geen onderwerp)").strip()[:120]
+    title = f"Nieuwe email: {subject_clean}"
+    message = f"Van: {from_label}"
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_EMAIL_RECEIVED,
+            title=title,
+            message=message,
+            case_id=case_id,
+            case_number=case_number,
+        ),
+        dedup_minutes=60,
+    )
+
+
+async def create_draft_ready_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    case_number: str | None,
+    intent: str,
+    preview: str,
+) -> int:
+    """Notify all tenant users that an AI draft is ready for review.
+
+    Deduped per (user, case, intent) within 5 minutes — protects against
+    accidental double-generation.
+    """
+    intent_label = {
+        "next_step": "volgende stap",
+        "reply_to_email": "antwoord op email",
+        "free_compose": "vrij bericht",
+    }.get(intent, intent)
+    title = f"AI-concept klaar — {intent_label}"
+    preview_clean = (preview or "").strip().replace("\n", " ")[:200]
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_AI_DRAFT_READY,
+            title=title,
+            message=preview_clean,
+            case_id=case_id,
+            case_number=case_number,
+        ),
+        dedup_minutes=5,
+    )
+
+
+async def create_classification_done_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    case_number: str | None,
+    category: str,
+    sentiment: str | None,
+    from_label: str,
+) -> int:
+    """Notify all tenant users that an inbound email was classified by AI.
+
+    Deduped per (user, case, category) within 10 minutes.
+    """
+    tone_label = sentiment or "neutraal"
+    title = f"Antwoord geclassificeerd — toon: {tone_label}"
+    message = f"Van: {from_label} • Categorie: {category}"
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_CLASSIFICATION_DONE,
+            title=title,
+            message=message,
+            case_id=case_id,
+            case_number=case_number,
+        ),
+        dedup_minutes=10,
+    )
 
 
 async def cleanup_old_notifications(

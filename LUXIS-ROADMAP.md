@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 14 mei 2026 (sessie 141 — onderzoek demo-feedback + S142/S143/S144 quick wins live)
+**Laatst bijgewerkt:** 1 juni 2026 (sessie 148 — volledige systeem-audit, read-only, 111 bevindingen → fix-backlog hieronder)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -45,6 +45,55 @@
 4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies
 5. Frontend E2E + polish (settings + docs E2E ✅, a11y + performance TODO) — deels compleet
 6. Final hardening (API docs ✅, runbook ✅, disaster recovery ✅) — COMPLEET ✅
+
+---
+
+## 🔴 SYSTEEM-AUDIT 2026-06-01 — Fix-backlog (PRIORITEIT)
+
+**Methode:** read-only audit (API+DB+code, parallel agents) + serieel visuele sweep, op lokale wegwerp-stack met Mailpit-zinkput. Elke bevinding onafhankelijk geverifieerd; high-severity adversarieel her-gecheckt. Geld onafhankelijk nagerekend tegen wettelijke ijkpunten.
+**Volledige rapporten (lokaal, gitignored — bevatten data):** `.audit/AUDIT-REPORT.md` (techniek) + `.audit/UI-FINDINGS.md` (visueel) + `.audit/PASS1-FINDINGS.md` (geld-orakel).
+**Telling:** 3 blocker · 25 high · 48 medium · 31 low · 4 polish (111 na dedup).
+**Positief referentiepunt:** rekenkern (rente/WIK/art. 6:44/nakosten) onafhankelijk nagerekend = **correct**. UI consistent professioneel, geen render-crashes.
+**Werkwijze fixen:** op volgorde, blockers eerst, elk rood→groen geverifieerd. NIET alles in één sessie.
+
+### BLOCKERS (eerst)
+| ID | Bevinding | Module | Aanpak |
+|----|-----------|--------|--------|
+| AUDIT-B1 | Placeholder `SECRET_KEY` = auth-bypass (admin-token namaakbaar) + RLS feitelijk uit | Auth/security | **Verifieer eerst productie-`.env` op VPS** (eigen sterke key?); guard ook in non-prod laten falen; RLS als `luxis_app` + FORCE herstellen |
+| AUDIT-B2 | `/api/reports/kpis` crasht (500) — `.days` op `Decimal` | Rapportages | `int(round(float(avg_interval)))`; test met ≥1 gesloten zaak (lokaal fixbaar) |
+| AUDIT-B3 | Bankimport-betaling negeert dossier-instellingen → verkeerde rente/BIK/BTW | Betalingen | Case+client laden, zelfde kwargs als router; centrale helper (deelt root met AUDIT-H20) |
+
+### HIGH (25)
+| ID | Bevinding | Module |
+|----|-----------|--------|
+| AUDIT-H1 | Status 'betaald' zonder financiële guard (F-1) | Dossiers/Rekenkern/Pipeline |
+| AUDIT-H2 | RLS no-op — tenant-isolatie leunt 100% op app-filters | Auth/security |
+| AUDIT-H3 | XFF-spoofing omzeilt login rate-limit; `/refresh` ongelimiteerd | Auth/security |
+| AUDIT-H4 | Openstaand op dashboard/reports sluit rente+BIK uit (onderschat) | Rapportages |
+| AUDIT-H5 | Griffierecht-staffel volledig verouderd (alle tarieven fout) | Rekenkern |
+| AUDIT-H6 | 14-dagenbrief: twee tegenstrijdige betaalinstructies (WIK B2C) | Documenten |
+| AUDIT-H7 | Betaalbrieven tonen leeg kantoor-IBAN/adres/telefoon | Documenten/Instellingen |
+| AUDIT-H8 | Managed-template preview crasht (ImportError → 500) | Documenten |
+| AUDIT-H9 | `email_logs`-tabel ontbreekt → verzonden mails onzichtbaar (500) | Correspondentie |
+| AUDIT-H10 | Verweer-switch schrijft naar niet-bestaand attribuut (teller reset niet) | Pipeline |
+| AUDIT-H11 | Pipeline negeert `case.status` (terminale stappen zetten status niet) | Pipeline |
+| AUDIT-H12 | Payment-/debtor_response-automation-rules nergens geëvalueerd | Pipeline |
+| AUDIT-H13 | Batch 'document genereren' werkt nooit op actieve stappen (template_type leeg) | Pipeline |
+| AUDIT-H14 | Vier-ogenprincipe staat standaard UIT — alle uitbetalingen self-approved | Derdengelden |
+| AUDIT-H15 | Correctie/storno-mechanisme (`reversed_by_id`) bestaat niet | Derdengelden |
+| AUDIT-H16 | Bank-match dubbel-boekt + geen terugdraai na uitvoering | Derdengelden/Betalingen |
+| AUDIT-H17 | Geen duplicaat-detectie op bankimport (dubbele betalingen) | Betalingen |
+| AUDIT-H18 | Geen atomaire verwerking: overbetaling laat wees-storting achter | Betalingen |
+| AUDIT-H19 | Wezen-/ongematchte transacties niet zichtbaar/koppelbaar in UI | Betalingen |
+| AUDIT-H20 | AI-tool registreert betaling óók zonder dossier-instellingen | Betalingen |
+| AUDIT-H21 | Soft-delete guard negeert open facturen/derdengelden → wees-tegenpartij | Relaties |
+| AUDIT-H22 | Taakstatus batch-gematerialiseerd — 324 taken tonen niet als 'overdue' | Taken/Agenda |
+| AUDIT-H23 | Reports-KPI 'overdue_tasks' hangt aan stale status-veld | Taken |
+| AUDIT-H24 | Open taken blijven hangen op gearchiveerde dossiers | Taken |
+| AUDIT-H25 | `modules_enabled` niet server-side afgedwongen (per-module pricing) | Instellingen |
+
+### MEDIUM (48) · LOW (31) · POLISH (4)
+Volledige lijst met symptoom→oorzaak→bewijs→advies staat in `.audit/AUDIT-REPORT.md` (lokaal). Hoofdthema's: BTW-/credit-nota-/Exact-randgevallen (grotendeels latent, 0 live-data), agenda timezone/all-day, factuur-totaal-integriteit, dode/ongebruikte code, UX-polish. Visuele-laag extra's (tabel-overflow, stille KPI-degradatie, omgekeerd BTW-label) in `.audit/UI-FINDINGS.md`.
 
 ---
 

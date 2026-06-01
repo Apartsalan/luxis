@@ -1,3 +1,8 @@
+# Audit workspace — contains DB snapshots + screenshots with REAL client data. NEVER commit.
+.audit/
+# Playwright MCP scratch (snapshots/console logs may contain real data)
+.playwright-mcp/
+
 # Python
 __pycache__/
 *.py[cod]

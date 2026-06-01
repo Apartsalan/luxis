@@ -8,6 +8,16 @@ services:
     ports:
       - "6379:6379"
 
+  # Mailpit — local SMTP sink. Captures ALL outbound mail in its web UI
+  # (http://localhost:8025) and NEVER forwards externally. Safety net for
+  # send-path testing: real recipients can never be reached locally.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web UI
+      - "1025:1025"   # SMTP
+    restart: unless-stopped
+
   backend:
     ports:
       - "8000:8000"
@@ -17,6 +27,12 @@ services:
       - ./backend/tests:/app/tests
       - ./templates:/app/templates
       - ./scripts:/app/scripts
+    environment:
+      # Route all SMTP into Mailpit (local sink — mail never leaves the machine)
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: audit@luxis.local
+      SMTP_USE_TLS: "false"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:

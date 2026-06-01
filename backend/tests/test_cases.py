@@ -548,8 +548,6 @@ async def test_delete_case_skips_open_tasks(
 ):
     """Soft-deleting (archiving) a case must mark its open tasks 'skipped' so
     they stop surfacing as overdue/upcoming (AUDIT-H24)."""
-    from sqlalchemy import select
-
     from app.workflow.models import WorkflowTask
 
     resp = await client.post(

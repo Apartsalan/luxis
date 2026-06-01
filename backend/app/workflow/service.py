@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
@@ -601,6 +601,31 @@ async def delete_task(
     task = await get_task(db, tenant_id, task_id)
     task.is_active = False
     await db.flush()
+
+
+async def skip_open_tasks_for_case(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> int:
+    """Mark a case's still-open tasks as 'skipped'.
+
+    Called when a case is archived (soft-deleted) so its open tasks stop
+    surfacing as overdue/upcoming and on the agenda (AUDIT-H24). Returns the
+    number of tasks that were skipped.
+    """
+    result = await db.execute(
+        update(WorkflowTask)
+        .where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.case_id == case_id,
+            WorkflowTask.is_active.is_(True),
+            WorkflowTask.status.notin_(["completed", "skipped"]),
+        )
+        .values(status="skipped")
+    )
+    await db.flush()
+    return result.rowcount
 
 
 # ── G9: Recurring task helper ────────────────────────────────────────────────

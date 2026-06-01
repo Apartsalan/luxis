@@ -619,8 +619,13 @@ async def delete_case(
     case_id: uuid.UUID,
 ) -> None:
     """Soft-delete a case by setting is_active=False."""
+    from app.workflow.service import skip_open_tasks_for_case
+
     case = await get_case(db, tenant_id, case_id)
     case.is_active = False
+    # Close out the case's open tasks so they stop surfacing as overdue /
+    # upcoming / on the agenda once the case is archived (AUDIT-H24).
+    await skip_open_tasks_for_case(db, tenant_id, case_id)
     await db.flush()
 
 

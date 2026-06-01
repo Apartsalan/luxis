@@ -1,7 +1,7 @@
 """Tests for the cases module — case CRUD, status workflow, parties, activities."""
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from httpx import AsyncClient
@@ -533,3 +533,66 @@ async def test_terminal_status_blocks_further_transitions(
         headers=auth_headers,
     )
     assert response.status_code == 409
+
+
+# ── AUDIT-H24: archiving a case closes its open tasks ────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_delete_case_skips_open_tasks(
+    client: AsyncClient,
+    auth_headers: dict,
+    db,
+    test_tenant,
+    test_company: Contact,
+):
+    """Soft-deleting (archiving) a case must mark its open tasks 'skipped' so
+    they stop surfacing as overdue/upcoming (AUDIT-H24)."""
+    from sqlalchemy import select
+
+    from app.workflow.models import WorkflowTask
+
+    resp = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": date.today().isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    case_id = resp.json()["id"]
+
+    open_task = WorkflowTask(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_id=uuid.UUID(case_id),
+        task_type="manual_review",
+        title="Open taak",
+        due_date=date.today() - timedelta(days=2),  # overdue if left open
+        status="pending",
+    )
+    done_task = WorkflowTask(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_id=uuid.UUID(case_id),
+        task_type="manual_review",
+        title="Afgeronde taak",
+        due_date=date.today(),
+        status="completed",
+    )
+    db.add_all([open_task, done_task])
+    await db.commit()
+
+    d = await client.delete(f"/api/cases/{case_id}", headers=auth_headers)
+    assert d.status_code == 204
+
+    await db.refresh(open_task)
+    await db.refresh(done_task)
+    assert open_task.status == "skipped"  # open task closed out
+    assert done_task.status == "completed"  # finished task left untouched
+
+    # Reflected in the overdue KPI: archived-case tasks no longer counted
+    kpi = await client.get("/api/reports/kpis", headers=auth_headers)
+    assert kpi.json()["overdue_tasks"] == 0

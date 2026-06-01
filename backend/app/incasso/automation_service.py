@@ -776,9 +776,12 @@ async def trigger_defense_response_for_email(
         return None
 
     if is_hoofdpad:
-        # Switch case naar verweer (alleen vanuit hoofdpad)
+        # Switch case naar verweer (alleen vanuit hoofdpad).
+        # NB: model-veld is `step_entered_at`; `incasso_step_entered_at` bestaat
+        # alleen als Pydantic-veld en schreef stilletjes niets naar de DB → de
+        # "dagen in stap"-teller resette niet (AUDIT-H10).
         case.incasso_step_id = verweer_step.id
-        case.incasso_step_entered_at = datetime.now(UTC)
+        case.step_entered_at = datetime.now(UTC)
         await db.flush()
     else:
         logger.info(

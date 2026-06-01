@@ -1178,3 +1178,24 @@ class TestQueueCounts:
         assert resp.status_code == 200
         data = resp.json()
         assert data["action_required"] >= 1
+
+
+# ── AUDIT-H10: verweer-switch must update the persisted step_entered_at ──────
+
+
+def test_step_entered_at_is_the_real_column_not_a_phantom():
+    """The verweer-switch wrote to `incasso_step_entered_at`, which is NOT a
+    mapped column on Case (only a Pydantic schema field), so the write was a
+    silent no-op and the "days in step" counter never reset. The real, persisted
+    column is `step_entered_at`. This locks in which name actually hits the DB.
+    """
+    from sqlalchemy import inspect
+
+    from app.cases.models import Case
+
+    column_keys = {attr.key for attr in inspect(Case).column_attrs}
+    assert "step_entered_at" in column_keys
+    assert "incasso_step_entered_at" not in column_keys, (
+        "incasso_step_entered_at is not a DB column — writing to it persists "
+        "nothing (AUDIT-H10). Use step_entered_at."
+    )

@@ -507,3 +507,133 @@ async def test_tenant_isolation_conflict_check(
     )
     assert response.status_code == 200
     assert response.json()["results_found"] == 0
+
+
+# ── AUDIT-H21: delete blocked by open invoices / trust balance ───────────────
+
+
+@pytest.mark.asyncio
+async def test_delete_contact_blocked_by_open_invoice(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """A contact with a non-terminal invoice may not be soft-deleted (AUDIT-H21)."""
+    from datetime import date
+
+    from app.invoices.models import Invoice
+
+    contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="company",
+        name="Factuur BV",
+    )
+    db.add(contact)
+    await db.flush()
+    db.add(
+        Invoice(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            invoice_number="2026-INV-9001",
+            contact_id=contact.id,
+            invoice_date=date.today(),
+            due_date=date.today(),
+            status="sent",  # open
+        )
+    )
+    await db.commit()
+
+    resp = await client.delete(f"/api/relations/{contact.id}", headers=auth_headers)
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_delete_contact_blocked_by_trust_balance(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user,
+    test_company: Contact,
+):
+    """A contact with a positive trust balance may not be soft-deleted (AUDIT-H21)."""
+    from datetime import date
+    from decimal import Decimal
+
+    from app.cases.models import Case
+    from app.trust_funds.models import TrustTransaction
+
+    contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="person",
+        name="Derden Jansen",
+    )
+    db.add(contact)
+    await db.flush()
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-08030",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today(),
+        total_principal=Decimal("0.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    await db.flush()
+    db.add(
+        TrustTransaction(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            contact_id=contact.id,
+            transaction_type="deposit",
+            amount=Decimal("500.00"),
+            transaction_date=date.today(),
+            description="Storting",
+            status="approved",
+            created_by=test_user.id,
+        )
+    )
+    await db.commit()
+
+    resp = await client.delete(f"/api/relations/{contact.id}", headers=auth_headers)
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_delete_contact_allowed_with_paid_invoice(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """A paid (terminal) invoice must NOT block deletion (AUDIT-H21 happy path)."""
+    from datetime import date
+
+    from app.invoices.models import Invoice
+
+    contact = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="company",
+        name="Betaald BV",
+    )
+    db.add(contact)
+    await db.flush()
+    db.add(
+        Invoice(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            invoice_number="2026-INV-9002",
+            contact_id=contact.id,
+            invoice_date=date.today(),
+            due_date=date.today(),
+            status="paid",
+        )
+    )
+    await db.commit()
+
+    resp = await client.delete(f"/api/relations/{contact.id}", headers=auth_headers)
+    assert resp.status_code == 204

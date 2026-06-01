@@ -190,6 +190,58 @@ async def delete_contact(
             f"Sluit eerst het dossier of vervang de partij voordat je de relatie verwijdert."
         )
 
+    # AUDIT-H21: ook open facturen en derdengeldensaldo blokkeren de delete,
+    # anders blijft de factuur-/trust-tegenpartij verweesd achter (de FK blijft
+    # wijzen naar een onzichtbare, soft-deleted relatie).
+    from decimal import Decimal
+
+    from app.invoices.models import Invoice
+    from app.trust_funds.models import TrustTransaction
+
+    open_invoice_count = await db.scalar(
+        select(func.count())
+        .select_from(Invoice)
+        .where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.contact_id == contact_id,
+            Invoice.is_active.is_(True),
+            Invoice.status.notin_(["paid", "cancelled"]),
+        )
+    )
+    if open_invoice_count and open_invoice_count > 0:
+        factuur_woord = "factuur" if open_invoice_count == 1 else "facturen"
+        raise ConflictError(
+            f"Deze relatie heeft nog {open_invoice_count} openstaande {factuur_woord}. "
+            f"Verwerk of annuleer deze eerst voordat je de relatie verwijdert."
+        )
+
+    # Derdengeldensaldo per relatie: goedgekeurde stortingen − goedgekeurde
+    # opnames/verrekeningen (niet-gestorneerd). Niet-nul saldo blokkeert delete.
+    deposits = await db.scalar(
+        select(func.coalesce(func.sum(TrustTransaction.amount), Decimal("0.00"))).where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.contact_id == contact_id,
+            TrustTransaction.transaction_type == "deposit",
+            TrustTransaction.status == "approved",
+            TrustTransaction.reversed_by_id.is_(None),
+        )
+    )
+    debits = await db.scalar(
+        select(func.coalesce(func.sum(TrustTransaction.amount), Decimal("0.00"))).where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.contact_id == contact_id,
+            TrustTransaction.transaction_type.in_(["disbursement", "offset_to_invoice"]),
+            TrustTransaction.status == "approved",
+            TrustTransaction.reversed_by_id.is_(None),
+        )
+    )
+    trust_balance = (deposits or Decimal("0.00")) - (debits or Decimal("0.00"))
+    if trust_balance != Decimal("0.00"):
+        raise ConflictError(
+            f"Deze relatie heeft nog een derdengeldensaldo van € {trust_balance}. "
+            f"Boek dit eerst af voordat je de relatie verwijdert."
+        )
+
     contact = await get_contact(db, tenant_id, contact_id)
     contact.is_active = False
     await db.flush()

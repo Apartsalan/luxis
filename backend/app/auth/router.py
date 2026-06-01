@@ -97,10 +97,19 @@ async def register(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    """Exchange a refresh token for new access + refresh tokens (with rotation)."""
+@limiter.limit("20/minute")
+async def refresh(
+    request: Request,
+    refresh_data: RefreshRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Exchange a refresh token for new access + refresh tokens (with rotation).
+
+    Rate-limited (AUDIT-H3): an unlimited /refresh let an attacker brute-force
+    refresh tokens without ever hitting the login limiter.
+    """
     try:
-        payload = decode_token(request.refresh_token)
+        payload = decode_token(refresh_data.refresh_token)
         if payload.get("type") != "refresh":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -115,7 +124,7 @@ async def refresh(request: RefreshRequest, db: AsyncSession = Depends(get_db)):
 
     # Rotate: consume old token, detect reuse
     try:
-        rt = await rotate_refresh_token(db, request.refresh_token)
+        rt = await rotate_refresh_token(db, refresh_data.refresh_token)
     except ValueError:
         # Token reuse detected — all tokens revoked
         await db.commit()

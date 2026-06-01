@@ -136,8 +136,8 @@ async def preview_template(
     from docxtpl import DocxTemplate
 
     from app.documents.docx_service import (
-        _build_base_context,
         _build_renteoverzicht_context,
+        build_base_context,
     )
 
     tpl = await template_service.get_managed_template(db, user.tenant_id, template_id)
@@ -157,7 +157,7 @@ async def preview_template(
     if tpl.template_key == "renteoverzicht":
         context = await _build_renteoverzicht_context(db, user.tenant_id, case)
     else:
-        context = await _build_base_context(db, user.tenant_id, case)
+        context = await build_base_context(db, user.tenant_id, case)
 
     render_context = {k: v for k, v in context.items() if not k.startswith("_")}
 

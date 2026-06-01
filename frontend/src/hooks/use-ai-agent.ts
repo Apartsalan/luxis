@@ -206,31 +206,6 @@ export function useApproveAndExecuteClassification() {
   });
 }
 
-// ── Smart Replies (AUDIT-25) ────────────────────────────────────────────────
-
-export interface SmartReply {
-  tone: "mild" | "zakelijk" | "streng";
-  subject: string;
-  body: string;
-}
-
-/**
- * Generate smart reply suggestions for a classification.
- */
-export function useSmartReplies(classificationId: string | undefined) {
-  return useQuery<SmartReply[]>({
-    queryKey: ["smart-replies", classificationId],
-    queryFn: async () => {
-      const res = await api(
-        `/api/ai-agent/classifications/${classificationId}/smart-replies`
-      );
-      if (!res.ok) throw new Error("Kon suggesties niet ophalen");
-      return res.json();
-    },
-    enabled: false, // Only fetch when explicitly triggered
-  });
-}
-
 /**
  * Manually trigger classification for a specific email.
  */

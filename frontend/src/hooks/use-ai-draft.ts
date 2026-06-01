@@ -10,9 +10,10 @@ export interface DraftSource {
 
 /**
  * AI draft response — matches backend AIDraftResponse schema.
- * Returned by both legacy /api/ai-agent/draft/{case_id} and new
- * /api/ai/draft endpoints; consumers should prefer body_html (branded
- * wrap) when present and fall back to body (plain text).
+ * Returned by the /api/ai/draft endpoint (UnifiedDraftService); consumers
+ * should prefer body_html (branded wrap) when present and fall back to body
+ * (plain text). The legacy /api/ai-agent/draft/{case_id} endpoint is
+ * deprecated (CLEAN-AI-01, S147) and slated for removal in S148.
  */
 export interface AiDraft {
   id?: string;

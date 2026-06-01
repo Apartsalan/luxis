@@ -1,15 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   Bot,
   CalendarClock,
   Check,
   ChevronDown,
   ChevronUp,
-  Copy,
   Loader2,
-  MessageSquareReply,
   Play,
   X,
 } from "lucide-react";
@@ -20,9 +18,7 @@ import {
   useRejectClassification,
   useExecuteClassification,
   useClassifyEmail,
-  useSmartReplies,
   type Classification,
-  type SmartReply,
 } from "@/hooks/use-ai-agent";
 
 // ── Status badge ─────────────────────────────────────────────────────────────
@@ -109,95 +105,13 @@ function SentimentBadge({ sentiment }: { sentiment: string }) {
   );
 }
 
-// ── Tone labels ─────────────────────────────────────────────────────────────
-
-const TONE_CONFIG: Record<string, { label: string; emoji: string; className: string }> = {
-  mild: {
-    label: "Mild",
-    emoji: "🤝",
-    className: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950",
-  },
-  zakelijk: {
-    label: "Zakelijk",
-    emoji: "📋",
-    className: "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950",
-  },
-  streng: {
-    label: "Streng",
-    emoji: "⚖️",
-    className: "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950",
-  },
-};
-
-// ── Smart Reply Card ────────────────────────────────────────────────────────
-
-function SmartReplyCard({ reply }: { reply: SmartReply }) {
-  const [expanded, setExpanded] = useState(false);
-  const config = TONE_CONFIG[reply.tone] ?? {
-    label: reply.tone,
-    emoji: "💬",
-    className: "border-border bg-muted/30",
-  };
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(
-      `Onderwerp: ${reply.subject}\n\n${reply.body}`
-    );
-    toast.success("Gekopieerd naar klembord");
-  }, [reply]);
-
-  return (
-    <div
-      className={`rounded-md border p-2.5 ${config.className}`}
-    >
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1.5 text-xs font-medium text-foreground"
-        >
-          <span>{config.emoji}</span>
-          <span>{config.label}</span>
-          {expanded ? (
-            <ChevronUp className="h-3 w-3 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-3 w-3 text-muted-foreground" />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-          aria-label="Kopieer antwoord"
-        >
-          <Copy className="h-3 w-3" />
-          Kopieer
-        </button>
-      </div>
-
-      {expanded && (
-        <div className="mt-2 space-y-1.5">
-          <p className="text-[11px] font-medium text-foreground">
-            {reply.subject}
-          </p>
-          <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-muted-foreground">
-            {reply.body}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Main card ────────────────────────────────────────────────────────────────
 
 function ClassificationCardInner({ c }: { c: Classification }) {
   const [expanded, setExpanded] = useState(false);
-  const [showReplies, setShowReplies] = useState(false);
   const approve = useApproveClassification();
   const reject = useRejectClassification();
   const execute = useExecuteClassification();
-  const smartReplies = useSmartReplies(c.id);
 
   const handleApprove = async () => {
     try {
@@ -225,11 +139,6 @@ function ClassificationCardInner({ c }: { c: Classification }) {
       toast.error(err instanceof Error ? err.message : "Uitvoeren mislukt");
     }
   };
-
-  const handleSmartReplies = useCallback(() => {
-    setShowReplies(true);
-    smartReplies.refetch();
-  }, [smartReplies]);
 
   const isPending = c.status === "pending";
   const isApproved = c.status === "approved";
@@ -384,58 +293,6 @@ function ClassificationCardInner({ c }: { c: Classification }) {
               )}
               Uitvoeren
             </button>
-          )}
-
-          {/* Smart replies button (AUDIT-25) */}
-          <button
-            type="button"
-            onClick={handleSmartReplies}
-            disabled={smartReplies.isFetching}
-            className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
-          >
-            {smartReplies.isFetching ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <MessageSquareReply className="h-3 w-3" />
-            )}
-            Concept-antwoord
-          </button>
-        </div>
-      )}
-
-      {/* Smart replies panel (AUDIT-25) */}
-      {showReplies && (
-        <div className="mt-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Concept-antwoorden
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowReplies(false)}
-              className="text-[10px] text-muted-foreground hover:text-foreground"
-            >
-              Verberg
-            </button>
-          </div>
-
-          {smartReplies.isFetching && (
-            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/20 p-3" role="status" aria-label="Antwoorden genereren">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <span className="text-xs text-muted-foreground">
-                AI genereert 3 concept-antwoorden...
-              </span>
-            </div>
-          )}
-
-          {smartReplies.data?.map((reply) => (
-            <SmartReplyCard key={reply.tone} reply={reply} />
-          ))}
-
-          {smartReplies.isError && (
-            <p className="text-xs text-red-600">
-              Kon geen suggesties genereren. Probeer opnieuw.
-            </p>
           )}
         </div>
       )}

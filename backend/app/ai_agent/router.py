@@ -3,7 +3,6 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.models import ACTION_LABELS, CATEGORY_LABELS
@@ -375,11 +374,7 @@ async def seed_templates(
     return {"created": created}
 
 
-# ── AI-UX-09/13/14: Draft generation ────────────────────────────────────────
-
-
-class DraftRequest(BaseModel):
-    instruction: str | None = None
+# ── AI-UX-09/13/14: Draft read endpoints ────────────────────────────────────
 
 
 def _draft_to_response(d) -> AIDraftResponse:
@@ -406,37 +401,10 @@ def _draft_to_response(d) -> AIDraftResponse:
     )
 
 
-@router.post("/draft/{case_id}", deprecated=True)
-async def generate_draft_email(
-    case_id: uuid.UUID,
-    data: DraftRequest | None = None,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """DEPRECATED (CLEAN-AI-01, S147) — use POST /api/ai/draft (UnifiedDraftService).
-
-    No frontend caller remains; the unified endpoint routes every draft flow
-    (next_step / reply_to_email / free_compose) through the same branded render
-    path. Scheduled for removal in S148. Kept temporarily to avoid breaking any
-    external/integration caller during the deprecation window.
-
-    Generate an AI draft email and persist it.
-    """
-    from app.ai_agent.draft_service import generate_and_persist_draft
-
-    try:
-        draft = await generate_and_persist_draft(
-            db,
-            current_user.tenant_id,
-            case_id,
-            instruction=data.instruction if data else None,
-        )
-        await db.commit()
-        return _draft_to_response(draft)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Concept genereren mislukt: {e}")
+# CLEAN-AI-01 (S148): POST /draft/{case_id} verwijderd — vervangen door
+# POST /api/ai/draft (UnifiedDraftService). De automatische draft-generatie loopt
+# via generate_and_persist_draft (ai_agent/orchestrator.py) die AIDraft persisteert
+# en de ai_draft_ready notificatie voor de CaseActionFeed afvuurt.
 
 
 @router.get("/drafts/case/{case_id}", response_model=list[AIDraftResponse])
@@ -489,35 +457,6 @@ async def update_draft(
     return _draft_to_response(draft)
 
 
-# ---------------------------------------------------------------------------
-# Smart replies (AUDIT-25)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/classifications/{classification_id}/smart-replies", deprecated=True)
-async def get_smart_replies(
-    classification_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """DEPRECATED (CLEAN-AI-01, S147) — smart-replies UI removed from frontend.
-
-    The CaseActionFeed ClassificationDoneCard ('Antwoord opstellen' CTA) is now
-    the single entry-point for replying to a classified email. No frontend caller
-    remains. Scheduled for removal in S148 together with smart_reply_service.
-
-    Generate 3 AI smart reply suggestions for a classified email.
-    """
-    from app.ai_agent.smart_reply_service import generate_smart_replies
-
-    try:
-        replies = await generate_smart_replies(
-            db, current_user.tenant_id, classification_id
-        )
-        return replies
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Suggesties genereren mislukt: {e}"
-        )
+# CLEAN-AI-01 (S148): GET /classifications/{id}/smart-replies + smart_reply_service
+# verwijderd. Reageren op een geclassificeerde mail loopt nu via de CaseActionFeed
+# ClassificationDoneCard ('Antwoord opstellen' CTA) → Correspondentie.

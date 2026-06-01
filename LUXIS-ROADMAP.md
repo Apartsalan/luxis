@@ -59,9 +59,9 @@
 ### BLOCKERS (eerst)
 | ID | Bevinding | Module | Aanpak |
 |----|-----------|--------|--------|
-| AUDIT-B1 | Placeholder `SECRET_KEY` = auth-bypass (admin-token namaakbaar) + RLS feitelijk uit | Auth/security | **Verifieer eerst productie-`.env` op VPS** (eigen sterke key?); guard ook in non-prod laten falen; RLS als `luxis_app` + FORCE herstellen |
-| AUDIT-B2 | `/api/reports/kpis` crasht (500) — `.days` op `Decimal` | Rapportages | `int(round(float(avg_interval)))`; test met ≥1 gesloten zaak (lokaal fixbaar) |
-| AUDIT-B3 | Bankimport-betaling negeert dossier-instellingen → verkeerde rente/BIK/BTW | Betalingen | Case+client laden, zelfde kwargs als router; centrale helper (deelt root met AUDIT-H20) |
+| AUDIT-B1 | Placeholder `SECRET_KEY` = auth-bypass (admin-token namaakbaar) + RLS feitelijk uit | Auth/security | 🟡 **Deels (2026-06-01, S149)** — guard gehardend (default-secure, `config.secret_key_status()`, unset/typo APP_ENV = enforced); prod-key bewezen sterk (live site draait met guard + APP_ENV=production). **RLS-deel (`luxis_app` role + FORCE op alle tabellen) gesplitst naar S150** (= AUDIT-H2). Commit `cfb942b` |
+| AUDIT-B2 | `/api/reports/kpis` crasht (500) — `.days` op `Decimal` | Rapportages | ✅ **Opgelost (2026-06-01, S149)** — `int(round(float(avg_interval)))` + rode→groene test met gesloten zaak. Commit `0e049fc` |
+| AUDIT-B3 | Bankimport-betaling negeert dossier-instellingen → verkeerde rente/BIK/BTW | Betalingen | ✅ **Opgelost (2026-06-01, S149)** — centrale helper `case_payment_kwargs()` + `create_payment_for_case()`; bankimport, AI-handler én router delen nu één bron. Lost AUDIT-H20 mee op. Commit `db2c767` |
 
 ### HIGH (25)
 | ID | Bevinding | Module |
@@ -85,7 +85,7 @@
 | AUDIT-H17 | Geen duplicaat-detectie op bankimport (dubbele betalingen) | Betalingen |
 | AUDIT-H18 | Geen atomaire verwerking: overbetaling laat wees-storting achter | Betalingen |
 | AUDIT-H19 | Wezen-/ongematchte transacties niet zichtbaar/koppelbaar in UI | Betalingen |
-| AUDIT-H20 | AI-tool registreert betaling óók zonder dossier-instellingen | Betalingen |
+| AUDIT-H20 | ✅ **Opgelost (S149, `db2c767`)** AI-tool registreert betaling óók zonder dossier-instellingen — via gedeelde helper (zie AUDIT-B3) | Betalingen |
 | AUDIT-H21 | Soft-delete guard negeert open facturen/derdengelden → wees-tegenpartij | Relaties |
 | AUDIT-H22 | Taakstatus batch-gematerialiseerd — 324 taken tonen niet als 'overdue' | Taken/Agenda |
 | AUDIT-H23 | Reports-KPI 'overdue_tasks' hangt aan stale status-veld | Taken |

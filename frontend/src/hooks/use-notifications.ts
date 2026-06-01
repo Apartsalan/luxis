@@ -13,6 +13,8 @@ export interface Notification {
   case_number?: string;
   task_id?: string;
   is_read: boolean;
+  /** FEAT-AI-05: ISO timestamp until which this item is hidden from "Wachtend". null = not snoozed. */
+  snoozed_until?: string | null;
   created_at: string;
 }
 

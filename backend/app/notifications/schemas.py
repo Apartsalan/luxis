@@ -15,6 +15,7 @@ class NotificationResponse(BaseModel):
     case_number: str | None = None
     task_id: uuid.UUID | None = None
     is_read: bool
+    snoozed_until: datetime | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

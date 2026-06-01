@@ -57,11 +57,18 @@ export function useCaseActionFeed({
 
   const items = useMemo(() => {
     const all = query.data ?? [];
+    const now = Date.now();
+    const isSnoozed = (n: Notification) =>
+      n.snoozed_until != null && new Date(n.snoozed_until).getTime() > now;
     const filtered = all.filter(
       (n) => n.case_id === caseId && FEED_TYPES.has(n.type),
     );
     if (filter === "wachtend") {
-      return filtered.filter((n) => !n.is_read && WAITING_TYPES.has(n.type));
+      // Hide items the user snoozed until their snooze window passes. The 30s
+      // poll picks up returning items automatically — no client-side timer needed.
+      return filtered.filter(
+        (n) => !n.is_read && WAITING_TYPES.has(n.type) && !isSnoozed(n),
+      );
     }
     if (filter === "afgehandeld") {
       return filtered.filter((n) => n.is_read);
@@ -86,6 +93,30 @@ export function useDismissFeedItem() {
         method: "PUT",
       });
       if (!res.ok) throw new Error("Kon melding niet verwijderen");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
+/** Allowed snooze durations (hours), matching the backend whitelist. */
+export const SNOOZE_OPTIONS: { label: string; hours: number }[] = [
+  { label: "24 uur", hours: 24 },
+  { label: "3 dagen", hours: 72 },
+  { label: "1 week", hours: 168 },
+];
+
+/** Snooze a feed item — hides it from "Wachtend" until the chosen window passes. */
+export function useSnoozeFeedItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, hours }: { id: string; hours: number }) => {
+      const res = await api(`/api/notifications/${id}/snooze`, {
+        method: "PUT",
+        body: JSON.stringify({ hours }),
+      });
+      if (!res.ok) throw new Error("Kon melding niet uitstellen");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });

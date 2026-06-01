@@ -28,7 +28,9 @@ from app.notifications.service import (
     create_classification_done_notification,
     create_draft_ready_notification,
     create_email_received_notification,
+    create_notification,
     create_notification_if_not_exists,
+    snooze_notification,
 )
 from app.relations.models import Contact
 
@@ -233,6 +235,88 @@ async def test_dedup_distinguishes_tasks_on_same_case(
     assert duplicate is None
     count = await _count(db, test_tenant.id, "deadline_overdue")
     assert count == 2
+
+
+async def _make_notification(db, tenant_id, user_id, case):
+    return await create_notification(
+        db,
+        tenant_id,
+        user_id,
+        NotificationCreate(
+            type="deadline_overdue",
+            title="Taak te laat",
+            message="Deadline verstreken",
+            case_id=case.id,
+            case_number=case.case_number,
+        ),
+    )
+
+
+@pytest.mark.asyncio
+async def test_snooze_sets_future_timestamp(
+    db: AsyncSession, test_user: User, test_tenant: Tenant
+):
+    """Snoozing sets snoozed_until in the future and keeps the item unread."""
+    from datetime import UTC, datetime
+
+    case = await _make_case(db, test_tenant.id, "2026-00060")
+    notif = await _make_notification(db, test_tenant.id, test_user.id, case)
+    await db.flush()
+
+    found = await snooze_notification(
+        db, test_tenant.id, test_user.id, notif.id, hours=24
+    )
+    await db.flush()
+    await db.refresh(notif)
+
+    assert found is True
+    assert notif.snoozed_until is not None
+    assert notif.snoozed_until > datetime.now(UTC)
+    assert notif.is_read is False  # snoozing never marks read
+
+
+@pytest.mark.asyncio
+async def test_snooze_zero_clears(
+    db: AsyncSession, test_user: User, test_tenant: Tenant
+):
+    """hours=0 unsnoozes — snoozed_until is reset to NULL."""
+    case = await _make_case(db, test_tenant.id, "2026-00061")
+    notif = await _make_notification(db, test_tenant.id, test_user.id, case)
+    await db.flush()
+
+    await snooze_notification(db, test_tenant.id, test_user.id, notif.id, hours=24)
+    await db.flush()
+    await snooze_notification(db, test_tenant.id, test_user.id, notif.id, hours=0)
+    await db.flush()
+    await db.refresh(notif)
+
+    assert notif.snoozed_until is None
+
+
+@pytest.mark.asyncio
+async def test_snooze_invalid_hours_raises(
+    db: AsyncSession, test_user: User, test_tenant: Tenant
+):
+    """Non-whitelisted durations are rejected."""
+    case = await _make_case(db, test_tenant.id, "2026-00062")
+    notif = await _make_notification(db, test_tenant.id, test_user.id, case)
+    await db.flush()
+
+    with pytest.raises(ValueError):
+        await snooze_notification(
+            db, test_tenant.id, test_user.id, notif.id, hours=5
+        )
+
+
+@pytest.mark.asyncio
+async def test_snooze_nonexistent_returns_false(
+    db: AsyncSession, test_user: User, test_tenant: Tenant
+):
+    """Snoozing an unknown id returns False, no error."""
+    found = await snooze_notification(
+        db, test_tenant.id, test_user.id, uuid.uuid4(), hours=72
+    )
+    assert found is False
 
 
 @pytest.mark.asyncio

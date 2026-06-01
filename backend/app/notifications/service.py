@@ -127,6 +127,43 @@ async def mark_read(
     return result.rowcount > 0
 
 
+# FEAT-AI-05: allowed snooze durations (hours). 0 = unsnooze (clear). Whitelisted
+# server-side so the client can only pick a fixed interval.
+SNOOZE_HOURS = frozenset({0, 24, 72, 168})
+
+
+async def snooze_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    notification_id: uuid.UUID,
+    hours: int,
+) -> bool:
+    """Snooze a notification for `hours` (server-computed), or unsnooze when hours==0.
+
+    Snoozing keeps the item unread (is_read=False) so it stays actionable — it is
+    only hidden from the "Wachtend" filter until snoozed_until passes. Returns True
+    if the notification was found.
+    """
+    if hours not in SNOOZE_HOURS:
+        raise ValueError(f"Ongeldige snooze-duur: {hours}")
+    snoozed_until = (
+        datetime.now(UTC) + timedelta(hours=hours) if hours > 0 else None
+    )
+    stmt = (
+        update(Notification)
+        .where(
+            Notification.id == notification_id,
+            Notification.tenant_id == tenant_id,
+            Notification.user_id == user_id,
+        )
+        .values(snoozed_until=snoozed_until, is_read=False)
+    )
+    result = await db.execute(stmt)
+    await db.flush()
+    return result.rowcount > 0
+
+
 async def mark_all_read(
     db: AsyncSession,
     tenant_id: uuid.UUID,

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
+  Clock,
   Mail,
   RefreshCw,
   Sparkles,
@@ -17,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   useCaseActionFeed,
   useDismissFeedItem,
+  useSnoozeFeedItem,
+  SNOOZE_OPTIONS,
   type FeedFilter,
 } from "@/hooks/use-case-action-feed";
 import type { Notification } from "@/hooks/use-notifications";
@@ -51,6 +54,7 @@ export function CaseActionFeed({ caseId, onNavigate }: CaseActionFeedProps) {
   // but there are still items under "Afgehandeld" / "Alles".
   const allFeed = useCaseActionFeed({ caseId, filter: "alles" });
   const dismiss = useDismissFeedItem();
+  const snooze = useSnoozeFeedItem();
 
   if (isLoading) return null;
   // Hide entirely on a fresh case with zero activity ever
@@ -127,6 +131,7 @@ export function CaseActionFeed({ caseId, onNavigate }: CaseActionFeedProps) {
               key={item.id}
               item={item}
               onDismiss={() => dismiss.mutate(item.id)}
+              onSnooze={(hours) => snooze.mutate({ id: item.id, hours })}
               onNavigate={onNavigate}
             />
           ))}
@@ -187,21 +192,23 @@ function FilterTab({
 interface FeedCardProps {
   item: Notification;
   onDismiss: () => void;
+  onSnooze: (hours: number) => void;
   onNavigate?: (tab: string) => void;
 }
 
-function FeedCard({ item, onDismiss, onNavigate }: FeedCardProps) {
+function FeedCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps) {
+  const shared = { item, onDismiss, onSnooze, onNavigate };
   switch (item.type) {
     case "ai_draft_ready":
-      return <DraftReadyCard item={item} onDismiss={onDismiss} onNavigate={onNavigate} />;
+      return <DraftReadyCard {...shared} />;
     case "email_received":
-      return <EmailReceivedCard item={item} onDismiss={onDismiss} onNavigate={onNavigate} />;
+      return <EmailReceivedCard {...shared} />;
     case "classification_done":
-      return <ClassificationDoneCard item={item} onDismiss={onDismiss} onNavigate={onNavigate} />;
+      return <ClassificationDoneCard {...shared} />;
     case "deadline_overdue":
     case "deadline_approaching":
     case "verjaring_warning":
-      return <DeadlineCard item={item} onDismiss={onDismiss} onNavigate={onNavigate} />;
+      return <DeadlineCard {...shared} />;
     default:
       return null;
   }
@@ -217,7 +224,9 @@ function CardShell({
   message,
   actions,
   onDismiss,
+  onSnooze,
   isRead,
+  snoozedUntil,
 }: {
   icon: React.ReactNode;
   iconClass: string;
@@ -226,8 +235,11 @@ function CardShell({
   message?: string;
   actions: React.ReactNode;
   onDismiss: () => void;
+  onSnooze: (hours: number) => void;
   isRead: boolean;
+  snoozedUntil?: string | null;
 }) {
+  const isSnoozed = snoozedUntil != null && new Date(snoozedUntil).getTime() > Date.now();
   return (
     <li
       className={`group flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/30 ${
@@ -245,21 +257,90 @@ function CardShell({
         {message && (
           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{message}</p>
         )}
+        {isSnoozed && (
+          <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            Sluimert tot{" "}
+            {new Date(snoozedUntil!).toLocaleDateString("nl-NL", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            })}
+            <button
+              type="button"
+              onClick={() => onSnooze(0)}
+              className="ml-1 text-primary hover:underline"
+            >
+              Nu tonen
+            </button>
+          </p>
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-2">{actions}</div>
       </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        aria-label="Verwijder uit lijst"
-        className="opacity-0 group-hover:opacity-100 transition-opacity rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <SnoozeMenu onSnooze={onSnooze} />
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Verwijder uit lijst"
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </li>
   );
 }
 
-function DraftReadyCard({ item, onDismiss, onNavigate }: FeedCardProps) {
+/** Small clock-icon button revealing the fixed snooze durations. */
+function SnoozeMenu({ onSnooze }: { onSnooze: (hours: number) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Uitstellen"
+        title="Uitstellen"
+        className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+      >
+        <Clock className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <>
+          {/* click-away backdrop */}
+          <button
+            type="button"
+            aria-hidden="true"
+            tabIndex={-1}
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 z-20 mt-1 w-32 overflow-hidden rounded-md border border-border bg-popover py-1 shadow-md">
+            <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Uitstellen
+            </p>
+            {SNOOZE_OPTIONS.map((opt) => (
+              <button
+                key={opt.hours}
+                type="button"
+                onClick={() => {
+                  onSnooze(opt.hours);
+                  setOpen(false);
+                }}
+                className="block w-full px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DraftReadyCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps) {
   const router = useRouter();
   const openTaken = () => {
     if (onNavigate) onNavigate("taken");
@@ -273,7 +354,9 @@ function DraftReadyCard({ item, onDismiss, onNavigate }: FeedCardProps) {
       message={item.message}
       time={formatNotificationTime(item.created_at)}
       isRead={item.is_read}
+      snoozedUntil={item.snoozed_until}
       onDismiss={onDismiss}
+      onSnooze={onSnooze}
       actions={
         <Button size="sm" variant="default" onClick={openTaken}>
           Openen
@@ -283,7 +366,7 @@ function DraftReadyCard({ item, onDismiss, onNavigate }: FeedCardProps) {
   );
 }
 
-function EmailReceivedCard({ item, onDismiss, onNavigate }: FeedCardProps) {
+function EmailReceivedCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps) {
   const router = useRouter();
   const openCorrespondentie = () => {
     if (onNavigate) onNavigate("correspondentie");
@@ -297,7 +380,9 @@ function EmailReceivedCard({ item, onDismiss, onNavigate }: FeedCardProps) {
       message={item.message}
       time={formatNotificationTime(item.created_at)}
       isRead={item.is_read}
+      snoozedUntil={item.snoozed_until}
       onDismiss={onDismiss}
+      onSnooze={onSnooze}
       actions={
         <Button size="sm" variant="outline" onClick={openCorrespondentie}>
           Bekijken
@@ -307,7 +392,7 @@ function EmailReceivedCard({ item, onDismiss, onNavigate }: FeedCardProps) {
   );
 }
 
-function ClassificationDoneCard({ item, onDismiss, onNavigate }: FeedCardProps) {
+function ClassificationDoneCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps) {
   const router = useRouter();
   const openCorrespondentie = () => {
     if (onNavigate) onNavigate("correspondentie");
@@ -321,7 +406,9 @@ function ClassificationDoneCard({ item, onDismiss, onNavigate }: FeedCardProps) 
       message={item.message}
       time={formatNotificationTime(item.created_at)}
       isRead={item.is_read}
+      snoozedUntil={item.snoozed_until}
       onDismiss={onDismiss}
+      onSnooze={onSnooze}
       actions={
         <Button size="sm" variant="default" onClick={openCorrespondentie}>
           Antwoord opstellen
@@ -331,7 +418,7 @@ function ClassificationDoneCard({ item, onDismiss, onNavigate }: FeedCardProps) 
   );
 }
 
-function DeadlineCard({ item, onDismiss, onNavigate }: FeedCardProps) {
+function DeadlineCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps) {
   const router = useRouter();
   const openStaphistorie = () => {
     if (onNavigate) onNavigate("staphistorie");
@@ -345,7 +432,9 @@ function DeadlineCard({ item, onDismiss, onNavigate }: FeedCardProps) {
       message={item.message}
       time={formatNotificationTime(item.created_at)}
       isRead={item.is_read}
+      snoozedUntil={item.snoozed_until}
       onDismiss={onDismiss}
+      onSnooze={onSnooze}
       actions={
         <Button size="sm" variant="destructive" onClick={openStaphistorie}>
           Naar pipeline

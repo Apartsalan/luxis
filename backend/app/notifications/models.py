@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.models import TenantBase
@@ -37,6 +38,12 @@ class Notification(TenantBase):
         nullable=True,
     )
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # FEAT-AI-05: when set in the future, the CaseActionFeed hides this item under
+    # the "Wachtend" filter until this moment passes. NULL = not snoozed. Snoozing
+    # never marks the item read — it stays actionable, just temporarily hidden.
+    snoozed_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (
         Index("ix_notifications_user_unread", "tenant_id", "user_id", "is_read", "created_at"),

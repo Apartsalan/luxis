@@ -1,9 +1,42 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 1 juni 2026 (sessie 147 — CLEAN-AI-01 deprecatie + smart-replies cleanup + snooze + conftest refactor)
-**Laatste feature/fix:** Sessie 147 — (1) CLEAN-AI-01: smart-replies UI volledig verwijderd (SmartReplyCard, "Concept-antwoord" knop/panel, `useSmartReplies` hook) — CaseActionFeed ClassificationDoneCard is enige entry-point; (2) deprecated AI-endpoints hard verwijderd: `POST /api/ai-agent/draft/{case_id}` + `GET /classifications/{id}/smart-replies` routes + `smart_reply_service.py` (draft_service blijft — orchestrator gebruikt het); (3) FEAT-AI-05 snooze op CaseActionFeed-kaarten (24u/3d/1w): `notifications.snoozed_until` kolom + migratie s147a, `PUT /snooze` endpoint (server-berekend, whitelist), klok-dropdown per kaart, "Sluimert tot …" + "Nu tonen" onder Alles — live getest op productie; (4) conftest refactor: schema 1× per proces + per-test TRUNCATE i.p.v. DROP SCHEMA → lost asyncpg statement-cache bug op, 13 voorheen-geskipte tests unskipped (KNOWN-002/003 OPGELOST), volledige suite 879 passed.
-**Openstaande bugs:** Geen kritieke. Pre-S146 `deadline_overdue` notifications hebben `task_id = NULL` (oude cleanup-fallback). Dev-container heeft `sepaxml` handmatig geïnstalleerd nodig na rebuild totdat image opnieuw gebouwd wordt (staat al in pyproject.toml, CI/prod bouwen fresh).
-**Volgende sessie:** S148 — keuze: (a) nieuwe kaart-types of WebSocket voor CaseActionFeed; (b) M0b voorbereiding (Lisanne overzetten naar M365); (c) algemene voorwaarden per cliënt + response templates fine-tunen (TODO's). Zie `docs/design/feat-ai-05-snooze.md` voor afgeronde snooze-scope.
+**Laatst bijgewerkt:** 1 juni 2026 (sessie 148 — volledige read-only systeem-audit, 111 bevindingen → fix-backlog)
+**Laatste feature/fix:** Sessie 148 — **GEEN fixes, alleen audit.** Volledige read-only systeem-audit van Luxis (API+DB+code via parallelle agents + seriële visuele Playwright-sweep) op een lokale wegwerp-stack met Mailpit-mailzinkput. 111 bevindingen na dedup (3 blocker · 25 high · 48 medium · 31 low · 4 polish). Rekenkern (rente/WIK/art.6:44/nakosten) onafhankelijk nagerekend = **correct**; UI consistent professioneel. Fix-backlog met `AUDIT-B1..B3` + `AUDIT-H1..H25` in `LUXIS-ROADMAP.md`. Volledige detail lokaal in `.audit/` (gitignored — bevat data).
+**Openstaande bugs:** **3 blockers** uit audit: B1 placeholder `SECRET_KEY` = auth-bypass + RLS feitelijk uit (eerst productie-`.env` verifiëren); B2 `/api/reports/kpis` crasht 500 (`.days` op Decimal); B3 bankimport-betaling negeert dossier-instellingen. + 25 high (zie roadmap). Pre-bestaand: `deadline_overdue` notifs met `task_id=NULL`; dev-container `sepaxml` na rebuild.
+**Volgende sessie:** S149 — fix AUDIT-blockers. B2 + B3 lokaal fixbaar + rood→groen; B1 na VPS-check van productie-`SECRET_KEY`. Test-harness staat klaar (Mailpit + `e2e-test@`, zie memory `project_systeem_audit_s148`).
+
+## Wat er gedaan is (sessie 148 — 1 juni 2026) — Volledige read-only systeem-audit
+
+### Samenvatting
+
+Geen feature/fix — een **complete systeem-audit** op verzoek van Arsalan ("test alles van top tot teen, als een technische advocaat"). Doel: één geprioriteerde lijst van wat kapot/mist/beter kan, vóór er gefixt wordt.
+
+**Veilige test-harness (Pass 0) gebouwd + bewezen:**
+- Lokale wegwerp-stack; DB-snapshot vooraf (`.audit/snapshots/pre-audit.sql`, terugrolbaar).
+- **Mailpit** als SMTP-zinkput in `docker-compose.dev.yml` (UI :8025) → mail verlaat de machine nooit; bewezen met testsend naar `debtor@example.com` (gevangen, niet verzonden).
+- Provider-route (Outlook) lokaal dood (geen `TOKEN_ENCRYPTION_KEY`/MS-secret). Test-identiteit `e2e-test@kestinglegal.nl` (geen gekoppeld account → SMTP→Mailpit).
+- Lokale data = echte Kesting: 271 cases / 484 contacts, grotendeels `is_active=false` seed; voorkant toont alleen actief (2 dossiers / 18 relaties) — geverifieerd geen bug.
+
+**Audit uitgevoerd (2 lagen):**
+- **Geld-orakel** op dossier 2026-00001: BIK €625, handelsrente €190,49, totaal €5.815,49 — onafhankelijk nagerekend, 3/3 match. Rekenkern correct.
+- **Breedte-sweep via workflow-orkestratie:** 14 modules, parallelle read-only agents (API+DB+code), high-severity adversarieel her-geverifieerd, gesynthetiseerd. 29 agents, ~28 min. 127 bevindingen → 111 na dedup.
+- **Seriële visuele Playwright-sweep:** login, dashboard, dossiers (+detail), incasso, rapportages, bankimport, derdengelden, instellingen. UI consistent professioneel; bevestigde F-1 (betaald + €5.000 open zichtbaar), B2 (reports stille KPI-degradatie), H7 (geen kantoor-IBAN-veld, derdengelden-IBAN wél).
+
+**Resultaat:** 3 blocker · 25 high · 48 medium · 31 low · 4 polish. Backlog in roadmap (`AUDIT-B/H`-ID's). Eén incident eerlijk geflagd + opgeruimd: een agent maakte per ongeluk 1 wegwerp-record `__AUDIT_VALIDATION_PROBE__` (DELETE 1, weg).
+
+### Gewijzigde bestanden
+- `docker-compose.dev.yml` — Mailpit-service + dev-SMTP-env (mail-zinkput)
+- `.gitignore` — `.audit/` + `.playwright-mcp/` (bevatten echte data)
+- `LUXIS-ROADMAP.md` — sectie "🔴 SYSTEEM-AUDIT 2026-06-01" met fix-backlog
+- `.audit/*` (lokaal, gitignored) — AUDIT-REPORT.md, UI-FINDINGS.md, PASS1-FINDINGS.md, snapshot, screenshots
+- Memory `project_systeem_audit_s148` — samenvatting + herbruikbare harness
+
+### Bekende issues
+- 3 blockers + 25 high nog te fixen (zie roadmap). B1 vereist productie-`.env`-verificatie.
+- Niet end-to-end getest (read-only + 0 imports/matches in lokale data): echte bankimport-flow, SEPA-XML, M365/Exact externe sync, PDF-pixelrendering.
+
+### Volgende sessie
+- S149: fix blockers. B2 (reports `.days` op Decimal) + B3 (bankimport kwargs) lokaal, elk rood→groen. B1 na VPS-check `SECRET_KEY`.
 
 ## Wat er gedaan is (sessie 147 — 1 juni 2026) — CLEAN-AI-01 deprecatie + smart-replies cleanup + snooze + conftest refactor
 

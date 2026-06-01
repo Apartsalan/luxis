@@ -406,14 +406,22 @@ def _draft_to_response(d) -> AIDraftResponse:
     )
 
 
-@router.post("/draft/{case_id}")
+@router.post("/draft/{case_id}", deprecated=True)
 async def generate_draft_email(
     case_id: uuid.UUID,
     data: DraftRequest | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Generate an AI draft email and persist it."""
+    """DEPRECATED (CLEAN-AI-01, S147) — use POST /api/ai/draft (UnifiedDraftService).
+
+    No frontend caller remains; the unified endpoint routes every draft flow
+    (next_step / reply_to_email / free_compose) through the same branded render
+    path. Scheduled for removal in S148. Kept temporarily to avoid breaking any
+    external/integration caller during the deprecation window.
+
+    Generate an AI draft email and persist it.
+    """
     from app.ai_agent.draft_service import generate_and_persist_draft
 
     try:
@@ -486,13 +494,20 @@ async def update_draft(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/classifications/{classification_id}/smart-replies")
+@router.get("/classifications/{classification_id}/smart-replies", deprecated=True)
 async def get_smart_replies(
     classification_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Generate 3 AI smart reply suggestions for a classified email."""
+    """DEPRECATED (CLEAN-AI-01, S147) — smart-replies UI removed from frontend.
+
+    The CaseActionFeed ClassificationDoneCard ('Antwoord opstellen' CTA) is now
+    the single entry-point for replying to a classified email. No frontend caller
+    remains. Scheduled for removal in S148 together with smart_reply_service.
+
+    Generate 3 AI smart reply suggestions for a classified email.
+    """
     from app.ai_agent.smart_reply_service import generate_smart_replies
 
     try:

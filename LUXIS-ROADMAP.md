@@ -56,6 +56,8 @@
 **Positief referentiepunt:** rekenkern (rente/WIK/art. 6:44/nakosten) onafhankelijk nagerekend = **correct**. UI consistent professioneel, geen render-crashes.
 **Werkwijze fixen:** op volgorde, blockers eerst, elk rood→groen geverifieerd. NIET alles in één sessie.
 
+**Voortgang S149 (2026-06-01):** 3 blockers (B1 deels, B2, B3) + 8 high opgelost (H1, H3, H8, H10, H20, H21, H23, H24), elk rood→groen + lint + push + CI/deploy groen. **Nog open:** H2 (RLS → S150, VPS nodig), H4 (openstaand excl. rente/BIK — niet-triviaal: geen cache, O(N) live-herberekening of nieuwe cache-kolommen, vereist keuze), H5 (griffierecht-tarieven — juridisch onderzoek), H6 (14-dagenbrief tekst — juridisch), H7 (kantoorgegevens in brieven), H9 (email_logs), H11/H12/H13 (pipeline), H14-H19 (derdengelden cluster — deels feature), H22 (taak effective-status in lijst/agenda — gedeelde root met H23/H24, alleen reports-deel gedaan), H25 (modules_enabled server-side — te breed, vereist JWT-claim + gefaseerde uitrol). Plus 48 medium / 31 low / 4 polish.
+
 ### BLOCKERS (eerst)
 | ID | Bevinding | Module | Aanpak |
 |----|-----------|--------|--------|
@@ -66,16 +68,16 @@
 ### HIGH (25)
 | ID | Bevinding | Module |
 |----|-----------|--------|
-| AUDIT-H1 | Status 'betaald' zonder financiële guard (F-1) | Dossiers/Rekenkern/Pipeline |
+| AUDIT-H1 | ✅ **Opgelost (S149, `c4c79f1`)** Status 'betaald' zonder financiële guard — guard in validate_transition blokkeert 'betaald' bij openstaand saldo | Dossiers/Rekenkern/Pipeline |
 | AUDIT-H2 | RLS no-op — tenant-isolatie leunt 100% op app-filters | Auth/security |
-| AUDIT-H3 | XFF-spoofing omzeilt login rate-limit; `/refresh` ongelimiteerd | Auth/security |
+| AUDIT-H3 | ✅ **Opgelost (S149, `9471713`)** XFF-spoofing omzeilt login rate-limit; `/refresh` ongelimiteerd — key_func gebruikt nu laatste XFF-entry (Caddy-peer) + /refresh 20/min | Auth/security |
 | AUDIT-H4 | Openstaand op dashboard/reports sluit rente+BIK uit (onderschat) | Rapportages |
 | AUDIT-H5 | Griffierecht-staffel volledig verouderd (alle tarieven fout) | Rekenkern |
 | AUDIT-H6 | 14-dagenbrief: twee tegenstrijdige betaalinstructies (WIK B2C) | Documenten |
 | AUDIT-H7 | Betaalbrieven tonen leeg kantoor-IBAN/adres/telefoon | Documenten/Instellingen |
-| AUDIT-H8 | Managed-template preview crasht (ImportError → 500) | Documenten |
+| AUDIT-H8 | ✅ **Opgelost (S149, `91a5c0b`)** Managed-template preview crasht (ImportError → 500) — verkeerde import `_build_base_context` → `build_base_context` | Documenten |
 | AUDIT-H9 | `email_logs`-tabel ontbreekt → verzonden mails onzichtbaar (500) | Correspondentie |
-| AUDIT-H10 | Verweer-switch schrijft naar niet-bestaand attribuut (teller reset niet) | Pipeline |
+| AUDIT-H10 | ✅ **Opgelost (S149, `91a5c0b`)** Verweer-switch schrijft naar niet-bestaand attribuut (teller reset niet) — `incasso_step_entered_at` → `step_entered_at` | Pipeline |
 | AUDIT-H11 | Pipeline negeert `case.status` (terminale stappen zetten status niet) | Pipeline |
 | AUDIT-H12 | Payment-/debtor_response-automation-rules nergens geëvalueerd | Pipeline |
 | AUDIT-H13 | Batch 'document genereren' werkt nooit op actieve stappen (template_type leeg) | Pipeline |
@@ -86,10 +88,10 @@
 | AUDIT-H18 | Geen atomaire verwerking: overbetaling laat wees-storting achter | Betalingen |
 | AUDIT-H19 | Wezen-/ongematchte transacties niet zichtbaar/koppelbaar in UI | Betalingen |
 | AUDIT-H20 | ✅ **Opgelost (S149, `db2c767`)** AI-tool registreert betaling óók zonder dossier-instellingen — via gedeelde helper (zie AUDIT-B3) | Betalingen |
-| AUDIT-H21 | Soft-delete guard negeert open facturen/derdengelden → wees-tegenpartij | Relaties |
+| AUDIT-H21 | ✅ **Opgelost (S149, `93c7968`)** Soft-delete guard negeert open facturen/derdengelden → wees-tegenpartij — delete_contact blokkeert nu op open facturen + niet-nul trust-saldo | Relaties |
 | AUDIT-H22 | Taakstatus batch-gematerialiseerd — 324 taken tonen niet als 'overdue' | Taken/Agenda |
-| AUDIT-H23 | Reports-KPI 'overdue_tasks' hangt aan stale status-veld | Taken |
-| AUDIT-H24 | Open taken blijven hangen op gearchiveerde dossiers | Taken |
+| AUDIT-H23 | ✅ **Opgelost (S149, `1c95843`)** Reports-KPI 'overdue_tasks' hangt aan stale status-veld — overdue/upcoming nu afgeleid uit due_date | Taken |
+| AUDIT-H24 | ✅ **Opgelost (S149, `308fb13`)** Open taken blijven hangen op gearchiveerde dossiers — delete_case zet open taken op 'skipped' | Taken |
 | AUDIT-H25 | `modules_enabled` niet server-side afgedwongen (per-module pricing) | Instellingen |
 
 ### MEDIUM (48) · LOW (31) · POLISH (4)

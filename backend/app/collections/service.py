@@ -318,6 +318,57 @@ async def create_payment(
     return payment
 
 
+def case_payment_kwargs(case: Case) -> dict:
+    """Per-case settings that must flow into ``create_payment()``.
+
+    Single source of truth for every payment entry point — manual UI
+    (collections/router), bank-import matching (payment_matching_service),
+    and the AI agent (tools/handlers/collections). Keeping it here means a
+    payment is distributed identically per art. 6:44 BW no matter how it was
+    registered (AUDIT-B3 / AUDIT-H20). ``case`` must have ``client`` loaded
+    (it is ``lazy="selectin"``, so a plain get_case() suffices).
+    """
+    return {
+        "interest_type": case.interest_type,
+        "contractual_rate": case.contractual_rate,
+        "contractual_compound": case.contractual_compound,
+        "bik_override": case.bik_override,
+        "bik_override_percentage": case.bik_override_percentage,
+        "include_btw_on_bik": not case.client.is_btw_plichtig,
+        "nakosten_type": case.nakosten_type,
+    }
+
+
+async def create_payment_for_case(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    data: PaymentCreate,
+    user_id: uuid.UUID | None = None,
+    *,
+    _skip_installment_link: bool = False,
+) -> Payment:
+    """Load the case (+ client) and register a payment using its own settings.
+
+    Convenience wrapper for callers that do not already hold a loaded Case —
+    bank-import matching and the AI agent. Callers that already loaded the
+    case (the router) pass ``case_payment_kwargs(case)`` to ``create_payment``
+    directly to avoid a second query.
+    """
+    from app.cases.service import get_case
+
+    case = await get_case(db, tenant_id, case_id)
+    return await create_payment(
+        db,
+        tenant_id,
+        case_id,
+        data,
+        user_id,
+        _skip_installment_link=_skip_installment_link,
+        **case_payment_kwargs(case),
+    )
+
+
 async def update_payment(
     db: AsyncSession,
     tenant_id: uuid.UUID,

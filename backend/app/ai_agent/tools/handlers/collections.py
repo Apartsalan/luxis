@@ -87,7 +87,9 @@ async def handle_payment_register(
         description=description,
         payment_method=payment_method,
     )
-    payment = await collections_service.create_payment(
+    # Use the case's own interest/BIK/BTW/nakosten settings (AUDIT-H20), so the
+    # AI agent distributes a payment identically to the manual UI.
+    payment = await collections_service.create_payment_for_case(
         db,
         tenant_id,
         uuid.UUID(case_id),

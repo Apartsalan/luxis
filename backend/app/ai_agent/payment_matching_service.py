@@ -32,7 +32,7 @@ from app.ai_agent.payment_matching_schemas import (
 from app.cases.models import Case
 from app.collections.models import Claim
 from app.collections.schemas import PaymentCreate
-from app.collections.service import create_payment
+from app.collections.service import create_payment_for_case
 from app.trust_funds.schemas import TrustTransactionCreate
 from app.trust_funds.service import create_transaction as create_trust_transaction
 
@@ -639,7 +639,11 @@ async def execute_match(
         description=f"Bankimport: {counterparty}",
         payment_method="bank",
     )
-    payment = await create_payment(db, tenant_id, match.case_id, payment_data, user_id)
+    # Use the case's own interest/BIK/BTW/nakosten settings (AUDIT-B3), so a
+    # bank-import payment distributes identically to a manually registered one.
+    payment = await create_payment_for_case(
+        db, tenant_id, match.case_id, payment_data, user_id
+    )
     match.payment_id = payment.id
 
     # Mark as executed

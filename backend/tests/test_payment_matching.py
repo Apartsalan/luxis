@@ -15,10 +15,12 @@ from app.ai_agent.payment_matching_algorithm import (
     find_matches,
 )
 from app.ai_agent.payment_matching_models import (
+    BankStatementImport,
     BankTransaction,
     ImportStatus,
     MatchMethod,
     MatchStatus,
+    PaymentMatch,
 )
 from app.ai_agent.payment_matching_service import (
     approve_match,
@@ -31,7 +33,9 @@ from app.ai_agent.payment_matching_service import (
 )
 from app.auth.models import Tenant, User
 from app.cases.models import Case
-from app.collections.models import Claim, InterestRate
+from app.collections.models import Claim, InterestRate, Payment
+from app.collections.schemas import PaymentCreate
+from app.collections.service import create_payment
 from app.relations.models import Contact
 
 # ── Test Data ────────────────────────────────────────────────────────────
@@ -710,3 +714,152 @@ class TestPaymentMatchingAPI:
             headers=auth_headers,
         )
         assert response.status_code == 404
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# AUDIT-B3: bank-import payment must honour the case's own settings
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestExecuteMatchHonoursCaseSettings:
+    """A bank-import payment must distribute identically to a manual one.
+
+    Before the fix, execute_match() called create_payment() without the
+    per-case kwargs (interest_type, BIK override, BTW, nakosten), so every
+    bank-import payment silently fell back to statutory interest and no BTW —
+    a different art. 6:44 BW allocation than a manually registered payment.
+    """
+
+    @staticmethod
+    async def _make_case(db, tenant, user, client_contact, case_number):
+        case = Case(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            case_number=case_number,
+            description="Commercial-interest case",
+            case_type="incasso",
+            debtor_type="b2b",
+            status="nieuw",
+            is_active=True,
+            client_id=client_contact.id,
+            assigned_to_id=user.id,
+            date_opened=date.today() - timedelta(days=90),
+            total_principal=Decimal("5000.00"),
+            total_paid=Decimal("0.00"),
+            interest_type="commercial",  # NOT the statutory default
+        )
+        db.add(case)
+        db.add(
+            Claim(
+                id=uuid.uuid4(),
+                tenant_id=tenant.id,
+                case_id=case.id,
+                description="Factuur",
+                principal_amount=Decimal("5000.00"),
+                default_date=date.today() - timedelta(days=60),
+            )
+        )
+        await db.flush()
+        return case
+
+    @pytest.mark.asyncio
+    async def test_bank_import_payment_matches_manual_payment(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        from sqlalchemy import select
+
+        # Seed both rates so statutory (the buggy fallback) and commercial both resolve
+        for rate_type, rate_val in [("statutory", "6.00"), ("commercial", "11.50")]:
+            db.add(
+                InterestRate(
+                    id=uuid.uuid4(),
+                    rate_type=rate_type,
+                    effective_from=date(2024, 1, 1),
+                    rate=Decimal(rate_val),
+                    source="Test fixture",
+                )
+            )
+        await db.flush()
+
+        # Client that is NOT BTW-plichtig -> BTW must be added on top of BIK
+        client_contact = Contact(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            contact_type="company",
+            name="Niet BTW-plichtige Stichting",
+            is_btw_plichtig=False,
+        )
+        db.add(client_contact)
+        await db.flush()
+
+        case_manual = await self._make_case(
+            db, test_tenant, test_user, client_contact, "2026-09001"
+        )
+        case_bank = await self._make_case(
+            db, test_tenant, test_user, client_contact, "2026-09002"
+        )
+
+        amount = Decimal("1500.00")
+        pay_date = date.today()
+
+        # ── Manual payment (mirrors collections/router.py kwargs) ──
+        manual_payment = await create_payment(
+            db,
+            test_tenant.id,
+            case_manual.id,
+            PaymentCreate(amount=amount, payment_date=pay_date, payment_method="bank"),
+            test_user.id,
+            interest_type=case_manual.interest_type,
+            contractual_rate=case_manual.contractual_rate,
+            contractual_compound=case_manual.contractual_compound,
+            bik_override=case_manual.bik_override,
+            bik_override_percentage=case_manual.bik_override_percentage,
+            include_btw_on_bik=not client_contact.is_btw_plichtig,
+            nakosten_type=case_manual.nakosten_type,
+        )
+        await db.flush()
+
+        # ── Bank-import payment (via execute_match) ──
+        stmt = BankStatementImport(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            filename="t.csv",
+            imported_by_id=test_user.id,
+            status=ImportStatus.COMPLETED,
+        )
+        db.add(stmt)
+        await db.flush()
+        txn = BankTransaction(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            import_id=stmt.id,
+            transaction_date=pay_date,
+            amount=amount,
+            counterparty_name="Niet BTW-plichtige Stichting",
+        )
+        db.add(txn)
+        await db.flush()
+        match = PaymentMatch(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            transaction_id=txn.id,
+            case_id=case_bank.id,
+            match_method=MatchMethod.MANUAL,
+            confidence=100,
+            status=MatchStatus.APPROVED,
+        )
+        db.add(match)
+        await db.flush()
+
+        executed = await execute_match(db, test_tenant.id, match.id, test_user.id)
+        assert executed is not None
+        assert executed.payment_id is not None
+
+        bank_payment = (
+            await db.execute(select(Payment).where(Payment.id == executed.payment_id))
+        ).scalar_one()
+
+        # Same payment, same case settings -> identical art. 6:44 BW allocation
+        assert bank_payment.allocated_to_costs == manual_payment.allocated_to_costs
+        assert bank_payment.allocated_to_interest == manual_payment.allocated_to_interest
+        assert bank_payment.allocated_to_principal == manual_payment.allocated_to_principal

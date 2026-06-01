@@ -21,7 +21,7 @@ from app.calendar.router import router as calendar_router
 from app.cases.router import router as cases_router
 from app.collections.router import rates_router
 from app.collections.router import router as collections_router
-from app.config import settings
+from app.config import secret_key_status, settings
 from app.dashboard.router import reports_router
 from app.dashboard.router import router as dashboard_router
 from app.documents.router import router as documents_router
@@ -52,21 +52,26 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
-_BLACKLISTED_KEYS = {
-    "change-this-to-a-random-string-in-production",
-    "dev-secret-key-change-in-production",
-    "secret",
-    "password",
-}
-_is_prod = settings.app_env.lower().strip() in {"production", "prod", "prd"}
-if _is_prod and (
-    settings.secret_key in _BLACKLISTED_KEYS or len(settings.secret_key) < 32
-):
+# SECRET_KEY hardening (AUDIT-B1). A placeholder/short key lets an attacker
+# forge valid JWTs. Default-secure: any environment that is NOT an explicit
+# dev/test env is enforced — so an unset or misspelled APP_ENV in production
+# still refuses to start instead of silently running with a weak key.
+_secret_weak, _secret_enforced = secret_key_status(settings.secret_key, settings.app_env)
+if _secret_weak and _secret_enforced:
     logging.critical(
-        "FATAL: SECRET_KEY is a default placeholder or too short (min 32 chars). "
-        "Set a strong random SECRET_KEY in production!"
+        "FATAL: SECRET_KEY is a default placeholder or too short (min 32 chars) "
+        "and APP_ENV=%r is not a development environment. Set a strong random "
+        "SECRET_KEY. Refusing to start.",
+        settings.app_env,
     )
     sys.exit(1)
+elif _secret_weak:
+    logging.critical(
+        "SECURITY WARNING: SECRET_KEY is a default placeholder or too short "
+        "(min 32 chars). Tolerated only because APP_ENV=%r is a development "
+        "environment — NEVER deploy with this key.",
+        settings.app_env,
+    )
 
 # Initialize Sentry if DSN is configured
 if settings.sentry_dsn:

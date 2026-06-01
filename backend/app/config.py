@@ -60,3 +60,39 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+# ── SECRET_KEY hardening (AUDIT-B1) ──────────────────────────────────────────
+# Known weak/placeholder keys that must never sign tokens in production. A
+# forged token signed with one of these would otherwise be accepted as valid.
+SECRET_KEY_BLACKLIST = frozenset(
+    {
+        "change-this-to-a-random-string-in-production",
+        "dev-secret-key-change-in-production",
+        "secret",
+        "password",
+    }
+)
+
+# Default-secure: ONLY these environments may boot with a weak SECRET_KEY.
+# Anything else — including an unset, empty, or misspelled APP_ENV — is treated
+# as production and must have a strong key. This closes the misconfiguration
+# hole where a typo'd APP_ENV silently disables the production guard.
+SECRET_KEY_DEV_ENVS = frozenset(
+    {"development", "dev", "test", "testing", "local", "ci"}
+)
+
+MIN_SECRET_KEY_LENGTH = 32
+
+
+def secret_key_status(secret_key: str, app_env: str) -> tuple[bool, bool]:
+    """Classify the SECRET_KEY for startup validation.
+
+    Returns ``(is_weak, is_enforced)``:
+    - ``is_weak``: the key is a known placeholder or shorter than 32 chars.
+    - ``is_enforced``: this environment must refuse to start on a weak key
+      (i.e. it is NOT an explicit development/test environment).
+    """
+    is_weak = secret_key in SECRET_KEY_BLACKLIST or len(secret_key) < MIN_SECRET_KEY_LENGTH
+    is_enforced = app_env.lower().strip() not in SECRET_KEY_DEV_ENVS
+    return is_weak, is_enforced

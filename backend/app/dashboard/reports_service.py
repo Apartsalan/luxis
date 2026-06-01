@@ -98,24 +98,33 @@ async def get_kpis(
     )
     cases_by_debtor_type = {row[0]: row[1] for row in result.all()}
 
-    # Overdue tasks count
+    # Overdue tasks count. Derive 'overdue' from due_date, NOT from the
+    # materialized WorkflowTask.status — that column is only refreshed by a
+    # daily batch job, so between runs it drifts stale and the KPI reads 0
+    # while tasks are in fact overdue (AUDIT-H23).
     from app.workflow.models import WorkflowTask
 
+    _open_task = (
+        WorkflowTask.is_active.is_(True),
+        WorkflowTask.status.notin_(["completed", "skipped"]),
+    )
     result = await db.execute(
         select(func.count(WorkflowTask.id)).where(
             WorkflowTask.tenant_id == tenant_id,
-            WorkflowTask.status == "overdue",
+            *_open_task,
+            WorkflowTask.due_date < date.today(),
         )
     )
     overdue_tasks = result.scalar() or 0
 
-    # Upcoming deadlines (due tasks in next 7 days)
+    # Upcoming deadlines (open tasks due in the next 7 days) — also derived from
+    # due_date so it stays consistent with the overdue count above.
     result = await db.execute(
         select(func.count(WorkflowTask.id)).where(
             WorkflowTask.tenant_id == tenant_id,
-            WorkflowTask.status.in_(["pending", "due"]),
-            WorkflowTask.due_date <= date.today() + timedelta(days=7),
+            *_open_task,
             WorkflowTask.due_date >= date.today(),
+            WorkflowTask.due_date <= date.today() + timedelta(days=7),
         )
     )
     upcoming_deadlines = result.scalar() or 0

@@ -192,6 +192,69 @@ async def test_reports_kpis_with_closed_case(
     assert data["avg_days_to_collect"] == 10
 
 
+@pytest.mark.asyncio
+async def test_reports_kpis_overdue_derived_from_due_date(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant,
+    test_company: Contact,
+):
+    """overdue_tasks must be derived from due_date, not the stale status column.
+
+    A task past its due date but still marked 'pending' (because the daily batch
+    that materializes status='overdue' has not run) must still count as overdue
+    (AUDIT-H23).
+    """
+    import uuid
+    from datetime import date, timedelta
+
+    from app.cases.models import Case
+    from app.workflow.models import WorkflowTask
+
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-08020",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today(),
+        total_principal=Decimal("0.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+
+    def _task(days: int, status: str) -> WorkflowTask:
+        return WorkflowTask(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            task_type="manual_review",
+            title="Taak",
+            due_date=date.today() + timedelta(days=days),
+            status=status,
+        )
+
+    db.add_all(
+        [
+            _task(-3, "pending"),   # overdue, stale status -> must count
+            _task(-5, "pending"),   # overdue -> must count
+            _task(-2, "completed"),  # past due but done -> must NOT count
+            _task(+3, "pending"),    # future -> upcoming, not overdue
+        ]
+    )
+    await db.commit()
+
+    resp = await client.get("/api/reports/kpis", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["overdue_tasks"] == 2
+    assert data["upcoming_deadlines"] >= 1
+
+
 # ── Auth Checks ──────────────────────────────────────────────────────────────
 
 

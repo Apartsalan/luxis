@@ -4,6 +4,8 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.relations.models import Contact
 
@@ -143,6 +145,51 @@ async def test_recent_activity_limit(
     assert response.status_code == 200
     data = response.json()
     assert len(data["items"]) <= 1
+
+
+# ── Reports KPIs ─────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_reports_kpis_with_closed_case(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_company: Contact,
+):
+    """KPIs endpoint must not crash when a closed case exists (AUDIT-B2).
+
+    func.avg(date_closed - date_opened) returns a NUMERIC -> Decimal, which has
+    no `.days` attribute. avg_days_to_collect must be computed as an int.
+    """
+    from datetime import date, timedelta
+
+    from app.cases.models import Case
+
+    opened = date.today() - timedelta(days=10)
+    case_response = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": opened.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert case_response.status_code == 201
+    case_id = case_response.json()["id"]
+
+    # Close the case (date_closed is not exposed on CaseUpdate -> set directly)
+    case = (
+        await db.execute(select(Case).where(Case.id == case_id))
+    ).scalar_one()
+    case.date_closed = date.today()
+    await db.commit()
+
+    response = await client.get("/api/reports/kpis", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["avg_days_to_collect"] == 10
 
 
 # ── Auth Checks ──────────────────────────────────────────────────────────────

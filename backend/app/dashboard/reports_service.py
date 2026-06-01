@@ -60,7 +60,9 @@ async def get_kpis(
         )
     )
     avg_interval = result.scalar()
-    avg_days_to_collect = avg_interval.days if avg_interval else 0
+    # date_closed - date_opened is an integer day-count in PostgreSQL, so
+    # func.avg() returns a NUMERIC -> Decimal (no .days attribute). Round to int.
+    avg_days_to_collect = int(round(float(avg_interval))) if avg_interval else 0
 
     # Cases by pipeline step
     result = await db.execute(

@@ -7,6 +7,7 @@ with additional hardcoded legal constraints (14-dagenbrief, verjaring).
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
 from sqlalchemy import select, update
@@ -337,6 +338,36 @@ async def validate_transition(
                     f"Na 14-dagenbrief moeten minimaal {min_wait} dagen gewacht worden. "
                     f"Nog {remaining} dag(en) te gaan (Art. 6:96 lid 6 BW)"
                 )
+
+    # 4b. Financial guard: 'betaald' means literally paid in full (AUDIT-H1).
+    # Closing a case that still has an outstanding balance must use 'oninbaar'
+    # or 'schikking', not 'betaald'. Mirror the auto-transition hook's exact
+    # get_financial_summary() call so the guard and the auto-flow never disagree
+    # (the hook only reaches validate_transition when outstanding <= 0, so this
+    # guard never blocks the legitimate auto-transition).
+    if new_slug == "betaald":
+        from app.collections.service import get_financial_summary
+
+        try:
+            summary = await get_financial_summary(
+                db,
+                tenant_id,
+                case.id,
+                case.interest_type,
+                case.contractual_rate,
+                case.contractual_compound,
+                include_btw_on_bik=not case.client.is_btw_plichtig if case.client else False,
+            )
+            total_outstanding = summary.get("total_outstanding", Decimal("0"))
+        except Exception:
+            # Fail open: never block a manual transition on a calc failure.
+            total_outstanding = Decimal("0")
+        if total_outstanding > Decimal("0.01"):
+            errors.append(
+                f"Zaak kan niet op 'betaald' gezet worden: er staat nog "
+                f"€ {total_outstanding} open. Gebruik 'oninbaar' of 'schikking' "
+                f"om de zaak met een restant af te sluiten."
+            )
 
     # 5. Verjaring warning (advisory, not blocking)
     if hasattr(case, "date_opened") and case.date_opened:

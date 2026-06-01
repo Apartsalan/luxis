@@ -452,3 +452,97 @@ async def test_verjaring_check(
     assert len(data) >= 1
     assert data[0]["case_number"] == "2021-00001"
     assert data[0]["days_remaining"] <= 90
+
+
+# ── AUDIT-H1: financial guard on transition to 'betaald' ─────────────────────
+
+
+@pytest.mark.asyncio
+async def test_betaald_blocked_when_outstanding(
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    workflow_data: dict,
+):
+    """A case with an outstanding balance may not transition to 'betaald'
+    (AUDIT-H1) — 'oninbaar'/'schikking' is the route to close with a remainder."""
+    from decimal import Decimal
+
+    from app.cases.service import get_case
+    from app.collections.models import Claim, InterestRate
+    from app.workflow.service import validate_transition
+
+    db.add(
+        InterestRate(
+            id=uuid.uuid4(),
+            rate_type="statutory",
+            effective_from=date(2024, 1, 1),
+            rate=Decimal("6.00"),
+            source="Test fixture",
+        )
+    )
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-08040",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today(),
+        total_principal=Decimal("5000.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    db.add(
+        Claim(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            description="Factuur",
+            principal_amount=Decimal("5000.00"),
+            default_date=date.today() - timedelta(days=60),
+        )
+    )
+    await db.commit()
+
+    loaded = await get_case(db, test_tenant.id, case.id)
+    result = await validate_transition(db, test_tenant.id, loaded, "betaald")
+    assert result.allowed is False
+    assert any("betaald" in e.lower() and "open" in e.lower() for e in result.errors)
+
+
+@pytest.mark.asyncio
+async def test_betaald_allowed_when_nothing_outstanding(
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    workflow_data: dict,
+):
+    """A case with no outstanding balance may transition to 'betaald' — the
+    auto-transition path must not be broken by the guard (AUDIT-H1)."""
+    from decimal import Decimal
+
+    from app.cases.service import get_case
+    from app.workflow.service import validate_transition
+
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-08041",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today(),
+        total_principal=Decimal("0.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    await db.commit()
+
+    loaded = await get_case(db, test_tenant.id, case.id)
+    result = await validate_transition(db, test_tenant.id, loaded, "betaald")
+    assert result.allowed is True

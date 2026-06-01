@@ -9,50 +9,39 @@ suite moet hier gelogd staan.
 `test_integration_api.py`. Dekking nu volledig in `test_trust_funds.py`
 (26 tests over CRUD + saldo + offset).
 
-## KNOWN-002 — SEPA-export test infrastructure bug
+## KNOWN-002 — SEPA-export test infrastructure bug — OPGELOST (S147)
 
-**Tests:**
-- `tests/test_trust_funds.py::test_sepa_export_marks_transactions_and_returns_xml`
-- `tests/test_trust_funds.py::test_sepa_export_rejects_already_exported`
-- `tests/test_trust_funds.py::test_sepa_export_requires_trust_account_settings`
-- `tests/test_trust_funds.py::test_sepa_export_rejects_pending_transaction`
-- `tests/test_trust_funds_offset.py` — alle 9 offset tests (file-level skip)
+**Tests (nu unskipped + groen):**
+- `tests/test_trust_funds.py::test_sepa_export_*` (4 tests)
+- `tests/test_trust_funds_offset.py` — alle 9 offset tests
 
-**Reden (geüpdate na onderzoek 2026-05-14):** De originele reden ("httpx client
-sluit te vroeg") klopt niet. Echte root cause is dezelfde conftest-bug als
-KNOWN-003: `setup_database` doet `DROP SCHEMA CASCADE` voor elke test, waarna
-asyncpg prepared-statement cache out-of-sync raakt → `UndefinedTableError` op
-INSERT. Andere tests in `test_trust_funds.py` werken wel omdat ze toevallig
-geen prepared-statement-conflict triggeren.
+**Root cause + fix (S147):** De conftest-bug uit KNOWN-003 (zie hieronder) was de
+échte blokkade — `setup_database` herbouwde het schema per test. Opgelost door
+session-éénmalige schema-creatie + per-test `TRUNCATE ... RESTART IDENTITY CASCADE`.
+Na het unskippen bleek nog één losstaande oorzaak voor de 4 SEPA-tests: de dev-
+container was **stale** (`sepaxml>=2.6.0` staat in `pyproject.toml` maar was niet
+geïnstalleerd) → `ModuleNotFoundError: No module named 'sepaxml'`. CI/prod bouwen
+fresh, dus daar speelde dit niet. Lokaal opgelost met een container-rebuild.
 
-**Dekking elders:** SEPA service-logica gedekt door unit-tests in
-`test_sepa.py` (gen + validatie). API-pad zelf werkt productie-side.
+## KNOWN-003 — Conftest setup_database fixture failure — OPGELOST (S147)
 
-**Out of scope:** Fix vereist conftest refactor — apart traject.
-
-## KNOWN-003 — Conftest setup_database fixture intermittent failure
-
-**Tests:**
+**Tests (nu unskipped + groen):**
 - `tests/test_documents.py::test_generate_docx_14_dagenbrief`
 - `tests/test_documents.py::test_generate_docx_sommatie`
 - `tests/test_documents.py::test_generate_docx_renteoverzicht`
 - `tests/test_documents.py::test_docx_financial_amounts_present`
 
-**Reden (geüpdate na onderzoek 2026-05-14):** De originele skip-reden
-("DOCX-templates ontbreken in dev") klopt niet — templates staan in de
-container. Echte root cause: `conftest.py::setup_database` doet
-`DROP SCHEMA CASCADE; CREATE SCHEMA; create_all()` voor elke test. asyncpg's
-prepared-statement cache raakt out-of-sync na schema-recreate → `relation
-"tenants" does not exist` errors bij `INSERT` operaties. 23 van 29 tests in
-`test_documents.py` falen door deze fixture-bug; 14 lukken — afhankelijk van
-welke connectie hergebruikt wordt. Niet specifiek voor DOCX-flow.
+**Root cause + fix (S147):** `conftest.py::setup_database` deed
+`DROP SCHEMA CASCADE; CREATE SCHEMA; create_all()` vóór elke test. asyncpg's
+prepared-statement cache raakte out-of-sync na de schema-recreate → `relation
+"tenants" does not exist` bij INSERT (intermittent — afhankelijk van connectie-
+hergebruik). Opgelost: schema wordt nu **éénmalig per test-proces** gebouwd
+(module-flag) en elke test start schoon via `TRUNCATE ... RESTART IDENTITY CASCADE`
+— geen DDL meer per test, dus de statement-cache blijft geldig.
 
-**Dekking elders:** `test_html_renderer.py` dekt HTML-pad (18/18 groen,
-geen DB needed). DOCX-flow zelf werkt productie-side; alleen tests in
-deze file lijden onder de fixture-bug.
-
-**Out of scope:** Fix vereist conftest refactor (per-worker test-DBs of
-session-scoped schema setup + truncate-tussen-tests). Apart traject.
+Na het unskippen bleek nog één stale test-assertie: de docx-tests checkten op
+`"EUR"` in de gerenderde tekst, maar de templates renderen het euro-symbool `€`
+(zie `_fmt_currency` in dezelfde file). Assertions bijgewerkt naar `€`.
 
 ## KNOWN-005 — Bestaande E2E specs stale t.o.v. nieuwe UI
 

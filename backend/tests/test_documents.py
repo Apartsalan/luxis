@@ -490,13 +490,6 @@ async def test_list_docx_templates(
 # ── Docx generation: 14-dagenbrief ──────────────────────────────────────────
 
 
-@pytest.mark.skip(
-    reason="KNOWN-003: conftest setup_database fixture geeft intermittent "
-    "'relation tenants does not exist' bij parallel test execution — "
-    "asyncpg prepared-statement cache mismatch na DROP/CREATE SCHEMA. "
-    "Affects 23/29 tests in test_documents.py. Out-of-scope: vereist "
-    "conftest refactor naar per-worker test-DBs of session-scoped setup."
-)
 @pytest.mark.asyncio
 async def test_generate_docx_14_dagenbrief(
     client: AsyncClient,
@@ -545,13 +538,12 @@ async def test_generate_docx_14_dagenbrief(
     # Must contain legal notice reference
     assert "6:96" in full_text or "veertien dagen" in full_text
     # Must contain formatted currency amounts
-    assert "EUR" in full_text
+    assert "€" in full_text
 
 
 # ── Docx generation: sommatie ────────────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="KNOWN-003: zelfde conftest setup_database issue")
 @pytest.mark.asyncio
 async def test_generate_docx_sommatie(
     client: AsyncClient,
@@ -589,13 +581,12 @@ async def test_generate_docx_sommatie(
     assert "Acme B.V." in full_text
     assert "Jan de Vries" in full_text
     # Must contain financial amounts
-    assert "EUR" in full_text
+    assert "€" in full_text
 
 
 # ── Docx generation: renteoverzicht ──────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="KNOWN-003: zelfde conftest setup_database issue")
 @pytest.mark.asyncio
 async def test_generate_docx_renteoverzicht(
     client: AsyncClient,
@@ -637,7 +628,7 @@ async def test_generate_docx_renteoverzicht(
     assert "Acme B.V." in full_text
     assert "Jan de Vries" in full_text
     # Must contain financial amounts
-    assert "EUR" in full_text
+    assert "€" in full_text
 
     # Should have principal amounts in tables
     assert "5.000,00" in table_text or "EUR 5.000,00" in table_text
@@ -689,7 +680,6 @@ async def test_generate_docx_nonexistent_case(
 # ── Docx: financial accuracy ─────────────────────────────────────────────────
 
 
-@pytest.mark.skip(reason="KNOWN-003: zelfde conftest setup_database issue")
 @pytest.mark.asyncio
 async def test_docx_financial_amounts_present(
     client: AsyncClient,
@@ -741,7 +731,7 @@ async def test_docx_financial_amounts_present(
 
     # Interest amount should be present (some EUR value)
     # The exact amount depends on calc date, but it should be > 0
-    assert all_text.count("EUR") >= 3  # At least principal, BIK, and total
+    assert all_text.count("€") >= 3  # At least principal, BIK, and total
 
 
 # ── Tenant Isolation ─────────────────────────────────────────────────────────

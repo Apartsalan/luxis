@@ -54,22 +54,39 @@ test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullP
 TestSession = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
+# Schema is created ONCE per test-process (first test), then each test starts
+# from a clean slate via TRUNCATE instead of DROP SCHEMA. Recreating the schema
+# per test invalidated asyncpg's prepared-statement cache → intermittent
+# `UndefinedTableError` on INSERT (KNOWN-002 / KNOWN-003). TRUNCATE issues no DDL,
+# so cached plans stay valid. The flag resets per process, so the very first test
+# always rebuilds the schema from scratch (clean slate across runs).
+_schema_created = False
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_database():
-    """Create all tables before each test, drop them after.
+    """Ensure the schema exists, then truncate all tables for a clean per-test slate.
 
-    Uses DROP SCHEMA CASCADE to ensure complete cleanup including
-    PostgreSQL composite types and any lingering objects that
-    metadata.drop_all() might miss due to FK ordering issues.
+    First test in the process drops + recreates the public schema and builds every
+    table. Subsequent tests only TRUNCATE ... RESTART IDENTITY CASCADE — fast and,
+    crucially, free of the schema-recreate that corrupted the statement cache.
     """
+    global _schema_created
     async with test_engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA public CASCADE"))
-        await conn.execute(text("CREATE SCHEMA public"))
-        await conn.run_sync(Base.metadata.create_all)
+        if not _schema_created:
+            await conn.execute(text("DROP SCHEMA public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
+            await conn.run_sync(Base.metadata.create_all)
+            _schema_created = True
+        else:
+            table_names = ", ".join(
+                f'"{table.name}"' for table in Base.metadata.sorted_tables
+            )
+            if table_names:
+                await conn.execute(
+                    text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE")
+                )
     yield
-    async with test_engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA public CASCADE"))
-        await conn.execute(text("CREATE SCHEMA public"))
 
 
 @pytest_asyncio.fixture

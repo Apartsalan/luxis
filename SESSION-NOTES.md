@@ -1,9 +1,51 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 1 juni 2026 (sessie 148 — volledige read-only systeem-audit, 111 bevindingen → fix-backlog)
-**Laatste feature/fix:** Sessie 148 — **GEEN fixes, alleen audit.** Volledige read-only systeem-audit van Luxis (API+DB+code via parallelle agents + seriële visuele Playwright-sweep) op een lokale wegwerp-stack met Mailpit-mailzinkput. 111 bevindingen na dedup (3 blocker · 25 high · 48 medium · 31 low · 4 polish). Rekenkern (rente/WIK/art.6:44/nakosten) onafhankelijk nagerekend = **correct**; UI consistent professioneel. Fix-backlog met `AUDIT-B1..B3` + `AUDIT-H1..H25` in `LUXIS-ROADMAP.md`. Volledige detail lokaal in `.audit/` (gitignored — bevat data).
-**Openstaande bugs:** **3 blockers** uit audit: B1 placeholder `SECRET_KEY` = auth-bypass + RLS feitelijk uit (eerst productie-`.env` verifiëren); B2 `/api/reports/kpis` crasht 500 (`.days` op Decimal); B3 bankimport-betaling negeert dossier-instellingen. + 25 high (zie roadmap). Pre-bestaand: `deadline_overdue` notifs met `task_id=NULL`; dev-container `sepaxml` na rebuild.
-**Volgende sessie:** S149 — fix AUDIT-blockers. B2 + B3 lokaal fixbaar + rood→groen; B1 na VPS-check van productie-`SECRET_KEY`. Test-harness staat klaar (Mailpit + `e2e-test@`, zie memory `project_systeem_audit_s148`).
+**Laatst bijgewerkt:** 1 juni 2026 (sessie 149 — 3 blockers + 8 high uit audit gefixt)
+**Laatste feature/fix:** Sessie 149 — **11 audit-bevindingen opgelost** (3 blocker + 8 high), elk rood→groen + lint + push + CI/deploy groen. B2 (KPIs 500-crash), B3+H20 (bankimport/AI-betaling negeerde dossier-instellingen → centrale helper), B1 deels (SECRET_KEY-guard gehardend; RLS→S150), H8 (template-preview import), H10 (verweer phantom-kolom), H23 (overdue-KPI uit due_date), H24 (archiveren skipt taken), H21 (delete-contact blokkeert open facturen/trust), H1 (betaald-guard), H3 (rate-limit XFF + /refresh). Rekenkern was al correct (audit S148).
+**Openstaande bugs:** Nog open uit audit: H2 (RLS → S150, VPS nodig), H4 (openstaand excl rente/BIK), H5/H6 (juridisch onderzoek), H7 (kantoorgegevens leeg — data/instellingen), H9 (email_logs — waarschijnlijk schema-drift, migratie 011 bestaat al), H11/H12/H13 (pipeline), H14–H19 (derdengelden-cluster, deels feature), H22 (taak effective-status in lijst/agenda — zelfde root als H23/H24), H25 (modules_enabled — te breed). + 48 medium / 31 low / 4 polish. Pre-bestaand: stale dev-container mist `sepaxml`/pytest/ruff (rebuild fixt; CI groen).
+**Volgende sessie:** S150 — RLS herstellen (`luxis_app` DB-role + FORCE RLS op alle tabellen, app als die rol). VPS-toegang nodig (rol in prod-DB aanmaken) + gefaseerde uitrol met terugrol-plan. = AUDIT-H2 + B1-restant.
+
+## Wat er gedaan is (sessie 149 — 1 juni 2026) — Fix audit-blockers + 8 high
+
+### Samenvatting
+
+Audit-backlog uit S148 aangepakt. **11 bevindingen opgelost**, elk **rood→groen** geverifieerd, los gecommit, gepusht, CI + auto-deploy groen.
+
+**3 blockers:**
+- **B2** (`0e049fc`) — `/api/reports/kpis` crashte 500 zodra er een gesloten zaak was: `avg(date_closed-date_opened)` → PostgreSQL NUMERIC → Decimal, `.days` bestaat niet. Fix `int(round(float(avg_interval)))` + test met gesloten zaak.
+- **B3 + H20** (`db2c767`) — bankimport-betaling (`execute_match`) én AI-handler riepen `create_payment()` zonder de 7 dossier-kwargs die de router wél doorgaf → altijd statutory rente, geen BIK-override, geen BTW. Centrale bron `collections.service.case_payment_kwargs()` + `create_payment_for_case()`; router/bankimport/AI delen nu één helper. Test: bankimport == handmatig op commercial+niet-BTW-dossier.
+- **B1 deels** (`cfb942b`) — SECRET_KEY-guard was alleen actief bij `APP_ENV=production`. Default-secure gemaakt: alles wat geen expliciete dev/test-env is wordt enforced (unset/typo APP_ENV → faalt op zwakke key), dev/test waarschuwt + boot. Pure helper `config.secret_key_status()` + 9 unit-tests. **Prod-key bewezen sterk**: live site draait met guard + APP_ENV=production. **RLS-deel → S150.**
+
+**8 high:**
+- **H8** (`72152b4`) — template-preview crash: import `_build_base_context` bestond niet → `build_base_context`. Test rendert echte sommatie-docx → 200.
+- **H10** (`91a5c0b`) — verweer-switch schreef `case.incasso_step_entered_at` (Pydantic-only, geen kolom) → teller resette nooit. Fix `step_entered_at`. Mapper-inspectie-test.
+- **H23** (`1c95843`) — reports `overdue_tasks` telde stale `status=='overdue'`; nu afgeleid uit `due_date` + open-filter (idem upcoming).
+- **H24** (`308fb13`) — `delete_case` liet open taken hangen; nieuwe `skip_open_tasks_for_case()` zet ze op 'skipped'.
+- **H21** (`93c7968`) — `delete_contact` blokkeert nu ook op open facturen (status niet paid/cancelled) + niet-nul derdengelden-saldo (approved, niet-gestorneerd).
+- **H1** (`c4c79f1`) — guard in `validate_transition`: 'betaald' geblokkeerd bij `total_outstanding > €0,01` (verwijst naar oninbaar/schikking). Spiegelt de auto-hook exact → breekt auto-betaald niet.
+- **H3** (`9471713`) — rate-limit key_func nam eerste XFF-entry (spoofbaar) → nu laatste (Caddy-peer, 1-hop). `/refresh` gelimiteerd op 20/min. Unit-tests op key_func.
+
+### Gewijzigde bestanden
+- `backend/app/dashboard/reports_service.py` — B2 (avg_days) + H23 (overdue/upcoming uit due_date)
+- `backend/app/collections/service.py` — B3 helper `case_payment_kwargs` + `create_payment_for_case`
+- `backend/app/collections/router.py` — B3 router gebruikt helper
+- `backend/app/ai_agent/payment_matching_service.py` + `ai_agent/tools/handlers/collections.py` — B3/H20 helper-aanroep
+- `backend/app/config.py` + `app/main.py` — B1 SECRET_KEY-guard
+- `backend/app/documents/template_router.py` — H8 import-fix
+- `backend/app/incasso/automation_service.py` — H10 step_entered_at
+- `backend/app/workflow/service.py` — H24 skip_open_tasks_for_case + H1 betaald-guard
+- `backend/app/cases/service.py` — H24 delete_case
+- `backend/app/relations/service.py` — H21 delete-guard
+- `backend/app/auth/router.py` + `app/middleware/rate_limit.py` — H3
+- Tests: test_dashboard, test_payment_matching, test_secret_key_guard (nieuw), test_template_preview (nieuw), test_incasso_pipeline, test_cases, test_relations, test_workflow, test_rate_limit (nieuw)
+- `LUXIS-ROADMAP.md` — alle gefixte ID's op ✅ + S149-voortgangsregel
+
+### Bekende issues
+- **Stale lokale dev-container** mist dev-deps (pytest/ruff/sepaxml) — moest `uv pip install --system -u root` doen. 6 lokale full-suite-fails zijn puur environment: 2× email_router (`SMTP_HOST=mailpit` maakt "not configured"-test fout) + 4× trust_funds SEPA (`sepaxml` mist in image). CI bouwt vers met alle deps → groen. Rebuild container fixt lokaal.
+- Restant audit-backlog (zie roadmap): H2/RLS, H4, H5–H7, H9, H11–H19, H22, H25 + 48 medium/31 low/4 polish.
+
+### Volgende sessie
+- **S150 — RLS** (= AUDIT-H2 + B1-restant): `luxis_app` DB-role aanmaken (ook in prod-DB op VPS), FORCE RLS op alle 43 tabellen, app als die rol laten verbinden. Gefaseerd: dev bewijzen → CI → prod met terugrol-plan. VPS-toegang nodig.
 
 ## Wat er gedaan is (sessie 148 — 1 juni 2026) — Volledige read-only systeem-audit
 

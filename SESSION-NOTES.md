@@ -1,9 +1,76 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 20 mei 2026 (sessie 146 — CaseActionFeed widget + notification-types + UX-verfijning + productie-cleanup)
-**Laatste feature/fix:** Sessie 146 — (1) CaseActionFeed widget op Overzicht-tab dossier met 4 kaart-types (DraftReady/EmailReceived/Classification/Deadline), filter Wachtend/Afgehandeld/Alles, max 3 zichtbaar + Toon-alle toggle, deadlines bovenaan, 30s polling + window-focus refetch; (2) 3 nieuwe notification-types met hooks in sync_service / unified_draft_service / ai_agent service, dedup per type (5/10/60 min) via `_notify_all_tenant_users`; (3) `create_notification_if_not_exists` dedup uitgebreid met `task_id` zodat verschillende tasks op zelfde case niet collapseren; (4) scheduler deadline_overdue window verlengd naar 30 dagen + task_id meegegeven; (5) cleanup parallelle AI-entries — "Bekijk concept" knoppen uit /taken en TijdregistratieTab weggehaald, CaseActionFeed is enige entry-point; (6) UX-verfijning widget: refresh-knop, vriendelijke lege staat met groene checkmark, klikbare hint naar afgehandelde berichten; (7) backfill script voor pre-S146 drafts (1 per case, idempotent); (8) productie-cleanup: 468 duplicate deadline notifications mark-as-read, 4 ai_draft_ready backfilled, 1 email_received test-trigger geverifieerd via Playwright.
-**Openstaande bugs:** UnifiedDraftService draait parallel naast oude `/api/ai-agent/draft` + smart-replies — frontend migratie in volgende sessies; bestaande pre-S146 deadline_overdue notifications hebben `task_id = NULL` (cleanup deduped op (user,case) als fallback).
-**Volgende sessie:** S147 — Snooze-functionaliteit (24u/3d/1w) op CaseActionFeed kaarten OF deprecatie oude `/api/ai-agent/draft` endpoint + verwijdering smart-replies UI (memory feedback_s141 — geen parallelle entries). Plus M0b voorbereiding (Lisanne overzetten naar M365) als prioriteit verschuift.
+**Laatst bijgewerkt:** 1 juni 2026 (sessie 147 — CLEAN-AI-01 deprecatie + smart-replies cleanup + snooze + conftest refactor)
+**Laatste feature/fix:** Sessie 147 — (1) CLEAN-AI-01: smart-replies UI volledig verwijderd (SmartReplyCard, "Concept-antwoord" knop/panel, `useSmartReplies` hook) — CaseActionFeed ClassificationDoneCard is enige entry-point; (2) deprecated AI-endpoints hard verwijderd: `POST /api/ai-agent/draft/{case_id}` + `GET /classifications/{id}/smart-replies` routes + `smart_reply_service.py` (draft_service blijft — orchestrator gebruikt het); (3) FEAT-AI-05 snooze op CaseActionFeed-kaarten (24u/3d/1w): `notifications.snoozed_until` kolom + migratie s147a, `PUT /snooze` endpoint (server-berekend, whitelist), klok-dropdown per kaart, "Sluimert tot …" + "Nu tonen" onder Alles — live getest op productie; (4) conftest refactor: schema 1× per proces + per-test TRUNCATE i.p.v. DROP SCHEMA → lost asyncpg statement-cache bug op, 13 voorheen-geskipte tests unskipped (KNOWN-002/003 OPGELOST), volledige suite 879 passed.
+**Openstaande bugs:** Geen kritieke. Pre-S146 `deadline_overdue` notifications hebben `task_id = NULL` (oude cleanup-fallback). Dev-container heeft `sepaxml` handmatig geïnstalleerd nodig na rebuild totdat image opnieuw gebouwd wordt (staat al in pyproject.toml, CI/prod bouwen fresh).
+**Volgende sessie:** S148 — keuze: (a) nieuwe kaart-types of WebSocket voor CaseActionFeed; (b) M0b voorbereiding (Lisanne overzetten naar M365); (c) algemene voorwaarden per cliënt + response templates fine-tunen (TODO's). Zie `docs/design/feat-ai-05-snooze.md` voor afgeronde snooze-scope.
+
+## Wat er gedaan is (sessie 147 — 1 juni 2026) — CLEAN-AI-01 deprecatie + smart-replies cleanup + snooze + conftest refactor
+
+### Samenvatting
+
+**CLEAN-AI-01 — smart-replies UI verwijderd (commit `885b38f`):**
+- `frontend/src/components/classification-card.tsx`: `SmartReplyCard`, "Concept-antwoord" knop + panel, `TONE_CONFIG` en ongebruikte imports weg. Classificatie-kaart toont nu alleen Akkoord/Afwijzen/Toon redenering.
+- `frontend/src/hooks/use-ai-agent.ts`: `useSmartReplies` hook + `SmartReply` type weg.
+- `frontend/src/hooks/use-ai-draft.ts`: verouderd legacy-commentaar bijgewerkt (`useGenerateDraft` routet al via `/api/ai/draft` sinds S145, geen callers — migratie was no-op).
+- Onderzoek wees uit: CaseActionFeed `ClassificationDoneCard` ("Antwoord opstellen" → Correspondentie) dekt smart-replies al → echte duplicaat, verwijderd (memory `feedback_s141_afspraken`).
+- Beslissing gebruiker: "Concept genereren"-knop in DossierHeader (incasso pipeline-stap, `useGenerateDraftForCase` → `/api/incasso/.../generate-draft`) **behouden** — handmatige trigger, geen duplicaat, buiten CLEAN-AI-01 scope.
+
+**CLEAN-AI-01 — backend deprecate → hard verwijderen (commits `417f45a`, `bd42017`):**
+- Eerst `deprecated=True` + docstrings (`417f45a`), daarna hard verwijderd (`bd42017`): `POST /api/ai-agent/draft/{case_id}` route + `GET /classifications/{id}/smart-replies` route + `backend/app/ai_agent/smart_reply_service.py` (alleen door die route gebruikt) + `DraftRequest` schema + ongebruikte `BaseModel`-import.
+- **Behouden:** `AIDraft` model, `draft_service.py` (`generate_and_persist_draft` wordt door `ai_agent/orchestrator.py` gebruikt — voedt CaseActionFeed `ai_draft_ready`), `GET/PATCH /drafts` read-endpoints (deeplink), `_draft_to_response`.
+- App boot OK (293 routes, deprecated weg), 45 tests groen.
+
+**FEAT-AI-05 — snooze op CaseActionFeed-kaarten (commit `c4ad4de`, ontwerp `4956d8c`):**
+- Lisanne kan een kaart tijdelijk verbergen ("herinner me later") zonder als afgehandeld te markeren. Snoozen houdt item ongelezen, alleen verborgen onder "Wachtend" tot moment passeert. 30s-poll haalt 'm vanzelf terug.
+- Backend: `notifications.snoozed_until` kolom (TIMESTAMPTZ, nullable) + handgeschreven migratie `s147a_notification_snooze` (autogenerate faalt op pre-existing `products` FK-issue). `PUT /api/notifications/{id}/snooze {hours}` — server berekent `now()+interval`, whitelist 24/72/168u, `hours=0` = unsnooze, zet `is_read=False`. 4 service-tests.
+- Frontend: `useSnoozeFeedItem` hook + `SNOOZE_OPTIONS`, hook filtert gesnoozede items uit "Wachtend". Klok-dropdown per kaart (24 uur / 3 dagen / 1 week). Gesnoozede kaart toont "Sluimert tot …" + "Nu tonen" onder filter Alles.
+- **Live getest op productie** (dossier 2026-00049): snooze 24u → Wachtend 10→9, "Sluimert tot di 2 jun" onder Alles, "Nu tonen" → terug naar 10, 0 console errors, state hersteld.
+
+**Conftest refactor — KNOWN-002/003 OPGELOST (commit `b3b458a`):**
+- `conftest.py::setup_database` deed `DROP SCHEMA CASCADE` vóór elke test → asyncpg prepared-statement cache out-of-sync → intermittent `UndefinedTableError`. Nu: schema **1× per test-proces** (module-flag `_schema_created`) + per-test `TRUNCATE ... RESTART IDENTITY CASCADE`. Geen DDL per test → cache blijft geldig. Function-scoped gehouden (geen event-loop scope-problemen).
+- 13 voorheen-geskipte tests unskipped + groen: `test_trust_funds_offset.py` (9), SEPA-export (4), docx (4).
+- 2 echte oorzaken die de skip verstopte: dev-container stale (`sepaxml` stond al in pyproject maar niet geïnstalleerd → `ModuleNotFoundError`; CI/prod bouwen fresh) + stale assertions (`"EUR"` → `"€"`, templates renderen euro-symbool, zie `_fmt_currency`).
+- `KNOWN_BUGS.md`: KNOWN-002 + KNOWN-003 gemarkeerd OPGELOST met werkelijke root cause.
+- **Volledige suite: 879 passed, 0 failed** (12m51s lokaal) + CI groen (fresh build, sepaxml aanwezig).
+
+### Gewijzigde bestanden
+
+**Backend:**
+- `backend/app/ai_agent/router.py` — deprecated routes verwijderd, `DraftRequest` + `BaseModel`-import weg, cleanup-comments
+- `backend/app/ai_agent/smart_reply_service.py` — **verwijderd**
+- `backend/app/notifications/models.py` — `snoozed_until` kolom
+- `backend/app/notifications/schemas.py` — `snoozed_until` veld op response
+- `backend/app/notifications/service.py` — `snooze_notification` + `SNOOZE_HOURS` whitelist
+- `backend/app/notifications/router.py` — `PUT /{id}/snooze` + `SnoozeRequest`
+- `backend/alembic/versions/s147a_notification_snooze.py` (nieuw)
+- `backend/tests/test_notifications_service.py` — 4 snooze-tests
+- `backend/tests/conftest.py` — session-éénmalig schema + per-test TRUNCATE
+- `backend/tests/test_documents.py`, `test_trust_funds.py`, `test_trust_funds_offset.py` — skips weg, `"EUR"`→`"€"`
+- `backend/tests/KNOWN_BUGS.md` — KNOWN-002/003 OPGELOST
+
+**Frontend:**
+- `frontend/src/components/classification-card.tsx` — smart-replies UI weg
+- `frontend/src/hooks/use-ai-agent.ts` — `useSmartReplies` + `SmartReply` weg
+- `frontend/src/hooks/use-ai-draft.ts` — legacy-comment bijgewerkt
+- `frontend/src/hooks/use-notifications.ts` — `snoozed_until` op `Notification`
+- `frontend/src/hooks/use-case-action-feed.ts` — snooze-filter + `useSnoozeFeedItem` + `SNOOZE_OPTIONS`
+- `frontend/src/components/case-action-feed/CaseActionFeed.tsx` — snooze-dropdown + "Sluimert tot"/"Nu tonen"
+
+**Docs:**
+- `docs/design/feat-ai-05-snooze.md` (nieuw) — snooze-ontwerp + pre-mortem
+
+### Bekende issues
+
+- Dev-container: `sepaxml` moet na container-rebuild opnieuw via pip (staat in pyproject.toml; CI/prod bouwen fresh dus geen issue daar). Bij volgende `build --no-cache` is dit opgelost.
+- Pre-S146 `deadline_overdue` notifications hebben `task_id = NULL` (oude data, geen nieuwe impact).
+
+### Volgende sessie
+
+S148 — keuze:
+1. **Nieuwe CaseActionFeed kaart-types** of WebSocket i.p.v. 30s-poll.
+2. **M0b** — Lisanne overzetten naar M365 (wacht op Lisanne).
+3. **Algemene voorwaarden per cliënt** + response templates fine-tunen (openstaande TODO's).
 
 ## Wat er gedaan is (sessie 146 — 20 mei 2026) — CaseActionFeed widget + notification-types + UX-verfijning + productie-cleanup
 

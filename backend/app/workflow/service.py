@@ -35,6 +35,7 @@ from app.workflow.schemas import (
     WorkflowTaskCreate,
     WorkflowTaskUpdate,
     WorkflowTransitionCreate,
+    effective_task_status,
 )
 
 # ── WorkflowStatus CRUD ────────────────────────────────────────────────────
@@ -869,6 +870,7 @@ async def get_calendar_events(
     Combines workflow tasks and KYC review deadlines into a single sorted list.
     """
     events: list[dict] = []
+    today = date.today()
 
     # ── 1. Workflow tasks ────────────────────────────────────────────────
     task_query = (
@@ -888,20 +890,23 @@ async def get_calendar_events(
     for task in tasks:
         case = task.case
         assigned_to = task.assigned_to
+        # Derive status from due_date so a past-due task shows red ('Te laat'),
+        # not blue ('Gepland'), even if the daily batch hasn't run (AUDIT-H22).
+        eff_status = effective_task_status(task.status, task.due_date, today)
         events.append(
             {
                 "id": str(task.id),
                 "title": task.title,
                 "date": task.due_date,
                 "event_type": "task",
-                "status": task.status,
+                "status": eff_status,
                 "case_id": str(task.case_id),
                 "case_number": case.case_number if case else None,
                 "contact_id": None,
                 "contact_name": None,
                 "assigned_to_name": assigned_to.full_name if assigned_to else None,
                 "task_type": task.task_type,
-                "color": _TASK_COLORS.get(task.status, "#3b82f6"),
+                "color": _TASK_COLORS.get(eff_status, "#3b82f6"),
             }
         )
 
@@ -919,7 +924,6 @@ async def get_calendar_events(
     result = await db.execute(kyc_query)
     kyc_records = list(result.scalars().all())
 
-    today = date.today()
     for kyc in kyc_records:
         contact = kyc.contact
         review_date = kyc.next_review_date

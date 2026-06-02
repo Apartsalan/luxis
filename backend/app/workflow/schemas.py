@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ── Legal constraints (hardcoded, not configurable) ─────────────────────────
 
@@ -25,6 +25,29 @@ TASK_TYPES = (
     "custom",
 )
 TASK_STATUSES = ("pending", "due", "completed", "skipped", "overdue")
+
+# Terminal statuses are authoritative — never recomputed from the due date.
+_TERMINAL_TASK_STATUSES = ("completed", "skipped")
+
+
+def effective_task_status(status: str, due_date: date, today: date | None = None) -> str:
+    """Derive a task's real status from its due_date at read time.
+
+    ``WorkflowTask.status`` is only materialized by a daily batch job
+    (``update_task_statuses``), so between runs it drifts stale: a task whose
+    ``due_date`` has already passed can still read ``pending``/``due``. We
+    recompute it on every read so the takenlijst, agenda and dashboard never
+    show a past-due task as 'Gepland' (AUDIT-H22 — same root cause as H23/H24).
+    Terminal statuses (completed/skipped) are kept as-is.
+    """
+    if status in _TERMINAL_TASK_STATUSES:
+        return status
+    today = today or date.today()
+    if due_date < today:
+        return "overdue"
+    if due_date == today:
+        return "due"
+    return "pending"
 
 
 # ── WorkflowStatus ─────────────────────────────────────────────────────────
@@ -151,6 +174,13 @@ class WorkflowTaskResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def _derive_effective_status(self) -> "WorkflowTaskResponse":
+        """Recompute status from due_date so the takenlijst/agenda never read
+        the stale batch-materialized value (AUDIT-H22)."""
+        self.status = effective_task_status(self.status, self.due_date)
+        return self
 
 
 # ── WorkflowRule ───────────────────────────────────────────────────────────

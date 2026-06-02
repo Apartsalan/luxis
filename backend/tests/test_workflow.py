@@ -194,7 +194,7 @@ async def test_create_task(
         "task_type": "manual_review",
         "title": "Controleer betalingsbewijs",
         "description": "Debiteur claimt betaald te hebben",
-        "due_date": "2026-03-15",
+        "due_date": (date.today() + timedelta(days=30)).isoformat(),
     }
     resp = await client.post("/api/workflow/tasks", json=payload, headers=auth_headers)
     assert resp.status_code == 201
@@ -546,3 +546,89 @@ async def test_betaald_allowed_when_nothing_outstanding(
     loaded = await get_case(db, test_tenant.id, case.id)
     result = await validate_transition(db, test_tenant.id, loaded, "betaald")
     assert result.allowed is True
+
+
+# ── Effective task status (AUDIT-H22) ────────────────────────────────────────
+
+
+def test_effective_task_status_helper():
+    """Open tasks derive status from due_date; terminal statuses are kept."""
+    from app.workflow.schemas import effective_task_status
+
+    today = date(2026, 6, 2)
+    assert effective_task_status("pending", today - timedelta(days=1), today) == "overdue"
+    assert effective_task_status("due", today - timedelta(days=5), today) == "overdue"
+    assert effective_task_status("pending", today, today) == "due"
+    assert effective_task_status("pending", today + timedelta(days=3), today) == "pending"
+    # Terminal statuses stay authoritative even when past due.
+    assert effective_task_status("completed", today - timedelta(days=10), today) == "completed"
+    assert effective_task_status("skipped", today - timedelta(days=10), today) == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_task_response_status_overdue_when_past_due(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
+):
+    """A past-due task still stored as 'pending' (daily batch not run) must
+    serialize as 'overdue' in the takenlijst response (AUDIT-H22)."""
+    case = await _create_case(db, test_tenant.id, "2026-09001")
+    resp = await client.post(
+        "/api/workflow/tasks",
+        json={
+            "case_id": str(case.id),
+            "task_type": "manual_review",
+            "title": "Verlopen taak",
+            "due_date": (date.today() - timedelta(days=3)).isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    # Stored status is 'pending' (column default); the response derives 'overdue'.
+    assert resp.json()["status"] == "overdue"
+
+    listed = await client.get(
+        f"/api/workflow/tasks?case_id={case.id}", headers=auth_headers
+    )
+    assert listed.status_code == 200
+    assert listed.json()[0]["status"] == "overdue"
+
+
+@pytest.mark.asyncio
+async def test_calendar_event_overdue_status_and_color_from_due_date(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
+):
+    """A past-due task on the agenda must be 'overdue' + red, not 'pending' +
+    blue, even when the daily batch hasn't materialized the status (AUDIT-H22)."""
+    case = await _create_case(db, test_tenant.id, "2026-09002")
+    due = date.today() - timedelta(days=2)
+    await client.post(
+        "/api/workflow/tasks",
+        json={
+            "case_id": str(case.id),
+            "task_type": "check_payment",
+            "title": "Verlopen agenda-taak",
+            "due_date": due.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    date_from = (due - timedelta(days=1)).isoformat()
+    date_to = (date.today() + timedelta(days=1)).isoformat()
+    resp = await client.get(
+        f"/api/workflow/calendar?date_from={date_from}&date_to={date_to}",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    events = [e for e in resp.json() if e["title"] == "Verlopen agenda-taak"]
+    assert len(events) == 1
+    assert events[0]["status"] == "overdue"
+    assert events[0]["color"] == "#ef4444"

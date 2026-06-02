@@ -74,9 +74,9 @@
 | AUDIT-H4 | Openstaand op dashboard/reports sluit rente+BIK uit (onderschat) | Rapportages |
 | AUDIT-H5 | Griffierecht-staffel volledig verouderd (alle tarieven fout) | Rekenkern |
 | AUDIT-H6 | 14-dagenbrief: twee tegenstrijdige betaalinstructies (WIK B2C) | Documenten |
-| AUDIT-H7 | Betaalbrieven tonen leeg kantoor-IBAN/adres/telefoon | Documenten/Instellingen |
+| AUDIT-H7 | ✅ **Opgelost (S151, `2bdd6dc`)** Betaalbrieven tonen leeg kantoor-IBAN/adres/telefoon — templates lazen `kantoor.iban/telefoon/email` al, maar Kantoor-tab had geen invulvelden → kolommen bleven leeg. Telefoon/E-mail/IBAN (kantoorrekening) toegevoegd aan Kantoor-tab (apart van Stichting Derdengelden-IBAN); end-to-end geverifieerd (UI→API→DB round-trip). Regressietest op `_tenant_ctx`-mergevelden. | Documenten/Instellingen |
 | AUDIT-H8 | ✅ **Opgelost (S149, `91a5c0b`)** Managed-template preview crasht (ImportError → 500) — verkeerde import `_build_base_context` → `build_base_context` | Documenten |
-| AUDIT-H9 | `email_logs`-tabel ontbreekt → verzonden mails onzichtbaar (500) | Correspondentie |
+| AUDIT-H9 | ✅ **Opgelost (S151, `4b45361`)** `email_logs`-tabel ontbreekt → verzonden mails onzichtbaar (500) — migratie 011 was gestampt maar nooit uitgevoerd op gedrifte DB's (restore-dumps); `sec13` gokte dit al ("may not exist on all environments"). Idempotente self-healing migratie `s151_heal_email_logs` (CREATE TABLE IF NOT EXISTS + indexes + RLS/policy/grant) heelt dev+prod, no-op waar tabel al bestaat. Rood→groen geverifieerd op gedrifte lokale DB + endpoint-regressietest. | Correspondentie |
 | AUDIT-H10 | ✅ **Opgelost (S149, `91a5c0b`)** Verweer-switch schrijft naar niet-bestaand attribuut (teller reset niet) — `incasso_step_entered_at` → `step_entered_at` | Pipeline |
 | AUDIT-H11 | Pipeline negeert `case.status` (terminale stappen zetten status niet) | Pipeline |
 | AUDIT-H12 | Payment-/debtor_response-automation-rules nergens geëvalueerd | Pipeline |
@@ -89,7 +89,7 @@
 | AUDIT-H19 | Wezen-/ongematchte transacties niet zichtbaar/koppelbaar in UI | Betalingen |
 | AUDIT-H20 | ✅ **Opgelost (S149, `db2c767`)** AI-tool registreert betaling óók zonder dossier-instellingen — via gedeelde helper (zie AUDIT-B3) | Betalingen |
 | AUDIT-H21 | ✅ **Opgelost (S149, `93c7968`)** Soft-delete guard negeert open facturen/derdengelden → wees-tegenpartij — delete_contact blokkeert nu op open facturen + niet-nul trust-saldo | Relaties |
-| AUDIT-H22 | Taakstatus batch-gematerialiseerd — 324 taken tonen niet als 'overdue' | Taken/Agenda |
+| AUDIT-H22 | ✅ **Opgelost (S151, `c7ba8f7`)** Taakstatus batch-gematerialiseerd — 324 taken tonen niet als 'overdue' — effectieve status nu afgeleid uit `due_date` op leestijd (zelfde root als H23/H24): helper `effective_task_status` + `WorkflowTaskResponse`-validator (takenlijst/my-tasks) + `get_calendar_events` (agenda status+kleur). Pydantic-laag, DB-kolom ongemoeid. Rood→groen test. | Taken/Agenda |
 | AUDIT-H23 | ✅ **Opgelost (S149, `1c95843`)** Reports-KPI 'overdue_tasks' hangt aan stale status-veld — overdue/upcoming nu afgeleid uit due_date | Taken |
 | AUDIT-H24 | ✅ **Opgelost (S149, `308fb13`)** Open taken blijven hangen op gearchiveerde dossiers — delete_case zet open taken op 'skipped' | Taken |
 | AUDIT-H25 | `modules_enabled` niet server-side afgedwongen (per-module pricing) | Instellingen |

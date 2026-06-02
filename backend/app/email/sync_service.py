@@ -30,6 +30,7 @@ from app.email.providers.base import EmailMessage
 from app.email.synced_email_models import SyncedEmail
 from app.email.token_encryption import decrypt_token
 from app.relations.models import Contact
+from app.shared.exceptions import NotFoundError
 
 # Base directory for email attachment storage
 EMAIL_ATTACHMENTS_BASE = Path("/app/uploads/email_attachments")
@@ -857,6 +858,20 @@ async def get_unlinked_emails(
     return emails, total
 
 
+async def _assert_case_in_tenant(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> None:
+    """Guard: the target case must belong to this tenant before any email is
+    linked to it. Emails are tenant-scoped, but the case_id arrives straight
+    from the request — without this check a caller could attach emails to
+    another tenant's dossier (AUDIT-MEDIUM)."""
+    result = await db.execute(
+        select(Case.id).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    if result.scalar_one_or_none() is None:
+        raise NotFoundError("Dossier niet gevonden")
+
+
 async def link_email_to_case(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -864,6 +879,7 @@ async def link_email_to_case(
     case_id: uuid.UUID,
 ) -> SyncedEmail | None:
     """Manually link an email to a case."""
+    await _assert_case_in_tenant(db, tenant_id, case_id)
     result = await db.execute(
         select(SyncedEmail).where(
             SyncedEmail.id == email_id,
@@ -923,6 +939,7 @@ async def bulk_link_emails(
     case_id: uuid.UUID,
 ) -> int:
     """Link multiple emails to the same case (bulk)."""
+    await _assert_case_in_tenant(db, tenant_id, case_id)
     result = await db.execute(
         select(SyncedEmail).where(
             SyncedEmail.tenant_id == tenant_id,

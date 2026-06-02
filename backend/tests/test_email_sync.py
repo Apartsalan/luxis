@@ -413,3 +413,82 @@ async def test_email_tenant_isolation(
     # Other tenant should see 0 unlinked emails
     resp = await client.get("/api/email/unlinked/count", headers=other_headers)
     assert resp.json()["count"] == 0
+
+
+# ── Cross-tenant link guard (AUDIT-MEDIUM) ────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_bulk_link_rejects_foreign_tenant_case(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """bulk_link_emails must refuse a case from another tenant (AUDIT-MEDIUM).
+
+    Emails are tenant-scoped, but the target case_id was never validated against
+    the tenant — a caller could attach their own emails to another tenant's
+    dossier."""
+    from app.email.sync_service import bulk_link_emails
+    from app.shared.exceptions import NotFoundError
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    email = await _create_synced_email(db, test_tenant.id, account.id, subject="Mine")
+
+    other = Tenant(
+        id=uuid.uuid4(), name="Other Firm A", slug="other-firm-a", kvk_number="11111111"
+    )
+    db.add(other)
+    await db.flush()
+    foreign_case = await _create_case(db, other.id, case_number="2026-99991")
+    await db.flush()
+
+    with pytest.raises(NotFoundError):
+        await bulk_link_emails(db, test_tenant.id, [email.id], foreign_case.id)
+
+    await db.refresh(email)
+    assert email.case_id is None  # left untouched
+
+
+@pytest.mark.asyncio
+async def test_link_email_rejects_foreign_tenant_case(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Single link_email_to_case must also refuse a foreign-tenant case."""
+    from app.email.sync_service import link_email_to_case
+    from app.shared.exceptions import NotFoundError
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    email = await _create_synced_email(db, test_tenant.id, account.id, subject="Mine2")
+
+    other = Tenant(
+        id=uuid.uuid4(), name="Other Firm B", slug="other-firm-b", kvk_number="22222222"
+    )
+    db.add(other)
+    await db.flush()
+    foreign_case = await _create_case(db, other.id, case_number="2026-99992")
+    await db.flush()
+
+    with pytest.raises(NotFoundError):
+        await link_email_to_case(db, test_tenant.id, email.id, foreign_case.id)
+
+    await db.refresh(email)
+    assert email.case_id is None
+
+
+@pytest.mark.asyncio
+async def test_bulk_link_same_tenant_still_works(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """The tenant guard must not break a normal same-tenant bulk link."""
+    from app.email.sync_service import bulk_link_emails
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_case(db, test_tenant.id, case_number="2026-00050")
+    e1 = await _create_synced_email(db, test_tenant.id, account.id, subject="A")
+    e2 = await _create_synced_email(db, test_tenant.id, account.id, subject="B")
+
+    count = await bulk_link_emails(db, test_tenant.id, [e1.id, e2.id], case.id)
+    assert count == 2
+    await db.refresh(e1)
+    await db.refresh(e2)
+    assert e1.case_id == case.id
+    assert e2.case_id == case.id

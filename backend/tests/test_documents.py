@@ -894,3 +894,57 @@ async def test_tenant_isolation_docx_generation(
         headers=second_auth_headers,
     )
     assert response.status_code == 404
+
+
+# ── Email logs endpoint (AUDIT-H9 regression) ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_list_email_logs_endpoint(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    test_person: Contact,
+):
+    """GET email-logs must return 200, never 500. On databases where migration
+    011 was stamped but not executed the email_logs table was missing, so this
+    endpoint crashed with UndefinedTable and sent mails vanished from the
+    correspondence view (AUDIT-H9, healed by s151_heal_email_logs)."""
+    from app.email.models import EmailLog
+
+    case_id = await _create_case_with_claims(
+        client, auth_headers, db, test_tenant, test_company, test_person
+    )
+
+    # Table exists, no rows yet -> 200 + empty list (not a 500).
+    empty = await client.get(
+        f"/api/documents/cases/{case_id}/email-logs", headers=auth_headers
+    )
+    assert empty.status_code == 200
+    assert empty.json() == []
+
+    # A logged send must surface in the correspondence view.
+    db.add(
+        EmailLog(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=uuid.UUID(case_id),
+            template="document_sent",
+            recipient="ontvanger@example.com",
+            subject="Sommatie verzonden",
+            status="sent",
+        )
+    )
+    await db.commit()
+
+    resp = await client.get(
+        f"/api/documents/cases/{case_id}/email-logs", headers=auth_headers
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["recipient"] == "ontvanger@example.com"
+    assert data[0]["subject"] == "Sommatie verzonden"
+    assert data[0]["status"] == "sent"

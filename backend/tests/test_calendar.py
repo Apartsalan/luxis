@@ -80,6 +80,17 @@ async def test_create_event(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
+async def test_create_event_invalid_case_id_returns_4xx(
+    client: AsyncClient, auth_headers: dict
+):
+    """A non-existent or cross-tenant case_id must fail with a 4xx, not a 500 on
+    the FK insert (AUDIT-MEDIUM)."""
+    payload = _event_payload(case_id=str(uuid.uuid4()))
+    resp = await client.post("/api/calendar/events", json=payload, headers=auth_headers)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_list_events(client: AsyncClient, auth_headers: dict):
     """Listing events returns created events."""
     await client.post("/api/calendar/events", json=_event_payload(), headers=auth_headers)

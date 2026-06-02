@@ -14,6 +14,36 @@ from app.shared.exceptions import BadRequestError, NotFoundError
 logger = logging.getLogger(__name__)
 
 
+async def _validate_links(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID | None,
+    contact_id: uuid.UUID | None,
+) -> None:
+    """Ensure a linked case/contact exists within this tenant (AUDIT-MEDIUM).
+
+    Without this an invalid or cross-tenant id hit the FK as a 500, or silently
+    linked the event across tenants.
+    """
+    from app.cases.models import Case
+    from app.relations.models import Contact
+
+    if case_id is not None:
+        exists = await db.execute(
+            select(Case.id).where(Case.id == case_id, Case.tenant_id == tenant_id)
+        )
+        if exists.scalar_one_or_none() is None:
+            raise NotFoundError("Gekoppelde zaak niet gevonden")
+    if contact_id is not None:
+        exists = await db.execute(
+            select(Contact.id).where(
+                Contact.id == contact_id, Contact.tenant_id == tenant_id
+            )
+        )
+        if exists.scalar_one_or_none() is None:
+            raise NotFoundError("Gekoppelde relatie niet gevonden")
+
+
 async def list_events(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -75,6 +105,11 @@ async def create_event(
     if data.end_time <= data.start_time and not data.all_day:
         raise BadRequestError("Eindtijd moet na starttijd liggen")
 
+    # AUDIT-MEDIUM: validate that a linked case/contact exists in THIS tenant
+    # before insert. An invalid or cross-tenant id otherwise hit the FK and
+    # surfaced as a 500 (or silently linked across tenants); fail with a 4xx.
+    await _validate_links(db, tenant_id, data.case_id, data.contact_id)
+
     color = data.color or EVENT_TYPE_COLORS.get(data.event_type, "#6b7280")
 
     event = CalendarEvent(
@@ -113,6 +148,10 @@ async def update_event(
     event = await get_event(db, tenant_id, event_id)
 
     update_data = data.model_dump(exclude_unset=True)
+    # AUDIT-MEDIUM: validate re-linked case/contact ownership (4xx, not 500).
+    await _validate_links(
+        db, tenant_id, update_data.get("case_id"), update_data.get("contact_id")
+    )
 
     for field, value in update_data.items():
         setattr(event, field, value)

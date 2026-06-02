@@ -33,6 +33,7 @@ from app.cases.models import Case
 from app.collections.models import Claim
 from app.collections.schemas import PaymentCreate
 from app.collections.service import create_payment_for_case
+from app.shared.exceptions import ConflictError
 from app.trust_funds.schemas import TrustTransactionCreate
 from app.trust_funds.service import create_transaction as create_trust_transaction
 
@@ -747,6 +748,22 @@ async def manual_match(
     case = case_result.scalar_one_or_none()
     if not case:
         raise ValueError("Dossier niet gevonden")
+
+    # Guard: a transaction may not get a second match while a prior auto-match is
+    # still PENDING — approving both double-counts the payment (AUDIT-MEDIUM).
+    # Surface a 409 so the user resolves the open match before linking manually.
+    existing_pending = await db.execute(
+        select(PaymentMatch).where(
+            PaymentMatch.tenant_id == tenant_id,
+            PaymentMatch.transaction_id == transaction_id,
+            PaymentMatch.status == MatchStatus.PENDING,
+        )
+    )
+    if existing_pending.scalars().first() is not None:
+        raise ConflictError(
+            "Deze transactie heeft al een openstaande match. "
+            "Beoordeel die eerst voordat je handmatig koppelt."
+        )
 
     # Create match
     match = PaymentMatch(

@@ -640,6 +640,53 @@ class TestMatchWorkflow:
                 uuid.uuid4(),
             )
 
+    @pytest.mark.asyncio
+    async def test_manual_match_blocked_when_pending_exists(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User, incasso_case: Case
+    ):
+        """manual_match must refuse a transaction that already has a PENDING
+        match (AUDIT-MEDIUM).
+
+        An auto-match awaiting review plus a fresh manual match would leave two
+        matches on one transaction; approving both double-counts the payment."""
+        from sqlalchemy import select
+
+        from app.shared.exceptions import ConflictError
+
+        row = _make_rabobank_row("+200.00", counterparty_name="Onbekende Betaler")
+        csv = f"{RABOBANK_HEADER}\n{row}"
+        stmt_import = await import_bank_statement(
+            db, test_tenant.id, test_user.id, "test.csv", csv, bank="rabobank"
+        )
+        await db.flush()
+
+        txn = (
+            await db.execute(
+                select(BankTransaction).where(
+                    BankTransaction.import_id == stmt_import.id
+                )
+            )
+        ).scalar_one()
+
+        # An auto-match is already awaiting review for this transaction.
+        db.add(
+            PaymentMatch(
+                id=uuid.uuid4(),
+                tenant_id=test_tenant.id,
+                transaction_id=txn.id,
+                case_id=incasso_case.id,
+                match_method=MatchMethod.CASE_NUMBER,
+                confidence=95,
+                status=MatchStatus.PENDING,
+            )
+        )
+        await db.flush()
+
+        with pytest.raises(ConflictError):
+            await manual_match(
+                db, test_tenant.id, test_user.id, txn.id, incasso_case.id
+            )
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # API Tests

@@ -1,9 +1,38 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 1 juni 2026 (sessie 149 — 3 blockers + 8 high uit audit gefixt)
-**Laatste feature/fix:** Sessie 149 — **11 audit-bevindingen opgelost** (3 blocker + 8 high), elk rood→groen + lint + push + CI/deploy groen. B2 (KPIs 500-crash), B3+H20 (bankimport/AI-betaling negeerde dossier-instellingen → centrale helper), B1 deels (SECRET_KEY-guard gehardend; RLS→S150), H8 (template-preview import), H10 (verweer phantom-kolom), H23 (overdue-KPI uit due_date), H24 (archiveren skipt taken), H21 (delete-contact blokkeert open facturen/trust), H1 (betaald-guard), H3 (rate-limit XFF + /refresh). Rekenkern was al correct (audit S148).
-**Openstaande bugs:** Nog open uit audit: H2 (RLS → S150, VPS nodig), H4 (openstaand excl rente/BIK), H5/H6 (juridisch onderzoek), H7 (kantoorgegevens leeg — data/instellingen), H9 (email_logs — waarschijnlijk schema-drift, migratie 011 bestaat al), H11/H12/H13 (pipeline), H14–H19 (derdengelden-cluster, deels feature), H22 (taak effective-status in lijst/agenda — zelfde root als H23/H24), H25 (modules_enabled — te breed). + 48 medium / 31 low / 4 polish. Pre-bestaand: stale dev-container mist `sepaxml`/pytest/ruff (rebuild fixt; CI groen).
-**Volgende sessie:** S150 — RLS herstellen (`luxis_app` DB-role + FORCE RLS op alle tabellen, app als die rol). VPS-toegang nodig (rol in prod-DB aanmaken) + gefaseerde uitrol met terugrol-plan. = AUDIT-H2 + B1-restant.
+**Laatst bijgewerkt:** 2 juni 2026 (sessie 150 — RLS écht geactiveerd, AUDIT-H2 fase 1)
+**Laatste feature/fix:** Sessie 150 — **RLS-vangnet écht aangezet (AUDIT-H2 + B1-restant).** Rol `luxis_app` ontbrak in dev → app draaide als bypassrls-superuser → alle policies genegeerd; maar 2/46 tabellen FORCE; `ai_drafts`/`contact_terms` zonder RLS. Idempotente migratie `h2_rls_complete` maakt rol aan + FORCE RLS + `tenant_isolation` (USING+WITH CHECK) op alle 45 tenant-tabellen via dynamische tenant_id-discovery (gedeelde helper `app/security/rls.py`). App schakelt per request `SET LOCAL ROLE luxis_app` → RLS afgedwongen (Model A); scheduler+login blijven superuser → niks breekt. Adversariële test (7) bewijst cross-tenant SELECT/INSERT geblokkeerd (rood→groen). **Geen VPS nodig**: migratie maakt rol idempotent aan bij deploy (prod heeft rol al sinds S86). Connectie-cutover (app verbindt ALS luxis_app) = fase 2, bewust uitgesteld.
+**Openstaande bugs:** Nog open uit audit: H4 (openstaand excl rente/BIK), H5/H6 (juridisch onderzoek), H7 (kantoorgegevens leeg — data/instellingen), H9 (email_logs — waarschijnlijk schema-drift, migratie 011 bestaat al), H11/H12/H13 (pipeline), H14–H19 (derdengelden-cluster, deels feature), H22 (taak effective-status in lijst/agenda — zelfde root als H23/H24), H25 (modules_enabled — te breed). + 48 medium / 31 low / 4 polish. Pre-bestaand: stale dev-container mist `sepaxml`/pytest/ruff (rebuild fixt; CI groen).
+**Volgende sessie:** AUDIT-H2 **fase 2** (optioneel, defense-in-depth): app rechtstreeks ALS `luxis_app` laten verbinden i.p.v. SET ROLE — vereist eerst scheduler (~8 jobs) + login/refresh tenant-context zetten + prod credential-rotatie + terugrol-plan. Of door met H4/H7/H9.
+
+## Wat er gedaan is (sessie 150 — 2 juni 2026) — RLS écht geactiveerd (AUDIT-H2 fase 1)
+
+### Samenvatting
+
+Multi-tenant isolatie leunde 100% op app-filters; de DB-vangnet (Row-Level Security) was feitelijk **uit**. Live diagnostiek op dev: rol `luxis_app` **bestond niet** → middleware schakelde nooit naar de beperkte rol → app draaide als `luxis` (superuser, `rolbypassrls=t`) → elke policy genegeerd. Slechts **2/46** tenant-tabellen hadden `FORCE ROW LEVEL SECURITY`; `ai_drafts` + `contact_terms` hadden **geen** RLS (drift sinds eerdere migraties sec9/sec9b — waarschijnlijk gestamped).
+
+**Gekozen aanpak: Optie 1 (Model A "SET ROLE").** App blijft verbinden als superuser, maar de tenant-middleware doet per ingelogd request `SET LOCAL ROLE luxis_app` (stond al klaar). Zodra de rol bestaat → RLS écht afgedwongen. Scheduler-jobs + login/refresh draaien als superuser (bypass) → **niks breekt**. De volledige connectie-cutover (app verbindt rechtstreeks als luxis_app) is fase 2 en bewust uitgesteld (vereist scheduler/login-refactor).
+
+### Wijzigingen
+- **`backend/app/security/rls.py`** (nieuw, `d2e6ce2`) — gedeelde single-source-of-truth: rol-aanmaak (idempotent, `GRANT` aan `current_user` → robuust dev/prod), grants, en per-tabel `ENABLE`+`FORCE`+`tenant_isolation` policy (`USING` + `WITH CHECK`). **Dynamische discovery** op `tenant_id`-kolom → dekt drift + toekomstige tabellen automatisch; `users` uitgezonderd (cross-tenant login-lookup). Ook `disable_rls()` voor downgrade/teardown.
+- **`backend/alembic/versions/h2_rls_complete.py`** (nieuw) — idempotente migratie (`apply_rls`). Draait automatisch mee op deploy (Dockerfile CMD `alembic upgrade head`).
+- **`backend/tests/test_rls_isolation.py`** (nieuw, `6ea1d0f`) — 7 adversariële tests: SELECT scoped, flip naar tenant B, forged query → 0 rijen, cross-tenant INSERT geblokkeerd (WITH CHECK), **control rood→groen** (superuser ziet beide → bewijst dat RLS het dichtzet), coverage-assert (alle tabellen FORCE+policy), users uitgesloten.
+- **`backend/tests/conftest.py`** — bij schema-rebuild `GRANT` luxis_app (schema-USAGE + DML + sequences) **als de rol bestaat**. Rollen zijn cluster-globaal → een migratie op de `luxis`-DB laat de rol ook in `luxis_test` verschijnen → middleware doet SET ROLE → zonder deze grant faalt elke endpoint-test met "relation … does not exist". In CI bestaat de rol niet → overgeslagen, suite draait als voorheen.
+
+### Verificatie (alles groen)
+- Migratie schoon toegepast op dev; `pg_roles`: luxis_app = non-super/non-bypassrls; **45/45** tenant-tabellen FORCE, 0 missend.
+- `pytest tests/test_rls_isolation.py` → 7 passed (rood→groen bewezen).
+- Volledige suite: **904 passed**; enige 6 fails = bekende omgevings-issues (`sepaxml` mist in stale image = 4× trust_funds; `SMTP_HOST=mailpit` in dev = 2× email_router) → groen in CI.
+- `ruff check app/` schoon (E501 staat in repo-config op extend-ignore).
+- **Functioneel:** backend herstart → logs tonen `SET LOCAL ROLE luxis_app` per request; `/api/relations` laadt 18 relaties (HTTP 200), geen 500 → Model A werkt end-to-end met RLS actief.
+
+### Belangrijke inzichten
+- **Prod had de rol al** (productie-guard in `middleware/tenant.py` raist als rol ontbreekt bij `APP_ENV=production`, staat live sinds S86 `b0a95a3`; prod draait → rol bestaat daar). Het was de **dev-DB die gedrift was**. Deze migratie is voor prod puur versterkend (idempotent), niet brekend → geen aparte VPS-stap nodig.
+- **Valkuil ontdekt:** een cluster-globale rol + per-database grants → een rol die in één DB wordt aangemaakt activeert de middleware-SET-ROLE in álle DB's van dezelfde cluster; `conftest` moet dan grants meeleveren. (Opgelost.)
+- BUG-58 (S86) claimde dit al "gefixt" (sec9b) — maar het was gestamped/gedrift. Nu écht geverifieerd met adversariële test.
+
+### Buiten scope (fase 2, vervolg)
+- App rechtstreeks als `luxis_app` laten verbinden (DATABASE_URL-cutover) — defense-in-depth tegen code-paden die de middleware omzeilen. Vereist: scheduler (~8 jobs) + login/refresh tenant-context zetten, prod credential-rotatie, terugrol-plan. Hoog risico → apart.
 
 ## Wat er gedaan is (sessie 149 — 1 juni 2026) — Fix audit-blockers + 8 high
 

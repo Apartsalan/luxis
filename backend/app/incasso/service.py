@@ -337,21 +337,14 @@ async def seed_default_transitions(
             "Geen reactie na 4 dagen",
         ))
 
-    # 2. Email-reactie debiteur (op elke hoofdpad-stap) → jump naar Verweer beantwoorden
-    for step_name in main_path:
-        defaults.append((
-            step_name, "Verweer beantwoorden",
-            "debtor_response", "jump_to_step", None, False,
-            "Verweer ontvangen — pauzeer hoofdpad",
-        ))
-
-    # 3. Betaling ontvangen (op elke hoofdpad-stap) → jump naar Betaald
-    for step_name in main_path:
-        defaults.append((
-            step_name, "Betaald",
-            "payment", "jump_to_step", None, False,
-            "Betaling ontvangen",
-        ))
+    # AUDIT-H12: GEEN debtor_response- of payment-rules meer seeden. Alleen
+    # 'timeout' wordt door de rule-evaluator (evaluate_timeout_rules) gelezen.
+    # - debtor_response: een binnenkomende verweer-mail wordt al afgehandeld door
+    #   de classificatie-hook (automation_service.trigger_defense_response_for_email),
+    #   onafhankelijk van deze tabel — een rule hier was dode dubbele config.
+    # - payment: werd nergens geëvalueerd, dus de regel deed niets.
+    # Beide toonden loze "Automatische regels" in de UI. Bestaande dode rules
+    # worden gedeactiveerd door migratie s151_dead_pipeline_rules.
 
     new_transitions = []
     for from_name, to_name, trigger, action, cond, is_def, lbl in defaults:

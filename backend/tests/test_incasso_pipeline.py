@@ -1239,3 +1239,22 @@ def test_step_entered_at_is_the_real_column_not_a_phantom():
         "incasso_step_entered_at is not a DB column — writing to it persists "
         "nothing (AUDIT-H10). Use step_entered_at."
     )
+
+
+# ── AUDIT-H12: only evaluable (timeout) rules are seeded ─────────────────────
+
+
+async def test_seed_omits_dead_payment_and_debtor_rules(db, test_tenant):
+    """The rule-evaluator only reads trigger_type='timeout'. The old seed also
+    created 'payment' and 'debtor_response' rules that were never evaluated (dead
+    config surfacing as loze UI-acties). The seed must now create timeout rules
+    only (AUDIT-H12)."""
+    from app.incasso.service import seed_default_transitions
+
+    transitions = await seed_default_transitions(db, test_tenant.id)
+    await db.commit()
+
+    trigger_types = {t.trigger_type for t in transitions}
+    assert "timeout" in trigger_types
+    assert "payment" not in trigger_types
+    assert "debtor_response" not in trigger_types

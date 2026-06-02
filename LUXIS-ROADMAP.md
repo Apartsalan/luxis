@@ -97,6 +97,8 @@
 ### MEDIUM (48) · LOW (31) · POLISH (4)
 Volledige lijst met symptoom→oorzaak→bewijs→advies staat in `.audit/AUDIT-REPORT.md` (lokaal). Hoofdthema's: BTW-/credit-nota-/Exact-randgevallen (grotendeels latent, 0 live-data), agenda timezone/all-day, factuur-totaal-integriteit, dode/ongebruikte code, UX-polish. Visuele-laag extra's (tabel-overflow, stille KPI-degradatie, omgekeerd BTW-label) in `.audit/UI-FINDINGS.md`.
 
+**✅ MEDIUM gefixt in S151 (4):** verjaring schrikkeldag-crash (`relativedelta`, `33a0ee9`) · `create_case` liet `nakosten_type`/`provisie_base` vallen (`30d3bf7`) · maandgrafiek negeerde `is_active` — 215 i.p.v. 2 (`000293a`) · agenda-event ongeldig/cross-tenant `case_id` → 404 i.p.v. 500 (`7d6b8ed`). _NB: deze 48 audit-MEDIUMs staan (bewust) niet als losse rows — bron blijft `.audit/AUDIT-REPORT.md`._
+
 ---
 
 ## Go-To-Market Plan (voorbereid sessie 116, 7 april 2026)

@@ -1,9 +1,47 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 2 juni 2026 (sessie 150 — RLS écht geactiveerd, AUDIT-H2 fase 1)
-**Laatste feature/fix:** Sessie 150 — **RLS-vangnet écht aangezet (AUDIT-H2 + B1-restant).** Rol `luxis_app` ontbrak in dev → app draaide als bypassrls-superuser → alle policies genegeerd; maar 2/46 tabellen FORCE; `ai_drafts`/`contact_terms` zonder RLS. Idempotente migratie `h2_rls_complete` maakt rol aan + FORCE RLS + `tenant_isolation` (USING+WITH CHECK) op alle 45 tenant-tabellen via dynamische tenant_id-discovery (gedeelde helper `app/security/rls.py`). App schakelt per request `SET LOCAL ROLE luxis_app` → RLS afgedwongen (Model A); scheduler+login blijven superuser → niks breekt. Adversariële test (7) bewijst cross-tenant SELECT/INSERT geblokkeerd (rood→groen). **Geen VPS nodig**: migratie maakt rol idempotent aan bij deploy (prod heeft rol al sinds S86). Connectie-cutover (app verbindt ALS luxis_app) = fase 2, bewust uitgesteld.
-**Openstaande bugs:** Nog open uit audit: H4 (openstaand excl rente/BIK), H5/H6 (juridisch onderzoek), H7 (kantoorgegevens leeg — data/instellingen), H9 (email_logs — waarschijnlijk schema-drift, migratie 011 bestaat al), H11/H12/H13 (pipeline), H14–H19 (derdengelden-cluster, deels feature), H22 (taak effective-status in lijst/agenda — zelfde root als H23/H24), H25 (modules_enabled — te breed). + 48 medium / 31 low / 4 polish. Pre-bestaand: stale dev-container mist `sepaxml`/pytest/ruff (rebuild fixt; CI groen).
-**Volgende sessie:** AUDIT-H2 **fase 2** (optioneel, defense-in-depth): app rechtstreeks ALS `luxis_app` laten verbinden i.p.v. SET ROLE — vereist eerst scheduler (~8 jobs) + login/refresh tenant-context zetten + prod credential-rotatie + terugrol-plan. Of door met H4/H7/H9.
+**Laatst bijgewerkt:** 2 juni 2026 (sessie 151 — 6 high + 4 medium audit-fixes)
+**Laatste feature/fix:** Sessie 151 — **6 high + 4 medium uit de S148-audit, elk rood→groen, los gecommit.** High: H22 (taakstatus uit `due_date` op leestijd — lijst+agenda), H9 (self-healing migratie voor ontbrekende `email_logs`-tabel), H7 (kantoor IBAN/tel/email in Kantoor-tab — browser-geverifieerd), H11 (pipeline-bord/queue filtert terminal-stap), H12 (dode payment/debtor_response-rules opgeschoond), H13 (batch-doc verwijst eerlijk naar AI-flow). Medium: verjaring schrikkeldag-crash (`relativedelta`), `create_case` liet `nakosten_type`/`provisie_base` vallen, maandgrafiek negeerde `is_active`, agenda-event met ongeldig/cross-tenant `case_id` → 404 i.p.v. 500. H11/H12/H13 **conservatief** (geen nieuwe automatisering — pipeline/AI-flows zijn door gebruiker ongetest).
+**Openstaande bugs:** Nog open uit audit: H4 (openstaand excl rente/BIK), H5/H6 (juridisch onderzoek), H14–H19 (derdengelden-cluster, deels feature), H25 (modules_enabled — te breed). + ~44 medium / 31 low / 4 polish (zie `.audit/AUDIT-REPORT.md`; let op: die 48 audit-MEDIUMs staan NIET als rows in de roadmap). H11-followup: pipeline-terminal→workflow-`case.status` koppelen bewust uitgesteld (productkeuze). Pre-bestaand: stale dev-container mist `sepaxml`/pytest/ruff (rebuild fixt; CI groen).
+**Volgende sessie:** door met **MEDIUM pure code-bugs** (verifieer elk tegen code — de triage-subagent verwarde MEDIUM met al-opgeloste blockers/highs) óf **H5/H6 juridisch** (griffierecht/14-dagenbrief — geld+recht, vereist onderzoek + jouw beslissing). **RLS fase 2 is trigger-gedreven** (vóór 2e klant/verkoop), NIET zomaar de volgende — Fase 1 dekt het primaire risico al; eventueel goedkope tussenstap: test/guard die afdwingt dat elke auth-route tenant-context zet.
+
+## Wat er gedaan is (sessie 151 — 2 juni 2026) — 6 high + 4 medium audit-fixes
+
+### Samenvatting
+
+Audit-backlog (S148) verder afgewerkt: **6 high + 4 medium**, elk **rood→groen**, los gecommit, gepusht, CI + auto-deploy. Bij de pipeline/AI-findings (door gebruiker nooit getest) bewust **conservatief**: correcte logica + opschonen, géén nieuwe agressieve automatisering aangezet die de gebruiker niet kan valideren. Bewijs zit in tests, niet in handmatige check.
+
+### High (6)
+- **H22** (`c7ba8f7`) — taakstatus was batch-gematerialiseerd → ~324 taken toonden niet als 'overdue', agenda kleurde verlopen taken blauw. Effectieve status nu afgeleid uit `due_date` op leestijd: helper `effective_task_status` (schemas) + `model_validator` op `WorkflowTaskResponse` (lijst+my-tasks) + `get_calendar_events` (agenda status+kleur). Pydantic-laag → DB-kolom ongemoeid (geen schrijf via GET-commit).
+- **H9** (`4b45361`) — `GET …/email-logs` gaf 500 (`email_logs` ontbrak: migratie 011 gestampt-maar-nooit-uitgevoerd op gedrifte DB's; `sec13` gokte dit al met `IF EXISTS`). Idempotente self-healing migratie `s151_heal_email_logs` (CREATE IF NOT EXISTS + indexes + RLS). Op gedrifte lokale DB rood→groen geverifieerd + endpoint-regressietest.
+- **H7** (`2bdd6dc`) — betaalbrieven toonden leeg IBAN/tel: templates lazen `kantoor.iban/telefoon/email` al, maar Kantoor-tab had geen invulvelden. Velden toegevoegd (apart van Stichting Derdengelden-IBAN); **end-to-end in browser geverifieerd** (UI→API→DB round-trip).
+- **H11** (`4fc4655`) — gesloten zaken (terminal-stap) bleven op pipeline-bord/queue staan (filters leunden op nooit-geschreven `case.status`). `get_pipeline_overview` + `get_queue_counts` sluiten nu `is_terminal`-stap uit aan de bron.
+- **H12** (`4795f6e`) — payment/debtor_response-automation-rules werden nergens geëvalueerd (alleen `timeout`). Seed maakt ze niet meer aan + migratie `s151_dead_pipeline_rules` deactiveert bestaande (5→0 actief elk). Geen nieuwe automatisering.
+- **H13** (`349e0ec`) — batch 'document genereren' faalde altijd op AI/HTML-stappen (`template_type` leeg). `batch_preview`/`batch_execute` + modal verwijzen nu eerlijk naar de AI-conceptflow i.p.v. dood "geen sjabloon".
+
+### Medium (4)
+- **Verjaring schrikkeldag** (`33a0ee9`) — `date_opened.replace(year=+5)` crashte (`ValueError`) op 29-feb dossiers. `relativedelta` in `workflow.validate_transition`, `workflow.check_verjaring`, `collections.compliance`.
+- **create_case velden** (`30d3bf7`) — `nakosten_type` + `provisie_base` stonden in `CaseCreate` maar werden niet doorgegeven aan de `Case()`-constructor → niet-default waarden stil verloren.
+- **Maandgrafiek `is_active`** (`000293a`) — `get_monthly_stats` telde soft-deleted seed-zaken mee ("215 nieuwe zaken" vs 2 actief). `is_active`-filter op new/closed-queries.
+- **Agenda-event ownership** (`7d6b8ed`) — ongeldig/cross-tenant `case_id`/`contact_id` bij event create/update gaf 500 (FK) of cross-tenant-link. Nu ownership-validatie → 404.
+
+### Gewijzigde bestanden (key)
+- `backend/app/workflow/{schemas,service}.py`, `backend/app/incasso/service.py`, `backend/app/cases/service.py`, `backend/app/dashboard/reports_service.py`, `backend/app/calendar/service.py`, `backend/app/collections/compliance.py`
+- `backend/alembic/versions/s151_heal_email_logs.py`, `…/s151_dead_pipeline_rules.py`
+- `frontend/src/app/(dashboard)/instellingen/kantoor-tab.tsx`, `…/incasso/page.tsx`
+- Tests: `test_workflow.py`, `test_documents.py`, `test_incasso_pipeline.py`, `test_cases.py`, `test_dashboard.py`, `test_calendar.py`
+
+### Verificatie
+- Per finding rood→groen test; targeted suites groen. Eerdere volledige suite 909 passed (6 bekende env-fails: sepaxml/SMTP). tsc + `npm run build` schoon. Ruff `app/` schoon (alleen pre-existing E501 in seed-tuples, niet aangeraakt).
+- Migratie-valkuil gevangen: revisie-id > `varchar(32)` crashte → hernoemd naar `s151_dead_pipeline_rules`.
+- Triage-valkuil: `luxis-researcher` mapte al-opgeloste B2/H10/H23 als "MEDIUM-kandidaten" → elke kandidaat handmatig tegen code geverifieerd vóór fix.
+
+### Bekende issues
+- H11-followup (pipeline-terminal → workflow-`case.status`) bewust uitgesteld: "Afgesloten" mist een status-slug, "Betaald" moet de H1-guard volgen — productkeuze.
+- 48 audit-MEDIUMs staan niet als rows in de roadmap (alleen in `.audit/AUDIT-REPORT.md`); 4 nu gefixt, rest open.
+
+### Volgende sessie
+- Door met **MEDIUM pure code-bugs** (elk tegen code verifiëren) óf **H5/H6 juridisch**. RLS **fase 2 = trigger-gedreven**, niet default.
 
 ## Wat er gedaan is (sessie 150 — 2 juni 2026) — RLS écht geactiveerd (AUDIT-H2 fase 1)
 

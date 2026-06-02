@@ -17,6 +17,9 @@ export function KantoorTab() {
     address: "",
     postal_code: "",
     city: "",
+    phone: "",
+    email: "",
+    iban: "",
     trust_account_iban: "",
     trust_account_holder: "",
     trust_account_bic: "",
@@ -32,6 +35,9 @@ export function KantoorTab() {
       address: tenant.address || "",
       postal_code: tenant.postal_code || "",
       city: tenant.city || "",
+      phone: tenant.phone || "",
+      email: tenant.email || "",
+      iban: tenant.iban || "",
       trust_account_iban: tenant.trust_account_iban || "",
       trust_account_holder: tenant.trust_account_holder || "",
       trust_account_bic: tenant.trust_account_bic || "",
@@ -46,6 +52,9 @@ export function KantoorTab() {
     form.address !== (tenant.address || "") ||
     form.postal_code !== (tenant.postal_code || "") ||
     form.city !== (tenant.city || "") ||
+    form.phone !== (tenant.phone || "") ||
+    form.email !== (tenant.email || "") ||
+    form.iban !== (tenant.iban || "") ||
     form.trust_account_iban !== (tenant.trust_account_iban || "") ||
     form.trust_account_holder !== (tenant.trust_account_holder || "") ||
     form.trust_account_bic !== (tenant.trust_account_bic || "")
@@ -64,6 +73,9 @@ export function KantoorTab() {
         address: form.address || null,
         postal_code: form.postal_code || null,
         city: form.city || null,
+        phone: form.phone || null,
+        email: form.email || null,
+        iban: form.iban || null,
         trust_account_iban: form.trust_account_iban || null,
         trust_account_holder: form.trust_account_holder || null,
         trust_account_bic: form.trust_account_bic || null,
@@ -184,6 +196,60 @@ export function KantoorTab() {
                 className={inputClass}
               />
             </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="settings-phone" className="block text-sm font-medium text-foreground">
+                Telefoonnummer
+              </label>
+              <input
+                id="settings-phone"
+                type="tel"
+                value={form.phone}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, phone: e.target.value }))
+                }
+                placeholder="020 123 4567"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="settings-email" className="block text-sm font-medium text-foreground">
+                E-mailadres
+              </label>
+              <input
+                id="settings-email"
+                type="email"
+                value={form.email}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, email: e.target.value }))
+                }
+                placeholder="info@kantoor.nl"
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="settings-iban" className="block text-sm font-medium text-foreground">
+              IBAN (kantoorrekening)
+            </label>
+            <input
+              id="settings-iban"
+              type="text"
+              value={form.iban}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  iban: e.target.value.toUpperCase().replace(/\s/g, ""),
+                }))
+              }
+              placeholder="NL00BANK0123456789"
+              className={inputClass}
+            />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Wordt gebruikt op betaalsommaties en facturen als rekening voor de betaling.
+              Apart van de Stichting Derdengelden hieronder.
+            </p>
           </div>
           <button
             onClick={handleSave}

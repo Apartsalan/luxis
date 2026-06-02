@@ -948,3 +948,36 @@ async def test_list_email_logs_endpoint(
     assert data[0]["recipient"] == "ontvanger@example.com"
     assert data[0]["subject"] == "Sommatie verzonden"
     assert data[0]["status"] == "sent"
+
+
+# ── Office merge fields in letters (AUDIT-H7) ─────────────────────────────────
+
+
+def test_tenant_ctx_surfaces_office_iban_phone_email():
+    """Letters render kantoor.iban / .telefoon / .email straight from the tenant.
+    H7: those columns existed and the template read them, but the Kantoor-tab had
+    no inputs so they stayed empty and betaalsommaties showed an empty IBAN. The
+    tab now exposes them; this guards the merge-field contract they rely on."""
+    from app.auth.models import Tenant
+    from app.documents.docx_service import _tenant_ctx
+
+    tenant = Tenant(
+        name="Kesting Legal",
+        address="Herengracht 1",
+        postal_code="1000 AA",
+        city="Amsterdam",
+        iban="NL91ABNA0417164300",
+        phone="020 123 4567",
+        email="info@kestinglegal.nl",
+    )
+    ctx = _tenant_ctx(tenant)
+    assert ctx["iban"] == "NL91ABNA0417164300"
+    assert ctx["telefoon"] == "020 123 4567"
+    assert ctx["email"] == "info@kestinglegal.nl"
+    assert ctx["postcode_stad"] == "1000 AA Amsterdam"
+
+    # An unconfigured tenant must not crash and yields empty strings.
+    empty = _tenant_ctx(Tenant(name="X"))
+    assert empty["iban"] == ""
+    assert empty["telefoon"] == ""
+    assert empty["email"] == ""

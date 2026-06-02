@@ -23,6 +23,12 @@ TASK_TYPES = (
     "manual_review",
     "set_deadline",
     "custom",
+    # System-created task types. Not offered in create_rule, but the scheduler
+    # and incasso automation persist these directly via WorkflowTask(...), so
+    # they must be part of the canonical list — otherwise create_task / rule
+    # validation rejects them as "Ongeldig taaktype" (AUDIT-MEDIUM).
+    "verjaring_warning",  # workflow/scheduler.py — verjaringstermijn nadert
+    "review_ai_draft",  # incasso/automation_service.py — AI-concept klaar voor review
 )
 TASK_STATUSES = ("pending", "due", "completed", "skipped", "overdue")
 

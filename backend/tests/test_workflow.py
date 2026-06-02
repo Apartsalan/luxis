@@ -672,3 +672,47 @@ async def test_check_verjaring_handles_leap_day_date_opened(
     assert len(mine) == 1
     assert mine[0]["verjaring_date"] == "2025-02-28"
     assert mine[0]["is_expired"] is True
+
+
+# ── System task types in canonical TASK_TYPES (AUDIT-MEDIUM) ──────────────────
+
+
+def test_system_created_task_types_are_canonical():
+    """Task types the scheduler/automation persist directly must be in TASK_TYPES.
+
+    workflow/scheduler.py creates 'verjaring_warning' and
+    incasso/automation_service.py creates 'review_ai_draft' via WorkflowTask(...).
+    If they are absent from TASK_TYPES, create_task / create_rule validation
+    rejects them as 'Ongeldig taaktype' (AUDIT-MEDIUM)."""
+    from app.workflow.schemas import TASK_TYPES
+
+    assert "verjaring_warning" in TASK_TYPES
+    assert "review_ai_draft" in TASK_TYPES
+
+
+@pytest.mark.asyncio
+async def test_create_review_ai_draft_task_accepted(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    workflow_data: dict,
+):
+    """A 'review_ai_draft' task must be accepted by create_task (AUDIT-MEDIUM).
+
+    The incasso automation creates these; the manual API path used the same
+    TASK_TYPES guard, so before the fix this returned 400 'Ongeldig taaktype'."""
+    case = await _create_case(db, test_tenant.id, "2026-09010")
+    resp = await client.post(
+        "/api/workflow/tasks",
+        json={
+            "case_id": str(case.id),
+            "task_type": "review_ai_draft",
+            "title": "Review concept-email",
+            "due_date": (date.today() + timedelta(days=2)).isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["task_type"] == "review_ai_draft"

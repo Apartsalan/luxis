@@ -99,6 +99,10 @@ Volledige lijst met symptoom→oorzaak→bewijs→advies staat in `.audit/AUDIT-
 
 **✅ MEDIUM gefixt in S151 (4):** verjaring schrikkeldag-crash (`relativedelta`, `33a0ee9`) · `create_case` liet `nakosten_type`/`provisie_base` vallen (`30d3bf7`) · maandgrafiek negeerde `is_active` — 215 i.p.v. 2 (`000293a`) · agenda-event ongeldig/cross-tenant `case_id` → 404 i.p.v. 500 (`7d6b8ed`). _NB: deze 48 audit-MEDIUMs staan (bewust) niet als losse rows — bron blijft `.audit/AUDIT-REPORT.md`._
 
+**✅ MEDIUM gefixt in S152 (4):** TASK_TYPES miste `verjaring_warning`/`review_ai_draft` die scheduler/automation al aanmaken (`bdef23e`) · producten geen unieke `(tenant_id, code)` → `MultipleResultsFound`-crash; partial-unique index actieve rijen + lookup op `is_active` (`b37c24f`) · `manual_match` blokkeert nu (409) bij bestaande PENDING-match → geen dubbele betaling (`c5a4547`) · `(bulk-)link emails` valideert doel-dossier-tenant → cross-tenant koppeling dicht (`9e70e6c`). **Niet gefixt:** C1 (CaseActivity bij mislukte SMTP) = non-issue (`get_db` rollbackt op raise); C4 (agenda timezone-grens) = niet schoon bounded (frontend). **~40 medium resterend** — lijst bevat non-issues + design/feature/legal, verifieer elk tegen code.
+
+**🔬 H5/H6 griffierecht — onderzocht S152, NIET gefixt (samen met Lisanne):** 4 bevestigde fouten in `griffierechten.py`: (1) bedragen verouderd (kanton top-staffel €619/€1.384 vs 2026 €753/€1.504), (2) staffel achterhaald na 2026-differentiatie €500–€5.000, (3) tarief op `case.debtor_type` (wederpartij) i.p.v. **eiser** (`router.py:484`), (4) `onvermogenden`-tarief ontbreekt. Fix vereist volledige 2026-tabel (Stcrt. 2025, 39855) + Lisanne's beslissing → eigen sessie.
+
 ---
 
 ## Go-To-Market Plan (voorbereid sessie 116, 7 april 2026)

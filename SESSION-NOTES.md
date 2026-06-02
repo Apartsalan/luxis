@@ -1,9 +1,46 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 2 juni 2026 (sessie 151 — 6 high + 4 medium audit-fixes)
-**Laatste feature/fix:** Sessie 151 — **6 high + 4 medium uit de S148-audit, elk rood→groen, los gecommit.** High: H22 (taakstatus uit `due_date` op leestijd — lijst+agenda), H9 (self-healing migratie voor ontbrekende `email_logs`-tabel), H7 (kantoor IBAN/tel/email in Kantoor-tab — browser-geverifieerd), H11 (pipeline-bord/queue filtert terminal-stap), H12 (dode payment/debtor_response-rules opgeschoond), H13 (batch-doc verwijst eerlijk naar AI-flow). Medium: verjaring schrikkeldag-crash (`relativedelta`), `create_case` liet `nakosten_type`/`provisie_base` vallen, maandgrafiek negeerde `is_active`, agenda-event met ongeldig/cross-tenant `case_id` → 404 i.p.v. 500. H11/H12/H13 **conservatief** (geen nieuwe automatisering — pipeline/AI-flows zijn door gebruiker ongetest).
-**Openstaande bugs:** Nog open uit audit: H4 (openstaand excl rente/BIK), H5/H6 (juridisch onderzoek), H14–H19 (derdengelden-cluster, deels feature), H25 (modules_enabled — te breed). + ~44 medium / 31 low / 4 polish (zie `.audit/AUDIT-REPORT.md`; let op: die 48 audit-MEDIUMs staan NIET als rows in de roadmap). H11-followup: pipeline-terminal→workflow-`case.status` koppelen bewust uitgesteld (productkeuze). Pre-bestaand: stale dev-container mist `sepaxml`/pytest/ruff (rebuild fixt; CI groen).
-**Volgende sessie:** door met **MEDIUM pure code-bugs** (verifieer elk tegen code — de triage-subagent verwarde MEDIUM met al-opgeloste blockers/highs) óf **H5/H6 juridisch** (griffierecht/14-dagenbrief — geld+recht, vereist onderzoek + jouw beslissing). **RLS fase 2 is trigger-gedreven** (vóór 2e klant/verkoop), NIET zomaar de volgende — Fase 1 dekt het primaire risico al; eventueel goedkope tussenstap: test/guard die afdwingt dat elke auth-route tenant-context zet.
+**Laatst bijgewerkt:** 2 juni 2026 (sessie 152 — 4 medium audit-fixes, pure code-bugs)
+**Laatste feature/fix:** Sessie 152 — **4 MEDIUM uit de S148-audit, elk rood→groen, los gecommit.** (1) TASK_TYPES miste `verjaring_warning`/`review_ai_draft` die scheduler/automation al direct aanmaken → validatie wees ze af. (2) Producten hadden geen unieke `(tenant_id, code)` → `get_product_by_code` (scalar_one_or_none) kon crashen met `MultipleResultsFound`; partial-unique index (alleen actieve rijen) + lookup filtert op `is_active`. (3) `manual_match` blokkeert nu (409) als de transactie al een PENDING-match heeft → geen dubbele betaling. (4) `(bulk-)link emails` valideert nu dat het doel-dossier van dezelfde tenant is → cross-tenant koppeling dicht. **C1** (CaseActivity bij mislukte SMTP) bleek **géén bug** (`get_db` rollbackt op de raise — niet gepersisteerd). **C4** (agenda timezone-grens) overgeslagen — niet schoon bounded (frontend-rendering).
+**Openstaande bugs:** Audit nog open: H4 (openstaand excl rente/BIK), **H5/H6 griffierecht** (deels onderzocht S152 — 4 fouten bevestigd: verouderde 2026-bedragen, achterhaalde staffel ná 2026-differentiatie €500–€5.000, tarief op debiteur i.p.v. **eiser**, `onvermogenden`-tarief ontbreekt → SAMEN MET LISANNE, geld+recht), H14–H19 (derdengelden-cluster), H25 (modules_enabled). + **~40 medium** / 31 low / 4 polish (zie `.audit/AUDIT-REPORT.md`; staan NIET als roadmap-rows; let op: lijst bevat non-issues zoals C1 — verifieer elk). Pre-bestaand: stale dev-container mist `sepaxml` (rebuild fixt; CI groen).
+**Volgende sessie:** verder met **bounded MEDIUM code-bugs** (verifieer elk tegen code vóór fix). Volgende kandidaat: **GET dossier-detail schrijft naar DB** (side-effecting GET → niet-idempotent). Andere bounded: PUT factuur `btw_percentage` herberekent bedrag niet, rapport "verdeling debiteur" classificeert op crediteur, factuurnummer-regex te breed blokkeert contact-koppeling, batch `recalculate_interest` misleidende no-op. **Geld/juridisch (griffierecht, BTW-rente) = met Lisanne.** Derdengelden-cluster = eigen sessie. RLS fase 2 = trigger-gedreven, niet default.
+
+## Wat er gedaan is (sessie 152 — 2 juni 2026) — 4 medium audit-fixes (pure code-bugs)
+
+### Samenvatting
+
+Vervolg op de S148-audit: **4 MEDIUM bounded bugs**, elk **rood→groen**, los gecommit, gepusht, CI + auto-deploy. Elke kandidaat eerst handmatig tegen de echte code geverifieerd (S151-les: triage-subagent mapte al-opgeloste items als MEDIUM). Daardoor 2 van de 5 voorgestelde kandidaten **niet** gefixt: C1 bleek non-issue, C4 niet schoon bounded.
+
+### Gefixte bugs (4)
+- **C2 — TASK_TYPES** (`bdef23e`) — `scheduler.py` maakt `verjaring_warning`, `automation_service.py` maakt `review_ai_draft` direct via `WorkflowTask(...)`, maar beide ontbraken in de canonieke `TASK_TYPES`-tuple → `create_task`/`create_rule`-validatie wees ze af ("Ongeldig taaktype"). Beide toegevoegd. Unit + API-test.
+- **C3 — Producten unieke code** (`b37c24f`) — `get_product_by_code` (`scalar_one_or_none`) zonder DB-uniciteit kon crashen met `MultipleResultsFound`. Partial-unique index `uq_products_tenant_code_active` (WHERE `is_active`) in `__table_args__` + migratie `prod_uniq_active_code`, en lookup filtert nu op `is_active` → soft-deleted code herbruikbaar, twee actieve nooit. Migratie op dev-DB met echte productdata geverifieerd (geen conflict).
+- **C5 — manual_match dubbele match** (`c5a4547`) — `manual_match` maakte een APPROVED-match + `is_matched=True` zonder te checken op een bestaande PENDING auto-match op dezelfde transactie → beide approven = betaling dubbel geteld. Guard: 409 `ConflictError` als er al een PENDING-match is. Normale manual match (geen pending) ongewijzigd.
+- **Cross-tenant (bulk-)link** (`9e70e6c`) — `link_email_to_case`/`bulk_link_emails` zetten `email.case_id` rechtstreeks uit de request zonder te checken dat het dossier van dezelfde tenant is (mails wél tenant-scoped, doel-dossier niet). Gedeelde `_assert_case_in_tenant`-guard (404). Same-tenant ongewijzigd (regressietest).
+
+### Niet gefixt (bewust)
+- **C1 — CaseActivity bij mislukte SMTP** — `email/router.py` voegt de activity toe vóór de `raise`, maar `get_db` (`database.py:46`) doet `rollback()` op de exception → de activity **persisteert niet**. `send_service.py` was al correct geguard op `status=="sent"`. **Geen echte bug.**
+- **C4 — agenda timezone-grens** — `start_time` is tz-aware; "nacht-event verkeerde dag" is grotendeels frontend-rendering, niet een schoon-bounded backend-bug → overgeslagen, vergt frontend-onderzoek.
+
+### Griffierecht (H5/H6) — onderzocht, NIET gefixt (op verzoek: samen met Lisanne)
+Op vraag gebruiker geverifieerd tegen `griffierechten.py` + rechtspraak.nl. **4 bevestigde fouten:** (1) bedragen verouderd (code top-staffel kanton €619/€1.384 vs 2026 **€753/€1.504**), (2) staffel-structuur achterhaald — 2026 splitste €500–€12.500 in nieuwe tussenstaffels €500–€5.000 (differentiatie lagere geldvorderingen), (3) tarief gebaseerd op `case.debtor_type` (wederpartij) i.p.v. de **eiser** die griffierecht betaalt (`router.py:484`), (4) `onvermogenden`-tarief (3e categorie) ontbreekt. Fix vereist volledige officiële 2026-tabel (Stcrt. 2025, 39855) + Lisanne's beslissing op partij-logica → eigen sessie.
+
+### Gewijzigde bestanden (key)
+- `backend/app/workflow/schemas.py` (TASK_TYPES)
+- `backend/app/products/{models,service}.py` + `backend/alembic/versions/prod_uniq_active_code.py`
+- `backend/app/ai_agent/payment_matching_service.py` (manual_match guard)
+- `backend/app/email/sync_service.py` (`_assert_case_in_tenant`)
+- Tests: `test_workflow.py`, `test_products.py`, `test_payment_matching.py`, `test_email_sync.py`
+
+### Verificatie
+- Per finding rood→groen (RED-state aangetoond vóór fix). Targeted suites groen: workflow (2 nieuw), products (10/10), payment_matching (7/7 workflow), email_sync (14/14). Ruff `--no-cache` schoon op alle gewijzigde bestanden. Migratie `prod_uniq_active_code` op dev-DB toegepast zonder conflict.
+- Geen volledige suite gedraaid (wijzigingen grotendeels additief + één gedeelde functie `get_product_by_code` met 2 callers, beide afgedekt).
+
+### Bekende issues
+- Lijst van ~40 resterende audit-MEDIUMs bevat non-issues (C1) en design/feature/legal-items → elk eerst verifiëren.
+- `.claude/scheduled_tasks.lock` untracked (lock-bestand, niet committen).
+
+### Volgende sessie
+- **GET dossier-detail side-effect** (idempotency) + meer bounded MEDIUM-bugs. Geld/juridisch (griffierecht/BTW-rente) met Lisanne.
 
 ## Wat er gedaan is (sessie 151 — 2 juni 2026) — 6 high + 4 medium audit-fixes
 

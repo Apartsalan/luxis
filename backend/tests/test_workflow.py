@@ -632,3 +632,43 @@ async def test_calendar_event_overdue_status_and_color_from_due_date(
     assert len(events) == 1
     assert events[0]["status"] == "overdue"
     assert events[0]["color"] == "#ef4444"
+
+
+# ── Verjaring leap-day crash (AUDIT-MEDIUM) ──────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_check_verjaring_handles_leap_day_date_opened(
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+):
+    """check_verjaring must not crash on a leap-day date_opened. date_opened +5y
+    landed on 29 Feb of a non-leap year, and date.replace(year=...) raised
+    ValueError — verjaring-checks crashed for any case opened on 29 Feb."""
+    from decimal import Decimal
+
+    from app.workflow.service import check_verjaring
+
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-LEAP1",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date(2020, 2, 29),  # 2025 has no 29 Feb
+        date_closed=None,
+        total_principal=Decimal("0.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    await db.commit()
+
+    warnings = await check_verjaring(db, test_tenant.id)
+    mine = [w for w in warnings if w["case_number"] == "2026-LEAP1"]
+    assert len(mine) == 1
+    assert mine[0]["verjaring_date"] == "2025-02-28"
+    assert mine[0]["is_expired"] is True

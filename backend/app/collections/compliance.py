@@ -9,6 +9,7 @@ Validates legal requirements before sending:
 import uuid
 from datetime import date
 
+from dateutil.relativedelta import relativedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -103,7 +104,7 @@ async def pre_send_compliance_check(
 
     # ── Check 6: Verjaring warning ─────────────────────────────────────
     if case.date_opened:
-        verjaring_date = case.date_opened.replace(year=case.date_opened.year + 5)
+        verjaring_date = case.date_opened + relativedelta(years=5)
         days_until = (verjaring_date - date.today()).days
         if days_until <= 0:
             warnings.append(

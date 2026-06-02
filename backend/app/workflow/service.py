@@ -373,7 +373,7 @@ async def validate_transition(
     # 5. Verjaring warning (advisory, not blocking)
     if hasattr(case, "date_opened") and case.date_opened:
         verjaring_years = LEGAL_CONSTRAINTS["verjaring_years"]
-        verjaring_date = case.date_opened.replace(year=case.date_opened.year + verjaring_years)
+        verjaring_date = case.date_opened + relativedelta(years=verjaring_years)
         days_until_verjaring = (verjaring_date - date.today()).days
         if days_until_verjaring <= 0:
             warnings.append(
@@ -830,7 +830,7 @@ async def check_verjaring(
 
     warnings = []
     for case in result.scalars().all():
-        verjaring_date = case.date_opened.replace(year=case.date_opened.year + verjaring_years)
+        verjaring_date = case.date_opened + relativedelta(years=verjaring_years)
         days_remaining = (verjaring_date - today).days
         warnings.append(
             {

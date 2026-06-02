@@ -37,11 +37,17 @@ async def get_product(
 async def get_product_by_code(
     db: AsyncSession, tenant_id: uuid.UUID, code: str
 ) -> Product | None:
-    """Get a product by its code."""
+    """Get the ACTIVE product with the given code.
+
+    Filters on is_active so a soft-deleted product never collides with a live
+    one sharing the same code — which would raise MultipleResultsFound
+    (AUDIT-MEDIUM). The partial-unique index guarantees at most one active row.
+    """
     result = await db.execute(
         select(Product).where(
             Product.code == code,
             Product.tenant_id == tenant_id,
+            Product.is_active.is_(True),
         )
     )
     return result.scalar_one_or_none()

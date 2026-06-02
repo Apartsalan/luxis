@@ -5,7 +5,7 @@ Maps to Exact Online articles with GL account codes and VAT types.
 
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Integer, Numeric, String
+from sqlalchemy import Boolean, Index, Integer, Numeric, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.models import TenantBase
@@ -21,6 +21,20 @@ class Product(TenantBase):
     """
 
     __tablename__ = "products"
+
+    __table_args__ = (
+        # A product code is unique per tenant among ACTIVE products. Partial
+        # index (WHERE is_active) so a soft-deleted code can be reused, and so
+        # get_product_by_code()'s scalar_one_or_none() can never hit
+        # MultipleResultsFound (AUDIT-MEDIUM).
+        Index(
+            "uq_products_tenant_code_active",
+            "tenant_id",
+            "code",
+            unique=True,
+            postgresql_where=text("is_active"),
+        ),
+    )
 
     code: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)

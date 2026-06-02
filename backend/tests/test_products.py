@@ -1,12 +1,13 @@
 """Tests for product catalog module (DF120-08)."""
 
-from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant
+from app.products.models import Product
 
 
 @pytest.mark.asyncio
@@ -191,3 +192,73 @@ async def test_product_gl_codes(
     assert products["100039"]["gl_account_code"] == "8020"
     assert float(products["100039"]["default_price"]) == 3083.00
     assert products["100042"]["gl_account_code"] == "1950"
+
+
+# ── Unique (tenant_id, code) among active products (AUDIT-MEDIUM) ─────────────
+
+
+@pytest.mark.asyncio
+async def test_duplicate_active_code_db_constraint(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """Two ACTIVE products must not share (tenant_id, code) (AUDIT-MEDIUM).
+
+    Without the partial-unique index, get_product_by_code()'s
+    scalar_one_or_none() crashes with MultipleResultsFound the moment two active
+    rows share a code. The DB now rejects the second active row."""
+    db.add(
+        Product(
+            tenant_id=test_tenant.id,
+            code="DUPDB",
+            name="A",
+            gl_account_code="8000",
+            gl_account_name="X",
+        )
+    )
+    await db.flush()
+    db.add(
+        Product(
+            tenant_id=test_tenant.id,
+            code="DUPDB",
+            name="B",
+            gl_account_code="8000",
+            gl_account_name="X",
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await db.flush()
+
+
+@pytest.mark.asyncio
+async def test_code_reusable_after_soft_delete(
+    client: AsyncClient, auth_headers: dict
+):
+    """A soft-deleted product's code can be reused, and the lookup returns the
+    single active row without crashing (AUDIT-MEDIUM).
+
+    Previously get_product_by_code() matched soft-deleted rows too: recreating a
+    deleted code 409'd, and an active + deleted row sharing a code raised
+    MultipleResultsFound."""
+    payload = {
+        "code": "REUSE01",
+        "name": "First",
+        "gl_account_code": "8000",
+        "gl_account_name": "X",
+    }
+    r1 = await client.post("/api/products", headers=auth_headers, json=payload)
+    assert r1.status_code == 201
+    pid = r1.json()["id"]
+
+    rd = await client.delete(f"/api/products/{pid}", headers=auth_headers)
+    assert rd.status_code == 204
+
+    # Same code is now free again — recreation must succeed.
+    r2 = await client.post(
+        "/api/products", headers=auth_headers, json={**payload, "name": "Second"}
+    )
+    assert r2.status_code == 201
+
+    listed = await client.get("/api/products", headers=auth_headers)
+    actives = [p for p in listed.json() if p["code"] == "REUSE01"]
+    assert len(actives) == 1
+    assert actives[0]["name"] == "Second"

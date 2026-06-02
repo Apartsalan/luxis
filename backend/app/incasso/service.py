@@ -639,6 +639,7 @@ async def get_pipeline_overview(
     """Get all incasso cases grouped by pipeline step."""
     # Get active steps
     steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+    terminal_step_ids = {s.id for s in steps if s.is_terminal}
 
     # Get all active incasso cases
     result = await db.execute(
@@ -650,6 +651,11 @@ async def get_pipeline_overview(
         )
     )
     all_cases = list(result.scalars().all())
+    # AUDIT-H11: a case parked on a terminal step ("Betaald"/"Afgesloten") is
+    # closed and must leave the active board. The status filter above only
+    # catches cases closed via the workflow-status dropdown — move_case_to_step
+    # never writes case.status, so pipeline-closed cases would otherwise linger.
+    all_cases = [c for c in all_cases if c.incasso_step_id not in terminal_step_ids]
 
     # Group cases by step
     step_by_id: dict[uuid.UUID, IncassoPipelineStep] = {s.id: s for s in steps}
@@ -1365,6 +1371,7 @@ async def get_queue_counts(
             next_step_map[step.id] = step_list[i + 1]
 
     # Get all active incasso cases (not closed/paid)
+    terminal_step_ids = {s.id for s in steps if s.is_terminal}
     result = await db.execute(
         select(Case).where(
             Case.tenant_id == tenant_id,
@@ -1374,6 +1381,10 @@ async def get_queue_counts(
         )
     )
     all_cases = list(result.scalars().all())
+    # AUDIT-H11: exclude cases parked on a terminal step — closed cases have no
+    # next step and must not inflate the queue counts (case.status is never
+    # written by the pipeline, so the status filter alone misses them).
+    all_cases = [c for c in all_cases if c.incasso_step_id not in terminal_step_ids]
 
     ready_next_step = 0
     wik_expired = 0

@@ -1103,6 +1103,46 @@ class TestPipelineOverview:
         data = resp.json()
         assert len(data["unassigned"]) == 1
 
+    async def test_terminal_step_cases_excluded_from_board(
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
+    ):
+        """A case parked on a terminal step ('Betaald') is closed and must leave
+        the active board, even though move_case_to_step never writes case.status —
+        so its status is still e.g. 'sommatie' (AUDIT-H11)."""
+        steps = await create_pipeline_steps(db, test_tenant.id)
+        terminal = IncassoPipelineStep(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            name="Betaald",
+            sort_order=99,
+            is_terminal=True,
+        )
+        db.add(terminal)
+        await db.flush()
+
+        # One genuinely open case + one parked on the terminal step with a stale,
+        # non-closed workflow status.
+        await create_incasso_case(
+            db, test_tenant.id, test_company, test_person, test_user,
+            step=steps[0], case_number="2026-00310",
+        )
+        await create_incasso_case(
+            db, test_tenant.id, test_company, test_person, test_user,
+            step=terminal, case_number="2026-00311", status="sommatie",
+        )
+        await db.commit()
+
+        resp = await client.get("/api/incasso/pipeline", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # The closed (terminal-step) case is excluded from the board entirely.
+        assert data["total_cases"] == 1
+        col_aanmaning = next(c for c in data["columns"] if c["step"]["name"] == "Aanmaning")
+        col_betaald = next(c for c in data["columns"] if c["step"]["name"] == "Betaald")
+        assert col_aanmaning["count"] == 1
+        assert col_betaald["count"] == 0
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 7: Queue Counts (API tests)

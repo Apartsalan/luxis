@@ -36,6 +36,34 @@ async def test_create_case(
 
 
 @pytest.mark.asyncio
+async def test_create_case_persists_nakosten_type_and_provisie_base(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, test_person: Contact
+):
+    """create_case builds Case() field-by-field and used to omit nakosten_type +
+    provisie_base, so non-default values from the form were silently dropped
+    (AUDIT-MEDIUM)."""
+    payload = {
+        "case_type": "incasso",
+        "description": "Test nakosten/provisie",
+        "interest_type": "statutory",
+        "client_id": str(test_company.id),
+        "opposing_party_id": str(test_person.id),
+        "date_opened": date.today().isoformat(),
+        "nakosten_type": "met_betekening",
+        "provisie_base": "total_claim",
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.json()
+    case_id = response.json()["id"]
+
+    detail = await client.get(f"/api/cases/{case_id}", headers=auth_headers)
+    assert detail.status_code == 200
+    data = detail.json()
+    assert data["nakosten_type"] == "met_betekening"
+    assert data["provisie_base"] == "total_claim"
+
+
+@pytest.mark.asyncio
 async def test_create_case_auto_increment(
     client: AsyncClient, auth_headers: dict, test_company: Contact
 ):

@@ -77,6 +77,34 @@ async def setup_database():
             await conn.execute(text("DROP SCHEMA public CASCADE"))
             await conn.execute(text("CREATE SCHEMA public"))
             await conn.run_sync(Base.metadata.create_all)
+            # If the luxis_app role exists in this cluster (dev/prod-like DBs
+            # where RLS migrations ran), the tenant middleware will SET ROLE to
+            # it on authenticated requests. The freshly recreated schema must
+            # therefore grant luxis_app access, or every endpoint test fails with
+            # "relation ... does not exist" (no schema USAGE). Roles are
+            # cluster-global, so a sibling DB's migration can make this role
+            # appear here. In CI the role is absent → this is skipped and tests
+            # run as the superuser exactly as before. RLS *policies* are NOT
+            # added here on purpose — tests/test_rls_isolation.py proves
+            # enforcement; here we only keep the suite runnable under the role.
+            role_exists = (
+                await conn.execute(
+                    text("SELECT 1 FROM pg_roles WHERE rolname = 'luxis_app'")
+                )
+            ).scalar()
+            if role_exists:
+                await conn.execute(text("GRANT USAGE ON SCHEMA public TO luxis_app"))
+                await conn.execute(
+                    text(
+                        "GRANT SELECT, INSERT, UPDATE, DELETE "
+                        "ON ALL TABLES IN SCHEMA public TO luxis_app"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO luxis_app"
+                    )
+                )
             _schema_created = True
         else:
             table_names = ", ".join(

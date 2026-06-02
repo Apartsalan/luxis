@@ -153,12 +153,15 @@ async def get_monthly_stats(
     start_date = today.replace(day=1) - timedelta(days=30 * (months - 1))
     start_date = start_date.replace(day=1)
 
-    # New cases per month
+    # New cases per month. AUDIT-MEDIUM: filter is_active — without it the
+    # soft-deleted seed cases (hundreds of is_active=false rows) inflated the
+    # chart to "215 nieuwe zaken" while only 2 cases are actually active.
     opened_month = func.to_char(Case.date_opened, "YYYY-MM").label("month")
     result = await db.execute(
         select(opened_month, func.count(Case.id))
         .where(
             Case.tenant_id == tenant_id,
+            Case.is_active.is_(True),
             Case.date_opened >= start_date,
         )
         .group_by(opened_month)
@@ -166,12 +169,13 @@ async def get_monthly_stats(
     )
     new_cases_by_month = dict(result.all())
 
-    # Closed cases per month
+    # Closed cases per month (same is_active filter — the active book only).
     closed_month = func.to_char(Case.date_closed, "YYYY-MM").label("month")
     result = await db.execute(
         select(closed_month, func.count(Case.id))
         .where(
             Case.tenant_id == tenant_id,
+            Case.is_active.is_(True),
             Case.date_closed >= start_date,
             Case.date_closed.isnot(None),
         )

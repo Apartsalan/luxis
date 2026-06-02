@@ -332,3 +332,49 @@ async def test_tenant_isolation_recent_activity(
     # Tenant B sees nothing
     resp_b = await client.get("/api/dashboard/recent-activity", headers=second_auth_headers)
     assert resp_b.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_monthly_stats_excludes_inactive_cases(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant,
+    test_company: Contact,
+):
+    """Monthly 'new_cases' must count only active cases — the soft-deleted seed
+    cases inflated the chart ('215 nieuwe zaken' vs 2 actief) (AUDIT-MEDIUM)."""
+    import uuid
+    from datetime import date
+
+    from app.cases.models import Case
+
+    today = date.today()
+
+    def _case(num: str, active: bool) -> Case:
+        return Case(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_number=num,
+            case_type="incasso",
+            debtor_type="b2b",
+            status="nieuw",
+            is_active=active,
+            client_id=test_company.id,
+            date_opened=today,
+            total_principal=Decimal("0.00"),
+            total_paid=Decimal("0.00"),
+        )
+
+    db.add_all([
+        _case("2026-ACT01", True),
+        _case("2026-INA01", False),
+        _case("2026-INA02", False),
+    ])
+    await db.commit()
+
+    resp = await client.get("/api/reports/monthly?months=1", headers=auth_headers)
+    assert resp.status_code == 200
+    rows = resp.json()
+    # Only the active case is counted; the two inactive (seed-style) ones are not.
+    assert sum(r["new_cases"] for r in rows) == 1

@@ -1687,6 +1687,21 @@ function PreFlightDialog({
               </div>
             )}
 
+            {/* AUDIT-H13: honest empty-state — these steps use AI drafts, not a
+                fixed DOCX template, so batch brief-generation cannot run here. */}
+            {action === "generate_document" && preview.ready === 0 && (
+              <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-3">
+                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>
+                    Deze stappen gebruiken AI-concepten in plaats van een vaste
+                    briefsjabloon. Batch-briefgeneratie werkt hier niet. Open een
+                    dossier en gebruik de AI-conceptknop om een brief te maken.
+                  </span>
+                </p>
+              </div>
+            )}
+
             {/* Email toggle for generate_document */}
             {action === "generate_document" && preview.ready > 0 && (
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">

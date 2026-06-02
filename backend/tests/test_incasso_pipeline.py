@@ -552,7 +552,10 @@ class TestBatchPreview:
         data = resp.json()
         assert data["ready"] == 0
         assert len(data["blocked"]) == 1
-        assert "briefsjabloon" in data["blocked"][0]["reason"]
+        # AUDIT-H13: the reason must point to the AI-draft flow, not dead-end on
+        # "geen briefsjabloon" — AI/HTML steps have no fixed DOCX template.
+        reason = data["blocked"][0]["reason"]
+        assert "AI-concept" in reason
 
     async def test_email_readiness_check(
         self, client, auth_headers, db, test_tenant, test_user, test_company, test_person

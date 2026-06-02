@@ -748,11 +748,17 @@ async def batch_preview(
 
             step = step_map.get(case.incasso_step_id)
             if step and not step.template_type:
+                # AUDIT-H13: AI/HTML-stappen hebben geen vaste briefsjabloon —
+                # batch-DOCX-generatie werkt daar niet. Verwijs naar de AI-
+                # conceptflow per dossier i.p.v. een dood "geen sjabloon".
                 blocked.append(
                     BatchBlocker(
                         case_id=case.id,
                         case_number=case.case_number,
-                        reason=f"Stap '{step.name}' heeft geen briefsjabloon",
+                        reason=(
+                            f"Stap '{step.name}' gebruikt AI-concepten i.p.v. een vaste "
+                            f"briefsjabloon — open het dossier voor de AI-conceptknop"
+                        ),
                     )
                 )
                 continue
@@ -1081,11 +1087,14 @@ async def batch_execute(
 
             step = step_map.get(case.incasso_step_id)
             if not step or not step.template_type:
+                # AUDIT-H13: AI/HTML-stappen kennen geen DOCX-sjabloon — verwijs
+                # naar de AI-conceptflow i.p.v. een dood "geen briefsjabloon".
                 skipped += 1
                 step_name = step.name if step else "onbekend"
                 errors.append(
-                    f"{case.case_number}: stap '{step_name}' heeft geen "
-                    f"briefsjabloon — overgeslagen"
+                    f"{case.case_number}: stap '{step_name}' gebruikt AI-concepten "
+                    f"i.p.v. een vaste briefsjabloon — open het dossier voor de "
+                    f"AI-conceptknop"
                 )
                 continue
 

@@ -472,17 +472,29 @@ async def compliance_check(
 @router.get("/griffierecht")
 async def get_griffierecht(
     case_id: uuid.UUID,
+    onvermogend: bool = Query(default=False),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Calculate griffierecht for a case based on total principal."""
+    """Calculate griffierecht for a case based on total principal.
+
+    Griffierecht is paid by the eiser (the party starting the procedure) — in an
+    incasso case that is the firm's client/creditor, not the debtor. The tariff
+    therefore follows the *client's* legal form, not debtor_type (AUDIT-H6).
+    `onvermogend` opts into the reduced low-income tariff (off by default).
+    """
     from app.collections.griffierechten import calculate_griffierecht
 
     case = await get_case(db, current_user.tenant_id, case_id)
     claims = await service.list_claims(db, current_user.tenant_id, case_id)
     total_principal = sum(c.principal_amount for c in claims)
-    is_rp = case.debtor_type == "b2b"
-    return calculate_griffierecht(total_principal, is_rechtspersoon=is_rp)
+    # Eiser = client/creditor. company → rechtspersoon, person → natuurlijk
+    # persoon. (Eenmanszaak stored as 'company' is a known edge — natural person
+    # in law — to refine later with a dedicated legal-form flag.)
+    is_rp = case.client.contact_type == "company"
+    return calculate_griffierecht(
+        total_principal, is_rechtspersoon=is_rp, is_onvermogend=onvermogend
+    )
 
 
 # ── Interest Rates (standalone reference endpoint) ───────────────────────────

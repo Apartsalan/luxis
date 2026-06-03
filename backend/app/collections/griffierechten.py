@@ -1,81 +1,106 @@
 """Griffierechten berekening — rechtbank kosten op basis van vorderingsbedrag.
 
-Tarieven per 1 januari 2026 voor kantonzaken (natuurlijke personen en rechtspersonen).
-Bron: Wet griffierechten burgerlijke zaken (Wgbz).
+Officiële tarieven per 1 januari 2026.
+Bron: Regeling tot indexering Wgbz, Stcrt. 2025, 39855 (rechtspraak.nl —
+griffierecht-kanton / griffierecht-civiel).
 
-Note: dit zijn de tarieven voor dagvaardingszaken bij de kantonrechter,
-de meest voorkomende procedure bij incasso.
+Griffierecht wordt betaald door de EISER/verzoeker (degene die de procedure
+start), niet door de gedaagde. Bij incasso is dat de schuldeiser = de cliënt.
+Het tarief hangt af van de rechtsvorm van die eiser:
+  - niet-natuurlijke personen (rechtspersoon, vof, cv)
+  - natuurlijke personen (particulier, eenmanszaak)
+  - onvermogenden (laag inkomen / toevoeging) — vlak tarief
 """
 
 from decimal import Decimal
 
-# Griffierechten 2026 — kantonzaken
-# (max_bedrag, tarief_natuurlijk_persoon, tarief_rechtspersoon)
+# Kantonzaken (vorderingen t/m € 25.000) — (max_bedrag, rechtspersoon, natuurlijk, onvermogend)
 GRIFFIERECHTEN_KANTON_2026 = [
-    (Decimal("500"), Decimal("92"), Decimal("132")),
-    (Decimal("1500"), Decimal("92"), Decimal("132")),
-    (Decimal("2500"), Decimal("244"), Decimal("530")),
-    (Decimal("5000"), Decimal("244"), Decimal("530")),
-    (Decimal("12500"), Decimal("244"), Decimal("530")),
-    (Decimal("25000"), Decimal("619"), Decimal("1384")),
-    (Decimal("100000"), Decimal("619"), Decimal("1384")),  # kantonrechter max 25k, maar voor volledigheid
+    (Decimal("500"), Decimal("139"), Decimal("93"), Decimal("93")),
+    (Decimal("1500"), Decimal("350"), Decimal("233"), Decimal("93")),
+    (Decimal("2500"), Decimal("397"), Decimal("265"), Decimal("93")),
+    (Decimal("5000"), Decimal("529"), Decimal("265"), Decimal("93")),
+    (Decimal("12500"), Decimal("559"), Decimal("265"), Decimal("93")),
+    (Decimal("25000"), Decimal("1504"), Decimal("753"), Decimal("93")),
 ]
 
-# Griffierechten 2026 — rechtbank (handelszaken, boven kantongrens)
-GRIFFIERECHTEN_RECHTBANK_2026 = [
-    (Decimal("100000"), Decimal("1384"), Decimal("4394")),
-    (Decimal("Infinity"), Decimal("1384"), Decimal("4394")),
+# Civiele zaken bij de rechtbank (vorderingen boven € 25.000) —
+# (max_bedrag, rechtspersoon, natuurlijk, onvermogend)
+GRIFFIERECHTEN_CIVIEL_2026 = [
+    (Decimal("100000"), Decimal("3083"), Decimal("1414"), Decimal("93")),
+    (Decimal("1000000"), Decimal("7062"), Decimal("2803"), Decimal("93")),
+    (Decimal("Infinity"), Decimal("10487"), Decimal("2803"), Decimal("93")),
 ]
+
+KANTON_LIMIET = Decimal("25000")
+
+
+def _tarief_uit_tier(
+    tier: tuple[Decimal, Decimal, Decimal, Decimal],
+    is_rechtspersoon: bool,
+    is_onvermogend: bool,
+) -> Decimal:
+    _max, tarief_rp, tarief_np, tarief_onvermogend = tier
+    if is_onvermogend:
+        return tarief_onvermogend
+    return tarief_rp if is_rechtspersoon else tarief_np
 
 
 def calculate_griffierecht(
     vordering: Decimal,
     is_rechtspersoon: bool = True,
+    is_onvermogend: bool = False,
 ) -> dict:
-    """Calculate griffierecht based on claim amount.
+    """Calculate griffierecht based on claim amount and the eiser's legal form.
 
     Args:
-        vordering: Total claim amount (principal)
-        is_rechtspersoon: True for legal entities (B2B), False for natural persons (B2C)
+        vordering: Total claim amount (principal).
+        is_rechtspersoon: True if the eiser (the firm's client/creditor) is a
+            legal entity, False for a natural person (particulier/eenmanszaak).
+        is_onvermogend: True for the reduced 'onvermogenden' tariff (low income /
+            toevoeging). Overrides is_rechtspersoon.
 
     Returns:
-        dict with griffierecht amount, court type, and tier info
+        dict with griffierecht amount, court type, tariff category, and tier info.
     """
     if vordering <= Decimal("0"):
         return {
             "griffierecht": Decimal("0"),
             "rechter": "n.v.t.",
+            "tarief_categorie": "n.v.t.",
             "toelichting": "Geen vordering",
         }
 
-    # Kantonrechter: vorderingen t/m €25.000
-    if vordering <= Decimal("25000"):
+    if vordering <= KANTON_LIMIET:
         rechter = "kantonrechter"
-        for max_bedrag, tarief_np, tarief_rp in GRIFFIERECHTEN_KANTON_2026:
-            if vordering <= max_bedrag:
-                tarief = tarief_rp if is_rechtspersoon else tarief_np
-                return {
-                    "griffierecht": tarief,
-                    "rechter": rechter,
-                    "toelichting": f"Vordering t/m €{max_bedrag:,.0f} — {'rechtspersoon' if is_rechtspersoon else 'natuurlijk persoon'}",
-                }
+        table = GRIFFIERECHTEN_KANTON_2026
     else:
-        # Rechtbank: vorderingen boven €25.000
         rechter = "rechtbank"
-        tarief = (
-            GRIFFIERECHTEN_RECHTBANK_2026[0][2]
-            if is_rechtspersoon
-            else GRIFFIERECHTEN_RECHTBANK_2026[0][1]
-        )
-        return {
-            "griffierecht": tarief,
-            "rechter": rechter,
-            "toelichting": f"Vordering boven €25.000 — {'rechtspersoon' if is_rechtspersoon else 'natuurlijk persoon'}",
-        }
+        table = GRIFFIERECHTEN_CIVIEL_2026
 
-    # Fallback (should not reach)
+    if is_onvermogend:
+        categorie = "onvermogende"
+    elif is_rechtspersoon:
+        categorie = "rechtspersoon"
+    else:
+        categorie = "natuurlijk persoon"
+
+    for tier in table:
+        max_bedrag = tier[0]
+        if vordering <= max_bedrag:
+            tarief = _tarief_uit_tier(tier, is_rechtspersoon, is_onvermogend)
+            grens = "" if max_bedrag.is_infinite() else f" t/m €{max_bedrag:,.0f}"
+            return {
+                "griffierecht": tarief,
+                "rechter": rechter,
+                "tarief_categorie": categorie,
+                "toelichting": f"Vordering{grens} — {categorie}",
+            }
+
+    # Unreachable: the civiel table's last tier is Infinity.
     return {
         "griffierecht": Decimal("0"),
         "rechter": "onbekend",
+        "tarief_categorie": "n.v.t.",
         "toelichting": "Kon griffierecht niet bepalen",
     }

@@ -142,6 +142,44 @@ async def test_token_with_nonexistent_user_returns_401(client: AsyncClient, test
 
 
 @pytest.mark.asyncio
+async def test_token_with_malformed_tenant_id_returns_401(
+    client: AsyncClient, test_user: User
+):
+    """A token with a non-UUID tenant_id should return 401, not crash with 500."""
+    payload = {
+        "sub": str(test_user.id),
+        "tenant_id": "not-a-uuid",
+        "type": "access",
+        "exp": datetime.now(UTC) + timedelta(minutes=5),
+    }
+    token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
+    response = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_token_with_malformed_sub_returns_401(
+    client: AsyncClient, test_tenant: Tenant
+):
+    """A token with a non-UUID sub should return 401, not crash with 500."""
+    payload = {
+        "sub": "not-a-uuid",
+        "tenant_id": str(test_tenant.id),
+        "type": "access",
+        "exp": datetime.now(UTC) + timedelta(minutes=5),
+    }
+    token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
+    response = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_login_with_empty_credentials(client: AsyncClient, test_user: User):
     """Empty email and/or password should return 401 or 422."""
     response = await client.post(

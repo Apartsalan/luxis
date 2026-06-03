@@ -1,5 +1,6 @@
 """Shared FastAPI dependencies — auth, database, tenant context."""
 
+import uuid
 from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, status
@@ -38,7 +39,11 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload",
             )
-    except JWTError:
+        # Validate UUID format here so a malformed claim yields 401, not a 500
+        # from uuid.UUID() failing later in set_tenant_context / get_user_by_id.
+        uuid.UUID(str(user_id))
+        uuid.UUID(str(tenant_id))
+    except (JWTError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

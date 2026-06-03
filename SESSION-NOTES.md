@@ -1,9 +1,40 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 3 juni 2026 (sessie 153 — 10 audit-fixes incl. H4 + H5/H6 griffierecht)
-**Laatste feature/fix:** Sessie 153 — **10 audit-bugs, elk rood→groen, los gecommit, deels live in browser/API geverifieerd.** 6 bounded MEDIUM (#1 GET dossier-detail idempotent, #2 PUT factuur-BTW herberekent, #3 "Verdeling type debiteur" op debtor i.p.v. crediteur, #4 dossiernummer-regex ≥5 cijfers, #5 batch `recalculate_interest` ressynct cache i.p.v. no-op, #6 cross-tenant `product_id` op factuurregel geweigerd) + **H4** (dashboard/rapportages "openstaand" incl. rente+BIK via `get_portfolio_outstanding`, sluit aan op dossierdetail) + **H5/H6 griffierecht** (officiële 2026-staffel Stcrt. 2025, 39855 — kanton + civiel, 3 kolommen incl. onvermogend; tarief volgt nu de **eiser**/cliënt, niet de debiteur; `?onvermogend`-toggle) + **row 55** (delete/cancel factuur geeft gelinkte uren+verschotten vrij). Browser/API bevestigd: openstaand €5.000→€5.818,27 (dashboard+rapportages = dossierdetail), griffierecht €529 op echt dossier 2026-00001.
-**Openstaande bugs:** Audit nog open: **row 59** ("Wettelijke rente"-label hardcoded in `email/incasso_templates.py` r.595/611 — onjuist bij B2B/handelsrente; klantgerichte tekst → met Lisanne's bewoording), H14–H19 (derdengelden-cluster), H25 (modules_enabled), betaalbrieven-IBAN, BTW-op-rente (geld/juridisch). + resterende low/polish + bounded crash-guards (JWT 500→401, `_determine_direction` None-crash, `distribute_payment` negatief). Zie `.audit/AUDIT-REPORT.md` (verifieer elk; lijst bevat non-issues). Pre-bestaand: stale dev-container mist `sepaxml`; lokale ruff flagt E501 (CI niet — alleen default rule-set op `app/`).
-**Volgende sessie:** bounded crash-guards (snel, risicovrij) + **row 59** mits Lisanne's bewoording OK. Derdengelden-cluster = eigen sessie. RLS fase 2 = trigger-gedreven. Eenmanszaak-nuance griffierecht (`company`→rechtspersoon) later verfijnen met rechtsvorm-vlag.
+**Laatst bijgewerkt:** 3 juni 2026 (sessie 154 — 3 bounded crash-guards + row 59 rente-label)
+**Laatste feature/fix:** Sessie 154 — **3 bounded crash-guards + row 59, elk rood→groen, los gecommit, CI+auto-deploy.** (1) Malformed JWT `sub`/`tenant_id` → 401 i.p.v. 500 (`dependencies.py`: UUID-validatie binnen auth-try; `c10e7c5`), (2) `_determine_direction` crashte op `from_email=None` → `(… or "")`-guard zoals `_is_system_email` al had (`sync_service.py`; `a098a09`), (3) `distribute_payment` accepteerde negatieve bedragen (inflateerde saldi) → `ValueError` op `< 0`, **nul blijft toegestaan** (auditvoorstel `<= 0` zou bestaand `test_zero_payment` breken — geverifieerd; `63385f9`), (4) **row 59** 14-dagenbrief hardcodede "wettelijke rente" → neutraal "Rente"/"verschuldigde rente" zoals de sommatie (klopt B2C+B2B; bewoording bevestigd met gebruiker; `9fa3de7`).
+**Openstaande bugs:** Audit nog open: H14–H19 (derdengelden-cluster), H25 (modules_enabled), betaalbrieven-IBAN, BTW-op-rente (geld/juridisch). + resterende medium/low/polish in `.audit/AUDIT-REPORT.md` (verifieer elk; lijst bevat non-issues). Pre-bestaand: stale dev-container mist `sepaxml`; lokale ruff flagt E501 (CI niet — alleen default rule-set op `app/`).
+**Volgende sessie:** Derdengelden-cluster (H14–H19) = eigen sessie / met Lisanne. RLS fase 2 = verbind ALS `luxis_app`. Resterende medium audit-fixes (elk eerst tegen code verifiëren). Eenmanszaak-nuance griffierecht (`company`→rechtspersoon) later verfijnen met rechtsvorm-vlag.
+
+## Wat er gedaan is (sessie 154 — 3 juni 2026) — 3 bounded crash-guards + row 59
+
+### Samenvatting
+
+Vervolg S148-audit: de drie als "volgende sessie" gemarkeerde **bounded crash-guards** + **row 59** (email rente-label). Elk **rood→groen** (RED aangetoond vóór fix), los gecommit, gepusht, CI + auto-deploy. Elke kandidaat eerst tegen de echte code geverifieerd vóór fix (auditlijst bevat non-issues). Eén auditvoorstel afgekeurd en aangepast: de voorgestelde `payment_amount <= 0`-guard zou het bestaande `test_zero_payment` (nul = alles-nul, geen raise) breken → guard alleen op `< 0`. Row 59 = klantgerichte juridische tekst → bewoording **eerst met gebruiker bevestigd** (gekozen: gelijktrekken met de sommatie, neutraal label).
+
+### Gefixte bugs (4)
+- **Crash-guard 1 — malformed JWT** (`c10e7c5`) — `get_current_user` ving `JWTError`, maar `set_tenant_context`/`get_user_by_id` deden `uuid.UUID()` op `sub`/`tenant_id` *buiten* de try → een ondertekend token met een geldige-string-maar-geen-UUID claim (bv. `"not-a-uuid"`) gaf `ValueError` → **500** i.p.v. 401. UUID-formaat nu gevalideerd binnen de auth-try; `except (JWTError, ValueError)` → 401. 2 nieuwe tests.
+- **Crash-guard 2 — `_determine_direction` None** (`a098a09`) — `email_msg.from_email.lower()` crashte met `AttributeError` als `from_email=None` (sommige server-side notificaties, bv. Microsoft delivery receipts) → hele batch-sync stuk. `(email_msg.from_email or "").lower()`, identiek aan de guard die `_is_system_email` al had. 2 unit-tests.
+- **Crash-guard 3 — negatieve betaling** (`63385f9`) — `distribute_payment` had geen guard; een negatief bedrag gaf negatieve allocaties en **verhoogde** de openstaande saldi (`min(neg, x)=neg`, `remaining -= neg`). `ValueError` op `payment_amount < 0`. **Nul blijft toegestaan** (alloceert niets) — auditvoorstel `<= 0` afgekeurd want het brak `test_zero_payment`. Defense-in-depth: de API-schema dwingt al `gt=0` af; dit beschermt directe/script-callers. Rode test `test_negative_payment_raises`.
+- **row 59 — 14-dagenbrief rente-label** (`9fa3de7`) — `incasso_templates.py` r.595/611 hardcodede "Wettelijke rente" in zowel de specificatieregel als de proza → juridisch onjuist bij B2B (handelsrente, art. 6:119a BW). Gelijkgetrokken met de sommatie/overige brieven: neutraal "Rente t/m {datum}" in de regel + "de verschuldigde rente vanaf de verzuimdatum" in de tekst. Klopt B2C én B2B. **Bewoording vooraf met gebruiker bevestigd.** Alleen de 14-dagenbrief week af; herinnering/sommatie gebruikten al neutraal "Rente". Rode test `test_render_14_dagenbrief_neutral_rente_label`.
+
+### Geverifieerd, niet blind gevolgd
+- Auditvoorstel `payment_amount <= Decimal("0")` → afgekeurd (breekt `test_zero_payment`); guard op `< 0`.
+- Row 59 alternatief "toon exact rentetype met wetsartikel" → afgewezen door gebruiker; neutraal label zoals de sommatie gekozen.
+- B2C/B2B-nuance: een 14-dagenbrief (art. 6:96 lid 6 BW) is van oorsprong een consumenteninstrument; of hij voor B2B passend is = workflow-vraag, buiten scope van deze label-fix.
+
+### Gewijzigde bestanden (key)
+- `backend/app/dependencies.py` (JWT UUID-guard), `backend/app/email/sync_service.py` (`_determine_direction` None-guard), `backend/app/collections/payment_distribution.py` (negatief-guard), `backend/app/email/incasso_templates.py` (14-dagenbrief rente-label)
+- Tests: `test_auth.py` (+2), `test_email_sync.py` (+2), `test_payment_distribution.py` (+1), `test_incasso_templates.py` (+1)
+
+### Verificatie
+- Per finding rood→groen aangetoond. Targeted suites groen: auth (17), email_sync direction (2), payment_distribution (12) + extended/allocation (30), incasso_templates (22). Lint: `ruff check --no-cache --select F,E7,E9 app/<file>` schoon per gewijzigd bestand (CI-rule-set; lokale E501 ≠ CI).
+
+### Bekende issues
+- Derdengelden-cluster (H14–H19), H25, betaalbrieven-IBAN, BTW-op-rente nog open. Resterende medium/low/polish in `.audit/AUDIT-REPORT.md`.
+- `.claude/scheduled_tasks.lock` untracked (lock-bestand, niet committen).
+
+### Volgende sessie
+- Derdengelden-cluster (H14–H19) = eigen sessie met Lisanne. Resterende medium audit-fixes (elk eerst tegen code verifiëren). RLS fase 2 (verbind ALS `luxis_app`).
 
 ## Wat er gedaan is (sessie 153 — 3 juni 2026) — 10 audit-fixes (6 MEDIUM + H4 + H5/H6 + row 55)
 

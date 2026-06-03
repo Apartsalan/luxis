@@ -331,45 +331,6 @@ export function KantoorTab() {
           </p>
         </div>
       </div>
-
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="text-base font-semibold text-foreground mb-2">
-          Standaard rente-instellingen
-        </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Standaard instellingen voor nieuwe dossiers
-        </p>
-        <div className="max-w-md space-y-4">
-          <div>
-            <label htmlFor="settings-interest-type" className="block text-sm font-medium text-foreground">
-              Standaard rentetype
-            </label>
-            <select id="settings-interest-type" defaultValue="statutory" className={inputClass}>
-              <option value="statutory">
-                Wettelijke rente (art. 6:119 BW)
-              </option>
-              <option value="commercial">
-                Handelsrente (art. 6:119a BW)
-              </option>
-              <option value="government">
-                Overheidsrente (art. 6:119b BW)
-              </option>
-              <option value="contractual">Contractuele rente</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="btw_bik"
-              defaultChecked
-              className="h-4 w-4 rounded border-input accent-primary"
-            />
-            <label htmlFor="btw_bik" className="text-sm text-foreground">
-              BTW over BIK berekenen (client is btw-plichtig)
-            </label>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

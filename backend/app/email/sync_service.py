@@ -37,8 +37,12 @@ EMAIL_ATTACHMENTS_BASE = Path("/app/uploads/email_attachments")
 
 logger = logging.getLogger(__name__)
 
-# Regex: matches case numbers like "2024-00001", "2026-12345"
-CASE_NUMBER_RE = re.compile(r"\b(20\d{2}-\d{4,6})\b")
+# Regex: matches case numbers like "2024-00001", "2026-12345".
+# Real dossiernummers are YYYY-NNNNN (generate_case_number uses :05d, so >=5
+# digits). Requiring >=5 digits keeps 4-digit references (invoice/payment
+# numbers) from being mistaken for a dossiernummer, which blocked the
+# contact-email fallback and left such emails unlinked (AUDIT-MEDIUM).
+CASE_NUMBER_RE = re.compile(r"\b(20\d{2}-\d{5,6})\b")
 
 # Simple HTML tag stripper — faster than BeautifulSoup for our needs
 _HTML_TAG_RE = re.compile(r"<[^>]+>")

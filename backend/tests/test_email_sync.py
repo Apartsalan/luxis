@@ -492,3 +492,32 @@ async def test_bulk_link_same_tenant_still_works(
     await db.refresh(e2)
     assert e1.case_id == case.id
     assert e2.case_id == case.id
+
+
+@pytest.mark.asyncio
+async def test_case_number_match_ignores_4digit_invoice_like_number(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """A 4-digit '20YY-NNNN' reference (e.g. an invoice/payment number) must NOT
+    be treated as a dossiernummer (AUDIT-MEDIUM).
+
+    Real case numbers are YYYY-NNNNN (>=5 digits). The old regex (\\d{4,6})
+    matched 4-digit references too, so a non-existent "case number" was reported,
+    which blocks the contact-email fallback and leaves the email unlinked.
+    """
+    from app.email.sync_service import _find_case_by_case_number
+
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "Betreft factuur 2026-1234 van vorige maand"
+    )
+    assert has_case_number is False
+    assert case_id is None
+
+    # A real 5-digit dossiernummer is still matched
+    case = await _create_case(db, test_tenant.id, case_number="2026-00077")
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "Inzake dossier 2026-00077"
+    )
+    assert has_case_number is True
+    assert case_id == case.id
+    assert matched_by == "case_number"

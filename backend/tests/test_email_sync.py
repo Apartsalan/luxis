@@ -521,3 +521,23 @@ async def test_case_number_match_ignores_4digit_invoice_like_number(
     assert has_case_number is True
     assert case_id == case.id
     assert matched_by == "case_number"
+
+
+def test_determine_direction_handles_none_from_email():
+    """A message with from_email=None (e.g. some server-side notifications) must
+    not crash the sync loop with AttributeError (crash-guard)."""
+    from app.email.providers.base import EmailMessage
+    from app.email.sync_service import _determine_direction
+
+    msg = EmailMessage(provider_message_id="x", from_email=None)
+    # Should not raise; an unknown sender is treated as inbound.
+    assert _determine_direction(msg, "lisanne@kestinglegal.nl") == "inbound"
+
+
+def test_determine_direction_outbound_matches_account():
+    """from_email equal to the account email is outbound (case-insensitive)."""
+    from app.email.providers.base import EmailMessage
+    from app.email.sync_service import _determine_direction
+
+    msg = EmailMessage(provider_message_id="x", from_email="Lisanne@KestingLegal.nl")
+    assert _determine_direction(msg, "lisanne@kestinglegal.nl") == "outbound"

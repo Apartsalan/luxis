@@ -279,7 +279,7 @@ def _parse_email_date(date_str: str) -> datetime:
 
 def _determine_direction(email_msg: EmailMessage, account_email: str) -> str:
     """Determine if an email is inbound or outbound based on the account email."""
-    if email_msg.from_email.lower() == account_email.lower():
+    if (email_msg.from_email or "").lower() == account_email.lower():
         return "outbound"
     return "inbound"
 

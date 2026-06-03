@@ -1,9 +1,47 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 2 juni 2026 (sessie 152 — 4 medium audit-fixes, pure code-bugs)
-**Laatste feature/fix:** Sessie 152 — **4 MEDIUM uit de S148-audit, elk rood→groen, los gecommit.** (1) TASK_TYPES miste `verjaring_warning`/`review_ai_draft` die scheduler/automation al direct aanmaken → validatie wees ze af. (2) Producten hadden geen unieke `(tenant_id, code)` → `get_product_by_code` (scalar_one_or_none) kon crashen met `MultipleResultsFound`; partial-unique index (alleen actieve rijen) + lookup filtert op `is_active`. (3) `manual_match` blokkeert nu (409) als de transactie al een PENDING-match heeft → geen dubbele betaling. (4) `(bulk-)link emails` valideert nu dat het doel-dossier van dezelfde tenant is → cross-tenant koppeling dicht. **C1** (CaseActivity bij mislukte SMTP) bleek **géén bug** (`get_db` rollbackt op de raise — niet gepersisteerd). **C4** (agenda timezone-grens) overgeslagen — niet schoon bounded (frontend-rendering).
-**Openstaande bugs:** Audit nog open: H4 (openstaand excl rente/BIK), **H5/H6 griffierecht** (deels onderzocht S152 — 4 fouten bevestigd: verouderde 2026-bedragen, achterhaalde staffel ná 2026-differentiatie €500–€5.000, tarief op debiteur i.p.v. **eiser**, `onvermogenden`-tarief ontbreekt → SAMEN MET LISANNE, geld+recht), H14–H19 (derdengelden-cluster), H25 (modules_enabled). + **~40 medium** / 31 low / 4 polish (zie `.audit/AUDIT-REPORT.md`; staan NIET als roadmap-rows; let op: lijst bevat non-issues zoals C1 — verifieer elk). Pre-bestaand: stale dev-container mist `sepaxml` (rebuild fixt; CI groen).
-**Volgende sessie:** verder met **bounded MEDIUM code-bugs** (verifieer elk tegen code vóór fix). Volgende kandidaat: **GET dossier-detail schrijft naar DB** (side-effecting GET → niet-idempotent). Andere bounded: PUT factuur `btw_percentage` herberekent bedrag niet, rapport "verdeling debiteur" classificeert op crediteur, factuurnummer-regex te breed blokkeert contact-koppeling, batch `recalculate_interest` misleidende no-op. **Geld/juridisch (griffierecht, BTW-rente) = met Lisanne.** Derdengelden-cluster = eigen sessie. RLS fase 2 = trigger-gedreven, niet default.
+**Laatst bijgewerkt:** 3 juni 2026 (sessie 153 — 10 audit-fixes incl. H4 + H5/H6 griffierecht)
+**Laatste feature/fix:** Sessie 153 — **10 audit-bugs, elk rood→groen, los gecommit, deels live in browser/API geverifieerd.** 6 bounded MEDIUM (#1 GET dossier-detail idempotent, #2 PUT factuur-BTW herberekent, #3 "Verdeling type debiteur" op debtor i.p.v. crediteur, #4 dossiernummer-regex ≥5 cijfers, #5 batch `recalculate_interest` ressynct cache i.p.v. no-op, #6 cross-tenant `product_id` op factuurregel geweigerd) + **H4** (dashboard/rapportages "openstaand" incl. rente+BIK via `get_portfolio_outstanding`, sluit aan op dossierdetail) + **H5/H6 griffierecht** (officiële 2026-staffel Stcrt. 2025, 39855 — kanton + civiel, 3 kolommen incl. onvermogend; tarief volgt nu de **eiser**/cliënt, niet de debiteur; `?onvermogend`-toggle) + **row 55** (delete/cancel factuur geeft gelinkte uren+verschotten vrij). Browser/API bevestigd: openstaand €5.000→€5.818,27 (dashboard+rapportages = dossierdetail), griffierecht €529 op echt dossier 2026-00001.
+**Openstaande bugs:** Audit nog open: **row 59** ("Wettelijke rente"-label hardcoded in `email/incasso_templates.py` r.595/611 — onjuist bij B2B/handelsrente; klantgerichte tekst → met Lisanne's bewoording), H14–H19 (derdengelden-cluster), H25 (modules_enabled), betaalbrieven-IBAN, BTW-op-rente (geld/juridisch). + resterende low/polish + bounded crash-guards (JWT 500→401, `_determine_direction` None-crash, `distribute_payment` negatief). Zie `.audit/AUDIT-REPORT.md` (verifieer elk; lijst bevat non-issues). Pre-bestaand: stale dev-container mist `sepaxml`; lokale ruff flagt E501 (CI niet — alleen default rule-set op `app/`).
+**Volgende sessie:** bounded crash-guards (snel, risicovrij) + **row 59** mits Lisanne's bewoording OK. Derdengelden-cluster = eigen sessie. RLS fase 2 = trigger-gedreven. Eenmanszaak-nuance griffierecht (`company`→rechtspersoon) later verfijnen met rechtsvorm-vlag.
+
+## Wat er gedaan is (sessie 153 — 3 juni 2026) — 10 audit-fixes (6 MEDIUM + H4 + H5/H6 + row 55)
+
+### Samenvatting
+
+Vervolg S148-audit: **10 bugs**, elk **rood→groen** (RED-state aangetoond vóór fix), los gecommit, gepusht, CI + auto-deploy. Elke kandidaat eerst tegen echte code geverifieerd — 2 voorgestelde kandidaten als non-issue/gedragskeuze geflagd i.p.v. blind gefixt. Op verzoek gebruiker daarna H4 (openstaand) en H5/H6 (griffierecht, met officiële rechtspraak.nl-bron) opgepakt — die stonden als "met Lisanne". Diverse fixes **live in browser/API geverifieerd** (gebruiker vroeg expliciet om functionele check, niet alleen tests).
+
+### Gefixte bugs (10)
+- **#1 GET dossier-detail idempotent** (`1523c67`) — `GET /cases/{id}` riep `_refresh_case_financials` + `commit` op élke read → side-effecting GET. Cache wordt al door alle claim/payment-mutatiepaden onderhouden → refresh-on-read verwijderd; nu pure SELECT. (`get_db` auto-commit → de flush persisteerde anders.)
+- **#2 PUT factuur btw_percentage** (`3c01127`) — `_recalculate_totals` leidt BTW af uit regel-`btw_percentage`; `update_invoice` zette alleen het header-veld → BTW-bedrag bewoog niet. Nieuw tarief propageert nu naar regels die de oude default erfden; expliciet afwijkende regels behouden hun tarief.
+- **#3 Verdeling type debiteur** (`2d0eef9`) — KPI groepeerde op `contact_type` van `Case.client_id` (de crediteur) onder het label "debiteur". Nu op `Case.debtor_type` (b2b→Bedrijf, b2c→Particulier); crediteur-join weg.
+- **#6 cross-tenant product_id** (`b026ef6`) — `create_invoice` bewaarde `product_id` ook als `get_product` (tenant-scoped) None gaf → dangling/cross-tenant ref. Nu `NotFoundError`.
+- **#5 batch recalculate_interest** (`5e3ff02`) — herzette `total_principal` naar dezelfde waarde (no-op), raakte `total_paid` nooit, maar rapporteerde elk dossier als 'processed'. Nu `_refresh_case_financials` (principal+paid resync); rente wordt sowieso live berekend. Dode per-claim rente-recompute verwijderd.
+- **#4 dossiernummer-regex** (`b2e58d1`) — `\b(20\d{2}-\d{4,6})\b` matchte 4-cijferige factuur-/betaalreferenties → vals "has_case_number=True" blokkeerde de contact-fallback. Verstrakt naar `\d{5,6}` (echte nummers ≥5 cijfers). Caveat: 5-cijferig factuurnr blijft qua vorm ononderscheidbaar (echte fix = contact-fallback-gedragswijziging, backlog).
+- **H4 openstaand incl. rente+BIK** (`f40152e`) — dashboard + rapportages telden `SUM(total_principal) − SUM(total_paid)` (zonder rente/BIK) → €5.000 vs €5.818 op dossierdetail. Nieuwe `get_portfolio_outstanding()` sommeert per actief dossier de `get_financial_summary`-`total_outstanding` (zelfde grand_total-logica). Dossiers zonder vorderingen vallen terug op cache `principal − paid` (skipt de dure rentecalc → loste meteen een regressie op die ik introduceerde: claimloze dossiers crashten op `calculate_case_interest` zonder geseede tarieven). Live: dashboard+rapportages tonen nu €5.818,27 = dossierdetail.
+- **H5/H6 griffierecht** (`7758f5d`) — álle hardcoded tarieven fout → vervangen door officiële 2026-staffel (Stcrt. 2025, 39855) voor kanton (≤€25k) én civiel (rechtbank), 3 kolommen (rechtspersoon/natuurlijk/onvermogend). **H6:** griffierecht betaalt de **eiser** (= cliënt/crediteur, niet de debiteur — rechtspraak.nl letterlijk) → tarief volgt nu `case.client.contact_type` i.p.v. `debtor_type`. Optionele `?onvermogend` (default uit; voor verkoop). Live op echt dossier 2026-00001 (bedrijf, €5.000) → €529; `?onvermogend=true` → €93.
+- **row 55 delete/cancel factuur** (`1db7432`) — `delete_invoice`/`cancel_invoice` lieten gelinkte expenses+time_entries op `invoiced=True` (alleen `remove_line` gaf per regel vrij) → nooit meer factureerbaar. Gedeelde `_release_invoiced_items`-helper in beide.
+
+### Niet blind gefixt (geflagd)
+- **#4 diepe fix** (contact-fallback toestaan als gevonden "dossiernummer" niet bestaat) = gedragswijziging email-matching → backlog.
+- **#5 naam** "rente herberekenen" blijft semantisch zwak (rente wordt nooit gepersisteerd); gebruiker akkoord met cache-resync-interpretatie.
+- **row 59** ("Wettelijke rente"-label) bewust NIET nu: klantgerichte juridische tekst, vergt Lisanne's bewoording.
+- **Griffierecht eenmanszaak-nuance:** juridisch natuurlijk persoon maar mogelijk als `company` opgeslagen → nu simpel `company→rechtspersoon`, te verfijnen met rechtsvorm-vlag. Cosmetisch: `toelichting`-veld toont "€5,000" i.p.v. "€5.000" (niet getoond in UI).
+
+### Gewijzigde bestanden (key)
+- `backend/app/cases/router.py` (GET idempotent), `backend/app/invoices/service.py` (btw-update, product-guard, `_release_invoiced_items`), `backend/app/dashboard/{service,reports_service}.py` (debiteur-rapport + H4), `backend/app/collections/service.py` (`get_portfolio_outstanding`), `backend/app/incasso/service.py` (batch resync), `backend/app/email/sync_service.py` (regex), `backend/app/collections/{griffierechten.py,router.py}` (H5/H6)
+- Tests: `test_cases.py`, `test_invoices.py`, `test_dashboard.py`, `test_incasso_pipeline.py`, `test_email_sync.py`, **nieuw** `test_griffierechten.py` (15)
+
+### Verificatie
+- Per finding rood→groen (RED aangetoond, o.a. via gestashte fix). Targeted suites groen: cases (24), invoices (32), dashboard (16), email_sync (15), griffierechten (15), incasso recalc. Lint: CI lint = `ruff check app/` (default rule-set, alleen `app/`) — eigen `app/`-wijzigingen schoon via `--select F,E7,E9`. **Lokale ruff flagt E501 die CI niet afdwingt** (pre-existing, zie [[reference_local_ruff_vs_ci]]).
+- Browser/API: dashboard+rapportages openstaand €5.818,27 = dossierdetail; griffierecht-endpoint €529/€93 op echt dossier; GET dossier-detail `updated_at` ongewijzigd na openen (geen write).
+
+### Bekende issues
+- row 59 (email-label) + bounded crash-guards (JWT 500→401, `_determine_direction` None, negatief `distribute_payment`) nog open.
+- `.claude/scheduled_tasks.lock` untracked (lock-bestand, niet committen).
+
+### Volgende sessie
+- Bounded crash-guards (snel/risicovrij) + row 59 (mits Lisanne's bewoording). Derdengelden-cluster = eigen sessie.
 
 ## Wat er gedaan is (sessie 152 — 2 juni 2026) — 4 medium audit-fixes (pure code-bugs)
 

@@ -9,6 +9,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant
+from app.invoices.models import Expense
 from app.relations.models import Contact
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -375,6 +376,78 @@ async def test_cancel_invoice(
     resp = await client.post(f"/api/invoices/{created['id']}/cancel", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["status"] == "cancelled"
+
+
+async def _expense(db: AsyncSession, tenant_id: uuid.UUID) -> Expense:
+    exp = Expense(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        description="Griffierecht",
+        amount=Decimal("100.00"),
+        expense_date=date.today(),
+    )
+    db.add(exp)
+    await db.flush()
+    return exp
+
+
+@pytest.mark.asyncio
+async def test_delete_concept_invoice_releases_linked_expense(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Deleting a concept invoice must release its linked expense so it becomes
+    billable again — it used to stay invoiced=True forever (AUDIT-MEDIUM)."""
+    contact = await _create_contact(db, test_tenant.id)
+    exp = await _expense(db, test_tenant.id)
+    created = await _create_concept_invoice(
+        client,
+        auth_headers,
+        contact.id,
+        lines=[
+            {
+                "description": "Verschot",
+                "quantity": "1",
+                "unit_price": "100.00",
+                "expense_id": str(exp.id),
+            }
+        ],
+    )
+    await db.refresh(exp)
+    assert exp.invoiced is True  # create_invoice marked it
+
+    resp = await client.delete(f"/api/invoices/{created['id']}", headers=auth_headers)
+    assert resp.status_code == 204
+    await db.refresh(exp)
+    assert exp.invoiced is False
+
+
+@pytest.mark.asyncio
+async def test_cancel_invoice_releases_linked_expense(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Cancelling an invoice must release its linked expense too (AUDIT-MEDIUM)."""
+    contact = await _create_contact(db, test_tenant.id)
+    exp = await _expense(db, test_tenant.id)
+    created = await _create_concept_invoice(
+        client,
+        auth_headers,
+        contact.id,
+        lines=[
+            {
+                "description": "Verschot",
+                "quantity": "1",
+                "unit_price": "100.00",
+                "expense_id": str(exp.id),
+            }
+        ],
+    )
+    await db.refresh(exp)
+    assert exp.invoiced is True
+
+    resp = await client.post(f"/api/invoices/{created['id']}/cancel", headers=auth_headers)
+    assert resp.status_code == 200
+    await db.refresh(exp)
+    assert exp.invoiced is False
 
 
 @pytest.mark.asyncio

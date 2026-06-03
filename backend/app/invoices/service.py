@@ -60,6 +60,38 @@ async def _recalculate_totals(db: AsyncSession, invoice: Invoice) -> None:
     invoice.total = subtotal + btw_total
 
 
+async def _release_invoiced_items(
+    db: AsyncSession, tenant_id: uuid.UUID, invoice_id: uuid.UUID
+) -> None:
+    """Un-mark the expenses + time entries linked to this invoice's lines so they
+    become billable again (AUDIT-MEDIUM).
+
+    remove_line already does this per line; delete_invoice and cancel_invoice did
+    not, so deleting/cancelling an invoice left its uren/verschotten stuck on
+    invoiced=True and they could never be put on a new invoice.
+    """
+    expense_ids = select(InvoiceLine.expense_id).where(
+        InvoiceLine.invoice_id == invoice_id,
+        InvoiceLine.tenant_id == tenant_id,
+        InvoiceLine.expense_id.isnot(None),
+    )
+    await db.execute(
+        update(Expense)
+        .where(Expense.tenant_id == tenant_id, Expense.id.in_(expense_ids))
+        .values(invoiced=False)
+    )
+    time_entry_ids = select(InvoiceLine.time_entry_id).where(
+        InvoiceLine.invoice_id == invoice_id,
+        InvoiceLine.tenant_id == tenant_id,
+        InvoiceLine.time_entry_id.isnot(None),
+    )
+    await db.execute(
+        update(TimeEntry)
+        .where(TimeEntry.tenant_id == tenant_id, TimeEntry.id.in_(time_entry_ids))
+        .values(invoiced=False)
+    )
+
+
 # ── Status Workflow ──────────────────────────────────────────────────────────
 
 VALID_TRANSITIONS = {
@@ -385,6 +417,7 @@ async def delete_invoice(
     if invoice.status not in ("concept", "cancelled"):
         raise BadRequestError("Alleen concept- of geannuleerde facturen kunnen worden verwijderd")
 
+    await _release_invoiced_items(db, tenant_id, invoice.id)
     invoice.is_active = False
     await db.flush()
 
@@ -633,6 +666,7 @@ async def cancel_invoice(
     invoice = await get_invoice(db, tenant_id, invoice_id)
     _validate_transition(invoice.status, "cancelled")
     invoice.status = "cancelled"
+    await _release_invoiced_items(db, tenant_id, invoice.id)
     await db.flush()
     await db.refresh(invoice)
     return invoice

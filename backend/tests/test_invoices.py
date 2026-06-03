@@ -94,6 +94,41 @@ async def test_create_invoice(
 
 
 @pytest.mark.asyncio
+async def test_create_invoice_rejects_cross_tenant_product(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    second_tenant: Tenant,
+):
+    """A line referencing a product from another tenant must be rejected, not
+    silently stored with a dangling cross-tenant product_id (AUDIT-MEDIUM).
+
+    get_product is tenant-scoped, so the product resolves to None for tenant A;
+    create_invoice used to keep the product_id (only skipping the GL lookup).
+    """
+    from app.products.models import Product
+
+    foreign_product = Product(
+        id=uuid.uuid4(),
+        tenant_id=second_tenant.id,
+        code="X-001",
+        name="Andermans product",
+        gl_account_code="8000",
+        gl_account_name="Omzet",
+    )
+    db.add(foreign_product)
+    await db.flush()
+
+    contact = await _create_contact(db, test_tenant.id)
+    payload = _invoice_payload(contact.id)
+    payload["lines"][0]["product_id"] = str(foreign_product.id)
+
+    resp = await client.post("/api/invoices", json=payload, headers=auth_headers)
+    assert resp.status_code == 404, resp.text
+
+
+@pytest.mark.asyncio
 async def test_invoice_auto_numbering(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):

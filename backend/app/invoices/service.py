@@ -275,11 +275,15 @@ async def create_invoice(
         if line_data.product_id:
             from app.products.service import get_product
             product = await get_product(db, tenant_id, line_data.product_id)
-            if product:
-                gl_account_code = product.gl_account_code
-                # Auto-fill BTW from product if not explicitly set on line
-                if line_data.btw_percentage is None:
-                    line_btw = product.vat_percentage
+            if product is None:
+                # get_product is tenant-scoped; a None here means the product
+                # belongs to another tenant or doesn't exist. Reject instead of
+                # silently storing a dangling/cross-tenant product_id (AUDIT-MEDIUM).
+                raise NotFoundError("Product niet gevonden")
+            gl_account_code = product.gl_account_code
+            # Auto-fill BTW from product if not explicitly set on line
+            if line_data.btw_percentage is None:
+                line_btw = product.vat_percentage
 
         line = InvoiceLine(
             tenant_id=tenant_id,

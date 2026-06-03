@@ -2,6 +2,8 @@
 
 from decimal import Decimal
 
+import pytest
+
 from app.collections.payment_distribution import distribute_payment
 
 
@@ -118,6 +120,19 @@ def test_zero_payment():
     assert result["to_interest"] == Decimal("0")
     assert result["to_principal"] == Decimal("0")
     assert result["remaining_costs"] == Decimal("875.00")
+
+
+def test_negative_payment_raises():
+    """A negative payment is nonsensical and would inflate remaining balances
+    (negative allocation increases the outstanding amount). Reject it
+    (defense-in-depth crash-guard; the API schema already enforces gt=0)."""
+    with pytest.raises(ValueError):
+        distribute_payment(
+            payment_amount=Decimal("-100.00"),
+            outstanding_costs=Decimal("875.00"),
+            outstanding_interest=Decimal("600.00"),
+            outstanding_principal=Decimal("5000.00"),
+        )
 
 
 def test_small_payment_with_cents():

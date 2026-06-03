@@ -52,7 +52,17 @@ def distribute_payment(
             remaining_interest: Interest still outstanding after payment
             remaining_principal: Principal still outstanding after payment
             overpayment: Any excess amount (payment > total outstanding)
+
+    Raises:
+        ValueError: if payment_amount is negative. A negative payment would
+            allocate negative amounts and inflate the outstanding balances.
+            (The API schema already enforces gt=0; this is defense-in-depth
+            for direct/script callers.) A zero payment is allowed and
+            allocates nothing.
     """
+    if payment_amount < Decimal("0"):
+        raise ValueError(f"payment_amount must not be negative, got {payment_amount}")
+
     remaining = _round2(payment_amount)
 
     # 1. Costs first

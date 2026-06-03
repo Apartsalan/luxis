@@ -592,7 +592,7 @@ def _render_14_dagenbrief(ctx: dict) -> str:
         'border-top:2px solid #1e293b;">'
     )
     summary += _summary_row("Totaal hoofdsom", ctx["totaal_hoofdsom"], bold=True)
-    summary += _summary_row(f"Wettelijke rente t/m {ctx['vandaag']}", ctx["totaal_rente"])
+    summary += _summary_row(f"Rente t/m {ctx['vandaag']}", ctx["totaal_rente"])
     summary += _summary_row("Buitengerechtelijke incassokosten (BIK)", ctx["bik_bedrag"])
     summary += _summary_row(ctx["btw_regel_label"], ctx["btw_regel_bedrag"])
     summary += _summary_row("Totaal verschuldigd", ctx["totaal_verschuldigd"], bold=True)
@@ -608,7 +608,7 @@ def _render_14_dagenbrief(ctx: dict) -> str:
         f"<p>Indien betaling binnen deze termijn uitblijft, bent u naast "
         f"de hoofdsom tevens de buitengerechtelijke incassokosten verschuldigd "
         f"ter hoogte van <strong>{ctx['bik_bedrag']}"
-        f"{ctx['btw_toelichting']}</strong>, alsmede de wettelijke rente "
+        f"{ctx['btw_toelichting']}</strong>, alsmede de verschuldigde rente "
         f"vanaf de verzuimdatum.</p>"
         f"<p>Ik verzoek u het totaal verschuldigde bedrag van "
         f"<strong>{ctx['totaal_verschuldigd']}</strong> binnen veertien dagen "

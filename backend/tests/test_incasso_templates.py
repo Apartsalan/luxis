@@ -124,6 +124,21 @@ def test_render_sommatie_eerste_av(mock_context):
     assert "Test Debiteur BV" in html
 
 
+def test_render_14_dagenbrief_neutral_rente_label(mock_context):
+    """Row 59 / AUDIT — de 14-dagenbrief mag rente niet hardcoden als
+    'wettelijke rente'. Dat is juridisch onjuist bij B2B (handelsrente,
+    art. 6:119a BW). Net als de sommatie neutraal: 'Rente' in de
+    specificatieregel, 'verschuldigde rente' in de lopende tekst."""
+    html = render_incasso_email("14_dagenbrief", mock_context)
+    _assert_base_nl(html)
+    # Specificatieregel + proza neutraal (zoals de sommatie)
+    assert "Rente t/m" in html
+    assert "verschuldigde rente" in html
+    # Geen hardcoded 'wettelijke rente' meer. De heading 'Wettelijke
+    # mededeling (art. 6:96 lid 6 BW)' mag wél blijven — dat is geen rente.
+    assert "wettelijke rente" not in html.lower()
+
+
 def test_render_schikkingsvoorstel_placeholder(mock_context):
     """L3 — eenmalig schikkingsvoorstel met [VUL SCHIKKINGSBEDRAG IN]."""
     html = render_incasso_email("schikkingsvoorstel", mock_context)

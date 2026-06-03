@@ -199,6 +199,75 @@ async def test_update_concept_invoice(
 
 
 @pytest.mark.asyncio
+async def test_update_invoice_btw_percentage_recalculates_btw(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Changing the invoice-level BTW rate via PUT must actually change the BTW
+    amount (AUDIT-MEDIUM). It used to only setattr the header field while the
+    per-line BTW (which drives _recalculate_totals) stayed at the old rate, so
+    btw_amount/total never moved. Lines that inherited the old default should
+    follow the new rate.
+    """
+    contact = await _create_contact(db, test_tenant.id)
+    created = await _create_concept_invoice(client, auth_headers, contact.id)
+    # Baseline: 2 * 250 = 500 subtotal, 21% BTW = 105.00, total 605.00
+    assert Decimal(created["btw_amount"]) == Decimal("105.00")
+
+    resp = await client.put(
+        f"/api/invoices/{created['id']}",
+        json={"btw_percentage": "9.00"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert Decimal(data["btw_percentage"]) == Decimal("9.00")
+    assert Decimal(data["subtotal"]) == Decimal("500.00")
+    assert Decimal(data["btw_amount"]) == Decimal("45.00")  # 500 * 9%
+    assert Decimal(data["total"]) == Decimal("545.00")
+    # The inherited line followed the new rate
+    assert Decimal(data["lines"][0]["btw_percentage"]) == Decimal("9.00")
+
+
+@pytest.mark.asyncio
+async def test_update_invoice_btw_preserves_divergent_line_rate(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """A line explicitly set to a rate that differs from the header default must
+    keep its rate when the header BTW changes — only inherited lines follow."""
+    contact = await _create_contact(db, test_tenant.id)
+    created = await _create_concept_invoice(
+        client,
+        auth_headers,
+        contact.id,
+        btw_percentage="21.00",
+        lines=[
+            {"description": "Advies 21%", "quantity": "1", "unit_price": "100.00"},
+            {
+                "description": "Verschot 0%",
+                "quantity": "1",
+                "unit_price": "100.00",
+                "btw_percentage": "0.00",
+            },
+        ],
+    )
+    # 100 @ 21% = 21, 100 @ 0% = 0 → btw 21.00
+    assert Decimal(created["btw_amount"]) == Decimal("21.00")
+
+    resp = await client.put(
+        f"/api/invoices/{created['id']}",
+        json={"btw_percentage": "9.00"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    # Inherited 21%-line → 9%; explicit 0%-line stays 0% → btw 9.00
+    assert Decimal(data["btw_amount"]) == Decimal("9.00")
+    by_desc = {line["description"]: line for line in data["lines"]}
+    assert Decimal(by_desc["Advies 21%"]["btw_percentage"]) == Decimal("9.00")
+    assert Decimal(by_desc["Verschot 0%"]["btw_percentage"]) == Decimal("0.00")
+
+
+@pytest.mark.asyncio
 async def test_delete_concept_invoice(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):

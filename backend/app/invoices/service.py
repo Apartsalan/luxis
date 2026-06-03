@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -344,11 +344,25 @@ async def update_invoice(
     if invoice.status != "concept":
         raise BadRequestError("Alleen conceptfacturen kunnen worden bewerkt")
 
+    old_btw = invoice.btw_percentage
+
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(invoice, field, value)
 
-    # Recalculate if btw_percentage changed
-    if data.btw_percentage is not None:
+    # When the invoice-level BTW rate changes, the per-line btw_percentage drives
+    # _recalculate_totals — so the header change alone never moved the BTW amount.
+    # Propagate the new rate to lines that inherited the old default; lines
+    # explicitly set to a divergent rate keep theirs (AUDIT-MEDIUM).
+    if data.btw_percentage is not None and data.btw_percentage != old_btw:
+        await db.execute(
+            update(InvoiceLine)
+            .where(
+                InvoiceLine.invoice_id == invoice.id,
+                InvoiceLine.tenant_id == tenant_id,
+                InvoiceLine.btw_percentage == old_btw,
+            )
+            .values(btw_percentage=data.btw_percentage)
+        )
         await _recalculate_totals(db, invoice)
 
     await db.flush()

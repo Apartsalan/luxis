@@ -115,13 +115,12 @@ async def get_case(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get full case detail with parties and recent activities."""
-    # Refresh cached financials to ensure accuracy
-    from app.collections.service import _refresh_case_financials
+    """Get full case detail with parties and recent activities.
 
-    await _refresh_case_financials(db, current_user.tenant_id, case_id)
-    await db.commit()
-
+    Read-only: the cached financial totals (total_principal/total_paid) are
+    maintained by every claim/payment mutation path, so this GET must stay
+    idempotent and never write to the DB (AUDIT-MEDIUM: side-effecting GET).
+    """
     case = await service.get_case(db, current_user.tenant_id, case_id)
 
     # Get recent activities (last 10)

@@ -2,10 +2,13 @@
 
 import uuid
 from datetime import date, timedelta
+from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cases.models import Case
 from app.relations.models import Contact
 
 # ── Create Case ──────────────────────────────────────────────────────────────
@@ -61,6 +64,47 @@ async def test_create_case_persists_nakosten_type_and_provisie_base(
     data = detail.json()
     assert data["nakosten_type"] == "met_betekening"
     assert data["provisie_base"] == "total_claim"
+
+
+@pytest.mark.asyncio
+async def test_get_case_detail_is_idempotent(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_company: Contact,
+    test_person: Contact,
+):
+    """GET case-detail must not write to the DB (AUDIT-MEDIUM: side-effecting GET).
+
+    The endpoint used to call _refresh_case_financials + commit on every read,
+    making a GET non-idempotent. The cached totals are already maintained by
+    every claim/payment mutation path, so a plain read must leave them untouched.
+    """
+    payload = {
+        "case_type": "incasso",
+        "description": "Idempotente GET",
+        "interest_type": "statutory",
+        "client_id": str(test_company.id),
+        "opposing_party_id": str(test_person.id),
+        "date_opened": date.today().isoformat(),
+    }
+    resp = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert resp.status_code == 201
+    case_id = resp.json()["id"]
+
+    # Drift the cached principal to a sentinel the recompute could never produce:
+    # the case has no claims, so a refresh-on-read would reset it to 0.00.
+    case = await db.get(Case, uuid.UUID(case_id))
+    case.total_principal = Decimal("777.77")
+    await db.commit()
+
+    detail = await client.get(f"/api/cases/{case_id}", headers=auth_headers)
+    assert detail.status_code == 200
+    # A pure read leaves the (drifted) cache untouched.
+    assert Decimal(detail.json()["total_principal"]) == Decimal("777.77")
+
+    await db.refresh(case)
+    assert case.total_principal == Decimal("777.77")
 
 
 @pytest.mark.asyncio

@@ -1219,51 +1219,21 @@ async def batch_execute(
                 errors.append(f"{case.case_number}: fout bij genereren — {exc}")
 
     elif action == "recalculate_interest":
-        from app.collections.interest import calculate_case_interest
-        from app.collections.models import Claim
+        # Interest is always computed on the fly (never persisted), so the only
+        # thing this action can meaningfully do is resync the cached financial
+        # totals. The old version recomputed total_principal to the value it
+        # already held (a no-op) — leaving total_paid stale — yet still reported
+        # each case as 'processed' (AUDIT-MEDIUM). Refresh principal+paid from the
+        # live claims/payments so the reported count reflects real work.
+        from app.collections.service import _refresh_case_financials
 
         for case in cases:
             try:
-                # Fetch active claims for this case
-                claims_result = await db.execute(
-                    select(Claim).where(
-                        Claim.case_id == case.id,
-                        Claim.is_active.is_(True),
-                    )
-                )
-                claims = claims_result.scalars().all()
-
-                if not claims:
-                    skipped += 1
-                    continue
-
-                claim_dicts = [
-                    {
-                        "id": str(c.id),
-                        "description": c.description,
-                        "principal_amount": c.principal_amount,
-                        "default_date": c.default_date,
-                        "rate_basis": c.rate_basis,
-                    }
-                    for c in claims
-                ]
-
-                result = await calculate_case_interest(
-                    db=db,
-                    case_id=str(case.id),
-                    interest_type=case.interest_type,
-                    contractual_rate=case.contractual_rate,
-                    contractual_compound=case.contractual_compound,
-                    claims=claim_dicts,
-                    calc_date=date.today(),
-                )
-
-                # Update case financial totals
-                case.total_principal = result["total_principal"]
+                await _refresh_case_financials(db, tenant_id, case.id)
                 processed += 1
             except Exception as exc:
                 logger.error(
-                    "Interest recalculation failed for %s: %s",
+                    "Financial refresh failed for %s: %s",
                     case.case_number,
                     exc,
                 )

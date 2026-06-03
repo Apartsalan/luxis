@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, patch
 from sqlalchemy import select
 
 from app.cases.models import CaseActivity
-from app.collections.models import InterestRate
+from app.collections.models import Claim, InterestRate, Payment
 from app.documents.models import GeneratedDocument
 from app.email.models import EmailLog
 from app.incasso.models import IncassoPipelineStep
@@ -1031,6 +1031,56 @@ class TestBatchExecute:
 
         # Either 400 or 422 depending on validation
         assert resp.status_code in (400, 422)
+
+    async def test_recalculate_interest_resyncs_financial_cache(
+        self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
+    ):
+        """Batch 'recalculate_interest' must resync the cached totals, not no-op
+        (AUDIT-MEDIUM).
+
+        The old version only re-set total_principal to the value it already held
+        and never touched total_paid, yet reported the case as 'processed'. Here a
+        payment exists but the cached total_paid is stale at 0.00 — the action must
+        bring it in line with the live payments.
+        """
+        case = await create_incasso_case(
+            db, test_tenant.id, test_company, test_person, test_user
+        )
+        # A live claim (5000) and a live payment (1000)...
+        db.add(
+            Claim(
+                id=uuid.uuid4(),
+                tenant_id=test_tenant.id,
+                case_id=case.id,
+                description="Factuur 2026-001",
+                principal_amount=Decimal("5000.00"),
+                default_date=date(2026, 1, 1),
+            )
+        )
+        db.add(
+            Payment(
+                id=uuid.uuid4(),
+                tenant_id=test_tenant.id,
+                case_id=case.id,
+                amount=Decimal("1000.00"),
+                payment_date=date(2026, 2, 1),
+            )
+        )
+        # ...but the cache is stale (helper seeded total_paid=0.00).
+        case.total_paid = Decimal("0.00")
+        await db.commit()
+
+        resp = await client.post(
+            "/api/incasso/batch",
+            json={"case_ids": [str(case.id)], "action": "recalculate_interest"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["processed"] == 1
+
+        await db.refresh(case)
+        assert case.total_paid == Decimal("1000.00")  # resynced from the payment
+        assert case.total_principal == Decimal("5000.00")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

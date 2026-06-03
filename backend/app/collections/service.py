@@ -1022,3 +1022,54 @@ async def get_financial_summary(
         "derdengelden_balance": trust_balance.total_balance,
         "interest_details": interest_result,
     }
+
+
+async def get_portfolio_outstanding(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    calc_date: date | None = None,
+) -> Decimal:
+    """Sum the true outstanding across all active cases (AUDIT-H4).
+
+    Uses the same per-case grand_total logic as the financial-summary endpoint
+    (principal + interest + BIK + nakosten − paid), so the dashboard/reports
+    'openstaand' matches the figure shown on the case detail. Cases without
+    claims contribute 0 (calculate_bik returns 0 for principal ≤ 0).
+
+    Computed live per case because statutory interest is date-dependent; at
+    Luxis's scale (small firms, a handful of active cases) the per-case cost is
+    negligible. If a tenant ever has hundreds of simultaneously active cases,
+    revisit with cached interest/BIK columns refreshed by a daily job.
+    """
+    result = await db.execute(
+        select(Case)
+        .options(selectinload(Case.client))
+        .where(Case.tenant_id == tenant_id, Case.is_active.is_(True))
+    )
+    cases = result.scalars().all()
+
+    total = Decimal("0.00")
+    for case in cases:
+        principal = case.total_principal or Decimal("0.00")
+        paid = case.total_paid or Decimal("0.00")
+        # Only the grand_total of cases that actually have claims carries interest
+        # + BIK; claimless cases (advies/fixed-fee or empty) have none, so fall
+        # back to the cached principal − paid and skip the expensive interest calc.
+        if principal <= 0:
+            total += principal - paid
+            continue
+        summary = await get_financial_summary(
+            db,
+            tenant_id,
+            case.id,
+            case.interest_type,
+            case.contractual_rate,
+            case.contractual_compound,
+            calc_date,
+            bik_override=case.bik_override,
+            bik_override_percentage=case.bik_override_percentage,
+            include_btw_on_bik=(not case.client.is_btw_plichtig) if case.client else False,
+            nakosten_type=case.nakosten_type,
+        )
+        total += summary["total_outstanding"]
+    return total

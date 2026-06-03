@@ -300,6 +300,86 @@ async def test_reports_kpis_debtor_type_uses_case_debtor_type(
     assert breakdown.get("Bedrijf") == 1  # the b2b debtor
 
 
+async def _seed_active_incasso_with_interest_bik(db, tenant_id, client_id):
+    """Active incasso case + claim + statutory rate, so its financial summary has
+    interest + BIK on top of the €1000 principal."""
+    import uuid
+    from datetime import date, timedelta
+
+    from app.cases.models import Case
+    from app.collections.models import Claim, InterestRate
+
+    db.add(
+        InterestRate(
+            id=uuid.uuid4(),
+            rate_type="statutory",
+            rate=Decimal("8.00"),
+            effective_from=date(2023, 1, 1),
+        )
+    )
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        case_number="2026-H4001",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=client_id,
+        interest_type="statutory",
+        date_opened=date.today() - timedelta(days=400),
+        total_principal=Decimal("1000.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    await db.flush()
+    db.add(
+        Claim(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            case_id=case.id,
+            description="Factuur H4",
+            principal_amount=Decimal("1000.00"),
+            default_date=date.today() - timedelta(days=400),
+        )
+    )
+    await db.commit()
+    return case
+
+
+@pytest.mark.asyncio
+async def test_dashboard_outstanding_includes_interest_and_bik(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant, test_company: Contact
+):
+    """Dashboard 'openstaand' must include interest + BIK — matching the case
+    detail's financial summary — not just principal − paid (AUDIT-H4)."""
+    case = await _seed_active_incasso_with_interest_bik(db, test_tenant.id, test_company.id)
+
+    fin = await client.get(f"/api/cases/{case.id}/financial-summary", headers=auth_headers)
+    assert fin.status_code == 200
+    expected = Decimal(str(fin.json()["total_outstanding"]))
+    assert expected > Decimal("1000.00")  # interest + BIK sit on top of the principal
+
+    resp = await client.get("/api/dashboard/summary", headers=auth_headers)
+    assert resp.status_code == 200
+    assert Decimal(str(resp.json()["total_outstanding"])) == expected
+
+
+@pytest.mark.asyncio
+async def test_reports_outstanding_includes_interest_and_bik(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant, test_company: Contact
+):
+    """Reports-KPI 'openstaand' must include interest + BIK too (AUDIT-H4)."""
+    case = await _seed_active_incasso_with_interest_bik(db, test_tenant.id, test_company.id)
+
+    fin = await client.get(f"/api/cases/{case.id}/financial-summary", headers=auth_headers)
+    expected = Decimal(str(fin.json()["total_outstanding"]))
+
+    resp = await client.get("/api/reports/kpis", headers=auth_headers)
+    assert resp.status_code == 200
+    assert Decimal(str(resp.json()["total_outstanding"])) == expected
+
+
 # ── Auth Checks ──────────────────────────────────────────────────────────────
 
 

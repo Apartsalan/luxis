@@ -42,7 +42,12 @@ async def get_kpis(
     row = result.one()
     total_principal = Decimal(str(row[0]))
     total_paid = Decimal(str(row[1]))
-    total_outstanding = total_principal - total_paid
+    # AUDIT-H4: 'openstaand' must include interest + BIK (same grand_total logic
+    # as the case detail), not just principal − paid. collected/collection_rate
+    # stay principal-based (separate metrics).
+    from app.collections.service import get_portfolio_outstanding
+
+    total_outstanding = await get_portfolio_outstanding(db, tenant_id)
     total_collected = total_paid
 
     # Collection rate

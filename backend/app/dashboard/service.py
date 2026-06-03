@@ -50,7 +50,11 @@ async def get_dashboard_summary(
     row = result.one()
     total_principal = Decimal(str(row[0]))
     total_paid = Decimal(str(row[1]))
-    total_outstanding = total_principal - total_paid
+    # AUDIT-H4: 'openstaand' must include interest + BIK (same grand_total logic
+    # as the case detail), not just principal − paid.
+    from app.collections.service import get_portfolio_outstanding
+
+    total_outstanding = await get_portfolio_outstanding(db, tenant_id)
 
     # Cases by status
     result = await db.execute(

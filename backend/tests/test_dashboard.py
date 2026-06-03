@@ -255,6 +255,51 @@ async def test_reports_kpis_overdue_derived_from_due_date(
     assert data["upcoming_deadlines"] >= 1
 
 
+@pytest.mark.asyncio
+async def test_reports_kpis_debtor_type_uses_case_debtor_type(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant,
+    test_company: Contact,
+):
+    """'Verdeling type debiteur' must classify on Case.debtor_type, not on the
+    creditor/client contact that Case.client_id points to (AUDIT-MEDIUM).
+
+    Both cases below have the same *company* creditor (client_id), but their
+    debtors differ: one b2c (consumer), one b2b (business). Grouping on the
+    creditor would wrongly report both as 'Bedrijf'.
+    """
+    import uuid
+    from datetime import date
+
+    from app.cases.models import Case
+
+    def _case(num: str, debtor_type: str) -> Case:
+        return Case(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_number=num,
+            case_type="incasso",
+            debtor_type=debtor_type,
+            status="nieuw",
+            is_active=True,
+            client_id=test_company.id,  # creditor is a company in both
+            date_opened=date.today(),
+            total_principal=Decimal("0.00"),
+            total_paid=Decimal("0.00"),
+        )
+
+    db.add_all([_case("2026-DBT01", "b2c"), _case("2026-DBT02", "b2b")])
+    await db.commit()
+
+    resp = await client.get("/api/reports/kpis", headers=auth_headers)
+    assert resp.status_code == 200
+    breakdown = resp.json()["cases_by_debtor_type"]
+    assert breakdown.get("Particulier") == 1  # the b2c debtor
+    assert breakdown.get("Bedrijf") == 1  # the b2b debtor
+
+
 # ── Auth Checks ──────────────────────────────────────────────────────────────
 
 

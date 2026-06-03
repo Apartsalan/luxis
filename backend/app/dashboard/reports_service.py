@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cases.models import Case
 from app.collections.models import Payment
 from app.incasso.models import IncassoPipelineStep
-from app.relations.models import Contact
 
 
 async def get_kpis(
@@ -80,21 +79,23 @@ async def get_kpis(
     )
     cases_by_phase = {row[0] or "Geen stap": row[1] for row in result.all()}
 
-    # Cases by debtor type
+    # Cases by debtor type — classify on the case's own debtor_type (b2b = the
+    # debtor is a business, b2c = a consumer), NOT the creditor/client contact
+    # that Case.client_id points to (AUDIT-MEDIUM: this used to group on the
+    # client's contact_type, mislabelling the creditor as the debtor).
     result = await db.execute(
         select(
             sql_case(
-                (Contact.contact_type == "company", "Bedrijf"),
+                (Case.debtor_type == "b2b", "Bedrijf"),
                 else_="Particulier",
             ),
             func.count(Case.id),
         )
-        .join(Contact, Case.client_id == Contact.id, isouter=True)
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
         )
-        .group_by(Contact.contact_type)
+        .group_by(Case.debtor_type)
     )
     cases_by_debtor_type = {row[0]: row[1] for row in result.all()}
 

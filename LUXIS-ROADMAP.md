@@ -105,7 +105,8 @@ Volledige lijst met symptoom→oorzaak→bewijs→advies staat in `.audit/AUDIT-
 
 **🔬 Griffierecht (H5) — ✅ GEFIXT S153** (was onderzocht S152, "samen met Lisanne"): officiële bron rechtspraak.nl gevonden → volledige 2026-tabel verwerkt; eiser-logica + onvermogenden bevestigd met gebruiker. Zie AUDIT-H5. **NB:** AUDIT-H6 (14-dagenbrief tegenstrijdige instructies) is een ánder item (Documenten/juridisch) en nog open.
 
-**✅ Bounded crash-guards + row 59 — GEFIXT S154:** malformed JWT 500→401 (`c10e7c5`) · `_determine_direction` None-crash (`a098a09`) · `distribute_payment` negatief bedrag (`63385f9`) · row 59 14-dagenbrief rente-label neutraal zoals de sommatie (`9fa3de7`). Elk rood→groen.
+**✅ Bounded crash-guards + row 59 — GEFIXT S154:** malformed JWT 500→401 (`c10e7c5`) · `_determine_direction` None-crash (`a098a09`) · `distribute_payment` negatief bedrag (`63385f9`) · row 59 14-dagenbrief rente-label neutraal zoals de sommatie (`9fa3de7`) · dead 'Standaard rente-instellingen'-blok op Kantoor-tab verwijderd (placeholder uit maart, sloeg niks op + fout BTW-label; `ee382f3`). Elk rood→groen / tsc-schoon.
+**Audit-triage S154 (al opgelost / non-issue, geverifieerd tegen code):** #48 maandgrafiek `is_active`, #63 `create_case` nakosten/provisie, #84 verjaring schrikkeldag (`relativedelta` + `day=28`-fallback), #81 event cross-tenant `case_id` (al geguard → 404). **Open + echt maar niet schoon-testbaar:** #93 Exact-sync `float()` op geld — vereist verificatie tegen live Exact-API vóór wijziging.
 **Resterend (volgende sessie):** H14–H19 (derdengelden-cluster — eigen sessie/met Lisanne) · H25 (modules_enabled) · betaalbrieven-IBAN · BTW-op-rente · **~38 medium resterend** — verifieer elk tegen code (lijst bevat non-issues).
 
 ---

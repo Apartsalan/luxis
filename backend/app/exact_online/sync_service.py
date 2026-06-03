@@ -192,6 +192,11 @@ async def sync_invoice(
     for line in invoice.lines:
         # Use per-line GL account if set (from product catalog), else fallback to default
         gl_account = line.gl_account_code or conn.default_revenue_gl
+        # Exact types Quantity/UnitPrice as Edm.Double (per the official REST API
+        # reference). In OData v3 JSON an Edm.Double MUST be a JSON number, not a
+        # quoted string — so float() here is the correct boundary conversion, not
+        # a "never float for money" violation (our internal calc/storage stays
+        # Decimal). Do NOT switch these to str(): Exact would reject/mis-parse it.
         exact_line = {
             "Description": line.description,
             "Quantity": float(line.quantity),
@@ -274,6 +279,8 @@ async def sync_payment(
         "Journal": conn.bank_journal_code,
         "BankEntryLines": [
             {
+                # AmountDC is Edm.Double in Exact's REST API → OData JSON requires
+                # a JSON number, so float() is correct here (see sync_invoice).
                 "AmountDC": float(payment.amount),
                 "Date": payment.payment_date.isoformat(),
                 "Description": f"Betaling {invoice.invoice_number}",

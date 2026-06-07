@@ -80,70 +80,37 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden p-12">
-        {/* Background layers */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(224,40%,12%)] via-[hsl(224,45%,18%)] to-[hsl(240,35%,14%)]" />
-        {/* Subtle radial glow */}
-        <div className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] rounded-full bg-primary/8 blur-3xl" />
-        <div className="absolute bottom-1/4 right-0 w-[400px] h-[400px] rounded-full bg-accent/5 blur-3xl" />
-        {/* Dot grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        />
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/30 ring-1 ring-white/10">
-              <Scale className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white tracking-tight">
-              Luxis
-            </span>
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between bg-sidebar-bg p-12">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary">
+            <Scale className="h-5 w-5 text-white" />
           </div>
+          <span className="text-xl font-bold text-white tracking-tight">
+            Luxis
+          </span>
         </div>
 
-        <div className="relative z-10 space-y-6">
-          <h2 className="text-4xl font-bold text-white leading-tight">
-            Praktijkmanagement
-            <br />
-            <span className="bg-gradient-to-r from-blue-300 to-violet-300 bg-clip-text text-transparent">voor de advocatuur</span>
+        <div className="space-y-4">
+          <h2 className="text-3xl font-bold text-white leading-tight text-balance">
+            Praktijkmanagement voor de advocatuur
           </h2>
-          <p className="text-base text-white/55 max-w-md leading-relaxed">
+          <p className="text-base text-white/70 max-w-md leading-relaxed">
             Dossierbeheer, tijdschrijven, facturatie en documentgeneratie
             in één overzichtelijk platform.
           </p>
-          <div className="flex gap-8 pt-4">
-            {[
-              { label: "Dossiers", sub: "Centraal beheer" },
-              { label: "Uren", sub: "Tijdschrijven" },
-              { label: "Facturen", sub: "Facturatie" },
-            ].map((item, i) => (
-              <div key={item.label} className="flex gap-8">
-                {i > 0 && <div className="w-px bg-white/10 -ml-8 mr-0" />}
-                <div>
-                  <p className="text-2xl font-bold text-white">{item.label}</p>
-                  <p className="text-xs text-white/40 mt-0.5">{item.sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
-        <p className="relative z-10 text-xs text-white/20">
+        <p className="text-xs text-white/50">
           © {new Date().getFullYear()} Luxis · Kesting Legal
         </p>
       </div>
 
       {/* Right panel — forms */}
-      <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-background to-muted/30 px-6 sm:px-8">
+      <div className="flex flex-1 items-center justify-center bg-background px-6 sm:px-8">
         <div className="w-full max-w-sm animate-fade-in">
           {/* Mobile logo */}
           <div className="mb-8 text-center lg:hidden">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/25">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
               <Scale className="h-6 w-6 text-white" />
             </div>
             <h1 className="mt-4 text-2xl font-bold text-foreground">Luxis</h1>
@@ -206,7 +173,7 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
+                      aria-label={showPassword ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -325,7 +292,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <p className="mt-8 text-center text-xs text-muted-foreground/50">
+          <p className="mt-8 text-center text-xs text-muted-foreground">
             Luxis v0.1.0 · Praktijkmanagementsysteem
           </p>
         </div>

@@ -12,28 +12,15 @@ import {
 import { sanitizeHtml } from "@/lib/sanitize";
 
 // ── Status & Pipeline constants ─────────────────────────────────────────────
+// Status/type labels en badges komen uit lib/status-constants.ts (single source
+// of truth) en worden hier her-geëxporteerd onder de lokale namen.
 
-export const STATUS_LABELS: Record<string, string> = {
-  nieuw: "Nieuw",
-  "14_dagenbrief": "14-dagenbrief",
-  sommatie: "Sommatie",
-  dagvaarding: "Dagvaarding",
-  vonnis: "Vonnis",
-  executie: "Executie",
-  betaald: "Betaald",
-  afgesloten: "Afgesloten",
-};
-
-export const STATUS_BADGE: Record<string, string> = {
-  nieuw: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  "14_dagenbrief": "bg-sky-50 text-sky-700 ring-sky-600/20",
-  sommatie: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  dagvaarding: "bg-red-50 text-red-700 ring-red-600/20",
-  vonnis: "bg-purple-50 text-purple-700 ring-purple-600/20",
-  executie: "bg-red-50 text-red-800 ring-red-700/20",
-  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
-};
+export {
+  CASE_STATUS_LABELS as STATUS_LABELS,
+  CASE_STATUS_BADGE as STATUS_BADGE,
+  CASE_TYPE_LABELS as TYPE_LABELS,
+  TASK_STATUS_BADGE,
+} from "@/lib/status-constants";
 
 export const PIPELINE_STEPS = [
   "nieuw",
@@ -54,12 +41,6 @@ export const NEXT_STATUSES: Record<string, string[]> = {
   executie: ["betaald", "afgesloten"],
   betaald: [],
   afgesloten: [],
-};
-
-export const TYPE_LABELS: Record<string, string> = {
-  incasso: "Incasso",
-  dossier: "Dossier",
-  advies: "Advies",
 };
 
 export const INTEREST_LABELS: Record<string, string> = {
@@ -88,9 +69,9 @@ export const ACTIVITY_COLORS: Record<string, string> = {
   phone_call: "bg-emerald-50 text-emerald-600",
   email: "bg-violet-50 text-violet-600",
   document: "bg-slate-100 text-slate-600",
-  payment: "bg-green-50 text-green-600",
-  ai_action: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-  automation: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  payment: "bg-emerald-50 text-emerald-600",
+  ai_action: "bg-violet-100 text-violet-700",
+  automation: "bg-amber-100 text-amber-700",
 };
 
 export const ACTIVITY_TYPE_LABELS: Record<string, string> = {
@@ -102,16 +83,6 @@ export const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   payment: "Betaling",
   ai_action: "AI",
   automation: "Automatisering",
-};
-
-// ── Task constants ──────────────────────────────────────────────────────────
-
-export const TASK_STATUS_BADGE: Record<string, string> = {
-  pending: "bg-slate-50 text-slate-600 ring-slate-500/20",
-  due: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  completed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  skipped: "bg-slate-50 text-slate-500 ring-slate-400/20",
-  overdue: "bg-red-50 text-red-700 ring-red-600/20",
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

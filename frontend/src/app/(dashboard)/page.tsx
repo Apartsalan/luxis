@@ -458,16 +458,16 @@ function KPICard({
   href?: string;
 }) {
   const iconClasses = {
-    primary: "bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-500/25",
-    success: "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-emerald-500/25",
-    warning: "bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-amber-500/25",
+    primary: "bg-primary/10 text-primary",
+    success: "bg-success/10 text-success",
+    warning: "bg-warning/10 text-warning",
   };
 
   const content = (
     <div className="rounded-xl border border-border bg-card p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group cursor-pointer">
       <div className="flex items-start justify-between">
         <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl shadow-lg ${iconClasses[color]}`}
+          className={`flex h-11 w-11 items-center justify-center rounded-lg ${iconClasses[color]}`}
         >
           {icon}
         </div>
@@ -481,7 +481,7 @@ function KPICard({
         </p>
         <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
         {subtitle && (
-          <p className="text-xs text-muted-foreground/70 mt-1">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         )}
       </div>
     </div>

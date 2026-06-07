@@ -70,6 +70,7 @@ export const TONES = {
     button: "bg-amber-600 text-white hover:bg-amber-700",
     outlineButton:
       "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100",
+    hoverSurface: "hover:bg-amber-50",
     border: "border-amber-200",
     borderStrong: "border-amber-300",
     ring: "ring-amber-200",
@@ -90,6 +91,7 @@ export const TONES = {
     solid: "bg-red-500",
     border: "border-red-200",
     borderFaint: "border-red-100",
+    divide: "divide-red-200",
     ring: "ring-red-200",
     hoverSurface: "hover:bg-red-50",
     hoverGhost: "hover:bg-red-50 hover:text-red-600",

@@ -259,7 +259,7 @@ export function ContactLinks({
                   type="button"
                   onClick={() => handleDelete(link.link_id)}
                   disabled={deletingId === link.link_id}
-                  className="rounded-lg p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
+                  className="rounded-lg p-1.5 text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
                   title="Koppeling verwijderen"
                 >
                   {deletingId === link.link_id ? (

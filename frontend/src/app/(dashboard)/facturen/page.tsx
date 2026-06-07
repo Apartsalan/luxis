@@ -371,7 +371,7 @@ export default function FacturenPage() {
                         <td className="px-4 py-3.5">
                           <Link
                             href={`/facturen/${factuur.id}`}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-muted hover:text-foreground transition-all"
                             title="Bekijken"
                           >
                             <ArrowUpRight className="h-4 w-4" />

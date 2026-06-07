@@ -930,6 +930,7 @@ export default function FactuurDetailPage() {
         {/* Lines */}
         {factuur.lines.length > 0 ? (
           <>
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
@@ -979,7 +980,7 @@ export default function FactuurDetailPage() {
                         <button
                           onClick={() => handleRemoveLine(line.id)}
                           disabled={removeLineMutation.isPending}
-                          className="rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50"
+                          className="rounded p-1 text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50"
                           title="Verwijderen"
                           aria-label="Factuurregel verwijderen"
                         >
@@ -991,6 +992,7 @@ export default function FactuurDetailPage() {
                 ))}
               </tbody>
             </table>
+            </div>
 
             {/* Totals */}
             <div className="border-t border-border px-5 py-4">
@@ -1404,6 +1406,7 @@ export default function FactuurDetailPage() {
 
           {/* Payment list */}
           {payments && payments.length > 0 ? (
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -1435,7 +1438,7 @@ export default function FactuurDetailPage() {
                       <button
                         onClick={() => handleDeletePayment(payment.id)}
                         disabled={deletePayment.isPending}
-                        className="rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50"
+                        className="rounded p-1 text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50"
                         title="Verwijderen"
                         aria-label="Betaling verwijderen"
                       >
@@ -1446,6 +1449,7 @@ export default function FactuurDetailPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="px-5 py-8 text-center">
               <Wallet className="mx-auto h-8 w-8 text-muted-foreground/30" />

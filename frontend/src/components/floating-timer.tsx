@@ -101,7 +101,7 @@ function CompactCasePicker({
       </button>
 
       {open && (
-        <div className="absolute bottom-full mb-1 w-full min-w-[280px] rounded-md border border-border bg-card shadow-lg z-50">
+        <div className="absolute bottom-full mb-1 w-full min-w-[280px] max-w-[calc(100vw-2rem)] rounded-md border border-border bg-card shadow-lg z-50">
           <div className="p-1.5 border-b border-border">
             <input
               type="text"

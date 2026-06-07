@@ -370,7 +370,7 @@ export default function IntakePage() {
 
                   {/* Arrow */}
                   <div className="hidden md:flex items-center justify-end">
-                    <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowUpRight className="h-4 w-4 text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" />
                   </div>
                   </Link>
                 </div>

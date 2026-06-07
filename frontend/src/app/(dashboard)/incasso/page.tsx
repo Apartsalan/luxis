@@ -307,7 +307,7 @@ function StappenTab() {
       </div>
 
       {/* Steps list */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <table className="w-full min-w-[700px] text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
@@ -837,7 +837,7 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
               </div>
               <button
                 onClick={() => handleDelete(t)}
-                className="opacity-0 group-hover:opacity-100 rounded-md p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-all"
+                className="max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 rounded-md p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-all"
                 title="Verwijderen"
               >
                 <Trash2 className="h-3.5 w-3.5" />

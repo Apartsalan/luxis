@@ -1074,8 +1074,8 @@ export default function NieuweFactuurPage() {
 
           {/* Line items table */}
           <div className="space-y-3">
-            {/* Header */}
-            <div className="grid grid-cols-12 gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+            {/* Header — alleen op desktop; mobiel stapelen de regels als kaartjes */}
+            <div className="hidden md:grid grid-cols-12 gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
               <div className="col-span-2">Artikel</div>
               <div className="col-span-3">Omschrijving</div>
               <div className="col-span-1">Aantal</div>
@@ -1091,8 +1091,8 @@ export default function NieuweFactuurPage() {
               const lineTotal = qty * price;
 
               return (
-                <div key={index} className="grid grid-cols-12 gap-2 items-start">
-                  <div className="col-span-2">
+                <div key={index} className="grid grid-cols-2 gap-2 items-start rounded-lg border border-border p-3 md:grid-cols-12 md:rounded-none md:border-0 md:p-0">
+                  <div className="col-span-2 md:col-span-2">
                     <select
                       id={`regel-artikel-${index}`}
                       aria-label={`Artikel regel ${index + 1}`}
@@ -1126,7 +1126,7 @@ export default function NieuweFactuurPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2 md:col-span-3">
                     <input
                       id={`regel-omschrijving-${index}`}
                       aria-label={`Omschrijving regel ${index + 1}`}
@@ -1139,7 +1139,7 @@ export default function NieuweFactuurPage() {
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                     />
                   </div>
-                  <div className="col-span-1">
+                  <div className="col-span-1 md:col-span-1">
                     <input
                       id={`regel-aantal-${index}`}
                       aria-label={`Aantal regel ${index + 1}`}
@@ -1154,7 +1154,7 @@ export default function NieuweFactuurPage() {
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <input
                       id={`regel-prijs-${index}`}
                       aria-label={`Prijs regel ${index + 1}`}
@@ -1169,7 +1169,7 @@ export default function NieuweFactuurPage() {
                       className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm tabular-nums focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
                     />
                   </div>
-                  <div className="col-span-1">
+                  <div className="col-span-1 md:col-span-1">
                     <select
                       id={`regel-btw-${index}`}
                       aria-label={`BTW-percentage regel ${index + 1}`}
@@ -1184,12 +1184,12 @@ export default function NieuweFactuurPage() {
                       <option value="0.00">0%</option>
                     </select>
                   </div>
-                  <div className="col-span-1 flex items-center justify-end h-[38px]">
+                  <div className="col-span-1 md:col-span-1 flex items-center justify-end h-[38px]">
                     <span className="text-sm font-medium tabular-nums">
                       {formatCurrency(lineTotal)}
                     </span>
                   </div>
-                  <div className="col-span-1 flex items-center justify-center h-[38px]">
+                  <div className="col-span-1 md:col-span-1 flex items-center justify-end md:justify-center h-[38px]">
                     {lines.length > 1 && (
                       <button
                         type="button"

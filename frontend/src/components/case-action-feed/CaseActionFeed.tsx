@@ -277,7 +277,7 @@ function CardShell({
         )}
         <div className="mt-2 flex flex-wrap items-center gap-2">{actions}</div>
       </div>
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex shrink-0 items-center gap-0.5 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
         <SnoozeMenu onSnooze={onSnooze} />
         <button
           type="button"

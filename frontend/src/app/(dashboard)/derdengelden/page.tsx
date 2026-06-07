@@ -325,7 +325,7 @@ function ClientRow({
       </button>
 
       {expanded && (
-        <div className="bg-muted/20 border-t border-border">
+        <div className="bg-muted/20 border-t border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground">
               <tr>
@@ -554,6 +554,7 @@ function SepaTab() {
             </p>
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/30 text-xs text-muted-foreground">
               <tr>
@@ -577,6 +578,7 @@ function SepaTab() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

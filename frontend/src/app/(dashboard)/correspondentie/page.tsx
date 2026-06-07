@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Mail,
   ArrowDownLeft,
+  ArrowLeft,
   ArrowUpRight,
   Paperclip,
   RefreshCw,
@@ -382,9 +383,10 @@ export default function CorrespondentiePage() {
         <EmptyState />
       ) : (
         <div className="flex gap-4">
-          {/* Email list */}
+          {/* Email list — onder lg verborgen zodra een mail open is
+              (detail wordt dan full-width i.p.v. een geplette split-view) */}
           <div
-            className={`${selectedEmailId ? "w-2/5" : "w-full"} transition-all`}
+            className={selectedEmailId ? "hidden lg:block lg:w-2/5" : "w-full"}
           >
             {/* Select all */}
             <div className="flex items-center gap-2 mb-2 px-1">
@@ -436,7 +438,15 @@ export default function CorrespondentiePage() {
 
           {/* Detail + action panel */}
           {selectedEmailId && emailDetail && (
-            <div className="w-3/5 space-y-4">
+            <div className="w-full lg:w-3/5 space-y-4">
+              {/* Mobiel: terug naar de lijst */}
+              <button
+                onClick={() => setSelectedEmailId(null)}
+                className="lg:hidden inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Terug naar lijst
+              </button>
               {/* Email detail */}
               <div className="rounded-xl border border-border bg-card overflow-hidden">
                 {/* Header */}
@@ -479,6 +489,7 @@ export default function CorrespondentiePage() {
                   </div>
                   <button
                     onClick={() => setSelectedEmailId(null)}
+                    aria-label="E-mail sluiten"
                     className="rounded-md p-1 hover:bg-muted transition-colors"
                   >
                     <XCircle className="h-4 w-4 text-muted-foreground" />

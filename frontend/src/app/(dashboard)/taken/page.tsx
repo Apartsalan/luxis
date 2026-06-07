@@ -253,7 +253,7 @@ function TaskRow({
         <button
           onClick={() => onSkip(task.id)}
           disabled={isSkipping}
-          className="shrink-0 mt-0.5 rounded-md p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all"
+          className="shrink-0 mt-0.5 rounded-md p-1.5 text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-muted hover:text-foreground transition-all"
           title="Overslaan"
           aria-label="Overslaan"
         >

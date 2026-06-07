@@ -179,7 +179,7 @@ export default function DossierSidebar({
                   {zaak.client.name}
                 </p>
               </div>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" />
             </Link>
             {zaak.client.email && (
               <a
@@ -211,7 +211,7 @@ export default function DossierSidebar({
                   {zaak.opposing_party.name}
                 </p>
               </div>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" />
             </Link>
             {zaak.opposing_party.email && (
               <a
@@ -243,7 +243,7 @@ export default function DossierSidebar({
                   {currentLawyer.contact.name}
                 </p>
               </div>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" />
             </Link>
             {currentLawyer.contact.email && (
               <a

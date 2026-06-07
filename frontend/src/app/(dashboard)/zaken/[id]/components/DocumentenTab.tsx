@@ -494,12 +494,12 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
                           });
                         }
                       }}
-                      className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                      className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                       title="Verwijderen"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" />
                   </div>
                 </Link>
               );
@@ -811,7 +811,7 @@ function VerschottenSection({ caseId }: { caseId: string }) {
                   {!expense.invoiced && (
                     <button
                       onClick={() => handleDelete(expense.id)}
-                      className="rounded p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                      className="rounded p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all"
                       title="Verwijderen"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1345,7 +1345,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       {!isEmail && isPreviewable(item.content_type) && (
                         <button
                           onClick={() => handlePreviewFile(item.id, item.filename)}
-                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                           title="Preview"
                         >
                           <Eye className="h-4 w-4" />
@@ -1354,7 +1354,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       {isEmail && isPreviewable(item.content_type) && (
                         <button
                           onClick={() => handlePreviewEmailAttachment(item.id, item.filename)}
-                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                           title="Preview"
                         >
                           <Eye className="h-4 w-4" />
@@ -1370,7 +1370,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                               }
                             );
                           }}
-                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                           title="Opslaan in dossier"
                         >
                           <Save className="h-4 w-4" />
@@ -1383,7 +1383,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                             setRenamingFileId(item.id);
                             setRenameValue(item.filename);
                           }}
-                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                           title="Hernoemen"
                         >
                           <Pencil className="h-4 w-4" />
@@ -1392,7 +1392,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       {!isEmail && (
                         <button
                           onClick={async () => { if (await confirmDelete({ title: "Bestand verwijderen", description: "Weet je zeker dat je dit bestand wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" })) deleteCaseFile.mutate(item.id); }}
-                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                          className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                           title="Verwijderen"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -1463,21 +1463,21 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handlePreviewDocument(doc.id, doc.title)}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                    className="rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                     title="Preview"
                   >
                     <Eye className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleOpenEmailDialog(doc)}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                    className="rounded-lg p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                     title="Verstuur per e-mail"
                   >
                     <Send className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(doc.id)}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                    className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                     title="Verwijderen"
                   >
                     <Trash2 className="h-4 w-4" />

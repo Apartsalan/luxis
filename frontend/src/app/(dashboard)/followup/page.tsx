@@ -354,7 +354,7 @@ export default function FollowupPage() {
                         <Link
                           href={`/zaken/${item.case_id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
                         >
                           <ArrowUpRight className="h-4 w-4" />
                         </Link>

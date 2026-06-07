@@ -228,7 +228,7 @@ function CaseSelector({
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full min-w-[320px] rounded-md border border-border bg-card shadow-lg">
+        <div className="absolute z-50 mt-1 w-full min-w-[320px] max-w-[calc(100vw-2rem)] rounded-md border border-border bg-card shadow-lg">
           <div className="p-2 border-b border-border">
             <input
               type="text"
@@ -1055,7 +1055,7 @@ export default function UrenPage() {
                   <span className="text-[10px] text-muted-foreground">—</span>
                 )}
               </span>
-              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center justify-end gap-1 max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                 {editId === entry.id ? (
                   <>
                     <button

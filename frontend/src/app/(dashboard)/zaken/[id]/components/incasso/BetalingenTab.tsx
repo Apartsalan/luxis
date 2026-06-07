@@ -98,9 +98,11 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
                 }}
                 className={`${inputClass} ${fieldErrors.amount ? "border-destructive ring-1 ring-destructive/30" : ""}`}
                 placeholder="0.00"
+                aria-invalid={!!fieldErrors.amount}
+                aria-describedby={fieldErrors.amount ? "err-betaling-amount" : undefined}
               />
               {fieldErrors.amount && (
-                <p className="mt-1 text-xs text-destructive">{fieldErrors.amount}</p>
+                <p id="err-betaling-amount" role="alert" className="mt-1 text-xs text-destructive">{fieldErrors.amount}</p>
               )}
             </div>
             <div>
@@ -116,9 +118,11 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
                   if (fieldErrors.payment_date) setFieldErrors((p) => { const n = { ...p }; delete n.payment_date; return n; });
                 }}
                 className={`${inputClass} ${fieldErrors.payment_date ? "border-destructive ring-1 ring-destructive/30" : ""}`}
+                aria-invalid={!!fieldErrors.payment_date}
+                aria-describedby={fieldErrors.payment_date ? "err-betaling-date" : undefined}
               />
               {fieldErrors.payment_date && (
-                <p className="mt-1 text-xs text-destructive">{fieldErrors.payment_date}</p>
+                <p id="err-betaling-date" role="alert" className="mt-1 text-xs text-destructive">{fieldErrors.payment_date}</p>
               )}
             </div>
             <div>

@@ -496,10 +496,12 @@ export default function NieuweFactuurPage() {
                     ? "border-destructive focus:border-destructive focus:ring-destructive/20"
                     : "border-input focus:border-primary focus:ring-primary/20"
                 }`}
+                aria-invalid={!!invoiceFieldErrors.contact_id}
+                aria-describedby={invoiceFieldErrors.contact_id ? "err-contact_id" : undefined}
               />
             </div>
             {invoiceFieldErrors.contact_id && (
-              <p className="mt-1 text-xs text-destructive">{invoiceFieldErrors.contact_id}</p>
+              <p id="err-contact_id" role="alert" className="mt-1 text-xs text-destructive">{invoiceFieldErrors.contact_id}</p>
             )}
             {showContactResults &&
               contactSearch &&
@@ -549,10 +551,12 @@ export default function NieuweFactuurPage() {
                 }}
                 onFocus={() => setShowCaseResults(true)}
                 className={`${inputClass} pl-10 ${invoiceFieldErrors.case_id ? "border-destructive ring-1 ring-destructive/30" : ""}`}
+                aria-invalid={!!invoiceFieldErrors.case_id}
+                aria-describedby={invoiceFieldErrors.case_id ? "err-case_id" : undefined}
               />
             </div>
             {invoiceFieldErrors.case_id && (
-              <p className="mt-1 text-xs text-destructive">{invoiceFieldErrors.case_id}</p>
+              <p id="err-case_id" role="alert" className="mt-1 text-xs text-destructive">{invoiceFieldErrors.case_id}</p>
             )}
             {showCaseResults &&
               caseSearch &&
@@ -784,10 +788,12 @@ export default function NieuweFactuurPage() {
                     }
                     placeholder="0.00"
                     className={`${inputClass} pl-8 ${invoiceFieldErrors.voorschot_amount ? "border-destructive ring-1 ring-destructive/30" : ""}`}
+                    aria-invalid={!!invoiceFieldErrors.voorschot_amount}
+                    aria-describedby={invoiceFieldErrors.voorschot_amount ? "err-voorschot_amount" : undefined}
                   />
                 </div>
                 {invoiceFieldErrors.voorschot_amount && (
-                  <p className="mt-1 text-xs text-destructive">{invoiceFieldErrors.voorschot_amount}</p>
+                  <p id="err-voorschot_amount" role="alert" className="mt-1 text-xs text-destructive">{invoiceFieldErrors.voorschot_amount}</p>
                 )}
               </div>
               <div className="flex items-end">
@@ -880,7 +886,7 @@ export default function NieuweFactuurPage() {
                 Factuurregels
               </h2>
               {invoiceFieldErrors.lines && (
-                <p className="text-xs text-destructive mt-1">{invoiceFieldErrors.lines}</p>
+                <p role="alert" className="text-xs text-destructive mt-1">{invoiceFieldErrors.lines}</p>
               )}
             </div>
             <div className="flex gap-2">

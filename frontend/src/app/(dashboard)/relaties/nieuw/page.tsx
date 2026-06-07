@@ -163,9 +163,15 @@ export default function NieuweRelatiePage() {
   const getInputClass = (field: string) =>
     touched[field] && fieldErrors[field] ? inputErrorClass : inputClass;
 
+  // AUDIT-FE-3: aria-koppeling — screenreaders horen de fout bij het veld zelf
+  const fieldAria = (field: string) =>
+    touched[field] && fieldErrors[field]
+      ? { "aria-invalid": true, "aria-describedby": `err-${field}` }
+      : {};
+
   const FieldError = ({ field }: { field: string }) =>
     touched[field] && fieldErrors[field] ? (
-      <p className="mt-1 text-xs text-destructive">{fieldErrors[field]}</p>
+      <p id={`err-${field}`} role="alert" className="mt-1 text-xs text-destructive">{fieldErrors[field]}</p>
     ) : null;
 
   return (
@@ -226,6 +232,7 @@ export default function NieuweRelatiePage() {
                 onChange={(e) => updateField("name", e.target.value)}
                 onBlur={() => handleBlur("name")}
                 className={getInputClass("name")}
+                {...fieldAria("name")}
                 placeholder="Acme B.V."
               />
               <FieldError field="name" />
@@ -263,6 +270,7 @@ export default function NieuweRelatiePage() {
                     onChange={(e) => updateField("first_name", e.target.value)}
                     onBlur={() => handleBlur("first_name")}
                     className={getInputClass("first_name")}
+                    {...fieldAria("first_name")}
                   />
                   <FieldError field="first_name" />
                 </div>
@@ -278,6 +286,7 @@ export default function NieuweRelatiePage() {
                     onChange={(e) => updateField("last_name", e.target.value)}
                     onBlur={() => handleBlur("last_name")}
                     className={getInputClass("last_name")}
+                    {...fieldAria("last_name")}
                   />
                   <FieldError field="last_name" />
                 </div>
@@ -297,6 +306,7 @@ export default function NieuweRelatiePage() {
                 onChange={(e) => updateField("email", e.target.value)}
                 onBlur={() => handleBlur("email")}
                 className={getInputClass("email")}
+                {...fieldAria("email")}
               />
               <FieldError field="email" />
             </div>
@@ -327,6 +337,7 @@ export default function NieuweRelatiePage() {
                   onChange={(e) => updateField("kvk_number", e.target.value)}
                   onBlur={() => handleBlur("kvk_number")}
                   className={getInputClass("kvk_number")}
+                  {...fieldAria("kvk_number")}
                   maxLength={8}
                 />
                 <FieldError field="kvk_number" />
@@ -372,6 +383,7 @@ export default function NieuweRelatiePage() {
                 onChange={(e) => updateField("visit_postcode", e.target.value)}
                 onBlur={() => handleBlur("visit_postcode")}
                 className={getInputClass("visit_postcode")}
+                {...fieldAria("visit_postcode")}
                 placeholder="1234 AB"
               />
               <FieldError field="visit_postcode" />
@@ -416,6 +428,7 @@ export default function NieuweRelatiePage() {
                 onChange={(e) => updateField("postal_postcode", e.target.value)}
                 onBlur={() => handleBlur("postal_postcode")}
                 className={getInputClass("postal_postcode")}
+                {...fieldAria("postal_postcode")}
                 placeholder="1234 AB"
               />
               <FieldError field="postal_postcode" />

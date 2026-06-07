@@ -984,9 +984,11 @@ function NieuweZaakPage() {
                     onChange={(e) => updateField("date_opened", e.target.value)}
                     onBlur={() => handleWizardBlur("date_opened")}
                     className={getWizardInputClass("date_opened")}
+                    aria-invalid={!!wizardFieldErrors.date_opened}
+                    aria-describedby={wizardFieldErrors.date_opened ? "err-date_opened" : undefined}
                   />
                   {wizardFieldErrors.date_opened && (
-                    <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.date_opened}</p>
+                    <p id="err-date_opened" role="alert" className="mt-1 text-xs text-destructive">{wizardFieldErrors.date_opened}</p>
                   )}
                 </div>
               </div>
@@ -1118,10 +1120,12 @@ function NieuweZaakPage() {
                           : "border-input focus:border-primary focus:ring-primary/20"
                       }`}
                       placeholder="Zoek een client..."
+                      aria-invalid={!!wizardFieldErrors.client_id}
+                      aria-describedby={wizardFieldErrors.client_id ? "err-client_id" : undefined}
                     />
                   </div>
                   {wizardFieldErrors.client_id && (
-                    <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.client_id}</p>
+                    <p id="err-client_id" role="alert" className="mt-1 text-xs text-destructive">{wizardFieldErrors.client_id}</p>
                   )}
                   {clientSearch &&
                     clientResults?.items &&
@@ -2064,9 +2068,11 @@ function NieuweZaakPage() {
                       onBlur={() => handleWizardBlur("contractual_rate")}
                       className={getWizardInputClass("contractual_rate")}
                       placeholder="Bijv. 8.00"
+                      aria-invalid={!!wizardFieldErrors.contractual_rate}
+                      aria-describedby={wizardFieldErrors.contractual_rate ? "err-contractual_rate" : undefined}
                     />
                     {wizardFieldErrors.contractual_rate && (
-                      <p className="mt-1 text-xs text-destructive">{wizardFieldErrors.contractual_rate}</p>
+                      <p id="err-contractual_rate" role="alert" className="mt-1 text-xs text-destructive">{wizardFieldErrors.contractual_rate}</p>
                     )}
                   </div>
                   <div>

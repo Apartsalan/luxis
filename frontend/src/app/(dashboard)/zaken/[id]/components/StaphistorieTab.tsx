@@ -4,15 +4,7 @@ import { Loader2, Clock, ArrowRight, FileText, Mail, Bot, User } from "lucide-re
 import { EmptyState } from "@/components/empty-state";
 import { useCaseStepHistory, type CaseStepHistory } from "@/hooks/use-incasso";
 import { formatDateTime } from "@/lib/utils";
-
-const CATEGORY_STYLES: Record<string, string> = {
-  minnelijk: "bg-blue-100 text-blue-700",
-  gerechtelijk: "bg-purple-100 text-purple-700",
-  executie: "bg-red-100 text-red-700",
-  regeling: "bg-teal-100 text-teal-700",
-  administratief: "bg-gray-100 text-gray-700",
-  afsluiting: "bg-emerald-100 text-emerald-700",
-};
+import { STEP_CATEGORY_STYLES } from "@/lib/status-constants";
 
 const TRIGGER_LABELS: Record<string, { label: string; icon: typeof User }> = {
   manual: { label: "Handmatig", icon: User },
@@ -82,7 +74,7 @@ export function StaphistorieTab({ caseId }: { caseId: string }) {
                     </span>
                     <span
                       className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
-                        CATEGORY_STYLES[entry.step_category] || CATEGORY_STYLES.administratief
+                        STEP_CATEGORY_STYLES[entry.step_category] || STEP_CATEGORY_STYLES.administratief
                       }`}
                     >
                       {entry.step_category}

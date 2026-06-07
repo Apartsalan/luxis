@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -166,6 +166,8 @@ export function useInvoices(params?: {
       if (!res.ok) throw new Error("Kan facturen niet laden");
       return res.json();
     },
+    // Houd vorige resultaten zichtbaar tijdens zoeken/pagineren
+    placeholderData: keepPreviousData,
   });
 }
 

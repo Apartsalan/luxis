@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export interface ContactSummary {
@@ -134,6 +134,8 @@ export function useRelations(params?: {
       if (!res.ok) throw new Error("Failed to fetch relations");
       return res.json();
     },
+    // Houd vorige resultaten zichtbaar tijdens zoeken/pagineren
+    placeholderData: keepPreviousData,
   });
 }
 

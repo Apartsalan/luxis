@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export interface CaseSummary {
@@ -154,6 +154,9 @@ export function useCases(params?: {
       if (!res.ok) throw new Error("Failed to fetch cases");
       return res.json();
     },
+    // Houd vorige resultaten zichtbaar tijdens zoeken/pagineren —
+    // voorkomt dat de tabel in een skeleton verdwijnt bij elke wijziging
+    placeholderData: keepPreviousData,
   });
 }
 

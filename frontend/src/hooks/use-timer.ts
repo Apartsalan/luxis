@@ -91,6 +91,31 @@ export function useTimer() {
   return useContext(TimerContext);
 }
 
+// Live verstreken seconden berekenen — tijdens running uit startedAt,
+// anders de opgeslagen waarde.
+export function getTimerSeconds(t: TimerState): number {
+  if (t.running && t.startedAt) {
+    return Math.floor((Date.now() - t.startedAt) / 1000);
+  }
+  return t.seconds;
+}
+
+// Tikkende seconden, LOKAAL in de component die ze toont.
+// De context tikt bewust niet (zou de hele app elke seconde her-renderen).
+export function useTimerSeconds(): number {
+  const { timer } = useTimer();
+  const [seconds, setSeconds] = useState(() => getTimerSeconds(timer));
+
+  useEffect(() => {
+    setSeconds(getTimerSeconds(timer));
+    if (!timer.running) return;
+    const id = setInterval(() => setSeconds(getTimerSeconds(timer)), 1000);
+    return () => clearInterval(id);
+  }, [timer]);
+
+  return seconds;
+}
+
 // ── Auto-timer preference hook ──────────────────────────────────────────
 
 export function useAutoTimerPreference(): [boolean, (v: boolean) => void] {
@@ -209,7 +234,7 @@ export function useTimerProvider() {
     const handleBeforeUnload = () => {
       const current = timerRef.current;
       if (current.running) {
-        saveToStorage(current);
+        saveToStorage({ ...current, seconds: getTimerSeconds(current) });
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -242,31 +267,25 @@ export function useTimerProvider() {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  // Tick interval + forgotten timer warning
+  // Persistentie + vergeten-timer-waarschuwing tijdens running.
+  // Tikt BEWUST geen React-state per seconde — display gebeurt lokaal via
+  // useTimerSeconds(), anders her-rendert de hele app elke seconde.
   useEffect(() => {
     if (timer.running) {
       intervalRef.current = setInterval(() => {
-        setTimer((prev) => {
-          const next = { ...prev, seconds: prev.seconds + 1 };
-          // Persist every 10 seconds to avoid excessive writes
-          if (next.seconds % 10 === 0) {
-            saveToStorage(next);
-          }
-          // Forgotten timer warning (after 2 hours)
-          if (
-            next.seconds >= FORGOTTEN_THRESHOLD &&
-            !hasWarnedRef.current
-          ) {
-            hasWarnedRef.current = true;
-            const h = Math.floor(next.seconds / 3600);
-            toast.warning(
-              `Timer loopt al ${h} uur voor ${next.caseName}`,
-              { duration: 10000 }
-            );
-          }
-          return next;
-        });
-      }, 1000);
+        const current = timerRef.current;
+        const elapsed = getTimerSeconds(current);
+        saveToStorage({ ...current, seconds: elapsed });
+        // Forgotten timer warning (after 2 hours)
+        if (elapsed >= FORGOTTEN_THRESHOLD && !hasWarnedRef.current) {
+          hasWarnedRef.current = true;
+          const h = Math.floor(elapsed / 3600);
+          toast.warning(
+            `Timer loopt al ${h} uur voor ${current.caseName}`,
+            { duration: 10000 }
+          );
+        }
+      }, 10000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -314,15 +333,16 @@ export function useTimerProvider() {
   }, []);
 
   const stopTimer = useCallback(async () => {
+    const current = timerRef.current;
     // Round up to nearest 6 minutes (0.1 hour) — standard legal billing
-    const minutes = Math.max(6, Math.ceil(timer.seconds / 360) * 6);
+    const minutes = Math.max(6, Math.ceil(getTimerSeconds(current) / 360) * 6);
     try {
       await createMutation.mutateAsync({
-        case_id: timer.caseId,
+        case_id: current.caseId,
         date: toISO(new Date()),
         duration_minutes: minutes,
-        description: timer.description?.trim() || null,
-        activity_type: timer.activityType || "other",
+        description: current.description?.trim() || null,
+        activity_type: current.activityType || "other",
         billable: true,
       });
       const h = Math.floor(minutes / 60);
@@ -333,12 +353,17 @@ export function useTimerProvider() {
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Opslaan mislukt");
     }
-  }, [timer.seconds, timer.caseId, timer.description, timer.activityType, createMutation]);
+  }, [createMutation]);
 
   const pauseTimer = useCallback(() => {
     setTimer((prev) => {
       if (!prev.running) return prev;
-      const paused: TimerState = { ...prev, running: false };
+      // Bevries de live seconden op het pauzemoment
+      const paused: TimerState = {
+        ...prev,
+        running: false,
+        seconds: getTimerSeconds(prev),
+      };
       saveToStorage(paused);
       return paused;
     });

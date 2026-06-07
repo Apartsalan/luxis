@@ -25,6 +25,7 @@ import {
 import { useCases, type CaseSortField, type CaseSortDir } from "@/hooks/use-cases";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useModules } from "@/hooks/use-modules";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useUsers } from "@/hooks/use-users";
 import { useWorkflowStatuses } from "@/hooks/use-workflow";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
@@ -101,7 +102,7 @@ export default function ZakenPage() {
   const [dateTo, setDateTo] = useState("");
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [page, setPage] = useState(1);
-  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const debouncedSearch = useDebounce(search, 300);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<"" | "status" | "export">("");
   const [bulkStatus, setBulkStatus] = useState("");
@@ -147,7 +148,7 @@ export default function ZakenPage() {
     page,
     case_type: caseType || undefined,
     status: status || undefined,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     assigned_to_id: assignedTo || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
@@ -650,8 +651,6 @@ export default function ZakenPage() {
                   <tr
                     key={zaak.id}
                     className="group hover:bg-muted/40 transition-colors relative"
-                    onMouseEnter={() => setHoveredRow(zaak.id)}
-                    onMouseLeave={() => setHoveredRow(null)}
                   >
                     <td className="w-10 px-4 py-3.5">
                       <button

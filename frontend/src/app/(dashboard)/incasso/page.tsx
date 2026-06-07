@@ -1020,6 +1020,13 @@ function WerkstroomTab() {
     return true;
   };
 
+  // Eén keer filteren per render i.p.v. 4x (header-checkbox + tbody)
+  const filteredCases = useMemo(
+    () => allCases.filter(filterCase),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allCases, queueFilter, nextStepMap, firstStepId]
+  );
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -1206,16 +1213,15 @@ function WerkstroomTab() {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="w-10 px-3 py-2 text-left">
                     <button onClick={() => {
-                      const filtered = allCases.filter(filterCase);
-                      const allSelected = filtered.every((c) => selectedIds.has(c.id));
+                      const allSelected = filteredCases.every((c) => selectedIds.has(c.id));
                       setSelectedIds((prev) => {
                         const next = new Set(prev);
-                        if (allSelected) filtered.forEach((c) => next.delete(c.id));
-                        else filtered.forEach((c) => next.add(c.id));
+                        if (allSelected) filteredCases.forEach((c) => next.delete(c.id));
+                        else filteredCases.forEach((c) => next.add(c.id));
                         return next;
                       });
                     }}>
-                      {allCases.filter(filterCase).length > 0 && allCases.filter(filterCase).every((c) => selectedIds.has(c.id)) ? (
+                      {filteredCases.length > 0 && filteredCases.every((c) => selectedIds.has(c.id)) ? (
                         <CheckSquare className="h-4 w-4 text-primary" />
                       ) : (
                         <Square className="h-4 w-4 text-muted-foreground" />
@@ -1233,7 +1239,7 @@ function WerkstroomTab() {
                 </tr>
               </thead>
               <tbody>
-                {allCases.filter(filterCase).map((c) => {
+                {filteredCases.map((c) => {
                   const isSelected = selectedIds.has(c.id);
                   return (
                     <tr

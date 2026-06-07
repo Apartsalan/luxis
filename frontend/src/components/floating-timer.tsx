@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import {
   useTimer,
+  useTimerSeconds,
   useAutoTimerPreference,
   ACTIVITY_TYPES,
 } from "@/hooks/use-timer";
@@ -179,6 +180,7 @@ function FloatingTimerInner() {
     isExpanded,
     setIsExpanded,
   } = useTimer();
+  const liveSeconds = useTimerSeconds();
   const router = useRouter();
   const [autoTimer, setAutoTimer] = useAutoTimerPreference();
 
@@ -195,7 +197,7 @@ function FloatingTimerInner() {
         >
           <Clock className="h-4 w-4 animate-pulse" />
           <span className="font-mono text-sm font-bold tabular-nums">
-            {formatTimer(timer.seconds)}
+            {formatTimer(liveSeconds)}
           </span>
           <ChevronUp className="h-3.5 w-3.5 opacity-70" />
         </button>
@@ -247,7 +249,7 @@ function FloatingTimerInner() {
               timer.running ? "text-emerald-600" : "text-foreground"
             }`}
           >
-            {formatTimer(timer.seconds)}
+            {formatTimer(liveSeconds)}
           </div>
           {timer.caseName && (
             <p className="mt-1 text-[11px] text-muted-foreground text-center truncate">
@@ -324,7 +326,7 @@ function FloatingTimerInner() {
                 <Trash2 className="h-3 w-3" />
               </button>
             </>
-          ) : timer.seconds > 0 && timer.caseId ? (
+          ) : liveSeconds > 0 && timer.caseId ? (
             // Paused timer (e.g. restored after browser close) — show resume + discard
             <>
               <button

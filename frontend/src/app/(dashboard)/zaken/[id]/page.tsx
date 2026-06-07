@@ -40,7 +40,7 @@ import {
   useWorkflowTransitions,
 } from "@/hooks/use-workflow";
 import { useModules } from "@/hooks/use-modules";
-import { useTimer, useAutoTimerPreference, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
+import { useTimer, useAutoTimerPreference, getTimerSeconds, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 import { useSendViaProvider } from "@/hooks/use-email-sync";
 import { useIncassoPipelineSteps, useGenerateDraftForCase } from "@/hooks/use-incasso";
@@ -122,7 +122,7 @@ export default function ZaakDetailPage() {
     // Timer running for ANOTHER case — save/discard + start new
     if (timer.running && timer.caseId !== zaak.id) {
       const prevName = timer.caseName;
-      const prevSeconds = timer.seconds;
+      const prevSeconds = getTimerSeconds(timer);
       if (prevSeconds >= AUTO_SAVE_MIN_SECONDS) {
         stopTimer().then(() => {
           const m = Math.max(1, Math.round(prevSeconds / 60));

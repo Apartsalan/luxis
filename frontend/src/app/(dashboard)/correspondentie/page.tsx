@@ -36,22 +36,12 @@ import {
   type CaseSuggestion,
 } from "@/hooks/use-email-sync";
 import { useCases } from "@/hooks/use-cases";
+import { useDebounce } from "@/hooks/use-debounce";
 import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRelativeTime } from "@/lib/utils";
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function useDebounce(value: string, delay: number) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
-}
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 

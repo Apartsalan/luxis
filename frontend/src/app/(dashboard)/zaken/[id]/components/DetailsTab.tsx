@@ -24,7 +24,7 @@ import { useRelations } from "@/hooks/use-relations";
 import { useModules } from "@/hooks/use-modules";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
 import { ACTIVITY_ICONS, ACTIVITY_COLORS, stripHtml } from "../types";
-import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor";
+import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor-lazy";
 
 const DUTCH_COURTS = [
   "Rechtbank Amsterdam",

@@ -24,7 +24,7 @@ import {
 } from "@/hooks/use-cases";
 import { formatRelativeTime } from "@/lib/utils";
 import { renderNoteContent } from "../types";
-import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor";
+import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor-lazy";
 
 import type { CaseDetail } from "@/hooks/use-cases";
 

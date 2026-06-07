@@ -31,7 +31,7 @@ import {
 import { useCases, type CaseSummary } from "@/hooks/use-cases";
 import { formatCurrency } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
-import { useTimer } from "@/hooks/use-timer";
+import { useTimer, useTimerSeconds } from "@/hooks/use-timer";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -399,7 +399,6 @@ export default function UrenPage() {
 
   // Aliases for backward compatibility with the timer card UI
   const timerRunning = timer.running;
-  const timerSeconds = timer.seconds;
   const timerCaseId = timer.caseId;
   const setTimerCaseId = (id: string) => {
     const c = cases.find((cs) => cs.id === id);
@@ -534,7 +533,6 @@ export default function UrenPage() {
   }
 
   const todayTotal = todayEntries?.reduce((sum, e) => sum + e.duration_minutes, 0) ?? 0;
-  const timerDisplay = `${Math.floor(timerSeconds / 3600)}:${String(Math.floor((timerSeconds % 3600) / 60)).padStart(2, "0")}:${String(timerSeconds % 60).padStart(2, "0")}`;
 
   // ── Navigation helpers ────────────────────────────────────────────────
   const navigateBack = () => {
@@ -597,9 +595,7 @@ export default function UrenPage() {
             <Timer className="h-4 w-4" />
             Stopwatch
           </div>
-          <div className="text-2xl font-mono font-bold text-foreground mb-3 tabular-nums">
-            {timerDisplay}
-          </div>
+          <LiveTimerDisplay />
           <div className="mb-2">
             <CaseSelector
               cases={cases}
@@ -1106,6 +1102,18 @@ export default function UrenPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Tikkende timer-weergave — geïsoleerd component zodat alleen dit blokje
+// per seconde her-rendert, niet de hele urenpagina.
+function LiveTimerDisplay() {
+  const seconds = useTimerSeconds();
+  const display = `${Math.floor(seconds / 3600)}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  return (
+    <div className="text-2xl font-mono font-bold text-foreground mb-3 tabular-nums">
+      {display}
     </div>
   );
 }

@@ -23,6 +23,7 @@ import {
 } from "@/hooks/use-invoices";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export default function FacturenPage() {
   const searchParams = useSearchParams();
@@ -33,6 +34,7 @@ export default function FacturenPage() {
 
   const [activeTab, setActiveTab] = useState<"facturen" | "debiteuren">("facturen");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState(initialStatus);
   const [contactId, setContactId] = useState(initialContactId);
   const [contactName, setContactName] = useState(initialContactName);
@@ -55,7 +57,7 @@ export default function FacturenPage() {
   const { data, isLoading, isError, error, refetch } = useInvoices({
     page,
     status: status || undefined,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     contact_id: contactId || undefined,
   });
 

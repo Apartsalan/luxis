@@ -135,8 +135,5 @@ export function RichNoteEditor({
   );
 }
 
-/** Check if a note HTML string is effectively empty */
-export function isNoteEmpty(html: string | undefined | null): boolean {
-  if (!html) return true;
-  return html.replace(/<[^>]*>/g, "").trim() === "";
-}
+// isNoteEmpty is verhuisd naar rich-note-editor-lazy.tsx zodat importeurs
+// geen TipTap mee-bundelen voor een simpele string-check.

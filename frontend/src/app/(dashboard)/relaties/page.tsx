@@ -26,6 +26,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRelations, type RelationSortField, type SortDir } from "@/hooks/use-relations";
+import { useDebounce } from "@/hooks/use-debounce";
 import { formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -82,6 +83,7 @@ export default function RelatiesPage() {
   const sortDir: SortDir = sortDirRaw === "desc" ? "desc" : "asc";
 
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
   const [contactType, setContactType] = useState("");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -105,7 +107,7 @@ export default function RelatiesPage() {
 
   const { data, isLoading, isError, error, refetch } = useRelations({
     page,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     contact_type: contactType || undefined,
     sort_by: sortBy,
     sort_dir: sortDir,

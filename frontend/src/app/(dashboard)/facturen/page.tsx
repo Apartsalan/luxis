@@ -22,6 +22,7 @@ import {
   type ContactReceivable,
 } from "@/hooks/use-invoices";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
+import { AGING_TONES, CREDIT_NOTE_TONE, TONES } from "@/lib/tones";
 import { QueryError } from "@/components/query-error";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -119,7 +120,7 @@ export default function FacturenPage() {
           <Users className="mr-1.5 inline h-4 w-4" />
           Debiteuren
           {receivables && receivables.total_overdue > 0 && (
-            <span className="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-100 px-1.5 text-[10px] font-semibold text-red-700">
+            <span className={`ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${TONES.danger.chip}`}>
               {formatCurrency(receivables.total_overdue)}
             </span>
           )}
@@ -228,12 +229,12 @@ export default function FacturenPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className={`font-mono text-sm font-semibold ${
-                            factuur.invoice_type === "credit_note" ? "text-purple-700" : "text-foreground"
+                            factuur.invoice_type === "credit_note" ? CREDIT_NOTE_TONE.text : "text-foreground"
                           }`}>
                             {factuur.invoice_number}
                           </p>
                           {factuur.invoice_type === "credit_note" && (
-                            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-600">
+                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${CREDIT_NOTE_TONE.chip}`}>
                               CN
                             </span>
                           )}
@@ -246,7 +247,7 @@ export default function FacturenPage() {
                       </div>
                       <span
                         className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          INVOICE_STATUS_COLORS[factuur.status] ?? "bg-gray-100 text-gray-700"
+                          INVOICE_STATUS_COLORS[factuur.status] ?? TONES.gray.chip
                         }`}
                       >
                         {INVOICE_STATUS_LABELS[factuur.status] ?? factuur.status}
@@ -255,7 +256,7 @@ export default function FacturenPage() {
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                       <span>{formatDateShort(factuur.invoice_date)}</span>
                       <span className={`text-sm font-semibold tabular-nums ${
-                        factuur.invoice_type === "credit_note" ? "text-red-600" : "text-foreground"
+                        factuur.invoice_type === "credit_note" ? TONES.danger.text : "text-foreground"
                       }`}>
                         {factuur.invoice_type === "credit_note" ? "-" : ""}
                         {formatCurrency(factuur.total)}
@@ -306,14 +307,14 @@ export default function FacturenPage() {
                               href={`/facturen/${factuur.id}`}
                               className={`font-mono text-sm font-semibold hover:text-primary transition-colors ${
                                 factuur.invoice_type === "credit_note"
-                                  ? "text-purple-700"
+                                  ? CREDIT_NOTE_TONE.text
                                   : "text-foreground"
                               }`}
                             >
                               {factuur.invoice_number}
                             </Link>
                             {factuur.invoice_type === "credit_note" && (
-                              <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-600">
+                              <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${CREDIT_NOTE_TONE.chip}`}>
                                 CN
                               </span>
                             )}
@@ -328,7 +329,7 @@ export default function FacturenPage() {
                           <span
                             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                               INVOICE_STATUS_COLORS[factuur.status] ??
-                              "bg-gray-100 text-gray-700"
+                              TONES.gray.chip
                             }`}
                           >
                             {INVOICE_STATUS_LABELS[factuur.status] ??
@@ -360,7 +361,7 @@ export default function FacturenPage() {
                           <span
                             className={`text-sm font-semibold tabular-nums ${
                               factuur.invoice_type === "credit_note"
-                                ? "text-red-600"
+                                ? TONES.danger.text
                                 : "text-foreground"
                             }`}
                           >
@@ -492,28 +493,28 @@ function AgingBar({
     <div className="flex h-2 w-full overflow-hidden rounded-full bg-muted">
       {pCurrent > 0 && (
         <div
-          className="bg-emerald-400 transition-all"
+          className={`${AGING_TONES.d0_30.dot} transition-all`}
           style={{ width: `${pCurrent}%` }}
           title={`0-30 dagen: ${formatCurrency(current)}`}
         />
       )}
       {p31 > 0 && (
         <div
-          className="bg-amber-400 transition-all"
+          className={`${AGING_TONES.d31_60.dot} transition-all`}
           style={{ width: `${p31}%` }}
           title={`31-60 dagen: ${formatCurrency(days31)}`}
         />
       )}
       {p61 > 0 && (
         <div
-          className="bg-orange-400 transition-all"
+          className={`${AGING_TONES.d61_90.dot} transition-all`}
           style={{ width: `${p61}%` }}
           title={`61-90 dagen: ${formatCurrency(days61)}`}
         />
       )}
       {p90 > 0 && (
         <div
-          className="bg-red-500 transition-all"
+          className={`${AGING_TONES.d90_plus.dot} transition-all`}
           style={{ width: `${p90}%` }}
           title={`90+ dagen: ${formatCurrency(days90)}`}
         />
@@ -551,8 +552,8 @@ function DebiteurenTab({
   if (!receivables || receivables.contacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50">
-          <Users className="h-8 w-8 text-emerald-400" />
+        <div className={`flex h-16 w-16 items-center justify-center rounded-2xl ${TONES.success.surface}`}>
+          <Users className={`h-8 w-8 ${TONES.success.textFaint}`} />
         </div>
         <p className="mt-5 text-base font-medium text-foreground">
           Geen openstaande facturen
@@ -579,7 +580,7 @@ function DebiteurenTab({
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs font-medium text-emerald-600 uppercase tracking-wider">
+          <p className={`text-xs font-medium ${AGING_TONES.d0_30.text} uppercase tracking-wider`}>
             0-30 dagen
           </p>
           <p className="mt-1 text-xl font-bold text-foreground tabular-nums">
@@ -590,7 +591,7 @@ function DebiteurenTab({
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs font-medium text-amber-600 uppercase tracking-wider">
+          <p className={`text-xs font-medium ${AGING_TONES.d31_60.text} uppercase tracking-wider`}>
             31-60 dagen
           </p>
           <p className="mt-1 text-xl font-bold text-foreground tabular-nums">
@@ -601,7 +602,7 @@ function DebiteurenTab({
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs font-medium text-orange-600 uppercase tracking-wider">
+          <p className={`text-xs font-medium ${AGING_TONES.d61_90.text} uppercase tracking-wider`}>
             61-90 dagen
           </p>
           <p className="mt-1 text-xl font-bold text-foreground tabular-nums">
@@ -612,7 +613,7 @@ function DebiteurenTab({
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs font-medium text-red-600 uppercase tracking-wider">
+          <p className={`text-xs font-medium ${AGING_TONES.d90_plus.text} uppercase tracking-wider`}>
             90+ dagen
           </p>
           <p className="mt-1 text-xl font-bold text-foreground tabular-nums">
@@ -630,16 +631,16 @@ function DebiteurenTab({
           <p className="text-sm font-medium text-foreground">Aging verdeling</p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> 0-30d
+              <span className={`h-2.5 w-2.5 rounded-full ${AGING_TONES.d0_30.dot}`} /> 0-30d
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> 31-60d
+              <span className={`h-2.5 w-2.5 rounded-full ${AGING_TONES.d31_60.dot}`} /> 31-60d
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-orange-400" /> 61-90d
+              <span className={`h-2.5 w-2.5 rounded-full ${AGING_TONES.d61_90.dot}`} /> 61-90d
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> 90+d
+              <span className={`h-2.5 w-2.5 rounded-full ${AGING_TONES.d90_plus.dot}`} /> 90+d
             </span>
           </div>
         </div>
@@ -663,16 +664,16 @@ function DebiteurenTab({
               <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Facturen
               </th>
-              <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-emerald-600">
+              <th className={`px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider ${AGING_TONES.d0_30.text}`}>
                 0-30d
               </th>
-              <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-amber-600">
+              <th className={`px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider ${AGING_TONES.d31_60.text}`}>
                 31-60d
               </th>
-              <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-orange-600">
+              <th className={`px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider ${AGING_TONES.d61_90.text}`}>
                 61-90d
               </th>
-              <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-red-600">
+              <th className={`px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider ${AGING_TONES.d90_plus.text}`}>
                 90+d
               </th>
               <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -708,21 +709,21 @@ function DebiteurenTab({
                 </td>
                 <td className="px-4 py-3.5 text-right text-sm tabular-nums">
                   {contact.days_31_60.total > 0 ? (
-                    <span className="text-amber-700">{formatCurrency(contact.days_31_60.total)}</span>
+                    <span className={AGING_TONES.d31_60.textStrong}>{formatCurrency(contact.days_31_60.total)}</span>
                   ) : (
                     <span className="text-muted-foreground/40">-</span>
                   )}
                 </td>
                 <td className="px-4 py-3.5 text-right text-sm tabular-nums">
                   {contact.days_61_90.total > 0 ? (
-                    <span className="text-orange-700">{formatCurrency(contact.days_61_90.total)}</span>
+                    <span className={AGING_TONES.d61_90.textStrong}>{formatCurrency(contact.days_61_90.total)}</span>
                   ) : (
                     <span className="text-muted-foreground/40">-</span>
                   )}
                 </td>
                 <td className="px-4 py-3.5 text-right text-sm tabular-nums">
                   {contact.days_90_plus.total > 0 ? (
-                    <span className="font-medium text-red-700">{formatCurrency(contact.days_90_plus.total)}</span>
+                    <span className={`font-medium ${AGING_TONES.d90_plus.textStrong}`}>{formatCurrency(contact.days_90_plus.total)}</span>
                   ) : (
                     <span className="text-muted-foreground/40">-</span>
                   )}
@@ -755,13 +756,13 @@ function DebiteurenTab({
               <td className="px-4 py-3.5 text-right text-sm font-semibold tabular-nums text-foreground">
                 {current.total > 0 ? formatCurrency(current.total) : "-"}
               </td>
-              <td className="px-4 py-3.5 text-right text-sm font-semibold tabular-nums text-amber-700">
+              <td className={`px-4 py-3.5 text-right text-sm font-semibold tabular-nums ${AGING_TONES.d31_60.textStrong}`}>
                 {days_31_60.total > 0 ? formatCurrency(days_31_60.total) : "-"}
               </td>
-              <td className="px-4 py-3.5 text-right text-sm font-semibold tabular-nums text-orange-700">
+              <td className={`px-4 py-3.5 text-right text-sm font-semibold tabular-nums ${AGING_TONES.d61_90.textStrong}`}>
                 {days_61_90.total > 0 ? formatCurrency(days_61_90.total) : "-"}
               </td>
-              <td className="px-4 py-3.5 text-right text-sm font-semibold tabular-nums text-red-700">
+              <td className={`px-4 py-3.5 text-right text-sm font-semibold tabular-nums ${AGING_TONES.d90_plus.textStrong}`}>
                 {days_90_plus.total > 0 ? formatCurrency(days_90_plus.total) : "-"}
               </td>
               <td className="px-4 py-3.5 text-right text-sm font-bold tabular-nums text-foreground">
@@ -783,13 +784,13 @@ function DebiteurenTab({
 
       {/* Overdue warning */}
       {total_overdue > 0 && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+        <div className={`flex items-start gap-3 rounded-xl border ${TONES.warning.border} ${TONES.warning.surface} p-4`}>
+          <AlertTriangle className={`h-5 w-5 ${TONES.warning.text} mt-0.5 shrink-0`} />
           <div>
-            <p className="text-sm font-medium text-amber-800">
+            <p className={`text-sm font-medium ${TONES.warning.heading}`}>
               {formatCurrency(total_overdue)} aan achterstallige facturen
             </p>
-            <p className="text-sm text-amber-700 mt-0.5">
+            <p className={`text-sm ${TONES.warning.textStrong} mt-0.5`}>
               {days_90_plus.count > 0 && (
                 <>
                   {days_90_plus.count} factuur{days_90_plus.count !== 1 ? "en" : ""} ouder dan 90 dagen.{" "}

@@ -125,6 +125,7 @@ export const TONES = {
   neutral: {
     chip: "bg-slate-50 text-slate-600",
     badge: "bg-slate-50 text-slate-600 ring-slate-500/20",
+    solid: "bg-slate-500",
     solidSoft: "bg-slate-400",
   },
 

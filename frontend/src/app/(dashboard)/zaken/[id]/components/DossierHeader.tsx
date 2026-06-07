@@ -40,6 +40,8 @@ import {
 } from "@/hooks/use-workflow";
 import type { WorkflowStatus, WorkflowTransition } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { CASE_STATUS_BADGE_FALLBACK, DEBTOR_TYPE_BADGE } from "@/lib/status-constants";
+import { TONES } from "@/lib/tones";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
 import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
 import type { PipelineStep } from "@/hooks/use-incasso";
@@ -72,7 +74,7 @@ function VerjaringBadge({
 
   if (daysLeft <= 0) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${TONES.danger.badge}`}>
         <AlertTriangle className="h-3 w-3" />
         Verjaard
       </span>
@@ -81,7 +83,7 @@ function VerjaringBadge({
 
   if (daysLeft <= 30) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${TONES.danger.badge}`}>
         <AlertTriangle className="h-3 w-3" />
         Verjaring: {daysLeft}d
       </span>
@@ -90,7 +92,7 @@ function VerjaringBadge({
 
   if (daysLeft <= 90) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${TONES.warning.badge}`}>
         <Clock className="h-3 w-3" />
         Verjaring: {daysLeft}d
       </span>
@@ -205,7 +207,7 @@ export default function DossierHeader({
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
                   STATUS_BADGE[zaak.status] ??
-                  "bg-slate-50 text-slate-600 ring-slate-500/20"
+                  CASE_STATUS_BADGE_FALLBACK
                 }`}
               >
                 {STATUS_LABELS[zaak.status] ?? zaak.status}
@@ -214,8 +216,8 @@ export default function DossierHeader({
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
                     zaak.debtor_type === "b2b"
-                      ? "bg-indigo-50 text-indigo-700 ring-indigo-600/20"
-                      : "bg-pink-50 text-pink-700 ring-pink-600/20"
+                      ? DEBTOR_TYPE_BADGE.b2b
+                      : DEBTOR_TYPE_BADGE.b2c
                   }`}
                 >
                   {zaak.debtor_type === "b2b" ? "B2B" : "B2C"}
@@ -249,11 +251,11 @@ export default function DossierHeader({
               const isActive = phase === currentPhase;
               const isPast = currentPhaseIndex >= 0 && index < currentPhaseIndex;
               const PHASE_ACTIVE_CLASSES: Record<string, string> = {
-                minnelijk: "bg-blue-500 text-white ring-4 ring-blue-500/20",
-                regeling: "bg-amber-500 text-white ring-4 ring-amber-500/20",
-                gerechtelijk: "bg-purple-500 text-white ring-4 ring-purple-500/20",
-                executie: "bg-red-500 text-white ring-4 ring-red-500/20",
-                afgerond: "bg-emerald-500 text-white ring-4 ring-emerald-500/20",
+                minnelijk: `ring-4 ${TONES.info.stepper}`,
+                regeling: `ring-4 ${TONES.warning.stepper}`,
+                gerechtelijk: `ring-4 ${TONES.legal.stepper}`,
+                executie: `ring-4 ${TONES.danger.stepper}`,
+                afgerond: `ring-4 ${TONES.success.stepper}`,
               };
 
               return (
@@ -262,9 +264,9 @@ export default function DossierHeader({
                     <div
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
                         isActive
-                          ? PHASE_ACTIVE_CLASSES[phase] ?? "bg-slate-500 text-white"
+                          ? PHASE_ACTIVE_CLASSES[phase] ?? `${TONES.neutral.solid} text-white`
                           : isPast
-                            ? "bg-emerald-500 text-white"
+                            ? `${TONES.success.solid} text-white`
                             : "border-2 border-border text-muted-foreground"
                       }`}
                     >
@@ -279,7 +281,7 @@ export default function DossierHeader({
                         isActive
                           ? "text-foreground font-semibold"
                           : isPast
-                            ? "text-emerald-600"
+                            ? TONES.success.text
                             : "text-muted-foreground"
                       }`}
                     >
@@ -289,7 +291,7 @@ export default function DossierHeader({
                   {index < PHASE_ORDER.length - 1 && (
                     <div
                       className={`hidden sm:block h-0.5 w-4 shrink-0 mx-0.5 ${
-                        isPast ? "bg-emerald-400" : "bg-border"
+                        isPast ? TONES.success.solidSoft : "bg-border"
                       }`}
                     />
                   )}
@@ -380,10 +382,10 @@ export default function DossierHeader({
 
       {/* T2: Workflow-suggestie banner */}
       {statusSuggestion && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center justify-between gap-4 animate-fade-in">
+        <div className={`rounded-xl border ${TONES.warning.border} ${TONES.warning.surface} p-4 flex items-center justify-between gap-4 animate-fade-in`}>
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
-              <FileText className="h-4 w-4 text-amber-600" />
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${TONES.warning.iconBox}`}>
+              <FileText className={`h-4 w-4 ${TONES.warning.text}`} />
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">
@@ -424,8 +426,8 @@ export default function DossierHeader({
           <>
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50">
-                  <Euro className="h-4 w-4 text-blue-600" />
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.info.surface}`}>
+                  <Euro className={`h-4 w-4 ${TONES.info.text}`} />
                 </div>
                 <span className="text-xs text-muted-foreground">Hoofdsom</span>
               </div>
@@ -435,19 +437,19 @@ export default function DossierHeader({
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
-                  <CreditCard className="h-4 w-4 text-emerald-600" />
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.success.surface}`}>
+                  <CreditCard className={`h-4 w-4 ${TONES.success.text}`} />
                 </div>
                 <span className="text-xs text-muted-foreground">Betaald</span>
               </div>
-              <p className="text-xl font-bold text-emerald-600 tabular-nums">
+              <p className={`text-xl font-bold ${TONES.success.text} tabular-nums`}>
                 {formatCurrency(zaak.total_paid)}
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
-                  <CalendarDays className="h-4 w-4 text-amber-600" />
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.warning.surface}`}>
+                  <CalendarDays className={`h-4 w-4 ${TONES.warning.text}`} />
                 </div>
                 <span className="text-xs text-muted-foreground">Rente</span>
               </div>
@@ -459,8 +461,8 @@ export default function DossierHeader({
         )}
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50">
-              <Users className="h-4 w-4 text-violet-600" />
+            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.ai.surface}`}>
+              <Users className={`h-4 w-4 ${TONES.ai.text}`} />
             </div>
             <span className="text-xs text-muted-foreground">Partijen</span>
           </div>
@@ -493,7 +495,7 @@ export default function DossierHeader({
           disabled={timer.running && timer.caseId === zaak.id}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Clock className="h-3.5 w-3.5 text-emerald-500" />
+          <Clock className={`h-3.5 w-3.5 ${TONES.success.textMuted}`} />
           {timer.running && timer.caseId === zaak.id ? "Timer loopt..." : "Uren loggen"}
         </button>
         <button
@@ -501,7 +503,7 @@ export default function DossierHeader({
           onClick={() => setActiveTab("activiteiten")}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
-          <MessageSquare className="h-3.5 w-3.5 text-amber-500" />
+          <MessageSquare className={`h-3.5 w-3.5 ${TONES.warning.textMuted}`} />
           Notitie
         </button>
         <button
@@ -518,7 +520,7 @@ export default function DossierHeader({
           }}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
-          <Phone className="h-3.5 w-3.5 text-emerald-500" />
+          <Phone className={`h-3.5 w-3.5 ${TONES.success.textMuted}`} />
           Telefoonnotitie
         </button>
         <button
@@ -526,20 +528,20 @@ export default function DossierHeader({
           onClick={() => setActiveTab("documenten")}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
-          <FileText className="h-3.5 w-3.5 text-blue-500" />
+          <FileText className={`h-3.5 w-3.5 ${TONES.info.textMuted}`} />
           Document
         </button>
         <Link
           href={`/facturen/nieuw?case_id=${zaak.id}`}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
-          <Receipt className="h-3.5 w-3.5 text-violet-500" />
+          <Receipt className={`h-3.5 w-3.5 ${TONES.ai.textMuted}`} />
           Factuur
         </Link>
         <button
           type="button"
           onClick={() => setCaseEmailOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors"
+          className={`inline-flex items-center gap-1.5 rounded-lg border ${TONES.info.outlineButton} px-3 py-2 text-xs font-medium transition-colors`}
         >
           <Mail className="h-3.5 w-3.5" />
           E-mail versturen

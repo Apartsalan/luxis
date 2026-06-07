@@ -32,7 +32,7 @@ const VAT_TYPE_LABELS: Record<string, string> = {
 function EmptyState({ onSeed }: { onSeed: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+      <Package className="h-12 w-12 text-muted-foreground mb-4" />
       <h3 className="text-lg font-semibold text-foreground mb-1">
         Geen producten
       </h3>

@@ -162,6 +162,7 @@ function TaskRow({
           isDone && "cursor-default"
         )}
         title={isDone ? "Al afgerond" : "Markeer als afgerond"}
+        aria-label={isDone ? "Al afgerond" : "Markeer als afgerond"}
       >
         {isDone ? (
           <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -254,6 +255,7 @@ function TaskRow({
           disabled={isSkipping}
           className="shrink-0 mt-0.5 rounded-md p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all"
           title="Overslaan"
+          aria-label="Overslaan"
         >
           <SkipForward className="h-4 w-4" />
         </button>
@@ -651,6 +653,7 @@ export default function TakenPage() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
+              aria-label="Sluiten"
               className="rounded-md p-1 hover:bg-muted transition-colors"
             >
               <X className="h-4 w-4 text-muted-foreground" />
@@ -658,10 +661,11 @@ export default function TakenPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-foreground">
+              <label htmlFor="taak-dossier" className="block text-xs font-medium text-foreground">
                 Dossier *
               </label>
               <select
+                id="taak-dossier"
                 required
                 value={form.case_id}
                 onChange={(e) => setForm((f) => ({ ...f, case_id: e.target.value }))}
@@ -676,10 +680,11 @@ export default function TakenPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-foreground">
+              <label htmlFor="taak-titel" className="block text-xs font-medium text-foreground">
                 Titel *
               </label>
               <input
+                id="taak-titel"
                 type="text"
                 required
                 value={form.title}
@@ -689,10 +694,11 @@ export default function TakenPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-foreground">
+              <label htmlFor="taak-type" className="block text-xs font-medium text-foreground">
                 Type
               </label>
               <select
+                id="taak-type"
                 value={form.task_type}
                 onChange={(e) => setForm((f) => ({ ...f, task_type: e.target.value }))}
                 className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
@@ -705,10 +711,11 @@ export default function TakenPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-foreground">
+              <label htmlFor="taak-deadline" className="block text-xs font-medium text-foreground">
                 Deadline *
               </label>
               <input
+                id="taak-deadline"
                 type="date"
                 required
                 value={form.due_date}
@@ -718,10 +725,11 @@ export default function TakenPage() {
             </div>
             {/* G9: Recurrence dropdown */}
             <div>
-              <label className="block text-xs font-medium text-foreground">
+              <label htmlFor="taak-herhaling" className="block text-xs font-medium text-foreground">
                 Herhaling
               </label>
               <select
+                id="taak-herhaling"
                 value={form.recurrence}
                 onChange={(e) => setForm((f) => ({ ...f, recurrence: e.target.value }))}
                 className="mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
@@ -735,10 +743,11 @@ export default function TakenPage() {
             </div>
             {form.recurrence !== "none" && (
               <div>
-                <label className="block text-xs font-medium text-foreground">
+                <label htmlFor="taak-herhalen-tot" className="block text-xs font-medium text-foreground">
                   Herhalen tot
                 </label>
                 <input
+                  id="taak-herhalen-tot"
                   type="date"
                   value={form.recurrence_end_date}
                   onChange={(e) => setForm((f) => ({ ...f, recurrence_end_date: e.target.value }))}
@@ -749,10 +758,11 @@ export default function TakenPage() {
               </div>
             )}
             <div className={form.recurrence !== "none" ? "" : "sm:col-span-2"}>
-              <label className="block text-xs font-medium text-foreground">
+              <label htmlFor="taak-omschrijving" className="block text-xs font-medium text-foreground">
                 Omschrijving
               </label>
               <input
+                id="taak-omschrijving"
                 type="text"
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -828,7 +838,7 @@ function EmptyState({ filter }: { filter: TaskFilter }) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-          <CheckSquare className="h-8 w-8 text-muted-foreground/50" />
+          <CheckSquare className="h-8 w-8 text-muted-foreground" />
         </div>
         <p className="mt-5 text-base font-medium text-muted-foreground">
           Nog geen afgeronde taken

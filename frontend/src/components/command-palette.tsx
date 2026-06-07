@@ -182,6 +182,7 @@ export function CommandPalette() {
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             <button
               onClick={() => setOpen(false)}
+              aria-label="Zoeken sluiten"
               className="rounded-md p-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-4 w-4" />
@@ -217,7 +218,7 @@ export function CommandPalette() {
                         <p className="text-sm font-medium truncate">{result.title}</p>
                         <p className="text-xs text-muted-foreground truncate">{result.subtitle}</p>
                       </div>
-                      <span className="text-[10px] font-medium text-muted-foreground/60 shrink-0">
+                      <span className="text-[10px] font-medium text-muted-foreground shrink-0">
                         {TYPE_LABELS[result.type]}
                       </span>
                     </button>
@@ -265,7 +266,7 @@ export function CommandPalette() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center gap-4 border-t border-border px-4 py-2 text-[10px] text-muted-foreground/60">
+          <div className="flex items-center gap-4 border-t border-border px-4 py-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">
               <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono">↑↓</kbd>
               Navigeren

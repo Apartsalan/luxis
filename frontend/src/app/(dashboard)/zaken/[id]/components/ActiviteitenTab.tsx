@@ -239,7 +239,7 @@ export default function ActiviteitenTab({ zaak }: { zaak: CaseDetail }) {
                         {typeLabel}
                       </span>
                     </div>
-                    <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground/70">
+                    <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{formatRelativeTime(item.date)}</span>
                       {"user" in item.metadata && item.metadata.user ? (
                         <>

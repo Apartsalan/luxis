@@ -313,6 +313,7 @@ export default function ZakenPage() {
               setCaseType(e.target.value);
               setPage(1);
             }}
+            aria-label="Filter op type"
             className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           >
             <option value="">Alle types</option>
@@ -326,6 +327,7 @@ export default function ZakenPage() {
               setStatus(e.target.value);
               setPage(1);
             }}
+            aria-label="Filter op status"
             className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           >
             <option value="">Alle statussen</option>
@@ -376,8 +378,9 @@ export default function ZakenPage() {
       {showMoreFilters && (
         <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-card px-4 py-3 animate-fade-in">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Toegewezen aan</label>
+            <label htmlFor="filter-toegewezen-aan" className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Toegewezen aan</label>
             <select
+              id="filter-toegewezen-aan"
               value={assignedTo}
               onChange={(e) => { setAssignedTo(e.target.value); setPage(1); }}
               className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 min-w-[160px]"
@@ -389,8 +392,9 @@ export default function ZakenPage() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Geopend vanaf</label>
+            <label htmlFor="filter-geopend-vanaf" className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Geopend vanaf</label>
             <input
+              id="filter-geopend-vanaf"
               type="date"
               value={dateFrom}
               onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
@@ -398,8 +402,9 @@ export default function ZakenPage() {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Geopend t/m</label>
+            <label htmlFor="filter-geopend-tm" className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Geopend t/m</label>
             <input
+              id="filter-geopend-tm"
               type="date"
               value={dateTo}
               onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
@@ -441,6 +446,7 @@ export default function ZakenPage() {
           </button>
           <button
             onClick={() => { setSelectedIds(new Set()); setBulkAction(""); }}
+            aria-label="Selectie wissen"
             className="ml-auto rounded-md p-1 text-primary/60 hover:text-primary transition-colors"
           >
             <X className="h-4 w-4" />
@@ -744,6 +750,7 @@ export default function ZakenPage() {
                         href={`/zaken/${zaak.id}`}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all"
                         title="Bekijken"
+                        aria-label={`Dossier ${zaak.case_number} bekijken`}
                       >
                         <ArrowUpRight className="h-4 w-4" />
                       </Link>
@@ -764,6 +771,7 @@ export default function ZakenPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
+                  aria-label="Vorige pagina"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -796,6 +804,7 @@ export default function ZakenPage() {
                     setPage((p) => Math.min(data.pages, p + 1))
                   }
                   disabled={page === data.pages}
+                  aria-label="Volgende pagina"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -807,7 +816,7 @@ export default function ZakenPage() {
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-            <Briefcase className="h-8 w-8 text-muted-foreground/50" />
+            <Briefcase className="h-8 w-8 text-muted-foreground" />
           </div>
           <p className="mt-5 text-base font-medium text-foreground">
             Geen dossiers gevonden

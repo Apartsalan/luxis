@@ -871,7 +871,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                           {stripHtml(activity.description)}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground/70 mt-0.5">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {formatRelativeTime(activity.created_at)}
                       </p>
                     </div>

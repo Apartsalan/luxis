@@ -680,7 +680,7 @@ function AllEmailsView({
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-          <Inbox className="h-8 w-8 text-muted-foreground/50" />
+          <Inbox className="h-8 w-8 text-muted-foreground" />
         </div>
         <p className="mt-5 text-base font-medium text-foreground">Geen e-mails</p>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -776,7 +776,17 @@ function EmailListItem({
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer border-l-3 ${
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      aria-label={`E-mail openen: ${email.subject || "(Geen onderwerp)"}`}
+      className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer border-l-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40 ${
         isSelected
           ? `bg-primary/5 ${directionBorder}`
           : directionBorder
@@ -788,6 +798,8 @@ function EmailListItem({
           e.stopPropagation();
           onToggleCheck();
         }}
+        onKeyDown={(e) => e.stopPropagation()}
+        aria-label={isChecked ? "E-mail deselecteren" : "E-mail selecteren"}
         className="mt-0.5 shrink-0"
       >
         {isChecked ? (
@@ -804,7 +816,6 @@ function EmailListItem({
             ? "bg-blue-100 dark:bg-blue-900/30"
             : "bg-emerald-100 dark:bg-emerald-900/30"
         }`}
-        onClick={onSelect}
       >
         {email.direction === "inbound" ? (
           <ArrowDownLeft
@@ -820,7 +831,7 @@ function EmailListItem({
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0" onClick={onSelect}>
+      <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium truncate" title={email.direction === "inbound" ? email.from_email : email.to_emails[0]}>
             {email.direction === "inbound"

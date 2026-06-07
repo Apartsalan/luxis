@@ -31,6 +31,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
 import { toast } from "sonner";
 import {
@@ -898,16 +899,6 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
     setPreviewTitle("");
   }, [previewUrl]);
 
-  // Close on Escape key
-  useEffect(() => {
-    if (!previewOpen) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closePreview();
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [previewOpen, closePreview]);
-
   /** Preview a generated document (DOCX → PDF via backend). */
   const handlePreviewDocument = async (docId: string, title: string) => {
     setPreviewTitle(title);
@@ -1094,7 +1085,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
               <>Sleep bestanden hierheen of <span className="text-primary font-medium">klik om te uploaden</span></>
             )}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
+          <p className="mt-1 text-xs text-muted-foreground">
             PDF, Word, Excel, afbeeldingen, e-mail · max. 50 MB
           </p>
         </div>
@@ -1247,7 +1238,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       >
                         {opt.icon}
                         {opt.label}
-                        <span className={`ml-0.5 ${isActive ? "text-primary-foreground/70" : "text-muted-foreground/60"}`}>
+                        <span className={`ml-0.5 ${isActive ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                           {count}
                         </span>
                       </button>
@@ -1686,29 +1677,22 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
 
       {/* G11: Document preview dialog */}
       {previewOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="relative flex h-[90vh] w-[90vw] max-w-5xl flex-col rounded-xl border border-border bg-card shadow-2xl">
+        <Dialog open onOpenChange={(open) => { if (!open) closePreview(); }}>
+          <DialogContent className="flex h-[90vh] w-[90vw] max-w-5xl flex-col p-0 gap-0">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <DialogHeader className="border-b border-border px-5 py-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Eye className="h-4 w-4 text-primary" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground truncate">
+                  <DialogTitle className="text-sm font-semibold text-foreground truncate">
                     {previewTitle}
-                  </h3>
+                  </DialogTitle>
                   <p className="text-xs text-muted-foreground">Document preview</p>
                 </div>
               </div>
-              <button
-                onClick={closePreview}
-                className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Sluiten (Esc)"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            </DialogHeader>
 
             {/* Content */}
             <div className="flex-1 overflow-hidden bg-muted/30">
@@ -1731,8 +1715,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

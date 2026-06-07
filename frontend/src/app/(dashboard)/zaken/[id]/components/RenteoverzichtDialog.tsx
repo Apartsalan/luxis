@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Euro, Calendar, TrendingUp } from "lucide-react";
+import { Euro, Calendar, TrendingUp } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCaseInterest, useCaseBIK } from "@/hooks/use-collections";
 import type { ClaimInterest, InterestPeriod } from "@/hooks/use-collections";
 
@@ -98,23 +99,16 @@ export function RenteoverzichtDialog({ caseId, open, onOpenChange }: Renteoverzi
   const isLoading = interestLoading || bikLoading;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={() => onOpenChange(false)}
-      />
-
-      {/* Dialog */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-xl border border-border bg-background shadow-xl mx-4">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto p-0 gap-0">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background px-6 py-4">
+        <DialogHeader className="sticky top-0 z-10 border-b border-border bg-background px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-orange-100 p-2">
               <TrendingUp className="h-5 w-5 text-orange-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Renteoverzicht</h2>
+              <DialogTitle className="text-lg font-semibold text-foreground">Renteoverzicht</DialogTitle>
               {interest && (
                 <p className="text-xs text-muted-foreground">
                   Berekend per {formatDate(interest.calculation_date)} · {interest.interest_type === "statutory" ? "Wettelijke rente" : interest.interest_type === "commercial" ? "Handelsrente" : "Contractuele rente"}
@@ -122,14 +116,7 @@ export function RenteoverzichtDialog({ caseId, open, onOpenChange }: Renteoverzi
               )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className="rounded-lg p-1.5 hover:bg-muted transition-colors"
-          >
-            <X className="h-5 w-5 text-muted-foreground" />
-          </button>
-        </div>
+        </DialogHeader>
 
         {/* Content */}
         <div className="p-6 space-y-4">
@@ -195,7 +182,7 @@ export function RenteoverzichtDialog({ caseId, open, onOpenChange }: Renteoverzi
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

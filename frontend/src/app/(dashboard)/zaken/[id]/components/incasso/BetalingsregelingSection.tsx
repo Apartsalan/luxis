@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useConfirm } from "@/components/confirm-dialog";
 import {
   useArrangements,
@@ -233,15 +234,16 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
         <form onSubmit={handleCreate} className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium">Nieuwe betalingsregeling</h4>
-            <button type="button" onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => setShowCreate(false)} aria-label="Sluiten" className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium">Totaalbedrag</label>
+              <label htmlFor="regeling-totaalbedrag" className="mb-1 block text-sm font-medium">Totaalbedrag</label>
               <input
+                id="regeling-totaalbedrag"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -262,8 +264,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Aantal termijnen</label>
+              <label htmlFor="regeling-aantal-termijnen" className="mb-1 block text-sm font-medium">Aantal termijnen</label>
               <input
+                id="regeling-aantal-termijnen"
                 type="number"
                 step="1"
                 min="1"
@@ -283,8 +286,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Termijnbedrag</label>
+              <label htmlFor="regeling-termijnbedrag" className="mb-1 block text-sm font-medium">Termijnbedrag</label>
               <input
+                id="regeling-termijnbedrag"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -295,8 +299,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Frequentie</label>
+              <label htmlFor="regeling-frequentie" className="mb-1 block text-sm font-medium">Frequentie</label>
               <select
+                id="regeling-frequentie"
                 value={form.frequency}
                 onChange={(e) => setForm({ ...form, frequency: e.target.value })}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
@@ -307,8 +312,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Startdatum</label>
+              <label htmlFor="regeling-startdatum" className="mb-1 block text-sm font-medium">Startdatum</label>
               <input
+                id="regeling-startdatum"
                 type="date"
                 required
                 value={form.start_date}
@@ -319,8 +325,9 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">Notities</label>
+            <label htmlFor="regeling-notities" className="mb-1 block text-sm font-medium">Notities</label>
             <textarea
+              id="regeling-notities"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="Optionele notities..."
@@ -418,89 +425,87 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
 
       {/* Record Payment Dialog (overlay) */}
       {showPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowPayment(null)}>
-          <form
-            onSubmit={handleRecordPayment}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-xl bg-card border border-border p-6 shadow-lg space-y-4"
-          >
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium">
+        <Dialog open onOpenChange={(open) => { if (!open) setShowPayment(null); }}>
+          <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
                 Betaling registreren — Termijn {showPayment.installment.installment_number}
-              </h4>
-              <button type="button" onClick={() => setShowPayment(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleRecordPayment} className="space-y-4">
+              <div className="grid gap-4">
+                <div>
+                  <label htmlFor="betaling-bedrag" className="mb-1 block text-sm font-medium">Bedrag</label>
+                  <input
+                    id="betaling-bedrag"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    value={payForm.amount}
+                    onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="betaling-datum" className="mb-1 block text-sm font-medium">Datum</label>
+                  <input
+                    id="betaling-datum"
+                    type="date"
+                    required
+                    value={payForm.payment_date}
+                    onChange={(e) => setPayForm({ ...payForm, payment_date: e.target.value })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="betaling-betaalmethode" className="mb-1 block text-sm font-medium">Betaalmethode</label>
+                  <select
+                    id="betaling-betaalmethode"
+                    value={payForm.payment_method}
+                    onChange={(e) => setPayForm({ ...payForm, payment_method: e.target.value })}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">— Kies —</option>
+                    <option value="bank">Bankoverschrijving</option>
+                    <option value="ideal">iDEAL</option>
+                    <option value="cash">Contant</option>
+                    <option value="other">Anders</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="betaling-notities" className="mb-1 block text-sm font-medium">Notities</label>
+                  <textarea
+                    id="betaling-notities"
+                    value={payForm.notes}
+                    onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })}
+                    placeholder="Optioneel..."
+                    rows={2}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none"
+                  />
+                </div>
+              </div>
 
-            <div className="grid gap-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Bedrag</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  value={payForm.amount}
-                  onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Datum</label>
-                <input
-                  type="date"
-                  required
-                  value={payForm.payment_date}
-                  onChange={(e) => setPayForm({ ...payForm, payment_date: e.target.value })}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Betaalmethode</label>
-                <select
-                  value={payForm.payment_method}
-                  onChange={(e) => setPayForm({ ...payForm, payment_method: e.target.value })}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPayment(null)}
+                  className="rounded-lg border border-input px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
                 >
-                  <option value="">— Kies —</option>
-                  <option value="bank">Bankoverschrijving</option>
-                  <option value="ideal">iDEAL</option>
-                  <option value="cash">Contant</option>
-                  <option value="other">Anders</option>
-                </select>
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  disabled={recordPayment.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {recordPayment.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Registreren
+                </button>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Notities</label>
-                <textarea
-                  value={payForm.notes}
-                  onChange={(e) => setPayForm({ ...payForm, notes: e.target.value })}
-                  placeholder="Optioneel..."
-                  rows={2}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPayment(null)}
-                className="rounded-lg border border-input px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
-              >
-                Annuleren
-              </button>
-              <button
-                type="submit"
-                disabled={recordPayment.isPending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-              >
-                {recordPayment.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Registreren
-              </button>
-            </div>
-          </form>
-        </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
@@ -569,6 +574,7 @@ function ArrangementCard({
           <div className="relative" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={onToggleActions}
+              aria-label="Acties"
               className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <MoreHorizontal className="h-4 w-4" />
@@ -665,6 +671,7 @@ function ArrangementCard({
                                 onClick={() => onWaive(inst.id)}
                                 className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                                 title="Kwijtschelden"
+                                aria-label="Kwijtschelden"
                               >
                                 <X className="h-3 w-3" />
                               </button>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Save, Loader2, FileText, Download, Upload, Trash2, Pencil, Lock, X } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useConfirm } from "@/components/confirm-dialog";
 import {
   useManagedTemplates,
@@ -178,6 +179,7 @@ export function SjablonenTab() {
                         <input
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
+                          aria-label="Naam van sjabloon"
                           className="w-full rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       ) : (
@@ -194,6 +196,7 @@ export function SjablonenTab() {
                         <select
                           value={editKey}
                           onChange={(e) => setEditKey(e.target.value)}
+                          aria-label="Sjabloontype"
                           className="rounded border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                         >
                           {templateKeyOptions.map(([value, label]) => (
@@ -306,19 +309,11 @@ export function SjablonenTab() {
 
       {/* Upload modal */}
       {showUpload && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-foreground">
-                Sjabloon uploaden
-              </h2>
-              <button
-                onClick={() => { setShowUpload(false); setUploadFile(null); }}
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+        <Dialog open onOpenChange={(open) => { if (!open) { setShowUpload(false); setUploadFile(null); } }}>
+          <DialogContent className="z-[60] max-w-md">
+            <DialogHeader>
+              <DialogTitle>Sjabloon uploaden</DialogTitle>
+            </DialogHeader>
 
             <div className="space-y-4">
               {/* File selection */}
@@ -332,6 +327,7 @@ export function SjablonenTab() {
                     <span className="flex-1 truncate">{uploadFile.name}</span>
                     <button
                       onClick={() => setUploadFile(null)}
+                      aria-label="Geselecteerd bestand verwijderen"
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
@@ -424,8 +420,8 @@ export function SjablonenTab() {
                 Uploaden
               </button>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

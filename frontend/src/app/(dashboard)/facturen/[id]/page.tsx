@@ -27,6 +27,7 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   useInvoice,
   useUpdateInvoice,
@@ -580,6 +581,7 @@ export default function FactuurDetailPage() {
               onClick={() => setEditing(false)}
               className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted transition-colors"
               title="Annuleren"
+              aria-label="Bewerken annuleren"
             >
               <X className="h-4 w-4" />
             </button>
@@ -589,6 +591,7 @@ export default function FactuurDetailPage() {
               onClick={handleDelete}
               className="rounded-lg border border-destructive/20 p-2 text-destructive hover:bg-destructive/10 transition-colors"
               title="Verwijderen"
+              aria-label="Factuur verwijderen"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -686,12 +689,14 @@ export default function FactuurDetailPage() {
                 type="date"
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
+                aria-label="Factuurdatum"
                 className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
               />
               <input
                 type="date"
                 value={editDueDate}
                 onChange={(e) => setEditDueDate(e.target.value)}
+                aria-label="Vervaldatum"
                 className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
               />
             </div>
@@ -730,10 +735,11 @@ export default function FactuurDetailPage() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
+              <label htmlFor="factuur-btw-percentage" className="block text-xs font-medium text-muted-foreground mb-1">
                 BTW-percentage
               </label>
               <input
+                id="factuur-btw-percentage"
                 type="number"
                 step="0.01"
                 value={editBtw}
@@ -742,10 +748,11 @@ export default function FactuurDetailPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
+              <label htmlFor="factuur-referentie" className="block text-xs font-medium text-muted-foreground mb-1">
                 Referentie
               </label>
               <input
+                id="factuur-referentie"
                 type="text"
                 value={editReference}
                 onChange={(e) => setEditReference(e.target.value)}
@@ -754,10 +761,11 @@ export default function FactuurDetailPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
+              <label htmlFor="factuur-notities" className="block text-xs font-medium text-muted-foreground mb-1">
                 Notities
               </label>
               <input
+                id="factuur-notities"
                 type="text"
                 value={editNotes}
                 onChange={(e) => setEditNotes(e.target.value)}
@@ -839,10 +847,11 @@ export default function FactuurDetailPage() {
           <div className="border-b border-border bg-muted/30 px-5 py-3">
             <div className="grid grid-cols-[1fr_80px_120px_80px_auto] gap-2 items-end">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="factuurregel-omschrijving" className="block text-xs font-medium text-muted-foreground mb-1">
                   Omschrijving
                 </label>
                 <input
+                  id="factuurregel-omschrijving"
                   type="text"
                   value={lineDescription}
                   onChange={(e) => setLineDescription(e.target.value)}
@@ -851,10 +860,11 @@ export default function FactuurDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="factuurregel-aantal" className="block text-xs font-medium text-muted-foreground mb-1">
                   Aantal
                 </label>
                 <input
+                  id="factuurregel-aantal"
                   type="number"
                   min="0.01"
                   step="0.01"
@@ -864,10 +874,11 @@ export default function FactuurDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="factuurregel-prijs" className="block text-xs font-medium text-muted-foreground mb-1">
                   Prijs
                 </label>
                 <input
+                  id="factuurregel-prijs"
                   type="number"
                   min="0"
                   step="0.01"
@@ -878,10 +889,11 @@ export default function FactuurDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="factuurregel-btw" className="block text-xs font-medium text-muted-foreground mb-1">
                   BTW
                 </label>
                 <select
+                  id="factuurregel-btw"
                   value={lineBtwPercentage}
                   onChange={(e) => setLineBtwPercentage(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
@@ -905,6 +917,7 @@ export default function FactuurDetailPage() {
                 </button>
                 <button
                   onClick={() => setShowLineForm(false)}
+                  aria-label="Regel toevoegen annuleren"
                   className="rounded-md border border-border px-2 py-2 text-muted-foreground hover:bg-muted transition-colors"
                 >
                   <X className="h-4 w-4" />
@@ -968,6 +981,7 @@ export default function FactuurDetailPage() {
                           disabled={removeLineMutation.isPending}
                           className="rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50"
                           title="Verwijderen"
+                          aria-label="Factuurregel verwijderen"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -1303,10 +1317,11 @@ export default function FactuurDetailPage() {
               <h4 className="text-sm font-semibold text-foreground mb-3">Betaling registreren</h4>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Bedrag *</label>
+                  <label htmlFor="betaling-bedrag" className="block text-xs font-medium text-foreground mb-1">Bedrag *</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
                     <input
+                      id="betaling-bedrag"
                       type="number"
                       step="0.01"
                       min="0.01"
@@ -1318,8 +1333,9 @@ export default function FactuurDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Datum *</label>
+                  <label htmlFor="betaling-datum" className="block text-xs font-medium text-foreground mb-1">Datum *</label>
                   <input
+                    id="betaling-datum"
                     type="date"
                     value={payDate}
                     onChange={(e) => setPayDate(e.target.value)}
@@ -1327,8 +1343,9 @@ export default function FactuurDetailPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Methode *</label>
+                  <label htmlFor="betaling-methode" className="block text-xs font-medium text-foreground mb-1">Methode *</label>
                   <select
+                    id="betaling-methode"
                     value={payMethod}
                     onChange={(e) => setPayMethod(e.target.value)}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1340,8 +1357,9 @@ export default function FactuurDetailPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground mb-1">Referentie</label>
+                  <label htmlFor="betaling-referentie" className="block text-xs font-medium text-foreground mb-1">Referentie</label>
                   <input
+                    id="betaling-referentie"
                     type="text"
                     value={payReference}
                     onChange={(e) => setPayReference(e.target.value)}
@@ -1350,8 +1368,9 @@ export default function FactuurDetailPage() {
                   />
                 </div>
                 <div className="sm:col-span-2 lg:col-span-2">
-                  <label className="block text-xs font-medium text-foreground mb-1">Omschrijving</label>
+                  <label htmlFor="betaling-omschrijving" className="block text-xs font-medium text-foreground mb-1">Omschrijving</label>
                   <input
+                    id="betaling-omschrijving"
                     type="text"
                     value={payDescription}
                     onChange={(e) => setPayDescription(e.target.value)}
@@ -1418,6 +1437,7 @@ export default function FactuurDetailPage() {
                         disabled={deletePayment.isPending}
                         className="rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-50"
                         title="Verwijderen"
+                        aria-label="Betaling verwijderen"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -1530,23 +1550,11 @@ function AddExpenseDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-xl bg-card border border-border shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-base font-semibold text-foreground">Verschot toevoegen aan factuur</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg p-0 gap-0">
+        <DialogHeader className="border-b border-border px-5 py-4">
+          <DialogTitle className="text-base font-semibold text-foreground">Verschot toevoegen aan factuur</DialogTitle>
+        </DialogHeader>
 
         {/* Tabs */}
         <div className="flex border-b border-border">
@@ -1628,8 +1636,9 @@ function AddExpenseDialog({
         ) : (
           <form onSubmit={handleNewSubmit} className="space-y-4 p-5">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving *</label>
+              <label htmlFor="verschot-omschrijving" className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving *</label>
               <input
+                id="verschot-omschrijving"
                 type="text"
                 required
                 autoFocus
@@ -1641,8 +1650,9 @@ function AddExpenseDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Bedrag (€) *</label>
+                <label htmlFor="verschot-bedrag" className="block text-xs font-medium text-muted-foreground mb-1">Bedrag (€) *</label>
                 <input
+                  id="verschot-bedrag"
                   type="number"
                   step="0.01"
                   min="0"
@@ -1654,8 +1664,9 @@ function AddExpenseDialog({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
+                <label htmlFor="verschot-datum" className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
                 <input
+                  id="verschot-datum"
                   type="date"
                   value={newForm.expense_date}
                   onChange={(e) => setNewForm((p) => ({ ...p, expense_date: e.target.value }))}
@@ -1665,8 +1676,9 @@ function AddExpenseDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">Categorie</label>
+                <label htmlFor="verschot-categorie" className="block text-xs font-medium text-muted-foreground mb-1">Categorie</label>
                 <select
+                  id="verschot-categorie"
                   value={newForm.category}
                   onChange={(e) => setNewForm((p) => ({ ...p, category: e.target.value }))}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1679,8 +1691,9 @@ function AddExpenseDialog({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">BTW-status</label>
+                <label htmlFor="verschot-btw-status" className="block text-xs font-medium text-muted-foreground mb-1">BTW-status</label>
                 <select
+                  id="verschot-btw-status"
                   value={newForm.tax_type}
                   onChange={(e) => setNewForm((p) => ({ ...p, tax_type: e.target.value }))}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1712,7 +1725,7 @@ function AddExpenseDialog({
             </div>
           </form>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

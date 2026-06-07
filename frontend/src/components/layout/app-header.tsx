@@ -71,16 +71,23 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or Escape
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowNotifications(false);
       }
     }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowNotifications(false);
+    }
     if (showNotifications) {
       document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
+      document.addEventListener("keydown", handleKey);
+      return () => {
+        document.removeEventListener("mousedown", handleClick);
+        document.removeEventListener("keydown", handleKey);
+      };
     }
   }, [showNotifications]);
 
@@ -190,7 +197,6 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
                         className={`flex gap-3 px-4 py-3 hover:bg-muted/50 cursor-pointer transition-colors ${
                           !n.is_read ? "bg-primary/5" : ""
                         }`}
-                        onClick={() => handleNotificationClick(n)}
                       >
                         {getNotificationIcon(n.type)}
                         <div className="flex-1 min-w-0">
@@ -201,7 +207,7 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
                             {n.message}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[11px] text-muted-foreground/60">
+                            <span className="text-[11px] text-muted-foreground">
                               {formatNotificationTime(n.created_at)}
                             </span>
                             {n.case_number && (
@@ -219,15 +225,30 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
                       </div>
                     );
 
-                    // Wrap in Link if there's a case_id
+                    // Link bij case_id, anders een echte button — beide
+                    // toetsenbord-focusbaar (was: niet-focusbare div)
                     if (n.case_id) {
                       return (
-                        <Link key={n.id} href={`/zaken/${n.case_id}`}>
+                        <Link
+                          key={n.id}
+                          href={`/zaken/${n.case_id}`}
+                          onClick={() => handleNotificationClick(n)}
+                          className="block focus-visible:outline-none focus-visible:bg-muted/50"
+                        >
                           {content}
                         </Link>
                       );
                     }
-                    return <div key={n.id}>{content}</div>;
+                    return (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => handleNotificationClick(n)}
+                        className="block w-full text-left focus-visible:outline-none focus-visible:bg-muted/50"
+                      >
+                        {content}
+                      </button>
+                    );
                   })
                 )}
               </div>

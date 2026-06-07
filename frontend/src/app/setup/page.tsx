@@ -268,7 +268,7 @@ export default function SetupPage() {
           </div>
         )}
 
-        <p className="mt-8 text-center text-xs text-muted-foreground/50">
+        <p className="mt-8 text-center text-xs text-muted-foreground">
           Luxis v0.1.0 · Praktijkmanagementsysteem
         </p>
       </div>

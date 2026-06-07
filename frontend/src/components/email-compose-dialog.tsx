@@ -891,7 +891,7 @@ export function EmailComposeDialog({
                   <SelectContent className="max-h-[420px]">
                     {TEMPLATE_GROUPS.map((group) => (
                       <SelectGroup key={group.label}>
-                        <SelectLabel className="text-[11px] uppercase tracking-wide text-muted-foreground/70 pl-2 pt-2">
+                        <SelectLabel className="text-[11px] uppercase tracking-wide text-muted-foreground pl-2 pt-2">
                           {group.label}
                         </SelectLabel>
                         {group.keys.map((key) => (
@@ -926,6 +926,9 @@ export function EmailComposeDialog({
               <div
                 ref={templateEditorRef}
                 contentEditable
+                role="textbox"
+                aria-multiline="true"
+                aria-label="Berichttekst"
                 suppressContentEditableWarning
                 dangerouslySetInnerHTML={{ __html: sanitizeOutgoingHtml(templateHtml) }}
                 onBlur={() => {

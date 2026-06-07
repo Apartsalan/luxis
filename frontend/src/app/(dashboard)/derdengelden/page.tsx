@@ -11,9 +11,15 @@ import {
   AlertCircle,
   ArrowUpRight,
   Download,
-  X,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useTrustFundsOverview,
@@ -162,6 +168,7 @@ export default function DerdengeldenPage() {
           <input
             type="text"
             placeholder="Zoek cliënt..."
+            aria-label="Zoek cliënt"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -481,10 +488,14 @@ function SepaTab() {
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block">
+            <label
+              htmlFor="sepa-uitvoerdatum"
+              className="text-xs font-medium text-muted-foreground block"
+            >
               Uitvoerdatum
             </label>
             <input
+              id="sepa-uitvoerdatum"
               type="date"
               value={executionDate}
               onChange={(e) => setExecutionDate(e.target.value)}
@@ -538,7 +549,7 @@ function SepaTab() {
             <p className="text-sm text-muted-foreground">
               Geen uitbetalingen klaar voor SEPA-export.
             </p>
-            <p className="text-xs text-muted-foreground/60 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Goedgekeurde uitbetalingen verschijnen hier automatisch.
             </p>
           </div>
@@ -594,6 +605,7 @@ function SepaRow({
           checked={selected}
           disabled={exported}
           onChange={onToggle}
+          aria-label={`Selecteer uitbetaling aan ${tx.beneficiary_name || tx.contact_name}`}
           className="h-4 w-4 rounded border-border"
         />
       </td>
@@ -672,44 +684,33 @@ function ReportDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-card rounded-lg border border-border shadow-xl w-full max-w-md p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              {kind === "mutaties"
-                ? "Mutatieoverzicht downloaden"
-                : "Saldolijst downloaden"}
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {kind === "mutaties"
-                ? "Alle derdengeldenmutaties in de geselecteerde periode (CSV)"
-                : "Saldo per cliënt op de geselecteerde peildatum (CSV)"}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Sluiten"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {kind === "mutaties"
+              ? "Mutatieoverzicht downloaden"
+              : "Saldolijst downloaden"}
+          </DialogTitle>
+          <DialogDescription>
+            {kind === "mutaties"
+              ? "Alle derdengeldenmutaties in de geselecteerde periode (CSV)"
+              : "Saldo per cliënt op de geselecteerde peildatum (CSV)"}
+          </DialogDescription>
+        </DialogHeader>
 
         <div className="space-y-3">
           {kind === "mutaties" ? (
             <>
               <div>
-                <label className="text-xs font-medium text-muted-foreground">
+                <label
+                  htmlFor="rapport-van"
+                  className="text-xs font-medium text-muted-foreground"
+                >
                   Van
                 </label>
                 <input
+                  id="rapport-van"
                   type="date"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
@@ -717,10 +718,14 @@ function ReportDialog({
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground">
+                <label
+                  htmlFor="rapport-tot"
+                  className="text-xs font-medium text-muted-foreground"
+                >
                   Tot en met
                 </label>
                 <input
+                  id="rapport-tot"
                   type="date"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
@@ -730,10 +735,14 @@ function ReportDialog({
             </>
           ) : (
             <div>
-              <label className="text-xs font-medium text-muted-foreground">
+              <label
+                htmlFor="rapport-peildatum"
+                className="text-xs font-medium text-muted-foreground"
+              >
                 Peildatum
               </label>
               <input
+                id="rapport-peildatum"
                 type="date"
                 value={peildatum}
                 onChange={(e) => setPeildatum(e.target.value)}
@@ -762,8 +771,8 @@ function ReportDialog({
             {downloading ? "Bezig..." : "Download CSV"}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -776,7 +785,7 @@ function EmptyState({ onlyNonzero }: { onlyNonzero: boolean }) {
           ? "Geen cliënten met actief derdengeldensaldo."
           : "Geen derdengelden-transacties gevonden."}
       </p>
-      <p className="text-xs text-muted-foreground/60 mt-2">
+      <p className="text-xs text-muted-foreground mt-2">
         Stortingen en uitbetalingen worden geregistreerd vanuit een dossier.
       </p>
     </div>

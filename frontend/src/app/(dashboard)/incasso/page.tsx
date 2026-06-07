@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useConfirm } from "@/components/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Gavel,
   Settings2,
@@ -266,7 +267,7 @@ function StappenTab() {
   if (!steps || activeSteps.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 text-center">
-        <Settings2 className="mx-auto h-10 w-10 text-muted-foreground/50" />
+        <Settings2 className="mx-auto h-10 w-10 text-muted-foreground" />
         <h3 className="mt-4 text-base font-semibold text-foreground">
           Geen incassostappen geconfigureerd
         </h3>
@@ -1131,7 +1132,7 @@ function WerkstroomTab() {
   if (!pipeline || pipeline.total_cases === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-muted/30 p-12 text-center">
-        <Gavel className="mx-auto h-10 w-10 text-muted-foreground/50" />
+        <Gavel className="mx-auto h-10 w-10 text-muted-foreground" />
         <h3 className="mt-4 text-base font-semibold text-foreground">
           Geen incassodossiers
         </h3>
@@ -1212,7 +1213,9 @@ function WerkstroomTab() {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="w-10 px-3 py-2 text-left">
-                    <button onClick={() => {
+                    <button
+                      aria-label="Alle dossiers selecteren of deselecteren"
+                      onClick={() => {
                       const allSelected = filteredCases.every((c) => selectedIds.has(c.id));
                       setSelectedIds((prev) => {
                         const next = new Set(prev);
@@ -1248,7 +1251,16 @@ function WerkstroomTab() {
                       onClick={() => toggleSelect(c.id)}
                     >
                       <td className="px-3 py-2">
-                        {isSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelect(c.id);
+                          }}
+                          aria-label={isSelected ? `Dossier ${c.case_number} deselecteren` : `Dossier ${c.case_number} selecteren`}
+                          className="flex items-center justify-center"
+                        >
+                          {isSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+                        </button>
                       </td>
                       <td className="px-3 py-2 font-mono text-xs">
                         <span className="inline-flex items-center gap-1.5">
@@ -1626,19 +1638,11 @@ function PreFlightDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            {actionLabels[action] || action}
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="z-[60] max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{actionLabels[action] || action}</DialogTitle>
+        </DialogHeader>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -1805,8 +1809,8 @@ function PreFlightDialog({
               : `Uitvoeren (${preview?.ready ?? 0} dossiers)`}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

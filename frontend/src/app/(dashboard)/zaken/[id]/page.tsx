@@ -516,10 +516,12 @@ export default function ZaakDetailPage() {
           <div className="sticky top-14 z-30 bg-background -mx-4 sm:-mx-6 px-4 sm:px-6">
             <div className="relative">
               <div className="border-b border-border overflow-x-auto">
-                <nav className="flex gap-0.5 min-w-max">
+                <nav className="flex gap-0.5 min-w-max" role="tablist" aria-label="Dossier-tabbladen">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
                         activeTab === tab.id

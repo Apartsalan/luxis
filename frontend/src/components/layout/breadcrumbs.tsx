@@ -72,7 +72,7 @@ export function Breadcrumbs({ overrides = [], className }: BreadcrumbsProps) {
       </Link>
       {crumbs.map((crumb) => (
         <span key={crumb.href} className="flex items-center gap-1">
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
           {crumb.isLast ? (
             <span className="font-medium text-foreground truncate max-w-[200px]" aria-current="page">
               {crumb.label}

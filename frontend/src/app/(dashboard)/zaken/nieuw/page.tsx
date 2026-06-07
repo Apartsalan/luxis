@@ -113,6 +113,7 @@ function WizardStepper({
             <button
               type="button"
               onClick={() => isClickable && onStepClick(stepNum)}
+              aria-label={`Stap ${stepNum}: ${step.label}`}
               className={`flex items-center gap-2 transition-colors ${
                 isClickable ? "cursor-pointer" : isActive ? "cursor-default" : "cursor-default"
               }`}
@@ -901,6 +902,7 @@ function NieuweZaakPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/zaken"
+          aria-label="Terug naar dossiers"
           className="rounded-lg p-2 hover:bg-muted transition-colors"
         >
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
@@ -937,10 +939,11 @@ function NieuweZaakPage() {
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="block text-sm font-medium text-foreground">
+                  <label htmlFor="dossiertype" className="block text-sm font-medium text-foreground">
                     Dossiertype *
                   </label>
                   <select
+                    id="dossiertype"
                     value={form.case_type}
                     onChange={(e) => updateField("case_type", e.target.value)}
                     className={inputClass}
@@ -951,11 +954,12 @@ function NieuweZaakPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground">
+                  <label htmlFor="debiteurtype" className="block text-sm font-medium text-foreground">
                     Debiteurtype
                     <ConfidenceDot field="debtor_type" confidence={fieldConfidence} />
                   </label>
                   <select
+                    id="debiteurtype"
                     value={form.debtor_type}
                     onChange={(e) => updateField("debtor_type", e.target.value)}
                     className={inputClass}
@@ -969,10 +973,11 @@ function NieuweZaakPage() {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground">
+                  <label htmlFor="datum-geopend" className="block text-sm font-medium text-foreground">
                     Datum geopend *
                   </label>
                   <input
+                    id="datum-geopend"
                     type="date"
                     required
                     value={form.date_opened}
@@ -987,11 +992,12 @@ function NieuweZaakPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="beschrijving" className="block text-sm font-medium text-foreground">
                   Beschrijving
                   <ConfidenceDot field="description" confidence={fieldConfidence} />
                 </label>
                 <textarea
+                  id="beschrijving"
                   value={form.description}
                   onChange={(e) => updateField("description", e.target.value)}
                   rows={2}
@@ -1002,10 +1008,11 @@ function NieuweZaakPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-foreground">
+                  <label htmlFor="referentie" className="block text-sm font-medium text-foreground">
                     Referentie (klantreferentie)
                   </label>
                   <input
+                    id="referentie"
                     type="text"
                     value={form.reference}
                     onChange={(e) => updateField("reference", e.target.value)}
@@ -1013,10 +1020,11 @@ function NieuweZaakPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground">
+                  <label htmlFor="zaaknummer-rechtbank" className="block text-sm font-medium text-foreground">
                     Zaaknummer rechtbank
                   </label>
                   <input
+                    id="zaaknummer-rechtbank"
                     type="text"
                     value={form.court_case_number}
                     onChange={(e) =>
@@ -1031,10 +1039,11 @@ function NieuweZaakPage() {
               {/* G13: Budget field */}
               {hasModule("budget") && (
                 <div className="sm:w-1/2">
-                  <label className="block text-sm font-medium text-foreground">
+                  <label htmlFor="budget" className="block text-sm font-medium text-foreground">
                     Budget
                   </label>
                   <input
+                    id="budget"
                     type="number"
                     step="0.01"
                     min="0"
@@ -1062,7 +1071,7 @@ function NieuweZaakPage() {
 
             {/* Client selection */}
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="client-zoeken" className="block text-sm font-medium text-foreground">
                 Client *
                 {invoiceData && <ConfidenceDot field="creditor_name" confidence={fieldConfidence} />}
               </label>
@@ -1099,6 +1108,7 @@ function NieuweZaakPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
+                      id="client-zoeken"
                       type="text"
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
@@ -1159,6 +1169,7 @@ function NieuweZaakPage() {
                         <button
                           type="button"
                           onClick={() => setShowNewClient(false)}
+                          aria-label="Sluiten"
                           className="text-muted-foreground hover:text-foreground"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -1325,7 +1336,7 @@ function NieuweZaakPage() {
 
             {/* Opposing party selection */}
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="wederpartij-zoeken" className="block text-sm font-medium text-foreground">
                 Wederpartij
                 {invoiceData && <ConfidenceDot field="debtor_name" confidence={fieldConfidence} />}
               </label>
@@ -1364,6 +1375,7 @@ function NieuweZaakPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
+                      id="wederpartij-zoeken"
                       type="text"
                       value={opponentSearch}
                       onChange={(e) => setOpponentSearch(e.target.value)}
@@ -1429,6 +1441,7 @@ function NieuweZaakPage() {
                         <button
                           type="button"
                           onClick={() => setShowNewOpponent(false)}
+                          aria-label="Sluiten"
                           className="text-muted-foreground hover:text-foreground"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -1568,7 +1581,7 @@ function NieuweZaakPage() {
 
             {/* Advocaat wederpartij selection */}
             <div>
-              <label className="block text-sm font-medium text-foreground">
+              <label htmlFor="advocaat-zoeken" className="block text-sm font-medium text-foreground">
                 Advocaat wederpartij
               </label>
               {selectedLawyer ? (
@@ -1597,6 +1610,7 @@ function NieuweZaakPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
+                      id="advocaat-zoeken"
                       type="text"
                       value={lawyerSearch}
                       onChange={(e) => setLawyerSearch(e.target.value)}
@@ -1653,6 +1667,7 @@ function NieuweZaakPage() {
                         <button
                           type="button"
                           onClick={() => setShowNewLawyer(false)}
+                          aria-label="Sluiten"
                           className="text-muted-foreground hover:text-foreground"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -1790,6 +1805,7 @@ function NieuweZaakPage() {
                       <button
                         type="button"
                         onClick={() => removeClaim(index)}
+                        aria-label={`Vordering ${index + 1} verwijderen`}
                         className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -1799,11 +1815,12 @@ function NieuweZaakPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <label className="block text-sm font-medium text-foreground">
+                      <label htmlFor={`vordering-omschrijving-${index}`} className="block text-sm font-medium text-foreground">
                         Omschrijving
                         {index === 0 && invoiceData && <ConfidenceDot field="description" confidence={fieldConfidence} />}
                       </label>
                       <input
+                        id={`vordering-omschrijving-${index}`}
                         type="text"
                         value={claim.description}
                         onChange={(e) =>
@@ -1814,11 +1831,12 @@ function NieuweZaakPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground">
+                      <label htmlFor={`vordering-hoofdsom-${index}`} className="block text-sm font-medium text-foreground">
                         Hoofdsom
                         {index === 0 && invoiceData && <ConfidenceDot field="principal_amount" confidence={fieldConfidence} />}
                       </label>
                       <input
+                        id={`vordering-hoofdsom-${index}`}
                         type="number"
                         step="0.01"
                         min="0"
@@ -1835,11 +1853,12 @@ function NieuweZaakPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground">
+                      <label htmlFor={`vordering-verzuimdatum-${index}`} className="block text-sm font-medium text-foreground">
                         Verzuimdatum
                         {index === 0 && invoiceData && <ConfidenceDot field="due_date" confidence={fieldConfidence} />}
                       </label>
                       <input
+                        id={`vordering-verzuimdatum-${index}`}
                         type="date"
                         value={claim.default_date}
                         onChange={(e) =>
@@ -1849,11 +1868,12 @@ function NieuweZaakPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground">
+                      <label htmlFor={`vordering-factuurnummer-${index}`} className="block text-sm font-medium text-foreground">
                         Factuurnummer
                         {index === 0 && invoiceData && <ConfidenceDot field="invoice_number" confidence={fieldConfidence} />}
                       </label>
                       <input
+                        id={`vordering-factuurnummer-${index}`}
                         type="text"
                         value={claim.invoice_number}
                         onChange={(e) =>
@@ -1864,11 +1884,12 @@ function NieuweZaakPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground">
+                      <label htmlFor={`vordering-factuurdatum-${index}`} className="block text-sm font-medium text-foreground">
                         Factuurdatum
                         {index === 0 && invoiceData && <ConfidenceDot field="invoice_date" confidence={fieldConfidence} />}
                       </label>
                       <input
+                        id={`vordering-factuurdatum-${index}`}
                         type="date"
                         value={claim.invoice_date}
                         onChange={(e) =>
@@ -1892,6 +1913,7 @@ function NieuweZaakPage() {
                                 return updated;
                               });
                             }}
+                            aria-label="Factuurbestand verwijderen"
                             className="ml-auto text-muted-foreground hover:text-destructive shrink-0"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -2000,10 +2022,11 @@ function NieuweZaakPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="type-rente" className="block text-sm font-medium text-foreground">
                   Type rente
                 </label>
                 <select
+                  id="type-rente"
                   value={form.interest_type}
                   onChange={(e) =>
                     updateField("interest_type", e.target.value)
@@ -2026,10 +2049,11 @@ function NieuweZaakPage() {
               {form.interest_type === "contractual" && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-foreground">
+                    <label htmlFor="contractueel-rentepercentage" className="block text-sm font-medium text-foreground">
                       Contractueel rentepercentage (%) *
                     </label>
                     <input
+                      id="contractueel-rentepercentage"
                       type="number"
                       step="0.01"
                       required={form.interest_type === "contractual"}
@@ -2046,10 +2070,11 @@ function NieuweZaakPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground">
+                    <label htmlFor="rentefrequentie" className="block text-sm font-medium text-foreground">
                       Rentefrequentie
                     </label>
                     <select
+                      id="rentefrequentie"
                       value={form.rate_basis}
                       onChange={(e) =>
                         updateField("rate_basis", e.target.value)

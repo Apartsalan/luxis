@@ -10,7 +10,6 @@ import {
   Briefcase,
   ShieldCheck,
   Plus,
-  X,
   Clock,
   MapPin,
   Pencil,
@@ -25,6 +24,7 @@ import {
   Cloud,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCalendarEvents, type CalendarEvent } from "@/hooks/use-calendar";
 import {
   useCreateCalendarEvent,
@@ -577,25 +577,13 @@ function EventDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
-      <div
-        className="w-full max-w-lg rounded-xl border border-border bg-card shadow-xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-base font-semibold text-card-foreground">
-            {isEdit ? "Event bewerken" : "Nieuw event"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted/50 transition-colors"
-          >
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "Event bewerken" : "Nieuw event"}</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title */}
           <div>
             <label htmlFor="agenda-title" className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -607,7 +595,7 @@ function EventDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Bijv. Overleg met cliënt"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               required
               autoFocus
             />
@@ -700,7 +688,7 @@ function EventDialog({
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Bijv. Kantoor, Rechtbank Amsterdam"
-                className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
           </div>
@@ -780,7 +768,7 @@ function EventDialog({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Eventuele notities..."
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
             />
           </div>
 
@@ -844,8 +832,8 @@ function EventDialog({
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1018,7 +1006,7 @@ function WeekView({
                 </div>
               ) : (
                 <div className="flex-1 flex items-center justify-center">
-                  <span className="text-[10px] text-muted-foreground/50">
+                  <span className="text-[10px] text-muted-foreground">
                     Geen items
                   </span>
                 </div>
@@ -1063,7 +1051,7 @@ function WeekView({
                 </div>
               ) : (
                 <div className="ml-9">
-                  <span className="text-xs text-muted-foreground/50">
+                  <span className="text-xs text-muted-foreground">
                     Geen items
                   </span>
                 </div>

@@ -6,12 +6,16 @@ interface FormFieldErrorProps {
   error?: string;
   touched?: boolean;
   className?: string;
+  /** Koppel met aria-describedby op het invoerveld */
+  id?: string;
 }
 
-export function FormFieldError({ error, touched = true, className }: FormFieldErrorProps) {
+export function FormFieldError({ error, touched = true, className, id }: FormFieldErrorProps) {
   if (!error || !touched) return null;
   return (
-    <p className={cn("text-[13px] text-destructive mt-1", className)}>
+    // role="alert" zodat screenreaders de fout direct voorlezen;
+    // text-red-700 i.p.v. text-destructive: 13px-tekst vereist 4.5:1 contrast
+    <p id={id} role="alert" className={cn("text-[13px] text-red-700 mt-1", className)}>
       {error}
     </p>
   );

@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, Clock, Plus, Trash2, Search, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus, useProvisie } from "@/hooks/use-invoices";
 import { useDerdengeldenBalance } from "@/hooks/use-collections";
@@ -420,6 +421,7 @@ export default function NieuweFactuurPage() {
       <div className="flex items-center gap-3">
         <Link
           href="/facturen"
+          aria-label="Terug naar facturen"
           className="rounded-lg p-2 hover:bg-muted transition-colors"
         >
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
@@ -692,6 +694,7 @@ export default function NieuweFactuurPage() {
                   value={form.btw_percentage}
                   onChange={(e) => updateField("btw_percentage", e.target.value)}
                   placeholder="Bijv. 9.00"
+                  aria-label="Aangepast BTW-percentage"
                   className={`${inputClass} mt-2`}
                 />
               )}
@@ -819,10 +822,10 @@ export default function NieuweFactuurPage() {
 
             {/* DF-13: Verrekening type */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <span id="verrekening-label" className="block text-sm font-medium text-foreground mb-2">
                 Verrekening
-              </label>
-              <div className="flex gap-3">
+              </span>
+              <div className="flex gap-3" role="group" aria-labelledby="verrekening-label">
                 <button
                   type="button"
                   onClick={() => setVoorschotForm((p) => ({ ...p, settlement_type: "tussentijds" }))}
@@ -1091,6 +1094,8 @@ export default function NieuweFactuurPage() {
                 <div key={index} className="grid grid-cols-12 gap-2 items-start">
                   <div className="col-span-2">
                     <select
+                      id={`regel-artikel-${index}`}
+                      aria-label={`Artikel regel ${index + 1}`}
                       value={line.product_id ?? ""}
                       onChange={(e) => {
                         const productId = e.target.value || undefined;
@@ -1123,6 +1128,8 @@ export default function NieuweFactuurPage() {
                   </div>
                   <div className="col-span-3">
                     <input
+                      id={`regel-omschrijving-${index}`}
+                      aria-label={`Omschrijving regel ${index + 1}`}
                       type="text"
                       placeholder="Omschrijving"
                       value={line.description}
@@ -1134,6 +1141,8 @@ export default function NieuweFactuurPage() {
                   </div>
                   <div className="col-span-1">
                     <input
+                      id={`regel-aantal-${index}`}
+                      aria-label={`Aantal regel ${index + 1}`}
                       type="number"
                       step="0.01"
                       min="0"
@@ -1147,6 +1156,8 @@ export default function NieuweFactuurPage() {
                   </div>
                   <div className="col-span-2">
                     <input
+                      id={`regel-prijs-${index}`}
+                      aria-label={`Prijs regel ${index + 1}`}
                       type="number"
                       step="0.01"
                       min="0"
@@ -1160,6 +1171,8 @@ export default function NieuweFactuurPage() {
                   </div>
                   <div className="col-span-1">
                     <select
+                      id={`regel-btw-${index}`}
+                      aria-label={`BTW-percentage regel ${index + 1}`}
                       value={line.btw_percentage}
                       onChange={(e) =>
                         updateLine(index, "btw_percentage", e.target.value)
@@ -1181,6 +1194,7 @@ export default function NieuweFactuurPage() {
                       <button
                         type="button"
                         onClick={() => removeLine(index)}
+                        aria-label={`Regel ${index + 1} verwijderen`}
                         className="rounded-md p-1 text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -1409,27 +1423,16 @@ function NewExpenseDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-xl bg-card border border-border shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-base font-semibold text-foreground">Nieuw verschot toevoegen</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nieuw verschot toevoegen</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving *</label>
+            <label htmlFor="verschot-omschrijving" className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving *</label>
             <input
+              id="verschot-omschrijving"
               type="text"
               required
               autoFocus
@@ -1441,8 +1444,9 @@ function NewExpenseDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Bedrag (€) *</label>
+              <label htmlFor="verschot-bedrag" className="block text-xs font-medium text-muted-foreground mb-1">Bedrag (€) *</label>
               <input
+                id="verschot-bedrag"
                 type="number"
                 step="0.01"
                 min="0"
@@ -1454,8 +1458,9 @@ function NewExpenseDialog({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
+              <label htmlFor="verschot-datum" className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
               <input
+                id="verschot-datum"
                 type="date"
                 value={form.expense_date}
                 onChange={(e) => setForm((p) => ({ ...p, expense_date: e.target.value }))}
@@ -1465,8 +1470,9 @@ function NewExpenseDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Categorie</label>
+              <label htmlFor="verschot-categorie" className="block text-xs font-medium text-muted-foreground mb-1">Categorie</label>
               <select
+                id="verschot-categorie"
                 value={form.category}
                 onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1479,8 +1485,9 @@ function NewExpenseDialog({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">BTW-status</label>
+              <label htmlFor="verschot-btw-status" className="block text-xs font-medium text-muted-foreground mb-1">BTW-status</label>
               <select
+                id="verschot-btw-status"
                 value={form.tax_type}
                 onChange={(e) => setForm((p) => ({ ...p, tax_type: e.target.value }))}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -1511,7 +1518,7 @@ function NewExpenseDialog({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

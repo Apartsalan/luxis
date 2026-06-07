@@ -118,12 +118,14 @@ function CaseSelector({
   onChange,
   disabled,
   placeholder = "Selecteer dossier...",
+  id,
 }: {
   cases: CaseSummary[];
   value: string;
   onChange: (id: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  id?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -212,6 +214,7 @@ function CaseSelector({
     <div ref={containerRef} className="relative">
       <button
         type="button"
+        id={id}
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-left flex items-center justify-between gap-2 hover:bg-muted/50 transition-colors disabled:opacity-50"
@@ -717,6 +720,7 @@ export default function UrenPage() {
             <select
               value={filterContactId}
               onChange={(e) => setFilterContactId(e.target.value)}
+              aria-label="Filter op relatie"
               className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
             >
               <option value="">Alle relaties</option>
@@ -727,6 +731,7 @@ export default function UrenPage() {
             <select
               value={filterBillable}
               onChange={(e) => setFilterBillable(e.target.value)}
+              aria-label="Filter op type"
               className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
             >
               <option value="">Alle typen</option>
@@ -771,14 +776,15 @@ export default function UrenPage() {
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-foreground">Nieuwe registratie</h3>
-            <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => setShowForm(false)} aria-label="Formulier sluiten" className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Dossier *</label>
+              <label htmlFor="registratie-dossier" className="block text-xs font-medium text-muted-foreground mb-1">Dossier *</label>
               <CaseSelector
+                id="registratie-dossier"
                 cases={cases}
                 value={formCaseId}
                 onChange={setFormCaseId}
@@ -786,8 +792,9 @@ export default function UrenPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
+              <label htmlFor="registratie-datum" className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
               <input
+                id="registratie-datum"
                 type="date"
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
@@ -795,21 +802,25 @@ export default function UrenPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Duur *</label>
+              <label htmlFor="registratie-duur-uren" className="block text-xs font-medium text-muted-foreground mb-1">Duur *</label>
               <div className="flex gap-1.5">
                 <input
+                  id="registratie-duur-uren"
                   type="number"
                   min="0"
                   placeholder="uur"
+                  aria-label="Duur in uren"
                   value={formHours}
                   onChange={(e) => setFormHours(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
                 <input
+                  id="registratie-duur-minuten"
                   type="number"
                   min="0"
                   max="59"
                   placeholder="min"
+                  aria-label="Duur in minuten"
                   value={formMinutes}
                   onChange={(e) => setFormMinutes(e.target.value)}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -817,8 +828,9 @@ export default function UrenPage() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Activiteit</label>
+              <label htmlFor="registratie-activiteit" className="block text-xs font-medium text-muted-foreground mb-1">Activiteit</label>
               <select
+                id="registratie-activiteit"
                 value={formActivity}
                 onChange={(e) => setFormActivity(e.target.value)}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -829,8 +841,9 @@ export default function UrenPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving</label>
+              <label htmlFor="registratie-omschrijving" className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving</label>
               <input
+                id="registratie-omschrijving"
                 type="text"
                 placeholder="Wat heb je gedaan?"
                 value={formDescription}
@@ -839,8 +852,9 @@ export default function UrenPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Uurtarief</label>
+              <label htmlFor="registratie-uurtarief" className="block text-xs font-medium text-muted-foreground mb-1">Uurtarief</label>
               <input
+                id="registratie-uurtarief"
                 type="number"
                 min="0"
                 step="0.01"
@@ -873,8 +887,9 @@ export default function UrenPage() {
           </div>
           {formDiscount && (
             <div className="mt-3 max-w-xs">
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Te factureren (minuten)</label>
+              <label htmlFor="registratie-te-factureren" className="block text-xs font-medium text-muted-foreground mb-1">Te factureren (minuten)</label>
               <input
+                id="registratie-te-factureren"
                 type="number"
                 min="0"
                 placeholder="bijv. 45"
@@ -916,7 +931,7 @@ export default function UrenPage() {
       ) : !entries || entries.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-            <Clock className="h-8 w-8 text-muted-foreground/50" />
+            <Clock className="h-8 w-8 text-muted-foreground" />
           </div>
           <p className="mt-5 text-base font-medium text-foreground">
             Geen registraties {viewMode === "week" ? "deze week" : viewMode === "month" ? "deze maand" : "vandaag"}
@@ -951,6 +966,7 @@ export default function UrenPage() {
                   type="date"
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
+                  aria-label="Datum bewerken"
                   className="rounded border border-input bg-background px-1.5 py-1 text-sm w-full"
                 />
               ) : (
@@ -971,6 +987,7 @@ export default function UrenPage() {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+                  aria-label="Omschrijving bewerken"
                   className="rounded border border-input bg-background px-2 py-1 text-sm"
                   autoFocus
                 />
@@ -992,6 +1009,7 @@ export default function UrenPage() {
                     className="rounded border border-input bg-background px-2 py-1 text-sm text-right w-full"
                     min="1"
                     title="Duur (minuten)"
+                    aria-label="Duur in minuten"
                   />
                   <input
                     type="number"
@@ -1002,6 +1020,7 @@ export default function UrenPage() {
                     min="0"
                     placeholder="factur."
                     title="Te factureren minuten (leeg = zelfde als duur)"
+                    aria-label="Te factureren minuten"
                   />
                 </div>
               ) : (
@@ -1043,6 +1062,7 @@ export default function UrenPage() {
                       onClick={saveEdit}
                       className="rounded p-1 text-emerald-600 hover:bg-emerald-50 transition-colors"
                       title="Opslaan"
+                      aria-label="Opslaan"
                     >
                       <Plus className="h-3.5 w-3.5" />
                     </button>
@@ -1050,6 +1070,7 @@ export default function UrenPage() {
                       onClick={() => setEditId(null)}
                       className="rounded p-1 text-muted-foreground hover:bg-muted transition-colors"
                       title="Annuleren"
+                      aria-label="Annuleren"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -1060,6 +1081,7 @@ export default function UrenPage() {
                       onClick={() => startEdit(entry)}
                       className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
                       title="Bewerken"
+                      aria-label="Bewerken"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -1067,6 +1089,7 @@ export default function UrenPage() {
                       onClick={() => deleteEntry(entry.id)}
                       className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                       title="Verwijderen"
+                      aria-label="Verwijderen"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

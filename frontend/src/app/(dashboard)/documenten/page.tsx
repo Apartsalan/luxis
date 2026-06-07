@@ -12,6 +12,7 @@ import {
   Info,
   Download,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   useDocxTemplates,
   getTemplateLabel,
@@ -117,28 +118,26 @@ function CasePickerDialog({
     }
   }, [open]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-card shadow-xl">
-        <div className="p-4 border-b border-border">
-          <h3 className="text-sm font-semibold text-foreground">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md p-0 gap-0">
+        <DialogHeader className="p-4 border-b border-border space-y-0 text-left">
+          <DialogTitle className="text-sm font-semibold text-foreground pr-8">
             Kies een dossier voor &quot;{getTemplateLabel(templateType)}&quot;
-          </h3>
+          </DialogTitle>
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
               type="text"
               placeholder="Zoek op dossiernummer of naam..."
+              aria-label="Zoek op dossiernummer of naam"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
-        </div>
+        </DialogHeader>
         <div className="max-h-64 overflow-y-auto p-2">
           {casesData?.items?.length ? (
             casesData.items.map((c: CaseSummary) => (
@@ -167,8 +166,8 @@ function CasePickerDialog({
             </p>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -204,7 +203,7 @@ function DocxTemplatesView({
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-          <File className="h-8 w-8 text-muted-foreground/50" />
+          <File className="h-8 w-8 text-muted-foreground" />
         </div>
         <p className="mt-5 text-base font-medium text-foreground">
           Geen Word-templates beschikbaar
@@ -245,7 +244,7 @@ function DocxTemplatesView({
               {getTemplateDescription(template.template_type)}
             </p>
             <div className="mt-3 flex items-center justify-between">
-              <p className="text-[11px] text-muted-foreground/70">
+              <p className="text-[11px] text-muted-foreground">
                 {template.filename}
               </p>
               {template.available && (
@@ -301,7 +300,7 @@ function HtmlTemplatesView({
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-          <FileCheck className="h-8 w-8 text-muted-foreground/50" />
+          <FileCheck className="h-8 w-8 text-muted-foreground" />
         </div>
         <p className="mt-5 text-base font-medium text-foreground">
           Nog geen HTML-sjablonen aangemaakt

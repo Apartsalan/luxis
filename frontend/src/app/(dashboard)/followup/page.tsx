@@ -250,7 +250,7 @@ export default function FollowupPage() {
                 : "Er zijn geen aanbevelingen met deze status."}
             </p>
             {statusFilter === "pending" && (
-              <p className="text-xs text-muted-foreground/70 mt-3 max-w-md">
+              <p className="text-xs text-muted-foreground mt-3 max-w-md">
                 Follow-up analyseert automatisch je incassodossiers en stelt acties voor
                 zoals herinneringen versturen, rente herberekenen of de volgende stap zetten.
               </p>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Euro, Filter, Plus, X } from "lucide-react";
+import { Clock, Euro, Filter, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
 import {
   useTimeEntries,
@@ -135,8 +136,9 @@ export default function UrenTab({ caseId }: { caseId: string }) {
               </div>
               {activityTypes.length > 1 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Activiteit:</span>
+                  <label htmlFor="uren-activiteit-filter" className="text-xs text-muted-foreground">Activiteit:</label>
                   <select
+                    id="uren-activiteit-filter"
                     value={activityFilter}
                     onChange={(e) => setActivityFilter(e.target.value)}
                     className="rounded-lg border border-border bg-card px-2.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -273,27 +275,16 @@ function AddTimeEntryDialog({ caseId, onClose }: { caseId: string; onClose: () =
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-xl bg-card border border-border shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-base font-semibold text-foreground">Uren toevoegen</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md p-0 gap-0">
+        <DialogHeader className="border-b border-border px-5 py-4">
+          <DialogTitle className="text-base font-semibold text-foreground">Uren toevoegen</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 p-5">
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
+            <label htmlFor="uren-datum" className="block text-xs font-medium text-muted-foreground mb-1">Datum</label>
             <input
+              id="uren-datum"
               type="date"
               required
               value={form.date}
@@ -303,8 +294,9 @@ function AddTimeEntryDialog({ caseId, onClose }: { caseId: string; onClose: () =
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Uren</label>
+              <label htmlFor="uren-uren" className="block text-xs font-medium text-muted-foreground mb-1">Uren</label>
               <input
+                id="uren-uren"
                 type="number"
                 min="0"
                 max="24"
@@ -315,8 +307,9 @@ function AddTimeEntryDialog({ caseId, onClose }: { caseId: string; onClose: () =
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Minuten</label>
+              <label htmlFor="uren-minuten" className="block text-xs font-medium text-muted-foreground mb-1">Minuten</label>
               <input
+                id="uren-minuten"
                 type="number"
                 min="0"
                 max="59"
@@ -329,8 +322,9 @@ function AddTimeEntryDialog({ caseId, onClose }: { caseId: string; onClose: () =
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Activiteit</label>
+            <label htmlFor="uren-activiteit" className="block text-xs font-medium text-muted-foreground mb-1">Activiteit</label>
             <select
+              id="uren-activiteit"
               value={form.activity_type}
               onChange={(e) => setForm((p) => ({ ...p, activity_type: e.target.value }))}
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -343,8 +337,9 @@ function AddTimeEntryDialog({ caseId, onClose }: { caseId: string; onClose: () =
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving</label>
+            <label htmlFor="uren-omschrijving" className="block text-xs font-medium text-muted-foreground mb-1">Omschrijving</label>
             <textarea
+              id="uren-omschrijving"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               rows={3}
@@ -381,7 +376,7 @@ function AddTimeEntryDialog({ caseId, onClose }: { caseId: string; onClose: () =
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

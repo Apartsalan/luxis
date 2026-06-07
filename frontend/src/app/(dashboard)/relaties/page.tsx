@@ -496,7 +496,7 @@ export default function RelatiesPage() {
                           </div>
                         )}
                         {!contact.email && !contact.phone && (
-                          <span className="text-sm text-muted-foreground/50">
+                          <span className="text-sm text-muted-foreground">
                             -
                           </span>
                         )}
@@ -509,7 +509,7 @@ export default function RelatiesPage() {
                           {contact.visit_city}
                         </div>
                       ) : (
-                        <span className="text-sm text-muted-foreground/50">
+                        <span className="text-sm text-muted-foreground">
                           -
                         </span>
                       )}
@@ -585,7 +585,7 @@ export default function RelatiesPage() {
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-            <Users className="h-8 w-8 text-muted-foreground/50" />
+            <Users className="h-8 w-8 text-muted-foreground" />
           </div>
           <p className="mt-5 text-base font-medium text-foreground">
             Geen relaties gevonden

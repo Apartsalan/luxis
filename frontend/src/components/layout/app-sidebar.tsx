@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -125,6 +125,16 @@ export function AppSidebar({
     [hasModule]
   );
 
+  // Escape sluit het mobiele menu
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onMobileClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen, onMobileClose]);
+
   return (
     <>
       {/* Mobile overlay */}
@@ -202,7 +212,7 @@ export function AppSidebar({
               )}
               {/* Section label (only in expanded state) */}
               {(!collapsed || mobileOpen) && (
-                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/30">
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/60">
                   {section.label}
                 </p>
               )}
@@ -299,7 +309,7 @@ export function AppSidebar({
             )}
           </button>
           {!collapsed && (
-            <p className="mt-2 px-3 text-[10px] text-sidebar-foreground/30">
+            <p className="mt-2 px-3 text-[10px] text-sidebar-foreground/60">
               Luxis v0.1.0
             </p>
           )}

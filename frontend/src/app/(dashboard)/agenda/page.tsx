@@ -32,6 +32,8 @@ import {
   useDeleteCalendarEvent,
   EVENT_TYPES,
   EVENT_TYPE_LABELS,
+  eventColor,
+  eventColorTint,
   type CalendarEventCreateInput,
   type CalendarEventUpdateInput,
 } from "@/hooks/use-calendar-events";
@@ -401,7 +403,7 @@ export default function AgendaPage() {
             "mx-5 mt-3 px-3 py-2 rounded-lg text-xs font-medium",
             syncMutation.isError
               ? "bg-destructive/10 text-destructive"
-              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400"
+              : "bg-emerald-50 text-emerald-700"
           )}>
             <Cloud className="h-3.5 w-3.5 inline mr-1.5" />
             {syncMessage}
@@ -916,7 +918,7 @@ function MonthView({
                   >
                     <div
                       className="h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: event.color || "#6b7280" }}
+                      style={{ backgroundColor: eventColor(event.color) }}
                     />
                     <span className="text-[10px] leading-tight text-foreground truncate">
                       {event.source === "user" && event.start_time && !event.all_day
@@ -1076,8 +1078,8 @@ function EventChip({ event }: { event: CalendarEvent }) {
     <div
       className="rounded-md px-2 py-1 text-[10px] leading-tight truncate w-full"
       style={{
-        backgroundColor: event.color ? `${event.color}18` : "#6b728018",
-        borderLeft: `3px solid ${event.color || "#6b7280"}`,
+        backgroundColor: eventColorTint(event.color),
+        borderLeft: `3px solid ${eventColor(event.color)}`,
       }}
       title={event.title}
     >
@@ -1111,15 +1113,15 @@ function MobileEventCard({ event }: { event: CalendarEvent }) {
   const content = (
     <div
       className="flex items-start gap-2.5 rounded-lg border border-border bg-card p-3 hover:bg-muted/50 transition-colors"
-      style={{ borderLeftColor: event.color || "#6b7280", borderLeftWidth: "3px" }}
+      style={{ borderLeftColor: eventColor(event.color), borderLeftWidth: "3px" }}
     >
       <div
         className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
-        style={{ backgroundColor: event.color ? `${event.color}18` : "#6b728018" }}
+        style={{ backgroundColor: eventColorTint(event.color) }}
       >
         <Icon
           className="h-3 w-3"
-          style={{ color: event.color || "#6b7280" }}
+          style={{ color: eventColor(event.color) }}
         />
       </div>
       <div className="min-w-0 flex-1">
@@ -1238,14 +1240,12 @@ function MobileEventList({
                     <div
                       className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
                       style={{
-                        backgroundColor: event.color
-                          ? `${event.color}18`
-                          : "#6b728018",
+                        backgroundColor: eventColorTint(event.color),
                       }}
                     >
                       <Icon
                         className="h-3 w-3"
-                        style={{ color: event.color || "#6b7280" }}
+                        style={{ color: eventColor(event.color) }}
                       />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1376,18 +1376,18 @@ function DayDetailEvent({
   return (
     <div
       className="flex items-start gap-3 px-5 py-3.5"
-      style={{ borderLeftColor: event.color || "#6b7280", borderLeftWidth: "3px" }}
+      style={{ borderLeftColor: eventColor(event.color), borderLeftWidth: "3px" }}
     >
       {/* Icon */}
       <div
         className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
         style={{
-          backgroundColor: event.color ? `${event.color}18` : "#6b728018",
+          backgroundColor: eventColorTint(event.color),
         }}
       >
         <Icon
           className="h-4 w-4"
-          style={{ color: event.color || "#6b7280" }}
+          style={{ color: eventColor(event.color) }}
         />
       </div>
 
@@ -1399,7 +1399,7 @@ function DayDetailEvent({
           </p>
           <StatusBadge status={event.status} color={event.color} />
           {event.source === "outlook" && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-500/20 dark:bg-blue-950/30 dark:text-blue-400 dark:ring-blue-400/30">
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600 ring-1 ring-inset ring-blue-500/20">
               <Cloud className="h-2.5 w-2.5" />
               Outlook
             </span>
@@ -1518,9 +1518,9 @@ function StatusBadge({
     <span
       className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
       style={{
-        backgroundColor: color ? `${color}12` : "#6b728012",
-        color: color || "#6b7280",
-        boxShadow: `inset 0 0 0 1px ${color ? `${color}30` : "#6b728030"}`,
+        backgroundColor: `${eventColor(color)}12`,
+        color: eventColor(color),
+        boxShadow: `inset 0 0 0 1px ${eventColor(color)}30`,
       }}
     >
       {STATUS_LABELS[status] ?? status}

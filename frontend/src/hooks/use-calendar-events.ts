@@ -77,6 +77,22 @@ export const EVENT_TYPE_COLORS: Record<string, string> = Object.fromEntries(
   EVENT_TYPES.map((t) => [t.value, t.color])
 );
 
+const DEFAULT_EVENT_COLOR = "#6b7280";
+
+/** Event-kleur met fallback; accepteert alleen geldige 6-digit hex. */
+export function eventColor(color?: string | null): string {
+  return color && /^#[0-9a-fA-F]{6}$/.test(color) ? color : DEFAULT_EVENT_COLOR;
+}
+
+/**
+ * Lichte achtergrond-tint van de event-kleur (~9% alpha).
+ * Gecentraliseerd omdat hex+alpha-concat stilletjes breekt op
+ * niet-6-digit kleuren — validatie zit in eventColor().
+ */
+export function eventColorTint(color?: string | null): string {
+  return `${eventColor(color)}18`;
+}
+
 // ── Hooks ────────────────────────────────────────────────────────────────
 
 export function useUserCalendarEvents(dateFrom: string, dateTo: string) {

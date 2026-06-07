@@ -26,19 +26,19 @@ import {
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   pending: {
     label: "Wacht op review",
-    className: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    className: "bg-amber-500/10 text-amber-600",
   },
   approved: {
     label: "Goedgekeurd",
-    className: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    className: "bg-emerald-500/10 text-emerald-600",
   },
   rejected: {
     label: "Afgewezen",
-    className: "bg-red-500/10 text-red-600 dark:text-red-400",
+    className: "bg-red-500/10 text-red-600",
   },
   executed: {
     label: "Uitgevoerd",
-    className: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    className: "bg-blue-500/10 text-blue-600",
   },
 };
 
@@ -163,11 +163,11 @@ function ClassificationCardInner({ c }: { c: Classification }) {
       {/* Payment promise (AUDIT-18) */}
       {c.category === "belofte_tot_betaling" &&
         (c.promise_date || c.promise_amount) && (
-          <div className="mt-2 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 dark:border-emerald-800 dark:bg-emerald-950">
+          <div className="mt-2 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5">
             <CalendarClock className="h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
             <div className="flex items-center gap-3 text-xs">
               {c.promise_date && (
-                <span className="text-emerald-700 dark:text-emerald-300">
+                <span className="text-emerald-700">
                   <span className="font-medium">Datum:</span>{" "}
                   {new Date(c.promise_date).toLocaleDateString("nl-NL", {
                     weekday: "short",
@@ -178,7 +178,7 @@ function ClassificationCardInner({ c }: { c: Classification }) {
                 </span>
               )}
               {c.promise_amount && (
-                <span className="text-emerald-700 dark:text-emerald-300">
+                <span className="text-emerald-700">
                   <span className="font-medium">Bedrag:</span>{" "}
                   {new Intl.NumberFormat("nl-NL", {
                     style: "currency",

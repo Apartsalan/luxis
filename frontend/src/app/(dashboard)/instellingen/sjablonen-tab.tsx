@@ -215,12 +215,12 @@ export function SjablonenTab() {
                     </td>
                     <td className="py-2.5 pr-4">
                       {tpl.is_builtin ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
                           <Lock className="h-3 w-3" />
                           Standaard
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
                           Aangepast
                         </span>
                       )}
@@ -284,7 +284,7 @@ export function SjablonenTab() {
                                     const ok = await confirm({ title: "Sjabloon verwijderen", description: "Weet je zeker dat je dit sjabloon wilt verwijderen?", variant: "destructive", confirmText: "Verwijderen" });
                                     if (ok) deleteTemplate.mutate(tpl.id);
                                   }}
-                                  className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+                                  className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
                                   title="Verwijderen"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />

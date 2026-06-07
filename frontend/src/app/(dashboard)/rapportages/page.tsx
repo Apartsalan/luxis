@@ -112,28 +112,28 @@ export default function RapportagesPage() {
             value={formatCurrency(kpis.total_outstanding)}
             icon={TrendingUp}
             color="text-orange-600"
-            bgColor="bg-orange-50 dark:bg-orange-950/30"
+            bgColor="bg-orange-50"
           />
           <KpiCard
             label="Geind"
             value={formatCurrency(kpis.total_collected)}
             icon={TrendingDown}
             color="text-emerald-600"
-            bgColor="bg-emerald-50 dark:bg-emerald-950/30"
+            bgColor="bg-emerald-50"
           />
           <KpiCard
             label="Incasso-ratio"
             value={formatPercentage(kpis.collection_rate)}
             icon={BarChart3}
             color="text-blue-600"
-            bgColor="bg-blue-50 dark:bg-blue-950/30"
+            bgColor="bg-blue-50"
           />
           <KpiCard
             label="Gem. doorlooptijd"
             value={`${kpis.avg_days_to_collect} dagen`}
             icon={Clock}
             color="text-purple-600"
-            bgColor="bg-purple-50 dark:bg-purple-950/30"
+            bgColor="bg-purple-50"
           />
         </div>
       ) : null}

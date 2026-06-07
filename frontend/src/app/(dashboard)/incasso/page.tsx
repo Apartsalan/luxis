@@ -30,6 +30,9 @@ import {
   List,
   LayoutGrid,
   Shield,
+  MessageSquare,
+  Wrench,
+  Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -357,7 +360,7 @@ function StappenTab() {
                       ))}
                     </select>
                   ) : (
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[step.step_category] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[step.step_category] || "bg-gray-100 text-gray-700"}`}>
                       {STEP_CATEGORIES.find((c) => c.value === step.step_category)?.label || step.step_category}
                     </span>
                   )}
@@ -480,7 +483,7 @@ function StappenTab() {
                         </button>
                         <button
                           onClick={() => handleDelete(step)}
-                          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-colors"
+                          className="rounded-md p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
                           title="Verwijderen"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -492,7 +495,7 @@ function StappenTab() {
               </tr>
               {/* Email preview + transitions — shown when expanded (not editing) */}
               {expandedId === step.id && editingId !== step.id && (
-                <tr className="border-b border-border last:border-0 bg-blue-50/50 dark:bg-blue-900/10">
+                <tr className="border-b border-border last:border-0 bg-blue-50/50">
                   <td colSpan={8} className="px-6 py-3">
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -738,11 +741,12 @@ const TRIGGER_LABELS: Record<string, string> = {
   payment: "Betaling",
 };
 
-const TRIGGER_ICONS: Record<string, string> = {
-  timeout: "⏱",
-  debtor_response: "💬",
-  manual: "🔧",
-  payment: "💰",
+// Lucide-icons i.p.v. emoji's — consistent met de rest van de app
+const TRIGGER_ICONS: Record<string, typeof Clock> = {
+  timeout: Clock,
+  debtor_response: MessageSquare,
+  manual: Wrench,
+  payment: Coins,
 };
 
 function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: PipelineStep[] }) {
@@ -824,7 +828,10 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
           {transitions.map((t) => (
             <div key={t.id} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 group">
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-base">{TRIGGER_ICONS[t.trigger_type] || "→"}</span>
+                {(() => {
+                  const TriggerIcon = TRIGGER_ICONS[t.trigger_type] || ArrowRight;
+                  return <TriggerIcon className="h-4 w-4 text-muted-foreground shrink-0" />;
+                })()}
                 <span className="text-muted-foreground">
                   {t.label || TRIGGER_LABELS[t.trigger_type]}
                   {t.condition?.days && ` (${t.condition.days}d)`}
@@ -837,7 +844,7 @@ function TransitionsSection({ step, allSteps }: { step: PipelineStep; allSteps: 
               </div>
               <button
                 onClick={() => handleDelete(t)}
-                className="max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 rounded-md p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-all"
+                className="max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 rounded-md p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-all"
                 title="Verwijderen"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -1177,7 +1184,7 @@ function WerkstroomTab() {
                   queueFilter === tab.id
                     ? "bg-primary-foreground/20 text-primary-foreground"
                     : tab.id === "action_required" && tab.count > 0
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                      ? "bg-amber-100 text-amber-700"
                       : "bg-muted text-muted-foreground"
                 }`}>
                   {tab.count}
@@ -1273,12 +1280,12 @@ function WerkstroomTab() {
                             {c.case_number}
                           </Link>
                           {c.has_verweer && (
-                            <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400" title="Verweer">
+                            <span className="inline-flex items-center rounded-md bg-amber-100 px-1 py-0.5 text-[9px] font-semibold text-amber-700" title="Verweer">
                               <Shield className="h-2.5 w-2.5" />
                             </span>
                           )}
                           {aiCaseIds.has(c.id) && (
-                            <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-100 dark:bg-violet-900/30 px-1 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400" title="AI-suggestie">
+                            <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-100 px-1 py-0.5 text-[9px] font-semibold text-violet-700" title="AI-suggestie">
                               <Bot className="h-2.5 w-2.5" />
                             </span>
                           )}
@@ -1288,7 +1295,7 @@ function WerkstroomTab() {
                       <td className="px-3 py-2 text-muted-foreground">{c.opposing_party_name || "—"}</td>
                       <td className="px-3 py-2">
                         {c.step_name ? (
-                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[stepLookup.get(c.incasso_step_id ?? "")?.step_category ?? ""] || "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"}`}>
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${CATEGORY_STYLES[stepLookup.get(c.incasso_step_id ?? "")?.step_category ?? ""] || "bg-gray-100 text-gray-700"}`}>
                             {c.step_name}
                           </span>
                         ) : (
@@ -1300,7 +1307,7 @@ function WerkstroomTab() {
                       </td>
                       <td className="px-3 py-2 text-right font-mono">{formatCurrency(c.total_principal)}</td>
                       <td className="px-3 py-2 text-right font-mono">
-                        <span className={c.outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}>
+                        <span className={c.outstanding > 0 ? "text-red-600" : "text-emerald-600"}>
                           {formatCurrency(c.outstanding)}
                         </span>
                       </td>
@@ -1386,7 +1393,7 @@ function WerkstroomTab() {
           <button
             onClick={handleBatchVerweer}
             disabled={verweerLoading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors"
           >
             <Shield className="h-3.5 w-3.5" />
             Markeer verweer
@@ -1479,20 +1486,20 @@ function PipelineColumnView({
   return (
     <div className={`rounded-xl border bg-card ${
       isUnassigned
-        ? "border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/10"
+        ? "border-amber-300 bg-amber-50/30"
         : "border-border"
     }`}>
       <div className={`flex items-center justify-between px-4 py-3 border-b ${
-        isUnassigned ? "border-amber-200 dark:border-amber-800" : "border-border"
+        isUnassigned ? "border-amber-200" : "border-border"
       }`}>
         <div className="flex items-center gap-2">
           {isUnassigned && <AlertTriangle className="h-4 w-4 text-amber-500" />}
-          <h3 className={`text-sm font-semibold ${isUnassigned ? "text-amber-700 dark:text-amber-400" : "text-foreground"}`}>{column.step.name}</h3>
-          <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${isUnassigned ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-primary/10 text-primary"}`}>
+          <h3 className={`text-sm font-semibold ${isUnassigned ? "text-amber-700" : "text-foreground"}`}>{column.step.name}</h3>
+          <span className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${isUnassigned ? "bg-amber-100 text-amber-700" : "bg-primary/10 text-primary"}`}>
             {column.count}
           </span>
           {isUnassigned && (
-            <span className="text-xs text-amber-600 dark:text-amber-400">
+            <span className="text-xs text-amber-600">
               — wijs een stap toe
             </span>
           )}
@@ -1569,12 +1576,12 @@ function PipelineColumnView({
                         {c.case_number}
                       </Link>
                       {c.has_verweer && (
-                        <span className="inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/30 px-1 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400" title="Verweer">
+                        <span className="inline-flex items-center rounded-md bg-amber-100 px-1 py-0.5 text-[9px] font-semibold text-amber-700" title="Verweer">
                           <Shield className="h-2.5 w-2.5" />
                         </span>
                       )}
                       {aiCaseIds.has(c.id) && (
-                        <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-100 dark:bg-violet-900/30 px-1 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400" title="AI-suggestie wacht op review">
+                        <span className="inline-flex items-center gap-0.5 rounded-md bg-violet-100 px-1 py-0.5 text-[9px] font-semibold text-violet-700" title="AI-suggestie wacht op review">
                           <Bot className="h-2.5 w-2.5" />
                           AI
                         </span>
@@ -1587,7 +1594,7 @@ function PipelineColumnView({
                     {formatCurrency(c.total_principal)}
                   </td>
                   <td className="px-3 py-2 text-right font-mono">
-                    <span className={c.outstanding > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}>
+                    <span className={c.outstanding > 0 ? "text-red-600" : "text-emerald-600"}>
                       {formatCurrency(c.outstanding)}
                     </span>
                   </td>
@@ -1657,12 +1664,12 @@ function PreFlightDialog({
                 <div className="text-lg font-bold text-foreground">{preview.total_selected}</div>
                 <div className="text-xs text-muted-foreground">Geselecteerd</div>
               </div>
-              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
-                <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{preview.ready}</div>
+              <div className="rounded-lg bg-emerald-50 p-3 text-center">
+                <div className="text-lg font-bold text-emerald-600">{preview.ready}</div>
                 <div className="text-xs text-muted-foreground">Gereed</div>
               </div>
-              <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-center">
-                <div className="text-lg font-bold text-red-600 dark:text-red-400">{preview.blocked.length}</div>
+              <div className="rounded-lg bg-red-50 p-3 text-center">
+                <div className="text-lg font-bold text-red-600">{preview.blocked.length}</div>
                 <div className="text-xs text-muted-foreground">Geblokkeerd</div>
               </div>
             </div>
@@ -1700,8 +1707,8 @@ function PreFlightDialog({
             {/* AUDIT-H13: honest empty-state — these steps use AI drafts, not a
                 fixed DOCX template, so batch brief-generation cannot run here. */}
             {action === "generate_document" && preview.ready === 0 && (
-              <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-3">
-                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-1.5">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                <p className="text-sm text-amber-700 flex items-start gap-1.5">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                   <span>
                     Deze stappen gebruiken AI-concepten in plaats van een vaste
@@ -1730,12 +1737,12 @@ function PreFlightDialog({
                 {sendEmail && (
                   <div className="ml-6 space-y-1">
                     {preview.email_ready > 0 && (
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                      <p className="text-xs text-emerald-600">
                         {preview.email_ready} dossier(s) worden per e-mail verstuurd
                       </p>
                     )}
                     {preview.email_blocked.length > 0 && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                      <p className="text-xs text-amber-600">
                         {preview.email_blocked.length} dossier(s) zonder e-mailadres wederpartij — brief wordt wél gegenereerd
                       </p>
                     )}
@@ -1747,15 +1754,15 @@ function PreFlightDialog({
             {/* Blockers */}
             {preview.blocked.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-red-600 dark:text-red-400 mb-2 flex items-center gap-1.5">
+                <h3 className="text-sm font-medium text-red-600 mb-2 flex items-center gap-1.5">
                   <AlertTriangle className="h-4 w-4" />
                   Geblokkeerde dossiers
                 </h3>
-                <div className="max-h-32 overflow-y-auto rounded-lg border border-red-200 dark:border-red-800">
+                <div className="max-h-32 overflow-y-auto rounded-lg border border-red-200">
                   {preview.blocked.map((b) => (
-                    <div key={b.case_id} className="flex items-center justify-between px-3 py-1.5 text-sm border-b border-red-100 dark:border-red-900 last:border-0">
+                    <div key={b.case_id} className="flex items-center justify-between px-3 py-1.5 text-sm border-b border-red-100 last:border-0">
                       <span className="font-mono text-xs">{b.case_number}</span>
-                      <span className="text-xs text-red-600 dark:text-red-400">{b.reason}</span>
+                      <span className="text-xs text-red-600">{b.reason}</span>
                     </div>
                   ))}
                 </div>
@@ -1764,8 +1771,8 @@ function PreFlightDialog({
 
             {/* Verweer warning */}
             {preview.verweer_blocked > 0 && (
-              <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-3">
-                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                <p className="text-sm text-amber-700 flex items-center gap-1.5">
                   <Shield className="h-4 w-4" />
                   {preview.verweer_blocked} dossier(s) met verweer — worden niet automatisch doorgeschoven.
                 </p>
@@ -1774,8 +1781,8 @@ function PreFlightDialog({
 
             {/* Needs step assignment (only show for non-advance_step actions) */}
             {action !== "advance_step" && preview.needs_step_assignment.length > 0 && (
-              <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10 p-3">
-                <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                <p className="text-sm text-amber-700 flex items-center gap-1.5">
                   <Users className="h-4 w-4" />
                   {preview.needs_step_assignment.length} dossier(s) zonder stap — wijs eerst een stap toe.
                 </p>
@@ -1826,18 +1833,18 @@ const STEP_CATEGORIES = [
 ] as const;
 
 const CATEGORY_STYLES: Record<string, string> = {
-  minnelijk: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  gerechtelijk: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  executie: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  regeling: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
-  administratief: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-  afsluiting: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  minnelijk: "bg-blue-100 text-blue-700",
+  gerechtelijk: "bg-purple-100 text-purple-700",
+  executie: "bg-red-100 text-red-700",
+  regeling: "bg-teal-100 text-teal-700",
+  administratief: "bg-gray-100 text-gray-700",
+  afsluiting: "bg-emerald-100 text-emerald-700",
 };
 
 const DEADLINE_STYLES: Record<DeadlineStatus, { dot: string; text: string; label: string }> = {
-  green:  { dot: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", label: "Wachtperiode" },
-  orange: { dot: "bg-amber-500",   text: "text-amber-600 dark:text-amber-400",     label: "Klaar voor actie" },
-  red:    { dot: "bg-red-500",     text: "text-red-600 dark:text-red-400",         label: "Te laat" },
+  green:  { dot: "bg-emerald-500", text: "text-emerald-600", label: "Wachtperiode" },
+  orange: { dot: "bg-amber-500",   text: "text-amber-600",     label: "Klaar voor actie" },
+  red:    { dot: "bg-red-500",     text: "text-red-600",         label: "Te laat" },
   gray:   { dot: "bg-gray-400",    text: "text-muted-foreground",                  label: "Geen stap" },
 };
 

@@ -380,10 +380,10 @@ export default function DossierHeader({
 
       {/* T2: Workflow-suggestie banner */}
       {statusSuggestion && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-4 flex items-center justify-between gap-4 animate-fade-in">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-center justify-between gap-4 animate-fade-in">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
-              <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+              <FileText className="h-4 w-4 text-amber-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">
@@ -509,7 +509,7 @@ export default function DossierHeader({
           onClick={() => {
             const now = new Date();
             const stamp = now.toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-            setPhoneNoteText(`📞 Telefoonnotitie ${stamp}\n\nGesprek met: \nOnderwerp: \n\n`);
+            setPhoneNoteText(`Telefoonnotitie ${stamp}\n\nGesprek met: \nOnderwerp: \n\n`);
             setActiveTab("overzicht");
             setTimeout(() => {
               const ta = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="notitie"]');

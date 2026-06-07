@@ -78,9 +78,9 @@ export function InvoiceUploadZone({ onParsed }: InvoiceUploadZoneProps) {
         dragOver
           ? "border-primary bg-primary/5"
           : state === "success"
-          ? "border-green-300 bg-green-50/50 dark:border-green-700 dark:bg-green-950/20"
+          ? "border-green-300 bg-green-50/50"
           : state === "error"
-          ? "border-red-300 bg-red-50/50 dark:border-red-700 dark:bg-red-950/20"
+          ? "border-red-300 bg-red-50/50"
           : "border-border hover:border-primary/50 hover:bg-muted/50"
       }`}
     >
@@ -124,7 +124,7 @@ export function InvoiceUploadZone({ onParsed }: InvoiceUploadZoneProps) {
         <div className="flex items-center justify-center gap-3 py-2">
           <CheckCircle className="h-5 w-5 text-green-600" />
           <div className="text-left">
-            <p className="text-sm font-medium text-green-700 dark:text-green-400">
+            <p className="text-sm font-medium text-green-700">
               Factuur geanalyseerd — velden ingevuld
             </p>
             <p className="text-xs text-muted-foreground">{filename}</p>
@@ -136,7 +136,7 @@ export function InvoiceUploadZone({ onParsed }: InvoiceUploadZoneProps) {
         <div className="flex items-center justify-center gap-3 py-2">
           <AlertCircle className="h-5 w-5 text-red-600" />
           <div className="text-left">
-            <p className="text-sm font-medium text-red-700 dark:text-red-400">
+            <p className="text-sm font-medium text-red-700">
               {errorMsg}
             </p>
             <p className="text-xs text-muted-foreground">

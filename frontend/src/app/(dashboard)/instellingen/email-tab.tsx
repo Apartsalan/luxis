@@ -97,11 +97,11 @@ export function EmailTab() {
         ) : account?.connected ? (
           /* Connected state */
           <div className="space-y-4">
-            <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30 p-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/50">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">

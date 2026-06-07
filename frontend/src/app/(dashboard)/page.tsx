@@ -322,7 +322,7 @@ export default function DashboardPage() {
                     className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-800">
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-300">
                         Ongesorteerd
                       </span>
                       <span className="text-sm text-muted-foreground">
@@ -833,7 +833,7 @@ function AiSuggestionsWidget() {
           <h2 className="text-sm font-semibold text-foreground">
             AI-suggesties
           </h2>
-          <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+          <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 uppercase tracking-wider">
             AI
           </span>
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
@@ -868,8 +868,8 @@ function AiSuggestionsWidget() {
               href={`/zaken/${c.case_id}?tab=correspondentie`}
               className="flex items-start gap-3 px-5 py-3 hover:bg-primary/10 transition-colors"
             >
-              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-900/30">
-                <Mail className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100">
+                <Mail className="h-3.5 w-3.5 text-violet-600" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">

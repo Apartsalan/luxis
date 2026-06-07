@@ -6,12 +6,12 @@ import { useCaseStepHistory, type CaseStepHistory } from "@/hooks/use-incasso";
 import { formatDateTime } from "@/lib/utils";
 
 const CATEGORY_STYLES: Record<string, string> = {
-  minnelijk: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  gerechtelijk: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  executie: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  regeling: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
-  administratief: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
-  afsluiting: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  minnelijk: "bg-blue-100 text-blue-700",
+  gerechtelijk: "bg-purple-100 text-purple-700",
+  executie: "bg-red-100 text-red-700",
+  regeling: "bg-teal-100 text-teal-700",
+  administratief: "bg-gray-100 text-gray-700",
+  afsluiting: "bg-emerald-100 text-emerald-700",
 };
 
 const TRIGGER_LABELS: Record<string, { label: string; icon: typeof User }> = {
@@ -118,13 +118,13 @@ export function StaphistorieTab({ caseId }: { caseId: string }) {
 
                 <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
                   {entry.template_sent && (
-                    <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                    <span className="flex items-center gap-1 text-blue-600">
                       <FileText className="h-3 w-3" />
                       Brief gegenereerd
                     </span>
                   )}
                   {entry.email_sent && (
-                    <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                    <span className="flex items-center gap-1 text-emerald-600">
                       <Mail className="h-3 w-3" />
                       E-mail verzonden
                     </span>

@@ -349,7 +349,7 @@ function DraftReadyCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps
   return (
     <CardShell
       icon={<Sparkles className="h-4 w-4 text-violet-600" />}
-      iconClass="bg-violet-100 dark:bg-violet-950"
+      iconClass="bg-violet-100"
       title={item.title}
       message={item.message}
       time={formatNotificationTime(item.created_at)}
@@ -375,7 +375,7 @@ function EmailReceivedCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardPr
   return (
     <CardShell
       icon={<Mail className="h-4 w-4 text-blue-600" />}
-      iconClass="bg-blue-100 dark:bg-blue-950"
+      iconClass="bg-blue-100"
       title={item.title}
       message={item.message}
       time={formatNotificationTime(item.created_at)}
@@ -401,7 +401,7 @@ function ClassificationDoneCard({ item, onDismiss, onSnooze, onNavigate }: FeedC
   return (
     <CardShell
       icon={<Tag className="h-4 w-4 text-amber-600" />}
-      iconClass="bg-amber-100 dark:bg-amber-950"
+      iconClass="bg-amber-100"
       title={item.title}
       message={item.message}
       time={formatNotificationTime(item.created_at)}
@@ -427,7 +427,7 @@ function DeadlineCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps) 
   return (
     <CardShell
       icon={<AlertTriangle className="h-4 w-4 text-red-600" />}
-      iconClass="bg-red-100 dark:bg-red-950"
+      iconClass="bg-red-100"
       title={item.title}
       message={item.message}
       time={formatNotificationTime(item.created_at)}

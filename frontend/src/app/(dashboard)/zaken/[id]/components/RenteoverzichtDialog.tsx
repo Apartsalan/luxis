@@ -135,9 +135,9 @@ export function RenteoverzichtDialog({ caseId, open, onOpenChange }: Renteoverzi
                     {formatCurrency(interest?.total_principal ?? 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-950/30">
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
                   <p className="text-xs text-orange-600">Totaal rente</p>
-                  <p className="text-lg font-semibold text-orange-700 dark:text-orange-400">
+                  <p className="text-lg font-semibold text-orange-700">
                     {formatCurrency(interest?.total_interest ?? 0)}
                   </p>
                 </div>
@@ -151,7 +151,7 @@ export function RenteoverzichtDialog({ caseId, open, onOpenChange }: Renteoverzi
 
               {/* BIK card */}
               {bik && bik.bik_amount > 0 && (
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
                   <p className="text-xs text-blue-600 font-medium mb-1">Buitengerechtelijke incassokosten (BIK)</p>
                   <div className="flex items-center gap-4 text-sm">
                     <span>BIK: {formatCurrency(bik.bik_amount)}</span>

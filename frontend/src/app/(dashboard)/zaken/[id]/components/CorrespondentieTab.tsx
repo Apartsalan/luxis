@@ -436,13 +436,13 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                     {/* Direction icon */}
                     <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
                       item.direction === "inbound"
-                        ? "bg-blue-100 dark:bg-blue-900/30"
-                        : "bg-emerald-100 dark:bg-emerald-900/30"
+                        ? "bg-blue-100"
+                        : "bg-emerald-100"
                     }`}>
                       {item.direction === "inbound" ? (
-                        <ArrowDownLeft className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        <ArrowDownLeft className="h-3.5 w-3.5 text-blue-600" />
                       ) : (
-                        <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
                       )}
                     </div>
                     {/* Content */}
@@ -458,7 +458,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm text-foreground truncate">{item.subject}</p>
                         {item.type === "synced" && classificationMap.get(item.id)?.status === "pending" && (
-                          <span className="shrink-0 flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400" title="Wacht op review">
+                          <span className="shrink-0 flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600" title="Wacht op review">
                             <Bot className="h-2.5 w-2.5" />
                             Review
                           </span>

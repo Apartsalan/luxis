@@ -715,8 +715,8 @@ function AllEmailsView({
               key={email.id}
               className={`flex items-start gap-3 px-4 py-3 border-b border-border/50 hover:bg-muted/30 transition-colors border-l-3 ${
                 email.direction === "inbound"
-                  ? "border-l-blue-500 dark:border-l-blue-400"
-                  : "border-l-emerald-500 dark:border-l-emerald-400"
+                  ? "border-l-blue-500"
+                  : "border-l-emerald-500"
               }`}
             >
               <div className="mt-0.5 shrink-0">
@@ -744,13 +744,13 @@ function AllEmailsView({
                   {email.case_number ? (
                     <a
                       href={`/zaken/${email.case_id}`}
-                      className="inline-flex items-center gap-1 shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-950 dark:text-emerald-300 dark:ring-emerald-400/30 hover:bg-emerald-100 transition-colors"
+                      className="inline-flex items-center gap-1 shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 hover:bg-emerald-100 transition-colors"
                     >
                       <Briefcase className="h-2.5 w-2.5" />
                       {email.case_number}
                     </a>
                   ) : (
-                    <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950 dark:text-amber-300 dark:ring-amber-400/30">
+                    <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
                       Niet gekoppeld
                     </span>
                   )}
@@ -782,8 +782,8 @@ function EmailListItem({
   compact: boolean;
 }) {
   const directionBorder = email.direction === "inbound"
-    ? "border-l-blue-500 dark:border-l-blue-400"
-    : "border-l-emerald-500 dark:border-l-emerald-400";
+    ? "border-l-blue-500"
+    : "border-l-emerald-500";
 
   return (
     <div
@@ -824,20 +824,20 @@ function EmailListItem({
       <div
         className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${
           email.direction === "inbound"
-            ? "bg-blue-100 dark:bg-blue-900/30"
-            : "bg-emerald-100 dark:bg-emerald-900/30"
+            ? "bg-blue-100"
+            : "bg-emerald-100"
         }`}
       >
         {email.direction === "inbound" ? (
           <ArrowDownLeft
             className={`h-3.5 w-3.5 ${
               email.direction === "inbound"
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-emerald-600 dark:text-emerald-400"
+                ? "text-blue-600"
+                : "text-emerald-600"
             }`}
           />
         ) : (
-          <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          <ArrowUpRight className="h-3.5 w-3.5 text-emerald-600" />
         )}
       </div>
 
@@ -997,8 +997,8 @@ function BulkLinkButton({
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="h-14 w-14 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-        <Inbox className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+      <div className="h-14 w-14 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4">
+        <Inbox className="h-7 w-7 text-emerald-600" />
       </div>
       <h3 className="text-lg font-semibold">Alles gesorteerd</h3>
       <p className="text-sm text-muted-foreground mt-1 max-w-sm">

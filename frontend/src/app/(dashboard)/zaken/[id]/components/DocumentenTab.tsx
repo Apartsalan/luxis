@@ -1319,7 +1319,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                             </p>
                           )}
                           {isEmail && (
-                            <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 dark:bg-blue-950 dark:text-blue-300 dark:ring-blue-400/30">
+                            <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
                               <Mail className="h-2.5 w-2.5" />
                               Email bijlage
                             </span>
@@ -1572,7 +1572,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       <div>
                         <div className="flex items-center gap-1.5 mb-2">
                           <Star className="h-3.5 w-3.5 text-amber-500" />
-                          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Aanbevolen voor huidige status</span>
+                          <span className="text-xs font-medium text-amber-700">Aanbevolen voor huidige status</span>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           {brievenRecommended.map((t) => renderCard(t, "recommended"))}
@@ -1616,7 +1616,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                       <div>
                         <div className="flex items-center gap-1.5 mb-2">
                           <Star className="h-3.5 w-3.5 text-amber-500" />
-                          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Aanbevolen voor huidige status</span>
+                          <span className="text-xs font-medium text-amber-700">Aanbevolen voor huidige status</span>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                           {procRecommended.map((t) => renderCard(t, "recommended"))}

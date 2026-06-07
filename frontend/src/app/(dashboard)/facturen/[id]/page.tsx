@@ -1045,17 +1045,17 @@ export default function FactuurDetailPage() {
 
       {/* Credit note creation form */}
       {showCreditNoteForm && (
-        <div className="rounded-xl border-2 border-purple-200 bg-purple-50/30 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-purple-200 bg-purple-50">
+        <div className="rounded-xl border border-border bg-muted/30 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/50">
             <div className="flex items-center gap-2">
-              <ReceiptText className="h-4 w-4 text-purple-600" />
-              <h3 className="text-sm font-semibold text-purple-900">
+              <ReceiptText className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">
                 Credit nota aanmaken
               </h3>
             </div>
             <button
               onClick={() => setShowCreditNoteForm(false)}
-              className="rounded-lg p-1.5 text-purple-400 hover:bg-purple-100 transition-colors"
+              className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1069,7 +1069,7 @@ export default function FactuurDetailPage() {
             {/* Lines */}
             <div className="space-y-2">
               {cnLines.map((line, idx) => (
-                <div key={idx} className="rounded-md border border-purple-100 bg-white p-3">
+                <div key={idx} className="rounded-md border border-border bg-card p-3">
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
                       {idx === 0 && (
@@ -1174,7 +1174,7 @@ export default function FactuurDetailPage() {
                     <button
                       type="button"
                       onClick={() => toggleCnLineMode(idx)}
-                      className="text-[11px] font-medium text-purple-600 hover:text-purple-800 transition-colors"
+                      className="text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
                     >
                       {line.mode === "calc"
                         ? "→ Schakel naar direct bedrag"
@@ -1187,18 +1187,18 @@ export default function FactuurDetailPage() {
 
             <button
               onClick={addCnLine}
-              className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               Regel toevoegen
             </button>
           </div>
 
-          <div className="flex items-center gap-2 px-5 py-3 border-t border-purple-200 bg-purple-50/50">
+          <div className="flex items-center gap-2 px-5 py-3 border-t border-border bg-muted/30">
             <button
               onClick={handleCreateCreditNote}
               disabled={createCreditNote.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {createCreditNote.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1219,9 +1219,9 @@ export default function FactuurDetailPage() {
 
       {/* Linked credit notes */}
       {!isCreditNote && factuur.credit_notes && factuur.credit_notes.length > 0 && (
-        <div className="rounded-xl border border-purple-200 bg-card shadow-sm overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-purple-100 bg-purple-50/50">
-            <ReceiptText className="h-4 w-4 text-purple-600" />
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-muted/30">
+            <ReceiptText className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold text-foreground">
               Credit nota&apos;s ({factuur.credit_notes.length})
             </h3>

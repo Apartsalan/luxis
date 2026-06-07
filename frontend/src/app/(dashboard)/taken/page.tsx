@@ -295,7 +295,7 @@ function FollowupSection() {
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
           {data?.total ?? items.length}
         </span>
-        <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+        <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 uppercase tracking-wider">
           AI
         </span>
       </div>
@@ -372,7 +372,7 @@ function FollowupSection() {
 // ── Nieuwe Dossiers (Intakes) ────────────────────────────────────────────────
 
 function confidenceBadge(confidence: number | null) {
-  if (!confidence) return "bg-slate-50 text-slate-600 ring-slate-500/20 dark:bg-slate-800/30 dark:text-slate-400";
+  if (!confidence) return "bg-slate-50 text-slate-600 ring-slate-500/20";
   return confidenceBadgeClasses(confidence / 100);
 }
 
@@ -391,7 +391,7 @@ function IntakeSection() {
         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
           {items.length}
         </span>
-        <span className="rounded-md bg-violet-100 dark:bg-violet-900/30 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+        <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 uppercase tracking-wider">
           AI
         </span>
       </div>

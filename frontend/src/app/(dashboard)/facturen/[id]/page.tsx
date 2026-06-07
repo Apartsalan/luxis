@@ -48,6 +48,7 @@ import {
 } from "@/hooks/use-invoices";
 import { useExpenses, useCreateExpense, EXPENSE_CATEGORY_LABELS, type Expense } from "@/hooks/use-expenses";
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
+import { CREDIT_NOTE_TONE, TONES } from "@/lib/tones";
 import { QueryError } from "@/components/query-error";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 import { tokenStore } from "@/lib/token-store";
@@ -63,8 +64,7 @@ const STATUS_ACTIONS: Record<
       label: "Goedkeuren",
       next: "approved",
       icon: CheckCircle2,
-      color:
-        "bg-blue-600 text-white hover:bg-blue-700",
+      color: TONES.info.button,
     },
   ],
   approved: [
@@ -72,8 +72,7 @@ const STATUS_ACTIONS: Record<
       label: "Verzenden",
       next: "sent",
       icon: Send,
-      color:
-        "bg-amber-600 text-white hover:bg-amber-700",
+      color: TONES.warning.button,
     },
   ],
   sent: [],
@@ -513,7 +512,7 @@ export default function FactuurDetailPage() {
                 {factuur.invoice_number}
               </h1>
               {isCreditNote && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${CREDIT_NOTE_TONE.chipStrong}`}>
                   <ReceiptText className="h-3 w-3" />
                   Credit nota
                 </span>
@@ -521,7 +520,7 @@ export default function FactuurDetailPage() {
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                   INVOICE_STATUS_COLORS[factuur.status] ??
-                  "bg-gray-100 text-gray-700"
+                  TONES.gray.chip
                 }`}
               >
                 {INVOICE_STATUS_LABELS[factuur.status] ?? factuur.status}
@@ -620,7 +619,7 @@ export default function FactuurDetailPage() {
           {canCreateCreditNote && (
             <button
               onClick={startCreditNote}
-              className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+              className={`inline-flex items-center gap-2 rounded-lg border ${CREDIT_NOTE_TONE.outlineButton} px-4 py-2.5 text-sm font-medium transition-colors`}
             >
               <ReceiptText className="h-4 w-4" />
               Credit nota
@@ -801,11 +800,11 @@ export default function FactuurDetailPage() {
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">Verrekening:</span>{" "}
             {factuur.settlement_type === "bij_sluiting" ? (
-              <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+              <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${TONES.warning.badge}`}>
                 Bij sluiting dossier
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+              <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${TONES.info.badge}`}>
                 Tussentijds
               </span>
             )}
@@ -1234,12 +1233,12 @@ export default function FactuurDetailPage() {
                 className="flex items-center justify-between px-5 py-3 hover:bg-muted/40 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-mono font-semibold text-purple-700">
+                  <span className={`text-sm font-mono font-semibold ${CREDIT_NOTE_TONE.text}`}>
                     {cn.invoice_number}
                   </span>
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      INVOICE_STATUS_COLORS[cn.status] ?? "bg-gray-100 text-gray-700"
+                      INVOICE_STATUS_COLORS[cn.status] ?? TONES.gray.chip
                     }`}
                   >
                     {INVOICE_STATUS_LABELS[cn.status] ?? cn.status}
@@ -1249,7 +1248,7 @@ export default function FactuurDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-red-600 tabular-nums">
+                  <span className={`text-sm font-semibold ${TONES.danger.text} tabular-nums`}>
                     -{formatCurrency(cn.total)}
                   </span>
                   <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1278,7 +1277,7 @@ export default function FactuurDetailPage() {
             {!paymentSummary?.is_fully_paid && (
               <button
                 onClick={() => setShowPaymentForm(!showPaymentForm)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${TONES.success.button} transition-colors`}
               >
                 <ArrowDownLeft className="h-3.5 w-3.5" />
                 Betaling registreren
@@ -1300,13 +1299,13 @@ export default function FactuurDetailPage() {
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    paymentSummary.is_fully_paid ? "bg-emerald-500" : "bg-amber-500"
+                    paymentSummary.is_fully_paid ? TONES.success.solid : TONES.warning.solid
                   }`}
                   style={{ width: `${Math.min(100, paymentSummary.invoice_total > 0 ? (paymentSummary.total_paid / paymentSummary.invoice_total) * 100 : 0)}%` }}
                 />
               </div>
               {paymentSummary.outstanding > 0 && (
-                <p className="text-xs text-amber-600 mt-1 tabular-nums">
+                <p className={`text-xs ${TONES.warning.text} mt-1 tabular-nums`}>
                   Nog openstaand: {formatCurrency(paymentSummary.outstanding)}
                 </p>
               )}
@@ -1315,7 +1314,7 @@ export default function FactuurDetailPage() {
 
           {/* Payment form */}
           {showPaymentForm && (
-            <div className="border-b border-border bg-emerald-50/50 px-5 py-4">
+            <div className={`border-b border-border ${TONES.success.surfaceSoft} px-5 py-4`}>
               <h4 className="text-sm font-semibold text-foreground mb-3">Betaling registreren</h4>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
@@ -1385,7 +1384,7 @@ export default function FactuurDetailPage() {
                 <button
                   onClick={handleAddPayment}
                   disabled={createPayment.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-medium text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium ${TONES.success.button} transition-colors disabled:opacity-50`}
                 >
                   {createPayment.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1423,7 +1422,7 @@ export default function FactuurDetailPage() {
                     <td className="px-5 py-3 text-sm text-muted-foreground">
                       {formatDateShort(payment.payment_date)}
                     </td>
-                    <td className="px-5 py-3 text-right text-sm font-semibold text-emerald-600 tabular-nums">
+                    <td className={`px-5 py-3 text-right text-sm font-semibold ${TONES.success.text} tabular-nums`}>
                       +{formatCurrency(payment.amount)}
                     </td>
                     <td className="px-5 py-3">

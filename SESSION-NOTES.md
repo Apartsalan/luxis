@@ -1,9 +1,51 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 7 juni 2026 (sessie 155 — impeccable design-audit + alle 5 fix-waves uitgevoerd)
-**Laatste feature/fix:** Sessie 155 — **Impeccable frontend-audit (10.5/20) + alle 5 aanbevolen fix-waves dezelfde dag uitgevoerd** (6 commits `1507a00`→`6790087`, tsc groen per wave, visueel geverifieerd): W1 login/dashboard ont-AI'd + status-kleurconflict · W2 timer-tick app-breed gestopt (useTimerSeconds lokaal) + zoek-debounce/keepPreviousData + TipTap lazy · W3 12 modals → Radix Dialog + muis-only workflows toetsenbord-bedienbaar + ~70 labels + 40+ aria-labels + contrast · W4 Mail/Incasso mobiel bruikbaar + 27× hover-reveal zichtbaar op touch · W5 189 dode dark:-classes weg + emoji's → lucide + paars paneel neutraal + agenda hex gevalideerd. Anti-pattern scan 3→1. Geschatte score nu ~15.5/20. Nieuw: PRODUCT.md (design-context), `hooks/use-debounce.ts`, `rich-note-editor-lazy.tsx`. Rapport: `docs/qa/impeccable-audit-2026-06-07.md`.
-**Openstaande bugs:** AUDIT-FE-1 (718 palette-classes → semantic, eigen sessie), AUDIT-FE-2 (touch targets <44px, per scherm), AUDIT-FE-3 (aria-describedby per veld, klein) — zie roadmap Backlog. Systeem-audit nog open: H14–H19 (derdengelden-cluster), H25 (modules_enabled), #61/#54/#64 met Lisanne. Pre-bestaand: stale dev-container mist `sepaxml`; lokale ruff flagt E501 (CI niet); Windows hot-reload pakt wijzigingen soms niet op → `docker restart luxis-frontend`.
-**Volgende sessie:** AUDIT-FE-1 (palette-migratie mét screenshot-vergelijking) óf derdengelden-cluster (H14–H19) mét Lisanne óf RLS fase 2. Tooling-TODO's in memory: graphify testen, grill-me installeren.
+**Laatst bijgewerkt:** 7 juni 2026 (sessie 156 — AUDIT-FE-1 top-5 palette-migratie + AUDIT-FE-3 aria-koppeling)
+**Laatste feature/fix:** Sessie 156 — **Semantic tone-systeem (`lib/tones.ts`) + top-5 bestanden gemigreerd** (7 commits `79b3bb2`→`2fc627e`): incasso 51→0, dashboard 41→0, facturen 37→0, DossierHeader 34→1 (bewuste rest), facturen/[id] 29→0 palette-classes. Per pagina screenshot vóór/na vergeleken — pixel-identiek. CATEGORY_STYLES-duplicaat gededupliceerd (STEP_CATEGORY_STYLES in status-constants). Plus AUDIT-FE-3: aria-invalid/aria-describedby gekoppeld in 4 forms (relaties/nieuw, zaken/nieuw, facturen/nieuw, BetalingenTab), functioneel in browser geverifieerd.
+**Openstaande bugs:** AUDIT-FE-1 restant (~57 bestanden, ~620 classes — mechanisch nu tones.ts er staat), AUDIT-FE-2 (touch targets, verkenning gedaan: DocumentenTab 12× ergst), `FormFieldError`-component zelf nog ongebruikt (infra zonder consumers — adopteren of verwijderen). Systeem-audit nog open: H14–H19 (derdengelden-cluster), H25 (modules_enabled), #61/#54/#64 met Lisanne. Pre-bestaand: stale dev-container mist `sepaxml`; lokale ruff flagt E501 (CI niet); Windows hot-reload pakt wijzigingen soms niet op → `docker restart luxis-frontend`.
+**Volgende sessie:** AUDIT-FE-1 vervolg (correspondentie/agenda/taken e.a. via tones.ts-patroon) óf derdengelden-cluster (H14–H19) mét Lisanne óf RLS fase 2.
+
+## Wat er gedaan is (sessie 156 — 7 juni 2026) — AUDIT-FE-1 top-5 palette-migratie + AUDIT-FE-3
+
+### Samenvatting
+
+**AUDIT-FE-1 (hoofdtaak):** semantic tone-systeem neergezet en de 5 ergste bestanden volledig gemigreerd, exact volgens het sessie-recept (screenshot vóór/na per pagina, tsc per bestand, commit per pagina).
+
+- **`lib/tones.ts` (nieuw)** — één bron voor alle niet-status palette-classes. Tones: `info/success/warning/danger/ai/legal/agreement/neutral/gray` met usage-driven slots (foreground-ladder `textFaint(-400)`→`headingStrong(-900)`, surfaces, chips, badges, buttons, borders, hovers, steppers). **Waarden spiegelen bewust de bestaande palette-classes — migratie is visueel identiek, alleen de bron centraliseert.** Aparte exports: `CREDIT_NOTE_TONE` (paars als type-kleur, onafhankelijk rebrandbaar van `legal`), `AGING_TONES` (debiteuren severity-ramp emerald→amber→orange→rood), `CHECKBOX_COLOR`. Geen CSS-var-adoptie: `--success` (green-600) ≠ emerald-600 — zou zichtbaar verschuiven; geflagd als latere design-keuze.
+- **Migratie per bestand** (alle: tsc groen + screenshot-paar identiek): incasso/page.tsx 51→0 (`8bee3d4`, 3 views: lijst/kanban/stappen), dashboard 41→0 (`5547dc4`), facturen 37→0 (`98d6ac4`, 2 tabs), DossierHeader 34→1 (`4e55ad1`), facturen/[id] 29→0 (`96144f4`). Top-5 totaal: **192 → 1**.
+- **Dedup meegenomen:** identieke `CATEGORY_STYLES`-maps in incasso + StaphistorieTab → gedeelde `STEP_CATEGORY_STYLES` in status-constants (gebouwd op tones). Additief in status-constants: `DEBTOR_TYPE_BADGE` (B2B indigo/B2C pink), `CASE_STATUS_COLOR_FALLBACK`.
+
+**AUDIT-FE-3 (meelifter, `2fc627e`):** `FormFieldError` bleek **0 consumers** te hebben (infra uit W3 nooit aangesloten — forms gebruiken eigen inline `<p>`-errors). Minimaal gefixt zonder visuele wijziging: per veld `aria-invalid` + `aria-describedby` → error-`<p>` kreeg `id` + `role="alert"`. Gedaan in relaties/nieuw (7 velden, `fieldAria()`-helper), zaken/nieuw (3), facturen/nieuw (3 + lines-fout role=alert), BetalingenTab (2). In browser geverifieerd: blur op leeg verplicht veld → `aria-invalid="true"` + `aria-describedby="err-name"` → `role="alert"` met "Bedrijfsnaam is verplicht".
+
+**AUDIT-FE-2 (alleen verkend, niets gefixt):** `p-1`/`p-1.5` icon-buttons per bestand: DocumentenTab 12, incasso 8, uren 6, sjablonen-tab 6, producten-tab 4. Voorgestelde aanpak volgende keer: per component `max-sm:p-2` (groter alleen op touch, data-dense desktop intact) — beginnen bij DocumentenTab.
+
+### Bewuste keuzes
+- **DossierHeader `text-orange-500`** (Renteoverzicht-icoon) NIET gemigreerd — enige orange-500 in de app, bewuste one-off accent; tone toevoegen voor 1 gebruik = dode code.
+- **6 tone-slots zonder directe consumer** (o.a. `info.textStrong`, `gray.text`) bewust behouden: deels in-file geconsumeerd via AGING_TONES, deels complete-ladder voor de resterende ~57 bestanden — maakt vervolgmigratie mechanisch.
+- **status-constants.ts statuswaarden niet aangeraakt** — al gecentraliseerd (audit: "Positief"), eigen shades (sky, red-800) die niet op de tone-ladder passen.
+- **FE-3 minimaal**: bestaande inline error-styling behouden (`text-xs text-destructive`) i.p.v. alles omzetten naar FormFieldError (13px red-700) — dat zou een visuele wijziging zijn; component-adoptie is een aparte beslissing.
+
+### Gewijzigde bestanden
+- Nieuw: `frontend/src/lib/tones.ts`
+- `frontend/src/lib/status-constants.ts` (additief: STEP_CATEGORY_STYLES, DEBTOR_TYPE_BADGE, CASE_STATUS_COLOR_FALLBACK)
+- Migratie: `incasso/page.tsx`, `(dashboard)/page.tsx`, `facturen/page.tsx`, `zaken/[id]/components/DossierHeader.tsx`, `facturen/[id]/page.tsx`, `zaken/[id]/components/StaphistorieTab.tsx`
+- FE-3: `relaties/nieuw/page.tsx`, `zaken/nieuw/page.tsx`, `facturen/nieuw/page.tsx`, `zaken/[id]/components/incasso/BetalingenTab.tsx`
+
+### Verificatie
+- `npx tsc --noEmit` groen na elk bestand (7×)
+- Screenshot-paren (Playwright, 1440×900, fullPage, ingelogd als e2e-test@): incasso lijst/kanban/stappen, dashboard, facturen + debiteuren-tab, zaak-detail, factuur-detail — **alle pixel-identiek** (enige diff: hover-pijltje door cursorpositie)
+- `npx impeccable detect frontend/src`: **1 bevinding** (agenda side-stripe, bewust behouden) — niet gestegen ✓
+- FE-3 functioneel in browser geverifieerd (aria-attributen + role=alert)
+- Frontend-container per migratie herstart (Windows hot-reload quirk)
+- Geen backend-wijzigingen → geen pytest
+
+### Bekende issues
+- AUDIT-FE-1 restant: ~57 bestanden / ~620 palette-classes (ergste resterend: correspondentie, agenda, taken) — nu mechanisch via tones.ts-patroon
+- `FormFieldError`-component nog steeds 0 consumers — adopteren (visuele unificatie error-styling) of verwijderen
+- AUDIT-FE-2 open; verkenning hierboven
+
+### Volgende sessie
+- **AUDIT-FE-1 vervolg**: resterende bestanden migreren via tones.ts (zelfde recept: screenshot vóór/na, tsc, commit per pagina). Of: derdengelden-cluster (H14–H19) mét Lisanne / RLS fase 2.
 
 ## Wat er gedaan is (sessie 155 — 7 juni 2026) — Impeccable design-audit + 5 fix-waves
 

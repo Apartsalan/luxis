@@ -705,10 +705,10 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 ### Frontend design-audit S155 — restwerk (bewuste backlog, zie `docs/qa/impeccable-audit-2026-06-07.md`)
 
-- **AUDIT-FE-1: 718 hard-coded palette-classes → semantic varianten** (62 bestanden; top-5: incasso 51, dashboard 41, facturen 37, DossierHeader 34, facturen/[id] 29). Definieer semantic badge/alert-varianten op basis van bestaande success/warning tokens + `lib/status-constants.ts`-patroon, migreer per pagina mét visuele screenshot-vergelijking. Eigen sessie; visueel regressie-gevoelig — NIET via blinde sed.
-- **AUDIT-FE-2: touch targets < 44px** (±73 `p-1`/`p-1.5` icon-buttons + 47 `h-6`/`h-7`). Per scherm beoordelen — bulk-vergroting vervormt data-dense tabellen. Hover-reveal-deel is al gefixt (W4: zichtbaar op touch + focus).
-- **AUDIT-FE-3 (klein): per-veld `aria-invalid`/`aria-describedby`** — infra staat klaar in `form-field-error.tsx` (id-prop + role=alert); velden moeten nog gekoppeld worden waar FormFieldError gebruikt wordt.
-- *(Bewust behouden, géén werk: agenda event side-stripes = Google Calendar-idioom; credit-nota paars als functionele type-kleur; DossierSidebar verborgen <lg.)*
+- **AUDIT-FE-1: hard-coded palette-classes → semantic varianten** — 🔶 Top-5 gedaan (sessie 156): `lib/tones.ts` als centrale bron + incasso/dashboard/facturen/DossierHeader/facturen-detail gemigreerd (192→1 classes, screenshots pixel-identiek). **Restant: ~57 bestanden / ~620 classes** (ergste: correspondentie, agenda, taken) — nu mechanisch via tones.ts-patroon, zelfde recept (screenshot vóór/na, tsc, commit per pagina). NIET via blinde sed.
+- **AUDIT-FE-2: touch targets < 44px** (±73 `p-1`/`p-1.5` icon-buttons). Per scherm beoordelen — bulk-vergroting vervormt data-dense tabellen. Verkenning sessie 156: DocumentenTab 12×, incasso 8×, uren 6×, sjablonen-tab 6×; voorgestelde aanpak `max-sm:p-2` per component (groter alleen op touch).
+- ~~**AUDIT-FE-3: per-veld `aria-invalid`/`aria-describedby`**~~ ✅ Gedaan (sessie 156) — gekoppeld in relaties/nieuw (7 velden), zaken/nieuw (3), facturen/nieuw (3), BetalingenTab (2); error-`<p>` kreeg id + role=alert; functioneel geverifieerd. **Let op:** `form-field-error.tsx`-component zelf heeft nog 0 consumers — adopteren (unificeert error-styling) of verwijderen.
+- *(Bewust behouden, géén werk: agenda event side-stripes = Google Calendar-idioom; credit-nota paars als functionele type-kleur (`CREDIT_NOTE_TONE`); DossierSidebar verborgen <lg; DossierHeader `text-orange-500` rente-icoon als one-off accent.)*
 
 ### Incasso Workflow Automatisering (P1)
 

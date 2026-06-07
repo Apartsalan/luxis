@@ -25,7 +25,7 @@
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
 | Backend (FastAPI) | ~97% | 234 endpoints, 25 routers, 35 models, 684 tests (4 skipped). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. Zero-BTW bug gefixt ✅. Pipeline overhaul: 21 stappen, step_transitions (branching workflow), CaseStepHistory, verweer-tracking. |
-| Frontend (Next.js) | ~85% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). GAT: redesign (backlog). |
+| Frontend (Next.js) | ~87% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). **Impeccable design-audit S155 (7 jun): 10.5→~15.5/20** — login/dashboard ont-AI'd, timer-tick + zoek-flikker gefixt, 12 modals → Radix Dialog, toetsenbord/screenreader-toegankelijkheid, Mail/Incasso mobiel, dode dark:-classes weg. Rapport: `docs/qa/impeccable-audit-2026-06-07.md`. Restwerk: zie Backlog. |
 | Infra/DevOps | ~98% | Docker Compose op Hetzner VPS. Caddy ✅. GitHub-hosted CI runners ✅. Auto-deploy via SSH ✅. Backup: lokaal 7d + off-site B2 90d ✅. fail2ban ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. CI 6/6 groen ✅. |
 
 **Rode draad:** Backend ~97%, Frontend ~85%, Infra ~98%. Fasen 1-3 + 5 + 6 compleet. CI volledig groen (6/6 jobs).
@@ -702,6 +702,13 @@ Volledige UX review van alle 31 schermen. 5 gefixt, 13 openstaand.
 
 - ~~**FEATURE: Relaties — inline contactpersoon aanmaken vanuit koppeldialoog**~~ ✅ Gedaan (sessie 19) — inline aanmaken van advocaat wederpartij bij nieuw dossier
 - ~~**FEATURE: Advocaat wederpartij — klikbare detailweergave**~~ ✅ Gedaan (sessie 19) — zaken zichtbaar op relatiepagina via CaseParty filter + "Partij" rol label
+
+### Frontend design-audit S155 — restwerk (bewuste backlog, zie `docs/qa/impeccable-audit-2026-06-07.md`)
+
+- **AUDIT-FE-1: 718 hard-coded palette-classes → semantic varianten** (62 bestanden; top-5: incasso 51, dashboard 41, facturen 37, DossierHeader 34, facturen/[id] 29). Definieer semantic badge/alert-varianten op basis van bestaande success/warning tokens + `lib/status-constants.ts`-patroon, migreer per pagina mét visuele screenshot-vergelijking. Eigen sessie; visueel regressie-gevoelig — NIET via blinde sed.
+- **AUDIT-FE-2: touch targets < 44px** (±73 `p-1`/`p-1.5` icon-buttons + 47 `h-6`/`h-7`). Per scherm beoordelen — bulk-vergroting vervormt data-dense tabellen. Hover-reveal-deel is al gefixt (W4: zichtbaar op touch + focus).
+- **AUDIT-FE-3 (klein): per-veld `aria-invalid`/`aria-describedby`** — infra staat klaar in `form-field-error.tsx` (id-prop + role=alert); velden moeten nog gekoppeld worden waar FormFieldError gebruikt wordt.
+- *(Bewust behouden, géén werk: agenda event side-stripes = Google Calendar-idioom; credit-nota paars als functionele type-kleur; DossierSidebar verborgen <lg.)*
 
 ### Incasso Workflow Automatisering (P1)
 

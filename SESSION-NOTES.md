@@ -1,9 +1,48 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 3 juni 2026 (sessie 154 — 3 crash-guards + row 59 + dead-block cleanup + #93 onderzocht)
-**Laatste feature/fix:** Sessie 154 — **3 bounded crash-guards + row 59 + 1 UI-cleanup, elk rood→groen / tsc-schoon, los gecommit, CI+auto-deploy.** (1) Malformed JWT `sub`/`tenant_id` → 401 i.p.v. 500 (`c10e7c5`), (2) `_determine_direction` None-guard op `from_email` (`a098a09`), (3) `distribute_payment` weigert negatief bedrag (`< 0`; nul blijft toegestaan — auditvoorstel `<= 0` afgekeurd, brak `test_zero_payment`; `63385f9`), (4) **row 59** 14-dagenbrief rente-label neutraal zoals de sommatie (B2C+B2B; bewoording bevestigd; `9fa3de7`), (5) dead 'Standaard rente-instellingen'-blok op Kantoor-tab verwijderd (placeholder uit maart, sloeg niks op + fout BTW-label; echte rente staat per Relatie; `ee382f3`). **#93 Exact-`float()` onderzocht → NON-ISSUE** (`9127d56`): Exact-velden zijn Edm.Double → OData vereist JSON-getal, niet string; auditadvies was fout; comment toegevoegd.
-**Openstaande bugs:** Audit nog open: H14–H19 (derdengelden-cluster), H25 (modules_enabled), betaalbrieven-IBAN (#61), BTW-op-rente (#54), debtor_type-afleiding (#64) — geld/juridisch/product, met Lisanne. + resterende low/polish in `.audit/AUDIT-REPORT.md` (verifieer elk; lijst bevat non-issues — bevestigd: #48/#63/#81/#84/#93 al opgelost of non-issue). Pre-bestaand: stale dev-container mist `sepaxml`; lokale ruff flagt E501 (CI niet — alleen default rule-set op `app/`).
-**Volgende sessie:** Bounded technische audit-werk is grotendeels uitgeput. Keuze: Derdengelden-cluster (H14–H19) = eigen sessie mét Lisanne · product/juridische audit-items (#61/#54/#64) mét Lisanne · RLS fase 2 (verbind ALS `luxis_app`) · of nieuwe feature. Eenmanszaak-nuance griffierecht (`company`→rechtspersoon) later met rechtsvorm-vlag.
+**Laatst bijgewerkt:** 7 juni 2026 (sessie 155 — impeccable design-audit + alle 5 fix-waves uitgevoerd)
+**Laatste feature/fix:** Sessie 155 — **Impeccable frontend-audit (10.5/20) + alle 5 aanbevolen fix-waves dezelfde dag uitgevoerd** (6 commits `1507a00`→`6790087`, tsc groen per wave, visueel geverifieerd): W1 login/dashboard ont-AI'd + status-kleurconflict · W2 timer-tick app-breed gestopt (useTimerSeconds lokaal) + zoek-debounce/keepPreviousData + TipTap lazy · W3 12 modals → Radix Dialog + muis-only workflows toetsenbord-bedienbaar + ~70 labels + 40+ aria-labels + contrast · W4 Mail/Incasso mobiel bruikbaar + 27× hover-reveal zichtbaar op touch · W5 189 dode dark:-classes weg + emoji's → lucide + paars paneel neutraal + agenda hex gevalideerd. Anti-pattern scan 3→1. Geschatte score nu ~15.5/20. Nieuw: PRODUCT.md (design-context), `hooks/use-debounce.ts`, `rich-note-editor-lazy.tsx`. Rapport: `docs/qa/impeccable-audit-2026-06-07.md`.
+**Openstaande bugs:** AUDIT-FE-1 (718 palette-classes → semantic, eigen sessie), AUDIT-FE-2 (touch targets <44px, per scherm), AUDIT-FE-3 (aria-describedby per veld, klein) — zie roadmap Backlog. Systeem-audit nog open: H14–H19 (derdengelden-cluster), H25 (modules_enabled), #61/#54/#64 met Lisanne. Pre-bestaand: stale dev-container mist `sepaxml`; lokale ruff flagt E501 (CI niet); Windows hot-reload pakt wijzigingen soms niet op → `docker restart luxis-frontend`.
+**Volgende sessie:** AUDIT-FE-1 (palette-migratie mét screenshot-vergelijking) óf derdengelden-cluster (H14–H19) mét Lisanne óf RLS fase 2. Tooling-TODO's in memory: graphify testen, grill-me installeren.
+
+## Wat er gedaan is (sessie 155 — 7 juni 2026) — Impeccable design-audit + 5 fix-waves
+
+### Samenvatting
+
+Impeccable-skill (Paul Bakaus, upgrade van Anthropic's frontend-design skill) geïnstalleerd → eenmalige init (PRODUCT.md geschreven: register=product, brand=kalm/professioneel/efficiënt, a11y="goede basis" — keuze gebruiker) → volledige technische audit over `frontend/src` via 3 parallelle agents over 5 dimensies. **Score 10.5/20** (A11y 2, Perf 3, Responsive 2.5, Theming 2, Anti-patterns 1; 0×P0, 11×P1, 18×P2, 15×P3). Gebruiker: "doe alles" → alle 5 aanbevolen acties in waves uitgevoerd, commit+push per wave, tsc groen per wave, eindverificatie visueel in browser (login, dashboard, mail, incasso).
+
+### Per wave (elk eigen commit)
+
+- **W1 Quieter** (`f003d2d`) — login AI-hero-sjabloon (gradient-tekst, 2× blur-orbs, dot-grid, fake stat-row) → effen donker paneel op `sidebar-bg` token; dashboard KPI gradient-chips + glow-shadows → vlakke `primary/success/warning`-tints; password-toggle toetsenbord-bereikbaar + aria; **status-kleurconflict opgelost**: `types.tsx` her-exporteert nu uit `lib/status-constants.ts` (TASK_STATUS_BADGE "due" was amber vs blauw — SSOT gekozen).
+- **W2 Optimize** (`1feb7c6`) — **timer-context tikt niet meer** (was: setState 1×/sec → hele dossierboom her-renderde elke seconde bij lopende timer): persistentie/warning via 10s-interval op ref, live display via nieuwe `useTimerSeconds()` lokaal in FloatingTimer + `LiveTimerDisplay` (uren); `getTimerSeconds()` berekent uit `startedAt`; pause/stop/beforeunload bevriezen accuraat. Zoeken: gedeelde `hooks/use-debounce.ts` + 300ms op zaken/relaties/facturen + `placeholderData: keepPreviousData` in de 3 lijst-hooks (was: API-call + tabel→skeleton per toetsaanslag). Dode `hoveredRow`-state weg; TipTap via `rich-note-editor-lazy.tsx` (next/dynamic, isNoteEmpty verhuisd); incasso `filteredCases` gememoized (was 4× filter per render).
+- **W3 Harden** (`5e68297`) — **12 handgebouwde modals → Radix Dialog** (focus-trap/Escape/aria gratis): agenda event, documenten case-picker, derdengelden rapport, facturen/[id] verschot, UrenTab, sjablonen-tab, BetalingsregelingSection, facturen/nieuw verschot, incasso batch-preview, DocumentenTab preview, RenteoverzichtDialog (laatste 2 buiten audit-lijst gevonden). Muis-only workflows toetsenbord-bedienbaar: correspondentie mail-open (role=button + Enter/Space), incasso batch-selectie (echte buttons + aria per dossier). ~70 labels htmlFor/id (4 parallelle agents, disjuncte bestanden), 40+ icon-buttons benoemd, filter-selects benoemd. `form-field-error`: role=alert + id-prop + red-700 (4.5:1 bij 13px). 33× `text-muted-foreground/50-70` → onverdund (was 2.0-2.8:1). Sidebar-labels /30→/60; Escape sluit mobiel menu + notificatie-dropdown; notificatie-items nu Link/button; dossier-tabs role=tablist + aria-selected; email-editor role=textbox.
+- **W4 Adapt** (`c2cf1e8`) — correspondentie split-view: lijst verbergt onder lg zodra detail open, detail full-width + "Terug naar lijst" (was w-2/5+3/5 = ±150px lijst op telefoon); incasso stappen-tabel `overflow-hidden`→`overflow-x-auto` (kolommen hard geclipt <700px); facturen/[id] regels+betalingen + derdengelden 2 tabellen in overflow-x-auto; **27× hover-reveal** → `max-sm:opacity-100` + `group-focus-within:opacity-100` (zichtbaar op touch én keyboard); facturen/nieuw grid-cols-12 stapelt naar 2-kolom cards onder md; dropdown viewport-clamps (uren CaseSelector, floating-timer).
+- **W5 Theming** (`f8784ff`) — 189 dode `dark:`-classes gestript uit 19 bestanden (geen `.dark` block — generatie-artefact; `components/ui/` bewust overgeslagen); incasso TRIGGER_ICONS emoji's → lucide Clock/MessageSquare/Wrench/Coins; DossierHeader 📞-prefix weg; credit-nota paars sfeer-paneel → neutrale border/muted tokens (paars blijft alléén als functionele type-kleur op badge/knop/nummer); agenda hex-alpha-concat (`${color}18`, brak stilletjes op niet-6-digit hex) gecentraliseerd in gevalideerde `eventColor()`/`eventColorTint()` helpers; invoice paid green→emerald, cancelled gray-400→600.
+- **Docs** (`6790087`) — auditrapport bijgewerkt: resultaat-tabel, zelf-ingeschatte nieuwe scores (~15.5/20 "Good"), eerlijke backlog met redenen.
+
+### Geverifieerd, niet blind gevolgd
+- Agenda event side-stripes (detect-scan flagde ze) — bewust behouden: Google Calendar/Outlook-idioom, functionele event-type-codering, geen AI-tell.
+- Credit-nota paars als type-kleur (badge/knop/nummer) behouden; alleen het sfeer-paneel was fout.
+- Touch-target bulk-fix (±73 knoppen) bewust NIET gedaan: blinde vergroting vervormt data-dense tabellen; per scherm beoordelen (AUDIT-FE-2).
+- 718 palette-classes NIET in deze sessie gemigreerd: visueel regressie-gevoelig, eigen sessie met screenshot-vergelijking (AUDIT-FE-1).
+
+### Gewijzigde bestanden (key)
+- Nieuw: `PRODUCT.md`, `frontend/src/hooks/use-debounce.ts`, `frontend/src/components/rich-note-editor-lazy.tsx`, `.claude/skills/impeccable/` (+ `.github/skills/`), `docs/qa/impeccable-audit-2026-06-07.md`
+- Zwaar gewijzigd: `hooks/use-timer.ts`, `login/page.tsx`, `(dashboard)/page.tsx`, `correspondentie/page.tsx`, `incasso/page.tsx`, `facturen/[id]/page.tsx`, `zaken/[id]/types.tsx`, `app-sidebar.tsx`, `app-header.tsx`, `form-field-error.tsx` + ~40 andere frontend-bestanden (labels/aria/dark-strip/hover-reveal)
+
+### Verificatie
+- `npx tsc --noEmit` groen na elke wave (6×). `npx impeccable detect frontend/src`: 3 → 1 bevinding.
+- Visueel (Playwright op localhost:3000, ingelogd als e2e-test@): login-redesign ✅, dashboard vlakke KPI-chips + leesbare sidebar-labels ✅, mail-pagina rendert ✅, incasso-tabel met checkbox-buttons ✅. Geen render-crashes.
+- Let op: frontend-container moest herstart worden (`docker restart luxis-frontend`) — Windows bind-mount hot-reload pakt wijzigingen niet altijd op.
+- Geen backend-wijzigingen → geen pytest nodig (puur additief/frontend).
+
+### Bekende issues
+- AUDIT-FE-1/2/3 in roadmap Backlog (palette-migratie, touch targets, aria-describedby).
+- FloatingTimer "Timer"-knop zichtbaar op login-pagina (pre-existing, stale token in browser; geen regressie).
+- `.claude/scheduled_tasks.lock` untracked (niet committen).
+
+### Volgende sessie
+- **AUDIT-FE-1**: palette-migratie per pagina mét screenshot-vergelijking (zie prompt). Of: derdengelden-cluster (H14–H19) mét Lisanne / RLS fase 2.
 
 ## Wat er gedaan is (sessie 154 — 3 juni 2026) — 3 bounded crash-guards + row 59
 

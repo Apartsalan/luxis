@@ -1,5 +1,8 @@
 // Shared status constants — single source of truth for case/task status labels and badge styles.
 // Standard badge pattern: bg-[color]-50 text-[color]-700 ring-1 ring-inset ring-[color]-600/20
+// Non-status semantic colours live in lib/tones.ts.
+
+import { TONES } from "@/lib/tones";
 
 // --- Case statuses (incasso workflow + general) ---
 
@@ -27,6 +30,8 @@ export const CASE_STATUS_BADGE: Record<string, string> = {
 
 export const CASE_STATUS_BADGE_FALLBACK = "bg-slate-50 text-slate-600 ring-slate-500/20";
 
+export const CASE_STATUS_COLOR_FALLBACK = "bg-slate-400";
+
 // Solid colors for pipeline visualization (dashboard bar chart)
 export const CASE_STATUS_COLORS: Record<string, string> = {
   nieuw: "bg-blue-500",
@@ -51,6 +56,24 @@ export const CASE_TYPE_BADGE: Record<string, string> = {
   incasso: "bg-blue-50 text-blue-600",
   dossier: "bg-slate-50 text-slate-600",
   advies: "bg-teal-50 text-teal-600",
+};
+
+// --- Incasso step categories (chip styling, shared by incasso page + staphistorie tab) ---
+
+export const STEP_CATEGORY_STYLES: Record<string, string> = {
+  minnelijk: TONES.info.chip,
+  gerechtelijk: TONES.legal.chip,
+  executie: TONES.danger.chip,
+  regeling: TONES.agreement.chip,
+  administratief: TONES.gray.chip,
+  afsluiting: TONES.success.chip,
+};
+
+// --- Debtor type (B2B/B2C) badges ---
+
+export const DEBTOR_TYPE_BADGE: Record<string, string> = {
+  b2b: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
+  b2c: "bg-pink-50 text-pink-700 ring-pink-600/20",
 };
 
 // --- Task statuses (workflow tasks) ---

@@ -1,5 +1,10 @@
 # Impeccable Frontend Audit — 7 juni 2026
 
+> **STATUS UPDATE (7 juni 2026, zelfde dag):** alle 5 aanbevolen acties uitgevoerd in waves W1-W5
+> (commits `f003d2d`, `1feb7c6`, `5e68297`, `c2cf1e8`, `f8784ff`). Zie "Resultaat na fixes" onderaan.
+> Deterministische anti-pattern scan: 3 → 1 (resterende = agenda event side-stripes, bewust behouden
+> als Google Calendar-idioom). Visueel geverifieerd: login, dashboard, mail, incasso.
+
 Technische kwaliteitsaudit van `frontend/src` via de impeccable-skill (5 dimensies, 3 parallelle audit-agents + deterministische anti-pattern scan). Geen fixes uitgevoerd — dit rapport is de werklijst.
 
 ## Audit Health Score
@@ -133,3 +138,44 @@ Bewust NIET geteld (product-register): agenda side-stripes (Google Calendar-idio
 Schatting: acties 1+2 samen ± halve sessie; 3+4 elk een eigen sessie; 5 verspreid/mechanisch.
 
 Her-run `/impeccable audit` na fixes om score-verbetering te meten.
+
+---
+
+## Resultaat na fixes (7 juni 2026)
+
+### Uitgevoerd
+
+| Wave | Commit | Inhoud |
+|---|---|---|
+| W1 Quieter | `f003d2d` | Login AI-hero → effen donker paneel; KPI gradient-chips → vlakke token-tints; status-kleurconflict opgelost (types.tsx → status-constants re-export) |
+| W2 Optimize | `1feb7c6` | Timer tikt niet meer door hele app (useTimerSeconds lokaal); zoeken 300ms debounced + keepPreviousData; TipTap lazy; dode hover-state weg; incasso filter gememoized |
+| W3 Harden | `5e68297` | 12 handgebouwde modals → Radix Dialog; mail-open + incasso-selectie toetsenbord-bedienbaar; ~70 labels gekoppeld; 40+ aria-labels; form-errors role=alert + rood 4.5:1; 33× opacity-muted tekst naar vol contrast; Escape op sidebar/notificaties |
+| W4 Adapt | `c2cf1e8` | Mail split-view mobiel bruikbaar (lijst↔detail wissel); incasso tabel-clip fix; 4 tabellen overflow-x-auto; 27× hover-reveal zichtbaar op touch + focus; factuurregels stapelen op mobiel; dropdown viewport-clamps |
+| W5 Theming | `f8784ff` | 189 dode dark:-classes weg; emoji's → lucide; credit-nota paars sfeer-paneel → neutraal; agenda hex-alpha gecentraliseerd + gevalideerd; paid green→emerald; cancelled-badge contrast |
+
+### Zelf-inschatting nieuwe scores (her-run `/impeccable audit` voor officiële meting)
+
+| Dimensie | Was | Nu (geschat) | Toelichting |
+|---|---|---|---|
+| Accessibility | 2 | ~3 | Alle 4 P1's opgelost; per-veld aria-describedby koppeling nog niet overal (infra staat in form-field-error) |
+| Performance | 3 | ~3.5 | Timer-tick + zoek-flikker (alles wat Lisanne voelt) opgelost |
+| Responsive | 2.5 | ~3 | Mail/Incasso mobiel bruikbaar; touch targets <44px grotendeels backlog |
+| Theming | 2 | ~2.5 | Conflicten/dode code weg; 718 palette-classes → semantic varianten = backlog |
+| Anti-Patterns | 1 | ~3.5 | Deterministische scan 3→1 (rest bewust); login/dashboard/paars/emoji weg |
+| **Totaal** | **10.5** | **~15.5 (Good)** | |
+
+### Bewuste backlog (niet gedaan, met reden)
+
+1. **718 hard-coded palette-classes → semantic badge/alert-varianten** — grootste klus, mechanisch maar visueel-regressie-gevoelig; vergt eigen sessie met screenshot-vergelijking per pagina. Token-infra (success/warning) staat klaar.
+2. **Touch targets <44px (±73 knoppen)** — bulk-vergroting vervormt data-dense tabellen; per-scherm beoordelen, geen blinde sed. Hover-reveal-deel is wél gefixt (zichtbaar op touch).
+3. **DossierSidebar verborgen <lg** — gedrag gedocumenteerd als bewuste keuze; collapsible variant kan later.
+4. **success/warning tokens breed inzetten** — onderdeel van backlog-punt 1.
+5. **Credit-nota paars als type-kleur** (badge/knop/nummer) — bewust behouden, functionele codering.
+6. **Agenda event side-stripes** — bewust behouden, Google Calendar/Outlook-idioom voor event-types.
+
+### Verificatie
+
+- `npx tsc --noEmit` groen na elke wave
+- `npx impeccable detect frontend/src`: 3 → 1 bevinding
+- Visueel gecheckt (Playwright, localhost:3000): login-redesign, dashboard KPI-chips, mail-pagina, incasso-tabel — alles rendert correct, geen render-crashes
+- Let op: frontend-container moest herstart worden voor hot-reload (Windows bind-mount watching) — wijzigingen zijn daarna zichtbaar

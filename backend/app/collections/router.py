@@ -140,6 +140,17 @@ async def calculate_interest(
         for c in claims
     ]
 
+    # Audit #52: deelbetalingen verlagen de hoofdsom (art. 6:44 BW) — zonder
+    # payments rekent dit endpoint bruto en toont het te hoge rente.
+    payments = await service.list_payments(db, current_user.tenant_id, case_id)
+    payment_dicts = [
+        {
+            "payment_date": p.payment_date,
+            "allocated_to_principal": p.allocated_to_principal,
+        }
+        for p in payments
+    ]
+
     result = await calculate_case_interest(
         db,
         str(case_id),
@@ -148,6 +159,7 @@ async def calculate_interest(
         case.contractual_compound,
         claim_dicts,
         calc_date,
+        payments=payment_dicts,
     )
     return result
 

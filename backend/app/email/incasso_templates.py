@@ -371,14 +371,33 @@ def _vordering_table_basenet(ctx: dict) -> str:
     return html
 
 
+def _dg_iban(ctx: dict) -> str:
+    """IBAN van de Stichting Derdengelden (Instellingen → Kantoor).
+
+    Audit #61: debiteuren moeten op de stichtingsrekening betalen (Voda 6.19
+    lid 1). Geen hardcoded fallback-IBAN — bij ontbreken een luide placeholder
+    zodat de brief nooit stilletjes naar de verkeerde rekening verwijst.
+    """
+    return (ctx.get("kantoor") or {}).get("derdengelden_iban") or (
+        "[IBAN STICHTING DERDENGELDEN ONTBREEKT — vul in via Instellingen → Kantoor]"
+    )
+
+
+def _dg_tnv(ctx: dict) -> str:
+    """Tenaamstelling van de Stichting Derdengelden."""
+    return (ctx.get("kantoor") or {}).get("derdengelden_tnv") or (
+        "[TENAAMSTELLING STICHTING DERDENGELDEN ONTBREEKT]"
+    )
+
+
 def _betaling_instructie(ctx: dict, termijn: str = "2 DAGEN") -> str:
     """Betalingsinstructie blok — IBAN derdengelden + kenmerk."""
     return (
         f"<p>Hierbij sommeer ik u andermaal het bovengenoemd totaalbedrag "
         f"ad {ctx['totaal_openstaand']} <strong>UITERLIJK BINNEN "
         f"{termijn} NA HEDEN</strong> te hebben bijgeschreven op de "
-        "derdengeldenrekening van mijn kantoor IBAN: NL20 RABO 0388 "
-        "5065 20 t.n.v. Stichting Beheer Derdengelden Kesting Legal "
+        f"derdengeldenrekening van mijn kantoor IBAN: {_dg_iban(ctx)} "
+        f"t.n.v. {_dg_tnv(ctx)} "
         f"onder vermelding van het kenmerk "
         f"{ctx['zaak']['zaaknummer']}.</p>"
     )
@@ -431,8 +450,8 @@ def _betaling_instructie_en(ctx: dict, days: int = 2) -> str:
         f"amount of {ctx['totaal_openstaand']} <strong>WITHIN {days} "
         "DAYS FROM TODAY</strong> to the third-party account of my "
         "office:</p>"
-        "<p>IBAN: NL20 RABO 0388 5065 20<br>"
-        "Account holder: Stichting Beheer Derdengelden Kesting Legal<br>"
+        f"<p>IBAN: {_dg_iban(ctx)}<br>"
+        f"Account holder: {_dg_tnv(ctx)}<br>"
         f"Reference: {ctx['zaak']['zaaknummer']}</p>"
         "<p><strong>Important:</strong> You must include the correct "
         "case number when making the payment. Please note that only "
@@ -468,8 +487,7 @@ def _render_aanmaning(ctx: dict) -> str:
     body += (
         f"<p>Wij sommeren u het bedrag van <strong>{ctx['totaal_openstaand']}"
         f"</strong> uiterlijk {ctx['termijn_14_dagen']} te voldoen op "
-        "IBAN NL20 RABO 0388 5065 20 t.n.v. Stichting Beheer "
-        "Derdengelden Kesting Legal, "
+        f"IBAN {_dg_iban(ctx)} t.n.v. {_dg_tnv(ctx)}, "
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
         "<p>Bij gebreke van tijdige betaling zullen wij zonder nadere "
         "aankondiging rechtsmaatregelen treffen.</p>"
@@ -510,8 +528,8 @@ def _render_sommatie(ctx: dict) -> str:
         f"<p>Ik sommeer u hierbij om het openstaande bedrag van "
         f"<strong>{ctx['totaal_openstaand']}</strong> "
         "<strong>BINNEN 3 DAGEN NA HEDEN</strong> bij te schrijven op de "
-        "derdengeldenrekening van mijn kantoor IBAN NL20 RABO 0388 5065 20 "
-        "ten name van Stichting Beheer Derdengelden Kesting Legal onder "
+        f"derdengeldenrekening van mijn kantoor IBAN {_dg_iban(ctx)} "
+        f"ten name van {_dg_tnv(ctx)} onder "
         f"vermelding van het kenmerk {zn}.</p>"
         "<p>Ik wijs u erop dat alleen betaling van het volledige bedrag op "
         "de hiervoor aangegeven wijze ervoor zorgt dat de incassoprocedure "
@@ -556,8 +574,7 @@ def _render_tweede_sommatie(ctx: dict) -> str:
         f"<p>Wij sommeren u &mdash; voor de laatste maal &mdash; het bedrag van "
         f"<strong>{ctx['totaal_openstaand']}</strong> uiterlijk "
         f"{ctx['termijn_14_dagen']} te voldoen op "
-        "IBAN NL20 RABO 0388 5065 20 t.n.v. Stichting Beheer "
-        "Derdengelden Kesting Legal, "
+        f"IBAN {_dg_iban(ctx)} t.n.v. {_dg_tnv(ctx)}, "
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
         "<p>Bij gebreke van tijdige betaling zullen wij zonder nadere "
         "aankondiging tot dagvaarding overgaan. De kosten hiervan "
@@ -613,8 +630,8 @@ def _render_14_dagenbrief(ctx: dict) -> str:
         f"<p>Ik verzoek u het totaal verschuldigde bedrag van "
         f"<strong>{ctx['totaal_verschuldigd']}</strong> binnen veertien dagen "
         f"na ontvangst van deze brief over te maken op het rekeningnummer "
-        f"<strong>{ctx['kantoor']['iban']}</strong> t.n.v. Stichting Beheer "
-        f"Derdengelden Kesting Legal, onder vermelding van zaaknummer "
+        f"<strong>{_dg_iban(ctx)}</strong> t.n.v. "
+        f"{_dg_tnv(ctx)}, onder vermelding van zaaknummer "
         f"<strong>{ctx['zaak']['zaaknummer']}</strong>.</p>"
         "<p>Bij gebreke van tijdige betaling zullen wij zonder nadere "
         "aankondiging rechtsmaatregelen treffen, waarvan de kosten eveneens "
@@ -645,8 +662,7 @@ def _render_herinnering(ctx: dict) -> str:
     body += (
         f"<p>Wij verzoeken u het bedrag van <strong>{ctx['totaal_openstaand']}"
         f"</strong> voor {ctx['termijn_14_dagen']} over te maken op "
-        "IBAN NL20 RABO 0388 5065 20 t.n.v. Stichting Beheer "
-        "Derdengelden Kesting Legal, "
+        f"IBAN {_dg_iban(ctx)} t.n.v. {_dg_tnv(ctx)}, "
         f"onder vermelding van zaaknummer {ctx['zaak']['zaaknummer']}.</p>"
     )
     return _render_branded(
@@ -767,8 +783,8 @@ def _render_schikkingsvoorstel(ctx: dict) -> str:
         "<p>Namens cli&euml;nte sommeer ik u om het voormelde "
         "bedrag <strong>binnen 24 uur na heden</strong> bij te "
         "schrijven op de derdengeldenrekening van mijn kantoor "
-        "IBAN: NL20 RABO 0388 5065 20 ten name van Stichting "
-        "Beheer Derdengelden Kesting Legal onder vermelding van "
+        f"IBAN: {_dg_iban(ctx)} ten name van "
+        f"{_dg_tnv(ctx)} onder vermelding van "
         f"het kenmerk {zn}.</p>"
         "<p>Is het bedrag alsdan niet bijgeschreven, dan komt het "
         "aanbod automatisch te vervallen en kan daar zowel in als "
@@ -836,8 +852,8 @@ def _render_engelse_sommatie(ctx: dict) -> str:
         f"<p>I hereby demand that you transfer the total outstanding "
         f"amount of {ctx['totaal_openstaand']} <strong>WITHIN 2 DAYS "
         "FROM TODAY</strong> to the escrow account of my office "
-        "IBAN: NL20 RABO 0388 5065 20 in the name of Stichting "
-        f"Beheer Derdengelden Kesting Legal, stating reference {zn}.</p>"
+        f"IBAN: {_dg_iban(ctx)} in the name of "
+        f"{_dg_tnv(ctx)}, stating reference {zn}.</p>"
         "<p><strong>Payment arrangement</strong><br>"
         "If you wish to propose a payment arrangement, please reply "
         "to this e-mail within the stated deadline. Please note: "
@@ -1000,8 +1016,8 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
         "zijn bijgeschreven:<br>"
         f'{ctx.get("regeling", {}).get("termijnen_tekst", "[VUL TERMIJNEN IN]")}</li>'
         "<li>De betaling zal uitsluitend geschieden op IBAN: "
-        "NL20 RABO 0388 5065 20 ten name van Stichting Beheer "
-        f"Derdengelden Kesting Legal onder vermelding van het "
+        f"{_dg_iban(ctx)} ten name van "
+        f"{_dg_tnv(ctx)} onder vermelding van het "
         f"kenmerk {zn}.</li>"
         "<li>Elke betaling strekt allereerst in mindering op de "
         "kosten, vervolgens de rente en aansluitend de hoofdsom.</li>"
@@ -1070,8 +1086,8 @@ def _render_faillissement_dreigbrief(ctx: dict) -> str:
         f"totaalbedrag van {ctx['totaal_openstaand']} uiterlijk "
         "<strong>BINNEN 2 DAGEN NA HEDEN</strong> te hebben "
         "bijgeschreven op de derdengeldenrekening van mijn kantoor "
-        "IBAN: NL20 RABO 0388 5065 20 ten name van Stichting "
-        f"Beheer Derdengelden Kesting Legal onder vermelding van "
+        f"IBAN: {_dg_iban(ctx)} ten name van "
+        f"{_dg_tnv(ctx)} onder vermelding van "
         f"het kenmerk {zn}.</p>"
         "<p>Let op: U dient bij betaling het juiste dossiernummer "
         "te vermelden zodat uw betaling correct kan worden "
@@ -1189,8 +1205,8 @@ def _render_sommatie_eerste_opgave(ctx: dict) -> str:
     body += (
         "<p>Het restant verschuldigde dient <strong>per omgaand</strong> "
         "bijgeschreven te zijn op de derdengeldenrekening van mijn "
-        "kantoor IBAN: NL20 RABO 0388 5065 20 t.n.v. Stichting Beheer "
-        f"Derdengelden Kesting Legal onder vermelding van het kenmerk "
+        f"kantoor IBAN: {_dg_iban(ctx)} t.n.v. "
+        f"{_dg_tnv(ctx)} onder vermelding van het kenmerk "
         f"{zn}.</p>"
         "<p>Een betaalbewijs zie ik wel per omgaand tegemoet.</p>"
     )
@@ -1230,8 +1246,8 @@ def _render_niet_voldaan_regeling(ctx: dict) -> str:
         "<p><strong>Sommatie</strong><br>"
         f"Ik sommeer u hierbij om het totaalbedrag van "
         f"{ctx['totaal_openstaand']} <strong>BINNEN 2 DAGEN NA "
-        "HEDEN</strong> over te maken naar IBAN: NL20 RABO 0388 5065 "
-        "20 ten name van Stichting Beheer Derdengelden Kesting Legal "
+        f"HEDEN</strong> over te maken naar IBAN: {_dg_iban(ctx)} "
+        f"ten name van {_dg_tnv(ctx)} "
         f"onder vermelding van het kenmerk {zn}.</p>"
         "<p><strong>Aanzegging rechtsmaatregelen</strong><br>"
         "Indien betaling van het bovengenoemde bedrag uitblijft, "
@@ -1285,8 +1301,8 @@ def _render_sommatie_laatste_voor_fai(ctx: dict) -> str:
         f"totaalbedrag van {ctx['totaal_openstaand']} uiterlijk "
         "<strong>BINNEN 2 DAGEN NA HEDEN</strong> te hebben "
         "bijgeschreven op de derdengeldenrekening van mijn kantoor "
-        "IBAN: NL20 RABO 0388 5065 20 ten name van Stichting Beheer "
-        "Derdengelden Kesting Legal onder vermelding van het kenmerk "
+        f"IBAN: {_dg_iban(ctx)} ten name van "
+        f"{_dg_tnv(ctx)} onder vermelding van het kenmerk "
         f"{zn}.</p>"
         "<p>Let op: U dient bij betaling het juiste dossiernummer te "
         "vermelden. Ik wijs u erop dat alleen betaling van het "
@@ -1345,9 +1361,9 @@ def _render_wederom_sommatie_inhoudelijk(ctx: dict) -> str:
         f"Hierbij sommeer ik u andermaal het bovengenoemd totaalbedrag "
         f"van {ctx['totaal_openstaand']} uiterlijk binnen een termijn "
         "van <strong>3 dagen na heden</strong> te hebben bijgeschreven "
-        "op de derdengeldenrekening van mijn kantoor IBAN: NL20 RABO "
-        "0388 5065 20 t.n.v. Stichting Beheer Derdengelden Kesting "
-        f"Legal onder vermelding van het kenmerk {zn}.</p>"
+        f"op de derdengeldenrekening van mijn kantoor IBAN: {_dg_iban(ctx)} "
+        f"t.n.v. {_dg_tnv(ctx)} "
+        f"onder vermelding van het kenmerk {zn}.</p>"
         "<p>Let op: U dient bij betaling het juiste dossiernummer te "
         "vermelden. Ik wijs u erop dat alleen betaling van het "
         "volledige bedrag op de hiervoor aangegeven wijze ervoor "
@@ -1398,9 +1414,9 @@ def _render_wederom_sommatie_kort(ctx: dict) -> str:
         f"Hierbij sommeer ik u andermaal het bovengenoemd totaalbedrag "
         f"van {ctx['totaal_openstaand']} uiterlijk binnen een termijn "
         "van <strong>3 dagen na heden</strong> te hebben bijgeschreven "
-        "op de derdengeldenrekening van mijn kantoor IBAN: NL20 RABO "
-        "0388 5065 20 t.n.v. Stichting Beheer Derdengelden Kesting "
-        f"Legal onder vermelding van het kenmerk {zn} in de "
+        f"op de derdengeldenrekening van mijn kantoor IBAN: {_dg_iban(ctx)} "
+        f"t.n.v. {_dg_tnv(ctx)} "
+        f"onder vermelding van het kenmerk {zn} in de "
         "onderwerpregel.</p>"
         "<p>Let op: U dient bij betaling het juiste dossiernummer te "
         "vermelden. Ik wijs u erop dat alleen betaling van het "
@@ -1455,9 +1471,9 @@ def _render_sommatie_drukte(ctx: dict) -> str:
         f"<p>Ik sommeer u hierbij om het openstaande bedrag van "
         f"<strong>{ctx['totaal_openstaand']}</strong> "
         "<strong>BINNEN 3 DAGEN NA HEDEN</strong> bij te schrijven "
-        "op de derdengeldenrekening van mijn kantoor IBAN NL20 RABO "
-        "0388 5065 20 ten name van Stichting Beheer Derdengelden "
-        f"Kesting Legal onder vermelding van het kenmerk {zn}.</p>"
+        f"op de derdengeldenrekening van mijn kantoor IBAN {_dg_iban(ctx)} "
+        f"ten name van {_dg_tnv(ctx)} "
+        f"onder vermelding van het kenmerk {zn}.</p>"
         "<p>Ik wijs u erop dat alleen betaling van het volledige "
         "bedrag op de hiervoor aangegeven wijze ervoor zorgt dat de "
         "incassoprocedure wordt gestopt. Blijft betaling uit binnen "

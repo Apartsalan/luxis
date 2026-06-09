@@ -65,7 +65,7 @@ async def _create_approved_disbursement(
             "amount": amount,
             "description": f"Uitbetaling {amount}",
             "beneficiary_name": "J. Jansen",
-            "beneficiary_iban": "NL12INGB0001234567",
+            "beneficiary_iban": "NL91ABNA0417164300",
         },
         headers=headers,
     )
@@ -239,7 +239,7 @@ async def test_reverse_guards(
             "amount": "100.00",
             "description": "Pending uitbetaling",
             "beneficiary_name": "X",
-            "beneficiary_iban": "NL12INGB0001234567",
+            "beneficiary_iban": "NL91ABNA0417164300",
         },
         headers=auth_headers,
     )

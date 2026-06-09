@@ -236,6 +236,8 @@ def _tenant_ctx(tenant: Tenant | None) -> dict:
             "kvk": "",
             "btw": "",
             "iban": "",
+            "derdengelden_iban": "",
+            "derdengelden_tnv": "",
             "telefoon": "",
             "email": "",
         }
@@ -249,6 +251,10 @@ def _tenant_ctx(tenant: Tenant | None) -> dict:
         "kvk": tenant.kvk_number or "",
         "btw": tenant.btw_number or "",
         "iban": tenant.iban or "",
+        # Audit #61: debiteuren betalen op de stichtingsrekening (Voda 6.19
+        # lid 1), nóóit op de kantoorrekening — aparte merge-velden.
+        "derdengelden_iban": tenant.trust_account_iban or "",
+        "derdengelden_tnv": tenant.trust_account_holder or "",
         "telefoon": tenant.phone or "",
         "email": tenant.email or "",
     }

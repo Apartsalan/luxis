@@ -258,6 +258,41 @@ async def test_interest_calculation(
     assert resp.status_code == 200
 
 
+@pytest.mark.asyncio
+async def test_interest_endpoint_accounts_for_payments(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Audit #52: deelbetaling verlaagt de hoofdsom (art. 6:44 BW) — de rente
+    ná de betaling moet lager zijn dan zonder betaling."""
+    await _seed_interest_rates(db)
+    case = await _create_case(db, test_tenant.id)
+    await client.post(f"/api/cases/{case.id}/claims", json=_claim_payload(), headers=auth_headers)
+
+    resp_before = await client.get(f"/api/cases/{case.id}/interest", headers=auth_headers)
+    assert resp_before.status_code == 200
+    interest_without_payment = Decimal(str(resp_before.json()["total_interest"]))
+
+    # Forse deelbetaling 60 dagen geleden die (na kosten/rente) grotendeels op
+    # de hoofdsom landt — daarna loopt rente over een lagere hoofdsom door.
+    pay = await client.post(
+        f"/api/cases/{case.id}/payments",
+        json=_payment_payload(
+            amount="3000.00",
+            payment_date=(date.today() - timedelta(days=60)).isoformat(),
+        ),
+        headers=auth_headers,
+    )
+    assert pay.status_code == 201, pay.text
+    allocated_to_principal = Decimal(str(pay.json()["allocated_to_principal"]))
+    assert allocated_to_principal > Decimal("0")
+
+    resp_after = await client.get(f"/api/cases/{case.id}/interest", headers=auth_headers)
+    assert resp_after.status_code == 200
+    interest_with_payment = Decimal(str(resp_after.json()["total_interest"]))
+
+    assert interest_with_payment < interest_without_payment
+
+
 # ── Financial Summary ────────────────────────────────────────────────────────
 
 

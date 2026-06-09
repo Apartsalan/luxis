@@ -10,7 +10,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
@@ -817,26 +817,43 @@ async def check_verjaring(
     """
     today = date.today()
     verjaring_years = LEGAL_CONSTRAINTS["verjaring_years"]
-    warning_threshold = today - timedelta(days=verjaring_years * 365 - 90)
+
+    # Audit #83: verjaring (art. 3:307 BW) loopt vanaf de opeisbaarheid van de
+    # vordering — in Luxis benaderd door de oudste claims.default_date — en
+    # niet vanaf het moment dat het dossier bij het kantoor werd geopend.
+    # date_opened blijft de fallback voor dossiers zonder vorderingen.
+    from app.collections.models import Claim
+
+    oldest_claim = (
+        select(Claim.case_id, func.min(Claim.default_date).label("oldest_default"))
+        .where(Claim.tenant_id == tenant_id, Claim.is_active.is_(True))
+        .group_by(Claim.case_id)
+        .subquery()
+    )
 
     result = await db.execute(
-        select(Case).where(
+        select(Case, oldest_claim.c.oldest_default)
+        .outerjoin(oldest_claim, oldest_claim.c.case_id == Case.id)
+        .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
             Case.date_closed.is_(None),
-            Case.date_opened <= warning_threshold,
         )
     )
 
     warnings = []
-    for case in result.scalars().all():
-        verjaring_date = case.date_opened + relativedelta(years=verjaring_years)
+    for case, oldest_default in result.all():
+        basis_date = oldest_default or case.date_opened
+        verjaring_date = basis_date + relativedelta(years=verjaring_years)
         days_remaining = (verjaring_date - today).days
+        if days_remaining > 90:
+            continue  # nog ruim buiten de waarschuwingstermijn
         warnings.append(
             {
                 "case_id": str(case.id),
                 "case_number": case.case_number,
                 "date_opened": case.date_opened.isoformat(),
+                "basis_date": basis_date.isoformat(),
                 "verjaring_date": verjaring_date.isoformat(),
                 "days_remaining": days_remaining,
                 "is_expired": days_remaining <= 0,

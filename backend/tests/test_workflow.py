@@ -674,6 +674,59 @@ async def test_check_verjaring_handles_leap_day_date_opened(
     assert mine[0]["is_expired"] is True
 
 
+@pytest.mark.asyncio
+async def test_check_verjaring_uses_oldest_claim_default_date(
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+):
+    """Audit #83: verjaring (art. 3:307 BW) loopt vanaf opeisbaarheid van de
+    vordering (oudste claims.default_date), niet vanaf dossier-opening. Een
+    recent geopend dossier met een bijna-verjaarde vordering moet dus wél
+    een waarschuwing geven."""
+    from decimal import Decimal
+
+    from dateutil.relativedelta import relativedelta
+
+    from app.collections.models import Claim
+    from app.workflow.service import check_verjaring
+
+    almost_expired = date.today() - relativedelta(years=5) + timedelta(days=30)
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-VERJ1",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today() - timedelta(days=10),  # net geopend
+        date_closed=None,
+        total_principal=Decimal("1000.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    db.add(
+        Claim(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            description="Oude vordering",
+            principal_amount=Decimal("1000.00"),
+            default_date=almost_expired,
+        )
+    )
+    await db.commit()
+
+    warnings = await check_verjaring(db, test_tenant.id)
+    mine = [w for w in warnings if w["case_number"] == "2026-VERJ1"]
+    assert len(mine) == 1, "bijna-verjaarde vordering moet waarschuwen, ook op vers dossier"
+    assert mine[0]["basis_date"] == almost_expired.isoformat()
+    assert 0 < mine[0]["days_remaining"] <= 90
+    assert mine[0]["is_expired"] is False
+
+
 # ── System task types in canonical TASK_TYPES (AUDIT-MEDIUM) ──────────────────
 
 

@@ -1,5 +1,6 @@
 """Trust funds module schemas — Pydantic models for request/response validation."""
 
+import re
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -9,6 +10,24 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 TRANSACTION_TYPES = ("deposit", "disbursement", "offset_to_invoice")
 TRANSACTION_STATUSES = ("pending_approval", "approved", "rejected")
 CONSENT_METHODS = ("email", "document", "mondeling", "anders")
+
+_IBAN_RE = re.compile(r"[A-Z]{2}\d{2}[A-Z0-9]{10,30}")
+
+
+def validate_iban(value: str) -> str:
+    """Normalise and mod-97 validate an IBAN (audit #69).
+
+    A disbursement with an invalid beneficiary IBAN would otherwise only fail
+    at the bank after SEPA upload — far too late for derdengelden.
+    """
+    v = value.replace(" ", "").upper()
+    if not _IBAN_RE.fullmatch(v):
+        raise ValueError("Ongeldige IBAN: verkeerd formaat")
+    rearranged = v[4:] + v[:4]
+    digits = "".join(str(int(c, 36)) for c in rearranged)
+    if int(digits) % 97 != 1:
+        raise ValueError("Ongeldige IBAN: controlegetal klopt niet — controleer op typefouten")
+    return v
 
 
 # ── Request Schemas ──────────────────────────────────────────────────────────
@@ -27,6 +46,13 @@ class TrustTransactionCreate(BaseModel):
     reference: str | None = None
     beneficiary_name: str | None = None
     beneficiary_iban: str | None = None
+
+    @field_validator("beneficiary_iban")
+    @classmethod
+    def _check_iban(cls, v: str | None) -> str | None:
+        if v is None or not v.strip():
+            return None
+        return validate_iban(v)
 
 
 class TrustOffsetCreate(BaseModel):

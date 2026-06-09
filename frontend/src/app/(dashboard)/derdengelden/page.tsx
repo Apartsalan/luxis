@@ -20,11 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useTrustFundsOverview,
   useSepaPending,
   type ClientTrustOverview,
+  type DerdengeldenTransaction,
   type SepaPendingTransaction,
 } from "@/hooks/use-collections";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ export default function DerdengeldenPage() {
   const [reportDialog, setReportDialog] = useState<
     null | "mutaties" | "saldolijst"
   >(null);
+  const [showPending, setShowPending] = useState(false);
 
   const { data, isLoading, isError, error, refetch } =
     useTrustFundsOverview(onlyNonzero);
@@ -158,8 +160,17 @@ export default function DerdengeldenPage() {
             totals && totals.pending_approval_count > 0 ? "warning" : undefined
           }
           loading={isLoading}
+          onClick={
+            totals && totals.pending_approval_count > 0
+              ? () => setShowPending(true)
+              : undefined
+          }
         />
       </div>
+
+      {showPending && (
+        <PendingApprovalsDialog onClose={() => setShowPending(false)} />
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
@@ -243,12 +254,14 @@ function KpiCard({
   icon,
   accent,
   loading,
+  onClick,
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
   accent?: "primary" | "warning";
   loading?: boolean;
+  onClick?: () => void;
 }) {
   const accentClass =
     accent === "primary"
@@ -256,8 +269,8 @@ function KpiCard({
       : accent === "warning"
       ? "text-amber-600"
       : "text-muted-foreground";
-  return (
-    <div className="bg-card rounded-lg border border-border p-4">
+  const content = (
+    <>
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           {label}
@@ -271,7 +284,20 @@ function KpiCard({
       >
         {loading ? "•••" : value}
       </p>
-    </div>
+    </>
+  );
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className="bg-card rounded-lg border border-border p-4 text-left hover:border-primary/50 hover:bg-muted/30 transition-colors cursor-pointer"
+      >
+        {content}
+      </button>
+    );
+  }
+  return (
+    <div className="bg-card rounded-lg border border-border p-4">{content}</div>
   );
 }
 
@@ -773,6 +799,75 @@ function ReportDialog({
             {downloading ? "Bezig..." : "Download CSV"}
           </button>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PendingApprovalsDialog({ onClose }: { onClose: () => void }) {
+  const { data, isLoading } = useQuery<DerdengeldenTransaction[]>({
+    queryKey: ["trust-funds", "pending-approvals"],
+    queryFn: async () => {
+      const res = await api("/api/trust-funds/transactions/pending");
+      if (!res.ok) throw new Error("Kon openstaande goedkeuringen niet laden");
+      return res.json();
+    },
+  });
+
+  const TYPE_LABEL: Record<string, string> = {
+    deposit: "Storting",
+    disbursement: "Uitbetaling",
+    offset_to_invoice: "Verrekening",
+    reversal: "Storno",
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Wachten op goedkeuring</DialogTitle>
+          <DialogDescription>
+            Transacties die één of twee goedkeuringen nodig hebben. Goedkeuren
+            doe je op het dossier zelf (tab Betalingen).
+          </DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <p className="py-6 text-sm text-muted-foreground">Laden...</p>
+        ) : !data || data.length === 0 ? (
+          <p className="py-6 text-sm text-muted-foreground">
+            Geen openstaande goedkeuringen.
+          </p>
+        ) : (
+          <div className="max-h-96 overflow-y-auto divide-y divide-border -mx-1">
+            {data.map((tx) => (
+              <Link
+                key={tx.id}
+                href={`/zaken/${tx.case_id}?tab=betalingen`}
+                onClick={onClose}
+                className="flex items-center justify-between gap-3 px-1 py-3 hover:bg-muted/50 rounded-md transition-colors"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {TYPE_LABEL[tx.transaction_type] ?? tx.transaction_type} —{" "}
+                    {formatCurrency(tx.amount)}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {tx.case?.case_number} · {tx.contact?.name} ·{" "}
+                    {tx.description}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {formatDateShort(tx.transaction_date)}
+                  </p>
+                  <p className="text-[10px] text-amber-600">
+                    {tx.approved_by_1 ? "1/2 goedgekeurd" : "0/2 goedgekeurd"}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

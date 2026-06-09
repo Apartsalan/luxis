@@ -207,6 +207,8 @@ async def test_disbursement_insufficient_balance(
     # Try to disburse 5000 — should fail
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "5000.00",
         "description": "Te groot bedrag",
     }
@@ -231,6 +233,8 @@ async def test_disbursement_no_balance(
 
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "100.00",
         "description": "Geen saldo",
     }
@@ -268,6 +272,8 @@ async def test_approve_disbursement_two_directors(
     # Create disbursement (by user 1 / auth_headers)
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "3000.00",
         "description": "Uitbetaling",
     }
@@ -330,6 +336,8 @@ async def test_creator_cannot_approve_own_transaction(
     # Create disbursement
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "1000.00",
         "description": "Uitbetaling",
     }
@@ -372,6 +380,8 @@ async def test_same_director_cannot_approve_twice(
 
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "2000.00",
         "description": "Uitbetaling",
     }
@@ -425,6 +435,8 @@ async def test_reject_disbursement(
 
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "2000.00",
         "description": "Uitbetaling",
     }
@@ -470,6 +482,8 @@ async def test_balance_with_approved_disbursement(
     # Create disbursement of 3000
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "3000.00",
         "description": "Uitbetaling",
     }
@@ -522,6 +536,8 @@ async def test_balance_with_pending_disbursement(
     # Create pending disbursement of 4000
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "4000.00",
         "description": "Uitbetaling",
     }
@@ -598,6 +614,8 @@ async def test_list_transactions_filter_by_type(
     # Create disbursement
     disbursement = {
         "transaction_type": "disbursement",
+        "beneficiary_name": "Test Begunstigde",
+        "beneficiary_iban": "NL91ABNA0417164300",
         "amount": "1000.00",
         "description": "Uitbetaling",
     }

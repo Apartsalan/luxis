@@ -17,9 +17,32 @@ export interface BankStatementImport {
   credit_count: number;
   debit_count: number;
   skipped_count: number;
+  duplicate_count: number;
   matched_count: number;
   imported_by_name: string | null;
   created_at: string;
+}
+
+export interface BankTransaction {
+  id: string;
+  import_id: string;
+  transaction_date: string;
+  amount: string;
+  counterparty_name: string | null;
+  counterparty_iban: string | null;
+  description: string | null;
+  currency: string;
+  entry_date: string | null;
+  is_matched: boolean;
+  created_at: string;
+}
+
+export interface BankTransactionList {
+  items: BankTransaction[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
 }
 
 export interface BankStatementImportList {
@@ -52,7 +75,7 @@ export interface PaymentMatch {
   review_note: string | null;
   executed_at: string | null;
   payment_id: string | null;
-  derdengelden_id: string | null;
+  trust_transaction_id: string | null;
   created_at: string;
 }
 
@@ -186,6 +209,105 @@ export function usePaymentPendingCount() {
   });
 }
 
+export function useUnmatchedTransactions(page = 1, perPage = 50) {
+  return useQuery<BankTransactionList>({
+    queryKey: ["payment-unmatched", page, perPage],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("per_page", String(perPage));
+      const res = await api(
+        `/api/payment-matching/transactions/unmatched?${params}`,
+      );
+      if (!res.ok) throw new Error("Kon ongekoppelde transacties niet ophalen");
+      return res.json();
+    },
+  });
+}
+
+export function useManualMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    PaymentMatch,
+    Error,
+    { transactionId: string; caseId: string; note?: string }
+  >({
+    mutationFn: async ({ transactionId, caseId, note }) => {
+      const res = await api("/api/payment-matching/matches/manual", {
+        method: "POST",
+        body: JSON.stringify({
+          transaction_id: transactionId,
+          case_id: caseId,
+          note: note || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Handmatig koppelen mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-unmatched"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-matches"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-match-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-pending-count"] });
+    },
+  });
+}
+
+export function useExecuteMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation<PaymentMatch, Error, { id: string }>({
+    mutationFn: async ({ id }) => {
+      const res = await api(`/api/payment-matching/matches/${id}/execute`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Verwerken mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-matches"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-match-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-pending-count"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-unmatched"] });
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+    },
+  });
+}
+
+export function useUndoMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation<PaymentMatch, Error, { id: string; reason: string }>({
+    mutationFn: async ({ id, reason }) => {
+      const res = await api(`/api/payment-matching/matches/${id}/undo`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Terugdraaien mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payment-matches"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-match-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-pending-count"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-unmatched"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-imports"] });
+      queryClient.invalidateQueries({ queryKey: ["cases"] });
+      queryClient.invalidateQueries({ queryKey: ["derdengelden"] });
+    },
+  });
+}
+
 export function useApproveAndExecuteMatch() {
   const queryClient = useQueryClient();
 
@@ -238,7 +360,7 @@ export function useApproveAllMatches() {
   const queryClient = useQueryClient();
 
   return useMutation<
-    { executed: number },
+    { executed: number; failed: number },
     Error,
     { minConfidence?: number; importId?: string }
   >({

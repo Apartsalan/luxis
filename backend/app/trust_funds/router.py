@@ -97,6 +97,15 @@ async def list_transactions(
     )
 
 
+@router.get("/transactions/pending", response_model=list[TrustTransactionRead])
+async def list_pending_approvals(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Alle transacties die op goedkeuring wachten, kantoorbreed."""
+    return await service.list_pending_approvals(db, current_user.tenant_id)
+
+
 # ── Balance ──────────────────────────────────────────────────────────────────
 
 

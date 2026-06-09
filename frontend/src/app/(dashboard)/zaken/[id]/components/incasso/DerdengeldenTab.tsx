@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  RotateCcw,
   Scale,
   ShieldCheck,
   Wallet,
@@ -21,6 +22,7 @@ import {
   useCreateDerdengelden,
   useApproveTrustTransaction,
   useRejectTrustTransaction,
+  useReverseTrustTransaction,
 } from "@/hooks/use-collections";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
@@ -32,8 +34,11 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
   const createTx = useCreateDerdengelden();
   const approveTx = useApproveTrustTransaction();
   const rejectTx = useRejectTrustTransaction();
+  const reverseTx = useReverseTrustTransaction();
   const [showForm, setShowForm] = useState<"deposit" | "disbursement" | null>(null);
   const [offsetOpen, setOffsetOpen] = useState(false);
+  const [reversingId, setReversingId] = useState<string | null>(null);
+  const [reverseReason, setReverseReason] = useState("");
   const [form, setForm] = useState({
     amount: "",
     description: "",
@@ -91,6 +96,29 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
     }
   };
 
+  const handleReverse = async (txId: string) => {
+    if (reverseReason.trim().length < 3) {
+      toast.error("Geef een reden op (minimaal 3 tekens)");
+      return;
+    }
+    try {
+      const result = await reverseTx.mutateAsync({
+        transactionId: txId,
+        caseId,
+        reason: reverseReason.trim(),
+      });
+      setReversingId(null);
+      setReverseReason("");
+      toast.success(
+        result.status === "pending_approval"
+          ? "Storno ingediend — vereist twee goedkeuringen voordat deze effect heeft"
+          : "Transactie gestorneerd",
+      );
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Storno mislukt");
+    }
+  };
+
   const inputClass =
     "mt-1.5 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
 
@@ -102,7 +130,7 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
 
   const TYPE_META: Record<
     string,
-    { label: string; className: string; icon: typeof ArrowDownLeft; sign: "+" | "-" }
+    { label: string; className: string; icon: typeof ArrowDownLeft; sign: string }
   > = {
     deposit: {
       label: "Storting",
@@ -121,6 +149,12 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
       className: "bg-violet-50 text-violet-700 ring-violet-600/20",
       icon: Scale,
       sign: "-",
+    },
+    reversal: {
+      label: "Storno",
+      className: "bg-slate-50 text-slate-600 ring-slate-500/20",
+      icon: RotateCcw,
+      sign: "±",
     },
   };
 
@@ -287,9 +321,10 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
             {showForm === "disbursement" && (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-foreground">Begunstigde</label>
+                  <label className="block text-xs font-medium text-foreground">Begunstigde *</label>
                   <input
                     type="text"
+                    required
                     value={form.beneficiary_name}
                     onChange={(e) => setForm((f) => ({ ...f, beneficiary_name: e.target.value }))}
                     className={inputClass}
@@ -297,9 +332,10 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-foreground">IBAN begunstigde</label>
+                  <label className="block text-xs font-medium text-foreground">IBAN begunstigde *</label>
                   <input
                     type="text"
+                    required
                     value={form.beneficiary_iban}
                     onChange={(e) => setForm((f) => ({ ...f, beneficiary_iban: e.target.value }))}
                     className={inputClass}
@@ -377,7 +413,8 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
                 const isDeposit = tx.transaction_type === "deposit";
                 const Icon = meta.icon;
                 return (
-                  <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
+                  <React.Fragment key={tx.id}>
+                  <tr className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
                       {formatDateShort(tx.transaction_date || tx.created_at)}
                     </td>
@@ -411,14 +448,21 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${badge.className}`}
-                      >
-                        {badge.label}
-                      </span>
+                      {tx.reversed_by_id ? (
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset bg-slate-50 text-slate-600 ring-slate-500/20">
+                          <RotateCcw className="h-3 w-3" />
+                          Gestorneerd
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${badge.className}`}
+                        >
+                          {badge.label}
+                        </span>
+                      )}
                       {tx.status === "pending_approval" && tx.approved_by_1 && !tx.approved_by_2 && (
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          1/2 goedgekeurd{tx.approver_1 ? ` door ${tx.approver_1.full_name}` : ""}
+                          1/2 goedgekeurd{tx.approver_1 ? ` door ${tx.approver_1.full_name}` : ""} — wacht op tweede goedkeuring
                         </p>
                       )}
                     </td>
@@ -444,11 +488,31 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
                           </button>
                         </div>
                       )}
-                      {tx.status === "approved" && (
-                        <span className="text-xs text-emerald-600">
-                          <CheckCircle2 className="h-3.5 w-3.5 inline" />
-                        </span>
-                      )}
+                      {tx.status === "approved" &&
+                        !tx.reversed_by_id &&
+                        tx.transaction_type !== "reversal" && (
+                          <div className="inline-flex items-center gap-1.5">
+                            <span className="text-xs text-emerald-600">
+                              <CheckCircle2 className="h-3.5 w-3.5 inline" />
+                            </span>
+                            <button
+                              onClick={() => {
+                                setReversingId(reversingId === tx.id ? null : tx.id);
+                                setReverseReason("");
+                              }}
+                              className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
+                              title="Storneren (tegenboeking)"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
+                      {tx.status === "approved" &&
+                        (tx.reversed_by_id || tx.transaction_type === "reversal") && (
+                          <span className="text-xs text-muted-foreground">
+                            <CheckCircle2 className="h-3.5 w-3.5 inline" />
+                          </span>
+                        )}
                       {tx.status === "rejected" && (
                         <span className="text-xs text-red-500">
                           <XCircle className="h-3.5 w-3.5 inline" />
@@ -456,6 +520,46 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
                       )}
                     </td>
                   </tr>
+                  {reversingId === tx.id && (
+                    <tr>
+                      <td colSpan={6} className="px-4 pb-3 pt-0">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={reverseReason}
+                            onChange={(e) => setReverseReason(e.target.value)}
+                            placeholder="Reden van storno (verplicht)..."
+                            className="flex-1 rounded-md border px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleReverse(tx.id);
+                              if (e.key === "Escape") {
+                                setReversingId(null);
+                                setReverseReason("");
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => handleReverse(tx.id)}
+                            disabled={reverseTx.isPending}
+                            className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                          >
+                            {reverseTx.isPending ? "Bezig..." : "Storneren"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setReversingId(null);
+                              setReverseReason("");
+                            }}
+                            className="rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+                          >
+                            Annuleren
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 );
               })}
             </tbody>

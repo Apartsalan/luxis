@@ -620,6 +620,30 @@ async def generate_saldolijst_csv(
     return buf.getvalue()
 
 
+async def list_pending_approvals(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> list[TrustTransaction]:
+    """All transactions awaiting approval, tenant-wide (overview drill-down)."""
+    result = await db.execute(
+        select(TrustTransaction)
+        .options(
+            selectinload(TrustTransaction.contact),
+            selectinload(TrustTransaction.case),
+            selectinload(TrustTransaction.target_invoice),
+            selectinload(TrustTransaction.creator),
+            selectinload(TrustTransaction.approver_1),
+            selectinload(TrustTransaction.approver_2),
+        )
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.status == "pending_approval",
+        )
+        .order_by(TrustTransaction.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
 # ── Create Transaction ───────────────────────────────────────────────────────
 
 
@@ -651,12 +675,20 @@ async def create_transaction(
     # Verify case exists and belongs to tenant
     case = await get_case(db, tenant_id, case_id)
 
-    # For disbursements: check available balance
+    # For disbursements: check available balance + beneficiary details
     if data.transaction_type == "disbursement":
         balance = await get_balance(db, tenant_id, case_id)
         if balance.available < data.amount:
             raise BadRequestError(
                 f"Onvoldoende saldo. Beschikbaar: {balance.available}, gevraagd: {data.amount}"
+            )
+        # Vroege validatie: zonder begunstigde faalt de SEPA-export later pas
+        if not (data.beneficiary_name and data.beneficiary_name.strip()) or not (
+            data.beneficiary_iban and data.beneficiary_iban.strip()
+        ):
+            raise BadRequestError(
+                "Een uitbetaling vereist de naam en IBAN van de begunstigde "
+                "(nodig voor de SEPA-betaling)."
             )
 
     # Deposits are auto-approved, disbursements need approval

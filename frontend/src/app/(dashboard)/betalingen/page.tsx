@@ -28,7 +28,13 @@ import {
   useApproveAndExecuteMatch,
   useRejectMatch,
   useApproveAllMatches,
+  useUnmatchedTransactions,
+  useManualMatch,
+  useExecuteMatch,
+  useUndoMatch,
+  type BankTransaction,
 } from "@/hooks/use-payment-matching";
+import { useCases } from "@/hooks/use-cases";
 import { formatCurrency } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { toast } from "sonner";
@@ -74,7 +80,7 @@ const PER_PAGE = 20;
 
 // ── Main tabs ────────────────────────────────────────────────────────────────
 
-type MainTab = "upload" | "matches";
+type MainTab = "upload" | "matches" | "unmatched";
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -91,9 +97,14 @@ export default function BetalingenPage() {
       }
       upload.mutate(file, {
         onSuccess: (result) => {
-          toast.success(
-            `${result.credit_count} inkomende transacties geïmporteerd, ${result.matched_count} gematcht`,
-          );
+          const parts = [
+            `${result.credit_count - (result.duplicate_count ?? 0)} inkomende transacties geïmporteerd`,
+            `${result.matched_count} gematcht`,
+          ];
+          if (result.duplicate_count > 0) {
+            parts.push(`${result.duplicate_count} overgeslagen (al geïmporteerd)`);
+          }
+          toast.success(parts.join(", "));
           setMainTab("matches");
         },
         onError: (err) => {
@@ -153,6 +164,10 @@ export default function BetalingenPage() {
         >
           Matches
         </button>
+        <UnmatchedTabButton
+          active={mainTab === "unmatched"}
+          onClick={() => setMainTab("unmatched")}
+        />
         <button
           onClick={() => setMainTab("upload")}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -165,7 +180,13 @@ export default function BetalingenPage() {
         </button>
       </div>
 
-      {mainTab === "upload" ? <UploadSection /> : <MatchSection />}
+      {mainTab === "upload" ? (
+        <UploadSection />
+      ) : mainTab === "unmatched" ? (
+        <UnmatchedSection />
+      ) : (
+        <MatchSection />
+      )}
     </div>
   );
 }
@@ -346,9 +367,17 @@ function UploadSection() {
                   {imp.bank}
                 </div>
 
-                {/* Credit count */}
-                <div className="hidden md:block text-sm text-foreground tabular-nums">
+                {/* Credit count + duplicaten */}
+                <div className="hidden md:flex items-center gap-1.5 text-sm text-foreground tabular-nums">
                   {imp.credit_count}
+                  {imp.duplicate_count > 0 && (
+                    <span
+                      className="inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20"
+                      title={`${imp.duplicate_count} transacties overgeslagen — al eerder geïmporteerd`}
+                    >
+                      {imp.duplicate_count} dubbel
+                    </span>
+                  )}
                 </div>
 
                 {/* Matched */}
@@ -446,6 +475,344 @@ function UploadSection() {
   );
 }
 
+// ── Unmatched Section (H19 — Ongekoppeld) ────────────────────────────────────
+
+function UnmatchedTabButton({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  const { data } = useUnmatchedTransactions(1, 1);
+  const count = data?.total ?? 0;
+
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground"
+          : "bg-muted text-muted-foreground hover:bg-muted/80"
+      }`}
+    >
+      Ongekoppeld
+      {count > 0 && (
+        <span
+          className={`ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+            active
+              ? "bg-primary-foreground/20 text-primary-foreground"
+              : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function UnmatchedSection() {
+  const [page, setPage] = useState(1);
+  const [linkingTxn, setLinkingTxn] = useState<BankTransaction | null>(null);
+  const { data, isLoading, isError, error, refetch } =
+    useUnmatchedTransactions(page, PER_PAGE);
+
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / PER_PAGE);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Binnengekomen betalingen die niet automatisch aan een dossier gekoppeld
+        konden worden. Koppel ze handmatig zodat ze in de administratie
+        terechtkomen.
+      </p>
+
+      {isError && (
+        <QueryError
+          message={error?.message ?? "Kon ongekoppelde transacties niet laden"}
+          onRetry={refetch}
+        />
+      )}
+
+      <div className="rounded-lg border bg-card">
+        <div className="hidden md:grid grid-cols-[110px_1fr_120px_140px] gap-2 px-4 py-2.5 border-b text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <div>Datum</div>
+          <div>Tegenpartij / omschrijving</div>
+          <div>Bedrag</div>
+          <div />
+        </div>
+
+        {isLoading && (
+          <div className="divide-y">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="grid grid-cols-[110px_1fr_120px_140px] gap-2 px-4 py-3.5"
+              >
+                <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+                <div className="h-4 w-48 rounded bg-muted animate-pulse" />
+                <div className="h-4 w-16 rounded bg-muted animate-pulse" />
+                <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && !isError && items.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 mb-3">
+              <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+            </div>
+            <h3 className="text-sm font-medium text-foreground">
+              Alles gekoppeld
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+              Er zijn geen ongekoppelde banktransacties.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && items.length > 0 && (
+          <div className="divide-y">
+            {items.map((txn) => (
+              <div
+                key={txn.id}
+                className="grid grid-cols-1 md:grid-cols-[110px_1fr_120px_140px] gap-1 md:gap-2 px-4 py-3 hover:bg-muted/50 transition-colors"
+              >
+                <div className="text-sm text-foreground tabular-nums">
+                  {new Date(txn.transaction_date).toLocaleDateString("nl-NL")}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {txn.counterparty_name ?? "Onbekend"}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {txn.description ?? txn.counterparty_iban ?? ""}
+                  </span>
+                </div>
+                <div className="text-sm font-medium text-foreground tabular-nums">
+                  {formatCurrency(txn.amount)}
+                </div>
+                <div className="flex items-center md:justify-end">
+                  <button
+                    onClick={() => setLinkingTxn(txn)}
+                    className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    <ArrowUpRight className="h-3 w-3" />
+                    Koppel aan dossier
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {!isLoading && total > PER_PAGE && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            {total} transacties — pagina {page} van {totalPages || 1}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Vorige
+            </button>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages}
+              className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted disabled:opacity-50 disabled:pointer-events-none"
+            >
+              Volgende
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {linkingTxn && (
+        <ManualMatchDialog
+          transaction={linkingTxn}
+          onClose={() => setLinkingTxn(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ManualMatchDialog({
+  transaction,
+  onClose,
+}: {
+  transaction: BankTransaction;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const manualMatch = useManualMatch();
+  const executeMatch = useExecuteMatch();
+
+  const { data: casesData, isLoading } = useCases({
+    search: search || undefined,
+    case_type: "incasso",
+    per_page: 8,
+  });
+  const cases = casesData?.items ?? [];
+  const busy = manualMatch.isPending || executeMatch.isPending;
+
+  function handleLink() {
+    if (!selectedCaseId) return;
+    manualMatch.mutate(
+      {
+        transactionId: transaction.id,
+        caseId: selectedCaseId,
+        note: note || undefined,
+      },
+      {
+        onSuccess: (match) => {
+          // Direct verwerken: boekt derdengelden-storting + betaling
+          executeMatch.mutate(
+            { id: match.id },
+            {
+              onSuccess: () => {
+                toast.success("Transactie gekoppeld en verwerkt");
+                onClose();
+              },
+              onError: (err) => {
+                toast.error(
+                  `Gekoppeld, maar verwerken mislukte: ${err.message}. ` +
+                    "Verwerk de match via het Matches-tabblad.",
+                );
+                onClose();
+              },
+            },
+          );
+        },
+        onError: (err) => {
+          toast.error(err.message || "Koppelen mislukt");
+        },
+      },
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg rounded-lg border bg-card shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 py-4 border-b">
+          <h2 className="text-sm font-semibold text-foreground">
+            Koppel aan dossier
+          </h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            {formatCurrency(transaction.amount)} van{" "}
+            {transaction.counterparty_name ?? "onbekende afzender"} (
+            {new Date(transaction.transaction_date).toLocaleDateString("nl-NL")}
+            )
+          </p>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              Zoek dossier
+            </label>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setSelectedCaseId(null);
+              }}
+              placeholder="Dossiernummer, debiteur of omschrijving..."
+              autoFocus
+              className="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div className="max-h-56 overflow-y-auto rounded-md border divide-y">
+            {isLoading && (
+              <div className="px-3 py-4 text-sm text-muted-foreground">
+                Zoeken...
+              </div>
+            )}
+            {!isLoading && cases.length === 0 && (
+              <div className="px-3 py-4 text-sm text-muted-foreground">
+                Geen incassodossiers gevonden.
+              </div>
+            )}
+            {cases.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setSelectedCaseId(c.id)}
+                className={`w-full px-3 py-2.5 text-left transition-colors ${
+                  selectedCaseId === c.id
+                    ? "bg-primary/10 ring-1 ring-inset ring-primary/40"
+                    : "hover:bg-muted/60"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {c.case_number}
+                  </span>
+                  {selectedCaseId === c.id && (
+                    <Check className="h-4 w-4 text-primary shrink-0" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  {c.description}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              Notitie (optioneel)
+            </label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Bijv. betaling herkend aan telefonisch contact"
+              className="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t">
+          <button
+            onClick={onClose}
+            className="rounded-md border px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+          >
+            Annuleren
+          </button>
+          <button
+            onClick={handleLink}
+            disabled={!selectedCaseId || busy}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" />
+            {busy ? "Bezig..." : "Koppelen en verwerken"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Match Section ────────────────────────────────────────────────────────────
 
 function MatchSection() {
@@ -454,6 +821,8 @@ function MatchSection() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState("");
+  const [undoingId, setUndoingId] = useState<string | null>(null);
+  const [undoReason, setUndoReason] = useState("");
 
   const { data, isLoading, isError, error, refetch } = usePaymentMatches(
     statusFilter || undefined,
@@ -464,6 +833,7 @@ function MatchSection() {
   const approveAndExecute = useApproveAndExecuteMatch();
   const reject = useRejectMatch();
   const approveAll = useApproveAllMatches();
+  const undo = useUndoMatch();
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -506,10 +876,38 @@ function MatchSection() {
       { minConfidence: 85 },
       {
         onSuccess: (r) => {
-          toast.success(`${r.executed} matches goedgekeurd en verwerkt`);
+          if (r.failed > 0) {
+            toast.warning(
+              `${r.executed} matches verwerkt, ${r.failed} mislukt — controleer de openstaande matches`,
+            );
+          } else {
+            toast.success(`${r.executed} matches goedgekeurd en verwerkt`);
+          }
         },
         onError: (err) => {
           toast.error(err.message || "Bulk goedkeuren mislukt");
+        },
+      },
+    );
+  }
+
+  function handleUndo(id: string) {
+    if (undoReason.trim().length < 3) {
+      toast.error("Geef een reden op (minimaal 3 tekens)");
+      return;
+    }
+    undo.mutate(
+      { id, reason: undoReason.trim() },
+      {
+        onSuccess: () => {
+          setUndoingId(null);
+          setUndoReason("");
+          toast.success(
+            "Match teruggedraaid — storting gestorneerd en betaling verwijderd",
+          );
+        },
+        onError: (err) => {
+          toast.error(err.message || "Terugdraaien mislukt");
         },
       },
     );
@@ -738,6 +1136,23 @@ function MatchSection() {
                           </button>
                         </>
                       )}
+                      {match.status === "executed" && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setUndoingId(
+                              undoingId === match.id ? null : match.id,
+                            );
+                            setUndoReason("");
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="Match terugdraaien (storno)"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Terugdraaien
+                        </button>
+                      )}
                       {match.status !== "pending" && (
                         <Link
                           href={`/zaken/${match.case_id}`}
@@ -749,6 +1164,46 @@ function MatchSection() {
                       )}
                     </div>
                   </div>
+
+                  {/* Undo input */}
+                  {undoingId === match.id && (
+                    <div
+                      className="px-4 pb-3 flex items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="text"
+                        value={undoReason}
+                        onChange={(e) => setUndoReason(e.target.value)}
+                        placeholder="Reden van terugdraaien (verplicht)..."
+                        className="flex-1 rounded-md border px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleUndo(match.id);
+                          if (e.key === "Escape") {
+                            setUndoingId(null);
+                            setUndoReason("");
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => handleUndo(match.id)}
+                        disabled={undo.isPending}
+                        className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                      >
+                        {undo.isPending ? "Bezig..." : "Terugdraaien"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUndoingId(null);
+                          setUndoReason("");
+                        }}
+                        className="rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+                      >
+                        Annuleren
+                      </button>
+                    </div>
+                  )}
 
                   {/* Reject input */}
                   {isRejecting && (

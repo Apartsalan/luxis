@@ -111,7 +111,7 @@ export interface DerdengeldenTransaction {
   tenant_id: string;
   case_id: string;
   contact_id: string;
-  transaction_type: "deposit" | "disbursement" | "offset_to_invoice";
+  transaction_type: "deposit" | "disbursement" | "offset_to_invoice" | "reversal";
   amount: number;
   transaction_date: string;
   description: string;
@@ -125,6 +125,7 @@ export interface DerdengeldenTransaction {
   consent_document_url: string | null;
   consent_note: string | null;
   reversed_by_id: string | null;
+  reverses_id: string | null;
   status: "pending_approval" | "approved" | "rejected";
   approved_by_1: string | null;
   approved_at_1: string | null;
@@ -137,6 +138,8 @@ export interface DerdengeldenTransaction {
   creator: TrustTransactionUser;
   approver_1: TrustTransactionUser | null;
   approver_2: TrustTransactionUser | null;
+  case?: { id: string; case_number: string; description: string | null };
+  contact?: { id: string; contact_type: string; name: string; email: string | null };
 }
 
 export interface EligibleInvoice {
@@ -486,6 +489,37 @@ export function useRejectTrustTransaction() {
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.detail || "Afwijzing mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+}
+
+export function useReverseTrustTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      transactionId,
+      reason,
+    }: {
+      transactionId: string;
+      caseId: string;
+      reason: string;
+    }) => {
+      const res = await api(
+        `/api/trust-funds/transactions/${transactionId}/reverse`,
+        {
+          method: "POST",
+          body: JSON.stringify({ reason }),
+        },
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Storno mislukt");
       }
       return res.json();
     },

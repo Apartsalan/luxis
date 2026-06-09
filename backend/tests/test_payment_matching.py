@@ -910,3 +910,278 @@ class TestExecuteMatchHonoursCaseSettings:
         assert bank_payment.allocated_to_costs == manual_payment.allocated_to_costs
         assert bank_payment.allocated_to_interest == manual_payment.allocated_to_interest
         assert bank_payment.allocated_to_principal == manual_payment.allocated_to_principal
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Blok A — Bankimport-integriteit (H17 dedup, H18 atomair, datum/referentie)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestImportDeduplication:
+    """H17 — dezelfde banktransactie mag nooit twee keer geboekt worden."""
+
+    def test_parser_extracts_sequence_and_references(self):
+        result = parse_rabobank_csv(RABOBANK_CSV)
+        txn = result.transactions[0]
+        assert txn.sequence_number == "001"
+        assert txn.payment_reference == "2026-00003"
+        assert txn.account_iban == "NL91RABO0315273637"
+
+    @pytest.mark.asyncio
+    async def test_reimport_same_csv_skips_all_rows(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        from sqlalchemy import select
+
+        first = await import_bank_statement(
+            db, test_tenant.id, test_user.id, "afschrift.csv", RABOBANK_CSV
+        )
+        await db.flush()
+        assert first.status == ImportStatus.COMPLETED
+        assert first.credit_count == 1
+
+        second = await import_bank_statement(
+            db, test_tenant.id, test_user.id, "afschrift-nogmaals.csv", RABOBANK_CSV
+        )
+        await db.flush()
+
+        assert second.status == ImportStatus.COMPLETED
+        assert second.duplicate_count == 1
+
+        txns = (
+            (
+                await db.execute(
+                    select(BankTransaction).where(
+                        BankTransaction.tenant_id == test_tenant.id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(txns) == 1  # tweede import boekte niets bij
+
+    @pytest.mark.asyncio
+    async def test_duplicate_rows_within_one_csv_stored_once(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        from sqlalchemy import select
+
+        csv_double = f"{RABOBANK_HEADER}\n{RABOBANK_CREDIT_ROW}\n{RABOBANK_CREDIT_ROW}"
+        imp = await import_bank_statement(
+            db, test_tenant.id, test_user.id, "dubbel.csv", csv_double
+        )
+        await db.flush()
+
+        assert imp.status == ImportStatus.COMPLETED
+        assert imp.duplicate_count == 1
+        txns = (
+            (
+                await db.execute(
+                    select(BankTransaction).where(BankTransaction.import_id == imp.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(txns) == 1
+
+
+class TestExecuteMatchIntegrity:
+    """H18 + datum/referentie — geen wees-stortingen, juiste bankdata."""
+
+    async def _seed_rates(self, db: AsyncSession) -> None:
+        for rate_type, rate_val in [("statutory", "6.00"), ("commercial", "11.50")]:
+            db.add(
+                InterestRate(
+                    id=uuid.uuid4(),
+                    rate_type=rate_type,
+                    effective_from=date(2024, 1, 1),
+                    rate=Decimal(rate_val),
+                    source="Test fixture",
+                )
+            )
+        await db.flush()
+
+    async def _import_and_match(self, db, tenant_id, user_id, csv_content):
+        stmt_import = await import_bank_statement(
+            db, tenant_id, user_id, "test.csv", csv_content
+        )
+        await db.flush()
+        await generate_matches(db, tenant_id, stmt_import.id)
+        await db.flush()
+        result = await list_matches(db, tenant_id, status_filter="pending")
+        return stmt_import, result.items
+
+    @pytest.mark.asyncio
+    async def test_trust_deposit_uses_bank_date_and_reference(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User, incasso_case: Case
+    ):
+        from sqlalchemy import select
+
+        from app.trust_funds.models import TrustTransaction
+
+        await self._seed_rates(db)
+        _, items = await self._import_and_match(
+            db, test_tenant.id, test_user.id, RABOBANK_CSV
+        )
+        match_id = items[0].id
+        await approve_match(db, test_tenant.id, match_id, test_user.id)
+        await db.flush()
+
+        executed = await execute_match(db, test_tenant.id, match_id, test_user.id)
+        trust_tx = (
+            await db.execute(
+                select(TrustTransaction).where(
+                    TrustTransaction.id == executed.trust_transaction_id
+                )
+            )
+        ).scalar_one()
+
+        assert trust_tx.transaction_date == date(2026, 3, 1)  # bankdatum, niet vandaag
+        assert trust_tx.reference == "2026-00003"  # betalingskenmerk
+
+    @pytest.mark.asyncio
+    async def test_overpayment_caps_payment_and_keeps_surplus_in_trust(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User, incasso_case: Case
+    ):
+        """Debiteur betaalt veel te veel: storting voor vol bedrag, betaling
+        gecapt op openstaand, overschot blijft zichtbaar als derdengeldensaldo."""
+        from sqlalchemy import select
+
+        from app.trust_funds.models import TrustTransaction
+        from app.trust_funds.service import get_balance
+
+        await self._seed_rates(db)
+        overpay_row = _make_rabobank_row(
+            "+99999.00", desc1="Betaling factuur 2026-001", desc2="Dossier 2026-00003"
+        )
+        csv_content = f"{RABOBANK_HEADER}\n{overpay_row}"
+        _, items = await self._import_and_match(
+            db, test_tenant.id, test_user.id, csv_content
+        )
+        match_id = items[0].id
+        await approve_match(db, test_tenant.id, match_id, test_user.id)
+        await db.flush()
+
+        executed = await execute_match(db, test_tenant.id, match_id, test_user.id)
+
+        assert executed is not None
+        assert executed.status == MatchStatus.EXECUTED
+        assert executed.payment_id is not None, "betaling moet bestaan (gecapt)"
+        assert executed.trust_transaction_id is not None
+
+        trust_tx = (
+            await db.execute(
+                select(TrustTransaction).where(
+                    TrustTransaction.id == executed.trust_transaction_id
+                )
+            )
+        ).scalar_one()
+        payment = (
+            await db.execute(select(Payment).where(Payment.id == executed.payment_id))
+        ).scalar_one()
+
+        assert trust_tx.amount == Decimal("99999.00")  # geld staat er echt
+        assert payment.amount < Decimal("99999.00")  # gecapt op openstaand
+        balance = await get_balance(db, test_tenant.id, incasso_case.id)
+        assert balance.total_balance == Decimal("99999.00")
+
+    @pytest.mark.asyncio
+    async def test_approve_all_failure_leaves_no_orphan_deposit(
+        self,
+        db: AsyncSession,
+        test_tenant: Tenant,
+        test_user: User,
+        test_company: Contact,
+        incasso_case: Case,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """Eén kapotte match in de bulk mag de rest niet meeslepen en mag
+        geen halve boekingen (wees-stortingen) achterlaten.
+
+        Fault-injection: de betaling-creatie van het tweede dossier faalt ná
+        de trust-storting — precies het H18 wees-stortingscenario."""
+        from sqlalchemy import select
+
+        from app.ai_agent import payment_matching_service as pm_service
+        from app.trust_funds.models import TrustTransaction
+
+        await self._seed_rates(db)
+        stmt_import, items = await self._import_and_match(
+            db, test_tenant.id, test_user.id, RABOBANK_CSV
+        )
+        assert len(items) == 1  # de credit-transactie
+
+        # Tweede, echt dossier waarvan de betaling-creatie zal falen
+        rogue_case = Case(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_number="2026-00099",
+            description="Saboteur",
+            case_type="incasso",
+            debtor_type="b2b",
+            status="nieuw",
+            is_active=True,
+            client_id=test_company.id,
+            assigned_to_id=test_user.id,
+            date_opened=date.today(),
+            total_principal=Decimal("250.00"),
+            total_paid=Decimal("0.00"),
+        )
+        db.add(rogue_case)
+        rogue_txn = BankTransaction(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            import_id=stmt_import.id,
+            transaction_date=date(2026, 3, 5),
+            amount=Decimal("250.00"),
+            counterparty_name="Spook B.V.",
+            is_matched=True,
+        )
+        db.add(rogue_txn)
+        await db.flush()
+        rogue = PaymentMatch(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            transaction_id=rogue_txn.id,
+            case_id=rogue_case.id,
+            match_method=MatchMethod.MANUAL,
+            confidence=100,
+            status=MatchStatus.PENDING,
+        )
+        db.add(rogue)
+        await db.flush()
+
+        real_create = pm_service.create_payment_for_case
+
+        async def failing_create(db_, tenant_id_, case_id_, *args, **kwargs):
+            if case_id_ == rogue_case.id:
+                raise RuntimeError("kunstmatige fout ná trust-storting")
+            return await real_create(db_, tenant_id_, case_id_, *args, **kwargs)
+
+        monkeypatch.setattr(pm_service, "create_payment_for_case", failing_create)
+
+        result = await pm_service.approve_all_pending(
+            db, test_tenant.id, test_user.id, import_id=stmt_import.id
+        )
+
+        assert result["executed"] == 1
+        assert result["failed"] == 1
+
+        # Goede match is uitgevoerd
+        good = await list_matches(db, test_tenant.id, status_filter="executed")
+        assert good.total == 1
+        # Kapotte match heeft GEEN trust-storting achtergelaten (savepoint!)
+        rogue_deposits = (
+            (
+                await db.execute(
+                    select(TrustTransaction).where(
+                        TrustTransaction.case_id == rogue_case.id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert rogue_deposits == []

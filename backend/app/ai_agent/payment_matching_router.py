@@ -288,7 +288,7 @@ async def approve_all_matches(
     db: AsyncSession = Depends(get_db),
 ):
     """Approve and execute all pending matches above a confidence threshold."""
-    count = await approve_all_pending(
+    result = await approve_all_pending(
         db,
         current_user.tenant_id,
         current_user.id,
@@ -296,7 +296,7 @@ async def approve_all_matches(
         min_confidence=min_confidence,
     )
     await db.commit()
-    return {"executed": count}
+    return result
 
 
 @router.post("/matches/manual", response_model=PaymentMatchOut)

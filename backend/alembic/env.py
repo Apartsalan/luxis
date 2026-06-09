@@ -24,7 +24,17 @@ from app.email.synced_email_models import SyncedEmail  # noqa: F401
 from app.ai_agent.followup_models import FollowupRecommendation  # noqa: F401
 from app.ai_agent.intake_models import IntakeRequest  # noqa: F401
 from app.ai_agent.models import EmailClassification, ResponseTemplate  # noqa: F401
+from app.ai_agent.payment_matching_models import (  # noqa: F401
+    BankStatementImport,
+    BankTransaction,
+    PaymentMatch,
+)
+from app.calendar.models import CalendarEvent  # noqa: F401
+from app.email.models import EmailLog  # noqa: F401
+from app.exact_online.models import ExactOnlineConnection, ExactSyncLog  # noqa: F401
 from app.incasso.models import IncassoPipelineStep, StepTransition  # noqa: F401
+from app.notifications.models import Notification  # noqa: F401
+from app.products.models import Product  # noqa: F401
 from app.invoices.models import Expense, Invoice, InvoiceLine, InvoicePayment  # noqa: F401
 from app.relations.kyc_models import KycVerification  # noqa: F401
 from app.relations.models import Contact, ContactLink  # noqa: F401

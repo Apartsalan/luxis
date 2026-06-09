@@ -197,6 +197,7 @@ async def create_payment(
     include_btw_on_bik: bool = False,
     nakosten_type: str | None = None,
     _skip_installment_link: bool = False,
+    cap_to_outstanding: bool = False,
 ) -> Payment:
     """Register a payment for a case.
 
@@ -272,10 +273,15 @@ async def create_payment(
     # ── Validate: warn if overpayment ──────────────────────────────────
     total_outstanding = outstanding_costs + outstanding_interest + outstanding_principal
     if total_outstanding > Decimal("0") and data.amount > total_outstanding:
-        raise BadRequestError(
-            f"Betaling van €{data.amount} is hoger dan het openstaande bedrag "
-            f"van €{total_outstanding}. Pas het bedrag aan."
-        )
+        if cap_to_outstanding:
+            # H18 (bankimport): boek maximaal het openstaande bedrag; het
+            # overschot blijft als derdengeldensaldo staan bij de aanroeper.
+            data = data.model_copy(update={"amount": total_outstanding})
+        else:
+            raise BadRequestError(
+                f"Betaling van €{data.amount} is hoger dan het openstaande bedrag "
+                f"van €{total_outstanding}. Pas het bedrag aan."
+            )
 
     # ── Distribute per art. 6:44 BW ──────────────────────────────────
     distribution = distribute_payment(
@@ -347,6 +353,7 @@ async def create_payment_for_case(
     user_id: uuid.UUID | None = None,
     *,
     _skip_installment_link: bool = False,
+    cap_to_outstanding: bool = False,
 ) -> Payment:
     """Load the case (+ client) and register a payment using its own settings.
 
@@ -365,6 +372,7 @@ async def create_payment_for_case(
         data,
         user_id,
         _skip_installment_link=_skip_installment_link,
+        cap_to_outstanding=cap_to_outstanding,
         **case_payment_kwargs(case),
     )
 

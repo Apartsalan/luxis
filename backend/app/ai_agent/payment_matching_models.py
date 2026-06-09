@@ -14,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -92,6 +93,8 @@ class BankStatementImport(TenantBase):
     debit_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     skipped_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     matched_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # H17: rijen die al eerder geïmporteerd waren en zijn overgeslagen
+    duplicate_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     imported_by_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
 
@@ -111,6 +114,11 @@ class BankTransaction(TenantBase):
     """
 
     __tablename__ = "bank_transactions"
+    __table_args__ = (
+        # H17: dezelfde banktransactie (Volgnr per rekening, of inhouds-hash)
+        # mag per tenant maar één keer bestaan.
+        UniqueConstraint("tenant_id", "dedup_key", name="uq_bank_transactions_dedup"),
+    )
 
     import_id: Mapped[uuid.UUID] = mapped_column(
         Uuid,
@@ -129,6 +137,13 @@ class BankTransaction(TenantBase):
     # Rabobank-specific fields
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="EUR")
     entry_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # Rentedatum
+
+    # H17: herleidbaarheid + duplicaat-detectie
+    sequence_number: Mapped[str | None] = mapped_column(String(35), nullable=True)  # Volgnr
+    payment_reference: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )  # Betalingskenmerk
+    dedup_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # Matching status
     is_matched: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

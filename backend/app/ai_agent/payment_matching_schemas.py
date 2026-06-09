@@ -43,6 +43,7 @@ class BankStatementImportOut(BaseModel):
     credit_count: int
     debit_count: int
     skipped_count: int
+    duplicate_count: int = 0
     matched_count: int
     imported_by_name: str | None = None
     created_at: datetime

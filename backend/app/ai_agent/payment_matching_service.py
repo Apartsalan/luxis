@@ -1,5 +1,6 @@
 """Payment matching service — import, match, review, and execute bank payments."""
 
+import hashlib
 import logging
 import math
 import uuid
@@ -40,6 +41,21 @@ from app.trust_funds.service import create_transaction as create_trust_transacti
 logger = logging.getLogger(__name__)
 
 TWO_PLACES = Decimal("0.01")
+
+
+def _dedup_key(txn) -> str:
+    """Stable identity of a bank transaction across imports (H17).
+
+    Primary: own IBAN + Volgnr — the bank guarantees uniqueness per account.
+    Fallback (no Volgnr): content hash of date|amount|counterparty|description.
+    """
+    if txn.account_iban and txn.sequence_number:
+        return f"{txn.account_iban}:{txn.sequence_number}"
+    raw = (
+        f"{txn.transaction_date.isoformat()}|{txn.amount}|"
+        f"{txn.counterparty_iban or ''}|{txn.description or ''}"
+    )
+    return "h:" + hashlib.sha256(raw.encode()).hexdigest()[:64]
 
 
 # ── Import ───────────────────────────────────────────────────────────────
@@ -92,8 +108,26 @@ async def import_bank_statement(
         stmt_import.debit_count = result.debit_count
         stmt_import.skipped_count = result.skipped_count
 
-        # Create transaction records for credits only
-        for txn in result.transactions:
+        # H17: skip transactions that were already imported (same Volgnr or
+        # identical content) — re-uploading the same statement must be a no-op.
+        keys = [_dedup_key(txn) for txn in result.transactions]
+        existing_keys: set[str] = set()
+        if keys:
+            existing_result = await db.execute(
+                select(BankTransaction.dedup_key).where(
+                    BankTransaction.tenant_id == tenant_id,
+                    BankTransaction.dedup_key.in_(keys),
+                )
+            )
+            existing_keys = {row[0] for row in existing_result.all()}
+
+        duplicate_count = 0
+        seen_in_file: set[str] = set()
+        for txn, key in zip(result.transactions, keys, strict=True):
+            if key in existing_keys or key in seen_in_file:
+                duplicate_count += 1
+                continue
+            seen_in_file.add(key)
             bank_txn = BankTransaction(
                 tenant_id=tenant_id,
                 import_id=stmt_import.id,
@@ -104,9 +138,13 @@ async def import_bank_statement(
                 description=txn.description,
                 currency=txn.currency,
                 entry_date=txn.entry_date,
+                sequence_number=txn.sequence_number,
+                payment_reference=txn.payment_reference,
+                dedup_key=key,
             )
             db.add(bank_txn)
 
+        stmt_import.duplicate_count = duplicate_count
         stmt_import.status = ImportStatus.COMPLETED
         if result.errors:
             stmt_import.error_message = "; ".join(result.errors[:5])
@@ -294,6 +332,7 @@ def _import_to_response(imp: BankStatementImport) -> BankStatementImportOut:
         credit_count=imp.credit_count,
         debit_count=imp.debit_count,
         skipped_count=imp.skipped_count,
+        duplicate_count=imp.duplicate_count,
         matched_count=imp.matched_count,
         imported_by_name=(
             imp.imported_by.full_name
@@ -617,7 +656,8 @@ async def execute_match(
         await db.flush()
         return match
 
-    # 1. Create trust fund deposit (derdengelden)
+    # 1. Create trust fund deposit (derdengelden) — with the real bank date
+    # and payment reference so the NOvA-administratie matches the bank.
     counterparty = txn.counterparty_name or "Onbekend"
     description = f"Bankimport: {counterparty}"
     if txn.description:
@@ -625,15 +665,19 @@ async def execute_match(
     trust_data = TrustTransactionCreate(
         transaction_type="deposit",
         amount=txn.amount,
+        transaction_date=txn.transaction_date,
         description=description,
         payment_method="bank",
+        reference=txn.payment_reference or txn.sequence_number,
     )
     trust_tx = await create_trust_transaction(
         db, tenant_id, match.case_id, user_id, trust_data
     )
     match.trust_transaction_id = trust_tx.id
 
-    # 2. Create payment with art. 6:44 BW distribution
+    # 2. Create payment with art. 6:44 BW distribution. H18: a debtor can pay
+    # more than the outstanding amount — the payment is then capped on the
+    # outstanding total and the surplus stays visible as trust balance.
     payment_data = PaymentCreate(
         amount=txn.amount,
         payment_date=txn.transaction_date,
@@ -643,9 +687,16 @@ async def execute_match(
     # Use the case's own interest/BIK/BTW/nakosten settings (AUDIT-B3), so a
     # bank-import payment distributes identically to a manually registered one.
     payment = await create_payment_for_case(
-        db, tenant_id, match.case_id, payment_data, user_id
+        db, tenant_id, match.case_id, payment_data, user_id, cap_to_outstanding=True
     )
     match.payment_id = payment.id
+
+    surplus = txn.amount - payment.amount
+    if surplus > Decimal("0"):
+        match.match_details = (
+            f"{match.match_details or ''} | Overschot €{surplus} blijft als "
+            f"derdengeldensaldo staan — terugbetalen aan debiteur."
+        ).strip(" |")
 
     # Mark as executed
     match.status = MatchStatus.EXECUTED
@@ -683,10 +734,14 @@ async def approve_all_pending(
     *,
     import_id: uuid.UUID | None = None,
     min_confidence: int = 0,
-) -> int:
+) -> dict[str, int]:
     """Approve and execute all pending matches above a confidence threshold.
 
-    Returns the number of matches executed.
+    H18: each match runs in its own savepoint — one failing match rolls back
+    only its own partial bookings (no orphan trust deposits) and the rest of
+    the batch continues.
+
+    Returns {"executed": n, "failed": m}.
     """
     query = select(PaymentMatch).where(
         PaymentMatch.tenant_id == tenant_id,
@@ -700,18 +755,23 @@ async def approve_all_pending(
         )
 
     result = await db.execute(query)
-    matches = list(result.scalars().all())
+    # Snapshot ids before the loop: after a savepoint rollback the ORM
+    # objects are expired and attribute access would trigger sync IO.
+    match_ids = [m.id for m in result.scalars().all()]
 
     executed = 0
-    for m in matches:
+    failed = 0
+    for match_id in match_ids:
         try:
-            result = await approve_and_execute_match(db, tenant_id, m.id, user_id)
-            if result:
+            async with db.begin_nested():
+                outcome = await approve_and_execute_match(db, tenant_id, match_id, user_id)
+            if outcome:
                 executed += 1
         except Exception as e:
-            logger.error("Failed to execute match %s: %s", m.id, e)
+            failed += 1
+            logger.error("Failed to execute match %s: %s", match_id, e)
 
-    return executed
+    return {"executed": executed, "failed": failed}
 
 
 async def manual_match(

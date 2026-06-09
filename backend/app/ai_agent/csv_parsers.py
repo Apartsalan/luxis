@@ -24,6 +24,11 @@ class ParsedTransaction:
     currency: str
     entry_date: date | None
     is_credit: bool
+    # Dedup-velden (H17): Volgnr is per rekening bank-uniek; betalingskenmerk
+    # en eigen IBAN maken her-import herkenbaar.
+    sequence_number: str | None = None
+    payment_reference: str | None = None
+    account_iban: str | None = None
 
 
 @dataclass
@@ -118,10 +123,12 @@ def parse_rabobank_csv(content: str) -> ParseResult:
 
         try:
             # Extract own account IBAN (from first valid row)
-            if account_iban is None:
-                raw_iban = row[0].strip().strip('"')
-                if raw_iban:
-                    account_iban = raw_iban
+            row_iban = row[0].strip().strip('"') or None
+            if account_iban is None and row_iban:
+                account_iban = row_iban
+
+            # Volgnr (sequence number) — bank-unique per account
+            sequence_number = row[3].strip().strip('"') or None
 
             # Parse date
             date_str = row[4].strip().strip('"')
@@ -173,6 +180,9 @@ def parse_rabobank_csv(content: str) -> ParseResult:
                         currency=currency,
                         entry_date=entry_date,
                         is_credit=True,
+                        sequence_number=sequence_number,
+                        payment_reference=payment_ref or None,
+                        account_iban=row_iban,
                     )
                 )
             else:

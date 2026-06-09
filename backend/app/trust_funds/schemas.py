@@ -77,6 +77,12 @@ class TrustReverseRequest(BaseModel):
     reason: str = Field(..., min_length=3, description="Reden van de storno")
 
 
+class TrustRejectRequest(BaseModel):
+    """Optional request body when rejecting a pending transaction."""
+
+    reason: str | None = Field(default=None, description="Reden van afwijzing")
+
+
 class EligibleInvoice(BaseModel):
     """An open invoice eligible for trust offset."""
 
@@ -154,6 +160,9 @@ class TrustTransactionRead(BaseModel):
     approved_at_1: datetime | None
     approved_by_2: uuid.UUID | None
     approved_at_2: datetime | None
+    rejected_by: uuid.UUID | None = None
+    rejected_at: datetime | None = None
+    reject_reason: str | None = None
     created_by: uuid.UUID
     created_at: datetime
     updated_at: datetime

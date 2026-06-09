@@ -18,6 +18,7 @@ export interface TenantDetail {
   trust_account_iban: string | null;
   trust_account_holder: string | null;
   trust_account_bic: string | null;
+  trust_allow_self_approval: boolean;
   phone: string | null;
   email: string | null;
   modules_enabled: string[];
@@ -45,6 +46,7 @@ export interface UpdateTenantData {
   trust_account_iban?: string | null;
   trust_account_holder?: string | null;
   trust_account_bic?: string | null;
+  trust_allow_self_approval?: boolean;
   phone?: string | null;
   email?: string | null;
   modules_enabled?: string[];

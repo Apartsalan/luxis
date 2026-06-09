@@ -20,6 +20,7 @@ class TenantSettingsResponse(BaseModel):
     trust_account_iban: str | None = None
     trust_account_holder: str | None = None
     trust_account_bic: str | None = None
+    trust_allow_self_approval: bool = True
     phone: str | None = None
     email: str | None = None
     modules_enabled: list[str] = []
@@ -39,6 +40,7 @@ class TenantSettingsUpdate(BaseModel):
     trust_account_iban: str | None = None
     trust_account_holder: str | None = None
     trust_account_bic: str | None = None
+    trust_allow_self_approval: bool | None = None
     phone: str | None = None
     email: str | None = None
     modules_enabled: list[str] | None = None

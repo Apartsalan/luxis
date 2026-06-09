@@ -16,16 +16,15 @@ shows two distinct approval steps.
 
 import csv
 import io
-import os
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth.models import Tenant
+from app.auth.models import Tenant, User
 from app.cases.models import Case
 from app.cases.service import get_case
 from app.invoices.models import Invoice, InvoicePayment
@@ -47,14 +46,26 @@ from app.trust_funds.schemas import (
 )
 
 
-def _self_approval_allowed() -> bool:
-    """Whether a single user may approve their own trust transactions.
+async def _self_approval_allowed(db: AsyncSession, tenant_id: uuid.UUID) -> bool:
+    """Whether a single user may approve their own trust transactions (H14).
 
-    Set by env flag TRUST_FUNDS_ALLOW_SELF_APPROVAL. Default: True for the
-    Kesting Legal solo-practice context. Set to "false" once a second user is
-    onboarded so the strict 4-eyes principle is restored.
+    Voda art. 6.22 lid 8 vereist functiescheiding: zodra het kantoor 2 of
+    meer actieve gebruikers heeft, geldt ALTIJD strikt vier-ogen — de
+    tenant-instelling wordt dan genegeerd. Bij precies 1 actieve gebruiker
+    bepaalt tenants.trust_allow_self_approval (default aan, omdat de formele
+    autorisatie dan via de twee stichtingsbestuurders bij de bank loopt).
     """
-    return os.environ.get("TRUST_FUNDS_ALLOW_SELF_APPROVAL", "true").lower() == "true"
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(User)
+        .where(User.tenant_id == tenant_id, User.is_active.is_(True))
+    )
+    if count_result.scalar_one() > 1:
+        return False
+
+    tenant_result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = tenant_result.scalar_one_or_none()
+    return bool(tenant and tenant.trust_allow_self_approval)
 
 # ── Balance Calculation ──────────────────────────────────────────────────────
 
@@ -933,7 +944,7 @@ async def approve_transaction(
             "Alleen transacties met status 'pending_approval' kunnen worden goedgekeurd"
         )
 
-    self_ok = _self_approval_allowed()
+    self_ok = await _self_approval_allowed(db, tenant_id)
 
     # Strict mode: approver cannot be the creator
     if not self_ok and approver_id == transaction.created_by:
@@ -973,6 +984,9 @@ async def approve_transaction(
         # For offset_to_invoice: now actually book the payment on the invoice.
         if transaction.transaction_type == "offset_to_invoice":
             await _book_offset_payment(db, tenant_id, transaction, approver_id)
+            # Voda art. 6.19 lid 5: na elke verrekening moet de cliënt een
+            # schriftelijke bevestiging krijgen — maak daar een taak voor aan.
+            await _create_offset_confirmation_task(db, tenant_id, transaction, approver_id)
         # For reversals of debits: only now does the storno take effect.
         elif transaction.transaction_type == "reversal":
             await _finalize_reversal(db, tenant_id, transaction)
@@ -1041,6 +1055,50 @@ async def _book_offset_payment(
 
     new_total_paid = current_paid + transaction.amount
     await _update_invoice_payment_status(db, invoice, new_total_paid)
+    await db.flush()
+
+
+async def _create_offset_confirmation_task(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    transaction: TrustTransaction,
+    user_id: uuid.UUID,
+) -> None:
+    """Taak: schriftelijke bevestiging van de verrekening aan de cliënt.
+
+    Wettelijk vereist (art. 6.19 lid 5 Voda): na elke verrekening met de
+    eigen declaratie moet de cliënt schriftelijk worden geïnformeerd. Bewust
+    een taak en geen automatische e-mail — de advocaat bepaalt de inhoud.
+    """
+    from app.workflow.models import WorkflowTask
+
+    invoice_ref = ""
+    if transaction.target_invoice_id is not None:
+        inv_result = await db.execute(
+            select(Invoice.invoice_number).where(
+                Invoice.id == transaction.target_invoice_id,
+                Invoice.tenant_id == tenant_id,
+            )
+        )
+        invoice_number = inv_result.scalar_one_or_none()
+        if invoice_number:
+            invoice_ref = f" (factuur {invoice_number})"
+
+    task = WorkflowTask(
+        tenant_id=tenant_id,
+        case_id=transaction.case_id,
+        assigned_to_id=user_id,
+        task_type="manual_review",
+        title=f"Bevestiging verrekening €{transaction.amount} aan cliënt sturen",
+        description=(
+            f"Er is €{transaction.amount} derdengeldensaldo verrekend met de eigen "
+            f"declaratie{invoice_ref}. Art. 6.19 lid 5 Voda vereist een schriftelijke "
+            f"bevestiging aan de cliënt na elke verrekening. Verstuur die en rond "
+            f"daarna deze taak af."
+        ),
+        due_date=date.today() + timedelta(days=2),
+    )
+    db.add(task)
     await db.flush()
 
 
@@ -1229,8 +1287,9 @@ async def reject_transaction(
     tenant_id: uuid.UUID,
     transaction_id: uuid.UUID,
     user_id: uuid.UUID,
+    reason: str | None = None,
 ) -> TrustTransaction:
-    """Reject a pending trust fund transaction."""
+    """Reject a pending trust fund transaction (with audit trail)."""
     transaction = await get_transaction(db, tenant_id, transaction_id)
 
     if transaction.status != "pending_approval":
@@ -1239,6 +1298,9 @@ async def reject_transaction(
         )
 
     transaction.status = "rejected"
+    transaction.rejected_by = user_id
+    transaction.rejected_at = datetime.now(UTC)
+    transaction.reject_reason = reason
     await db.flush()
     await db.refresh(transaction)
     return transaction

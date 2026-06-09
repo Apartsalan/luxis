@@ -314,15 +314,18 @@ async def test_approve_disbursement_two_directors(
 async def test_creator_cannot_approve_own_transaction(
     client: AsyncClient,
     auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
     test_company: Contact,
     case_payload: dict,
-    monkeypatch,
 ):
     """The creator of a transaction cannot approve it (four-eyes principle).
 
-    Tests strict mode (TRUST_FUNDS_ALLOW_SELF_APPROVAL=false).
+    Tests strict mode: tenant-setting trust_allow_self_approval uit.
     """
-    monkeypatch.setenv("TRUST_FUNDS_ALLOW_SELF_APPROVAL", "false")
+    test_tenant.trust_allow_self_approval = False
+    db.add(test_tenant)
+    await db.commit()
     case_id = await create_case(client, auth_headers, case_payload)
 
     # Deposit
@@ -365,10 +368,12 @@ async def test_same_director_cannot_approve_twice(
     test_tenant: Tenant,
     test_company: Contact,
     case_payload: dict,
-    monkeypatch,
 ):
-    """The same director cannot provide both approvals (strict 4-eyes mode)."""
-    monkeypatch.setenv("TRUST_FUNDS_ALLOW_SELF_APPROVAL", "false")
+    """The same director cannot provide both approvals (strict 4-eyes mode).
+
+    H14: met 2+ actieve gebruikers geldt automatisch strikt vier-ogen —
+    de tenant-setting telt alleen bij 1 gebruiker.
+    """
     case_id = await create_case(client, auth_headers, case_payload)
 
     deposit = {"transaction_type": "deposit", "amount": "10000.00", "description": "Storting"}
@@ -447,13 +452,18 @@ async def test_reject_disbursement(
     )
     tx_id = response.json()["id"]
 
-    # Reject
+    # Reject (met reden — audit trail)
     response = await client.post(
         f"/api/trust-funds/transactions/{tx_id}/reject",
+        json={"reason": "Verkeerd bedrag ingevoerd"},
         headers=auth_headers,
     )
     assert response.status_code == 200
-    assert response.json()["status"] == "rejected"
+    data = response.json()
+    assert data["status"] == "rejected"
+    assert data["rejected_by"] is not None
+    assert data["rejected_at"] is not None
+    assert data["reject_reason"] == "Verkeerd bedrag ingevoerd"
 
 
 # ── Balance Calculation ──────────────────────────────────────────────────────

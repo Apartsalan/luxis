@@ -23,6 +23,7 @@ export function KantoorTab() {
     trust_account_iban: "",
     trust_account_holder: "",
     trust_account_bic: "",
+    trust_allow_self_approval: true,
   });
   const [initialized, setInitialized] = useState(false);
 
@@ -41,6 +42,7 @@ export function KantoorTab() {
       trust_account_iban: tenant.trust_account_iban || "",
       trust_account_holder: tenant.trust_account_holder || "",
       trust_account_bic: tenant.trust_account_bic || "",
+      trust_allow_self_approval: tenant.trust_allow_self_approval ?? true,
     });
     setInitialized(true);
   }
@@ -57,7 +59,8 @@ export function KantoorTab() {
     form.iban !== (tenant.iban || "") ||
     form.trust_account_iban !== (tenant.trust_account_iban || "") ||
     form.trust_account_holder !== (tenant.trust_account_holder || "") ||
-    form.trust_account_bic !== (tenant.trust_account_bic || "")
+    form.trust_account_bic !== (tenant.trust_account_bic || "") ||
+    form.trust_allow_self_approval !== (tenant.trust_allow_self_approval ?? true)
   );
   useUnsavedWarning(!!isDirty);
 
@@ -79,6 +82,7 @@ export function KantoorTab() {
         trust_account_iban: form.trust_account_iban || null,
         trust_account_holder: form.trust_account_holder || null,
         trust_account_bic: form.trust_account_bic || null,
+        trust_allow_self_approval: form.trust_allow_self_approval,
       },
       {
         onSuccess: () => toast.success("Kantoorgegevens bijgewerkt"),
@@ -325,6 +329,35 @@ export function KantoorTab() {
               }
               className={inputClass}
             />
+          </div>
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.trust_allow_self_approval}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    trust_allow_self_approval: e.target.checked,
+                  }))
+                }
+                className="mt-0.5 h-4 w-4 rounded border-border"
+              />
+              <span>
+                <span className="block text-sm font-medium text-foreground">
+                  Zelf goedkeuren toestaan (alleen bij één gebruiker)
+                </span>
+                <span className="block text-xs text-muted-foreground mt-1">
+                  Uitbetalingen en verrekeningen vereisen twee goedkeuringen
+                  (vier-ogenprincipe, art. 6.22 lid 8 Voda). Met deze optie mag
+                  één gebruiker beide goedkeuringen geven — bedoeld voor
+                  eenmanskantoren, waar de formele autorisatie via de twee
+                  stichtingsbestuurders bij de bank loopt. Zodra het kantoor
+                  twee of meer actieve gebruikers heeft, geldt altijd strikt
+                  vier-ogen, ongeacht deze instelling.
+                </span>
+              </span>
+            </label>
           </div>
           <p className="text-xs text-muted-foreground">
             Wijzigingen worden opgeslagen via de knop &ldquo;Opslaan&rdquo; in de bovenste sectie.

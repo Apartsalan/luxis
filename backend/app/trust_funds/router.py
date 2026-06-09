@@ -20,6 +20,7 @@ from app.trust_funds.schemas import (
     TrustBalanceSummary,
     TrustOffsetCreate,
     TrustOverviewResponse,
+    TrustRejectRequest,
     TrustReverseRequest,
     TrustTransactionCreate,
     TrustTransactionRead,
@@ -147,12 +148,17 @@ async def approve_transaction(
 )
 async def reject_transaction(
     transaction_id: uuid.UUID,
+    payload: TrustRejectRequest | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Reject a pending trust fund transaction."""
     transaction = await service.reject_transaction(
-        db, current_user.tenant_id, transaction_id, current_user.id
+        db,
+        current_user.tenant_id,
+        transaction_id,
+        current_user.id,
+        reason=payload.reason if payload else None,
     )
     return transaction
 

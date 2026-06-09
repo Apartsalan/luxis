@@ -41,6 +41,12 @@ class Tenant(Base, TimestampMixin):
     pipeline_auto_drafts_enabled: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
     )
+    # H14: self-approval van derdengelden-transacties. Alleen van toepassing
+    # bij 1 actieve gebruiker — bij 2+ gebruikers geldt altijd strikt
+    # vier-ogen (Voda art. 6.22 lid 8 functiescheiding).
+    trust_allow_self_approval: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, server_default="true"
+    )
 
     users: Mapped[list["User"]] = relationship("User", back_populates="tenant")
 

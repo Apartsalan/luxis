@@ -181,14 +181,16 @@ async def test_offset_happy_path_books_invoice_payment(
     bal = r.json()
     assert Decimal(bal["available"]) == Decimal("500.00")
 
-    # Approve via second user (4-eyes)
+    # Approve via two independent users (strict 4-eyes: with 2+ active users
+    # the creator may not approve at all — H14)
     _user2, headers2 = await _create_second_user(db, test_tenant)
-    r = await client.post(
-        f"/api/trust-funds/transactions/{offset['id']}/approve", headers=auth_headers
-    )
-    assert r.status_code == 200
+    _user3, headers3 = await _create_second_user(db, test_tenant)
     r = await client.post(
         f"/api/trust-funds/transactions/{offset['id']}/approve", headers=headers2
+    )
+    assert r.status_code == 200, r.text
+    r = await client.post(
+        f"/api/trust-funds/transactions/{offset['id']}/approve", headers=headers3
     )
     assert r.status_code == 200, r.text
     final = r.json()
@@ -349,10 +351,8 @@ async def test_offset_self_approval_when_flag_enabled(
     test_company: Contact,
     case_payload: dict,
     db: AsyncSession,
-    monkeypatch,
 ):
-    """Default TRUST_FUNDS_ALLOW_SELF_APPROVAL=true allows solo practitioner."""
-    monkeypatch.setenv("TRUST_FUNDS_ALLOW_SELF_APPROVAL", "true")
+    """Default trust_allow_self_approval=true allows solo practitioner."""
     case_id = await _create_case(client, auth_headers, case_payload)
     await _create_deposit(client, auth_headers, case_id, "1000.00")
     invoice = await _create_sent_invoice(client, auth_headers, str(test_company.id), db)
@@ -383,9 +383,11 @@ async def test_offset_self_approval_blocked_when_flag_disabled(
     test_company: Contact,
     case_payload: dict,
     db: AsyncSession,
-    monkeypatch,
+    test_tenant: Tenant,
 ):
-    monkeypatch.setenv("TRUST_FUNDS_ALLOW_SELF_APPROVAL", "false")
+    test_tenant.trust_allow_self_approval = False
+    db.add(test_tenant)
+    await db.commit()
     case_id = await _create_case(client, auth_headers, case_payload)
     await _create_deposit(client, auth_headers, case_id, "1000.00")
     invoice = await _create_sent_invoice(client, auth_headers, str(test_company.id), db)
@@ -402,3 +404,52 @@ async def test_offset_self_approval_blocked_when_flag_disabled(
         f"/api/trust-funds/transactions/{offset['id']}/approve", headers=auth_headers
     )
     assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_offset_approval_creates_confirmation_task(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    case_payload: dict,
+    db: AsyncSession,
+):
+    """Na finale goedkeuring van een verrekening moet er een taak liggen om de
+    cliënt schriftelijk te bevestigen (art. 6.19 lid 5 Voda)."""
+    import uuid as _uuid
+
+    from sqlalchemy import select as _select
+
+    from app.workflow.models import WorkflowTask
+
+    case_id = await _create_case(client, auth_headers, case_payload)
+    await _create_deposit(client, auth_headers, case_id, "1000.00")
+    invoice = await _create_sent_invoice(client, auth_headers, str(test_company.id), db)
+
+    payload = _consent_payload(invoice["id"], "300.00")
+    r = await client.post(
+        f"/api/trust-funds/cases/{case_id}/offsets", json=payload, headers=auth_headers
+    )
+    assert r.status_code == 201
+    offset = r.json()
+
+    for _ in range(2):
+        r = await client.post(
+            f"/api/trust-funds/transactions/{offset['id']}/approve",
+            headers=auth_headers,
+        )
+        assert r.status_code == 200, r.text
+
+    tasks = (
+        (
+            await db.execute(
+                _select(WorkflowTask).where(
+                    WorkflowTask.case_id == _uuid.UUID(case_id),
+                    WorkflowTask.task_type == "manual_review",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert any("Bevestiging verrekening" in t.title for t in tasks)

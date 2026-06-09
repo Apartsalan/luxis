@@ -111,6 +111,13 @@ class TrustTransaction(TenantBase):
     )
     approved_at_2: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Rejection audit (wie wees af, wanneer en waarom)
+    rejected_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=True
+    )
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reject_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
 
     # Relationships

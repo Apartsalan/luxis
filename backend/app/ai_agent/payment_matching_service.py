@@ -33,10 +33,11 @@ from app.ai_agent.payment_matching_schemas import (
 from app.cases.models import Case
 from app.collections.models import Claim
 from app.collections.schemas import PaymentCreate
-from app.collections.service import create_payment_for_case
+from app.collections.service import create_payment_for_case, delete_payment
 from app.shared.exceptions import ConflictError
 from app.trust_funds.schemas import TrustTransactionCreate
 from app.trust_funds.service import create_transaction as create_trust_transaction
+from app.trust_funds.service import reverse_transaction as reverse_trust_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -445,6 +446,55 @@ async def list_import_transactions(
     return items, total
 
 
+async def list_unmatched_transactions(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    page: int = 1,
+    per_page: int = 50,
+) -> tuple[list[BankTransactionOut], int]:
+    """List all unmatched bank transactions tenant-wide (H19).
+
+    These are legitimate incoming payments on the derdengeldrekening that the
+    matcher could not link to a case — they must stay visible until handled.
+    """
+    base_filter = (
+        BankTransaction.tenant_id == tenant_id,
+        BankTransaction.is_matched.is_(False),
+    )
+    count_result = await db.execute(
+        select(func.count(BankTransaction.id)).where(*base_filter)
+    )
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        select(BankTransaction)
+        .where(*base_filter)
+        .order_by(BankTransaction.transaction_date.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
+    txns = list(result.scalars().all())
+
+    items = [
+        BankTransactionOut(
+            id=t.id,
+            import_id=t.import_id,
+            transaction_date=t.transaction_date,
+            amount=t.amount,
+            counterparty_name=t.counterparty_name,
+            counterparty_iban=t.counterparty_iban,
+            description=t.description,
+            currency=t.currency,
+            entry_date=t.entry_date,
+            is_matched=t.is_matched,
+            created_at=t.created_at,
+        )
+        for t in txns
+    ]
+    return items, total
+
+
 async def list_matches(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -772,6 +822,62 @@ async def approve_all_pending(
             logger.error("Failed to execute match %s: %s", match_id, e)
 
     return {"executed": executed, "failed": failed}
+
+
+async def undo_match(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    match_id: uuid.UUID,
+    user_id: uuid.UUID,
+    reason: str,
+) -> PaymentMatch | None:
+    """Undo an executed match (H16).
+
+    Reverses the trust deposit (storno), soft-deletes the payment (incl.
+    art. 6:44 BW re-totalling via _refresh_case_financials), and makes the
+    bank transaction matchable again. The trust reversal is attempted first:
+    if the trust money was already paid out, the reversal fails and the undo
+    aborts cleanly before touching the payment.
+    """
+    result = await db.execute(
+        select(PaymentMatch).where(
+            PaymentMatch.tenant_id == tenant_id,
+            PaymentMatch.id == match_id,
+            PaymentMatch.status == MatchStatus.EXECUTED,
+        )
+    )
+    match = result.scalar_one_or_none()
+    if not match:
+        return None
+
+    if match.trust_transaction_id:
+        await reverse_trust_transaction(
+            db,
+            tenant_id,
+            match.trust_transaction_id,
+            user_id,
+            reason=f"Bank-match teruggedraaid: {reason}",
+            _allow_matched=True,
+        )
+
+    if match.payment_id:
+        await delete_payment(db, tenant_id, match.payment_id)
+
+    match.status = MatchStatus.REJECTED
+    match.reviewed_by_id = user_id
+    match.reviewed_at = datetime.now(UTC)
+    match.review_note = f"Teruggedraaid: {reason}"
+
+    txn_result = await db.execute(
+        select(BankTransaction).where(BankTransaction.id == match.transaction_id)
+    )
+    txn = txn_result.scalar_one_or_none()
+    if txn:
+        txn.is_matched = False
+
+    await db.flush()
+    logger.info("Match undone: %s (reason: %s)", match_id, reason)
+    return match
 
 
 async def manual_match(

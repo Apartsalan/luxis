@@ -71,6 +71,12 @@ class TrustTransactionApprove(BaseModel):
     pass
 
 
+class TrustReverseRequest(BaseModel):
+    """Request body for reversing (storneren) an approved transaction."""
+
+    reason: str = Field(..., min_length=3, description="Reden van de storno")
+
+
 class EligibleInvoice(BaseModel):
     """An open invoice eligible for trust offset."""
 
@@ -142,6 +148,7 @@ class TrustTransactionRead(BaseModel):
     consent_document_url: str | None
     consent_note: str | None
     reversed_by_id: uuid.UUID | None
+    reverses_id: uuid.UUID | None = None
     status: str
     approved_by_1: uuid.UUID | None
     approved_at_1: datetime | None

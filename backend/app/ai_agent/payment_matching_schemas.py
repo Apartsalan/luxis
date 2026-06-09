@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # ── Bank Transaction ─────────────────────────────────────────────────────
 
@@ -137,3 +137,9 @@ class ManualMatchIn(BaseModel):
     transaction_id: uuid.UUID
     case_id: uuid.UUID
     note: str | None = None
+
+
+class UndoMatchIn(BaseModel):
+    """Request body for undoing an executed match."""
+
+    reason: str = Field(..., min_length=3, description="Reden van terugdraaien")

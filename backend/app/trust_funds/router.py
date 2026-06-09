@@ -20,6 +20,7 @@ from app.trust_funds.schemas import (
     TrustBalanceSummary,
     TrustOffsetCreate,
     TrustOverviewResponse,
+    TrustReverseRequest,
     TrustTransactionCreate,
     TrustTransactionRead,
 )
@@ -143,6 +144,27 @@ async def reject_transaction(
     """Reject a pending trust fund transaction."""
     transaction = await service.reject_transaction(
         db, current_user.tenant_id, transaction_id, current_user.id
+    )
+    return transaction
+
+
+@router.post(
+    "/transactions/{transaction_id}/reverse",
+    response_model=TrustTransactionRead,
+)
+async def reverse_transaction(
+    transaction_id: uuid.UUID,
+    payload: TrustReverseRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Storneer een goedgekeurde transactie via een tegenboeking (H15).
+
+    Storno van een storting werkt direct; storno van een uitbetaling of
+    verrekening vereist opnieuw twee goedkeuringen (vier-ogen).
+    """
+    transaction = await service.reverse_transaction(
+        db, current_user.tenant_id, transaction_id, current_user.id, payload.reason
     )
     return transaction
 

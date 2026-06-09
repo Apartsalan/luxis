@@ -49,7 +49,7 @@ class TrustTransaction(TenantBase):
 
     transaction_type: Mapped[str] = mapped_column(
         String(30), nullable=False
-    )  # deposit, disbursement, offset_to_invoice
+    )  # deposit, disbursement, offset_to_invoice, reversal
 
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
 
@@ -80,8 +80,13 @@ class TrustTransaction(TenantBase):
     consent_document_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     consent_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Reversal pointer (immutability — corrections via tegenboeking)
+    # Reversal pointers (immutability — corrections via tegenboeking).
+    # On the ORIGINAL: reversed_by_id -> the reversal entry that undoes it.
+    # On the REVERSAL (transaction_type="reversal"): reverses_id -> original.
     reversed_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("trust_transactions.id"), nullable=True
+    )
+    reverses_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("trust_transactions.id"), nullable=True
     )
 

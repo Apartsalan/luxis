@@ -9,6 +9,7 @@ from app.ai_agent.payment_matching_schemas import (
     BankStatementImportList,
     BankStatementImportOut,
     ManualMatchIn,
+    UndoMatchIn,
     MatchRejectIn,
     PaymentMatchList,
     PaymentMatchOut,
@@ -129,6 +130,30 @@ async def list_transactions(
         page=page,
         per_page=per_page,
         unmatched_only=unmatched_only,
+    )
+    import math
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": math.ceil(total / per_page) if total > 0 else 0,
+    }
+
+
+@router.get("/transactions/unmatched")
+async def list_unmatched(
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=50, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all unmatched bank transactions tenant-wide (H19 — 'Ongekoppeld')."""
+    from app.ai_agent.payment_matching_service import list_unmatched_transactions
+
+    items, total = await list_unmatched_transactions(
+        db, current_user.tenant_id, page=page, per_page=per_page
     )
     import math
 
@@ -296,6 +321,30 @@ async def approve_all_matches(
         min_confidence=min_confidence,
     )
     await db.commit()
+    return result
+
+
+@router.post("/matches/{match_id}/undo", response_model=PaymentMatchOut)
+async def undo_executed_match(
+    match_id: uuid.UUID,
+    body: UndoMatchIn,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Draai een uitgevoerde match terug (H16): storneert de derdengelden-
+    storting, verwijdert de betaling en maakt de transactie weer koppelbaar."""
+    from app.ai_agent.payment_matching_service import undo_match
+
+    match = await undo_match(
+        db, current_user.tenant_id, match_id, current_user.id, body.reason
+    )
+    if match is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Geen uitgevoerde match gevonden om terug te draaien",
+        )
+    await db.commit()
+    result = await get_match(db, current_user.tenant_id, match_id)
     return result
 
 

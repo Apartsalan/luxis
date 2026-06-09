@@ -941,6 +941,9 @@ async def approve_transaction(
         # For offset_to_invoice: now actually book the payment on the invoice.
         if transaction.transaction_type == "offset_to_invoice":
             await _book_offset_payment(db, tenant_id, transaction, approver_id)
+        # For reversals of debits: only now does the storno take effect.
+        elif transaction.transaction_type == "reversal":
+            await _finalize_reversal(db, tenant_id, transaction)
     else:
         raise BadRequestError("Transactie is al volledig goedgekeurd")
 
@@ -1005,6 +1008,183 @@ async def _book_offset_payment(
     await db.flush()
 
     new_total_paid = current_paid + transaction.amount
+    await _update_invoice_payment_status(db, invoice, new_total_paid)
+    await db.flush()
+
+
+# ── Reversal (storno / tegenboeking, H15) ────────────────────────────────────
+
+
+async def reverse_transaction(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    transaction_id: uuid.UUID,
+    user_id: uuid.UUID,
+    reason: str,
+    *,
+    _allow_matched: bool = False,
+) -> TrustTransaction:
+    """Create a reversal entry (tegenboeking) for an approved transaction.
+
+    Voda/NOvA: bookings are immutable — corrections happen via reversal
+    entries with a full audit trail. Rules:
+    - Only approved, not-yet-reversed transactions can be reversed.
+    - A reversal entry itself cannot be reversed.
+    - Deposit reversals apply immediately, but are refused if the available
+      balance is insufficient (the balance may never go negative).
+    - Debit reversals (disbursement/offset) require the same two-approval
+      flow; the storno takes effect at the second approval.
+    - Deposits created by a bank-import match must be undone via the match
+      (undo), so the payment side stays consistent.
+    """
+    if not reason or not reason.strip():
+        raise BadRequestError("Een storno vereist een reden")
+
+    original = await get_transaction(db, tenant_id, transaction_id)
+
+    if original.transaction_type == "reversal":
+        raise BadRequestError("Een storno kan niet zelf gestorneerd worden")
+    if original.status != "approved":
+        raise BadRequestError(
+            "Alleen goedgekeurde transacties kunnen gestorneerd worden — "
+            "wijs een openstaande transactie af in plaats van te storneren"
+        )
+    if original.reversed_by_id is not None:
+        raise BadRequestError("Deze transactie is al gestorneerd")
+
+    # Pending reversal already created for this original?
+    existing = await db.execute(
+        select(TrustTransaction).where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.reverses_id == original.id,
+            TrustTransaction.status.in_(("pending_approval", "approved")),
+        )
+    )
+    if existing.scalars().first() is not None:
+        raise BadRequestError("Er loopt al een storno voor deze transactie")
+
+    # Bank-import deposits must be undone via the match (keeps payment in sync)
+    if not _allow_matched and original.transaction_type == "deposit":
+        from app.ai_agent.payment_matching_models import MatchStatus, PaymentMatch
+
+        match_result = await db.execute(
+            select(PaymentMatch).where(
+                PaymentMatch.tenant_id == tenant_id,
+                PaymentMatch.trust_transaction_id == original.id,
+                PaymentMatch.status == MatchStatus.EXECUTED,
+            )
+        )
+        if match_result.scalars().first() is not None:
+            raise BadRequestError(
+                "Deze storting komt uit een bankimport-match. Draai de match "
+                "terug via Betalingen zodat ook de betaling wordt teruggedraaid."
+            )
+
+    # Deposit reversal lowers the balance — never below zero
+    if original.transaction_type == "deposit":
+        balance = await get_balance(db, tenant_id, original.case_id)
+        if balance.available < original.amount:
+            raise BadRequestError(
+                f"Onvoldoende saldo om deze storting te storneren. "
+                f"Beschikbaar: {balance.available}, nodig: {original.amount} — "
+                f"het geld is al (deels) uitbetaald."
+            )
+
+    is_debit = original.transaction_type in ("disbursement", "offset_to_invoice")
+    reversal = TrustTransaction(
+        tenant_id=tenant_id,
+        case_id=original.case_id,
+        contact_id=original.contact_id,
+        transaction_type="reversal",
+        amount=original.amount,
+        transaction_date=date.today(),
+        description=(
+            f"Storno: {reason.strip()} — origineel: {original.description[:120]}"
+        ),
+        payment_method=original.payment_method,
+        reference=original.reference,
+        reverses_id=original.id,
+        status="pending_approval" if is_debit else "approved",
+        created_by=user_id,
+    )
+    db.add(reversal)
+    await db.flush()
+
+    if not is_debit:
+        # Deposit reversal: takes effect immediately
+        await _finalize_reversal(db, tenant_id, reversal)
+
+    await db.refresh(reversal)
+    return reversal
+
+
+async def _finalize_reversal(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    reversal: TrustTransaction,
+) -> None:
+    """Apply a reversal: mark the original as reversed and unwind side-effects.
+
+    The balance effect is implicit: balance queries exclude transactions with
+    reversed_by_id set, and the 'reversal' type itself never counts.
+    """
+    if reversal.reverses_id is None:
+        raise BadRequestError("Storno mist verwijzing naar de originele transactie")
+
+    original = await get_transaction(db, tenant_id, reversal.reverses_id)
+    if original.reversed_by_id is not None:
+        raise BadRequestError("Deze transactie is al gestorneerd")
+
+    original.reversed_by_id = reversal.id
+
+    # Offset reversal: also remove the invoice payment and recompute status
+    if original.transaction_type == "offset_to_invoice":
+        await _unbook_offset_payment(db, tenant_id, original)
+
+    await db.flush()
+
+
+async def _unbook_offset_payment(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    original: TrustTransaction,
+) -> None:
+    """Remove the InvoicePayment created by an offset and recompute the
+    invoice status (paid -> partially_paid/sent)."""
+    from app.invoices.invoice_payment_service import _update_invoice_payment_status
+
+    if original.target_invoice_id is None:
+        return
+
+    payment_result = await db.execute(
+        select(InvoicePayment).where(
+            InvoicePayment.tenant_id == tenant_id,
+            InvoicePayment.invoice_id == original.target_invoice_id,
+            InvoicePayment.reference == f"Derdengelden-verrekening {original.id}",
+        )
+    )
+    payment = payment_result.scalar_one_or_none()
+    if payment is not None:
+        await db.delete(payment)
+        await db.flush()
+
+    inv_result = await db.execute(
+        select(Invoice).where(
+            Invoice.id == original.target_invoice_id,
+            Invoice.tenant_id == tenant_id,
+        )
+    )
+    invoice = inv_result.scalar_one_or_none()
+    if invoice is None:
+        return
+
+    paid_result = await db.execute(
+        select(func.coalesce(func.sum(InvoicePayment.amount), Decimal("0.00"))).where(
+            InvoicePayment.tenant_id == tenant_id,
+            InvoicePayment.invoice_id == invoice.id,
+        )
+    )
+    new_total_paid = paid_result.scalar_one()
     await _update_invoice_payment_status(db, invoice, new_total_paid)
     await db.flush()
 

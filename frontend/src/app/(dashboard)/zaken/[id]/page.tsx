@@ -482,6 +482,12 @@ export default function ZaakDetailPage() {
     { id: "partijen", label: "Partijen", icon: Users },
   ];
 
+  // CONN-6: een ?tab= deep-link kan een tab noemen die op dít dossier niet
+  // bestaat (bv. ?tab=betalingen op een niet-incasso dossier via de
+  // derdengelden-pagina). Onbekende/ontoegestane tab → val terug op overzicht,
+  // anders rendert geen enkele conditie en blijft het paneel leeg.
+  const safeTab = tabs.some((t) => t.id === activeTab) ? activeTab : "overzicht";
+
   return (
     <div className="space-y-6 animate-fade-in">
       {ConfirmDialogEl}
@@ -489,7 +495,7 @@ export default function ZaakDetailPage() {
       <DossierHeader
         zaak={zaak}
         isIncasso={isIncasso}
-        activeTab={activeTab}
+        activeTab={safeTab}
         setActiveTab={setActiveTab}
         handleStatusChange={handleStatusChange}
         handleDelete={handleDelete}
@@ -521,10 +527,10 @@ export default function ZaakDetailPage() {
                     <button
                       key={tab.id}
                       role="tab"
-                      aria-selected={activeTab === tab.id}
+                      aria-selected={safeTab === tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                        activeTab === tab.id
+                        safeTab === tab.id
                           ? "border-primary text-primary"
                           : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                       }`}
@@ -540,58 +546,58 @@ export default function ZaakDetailPage() {
 
           {/* Tab content — each tab wrapped in ErrorBoundary (UX-19) */}
           <div className="mt-6">
-            {activeTab === "overzicht" && (
+            {safeTab === "overzicht" && (
               <ErrorBoundary key="overzicht" fallback={<TabErrorFallback tabName="Overzicht" />}>
                 <CaseActionFeed caseId={id} onNavigate={setActiveTab} />
                 <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />
               </ErrorBoundary>
             )}
-            {activeTab === "taken" && (
+            {safeTab === "taken" && (
               <ErrorBoundary key="taken" fallback={<TabErrorFallback tabName="Taken" />}>
                 <TijdregistratieTab caseId={id} />
               </ErrorBoundary>
             )}
-            {activeTab === "uren" && (
+            {safeTab === "uren" && (
               <ErrorBoundary key="uren" fallback={<TabErrorFallback tabName="Uren" />}>
                 <UrenTab caseId={id} />
               </ErrorBoundary>
             )}
-            {isIncasso && activeTab === "vorderingen" && (
+            {isIncasso && safeTab === "vorderingen" && (
               <ErrorBoundary key="vorderingen" fallback={<TabErrorFallback tabName="Vorderingen" />}>
                 <VorderingenFinancieelTab caseId={id} />
               </ErrorBoundary>
             )}
-            {isIncasso && activeTab === "betalingen" && (
+            {isIncasso && safeTab === "betalingen" && (
               <ErrorBoundary key="betalingen" fallback={<TabErrorFallback tabName="Betalingen" />}>
                 <BetalingenDerdengeldenTab caseId={id} />
               </ErrorBoundary>
             )}
-            {isIncasso && activeTab === "staphistorie" && (
+            {isIncasso && safeTab === "staphistorie" && (
               <ErrorBoundary key="staphistorie" fallback={<TabErrorFallback tabName="Staphistorie" />}>
                 <StaphistorieTab caseId={id} />
               </ErrorBoundary>
             )}
-            {activeTab === "facturen" && (
+            {safeTab === "facturen" && (
               <ErrorBoundary key="facturen" fallback={<TabErrorFallback tabName="Facturen" />}>
                 <FacturenTab caseId={id} clientId={zaak?.client?.id} />
               </ErrorBoundary>
             )}
-            {activeTab === "documenten" && (
+            {safeTab === "documenten" && (
               <ErrorBoundary key="documenten" fallback={<TabErrorFallback tabName="Documenten" />}>
                 <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />
               </ErrorBoundary>
             )}
-            {activeTab === "correspondentie" && (
+            {safeTab === "correspondentie" && (
               <ErrorBoundary key="correspondentie" fallback={<TabErrorFallback tabName="Correspondentie" />}>
                 <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />
               </ErrorBoundary>
             )}
-            {activeTab === "activiteiten" && (
+            {safeTab === "activiteiten" && (
               <ErrorBoundary key="activiteiten" fallback={<TabErrorFallback tabName="Activiteiten" />}>
                 <ActiviteitenTab zaak={zaak} />
               </ErrorBoundary>
             )}
-            {activeTab === "partijen" && (
+            {safeTab === "partijen" && (
               <ErrorBoundary key="partijen" fallback={<TabErrorFallback tabName="Partijen" />}>
                 <PartijenTab zaak={zaak} />
               </ErrorBoundary>

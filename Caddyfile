@@ -67,3 +67,19 @@ app.bespokestaffingsolutions.nl {
 
     encode gzip
 }
+
+# Bespoke Staffing MCP server. Added manually on the VPS (S<=160); committed in
+# S161 so deploys stop aborting on the dirty Caddyfile and prod stays reproducible.
+mcp.bespokestaffingsolutions.nl {
+    reverse_proxy 172.17.0.1:3101
+
+    tls {
+        on_demand
+    }
+
+    header {
+        X-Content-Type-Options nosniff
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+}

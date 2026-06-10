@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premortem — Autonome AI Incasso-agent (Luxis)</title>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#121829; --panel2:#0f1422; --ink:#e8edf7; --muted:#9aa7c2;
+    --line:#21304d; --accent:#5b8cff; --danger:#ff5d6c; --warn:#ffb454; --ok:#3ecf8e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:40px 22px 80px}
+  h1{font-size:30px;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0 0 6px}
+  .frame{background:linear-gradient(180deg,#141b2e,#0f1422);border:1px solid var(--line);border-left:4px solid var(--danger);border-radius:12px;padding:16px 20px;margin:22px 0 30px}
+  .frame b{color:#fff}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:34px 0 14px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  .syn{display:grid;gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .card h3{margin:0 0 8px;font-size:16px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:10px}
+  .t-likely{background:rgba(255,180,84,.14);color:var(--warn);border:1px solid rgba(255,180,84,.35)}
+  .t-danger{background:rgba(255,93,108,.14);color:var(--danger);border:1px solid rgba(255,93,108,.35)}
+  .t-hidden{background:rgba(91,140,255,.14);color:var(--accent);border:1px solid rgba(91,140,255,.35)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .fail{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;border-top:3px solid var(--accent)}
+  .fail:nth-child(7n+1){border-top-color:#ff5d6c}
+  .fail:nth-child(7n+2){border-top-color:#ffb454}
+  .fail:nth-child(7n+3){border-top-color:#3ecf8e}
+  .fail:nth-child(7n+4){border-top-color:#5b8cff}
+  .fail:nth-child(7n+5){border-top-color:#c879ff}
+  .fail:nth-child(7n+6){border-top-color:#ff8fb1}
+  .fail:nth-child(7n+0){border-top-color:#54d6ff}
+  .fail .n{font-size:12px;color:var(--muted);font-weight:700}
+  .fail h4{margin:4px 0 10px;font-size:15px;line-height:1.35}
+  .fail p{margin:8px 0;font-size:13.5px;color:#d6deef}
+  .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;display:block;margin-top:12px}
+  .sig{background:#0b1120;border:1px dashed var(--line);border-radius:8px;padding:8px 11px;font-size:12.5px;color:#bcd0ff;margin-top:6px}
+  ol.rev{padding-left:20px} ol.rev li{margin:9px 0}
+  ul.chk{list-style:none;padding:0} ul.chk li{padding:9px 0 9px 30px;position:relative;border-bottom:1px solid var(--line)}
+  ul.chk li:before{content:"☐";position:absolute;left:4px;top:8px;color:var(--accent);font-size:16px}
+  .meta{color:var(--muted);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:14px}
+  .scope{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .pill{font-size:11px;background:#0b1120;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted)}
+  strong{color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Premortem — Autonome AI Incasso-agent</h1>
+  <p class="sub">Luxis · gelaagde autonomie (L0–L3), per-tenant + kill switch · 10 juni 2026</p>
+  <div class="scope">
+    <span class="pill">7 faalmodi onderzocht</span>
+    <span class="pill">7 parallelle agents</span>
+    <span class="pill">Klant: Lisanne Kesting (solo-advocaat)</span>
+    <span class="pill">Product voor andere kantoren</span>
+  </div>
+
+  <div class="frame">
+    <b>Frame:</b> Het is 6 maanden later. De autonome AI Incasso-agent is gebouwd en gelanceerd. Het is mislukt. We kijken terug en leggen uit waaróm.
+  </div>
+
+  <h2>Synthese — lees dit eerst</h2>
+  <div class="syn">
+    <div class="card">
+      <span class="tag t-likely">Meest waarschijnlijke mislukking</span>
+      <h3>Lisanne schaalt nooit op voorbij L1</h3>
+      <p>Voor een persoonlijk aansprakelijke solo-advocaat is de afweging asymmetrisch: bespaarde tijd is diffuus, een fout staat met háár naam eronder (tuchtrecht + civiel). Eén afgevangen fout op L1 bevestigt "goed dat ik nog kijk" i.p.v. "de check werkt". L1 doet bovendien bijna hetzelfde als wat er nu al is — opschalen voelt als risico zónder zichtbaar voordeel. De volledige ROI zit in L2+, en daar komt ze nooit. Resultaat: maandenlang gebouwde autonomie-machinerie die "uit" blijft staan.</p>
+    </div>
+    <div class="card">
+      <span class="tag t-danger">Gevaarlijkste mislukking</span>
+      <h3>Autonome actie op foute grond → onomkeerbaar → tuchtklacht</h3>
+      <p>De agent stuurt autonoom een sommatie/14-dagenbrief op een dossier waar de debiteur al betaalde (afwijkend bedrag/kenmerk gemist), of waar buiten Luxis om iets speelde (telefoon, Tikkie, mondelinge betwisting, cliënt-instructie). De brief is ontvangen, de wettelijke termijn loopt — software-"undo" zet alleen het databaserecord terug, niet de buitenwereld. Eén tuchtklacht raakt Lisanne's aansprakelijkheid én, als vlaggenschipkantoor, de reputatie van Luxis als product.</p>
+    </div>
+    <div class="card">
+      <span class="tag t-hidden">De verborgen aanname</span>
+      <h3>Luxis bevat de hele waarheid, en undo = ongedaan</h3>
+      <p>Het hele ontwerp gaat er stilzwijgend van uit dat (a) op het beslismoment de volledige stand van het dossier ín Luxis zit — terwijl de echte wereld deels buiten het systeem leeft (telefoon, contante/Tikkie-betaling, mondelinge afspraken, cliënt-opdracht), en (b) dat een actie terugdraaien in software gelijkstaat aan ongedaan maken in de werkelijkheid — terwijl ontvangst door een derde en het intreden van een wettelijke termijn buiten software's bereik liggen. "Pipeline-op-schema = veilig" verwart <em>op tijd</em> met <em>op juiste grond</em>.</p>
+    </div>
+  </div>
+
+  <h2>Het herziene plan — concreet</h2>
+  <div class="card">
+    <ol class="rev">
+      <li><strong>Begin niet met autonomie — bouw eerst "shadow mode" (L1.5).</strong> De agent berekent ALLES wat 'ie op L2 zou doen maar verstuurt niets; het logt "ik zou nu X sturen". Wekelijks rapport: hoe vaak zou de agent fout hebben gezeten? Pas opschalen als die foutmarge wekenlang ≈0 is. Dit is meteen je meetinstrument én je verkoop-bewijs.</li>
+      <li><strong>Pre-send legal-check als harde gate</strong> (geen toggle omzeilt 'm): vóór elke autonome verzending valideren — 14-dagentermijn correct? BIK op juiste staffel + verzuimdatum? rente actueel? debiteur niet betaald (incl. fuzzy-match op afwijkend bedrag/kenmerk)? Faalt één → escaleer naar mens. Rode→groene tests verplicht.</li>
+      <li><strong>Vang stop-signalen búiten e-mail.</strong> Elke handmatige betaling, agenda-item, notitie, telefoon-log of cliënt-instructie in de laatste 14 dagen vóór een autonome stap = automatische escalatie. De agent mag NOOIT redeneren "geen inbound mail = geen reden om te stoppen".</li>
+      <li><strong>Scheid "intern omkeerbaar" van "extern onomkeerbaar".</strong> Interne acties (status, concept) mogen autonoom. Externe acties (brief verstuurd, termijn gestart) zijn een aparte categorie die op L2 NOOIT volledig autonoom gaat — minimaal een "verzendvenster" met menselijke veto. Undo weigert hard op records met <code>sent_at ≠ null</code>.</li>
+      <li><strong>Houd de bediening simpel: 3 presets, geen matrix.</strong> "Uit / Assistent / Auto-routine" met bovenaan een dik <strong>"WAT STAAT NU AAN"</strong>-paneel dat een niet-technische advocaat in 5 sec begrijpt. Geen 4 niveaus × per-capability × per-tenant × kill switch die niemand mentaal kan simuleren.</li>
+      <li><strong>Productiseer pas na bewijs.</strong> Verkoop autonomie aan kantoor #2 pas als (a) Lisanne maanden incidentvrij op L2 draait én (b) elk nieuw kantoor verplicht in shadow mode start met per-tenant template-/staffel-validatie — ongeacht wat ze willen aanzetten.</li>
+      <li><strong>Scope-discipline.</strong> L1 levert al ~80% van de waarde. Bouw eerst klein (shadow + pre-send-check), niet de hele policy-engine + dashboard + reversibility-laag. Time-box; vallen migratie/security/livegang stil → stop.</li>
+    </ol>
+  </div>
+
+  <h2>Checklist vóór livegang</h2>
+  <div class="card">
+    <ul class="chk">
+      <li>Shadow-mode draait + wekelijkse "zou-fout-zijn"-rapportage; opschalen pas bij ≈0 over X weken.</li>
+      <li>Pre-send legal-check (14-dagen / BIK-staffel / rente / betaald / geen recente activiteit) blokkeert elke autonome verzending die niet 100% valideert — met tests.</li>
+      <li>Undo-logica weigert op <code>sent_at ≠ null</code>; "extern verzonden" is een aparte, niet-autonome categorie.</li>
+      <li>"Wat staat nu aan"-paneel; test: kan Lisanne 5 scenario's correct voorspellen wat de agent doet?</li>
+      <li>Reconciliatie-metric live vóór L2: % autonome acties dat binnen 7 dagen handmatig wordt teruggedraaid/gecorrigeerd; boven drempel → automatisch terug naar L1.</li>
+    </ul>
+  </div>
+
+  <h2>De 7 faalmodi — diepteonderzoek</h2>
+  <div class="grid">
+
+    <div class="fail">
+      <div class="n">FAALMODUS 1</div>
+      <h4>Autonome actie op foute grond → tuchtklacht</h4>
+      <p>B2C-dossier: debiteur betaalde op dag 12 met tikfout in kenmerk + €0,84 te laag (bankkosten). Matching faalde, geen "betaling-in-behandeling"-status → op dag 14 vuurde de agent autonoom een sommatie mét verse WIK + rente over een al voldane hoofdsom. Dreigbrief ná betaling → klacht bij de Deken. De BIK was bovendien niet eens verschuldigd (14-dagenbrief-termijn fout).</p>
+      <span class="lbl">Onderliggende aanname</span>
+      <p>Dat "op schema" veilig is, terwijl het echte risico is of de feiten (betaald? termijn? bedrag?) op het verzendmoment nog kloppen.</p>
+      <span class="lbl">Vroege signalen</span>
+      <div class="sig">% betalingen dat niet auto-matcht > 5–10% · sommaties verstuurd binnen X dagen ná een binnenkomende betaling/inbound-mail.</div>
+    </div>
+
+    <div class="fail">
+      <div class="n">FAALMODUS 2 · meest waarschijnlijk</div>
+      <h4>Lisanne blijft op L1 hangen — geen ROI</h4>
+      <p>L1 doet wat de bouwstenen al deden; opschalen voelde als risico zónder zichtbaar voordeel. Toen ze in maand 2 een fout rente-concept afving, was haar les "stel dat dit met mijn naam eronder autonoom was gegaan" — niet "de check werkt". Voor een persoonlijk aansprakelijke advocaat weegt één verzonden fout zwaarder dan 100 bespaarde klikken. De slider bleef op L1; alle L2/L3-machinerie: gebouwd, getest, ongebruikt.</p>
+      <span class="lbl">Onderliggende aanname</span>
+      <p>Dat opschalen een vertrouwenskwestie is die vanzelf groeit — terwijl het een blijvende asymmetrie is: tijdwinst diffuus, fout is van haar.</p>
+      <span class="lbl">Vroege signalen</span>
+      <div class="sig">Na 4 weken nog op L1 én >95% suggesties blind goedgekeurd · "shadow-foutmarge" daalt niet richting 0 over weken.</div>
+    </div>
+
+    <div class="fail">
+      <div class="n">FAALMODUS 3</div>
+      <h4>Scheidslijn pipeline/inbound houdt niet stand</h4>
+      <p>Debiteur belde + betaalde €500 via Tikkie ("rest deze week") — Lisanne had het in haar hoofd, niet in Luxis. Agent zag "termijn verstreken, geen inbound mail" en stuurde de volledige sommatie. Bij een B2B-dossier duwde de agent een dagvaarding-voorbereiding door terwijl de cliënt telefonisch zei "wacht, we onderhandelen zelf". In 4 van 11 autonome escalaties bestond een offline reden om te stoppen.</p>
+      <span class="lbl">Onderliggende aanname</span>
+      <p>"Geen inbound e-mail = geen reden om te stoppen" — terwijl het echte leven (telefoon, Tikkie, mondelinge afspraken, cliënt-opdracht) buiten de e-mailstroom loopt.</p>
+      <span class="lbl">Vroege signalen</span>
+      <div class="sig">>10% autonome escalaties binnen 7 dagen handmatig teruggedraaid · dossiers met betaling/notitie/agenda maar zónder inbound mail vóór een autonome stap.</div>
+    </div>
+
+    <div class="fail">
+      <div class="n">FAALMODUS 4</div>
+      <h4>Toggle-complexiteit → niemand weet wat aanstaat</h4>
+      <p>4 niveaus × 8 vinkjes × tenant-laag × kill switch. Lisanne vinkte "pipeline op schema vooruit" aan ("voelt veilig") zonder door te hebben dat dit óók 14-dagenbrief + sommatie autonoom verstuurde. Agent stuurde een sommatie tijdens een onderhandeling; ze zwoer "dat stond uit". De config klopte — haar mentale model niet. Bij kantoor #2 won niemand wist welke laag (globaal L3 vs per-capability uit). Geen bug; wél vertrouwensbreuk → terug naar L0.</p>
+      <span class="lbl">Onderliggende aanname</span>
+      <p>Dat een niet-technische gebruiker de gecombineerde uitkomst van 4 orthogonale instellings-assen mentaal kan simuleren vóór de agent handelt.</p>
+      <span class="lbl">Vroege signalen</span>
+      <div class="sig">In test: Lisanne voorspelt na instellen >1 op 5 scenario's fout · support-tickets "ik dacht dat dat uitstond" in de eerste weken.</div>
+    </div>
+
+    <div class="fail">
+      <div class="n">FAALMODUS 5</div>
+      <h4>Te vroeg geproductiseerd → incident bij vreemd kantoor</h4>
+      <p>Kantoor #2 (Rotterdam, hoog MKB-volume) koopt op de demo "draait al maanden autonoom, nul incidenten" — maar dat gold voor Lisanne's templates, data en handmatige bijsturing. #2 paste de 14-dagenbrief-template + verzuimdatum-logica aan en zette L2 aan. Honderden tweede sommaties met BIK op verkeerde staffel/verzuimdatum, zonder geldige 14-dagenbrief → ACM-klacht + screenshots. Framing: "die AI van Luxis stuurt verkeerde sommaties." Prospects haken af.</p>
+      <span class="lbl">Onderliggende aanname</span>
+      <p>Dat "bewezen veilig bij Lisanne" overdraagbaar is — terwijl het bewijs gold voor háár templates/data/bijsturing, niet voor de agent zelf.</p>
+      <span class="lbl">Vroege signalen</span>
+      <div class="sig">Nieuw kantoor binnen 30 dagen op L2/L3 met lage review-historie · autonoom verzonden sommaties zonder pre-send template-/staffel-validatie (moet 0 zijn).</div>
+    </div>
+
+    <div class="fail">
+      <div class="n">FAALMODUS 6</div>
+      <h4>Bouwkosten ≫ waarde (opportunity cost)</h4>
+      <p>Elke autonome actie vroeg een omkeerbaarheidspad → correctielaag op gedeelde financiële code → een test bij elke berekening. De test-dekking voor L2/L3 werd groter dan de feature. Audit-log + dashboard betekenden nieuwe tabellen + RLS-scoping (fase 2 nog open) + een tweede frontend-view bovenop 57 te refactoren bestanden. Ondertussen: BaseNet-migratie, M365-livegang, security-audit stil. Maand 5: race-condition stuurde een aanmaning op een betaald dossier → kill switch → terug naar L1-goedkeuren. 6 maanden bouwen voor een knop die "uit" stond.</p>
+      <span class="lbl">Onderliggende aanname</span>
+      <p>Dat de sprong "mens keurt goed → agent handelt zelf" een logische volgende stap is — terwijl die goedkeurklik juist de goedkoopste verzekering was tegen alle complexiteit die autonomie vereist.</p>
+      <span class="lbl">Vroege signalen</span>
+      <div class="sig">Regelverhouding test+omkeerbaarheid : feature-code > 2:1 binnen 2–3 sessies · BaseNet-migratie/M365 krijgen 0 commits over 3+ sessies.</div>
+    </div>
+
+    <div class="fail">
+      <div class="n">FAALMODUS 7</div>
+      <h4>"Omkeerbaar" is juridisch een mythe</h4>
+      <p>Agent stuurde autonoom een 14-dagenbrief; cliënt: "al betaald, géén harde brief naar deze relatie". Lisanne klikte "terugdraaien" — record terug naar concept, timeline zegt <em>teruggedraaid</em> — maar de brief lag al 3 dagen gelezen in de mailbox; relatie beschadigd. Erger: een autonome stuitingsbrief op een deels verjaarde vordering erkende feitelijk een lager bedrag; de wederpartij citeerde 'm later in de procedure. Twee tegenstrijdige 14-dagenbrieven → BIK betwist. Het dashboard zei groen; de buitenwereld het tegendeel.</p>
+      <span class="lbl">Onderliggende aanname</span>
+      <p>"Ongedaan maken" = databaserecord terugzetten — terwijl de onomkeerbare gebeurtenis de <em>ontvangst door een derde</em> en het <em>intreden van een wettelijke termijn</em> is, buiten software's bereik.</p>
+      <span class="lbl">Vroege signalen</span>
+      <div class="sig">Eén "Terugdraaien"-knop die óók geldt voor records met <code>sent_at ≠ null</code> (moet 0 zijn) · eerste keer dat cliënt/debiteur belt over een autonoom verstuurde brief.</div>
+    </div>
+
+  </div>
+
+  <p class="meta">Premortem-methode (Gary Klein / Kahneman) · 7 faalmodi, 7 parallelle onderzoekers · gegenereerd 10 juni 2026 · onderwerp: autonome AI Incasso-agent met gelaagde autonomie in Luxis. Transcript: <code>docs/premortem-ai-incasso-agent-2026-06-10.md</code></p>
+</div>
+</body>
+</html>

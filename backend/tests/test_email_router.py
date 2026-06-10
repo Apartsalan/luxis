@@ -9,7 +9,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
 from app.cases.models import Case
+from app.config import settings
 from app.relations.models import Contact
+
+
+def _force_smtp_unconfigured(monkeypatch) -> None:
+    """Force is_configured() to return False regardless of environment.
+
+    The dev stack wires SMTP to Mailpit (smtp_host set), so these
+    'not configured' tests were always red locally and only green in CI.
+    Patching the settings is_configured() reads makes them deterministic.
+    """
+    monkeypatch.setattr(settings, "smtp_host", "")
+    monkeypatch.setattr(settings, "smtp_from", "")
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,8 +70,9 @@ async def test_email_status(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
-async def test_send_test_email_not_configured(client: AsyncClient, auth_headers: dict):
+async def test_send_test_email_not_configured(client: AsyncClient, auth_headers: dict, monkeypatch):
     """Test email fails gracefully when SMTP not configured."""
+    _force_smtp_unconfigured(monkeypatch)
     resp = await client.post(
         "/api/email/test",
         json={"recipient_email": "test@example.nl"},
@@ -76,9 +89,10 @@ async def test_send_test_email_not_configured(client: AsyncClient, auth_headers:
 
 @pytest.mark.asyncio
 async def test_send_case_email_not_configured(
-    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant, monkeypatch
 ):
     """Sending case email fails with 400 when SMTP not configured."""
+    _force_smtp_unconfigured(monkeypatch)
     case = await _create_case(db, test_tenant.id)
     resp = await client.post(
         f"/api/email/cases/{case.id}/send",

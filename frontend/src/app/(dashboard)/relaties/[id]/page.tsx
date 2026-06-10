@@ -6,9 +6,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
+  ArrowRight,
   Building2,
   Download,
   File,
+  FileText,
   Loader2,
   User,
   Trash2,
@@ -461,6 +463,20 @@ export default function RelatieDetailPage() {
             contactName={contact.name}
             cases={contactCases}
           />
+
+          {/* CONN-9: doorklik naar facturen van deze klant */}
+          <Link
+            href={`/facturen?contact_id=${id}&contact_name=${encodeURIComponent(contact.name)}`}
+            className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4 hover:bg-muted/40 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold text-card-foreground">
+                Facturen van deze klant
+              </span>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
         </div>
       </div>
 

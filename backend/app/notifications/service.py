@@ -12,6 +12,8 @@ NOTIF_EMAIL_RECEIVED = "email_received"
 NOTIF_AI_DRAFT_READY = "ai_draft_ready"
 NOTIF_CLASSIFICATION_DONE = "classification_done"
 NOTIF_DEADLINE_OVERDUE = "deadline_overdue"
+NOTIF_INVOICE_OVERDUE = "invoice_overdue"  # CONN-1: eigen declaratie vervallen
+NOTIF_TRUST_APPROVAL_PENDING = "trust_approval_pending"  # CONN-2: vier-ogen wacht
 
 
 async def create_notification(
@@ -318,6 +320,37 @@ async def create_classification_done_notification(
             case_number=case_number,
         ),
         dedup_minutes=10,
+    )
+
+
+async def create_invoice_overdue_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    invoice_number: str,
+    amount,
+    case_id: uuid.UUID | None = None,
+    case_number: str | None = None,
+) -> int:
+    """CONN-1: notify all tenant users that an own invoice (declaratie) is overdue.
+
+    Deduped per (user, case, title) within 24h. The overdue job only flips
+    'sent' → 'overdue' once per invoice, so in practice this fires a single
+    time; the dedup window only guards against a double job-run.
+    """
+    title = f"Factuur te laat: {invoice_number}"
+    message = f"Vervaldatum verstreken — openstaand € {amount}"
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_INVOICE_OVERDUE,
+            title=title,
+            message=message,
+            case_id=case_id,
+            case_number=case_number,
+        ),
+        dedup_minutes=24 * 60,
     )
 
 

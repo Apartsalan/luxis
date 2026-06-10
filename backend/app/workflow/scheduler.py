@@ -567,6 +567,34 @@ async def daily_installment_overdue_check() -> None:
         logger.exception("Scheduler: installment overdue check failed")
 
 
+async def daily_invoice_overdue_check() -> None:
+    """Daily job: mark sent invoices past their due date as overdue + notify (CONN-1).
+
+    Per active tenant: flip 'sent' → 'overdue' for invoices past due_date and
+    create an in-app notification per newly-overdue declaratie. Idempotent —
+    only 'sent' invoices flip, so re-running is a no-op.
+    """
+    from app.auth.models import Tenant
+    from app.invoices.service import process_overdue_invoices
+
+    logger.info("Scheduler: starting invoice overdue check")
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
+            tenants = list(result.scalars().all())
+            total = 0
+            for tenant in tenants:
+                total += await process_overdue_invoices(session, tenant.id)
+            await session.commit()
+            if total > 0:
+                logger.info(
+                    "Scheduler: invoice overdue — %d facturen op 'te laat' gezet",
+                    total,
+                )
+    except Exception:
+        logger.exception("Scheduler: invoice overdue check failed")
+
+
 async def daily_pipeline_auto_drafts() -> None:
     """Daily job: evalueer timeout-rules + genereer AI-drafts per tenant.
 
@@ -682,6 +710,15 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=30),
         id="daily_installment_overdue_check",
         name="Mark overdue payment arrangement installments",
+        replace_existing=True,
+    )
+
+    # Daily at 06:35 UTC: mark sent invoices past due as overdue + notify (CONN-1)
+    scheduler.add_job(
+        daily_invoice_overdue_check,
+        CronTrigger(hour=6, minute=35),
+        id="daily_invoice_overdue_check",
+        name="Mark overdue invoices",
         replace_existing=True,
     )
 

@@ -672,6 +672,41 @@ async def cancel_invoice(
     return invoice
 
 
+async def process_overdue_invoices(db: AsyncSession, tenant_id: uuid.UUID) -> int:
+    """CONN-1: mark sent invoices past their due date as overdue + notify the firm.
+
+    Idempotent: only invoices in status 'sent' flip to 'overdue', so each
+    invoice transitions exactly once and re-running the job is a no-op.
+    Credit notes are excluded — money flowing the other way is never "te laat".
+    Returns the number of invoices newly marked overdue.
+    """
+    from app.notifications.service import create_invoice_overdue_notification
+
+    today = date.today()
+    result = await db.execute(
+        select(Invoice).where(
+            Invoice.tenant_id == tenant_id,
+            Invoice.status == "sent",
+            Invoice.due_date < today,
+            Invoice.is_active.is_(True),
+            Invoice.invoice_type != "credit_note",
+        )
+    )
+    invoices = list(result.scalars().all())
+    for invoice in invoices:
+        invoice.status = "overdue"
+        await create_invoice_overdue_notification(
+            db,
+            tenant_id,
+            invoice_number=invoice.invoice_number,
+            amount=invoice.total,
+            case_id=invoice.case_id,
+            case_number=invoice.case.case_number if invoice.case else None,
+        )
+    await db.flush()
+    return len(invoices)
+
+
 # ── Invoice Lines ────────────────────────────────────────────────────────────
 
 

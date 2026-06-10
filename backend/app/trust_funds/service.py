@@ -133,6 +133,40 @@ async def get_balance(
     )
 
 
+async def get_unsettled_reason(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> str | None:
+    """Return a reason why a case's trust position blocks final closing.
+
+    Derdengelden must be paid out (or offset) before a matter is finished —
+    Voda art. 6.19: client money is forwarded "onverwijld" and a stichting may
+    never quietly retain it. So a case may not be set to "afgesloten" or
+    archived while it still holds a non-zero trust balance or has trust
+    transactions awaiting approval. Returns ``None`` when the case is settled,
+    otherwise a Dutch explanation suitable for surfacing to the user.
+
+    Note: this deliberately does NOT block the "betaald" status — at the moment
+    the debtor pays (often straight onto the trust account) the money legitimately
+    sits there pending payout to the client; that payout is the next step, not a
+    reason the debtor hasn't paid.
+    """
+    balance = await get_balance(db, tenant_id, case_id)
+    if balance.total_balance != Decimal("0.00"):
+        return (
+            f"Er staat nog €{balance.total_balance} aan derdengelden op dit "
+            f"dossier. Betaal dit eerst uit aan de cliënt of verreken het "
+            f"voordat je de zaak afsluit."
+        )
+    if balance.pending_disbursements != Decimal("0.00"):
+        return (
+            "Er zijn nog derdengelden-transacties die op goedkeuring wachten. "
+            "Handel die eerst af voordat je de zaak afsluit."
+        )
+    return None
+
+
 # ── Cross-client Overview ────────────────────────────────────────────────────
 
 

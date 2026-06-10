@@ -468,6 +468,42 @@ async def test_delete_case(client: AsyncClient, auth_headers: dict, test_company
     assert response.json()["total"] == 0
 
 
+@pytest.mark.asyncio
+async def test_delete_case_blocked_with_trust_balance(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """FIN-2: archiving a case is refused while it still holds derdengelden —
+    the client money must be paid out or offset first (Voda art. 6.19)."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+    }
+    create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    case_id = create_response.json()["id"]
+
+    # A debtor payment via the trust account leaves a non-zero trust balance
+    pay = await client.post(
+        f"/api/cases/{case_id}/payments",
+        json={
+            "amount": "250.00",
+            "payment_date": date.today().isoformat(),
+            "payment_method": "derdengelden",
+        },
+        headers=auth_headers,
+    )
+    assert pay.status_code == 201
+
+    # Archiving must be blocked until the money is settled
+    resp = await client.delete(f"/api/cases/{case_id}", headers=auth_headers)
+    assert resp.status_code == 400
+    assert "derdengelden" in resp.json()["detail"].lower()
+
+    # Case is still active
+    listing = await client.get("/api/cases", headers=auth_headers)
+    assert listing.json()["total"] == 1
+
+
 # ── Tenant Isolation ─────────────────────────────────────────────────────────
 
 

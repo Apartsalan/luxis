@@ -620,10 +620,21 @@ async def delete_case(
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
 ) -> None:
-    """Soft-delete a case by setting is_active=False."""
+    """Soft-delete a case by setting is_active=False.
+
+    FIN-2: refuse to archive a case while it still holds client money on the
+    trust account (or has pending trust transactions) — archiving would hide
+    derdengelden that must first be paid out/offset (Voda art. 6.19).
+    """
+    from app.trust_funds.service import get_unsettled_reason
     from app.workflow.service import skip_open_tasks_for_case
 
     case = await get_case(db, tenant_id, case_id)
+
+    reason = await get_unsettled_reason(db, tenant_id, case_id)
+    if reason:
+        raise BadRequestError(reason)
+
     case.is_active = False
     # Close out the case's open tasks so they stop surfacing as overdue /
     # upcoming / on the agenda once the case is archived (AUDIT-H24).

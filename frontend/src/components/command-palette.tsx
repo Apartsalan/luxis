@@ -9,7 +9,13 @@ import {
   FileText,
   Settings,
   LayoutDashboard,
-  Scale,
+  Receipt,
+  Clock,
+  Calendar,
+  Gavel,
+  Inbox,
+  Banknote,
+  Mail,
   ArrowRight,
   Loader2,
   X,
@@ -18,7 +24,7 @@ import { api } from "@/lib/api";
 
 interface SearchResult {
   id: string;
-  type: "case" | "contact" | "document";
+  type: "case" | "contact" | "document" | "invoice" | "email";
   title: string;
   subtitle: string;
   href: string;
@@ -27,11 +33,16 @@ interface SearchResult {
 const QUICK_ACTIONS = [
   { label: "Nieuw dossier", href: "/zaken/nieuw", icon: Briefcase },
   { label: "Nieuwe relatie", href: "/relaties/nieuw", icon: Users },
+  { label: "Nieuwe factuur", href: "/facturen/nieuw", icon: Receipt },
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Dossiers", href: "/zaken", icon: Briefcase },
   { label: "Relaties", href: "/relaties", icon: Users },
-  { label: "Uren", href: "/uren", icon: Scale },
-  { label: "Facturen", href: "/facturen", icon: Scale },
+  { label: "Incasso", href: "/incasso", icon: Gavel },
+  { label: "Intake", href: "/intake", icon: Inbox },
+  { label: "Agenda", href: "/agenda", icon: Calendar },
+  { label: "Uren", href: "/uren", icon: Clock },
+  { label: "Facturen", href: "/facturen", icon: Receipt },
+  { label: "Bankimport", href: "/betalingen", icon: Banknote },
   { label: "Documenten", href: "/documenten", icon: FileText },
   { label: "Instellingen", href: "/instellingen", icon: Settings },
 ];
@@ -40,12 +51,16 @@ const TYPE_ICONS = {
   case: Briefcase,
   contact: Users,
   document: FileText,
+  invoice: Receipt,
+  email: Mail,
 };
 
 const TYPE_LABELS = {
   case: "Dossier",
   contact: "Relatie",
   document: "Document",
+  invoice: "Factuur",
+  email: "E-mail",
 };
 
 export function CommandPalette() {
@@ -176,7 +191,7 @@ export function CommandPalette() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Zoek dossiers, relaties, documenten..."
+              placeholder="Zoek dossiers, relaties, facturen, e-mails..."
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             />
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}

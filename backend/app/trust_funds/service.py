@@ -765,6 +765,20 @@ async def create_transaction(
 
         await on_derdengelden_deposit(db, tenant_id, case_id, data.amount, user_id)
 
+    # CONN-2: a disbursement starts pending — alert the other approver(s)
+    if status == "pending_approval":
+        from app.notifications.service import create_trust_approval_pending_notification
+
+        await create_trust_approval_pending_notification(
+            db,
+            tenant_id,
+            creator_id=user_id,
+            transaction_type=transaction.transaction_type,
+            amount=transaction.amount,
+            case_id=case_id,
+            case_number=case.case_number,
+        )
+
     return transaction
 
 
@@ -877,6 +891,20 @@ async def create_offset_to_invoice(
     db.add(transaction)
     await db.flush()
     await db.refresh(transaction)
+
+    # CONN-2: a verrekening starts pending — alert the other approver(s)
+    from app.notifications.service import create_trust_approval_pending_notification
+
+    await create_trust_approval_pending_notification(
+        db,
+        tenant_id,
+        creator_id=user_id,
+        transaction_type="offset_to_invoice",
+        amount=transaction.amount,
+        case_id=case_id,
+        case_number=case.case_number,
+    )
+
     return transaction
 
 

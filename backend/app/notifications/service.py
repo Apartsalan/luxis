@@ -354,6 +354,56 @@ async def create_invoice_overdue_notification(
     )
 
 
+async def create_trust_approval_pending_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    creator_id: uuid.UUID,
+    transaction_type: str,
+    amount,
+    case_id: uuid.UUID | None = None,
+    case_number: str | None = None,
+) -> int:
+    """CONN-2: notify active tenant users — EXCEPT the creator — that a trust
+    transaction (uitbetaling/verrekening) is waiting for four-eyes approval.
+
+    Returns 0 in a single-user tenant (no second approver to alert), which is
+    correct: self-approval is allowed there (H14) and there is no one to notify.
+    """
+    from app.auth.models import User
+
+    label = {
+        "disbursement": "Uitbetaling",
+        "offset_to_invoice": "Verrekening",
+    }.get(transaction_type, "Derdengelden-transactie")
+    title = f"{label} wacht op goedkeuring"
+    message = f"Bedrag € {amount} — controleer en keur goed (vier-ogen)"
+
+    users_result = await db.execute(
+        select(User.id).where(
+            User.tenant_id == tenant_id,
+            User.is_active.is_(True),
+            User.id != creator_id,
+        )
+    )
+    created = 0
+    for (user_id,) in users_result.all():
+        await create_notification(
+            db,
+            tenant_id,
+            user_id,
+            NotificationCreate(
+                type=NOTIF_TRUST_APPROVAL_PENDING,
+                title=title,
+                message=message,
+                case_id=case_id,
+                case_number=case_number,
+            ),
+        )
+        created += 1
+    return created
+
+
 async def cleanup_old_notifications(
     db: AsyncSession,
     tenant_id: uuid.UUID,

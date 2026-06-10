@@ -1246,3 +1246,104 @@ async def test_sepa_export_rejects_pending_transaction(
     )
     assert resp.status_code == 400
     assert "nog niet goedgekeurd" in resp.json()["detail"]
+
+
+# ── CONN-2: four-eyes approval notification ──────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_pending_disbursement_notifies_other_approver_not_creator(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    test_company: Contact,
+    case_payload: dict,
+):
+    """CONN-2: a pending disbursement alerts the OTHER active user (vier-ogen),
+    never the creator."""
+    from sqlalchemy import select as _select
+
+    from app.notifications.models import Notification
+    from app.notifications.service import NOTIF_TRUST_APPROVAL_PENDING
+
+    second_user, _ = await create_second_user(db, test_tenant)
+    case_id = await create_case(client, auth_headers, case_payload)
+
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={"transaction_type": "deposit", "amount": "10000.00", "description": "Storting"},
+        headers=auth_headers,
+    )
+    resp = await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "disbursement",
+            "amount": "3000.00",
+            "description": "Griffierecht",
+            "beneficiary_name": "Rechtbank Amsterdam",
+            "beneficiary_iban": "NL91ABNA0417164300",
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "pending_approval"
+
+    notifs = (
+        await db.execute(
+            _select(Notification).where(
+                Notification.tenant_id == test_tenant.id,
+                Notification.type == NOTIF_TRUST_APPROVAL_PENDING,
+            )
+        )
+    ).scalars().all()
+
+    recipients = {n.user_id for n in notifs}
+    assert second_user.id in recipients  # the other approver is alerted
+    assert test_user.id not in recipients  # the creator is NOT alerted
+
+
+@pytest.mark.asyncio
+async def test_single_user_disbursement_creates_no_approval_notification(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+    case_payload: dict,
+):
+    """With only one active user there is no second approver to notify."""
+    from sqlalchemy import select as _select
+
+    from app.notifications.models import Notification
+    from app.notifications.service import NOTIF_TRUST_APPROVAL_PENDING
+
+    case_id = await create_case(client, auth_headers, case_payload)
+    await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={"transaction_type": "deposit", "amount": "10000.00", "description": "Storting"},
+        headers=auth_headers,
+    )
+    resp = await client.post(
+        f"/api/trust-funds/cases/{case_id}/transactions",
+        json={
+            "transaction_type": "disbursement",
+            "amount": "3000.00",
+            "description": "Griffierecht",
+            "beneficiary_name": "Rechtbank Amsterdam",
+            "beneficiary_iban": "NL91ABNA0417164300",
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+
+    notifs = (
+        await db.execute(
+            _select(Notification).where(
+                Notification.tenant_id == test_tenant.id,
+                Notification.type == NOTIF_TRUST_APPROVAL_PENDING,
+            )
+        )
+    ).scalars().all()
+    assert notifs == []

@@ -43,6 +43,13 @@ De auto-deploy was STUK: de prod-VPS had een handmatig toegevoegde `mcp.bespokes
 - **VPS-drift:** ongecommitte `scripts/disk_guard.sh` + `setup-uptime-monitoring.sh` (S159-hardening, alleen op server) + zwerf-`test_followup.py` (root + `backend/app/`) + `.env.bak-*` op de VPS. Niet-blokkerend; ooit committen/opruimen.
 - **`pytest` zat niet in de herbouwde image** — alleen handmatig in de oude long-lived container geïnstalleerd. CI gebruikt `uv pip install ".[dev]"`; lokaal `.[dev]` faalt op de Windows bind-mount (egg-info timestamp) → installeer test-tools los als root.
 
+### Vervolg test-kwaliteit (zelfde sessie, na de sessie-161-tag)
+Op verzoek van Arsalan ("test-kwaliteit & dekking") — 3 stappen, elk geverifieerd:
+- **Harness-gap GEFIXT (`775076b`, deel 1):** `conftest.py` `override_get_db` spiegelt nu get_db (commit-on-success / rollback-on-exception) i.p.v. kaal `yield db`. Dít was de reden dat de lockout-bug door endpoint-tests glipte. **Volledige suite onveranderd: 987 passed** (geen breuk) — bevestigt dat de spiegeling veilig is én dat endpoint-tests nu de echte transactie-semantiek uitvoeren.
+- **Mailpit-ruis GEFIXT (`775076b`, deel 2):** de 2 altijd-rode `test_email_router`-tests ("SMTP niet geconfigureerd") forceren nu `smtp_host/smtp_from` leeg via monkeypatch → deterministisch groen in dev (Mailpit) én CI. Suite nu **989 passed, 0 failed**.
+- **Dekkingsmeting + gerichte aanvulling (`d186088`, deel 3):** volle coverage-run = **61% line-coverage / 989 tests**. Domeinlogica (financiële kern, incasso, CRUD, isolatie) is sterk gedekt; de 61% komt door service-edge-branches + externe integraties + scheduler. Toegevoegd: `test_tenant_context.py` — de **SQL-injection-guard** in `set_tenant_context` (weigert niet-UUID tenant-id's vóór de SET-statement; was ongedekt, security-kritiek voor multi-tenant). `COVERAGE.md` bijgewerkt met gemeten baseline + risico-gesorteerde gap-backlog (extern/scheduler = laag-ROI; trust/invoice service-branches = prioriteit vervolg). **Bewust NIET** blind richting 80% getest op externe/scheduler-code (laag-waarde busywork); backlog gedocumenteerd i.p.v. nepvulling.
+- **Resterend van de S161-residuals (nu in PROMPT-S162):** uv.lock + CI pip-audit, app als non-superuser owner, VPS-drift opruimen. (Harness-gap + Mailpit-fails = afgevinkt.)
+
 ## Wat er gedaan is (sessie 160 — 10 juni 2026, Opus, autonoom) — CONN-8 t/m 12 polish-batch
 
 ### Aanleiding & aanpak

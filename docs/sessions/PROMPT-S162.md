@@ -17,7 +17,7 @@ S161 deed de security-diepte: SEC-5 (tenant-isolatie) robuust bevonden, 4 echte 
 
 ## Taak (op volgorde, elk rode→groen / lokaal geverifieerd vóór push)
 
-1. **Harness-gap dichten (belangrijkste — maskeert bug-klasse).** `tests/conftest.py` `override_get_db` is een kaal `yield db` → repliceert get_db's commit/rollback NIET. Daardoor verstopte de S161 lockout-bug zich (flush-vs-commit). Laat de override get_db spiegelen (commit op success, rollback op exceptie) **zonder** de bestaande suite te breken — draai de volledige suite (verwacht: 987 passed + 2 dev-Mailpit-fails). Risico: tests die op de gedeelde sessie leunen kunnen breken; minimale, veilige variant kiezen (bv. commit/rollback rond de yield met behoud van de gedeelde sessie). Als te invasief → documenteer waarom en lever een kleinere mitigatie (bv. een aparte `realistic_client`-fixture die wél spiegelt, voor auth/transactie-tests).
+1. **✅ AL GEDAAN in de S161-vervolg (`775076b`):** harness-gap gedicht — `override_get_db` spiegelt nu get_db (commit/rollback), volle suite onveranderd 987→989 passed. Ook de 2 dev-Mailpit-fails deterministisch gemaakt. **Niet overdoen.** (Coverage-baseline gemeten: 61%, `test_tenant_context.py` toegevoegd, `tests/COVERAGE.md` bijgewerkt met risico-gesorteerde gap-backlog — zie `d186088`.) **S162 begint bij taak 2.**
 
 2. **Reproduceerbare builds + dep-scanning in CI.** Geen lockfile nu + deploy `build --no-cache` met `>=` floors = niet-reproduceerbaar. (a) Genereer `backend/uv.lock` (`uv lock`) en laat de Dockerfile/CI 'm gebruiken. (b) Voeg een `pip-audit`-stap toe aan `.github/workflows/ci.yml` (non-blocking of blocking-met-allowlist — kies + licht toe; `pip` zelf negeren). Frontend: overweeg `npm audit --audit-level=high` in CI. Verifieer CI groen.
 

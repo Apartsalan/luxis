@@ -113,6 +113,22 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
     );
   }
 
+  // CONN-5: stuur de melding naar de juiste dossier-tab i.p.v. kaal /zaken/{id}.
+  function notificationTab(type: NotificationType): string | null {
+    switch (type) {
+      case "email_received":
+        return "correspondentie";
+      case "deadline_overdue":
+        return "taken";
+      case "trust_approval_pending":
+        return "betalingen";
+      case "invoice_overdue":
+        return "facturen";
+      default:
+        return null;
+    }
+  }
+
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-white/80 backdrop-blur-sm px-4 sm:px-6">
       {/* Left: hamburger (mobile) + page title */}
@@ -225,13 +241,20 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
                       </div>
                     );
 
-                    // Link bij case_id, anders een echte button — beide
-                    // toetsenbord-focusbaar (was: niet-focusbare div)
-                    if (n.case_id) {
+                    // Link bij case_id (met tab-context, CONN-5); een
+                    // invoice_overdue zonder dossier → facturenlijst; anders een
+                    // echte button — alle drie toetsenbord-focusbaar.
+                    const tab = notificationTab(n.type);
+                    const href = n.case_id
+                      ? `/zaken/${n.case_id}${tab ? `?tab=${tab}` : ""}`
+                      : n.type === "invoice_overdue"
+                        ? "/facturen"
+                        : null;
+                    if (href) {
                       return (
                         <Link
                           key={n.id}
-                          href={`/zaken/${n.case_id}`}
+                          href={href}
                           onClick={() => handleNotificationClick(n)}
                           className="block focus-visible:outline-none focus-visible:bg-muted/50"
                         >

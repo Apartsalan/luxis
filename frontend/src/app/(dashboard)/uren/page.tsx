@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Timer,
   Briefcase,
+  Receipt,
   X,
 } from "lucide-react";
 import {
@@ -1108,17 +1109,28 @@ export default function UrenPage() {
           <h3 className="text-sm font-semibold text-foreground mb-3">Overzicht per dossier</h3>
           <div className="space-y-2">
             {summary.per_case.map((cs) => (
-              <div key={cs.case_id} className="flex items-center justify-between py-1.5">
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium text-foreground">{cs.case_number}</span>
+              <div key={cs.case_id} className="flex items-center justify-between gap-3 py-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium text-foreground truncate">{cs.case_number}</span>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground tabular-nums">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground tabular-nums shrink-0">
                   <span>{fmtMinutes(cs.total_minutes)}</span>
                   <span className="text-emerald-600">{fmtMinutes(cs.billable_minutes)} decl.</span>
                   <span className="font-medium text-foreground w-24 text-right">
                     {formatCurrency(cs.total_amount)}
                   </span>
+                  {/* CONN-10: factureer de declarabele uren van dit dossier */}
+                  {cs.billable_minutes > 0 && (
+                    <Link
+                      href={`/facturen/nieuw?case_id=${cs.case_id}`}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
+                      title="Factureer de declarabele uren van dit dossier"
+                    >
+                      <Receipt className="h-3.5 w-3.5" />
+                      Factureer
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

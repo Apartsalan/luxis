@@ -83,7 +83,13 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> User
             user.locked_until = datetime.now(UTC) + timedelta(hours=1)
         elif user.failed_login_count >= 5:
             user.locked_until = datetime.now(UTC) + timedelta(minutes=15)
-        await db.flush()
+        # COMMIT, not flush: a failed login ends with the endpoint raising
+        # HTTPException(401), and get_db rolls the transaction back on any
+        # exception. A flushed-only increment would be discarded every time, so
+        # the lockout counter never accumulated and SEC-20 never triggered
+        # (verified S161). The lockout counter is a security side-effect that
+        # must persist independently of the request's failure path.
+        await db.commit()
         return None
 
     # Successful login — reset lockout counter

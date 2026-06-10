@@ -188,7 +188,7 @@ def build_user_prompt(
     ])
 
     if av_text:
-        # AV-text volledig meegeven — Sonnet kan 200K context aan, Gemini Flash 1M.
+        # AV-text volledig meegeven — Sonnet kan 200K context aan.
         # Voor PDF-pad (Sonnet+native PDF) wordt deze sectie naast PDF gestuurd
         # als fallback, prompt-cost blijft verwaarloosbaar (~10K tokens).
         sections.extend([

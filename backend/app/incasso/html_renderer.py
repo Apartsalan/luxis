@@ -1,6 +1,6 @@
 """Server-side HTML template-renderer voor incasso emails.
 
-Het AI-model (Sonnet/Gemini/Haiku) genereert alleen `subject` + plain `body`
+Het AI-model (Sonnet/Haiku) genereert alleen `subject` + plain `body`
 (betrouwbaar, kort). De HTML-versie van de email wordt server-side opgebouwd
 op basis van het template (`IncassoPipelineStep.email_body_template_html`)
 plus dossier-context.

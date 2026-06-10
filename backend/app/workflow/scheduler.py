@@ -220,7 +220,7 @@ async def ai_intake_detection() -> None:
     """Periodic job: detect + process potential dossier intake emails.
 
     Runs every 7 minutes (offset from email sync and classification).
-    Only active if ANTHROPIC_API_KEY or KIMI_API_KEY is configured.
+    Only active if ANTHROPIC_API_KEY is configured.
     """
     from app.ai_agent.intake_service import detect_intake_emails, process_detected_intakes
     from app.auth.models import Tenant
@@ -717,7 +717,7 @@ def start_scheduler() -> None:
         )
 
     # Every 7 minutes: AI intake detection + processing
-    intake_enabled = ai_enabled or bool(app_settings.kimi_api_key)
+    intake_enabled = ai_enabled  # S159: Claude-only, was: or kimi_api_key
     if intake_enabled:
         scheduler.add_job(
             ai_intake_detection,

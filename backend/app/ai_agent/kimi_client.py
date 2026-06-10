@@ -1,11 +1,16 @@
-"""AI extraction clients — model routing per taak.
+"""AI extraction clients — model routing per taak (100% Claude sinds S159).
+
+Historische bestandsnaam (`kimi_client`): de fallback-keten liep ooit via
+Gemini Flash → Kimi (Moonshot) → Claude. Sinds S159 zijn Kimi en Gemini
+volledig verwijderd — debiteur-PII mag niet naar Moonshot (China, geen
+EU-verwerkersovereenkomst) of de gratis Gemini-tier (AVG-blocker B1, zie
+docs/research/readiness-audit.md). Alle routes draaien nu uitsluitend op Claude.
 
 INTAKE / CLASSIFICATIE / INVOICE (high volume, pattern matching):
-  Gemini Flash 2.5 → Kimi 2.5 → Claude Haiku 4.5
-  Goedkoop, snel, JSON-output betrouwbaar via tool_use.
+  Claude Haiku 4.5 — goedkoop, snel, JSON-output via tool_use (forced).
 
 DRAFT GENERATIE (juridische kwaliteit kritiek — emails naar wederpartij):
-  Claude Sonnet 4.6 → Gemini Flash 2.5 → Claude Haiku 4.5
+  Claude Sonnet 4.6 → Claude Haiku 4.5 (last-resort).
   Sonnet excelleert in Nederlandse juridische taal + AV-citaten.
   Bij Verweer beantwoorden + AV-PDF beschikbaar: native PDF input
   (lost truncatie-probleem op, Sonnet leest PDF direct).
@@ -18,17 +23,10 @@ import logging
 from typing import Any
 
 import anthropic
-import httpx
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
-
-KIMI_API_BASE = "https://api.moonshot.ai/v1"
-KIMI_MODEL = "moonshot-v1-auto"
-
-GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
-GEMINI_MODEL = "gemini-2.5-flash"
 
 CLAUDE_SONNET_MODEL = "claude-sonnet-4-6"
 CLAUDE_HAIKU_MODEL = "claude-haiku-4-5"
@@ -170,82 +168,6 @@ def _detect_schema(system_prompt: str) -> tuple[str, dict[str, Any]] | None:
     return None
 
 
-async def _call_gemini(system_prompt: str, user_message: str) -> dict:
-    """Call Google Gemini Flash API met retry-on-503.
-
-    Uses the generateContent endpoint met JSON response.
-    Gemini geeft soms transient 503 — 1x retry na 2s lost dat meestal op.
-    """
-    if not settings.gemini_api_key:
-        raise ValueError("GEMINI_API_KEY is not configured")
-
-    url = f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent?key={settings.gemini_api_key}"
-    payload = {
-        "contents": [
-            {"role": "user", "parts": [{"text": f"{system_prompt}\n\n{user_message}"}]},
-        ],
-        "generationConfig": {
-            "temperature": 0.1,
-            "responseMimeType": "application/json",
-            "maxOutputTokens": 16384,
-        },
-    }
-
-    last_exc: Exception | None = None
-    for attempt in range(2):
-        try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    url, headers={"Content-Type": "application/json"}, json=payload
-                )
-                response.raise_for_status()
-                data = response.json()
-            raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            return _parse_json(raw_text)
-        except httpx.HTTPStatusError as e:
-            last_exc = e
-            if e.response.status_code in (503, 429, 500) and attempt == 0:
-                logger.warning("Gemini %s — retry in 2s", e.response.status_code)
-                import asyncio as _asyncio
-                await _asyncio.sleep(2)
-                continue
-            raise
-    raise last_exc  # type: ignore[misc]
-
-
-async def _call_kimi(system_prompt: str, user_message: str) -> dict:
-    """Call Moonshot/Kimi API (OpenAI-compatible format).
-
-    Raises ValueError if API key not set or response is invalid.
-    """
-    if not settings.kimi_api_key:
-        raise ValueError("KIMI_API_KEY is not configured")
-
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(
-            f"{KIMI_API_BASE}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.kimi_api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": KIMI_MODEL,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message},
-                ],
-                "temperature": 0.1,
-                "response_format": {"type": "json_object"},
-                "max_tokens": 16384,
-            },
-        )
-        response.raise_for_status()
-        data = response.json()
-
-    raw_text = data["choices"][0]["message"]["content"].strip()
-    return _parse_json(raw_text)
-
-
 async def _call_haiku(system_prompt: str, user_message: str) -> dict:
     """Call Claude Haiku (or Sonnet bij complexe schemas) als fallback met tool_use.
 
@@ -302,7 +224,7 @@ async def _call_sonnet(system_prompt: str, user_message: str) -> dict:
     """Call Claude Sonnet 4.5 met tool_use voor structured JSON output.
 
     Gebruikt voor incasso-draft generatie — Nederlandse juridische taal +
-    AV-citaten kwaliteit beter dan Gemini Flash (Harvey BigLaw Bench).
+    AV-citaten kwaliteit (Harvey BigLaw Bench).
     Logs token-usage voor cost-monitoring per draft.
     """
     if not settings.anthropic_api_key:
@@ -385,7 +307,7 @@ async def call_claude_with_pdf(
 
     Uses Claude's native PDF understanding (base64-encoded document block).
     Intended for heavy analysis (contract disputes, complex documents) — not
-    for daily high-volume work which uses Kimi.
+    for daily high-volume work which uses Haiku.
 
     Args:
         system_prompt: System instructions for the analysis.
@@ -464,29 +386,13 @@ async def call_claude_with_pdf(
 
 
 async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, str]:
-    """Call AI for intake extraction. Returns (parsed_result, model_name).
+    """Call AI for intake/classificatie/invoice extraction. Claude-only (S159).
 
-    Priority: Gemini Flash 2.5 → Kimi 2.5 → Claude Haiku 4.5.
+    Routeert naar Claude Haiku 4.5 (of Sonnet voor draft-schema's) via
+    `_call_haiku`. Kimi/Gemini-fallback verwijderd — AVG-blocker B1.
+
+    Returns (parsed_result, model_name).
     """
-    # Try Gemini first (best instruction following)
-    if settings.gemini_api_key:
-        try:
-            result = await _call_gemini(system_prompt, user_message)
-            logger.info("Intake AI: Gemini Flash extraction successful")
-            return result, "gemini-2.5-flash"
-        except Exception as e:
-            logger.warning("Intake AI: Gemini failed, trying Kimi: %s", e)
-
-    # Fallback to Kimi
-    if settings.kimi_api_key:
-        try:
-            result = await _call_kimi(system_prompt, user_message)
-            logger.info("Intake AI: Kimi extraction successful")
-            return result, "kimi-2.5"
-        except Exception as e:
-            logger.warning("Intake AI: Kimi failed, falling back to Haiku: %s", e)
-
-    # Final fallback to Anthropic (Sonnet voor draft, Haiku voor rest)
     try:
         result = await _call_haiku(system_prompt, user_message)
         schema_info = _detect_schema(system_prompt)
@@ -495,8 +401,8 @@ async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, s
         logger.info("Intake AI: %s extraction successful", model_name)
         return result, model_name
     except Exception as e:
-        logger.error("Intake AI: all providers failed: %s", e)
-        raise ValueError(f"All AI providers failed: {e}") from e
+        logger.error("Intake AI: Claude extraction failed: %s", e)
+        raise ValueError(f"AI provider failed: {e}") from e
 
 
 async def call_draft_ai(
@@ -504,11 +410,12 @@ async def call_draft_ai(
     user_message: str,
     av_pdf_path: str | None = None,
 ) -> tuple[dict, str]:
-    """Call AI for incasso draft generation. Sonnet primary for legal quality.
+    """Call AI for incasso draft generation. Claude-only (S159).
 
-    Priority: Claude Sonnet 4.6 → Gemini Flash 2.5 → Claude Haiku 4.5.
+    Priority: Claude Sonnet 4.6 → Claude Haiku 4.5 (last-resort).
     Bij `av_pdf_path` gegeven: native Sonnet PDF input — leest AV-PDF direct
     zonder text-extract truncatie (voor Verweer beantwoorden met AV-citatie).
+    Gemini-fallback verwijderd — AVG-blocker B1.
 
     Returns (parsed_result, model_name).
     """
@@ -533,18 +440,7 @@ async def call_draft_ai(
             logger.info("Draft AI: Sonnet generation successful")
             return result, CLAUDE_SONNET_MODEL
         except Exception as e:
-            logger.warning("Draft AI: Sonnet failed, fallback naar Gemini: %s", e)
-
-    # Gemini fallback
-    if settings.gemini_api_key:
-        try:
-            result = await _call_gemini(system_prompt, user_message)
-            logger.info("Draft AI: Gemini fallback successful")
-            return result, "gemini-2.5-flash"
-        except Exception as e:
-            logger.warning(
-                "Draft AI: Gemini failed, last-resort Haiku: %s", e
-            )
+            logger.warning("Draft AI: Sonnet failed, last-resort Haiku: %s", e)
 
     # Last resort
     try:

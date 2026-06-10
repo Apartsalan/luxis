@@ -134,13 +134,13 @@ async def test_parse_invoice_pdf_success():
         patch(
             "app.ai_agent.invoice_parser.call_intake_ai",
             new_callable=AsyncMock,
-            return_value=(SAMPLE_AI_RESPONSE, "kimi-2.5"),
+            return_value=(SAMPLE_AI_RESPONSE, "claude-haiku-4-5"),
         ),
     ):
         result = await parse_invoice_pdf(b"fake-pdf-bytes", "test.pdf")
         assert result["debtor_name"] == "Acme B.V."
         assert result["principal_amount"] == "1500.50"
-        assert result["model"] == "kimi-2.5"
+        assert result["model"] == "claude-haiku-4-5"
         assert "confidence" in result
 
 

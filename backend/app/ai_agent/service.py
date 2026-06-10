@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 async def _call_classification_ai(user_message: str) -> dict:
     """Call AI to classify a debtor email.
 
-    Uses Kimi 2.5 (primary) with Claude Haiku fallback via kimi_client.
+    Uses Claude Haiku 4.5 via kimi_client.call_intake_ai (Claude-only sinds S159).
     Returns the parsed JSON dict from the AI response.
     """
     result, model = await call_intake_ai(CLASSIFICATION_SYSTEM_PROMPT, user_message)

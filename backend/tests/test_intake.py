@@ -254,7 +254,7 @@ class TestIntakeProcessing:
         self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):
         """Full extraction: all fields populated from AI response."""
-        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "kimi-2.5")
+        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "claude-haiku-4-5")
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -276,7 +276,7 @@ class TestIntakeProcessing:
         assert result.principal_amount == Decimal("2500.00")
         assert result.invoice_number == "F-2026-001"
         assert result.due_date == date(2026, 2, 15)
-        assert result.ai_model == "kimi-2.5"
+        assert result.ai_model == "claude-haiku-4-5"
         assert result.ai_confidence == pytest.approx(0.95, abs=0.01)
 
     @patch("app.ai_agent.intake_service.call_intake_ai")
@@ -372,7 +372,7 @@ class TestIntakeApprove:
         self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):
         """Approving creates a debtor contact, an incasso case, and a claim."""
-        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "kimi-2.5")
+        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "claude-haiku-4-5")
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)
@@ -467,7 +467,7 @@ class TestIntakeApprove:
         self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):
         """If debtor contact with same KvK exists, reuse it."""
-        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "kimi-2.5")
+        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "claude-haiku-4-5")
 
         # Pre-create the debtor contact with same KvK
         existing_debtor = Contact(
@@ -513,7 +513,7 @@ class TestIntakeReject:
         self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):
         """Rejecting sets status to REJECTED with reviewer info."""
-        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "kimi-2.5")
+        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "claude-haiku-4-5")
 
         client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
         account = await _create_email_account(db, test_tenant.id, test_user.id)

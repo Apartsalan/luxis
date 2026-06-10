@@ -42,10 +42,11 @@ class Settings(BaseSettings):
     # AI Agent (Anthropic API)
     anthropic_api_key: str = ""
 
-    # AI Agent (Moonshot/Kimi API — legacy intake model)
+    # AI Agent — unused since S159 — AVG B1 (Kimi/Moonshot uit code: PII naar China)
+    # Settings behouden voor backwards-compat .env; nergens meer gelezen.
     kimi_api_key: str = ""
 
-    # AI Agent (Google Gemini API — primary intake model)
+    # AI Agent — unused since S159 — AVG B1 (Gemini uit code: gratis-tier traint op data)
     gemini_api_key: str = ""
 
     # Exact Online

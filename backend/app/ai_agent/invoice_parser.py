@@ -3,7 +3,7 @@
 Pipeline:
 1. Extract text from PDF (pdfplumber/pymupdf)
 2. Pre-process: detect address blocks with regex, label them for the AI
-3. AI extraction (Gemini Flash → Kimi → Haiku fallback)
+3. AI extraction (Claude Haiku, of native PDF via Sonnet)
 4. Post-process: validate + auto-correct common AI mistakes
 """
 

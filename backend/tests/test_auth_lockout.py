@@ -13,7 +13,6 @@ each failed attempt — exactly what the 401 does in production — then assert 
 counter survived via a fresh session.
 """
 
-import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 

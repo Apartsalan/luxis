@@ -178,6 +178,9 @@ async def reset_password_with_token(db: AsyncSession, token: str, new_password: 
     user.password_reset_token = None
     user.password_reset_expires = None
     db.add(user)
+    # Resetting a password is the "I lost control of my account" path — kill all
+    # existing sessions so a stolen 7-day refresh token cannot outlive the reset.
+    await revoke_all_refresh_tokens(db, user.id)
     await db.flush()
     return True
 

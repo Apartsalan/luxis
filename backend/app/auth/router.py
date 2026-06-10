@@ -327,6 +327,9 @@ async def _change_password(
         )
     current_user.hashed_password = hash_password(data.new_password)
     db.add(current_user)
+    # Changing the password revokes all refresh tokens, so any other active
+    # session (e.g. a stolen device) is logged out (SEC-1).
+    await revoke_all_refresh_tokens(db, current_user.id)
     await db.commit()
 
 

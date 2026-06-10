@@ -7,14 +7,10 @@ Bijgewerkt: 10 juni 2026 (na sessie 160).
 
 ## 🔴 Jij zelf — technisch (uit sessie 159, blokkeert niks maar belangrijk)
 
-### 1. Sentry instellen (crash-meldingen)
-- [ ] Gratis account + DSN-sleutel in de server zetten.
-- **Waarom:** nu worden serverfouten in productie **nergens** gemeld — je weet pas dat er iets stuk is als een gebruiker klaagt.
-- **Hoe:**
-  1. Ga naar **sentry.io** → gratis account → nieuw project, kies **Python / FastAPI**.
-  2. Kopieer de **DSN** (ziet eruit als `https://xxxx@xxxx.ingest.sentry.io/xxxx`).
-  3. Geef die DSN aan mij → ik zet `SENTRY_DSN=...` in `/opt/luxis/.env` op de server en herstart de backend.
-- *Het enige dat ik niet kan: het account aanmaken. De rest doe ik.*
+### 1. Sentry instellen (crash-meldingen) ✅ KLAAR (10 juni 2026)
+- [x] Account + project `python-fastapi` aangemaakt, DSN in `/opt/luxis/.env` gezet, backend herstart, testmelding ontvangen.
+- **Regio:** Sentry **EU (Duitsland)** + `send_default_pii=False` → AVG-veilig (geen PII naar Sentry).
+- Serverfouten in productie worden nu automatisch gemeld in het Sentry-dashboard → Issues.
 
 ### 2. Outlook opnieuw koppelen
 - [ ] In Luxis → **Instellingen → E-mail → Outlook opnieuw verbinden**.

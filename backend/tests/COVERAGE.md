@@ -6,7 +6,31 @@ backend test-suite. Voor frontend-coverage zie `frontend/e2e/COVERAGE.md`.
 ## Statistiek (laatste meting)
 
 Run `docker compose exec backend python -m pytest --cov=app --cov-fail-under=80 --cov-report=term`
-voor de actuele cijfers. De suite bevat 800+ tests.
+voor de actuele cijfers.
+
+**Gemeten S162 (10 juni 2026):** **989 tests, 61% line-coverage** (`--cov=app`).
+De suite is sterk op *domeinlogica* (financiële kern, incasso-workflow, CRUD,
+multi-tenant isolatie — zie tabellen hieronder); de 61% komt vooral door
+service-laag edge-branches, externe integraties en de scheduler die niet
+line-gedekt zijn. Het 80%-doel is aspiratie, geen harde CI-gate (nog).
+
+## Bekende dekkingsgaten (gemeten S162) — risico-gesorteerd
+
+**Laag-ROI om te testen (bewust laag — externe/achtergrond-code):**
+- `workflow/scheduler.py` (7%) — achtergrondjobs; draaien tegen alle tenants. Lastig te unit-testen (eigen sessies); overweeg een dunne integratietest per job.
+- `email/sync_service.py` (16%), `email/send_service.py` (29%), `email/service.py` (28%) — Graph API / SMTP; vereist zware mocking.
+- `exact_online/*` (20-29%) — Exact nog niet geactiveerd; testen zodra live.
+- `relations/kyc_service.py` (13%) — KYC; deels feature-in-opbouw.
+
+**Wél de moeite waard (geld + workflow-logica, prioriteit voor vervolg):**
+- `trust_funds/service.py` (36%) — derdengelden = cliëntgeld (Voda 6.22). Domeinregels gedekt (zie tabel), maar veel service-branches (saldo-edge, storno, vier-ogen-randen) niet line-gedekt.
+- `invoices/service.py` (25%), `invoice_payment_service.py` (27%) — factuur/betaling-orkestratie rond de (wél geteste) financiële kern.
+- `incasso/service.py` (45%), `incasso/automation_service.py` (22%) — pipeline-randen + timeout-regels.
+- `workflow/service.py` (43%) — transitie-validatie + legale constraints.
+
+**Reeds gedekt (niet de cijfers misleiden):** de financiële *berekeningen*
+(rente/WIK/art. 6:44/nakosten), multi-tenant isolatie (70 cross-tenant API-tests
++ adversariële RLS-test `test_rls_isolation.py`), auth/JWT en CRUD-happy-paths.
 
 ## Bekende skips
 
@@ -47,7 +71,7 @@ Zie `backend/tests/KNOWN_BUGS.md` voor een lijst van geskipte tests met reden.
 | Time entries | `test_time_entries.py` | CRUD uren, billable, hourly rate |
 | Documents | `test_documents.py` | Upload + retrieval |
 | Trust funds | `test_trust_funds.py`, `test_trust_funds_offset.py` | Derdengelden CRUD, SEPA-export, offset tegen facturen |
-| Auth | `test_auth.py` | Login, JWT, password hash, role |
+| Auth | `test_auth.py`, `test_auth_lockout.py`, `test_auth_token_revocation.py` | Login, JWT, password hash, role; **account-lockout persistentie (SEC-161)**, **refresh-token-revocatie bij wachtwoordwijziging/-reset (SEC-1)** |
 | Workflow | `test_workflow.py` | Statuses, transitions, taken, automatische regels |
 | Calendar | `test_calendar.py` | Agenda CRUD |
 | Notifications | `test_notifications.py` | In-app notifications |
@@ -102,4 +126,6 @@ in `frontend/e2e/regression.spec.ts`.
 | Bestand | Dekt |
 |---------|------|
 | `test_collections_router.py::test_claims_tenant_isolation` | Tenant A claims niet zichtbaar voor Tenant B |
-| Diverse modules | Per-module isolatie via `second_tenant`/`second_auth_headers` fixtures |
+| Diverse modules | Per-module isolatie via `second_tenant`/`second_auth_headers` fixtures (70 cross-tenant API-tests) |
+| `test_rls_isolation.py` | Adversariële DB-laag RLS: geforceerde cross-tenant read → 0 rijen, cross-tenant INSERT geblokkeerd (WITH CHECK), FORCE-RLS coverage-guard voor élke tenant-tabel |
+| `test_tenant_context.py` | SQL-injection-guard: `set_tenant_context` weigert niet-UUID tenant-id's vóór de SET-statement (S161/S162) |

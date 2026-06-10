@@ -132,7 +132,19 @@ async def client(db: AsyncSession):
     """Provide a test HTTP client with the test database injected."""
 
     async def override_get_db():
-        yield db
+        # Mirror app.database.get_db so endpoint tests exercise the REAL
+        # transaction semantics: commit on success, rollback on exception.
+        # The old bare `yield db` skipped both — which is exactly how the
+        # SEC-161 lockout bug hid (a handler flushed a counter then raised
+        # HTTPException; in prod get_db rolled it back, but the test never did).
+        # The shared session's lifecycle stays owned by the `db` fixture, so we
+        # commit/rollback here but do NOT close it.
+        try:
+            yield db
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
 
     app.dependency_overrides[get_db] = override_get_db
 

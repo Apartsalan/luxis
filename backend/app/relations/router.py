@@ -233,6 +233,11 @@ async def upload_terms(
             detail=f"Bestandstype '{ext}' niet toegestaan. Gebruik: {', '.join(ALLOWED_TERMS_EXT)}",
         )
 
+    # Reject oversized uploads before reading into memory (SEC-6 defense-in-depth;
+    # Caddy also caps request bodies at the edge).
+    if file.size is not None and file.size > MAX_TERMS_SIZE:
+        raise HTTPException(status_code=400, detail="Bestand te groot (max 10 MB)")
+
     content = await file.read()
     if len(content) > MAX_TERMS_SIZE:
         raise HTTPException(status_code=400, detail="Bestand te groot (max 10 MB)")

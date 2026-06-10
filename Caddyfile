@@ -6,6 +6,13 @@
 
     # API requests → backend
     handle /api/* {
+        # Reject oversized uploads at the edge (413) before they reach the
+        # backend. The largest legitimate upload is a 50 MB case file; 55 MB
+        # leaves room for multipart overhead. Without this, a huge body is
+        # fully spooled + read by the backend before its own size check (SEC-6).
+        request_body {
+            max_size 55MB
+        }
         reverse_proxy backend:8000
     }
 

@@ -58,7 +58,16 @@ async def upload_case_file(
     """Upload a file and create a CaseFile record."""
     content_type, ext = _validate_file(file)
 
-    # Read file content and check size
+    # Reject oversized uploads BEFORE reading the whole file into memory
+    # (the multipart size is known up front). Caddy caps this at the edge too;
+    # this is the backend defense-in-depth (SEC-6).
+    if file.size is not None and file.size > MAX_FILE_SIZE:
+        raise ValueError(
+            f"Bestand is te groot ({file.size // (1024 * 1024)} MB). "
+            f"Maximum: {MAX_FILE_SIZE // (1024 * 1024)} MB."
+        )
+
+    # Read file content and check size (authoritative — size header may be absent)
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise ValueError(

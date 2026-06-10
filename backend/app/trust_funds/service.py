@@ -1040,12 +1040,16 @@ async def _book_offset_payment(
             f"Openstaand: {outstanding}, te verrekenen: {transaction.amount}"
         )
 
+    # FIN-1(b): a derdengelden offset uses its OWN method so it is not counted
+    # as a voorschot-verrekening by get_advance_balance (which filters on the
+    # plain "verrekening" method). Both are real offsets against an invoice, but
+    # they draw from different pots (trust balance vs paid advance).
     payment = InvoicePayment(
         tenant_id=tenant_id,
         invoice_id=invoice.id,
         amount=transaction.amount,
         payment_date=transaction.transaction_date,
-        payment_method="verrekening",
+        payment_method="verrekening_derdengelden",
         reference=f"Derdengelden-verrekening {transaction.id}",
         description=f"Verrekening van derdengeldensaldo: {transaction.description}",
         created_by=user_id,

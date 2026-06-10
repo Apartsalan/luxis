@@ -1354,7 +1354,7 @@ export default function FactuurDetailPage() {
                     <option value="bank">Bankoverschrijving</option>
                     <option value="ideal">iDEAL</option>
                     <option value="cash">Contant</option>
-                    <option value="verrekening">Verrekening</option>
+                    <option value="verrekening">Verrekening (voorschot)</option>
                   </select>
                 </div>
                 <div>
@@ -1427,7 +1427,7 @@ export default function FactuurDetailPage() {
                     </td>
                     <td className="px-5 py-3">
                       <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {{ bank: "Bank", ideal: "iDEAL", cash: "Contant", verrekening: "Verrekening" }[payment.payment_method] || payment.payment_method}
+                        {{ bank: "Bank", ideal: "iDEAL", cash: "Contant", verrekening: "Verrekening (voorschot)", verrekening_derdengelden: "Verrekening (derdengelden)" }[payment.payment_method] || payment.payment_method}
                       </span>
                     </td>
                     <td className="hidden sm:table-cell px-5 py-3 text-sm text-muted-foreground">

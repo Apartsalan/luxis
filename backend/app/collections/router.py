@@ -209,8 +209,23 @@ async def create_payment(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Register a payment for a case (distributed per art. 6:44 BW)."""
+    """Register a payment for a case (distributed per art. 6:44 BW).
+
+    FIN-1: a payment received "Via derdengelden" books BOTH a trust deposit
+    (money on the stichtingsrekening) and the art. 6:44 payment, identical to a
+    matched bank import — so the derdengelden saldo and the vordering stay in
+    sync no matter how the payment was entered.
+    """
     case = await get_case(db, current_user.tenant_id, case_id)
+    if data.payment_method == "derdengelden":
+        _, payment, _ = await service.record_trust_debtor_payment(
+            db,
+            current_user.tenant_id,
+            case_id,
+            data,
+            current_user.id,
+        )
+        return payment
     return await service.create_payment(
         db,
         current_user.tenant_id,

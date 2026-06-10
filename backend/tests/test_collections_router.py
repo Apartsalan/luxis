@@ -178,6 +178,38 @@ async def test_create_payment(
 
 
 @pytest.mark.asyncio
+async def test_payment_via_derdengelden_books_both_sides(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """FIN-1: a payment with method 'derdengelden' must book BOTH a trust
+    deposit (money on the stichtingsrekening) AND the art. 6:44 collections
+    payment — identical to a matched bank import. Before the fix only the
+    collections payment was created, so the trust balance stayed at 0."""
+    await _seed_interest_rates(db)
+    case = await _create_case(db, test_tenant.id)
+    await client.post(f"/api/cases/{case.id}/claims", json=_claim_payload(), headers=auth_headers)
+
+    resp = await client.post(
+        f"/api/cases/{case.id}/payments",
+        json=_payment_payload(payment_method="derdengelden"),
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+
+    # Collections payment exists
+    pay_resp = await client.get(f"/api/cases/{case.id}/payments", headers=auth_headers)
+    assert pay_resp.status_code == 200
+    assert len(pay_resp.json()) >= 1
+
+    # Trust deposit was booked for the full amount
+    bal_resp = await client.get(
+        f"/api/trust-funds/cases/{case.id}/balance", headers=auth_headers
+    )
+    assert bal_resp.status_code == 200
+    assert Decimal(bal_resp.json()["total_balance"]) == Decimal("500.00")
+
+
+@pytest.mark.asyncio
 async def test_list_payments(
     client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
 ):

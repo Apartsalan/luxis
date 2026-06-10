@@ -154,6 +154,12 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
                 <option value="cash">Contant</option>
                 <option value="derdengelden">Via derdengelden</option>
               </select>
+              {form.payment_method === "derdengelden" && (
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Boekt automatisch een storting op de derdengeldenrekening én de
+                  betaling op de vordering — net als een bankimport.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex gap-2">

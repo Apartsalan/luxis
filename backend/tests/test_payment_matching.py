@@ -1153,14 +1153,20 @@ class TestExecuteMatchIntegrity:
         db.add(rogue)
         await db.flush()
 
-        real_create = pm_service.create_payment_for_case
+        # execute_match now books deposit + payment via the shared helper
+        # record_trust_debtor_payment, which calls create_payment_for_case in
+        # the collections.service namespace — patch it there so the trust
+        # deposit is created first and the payment then fails (orphan check).
+        from app.collections import service as collections_service
+
+        real_create = collections_service.create_payment_for_case
 
         async def failing_create(db_, tenant_id_, case_id_, *args, **kwargs):
             if case_id_ == rogue_case.id:
                 raise RuntimeError("kunstmatige fout ná trust-storting")
             return await real_create(db_, tenant_id_, case_id_, *args, **kwargs)
 
-        monkeypatch.setattr(pm_service, "create_payment_for_case", failing_create)
+        monkeypatch.setattr(collections_service, "create_payment_for_case", failing_create)
 
         result = await pm_service.approve_all_pending(
             db, test_tenant.id, test_user.id, import_id=stmt_import.id

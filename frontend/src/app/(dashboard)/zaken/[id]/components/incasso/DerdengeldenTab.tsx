@@ -8,6 +8,7 @@ import {
   Ban,
   CheckCircle2,
   Clock,
+  Info,
   Loader2,
   RotateCcw,
   Scale,
@@ -260,6 +261,19 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
               <p className="text-xs text-amber-800">
                 Uitbetalingen vereisen goedkeuring van twee directeuren (vier-ogenprincipe).
+              </p>
+            </div>
+          )}
+          {showForm === "deposit" && (
+            <div className="flex items-start gap-2 rounded-lg bg-muted/50 border border-border p-3">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                Alleen een storting op de derdengeldenrekening. Is dit een
+                debiteurbetaling op de vordering? Boek die via{" "}
+                <span className="font-medium text-foreground">
+                  Betalingen → Via derdengelden
+                </span>{" "}
+                of de bankimport — dan wordt de vordering ook afgeboekt.
               </p>
             </div>
           )}

@@ -33,10 +33,8 @@ from app.ai_agent.payment_matching_schemas import (
 from app.cases.models import Case
 from app.collections.models import Claim
 from app.collections.schemas import PaymentCreate
-from app.collections.service import create_payment_for_case, delete_payment
+from app.collections.service import delete_payment, record_trust_debtor_payment
 from app.shared.exceptions import ConflictError
-from app.trust_funds.schemas import TrustTransactionCreate
-from app.trust_funds.service import create_transaction as create_trust_transaction
 from app.trust_funds.service import reverse_transaction as reverse_trust_transaction
 
 logger = logging.getLogger(__name__)
@@ -706,42 +704,33 @@ async def execute_match(
         await db.flush()
         return match
 
-    # 1. Create trust fund deposit (derdengelden) — with the real bank date
-    # and payment reference so the NOvA-administratie matches the bank.
+    # Book BOTH the trust deposit (money on the stichtingsrekening) and the
+    # art. 6:44 BW payment (claim satisfied) via the shared helper, so a bank
+    # import and a manual "Via derdengelden" entry produce identical
+    # bookkeeping (AUDIT-B3 / FIN-1). H18: the payment is capped on the
+    # outstanding total; any surplus stays visible as trust balance.
     counterparty = txn.counterparty_name or "Onbekend"
-    description = f"Bankimport: {counterparty}"
+    trust_description = f"Bankimport: {counterparty}"
     if txn.description:
-        description = f"{description} - {txn.description}"
-    trust_data = TrustTransactionCreate(
-        transaction_type="deposit",
-        amount=txn.amount,
-        transaction_date=txn.transaction_date,
-        description=description,
-        payment_method="bank",
+        trust_description = f"{trust_description} - {txn.description}"
+
+    trust_tx, payment, surplus = await record_trust_debtor_payment(
+        db,
+        tenant_id,
+        match.case_id,
+        PaymentCreate(
+            amount=txn.amount,
+            payment_date=txn.transaction_date,
+            description=f"Bankimport: {counterparty}",
+            payment_method="bank",
+        ),
+        user_id,
+        trust_description=trust_description,
         reference=txn.payment_reference or txn.sequence_number,
     )
-    trust_tx = await create_trust_transaction(
-        db, tenant_id, match.case_id, user_id, trust_data
-    )
     match.trust_transaction_id = trust_tx.id
-
-    # 2. Create payment with art. 6:44 BW distribution. H18: a debtor can pay
-    # more than the outstanding amount — the payment is then capped on the
-    # outstanding total and the surplus stays visible as trust balance.
-    payment_data = PaymentCreate(
-        amount=txn.amount,
-        payment_date=txn.transaction_date,
-        description=f"Bankimport: {counterparty}",
-        payment_method="bank",
-    )
-    # Use the case's own interest/BIK/BTW/nakosten settings (AUDIT-B3), so a
-    # bank-import payment distributes identically to a manually registered one.
-    payment = await create_payment_for_case(
-        db, tenant_id, match.case_id, payment_data, user_id, cap_to_outstanding=True
-    )
     match.payment_id = payment.id
 
-    surplus = txn.amount - payment.amount
     if surplus > Decimal("0"):
         match.match_details = (
             f"{match.match_details or ''} | Overschot €{surplus} blijft als "

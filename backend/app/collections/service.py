@@ -3,10 +3,14 @@
 import uuid
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+if TYPE_CHECKING:
+    from app.trust_funds.models import TrustTransaction
 
 from app.cases.models import Case
 from app.collections.interest import _round2, calculate_case_interest
@@ -375,6 +379,68 @@ async def create_payment_for_case(
         cap_to_outstanding=cap_to_outstanding,
         **case_payment_kwargs(case),
     )
+
+
+async def record_trust_debtor_payment(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    data: PaymentCreate,
+    user_id: uuid.UUID | None = None,
+    *,
+    trust_description: str | None = None,
+    reference: str | None = None,
+) -> "tuple[TrustTransaction, Payment, Decimal]":
+    """Record a debtor payment received on the trust (derdengelden) account.
+
+    Books BOTH sides in one go, exactly like a matched bank import:
+      1. a trust deposit — the money physically on the stichtingsrekening, and
+      2. a collections payment with art. 6:44 BW distribution — the claim being
+         satisfied, capped on the outstanding total.
+
+    Any amount beyond the outstanding total stays as trust balance (surplus).
+    This is the single source of truth for "a debtor paid via the trust
+    account", shared by the manual UI (collections/router "derdengelden"
+    method, derdengelden deposit) and bank-import matching (execute_match),
+    so manual and automatic entry produce identical bookkeeping.
+
+    Returns ``(trust_tx, payment, surplus)``.
+    """
+    from app.trust_funds.schemas import TrustTransactionCreate
+    from app.trust_funds.service import create_transaction as create_trust_transaction
+
+    # Trust deposit method must be a real receipt method (bank/ideal/cash);
+    # the collections "derdengelden" marker is not a deposit method.
+    deposit_method = (
+        data.payment_method
+        if data.payment_method in ("bank", "ideal", "cash")
+        else "bank"
+    )
+
+    # TrustTransactionCreate.description requires min_length=3 — guarantee it.
+    desc = (trust_description or data.description or "").strip()
+    if len(desc) < 3:
+        desc = "Derdengelden-storting (debiteurbetaling)"
+
+    trust_tx = await create_trust_transaction(
+        db,
+        tenant_id,
+        case_id,
+        user_id,
+        TrustTransactionCreate(
+            transaction_type="deposit",
+            amount=data.amount,
+            transaction_date=data.payment_date,
+            description=desc,
+            payment_method=deposit_method,
+            reference=reference,
+        ),
+    )
+    payment = await create_payment_for_case(
+        db, tenant_id, case_id, data, user_id, cap_to_outstanding=True
+    )
+    surplus = data.amount - payment.amount
+    return trust_tx, payment, surplus
 
 
 async def update_payment(

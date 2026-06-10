@@ -207,7 +207,9 @@ async def test_offset_happy_path_books_invoice_payment(
     assert r.status_code == 200
     payments = r.json()
     assert len(payments) == 1
-    assert payments[0]["payment_method"] == "verrekening"
+    # FIN-1(b): derdengelden offsets use a distinct method so they are not
+    # double-counted as voorschot-verrekening by get_advance_balance.
+    assert payments[0]["payment_method"] == "verrekening_derdengelden"
     assert Decimal(payments[0]["amount"]) == Decimal("500.00")
 
     # Invoice status updated

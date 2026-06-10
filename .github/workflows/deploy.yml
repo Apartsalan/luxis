@@ -23,12 +23,19 @@ jobs:
           username: root
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
+            set -e
             cd /opt/luxis
             git pull origin main
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-            sleep 10
-            echo "--- Health Check ---"
-            curl -sf http://localhost:8000/health && echo " [backend OK]" || echo " [backend FAIL]"
-            curl -sf http://localhost:3000 > /dev/null && echo " [frontend OK]" || echo " [frontend FAIL]"
-            docker compose ps
+            sleep 15
+            echo "--- Migrations ---"
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend python -m alembic upgrade head
+            echo "--- Health Check (intern, via container) ---"
+            docker exec luxis-backend python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+            echo " [backend OK]"
+            echo "--- Health Check (extern, via Caddy) ---"
+            curl -sf https://luxis.kestinglegal.nl/health > /dev/null || exit 1
+            echo " [public OK]"
+            echo "--- Status ---"
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps

@@ -123,6 +123,26 @@ Status: module gebouwd en idempotent (sync-log), settings-UI aanwezig (`instelli
 
 FIN-3 (kantoorbank-import) en FIN-6/7: backlog, heroverwegen bij volume.
 
+## 7. Status na sessie 158 (gebouwd)
+
+- **FIN-1 ✅ opgelost** (`8965322`). Gedeelde helper `record_trust_debtor_payment()`
+  is de enige bron voor "debiteur betaalt via de stichtingsrekening": maakt
+  altijd trust-deposit **én** art. 6:44-betaling (gecapt, overschot blijft saldo).
+  Gebruikt door bankimport (`execute_match`, gerefactored) én de handmatige
+  "Via derdengelden"-betaling. Derdengelden-verrekening gebruikt nu een eigen
+  methode (`verrekening_derdengelden`) → vervuilt het voorschotsaldo niet meer.
+  DerdengeldenTab-storting blijft trust-only met een hint naar de juiste route.
+- **FIN-2 ◐ deels** (`bc445be`). Harde **archive-guard**: een dossier kan niet
+  gearchiveerd worden zolang er derdengelden op staan of trust-transacties op
+  goedkeuring wachten (`get_unsettled_reason()`). **Nog te doen:** de geleide
+  **afwikkel-wizard** (factuurvoorstel → verrekening → restant uitbetalen →
+  sluiten) + een close-guard op de pipeline-stap. Vereist eerst een korte
+  ontwerpkeuze: aan welke "klaar"-status hang je dit op? Er zijn twee
+  status-systemen (WorkflowStatus vs incasso-pipeline-stap) en de oude
+  `afgesloten`-status is in migratie 009 weggemapt. `betaald` mag NIET blokkeren
+  (geld staat dan terecht op trust, wachtend op uitbetaling).
+- **FIN-4 (Exact payment-sync) + FIN-3/5/6/7:** ongewijzigd, zie hierboven.
+
 ## Verwante documenten
 - `docs/research/derdengelden-regels.md` — juridisch kader + Lisanne-vragen (S157)
 - `docs/research/14-dagenbrief-advies.md` — H6-beslispunten (S157)

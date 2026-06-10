@@ -14,7 +14,7 @@ dependencies = [
     "alembic>=1.14.0",
 
     # Auth
-    "PyJWT>=2.8.0",
+    "PyJWT>=2.13.0",  # floor raised: pre-2.13 advisories (SEC-4, S161)
     "bcrypt>=4.0.0",
 
     # Settings
@@ -28,7 +28,7 @@ dependencies = [
     "weasyprint>=62.0",
 
     # File uploads
-    "python-multipart>=0.0.9",
+    "python-multipart>=0.0.27",  # floor raised: CVE-2026-40347/42561 (SEC-4, S161)
 
     # Email
     "aiosmtplib>=3.0.0",

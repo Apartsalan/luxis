@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   BarChart3,
   TrendingUp,
@@ -50,6 +51,13 @@ const MONTH_NAMES: Record<string, string> = {
 function formatMonth(yyyymm: string): string {
   const [, mm] = yyyymm.split("-");
   return MONTH_NAMES[mm] || mm;
+}
+
+// CONN-8: zet "YYYY-MM" om naar een datum-range voor drill-down naar /zaken.
+function monthRange(yyyymm: string): { from: string; to: string } {
+  const [y, m] = yyyymm.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate(); // m is 1-gebaseerd → laatste dag van die maand
+  return { from: `${yyyymm}-01`, to: `${yyyymm}-${String(lastDay).padStart(2, "0")}` };
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────
@@ -113,6 +121,7 @@ export default function RapportagesPage() {
             icon={TrendingUp}
             color="text-orange-600"
             bgColor="bg-orange-50"
+            href="/incasso"
           />
           <KpiCard
             label="Geind"
@@ -141,14 +150,15 @@ export default function RapportagesPage() {
       {/* Secondary KPIs */}
       {kpis && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <MiniCard label="Actieve zaken" value={kpis.active_cases} />
-          <MiniCard label="Totaal zaken" value={kpis.total_cases} />
+          <MiniCard label="Actieve zaken" value={kpis.active_cases} href="/zaken" />
+          <MiniCard label="Totaal zaken" value={kpis.total_cases} href="/zaken" />
           <MiniCard
             label="Achterstallige taken"
             value={kpis.overdue_tasks}
             warning={kpis.overdue_tasks > 0}
+            href="/taken"
           />
-          <MiniCard label="Deadlines (7d)" value={kpis.upcoming_deadlines} />
+          <MiniCard label="Deadlines (7d)" value={kpis.upcoming_deadlines} href="/agenda" />
         </div>
       )}
 
@@ -227,15 +237,17 @@ function KpiCard({
   icon: Icon,
   color,
   bgColor,
+  href,
 }: {
   label: string;
   value: string;
   icon: React.ElementType;
   color: string;
   bgColor: string;
+  href?: string;
 }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-5">
+  const inner = (
+    <>
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           {label}
@@ -245,21 +257,34 @@ function KpiCard({
         </div>
       </div>
       <p className="text-2xl font-bold text-card-foreground">{value}</p>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="rounded-xl border border-border bg-card p-5 block hover:bg-muted/40 hover:border-primary/30 transition-colors"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="rounded-xl border border-border bg-card p-5">{inner}</div>;
 }
 
 function MiniCard({
   label,
   value,
   warning = false,
+  href,
 }: {
   label: string;
   value: number;
   warning?: boolean;
+  href?: string;
 }) {
-  return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center justify-between">
+  const content = (
+    <>
       <span className="text-xs text-muted-foreground">{label}</span>
       <span
         className={cn(
@@ -270,6 +295,21 @@ function MiniCard({
         {warning && <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />}
         {value}
       </span>
+    </>
+  );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="rounded-lg border border-border bg-card px-4 py-3 flex items-center justify-between hover:bg-muted/40 hover:border-primary/30 transition-colors"
+      >
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center justify-between">
+      {content}
     </div>
   );
 }
@@ -294,33 +334,39 @@ function MonthlyChart({ data }: { data: { month: string; new_cases: number; clos
         </div>
       </div>
 
-      {/* Bars */}
+      {/* Bars — elke maand linkt naar de dossiers geopend in die maand (CONN-8) */}
       <div className="flex items-end gap-1" style={{ height: "180px" }}>
-        {data.map((d) => (
-          <div key={d.month} className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end">
-            <div className="flex gap-0.5 items-end flex-1 w-full justify-center">
-              <div
-                className="bg-blue-500 rounded-t-sm min-h-[2px]"
-                style={{
-                  height: `${(d.new_cases / maxCases) * 100}%`,
-                  width: "40%",
-                }}
-                title={`${d.new_cases} nieuw`}
-              />
-              <div
-                className="bg-emerald-500 rounded-t-sm min-h-[2px]"
-                style={{
-                  height: `${(d.closed_cases / maxCases) * 100}%`,
-                  width: "40%",
-                }}
-                title={`${d.closed_cases} gesloten`}
-              />
-            </div>
-            <span className="text-[10px] text-muted-foreground mt-1">
-              {formatMonth(d.month)}
-            </span>
-          </div>
-        ))}
+        {data.map((d) => {
+          const { from, to } = monthRange(d.month);
+          return (
+            <Link
+              key={d.month}
+              href={`/zaken?date_from=${from}&date_to=${to}`}
+              className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end rounded-md hover:bg-muted/50 transition-colors"
+              title={`${d.new_cases} nieuw · ${d.closed_cases} gesloten — bekijk dossiers`}
+            >
+              <div className="flex gap-0.5 items-end flex-1 w-full justify-center">
+                <div
+                  className="bg-blue-500 rounded-t-sm min-h-[2px]"
+                  style={{
+                    height: `${(d.new_cases / maxCases) * 100}%`,
+                    width: "40%",
+                  }}
+                />
+                <div
+                  className="bg-emerald-500 rounded-t-sm min-h-[2px]"
+                  style={{
+                    height: `${(d.closed_cases / maxCases) * 100}%`,
+                    width: "40%",
+                  }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground mt-1">
+                {formatMonth(d.month)}
+              </span>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
@@ -356,10 +402,15 @@ function PipelineChart({ data }: { data: { phase: string; count: number; total_a
         })}
       </div>
 
-      {/* Legend */}
-      <div className="space-y-2">
+      {/* Legend — elke fase linkt naar de incasso-werkstroom (CONN-8) */}
+      <div className="space-y-0.5">
         {data.map((d, i) => (
-          <div key={d.phase} className="flex items-center justify-between">
+          <Link
+            key={d.phase}
+            href="/incasso"
+            className="flex items-center justify-between rounded-md -mx-1 px-1 py-1 hover:bg-muted/50 transition-colors"
+            title="Open de incasso-werkstroom"
+          >
             <div className="flex items-center gap-2">
               <div className={cn("h-2.5 w-2.5 rounded-sm", STEP_COLORS[i % STEP_COLORS.length])} />
               <span className="text-xs text-foreground">{d.phase}</span>
@@ -368,7 +419,7 @@ function PipelineChart({ data }: { data: { phase: string; count: number; total_a
               <span className="text-xs font-medium text-foreground">{d.count} zaken</span>
               <span className="text-xs text-muted-foreground">{formatCurrency(d.total_amount)}</span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

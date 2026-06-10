@@ -94,13 +94,17 @@ export default function ZakenPage() {
     sortByRaw && CASE_SORT_FIELDS.has(sortByRaw) ? sortByRaw : "date_opened";
   const sortDir: CaseSortDir = sortDirRaw === "asc" ? "asc" : "desc";
 
-  const [search, setSearch] = useState("");
-  const [caseType, setCaseType] = useState("");
-  const [status, setStatus] = useState("");
+  // CONN-8: filters uit de URL lezen zodat drill-downs (dashboard, rapportages)
+  // op een vóór-gefilterde lijst landen. Lazy initializer = alleen bij mount.
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [caseType, setCaseType] = useState(() => searchParams.get("case_type") ?? "");
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
   const [assignedTo, setAssignedTo] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get("date_from") ?? "");
+  const [dateTo, setDateTo] = useState(() => searchParams.get("date_to") ?? "");
+  const [showMoreFilters, setShowMoreFilters] = useState(
+    () => !!(searchParams.get("date_from") || searchParams.get("date_to"))
+  );
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(search, 300);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

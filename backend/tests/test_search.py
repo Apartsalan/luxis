@@ -1,7 +1,8 @@
 """Tests for the search module — global search across cases, contacts, documents."""
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
@@ -9,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
 from app.cases.models import Case
+from app.email.oauth_models import EmailAccount
+from app.email.synced_email_models import SyncedEmail
+from app.invoices.models import Invoice
 from app.relations.models import Contact
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -74,6 +78,78 @@ async def test_search_finds_case_by_number(
     assert data["total"] >= 1
     types = [r["type"] for r in data["results"]]
     assert "case" in types
+
+
+@pytest.mark.asyncio
+async def test_search_finds_invoice_by_number(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """Search by invoice number returns the matching invoice (CONN-11)."""
+    seeded = await _seed_data(db, test_tenant.id)
+    invoice = Invoice(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        invoice_number="F2026-09099",
+        contact_id=seeded["contact"].id,
+        invoice_date=date.today(),
+        due_date=date.today(),
+        status="sent",
+        total=Decimal("250.00"),
+    )
+    db.add(invoice)
+    await db.commit()
+
+    resp = await client.get("/api/search?q=F2026-09099", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 1
+    matches = [r for r in data["results"] if r["type"] == "invoice"]
+    assert matches, "Expected an invoice result"
+    assert matches[0]["href"] == f"/facturen/{invoice.id}"
+
+
+@pytest.mark.asyncio
+async def test_search_finds_email_by_subject(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """Search by email subject returns the matching synced email (CONN-11)."""
+    account = EmailAccount(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        user_id=test_user.id,
+        provider="outlook",
+        email_address="seidony@kestinglegal.nl",
+        access_token_enc=b"x",
+        refresh_token_enc=b"y",
+    )
+    db.add(account)
+    await db.flush()
+
+    email = SyncedEmail(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        email_account_id=account.id,
+        provider_message_id="msg-conn11-001",
+        subject="Betalingsherinnering openstaand bedrag",
+        from_email="debiteur@voorbeeld.nl",
+        from_name="Jan Debiteur",
+        email_date=datetime.now(UTC),
+    )
+    db.add(email)
+    await db.commit()
+
+    resp = await client.get(
+        "/api/search?q=Betalingsherinnering", headers=auth_headers
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    matches = [r for r in data["results"] if r["type"] == "email"]
+    assert matches, "Expected an email result"
+    assert matches[0]["href"] == "/correspondentie"
 
 
 @pytest.mark.asyncio

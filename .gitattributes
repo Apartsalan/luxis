@@ -3,6 +3,9 @@
 # shell shebangs (`/bin/bash^M: bad interpreter`) and churn generated locks.
 *.sh        text eol=lf
 uv.lock     text eol=lf
+# Claude Code parses these directly — CRLF can trip the loader, keep LF.
+.claude/commands/*.md  text eol=lf
+.claude/skills/**/*.md  text eol=lf
 Dockerfile  text eol=lf
 *.yml       text eol=lf
 *.yaml      text eol=lf

@@ -3,6 +3,10 @@
 # Playwright MCP scratch (snapshots/console logs may contain real data)
 .playwright-mcp/
 
+# Generated dep exports (derived from backend/uv.lock at build/CI time — never commit)
+backend/requirements.txt
+backend/requirements-dev.txt
+
 # Python
 __pycache__/
 *.py[cod]
@@ -26,6 +30,8 @@ out/
 .env
 .env.local
 .env.production
+.env.bak*
+*.env.bak*
 
 # IDE
 .vscode/

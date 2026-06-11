@@ -1,0 +1,8 @@
+# Keep LF on files that run on / are consumed by Linux (VPS, Docker, CI).
+# autocrlf=true on Windows checkouts would otherwise inject CRLF and break
+# shell shebangs (`/bin/bash^M: bad interpreter`) and churn generated locks.
+*.sh        text eol=lf
+uv.lock     text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf

@@ -23,8 +23,10 @@ jobs:
 
       - uses: astral-sh/setup-uv@v4
 
-      - name: Install dependencies
-        run: uv pip install --system ".[dev]"
+      - name: Install dependencies (locked)
+        run: |
+          uv export --frozen --extra dev --no-emit-project -o requirements-dev.txt
+          uv pip install --system -r requirements-dev.txt
 
       - name: Ruff check
         run: ruff check app/
@@ -69,8 +71,11 @@ jobs:
 
       - uses: astral-sh/setup-uv@v4
 
-      - name: Install dependencies
-        run: uv pip install --system ".[dev]"
+      - name: Install dependencies (locked)
+        run: |
+          uv export --frozen --extra dev --no-emit-project -o requirements-dev.txt
+          uv pip install --system -r requirements-dev.txt
+          uv pip install --system --no-deps .
 
       - name: Run tests
         env:
@@ -148,6 +153,58 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # ── Backend Dependency Audit ─────────────────────────────────────────────────
+  # Blocking. Audits the locked *runtime* closure (pip-audit on the uv export).
+  # pip/setuptools are not in the export, so their self-advisories (S161 noise)
+  # never surface here. A vuln WITH a fix fails CI and must be addressed; to
+  # accept an unfixable advisory, append `--ignore-vuln GHSA-xxxx` with a reason.
+  backend-audit:
+    name: Backend Dependency Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Export locked runtime requirements
+        run: uv export --frozen --no-dev --no-emit-project -o requirements.txt
+
+      - name: pip-audit (locked runtime deps)
+        run: |
+          uv pip install --system pip-audit
+          pip-audit --requirement requirements.txt --progress-spinner off
+
+  # ── Frontend Dependency Audit ────────────────────────────────────────────────
+  # Non-blocking (informational): residual *moderate* advisories live inside
+  # Next 15's own dependency tree and can only be "fixed" by downgrading Next
+  # (rejected, S161). --audit-level=high flags only high/critical so a real
+  # high-severity runtime issue is still loud, without failing CI on Next noise.
+  frontend-audit:
+    name: Frontend Dependency Audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high
 
   # ── Security Checks ─────────────────────────────────────────────────────────
   security:

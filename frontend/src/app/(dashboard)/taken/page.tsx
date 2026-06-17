@@ -242,10 +242,19 @@ function TaskRow({
           </p>
         )}
 
-        {/* AI-concept entry-point staat in CaseActionFeed op het dossier zelf —
-            geen parallelle "Bekijk concept" knop hier (S146 cleanup).
-            Klik op de taak om naar het dossier te navigeren waar CaseActionFeed
-            de juiste DraftReadyCard toont. */}
+        {/* Concept-mail reviewen: directe knop om het concept te heropenen
+            (review + versturen). Verse navigatie naar het dossier met
+            ?draft=latest → de dossierpagina opent het nieuwste niet-verzonden
+            concept in de review/verstuur-dialoog. */}
+        {task.task_type === "review_ai_draft" && task.case_id && (
+          <Link
+            href={`/zaken/${task.case_id}?draft=latest`}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Concept openen
+          </Link>
+        )}
       </div>
 
       {/* Skip button */}

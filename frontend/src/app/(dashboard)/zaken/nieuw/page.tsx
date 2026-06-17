@@ -89,6 +89,27 @@ const EMPTY_INLINE_CONTACT: InlineContact = {
   linked_person_email: "",
 };
 
+// ── Naam-matching voor AI-auto-selectie ──────────────────────────────────────
+// Normaliseer een naam (kleine letters, geen punten/komma's, enkele spaties) zodat
+// "Acme Vertaal B.V." en "acme vertaal bv" als gelijk gelden.
+function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[.,]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Bepaalt of een gevonden relatie écht bij de gezochte (AI-geëxtraheerde) naam hoort.
+// Voorkomt dat een willekeurige relatie uit een nog-niet-bijgewerkte zoeklijst wordt
+// gekozen: alleen een echte naam-overeenkomst telt als match.
+function nameMatches(candidate: string, query: string): boolean {
+  const c = normalizeName(candidate);
+  const q = normalizeName(query);
+  if (!c || !q) return false;
+  return c === q || c.includes(q) || q.includes(c);
+}
+
 // ── Stepper Component ────────────────────────────────────────────────────────
 
 function WizardStepper({
@@ -468,11 +489,11 @@ function NieuweZaakPage() {
   };
 
   // ── Data queries ─────────────────────────────────────────────────────────
-  const { data: clientResults } = useRelations({
+  const { data: clientResults, isFetching: clientFetching } = useRelations({
     search: clientSearch || undefined,
     per_page: 5,
   });
-  const { data: opponentResults } = useRelations({
+  const { data: opponentResults, isFetching: opponentFetching } = useRelations({
     search: opponentSearch || undefined,
     per_page: 5,
   });
@@ -527,43 +548,45 @@ function NieuweZaakPage() {
   const [aiParsedClient, setAiParsedClient] = useState(false);
   const [aiParsedOpponent, setAiParsedOpponent] = useState(false);
 
-  // Auto-select client from search results when AI-parsed
+  // Auto-select client from search results when AI-parsed.
+  // useRelations toont tijdens het zoeken nog de vórige resultaten (keepPreviousData,
+  // toegevoegd 2026-06-07). Wacht daarom tot het zoeken klaar is (!clientFetching) en
+  // selecteer alleen een relatie waarvan de naam écht overeenkomt — anders pakte de
+  // wizard per ongeluk de bovenste rij uit de oude, ongefilterde lijst (zowel client
+  // als wederpartij kregen dan dezelfde verkeerde relatie).
   useEffect(() => {
-    if (aiParsedClient && clientSearch && !form.client_id && clientResults?.items) {
-      if (clientResults.items.length > 0) {
-        // Match found — auto-select
-        const match = clientResults.items[0];
-        updateField("client_id", match.id);
-        setClientSearch(match.name);
-        setAiParsedClient(false);
-      } else {
-        // No match — auto-open inline form (already pre-filled by handleInvoiceParsed)
-        setShowNewClient(true);
-        setAiParsedClient(false);
-      }
+    if (!aiParsedClient || !clientSearch || form.client_id) return;
+    if (clientFetching) return; // resultaten horen nog bij de vorige zoekterm
+    const items = clientResults?.items ?? [];
+    const match = items.find((c) => nameMatches(c.name, clientSearch));
+    if (match) {
+      updateField("client_id", match.id);
+      setClientSearch(match.name);
+    } else {
+      // Geen echte match — open het (al voor-ingevulde) 'nieuwe relatie'-formulier
+      setShowNewClient(true);
     }
-  }, [aiParsedClient, clientSearch, clientResults, form.client_id]);
+    setAiParsedClient(false);
+  }, [aiParsedClient, clientSearch, clientFetching, clientResults, form.client_id]);
 
-  // Auto-select opponent from search results when AI-parsed
+  // Auto-select opponent from search results when AI-parsed (zie toelichting bij client).
   useEffect(() => {
-    if (aiParsedOpponent && opponentSearch && !form.opposing_party_id && opponentResults?.items) {
-      if (opponentResults.items.length > 0) {
-        // Match found — auto-select
-        const match = opponentResults.items[0];
-        updateField("opposing_party_id", match.id);
-        setOpponentSearch(match.name);
-        setOpponentContactType(match.contact_type);
-        if (!form.debtor_type) {
-          updateField("debtor_type", match.contact_type === "company" ? "b2b" : "b2c");
-        }
-        setAiParsedOpponent(false);
-      } else {
-        // No match — auto-open inline form (already pre-filled by handleInvoiceParsed)
-        setShowNewOpponent(true);
-        setAiParsedOpponent(false);
+    if (!aiParsedOpponent || !opponentSearch || form.opposing_party_id) return;
+    if (opponentFetching) return; // resultaten horen nog bij de vorige zoekterm
+    const items = opponentResults?.items ?? [];
+    const match = items.find((c) => nameMatches(c.name, opponentSearch));
+    if (match) {
+      updateField("opposing_party_id", match.id);
+      setOpponentSearch(match.name);
+      setOpponentContactType(match.contact_type);
+      if (!form.debtor_type) {
+        updateField("debtor_type", match.contact_type === "company" ? "b2b" : "b2c");
       }
+    } else {
+      setShowNewOpponent(true);
     }
-  }, [aiParsedOpponent, opponentSearch, opponentResults, form.opposing_party_id, form.debtor_type]);
+    setAiParsedOpponent(false);
+  }, [aiParsedOpponent, opponentSearch, opponentFetching, opponentResults, form.opposing_party_id, form.debtor_type]);
 
   // ── Invoice parse handler ────────────────────────────────────────────────
   const handleInvoiceParsed = useCallback(

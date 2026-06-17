@@ -776,13 +776,20 @@ async def trigger_defense_response_for_email(
         return None
 
     if is_hoofdpad:
-        # Switch case naar verweer (alleen vanuit hoofdpad).
-        # NB: model-veld is `step_entered_at`; `incasso_step_entered_at` bestaat
-        # alleen als Pydantic-veld en schreef stilletjes niets naar de DB → de
-        # "dagen in stap"-teller resette niet (AUDIT-H10).
-        case.incasso_step_id = verweer_step.id
-        case.step_entered_at = datetime.now(UTC)
-        await db.flush()
+        # Switch case naar verweer (alleen vanuit hoofdpad) via de centrale
+        # step-transitie, zodat er een CaseStepHistory-rij + pipeline_change-
+        # activity ontstaat én `step_entered_at` (de echte kolom) reset — i.p.v.
+        # een losse attribuut-write zonder spoor (AUDIT-#97; ondervangt ook #H10).
+        from app.incasso.service import move_case_to_step
+
+        await move_case_to_step(
+            db,
+            tenant_id,
+            case,
+            verweer_step,
+            trigger_type="auto_advance",
+            notes="Automatische switch naar 'Verweer beantwoorden' (verweer-email ontvangen)",
+        )
     else:
         logger.info(
             "Case %s al in Verweer beantwoorden — vervolgreactie %s, "

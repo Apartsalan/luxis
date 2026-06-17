@@ -1294,6 +1294,114 @@ def test_step_entered_at_is_the_real_column_not_a_phantom():
     )
 
 
+# ── AUDIT-#97: verweer-switch must run through move_case_to_step ─────────────
+
+
+async def test_verweer_switch_routes_through_move_case_to_step(
+    db, test_tenant, test_user, test_company
+):
+    """An inbound defense email switches the case to 'Verweer beantwoorden'. That
+    switch must go through the central move_case_to_step transition so it leaves
+    a CaseStepHistory row and a pipeline_change activity (audit #97) — the old
+    code set incasso_step_id/step_entered_at directly, leaving no history/log.
+    """
+    from datetime import UTC, datetime
+    from unittest.mock import AsyncMock, patch
+
+    from app.cases.models import CaseActivity
+    from app.email.oauth_models import EmailAccount
+    from app.email.synced_email_models import SyncedEmail
+    from app.incasso.automation_service import trigger_defense_response_for_email
+    from app.incasso.models import CaseStepHistory
+
+    # Hoofdpad step (must be in _HOOFDPAD_STEPS_FOR_DEFENSE) + the verweer step.
+    eerste = IncassoPipelineStep(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        name="Eerste sommatie",
+        sort_order=1,
+        min_wait_days=0,
+        max_wait_days=4,
+    )
+    verweer = IncassoPipelineStep(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        name="Verweer beantwoorden",
+        sort_order=10,
+        min_wait_days=0,
+        max_wait_days=0,
+        is_hold_step=True,
+    )
+    db.add_all([eerste, verweer])
+    await db.flush()
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=eerste, case_number="2026-09100", days_in_step=3,
+    )
+    old_entered = case.step_entered_at
+
+    account = EmailAccount(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        user_id=test_user.id,
+        provider="gmail",
+        email_address="kantoor@test.nl",
+        access_token_enc=b"x",
+        refresh_token_enc=b"y",
+    )
+    db.add(account)
+    await db.flush()
+    email = SyncedEmail(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        email_account_id=account.id,
+        case_id=case.id,
+        provider_message_id="defense-1",
+        from_email="debiteur@example.nl",
+        direction="inbound",
+        body_text="Ik betwist de vordering volledig.",
+        email_date=datetime.now(UTC),
+    )
+    db.add(email)
+    await db.flush()
+
+    # Stub the AI draft generation — the step-switch happens before it is called.
+    with patch(
+        "app.incasso.automation_service.generate_draft_for_step",
+        new=AsyncMock(return_value=None),
+    ):
+        await trigger_defense_response_for_email(
+            db, test_tenant.id, email.id, "juridisch_verweer"
+        )
+
+    await db.refresh(case)
+    assert case.incasso_step_id == verweer.id
+    assert case.step_entered_at != old_entered  # timer reset
+
+    # #97: the switch left an audit trail via move_case_to_step.
+    history = (
+        await db.execute(
+            select(CaseStepHistory).where(
+                CaseStepHistory.case_id == case.id,
+                CaseStepHistory.step_id == verweer.id,
+            )
+        )
+    ).scalars().all()
+    assert len(history) == 1
+    assert history[0].exited_at is None  # currently in the verweer step
+
+    activities = (
+        await db.execute(
+            select(CaseActivity).where(
+                CaseActivity.case_id == case.id,
+                CaseActivity.activity_type == "pipeline_change",
+            )
+        )
+    ).scalars().all()
+    assert len(activities) >= 1
+
+
 # ── AUDIT-H12: only evaluable (timeout) rules are seeded ─────────────────────
 
 

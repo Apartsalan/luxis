@@ -431,8 +431,20 @@ async def advance_after_send(
             "reason": "Geen default advance-rule gevonden voor huidige stap",
         }
 
-    case.incasso_step_id = rule.to_step_id
-    case.step_entered_at = datetime.now(UTC)
+    # Route via de centrale step-transitie (audit #97): laat een CaseStepHistory
+    # + pipeline_change-activity achter en reset step_entered_at — niet langer
+    # een losse attribuut-write zonder spoor.
+    from app.incasso.service import move_case_to_step
+
+    await move_case_to_step(
+        db,
+        current_user.tenant_id,
+        case,
+        rule.to_step,
+        user_id=current_user.id,
+        trigger_type="auto_advance",
+        notes="Doorgeschoven na verzending concept",
+    )
     await db.commit()
 
     return {

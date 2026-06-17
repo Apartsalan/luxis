@@ -156,7 +156,6 @@ export default function DossierHeader({
         id: zaak.id,
         data: {
           incasso_step_id: stepId || null,
-          incasso_step_entered_at: stepId ? new Date().toISOString() : null,
         },
       });
       const stepName = activeSteps.find((s: PipelineStep) => s.id === stepId)?.name ?? "Geen";

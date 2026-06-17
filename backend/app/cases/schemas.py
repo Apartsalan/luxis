@@ -122,9 +122,10 @@ class CaseUpdate(BaseModel):
     minimum_fee: Decimal | None = None
     bik_minimum_fee: Decimal | None = None
     provisie_base: str | None = None  # "collected_amount" or "total_claim"
-    # DF2-09: Pipeline step assignment from case detail
+    # DF2-09: Pipeline step assignment from case detail. The former
+    # incasso_step_entered_at field was not a mapped column (a silent no-op) and
+    # was removed; step_entered_at is owned by move_case_to_step (audit #97).
     incasso_step_id: uuid.UUID | None = None
-    incasso_step_entered_at: datetime | None = None
     # Verweer
     has_verweer: bool | None = None
     verweer_note: str | None = None

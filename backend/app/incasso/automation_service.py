@@ -440,6 +440,8 @@ async def gather_case_context(
             "reference": reference_value,
             "debtor_type": getattr(case, "debtor_type", None) or "b2b",
             "opened_at": _fmt_nl_date(case.date_opened),
+            # Grondslag-signaal voor de AI (abonnement / uren / afwikkeling).
+            "description": getattr(case, "description", None) or "",
         },
         "client_data": {
             "name": client_contact.name if client_contact else "?",
@@ -463,6 +465,7 @@ async def gather_case_context(
                 "date": _fmt_nl_date(c.invoice_date),
                 "due_date": _fmt_nl_date(c.default_date),
                 "amount": str(c.principal_amount or Decimal("0.00")),
+                "description": getattr(c, "description", None) or "",
             }
             for c in claims
         ],

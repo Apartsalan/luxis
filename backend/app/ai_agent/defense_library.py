@@ -132,10 +132,11 @@ kosten staat hiermee vast.""",
         key="verlengd_abonnement",
         title="Stilzwijgende verlenging serviceovereenkomst",
         description=(
-            "Debiteur betwist factuur voor verlengd abonnement. "
-            "Reactie: contract bepaalt stilzwijgende verlenging "
-            "tenzij 3 maanden voor einde opgezegd, geen geldige "
-            "opzegging ontvangen."
+            "Debiteur betwist factuur voor abonnement / service"
+            "overeenkomst (nieuw óf verlengd). Reactie BREED houden: het "
+            "overeengekomen tarief voor de periode is verschuldigd; een "
+            "opzegging moet tijdig en op de voorgeschreven wijze — werkt "
+            "voor beide situaties, beweer geen verlenging-specifieke feiten."
         ),
         language="nl",
         relevant_categories=(
@@ -143,21 +144,14 @@ kosten staat hiermee vast.""",
             "betwisting",
         ),
         body="""\
-U heeft met cliënte een serviceovereenkomst gesloten voor de \
-duur van één jaar, met stilzwijgende verlenging telkens voor de \
-duur van een jaar, tenzij uiterlijk drie maanden voor het einde \
-van de lopende termijn schriftelijk wordt opgezegd.
+U bent met cliënte een serviceovereenkomst aangegaan. Op grond \
+van die overeenkomst en de daarop van toepassing zijnde algemene \
+voorwaarden bent u het overeengekomen tarief verschuldigd. Tot \
+op heden is geen betaling ontvangen.
 
-Cliënte heeft van u geen tijdige of geldige opzegging ontvangen. \
-De overeenkomst is daarmee overeenkomstig de contractuele \
-bepalingen automatisch verlengd en loopt thans door. U bent om \
-die reden gehouden tot betaling van het abonnementstarief voor \
-de verlengde periode.
-
-Cliënte heeft u hierover eerder geïnformeerd, doch tot op heden \
-is geen betaling ontvangen. Nu sprake is van wanbetaling, is \
-cliënte op grond van artikel 9.3 van de overeenkomst gerechtigd \
-tot afrekening van de vordering.
+Een opzegging dient, om rechtsgeldig te zijn, tijdig en op de in \
+de overeenkomst voorgeschreven wijze te geschieden; zij ontslaat \
+u bovendien niet van de reeds ontstane betalingsverplichting.
 
 De betalingsverplichting staat daarmee vast.""",
     ),

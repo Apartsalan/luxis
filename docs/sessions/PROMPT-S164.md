@@ -10,16 +10,17 @@ cd Documents\luxis && claude --dangerously-skip-permissions
 ---
 
 ## Waarom deze sessie
-S163 hechtte de vier bounded audit-MEDIUMs af (#66/#70/#73/#97) + een starlette-CVE-bump. Wat autonoom + bounded resteert uit de audit zijn twee items; de rest van de backlog vereist Arsalan of Lisanne (zie onder). Geen nieuwe features (besluit S160: géén autonome AI-agent).
+S163 hechtte de vier bounded audit-MEDIUMs af (#66/#70/#73/#97) + de `update_case`-step-bypass + een starlette-CVE-bump. Wat autonoom + bounded resteert uit de audit is **H25**; de rest van de backlog vereist Arsalan of Lisanne (zie onder). Geen nieuwe features (besluit S160: géén autonome AI-agent).
 
 ## Context laden bij start
 - `SESSION-NOTES.md` — **S163-entry** bovenaan (wat net is afgehecht + de starlette-CVE-les + valkuilen).
 - `LUXIS-ROADMAP.md` — regel ~118 "✅ MEDIUM gefixt in S163" + "Resterend uit audit".
 - Diepe details per bevinding: `.audit/AUDIT-REPORT.md` (gitignored, alleen lokaal/VPS).
 
-## Taak (op volgorde, elk rood→groen / lokaal geverifieerd vóór push)
-1. **`update_case` step-transitie consolideren (bounded, follow-up #97).** De case-detail step-dropdown stuurt `incasso_step_id` via `CaseUpdate` → `update_case` zet 'm met `setattr` (cases/service.py ~580) i.p.v. via `move_case_to_step` → geen `CaseStepHistory`/`pipeline_change`-log en `step_entered_at` reset niet. Laat een step-wijziging in `update_case` door `move_case_to_step` lopen (zoals `create_case` al doet). **Let op:** alleen wanneer `incasso_step_id` daadwerkelijk wijzigt; andere velden ongemoeid; `user_id` doorgeven. Rode test (CaseUpdate met nieuwe stap → CaseStepHistory + activity) → groen.
-2. **#H25 — `modules_enabled` server-side afdwingen (bounded).** Per-module pricing wordt nu niet server-side gehandhaafd (alleen UI). Zie audit-bevinding H25. Endpoints van een uitgeschakelde module moeten 403/404 geven. Rode test eerst → guard → groen. **Bevestig de exacte module-set + gedrag met code (geen aannames).**
+## Taak (rood→groen / lokaal geverifieerd vóór push)
+**#H25 — `modules_enabled` server-side afdwingen (bounded).** Per-module pricing wordt nu niet server-side gehandhaafd (alleen UI). Zie audit-bevinding H25 in `.audit/AUDIT-REPORT.md`. Endpoints van een uitgeschakelde module moeten 403/404 geven (geen stille toegang). **Bevestig de exacte module-set + verwacht gedrag met code (geen aannames):** waar staat `modules_enabled`, welke endpoints horen bij welke module, en wat is de juiste afwijzing. Rode test eerst (request op uitgeschakelde module → 403/404) → guard → groen.
+
+_(De `update_case` step-transitie-consolidatie uit het oorspronkelijke S164-plan is al in S163 meegefixt, `cd21c97`.)_
 
 ## Verificatie
 - Per change relevante test rood→groen; bij raken van gedeelde infra (conftest/cases-service) → CI's volledige Backend Tests dekt dat. Eén run tegelijk (dev-DB).

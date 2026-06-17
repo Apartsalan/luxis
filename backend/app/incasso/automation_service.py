@@ -613,12 +613,29 @@ async def generate_draft_for_step(
         case_id, target_step.name, len(user_prompt), use_pdf_route,
     )
 
-    # Roep AI aan — Sonnet primary, met PDF bij verweer-stap
+    # Roep AI aan — Sonnet primary, met PDF bij verweer-stap.
+    # Het verweer-sjabloon heeft een 'XXX'-plaatshouder voor de weerlegging die de
+    # AI moet vervangen. Het model laat 'm soms staan (niet-deterministisch, ~50/50)
+    # → bij de verweer-stap regenereren we tot 'XXX' weg is (max 3 pogingen). Zo
+    # krijgt de gebruiker nooit een leeg 'XXX'-concept.
     result, model_name = await call_draft_ai(
         system_prompt,
         user_prompt,
         av_pdf_path=av_pdf_path if use_pdf_route else None,
     )
+    if target_step.name == "Verweer beantwoorden":
+        _attempt = 1
+        while "XXX" in result and _attempt < 3:
+            logger.warning(
+                "Case %s: verweer-draft liet 'XXX'-plaatshouder staan (poging %d) — regenereren",
+                case_id, _attempt,
+            )
+            result, model_name = await call_draft_ai(
+                system_prompt,
+                user_prompt,
+                av_pdf_path=av_pdf_path if use_pdf_route else None,
+            )
+            _attempt += 1
 
     from app.incasso.html_renderer import render_subject, render_template_html
 

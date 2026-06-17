@@ -537,6 +537,7 @@ async def update_case(
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
     data: CaseUpdate,
+    user_id: uuid.UUID | None = None,
 ) -> Case:
     """Update case details (not status — use update_case_status for that)."""
     case = await get_case(db, tenant_id, case_id)
@@ -577,8 +578,41 @@ async def update_case(
                     f"dan de WIK-staffel (€{max_bik})"
                 )
 
+    # A pipeline-step change must run through move_case_to_step (audit #97
+    # follow-up) so it leaves a CaseStepHistory + pipeline_change activity and
+    # resets step_entered_at — a bare setattr skips that audit trail. Only a
+    # change to a different, non-null step transitions; clearing the step
+    # (null) keeps the plain assignment, same as before.
+    _UNSET = object()
+    new_step_id = update_data.get("incasso_step_id", _UNSET)
+    transition = (
+        new_step_id is not _UNSET
+        and new_step_id is not None
+        and new_step_id != case.incasso_step_id
+    )
+    if transition:
+        update_data.pop("incasso_step_id")
+
     for field, value in update_data.items():
         setattr(case, field, value)
+
+    if transition:
+        from app.incasso.models import IncassoPipelineStep
+        from app.incasso.service import move_case_to_step
+
+        target = (
+            await db.execute(
+                select(IncassoPipelineStep).where(
+                    IncassoPipelineStep.id == new_step_id,
+                    IncassoPipelineStep.tenant_id == tenant_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if target is None:
+            raise BadRequestError("Onbekende incasso-stap")
+        await move_case_to_step(
+            db, tenant_id, case, target, user_id=user_id, trigger_type="manual"
+        )
 
     await db.flush()
     await db.refresh(case)

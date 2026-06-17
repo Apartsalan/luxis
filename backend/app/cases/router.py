@@ -140,7 +140,9 @@ async def update_case(
     db: AsyncSession = Depends(get_db),
 ):
     """Update case details (not status)."""
-    case = await service.update_case(db, current_user.tenant_id, case_id, data)
+    case = await service.update_case(
+        db, current_user.tenant_id, case_id, data, current_user.id
+    )
     return case
 
 

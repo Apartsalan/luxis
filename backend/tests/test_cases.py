@@ -8,6 +8,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.models import Tenant
 from app.cases.models import Case
 from app.relations.models import Contact
 
@@ -247,6 +248,73 @@ async def test_update_case(client: AsyncClient, auth_headers: dict, test_company
     data = response.json()
     assert data["description"] == "Bijgewerkte beschrijving"
     assert data["reference"] == "KL-REF-001"
+
+
+@pytest.mark.asyncio
+async def test_update_case_step_change_logs_history(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+):
+    """Changing the pipeline step from the case detail must route through
+    move_case_to_step — leaving a CaseStepHistory row + a pipeline_change
+    activity — not a bare attribute write (audit #97 follow-up).
+    """
+    from sqlalchemy import select
+
+    from app.cases.models import CaseActivity
+    from app.incasso.models import CaseStepHistory
+    from tests.helpers.incasso_fixtures import create_pipeline_steps
+
+    steps = await create_pipeline_steps(db, test_tenant.id)
+    await db.commit()
+    ordered = sorted(steps, key=lambda s: s.sort_order)
+    step2 = ordered[1]
+
+    # create_case auto-assigns the first step (move_case_to_step), so the case
+    # starts with one CaseStepHistory + one pipeline_change activity.
+    resp = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": date.today().isoformat(),
+        },
+        headers=auth_headers,
+    )
+    case_id = resp.json()["id"]
+
+    # Change the step via the case-detail update path.
+    resp = await client.put(
+        f"/api/cases/{case_id}",
+        json={"incasso_step_id": str(step2.id)},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["incasso_step_id"] == str(step2.id)
+
+    history = (
+        await db.execute(
+            select(CaseStepHistory).where(
+                CaseStepHistory.case_id == uuid.UUID(case_id),
+                CaseStepHistory.step_id == step2.id,
+            )
+        )
+    ).scalars().all()
+    assert len(history) == 1
+    assert history[0].exited_at is None
+
+    activities = (
+        await db.execute(
+            select(CaseActivity).where(
+                CaseActivity.case_id == uuid.UUID(case_id),
+                CaseActivity.activity_type == "pipeline_change",
+            )
+        )
+    ).scalars().all()
+    assert len(activities) >= 2  # initial assignment + this change
 
 
 # ── Status Workflow ──────────────────────────────────────────────────────────

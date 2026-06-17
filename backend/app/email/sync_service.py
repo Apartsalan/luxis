@@ -489,18 +489,24 @@ async def sync_emails_for_account(
             if existing_row[1] is None:
                 # Respecteer eerst het eigen dossiernummer van de mail; val alleen
                 # terug op het gesynchte dossier (force_case_id) als de mail GEEN
-                # dossiernummer draagt — anders trekken we mails van andere
-                # dossiers hierheen.
-                link_to, matched_by_val, has_case_number = await _find_case_by_case_number(
-                    db,
-                    account.tenant_id,
-                    _build_searchable_text(
-                        msg.subject, msg.body_text, msg.body_html, msg.snippet
-                    ),
-                )
-                if not link_to and not has_case_number and force_case_id:
-                    link_to = force_case_id
-                    matched_by_val = "force_case_id"
+                # dossiernummer draagt. Bounces/systeemmails NOOIT force-linken —
+                # die matchen alleen op dossiernummer in het onderwerp (anders
+                # belandt een 'Onbestelbaar'-mail van een ander dossier hier).
+                if _is_system_email(msg):
+                    link_to, matched_by_val, _ = await _find_case_by_case_number(
+                        db, account.tenant_id, msg.subject or ""
+                    )
+                else:
+                    link_to, matched_by_val, has_case_number = await _find_case_by_case_number(
+                        db,
+                        account.tenant_id,
+                        _build_searchable_text(
+                            msg.subject, msg.body_text, msg.body_html, msg.snippet
+                        ),
+                    )
+                    if not link_to and not has_case_number and force_case_id:
+                        link_to = force_case_id
+                        matched_by_val = "force_case_id"
                 if link_to:
                     synced_email = (
                         await db.execute(

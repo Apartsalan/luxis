@@ -583,10 +583,10 @@ async def update_case(
     # resets step_entered_at — a bare setattr skips that audit trail. Only a
     # change to a different, non-null step transitions; clearing the step
     # (null) keeps the plain assignment, same as before.
-    _UNSET = object()
-    new_step_id = update_data.get("incasso_step_id", _UNSET)
+    _unset = object()
+    new_step_id = update_data.get("incasso_step_id", _unset)
     transition = (
-        new_step_id is not _UNSET
+        new_step_id is not _unset
         and new_step_id is not None
         and new_step_id != case.incasso_step_id
     )

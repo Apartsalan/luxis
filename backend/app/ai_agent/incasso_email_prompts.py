@@ -270,6 +270,9 @@ STEP_SPECIFIC_GUIDANCE: dict[str, str] = {
     ),
     "Verweer beantwoorden": (
         "Sjabloon: TWEEDE SOMMATIE INDIEN WEL VERWEER. Lees `incoming_defense` zorgvuldig.\n\n"
+        "BELANGRIJK: in het sjabloon staat 'XXX' op de plek van de weerlegging. Vervang "
+        "die 'XXX' VOLLEDIG door je weerlegging (uit de stappen hieronder). Laat NOOIT "
+        "'XXX' in de uitvoer staan — dat is de plaatshouder die jij invult.\n\n"
         "VERPLICHTE WERKWIJZE:\n\n"
         "STAP 1 — Bepaal EERST de grondslag van de vordering (waaróm is dit verschuldigd?).\n"
         "Lees de dossier-omschrijving, de vorderingsregels (factuur + omschrijving) en het "

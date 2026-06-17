@@ -249,9 +249,12 @@ class OutlookProvider(EmailProvider):
                 ),
             }
             if query:
-                # Support both $filter and $search patterns
-                # The caller can pass Graph-compatible filter/search strings
-                # KQL search: from:user@domain.com OR subject:keyword
+                # KQL-zoekopdracht (from:/to:/subject: ... OR ...). Microsoft Graph
+                # weigert $search SAMEN met $orderby (400 Bad Request) — dus laten
+                # we $orderby vallen zodra er gezocht wordt; Graph sorteert dan op
+                # relevantie i.p.v. ontvangstdatum. Dit brak de dossier-sync (de
+                # "Sync inbox"-knop met case_id stuurt altijd een zoekquery mee).
+                params.pop("$orderby", None)
                 params["$search"] = f'"{query}"'
 
         async with httpx.AsyncClient(timeout=30.0) as client:

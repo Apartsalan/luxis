@@ -487,16 +487,20 @@ async def sync_emails_for_account(
         if existing_row is not None:
             # If already synced but unlinked → try to link it
             if existing_row[1] is None:
-                link_to = force_case_id
-                matched_by_val = "force_case_id" if force_case_id else None
-                if not link_to:
-                    link_to, matched_by_val, _ = await _find_case_by_case_number(
-                        db,
-                        account.tenant_id,
-                        _build_searchable_text(
-                            msg.subject, msg.body_text, msg.body_html, msg.snippet
-                        ),
-                    )
+                # Respecteer eerst het eigen dossiernummer van de mail; val alleen
+                # terug op het gesynchte dossier (force_case_id) als de mail GEEN
+                # dossiernummer draagt — anders trekken we mails van andere
+                # dossiers hierheen.
+                link_to, matched_by_val, has_case_number = await _find_case_by_case_number(
+                    db,
+                    account.tenant_id,
+                    _build_searchable_text(
+                        msg.subject, msg.body_text, msg.body_html, msg.snippet
+                    ),
+                )
+                if not link_to and not has_case_number and force_case_id:
+                    link_to = force_case_id
+                    matched_by_val = "force_case_id"
                 if link_to:
                     synced_email = (
                         await db.execute(
@@ -559,47 +563,53 @@ async def sync_emails_for_account(
         matched_by = None
         is_bounce = False
 
-        if force_case_id:
-            # Priority 1: explicit case context
-            case_id = force_case_id
-            matched_by = "force_case_id"
-        else:
-            # Priority 2: thread matching — most reliable
-            case_id = await _find_case_by_thread(db, account.id, msg.thread_id)
-            if case_id:
-                matched_by = "thread"
+        # Ook bij een dossier-sync (force_case_id) eerst de precieze signalen
+        # respecteren — thread + eigen dossiernummer — zodat mails die duidelijk
+        # bij een ÁNDER dossier horen niet hierheen worden getrokken. force_case_id
+        # bepaalt alleen de terugval: een mail ZONDER dossiernummer hangt aan het
+        # dossier waarvandaan je synct.
 
-            # Priority 3: bounce/system email detection
-            if not case_id and _is_system_email(msg):
-                is_bounce = True
-                # For bounces: only try case number in subject, never contact-match
-                cn_case_id, cn_matched_by, _ = await _find_case_by_case_number(
-                    db, account.tenant_id, msg.subject or ""
-                )
-                if cn_case_id:
-                    case_id = cn_case_id
-                    matched_by = cn_matched_by
-                # Bounce without a link → leave unlinked, auto-dismiss
-            elif not case_id:
-                # Priority 4: case number in subject + body (S144)
-                cn_case_id, cn_matched_by, has_case_number = await _find_case_by_case_number(
-                    db,
-                    account.tenant_id,
-                    _build_searchable_text(
-                        msg.subject, msg.body_text, msg.body_html, msg.snippet
-                    ),
-                )
-                if cn_case_id:
-                    case_id = cn_case_id
-                    matched_by = cn_matched_by
-                elif not has_case_number:
-                    # Priority 5: contact email match
-                    # ONLY if no case number was found in the subject
-                    # (if a case number was found but dossier doesn't exist,
-                    #  we intentionally stop here — don't guess)
+        # Priority 1: thread matching — most reliable
+        case_id = await _find_case_by_thread(db, account.id, msg.thread_id)
+        if case_id:
+            matched_by = "thread"
+
+        # Priority 2: bounce/system email detection
+        if not case_id and _is_system_email(msg):
+            is_bounce = True
+            # For bounces: only try case number in subject, never contact/dossier-context
+            cn_case_id, cn_matched_by, _ = await _find_case_by_case_number(
+                db, account.tenant_id, msg.subject or ""
+            )
+            if cn_case_id:
+                case_id = cn_case_id
+                matched_by = cn_matched_by
+            # Bounce without a link → leave unlinked, auto-dismiss
+        elif not case_id:
+            # Priority 3: case number in subject + body (S144)
+            cn_case_id, cn_matched_by, has_case_number = await _find_case_by_case_number(
+                db,
+                account.tenant_id,
+                _build_searchable_text(
+                    msg.subject, msg.body_text, msg.body_html, msg.snippet
+                ),
+            )
+            if cn_case_id:
+                case_id = cn_case_id
+                matched_by = cn_matched_by
+            elif not has_case_number:
+                # Priority 4: geen dossiernummer gevonden.
+                if force_case_id:
+                    # Dossier-sync: hang 'm aan het dossier waarvandaan je synct.
+                    case_id = force_case_id
+                    matched_by = "force_case_id"
+                else:
+                    # Contact email match.
                     case_id = await _find_case_for_email(db, account.tenant_id, all_addresses)
                     if case_id:
                         matched_by = "contact_email"
+            # has_case_number maar geen bestaand dossier → bewust ongelinkt laten
+            # (hoort bij een ander dossier, ook tijdens een sync vanuit dit dossier).
 
         synced = SyncedEmail(
             tenant_id=account.tenant_id,

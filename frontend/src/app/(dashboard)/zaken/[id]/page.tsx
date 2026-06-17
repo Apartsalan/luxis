@@ -249,6 +249,27 @@ export default function ZaakDetailPage() {
       toast.error(msg);
     }
   };
+  // Open het nieuwste nog niet-verzonden concept van dit dossier (gebruikt door
+  // de "Concept openen"-knop op de dossier-taken-tab). Directe dialoog-opening
+  // i.p.v. een ?draft=latest-navigatie → betrouwbaar binnen dezelfde pagina.
+  const openLatestDraft = async () => {
+    try {
+      const listRes = await api(`/api/ai-agent/drafts/case/${id}`);
+      if (!listRes.ok) throw new Error("Concept niet gevonden");
+      const drafts = await listRes.json();
+      const openable = (Array.isArray(drafts) ? drafts : []).find(
+        (dr: { status?: string; sent_at?: string | null }) =>
+          dr.status !== "sent" && !dr.sent_at
+      );
+      if (!openable) {
+        toast.error("Geen openstaand concept voor dit dossier");
+        return;
+      }
+      await openDraftDialog(openable.id);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Kon AI-concept niet laden");
+    }
+  };
   const handleGenerateDraft = async () => {
     try {
       const r = await generateDraft.mutateAsync(id);
@@ -570,7 +591,7 @@ export default function ZaakDetailPage() {
             )}
             {safeTab === "taken" && (
               <ErrorBoundary key="taken" fallback={<TabErrorFallback tabName="Taken" />}>
-                <TijdregistratieTab caseId={id} />
+                <TijdregistratieTab caseId={id} onOpenDraft={openLatestDraft} />
               </ErrorBoundary>
             )}
             {safeTab === "uren" && (

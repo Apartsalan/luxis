@@ -7,6 +7,7 @@ import {
   Clock,
   Loader2,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,8 +25,11 @@ import { TASK_STATUS_BADGE } from "../types";
 
 export default function TijdregistratieTab({
   caseId,
+  onOpenDraft,
 }: {
   caseId: string;
+  /** Opent het nieuwste niet-verzonden AI-concept van dit dossier (review + versturen). */
+  onOpenDraft?: () => void;
 }) {
   const { user } = useAuth();
   const { data: tasksData, isLoading } = useWorkflowTasks({ case_id: caseId });
@@ -307,8 +311,18 @@ export default function TijdregistratieTab({
                         {TASK_TYPE_LABELS[task.task_type] ?? task.task_type}
                       </span>
                     </div>
-                    {/* Concept-knop verwijderd in S146 — entry-point is nu de
-                        CaseActionFeed op de Overzicht-tab (DraftReadyCard). */}
+                    {/* Concept-mail reviewen: knop om het gegenereerde concept te
+                        heropenen (review + versturen). Opent direct de dialoog. */}
+                    {task.task_type === "review_ai_draft" && onOpenDraft && (
+                      <button
+                        type="button"
+                        onClick={onOpenDraft}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Concept openen
+                      </button>
+                    )}
                   </div>
                   <button
                     onClick={() => handleSkip(task.id)}
@@ -355,6 +369,16 @@ export default function TijdregistratieTab({
                         ? formatDateShort(task.completed_at)
                         : ""}
                     </p>
+                    {task.task_type === "review_ai_draft" && onOpenDraft && (
+                      <button
+                        type="button"
+                        onClick={onOpenDraft}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Concept openen
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

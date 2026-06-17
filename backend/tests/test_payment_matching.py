@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 import pytest
 import pytest_asyncio
@@ -136,6 +136,57 @@ async def incasso_case(
     await db.commit()
     await db.refresh(case)
     return case
+
+
+@pytest.mark.asyncio
+async def test_load_case_match_data_uses_total_debt_not_principal(
+    db: AsyncSession, test_tenant: Tenant, incasso_case: Case
+):
+    """outstanding_amount must be the full debt incl. interest + BIK (audit #73),
+    not principal − paid — otherwise a debtor paying the complete amount never
+    matches on amount. Cross-checked against the financial-summary grand_total
+    (the same figure shown on the case detail).
+    """
+    from app.ai_agent.payment_matching_service import _load_case_match_data
+    from app.collections.service import get_financial_summary
+
+    # Statutory + commercial rates so the interest calc can run.
+    for rate_type, rate_val in [("statutory", "6.00"), ("commercial", "11.50")]:
+        db.add(
+            InterestRate(
+                id=uuid.uuid4(),
+                rate_type=rate_type,
+                effective_from=date(2024, 1, 1),
+                rate=Decimal(rate_val),
+                source="Test fixture",
+            )
+        )
+    await db.flush()
+
+    data = await _load_case_match_data(db, test_tenant.id)
+    entry = next(d for d in data if d.case_number == incasso_case.case_number)
+
+    summary = await get_financial_summary(
+        db,
+        test_tenant.id,
+        incasso_case.id,
+        incasso_case.interest_type,
+        incasso_case.contractual_rate,
+        incasso_case.contractual_compound,
+        bik_override=incasso_case.bik_override,
+        bik_override_percentage=incasso_case.bik_override_percentage,
+        include_btw_on_bik=False,  # test_company is BTW-plichtig
+        nakosten_type=incasso_case.nakosten_type,
+    )
+    expected = summary["total_outstanding"].quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+
+    # BIK alone on a 5000 principal is ≥ 625, so the true outstanding is
+    # strictly greater than principal − paid (the old, buggy basis).
+    principal_only = incasso_case.total_principal - incasso_case.total_paid
+    assert entry.outstanding_amount == expected
+    assert entry.outstanding_amount > principal_only
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -285,6 +336,28 @@ class TestMatchAlgorithm:
         assert len(case1_matches) == 1
         assert case1_matches[0].match_method == MatchMethod.AMOUNT
         assert case1_matches[0].confidence == 70
+
+    def test_amount_match_has_tolerance(self):
+        """The amount match absorbs cent-level rounding drift on the full
+        outstanding debt (audit #73) — exact-equality would miss real payments
+        that round a few cents off the computed interest + BIK."""
+        case = CaseMatchData(
+            id=uuid.uuid4(),
+            case_number="2026-00009",
+            opposing_party_name=None,
+            opposing_party_iban=None,
+            outstanding_amount=Decimal("5815.49"),
+            invoice_numbers=[],
+        )
+
+        def amount_matched(amount: str) -> bool:
+            matches = find_matches("x", Decimal(amount), None, None, [case])
+            return any(m.match_method == MatchMethod.AMOUNT for m in matches)
+
+        assert amount_matched("5815.49")  # exact
+        assert amount_matched("5815.51")  # +2 cents, within tolerance
+        assert amount_matched("5815.47")  # -2 cents, within tolerance
+        assert not amount_matched("5800.00")  # well outside tolerance
 
     def test_match_by_name(self, case_data: list[CaseMatchData]):
         matches = find_matches(

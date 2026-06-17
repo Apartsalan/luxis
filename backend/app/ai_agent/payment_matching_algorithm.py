@@ -4,7 +4,7 @@
 1. Case number (dossiernummer) in description: 95
 2. Invoice number (factuurnummer) in description: 90
 3. IBAN of sender matches opposing party: 85
-4. Amount matches outstanding balance: 70
+4. Amount matches full outstanding debt (incl. interest + BIK): 70
 5. Name of sender matches opposing party: 50
 """
 
@@ -14,6 +14,12 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from app.ai_agent.payment_matching_models import MATCH_CONFIDENCE, MatchMethod
+
+# Cent-level tolerance on the amount match: the outstanding debt includes
+# interest + BIK that may round a few cents differently from what the debtor
+# actually transferred (audit #73). Anything wider risks matching an unrelated
+# case with a coincidentally similar amount.
+AMOUNT_MATCH_TOLERANCE = Decimal("0.05")
 
 
 @dataclass
@@ -34,7 +40,7 @@ class CaseMatchData:
     case_number: str
     opposing_party_name: str | None
     opposing_party_iban: str | None
-    outstanding_amount: Decimal
+    outstanding_amount: Decimal  # full debt: principal + interest + BIK − paid (audit #73)
     invoice_numbers: list[str]
 
 
@@ -143,14 +149,18 @@ def find_matches(
                 if not best_match or match.confidence > best_match.confidence:
                     best_match = match
 
-        # 4. Amount match (confidence: 70)
+        # 4. Amount match (confidence: 70) — full outstanding debt incl.
+        # interest + BIK (audit #73), within a small cent-level tolerance.
         if case.outstanding_amount > 0 and transaction_amount > 0:
-            if transaction_amount == case.outstanding_amount:
+            if abs(transaction_amount - case.outstanding_amount) <= AMOUNT_MATCH_TOLERANCE:
                 match = MatchCandidate(
                     case_id=case.id,
                     match_method=MatchMethod.AMOUNT,
                     confidence=MATCH_CONFIDENCE[MatchMethod.AMOUNT],
-                    details=f"Bedrag {transaction_amount} komt exact overeen met openstaand bedrag",
+                    details=(
+                        f"Bedrag {transaction_amount} komt overeen met "
+                        f"openstaande schuld {case.outstanding_amount}"
+                    ),
                 )
                 if not best_match or match.confidence > best_match.confidence:
                     best_match = match

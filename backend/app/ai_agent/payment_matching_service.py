@@ -33,7 +33,11 @@ from app.ai_agent.payment_matching_schemas import (
 from app.cases.models import Case
 from app.collections.models import Claim
 from app.collections.schemas import PaymentCreate
-from app.collections.service import delete_payment, record_trust_debtor_payment
+from app.collections.service import (
+    delete_payment,
+    get_financial_summary,
+    record_trust_debtor_payment,
+)
 from app.shared.exceptions import ConflictError
 from app.trust_funds.service import reverse_transaction as reverse_trust_transaction
 
@@ -192,7 +196,41 @@ async def _load_case_match_data(
         claims = list(claims_result.scalars().all())
         invoice_numbers = [c.invoice_number for c in claims if c.invoice_number]
 
-        outstanding = Decimal(str(case.total_principal)) - Decimal(str(case.total_paid))
+        # audit #73: match against the FULL outstanding debt (principal +
+        # interest + BIK + nakosten − paid), not just the principal remainder,
+        # so a debtor paying the complete amount matches on amount. Reuse the
+        # financial-summary grand_total logic (same figure as the case detail).
+        # Fall back to principal − paid if the interest calc cannot run (e.g. no
+        # statutory rate for the period) so one un-priceable case never breaks
+        # the whole import's matching.
+        principal = Decimal(str(case.total_principal))
+        paid = Decimal(str(case.total_paid))
+        if principal <= 0:
+            outstanding = principal - paid
+        else:
+            try:
+                summary = await get_financial_summary(
+                    db,
+                    tenant_id,
+                    case.id,
+                    case.interest_type,
+                    case.contractual_rate,
+                    case.contractual_compound,
+                    bik_override=case.bik_override,
+                    bik_override_percentage=case.bik_override_percentage,
+                    include_btw_on_bik=(
+                        not case.client.is_btw_plichtig if case.client else False
+                    ),
+                    nakosten_type=case.nakosten_type,
+                )
+                outstanding = summary["total_outstanding"]
+            except ValueError as exc:
+                logger.warning(
+                    "Outstanding for case %s fell back to principal − paid: %s",
+                    case.case_number,
+                    exc,
+                )
+                outstanding = principal - paid
         outstanding = outstanding.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
         case_data_list.append(

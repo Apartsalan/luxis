@@ -1,15 +1,20 @@
 """Tests for the trust_funds module — derdengelden transactions, approval, balance."""
 
 import uuid
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
 from app.auth.service import create_access_token, hash_password
+from app.cases.models import Case
 from app.relations.models import Contact
+from app.trust_funds.models import TrustTransaction
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -244,6 +249,91 @@ async def test_disbursement_no_balance(
         headers=auth_headers,
     )
     assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_concurrent_disbursements_serialised_by_case_lock(
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    test_company: Contact,
+    session_factory,
+):
+    """Two concurrent disbursements on one case must not both pass the balance
+    check and overdraw it (audit #70).
+
+    The balance is an aggregate over rows, so without serialisation two debits
+    can each read available=1000, both pass `available >= amount`, and both
+    insert — driving the balance negative. A per-case row lock serialises them:
+    the second blocks until the first commits. Proven here deterministically
+    via statement_timeout — WITHOUT the lock the second would not block and
+    would succeed (no exception), failing this test.
+    """
+    # Case with an approved deposit of 1000.
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-09001",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today(),
+        total_principal=Decimal("0.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    await db.flush()
+    db.add(
+        TrustTransaction(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            contact_id=test_company.id,
+            transaction_type="deposit",
+            amount=Decimal("1000.00"),
+            transaction_date=date.today(),
+            description="Storting",
+            status="approved",
+            created_by=test_user.id,
+        )
+    )
+    await db.commit()
+
+    from app.trust_funds import service
+    from app.trust_funds.schemas import TrustTransactionCreate
+
+    data = TrustTransactionCreate(
+        transaction_type="disbursement",
+        amount=Decimal("800.00"),
+        description="Uitbetaling griffierecht",
+        beneficiary_name="Rechtbank Amsterdam",
+        beneficiary_iban="NL91ABNA0417164300",
+    )
+
+    sa = session_factory()
+    sb = session_factory()
+    try:
+        # B aborts a query that blocks for >1s, so a held lock surfaces as an
+        # error instead of hanging the test forever.
+        await sb.execute(text("SET statement_timeout = '1000ms'"))
+
+        # A creates a disbursement (takes the case lock) and keeps its
+        # transaction open — the lock is held until A commits/rolls back.
+        await service.create_transaction(sa, test_tenant.id, case.id, test_user.id, data)
+
+        # B tries the same disbursement: it must block on A's case lock and be
+        # cancelled by statement_timeout. Without the lock it would just insert.
+        with pytest.raises(DBAPIError):
+            await service.create_transaction(
+                sb, test_tenant.id, case.id, test_user.id, data
+            )
+    finally:
+        await sa.rollback()
+        await sb.rollback()
+        await sa.close()
+        await sb.close()
 
 
 # ── Approval Workflow ────────────────────────────────────────────────────────

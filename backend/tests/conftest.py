@@ -128,6 +128,17 @@ async def db(setup_database):
 
 
 @pytest_asyncio.fixture
+def session_factory():
+    """Factory for *independent* sessions on the test engine.
+
+    Concurrency tests need two simultaneous transactions on separate
+    connections (NullPool gives each its own) to exercise row-locking — the
+    single shared `db` session cannot contend with itself.
+    """
+    return TestSession
+
+
+@pytest_asyncio.fixture
 async def client(db: AsyncSession):
     """Provide a test HTTP client with the test database injected."""
 

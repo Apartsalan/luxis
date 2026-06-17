@@ -70,6 +70,28 @@ async def _self_approval_allowed(db: AsyncSession, tenant_id: uuid.UUID) -> bool
 # ── Balance Calculation ──────────────────────────────────────────────────────
 
 
+async def _lock_case_for_balance(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> None:
+    """Serialise trust-balance mutations for one case (audit #70).
+
+    The balance is an aggregate over many rows, so two concurrent debits can
+    each read ``available`` via SELECTs, both pass the ``available >= amount``
+    guard, and both insert — driving the balance negative. Taking a row lock on
+    the case row makes read-check-write atomic per case: a second mutation
+    blocks until the first commits, then re-reads the true balance. The lock is
+    held until the request transaction commits/rolls back, so it pairs with
+    get_db's commit-on-success / rollback-on-error semantics. Every
+    balance-reducing path takes this same lock, so they serialise against each
+    other; each locks exactly one case row, so there is no deadlock ordering.
+    """
+    await db.execute(
+        select(Case.id)
+        .where(Case.id == case_id, Case.tenant_id == tenant_id)
+        .with_for_update()
+    )
+
+
 async def get_balance(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -722,6 +744,7 @@ async def create_transaction(
 
     # For disbursements: check available balance + beneficiary details
     if data.transaction_type == "disbursement":
+        await _lock_case_for_balance(db, tenant_id, case_id)
         balance = await get_balance(db, tenant_id, case_id)
         if balance.available < data.amount:
             raise BadRequestError(
@@ -848,6 +871,7 @@ async def create_offset_to_invoice(
         )
 
     # Check trust balance
+    await _lock_case_for_balance(db, tenant_id, case_id)
     balance = await get_balance(db, tenant_id, case_id)
     if balance.available < data.amount:
         raise BadRequestError(
@@ -1029,14 +1053,19 @@ async def approve_transaction(
         debit_types = ("disbursement", "offset_to_invoice")
         # Re-check balance before final approval of debit transactions
         if transaction.transaction_type in debit_types:
+            await _lock_case_for_balance(db, tenant_id, transaction.case_id)
             balance = await get_balance(db, tenant_id, transaction.case_id)
-            # Available balance already excludes this pending transaction,
-            # so we need to add it back for comparison
-            effective_available = balance.available + transaction.amount
-            if effective_available < transaction.amount:
+            # Approving this debit moves it from pending to approved, subtracting
+            # `amount` from the approved balance. total_balance reflects only
+            # approved deposits/debits (this pending one is excluded), so it must
+            # cover the amount or approval would drive the balance negative.
+            # (The old check added the amount back and compared to itself —
+            # effectively `available < 0`, audit #71 — which mis-handled other
+            # pending debits.)
+            if balance.total_balance < transaction.amount:
                 raise BadRequestError(
                     f"Onvoldoende saldo voor goedkeuring. "
-                    f"Beschikbaar: {effective_available}, gevraagd: {transaction.amount}"
+                    f"Beschikbaar: {balance.total_balance}, gevraagd: {transaction.amount}"
                 )
 
         transaction.approved_by_2 = approver_id
@@ -1238,6 +1267,7 @@ async def reverse_transaction(
 
     # Deposit reversal lowers the balance — never below zero
     if original.transaction_type == "deposit":
+        await _lock_case_for_balance(db, tenant_id, original.case_id)
         balance = await get_balance(db, tenant_id, original.case_id)
         if balance.available < original.amount:
             raise BadRequestError(

@@ -126,6 +126,85 @@ async def test_create_contact_missing_name(client: AsyncClient, auth_headers: di
     assert response.status_code == 422
 
 
+# ── #66: backend validation of KvK / e-mail / BTW / IBAN ──────────────────────
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("email", "not-an-email"),
+        ("email", "missing@dot"),
+        ("kvk_number", "1234"),  # too short
+        ("kvk_number", "ABCDEFGH"),  # not digits
+        ("kvk_number", "123456789"),  # 9 digits, too long
+        ("btw_number", "GARBAGE"),
+        ("btw_number", "NL123B01"),  # too few digits
+        ("iban", "XX"),  # wrong format
+        ("iban", "NL00INGB0001234567"),  # right format, wrong check digits
+    ],
+)
+async def test_create_contact_invalid_field(
+    client: AsyncClient, auth_headers: dict, field: str, value: str
+):
+    """Malformed business identifiers must be rejected with 422 (audit #66)."""
+    payload = {"contact_type": "company", "name": "Validatie BV", field: value}
+    response = await client.post("/api/relations", json=payload, headers=auth_headers)
+    assert response.status_code == 422, f"{field}={value!r} should be rejected"
+
+
+@pytest.mark.asyncio
+async def test_create_contact_normalizes_valid_fields(
+    client: AsyncClient, auth_headers: dict
+):
+    """Valid identifiers are accepted and normalised (spaces/case stripped)."""
+    payload = {
+        "contact_type": "company",
+        "name": "Net BV",
+        "email": "  info@net.nl  ",
+        "kvk_number": "12 34 56 78",
+        "btw_number": "nl123456789b01",
+        "iban": "NL91 ABNA 0417 1643 00",
+    }
+    response = await client.post("/api/relations", json=payload, headers=auth_headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["kvk_number"] == "12345678"
+    assert data["btw_number"] == "NL123456789B01"
+    assert data["iban"] == "NL91ABNA0417164300"
+    assert data["email"] == "info@net.nl"
+
+
+@pytest.mark.asyncio
+async def test_create_contact_empty_optional_fields_allowed(
+    client: AsyncClient, auth_headers: dict
+):
+    """Empty strings on optional id fields must NOT block creation (non-breaking)."""
+    payload = {
+        "contact_type": "company",
+        "name": "Leeg BV",
+        "email": "",
+        "kvk_number": "",
+        "btw_number": "",
+        "iban": "",
+    }
+    response = await client.post("/api/relations", json=payload, headers=auth_headers)
+    assert response.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_update_contact_invalid_iban(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """Updating a contact with a bad IBAN must return 422 (audit #66)."""
+    response = await client.put(
+        f"/api/relations/{test_company.id}",
+        json={"iban": "NL00INGB0001234567"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 422
+
+
 # ── Get Contact Detail ────────────────────────────────────────────────────────
 
 

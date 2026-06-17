@@ -5,7 +5,15 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.shared.validators import (
+    optional,
+    validate_btw,
+    validate_email,
+    validate_iban,
+    validate_kvk,
+)
 
 InterestType = Literal["statutory", "commercial", "government", "contractual"]
 Salutation = Literal["mr", "mrs", "unknown"]
@@ -13,7 +21,36 @@ Salutation = Literal["mr", "mrs", "unknown"]
 # ── Request Schemas ──────────────────────────────────────────────────────────
 
 
-class ContactCreate(BaseModel):
+class ContactFieldValidators(BaseModel):
+    """Normalise + validate Dutch business identifiers (audit #66).
+
+    Shared by ContactCreate and ContactUpdate. ``check_fields=False`` because
+    the validated fields are declared on the subclasses, not on this mixin.
+    Empty/blank values are mapped to NULL so the fields stay optional.
+    """
+
+    @field_validator("email", "billing_email", check_fields=False)
+    @classmethod
+    def _validate_email(cls, v: str | None) -> str | None:
+        return optional(v, validate_email)
+
+    @field_validator("kvk_number", check_fields=False)
+    @classmethod
+    def _validate_kvk(cls, v: str | None) -> str | None:
+        return optional(v, validate_kvk)
+
+    @field_validator("btw_number", check_fields=False)
+    @classmethod
+    def _validate_btw(cls, v: str | None) -> str | None:
+        return optional(v, validate_btw)
+
+    @field_validator("iban", check_fields=False)
+    @classmethod
+    def _validate_iban(cls, v: str | None) -> str | None:
+        return optional(v, validate_iban)
+
+
+class ContactCreate(ContactFieldValidators):
     contact_type: str = Field(
         ..., pattern="^(company|person)$", description="'company' or 'person'"
     )
@@ -48,7 +85,7 @@ class ContactCreate(BaseModel):
     notes: str | None = None
 
 
-class ContactUpdate(BaseModel):
+class ContactUpdate(ContactFieldValidators):
     name: str | None = Field(None, min_length=1, max_length=255)
     contact_person: str | None = None
     first_name: str | None = None

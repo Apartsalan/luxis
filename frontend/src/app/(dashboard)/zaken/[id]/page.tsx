@@ -198,21 +198,37 @@ export default function ZaakDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await api(`/api/ai-agent/drafts/${draftIdFromQuery}`);
+        let draftId = draftIdFromQuery;
+        // "latest"-sentinel: open het nieuwste nog niet-verzonden concept van dit
+        // dossier. Gebruikt door de CaseActionFeed "Openen"-knop — de
+        // ai_draft_ready-notificatie draagt zelf geen concept-id, dus zoeken we
+        // het hier op via de dossier-conceptenlijst (nieuwste eerst).
+        if (draftIdFromQuery === "latest") {
+          const listRes = await api(`/api/ai-agent/drafts/case/${id}`);
+          if (!listRes.ok) throw new Error("Concept niet gevonden");
+          const drafts = await listRes.json();
+          const openable = (Array.isArray(drafts) ? drafts : []).find(
+            (dr: { status?: string; sent_at?: string | null }) =>
+              dr.status !== "sent" && !dr.sent_at
+          );
+          if (!openable) throw new Error("Geen openstaand concept voor dit dossier");
+          draftId = openable.id;
+        }
+        const res = await api(`/api/ai-agent/drafts/${draftId}`);
         if (!res.ok) throw new Error("Concept niet gevonden");
         const d = await res.json();
         if (cancelled) return;
-        setActiveDraftId(draftIdFromQuery);
+        setActiveDraftId(draftId);
         setDraftSubject(d.subject || "");
         setDraftBody(d.body || "");
         setDraftBodyHtml(d.body_html || "");
         setCaseEmailOpen(true);
-      } catch {
-        toast.error("Kon AI-concept niet laden");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Kon AI-concept niet laden");
       }
     })();
     return () => { cancelled = true; };
-  }, [draftIdFromQuery]);
+  }, [draftIdFromQuery, id]);
 
   // BUG-73 fix (sessie 134): directe trigger ipv router.replace(?draft=X)
   // useSearchParams updatet niet altijd betrouwbaar na router.replace in Next.js 15,

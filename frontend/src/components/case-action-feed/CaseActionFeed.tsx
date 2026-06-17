@@ -340,11 +340,14 @@ function SnoozeMenu({ onSnooze }: { onSnooze: (hours: number) => void }) {
   );
 }
 
-function DraftReadyCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps) {
+function DraftReadyCard({ item, onDismiss, onSnooze }: FeedCardProps) {
   const router = useRouter();
-  const openTaken = () => {
-    if (onNavigate) onNavigate("taken");
-    else if (item.case_id) router.push(`/zaken/${item.case_id}?tab=taken`);
+  // Open het concept zelf (review + versturen). Vroeger ging deze knop naar de
+  // taken-tab, maar daar zit géén knop om het concept te heropenen → doodlopend.
+  // De dossierpagina vangt ?draft=latest op en opent het nieuwste niet-verzonden
+  // concept in de review/verstuur-dialoog.
+  const openDraft = () => {
+    if (item.case_id) router.push(`/zaken/${item.case_id}?draft=latest`);
   };
   return (
     <CardShell
@@ -358,7 +361,7 @@ function DraftReadyCard({ item, onDismiss, onSnooze, onNavigate }: FeedCardProps
       onDismiss={onDismiss}
       onSnooze={onSnooze}
       actions={
-        <Button size="sm" variant="default" onClick={openTaken}>
+        <Button size="sm" variant="default" onClick={openDraft}>
           Openen
         </Button>
       }

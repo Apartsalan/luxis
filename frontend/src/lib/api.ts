@@ -77,3 +77,28 @@ export async function api(path: string, options: RequestInit = {}): Promise<Resp
 
   return response;
 }
+
+/**
+ * Haal een leesbare melding uit een FastAPI-foutbody.
+ *
+ * `detail` kan een string zijn (onze eigen HTTPExceptions) óf een array van
+ * Pydantic-validatiefouten (HTTP 422). Zonder deze helper levert
+ * `new Error(body.detail)` op een 422 de tekst "[object Object]" op, omdat de
+ * array/het object als string wordt weergegeven. Pydantic plakt "Value error, "
+ * vóór eigen ValueError-meldingen — die strippen we eraf.
+ */
+export function parseApiError(body: unknown, fallback: string): string {
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((e) =>
+        e && typeof e === "object" && "msg" in e
+          ? String((e as { msg: unknown }).msg).replace(/^Value error,\s*/i, "")
+          : null
+      )
+      .filter((m): m is string => Boolean(m));
+    if (msgs.length) return Array.from(new Set(msgs)).join(" · ");
+  }
+  return fallback;
+}

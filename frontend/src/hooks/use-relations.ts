@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, parseApiError } from "@/lib/api";
 
 export interface ContactSummary {
   id: string;
@@ -161,8 +161,8 @@ export function useCreateRelation() {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || "Failed to create relation");
+        const error = await res.json().catch(() => ({}));
+        throw new Error(parseApiError(error, "Relatie aanmaken mislukt"));
       }
       return res.json();
     },
@@ -188,8 +188,8 @@ export function useUpdateRelation() {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || "Failed to update relation");
+        const error = await res.json().catch(() => ({}));
+        throw new Error(parseApiError(error, "Relatie bijwerken mislukt"));
       }
       return res.json();
     },

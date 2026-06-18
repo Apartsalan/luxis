@@ -141,14 +141,24 @@ async def build_learned_examples_text(
 # ── Backfill + capture (leer-data vullen) ────────────────────────────────────
 
 
-# Sjabloonbrieven (sommatie/aanmaning/...) zijn GEEN vrije verweer-reacties — die
-# sluiten we uit op onderwerp, anders leert het systeem standaard-betaalbrieven in
-# plaats van Lisanne's argumentatie. (Dit was de fout in de allereerste versie.)
-_TEMPLATE_SUBJECT = re.compile(
-    r"\b(sommatie|aanmaning|herinnering|betalingsherinnering|ingebrekestelling|"
-    r"dagvaarding|verzoekschrift|14[- ]?dagenbrief|14 dagen)\b",
+# Collectiebrief-markers: in het ONDERWERP óf in de kop/opening van de BODY. Een vrije
+# verweer-reactie weerlegt de argumenten van de debiteur; een collectiebrief (sommatie,
+# aanmaning, of een follow-up "Eerder heb ik u aangeschreven ... ter incasso") kondigt
+# een betaal-eis aan. Bij twijfel sluiten we uit — liever geen voorbeeld dan een fout
+# voorbeeld. (De eerste versie keek alleen naar het onderwerp en miste brieven waar de
+# "Betreft: SOMMATIE"-kop in de body staat.)
+_TEMPLATE_MARKERS = re.compile(
+    r"(sommatie|aanmaning|herinnering|betalingsherinnering|ingebrekestelling|"
+    r"dagvaarding|verzoekschrift|14[- ]?dagenbrief|ter incasso|"
+    r"eerder heb ik u aangeschreven|eerder schreef ik u aan)",
     re.IGNORECASE,
 )
+
+
+def _looks_like_collection_letter(subject: str | None, body: str | None) -> bool:
+    """True als dit een sjabloon-collectiebrief is (geen vrije verweer-reactie)."""
+    head = f"{subject or ''}\n{(body or '')[:400]}"
+    return bool(_TEMPLATE_MARKERS.search(head))
 
 
 async def _category_for_outbound(
@@ -219,8 +229,8 @@ async def backfill_learned_answers(
     for email in outbound:
         if email.id in seen:
             continue
-        # Sjabloon-sommatie/aanmaning overslaan — geen vrije verweer-reactie.
-        if _TEMPLATE_SUBJECT.search(email.subject or ""):
+        # Sjabloon-collectiebrief overslaan — geen vrije verweer-reactie.
+        if _looks_like_collection_letter(email.subject, email.body_text):
             continue
         category = await _category_for_outbound(
             db, tenant_id, email.case_id, email.email_date

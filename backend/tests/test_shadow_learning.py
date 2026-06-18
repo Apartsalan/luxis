@@ -189,10 +189,10 @@ async def test_backfill_learns_from_outbound_correction_and_dedups(
 
 
 @pytest.mark.asyncio
-async def test_backfill_excludes_template_letters(
+async def test_backfill_excludes_collection_letters(
     db, test_tenant, test_user, test_company, test_person
 ):
-    """Een sjabloon-sommatie is geen vrije verweer-reactie en moet worden uitgesloten."""
+    """Collectiebrieven (sommatie in het onderwerp ÓF in de body-kop) zijn geen verweer-reacties."""
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user, step=None
     )
@@ -203,14 +203,22 @@ async def test_backfill_excludes_template_letters(
         body="Ik betwist de factuur.", when=t0,
     )
     await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    # (a) sommatie in het onderwerp
     await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
         subject="WEDEROM SOMMATIE TOT BETALING / 2026-00049",
-        body=(
-            "Eerder heb ik u aangeschreven betreffende de openstaande vordering. "
-            "Ik verzoek u nogmaals het volledige bedrag te voldoen."
-        ),
+        body="Ik verzoek u het volledige bedrag binnen vijf dagen te voldoen.",
         when=t0 + timedelta(hours=1),
+    )
+    # (b) schoon onderwerp, maar collectiebrief-opening in de body
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht",
+        body=(
+            "Eerder heb ik u aangeschreven betreffende de openstaande vordering van "
+            "mijn cliënt. Deze vordering staat ter incasso. Ik verzoek u te betalen."
+        ),
+        when=t0 + timedelta(hours=2),
     )
     assert await backfill_learned_answers(db, test_tenant.id) == 0
 

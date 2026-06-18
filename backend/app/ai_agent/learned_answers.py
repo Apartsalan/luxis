@@ -45,14 +45,20 @@ _CUT_MARKERS = [
     re.compile(r"^\s*>", re.MULTILINE),
     re.compile(r"^\s*(Met vriendelijke groet|Hoogachtend|Met groet|Mvg)\b", re.IGNORECASE | re.MULTILINE),
 ]
-_LEADING_GREETING = re.compile(r"^\s*Geachte[^\n]*,\s*", re.IGNORECASE)
+# Hele aanhef-regel ("Geachte ...,"). Alles ervóór (Betreft, adresblok, sjabloon-kop)
+# én de regel zelf wordt weggehaald, zodat alleen de eigenlijke inhoud overblijft.
+_GREETING_LINE = re.compile(r"^\s*Geachte[^\n]*,?\s*$", re.IGNORECASE | re.MULTILINE)
 
 
 def clean_answer_body(raw: str) -> str:
-    """Haal de kern-argumentatie uit een verzonden mail (zonder aanhef/handtekening/quote)."""
+    """Haal de kern-inhoud uit een antwoord (zonder kop/aanhef/handtekening/quote)."""
     text = (raw or "").replace("\r\n", "\n").strip()
     if not text:
         return ""
+    # Drop alles t/m de aanhef-regel (Betreft/adresblok/"Geachte ...").
+    g = _GREETING_LINE.search(text)
+    if g:
+        text = text[g.end():].lstrip()
     # Knip bij de vroegste quote-/handtekening-marker.
     cut = len(text)
     for marker in _CUT_MARKERS:
@@ -60,8 +66,6 @@ def clean_answer_body(raw: str) -> str:
         if m and m.start() < cut:
             cut = m.start()
     text = text[:cut]
-    # Leidende aanhef weghalen (de hand-voorbeelden hebben die ook niet).
-    text = _LEADING_GREETING.sub("", text, count=1)
     # Lege regels samentrekken + trimmen.
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
@@ -137,78 +141,50 @@ async def build_learned_examples_text(
 # ── Backfill + capture (leer-data vullen) ────────────────────────────────────
 
 
-async def _category_for_outbound(
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    case_id: uuid.UUID,
-    sent_before: object,
-) -> str | None:
-    """Bepaal de categorie waarop een uitgaand antwoord reageerde: de classificatie van
-    de meest recente INKOMENDE mail op dit dossier vóór de verzenddatum."""
-    row = (
-        await db.execute(
-            select(EmailClassification.category)
-            .join(SyncedEmail, EmailClassification.synced_email_id == SyncedEmail.id)
-            .where(
-                EmailClassification.tenant_id == tenant_id,
-                EmailClassification.case_id == case_id,
-                SyncedEmail.direction == "inbound",
-                SyncedEmail.email_date <= sent_before,
-            )
-            .order_by(SyncedEmail.email_date.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-    return row
-
-
 async def backfill_learned_answers(
     db: AsyncSession,
     tenant_id: uuid.UUID,
-    *,
-    only_learnable: bool = True,
 ) -> int:
-    """Vul `learned_answers` uit bestaande uitgaande antwoorden. Idempotent (dedup op
-    source_synced_email_id). Geeft het aantal NIEUW toegevoegde voorbeelden terug.
+    """Leer van verzonden AI-verweerconcepten. Idempotent (dedup op source_ai_draft_id).
 
-    Wordt eenmalig gedraaid + opnieuw na elke e-mailsync (continu lerend, goedkoop).
+    Bron = AIDraft met status 'sent' én een verweer-classificatie (betwisting /
+    juridisch_verweer). Dat zijn echte verweer-reacties in de juiste categorie die de
+    advocaat heeft goedgekeurd door ze te versturen. Ruwe uitgaande mails worden bewust
+    NIET gebruikt — die bevatten vooral sjabloon-sommaties (verkeerde voorbeelden).
+
+    Wordt eenmalig + na elke e-mailsync gedraaid (continu lerend, goedkoop). Geeft het
+    aantal NIEUW toegevoegde voorbeelden terug.
     """
-    # Reeds verwerkte bron-mails (dedup).
     existing = (
         await db.execute(
-            select(LearnedAnswer.source_synced_email_id).where(
+            select(LearnedAnswer.source_ai_draft_id).where(
                 LearnedAnswer.tenant_id == tenant_id,
-                LearnedAnswer.source_synced_email_id.is_not(None),
+                LearnedAnswer.source_ai_draft_id.is_not(None),
             )
         )
     ).scalars().all()
     seen = {e for e in existing if e is not None}
 
-    outbound = (
+    # Verzonden concepten met een verweer-classificatie (incl. de categorie).
+    rows = (
         await db.execute(
-            select(SyncedEmail)
-            .where(
-                SyncedEmail.tenant_id == tenant_id,
-                SyncedEmail.direction == "outbound",
-                SyncedEmail.case_id.is_not(None),
-                SyncedEmail.is_bounce.is_(False),
+            select(AIDraft, EmailClassification.category)
+            .join(
+                EmailClassification, AIDraft.classification_id == EmailClassification.id
             )
-            .order_by(SyncedEmail.email_date.asc())
+            .where(
+                AIDraft.tenant_id == tenant_id,
+                AIDraft.status == "sent",
+                EmailClassification.category.in_(LEARNABLE_CATEGORIES),
+            )
         )
-    ).scalars().all()
+    ).all()
 
     added = 0
-    for email in outbound:
-        if email.id in seen:
+    for draft, category in rows:
+        if draft.id in seen:
             continue
-        category = await _category_for_outbound(
-            db, tenant_id, email.case_id, email.email_date
-        )
-        if not category:
-            continue
-        if only_learnable and category not in LEARNABLE_CATEGORIES:
-            continue
-        body = clean_answer_body(email.body_text or email.snippet or "")
+        body = clean_answer_body(draft.body or "")
         if len(body) < 40:  # te kort om een zinvol voorbeeld te zijn
             continue
         db.add(
@@ -217,11 +193,11 @@ async def backfill_learned_answers(
                 category=category,
                 body=body,
                 language="nl",
-                source_synced_email_id=email.id,
-                source_case_id=email.case_id,
+                source_ai_draft_id=draft.id,
+                source_case_id=draft.case_id,
             )
         )
-        seen.add(email.id)
+        seen.add(draft.id)
         added += 1
 
     if added:

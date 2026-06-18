@@ -250,6 +250,13 @@ class LearnedAnswer(TenantBase):
     language: Mapped[str] = mapped_column(String(5), nullable=False, default="nl")
 
     # Herkomst — voor dedup bij backfill en voor inzicht in de bron.
+    # Primaire bron = een verzonden AI-verweerconcept (gegarandeerd een verweer-reactie
+    # in de juiste categorie, door de advocaat goedgekeurd door het te versturen).
+    source_ai_draft_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("ai_drafts.id", ondelete="SET NULL"), nullable=True, unique=True
+    )
+    # source_synced_email_id blijft beschikbaar voor een latere, sterkere bron: de echte
+    # hand-bewerkte verzonden tekst (vergt betrouwbare draft↔mail-koppeling).
     source_synced_email_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("synced_emails.id", ondelete="SET NULL"), nullable=True, unique=True
     )

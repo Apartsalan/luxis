@@ -327,7 +327,7 @@ async def get_learning_stats(db: AsyncSession, tenant_id: uuid.UUID) -> dict:
         if not outbound:
             continue
         ai_body = clean_answer_body(draft.body or "")
-        sent_body = clean_answer_body(outbound.body_text or outbound.snippet or "")
+        sent_body = clean_answer_body(_email_body_text(outbound))
         if not ai_body or not sent_body:
             continue
         ratio = _similarity(ai_body, sent_body)

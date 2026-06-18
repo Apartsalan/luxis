@@ -413,6 +413,13 @@ async def advance_after_send(
         await db.commit()
         return {"advanced": False, "reason": "Dossier heeft geen actieve stap"}
 
+    # Log de verzending op de HUIDIGE stap (de stap waarvoor de brief gold) zodat de
+    # daadwerkelijk verzonden sommatie zichtbaar wordt in de staphistorie — ook als er
+    # straks geen advance-regel blijkt te zijn.
+    from app.incasso.service import mark_current_step_communication_sent
+
+    await mark_current_step_communication_sent(db, current_user.tenant_id, case)
+
     rule = (await db.execute(
         select(StepTransition).where(
             StepTransition.tenant_id == current_user.tenant_id,

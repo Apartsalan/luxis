@@ -518,7 +518,16 @@ async def create_case(
         from app.incasso.service import list_pipeline_steps, move_case_to_step
 
         steps = await list_pipeline_steps(db, tenant_id, active_only=True)
-        first_step = min(steps, key=lambda s: s.sort_order) if steps else None
+        # S166 (punt 3 + B2C-anders-dan-B2B): kies de eerste stap die geldt voor het
+        # debiteurtype van dit dossier. Zo start een B2C-dossier op de 14-dagenbrief
+        # (debtor_type "b2c", laagste sort_order) en een B2B-dossier op "Eerste sommatie"
+        # — de B2C-only 14-dagenbrief wordt voor een B2B-dossier overgeslagen.
+        valid_steps = [
+            s for s in steps if s.debtor_type in ("both", case.debtor_type)
+        ]
+        first_step = (
+            min(valid_steps, key=lambda s: s.sort_order) if valid_steps else None
+        )
         if first_step:
             await move_case_to_step(
                 db,

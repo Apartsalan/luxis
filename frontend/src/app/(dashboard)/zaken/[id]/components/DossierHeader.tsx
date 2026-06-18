@@ -145,10 +145,21 @@ export default function DossierHeader({
 }: DossierHeaderProps) {
   const [renteDialogOpen, setRenteDialogOpen] = useState(false);
 
-  // DF2-09: Pipeline step selector for incasso cases
+  // DF2-09: Pipeline step selector for incasso cases.
+  // S166 (punt 4, "B2C anders dan B2B"): toon alleen de stappen die gelden voor het
+  // debiteurtype van dit dossier — een B2C-dossier ziet de 14-dagenbrief (en niet de
+  // B2B-only faillissement-stappen), een B2B-dossier andersom. "both"-stappen gelden
+  // voor allebei. Zonder debtor_type tonen we alles.
   const { data: pipelineSteps } = useIncassoPipelineSteps(true);
   const updateCase = useUpdateCase();
-  const activeSteps = pipelineSteps?.filter((s: PipelineStep) => s.is_active) ?? [];
+  const activeSteps =
+    pipelineSteps?.filter(
+      (s: PipelineStep) =>
+        s.is_active &&
+        (!zaak.debtor_type ||
+          s.debtor_type === "both" ||
+          s.debtor_type === zaak.debtor_type)
+    ) ?? [];
 
   const handleStepChange = async (stepId: string) => {
     try {

@@ -599,15 +599,28 @@ function NieuweZaakPage() {
         updateField("debtor_type", data.debtor_type === "company" ? "b2b" : "b2c");
       }
 
-      // Step 2: Partijen — pre-fill search fields and trigger auto-match
-      if (data.debtor_name) {
-        setOpponentSearch(data.debtor_name);
+      // Step 2: Partijen — pre-fill search fields and trigger auto-match.
+      // Bij een particulier (debtor_type === "person") staat de naam soms níét in
+      // debtor_name (dat veld is bedoeld voor de handels-/bedrijfsnaam) maar in
+      // debtor_contact_person (de persoon / t.a.v.). Val daarom voor een persoon
+      // terug op de contactpersoon, zodat de wederpartij-naam (voornaam + achternaam,
+      // of alleen de achternaam als er geen voornaam is) tóch automatisch wordt
+      // ingevuld i.p.v. een leeg wederpartij-veld.
+      const debtorDisplayName =
+        data.debtor_name?.trim() ||
+        (data.debtor_type === "person" ? data.debtor_contact_person?.trim() : "") ||
+        "";
+      if (debtorDisplayName) {
+        setOpponentSearch(debtorDisplayName);
         setAiParsedOpponent(true);
-        // Pre-fill inline opponent form with all extracted NAW data
+        // Pre-fill inline opponent form with all extracted NAW data. Voor een persoon
+        // ís de naam de contactpersoon — laat contact_person dan leeg om dubbeling te
+        // voorkomen.
         setNewOpponent({
           contact_type: data.debtor_type || "company",
-          name: data.debtor_name || "",
-          contact_person: data.debtor_contact_person || "",
+          name: debtorDisplayName,
+          contact_person:
+            data.debtor_type === "person" ? "" : data.debtor_contact_person || "",
           email: data.debtor_email || "",
           phone: "",
           kvk_number: data.debtor_kvk || "",
@@ -625,14 +638,20 @@ function NieuweZaakPage() {
           setShowOpponentDetails(true);
         }
       }
-      if (data.creditor_name) {
-        setClientSearch(data.creditor_name);
+      // Zelfde particulier-terugval voor de crediteur/client (zie wederpartij hierboven).
+      const creditorDisplayName =
+        data.creditor_name?.trim() ||
+        (data.creditor_type === "person" ? data.creditor_contact_person?.trim() : "") ||
+        "";
+      if (creditorDisplayName) {
+        setClientSearch(creditorDisplayName);
         setAiParsedClient(true);
         // Pre-fill inline client form with all extracted NAW data
         setNewClient({
           contact_type: data.creditor_type || "company",
-          name: data.creditor_name || "",
-          contact_person: data.creditor_contact_person || "",
+          name: creditorDisplayName,
+          contact_person:
+            data.creditor_type === "person" ? "" : data.creditor_contact_person || "",
           email: data.creditor_email || "",
           phone: "",
           kvk_number: data.creditor_kvk || "",

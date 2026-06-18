@@ -33,9 +33,34 @@ from app.incasso.schemas import (
     TransitionUpdate,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
-from app.workflow.models import WorkflowTask
+from app.workflow.models import WorkflowStatus, WorkflowTask
 
 logger = logging.getLogger(__name__)
+
+# ── Pipeline ↔ status koppeling (S166, punt 4: "stappen moeten gelijk lopen") ──
+# De dossierheader toont twee voortgangs-weergaven: de fase-stepper + status-badge
+# (gevoed door Case.status) én de incasso-pipeline (Case.incasso_step_id, met
+# "Concept genereren"). Die liepen niet gelijk: de pipeline schoof op bij verzenden,
+# maar de status/fase bleef staan. Met deze mapping schuift de status mee zodra de
+# pipeline-stap verandert (via move_case_to_step — het enige pad voor stap-wissels),
+# zodat fase-stepper, status-badge en "Volgende stap" de pipeline volgen.
+#
+# Mapping op stap-NAAM → status-slug (de standaard-statussen uit de workflow-seed).
+# Bewust géén status voor administratieve/hold-stappen (Verweer beantwoorden, Opvragen
+# stukken, Voorstel/Akkoord dagvaarden, On hold) en voor "Afgesloten": daar is geen
+# eenduidige juridische tegenhanger → die laten de status ongemoeid. Dit is een
+# afgeleide mapping; Lisanne kan de exacte koppeling later bevestigen/bijstellen.
+STEP_NAME_TO_STATUS: dict[str, str] = {
+    "14-dagenbrief": "14_dagenbrief",
+    "Eerste sommatie": "sommatie",
+    "Tweede sommatie": "tweede_sommatie",
+    "Derde sommatie": "tweede_sommatie",
+    "Sommatie laatste mogelijkheid": "tweede_sommatie",
+    "Verzoekschrift faillissement": "faillissementsaanvraag",
+    "Treffen van regeling": "betalingsregeling",
+    "Bijhouden regeling": "betalingsregeling",
+    "Betaald": "betaald",
+}
 
 # ── Pipeline Step CRUD ────────────────────────────────────────────────────
 
@@ -140,6 +165,10 @@ async def seed_default_steps(
     # Hoofdpad = lineair, 4 dagen tussen stappen. Tussenstappen = handmatig.
     # B2C-pad (dagvaarding/vonnis) komt later — niet in deze seed.
     defaults = [
+        # B2C-only startstap: de 14-dagenbrief (WIK art. 6:96 lid 6 BW) is bij een
+        # particulier wettelijk verplicht en moet vóór de sommaties komen. Staat
+        # daarom als eerste in de lijst → laagste sort_order → eerste stap voor B2C.
+        {"name": "14-dagenbrief", "min_wait_days": 0, "max_wait_days": 15, "step_category": "minnelijk", "debtor_type": "b2c"},
         # Hoofdpad (B2B verzoekschrift faillissement)
         {"name": "Eerste sommatie", "min_wait_days": 0, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
         {"name": "Tweede sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
@@ -337,6 +366,15 @@ async def seed_default_transitions(
             "Geen reactie na 4 dagen",
         ))
 
+    # 1b. B2C-start: na de 14-dagenbrief (wettelijke termijn van 14 dagen) door naar
+    # de eerste sommatie als er niet betaald is. Zo loopt het B2C-pad door op dezelfde
+    # sommatie-keten als B2B (de B2B-only stappen worden voor B2C overgeslagen).
+    defaults.append((
+        "14-dagenbrief", "Eerste sommatie",
+        "timeout", "advance_to_step", {"days": 15}, True,
+        "Geen betaling na 14-dagentermijn",
+    ))
+
     # AUDIT-H12: GEEN debtor_response- of payment-rules meer seeden. Alleen
     # 'timeout' wordt door de rule-evaluator (evaluate_timeout_rules) gelezen.
     # - debtor_response: een binnenkomende verweer-mail wordt al afgehandeld door
@@ -456,6 +494,24 @@ async def move_case_to_step(
     case.incasso_step_id = target_step.id
     case.step_entered_at = now
 
+    # Houd de zaak-status gelijk met de pipeline-stap (S166, punt 4). Alleen bij een
+    # eenduidige mapping én als die status echt bestaat voor deze tenant; anders blijft
+    # de status ongemoeid. We zetten de status direct — de pipeline_change-activity
+    # hieronder is het audit-spoor; we draaien de workflow-transitievalidatie hier
+    # bewust niet (een pipeline-sprong is niet altijd een toegestane status-transitie).
+    mapped_status = STEP_NAME_TO_STATUS.get(target_step.name)
+    if mapped_status and mapped_status != case.status:
+        status_exists = (
+            await db.execute(
+                select(WorkflowStatus).where(
+                    WorkflowStatus.tenant_id == tenant_id,
+                    WorkflowStatus.slug == mapped_status,
+                )
+            )
+        ).scalar_one_or_none()
+        if status_exists is not None:
+            case.status = mapped_status
+
     await db.flush()
     await db.refresh(history)
 
@@ -482,6 +538,56 @@ async def move_case_to_step(
     db.add(activity)
     await db.flush()
 
+    return history
+
+
+async def mark_current_step_communication_sent(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+    *,
+    template_sent: bool = True,
+    email_sent: bool = True,
+    document_id: uuid.UUID | None = None,
+) -> CaseStepHistory | None:
+    """Markeer de open staphistorie-rij van de HUIDIGE stap als verstuurd.
+
+    Een brief/concept hoort bij de stap waarop het dossier op dat moment staat
+    (bv. 'Eerste sommatie'). De `template_sent`/`email_sent`-vlaggen horen dus op
+    de open (nog niet verlaten) history-rij van die stap — niet op de volgende stap.
+    Zonder dit bleef een daadwerkelijk verzonden sommatie onzichtbaar in de
+    staphistorie (alleen het concept werd getoond). Wordt aangeroepen op het
+    verzendpad, vóór een eventuele advance naar de volgende stap.
+
+    Geeft de bijgewerkte rij terug, of None als het dossier geen actieve stap of
+    geen open history-rij heeft.
+    """
+    if not case.incasso_step_id:
+        return None
+
+    result = await db.execute(
+        select(CaseStepHistory)
+        .where(
+            CaseStepHistory.tenant_id == tenant_id,
+            CaseStepHistory.case_id == case.id,
+            CaseStepHistory.step_id == case.incasso_step_id,
+            CaseStepHistory.exited_at.is_(None),
+        )
+        .order_by(CaseStepHistory.entered_at.desc())
+        .limit(1)
+    )
+    history = result.scalar_one_or_none()
+    if history is None:
+        return None
+
+    if template_sent:
+        history.template_sent = True
+    if email_sent:
+        history.email_sent = True
+    if document_id is not None:
+        history.document_id = document_id
+
+    await db.flush()
     return history
 
 

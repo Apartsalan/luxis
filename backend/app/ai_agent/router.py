@@ -460,3 +460,36 @@ async def update_draft(
 # CLEAN-AI-01 (S148): GET /classifications/{id}/smart-replies + smart_reply_service
 # verwijderd. Reageren op een geclassificeerde mail loopt nu via de CaseActionFeed
 # ClassificationDoneCard ('Antwoord opstellen' CTA) → Correspondentie.
+
+
+# ---------------------------------------------------------------------------
+# Shadow-learning (S168): leren van de eigen verzonden antwoorden
+# ---------------------------------------------------------------------------
+
+
+@router.post("/learning/backfill")
+async def learning_backfill(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Vul de leer-voorbeelden uit bestaande verzonden antwoorden (idempotent).
+
+    Eenmalig + periodiek te draaien zodat de agent leert van het echte werk. Geeft
+    het aantal NIEUW toegevoegde voorbeelden terug.
+    """
+    from app.ai_agent.learned_answers import backfill_learned_answers
+
+    added = await backfill_learned_answers(db, current_user.tenant_id)
+    await db.commit()
+    return {"added": added}
+
+
+@router.get("/learning/stats")
+async def learning_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kwaliteits-dashboard: edit-rate (AI-versie vs. verzonden) + leer-statistieken."""
+    from app.ai_agent.learned_answers import get_learning_stats
+
+    return await get_learning_stats(db, current_user.tenant_id)

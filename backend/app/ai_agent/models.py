@@ -226,3 +226,41 @@ class AIDraft(TenantBase):
         "EmailClassification", lazy="selectin"
     )
     reviewed_by: Mapped["User | None"] = relationship("User", lazy="selectin")  # noqa: F821
+
+
+class LearnedAnswer(TenantBase):
+    """Shadow-learning (S166+): een echt, eerder verzonden antwoord van de advocaat,
+    bewaard als voorbeeld voor toekomstige conceptgeneratie.
+
+    Vervangt/aanvult de hand-gecureerde `defense_library`: i.p.v. 5 vaste voorbeelden
+    haalt de agent bij het opstellen van een concept de eigen eerdere antwoorden in
+    dezelfde classificatie-categorie op en stuurt die mee als referentie voor toon en
+    juridische argumentatie. Elk verzonden antwoord wordt automatisch een toekomstig
+    voorbeeld → continu lerend, geen training, blijft een assistent (besluit S160).
+
+    Bron = Lisanne's UITGAANDE SyncedEmail (haar echte, hand-bewerkte tekst — niet de
+    ruwe AI-versie). De body is opgeschoond (kern-argumentatie, zonder aanhef/handtekening/
+    quote). Categorie komt van de classificatie van de inkomende mail waarop ze reageerde.
+    """
+
+    __tablename__ = "learned_answers"
+
+    category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    language: Mapped[str] = mapped_column(String(5), nullable=False, default="nl")
+
+    # Herkomst — voor dedup bij backfill en voor inzicht in de bron.
+    source_synced_email_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("synced_emails.id", ondelete="SET NULL"), nullable=True, unique=True
+    )
+    source_case_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("cases.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Aantal keer dat dit voorbeeld is meegestuurd bij een conceptgeneratie (voor het
+    # dashboard: "van welke eigen antwoorden leert de AI het meest").
+    use_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )

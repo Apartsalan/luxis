@@ -207,6 +207,24 @@ async def email_auto_sync() -> None:
                 except Exception as e:
                     logger.error(f"Scheduler: email sync mislukt voor {account.email_address}: {e}")
 
+            # Shadow-learning (S168): leer continu van nieuw verzonden antwoorden.
+            # Idempotent + goedkoop (dedup op bron-mail); per tenant met een account.
+            from app.ai_agent.learned_answers import backfill_learned_answers
+
+            for learn_tenant_id in {a.tenant_id for a in accounts}:
+                try:
+                    learned = await backfill_learned_answers(session, learn_tenant_id)
+                    if learned:
+                        logger.info(
+                            "Scheduler: shadow-learning +%d voorbeelden (tenant=%s)",
+                            learned, learn_tenant_id,
+                        )
+                except Exception as e:
+                    logger.error(
+                        "Scheduler: shadow-learning backfill mislukt (tenant=%s): %s",
+                        learn_tenant_id, e,
+                    )
+
             await session.commit()
             logger.info(
                 f"Scheduler: email auto-sync klaar — "

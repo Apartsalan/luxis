@@ -434,6 +434,26 @@ async def gather_case_context(
     def _fmt_nl_date(d: date | None) -> str:
         return d.strftime("%d-%m-%Y") if d else ""
 
+    # Shadow-learning: eigen eerdere antwoorden in de categorie van de laatste
+    # classificatie op dit dossier (komt naast de hand-bibliotheek in build_user_prompt).
+    from app.ai_agent.learned_answers import build_learned_examples_text
+    from app.ai_agent.models import EmailClassification
+
+    last_cls_category = (
+        await db.execute(
+            select(EmailClassification.category)
+            .where(
+                EmailClassification.tenant_id == tenant_id,
+                EmailClassification.case_id == case_id,
+            )
+            .order_by(EmailClassification.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    learned_examples_text = await build_learned_examples_text(
+        db, tenant_id, last_cls_category, max_chars=4000
+    )
+
     return {
         "case_data": {
             "case_number": case.case_number,
@@ -484,6 +504,7 @@ async def gather_case_context(
         "av_pdf_path": av_pdf_path,
         "incoming_defense": None,
         "prior_correspondence": [],
+        "learned_examples_text": learned_examples_text,
     }
 
 

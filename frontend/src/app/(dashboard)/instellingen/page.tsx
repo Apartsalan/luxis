@@ -13,6 +13,7 @@ import {
   FileText,
   Cloud,
   Package,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { ProfielTab } from "./profiel-tab";
@@ -26,6 +27,7 @@ import { SjablonenTab } from "./sjablonen-tab";
 import { WeergaveTab } from "./weergave-tab";
 import { ExactTab } from "./exact-tab";
 import { ProductenTab } from "./producten-tab";
+import { AILerenTab } from "./ai-leren-tab";
 
 const TABS = [
   { id: "profiel", label: "Profiel", icon: User },
@@ -33,6 +35,7 @@ const TABS = [
   { id: "modules", label: "Modules", icon: Puzzle },
   { id: "team", label: "Team", icon: Users },
   { id: "workflow", label: "Workflow", icon: GitBranch },
+  { id: "ai-leren", label: "Slim leren", icon: Sparkles },
   { id: "email", label: "E-mail", icon: Mail },
   { id: "meldingen", label: "Meldingen", icon: Bell },
   { id: "sjablonen", label: "Sjablonen", icon: FileText },
@@ -80,6 +83,7 @@ export default function InstellingenPage() {
           {activeTab === "modules" && <ModulesTab />}
           {activeTab === "team" && <TeamTab />}
           {activeTab === "workflow" && <WorkflowTab />}
+          {activeTab === "ai-leren" && <AILerenTab />}
           {activeTab === "email" && <EmailTab />}
           {activeTab === "meldingen" && <MeldingenTab />}
           {activeTab === "sjablonen" && <SjablonenTab />}

@@ -113,6 +113,7 @@ def build_user_prompt(
     incoming_defense: str | None = None,
     prior_correspondence: list[dict[str, Any]] | None = None,
     template_body_html: str | None = None,
+    learned_examples_text: str | None = None,
 ) -> str:
     """Construeer de user-prompt voor een incasso-stap.
 
@@ -213,6 +214,12 @@ def build_user_prompt(
             "",
             format_examples_for_prompt(DEFENSE_EXAMPLES, max_chars=8000),
         ])
+
+    # Shadow-learning: Lisanne's eigen eerdere antwoorden in deze categorie (door
+    # gather_case_context klaargezet). Komt NAAST de hand-bibliotheek; alleen aanwezig
+    # als er geleerde voorbeelden zijn (categorie-gefilterd → self-gating).
+    if learned_examples_text:
+        sections.extend(["", learned_examples_text])
 
     if prior_correspondence:
         sections.extend([

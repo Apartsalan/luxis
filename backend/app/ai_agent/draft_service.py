@@ -283,6 +283,15 @@ async def _gather_case_context(
             }
         )
 
+    # Shadow-learning: haal Lisanne's eigen eerdere antwoorden in deze categorie op en
+    # zet ze klaar voor de prompt (naast de hand-bibliotheek). Lege string als er nog
+    # geen voorbeelden zijn → de prompt valt dan terug op de hand-bibliotheek.
+    from app.ai_agent.learned_answers import build_learned_examples_text
+
+    context["learned_examples_text"] = await build_learned_examples_text(
+        db, tenant_id, context.get("last_classification_category")
+    )
+
     return context
 
 
@@ -363,6 +372,13 @@ def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
         defense_text = format_examples_for_prompt(examples)
         if defense_text:
             parts.append(f"\n{defense_text}")
+
+    # Shadow-learning: Lisanne's eigen eerdere antwoorden (in deze categorie),
+    # klaargezet in de context door _gather_case_context. Komt NAAST de
+    # hand-bibliotheek — die blijft de basis zolang er weinig geleerde voorbeelden zijn.
+    learned_text = context.get("learned_examples_text")
+    if learned_text:
+        parts.append(f"\n{learned_text}")
 
     # User instruction
     if instruction:

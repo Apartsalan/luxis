@@ -141,51 +141,94 @@ async def build_learned_examples_text(
 # ── Backfill + capture (leer-data vullen) ────────────────────────────────────
 
 
+# Sjabloonbrieven (sommatie/aanmaning/...) zijn GEEN vrije verweer-reacties — die
+# sluiten we uit op onderwerp, anders leert het systeem standaard-betaalbrieven in
+# plaats van Lisanne's argumentatie. (Dit was de fout in de allereerste versie.)
+_TEMPLATE_SUBJECT = re.compile(
+    r"\b(sommatie|aanmaning|herinnering|betalingsherinnering|ingebrekestelling|"
+    r"dagvaarding|verzoekschrift|14[- ]?dagenbrief|14 dagen)\b",
+    re.IGNORECASE,
+)
+
+
+async def _category_for_outbound(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    sent_before: object,
+) -> str | None:
+    """Categorie waarop een uitgaand antwoord reageert: de classificatie van de meest
+    recente INKOMENDE mail op dit dossier vóór de verzenddatum."""
+    return (
+        await db.execute(
+            select(EmailClassification.category)
+            .join(SyncedEmail, EmailClassification.synced_email_id == SyncedEmail.id)
+            .where(
+                EmailClassification.tenant_id == tenant_id,
+                EmailClassification.case_id == case_id,
+                SyncedEmail.direction == "inbound",
+                SyncedEmail.email_date <= sent_before,
+            )
+            .order_by(SyncedEmail.email_date.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
 async def backfill_learned_answers(
     db: AsyncSession,
     tenant_id: uuid.UUID,
 ) -> int:
-    """Leer van verzonden AI-verweerconcepten. Idempotent (dedup op source_ai_draft_id).
+    """Leer van wat de advocaat ÉCHT verstuurt — haar correcties.
 
-    Bron = AIDraft met status 'sent' én een verweer-classificatie (betwisting /
-    juridisch_verweer). Dat zijn echte verweer-reacties in de juiste categorie die de
-    advocaat heeft goedgekeurd door ze te versturen. Ruwe uitgaande mails worden bewust
-    NIET gebruikt — die bevatten vooral sjabloon-sommaties (verkeerde voorbeelden).
+    Bron = uitgaande SyncedEmail (de werkelijk verzonden tekst = haar correctie op het
+    AI-voorstel), op een dossier waar de recentste inkomende mail als verweer is
+    geclassificeerd (betwisting/juridisch_verweer). Sjabloonbrieven (sommatie/aanmaning/
+    ...) worden via het onderwerp uitgesloten — dat zijn geen vrije verweer-reacties.
 
-    Wordt eenmalig + na elke e-mailsync gedraaid (continu lerend, goedkoop). Geeft het
-    aantal NIEUW toegevoegde voorbeelden terug.
+    Bewust de uitgaande mail en niet het AIDraft: het concept in de database is het
+    AI-VOORSTEL; de verzonden mail is wat Lisanne er werkelijk van maakte. Wij leren van
+    haar versie. Idempotent (dedup op source_synced_email_id). Draait na elke e-mailsync,
+    dus haar nieuwe antwoorden worden vanzelf opgepikt (continu lerend). Geeft het aantal
+    NIEUW toegevoegde voorbeelden terug.
     """
     existing = (
         await db.execute(
-            select(LearnedAnswer.source_ai_draft_id).where(
+            select(LearnedAnswer.source_synced_email_id).where(
                 LearnedAnswer.tenant_id == tenant_id,
-                LearnedAnswer.source_ai_draft_id.is_not(None),
+                LearnedAnswer.source_synced_email_id.is_not(None),
             )
         )
     ).scalars().all()
     seen = {e for e in existing if e is not None}
 
-    # Verzonden concepten met een verweer-classificatie (incl. de categorie).
-    rows = (
+    outbound = (
         await db.execute(
-            select(AIDraft, EmailClassification.category)
-            .join(
-                EmailClassification, AIDraft.classification_id == EmailClassification.id
-            )
+            select(SyncedEmail)
             .where(
-                AIDraft.tenant_id == tenant_id,
-                AIDraft.status == "sent",
-                EmailClassification.category.in_(LEARNABLE_CATEGORIES),
+                SyncedEmail.tenant_id == tenant_id,
+                SyncedEmail.direction == "outbound",
+                SyncedEmail.case_id.is_not(None),
+                SyncedEmail.is_bounce.is_(False),
             )
+            .order_by(SyncedEmail.email_date.asc())
         )
-    ).all()
+    ).scalars().all()
 
     added = 0
-    for draft, category in rows:
-        if draft.id in seen:
+    for email in outbound:
+        if email.id in seen:
             continue
-        body = clean_answer_body(draft.body or "")
-        if len(body) < 40:  # te kort om een zinvol voorbeeld te zijn
+        # Sjabloon-sommatie/aanmaning overslaan — geen vrije verweer-reactie.
+        if _TEMPLATE_SUBJECT.search(email.subject or ""):
+            continue
+        category = await _category_for_outbound(
+            db, tenant_id, email.case_id, email.email_date
+        )
+        if category not in LEARNABLE_CATEGORIES:
+            continue
+        body = clean_answer_body(email.body_text or email.snippet or "")
+        if len(body) < 40:  # te kort voor een zinvol voorbeeld
             continue
         db.add(
             LearnedAnswer(
@@ -193,11 +236,11 @@ async def backfill_learned_answers(
                 category=category,
                 body=body,
                 language="nl",
-                source_ai_draft_id=draft.id,
-                source_case_id=draft.case_id,
+                source_synced_email_id=email.id,
+                source_case_id=email.case_id,
             )
         )
-        seen.add(draft.id)
+        seen.add(email.id)
         added += 1
 
     if added:

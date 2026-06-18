@@ -145,34 +145,31 @@ async def test_no_examples_returns_empty(db, test_tenant):
 
 
 @pytest.mark.asyncio
-async def test_backfill_learns_from_sent_verweer_drafts_and_dedups(
+async def test_backfill_learns_from_outbound_correction_and_dedups(
     db, test_tenant, test_user, test_company, test_person
 ):
+    """Leert van de tekst die Lisanne ECHT verstuurt (haar correctie), niet het AI-voorstel."""
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user, step=None
     )
     acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
     inbound = await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
-        body="Ik betwist de factuur, no cure no pay.", when=datetime.now(UTC),
+        body="Ik betwist de factuur, no cure no pay.", when=t0,
     )
-    cls = await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
-    db.add(
-        AIDraft(
-            id=uuid.uuid4(),
-            tenant_id=test_tenant.id,
-            case_id=case.id,
-            classification_id=cls.id,
-            subject="Re: vordering",
-            body=(
-                "Geachte heer,\n\nUw verweer faalt: de opdrachtbevestiging vermeldt het "
-                "tegendeel. De verplichting tot betaling staat vast.\n\n"
-                "Met vriendelijke groet,\nLisanne"
-            ),
-            status="sent",
-        )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    # Haar werkelijk verzonden antwoord — geen sommatie-onderwerp.
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht",
+        body=(
+            "Geachte heer,\n\nUw verweer faalt: de opdrachtbevestiging vermeldt het "
+            "tegendeel. De verplichting tot betaling staat vast.\n\n"
+            "Met vriendelijke groet,\nLisanne"
+        ),
+        when=t0 + timedelta(hours=1),
     )
-    await db.flush()
 
     added = await backfill_learned_answers(db, test_tenant.id)
     assert added == 1
@@ -192,6 +189,33 @@ async def test_backfill_learns_from_sent_verweer_drafts_and_dedups(
 
 
 @pytest.mark.asyncio
+async def test_backfill_excludes_template_letters(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Een sjabloon-sommatie is geen vrije verweer-reactie en moet worden uitgesloten."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist de factuur.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="WEDEROM SOMMATIE TOT BETALING / 2026-00049",
+        body=(
+            "Eerder heb ik u aangeschreven betreffende de openstaande vordering. "
+            "Ik verzoek u nogmaals het volledige bedrag te voldoen."
+        ),
+        when=t0 + timedelta(hours=1),
+    )
+    assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
 async def test_backfill_skips_non_learnable_category(
     db, test_tenant, test_user, test_company, test_person
 ):
@@ -199,23 +223,18 @@ async def test_backfill_skips_non_learnable_category(
         db, test_tenant.id, test_company, test_person, test_user, step=None
     )
     acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
     inbound = await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
-        body="Dank voor uw bericht.", when=datetime.now(UTC),
+        body="Dank voor uw bericht.", when=t0,
     )
-    cls = await _classify(db, test_tenant.id, inbound.id, case.id, "ontvangstbevestiging")
-    db.add(
-        AIDraft(
-            id=uuid.uuid4(),
-            tenant_id=test_tenant.id,
-            case_id=case.id,
-            classification_id=cls.id,
-            subject="Re",
-            body="Wij hebben uw bericht in goede orde ontvangen en komen erop terug.",
-            status="sent",
-        )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "ontvangstbevestiging")
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht",
+        body="Wij hebben uw bericht in goede orde ontvangen en komen erop terug.",
+        when=t0 + timedelta(hours=1),
     )
-    await db.flush()
     assert await backfill_learned_answers(db, test_tenant.id) == 0
 
 

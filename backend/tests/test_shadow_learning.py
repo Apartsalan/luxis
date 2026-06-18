@@ -42,8 +42,10 @@ async def _account(db, tenant_id, user_id) -> EmailAccount:
 
 
 async def _email(
-    db, tenant_id, account_id, *, case_id, direction, body, when, subject="Re: vordering"
+    db, tenant_id, account_id, *, case_id, direction, body, when,
+    subject="Re: vordering", html_only=False,
 ) -> SyncedEmail:
+    # html_only=True bootst een Outlook-mail na: body_text leeg, inhoud in body_html.
     e = SyncedEmail(
         id=uuid.uuid4(),
         tenant_id=tenant_id,
@@ -56,8 +58,8 @@ async def _email(
         to_emails=json.dumps(["y@test.nl"]),
         cc_emails=json.dumps([]),
         snippet=body[:80],
-        body_text=body,
-        body_html=f"<p>{body}</p>",
+        body_text="" if html_only else body,
+        body_html=f"<div><p>{body}</p></div>",
         direction=direction,
         email_date=when,
     )
@@ -221,6 +223,91 @@ async def test_backfill_excludes_collection_letters(
         when=t0 + timedelta(hours=2),
     )
     assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_excludes_html_only_collection_letter(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Inhoud zit vaak ALLÉÉN in body_html (Outlook); een HTML-sommatie moet ook dan eruit."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist de factuur.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="REACTIE OP UW VERWEER / 2026-00049",
+        body=(
+            "Betreft: WEDEROM SOMMATIE TOT BETALING. Eerder heb ik u aangeschreven "
+            "betreffende de openstaande vordering. Deze vordering staat ter incasso."
+        ),
+        when=t0 + timedelta(hours=1), html_only=True,
+    )
+    assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_excludes_unfilled_xxx_template(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Een verweer-sjabloon waar het argument nog 'XXX' is, mag niet geleerd worden."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist de factuur.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "juridisch_verweer")
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: reactie",
+        body="Hierbij voorzie ik u van een inhoudelijke reactie. XXX Met vriendelijke groet.",
+        when=t0 + timedelta(hours=1), html_only=True,
+    )
+    assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_learns_genuine_html_rebuttal(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Een ECHTE weerlegging (alleen in body_html) wordt wél geleerd."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist: er is nooit een overeenkomst gesloten.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht",
+        body=(
+            "In reactie op uw stellingen: de overeenkomst is rechtsgeldig tot stand "
+            "gekomen en de annuleringskosten zijn conform artikel 9.3 verschuldigd."
+        ),
+        when=t0 + timedelta(hours=1), html_only=True,
+    )
+    added = await backfill_learned_answers(db, test_tenant.id)
+    assert added == 1
+    rows = (
+        await db.execute(
+            select(LearnedAnswer).where(LearnedAnswer.tenant_id == test_tenant.id)
+        )
+    ).scalars().all()
+    assert "annuleringskosten" in rows[0].body
 
 
 @pytest.mark.asyncio

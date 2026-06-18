@@ -18,6 +18,7 @@ import difflib
 import logging
 import re
 import uuid
+from html import unescape as _html_unescape
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -161,6 +162,21 @@ def _looks_like_collection_letter(subject: str | None, body: str | None) -> bool
     return bool(_TEMPLATE_MARKERS.search(head))
 
 
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _email_body_text(email: SyncedEmail) -> str:
+    """Platte tekst van een mail. Veel mails (Outlook/Graph) hebben ALLÉÉN een HTML-body
+    — dan is body_text leeg en moeten we de tekst uit body_html halen. Zonder dit keek
+    het filter naar een lege body en glipten sjabloon-sommaties er doorheen."""
+    if email.body_text and email.body_text.strip():
+        return email.body_text
+    if email.body_html:
+        stripped = _HTML_TAG_RE.sub(" ", email.body_html)
+        return re.sub(r"\s+", " ", _html_unescape(stripped)).strip()
+    return email.snippet or ""
+
+
 async def _category_for_outbound(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -229,15 +245,17 @@ async def backfill_learned_answers(
     for email in outbound:
         if email.id in seen:
             continue
-        # Sjabloon-collectiebrief overslaan — geen vrije verweer-reactie.
-        if _looks_like_collection_letter(email.subject, email.body_text):
+        # Volledige tekst (uit body_html als body_text leeg is — vaak bij Outlook).
+        body_text = _email_body_text(email)
+        # Sjabloon-collectiebrief of oningevuld verweer-sjabloon ("XXX") overslaan.
+        if _looks_like_collection_letter(email.subject, body_text) or " XXX " in body_text:
             continue
         category = await _category_for_outbound(
             db, tenant_id, email.case_id, email.email_date
         )
         if category not in LEARNABLE_CATEGORIES:
             continue
-        body = clean_answer_body(email.body_text or email.snippet or "")
+        body = clean_answer_body(body_text)
         if len(body) < 40:  # te kort voor een zinvol voorbeeld
             continue
         db.add(

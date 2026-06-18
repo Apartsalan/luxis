@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 11 juni 2026 (sessie 162 — reproduceerbare builds: uv.lock + Dockerfile/CI uit de lock, pip-audit/npm-audit CI-gates, VPS-drift opgeruimd, non-superuser-owner plan gedocumenteerd)
+**Laatst bijgewerkt:** 18 juni 2026 (sessie 165 — incasso-backlog 2/3/4 live + shadow-learning-fundament ["Slim leren"] live; wacht op BaseNet-import als leer-data — XXX-sjablonen leveren nu 0 voorbeelden)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

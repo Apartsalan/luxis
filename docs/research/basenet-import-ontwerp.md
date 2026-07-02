@@ -91,6 +91,17 @@ Daarna: backfill draaien → dashboard "Slim leren" → **steekproef of geleerde
 - **C. Dossier-status** — ✅ **Passief archief** (akkoord): status gesloten/geen pipeline-stap, automatisering raakt de geïmporteerde dossiers niet. Activeren kan later per dossier.
 - **D. Dossiernummers** — ✅ **BaseNet IN-code als `case_number`** (akkoord): herkenbaar, er zijn al betalingen binnengekomen onder die nummers, en e-mail-dossiernummer-matching herkent ze vanzelf. Luxis-nieuwe zaken blijven 2026-xxxxx.
 
+## 4b. Prod dry-run + schone-lei-besluit (2 juli 2026)
+
+**Prod dry-run (read-only) uitgevoerd** tegen productie: 1168 relaties · 607 dossiers · 1563 vorderingen · 0 overgeslagen · 0 financiële mismatch · 2 velden afgekapt (buitenlandse postcodes). Overlap: 9 relaties bestonden al in prod (Incassocenter, Collect 1, LegalWork e.a.).
+
+**Besluit Arsalan:** alles wat nu in productie staat is **testdata** (45 contacts / 49 cases / 41 claims / 161 test-mails / 21 facturen / 9 uren) en **mag volledig weg**. → **Schone lei vóór de import.** Daarmee vervalt het 9-overlap/dedup-vraagstuk volledig.
+
+**Wipe-plan (uit te voeren mét verse backup, gebundeld met de import):**
+- **Verwijderen (business/testdata):** cases + case_parties/activities/files · claims · payments · payment_arrangements(+installments) · contacts + contact_links/terms · synced_emails + email_classifications/attachments · ai_drafts · intake_requests · invoices(+lines) · time_entries · trust-transacties · workflow_tasks · notifications · learned_answers.
+- **Behouden (config/infra):** tenants · users (login) · incasso_pipeline_steps (+transitions) · templates (managed/document/email) · tenant-settings (kantoorgegevens/IBAN) · interest_rates (globaal) · email_accounts (Outlook-koppeling).
+- **Volgorde:** verse backup (bewezen restore, S159) → wipe → BaseNet-import (fase 1 + fase 2 samen). **Timing:** bij de documenten-backup (paar dagen), niet nu.
+
 ## 5. Premortem (top-faalmodi)
 
 1. **Dubbele data in prod.** Luxis-prod heeft al ~48 dossiers + ~44 relaties (deels dezelfde: Incassocenter-zaken!). Blind importeren → dubbele Incassocenter B.V., dubbel dossier voor dezelfde vordering. → Dry-run rapporteert overlap (naam/e-mail/KvK-match voor relaties; wederpartij+bedrag/kenmerk voor dossiers); per overlap beslissing (koppelen i.p.v. aanmaken).

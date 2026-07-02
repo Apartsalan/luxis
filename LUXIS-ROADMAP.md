@@ -1,6 +1,6 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 18 juni 2026 (sessie 165 — incasso-backlog 2/3/4 live + shadow-learning-fundament ["Slim leren"] live; wacht op BaseNet-import als leer-data — XXX-sjablonen leveren nu 0 voorbeelden)
+**Laatst bijgewerkt:** 2 juli 2026 (sessie 166 — BaseNet-import fase 1 tooling gebouwd + getest + prod-dry-run schoon; prod-write bewust uitgesteld tot documenten-backup (~paar dagen) → dan schone-lei-wipe van prod-testdata + import fase 1+2 samen. Ontwerp: `docs/research/basenet-import-ontwerp.md`)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -306,8 +306,8 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | AUDIT-01 | Uptime monitoring instellen (UptimeRobot, gratis) | 1 sessie | ✅ Health endpoint bevestigd, user moet UptimeRobot account aanmaken |
 | AUDIT-02 | Backup restore test — bewijs dat restore werkt | 0.5 sessie | ✅ Restore getest: 43 tabellen, alle data intact (sessie 110) |
 | AUDIT-03 | Uitgebreid testen — alle features top-tot-teen (zie testplan Bijlage E) | 6-8 sessies | ✅ Alle 9 secties getest sessie 110. Alle endpoints werken. Geen blokkers gevonden. |
-| AUDIT-04 | Basenet export opvragen bij Lisanne + formaat analyseren | 1 sessie | ❌ TODO |
-| AUDIT-05 | Data-migratie script bouwen + dry-run | 3-5 sessies | ❌ TODO |
+| AUDIT-04 | Basenet export opvragen bij Lisanne + formaat analyseren | 1 sessie | ✅ **S166** — XML-export ontvangen (`Xml_02-07-2026_2400.zip`), formaat gekraakt (137 bestanden, per-record parser), mapping ontworpen. Documenten-backup (11,5 GB, apart deel) aangevraagd |
+| AUDIT-05 | Data-migratie script bouwen + dry-run | 3-5 sessies | ◐ **S166** — fase 1 tooling (`scripts/basenet/`, relaties/dossiers/vorderingen) gebouwd + 13 tests + prod-dry-run schoon (1168/607/1563, 0 mismatch). Uitvoering wacht op documenten-backup → dan schone-lei-wipe + import fase 1+2. Fase 1b (betalingen/ContactLink) TODO |
 
 ### P1 — Belangrijk voor werkbaarheid
 

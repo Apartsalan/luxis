@@ -30,6 +30,9 @@ De assistent kan het model/effort van de interactieve sessie **niet zelf wissele
 
 **Vuistregel:** iets uitzoeken/ontwerpen/kraken → Fable. Iets bouwen/deployen dat al is afgestemd → Opus. Noem bij elke niet-triviale taak proactief het aanbevolen model + één regel waarom, en laat de gebruiker `/model` + `/effort` zetten.
 
+### Orchestratie / hulp-agents — spaarzaam, geen volautomaat
+De **ruggengraat is handmatig modelwisselen in de hoofdsessie** (past bij de overlegmomenten met Arsalan + memory `feedback_no_agents_for_research`: agents timen uit op onderzoek). **Geen volautomatische orchestrator.** Zet parallelle hulp-agents (Agent-tool, met model-override op het passende model) **alléén** in waar het werk écht fan-out is: bv. meerdere concurrenten tegelijk onderzoeken (#1: Clio/Basenet/PracticePanther naast elkaar) of meerdere import-entiteiten parallel parsen (relaties/correspondentie/dossiers). Regels: **meld het vóór je een agent start** (kosten), houd het kort, en **cross-check de output zelf** (memory `feedback_verify_own_research`). Diep, open onderzoek: zelf doen, niet delegeren.
+
 ---
 
 ## Waarom deze sessie

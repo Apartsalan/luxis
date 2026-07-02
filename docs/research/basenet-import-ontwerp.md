@@ -69,7 +69,7 @@ De zip bevat **alleen metadata**. Alle 17.928 correspondentie-stukken (samen **1
 
 - **ID-mapping:** tabel `basenet_import_map` (entity, basenet_systemid, basenet_code, luxis_id) — nodig voor idempotentie én om in fase 2 Letters aan cases te koppelen.
 - **Import-runner:** script met `--dry-run` (rapport: verwacht vs te schrijven, per entiteit, incl. overlap-detectie met bestaande prod-data en financiële checks) en `--execute` (transactioneel).
-- **Rente-instellingen:** `incinteresttype`-codes moeten gedecodeerd (8 = ? → steekproef tegen BaseNet-UI of afleiden uit incinterest-percentage); bij twijfel → wettelijke rente + flag in dry-run-rapport.
+- **Rente-instellingen (bewuste beperking fase 1):** BaseNet's eigen rente-configuratie (`incinteresttype`/`incinterest`, bv. contractueel 2%) wordt NIET overgenomen — dossiers komen binnen als passief archief (b2c→wettelijk, b2b→handelsrente als label) en Luxis herberekent er niets op. Wordt een oud dossier ooit gereactiveerd, dan moeten de rente-instellingen handmatig beoordeeld worden (BaseNet-bron blijft beschikbaar). Evt. in fase 1b de BaseNet-rente-info als tekst in `debtor_notes` meenemen.
 
 ### Fase 2 — correspondentie (zodra documenten-export binnen is)
 - .eml parsen (Python `email`-module) → `synced_emails`: direction uit `leinout`, body_html/body_text uit .eml, from/to/cc uit headers, `email_date` = ledate, `provider_message_id` = `basenet:{systemid}` (dedup), case via lepcode→import_map.

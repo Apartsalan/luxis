@@ -44,6 +44,7 @@ description: Bekende fouten en valkuilen uit 32 sessies Luxis-ontwikkeling. Lees
 20. **Geen hardcoded datums in tests** — gebruik `date.today()` of relatieve datums, niet `"2026-02-17"`
 21. **Geen exacte counts op seeded data** — gebruik `>= N` niet `== N`, gebruik subset checks niet exact equality
 22. **URL paden in tests ALTIJD met `/api/` prefix** — `/api/auth/login`, niet `/auth/login`
+23. **backend/tests die repo-root `scripts/` importeren breken CI** (S166) — CI draait pytest vanuit `backend/`; de dev-container maskeert dit via de `/app/scripts`-mount. Gebruik een pad-shim (zoek ouder-map met het script-pakket, zie `test_basenet_import.py`) én check `gh run list` na elke push — lokaal groen ≠ CI groen (zie ook starlette/pydantic-settings: externe CVE's breken de pip-audit-gate zonder codewijziging)
 
 ## SQLAlchemy / Database
 

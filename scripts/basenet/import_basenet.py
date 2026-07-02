@@ -193,9 +193,12 @@ async def _existing_overlap(db, built: BuiltImport) -> dict:
     }
 
 
-def _print_report(built: BuiltImport, overlap: dict) -> None:
+def _print_report(built: BuiltImport, overlap: dict, execute: bool = False) -> None:
     print("=" * 64)
-    print("BaseNet-import — DRY RUN (er wordt niets geschreven)")
+    if execute:
+        print("BaseNet-import — EXECUTE (er wordt geschreven na deze controle)")
+    else:
+        print("BaseNet-import — DRY RUN (er wordt niets geschreven)")
     print("=" * 64)
     print(f"\nTenant: {built.tenant_id}\n")
     print("Te importeren:")
@@ -339,7 +342,7 @@ async def run(export_dir: str, execute: bool, tenant_arg: str | None) -> None:
         )
 
         overlap = await _existing_overlap(db, built)
-        _print_report(built, overlap)
+        _print_report(built, overlap, execute=execute)
 
         if not execute:
             return

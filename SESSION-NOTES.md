@@ -26,12 +26,21 @@ Primaire taak: BaseNet-import bouwen als voeding voor shadow-learning. Modelstra
 ### Belangrijk besluit (Arsalan): schone lei
 Alles in prod is **testdata** (45 contacts/49 cases/41 claims/161 mails/21 facturen/9 uren) en **mag volledig weg**. → 9-overlap/dedup-vraagstuk vervalt. **Wipe-plan** (verse backup → wipe testdata, behoud login/pipeline/templates/settings/Outlook/rentetabellen → import) staat in het ontwerpdoc §4b. **Prod-write bewust uitgesteld** tot de documenten-backup er is → dan fase 1+2 samen op een schone lei.
 
+### Review-naloop (zelfde avond, op verzoek Arsalan — Fable-nacheck)
+**CI stond ROOD op beide pushes** bij de eerste sessie-afsluiting — niet opgemerkt omdat ik `gh run list` niet checkte na push (S163-les herhaald; nu ook in bekende-fouten #23). Drie oorzaken, alle gefixt en **CI groen + deploy gestart** bevestigd:
+1. **Eigen bug:** `test_basenet_import.py` importeert repo-root `scripts/` — CI draait pytest vanuit `backend/` → `ModuleNotFoundError`; de dev-container maskeerde dit via de `/app/scripts`-mount. Fix: pad-shim die de ouder-map met `scripts/basenet` op sys.path zet (werkt in beide layouts, beide geverifieerd) (`e852a88`).
+2. **Externe CVE:** pydantic-settings 2.14.1 → 2.14.2 (GHSA-4xgf-cpjx-pc3j) blokkeerde de pip-audit-gate — zelfde patroon als starlette in S163; lock-bump alleen dat pakket (`a3e4e86`).
+3. **npm audit:** linkify-it (high, ReDoS) + dompurify (onze e-mail-sanitizer!) + js-yaml/markdown-it — `npm audit fix` (semver-compatibel), frontend build groen (`8a4b589`). Rest = bekende Next-noise (moderate, S161-besluit).
+
+**Inhoudelijke review — aannames tegen echte data geverifieerd, beide kloppen:** (a) 0 rcode-botsingen over Company/Person/Contact → opdrachtgever-resolutie veilig; (b) `incwederid` wijst altijd naar bedrijf (525) of persoon (80), nooit contactpersoon → b2b/b2c-afleiding correct. Plus: rapport-header zegt nu "EXECUTE" bij `--execute` (was altijd "DRY RUN" — verwarrend voor destructieve prod-run), en de bewuste beperking "BaseNet-rente-instellingen niet overgenomen (archief)" expliciet in het ontwerpdoc.
+
 ### Gewijzigde/nieuwe bestanden
 - `scripts/basenet/{__init__,parse,mapping,import_basenet}.py` (nieuw)
 - `backend/tests/test_basenet_import.py` (nieuw, 13 tests)
 - `docs/research/basenet-import-ontwerp.md` (nieuw — ontwerp, beslispunten, wipe-plan)
-- `.gitignore` (BaseNet-export uitgesloten — PII)
-- Commit `409ddd6` (tooling) + docs-commit.
+- `.gitignore` (BaseNet-export uitgesloten — PII) · `.claude/skills/bekende-fouten` (#23)
+- `backend/uv.lock` (pydantic-settings) · `frontend/package-lock.json` (npm audit fix)
+- Commits: `409ddd6` (tooling) · `46d2096` (docs) · `e852a88`+`a3e4e86`+`8a4b589` (review-fixes).
 
 ### Bekende issues / open
 - **Blocker fase 2/3:** documenten-backup (11,5 GB) nog niet gedownload → geen e-mailteksten → shadow-learning nog 0 data.

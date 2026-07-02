@@ -4,11 +4,23 @@ Puur Python, geen DB — draait mee in de gewone suite. Fixtures zijn afgeleid v
 échte records uit de BaseNet-export (Xml_02-07-2026_2400.zip).
 """
 
+import sys
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
-import pytest
-from scripts.basenet.mapping import (
+# scripts/ ligt in de REPO-ROOT, niet in backend/. In de dev-container is het op
+# /app/scripts gemount, maar CI draait pytest vanuit backend/ (volledige checkout)
+# — daar is scripts/ pas één map hoger. Zoek de dichtstbijzijnde ouder die
+# scripts/basenet bevat en maak die importeerbaar. (CI brak hierop in S166.)
+for _parent in Path(__file__).resolve().parents:
+    if (_parent / "scripts" / "basenet").is_dir():
+        if str(_parent) not in sys.path:
+            sys.path.insert(0, str(_parent))
+        break
+
+import pytest  # noqa: E402
+from scripts.basenet.mapping import (  # noqa: E402
     map_company,
     map_contactpersoon,
     map_incasso,
@@ -17,7 +29,7 @@ from scripts.basenet.mapping import (
     resolve_debtor_type,
     resolve_interest_type,
 )
-from scripts.basenet.parse import BaseNetRecord, detect_entity, parse_file
+from scripts.basenet.parse import BaseNetRecord, detect_entity, parse_file  # noqa: E402
 
 # ── Echte-data-fixtures ──────────────────────────────────────────────────────
 

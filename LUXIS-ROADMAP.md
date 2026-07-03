@@ -1,7 +1,7 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 3 juli 2026 (sessie 167 — shadow-learning kritisch herzien → verweer-antwoord-bibliotheek mét goedkeuring (vangen→anonimiseren→goedkeuren→voeden), LIVE + volledig geverifieerd op prod, Fable-eindreview 3 ontwerpfouten gefixt. **BaseNet documenten-backup is BINNEN** (`160174-160192.zip`, ~8GB, in luxis-hoofdmap, `.gitignore` `*.zip`). Import staat klaar voor S168: `docs/sessions/PROMPT-S168.md`.)
-**Vorige:** 2 juli 2026 (sessie 166 — BaseNet-import fase 1 tooling gebouwd + getest + prod-dry-run schoon. Ontwerp: `docs/research/basenet-import-ontwerp.md`)
+**Laatst bijgewerkt:** 3 juli 2026 (sessie 168 — **BaseNet-import UITGEVOERD op prod**: schone lei (verse backup+restore bewezen) → 1168 relaties/607 dossiers/1563 vorderingen → 6393 e-mails → 344 gerichte classificaties (Haiku, ~$3) → 131 verweer-kandidaten in "Slim leren". 2 veiligheidsfixes + 4 kwaliteitsfixes (Fable-eindreview) live. Fase 1b bewust overgeslagen. Volgende: `docs/sessions/PROMPT-S169.md`.)
+**Vorige:** 3 juli 2026 (sessie 167 — shadow-learning → verweer-antwoord-bibliotheek mét goedkeuring, LIVE + geverifieerd; documenten-backup binnen)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -308,7 +308,7 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | AUDIT-02 | Backup restore test — bewijs dat restore werkt | 0.5 sessie | ✅ Restore getest: 43 tabellen, alle data intact (sessie 110) |
 | AUDIT-03 | Uitgebreid testen — alle features top-tot-teen (zie testplan Bijlage E) | 6-8 sessies | ✅ Alle 9 secties getest sessie 110. Alle endpoints werken. Geen blokkers gevonden. |
 | AUDIT-04 | Basenet export opvragen bij Lisanne + formaat analyseren | 1 sessie | ✅ **S166** — XML-export ontvangen (`Xml_02-07-2026_2400.zip`), formaat gekraakt (137 bestanden, per-record parser), mapping ontworpen. Documenten-backup (11,5 GB, apart deel) aangevraagd |
-| AUDIT-05 | Data-migratie script bouwen + dry-run | 3-5 sessies | ◐ **S166** — fase 1 tooling (`scripts/basenet/`, relaties/dossiers/vorderingen) gebouwd + 13 tests + prod-dry-run schoon (1168/607/1563, 0 mismatch). Uitvoering wacht op documenten-backup → dan schone-lei-wipe + import fase 1+2. Fase 1b (betalingen/ContactLink) TODO |
+| AUDIT-05 | Data-migratie script bouwen + dry-run | 3-5 sessies | ✅ **UITGEVOERD S168** — schone-lei-wipe (backup+restore bewezen) → fase 1 (1168 relaties/607 dossiers/1563 vorderingen, 0 mismatch) + fase 2 (`import_emails.py`, 6393 .eml→synced_emails onder import-account) + fase 3 (`classify_and_backfill.py`, 344 gericht op Haiku → 131 verweer-kandidaten). Dossiers = passief archief. **Fase 1b (betalingen + persoon↔bedrijf ContactLinks) bewust overgeslagen** (peripheer, geen AI-kost) — optioneel S169+ |
 
 ### P1 — Belangrijk voor werkbaarheid
 

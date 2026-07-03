@@ -1,9 +1,39 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 3 juli 2026 (sessie 167 — shadow-learning kritisch herzien + volledig verbouwd tot verweer-antwoord-bibliotheek mét goedkeuring, LIVE op prod + volledig geverifieerd; Fable-eindreview 3 ontwerpfouten gefixt. BaseNet-documenten-backup binnen → import = S168.)
-**Laatste feature/fix:** Sessie 167 — verweer-bibliotheek: het "stil leren" werkte niet (filter gooide echte verweer-reacties weg; wat doorkwam = kopieën van standaardteksten mét PII). Omgebouwd naar **vangen → anonimiseren → goedkeuren → voeden**: backfill maakt KANDIDATEN (voeden AI niet), knipt de kern-weerlegging uit de sommatie-omlijsting, maakt een anonimiseer-voorstel; alleen door Lisanne goedgekeurde, geanonimiseerde tekst gaat naar de AI. Dashboard "Slim leren" = beoordeel-flow (goedkeuren/afwijzen). `LearnedAnswer.status`/`anonymized_body`/`defense_type`/`reviewed_at` (migratie s170), 3 endpoints, injectie alleen bij verweer-stap. **Live geverifieerd via echte prod-data**: dat ving 3 gaten die tests misten (sommatie-staart bleef staan → PII-lek van datums/factuurnrs; gefixt) én de Fable-eindreview ving 3 ontwerpfouten (use_count-sortering zelfversterkend → nieuwste goedkeuring wint; geen kandidaat-dedup → nu inhouds-dedup; backfill laadde elke sync alle mails → seen-filter in SQL). Eindstand prod: 2 unieke schone kandidaten, PII-check 0 treffers, 19 tests groen. Commits `560b3c9`+`f5dd7ae`+`a912c8e`+`0a8a6da`, alle via CI gedeployed. Deploy-regels-skill gecorrigeerd (build vóór migreren; prod bakt code in image).
-**Openstaande bugs:** Onveranderd t.o.v. S166 (zie hieronder). Nieuw genoteerd: verweer-bibliotheek heeft bewuste heuristiek-grenzen (bedrijfsnamen niet auto-gemaskeerd — Lisanne's review is vangnet; knip-regels kunnen weerlegging die zelf "binnen veertien dagen" noemt te vroeg afkappen) — bijstellen bij BaseNet-import op echte data.
-**Volgende sessie (S168):** zie `docs/sessions/PROMPT-S168.md` — **BaseNet-import UITVOEREN**: documenten-backup is binnen (`160174-160192.zip` ~8GB in luxis-hoofdmap). Schone-lei-wipe prod-testdata → fase 1 (relaties/dossiers/vorderingen, tooling staat klaar) → fase 1b+2 (betalingen + .eml→synced_emails) → fase 3 (classificatie → backfill vult nu de verweer-bibliotheek-wachtrij die Lisanne beoordeelt). **Modelverdeling in de prompt.** Deploy-veiligheid expliciet (build vóór migreren + CI/Deploy checken na push).
+**Laatst bijgewerkt:** 3 juli 2026 (sessie 168 — BaseNet-import UITGEVOERD op prod: schone lei + 1168 relaties/607 dossiers/1563 vorderingen + 6393 e-mails + 344 classificaties → 131 verweer-kandidaten. Sandwich Fable→Opus→Fable; 2 veiligheidsfixes + 4 kwaliteitsfixes live.)
+**Laatste feature/fix:** Sessie 168 — **BaseNet-import volledig uitgevoerd** (fase 1+2+3). Verse backup + bewezen restore → schone-lei-wipe (31 business-tabellen, inrichting behouden) → fase 1 (`import_basenet.py`, 0 mismatch) → fase 2 (`import_emails.py`, 6393 .eml→synced_emails onder provider='import'-account) → fase 3 (`classify_and_backfill.py`, 344 gericht geclassificeerd op Haiku 4.5 ~$3, backfill → kandidaten). **2 veiligheidsfixes vóór fase 2** (scheduler slaat import-account over; classificatie-sleepnet mijdt `afgesloten` dossiers — anders 3099 mails ongevraagd geclassificeerd). **Fable-eindreview → 4 kwaliteitsfixes** op `learned_answers.py`: F1 intro-boilerplate strippen (82→0), F2 EUR-woord/en-dash bedrag-masking (PII-lek 5→0), F3 opgave-boilerplate afknippen, F4 `pg_advisory_xact_lock` tegen scheduler/driver-race (near-dup 3→1). Her-oogst: 131 schone kandidaten. Commits `7524eaa`/`31bc41f`/`9414e49`/`923a767`/`9601613`, alle via CI gedeployed. 27 relevante tests groen.
+**Openstaande bugs:** Geen nieuwe. Bewuste heuristiek-grenzen verweer-bibliotheek blijven (bedrijfsnamen niet auto-gemaskeerd; af en toe geciteerde debiteur-tekst; 1 sommatie-staart/1 near-dup) — **Lisanne's goedkeuring is het vangnet**. Fase 1b (betalingen + contactpersoon↔bedrijf ContactLinks) bewust NIET gedaan (peripheer, dossiers = passief archief). Perf: backfill herlaadt elke 5 min ~3.300 bodies (F7, na Lisanne's oordeel).
+**Volgende sessie (S169):** zie `docs/sessions/PROMPT-S169.md` — **eerst Lisanne de 131 kandidaten laten beoordelen** in "Slim leren" (het menselijke vangnet activeren) vóór verdere heuristiek-tuning. Daarna optioneel: fase 1b (betalingen/contactlinks), F7 backfill-perf. **Uitzoeken: is de prod source-mount (`/opt/luxis/backend/app→/app/app`) bedoeld of dev-override?** (zie deploy-regels-skill S168-correctie + bekende-fouten #28).
+
+## Wat er gedaan is (sessie 168 — 3 juli 2026, Fable→Opus→Fable, met Arsalan) — BaseNet-import UITGEVOERD
+
+De echte BaseNet-import op productie, in 6 stappen met modelverdeling (kraken=Fable, uitvoeren/bouwen=Opus, eindreview=Fable).
+
+### A. Documentformaat gekraakt (Fable)
+11 documenten-zips (`160174-160192`, ~8,7 GB) = map per dossier `"{code} {opdrachtgever} _ {wederpartij}"`, bestand-prefix = **`letterno`** (NIET `documentstore_id` — eerste aanname; join op documentstore_id=0, op letterno=17928/17993). Richting uit `leinout` (3=uit/4=in/6=upload). Op IN-dossiers: 3308 uit + 3115 in. Alles `.eml`. Koppeling lepcode→inccode→case_id. Fase-1b-decoderingen: `Payment`=kantoorfacturen (skip), `IncassoBetalingAnders/Regeling`=echte betalingen, ContactLink via **vcode** (niet `account`). Vastgelegd in ontwerpdoc §7.
+
+### B. Schone lei (Opus — destructief, mét backup)
+Verse backup `luxis_db_2026-07-03_S168-pre-wipe.sql.gz` + **bewezen restore** (wegwerp-DB, tellingen exact gelijk). Live-scope met Arsalan herbevestigd. Wipe via FK-kaart: 31 business-tabellen leeg in één transactie (`session_replication_role=replica`, superuser). **Behouden:** login/pipeline/step_transitions/sjablonen/products-catalogus/rentetabellen/Outlook+IMAP/tenant. Geverifieerd: business=0, inrichting intact.
+
+### C+D. Fase 1 + 1b + 2 (Opus)
+- **Fase 1:** `import_basenet.py --execute` in prod-container (via `docker cp`) → 1168 relaties, 607 dossiers (allemaal `afgesloten`/passief archief, 0 pipeline-stap), 1563 vorderingen. 0 overlap, 0 financiële mismatch. Steekproef IN100000 klopt (kenmerk IN121388).
+- **2 veiligheidsfixes vóór e-mails** (`scheduler.py` + `service.py`): `email_auto_sync` slaat `provider='import'` over; `classify_new_emails` mijdt `status='afgesloten'`. Bewezen: 3099→**0** mails zouden geclassificeerd worden. Test `test_classify_new_emails_skips_closed_cases`.
+- **Fase 2:** `import_emails.py --execute` → **6393 e-mails** (3294 uit + 3099 in) onder apart import-account, allemaal aan dossier gekoppeld, dedup op `basenet:{systemid}`. 2 GB .eml naar VPS (tar+scp), uitgepakt in container.
+- **Fase 1b overgeslagen** (bewust — peripheer, geen AI-kost).
+
+### E. Fase 3 — verweer-bibliotheek voeden (Opus, kostenraming + go Arsalan)
+`classify_and_backfill.py`: gerichte classificatie van **344** inkomende mails (die vlak vóór een substantieel verweer-antwoord kwamen, niet alle 3099) op **Haiku 4.5** (~$3 van $11 tegoed; testcall bevestigde sleutel+tegoed). 344 geclassificeerd (betwisting 149, juridisch_verweer 89). Backfill → kandidaten. **Ontdekking: scheduler-backfill (elke 5 min) racete met de driver → 135 i.p.v. 2 kandidaten.**
+
+### F. Fable-eindreview → 4 kwaliteitsfixes (Opus) + her-oogst
+Steekproef op 135 kandidaten (allemaal `kandidaat`, voeden AI niet): 82 begonnen met intro-boilerplate, 5 €-lek, 3 near-dups. Fixes op `learned_answers.py` + tests: **F1** leidende intro strippen (`_strip_leading_intro`, inhoudelijke opener blijft), **F2** EUR-woord + en-dash bedrag-masking, **F3** "opgave van de vordering" afknippen, **F4** `pg_advisory_xact_lock(tenant)` serialiseert backfills. Machine-kandidaten gewist + verse backfill met nieuwe code → **131 schone kandidaten**: intro 0, €-lek 0, opgave 0, near-dup 1. 27 tests groen.
+
+### Deploy-ontdekking (deploy-regels-skill gecorrigeerd)
+Prod heeft **wél een source-mount** (`/opt/luxis/backend/app→/app/app`), i.t.t. de skill/geheugen ("code in image"). `git pull` ververst bestanden meteen, maar uvicorn draait zonder `--reload` → **codewijziging pas actief ná herstart**, en `up -d` herstart niet altijd. Praktijkregel toegevoegd: verifieer `StartedAt` ná push, anders `docker restart luxis-backend`. Open vraag S169: is de mount bedoeld?
+
+### PII-hygiëne
+Alle tijdelijke extracties (2 GB .eml + XML) op VPS-`/tmp` en lokaal (`bn168`, scratchpad) gewist. Originele zips (jouw backup) + de pre-wipe-DB-backup blijven bewaard. `.gitignore` dekt `*.zip` — geen enkele zip gecommit.
+
+---
 
 ## Wat er gedaan is (sessie 167 — 3 juli 2026, Fable→Opus→Fable, met Arsalan) — Shadow-learning kritisch herzien → verweer-antwoord-bibliotheek
 

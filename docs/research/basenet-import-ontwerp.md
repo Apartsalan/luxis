@@ -116,3 +116,44 @@ Daarna: backfill draaien → dashboard "Slim leren" → **steekproef of geleerde
 4. Import-runner dossiers + vorderingen (idem, met financiële checks)
 5. [wacht op documenten-export] .eml-import → synced_emails
 6. Gerichte classificatie (kostenraming eerst) → backfill → steekproef-verificatie
+
+## 7. Documenten-backup — formaat gekraakt (S168, 3 juli 2026)
+
+**Bron:** 11 zips `160174.zip … 160192.zip` (~8,7 GB), BaseNet "Documenten per project", gemaakt 3 juli 00:24 (één dag ná de XML-export van 2 juli 00:00).
+
+### Structuur (volledig geverifieerd tegen alle 17.993 bestanden)
+
+- **Map per dossier:** `"{dossiercode} {opdrachtgever} _ {wederpartij}"` (bv. `IN100338 Incassocenter B.V. _ Leenders/`). 784 mappen: 598 IN + 185 D + 1 `no project`. Mapcode ↔ `Letter.lepcode`: **0 mismatches**.
+- **Bestandsnaam:** `"{letterno}_{gesaneerd onderwerp}.{ext}"`. Het prefix is **`letterno`** (NIET `documentstore_id` — dat was de eerste aanname; join op documentstore_id = 0 treffers, op letterno = 17.928/17.993). Prefixen zijn 100% uniek.
+- **65 bestanden zonder Letter-record** = letterno > 118319 (max in XML-snapshot) → aangemaakt ná 2 juli. Waarvan **14 IN-.eml** (factuur-mails van 3 juli) → **overslaan + rapporteren**.
+
+### E-mails op IN-dossiers
+
+| leinout | Aantal | Betekenis | Actie |
+|---|---|---|---|
+| 3 | 3.308 | uitgaand | importeren (exact conform §1) |
+| 4 | 3.115 | inkomend | importeren |
+| 6 | 64 | geüpload .eml-bestand (document, geen correspondentie-flow) | overslaan |
+| — | 14 | nieuwer dan XML-snapshot | overslaan |
+
+- Alles op IN is `.eml` (RFC-822 met volledige headers) — **géén .msg** (die zitten alleen in D-mappen). Python `email`-module parset ze schoon (html+text getest op sample). Totaal IN-.eml: **6.501 bestanden, 2,08 GB**, verspreid over alle 11 zips.
+- Metadata-dekking op de 6.487 gematchte IN-.eml: `ledate`/`leinout` 100%, `lesubject` 99,8%, `lefrom` 99%.
+
+### Fase-2-mechaniek (besluiten uit de analyse)
+
+- **Koppeling:** mapcode → `inccode` → `Incasso.systemid` → `case_id = uuid5(NS, "basenet:case:{systemid}")` (zelfde NS als fase 1 → geen mapping-tabel nodig). Alle 598 IN-mapcodes resolven naar de Incasso-export.
+- **Dedup:** `provider_message_id = "basenet:{Letter.systemid}"`. Richting uit `leinout`; `email_date` uit `ledate`; to/cc uit de .eml-headers.
+- **email_account_id (NOT NULL):** apart import-account (`provider='import'`, dummy-tokens want NOT NULL) — **vereist een scheduler-guard**: `email_auto_sync` selecteert nu ALLE accounts (`refresh_token_enc IS NOT NULL` matcht altijd, kolom is non-nullable) → zonder guard elke 5 min een sync-fout op het import-account.
+- **⛔ KRITIEK — classificatie-sleepnet:** `classify_new_emails` (elke 6 min, batch 20) classificeert álle ongeclassificeerde inbound op incasso-zaken en filtert NIET op status → zou na fase 2 automatisch alle 3.115 geïmporteerde inbound-mails classificeren (~15 uur API-kosten, ongevraagd). **Fix vóór fase-2-execute:** status-filter (alleen actieve zaken) in het sleepnet; fase 3 classificeert gericht via directe `classify_email`-aanroepen.
+- **Backfill-volgorde is veilig:** `backfill_learned_answers` markeert alleen mails die een kandidaat opleveren als 'seen' — geïmporteerde outbound zonder classificatie valt af bij `_category_for_outbound` en wordt ná fase-3-classificatie alsnog opgepikt. **Perf-punt (later):** elke 5-min-tick herlaadt ~3.300 niet-kandidaat-bodies + draait er heuristiek op.
+- **Logistiek:** lokaal uitpakken → alleen IN-.eml filteren → herpakken (~2 GB) → scp naar VPS (disk-check eerst, bekende fout #27). Windows-let-op: MAX_PATH 260 breekt lange paden bij lokaal uitpakken (`\\?\`-prefix of korte doelmap); in de Linux-container speelt dit niet.
+
+### Fase-1b-decodering (geverifieerd)
+
+| Entiteit | Records | Koppeling | Besluit |
+|---|---|---|---|
+| `Payment` | 237 | `entityid=51` + `entitysysid` → **OutgoingInvoice** (237/237) | **overslaan** — kantoorfacturen = boekhouding, Exact leidend |
+| `IncassoBetalingAnders` | 56 | `incpincassoid` → Incasso (56/56) | importeren → payments op case |
+| `IncassoBetalingsRegeling` | 323 | `incbincassoid` → Incasso (323/323) | importeren (regeling-termijnen) |
+| Contactpersoon↔bedrijf | 145 | `Contact.vcode` → `Company.rcode` (145/145, 100% naam-match) | ContactLink via **vcode** (NIET `account` — dat is BaseNets eigen administratie-id, maar 2 unieke waarden) |
+| `ProjectRelation` | 48 | 47/48 op D-dossiers, 1 op IN | overslaan |

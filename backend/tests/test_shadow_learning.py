@@ -361,6 +361,34 @@ async def test_backfill_excludes_plain_sommatie(
 
 
 @pytest.mark.asyncio
+async def test_backfill_skips_empty_boilerplate_reply(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Een mail met alleen 'ik heb uw reactie besproken, hieronder mijn antwoord' + sommatie
+    (geen echt argument) is geen bruikbaar voorbeeld."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist de factuur.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht",
+        body=_wrapped_rebuttal(
+            "U heeft gereageerd waarna ik uw reactie met cliënte heb besproken. "
+            "Hieronder treft u mijn antwoord aan."
+        ),
+        when=t0 + timedelta(hours=1), html_only=True,
+    )
+    assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
 async def test_backfill_excludes_unfilled_xxx_template(
     db, test_tenant, test_user, test_company, test_person
 ):

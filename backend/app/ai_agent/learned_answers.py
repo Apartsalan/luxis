@@ -187,6 +187,25 @@ def _norm_ws(s: str) -> str:
     return re.sub(r"\s+", " ", s or "").strip().lower()
 
 
+# Generieke intro-/openingszinnen zónder inhoudelijke weerlegging. Blijft er ná het
+# weghalen hiervan te weinig over, dan is het geen echte weerlegging maar een lege
+# doorverwijzing ("ik heb uw reactie besproken, hieronder mijn antwoord") gevolgd door
+# een sommatie — niets om van te leren.
+_INTRO_BOILERPLATE = re.compile(
+    r"(U heeft gereageerd waarna ik uw reactie met (?:cli[eë]nte|de cli[eë]nt) "
+    r"heb besproken\.?|"
+    r"Hieronder treft u mijn antwoord aan\.?|"
+    r"Hierbij voorzie ik u van een inhoudelijke reactie[^.]*\.?|"
+    r"waarin ik uw stellingen weerleg\.?)",
+    re.IGNORECASE,
+)
+
+
+def _rebuttal_substance(core: str) -> str:
+    """De kern zónder generieke intro-zinnen — om te meten of er écht een argument in zit."""
+    return _INTRO_BOILERPLATE.sub("", core or "").strip()
+
+
 def _similarity_to_library(text: str) -> tuple[float, str | None]:
     """Hoogste gelijkenis (0..1) van `text` met een bestaande standaardtekst + de key ervan."""
     norm = _norm_ws(text)
@@ -425,7 +444,8 @@ async def backfill_learned_answers(
         if category not in LEARNABLE_CATEGORIES:
             continue
         core = extract_rebuttal(email.subject, body_text)
-        if len(core) < 60:  # (c) te kort voor een zinvol voorbeeld
+        # (c) te kort / geen echt argument (alleen intro-boilerplate + sommatie).
+        if len(_rebuttal_substance(core)) < 60:
             continue
         ratio, best_key = _similarity_to_library(core)
         if ratio >= _LIBRARY_DUPLICATE_RATIO:  # (d) dit is een bestaande standaardtekst

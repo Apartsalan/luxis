@@ -28,7 +28,7 @@ import uuid
 from datetime import UTC, datetime
 from html import unescape as _html_unescape
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.defense_library import DEFENSE_EXAMPLES
@@ -115,6 +115,7 @@ _TAIL_CUT = re.compile(
     r"Indien ondanks deze correspondentie|"
     r"Het openstaande saldo is als volgt|"
     r"Thans bent u verschuldigd|"
+    r"Hierbij doe ik u een opgave van de vordering|"
     r"\bVordering\s+(?:Het openstaande|Thans)|"
     r"\bLaatste sommatie\b|"
     r"\bSommatie\s+De verplichting|"
@@ -179,7 +180,7 @@ def extract_rebuttal(subject: str | None, body: str | None) -> str:
 
     core = re.sub(r"[ \t]+", " ", core)
     core = re.sub(r"\n{3,}", "\n\n", core).strip()
-    return core
+    return _strip_leading_intro(core)
 
 
 def _norm_ws(s: str) -> str:
@@ -196,7 +197,8 @@ _INTRO_BOILERPLATE = re.compile(
     r"heb besproken\.?|"
     r"Hieronder treft u mijn antwoord aan\.?|"
     r"Hierbij voorzie ik u van een inhoudelijke reactie[^.]*\.?|"
-    r"waarin ik uw stellingen weerleg\.?)",
+    r"waarin ik uw stellingen weerleg\.?|"
+    r"U heeft gereageerd\.?)",  # kale variant: "U heeft gereageerd." (geen 'waarna ...')
     re.IGNORECASE,
 )
 
@@ -204,6 +206,22 @@ _INTRO_BOILERPLATE = re.compile(
 def _rebuttal_substance(core: str) -> str:
     """De kern zónder generieke intro-zinnen — om te meten of er écht een argument in zit."""
     return _INTRO_BOILERPLATE.sub("", core or "").strip()
+
+
+def _strip_leading_intro(core: str) -> str:
+    """Verwijder generieke intro-zinnen die vóór het eigenlijke argument staan.
+
+    Lisanne's antwoorden openen vaak met 'U heeft gereageerd. Hieronder treft u mijn
+    antwoord aan.' — dat is filler, geen weerlegging, en hoort niet in het voorbeeld dat
+    naar de AI kan gaan. Alleen aan het BEGIN strippen (herhaald), zodat een inhoudelijke
+    opener als 'U heeft gesteld dat ...' onaangeroerd blijft."""
+    prev = None
+    while core and core != prev:
+        prev = core
+        m = _INTRO_BOILERPLATE.match(core)
+        if m and m.end() > 0:
+            core = core[m.end():].lstrip(" .\n\t")
+    return core
 
 
 def _similarity_to_library(text: str) -> tuple[float, str | None]:
@@ -224,7 +242,10 @@ def _similarity_to_library(text: str) -> tuple[float, str | None]:
 # Heuristische vervangingen — een VOORSTEL dat Lisanne bevestigt/bijstelt. Bewust
 # ruimhartig: liever iets te veel maskeren dan een naam/bedrag laten staan.
 _ANON_RULES: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"€\s?\d[\d.,]*"), "[bedrag]"),
+    # Bedragen — tolerant voor een minus/en-dash vóór het bedrag (€ –100,00) en de
+    # woord-notatie 'EUR 700,-' (prod-lek S168, glipte langs het kale €-teken).
+    (re.compile(r"€\s?[-–—]?\s?\d[\d.,]*(?:,-)?"), "[bedrag]"),
+    (re.compile(r"\bEUR\s?[-–—]?\s?\d[\d.,]*(?:,-)?", re.IGNORECASE), "[bedrag]"),
     (re.compile(r"\bNL\d{2}\s?[A-Z]{4}\s?(?:\d{4}\s?){2}\d{2}\b"), "[rekeningnummer]"),
     (re.compile(r"\b20\d{2}-\d{3,6}\b"), "[kenmerk]"),  # dossiernummer 2026-00099
     (re.compile(r"\b\d{4}-\d{2}-\d{2}\b"), "[datum]"),  # ISO-datum 2026-03-31
@@ -412,6 +433,14 @@ async def backfill_learned_answers(
     komt een eerder afgewezen antwoord niet telkens terug (Fable-review S167).
     Geeft het aantal NIEUWE kandidaten terug.
     """
+    # Serialiseer gelijktijdige backfills per tenant (transactie-lock). Zonder dit racen de
+    # 5-min-scheduler en een handmatige/bulk-run: beide lezen dezelfde `existing`-snapshot
+    # en maken near-duplicaat-kandidaten (bewezen bij de BaseNet-import, S168). De tweede
+    # run wacht tot de eerste commit en ziet dan (READ COMMITTED) diens rijen in `existing`.
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext('learned_answers_backfill'), hashtext(:t))"),
+        {"t": str(tenant_id)},
+    )
     existing = (
         await db.execute(
             select(LearnedAnswer.source_synced_email_id, LearnedAnswer.body).where(

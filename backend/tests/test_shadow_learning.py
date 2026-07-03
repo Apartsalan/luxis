@@ -151,6 +151,48 @@ def test_extract_rebuttal_drops_preamble_and_payment_tail():
     assert "Met vriendelijke groet" not in out  # handtekening weg
 
 
+def test_extract_rebuttal_strips_leading_intro_boilerplate():
+    """F1 (S168): 'U heeft gereageerd. Hieronder treft u mijn antwoord aan.' is filler
+    en hoort niet in het opgeslagen voorbeeld — alleen het argument blijft over."""
+    body = (
+        "Geachte heer,\n\n"
+        "U heeft gereageerd. Hieronder treft u mijn antwoord aan.\n\n"
+        "De door u gestelde ontbinding mist grond: er is nooit tijdig een gebrek "
+        "gemeld, zodat het klachtrecht van artikel 7:23 BW is vervallen.\n\n"
+        "Met vriendelijke groet,\nL. Kesting"
+    )
+    out = extract_rebuttal("Re: SOMMATIE", body)
+    assert out.startswith("De door u gestelde ontbinding")
+    assert "Hieronder treft u mijn antwoord aan" not in out
+    assert "U heeft gereageerd" not in out
+    assert "artikel 7:23 BW" in out  # het echte argument blijft
+    assert "Met vriendelijke groet" not in out
+
+
+def test_extract_rebuttal_preserves_substantive_opener():
+    """Regressiewaarborg bij F1: een inhoudelijke opener ('U heeft gesteld ...') mag
+    NIET als boilerplate worden gestript."""
+    body = (
+        "U heeft gesteld dat niet is geleverd. Uit de vrachtbrief blijkt het tegendeel."
+    )
+    out = extract_rebuttal("Re", body)
+    assert out.startswith("U heeft gesteld dat niet is geleverd")
+
+
+def test_extract_rebuttal_cuts_opgave_van_de_vordering():
+    """F3 (S168): administratieve 'opgave van de vordering'-mail → tail wordt afgeknipt,
+    zodat er te weinig substance overblijft en de backfill hem overslaat."""
+    body = (
+        "Naar aanleiding van uw bericht het volgende. "
+        "Hierbij doe ik u een opgave van de vordering die cliënte ter incasso uit "
+        "handen heeft gegeven. De vordering bedraagt thans € 1.000,00."
+    )
+    out = extract_rebuttal("Re", body)
+    assert "opgave van de vordering" not in out
+    assert "ter incasso" not in out
+    assert "€ 1.000,00" not in out
+
+
 # ── suggest_anonymization ────────────────────────────────────────────────
 
 
@@ -176,6 +218,17 @@ def test_suggest_anonymization_masks_iso_date_and_invoice_number():
     assert "2026-04-14" not in out
     assert "[nummer]" in out
     assert "[datum]" in out
+
+
+def test_suggest_anonymization_masks_eur_word_and_dash_amounts():
+    """F2 (S168): echte prod-lekken 'EUR 700,-' (woord i.p.v. €) en '€ –100,00'
+    (en-dash vóór het cijfer) glipten langs het kale €-teken."""
+    src = "Betaal EUR 700,- ; de creditering van € –100,00 en EUR 25,- zijn verwerkt."
+    out = suggest_anonymization(src)
+    assert "700" not in out
+    assert "100,00" not in out
+    assert "25" not in out
+    assert out.count("[bedrag]") >= 3
 
 
 # ── retrieval: alleen GOEDGEKEURD, geanonimiseerde tekst ─────────────────

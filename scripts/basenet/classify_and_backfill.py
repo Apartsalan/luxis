@@ -105,12 +105,19 @@ async def _target_inbound_ids(db, tenant_id) -> list:
     return ids
 
 
-async def run(execute: bool) -> None:
+async def run(execute: bool, backfill_only: bool = False) -> None:
     async with async_session() as db:
         tenants = (await db.execute(text("SELECT id FROM tenants"))).all()
         if len(tenants) != 1:
             raise SystemExit(f"Meerdere/geen tenants ({len(tenants)}).")
         tenant_id = tenants[0][0]
+
+        # Her-oogst na drempel-fixes: classificaties staan er al, alleen backfill opnieuw.
+        if backfill_only:
+            added = await backfill_learned_answers(db, tenant_id)
+            await db.commit()
+            print(f"Backfill: {added} nieuwe verweer-KANDIDATEN in 'Slim leren'.")
+            return
 
         ids = await _target_inbound_ids(db, tenant_id)
         print(f"Te classificeren inkomende mails: {len(ids)}")
@@ -136,8 +143,10 @@ async def run(execute: bool) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description="BaseNet fase 3: gerichte classificatie + backfill")
     p.add_argument("--execute", action="store_true", help="Classificeer + backfill (anders dry-run)")
+    p.add_argument("--backfill-only", action="store_true",
+                   help="Sla classificatie over, draai alleen de backfill (her-oogst na fixes)")
     args = p.parse_args()
-    asyncio.run(run(execute=args.execute))
+    asyncio.run(run(execute=args.execute or args.backfill_only, backfill_only=args.backfill_only))
 
 
 if __name__ == "__main__":

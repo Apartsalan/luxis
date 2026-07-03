@@ -281,6 +281,11 @@ async def classify_new_emails(
             SyncedEmail.case_id.isnot(None),
             SyncedEmail.is_dismissed.is_(False),
             Case.case_type == "incasso",
+            # Klasseer NOOIT mails op afgesloten (archief-)dossiers. Zonder dit filter
+            # zou dit sleepnet na de BaseNet-import automatisch ~3.100 geïmporteerde
+            # inbound-mails classificeren (~uren AI-kosten, ongevraagd). Fase 3 doet de
+            # import-mails gericht via directe classify_email-aanroepen.
+            Case.status != "afgesloten",
             SyncedEmail.id.notin_(already_classified),
         )
         .order_by(SyncedEmail.email_date.asc())

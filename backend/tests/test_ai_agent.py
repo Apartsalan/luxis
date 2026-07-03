@@ -241,6 +241,33 @@ async def test_classify_new_emails_batch(
     assert mock_ai.call_count == 3
 
 
+@pytest.mark.asyncio
+@patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
+async def test_classify_new_emails_skips_closed_cases(
+    mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User, test_company
+):
+    """Het classificatie-sleepnet mag afgesloten (archief-)dossiers NIET oppakken.
+
+    Beschermt tegen de BaseNet-import-valkuil: ~3.100 geïmporteerde archief-mails
+    zouden anders ongevraagd geclassificeerd worden (uren AI-kosten). Fase 3 doet
+    die gericht via directe classify_email-aanroepen.
+    """
+    mock_ai.return_value = FAKE_AI_RESPONSE
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    closed = await _create_incasso_case(
+        db, test_tenant.id, test_company.id, test_company.id, case_number="IN100000"
+    )
+    closed.status = "afgesloten"
+    await db.flush()
+    await _create_inbound_email(db, test_tenant.id, account.id, closed.id)
+    await db.commit()
+
+    count = await classify_new_emails(db, test_tenant.id)
+    assert count == 0
+    assert mock_ai.call_count == 0
+
+
 # ── Approve / Reject / Execute ──────────────────────────────────────────
 
 

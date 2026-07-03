@@ -175,10 +175,14 @@ async def email_auto_sync() -> None:
     logger.info("Scheduler: starting email auto-sync")
     try:
         async with async_session() as session:
-            # Get all connected email accounts across all tenants
+            # Get all connected email accounts across all tenants.
+            # Sla het BaseNet-import-account over (provider='import'): dat heeft geen
+            # echte provider/tokens en dient alleen als houder voor geïmporteerde
+            # archief-mails — de 5-min-sync zou er anders elke keer op stuklopen.
             result = await session.execute(
                 select(EmailAccount).where(
                     EmailAccount.refresh_token_enc.isnot(None),
+                    EmailAccount.provider != "import",
                 )
             )
             accounts = list(result.scalars().all())

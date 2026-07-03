@@ -259,5 +259,128 @@ def test_resolve_debtor_and_interest():
     assert resolve_interest_type("b2b") == "commercial"
 
 
+# ── Fase 2: e-mailimport (koppeling, richting, scope) ────────────────────────
+
+_INCASSO_XML = """
+<advocatuur.incasso>
+    <entityname>advocatuur.incasso</entityname>
+    <systemid>691311</systemid>
+    <entrylist>
+        <entry key="systemid" value="691311"/>
+        <entry key="inccode" value="IN100000"/>
+    </entrylist>
+</advocatuur.incasso>
+"""
+
+_LETTER_XML_F2 = """
+<rela.letter>
+    <entityname>rela.letter</entityname>
+    <systemid>111</systemid>
+    <entrylist>
+        <entry key="letterno" value="500001"/>
+        <entry key="leinout" value="3"/>
+        <entry key="lepcode" value="IN100000"/>
+        <entry key="ledate" value="2025-03-10 09:00:00.0"/>
+        <entry key="lesubject" value="SOMMATIE TOT BETALING"/>
+    </entrylist>
+</rela.letter>
+<rela.letter>
+    <entityname>rela.letter</entityname>
+    <systemid>222</systemid>
+    <entrylist>
+        <entry key="letterno" value="500002"/>
+        <entry key="leinout" value="4"/>
+        <entry key="lepcode" value="IN100000"/>
+        <entry key="ledate" value="2025-03-12 14:30:00.0"/>
+        <entry key="lesubject" value="Re: SOMMATIE"/>
+    </entrylist>
+</rela.letter>
+<rela.letter>
+    <entityname>rela.letter</entityname>
+    <systemid>333</systemid>
+    <entrylist>
+        <entry key="letterno" value="500003"/>
+        <entry key="leinout" value="6"/>
+        <entry key="lepcode" value="IN100000"/>
+        <entry key="ledate" value="2025-03-12 14:35:00.0"/>
+        <entry key="lesubject" value="Geupload document"/>
+    </entrylist>
+</rela.letter>
+"""
+
+
+def _eml(from_addr: str, to_addr: str, subject: str, body: str) -> bytes:
+    return (
+        f"From: {from_addr}\r\n"
+        f"To: {to_addr}\r\n"
+        f"Subject: {subject}\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "\r\n"
+        f"{body}\r\n"
+    ).encode("utf-8")
+
+
+def _build_fase2_export(tmp_path):
+    """Zet een mini eml-map + xml-map neer die de echte structuur nabootst."""
+    xml_dir = tmp_path / "xml"
+    xml_dir.mkdir()
+    (xml_dir / "a.Incasso.xml").write_text(_INCASSO_XML, encoding="utf-8")
+    (xml_dir / "b.Letter.xml").write_text(_LETTER_XML_F2, encoding="utf-8")
+
+    eml_dir = tmp_path / "eml"
+    folder = eml_dir / "IN100000 Incassocenter B.V. _ Bliksem"
+    folder.mkdir(parents=True)
+    (folder / "500001_SOMMATIE.eml").write_bytes(
+        _eml("incasso@kestinglegal.nl", "debiteur@x.nl", "SOMMATIE", "Betaal nu.")
+    )
+    (folder / "500002_Re_SOMMATIE.eml").write_bytes(
+        _eml("debiteur@x.nl", "incasso@kestinglegal.nl", "Re: SOMMATIE", "Ik betwist dit.")
+    )
+    # leinout=6 → moet worden overgeslagen (geüpload document)
+    (folder / "500003_document.eml").write_bytes(
+        _eml("a@x.nl", "b@x.nl", "Document", "irrelevant")
+    )
+    # letterno niet in de XML-snapshot → moet worden overgeslagen (nieuwer)
+    (folder / "599999_nieuwer.eml").write_bytes(
+        _eml("a@x.nl", "b@x.nl", "Nieuwer", "na de export")
+    )
+    return eml_dir, xml_dir
+
+
+def test_fase2_build_emails_koppelt_richting_en_scope(tmp_path):
+    from scripts.basenet.import_basenet import _uid
+    from scripts.basenet.import_emails import build_emails
+
+    eml_dir, xml_dir = _build_fase2_export(tmp_path)
+    rows, stats = build_emails(eml_dir, xml_dir)
+
+    # 4 bestanden gevonden, 2 geïmporteerd (1 uit, 1 in), 2 overgeslagen.
+    assert stats.total_files == 4
+    assert stats.to_import == 2
+    assert stats.by_direction == {"outbound": 1, "inbound": 1}
+    assert stats.skip_direction == 1   # leinout=6
+    assert stats.skip_no_meta == 1     # 599999 niet in XML
+
+    by_dir = {r["direction"]: r for r in rows}
+    # Koppeling: case_id == exact wat fase 1 aanmaakte voor incasso-systemid 691311.
+    expected_case = _uid("case", "691311")
+    assert by_dir["outbound"]["case_id"] == expected_case
+    assert by_dir["inbound"]["case_id"] == expected_case
+    # Dedup-sleutel op Letter.systemid, deterministische id op letterno.
+    assert by_dir["outbound"]["provider_message_id"] == "basenet:111"
+    assert by_dir["outbound"]["id"] == _uid("email", "500001")
+    assert "betwist" in by_dir["inbound"]["body_text"].lower()
+
+
+def test_fase2_import_is_idempotent_op_id(tmp_path):
+    """Twee keer bouwen levert identieke deterministische id's → her-run schrijft niets dubbel."""
+    from scripts.basenet.import_emails import build_emails
+
+    eml_dir, xml_dir = _build_fase2_export(tmp_path)
+    rows1, _ = build_emails(eml_dir, xml_dir)
+    rows2, _ = build_emails(eml_dir, xml_dir)
+    assert {r["id"] for r in rows1} == {r["id"] for r in rows2}
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

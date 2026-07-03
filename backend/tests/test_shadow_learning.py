@@ -95,8 +95,9 @@ async def _classify(db, tenant_id, synced_email_id, case_id, category) -> EmailC
     return c
 
 
-# Een sommatie-verpakt verweer-antwoord (zoals Lisanne's echte huisstijl): sommatie-kop,
-# preamble, dan de eigenlijke weerlegging, dan de betaal-staart + handtekening.
+# Een sommatie-verpakt verweer-antwoord (Lisanne's echte huisstijl, zoals live op prod):
+# sommatie-kop, preamble, de eigenlijke weerlegging, dan de "Vordering"-tabel + "Laatste
+# sommatie / Hierbij sommeer ik u andermaal ..."-staart met factuurnummer/datums/IBAN.
 def _wrapped_rebuttal(core: str) -> str:
     return (
         "Betreft: WEDEROM SOMMATIE TOT BETALING / 2026-00099\n\n"
@@ -105,8 +106,12 @@ def _wrapped_rebuttal(core: str) -> str:
         "cliënt. Deze vordering is ter incasso aan mijn kantoor overgedragen.\n\n"
         "Hierbij voorzie ik u van een inhoudelijke reactie, waarin ik uw stellingen weerleg.\n\n"
         f"{core}\n\n"
-        "Ik verzoek u dan ook het volledige bedrag binnen vijf dagen te voldoen op onze "
-        "bankrekening onder vermelding van het dossiernummer.\n\n"
+        "Indien ondanks deze correspondentie betaling uitblijft, ben ik genoodzaakt het "
+        "incassotraject voort te zetten.\n\n"
+        "Vordering Het openstaande saldo is als volgt gespecificeerd:\n"
+        "Factuurnummer Datum Vervaldatum Bedrag 102894 2026-03-31 2026-04-14 € 1.210,00\n"
+        "Laatste sommatie Hierbij sommeer ik u andermaal het bovengenoemd totaalbedrag van "
+        "€ 1.210,00 uiterlijk binnen 3 dagen na heden te voldoen op IBAN: NL12RABO0123456789.\n\n"
         "Met vriendelijke groet,\nL. Kesting"
     )
 
@@ -139,7 +144,10 @@ def test_extract_rebuttal_drops_preamble_and_payment_tail():
     out = extract_rebuttal("REACTIE OP UW VERWEER", _wrapped_rebuttal(core))
     assert "opleveringsrapport" in out
     assert "Eerder heb ik u aangeschreven" not in out  # preamble weg
-    assert "Ik verzoek u" not in out  # betaal-staart weg
+    assert "Vordering" not in out  # bedragen-tabel weg
+    assert "Factuurnummer" not in out
+    assert "102894" not in out  # factuurnummer uit de tabel weg
+    assert "Hierbij sommeer" not in out  # sommatie-staart weg
     assert "Met vriendelijke groet" not in out  # handtekening weg
 
 
@@ -157,6 +165,17 @@ def test_suggest_anonymization_masks_pii():
     assert "[datum]" in out
     assert "[naam]" in out
     assert "[kenmerk]" in out
+
+
+def test_suggest_anonymization_masks_iso_date_and_invoice_number():
+    """Echte prod-lek: ISO-datum (2026-03-31) en kaal factuurnummer (102894)."""
+    src = "Factuur 102894 met vervaldatum 2026-04-14 is op 2026-03-31 verzonden."
+    out = suggest_anonymization(src)
+    assert "102894" not in out
+    assert "2026-03-31" not in out
+    assert "2026-04-14" not in out
+    assert "[nummer]" in out
+    assert "[datum]" in out
 
 
 # ── retrieval: alleen GOEDGEKEURD, geanonimiseerde tekst ─────────────────
@@ -280,6 +299,8 @@ async def test_backfill_captures_wrapped_rebuttal_as_candidate(
     assert row.is_active is False
     assert "opleveringsrapport" in row.body
     assert "Eerder heb ik u aangeschreven" not in row.body  # sommatie-omlijsting weg
+    assert "Factuurnummer" not in row.body  # bedragen-tabel weg
+    assert "Hierbij sommeer" not in row.body  # sommatie-staart weg
     assert row.anonymized_body  # er is een anonimiseer-voorstel
 
     # Idempotent.

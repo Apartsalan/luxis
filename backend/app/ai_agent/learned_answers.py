@@ -105,17 +105,32 @@ _REBUTTAL_OPENER = re.compile(
     r"Uw verweer|Naar aanleiding van uw)",
     re.IGNORECASE,
 )
-# Waar de weerlegging eindigt en de sommatie-staart (betaal-eis) begint.
-_PAYMENT_TAIL = re.compile(
-    r"(Ik verzoek u (?:dan ook |vriendelijk |hierbij |thans )*"
+# Waar de weerlegging eindigt en de sommatie-staart (betaal-eis + bedragen-tabel) begint.
+# Afgesteld op Lisanne's echte huisstijl: de inhoudelijke weerlegging gaat over in een
+# "Vordering"-kopje met een bedragen-tabel en een "Laatste sommatie / Hierbij sommeer ik u
+# andermaal ..."-blok. Al die staart-tekst (incl. factuurnummers, datums, IBAN) willen we
+# NIET in het voorbeeld — knip bij de vroegste van deze markers.
+_TAIL_CUT = re.compile(
+    r"("
+    r"Indien ondanks deze correspondentie|"
+    r"Het openstaande saldo is als volgt|"
+    r"Thans bent u verschuldigd|"
+    r"\bVordering\s+(?:Het openstaande|Thans)|"
+    r"\bLaatste sommatie\b|"
+    r"\bSommatie\s+De verplichting|"
+    r"\bTe betalen\s+Hierbij|"
+    r"Factuurnummer\s+Datum|"
+    r"Hierbij sommeer ik u|"
+    r"\bIk sommeer u\b|"
+    r"Ik verzoek u (?:dan ook |vriendelijk |hierbij |thans )*"
     r"(?:om )?(?:het|de|binnen|thans|per omgaande|nogmaals)|"
     r"gelieve (?:het|de|binnen|per)|"
     r"binnen (?:vijf|5|zeven|7|veertien|14|drie|3|acht|8|tien|10) dagen|"
-    r"Het (?:totaal(?:aal)? |thans |)verschuldigde bedrag|"
     r"te voldoen op (?:onze|ons|de|het)|"
     r"onder vermelding van|"
     r"bij gebreke (?:van|waarvan)|"
-    r"IBAN\s*NL\d{2})",
+    r"IBAN\s*NL\d{2}"
+    r")",
     re.IGNORECASE,
 )
 
@@ -151,9 +166,9 @@ def extract_rebuttal(subject: str | None, body: str | None) -> str:
             start = intro.end()
     core = text[start:].lstrip()
 
-    # EIND: knip bij de betaal-staart of bij handtekening/quote (vroegste wint).
+    # EIND: knip bij de sommatie-staart of bij handtekening/quote (vroegste wint).
     cut = len(core)
-    tail = _PAYMENT_TAIL.search(core)
+    tail = _TAIL_CUT.search(core)
     if tail:
         cut = tail.start()
     for marker in _CUT_MARKERS:
@@ -192,8 +207,9 @@ def _similarity_to_library(text: str) -> tuple[float, str | None]:
 _ANON_RULES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"€\s?\d[\d.,]*"), "[bedrag]"),
     (re.compile(r"\bNL\d{2}\s?[A-Z]{4}\s?(?:\d{4}\s?){2}\d{2}\b"), "[rekeningnummer]"),
-    (re.compile(r"\b20\d{2}-\d{3,6}\b"), "[kenmerk]"),
-    (re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b"), "[datum]"),
+    (re.compile(r"\b20\d{2}-\d{3,6}\b"), "[kenmerk]"),  # dossiernummer 2026-00099
+    (re.compile(r"\b\d{4}-\d{2}-\d{2}\b"), "[datum]"),  # ISO-datum 2026-03-31
+    (re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b"), "[datum]"),  # 31-03-2026
     (
         re.compile(
             r"\b\d{1,2}\s+(?:januari|februari|maart|april|mei|juni|juli|augustus|"
@@ -202,6 +218,9 @@ _ANON_RULES: list[tuple[re.Pattern[str], str]] = [
         ),
         "[datum]",
     ),
+    # Kaal factuur-/referentienummer (5-7 cijfers). Bedragen/datums/rekeningnr zijn al
+    # vervangen, dus wat resteert is doorgaans een factuurnummer als 102894.
+    (re.compile(r"\b\d{5,7}\b"), "[nummer]"),
     (
         re.compile(
             r"\b(?:[Dd]e\s+heer|[Mm]evrouw|[Dd]hr\.?|[Mm]evr\.?|[Mm]w\.?)"

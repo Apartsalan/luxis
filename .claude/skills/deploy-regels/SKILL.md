@@ -29,13 +29,15 @@ ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && doc
 
 ### Backend + migraties:
 ```bash
-ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && docker compose run --rm backend python -m alembic upgrade head && docker compose build backend && docker compose up -d backend && docker image prune -f"
+ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && docker compose build backend && docker compose run --rm backend python -m alembic upgrade head && docker compose up -d backend && docker image prune -f"
 ```
 
 ### Alles:
 ```bash
-ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && docker compose run --rm backend python -m alembic upgrade head && docker compose build backend frontend && docker compose up -d && docker image prune -f"
+ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && docker compose build backend frontend && docker compose run --rm backend python -m alembic upgrade head && docker compose up -d && docker image prune -f"
 ```
+
+**VOLGORDE CRUCIAAL: eerst `build`, dán migreren.** Prod bakt de code ín de image (geen source-mount). `alembic upgrade` vóór de build draait op de OUDE image die de nieuwe migratiebestanden nog niet bevat → migratie wordt stil overgeslagen (S167 live tegengekomen). De CI-auto-deploy (`deploy.yml`) doet het goed: build → up → exec migrate.
 
 ## `--no-cache` — wanneer wel / niet
 

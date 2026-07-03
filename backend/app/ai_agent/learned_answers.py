@@ -271,9 +271,10 @@ async def get_learned_examples(
 ) -> list[LearnedAnswer]:
     """Haal goedgekeurde verweer-voorbeelden op in deze categorie.
 
-    Kiest op verweer-TYPE gespreid (niet blind 'nieuwste eerst'): eerst de meest
-    hergebruikte per type, zodat een divers en passend setje meegaat — anders zou na een
-    bulk-import 'nieuwste 3' een willekeurige greep zijn.
+    Gespreid over verweer-TYPEN, en binnen een type wint de NIEUWSTE goedkeuring.
+    Bewust niet op use_count sorteren: elk gebruik verhoogt die teller, dus wie één keer
+    vooraan staat zou eeuwig vooraan blijven — een nieuwer, beter goedgekeurd antwoord
+    kwam dan nooit meer aan bod (Fable-review S167). use_count is alleen dashboard-info.
     """
     if not category:
         return []
@@ -285,7 +286,10 @@ async def get_learned_examples(
                 LearnedAnswer.category == category,
                 LearnedAnswer.status == STATUS_APPROVED,
             )
-            .order_by(LearnedAnswer.use_count.desc(), LearnedAnswer.created_at.desc())
+            .order_by(
+                LearnedAnswer.reviewed_at.desc().nullslast(),
+                LearnedAnswer.created_at.desc(),
+            )
             .limit(max(limit * 4, 12))
         )
     ).scalars().all()
@@ -402,30 +406,37 @@ async def backfill_learned_answers(
     gelijk aan een bestaande standaardtekst (die kennen we al). Kandidaten voeden de AI
     NIET — dat gebeurt pas na goedkeuring in het 'Slim leren'-dashboard.
 
-    Idempotent (dedup op source_synced_email_id). Geeft het aantal NIEUWE kandidaten terug.
+    Idempotent (dedup op source_synced_email_id) én ontdubbeld op inhoud: een weerlegging
+    die vrijwel gelijk is aan een eerder gevangen/beoordeeld antwoord (welke status ook)
+    wordt overgeslagen — zo verschijnen geen drie identieke kandidaten in de wachtrij en
+    komt een eerder afgewezen antwoord niet telkens terug (Fable-review S167).
+    Geeft het aantal NIEUWE kandidaten terug.
     """
     existing = (
         await db.execute(
-            select(LearnedAnswer.source_synced_email_id).where(
+            select(LearnedAnswer.source_synced_email_id, LearnedAnswer.body).where(
                 LearnedAnswer.tenant_id == tenant_id,
-                LearnedAnswer.source_synced_email_id.is_not(None),
             )
         )
-    ).scalars().all()
-    seen = {e for e in existing if e is not None}
+    ).all()
+    seen = {row[0] for row in existing if row[0] is not None}
+    known_bodies = [_norm_ws(row[1]) for row in existing if row[1]]
 
-    outbound = (
-        await db.execute(
-            select(SyncedEmail)
-            .where(
-                SyncedEmail.tenant_id == tenant_id,
-                SyncedEmail.direction == "outbound",
-                SyncedEmail.case_id.is_not(None),
-                SyncedEmail.is_bounce.is_(False),
-            )
-            .order_by(SyncedEmail.email_date.asc())
+    # Al-verwerkte mails al in de query uitsluiten — de backfill draait elke 5 minuten en
+    # zou anders na de BaseNet-import telkens duizenden mails mét body inladen.
+    outbound_query = (
+        select(SyncedEmail)
+        .where(
+            SyncedEmail.tenant_id == tenant_id,
+            SyncedEmail.direction == "outbound",
+            SyncedEmail.case_id.is_not(None),
+            SyncedEmail.is_bounce.is_(False),
         )
-    ).scalars().all()
+        .order_by(SyncedEmail.email_date.asc())
+    )
+    if seen:
+        outbound_query = outbound_query.where(SyncedEmail.id.not_in(seen))
+    outbound = (await db.execute(outbound_query)).scalars().all()
 
     added = 0
     for email in outbound:
@@ -450,7 +461,15 @@ async def backfill_learned_answers(
         ratio, best_key = _similarity_to_library(core)
         if ratio >= _LIBRARY_DUPLICATE_RATIO:  # (d) dit is een bestaande standaardtekst
             continue
+        # (e) vrijwel gelijk aan een eerder gevangen/beoordeeld eigen antwoord.
+        norm_core = _norm_ws(core)
+        if any(
+            difflib.SequenceMatcher(None, norm_core, kb).ratio() >= _LIBRARY_DUPLICATE_RATIO
+            for kb in known_bodies
+        ):
+            continue
         defense_type = best_key if ratio >= _LIBRARY_TYPE_RATIO else "overig"
+        known_bodies.append(norm_core)
         db.add(
             LearnedAnswer(
                 tenant_id=tenant_id,

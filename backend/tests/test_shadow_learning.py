@@ -234,6 +234,50 @@ async def test_no_examples_returns_empty(db, test_tenant):
     assert await build_learned_examples_text(db, test_tenant.id, None) == ""
 
 
+@pytest.mark.asyncio
+async def test_retrieval_prefers_newest_approved_over_high_use_count(db, test_tenant):
+    """Fable-review F1: sorteren op use_count is zelfversterkend (wie één keer wint,
+    wint eeuwig). Het nieuwst goedgekeurde antwoord van een type moet voorrang krijgen."""
+    from datetime import timedelta
+
+    now = datetime.now(UTC)
+    # Drie oudere antwoorden van hetzelfde type met hoge tellers verdringen onder
+    # use_count-sortering het nieuwste antwoord (teller 0) uit de top-3.
+    for i, uses in enumerate((25, 20, 15)):
+        db.add(
+            LearnedAnswer(
+                id=uuid.uuid4(),
+                tenant_id=test_tenant.id,
+                category="betwisting",
+                body=f"raw oud {i}",
+                anonymized_body=f"OUD antwoord {i} dat al vaak is meegestuurd, met lengte.",
+                defense_type="verlengd_abonnement",
+                status=STATUS_APPROVED,
+                is_active=True,
+                use_count=uses,
+                reviewed_at=now - timedelta(days=30 + i),
+            )
+        )
+    db.add(
+        LearnedAnswer(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            category="betwisting",
+            body="raw nieuw",
+            anonymized_body="NIEUW verbeterd antwoord dat net is goedgekeurd met genoeg lengte.",
+            defense_type="verlengd_abonnement",
+            status=STATUS_APPROVED,
+            is_active=True,
+            use_count=0,
+            reviewed_at=now,
+        )
+    )
+    await db.flush()
+
+    text = await build_learned_examples_text(db, test_tenant.id, "betwisting")
+    assert "NIEUW verbeterd antwoord" in text  # nieuwste goedkeuring wint
+
+
 # ── injectie alleen bij de verweer-stap (bevinding 4) ────────────────────
 
 
@@ -356,6 +400,53 @@ async def test_backfill_excludes_plain_sommatie(
             "Ik verzoek u het volledige bedrag binnen vijf dagen te voldoen."
         ),
         when=t0 + timedelta(hours=1),
+    )
+    assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_dedups_near_identical_candidates(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Fable-review F2: twee vrijwel identieke weerleggingen (live op prod: 3 varianten
+    van hetzelfde abonnement-antwoord) moeten één kandidaat opleveren, niet twee. En na
+    een afwijzing mag een vrijwel gelijke mail niet opnieuw kandidaat worden."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist: de machine was ondeugdelijk.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    core = (
+        "U heeft gesteld dat de geleverde machine ondeugdelijk was. Uit het door u "
+        "ondertekende opleveringsrapport blijkt echter dat u de levering zonder enig "
+        "voorbehoud heeft geaccepteerd. Van een gebrek is niet gebleken."
+    )
+    # Zelfde weerlegging, twee mails (minieme variatie in de tweede).
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht", body=_wrapped_rebuttal(core),
+        when=t0 + timedelta(hours=1), html_only=True,
+    )
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht (2)", body=_wrapped_rebuttal(core + " Aldus ongegrond."),
+        when=t0 + timedelta(hours=2), html_only=True,
+    )
+
+    assert await backfill_learned_answers(db, test_tenant.id) == 1  # niet 2
+
+    # Afwijzen → een derde vrijwel gelijke mail wordt géén nieuwe kandidaat.
+    cand = (await list_candidates(db, test_tenant.id))[0]
+    await reject_candidate(db, test_tenant.id, cand.id)
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht (3)", body=_wrapped_rebuttal(core),
+        when=t0 + timedelta(hours=3), html_only=True,
     )
     assert await backfill_learned_answers(db, test_tenant.id) == 0
 

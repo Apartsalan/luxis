@@ -80,7 +80,9 @@ preview_*.html
 luxis_template.html
 reactie_verweer.html
 
-# BaseNet-export (S166) — bevat ECHTE cliënt-PII. NOOIT committen.
-Xml_*.zip
+# BaseNet-export (S166/S167) — bevat ECHTE cliënt-PII. NOOIT committen.
+# Xml_*.zip = metadata-export; 160*.zip = documenten-backup (~8GB, S167).
+# Blanket *.zip: er hoort geen enkele zip in deze repo getrackt te worden.
+*.zip
 *.base.*.xml
 basenet-export/

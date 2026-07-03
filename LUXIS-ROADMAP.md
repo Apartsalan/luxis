@@ -1,6 +1,7 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 2 juli 2026 (sessie 166 — BaseNet-import fase 1 tooling gebouwd + getest + prod-dry-run schoon; prod-write bewust uitgesteld tot documenten-backup (~paar dagen) → dan schone-lei-wipe van prod-testdata + import fase 1+2 samen. Ontwerp: `docs/research/basenet-import-ontwerp.md`)
+**Laatst bijgewerkt:** 3 juli 2026 (sessie 167 — shadow-learning kritisch herzien → verweer-antwoord-bibliotheek mét goedkeuring (vangen→anonimiseren→goedkeuren→voeden), LIVE + volledig geverifieerd op prod, Fable-eindreview 3 ontwerpfouten gefixt. **BaseNet documenten-backup is BINNEN** (`160174-160192.zip`, ~8GB, in luxis-hoofdmap, `.gitignore` `*.zip`). Import staat klaar voor S168: `docs/sessions/PROMPT-S168.md`.)
+**Vorige:** 2 juli 2026 (sessie 166 — BaseNet-import fase 1 tooling gebouwd + getest + prod-dry-run schoon. Ontwerp: `docs/research/basenet-import-ontwerp.md`)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

@@ -229,18 +229,24 @@ class AIDraft(TenantBase):
 
 
 class LearnedAnswer(TenantBase):
-    """Shadow-learning (S166+): een echt, eerder verzonden antwoord van de advocaat,
-    bewaard als voorbeeld voor toekomstige conceptgeneratie.
+    """Verweer-antwoord-bibliotheek (S167+): een maatwerk-weerlegging die de advocaat
+    ooit verstuurde, ná haar goedkeuring bewaard als extra standaardantwoord.
 
-    Vervangt/aanvult de hand-gecureerde `defense_library`: i.p.v. 5 vaste voorbeelden
-    haalt de agent bij het opstellen van een concept de eigen eerdere antwoorden in
-    dezelfde classificatie-categorie op en stuurt die mee als referentie voor toon en
-    juridische argumentatie. Elk verzonden antwoord wordt automatisch een toekomstig
-    voorbeeld → continu lerend, geen training, blijft een assistent (besluit S160).
+    Vult de hand-gecureerde `defense_library` (5 vaste voorbeelden) aan met de zeldzame
+    maatwerk-gevallen die daar niet in passen. Werkwijze (herzien S167 na kritische
+    review): het systeem VANGT kandidaten uit Lisanne's verstuurde antwoorden, maar
+    voedt de AI pas ná HAAR goedkeuring — zij bepaalt wat een standaardantwoord wordt en
+    haalt de persoonsgegevens eruit. Geen stil, automatisch leren meer (dat leverde in de
+    praktijk alleen kopieën van bestaande sommaties op). Blijft een assistent (besluit S160).
 
-    Bron = Lisanne's UITGAANDE SyncedEmail (haar echte, hand-bewerkte tekst — niet de
-    ruwe AI-versie). De body is opgeschoond (kern-argumentatie, zonder aanhef/handtekening/
-    quote). Categorie komt van de classificatie van de inkomende mail waarop ze reageerde.
+    Twee teksten per record:
+    * `body` = de ruw geëxtraheerde kern-weerlegging (kan nog namen/bedragen bevatten) —
+      alleen voor de review, wordt NOOIT naar de AI gestuurd.
+    * `anonymized_body` = de door Lisanne bevestigde, geanonimiseerde tekst — dít is wat
+      (bij `status == 'goedgekeurd'`) als voorbeeld naar de AI gaat.
+
+    Bron = Lisanne's UITGAANDE SyncedEmail. Categorie komt van de classificatie van de
+    inkomende mail waarop ze reageerde.
     """
 
     __tablename__ = "learned_answers"
@@ -248,6 +254,21 @@ class LearnedAnswer(TenantBase):
     category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     language: Mapped[str] = mapped_column(String(5), nullable=False, default="nl")
+
+    # Review-status: 'kandidaat' (wacht op beoordeling) → 'goedgekeurd' (voedt de AI) of
+    # 'afgewezen' (genegeerd). Alleen 'goedgekeurd' gaat ooit naar een prompt.
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="kandidaat",
+        server_default="kandidaat", index=True,
+    )
+    # De geanonimiseerde, door Lisanne bevestigde tekst — het enige dat de AV in mag.
+    # Bij een kandidaat: het automatische anonimiseer-voorstel (nog te bevestigen).
+    anonymized_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Welk type verweer dit weerlegt (library-key of 'overig') — voor gerichte matching
+    # i.p.v. "nieuwste eerst".
+    defense_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Wanneer Lisanne dit goedkeurde/afwees.
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Herkomst — voor dedup bij backfill en voor inzicht in de bron.
     # Primaire bron = een verzonden AI-verweerconcept (gegarandeerd een verweer-reactie

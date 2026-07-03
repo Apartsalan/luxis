@@ -215,10 +215,11 @@ def build_user_prompt(
             format_examples_for_prompt(DEFENSE_EXAMPLES, max_chars=8000),
         ])
 
-    # Shadow-learning: Lisanne's eigen eerdere antwoorden in deze categorie (door
-    # gather_case_context klaargezet). Komt NAAST de hand-bibliotheek; alleen aanwezig
-    # als er geleerde voorbeelden zijn (categorie-gefilterd → self-gating).
-    if learned_examples_text:
+    # Goedgekeurde extra standaardantwoorden — ALLEEN bij de verweer-stap. Bij een gewone
+    # sommatie voegen ze niets toe en vergroten ze het risico dat het model afdwaalt (de
+    # S164-les: hoe meer losse tekst in de prompt, hoe vaker het ontspoort). Bij andere
+    # stappen dus bewust weglaten, ook als er goedgekeurde voorbeelden klaarstaan.
+    if learned_examples_text and step_name == "Verweer beantwoorden":
         sections.extend(["", learned_examples_text])
 
     if prior_correspondence:

@@ -3,6 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.models import ACTION_LABELS, CATEGORY_LABELS
@@ -493,3 +494,71 @@ async def learning_stats(
     from app.ai_agent.learned_answers import get_learning_stats
 
     return await get_learning_stats(db, current_user.tenant_id)
+
+
+class ApproveCandidateRequest(BaseModel):
+    """Goedkeuring van een verweer-kandidaat: de bevestigde geanonimiseerde tekst."""
+
+    anonymized_body: str
+    defense_type: str | None = None
+
+
+@router.get("/learning/candidates")
+async def learning_candidates(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kandidaat-antwoorden die op beoordeling wachten (voor het 'Slim leren'-dashboard)."""
+    from app.ai_agent.learned_answers import list_candidates
+
+    rows = await list_candidates(db, current_user.tenant_id)
+    return [
+        {
+            "id": str(r.id),
+            "category": r.category,
+            "defense_type": r.defense_type,
+            "body": r.body,
+            "anonymized_body": r.anonymized_body,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+
+
+@router.post("/learning/candidates/{candidate_id}/approve")
+async def learning_approve_candidate(
+    candidate_id: uuid.UUID,
+    payload: ApproveCandidateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Keur een kandidaat goed — pas hierna voedt de (geanonimiseerde) tekst de AI."""
+    from app.ai_agent.learned_answers import approve_candidate
+
+    row = await approve_candidate(
+        db,
+        current_user.tenant_id,
+        candidate_id,
+        anonymized_body=payload.anonymized_body,
+        defense_type=payload.defense_type,
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Kandidaat niet gevonden")
+    await db.commit()
+    return {"id": str(row.id), "status": row.status}
+
+
+@router.post("/learning/candidates/{candidate_id}/reject")
+async def learning_reject_candidate(
+    candidate_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Wijs een kandidaat af — die voedt de AI nooit."""
+    from app.ai_agent.learned_answers import reject_candidate
+
+    ok = await reject_candidate(db, current_user.tenant_id, candidate_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Kandidaat niet gevonden")
+    await db.commit()
+    return {"ok": True}

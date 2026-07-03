@@ -1,8 +1,9 @@
-"""Shadow-learning (S168/S169) — leren van de eigen verzonden verweer-antwoorden.
+"""Verweer-antwoord-bibliotheek (S167) — kandidaten vangen → goedkeuren → voeden.
 
-Dekt: body opschonen (kop/aanhef/handtekening/quote), ophalen + formatteren
-(+ use_count), backfill (bron = verzonden AI-verweerconcepten, categorie via de
-classificatie, met dedup), en de edit-rate voor het kwaliteits-dashboard.
+Dekt: kern-weerlegging uit een sommatie-verpakt antwoord knippen, anonimiseer-voorstel,
+kandidaat-vangst (echte weerlegging wél, kale sommatie/XXX/dubbel-met-library niet),
+goedkeuren/afwijzen, en dat alleen GOEDGEKEURDE (geanonimiseerde) tekst de prompt voedt —
+plus dat de voorbeelden alleen bij de verweer-stap in de prompt komen.
 """
 
 import json
@@ -12,11 +13,21 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import select
 
+from app.ai_agent.defense_library import DEFENSE_EXAMPLES
+from app.ai_agent.incasso_email_prompts import build_user_prompt
 from app.ai_agent.learned_answers import (
+    STATUS_APPROVED,
+    STATUS_CANDIDATE,
+    STATUS_REJECTED,
+    approve_candidate,
     backfill_learned_answers,
     build_learned_examples_text,
     clean_answer_body,
+    extract_rebuttal,
     get_learning_stats,
+    list_candidates,
+    reject_candidate,
+    suggest_anonymization,
 )
 from app.ai_agent.models import AIDraft, EmailClassification, LearnedAnswer
 from app.email.oauth_models import EmailAccount
@@ -84,7 +95,23 @@ async def _classify(db, tenant_id, synced_email_id, case_id, category) -> EmailC
     return c
 
 
-# ── clean_answer_body ────────────────────────────────────────────────────
+# Een sommatie-verpakt verweer-antwoord (zoals Lisanne's echte huisstijl): sommatie-kop,
+# preamble, dan de eigenlijke weerlegging, dan de betaal-staart + handtekening.
+def _wrapped_rebuttal(core: str) -> str:
+    return (
+        "Betreft: WEDEROM SOMMATIE TOT BETALING / 2026-00099\n\n"
+        "Geachte heer,\n\n"
+        "Eerder heb ik u aangeschreven betreffende de openstaande vordering van mijn "
+        "cliënt. Deze vordering is ter incasso aan mijn kantoor overgedragen.\n\n"
+        "Hierbij voorzie ik u van een inhoudelijke reactie, waarin ik uw stellingen weerleg.\n\n"
+        f"{core}\n\n"
+        "Ik verzoek u dan ook het volledige bedrag binnen vijf dagen te voldoen op onze "
+        "bankrekening onder vermelding van het dossiernummer.\n\n"
+        "Met vriendelijke groet,\nL. Kesting"
+    )
+
+
+# ── clean_answer_body (edit-rate helper) ─────────────────────────────────
 
 
 def test_clean_answer_body_strips_quote_and_signature():
@@ -97,44 +124,89 @@ def test_clean_answer_body_strips_quote_and_signature():
     out = clean_answer_body(raw)
     assert "no cure no pay" in out
     assert "Met vriendelijke groet" not in out
-    assert "schreef" not in out
     assert "ik betwist" not in out
 
 
-def test_clean_answer_body_removes_leading_greeting():
-    out = clean_answer_body(
-        "Geachte heer Jansen,\n\nDe verplichting tot betaling staat vast."
+# ── extract_rebuttal: kern uit sommatie-omlijsting ───────────────────────
+
+
+def test_extract_rebuttal_drops_preamble_and_payment_tail():
+    core = (
+        "U heeft gesteld dat de geleverde machine ondeugdelijk was. Uit het door u "
+        "ondertekende opleveringsrapport blijkt echter dat u de levering zonder enig "
+        "voorbehoud heeft geaccepteerd. Van een gebrek is niet gebleken."
     )
-    assert out.startswith("De verplichting")
+    out = extract_rebuttal("REACTIE OP UW VERWEER", _wrapped_rebuttal(core))
+    assert "opleveringsrapport" in out
+    assert "Eerder heb ik u aangeschreven" not in out  # preamble weg
+    assert "Ik verzoek u" not in out  # betaal-staart weg
+    assert "Met vriendelijke groet" not in out  # handtekening weg
 
 
-# ── retrieval + formatteren + use_count ──────────────────────────────────
+# ── suggest_anonymization ────────────────────────────────────────────────
+
+
+def test_suggest_anonymization_masks_pii():
+    src = "De heer Jansen dient € 1.234,56 te betalen vóór 13 mei 2026, kenmerk 2026-00099."
+    out = suggest_anonymization(src)
+    assert "Jansen" not in out
+    assert "1.234,56" not in out
+    assert "13 mei 2026" not in out
+    assert "2026-00099" not in out
+    assert "[bedrag]" in out
+    assert "[datum]" in out
+    assert "[naam]" in out
+    assert "[kenmerk]" in out
+
+
+# ── retrieval: alleen GOEDGEKEURD, geanonimiseerde tekst ─────────────────
 
 
 @pytest.mark.asyncio
-async def test_build_learned_examples_text_formats_and_bumps_use_count(db, test_tenant):
-    for i in range(2):
-        db.add(
-            LearnedAnswer(
-                id=uuid.uuid4(),
-                tenant_id=test_tenant.id,
-                category="betwisting",
-                body=f"Argumentatie voorbeeld {i} met voldoende lengte voor een echte test.",
-            )
+async def test_build_learned_examples_uses_approved_anonymized_only(db, test_tenant):
+    # Goedgekeurd voorbeeld → moet meegaan, met de geanonimiseerde tekst.
+    db.add(
+        LearnedAnswer(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            category="betwisting",
+            body="Ruwe tekst met de naam Jansen erin die nooit verstuurd mag worden.",
+            anonymized_body="Schone weerlegging met plaatshouder [naam] en genoeg lengte hiervoor.",
+            status=STATUS_APPROVED,
+            is_active=True,
         )
+    )
+    # Kandidaat (nog niet goedgekeurd) → mag NIET meegaan.
+    db.add(
+        LearnedAnswer(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            category="betwisting",
+            body="Kandidaat die nog niet is beoordeeld en dus niet gebruikt mag worden.",
+            anonymized_body="Kandidaat-voorstel dat nog wacht op goedkeuring van de advocaat.",
+            status=STATUS_CANDIDATE,
+            is_active=False,
+        )
+    )
     await db.flush()
 
     text = await build_learned_examples_text(db, test_tenant.id, "betwisting")
-    assert "eigen eerdere antwoorden" in text.lower()
-    assert "Voorbeeld 1" in text
+    assert "goedgekeurd" in text.lower()
     assert "GEEN" in text  # PII-instructie aanwezig
+    assert "Schone weerlegging" in text
+    assert "Jansen" not in text  # ruwe body wordt nooit meegestuurd
+    assert "Kandidaat" not in text  # kandidaten voeden de prompt niet
 
-    rows = (
+    # use_count alleen op het goedgekeurde voorbeeld.
+    approved = (
         await db.execute(
-            select(LearnedAnswer).where(LearnedAnswer.tenant_id == test_tenant.id)
+            select(LearnedAnswer).where(
+                LearnedAnswer.tenant_id == test_tenant.id,
+                LearnedAnswer.status == STATUS_APPROVED,
+            )
         )
-    ).scalars().all()
-    assert all(r.use_count == 1 for r in rows)
+    ).scalar_one()
+    assert approved.use_count == 1
 
 
 @pytest.mark.asyncio
@@ -143,14 +215,39 @@ async def test_no_examples_returns_empty(db, test_tenant):
     assert await build_learned_examples_text(db, test_tenant.id, None) == ""
 
 
-# ── backfill ─────────────────────────────────────────────────────────────
+# ── injectie alleen bij de verweer-stap (bevinding 4) ────────────────────
+
+
+def _minimal_prompt(step_name: str, learned: str) -> str:
+    return build_user_prompt(
+        step_name=step_name,
+        template_subject="Betreft",
+        template_body="Body",
+        case_data={},
+        debtor_data={},
+        client_data={},
+        invoices=[],
+        amounts={},
+        learned_examples_text=learned,
+    )
+
+
+def test_learned_examples_only_injected_at_verweer_step():
+    marker = "UNIEKE-GELEERDE-VOORBEELDTEKST"
+    assert marker in _minimal_prompt("Verweer beantwoorden", marker)
+    assert marker not in _minimal_prompt("Tweede sommatie", marker)
+    assert marker not in _minimal_prompt("Eerste sommatie", marker)
+
+
+# ── kandidaat-vangst (backfill) ──────────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_backfill_learns_from_outbound_correction_and_dedups(
+async def test_backfill_captures_wrapped_rebuttal_as_candidate(
     db, test_tenant, test_user, test_company, test_person
 ):
-    """Leert van de tekst die Lisanne ECHT verstuurt (haar correctie), niet het AI-voorstel."""
+    """Bevinding 1: een echte weerlegging IN een sommatie-sjabloon wordt nu gevangen
+    (werd voorheen weggegooid omdat 'sommatie' in het onderwerp stond)."""
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user, step=None
     )
@@ -158,43 +255,68 @@ async def test_backfill_learns_from_outbound_correction_and_dedups(
     t0 = datetime.now(UTC)
     inbound = await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
-        body="Ik betwist de factuur, no cure no pay.", when=t0,
+        body="Ik betwist: de machine was ondeugdelijk.", when=t0,
     )
     await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
-    # Haar werkelijk verzonden antwoord — geen sommatie-onderwerp.
+    core = (
+        "U heeft gesteld dat de geleverde machine ondeugdelijk was. Uit het door u "
+        "ondertekende opleveringsrapport blijkt echter dat u de levering zonder enig "
+        "voorbehoud heeft geaccepteerd. Van een gebrek is niet gebleken."
+    )
     await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
-        subject="RE: uw bericht",
-        body=(
-            "Geachte heer,\n\nUw verweer faalt: de opdrachtbevestiging vermeldt het "
-            "tegendeel. De verplichting tot betaling staat vast.\n\n"
-            "Met vriendelijke groet,\nLisanne"
-        ),
-        when=t0 + timedelta(hours=1),
+        subject="REACTIE OP UW VERWEER / WEDEROM SOMMATIE",
+        body=_wrapped_rebuttal(core), when=t0 + timedelta(hours=1), html_only=True,
     )
 
     added = await backfill_learned_answers(db, test_tenant.id)
     assert added == 1
-    rows = (
+    row = (
         await db.execute(
             select(LearnedAnswer).where(LearnedAnswer.tenant_id == test_tenant.id)
         )
-    ).scalars().all()
-    assert len(rows) == 1
-    assert rows[0].category == "betwisting"
-    assert "opdrachtbevestiging" in rows[0].body
-    assert "Met vriendelijke groet" not in rows[0].body  # handtekening gestript
-    assert "Geachte" not in rows[0].body  # aanhef gestript
+    ).scalar_one()
+    assert row.status == STATUS_CANDIDATE  # kandidaat, voedt de AI nog niet
+    assert row.is_active is False
+    assert "opleveringsrapport" in row.body
+    assert "Eerder heb ik u aangeschreven" not in row.body  # sommatie-omlijsting weg
+    assert row.anonymized_body  # er is een anonimiseer-voorstel
 
-    # Idempotent: tweede run voegt niets toe.
+    # Idempotent.
     assert await backfill_learned_answers(db, test_tenant.id) == 0
 
 
 @pytest.mark.asyncio
-async def test_backfill_excludes_collection_letters(
+async def test_backfill_skips_duplicate_of_library(
     db, test_tenant, test_user, test_company, test_person
 ):
-    """Collectiebrieven (sommatie in het onderwerp ÓF in de body-kop) zijn geen verweer-reacties."""
+    """Bevinding 2: een weerlegging die vrijwel gelijk is aan een bestaande standaardtekst
+    wordt NIET als kandidaat opgeslagen — die kennen we al."""
+    library_body = next(e.body for e in DEFENSE_EXAMPLES if e.key == "verlengd_abonnement")
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist: het abonnement is opgezegd.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    # Opener + vrijwel de exacte library-tekst.
+    body = "U heeft gesteld dat het abonnement is opgezegd.\n\n" + library_body
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="RE: uw bericht", body=body, when=t0 + timedelta(hours=1), html_only=True,
+    )
+    assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_excludes_plain_sommatie(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Een kale sommatie (geen weerlegging) is geen kandidaat."""
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user, step=None
     )
@@ -205,49 +327,14 @@ async def test_backfill_excludes_collection_letters(
         body="Ik betwist de factuur.", when=t0,
     )
     await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
-    # (a) sommatie in het onderwerp
     await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
         subject="WEDEROM SOMMATIE TOT BETALING / 2026-00049",
-        body="Ik verzoek u het volledige bedrag binnen vijf dagen te voldoen.",
+        body=(
+            "Eerder heb ik u aangeschreven betreffende de openstaande vordering. "
+            "Ik verzoek u het volledige bedrag binnen vijf dagen te voldoen."
+        ),
         when=t0 + timedelta(hours=1),
-    )
-    # (b) schoon onderwerp, maar collectiebrief-opening in de body
-    await _email(
-        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
-        subject="RE: uw bericht",
-        body=(
-            "Eerder heb ik u aangeschreven betreffende de openstaande vordering van "
-            "mijn cliënt. Deze vordering staat ter incasso. Ik verzoek u te betalen."
-        ),
-        when=t0 + timedelta(hours=2),
-    )
-    assert await backfill_learned_answers(db, test_tenant.id) == 0
-
-
-@pytest.mark.asyncio
-async def test_backfill_excludes_html_only_collection_letter(
-    db, test_tenant, test_user, test_company, test_person
-):
-    """Inhoud zit vaak ALLÉÉN in body_html (Outlook); een HTML-sommatie moet ook dan eruit."""
-    case = await create_incasso_case(
-        db, test_tenant.id, test_company, test_person, test_user, step=None
-    )
-    acc = await _account(db, test_tenant.id, test_user.id)
-    t0 = datetime.now(UTC)
-    inbound = await _email(
-        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
-        body="Ik betwist de factuur.", when=t0,
-    )
-    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
-    await _email(
-        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
-        subject="REACTIE OP UW VERWEER / 2026-00049",
-        body=(
-            "Betreft: WEDEROM SOMMATIE TOT BETALING. Eerder heb ik u aangeschreven "
-            "betreffende de openstaande vordering. Deze vordering staat ter incasso."
-        ),
-        when=t0 + timedelta(hours=1), html_only=True,
     )
     assert await backfill_learned_answers(db, test_tenant.id) == 0
 
@@ -256,7 +343,7 @@ async def test_backfill_excludes_html_only_collection_letter(
 async def test_backfill_excludes_unfilled_xxx_template(
     db, test_tenant, test_user, test_company, test_person
 ):
-    """Een verweer-sjabloon waar het argument nog 'XXX' is, mag niet geleerd worden."""
+    """Een verweer-sjabloon waar het argument nog 'XXX' is, mag niet gevangen worden."""
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user, step=None
     )
@@ -270,44 +357,10 @@ async def test_backfill_excludes_unfilled_xxx_template(
     await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
         subject="RE: reactie",
-        body="Hierbij voorzie ik u van een inhoudelijke reactie. XXX Met vriendelijke groet.",
+        body="U heeft gesteld dat u niets verschuldigd bent. XXX Met vriendelijke groet.",
         when=t0 + timedelta(hours=1), html_only=True,
     )
     assert await backfill_learned_answers(db, test_tenant.id) == 0
-
-
-@pytest.mark.asyncio
-async def test_backfill_learns_genuine_html_rebuttal(
-    db, test_tenant, test_user, test_company, test_person
-):
-    """Een ECHTE weerlegging (alleen in body_html) wordt wél geleerd."""
-    case = await create_incasso_case(
-        db, test_tenant.id, test_company, test_person, test_user, step=None
-    )
-    acc = await _account(db, test_tenant.id, test_user.id)
-    t0 = datetime.now(UTC)
-    inbound = await _email(
-        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
-        body="Ik betwist: er is nooit een overeenkomst gesloten.", when=t0,
-    )
-    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
-    await _email(
-        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
-        subject="RE: uw bericht",
-        body=(
-            "In reactie op uw stellingen: de overeenkomst is rechtsgeldig tot stand "
-            "gekomen en de annuleringskosten zijn conform artikel 9.3 verschuldigd."
-        ),
-        when=t0 + timedelta(hours=1), html_only=True,
-    )
-    added = await backfill_learned_answers(db, test_tenant.id)
-    assert added == 1
-    rows = (
-        await db.execute(
-            select(LearnedAnswer).where(LearnedAnswer.tenant_id == test_tenant.id)
-        )
-    ).scalars().all()
-    assert "annuleringskosten" in rows[0].body
 
 
 @pytest.mark.asyncio
@@ -327,19 +380,98 @@ async def test_backfill_skips_non_learnable_category(
     await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
         subject="RE: uw bericht",
-        body="Wij hebben uw bericht in goede orde ontvangen en komen erop terug.",
+        body="U heeft gesteld dat u het bericht ontving; wij komen erop terug.",
         when=t0 + timedelta(hours=1),
     )
     assert await backfill_learned_answers(db, test_tenant.id) == 0
 
 
-# ── dashboard edit-rate ──────────────────────────────────────────────────
+# ── goedkeuren / afwijzen ────────────────────────────────────────────────
+
+
+async def _make_candidate(db, tenant_id) -> LearnedAnswer:
+    row = LearnedAnswer(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        category="betwisting",
+        body="Ruwe weerlegging met naam Jansen en bedrag € 500,00 erin voor de test.",
+        anonymized_body="Weerlegging met [naam] en [bedrag] — voorstel dat lang genoeg is.",
+        defense_type="overig",
+        status=STATUS_CANDIDATE,
+        is_active=False,
+    )
+    db.add(row)
+    await db.flush()
+    return row
 
 
 @pytest.mark.asyncio
-async def test_learning_stats_edit_rate_unchanged(
+async def test_approve_candidate_activates_and_feeds_prompt(db, test_tenant):
+    cand = await _make_candidate(db, test_tenant.id)
+    assert await list_candidates(db, test_tenant.id)  # staat in de wachtrij
+
+    approved = await approve_candidate(
+        db, test_tenant.id, cand.id,
+        anonymized_body="Definitieve geanonimiseerde weerlegging met genoeg lengte hiervoor.",
+        defense_type="annuleringskosten_9_3",
+    )
+    assert approved is not None
+    assert approved.status == STATUS_APPROVED
+    assert approved.is_active is True
+    assert approved.reviewed_at is not None
+    assert approved.defense_type == "annuleringskosten_9_3"
+
+    # Niet meer in de wachtrij, wél in de prompt.
+    assert await list_candidates(db, test_tenant.id) == []
+    text = await build_learned_examples_text(db, test_tenant.id, "betwisting")
+    assert "Definitieve geanonimiseerde weerlegging" in text
+
+
+@pytest.mark.asyncio
+async def test_reject_candidate_never_feeds_prompt(db, test_tenant):
+    cand = await _make_candidate(db, test_tenant.id)
+    assert await reject_candidate(db, test_tenant.id, cand.id) is True
+
+    refreshed = (
+        await db.execute(
+            select(LearnedAnswer).where(LearnedAnswer.id == cand.id)
+        )
+    ).scalar_one()
+    assert refreshed.status == STATUS_REJECTED
+    assert refreshed.is_active is False
+    assert await list_candidates(db, test_tenant.id) == []
+    assert await build_learned_examples_text(db, test_tenant.id, "betwisting") == ""
+
+
+@pytest.mark.asyncio
+async def test_approve_unknown_candidate_returns_none(db, test_tenant):
+    assert await approve_candidate(
+        db, test_tenant.id, uuid.uuid4(), anonymized_body="x" * 40
+    ) is None
+    assert await reject_candidate(db, test_tenant.id, uuid.uuid4()) is False
+
+
+# ── dashboard-stats ──────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_learning_stats_counts_and_edit_rate(
     db, test_tenant, test_user, test_company, test_person
 ):
+    # Eén kandidaat + één goedgekeurd voorbeeld.
+    await _make_candidate(db, test_tenant.id)
+    db.add(
+        LearnedAnswer(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            category="betwisting",
+            body="raw",
+            anonymized_body="Goedgekeurd voorbeeld met voldoende lengte voor de weergave.",
+            status=STATUS_APPROVED,
+            is_active=True,
+        )
+    )
+
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user, step=None
     )
@@ -358,7 +490,6 @@ async def test_learning_stats_edit_rate_unchanged(
             sent_at=gen,
         )
     )
-    # Uitgaande mail met (vrijwel) dezelfde tekst → bucket "ongewijzigd".
     await _email(
         db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
         body=body, when=gen + timedelta(minutes=5),
@@ -366,5 +497,7 @@ async def test_learning_stats_edit_rate_unchanged(
     await db.flush()
 
     stats = await get_learning_stats(db, test_tenant.id)
+    assert stats["candidates"] == 1
+    assert stats["total_examples"] == 1  # alleen goedgekeurd telt mee
     assert stats["edit_rate"]["matched"] == 1
     assert stats["edit_rate"]["ongewijzigd"] == 1

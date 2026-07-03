@@ -434,9 +434,9 @@ async def gather_case_context(
     def _fmt_nl_date(d: date | None) -> str:
         return d.strftime("%d-%m-%Y") if d else ""
 
-    # Shadow-learning: eigen eerdere antwoorden in de categorie van de laatste
-    # classificatie op dit dossier (komt naast de hand-bibliotheek in build_user_prompt).
-    from app.ai_agent.learned_answers import build_learned_examples_text
+    # Goedgekeurde extra standaardantwoorden — alleen relevant bij de verweer-stap. We
+    # bepalen hier enkel de categorie; de tekst wordt in generate_draft_for_step opgehaald
+    # ná de stap-check, zodat use_count niet oploopt bij stappen die de voorbeelden negeren.
     from app.ai_agent.models import EmailClassification
 
     last_cls_category = (
@@ -450,9 +450,6 @@ async def gather_case_context(
             .limit(1)
         )
     ).scalar_one_or_none()
-    learned_examples_text = await build_learned_examples_text(
-        db, tenant_id, last_cls_category, max_chars=4000
-    )
 
     return {
         "case_data": {
@@ -504,7 +501,8 @@ async def gather_case_context(
         "av_pdf_path": av_pdf_path,
         "incoming_defense": None,
         "prior_correspondence": [],
-        "learned_examples_text": learned_examples_text,
+        "learned_examples_text": "",
+        "_last_cls_category": last_cls_category,
     }
 
 
@@ -619,6 +617,16 @@ async def generate_draft_for_step(
         av_pdf_path is not None
         and target_step.name == "Verweer beantwoorden"
     )
+
+    # Goedgekeurde extra standaardantwoorden alleen bij de verweer-stap ophalen — dat is de
+    # enige stap die ze gebruikt. Zo blijft use_count (het 'meest gebruikt'-dashboard) zuiver.
+    last_cls_category = context.pop("_last_cls_category", None)
+    if target_step.name == "Verweer beantwoorden":
+        from app.ai_agent.learned_answers import build_learned_examples_text
+
+        context["learned_examples_text"] = await build_learned_examples_text(
+            db, tenant_id, last_cls_category, max_chars=4000
+        )
 
     # Bouw prompt
     system_prompt, user_prompt = build_full_prompt(

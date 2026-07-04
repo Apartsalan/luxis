@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premortem — Kennisbank &amp; Learning Loop (Luxis)</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0e1a; color: #d7dce8;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.55; padding: 40px 20px; max-width: 1100px; margin: 0 auto;
+  }
+  h1 { font-size: 1.6rem; color: #fff; margin-bottom: 4px; }
+  .sub { color: #8b93a7; font-size: .95rem; margin-bottom: 32px; }
+  h2 { font-size: 1.15rem; color: #fff; margin: 36px 0 14px; border-bottom: 1px solid #232a3d; padding-bottom: 8px; }
+  .synth { background: #101728; border: 1px solid #26304a; border-radius: 14px; padding: 24px 26px; margin-bottom: 10px; }
+  .synth h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+  .synth p { font-size: .95rem; margin-bottom: 18px; }
+  .synth p:last-child { margin-bottom: 0; }
+  .c-red { color: #ff7a7a; } .c-orange { color: #ffb066; } .c-violet { color: #b7a5ff; } .c-cyan { color: #6fd6e8; }
+  ol.plan { margin: 8px 0 0 22px; font-size: .95rem; }
+  ol.plan li { margin-bottom: 7px; }
+  ul.check { list-style: none; margin-top: 8px; font-size: .95rem; }
+  ul.check li { margin-bottom: 7px; padding-left: 26px; position: relative; }
+  ul.check li::before { content: "☐"; position: absolute; left: 0; color: #6fd6e8; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 8px; }
+  .card { background: #0f1524; border: 1px solid #232a3d; border-left: 4px solid var(--ac); border-radius: 12px; padding: 18px 20px; }
+  .card h3 { font-size: 1rem; color: var(--ac); margin-bottom: 10px; }
+  .badges { margin-bottom: 12px; }
+  .badge { display: inline-block; font-size: .7rem; font-weight: 600; letter-spacing: .04em;
+    border-radius: 999px; padding: 2px 10px; margin-right: 6px; border: 1px solid; }
+  .b-hoog { color: #ff8b8b; border-color: #ff8b8b55; background: #ff8b8b14; }
+  .b-mid  { color: #ffc266; border-color: #ffc26655; background: #ffc26614; }
+  .b-laag { color: #7ee0a3; border-color: #7ee0a355; background: #7ee0a314; }
+  .card p { font-size: .87rem; color: #b9c0d4; margin-bottom: 10px; }
+  .card .lbl { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: #7d86a0; margin-bottom: 3px; }
+  .card .assume { color: #e8d9a8; font-style: italic; }
+  .card ul { margin: 4px 0 0 18px; font-size: .85rem; color: #b9c0d4; }
+  .card ul li { margin-bottom: 5px; }
+  footer { margin-top: 44px; padding-top: 16px; border-top: 1px solid #232a3d;
+    color: #6c7590; font-size: .8rem; }
+  .meta { color: #8b93a7; font-size: .9rem; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Premortem — Kennisbank &amp; Learning Loop</h1>
+<p class="sub">Luxis AI-assistent · architectuurkeuze + gefaseerd plan K0–K3 · frame: <strong>het is januari 2027 en dit plan is mislukt</strong> · 7 faalscenario's, elk door een eigen analyse-agent uitgediept</p>
+
+<h2>Synthese — lees dit eerst</h2>
+<div class="synth">
+  <h3 class="c-red">Meest waarschijnlijke faal</h3>
+  <p><strong>De menselijke bottleneck.</strong> Twee scenario's (kennisbank blijft leeg · review-loop verstopt) delen dezelfde wortel: het plan hangt op deadline-loos werk van Lisanne — voorwaarden aanleveren en kandidaten beoordelen. Het signaal staat <strong>nu al op rood</strong>: 130 kandidaten wachten ±3 weken en de review is al twee keer verschoven.</p>
+
+  <h3 class="c-orange">Gevaarlijkste faal</h3>
+  <p><strong>Verouderde of verkeerde voorwaarden in de kennisbank.</strong> De AI citeert vol vertrouwen het verkeerde artikel in een echte zaak; juist de juridisch-degelijke vorm verlaagt Lisanne's waakzaamheid. Eén incident breekt het vertrouwen in álle AI-features. (De autonomie-drift eindigt op precies hetzelfde punt via een andere weg.)</p>
+
+  <h3 class="c-violet">De verborgen aanname</h3>
+  <p>Het plan behandelt <strong>Lisanne's tijd als gratis en juridische kennis als statisch</strong>: "als wij het bouwen, komen content, review en correctheid vanzelf." En daaronder: "meer juridische context = betere concepten" — terwijl het bewezen kwaliteitsanker haar eigen stijl-voorbeelden zijn.</p>
+
+  <h3 class="c-cyan">Herzien plan</h3>
+  <ol class="plan">
+    <li><strong>K0-gate vóór alle bouw:</strong> voorwaarden verzameld (eerst zoeken in de BaseNet-import; Lisanne alleen valideren — minuten, geen uren) én de eerste review-ronde is gebeurd. Na 14 dagen niets → eerst dát gesprek, niet bouwen.</li>
+    <li><strong>Versie-metadata verplicht</strong> (versiedatum + geldig-vanaf per document) en elk citaat toont de versiedatum.</li>
+    <li><strong>Injectie-cap ~1.500 tekens in code</strong> + injectiegrootte loggen.</li>
+    <li><strong>Met/zonder-vlag per concept</strong> + baseline vastklikken op livegang, zodat effect op de edit-rate binnen 2 weken zichtbaar is i.p.v. 4 maanden.</li>
+    <li><strong>Per-voorbeeld attributie geschrapt</strong> — statistisch betekenisloos op deze schaal; vervangen door geaggregeerde trend + wachtrij-gezondheid.</li>
+    <li><strong>Autonomie-grendel als test:</strong> geen verzendpad zonder gebruikersklik (besluit S160 verankerd in code).</li>
+    <li><strong>Kesting-begrippen naar data,</strong> hardcoded-teller mag tijdens K1 niet stijgen; synthetische-tenant-test vóór GTM-demo's.</li>
+  </ol>
+
+  <h3 class="c-cyan" style="margin-top:18px;">Checklist vóór K1-start</h3>
+  <ul class="check">
+    <li>≥5 van 7 voorwaarden-sets binnen, mét versiedatum per document</li>
+    <li>Eerste review-ronde: ≥50 van 130 kandidaten beoordeeld</li>
+    <li>Injectie-cap + met/zonder-vlag opgenomen in het K1-ontwerp</li>
+    <li>Autonomie-grendel-test gespecificeerd</li>
+    <li>Baseline edit-rate genoteerd (datum + cijfers)</li>
+  </ul>
+</div>
+
+<h2>De 7 faalscenario's</h2>
+<div class="grid">
+
+  <div class="card" style="--ac:#ff7a7a;">
+    <h3>1 · De kennisbank blijft leeg</h3>
+    <div class="badges"><span class="badge b-hoog">Kans: hoog</span><span class="badge b-mid">Impact: middel</span></div>
+    <p>K1 gaat technisch live, maar "content aanleveren" is een actiepunt zonder eigenaar, deadline of formaat. Het knippen van voorwaarden in injecteerbare fragmenten is juridisch curatiewerk dat alleen Lisanne kan — en dat is nooit als taak benoemd. In januari 2027 draait de prompt nog exact als daarvoor.</p>
+    <div class="lbl">Onderliggende aanname</div>
+    <p class="assume">"Als de techniek er staat en de waarde evident is, komt de content vanzelf."</p>
+    <div class="lbl">Vroege signalen</div>
+    <ul><li>Kandidaten-teller bij K1-launch nog &gt;100</li><li>14 dagen na K1: actieve knowledge_documents = 0</li></ul>
+  </div>
+
+  <div class="card" style="--ac:#ffb066;">
+    <h3>2 · Verouderde voorwaarden → foute citaten</h3>
+    <div class="badges"><span class="badge b-mid">Kans: middel</span><span class="badge b-hoog">Impact: hoog</span></div>
+    <p>Geüpload wat toevallig als PDF op de schijf stond; "versie" bestaat niet als concept. Opdrachtgever vernieuwt voorwaarden; de AI citeert art. 9.3 uit de oude versie in een echte zaak. Het juridisch-degelijke uiterlijk verlaagt Lisanne's waakzaamheid — de wederpartij wijst haar erop. Daarna vertrouwt ze geen citaat meer.</p>
+    <div class="lbl">Onderliggende aanname</div>
+    <p class="assume">"Algemene voorwaarden zijn statisch: één keer uploaden is genoeg."</p>
+    <div class="lbl">Vroege signalen</div>
+    <ul><li>Documenten mét geldigheidsperiode = 0 bij intake</li><li>Correctie in een geciteerde passage (bron-fout ≠ stijl-edit) = direct alarm</li></ul>
+  </div>
+
+  <div class="card" style="--ac:#ffd166;">
+    <h3>3 · Prompt-verwatering + stille kostenstijging</h3>
+    <div class="badges"><span class="badge b-mid">Kans: middel</span><span class="badge b-mid">Impact: middel</span></div>
+    <p>"Voor de zekerheid" gaan hele artikelen de tabel in; de prompt groeit naar 10.000+ tekens brontekst. Concepten worden formeel en wollig — de stijl-voorbeelden verdrinken. Zonder baseline is de trendbreuk niet aan K1 toe te schrijven; de verdubbelde tokenkosten vallen pas maanden later op een factuur op.</p>
+    <div class="lbl">Onderliggende aanname</div>
+    <p class="assume">"Meer relevante juridische context maakt een concept automatisch beter."</p>
+    <div class="lbl">Vroege signalen</div>
+    <ul><li>Gemiddelde injectiegrootte boven de limiet (~1.500 tekens)</li><li>Edit-rate mét injectie slechter dan zonder</li></ul>
+  </div>
+
+  <div class="card" style="--ac:#ff7ab8;">
+    <h3>4 · De loop verstopt: review blijft liggen</h3>
+    <div class="badges"><span class="badge b-hoog">Kans: hoog</span><span class="badge b-hoog">Impact: hoog</span></div>
+    <p>De eerste ronde stokt bij kandidaat 40; "klaar genoeg" is nooit gedefinieerd, dus K2 wacht eeuwig. De wachtrij groeit naar 200+; de berg zelf wordt de reden om niet te beginnen. Review voelt als onbetaald huiswerk zonder zichtbare beloning. Drie kwartalen tooling rond een knop die de gebruiker niet indrukt.</p>
+    <div class="lbl">Onderliggende aanname</div>
+    <p class="assume">"Als reviewen makkelijk genoeg is, maakt een overbelaste solo-advocaat er vanzelf structureel tijd voor vrij."</p>
+    <div class="lbl">Vroege signalen</div>
+    <ul><li>14 dagen na oplevering: 0 beoordeeld — staat nú al op rood</li><li>Instroom &gt; beoordeeld, twee weken op rij</li></ul>
+  </div>
+
+  <div class="card" style="--ac:#b7a5ff;">
+    <h3>5 · Attributie-dashboard stuurt op ruis</h3>
+    <div class="badges"><span class="badge b-hoog">Kans: hoog (indien gebouwd)</span><span class="badge b-mid">Impact: middel</span></div>
+    <p>~25 concepten/maand × 3 voorbeelden tegelijk = nooit toewijsbare observaties. Voorbeelden kleuren "rood" door toeval (één lastige debiteur), worden vervangen, metingen resetten — en het enige goede voorbeeld voor een situatie sneuvelt. De cijfers zágen er alleen wetenschappelijk uit.</p>
+    <div class="lbl">Onderliggende aanname</div>
+    <p class="assume">"Als we het meten, betekent het iets."</p>
+    <div class="lbl">Vroege signalen</div>
+    <ul><li>Ranking klapt om bij elke herberekening (leave-one-out)</li><li>Rood/groen-labels bij n &lt; 20</li></ul>
+    <p style="margin-top:8px;color:#7ee0a3;"><strong>Mitigatie: geschrapt uit het plan.</strong></p>
+  </div>
+
+  <div class="card" style="--ac:#6fd6e8;">
+    <h3>6 · Scope-drift naar de autonome agent</h3>
+    <div class="badges"><span class="badge b-laag">Kans: laag–middel</span><span class="badge b-hoog">Impact: zeer hoog</span></div>
+    <p>"Waarom moet ik standaardgevallen nog klikken?" → auto-verstuur bij sjabloonmatch → "hoge zekerheid"-drafts → gekoppeld aan pipeline-doorschuiving. S160 wordt nooit formeel teruggedraaid, het erodeert in tien kleine commits — tot een randgeval automatisch fout wordt beantwoord en Lisanne álle AI-features uitzet.</p>
+    <div class="lbl">Onderliggende aanname</div>
+    <p class="assume">"Een hoog goedkeuringspercentage bewijst dat menselijke controle overbodig is."</p>
+    <div class="lbl">Vroege signalen</div>
+    <ul><li>Commit met verzend-/statuspad zonder gebruikersklik (moet 0 blijven)</li><li>Review-tijd &lt;10 sec per concept / blind batch-goedkeuren</li></ul>
+  </div>
+
+  <div class="card" style="--ac:#7ee0a3;">
+    <h3>7 · Kesting-maatwerk dat niet generaliseert</h3>
+    <div class="badges"><span class="badge b-mid">Kans: middel</span><span class="badge b-hoog">Impact: hoog (bij GTM)</span></div>
+    <p>De kennisbank stapelt op de vijf Kesting-verweer-typen i.p.v. ze te vervangen. Bij de demo aan kantoor 2 (ander rechtsgebied) vallen heuristieken terug op het dichtstbijzijnde Kesting-type; "twee weken aanpassen" wordt zes weken herbouw en de tweede referentieklant haakt af — precies wanneer "slimme AI" het verkoopargument moest zijn.</p>
+    <div class="lbl">Onderliggende aanname</div>
+    <p class="assume">"Multi-tenant datamodel = generaliseerbaar product."</p>
+    <div class="lbl">Vroege signalen</div>
+    <ul><li>Hardcoded-teller Kesting-begrippen stijgt tijdens K1</li><li>Synthetische-tenant-test wordt nooit gedraaid</li></ul>
+  </div>
+
+</div>
+
+<footer>
+  Premortem gedraaid op 4 juli 2026 (sessie S169, Fable 5) · onderwerp: architectuurkeuze kennisbank + learning loop Luxis AI-assistent · 7 parallelle analyse-agents · volledig transcript: <em>premortem-transcript-2026-07-04.md</em> · onderzoeksdocument: <em>kennisbank-learning-loop-onderzoek-2026-07-04.md</em>
+</footer>
+
+</body>
+</html>

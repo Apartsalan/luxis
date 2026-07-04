@@ -1333,7 +1333,19 @@ LF-10 → afhankelijk van LF-11
 > Laag 3: ✅ COMPLEET — Geautomatiseerd E2E script (`scripts/e2e_intake_test.py`) — directe service-calls met gemockte AI extractie. 4 scenario's (happy path, lege email body, edit-before-approve, reject flow). Marker-based cleanup, deterministische UUIDs, onafhankelijke DB sessies per scenario. (sessie 59, 11 maart)
 > **LET OP: GEEN Gmail gebruiken — alles via OutlookProvider/Graph API met M365 account.**
 >
-> **AI Agent — Knowledge Base & Learning Loop** 📋 Gepland:
+> **AI Agent — Knowledge Base & Learning Loop** 🔶 Onderzoek afgerond (S169, 4 juli 2026 — Fable 5):
+> Volledige bevindingen + gefaseerd plan: `docs/research/kennisbank-learning-loop-onderzoek-2026-07-04.md`;
+> premortem: `docs/research/premortem-report-2026-07-04.html` (+ transcript).
+> **Uitkomst:** niemand (ook Harvey niet) laat het model "vanzelf leren" — industrie-standaard = gecureerde bronnen + mens keurt +
+> voorbeelden in de prompt + meten; Luxis doet die vorm al (defense_library, verweer-bibliotheek, edit-rate, S160).
+> **Architectuurkeuze:** deterministische selectieve prompt-injectie, GEEN RAG/vector-DB/embeddings (klein begrensd corpus,
+> structurele selectiesleutels, AVG); upgrade-pad pgvector indien ooit nodig.
+> **Plan:** K0-gate (voorwaarden 7 opdrachtgevers verzameld + Lisanne's eerste review-ronde gebeurd — geen bouw vóór die gate) →
+> K1 kennisbank (versie-metadata verplicht, injectie-cap ~1.500 tekens in code, met/zonder-vlag voor edit-rate-vergelijking) →
+> K2 leer-loop verbreden + geaggregeerde meting (per-voorbeeld attributie GESCHRAPT: schijnverbanden bij deze n; autonomie-grendel-test
+> S160 in code) → K3 patroonherkenning GEPARKEERD. Kesting-begrippen richting data (hardcoded-teller mag niet stijgen).
+>
+> Oorspronkelijke omschrijving:
 > De agent heeft een kennisbank nodig (algemene voorwaarden, wettelijke regels, interne richtlijnen) en een feedback/learning loop
 > zodat hij leert van Lisanne's correcties en steeds beter wordt. Vereist: onderzoekssessie (hoe doen Harvey AI, CoCounsel, Clio AI dit?)
 > → architectuurkeuze (RAG vs structured prompting) → knowledge base UI → feedback loop mechanisme.

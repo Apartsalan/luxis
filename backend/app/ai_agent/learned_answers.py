@@ -28,7 +28,7 @@ import uuid
 from datetime import UTC, datetime
 from html import unescape as _html_unescape
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.defense_library import DEFENSE_EXAMPLES
@@ -596,6 +596,33 @@ async def reject_candidate(
     row.reviewed_at = datetime.now(UTC)
     await db.flush()
     return True
+
+
+async def reject_candidates_bulk(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    candidate_ids: list[uuid.UUID],
+) -> int:
+    """Wijs meerdere kandidaten in één keer af — bulk-opruimen van ruis in de wachtrij.
+
+    Raakt alleen rijen die (a) van deze tenant zijn en (b) nog `kandidaat` zijn: een al
+    goedgekeurd voorbeeld blijft ongemoeid. Geeft het aantal daadwerkelijk afgewezen
+    kandidaten terug. Lege lijst = no-op (0).
+    """
+    if not candidate_ids:
+        return 0
+    result = await db.execute(
+        update(LearnedAnswer)
+        .where(
+            LearnedAnswer.tenant_id == tenant_id,
+            LearnedAnswer.id.in_(candidate_ids),
+            LearnedAnswer.status == STATUS_CANDIDATE,
+        )
+        .values(status=STATUS_REJECTED, is_active=False, reviewed_at=datetime.now(UTC))
+        .execution_options(synchronize_session=False)
+    )
+    await db.flush()
+    return result.rowcount or 0
 
 
 # ── Dashboard-statistieken (edit-rate + leer-stats) ──────────────────────────

@@ -1,8 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sparkles, RefreshCw, TrendingUp, BookOpen, Info, Check, X, ClipboardCheck } from "lucide-react";
+import {
+  Sparkles,
+  RefreshCw,
+  TrendingUp,
+  BookOpen,
+  Info,
+  Check,
+  X,
+  ClipboardCheck,
+  ChevronRight,
+  ChevronDown,
+  AlertTriangle,
+  Trash2,
+  CheckSquare,
+  Square,
+} from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
@@ -56,6 +71,58 @@ function catLabel(key: string): string {
   return CATEGORY_LABELS[key] ?? key;
 }
 
+// Normaliseer het verweer-type naar een bekende groep (null/onbekend → 'overig').
+function typeKey(c: Candidate): string {
+  return c.defense_type && DEFENSE_TYPE_LABELS[c.defense_type] ? c.defense_type : "overig";
+}
+
+// ── PII-hulp: mogelijke overgebleven namen opsporen ──────────────────────
+// Woorden met een hoofdletter MIDDEN in een zin (voorafgegaan door een kleine letter,
+// komma of haakje) zijn zelden een zinsbegin en vaak een eigennaam of bedrijfsnaam die
+// het anonimiseer-voorstel liet staan. Puur een waarschuwing — Lisanne beslist.
+const NAME_STOPWORDS = new Set([
+  "Cliënte", "Cliënt", "Client", "Uw", "Ik", "Hierbij", "Vordering", "Sommatie",
+  "Laatste", "Factuurnummer", "Datum", "Bedrag", "Thans", "BW", "IBAN", "EUR",
+  "No", "Cure", "Pay", "Engels", "Betreft", "Geachte", "Artikel", "Indien",
+]);
+const MID_SENTENCE_CAP = /(?<=[a-zà-ÿ,)]\s)([A-ZÀ-Ÿ][a-zà-ÿ]{2,})/g;
+
+function suspectNames(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of text.matchAll(MID_SENTENCE_CAP)) {
+    const w = m[1];
+    if (!NAME_STOPWORDS.has(w)) out.add(w);
+  }
+  return [...out].slice(0, 8);
+}
+
+// Toon de opgeslagen tekst met plaatshouders groen en verdachte namen amber gemarkeerd.
+function Highlighted({ text, suspects }: { text: string; suspects: string[] }) {
+  const flagged = new Set(suspects);
+  const tokens = text.split(/(\[[^\]]+\]|\s+)/);
+  return (
+    <p className="whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-2.5 text-xs leading-relaxed text-foreground">
+      {tokens.map((tok, i) => {
+        if (/^\[[^\]]+\]$/.test(tok)) {
+          return (
+            <mark key={i} className="rounded bg-emerald-500/15 px-0.5 text-emerald-700 dark:text-emerald-300">
+              {tok}
+            </mark>
+          );
+        }
+        if (flagged.has(tok.replace(/[^\wÀ-ÿ]/g, ""))) {
+          return (
+            <mark key={i} className="rounded bg-amber-500/20 px-0.5 text-amber-700 dark:text-amber-300">
+              {tok}
+            </mark>
+          );
+        }
+        return <span key={i}>{tok}</span>;
+      })}
+    </p>
+  );
+}
+
 export function AILerenTab() {
   const queryClient = useQueryClient();
 
@@ -76,6 +143,17 @@ export function AILerenTab() {
       return res.json();
     },
   });
+
+  // Beoordeeld-teller voor deze sessie (voortgangsgevoel bij een lange wachtrij).
+  const [reviewed, setReviewed] = useState(0);
+  const [catFilter, setCatFilter] = useState<string>("alle");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const dropFromCache = (ids: Set<string>) =>
+    queryClient.setQueryData<Candidate[]>(["learning-candidates"], (old) =>
+      (old ?? []).filter((c) => !ids.has(c.id))
+    );
 
   const backfill = useMutation({
     mutationFn: async () => {
@@ -107,10 +185,11 @@ export function AILerenTab() {
       if (!res.ok) throw new Error("Goedkeuren mislukt");
       return res.json();
     },
-    onSuccess: () => {
-      toast.success("Goedgekeurd — de AI gebruikt dit voortaan als voorbeeld");
-      queryClient.invalidateQueries({ queryKey: ["learning-candidates"] });
+    onSuccess: (_r, vars) => {
+      dropFromCache(new Set([vars.id]));
+      setReviewed((n) => n + 1);
       queryClient.invalidateQueries({ queryKey: ["learning-stats"] });
+      toast.success("Goedgekeurd — de AI gebruikt dit voortaan als voorbeeld");
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Goedkeuren mislukt"),
   });
@@ -121,13 +200,63 @@ export function AILerenTab() {
       if (!res.ok) throw new Error("Afwijzen mislukt");
       return res.json();
     },
-    onSuccess: () => {
-      toast.success("Afgewezen — dit voorbeeld wordt niet gebruikt");
-      queryClient.invalidateQueries({ queryKey: ["learning-candidates"] });
+    onSuccess: (_r, id) => {
+      dropFromCache(new Set([id]));
+      setReviewed((n) => n + 1);
       queryClient.invalidateQueries({ queryKey: ["learning-stats"] });
+      toast.success("Afgewezen — dit voorbeeld wordt niet gebruikt");
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Afwijzen mislukt"),
   });
+
+  const rejectBulk = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await api("/api/ai-agent/learning/candidates/reject-bulk", {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error("Bulk afwijzen mislukt");
+      return res.json() as Promise<{ rejected: number }>;
+    },
+    onSuccess: (r, ids) => {
+      dropFromCache(new Set(ids));
+      setReviewed((n) => n + r.rejected);
+      setSelected(new Set());
+      queryClient.invalidateQueries({ queryKey: ["learning-stats"] });
+      toast.success(`${r.rejected} afgewezen`);
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Bulk afwijzen mislukt"),
+  });
+
+  const pending = approve.isPending || reject.isPending || rejectBulk.isPending;
+
+  // Zichtbare kandidaten (na categoriefilter) en gegroepeerd per verweer-type.
+  const visible = useMemo(
+    () => (candidates ?? []).filter((c) => catFilter === "alle" || c.category === catFilter),
+    [candidates, catFilter]
+  );
+
+  const groups = useMemo(() => {
+    const byType = new Map<string, Candidate[]>();
+    for (const c of visible) {
+      const t = typeKey(c);
+      let arr = byType.get(t);
+      if (!arr) {
+        arr = [];
+        byType.set(t, arr);
+      }
+      arr.push(c);
+    }
+    // Binnen een groep op tekst-begin sorteren → bijna-identieke sjablonen komen naast elkaar.
+    for (const arr of byType.values()) {
+      arr.sort((a, b) =>
+        (a.body || "").slice(0, 140).localeCompare((b.body || "").slice(0, 140))
+      );
+    }
+    return DEFENSE_TYPE_KEYS.filter((t) => byType.has(t)).map(
+      (t) => [t, byType.get(t)!] as const
+    );
+  }, [visible]);
 
   if (isLoading) {
     return <div className="h-40 rounded-xl skeleton" />;
@@ -137,7 +266,52 @@ export function AILerenTab() {
   const total = er.matched || 0;
   const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
   const perCat = Object.entries(data?.per_category ?? {}).sort((a, b) => b[1] - a[1]);
-  const busy = approve.isPending || reject.isPending;
+
+  const visibleIds = visible.map((c) => c.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
+
+  const toggleSel = (id: string) =>
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const toggleExpand = (id: string) =>
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const toggleSelectAllVisible = () =>
+    setSelected((prev) => {
+      if (allVisibleSelected) {
+        const n = new Set(prev);
+        visibleIds.forEach((id) => n.delete(id));
+        return n;
+      }
+      return new Set([...prev, ...visibleIds]);
+    });
+  const doBulkReject = () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `${ids.length} kandidaat${ids.length === 1 ? "" : "en"} afwijzen? ` +
+          "Ze voeden de AI dan niet — dit is een status-wijziging, geen definitieve verwijdering."
+      )
+    )
+      return;
+    rejectBulk.mutate(ids);
+  };
+
+  const catFilters: { id: string; label: string }[] = [
+    { id: "alle", label: "Alle" },
+    { id: "juridisch_verweer", label: "Juridisch verweer" },
+    { id: "betwisting", label: "Betwisting" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -157,12 +331,15 @@ export function AILerenTab() {
 
       {/* Kandidaten om te beoordelen */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2">
             <ClipboardCheck className="h-4 w-4 text-violet-600" />
             <h3 className="text-sm font-semibold text-foreground">
               Te beoordelen ({candidates?.length ?? 0})
             </h3>
+            {reviewed > 0 && (
+              <span className="text-xs text-muted-foreground">· {reviewed} beoordeeld deze sessie</span>
+            )}
           </div>
           <button
             type="button"
@@ -184,17 +361,89 @@ export function AILerenTab() {
             </span>
           </div>
         ) : (
-          <div className="space-y-4">
-            {candidates.map((c) => (
-              <CandidateCard
-                key={c.id}
-                candidate={c}
-                busy={busy}
-                onApprove={(vars) => approve.mutate(vars)}
-                onReject={(id) => reject.mutate(id)}
-              />
-            ))}
-          </div>
+          <>
+            {/* Werkwijze-tip: niet alles hoeft, keur per type je beste goed. */}
+            <div className="mb-3 flex items-start gap-2 rounded-lg bg-violet-500/10 p-3 text-xs text-foreground">
+              <Info className="h-4 w-4 mt-0.5 shrink-0 text-violet-600" />
+              <span>
+                Je hoeft niet alle {candidates.length} te beoordelen. De AI pakt per verweer-type
+                maar een paar van je beste antwoorden. Keur per groep je sterkste weerlegging goed
+                en wijs de rest — dubbelingen en ruis — gerust in bulk af.
+              </span>
+            </div>
+
+            {/* Filter + bulk-balk */}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {catFilters.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setCatFilter(f.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    catFilter === f.id
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-border bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleSelectAllVisible}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  {allVisibleSelected ? (
+                    <CheckSquare className="h-3.5 w-3.5" />
+                  ) : (
+                    <Square className="h-3.5 w-3.5" />
+                  )}
+                  {allVisibleSelected ? "Selectie wissen" : "Selecteer zichtbare"}
+                </button>
+                {selected.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={doBulkReject}
+                    disabled={pending}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Wijs {selected.size} af
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Gegroepeerde, compacte lijst */}
+            <div className="space-y-5">
+              {groups.map(([type, items]) => (
+                <div key={type}>
+                  <div className="mb-1.5 flex items-center gap-2 px-0.5">
+                    <span className="text-xs font-semibold text-foreground">
+                      {DEFENSE_TYPE_LABELS[type]}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">({items.length})</span>
+                  </div>
+                  <div className="divide-y divide-border rounded-lg border border-border">
+                    {items.map((c) => (
+                      <CandidateRow
+                        key={c.id}
+                        candidate={c}
+                        selected={selected.has(c.id)}
+                        expanded={expanded.has(c.id)}
+                        disabled={pending}
+                        onToggleSelect={() => toggleSel(c.id)}
+                        onToggleExpand={() => toggleExpand(c.id)}
+                        onApprove={(vars) => approve.mutate(vars)}
+                        onReject={(id) => reject.mutate(id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -202,9 +451,7 @@ export function AILerenTab() {
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="h-4 w-4 text-emerald-600" />
-          <h3 className="text-sm font-semibold text-foreground">
-            Hoeveel pas je nog aan?
-          </h3>
+          <h3 className="text-sm font-semibold text-foreground">Hoeveel pas je nog aan?</h3>
         </div>
 
         {total === 0 ? (
@@ -291,15 +538,23 @@ export function AILerenTab() {
   );
 }
 
-// ── Kandidaat-kaart: controleer geanonimiseerde tekst → goedkeuren/afwijzen ──
-function CandidateCard({
+// ── Kandidaat-rij: compact ingeklapt, editor bij uitklappen ──────────────
+function CandidateRow({
   candidate,
-  busy,
+  selected,
+  expanded,
+  disabled,
+  onToggleSelect,
+  onToggleExpand,
   onApprove,
   onReject,
 }: {
   candidate: Candidate;
-  busy: boolean;
+  selected: boolean;
+  expanded: boolean;
+  disabled: boolean;
+  onToggleSelect: () => void;
+  onToggleExpand: () => void;
   onApprove: (vars: { id: string; anonymized_body: string; defense_type: string }) => void;
   onReject: (id: string) => void;
 }) {
@@ -310,65 +565,129 @@ function CandidateCard({
       : "overig"
   );
 
+  const preview = (candidate.anonymized_body ?? candidate.body).replace(/\s+/g, " ").trim();
+  const suspects = expanded ? suspectNames(text) : [];
+
   return (
-    <div className="rounded-lg border border-border p-4 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-primary">{catLabel(candidate.category)}</span>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground"
-        >
-          {DEFENSE_TYPE_KEYS.map((k) => (
-            <option key={k} value={k}>
-              {DEFENSE_TYPE_LABELS[k]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Origineel ter referentie — kan nog namen/bedragen bevatten */}
-      <details>
-        <summary className="text-xs text-muted-foreground cursor-pointer select-none">
-          Origineel tonen (met gegevens)
-        </summary>
-        <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
-          {candidate.body}
-        </p>
-      </details>
-
-      <div>
-        <label className="text-xs font-medium text-foreground">
-          Geanonimiseerde tekst — controleer dat er geen namen, bedragen of datums meer in staan:
-        </label>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={6}
-          className="mt-1.5 w-full rounded-md border border-border bg-card p-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+    <div className="text-sm">
+      {/* Compacte kop — altijd zichtbaar */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
+          className="h-3.5 w-3.5 shrink-0 cursor-pointer accent-primary"
+          aria-label="Selecteer kandidaat"
         />
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {catLabel(candidate.category)}
+          </span>
+          <span className="truncate text-xs text-foreground">{preview}</span>
+          <span className="ml-auto shrink-0 text-[10px] tabular-nums text-muted-foreground">
+            {preview.length} tekens
+          </span>
+        </button>
       </div>
 
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => onReject(candidate.id)}
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
-        >
-          <X className="h-3.5 w-3.5" />
-          Afwijzen
-        </button>
-        <button
-          type="button"
-          onClick={() => onApprove({ id: candidate.id, anonymized_body: text, defense_type: type })}
-          disabled={busy || text.trim().length < 20}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-        >
-          <Check className="h-3.5 w-3.5" />
-          Goedkeuren
-        </button>
-      </div>
+      {/* Editor — alleen bij uitklappen (houdt de lijst kort) */}
+      {expanded && (
+        <div className="space-y-3 border-t border-border bg-muted/20 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-primary">{catLabel(candidate.category)}</span>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground"
+            >
+              {DEFENSE_TYPE_KEYS.map((k) => (
+                <option key={k} value={k}>
+                  {DEFENSE_TYPE_LABELS[k]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Origineel ter referentie — kan nog namen/bedragen bevatten */}
+          <details>
+            <summary className="text-xs text-muted-foreground cursor-pointer select-none">
+              Origineel tonen (met gegevens)
+            </summary>
+            <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+              {candidate.body}
+            </p>
+          </details>
+
+          {/* Gemarkeerd voorbeeld: plaatshouders groen, mogelijke namen amber */}
+          <div>
+            <label className="text-xs font-medium text-foreground">
+              Voorbeeld zoals opgeslagen — plaatshouders staan groen, mogelijke resten amber:
+            </label>
+            <div className="mt-1.5">
+              <Highlighted text={text} suspects={suspects} />
+            </div>
+            {suspects.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                <span className="text-[11px] text-amber-700 dark:text-amber-400">
+                  Mogelijk nog een naam/bedrijf:
+                </span>
+                {suspects.map((s) => (
+                  <span
+                    key={s}
+                    className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-foreground">
+              Pas de geanonimiseerde tekst zo nodig aan:
+            </label>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={6}
+              className="mt-1.5 w-full rounded-md border border-border bg-card p-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onReject(candidate.id)}
+              disabled={disabled}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <X className="h-3.5 w-3.5" />
+              Afwijzen
+            </button>
+            <button
+              type="button"
+              onClick={() => onApprove({ id: candidate.id, anonymized_body: text, defense_type: type })}
+              disabled={disabled || text.trim().length < 20}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              <Check className="h-3.5 w-3.5" />
+              Goedkeuren
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

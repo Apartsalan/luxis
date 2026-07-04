@@ -562,3 +562,23 @@ async def learning_reject_candidate(
         raise HTTPException(status_code=404, detail="Kandidaat niet gevonden")
     await db.commit()
     return {"ok": True}
+
+
+class RejectBulkRequest(BaseModel):
+    """Bulk-afwijzen: de id's van de kandidaten die in één keer weg mogen."""
+
+    ids: list[uuid.UUID]
+
+
+@router.post("/learning/candidates/reject-bulk")
+async def learning_reject_candidates_bulk(
+    payload: RejectBulkRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Wijs meerdere kandidaten tegelijk af (ruis in bulk opruimen)."""
+    from app.ai_agent.learned_answers import reject_candidates_bulk
+
+    rejected = await reject_candidates_bulk(db, current_user.tenant_id, payload.ids)
+    await db.commit()
+    return {"rejected": rejected}

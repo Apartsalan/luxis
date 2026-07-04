@@ -46,7 +46,12 @@ const TABS = [
 
 export default function InstellingenPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("profiel");
+  // ponytail: query-param direct lezen bij mount — vermijdt useSearchParams + Suspense-eis.
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === "undefined") return "profiel";
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return tab && TABS.some((t) => t.id === tab) ? tab : "profiel";
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">

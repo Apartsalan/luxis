@@ -644,6 +644,42 @@ async def test_approve_unknown_candidate_returns_none(db, test_tenant):
     assert await reject_candidate(db, test_tenant.id, uuid.uuid4()) is False
 
 
+@pytest.mark.asyncio
+async def test_reject_candidates_bulk_only_touches_own_pending(db, test_tenant):
+    """Bulk-afwijzen ruimt meerdere kandidaten in één keer op, maar laat een al
+    goedgekeurd voorbeeld ongemoeid (raakt alleen status 'kandidaat')."""
+    from app.ai_agent.learned_answers import reject_candidates_bulk
+
+    c1 = await _make_candidate(db, test_tenant.id)
+    c2 = await _make_candidate(db, test_tenant.id)
+    approved = LearnedAnswer(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        category="betwisting",
+        body="raw",
+        anonymized_body="Goedgekeurd voorbeeld dat niet teruggezet mag worden, lang genoeg.",
+        status=STATUS_APPROVED,
+        is_active=True,
+    )
+    db.add(approved)
+    await db.flush()
+
+    rejected = await reject_candidates_bulk(
+        db, test_tenant.id, [c1.id, c2.id, approved.id]
+    )
+    assert rejected == 2  # alleen de twee kandidaten, niet het goedgekeurde voorbeeld
+    assert await list_candidates(db, test_tenant.id) == []
+
+    still_approved = (
+        await db.execute(select(LearnedAnswer).where(LearnedAnswer.id == approved.id))
+    ).scalar_one()
+    assert still_approved.status == STATUS_APPROVED
+    assert still_approved.is_active is True
+
+    # Lege lijst is een no-op.
+    assert await reject_candidates_bulk(db, test_tenant.id, []) == 0
+
+
 # ── dashboard-stats ──────────────────────────────────────────────────────
 
 

@@ -220,6 +220,16 @@ def test_suggest_anonymization_masks_iso_date_and_invoice_number():
     assert "[datum]" in out
 
 
+def test_suggest_anonymization_masks_email():
+    """Echte prod-lek (S169): e-mailadressen bleven staan in het anonimiseer-voorstel."""
+    src = "Verzoek voortaan peter@langedijk.nl te gebruiken i.p.v. info@langedijk.nl."
+    out = suggest_anonymization(src)
+    assert "peter@langedijk.nl" not in out
+    assert "info@langedijk.nl" not in out
+    assert "@" not in out
+    assert out.count("[e-mail]") == 2
+
+
 def test_suggest_anonymization_masks_eur_word_and_dash_amounts():
     """F2 (S168): echte prod-lekken 'EUR 700,-' (woord i.p.v. €) en '€ –100,00'
     (en-dash vóór het cijfer) glipten langs het kale €-teken."""

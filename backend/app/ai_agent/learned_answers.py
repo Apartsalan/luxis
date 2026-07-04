@@ -246,6 +246,7 @@ _ANON_RULES: list[tuple[re.Pattern[str], str]] = [
     # woord-notatie 'EUR 700,-' (prod-lek S168, glipte langs het kale €-teken).
     (re.compile(r"€\s?[-–—]?\s?\d[\d.,]*(?:,-)?"), "[bedrag]"),
     (re.compile(r"\bEUR\s?[-–—]?\s?\d[\d.,]*(?:,-)?", re.IGNORECASE), "[bedrag]"),
+    (re.compile(r"\b[\w.+-]+@[\w.-]+\.\w{2,}\b"), "[e-mail]"),
     (re.compile(r"\bNL\d{2}\s?[A-Z]{4}\s?(?:\d{4}\s?){2}\d{2}\b"), "[rekeningnummer]"),
     (re.compile(r"\b20\d{2}-\d{3,6}\b"), "[kenmerk]"),  # dossiernummer 2026-00099
     (re.compile(r"\b\d{4}-\d{2}-\d{2}\b"), "[datum]"),  # ISO-datum 2026-03-31

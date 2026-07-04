@@ -86,9 +86,13 @@ const NAME_STOPWORDS = new Set([
   "No", "Cure", "Pay", "Engels", "Betreft", "Geachte", "Artikel", "Indien",
 ]);
 const MID_SENTENCE_CAP = /(?<=[a-zà-ÿ,)]\s)([A-ZÀ-Ÿ][a-zà-ÿ]{2,})/g;
+const EMAIL_RE = /[\w.+-]+@[\w.-]+\.\w{2,}/g;
 
+// Mogelijke overgebleven persoonsgegevens: namen/bedrijven (hoofdletter mid-zin) én
+// e-mailadressen (die het anonimiseer-voorstel ook liet staan — echte prod-lek S169).
 function suspectNames(text: string): string[] {
   const out = new Set<string>();
+  for (const m of text.matchAll(EMAIL_RE)) out.add(m[0]);
   for (const m of text.matchAll(MID_SENTENCE_CAP)) {
     const w = m[1];
     if (!NAME_STOPWORDS.has(w)) out.add(w);
@@ -96,10 +100,10 @@ function suspectNames(text: string): string[] {
   return [...out].slice(0, 8);
 }
 
-// Toon de opgeslagen tekst met plaatshouders groen en verdachte namen amber gemarkeerd.
+// Toon de opgeslagen tekst met plaatshouders groen en verdachte resten amber gemarkeerd.
 function Highlighted({ text, suspects }: { text: string; suspects: string[] }) {
   const flagged = new Set(suspects);
-  const tokens = text.split(/(\[[^\]]+\]|\s+)/);
+  const tokens = text.split(/(\[[^\]]+\]|[\w.+-]+@[\w.-]+\.\w{2,}|\s+)/);
   return (
     <p className="whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-2.5 text-xs leading-relaxed text-foreground">
       {tokens.map((tok, i) => {
@@ -110,7 +114,7 @@ function Highlighted({ text, suspects }: { text: string; suspects: string[] }) {
             </mark>
           );
         }
-        if (flagged.has(tok.replace(/[^\wÀ-ÿ]/g, ""))) {
+        if (flagged.has(tok) || flagged.has(tok.replace(/[^\wÀ-ÿ]/g, ""))) {
           return (
             <mark key={i} className="rounded bg-amber-500/20 px-0.5 text-amber-700 dark:text-amber-300">
               {tok}
@@ -640,7 +644,7 @@ function CandidateRow({
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
                 <span className="text-[11px] text-amber-700 dark:text-amber-400">
-                  Mogelijk nog een naam/bedrijf:
+                  Mogelijk nog een naam, bedrijf of e-mailadres:
                 </span>
                 {suspects.map((s) => (
                   <span

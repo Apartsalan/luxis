@@ -216,6 +216,71 @@ def _build_free_compose_user_msg(case: Case, instruction: str | None) -> str:
     return "\n".join(parts)
 
 
+# ── Kennis-injectie (S173) ─────────────────────────────────────────────────
+
+
+async def _last_case_classification_category(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> str | None:
+    """Meest recente e-mailclassificatie op dit dossier.
+
+    Voor next_step/free_compose (geen bron-email) en als fallback bij een reply zonder
+    eigen classificatie: dan bepaalt de laatste bekende verweer-context of we AV +
+    voorbeelden meesturen.
+    """
+    return (
+        await db.execute(
+            select(EmailClassification.category)
+            .where(
+                EmailClassification.tenant_id == tenant_id,
+                EmailClassification.case_id == case_id,
+            )
+            .order_by(EmailClassification.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
+async def _build_verweer_knowledge(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+    category: str | None,
+) -> str:
+    """AV + verweer-bibliotheek + goedgekeurde geleerde voorbeelden voor de prompt.
+
+    Alleen bij een verweer-categorie (juridisch_verweer/betwisting) — bij een gewoon
+    bericht voegen deze niets toe en vergroten ze alleen de kans dat het model afdwaalt
+    (S164-les). Lege string als er niets zinvols is. Gebruikt bewust de bestaande gedeelde
+    helpers zodat de bibliotheek/geleerde voorbeelden identiek zijn aan de andere paden.
+    """
+    from app.ai_agent.learned_answers import LEARNABLE_CATEGORIES, build_learned_examples_text
+
+    if category not in LEARNABLE_CATEGORIES:
+        return ""
+
+    from app.ai_agent.defense_library import (
+        format_examples_for_prompt,
+        get_relevant_examples,
+    )
+    from app.ai_agent.knowledge_context import resolve_case_terms
+
+    parts: list[str] = []
+    av_text, _ = await resolve_case_terms(db, tenant_id, case)
+    if av_text:
+        parts.append(
+            "--- Algemene Voorwaarden van cliënt "
+            "(citeer artikelnummer + tekst waar relevant) ---\n" + av_text
+        )
+    defense_text = format_examples_for_prompt(get_relevant_examples(category))
+    if defense_text:
+        parts.append(defense_text)
+    learned_text = await build_learned_examples_text(db, tenant_id, category)
+    if learned_text:
+        parts.append(learned_text)
+    return "\n\n".join(parts)
+
+
 # ── Main entrypoint ───────────────────────────────────────────────────────
 
 
@@ -240,6 +305,7 @@ async def generate_unified_draft(
         intent = DraftIntent(intent)
 
     case = await _load_case(db, tenant_id, case_id)
+    classification: EmailClassification | None = None
 
     if intent == DraftIntent.NEXT_STEP:
         system_prompt = _NEXT_STEP_PROMPT
@@ -261,6 +327,19 @@ async def generate_unified_draft(
         system_prompt = _FREE_COMPOSE_PROMPT
         user_msg = _build_free_compose_user_msg(case, instruction)
         classification_id = None
+
+    # S173: geef álle 3 de intents dezelfde kennis (AV + verweer-bibliotheek + geleerde
+    # voorbeelden) als het incasso-pad — maar alléén bij een verweer-categorie. Voorheen
+    # zag de compose-dialog niets, dus hing de kwaliteit af van welke knop toevallig werd
+    # gebruikt. Categorie: van de bron-email (reply) of de laatste dossier-classificatie.
+    category = (
+        classification.category
+        if classification
+        else await _last_case_classification_category(db, tenant_id, case.id)
+    )
+    knowledge = await _build_verweer_knowledge(db, tenant_id, case, category)
+    if knowledge:
+        user_msg = f"{user_msg}\n\n{knowledge}"
 
     logger.info(
         "UnifiedDraftService: case=%s intent=%s tone=%s",

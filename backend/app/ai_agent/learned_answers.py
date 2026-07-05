@@ -380,6 +380,25 @@ async def build_learned_examples_text(
 
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 
+# S173 — debiteur-stem-guard. Eerste-persoons verweer-frasen die de DEBITEUR schrijft, niet
+# de advocaat. Lisanne schrijft over "cliënte" en spreekt de debiteur aan met "u" ("u heeft
+# gesteld", "u betwist"); zij zou nooit "ik betwist" of "wil ik een betalingsregeling"
+# schrijven. Als de citaat-knip faalt (bij Re:/Fwd:-mails ontbreken de citaat-markers in de
+# BaseNet-platte tekst) glipt geciteerde debiteur-tekst mee de "kern" in — die willen we
+# nooit als modelantwoord leren, ook niet bij Re:-mails waar de Fwd:-subjectguard niet grijpt
+# (audit §5.b, Fable-review S173).
+_DEBTOR_VOICE = re.compile(
+    r"\b("
+    r"ik betwist|wij betwisten|betwist ik|betwisten wij|"
+    r"ik maak bezwaar|maak ik bezwaar|maken wij bezwaar|"
+    r"wil ik een (?:betalings)?regeling|"
+    r"verzoek ik u(?: om)? een betalingsregeling|"
+    r"ben ik het (?:hier ?)?niet mee eens|zijn wij het (?:hier ?)?niet mee eens|"
+    r"heb ik (?:al|reeds) betaald|hebben wij (?:al|reeds) betaald"
+    r")\b",
+    re.IGNORECASE,
+)
+
 
 def _email_body_text(email: SyncedEmail) -> str:
     """Platte tekst van een mail. Veel mails (Outlook/Graph) hebben ALLÉÉN een HTML-body
@@ -472,6 +491,10 @@ async def backfill_learned_answers(
     for email in outbound:
         if email.id in seen:
             continue
+        # (S173-a) Doorgestuurde debiteur-mail: Lisanne's uitgaande mail, maar de inhoud is
+        # vaak de geciteerde debiteur-tekst → nooit als voorbeeld leren (audit §5.b).
+        if (email.subject or "").strip().lower().startswith(("fwd:", "fw:")):
+            continue
         body_text = _email_body_text(email)
         # (b) oningevuld verweer-sjabloon.
         if " XXX " in body_text:
@@ -485,6 +508,10 @@ async def backfill_learned_answers(
         if category not in LEARNABLE_CATEGORIES:
             continue
         core = extract_rebuttal(email.subject, body_text)
+        # (S173-b) Kern in debiteur-stem → geciteerde tegenpartij-tekst die door de knip is
+        # geglipt; nooit als modelantwoord leren (ook bij Re:-mails). Fable-review S173.
+        if _DEBTOR_VOICE.search(core):
+            continue
         # (c) te kort / geen echt argument (alleen intro-boilerplate + sommatie).
         if len(_rebuttal_substance(core)) < 60:
             continue

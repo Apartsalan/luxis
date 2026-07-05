@@ -28,7 +28,6 @@ from app.cases.models import Case, CaseFile, CaseParty
 from app.collections.models import Claim, Payment
 from app.email.synced_email_models import SyncedEmail
 from app.invoices.models import Invoice
-from app.relations.models import Contact
 
 logger = logging.getLogger(__name__)
 
@@ -117,13 +116,13 @@ async def _gather_case_context(
     )
     payments = payment_result.scalars().all()
 
-    # Client AV (terms)
-    terms_text = ""
-    if case.client_id:
-        client_result = await db.execute(select(Contact).where(Contact.id == case.client_id))
-        client = client_result.scalar_one_or_none()
-        if client and client.terms_file_path:
-            terms_text = extract_text_from_pdf(client.terms_file_path)
+    # Client AV (terms) — S173: via de gedeelde resolver (geversioneerde ContactTerms),
+    # niet meer de sinds S168 lege legacy `terms_file_path`-kolom. Zelfde AV die het
+    # incasso-pad al gebruikte, zodat dit pad dezelfde spelregels ziet.
+    from app.ai_agent.knowledge_context import resolve_case_terms
+
+    terms_text_full, _ = await resolve_case_terms(db, tenant_id, case)
+    terms_text = terms_text_full or ""
 
     # DF117-03 (Lisanne demo 2026-04-07): include uploaded case files (contracts,
     # overeenkomsten, deurwaardersrapporten, etc.) so the AI can reference them
@@ -210,7 +209,7 @@ async def _gather_case_context(
             sum((c.principal_amount for c in claims), Decimal("0"))
         ),
         "total_paid": _serialize_decimal(sum((p.amount for p in payments), Decimal("0"))),
-        "terms_text": terms_text[:3000] if terms_text else None,
+        "terms_text": terms_text or None,
         "case_files": case_file_excerpts,
         "invoices": [
             {

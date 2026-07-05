@@ -27,8 +27,8 @@ from app.ai_agent.draft_service import _build_draft_prompt, _gather_case_context
 from app.auth.models import Tenant, User
 from app.cases.models import Case, CaseFile
 from app.collections.models import Claim
-from app.invoices.models import Invoice, InvoiceLine
-from app.relations.models import Contact
+from app.invoices.models import Invoice
+from app.relations.models import Contact, ContactTerms
 
 
 @pytest_asyncio.fixture
@@ -43,8 +43,6 @@ async def case_with_data(
         contact_type="company",
         name="Cliënt BV",
         email="info@client.nl",
-        terms_file_path="/tmp/fake_av.pdf",  # Will be mocked
-        terms_file_name="algemene_voorwaarden.pdf",
     )
     debtor = Contact(
         id=uuid.uuid4(),
@@ -156,10 +154,26 @@ async def test_gather_context_includes_case_invoices(
 async def test_gather_context_includes_terms_text(
     db: AsyncSession, test_tenant: Tenant, case_with_data: Case
 ):
-    """The client's AV text should be loaded and trimmed to ~3000 chars."""
+    """The client's versioned AV text should be loaded via the shared resolver (S173).
+
+    Voorheen las dit pad de sinds S168 lege legacy `terms_file_path`-kolom; nu de
+    geversioneerde ContactTerms, zodat de compose/client-update dezelfde AV ziet als
+    het incasso-pad."""
+    terms = ContactTerms(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_id=case_with_data.client_id,
+        file_path="/tmp/av.pdf",
+        file_name="av.pdf",
+        label="v1",
+        valid_from=date(2026, 1, 1),
+    )
+    db.add(terms)
+    await db.commit()
+
     fake_terms = "Artikel 5.2 — Bij niet-tijdige betaling is een rente van 8% verschuldigd."
     with patch(
-        "app.ai_agent.draft_service.extract_text_from_pdf",
+        "app.ai_agent.knowledge_context._extract_pdf_text",
         return_value=fake_terms,
     ):
         context = await _gather_case_context(db, test_tenant.id, case_with_data.id)

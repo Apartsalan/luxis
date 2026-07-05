@@ -39,11 +39,15 @@ dossiers (cases) ◄── intake-agent ◄── inkomende mail            verw
 | Pad | Trigger (knop) | Voorwaarden (AV) | Geleerde vb. | Bibliotheek |
 |---|---|---|---|---|
 | `incasso/automation_service.py` | Pipeline "Concept genereren" + verweer-flow | ✅ `ContactTerms` (geversioneerd) | ✅ | ✅ |
-| `ai_agent/draft_service.py` | Orchestrator/classificatie-hook, client-update | ⚠️ legacy `terms_file_path` (leeg) | ✅ | ✅ |
-| `ai_agent/unified_draft_service.py` | Compose-dialog `/api/ai/draft` | ❌ | ❌ | ❌ |
+| `ai_agent/draft_service.py` | Orchestrator/classificatie-hook, client-update | ✅ `ContactTerms` (gedeelde resolver, S173) | ✅ | ✅ |
+| `ai_agent/unified_draft_service.py` | Compose-dialog `/api/ai/draft` | ✅ bij verweer (resolver, S173) | ✅ bij verweer | ✅ bij verweer |
 
-**Plan (S173):** één gedeelde context-bouwer die alle drie aanroepen — tot die er is: nieuwe
-AI-kennis ALTIJD op alle drie de paden aansluiten, anders "klikt het niet".
+**Gedaan (S173):** gedeelde AV-resolver `ai_agent/knowledge_context.resolve_case_terms`,
+gebruikt door alle drie de paden. Automation-gedrag byte-identiek (de bibliotheek-injectie
+zit in `incasso_email_prompts`, ongewijzigd). unified injecteert AV + bibliotheek + geleerde
+voorbeelden **alleen bij een verweer-categorie** (S164-les: minder losse tekst = minder
+afdwalen). Consolidatie 3→minder services blijft een latere opruimklus. Type-toekenning
+(13-types-woordenschat) staat nog open → S174.
 
 **AI-kennisbronnen:**
 - `ContactTerms` (relations) — geversioneerde AV per opdrachtgever, selectie op factuurdatum.

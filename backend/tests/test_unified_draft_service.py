@@ -12,6 +12,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -359,3 +360,146 @@ async def test_ai_returning_html_in_body_is_stripped(
     assert draft.body_html is not None
     assert "<strong>opmaak</strong>" not in draft.body_html
     assert "opmaak" in draft.body_html
+
+
+# ── S173: kennis-injectie (AV + bibliotheek) bij verweer ──────────────────
+
+
+def _patch_ai_capture(monkeypatch, holder, *, subject="X", body="Y", tone="formeel"):
+    """Als _patch_ai, maar bewaart de user-prompt zodat we kunnen bewijzen dat de
+    kennis (AV/bibliotheek) er wél/niet in zit."""
+
+    async def fake_call(_system, _user):
+        holder["user"] = _user
+        return ({"subject": subject, "body": body, "tone": tone}, "fake-model")
+
+    monkeypatch.setattr(
+        "app.ai_agent.unified_draft_service.call_intake_ai", fake_call
+    )
+
+
+@pytest.mark.asyncio
+async def test_reply_verweer_injects_av_and_library(
+    db, test_tenant, test_user, test_company, incasso_case, fake_base_context, monkeypatch
+):
+    """Bij een verweer-classificatie krijgt de compose-dialog nu de AV én de verweer-
+    bibliotheek mee — voorheen zag dit pad niets (kernbevinding S172)."""
+    from app.ai_agent.models import EmailClassification
+    from app.email.oauth_models import EmailAccount
+    from app.relations.models import ContactTerms
+
+    db.add(
+        ContactTerms(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            contact_id=test_company.id,
+            file_path="/tmp/av.pdf",
+            file_name="av.pdf",
+            label="v1",
+            valid_from=date(2026, 1, 1),
+        )
+    )
+    account = EmailAccount(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        user_id=test_user.id,
+        provider="outlook",
+        email_address="lisanne@kestinglegal.nl",
+        access_token_enc=b"stub",
+        refresh_token_enc=b"stub",
+        token_expiry=datetime.now(UTC) + timedelta(hours=1),
+    )
+    db.add(account)
+    await db.flush()
+    src = SyncedEmail(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        email_account_id=account.id,
+        case_id=incasso_case.id,
+        provider_message_id="verweer@example.com",
+        from_email="debiteur@example.com",
+        from_name="Debiteur",
+        subject="Ik betwist de factuur",
+        body_text="Er gold no cure no pay.",
+        body_html="",
+        direction="inbound",
+        email_date=datetime.now(UTC),
+    )
+    db.add(src)
+    await db.flush()
+    db.add(
+        EmailClassification(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            synced_email_id=src.id,
+            case_id=incasso_case.id,
+            category="juridisch_verweer",
+            confidence=0.9,
+            suggested_action="reply",
+        )
+    )
+    await db.commit()
+
+    holder: dict = {}
+    _patch_ai_capture(monkeypatch, holder, subject="Re:", body="Reactie.")
+    _patch_context(monkeypatch, fake_base_context)
+
+    with patch(
+        "app.ai_agent.knowledge_context._extract_pdf_text",
+        return_value="Artikel 9.3 — commissie bij intrekking.",
+    ):
+        await generate_unified_draft(
+            db,
+            test_tenant.id,
+            test_user.id,
+            case_id=incasso_case.id,
+            intent=DraftIntent.REPLY_TO_EMAIL,
+            tone="zakelijk",
+            source_email_id=src.id,
+        )
+
+    user_msg = holder["user"]
+    assert "Artikel 9.3" in user_msg          # AV meegestuurd
+    assert "Verweer-bibliotheek" in user_msg  # statische bibliotheek meegestuurd
+
+
+@pytest.mark.asyncio
+async def test_free_compose_without_verweer_omits_av(
+    db, test_tenant, test_user, test_company, incasso_case, fake_base_context, monkeypatch
+):
+    """Zonder verweer-classificatie stuurt de compose-dialog géén AV/bibliotheek mee,
+    ook al is er AV beschikbaar (S164-les: minder losse tekst = minder afdwalen)."""
+    from app.relations.models import ContactTerms
+
+    db.add(
+        ContactTerms(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            contact_id=test_company.id,
+            file_path="/tmp/av.pdf",
+            file_name="av.pdf",
+            label="v1",
+            valid_from=date(2026, 1, 1),
+        )
+    )
+    await db.commit()
+
+    holder: dict = {}
+    _patch_ai_capture(monkeypatch, holder, subject="X", body="Y")
+    _patch_context(monkeypatch, fake_base_context)
+
+    with patch(
+        "app.ai_agent.knowledge_context._extract_pdf_text",
+        return_value="Artikel 9.3 — commissie bij intrekking.",
+    ):
+        await generate_unified_draft(
+            db,
+            test_tenant.id,
+            test_user.id,
+            case_id=incasso_case.id,
+            intent=DraftIntent.FREE_COMPOSE,
+        )
+
+    user_msg = holder["user"]
+    assert "Artikel 9.3" not in user_msg
+    assert "Verweer-bibliotheek" not in user_msg

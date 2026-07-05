@@ -144,33 +144,6 @@ async def evaluate_timeout_rules(
 # ── Helpers voor draft-generator ──────────────────────────────────────────
 
 
-def _extract_pdf_text(path: str, max_chars: int = 8000) -> str | None:
-    """Extract text from PDF at given path. Returns None bij fouten of leeg."""
-    try:
-        import pymupdf
-    except ImportError:
-        logger.warning("pymupdf niet beschikbaar — AV-text extractie uitgeschakeld")
-        return None
-    try:
-        doc = pymupdf.open(path)
-    except Exception as e:
-        logger.warning(f"AV PDF kan niet geopend worden ({path}): {e}")
-        return None
-    try:
-        parts: list[str] = []
-        total = 0
-        for page in doc:
-            text = page.get_text("text") or ""
-            parts.append(text)
-            total += len(text)
-            if total >= max_chars:
-                break
-        result = "\n".join(parts).strip()
-        return result[:max_chars] if result else None
-    finally:
-        doc.close()
-
-
 def _dedupe_subject_slots(body: str) -> str:
     """Vervang dubbele slot-vermelding in Betreft-regel: '/ X / X' → '/ X'.
 
@@ -373,57 +346,19 @@ async def gather_case_context(
         totaal = (hoofdsom + rente + bik + btw).quantize(Decimal("0.01"))
         te_voldoen = (totaal - total_paid).quantize(Decimal("0.01"))
 
-    # Algemene Voorwaarden van cliënt — versie-aware (S140):
-    # 1. case.contact_terms_id expliciet gezet → die versie
-    # 2. Smart-default: versie geldig bij datum eerste factuur
-    # 3. Fallback: contact.terms_file_path (legacy single-file kolom)
-    av_text: str | None = None
-    av_pdf_path: str | None = None
-    if client_contact:
-        from app.relations.service import list_contact_terms, select_terms_for_date
+    # Algemene Voorwaarden van cliënt — geversioneerd (S140). Sinds S173 via de gedeelde
+    # resolver (app.ai_agent.knowledge_context) zodat álle AI-conceptpaden dezelfde AV
+    # zien; gedrag hier identiek aan voorheen (zelfde selectie, zelfde 50k-extractie).
+    from app.ai_agent.knowledge_context import resolve_case_terms
 
-        terms_path: str | None = None
-        chosen_label: str | None = None
-        if case.contact_terms_id is not None:
-            from app.relations.models import ContactTerms
-
-            terms_row = (
-                await db.execute(
-                    select(ContactTerms).where(
-                        ContactTerms.tenant_id == tenant_id,
-                        ContactTerms.id == case.contact_terms_id,
-                    )
-                )
-            ).scalar_one_or_none()
-            if terms_row is not None:
-                terms_path = terms_row.file_path
-                chosen_label = terms_row.label or "(geen label)"
-        else:
-            # Smart-default: kies versie op basis van eerste factuur-datum
-            target_date = None
-            if claims:
-                invoice_dates = [c.invoice_date for c in claims if c.invoice_date is not None]
-                if invoice_dates:
-                    target_date = min(invoice_dates)
-            versions = await list_contact_terms(db, tenant_id, client_contact.id)
-            chosen = select_terms_for_date(versions, target_date)
-            if chosen is not None:
-                terms_path = chosen.file_path
-                chosen_label = chosen.label or "(geen label)"
-
-        # Fallback voor cliënten zonder versie-rij: legacy single-file kolom.
-        if not terms_path and client_contact.terms_file_path:
-            terms_path = client_contact.terms_file_path
-            chosen_label = "legacy single-file"
-
-        if terms_path:
-            av_pdf_path = terms_path
-            av_text = _extract_pdf_text(terms_path, max_chars=50000)
-            if av_text:
-                logger.info(
-                    "Case %s: AV geladen voor %s (versie='%s', PDF=%s, %d chars text-fallback)",
-                    case.case_number, client_contact.name, chosen_label, av_pdf_path, len(av_text),
-                )
+    target_date: date | None = None
+    if claims:
+        invoice_dates = [c.invoice_date for c in claims if c.invoice_date is not None]
+        if invoice_dates:
+            target_date = min(invoice_dates)
+    av_text, av_pdf_path = await resolve_case_terms(
+        db, tenant_id, case, target_date=target_date, max_chars=50000
+    )
 
     # DF138-05: Reference (kenmerk) NIET gebruiken in mail aan wederpartij.
     # case.reference is de KLANT-referentie en hoort alleen in communicatie met

@@ -589,6 +589,88 @@ async def test_backfill_skips_non_learnable_category(
     assert await backfill_learned_answers(db, test_tenant.id) == 0
 
 
+@pytest.mark.asyncio
+async def test_backfill_skips_forwarded_debtor_mail(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """S173-a: een doorgestuurde (Fwd:) mail is Lisanne's uitgaande mail, maar de inhoud is
+    de geciteerde debiteur-tekst — nooit als voorbeeld leren (audit §5.b). Zelfde body die
+    zónder Fwd: wél gevangen wordt, zodat alleen de subjectguard het verschil maakt."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist de factuur.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+    core = (
+        "U heeft gesteld dat de geleverde machine ondeugdelijk was. Uit het door u "
+        "ondertekende opleveringsrapport blijkt echter dat u de levering zonder enig "
+        "voorbehoud heeft geaccepteerd. Van een gebrek is niet gebleken."
+    )
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="Fwd: reactie debiteur", body=_wrapped_rebuttal(core),
+        when=t0 + timedelta(hours=1), html_only=True,
+    )
+    assert await backfill_learned_answers(db, test_tenant.id) == 0
+
+
+@pytest.mark.asyncio
+async def test_backfill_skips_debtor_voice_but_keeps_genuine_rebuttal(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """S173-b: bij een Re:-mail (waar de Fwd:-guard niet grijpt) waarvan de kern in
+    debiteur-stem staat ('...wil ik een betalingsregeling aanvragen...') wordt de mail
+    overgeslagen — terwijl een échte weerlegging in dezelfde run wél wordt gevangen. Bewijst
+    dat de guard specifiek is en niet alles wegvangt (audit §5.b, Fable-review S173)."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    inbound = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Ik betwist de factuur.", when=t0,
+    )
+    await _classify(db, test_tenant.id, inbound.id, case.id, "betwisting")
+
+    # (1) Debiteur-stem in de kern — moet worden overgeslagen.
+    debtor_core = (
+        "Naar aanleiding van uw bericht wil ik een betalingsregeling aanvragen, omdat ik "
+        "op dit moment niet in staat ben het volledige bedrag ineens te voldoen. Ik stel "
+        "voor het bedrag in maandelijkse termijnen te betalen."
+    )
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="Re: uw bericht", body=_wrapped_rebuttal(debtor_core),
+        when=t0 + timedelta(hours=1), html_only=True,
+    )
+    # (2) Echte weerlegging van Lisanne — moet wél gevangen worden.
+    genuine_core = (
+        "U heeft gesteld dat de geleverde machine ondeugdelijk was. Uit het door u "
+        "ondertekende opleveringsrapport blijkt echter dat u de levering zonder enig "
+        "voorbehoud heeft geaccepteerd. Van een gebrek is niet gebleken."
+    )
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        subject="Re: uw bericht (2)", body=_wrapped_rebuttal(genuine_core),
+        when=t0 + timedelta(hours=2), html_only=True,
+    )
+
+    assert await backfill_learned_answers(db, test_tenant.id) == 1  # alleen de echte
+    row = (
+        await db.execute(
+            select(LearnedAnswer).where(LearnedAnswer.tenant_id == test_tenant.id)
+        )
+    ).scalar_one()
+    assert "opleveringsrapport" in row.body
+    assert "betalingsregeling" not in row.body
+
+
 # ── goedkeuren / afwijzen ────────────────────────────────────────────────
 
 

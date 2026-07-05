@@ -655,6 +655,31 @@ async def test_approve_unknown_candidate_returns_none(db, test_tenant):
 
 
 @pytest.mark.asyncio
+async def test_reject_candidate_leaves_approved_untouched(db, test_tenant):
+    """Fable-review S170: enkelvoudig afwijzen mag een al GOEDGEKEURD voorbeeld
+    niet terugzetten — zelfde guard als de bulk-variant (raakt AI-voeding)."""
+    approved = LearnedAnswer(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        category="betwisting",
+        body="raw",
+        anonymized_body="Goedgekeurd voorbeeld dat afwijzen moet overleven, lang genoeg.",
+        status=STATUS_APPROVED,
+        is_active=True,
+    )
+    db.add(approved)
+    await db.flush()
+
+    assert await reject_candidate(db, test_tenant.id, approved.id) is False
+
+    refreshed = (
+        await db.execute(select(LearnedAnswer).where(LearnedAnswer.id == approved.id))
+    ).scalar_one()
+    assert refreshed.status == STATUS_APPROVED
+    assert refreshed.is_active is True
+
+
+@pytest.mark.asyncio
 async def test_reject_candidates_bulk_only_touches_own_pending(db, test_tenant):
     """Bulk-afwijzen ruimt meerdere kandidaten in één keer op, maar laat een al
     goedgekeurd voorbeeld ongemoeid (raakt alleen status 'kandidaat')."""

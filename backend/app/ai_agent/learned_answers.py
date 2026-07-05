@@ -581,12 +581,17 @@ async def reject_candidate(
     tenant_id: uuid.UUID,
     candidate_id: uuid.UUID,
 ) -> bool:
-    """Wijs een kandidaat af (voedt de AI nooit). True als er iets is gewijzigd."""
+    """Wijs een kandidaat af (voedt de AI nooit). True als er iets is gewijzigd.
+
+    Raakt — net als de bulk-variant — nooit een al GOEDGEKEURD voorbeeld: dat
+    zou de AI-voeding wijzigen via een pad zonder die bedoeling (Fable-review S170).
+    """
     row = (
         await db.execute(
             select(LearnedAnswer).where(
                 LearnedAnswer.tenant_id == tenant_id,
                 LearnedAnswer.id == candidate_id,
+                LearnedAnswer.status != STATUS_APPROVED,
             )
         )
     ).scalar_one_or_none()

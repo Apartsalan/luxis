@@ -79,8 +79,9 @@ notificatie per dossier per 7 dagen). Drempel als constante in code met
    (+ status), al-geboekte verrekening(en), al-geboekte/pending uitbetaling(en),
    en het **voorgerekende restant** ("uit te betalen = saldo − openstaande
    verrekening"). Geen nieuwe boekingslogica — alleen lezen/rekenen.
-3. `PATCH .../settlement` — routekeuze opslaan (weigeren als er al geboekt is
-   in de andere route).
+3. `PATCH .../settlement` — routekeuze opslaan. (Gebouwd: vrij wijzigbaar, óók
+   na een boeking — de route is enkel een UI-hint; de echte boekingen hebben
+   eigen guards. Blokkeren zou een schijnveiligheid toevoegen.)
 4. Guard: `move_case_to_step` / status-transitie → bij `requires_settled`-doel
    eerst `get_unsettled_reason` (zelfde melding als archive-guard).
 5. Scheduler-job talm-signaal (§2e) + notificatie met tab-context

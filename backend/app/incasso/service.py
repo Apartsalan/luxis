@@ -1182,11 +1182,19 @@ async def batch_execute(
                 errors.append(f"{case.case_number}: status '{case.status}' — overgeslagen")
                 continue
 
-            await move_case_to_step(
-                db, tenant_id, case, target_step,
-                user_id=user_id,
-                trigger_type="batch",
-            )
+            try:
+                await move_case_to_step(
+                    db, tenant_id, case, target_step,
+                    user_id=user_id,
+                    trigger_type="batch",
+                )
+            except BadRequestError as e:
+                # FIN-2 afsluit-guard (onafgewikkelde derdengelden): sla dit dossier
+                # over i.p.v. de hele batch te laten klappen — zelfde semantiek als
+                # de andere skips in deze loop.
+                skipped += 1
+                errors.append(f"{case.case_number}: {e.detail}")
+                continue
             processed += 1
 
             await _create_tasks_for_step(db, tenant_id, case, target_step)

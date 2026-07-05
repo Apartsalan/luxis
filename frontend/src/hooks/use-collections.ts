@@ -459,8 +459,11 @@ export interface CaseSettlement {
 }
 
 export function useSettlement(caseId: string | undefined) {
+  // Onder de trust-funds-prefix: elke boekingsactie (storting/uitbetaling/
+  // verrekening/goedkeuring/storno) invalideert ["trust-funds", caseId] en
+  // ververst zo automatisch óók de afwikkel-checklist (Fable-review S170).
   return useQuery<CaseSettlement>({
-    queryKey: ["cases", caseId, "settlement"],
+    queryKey: ["trust-funds", caseId, "settlement"],
     queryFn: async () => {
       const res = await api(`/api/cases/${caseId}/settlement`);
       if (!res.ok) throw new Error("Kon afwikkelstatus niet laden");
@@ -491,7 +494,7 @@ export function useUpdateSettlementRoute() {
       return res.json();
     },
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: ["cases", vars.caseId, "settlement"] });
+      qc.invalidateQueries({ queryKey: ["trust-funds", vars.caseId, "settlement"] });
     },
   });
 }

@@ -51,8 +51,12 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend/app:/app/app
-      - ./backend/alembic:/app/alembic
+      # Geen bind-mount van app/ + alembic/ hier: die lekten via de compose-merge
+      # (union op mount-target) ongewild naar prod (COMPOSE_FILE=docker-compose.yml:
+      # docker-compose.prod.yml), waardoor prod de git-werkkopie draaide i.p.v. de
+      # image-code. Met uvicorn zonder --reload werd nieuwe code pas actief na een
+      # handmatige restart (S168-valkuil). De hot-reload-mounts voor lokale dev staan
+      # in docker-compose.dev.yml; prod draait nu image-baked, reproduceerbare code.
       - ./templates:/app/templates
       - generated_docs:/app/generated_docs
       - uploads:/app/uploads

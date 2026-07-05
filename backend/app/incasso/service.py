@@ -186,7 +186,7 @@ async def seed_default_steps(
         {"name": "On hold", "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
         # Afsluiting
         {"name": "Betaald", "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
-        {"name": "Afgesloten", "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True},
+        {"name": "Afgesloten", "min_wait_days": 0, "max_wait_days": 0, "step_category": "afsluiting", "debtor_type": "both", "is_terminal": True, "requires_settled": True},
     ]
 
     max_order = max((s.sort_order for s in existing), default=0)
@@ -457,6 +457,17 @@ async def move_case_to_step(
     document_id: uuid.UUID | None = None,
 ) -> CaseStepHistory:
     """Move a case to a target pipeline step — single source of truth for all step transitions."""
+    # FIN-2: een dossier mag niet definitief afgesloten worden zolang er nog
+    # derdengelden op staan (of trust-transacties op goedkeuring wachten). Voda
+    # art. 6.19: clientgeld moet eerst uitbetaald/verrekend worden. Zelfde bron
+    # en melding als de archiveer-guard (cases.service.delete_case).
+    if target_step.requires_settled:
+        from app.trust_funds.service import get_unsettled_reason
+
+        reason = await get_unsettled_reason(db, tenant_id, case.id)
+        if reason:
+            raise BadRequestError(reason)
+
     now = datetime.now(UTC)
     old_step_name = None
 

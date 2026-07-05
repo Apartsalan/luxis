@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
-from app.cases import files_service, service
+from app.cases import files_service, service, settlement_service
 from app.cases.schemas import (
     CaseActivityCreate,
     CaseActivityResponse,
@@ -21,9 +21,11 @@ from app.cases.schemas import (
     CasePartyCreate,
     CasePartyResponse,
     CaseResponse,
+    CaseSettlementResponse,
     CaseStatusUpdate,
     CaseSummary,
     CaseUpdate,
+    SettlementRouteUpdate,
 )
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -171,6 +173,34 @@ async def update_status(
         db, current_user.tenant_id, case_id, current_user.id, data
     )
     return case
+
+
+# ── Afwikkelflow (FIN-2) ─────────────────────────────────────────────────────
+
+
+@router.get("/{case_id}/settlement", response_model=CaseSettlementResponse)
+async def get_settlement(
+    case_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Afgeleide afwikkelstaat van een dossier (saldo, facturen, verrekening/uitbetaling)."""
+    return await settlement_service.get_case_settlement(
+        db, current_user.tenant_id, case_id
+    )
+
+
+@router.patch("/{case_id}/settlement", response_model=CaseSettlementResponse)
+async def update_settlement_route(
+    case_id: uuid.UUID,
+    data: SettlementRouteUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kies (of wis) de afwikkelroute — 'verrekenen' of 'doorbetalen'."""
+    return await settlement_service.set_settlement_route(
+        db, current_user.tenant_id, case_id, data.route
+    )
 
 
 # ── Case Parties ─────────────────────────────────────────────────────────────

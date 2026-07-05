@@ -424,6 +424,78 @@ export function useDerdengeldenBalance(caseId: string | undefined) {
   });
 }
 
+// ── Afwikkelflow (FIN-2) ─────────────────────────────────────────────────────
+
+export interface SettlementInvoice {
+  id: string;
+  invoice_number: string;
+  status: string;
+  total: number;
+  outstanding: number;
+}
+
+export interface SettlementTransaction {
+  id: string;
+  transaction_type: string; // disbursement | offset_to_invoice
+  amount: number;
+  status: string; // pending_approval | approved
+  transaction_date: string;
+  beneficiary_name: string | null;
+}
+
+export type SettlementRoute = "verrekenen" | "doorbetalen";
+
+export interface CaseSettlement {
+  case_id: string;
+  settlement_route: SettlementRoute | null;
+  total_balance: number;
+  available: number;
+  pending_disbursements: number;
+  suggested_payout: number;
+  unsettled_reason: string | null;
+  invoices: SettlementInvoice[];
+  offsets: SettlementTransaction[];
+  disbursements: SettlementTransaction[];
+}
+
+export function useSettlement(caseId: string | undefined) {
+  return useQuery<CaseSettlement>({
+    queryKey: ["cases", caseId, "settlement"],
+    queryFn: async () => {
+      const res = await api(`/api/cases/${caseId}/settlement`);
+      if (!res.ok) throw new Error("Kon afwikkelstatus niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
+export function useUpdateSettlementRoute() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      caseId,
+      route,
+    }: {
+      caseId: string;
+      route: SettlementRoute | null;
+    }) => {
+      const res = await api(`/api/cases/${caseId}/settlement`, {
+        method: "PATCH",
+        body: JSON.stringify({ route }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Kon route niet opslaan");
+      }
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["cases", vars.caseId, "settlement"] });
+    },
+  });
+}
+
 export function useCreateDerdengelden() {
   const qc = useQueryClient();
   return useMutation({

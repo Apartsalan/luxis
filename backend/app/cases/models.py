@@ -119,6 +119,13 @@ class Case(TenantBase):
     date_opened: Mapped[date] = mapped_column(Date, nullable=False)
     date_closed: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    # FIN-2 / afwikkelflow: hoe wordt het geincasseerde geld afgewikkeld?
+    #   'verrekenen'  — honorarium verrekenen met het derdengelden-saldo, restant uitbetalen
+    #   'doorbetalen' — volledig saldo aan de client, later los factureren
+    # NULL = nog niet gekozen. Enkel een UI-hint voor het afwikkel-paneel; de
+    # daadwerkelijke boekingen hebben hun eigen waarborgen (vier-ogen, consent).
+    settlement_route: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     # Financial summary cache (updated on payment/claim changes)
     total_principal: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=0, nullable=False)
     total_paid: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=0, nullable=False)

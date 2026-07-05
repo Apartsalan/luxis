@@ -618,6 +618,33 @@ async def daily_invoice_overdue_check() -> None:
         logger.exception("Scheduler: invoice overdue check failed")
 
 
+async def daily_trust_stale_check() -> None:
+    """Daily job: flag cases whose derdengelden-saldo has sat idle too long (FIN-2).
+
+    Per active tenant: notify when a positive trust balance hasn't moved for
+    STALE_TRUST_DAYS. Deduped per case, so re-running is a no-op within the window.
+    """
+    from app.auth.models import Tenant
+    from app.trust_funds.service import process_stale_trust_balances
+
+    logger.info("Scheduler: starting trust stale check")
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
+            tenants = list(result.scalars().all())
+            total = 0
+            for tenant in tenants:
+                total += await process_stale_trust_balances(session, tenant.id)
+            await session.commit()
+            if total > 0:
+                logger.info(
+                    "Scheduler: trust stale — %d dossiers gemeld (stilstaand saldo)",
+                    total,
+                )
+    except Exception:
+        logger.exception("Scheduler: trust stale check failed")
+
+
 async def daily_pipeline_auto_drafts() -> None:
     """Daily job: evalueer timeout-rules + genereer AI-drafts per tenant.
 
@@ -742,6 +769,15 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=35),
         id="daily_invoice_overdue_check",
         name="Mark overdue invoices",
+        replace_existing=True,
+    )
+
+    # Daily at 06:40 UTC: flag cases with idle derdengelden-saldo (FIN-2 talm-signaal)
+    scheduler.add_job(
+        daily_trust_stale_check,
+        CronTrigger(hour=6, minute=40),
+        id="daily_trust_stale_check",
+        name="Flag idle derdengelden balances",
         replace_existing=True,
     )
 

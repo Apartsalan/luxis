@@ -14,6 +14,7 @@ NOTIF_CLASSIFICATION_DONE = "classification_done"
 NOTIF_DEADLINE_OVERDUE = "deadline_overdue"
 NOTIF_INVOICE_OVERDUE = "invoice_overdue"  # CONN-1: eigen declaratie vervallen
 NOTIF_TRUST_APPROVAL_PENDING = "trust_approval_pending"  # CONN-2: vier-ogen wacht
+NOTIF_TRUST_STALE = "trust_stale"  # FIN-2: derdengelden staan te lang stil
 
 
 async def create_notification(
@@ -402,6 +403,41 @@ async def create_trust_approval_pending_notification(
         )
         created += 1
     return created
+
+
+async def create_trust_stale_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    balance,
+    days_stale: int,
+    dedup_days: int,
+    case_id: uuid.UUID | None = None,
+    case_number: str | None = None,
+) -> int:
+    """FIN-2: notify all tenant users that a case's trust balance has sat idle.
+
+    Voda art. 6.19: client money must be forwarded "zodra de gelegenheid zich
+    voordoet". Deduped per (user, case, title) within `dedup_days` days so the
+    daily job nags at most once per window, not every morning.
+    """
+    title = f"Derdengelden staan stil: dossier {case_number or ''}".strip()
+    message = (
+        f"€ {balance} staat al {days_stale} dagen op de stichtingsrekening — "
+        f"wikkel het dossier af (verrekenen of uitbetalen)."
+    )
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_TRUST_STALE,
+            title=title,
+            message=message,
+            case_id=case_id,
+            case_number=case_number,
+        ),
+        dedup_minutes=dedup_days * 24 * 60,
+    )
 
 
 async def cleanup_old_notifications(

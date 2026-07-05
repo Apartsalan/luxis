@@ -45,6 +45,11 @@ from app.trust_funds.schemas import (
     TrustTransactionCreate,
 )
 
+# FIN-2 talm-signaal: na zoveel dagen stilstaand saldo een melding, en daarna
+# hooguit eens per zoveel dagen opnieuw (geen dagelijkse herhaling).
+STALE_TRUST_DAYS = 7
+STALE_TRUST_DEDUP_DAYS = 7
+
 
 async def _self_approval_allowed(db: AsyncSession, tenant_id: uuid.UUID) -> bool:
     """Whether a single user may approve their own trust transactions (H14).
@@ -187,6 +192,57 @@ async def get_unsettled_reason(
             "Handel die eerst af voordat je de zaak afsluit."
         )
     return None
+
+
+async def process_stale_trust_balances(
+    db: AsyncSession, tenant_id: uuid.UUID
+) -> int:
+    """FIN-2 talm-signaal: meld actieve dossiers met te lang stilstaand saldo.
+
+    Een dossier is 'stil' als het een positief derdengelden-saldo heeft en de
+    meest recente trust-transactie (elke status behalve rejected) ouder is dan
+    STALE_TRUST_DAYS. Een lopende (pending) transactie telt als recente activiteit
+    — een dossier midden in een uitbetaling wordt dus niet gepord. Gededupliceerd
+    per dossier binnen STALE_TRUST_DEDUP_DAYS. Geeft het aantal nieuwe meldingen.
+
+    ponytail: per-kandidaat get_balance-loop; prima op kantoorschaal (een handvol
+    open derdengelden-dossiers). Eén grouped query als een tenant er ooit honderden
+    heeft.
+    """
+    from app.notifications.service import create_trust_stale_notification
+
+    cutoff = date.today() - timedelta(days=STALE_TRUST_DAYS)
+    last_date_col = func.max(TrustTransaction.transaction_date)
+
+    result = await db.execute(
+        select(TrustTransaction.case_id, Case.case_number, last_date_col.label("last_date"))
+        .join(Case, Case.id == TrustTransaction.case_id)
+        .where(
+            TrustTransaction.tenant_id == tenant_id,
+            TrustTransaction.status != "rejected",
+            Case.is_active.is_(True),
+        )
+        .group_by(TrustTransaction.case_id, Case.case_number)
+        .having(last_date_col < cutoff)
+    )
+    candidates = result.all()
+
+    notified = 0
+    for case_id, case_number, last_date in candidates:
+        balance = await get_balance(db, tenant_id, case_id)
+        if balance.total_balance <= Decimal("0.00"):
+            continue
+        days_stale = (date.today() - last_date).days
+        notified += await create_trust_stale_notification(
+            db,
+            tenant_id,
+            balance=balance.total_balance,
+            days_stale=days_stale,
+            dedup_days=STALE_TRUST_DEDUP_DAYS,
+            case_id=case_id,
+            case_number=case_number,
+        )
+    return notified
 
 
 # ── Cross-client Overview ────────────────────────────────────────────────────

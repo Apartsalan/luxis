@@ -28,6 +28,7 @@ import {
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { OffsetToInvoiceDialog } from "@/components/derdengelden/OffsetToInvoiceDialog";
+import { AfwikkelingPanel } from "./AfwikkelingPanel";
 
 export function DerdengeldenTab({ caseId }: { caseId: string }) {
   const { data: txData, isLoading, isError, error, refetch } = useDerdengelden(caseId);
@@ -161,8 +162,20 @@ export function DerdengeldenTab({ caseId }: { caseId: string }) {
 
   const pendingCount = transactions.filter((t) => t.status === "pending_approval").length;
 
+  const startDisbursement = (amount: string) => {
+    setForm((f) => ({ ...f, amount }));
+    setShowForm("disbursement");
+  };
+
   return (
     <div className="space-y-6">
+      {/* Afwikkelflow (FIN-2): checklist zodra er saldo of een gekozen route is */}
+      <AfwikkelingPanel
+        caseId={caseId}
+        onStartDisbursement={startDisbursement}
+        onStartOffset={() => setOffsetOpen(true)}
+      />
+
       {/* Balance cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-5">

@@ -50,6 +50,12 @@ class IncassoPipelineStep(TenantBase):
     is_hold_step: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, server_default="false"
     )
+    # FIN-2: een dossier mag deze stap pas in als de derdengelden afgewikkeld zijn
+    # (saldo 0 + geen openstaande trust-transacties). Aan voor "Afgesloten", uit
+    # voor "Betaald" (geld staat daar terecht, wachtend op uitbetaling).
+    requires_settled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
 
     # Relationships
     template: Mapped["DocumentTemplate | None"] = relationship(  # noqa: F821

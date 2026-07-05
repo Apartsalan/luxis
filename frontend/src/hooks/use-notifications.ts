@@ -33,6 +33,7 @@ export type NotificationType =
   | "classification_done"
   | "invoice_overdue"
   | "trust_approval_pending"
+  | "trust_stale"
   | "system";
 
 export const NOTIFICATION_TYPE_CONFIG: Record<
@@ -53,6 +54,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
   classification_done: { label: "Antwoord geclassificeerd", icon: "tag", color: "amber" },
   invoice_overdue: { label: "Factuur te laat", icon: "alert-triangle", color: "red" },
   trust_approval_pending: { label: "Goedkeuring nodig", icon: "alert-circle", color: "amber" },
+  trust_stale: { label: "Derdengelden stil", icon: "alert-triangle", color: "amber" },
   system: { label: "Systeem", icon: "info", color: "gray" },
 };
 

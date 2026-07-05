@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # Valid case types and statuses
 CASE_TYPES = ("incasso", "dossier", "advies")
@@ -135,6 +135,62 @@ class CaseUpdate(BaseModel):
 class CaseStatusUpdate(BaseModel):
     new_status: str
     note: str | None = None
+
+
+# ── Afwikkelflow (FIN-2) ────────────────────────────────────────────────────
+
+SETTLEMENT_ROUTES = ("verrekenen", "doorbetalen")
+
+
+class SettlementRouteUpdate(BaseModel):
+    """Kies (of wis) de afwikkelroute voor een dossier."""
+
+    route: str | None = Field(
+        default=None, description="'verrekenen', 'doorbetalen' of null om te wissen"
+    )
+
+    @field_validator("route")
+    @classmethod
+    def _check_route(cls, v: str | None) -> str | None:
+        if v is not None and v not in SETTLEMENT_ROUTES:
+            raise ValueError(
+                f"Ongeldige route: {v}. Kies uit: {', '.join(SETTLEMENT_ROUTES)}"
+            )
+        return v
+
+
+class SettlementInvoice(BaseModel):
+    id: uuid.UUID
+    invoice_number: str
+    status: str
+    total: Decimal
+    outstanding: Decimal
+
+
+class SettlementTransaction(BaseModel):
+    """Een geboekte/lopende verrekening of uitbetaling op het dossier."""
+
+    id: uuid.UUID
+    transaction_type: str  # disbursement | offset_to_invoice
+    amount: Decimal
+    status: str  # pending_approval | approved | rejected
+    transaction_date: date
+    beneficiary_name: str | None = None
+
+
+class CaseSettlementResponse(BaseModel):
+    """Afgeleide afwikkelstaat van een dossier — enkel lezen/rekenen, geen boekingen."""
+
+    case_id: uuid.UUID
+    settlement_route: str | None
+    total_balance: Decimal
+    available: Decimal
+    pending_disbursements: Decimal
+    suggested_payout: Decimal  # het bedrag dat nu aan de client uitbetaald kan worden
+    unsettled_reason: str | None  # waarom afsluiten (nog) geblokkeerd is; null = klaar
+    invoices: list[SettlementInvoice] = []
+    offsets: list[SettlementTransaction] = []
+    disbursements: list[SettlementTransaction] = []
 
 
 class CasePartyCreate(BaseModel):

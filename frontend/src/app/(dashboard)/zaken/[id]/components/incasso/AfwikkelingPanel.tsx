@@ -77,8 +77,12 @@ export function AfwikkelingPanel({
   const updateRoute = useUpdateSettlementRoute();
 
   // Paneel verschijnt op basis van het geld: is er saldo of een gekozen route.
+  // NB: de API serialiseert Decimal als string — coerce vóór rekenen/vergelijken.
   if (!data) return null;
-  if (data.total_balance <= 0 && !data.settlement_route) return null;
+  const totalBalance = Number(data.total_balance);
+  const available = Number(data.available);
+  const payout = Number(data.suggested_payout);
+  if (totalBalance <= 0 && !data.settlement_route) return null;
 
   const route = data.settlement_route;
   const settled = data.unsettled_reason === null;
@@ -91,12 +95,12 @@ export function AfwikkelingPanel({
 
   const payoutBtn = (
     <button
-      onClick={() => onStartDisbursement(data.suggested_payout.toFixed(2))}
-      disabled={data.suggested_payout <= 0}
+      onClick={() => onStartDisbursement(payout.toFixed(2))}
+      disabled={payout <= 0}
       className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <ArrowUpRight className="h-3.5 w-3.5" />
-      Uitbetalen ({formatCurrency(data.suggested_payout)})
+      Uitbetalen ({formatCurrency(payout)})
     </button>
   );
   const invoiceBtn = (
@@ -111,7 +115,7 @@ export function AfwikkelingPanel({
   const offsetBtn = (
     <button
       onClick={onStartOffset}
-      disabled={data.available <= 0}
+      disabled={available <= 0}
       className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <Scale className="h-3.5 w-3.5" />
@@ -205,7 +209,7 @@ export function AfwikkelingPanel({
                     ? "Uitbetaling wacht op tweede goedkeuring (vier-ogen)."
                     : disbApproved
                       ? "Uitbetaling geboekt."
-                      : `Nog uit te betalen: ${formatCurrency(data.suggested_payout)}.`
+                      : `Nog uit te betalen: ${formatCurrency(payout)}.`
                 }
                 action={payoutBtn}
               />
@@ -220,7 +224,7 @@ export function AfwikkelingPanel({
                     ? "Uitbetaling wacht op tweede goedkeuring (vier-ogen)."
                     : disbApproved
                       ? "Uitbetaling geboekt."
-                      : `Uit te betalen: ${formatCurrency(data.suggested_payout)}.`
+                      : `Uit te betalen: ${formatCurrency(payout)}.`
                 }
                 action={payoutBtn}
               />

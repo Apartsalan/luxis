@@ -56,4 +56,4 @@ description: Bekende fouten en valkuilen uit 32 sessies Luxis-ontwikkeling. Lees
 ## Infra / VPS
 
 27. **VPS disk vol → PostgreSQL crasht** — `docker system prune -a --volumes -f` vrijt ruimte. Check regelmatig.
-28. **COMPOSE_FILE moet in .env staan op VPS** — anders wordt prod override niet geladen en draait dev-config in productie
+28. **COMPOSE_FILE moet in .env staan op VPS** — anders wordt prod override niet geladen en draait dev-config in productie. Prod = `docker-compose.yml:docker-compose.prod.yml`. **S170:** de app/alembic source-mount die hierdoor ongewild naar prod lekte (basis-compose = dev-config, merge = union op target) is verwijderd → prod draait nu image-baked code. Zie deploy-regels-skill.

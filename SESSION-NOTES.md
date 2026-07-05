@@ -1,9 +1,90 @@
 # Sessie Notities — Luxis
 
-**Laatst bijgewerkt:** 4 juli 2026 (sessie 169 — "Slim leren"-review geschaald naar de 130 kandidaten (compacte rijen, groepering, bulk-afwijzen, PII-markering incl. e-mail, deep-link) → LIVE; + Fable-onderzoekssessie Knowledge Base & Learning Loop → architectuurkeuze (geen RAG) + premortem + gefaseerd plan K0–K3, Arsalan akkoord. Zie S169-entry. Eerder sessie 168 — BaseNet-import UITGEVOERD op prod: schone lei + 1168 relaties/607 dossiers/1563 vorderingen + 6393 e-mails + 344 classificaties → 130 verweer-kandidaten (alleen van de 7 vaste opdrachtgevers). Sandwich Fable→Opus→Fable; 2 veiligheidsfixes + 4 kwaliteitsfixes live.)
-**Laatste feature/fix:** Sessie 169 — "Slim leren"-dashboard geschaald naar 130 kandidaten (live) + kennisbank-onderzoek met plan (zie S169-entry). Eerder sessie 168 — **BaseNet-import volledig uitgevoerd** (fase 1+2+3). Verse backup + bewezen restore → schone-lei-wipe (31 business-tabellen, inrichting behouden) → fase 1 (`import_basenet.py`, 0 mismatch) → fase 2 (`import_emails.py`, 6393 .eml→synced_emails onder provider='import'-account) → fase 3 (`classify_and_backfill.py`, 344 gericht geclassificeerd op Haiku 4.5 ~$3, backfill → kandidaten). **2 veiligheidsfixes vóór fase 2** (scheduler slaat import-account over; classificatie-sleepnet mijdt `afgesloten` dossiers — anders 3099 mails ongevraagd geclassificeerd). **Fable-eindreview → 4 kwaliteitsfixes** op `learned_answers.py`: F1 intro-boilerplate strippen (82→0), F2 EUR-woord/en-dash bedrag-masking (PII-lek 5→0), F3 opgave-boilerplate afknippen, F4 `pg_advisory_xact_lock` tegen scheduler/driver-race (near-dup 3→1). Her-oogst: 131 schone kandidaten. **Besluit Arsalan: bibliotheek leert alleen van de 7 vaste opdrachtgevers** (Incassocenter/INC Zakelijk/COLLECT 1/LegalWork/SYN Finance 1/CM Zakelijk/Invorderingsbedrijf) — 1 one-off (Fideal) afgewezen → **130 kandidaten**. Nog geen permanente code-filter (archief afgesloten → geen re-harvest; optioneel S169). Commits `7524eaa`/`31bc41f`/`9414e49`/`923a767`/`9601613`, alle via CI gedeployed. 27 relevante tests groen.
+**Laatst bijgewerkt:** 5 juli 2026 (sessie 170 — doorlichting Luxis + **FIN-2 dossier-afwikkelflow gebouwd → LIVE** + onafhankelijke Fable-review van S170+S169 (3 fixes, live) + **source-mount-lek gefixt** (prod draait nu image-baked code). **K0-gate nog niet gehaald** (0/130 beoordeeld; Arsalan levert voorwaarden + doet Lisanne's review ~6 juli). Zie S170-entry. Eerder sessie 169 — "Slim leren"-review geschaald naar de 130 kandidaten (compacte rijen, groepering, bulk-afwijzen, PII-markering incl. e-mail, deep-link) → LIVE; + Fable-onderzoekssessie Knowledge Base & Learning Loop → architectuurkeuze (geen RAG) + premortem + gefaseerd plan K0–K3, Arsalan akkoord. Zie S169-entry. Eerder sessie 168 — BaseNet-import UITGEVOERD op prod: schone lei + 1168 relaties/607 dossiers/1563 vorderingen + 6393 e-mails + 344 classificaties → 130 verweer-kandidaten (alleen van de 7 vaste opdrachtgevers). Sandwich Fable→Opus→Fable; 2 veiligheidsfixes + 4 kwaliteitsfixes live.)
+**Laatste feature/fix:** Sessie 170 — **FIN-2 afwikkelflow**: afwikkel-paneel op de derdengelden-tab (routekeuze verrekenen/doorbetalen per dossier + checklist die bestaande factuur-/verrekening-/uitbetaal-flows aanstuurt, verschijnt op basis van saldo), afsluit-guard `requires_settled` op de "Afgesloten"-stap (Voda 6.19; "Betaald" mag wél), dagelijkse talm-job (saldo >7 dagen stil). Migratie `s170_settlement_flow`. Fable-review → 3 fixes: cache-refresh na boeking, batch-stapguard per dossier, `reject_candidate` guardt goedgekeurd voorbeeld. Source-mount uit basis-compose → prod image-code. Commits `fc8b471`/`0eefd89`/`1ee1265`/`60ffa51`, alle CI-groen + gedeployed; 5 + 107 tests groen. Eerder Sessie 169 — "Slim leren"-dashboard geschaald naar 130 kandidaten (live) + kennisbank-onderzoek met plan (zie S169-entry). Eerder sessie 168 — **BaseNet-import volledig uitgevoerd** (fase 1+2+3). Verse backup + bewezen restore → schone-lei-wipe (31 business-tabellen, inrichting behouden) → fase 1 (`import_basenet.py`, 0 mismatch) → fase 2 (`import_emails.py`, 6393 .eml→synced_emails onder provider='import'-account) → fase 3 (`classify_and_backfill.py`, 344 gericht geclassificeerd op Haiku 4.5 ~$3, backfill → kandidaten). **2 veiligheidsfixes vóór fase 2** (scheduler slaat import-account over; classificatie-sleepnet mijdt `afgesloten` dossiers — anders 3099 mails ongevraagd geclassificeerd). **Fable-eindreview → 4 kwaliteitsfixes** op `learned_answers.py`: F1 intro-boilerplate strippen (82→0), F2 EUR-woord/en-dash bedrag-masking (PII-lek 5→0), F3 opgave-boilerplate afknippen, F4 `pg_advisory_xact_lock` tegen scheduler/driver-race (near-dup 3→1). Her-oogst: 131 schone kandidaten. **Besluit Arsalan: bibliotheek leert alleen van de 7 vaste opdrachtgevers** (Incassocenter/INC Zakelijk/COLLECT 1/LegalWork/SYN Finance 1/CM Zakelijk/Invorderingsbedrijf) — 1 one-off (Fideal) afgewezen → **130 kandidaten**. Nog geen permanente code-filter (archief afgesloten → geen re-harvest; optioneel S169). Commits `7524eaa`/`31bc41f`/`9414e49`/`923a767`/`9601613`, alle via CI gedeployed. 27 relevante tests groen.
 **Openstaande bugs:** Geen nieuwe. Bewuste heuristiek-grenzen verweer-bibliotheek blijven (bedrijfsnamen niet auto-gemaskeerd; af en toe geciteerde debiteur-tekst; 1 sommatie-staart/1 near-dup) — **Lisanne's goedkeuring is het vangnet**. Fase 1b (betalingen + contactpersoon↔bedrijf ContactLinks) bewust NIET gedaan (peripheer, dossiers = passief archief). Perf: backfill herlaadt elke 5 min ~3.300 bodies (F7, na Lisanne's oordeel).
-**Volgende sessie (S170):** zie `docs/sessions/PROMPT-S170.md` — **K0-gate → K1 kennisbank**. Mens-afhankelijk vóór bouw: Lisanne's eerste review-ronde van de 130 kandidaten + haar actuele algemene voorwaarden van de 7 vaste opdrachtgevers (zij heeft ze). Dán K1 bouwen (kennisbank-tabblad, versie-metadata, injectie-cap ~1.500 tekens, met/zonder-meting). Onderzoek + plan: `docs/research/kennisbank-learning-loop-onderzoek-2026-07-04.md` + premortem-rapport. Open: source-mount-vraag (`/opt/luxis/backend/app→/app/app` bedoeld?), F7 backfill-perf.
+**Volgende sessie (S171):** zie `docs/sessions/PROMPT-S171.md` — **K0-gate → K1 kennisbank** (mits gate gehaald). Mens-afhankelijk vóór bouw: Lisanne's eerste review-ronde van de 130 kandidaten + haar actuele algemene voorwaarden van de 7 vaste opdrachtgevers (zij heeft ze). Dán K1 bouwen (kennisbank-tabblad, versie-metadata, injectie-cap ~1.500 tekens, met/zonder-meting). Onderzoek + plan: `docs/research/kennisbank-learning-loop-onderzoek-2026-07-04.md` + premortem-rapport. Source-mount-vraag **opgelost in S170** (was een lek, verwijderd → prod image-code). Nog open: Lisanne-beslissingen (verdienmodel/BTW FIN-5, 2e bestuurder, 14-dagenbrief H6), F7 backfill-perf (na Lisanne's oordeel), FIN-4 (Exact-sync, bundelen met Exact-activatie).
+
+## Wat er gedaan is (sessie 170 — 5 juli 2026, Fable+Opus, met Arsalan) — Doorlichting + FIN-2 afwikkelflow + review + infra-fix
+
+Sessie begon op de K0-gate voor K1 (kennisbank). Die is **nog niet gehaald** — DB toonde
+0 van 130 kandidaten beoordeeld (dashboard pas gisteren opgeleverd; Lisanne begint ~vandaag/
+morgen; Arsalan levert de voorwaarden ~6 juli). I.p.v. K1 te forceren stuurde Arsalan bij
+naar een brede doorlichting + de hoogste onbelemmerde bouwklus.
+
+### A. Doorlichting van Luxis (Fable) — geprioriteerde kaart
+Internetonderzoek (LPMS-lat 2026 + roadmap-review-praktijk) + code-trace van de betaalketen.
+Kern: de drie geldadministraties (vordering `payments` / derdengelden `trust_transactions` /
+declaratie `invoices`) hangen goed samen (FIN-1 al gedicht S158) — wat miste was de
+**afwikkel-flow als vloeiend geheel** (FIN-2) én de menselijke bottleneck (Lisanne-
+beslissingen open sinds S157: verdienmodel/BTW, 2e stichtingsbestuurder, 14-dagenbrief-
+akkoord H6). Prioriteitenlijst opgesteld; #1 = FIN-2.
+
+### B. FIN-2 dossier-afwikkelflow gebouwd (Opus, LIVE)
+Afwikkel-paneel op de derdengelden-tab: routekeuze per dossier (**verrekenen** = honorarium
+van saldo afhalen, restant uitbetalen / **doorbetalen** = volledig saldo naar cliënt, later
+los factureren — Arsalan bevestigde: verschilt per cliënt, geen vaste volgorde afdwingen).
+Checklist stuurt de **bestaande** factuur-/verrekening-/uitbetaal-schermen aan (niks dubbel
+gebouwd). Verschijnt op basis van het **saldo**, niet van een status → lost de S158-
+ontwerpvraag op door hem te omzeilen. Vangnetten: (1) `requires_settled` op de "Afgesloten"-
+stap → guard in `move_case_to_step` weigert afsluiten met openstaand derdengelden-saldo
+(Voda 6.19; "Betaald" mag wél — geld staat daar terecht wachtend op uitbetaling); (2)
+dagelijkse talm-job meldt saldo dat >7 dagen stilstaat (gededupt). Migratie
+`s170_settlement_flow` (`cases.settlement_route` + `incasso_pipeline_steps.requires_settled`).
+Bewust GEEN `requires_settled` op elke workflow-status (betaald/schikking/oninbaar zijn het
+BEGIN van de afwikkeling → zou dode code zijn). Endpoint `GET/PATCH /api/cases/{id}/settlement`
+(afgeleide staat + routekeuze). Ontwerp + premortem: `docs/research/afwikkel-flow-ontwerp-2026-07-05.md`.
+Commits `fc8b471` + `0eefd89` (Decimal-als-string coercion: de API serialiseert Decimal als
+string, `.toFixed()` zou crashen — live gevangen bij de eerste endpoint-test). 5 settlement-
+tests + 107 trust/incasso/workflow groen, lint/tsc/build clean, live geverifieerd (endpoint 200).
+
+### C. Onafhankelijke Fable-review van S170 + S169 → 3 fixes (LIVE)
+Arsalan vroeg een review door Fable (ander model dan de bouwer) — óók S169, dat nooit
+gereviewd was (slim-leren-dashboard `da14895`/`ef52ab9`). 3 echte bevindingen, alle direct
+gefixt (`1ee1265`, rood→groen + gedeployed):
+1. **Afwikkel-paneel ververste niet na een boeking** → settlement-cache-key onder de
+   `trust-funds`-prefix gezet, zodat elke bestaande boekings-mutatie hem invalideert.
+2. **Batch "stap wijzigen" naar Afgesloten klapte** als één dossier saldo had → guard-fout
+   nu per dossier gevangen (overslaan + melding, zoals de overige batch-skips).
+3. **`reject_candidate` (enkelvoudig) kon een al goedgekeurd voorbeeld terugzetten**
+   (bulk-variant guardde dit al) → status-filter toegevoegd, rode test → groen.
+In orde bevonden: tenant-isolatie nieuwe endpoints, Decimal-precisie restant-berekening,
+e-mail-maskering S169 (regel op juiste plek in de volgorde), bulk-afwijzen-afbakening,
+optimistische cache-logica dashboard-herbouw.
+
+### D. Source-mount-vraag opgelost (#7, Opus, LIVE)
+De prod source-mount (`/opt/luxis/backend/app→/app/app`) bleek een **lek**, geen bedoeling:
+staat in de basis-`docker-compose.yml` (dev-config: `APP_ENV=development`) en glipte via de
+compose-**merge** (union op mount-target) naar prod (`COMPOSE_FILE=docker-compose.yml:
+docker-compose.prod.yml`), ondanks dat prod.yml de backend-volumes bewust zónder die mounts
+herdefinieert. Mounts uit de basis gehaald (staan al in `docker-compose.dev.yml` voor lokale
+hot-reload). Geverifieerd vóór wijziging: Dockerfile bakt de code (`COPY . .`), image bevat
+app+alembic zonder mount, VPS schoon (geen drift). **Prod draait nu image-baked, reproduceer-
+bare code** → elke deploy hercreëert gegarandeerd; de S168 "docker restart"-dans is niet meer
+nodig. Geverifieerd na deploy: mounts weg (enkel templates + named volumes), `/health` +
+settlement-endpoint 200, healthy. Commit `60ffa51`. deploy-regels + bekende-fouten #28 bijgewerkt.
+
+### Model-inzet
+Fable = doorlichting + ontwerp + review (redeneren/onderzoek); Opus = bouwen + infra-fix.
+Per stap met Arsalan afgestemd wanneer te schakelen (memory-regel model-keuze gevolgd).
+
+### Gewijzigde bestanden (kern)
+- Backend: `cases/{models,schemas,router,settlement_service}.py`, `incasso/{models,service}.py`,
+  `trust_funds/service.py`, `notifications/service.py`, `workflow/scheduler.py`,
+  `ai_agent/learned_answers.py`, migratie `s170_settlement_flow.py`, tests `test_settlement.py` + `test_shadow_learning.py`
+- Frontend: `AfwikkelingPanel.tsx` (nieuw), `DerdengeldenTab.tsx`, `use-collections.ts`, `use-notifications.ts`, `app-header.tsx`
+- Infra/docs: `docker-compose.yml`, `docs/research/afwikkel-flow-ontwerp-2026-07-05.md`, deploy-regels + bekende-fouten skills
+
+### Bekende issues / open
+- **K0-gate nog niet gehaald** (0/130 beoordeeld). Arsalan: voorwaarden + Lisanne's review ~6 juli. K1 pas daarna.
+- **Lisanne-beslissingen** open sinds S157: verdienmodel/BTW (FIN-5), 2e bestuurder, 14-dagenbrief-akkoord (H6, advies+tekst liggen klaar).
+- FIN-4 (Exact payment-sync strippen): geparkeerd — bundelen met Exact-activatie (bijt pas als Exact live is; 0 connecties nu).
+- F7 backfill-perf (herlaadt ~3.300 bodies/5 min): na Lisanne's oordeel.
+
+### Volgende sessie
+Zie `docs/sessions/PROMPT-S171.md` — K0-gate → K1 kennisbank (mits gate gehaald), anders H6/kleine items.
+
+---
 
 ## Wat er gedaan is (sessie 169 — 4 juli 2026, Opus+Fable, met Arsalan) — Slim-leren geschaald + kennisbank-onderzoek
 

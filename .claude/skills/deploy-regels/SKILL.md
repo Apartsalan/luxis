@@ -39,25 +39,22 @@ ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && git pull && doc
 
 **VOLGORDE CRUCIAAL: eerst `build`, dán migreren.** `alembic upgrade` vóór de build kan op een oude toestand draaien → migratie stil overgeslagen (S167 live tegengekomen). De CI-auto-deploy (`deploy.yml`) doet het goed: build → up → exec migrate.
 
-> ⚠️ **S168-correctie — er IS wél een source-mount (i.t.t. wat hier eerder stond).**
-> `docker inspect luxis-backend` toont bind-mounts: `/opt/luxis/backend/app → /app/app` en
-> `/opt/luxis/backend/alembic → /app/alembic`. Gevolgen die je moet kennen:
-> 1. **`git pull` ververst de codebestanden in de container meteen** — géén rebuild nodig om
->    de *bestanden* te wijzigen.
-> 2. **Maar uvicorn draait ZONDER `--reload`** → het draaiende proces houdt de oude code in
->    geheugen. Een codewijziging wordt pas actief na een **herstart** van de container.
-> 3. **`docker compose up -d` herstart NIET altijd** (als het image niet wijzigt, is het een
->    no-op). In S168 bleef het proces na de deploy op de oude code draaien.
-> 4. **Praktijkregel: verifieer ná elke code-deploy dat het proces echt herstartte** —
->    `docker inspect luxis-backend --format '{{.State.StartedAt}}'` moet ná je push liggen.
->    Zo niet: `docker restart luxis-backend` (veilig bij mount + geen nieuwe migratie).
->    Verifieer dat de nieuwe code draait, niet alleen dat het bestand gewijzigd is.
-> 5. **Los script draaien** (bv. import) importeert altíjd verse code (los python-proces),
->    dus dat merkt de niet-herstart niet — alleen de scheduler/webserver wel.
->
-> **Open vraag (S169):** is deze source-mount in prod bedoeld of een dev-override die per
-> ongeluk draait (zie bekende-fouten #28, `COMPOSE_FILE`)? Uitzoeken — het bepaalt of de
-> "code in image"-aannames elders kloppen.
+> ✅ **S170-oplossing — de source-mount is WEG (was een lek, geen bedoeling).**
+> De bind-mounts `./backend/app` + `./backend/alembic` stonden in de basis
+> `docker-compose.yml` (dev-config) en lekten via de compose-merge (union op mount-target)
+> naar prod, ondanks dat `docker-compose.prod.yml` de backend-volumes bewust zónder die
+> mounts herdefinieert. In S170 uit de basis gehaald (staan nog in `docker-compose.dev.yml`
+> voor lokale hot-reload). **Prod draait nu image-baked code** (`docker inspect luxis-backend`
+> toont enkel `/app/templates` + de named volumes generated_docs/uploads — geen `/app/app`).
+> Gevolgen voor de deploy:
+> 1. **Code wijzigen vereist nu een rebuild** — `git pull` alleen ververst de code NIET meer
+>    (geen mount). De deploy-commando's doen `build` altijd al, dus dat is goed.
+> 2. **`docker compose up -d` hercreëert de backend gegarandeerd bij een codewijziging**
+>    (image verandert → nieuwe container). De handmatige `docker restart`-dans van S168 is
+>    niet meer nodig; verifieer `StartedAt` nog wel als goedkope check.
+> 3. **`templates/` blijft wél bind-mounted** (prod.yml `:ro`) — templates worden bij render
+>    van schijf gelezen, dus een `git pull` ververst ze live zonder rebuild (bedoeld).
+> 4. Draaiende code == de build == git HEAD → reproduceerbaar, geen VPS-werkkopie-drift meer.
 
 ## `--no-cache` — wanneer wel / niet
 

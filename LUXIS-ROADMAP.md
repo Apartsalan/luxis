@@ -1,7 +1,7 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 3 juli 2026 (sessie 168 — **BaseNet-import UITGEVOERD op prod**: schone lei (verse backup+restore bewezen) → 1168 relaties/607 dossiers/1563 vorderingen → 6393 e-mails → 344 gerichte classificaties (Haiku, ~$3) → 131 verweer-kandidaten in "Slim leren". 2 veiligheidsfixes + 4 kwaliteitsfixes (Fable-eindreview) live. Fase 1b bewust overgeslagen. Volgende: `docs/sessions/PROMPT-S169.md`.)
-**Vorige:** 3 juli 2026 (sessie 167 — shadow-learning → verweer-antwoord-bibliotheek mét goedkeuring, LIVE + geverifieerd; documenten-backup binnen)
+**Laatst bijgewerkt:** 5 juli 2026 (sessie 171 — **Algemene voorwaarden LIVE voor de 7 opdrachtgevers**: ontdekt dat de geversioneerde AV-upload per cliënt (`ContactTerms`, S140) al bestond incl. AI-injectie in de verweer-prompt → 3 AV-sets gekoppeld + end-to-end geverifieerd (AI laadt nu per zaak de echte voorwaarden). **K1-kennisbank dus grotendeels al gebouwd → alleen gevuld.** + Slim-leren layout-bug gefixt (grid `min-w-0`, live). Audit-opdracht code↔roadmap voor Fable klaargezet. K0-gate poot 2 rond; poot 1 = Lisanne's review loopt (12 goedgekeurd). Volgende: `docs/sessions/PROMPT-AUDIT-code-vs-roadmap.md` / `PROMPT-S172.md`.)
+**Vorige:** 5 juli 2026 (sessie 170 — FIN-2 dossier-afwikkelflow LIVE + Fable-review 3 fixes + source-mount-lek gefixt) · 4 juli (S169 — Slim leren geschaald naar 130 + kennisbank-onderzoek) · 3 juli (S168 — BaseNet-import uitgevoerd)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -1332,6 +1332,18 @@ LF-10 → afhankelijk van LF-11
 > Laag 2: ✅ Test-factuur PDFs (`scripts/generate_test_invoices.py`) — 5 professionele Nederlandse facturen via WeasyPrint. Output: `scripts/test_invoices/`. (sessie 58, 11 maart)
 > Laag 3: ✅ COMPLEET — Geautomatiseerd E2E script (`scripts/e2e_intake_test.py`) — directe service-calls met gemockte AI extractie. 4 scenario's (happy path, lege email body, edit-before-approve, reject flow). Marker-based cleanup, deterministische UUIDs, onafhankelijke DB sessies per scenario. (sessie 59, 11 maart)
 > **LET OP: GEEN Gmail gebruiken — alles via OutlookProvider/Graph API met M365 account.**
+>
+> **AI Agent — Knowledge Base & Learning Loop** ✅ KERN LIVE (S171, 5 juli 2026):
+> De "kennisbank" bleek grotendeels al te bestaan — `ContactTerms` (geversioneerde AV per cliënt met
+> `valid_from`/`valid_to`/label, S140) + `case.contact_terms_id` + versie-selectie `select_terms_for_date`,
+> én `automation_service.py` injecteert de gekozen AV al volledig in de verweer-prompt. S171: 3 AV-sets
+> gekoppeld aan de 7 opdrachtgevers via de bestaande API + **end-to-end geverifieerd** (juiste versie +
+> 5019 tekens per zaak). **K1 dus NIET nieuw bouwen — hergebruik `ContactTerms`; het K1-plan hieronder
+> (nieuw `knowledge_documents`-systeem) is grotendeels achterhaald.** K0-gate poot 2 (voorwaarden) rond;
+> poot 1 = Lisanne's review loopt (S171: 12 goedgekeurd / 118 kandidaat). **Openstaand:** `draft_service.py`
+> leest nog legacy `Contact.terms_file_path` (verweer-pad correct); verweer-type-woordenschat te smal
+> (5 types → 93% "Overig" — zie audit `docs/sessions/PROMPT-AUDIT-code-vs-roadmap.md`). Onderzoek S169
+> hieronder blijft als achtergrond/architectuur-onderbouwing.
 >
 > **AI Agent — Knowledge Base & Learning Loop** 🔶 Onderzoek afgerond (S169, 4 juli 2026 — Fable 5):
 > Volledige bevindingen + gefaseerd plan: `docs/research/kennisbank-learning-loop-onderzoek-2026-07-04.md`;

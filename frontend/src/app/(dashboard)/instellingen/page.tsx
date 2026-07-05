@@ -81,8 +81,9 @@ export default function InstellingenPage() {
           ))}
         </nav>
 
-        {/* Content */}
-        <div className="space-y-6">
+        {/* Content — min-w-0: grid-cel mag krimpen, anders duwt nowrap-tekst (bijv. de
+            Slim-leren-voorbeeldregels) de 1fr-kolom open tot ver buiten het scherm */}
+        <div className="min-w-0 space-y-6">
           {activeTab === "profiel" && <ProfielTab user={user} />}
           {activeTab === "kantoor" && <KantoorTab />}
           {activeTab === "modules" && <ModulesTab />}

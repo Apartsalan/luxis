@@ -105,7 +105,7 @@ function Highlighted({ text, suspects }: { text: string; suspects: string[] }) {
   const flagged = new Set(suspects);
   const tokens = text.split(/(\[[^\]]+\]|[\w.+-]+@[\w.-]+\.\w{2,}|\s+)/);
   return (
-    <p className="whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-2.5 text-xs leading-relaxed text-foreground">
+    <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-muted/30 p-2.5 text-xs leading-relaxed text-foreground">
       {tokens.map((tok, i) => {
         if (/^\[[^\]]+\]$/.test(tok)) {
           return (
@@ -627,7 +627,7 @@ function CandidateRow({
             <summary className="text-xs text-muted-foreground cursor-pointer select-none">
               Origineel tonen (met gegevens)
             </summary>
-            <p className="mt-2 whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+            <p className="mt-2 whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
               {candidate.body}
             </p>
           </details>

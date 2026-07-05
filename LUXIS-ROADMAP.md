@@ -63,9 +63,9 @@ Volledige onderbouwing: `docs/audit/inventaris-2026-07-05.md`.
 
 | # | Stap | Sessie | Status |
 |---|------|--------|--------|
-| V1 | **Gedeelde AI-kennis-bouwer** — AV + geleerde voorbeelden + bibliotheek in álle 3 draft-paden (lost ook `draft_service` legacy-AV op) | S173 (Opus) | 📋 PROMPT-S173 klaar |
-| V2 | **Leer-wachtrij schoonmaken** — ±20 vervuilde kandidaten afwijzen + 2 extractie-guards | S173 (Opus) | 📋 |
-| V3 | **Verweer-woordenschat 13 types** + trefwoord-labeling + relabel 110 + dropdown | S173/S174 | 📋 |
+| V1 | **Gedeelde AI-kennis-bouwer** — AV + geleerde voorbeelden + bibliotheek in álle 3 draft-paden (lost ook `draft_service` legacy-AV op) | S173 (Opus) | ✅ live (`resolve_case_terms`, commit bc8923e) |
+| V2 | **Leer-wachtrij schoonmaken** — ±20 vervuilde kandidaten afwijzen + 2 extractie-guards | S173 (Opus) | ✅ live (16 afgewezen, 118→102) |
+| V3 | **Verweer-woordenschat 13 types** + trefwoord-labeling + relabel 'overig' + dropdown | S174 | 📋 |
 | V4 | **Fable-review van S173-werk** (afspraak Arsalan: na Opus-bouw altijd Fable-check) | S174 (Fable) | 📋 |
 | V5 | Met/zonder-meting edit-rate (K1-vlag) | S174 | 📋 |
 | V6 | Later: sjablonen→DB (DF122-04), 3 services→1 motor, `kimi_client` hernoemen, Celery-dep weg, `terms_file_path` uitfaseren, H25-besluit | backlog | 📋 |

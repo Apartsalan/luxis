@@ -1,10 +1,41 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 5 juli 2026 (S172, Fable) — Audit code↔roadmap afgerond: 3 AI-services/3 geheugens (kernbevinding), ±20 vervuilde leer-kandidaten, 13-types verweer-woordenschat, ARCHITECTUUR-KAART + SessionStart-hook, roadmap ontstaled. Detail: S172-entry.
-**Laatste feature/fix:** S172 — geen code (audit-sessie); wel `docs/ARCHITECTUUR-KAART.md` + hook + roadmap-correcties.
-**Openstaand:** Verbind-sprint V1-V3 (PROMPT-S173, Opus) → daarna VERPLICHT Fable-review (V4, S174). Lisanne's review loopt (12/130). Geen open bugs.
-**Volgende sessie (S173):** Verbind-sprint 1 — `docs/sessions/PROMPT-S173.md` (Opus; eerst kaart lezen).
+**Laatst bijgewerkt:** 5 juli 2026 (S173, Opus) — Verbind-sprint 1 live: gedeelde AV-resolver in alle 3 AI-paden (incasso byte-identiek), 2 leerlijst-guards, 16 vervuilde kandidaten afgewezen (118→102). 54 tests groen. Detail: S173-entry.
+**Laatste feature/fix:** S173 — `ai_agent/knowledge_context.resolve_case_terms` + backfill-guards + prod-schoonmaak. Backend gedeployed (commit bc8923e), healthy.
+**Openstaand:** V3 verweer-woordenschat (13 types) → S174; V4 VERPLICHT Fable-review van S173 vóór verder bouwen. Lisanne's review loopt (12 goedgekeurd). Geen open bugs.
+**Volgende sessie (S174):** Fable-review S173 (eerst!) → daarna V3 — `docs/sessions/PROMPT-S174.md`.
+
+## Wat er gedaan is (sessie 173 — 5 juli 2026, Opus, met Arsalan) — Verbind-sprint 1: gedeelde AV + leerlijst-guards
+
+**Fable-plan-review vooraf (GO-MITS)** ving 3 dingen die het plan aanpasten: automation mag NIET
+via de bouwer voor de bibliotheek (die injectie zit in `incasso_email_prompts`, alle 5 vb. incl.
+Engelse, cap 8000 — anders stille regressie op het live verweer-pad); géén 4k-AV-cap in unified
+(= Recruit-S24-truncatiebug opnieuw); lichter pad = één AV-resolver i.p.v. een 3-tuple-bouwer.
+
+### V1 — Gedeelde AV-resolver (live)
+- Nieuw `ai_agent/knowledge_context.resolve_case_terms(db, tenant, case)` → `(av_text, av_pdf_path)`;
+  AV-logica geliftet uit `automation_service` (ContactTerms → `select_terms_for_date` → legacy fallback).
+- `automation_service`: AV via resolver, **gedrag byte-identiek** (bibliotheek/learned-gating in
+  `incasso_email_prompts` onaangeraakt); `_extract_pdf_text` verhuisd naar knowledge_context.
+- `draft_service`: kapot legacy `terms_file_path`-pad → resolver; 3000-cap weg.
+- `unified_draft_service` (compose-dialog): AV + bibliotheek + geleerde voorbeelden in alle 3
+  intents, **alleen bij verweer-categorie** (van bron-email of laatste dossier-classificatie).
+
+### V2 — Leerlijst-guards + prod-schoonmaak (live)
+- 2 guards in `backfill_learned_answers`: (a) Fwd:/FW:-subject skip; (b) debiteur-stem-frasen
+  (`_DEBTOR_VOICE`: "ik betwist", "wil ik een betalingsregeling", …) skip — óók bij Re:-mails.
+- Prod: **16 vervuilde kandidaten afgewezen** (elk volledig gelezen: debiteur/debiteur-advocaat/
+  lege intro; 3 scan-treffers die tóch Lisanne-tekst waren bewust gespaard). Kandidaten 118 → 102.
+
+### Tests + deploy
+- **54 tests groen**: 5 resolver + golden-guard (incasso-pad houdt alle 5 vb. incl. Engelse) +
+  unified wél/niet bij verweer + backfill-guards met echte bodies als fixtures.
+- Commit `bc8923e`, backend gedeployed (rebuild, geen migraties), healthy. Kaart AI-tabel = 3×✅.
+
+### Openstaand → S174
+- **V4 VERPLICHT eerst:** Fable-review van dit S173-werk vóór verder bouwen (zie PROMPT-S174).
+- V3 verweer-woordenschat (13 types) + trefwoord-labeling + relabel resterende 'overig' + UI-dropdown.
 
 ## Wat er gedaan is (sessie 172 — 5 juli 2026, Fable, met Arsalan) — Audit code↔roadmap + verbindingskaart
 

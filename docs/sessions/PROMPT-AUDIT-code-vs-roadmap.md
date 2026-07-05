@@ -59,6 +59,39 @@ Presenteer eerst de bevindingen (Plan Mode) vóór je iets in de roadmap wijzigt
 bouwen in deze sessie — dit is inventariseren + herijken. Kesting-specifieke kennis (art. 9.3,
 opdrachtgever-namen) hoort in **data**, niet in code — flag het als je het in code tegenkomt.
 
+## 7. De vraag van Arsalan — beantwoord deze PERSOONLIJK, pas NÁ stap 1–6
+Lees eerst de hele inventaris + roadmap + `PRODUCT.md` + de recentste sessie-notities, zodat je
+het **complete plaatje** hebt. Beantwoord dan, eerlijk en zonder holle geruststelling, in gewoon
+Nederlands (Arsalan is geen developer), zijn eigen woorden:
+
+> "Ik ben al zo lang aan het bouwen. Heel veel klopt al, maar heel veel is niet aan elkaar
+> geconnecteerd. Het lijkt alsof ik bouw en bouw en bouw en het maar niet echt béter wordt,
+> omdat het ergens niet in elkaar klikt. En dat de AI — Fable of Opus — nooit dit complete
+> plaatje begrijpt van hoe alles aan elkaar hangt. Elke sessie voelt als werken met een nieuwe
+> medewerker (voorbeeld: pas laat ontdekt dat de voorwaarden-upload al bestond, of hoe de
+> sjablonen/verweer-types samenhangen). Ik las over Obsidian/een vault om makkelijker door de
+> codebase te gaan. Soms word ik moedeloos: gaat dit ooit één goed product worden? Wat mis ik?"
+
+Behandel concreet, onderbouwd met wat je in de audit vond:
+1. **Is dit één samenhangend product aan het worden, of hobbelt het uiteen?** Geef je echte
+   oordeel op basis van de code — waar is het fundament solide, waar valt het uiteen in losse,
+   niet-verbonden stukken. Geen marketingtaal; toon bewijs.
+2. **Waarom voelt "bouwen en bouwen" alsof het niet béter wordt?** (Hypothese om te toetsen:
+   méér bouwen op een kaart die is weggedreven van de code maakt het rommeliger, niet beter.
+   De ontbrekende laag is *verbinden + één actuele kaart*, niet nóg een feature.)
+3. **Het "elke sessie een nieuwe medewerker"-probleem.** Dit is een echte, bekende beperking
+   (de AI begint elke sessie blanco en leest maar een deel van de code). Is het oplosbaar? Wat
+   is het praktische recept — een levende architectuur-/verbindingskaart in de repo die élke
+   sessie eerst leest, plus discipline om hem actueel te houden (deel van sessie-einde)?
+4. **Obsidian/vault — eerlijk.** Obsidian zelf leest de AI niet; de AI leest markdown in de repo.
+   Beoordeel of de kérn van het idee (een web van gelinkte notities die het systeem beschrijven)
+   waarde heeft als markdown-kaart ín de repo, en zo ja, hoe die eruit moet zien.
+5. **Wat mist Arsalan werkelijk?** Wees eerlijk: ligt het aan hem/het product, of aan de
+   ontbrekende connectieve/geheugen-laag? En wat is de concrete weg vooruit (stabiliseren +
+   verbinden i.p.v. doorbouwen).
+
+Toon = warm, direct, eerlijk. Niet kleineren, niet vals opbeuren. Hij wil de waarheid, met bewijs.
+
 ## Kostenbesparende voorbereiding (optioneel, door Opus vooraf)
 Opus kan vooraf de goedkope mechanische inventaris (stap 1) al produceren als los document,
 zodat Fable alleen nog het dure redeneerwerk (2–6) op een kant-en-klare kaart hoeft te doen.

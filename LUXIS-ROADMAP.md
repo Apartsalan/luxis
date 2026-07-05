@@ -1,6 +1,12 @@
 # Luxis — Project Roadmap (Source of Truth)
 
-**Laatst bijgewerkt:** 5 juli 2026 (sessie 171 — **Algemene voorwaarden LIVE voor de 7 opdrachtgevers**: ontdekt dat de geversioneerde AV-upload per cliënt (`ContactTerms`, S140) al bestond incl. AI-injectie in de verweer-prompt → 3 AV-sets gekoppeld + end-to-end geverifieerd (AI laadt nu per zaak de echte voorwaarden). **K1-kennisbank dus grotendeels al gebouwd → alleen gevuld.** + Slim-leren layout-bug gefixt (grid `min-w-0`, live). Audit-opdracht code↔roadmap voor Fable klaargezet. K0-gate poot 2 rond; poot 1 = Lisanne's review loopt (12 goedgekeurd). Volgende: `docs/sessions/PROMPT-AUDIT-code-vs-roadmap.md` / `PROMPT-S172.md`.)
+> ⚠️ **LEES EERST `docs/ARCHITECTUUR-KAART.md`** (2 pag.) — hoe alle systemen aan elkaar
+> hangen. Wordt óók automatisch geladen bij sessiestart (SessionStart-hook, S172). Wijzig
+> je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
+> `docs/audit/inventaris-2026-07-05.md`.
+
+**Laatst bijgewerkt:** 5 juli 2026 (sessie 172 — **Fable-audit code↔roadmap**: feature-inventaris opgeleverd (`docs/audit/inventaris-2026-07-05.md`), KERNBEVINDING: 3 AI-conceptservices met 3 verschillende geheugens (alleen het verweer-pad ziet AV+geleerde voorbeelden; compose-dialog ziet NIETS) → verbind-sprint gepland (PROMPT-S173, daarna Fable-review in S174). ±20 van de 110 "Overig"-kandidaten = vervuiling (debiteur-tekst/lege fragmenten, in prod geverifieerd); verweer-woordenschat van 13 types uit de echte data gedestilleerd. `docs/ARCHITECTUUR-KAART.md` gemaakt + SessionStart-hook. Stale roadmap-regels gefixt (Celery/Nginx/jose/Sentry/doc-paden/FEAT-MAIL-01).)
+**Vorige:** 5 juli 2026 (sessie 171 — **Algemene voorwaarden LIVE voor de 7 opdrachtgevers**: ontdekt dat de geversioneerde AV-upload per cliënt (`ContactTerms`, S140) al bestond incl. AI-injectie in de verweer-prompt → 3 AV-sets gekoppeld + end-to-end geverifieerd (AI laadt nu per zaak de echte voorwaarden). **K1-kennisbank dus grotendeels al gebouwd → alleen gevuld.** + Slim-leren layout-bug gefixt (grid `min-w-0`, live). Audit-opdracht code↔roadmap voor Fable klaargezet. K0-gate poot 2 rond; poot 1 = Lisanne's review loopt (12 goedgekeurd). Volgende: `docs/sessions/PROMPT-AUDIT-code-vs-roadmap.md` / `PROMPT-S172.md`.)
 **Vorige:** 5 juli 2026 (sessie 170 — FIN-2 dossier-afwikkelflow LIVE + Fable-review 3 fixes + source-mount-lek gefixt) · 4 juli (S169 — Slim leren geschaald naar 130 + kennisbank-onderzoek) · 3 juli (S168 — BaseNet-import uitgevoerd)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
@@ -25,7 +31,7 @@
 
 | Laag | Volwassenheid | Toelichting |
 |------|--------------|-------------|
-| Backend (FastAPI) | ~97% | 234 endpoints, 25 routers, 35 models, 684 tests (4 skipped). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. Zero-BTW bug gefixt ✅. Pipeline overhaul: 21 stappen, step_transitions (branching workflow), CaseStepHistory, verweer-tracking. |
+| Backend (FastAPI) | ~97% | ~19 modules, ~290 endpoints, ~42 models (exacte inventaris: `docs/audit/inventaris-2026-07-05.md`), 684 tests (4 skipped). Financial calcs uitstekend getest. Alle routers getest. Ruff clean ✅. CI groen ✅. Zero-BTW bug gefixt ✅. Pipeline overhaul: 21 stappen, step_transitions (branching workflow), CaseStepHistory, verweer-tracking. |
 | Frontend (Next.js) | ~87% | 24 pagina's (0 stubs), 29 hooks, 29 componenten. Alle 17 backend modules hebben frontend. Skeleton loaders, error boundaries, toast notifications, mobile responsive. 65 `any` types gekilld ✅, hooks cleanup ✅. E2E: 14 spec files (incl. settings, docs). **Impeccable design-audit S155 (7 jun): 10.5→~15.5/20** — login/dashboard ont-AI'd, timer-tick + zoek-flikker gefixt, 12 modals → Radix Dialog, toetsenbord/screenreader-toegankelijkheid, Mail/Incasso mobiel, dode dark:-classes weg. Rapport: `docs/qa/impeccable-audit-2026-06-07.md`. Restwerk: zie Backlog. |
 | Infra/DevOps | ~98% | Docker Compose op Hetzner VPS. Caddy ✅. GitHub-hosted CI runners ✅. Auto-deploy via SSH ✅ (S159: draait nu `alembic upgrade head` + faalt hard op health). Backup: lokaal 7d + off-site B2 90d ✅, **restore-test bewezen S159** (`docs/runbooks/restore.md`). fail2ban ✅. **ufw actief (22/80/443) S159** ✅. **uptime-cron gefixt S159** ✅. `TOKEN_ENCRYPTION_KEY` gezet ✅. Kernel 6.8.0-106 ✅. API docs + runbook ✅. CI 6/6 groen ✅. |
 
@@ -46,6 +52,26 @@
 4. Stitch redesign (nieuw design, component-voor-component) — 3-5 sessies
 5. Frontend E2E + polish (settings + docs E2E ✅, a11y + performance TODO) — deels compleet
 6. Final hardening (API docs ✅, runbook ✅, disaster recovery ✅) — COMPLEET ✅
+
+---
+
+## 🎯 VERBIND-SPRINT (na audit S172) — HUIDIGE PRIORITEIT
+
+**Kern:** even geen nieuwe features — eerst verbinden. De audit bewees dat de AI-laag uit
+losse, half-verbonden stukken bestaat (3 conceptservices / 3 geheugens; 4 sjabloonplekken).
+Volledige onderbouwing: `docs/audit/inventaris-2026-07-05.md`.
+
+| # | Stap | Sessie | Status |
+|---|------|--------|--------|
+| V1 | **Gedeelde AI-kennis-bouwer** — AV + geleerde voorbeelden + bibliotheek in álle 3 draft-paden (lost ook `draft_service` legacy-AV op) | S173 (Opus) | 📋 PROMPT-S173 klaar |
+| V2 | **Leer-wachtrij schoonmaken** — ±20 vervuilde kandidaten afwijzen + 2 extractie-guards | S173 (Opus) | 📋 |
+| V3 | **Verweer-woordenschat 13 types** + trefwoord-labeling + relabel 110 + dropdown | S173/S174 | 📋 |
+| V4 | **Fable-review van S173-werk** (afspraak Arsalan: na Opus-bouw altijd Fable-check) | S174 (Fable) | 📋 |
+| V5 | Met/zonder-meting edit-rate (K1-vlag) | S174 | 📋 |
+| V6 | Later: sjablonen→DB (DF122-04), 3 services→1 motor, `kimi_client` hernoemen, Celery-dep weg, `terms_file_path` uitfaseren, H25-besluit | backlog | 📋 |
+
+**Parallel (mensen, kritiek pad):** Lisanne's review van de 130 kandidaten · open beslissingen
+S157 (verdienmodel/BTW, 2e stichtingsbestuurder, 14-dagenbrief-akkoord H6 — advies ligt klaar).
 
 ---
 
@@ -366,15 +392,13 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 | Document | Doel | Status |
 |----------|------|--------|
 | `LUXIS-ROADMAP.md` | **Dit document** — overzicht van alles. Status, prioriteit, bugs, features | **ENIGE source of truth** — alle andere docs verwijzen hiernaar |
-| `CLAUDE.md` | AI development guide, architectuurregels, werkwijze | Actief, bijwerken bij nieuwe afspraken |
-| `backend/CLAUDE.md` | Backend-specifieke conventies | Actief |
-| `frontend/CLAUDE.md` | Frontend-specifieke conventies | Actief |
-| `DECISIONS.md` | Tech stack keuzes + onderbouwing | Definitief (niet wijzigen tenzij stack verandert) |
-| `FEATURE-INVENTORY.md` | Complete feature-inventaris (alle 15 modules) | Referentie — de "wat zou kunnen" lijst |
-| `UX-REVIEW.md` | Kritische UX analyse per feature vs. concurrentie | Referentie — de "waar staan we" analyse |
-| `UX-VERBETERPLAN.md` | Gedetailleerde bouw-instructies per UX feature | Detail-doc — status/prioriteit staat hier in roadmap |
-| `BUGS-EN-VERBETERPUNTEN.md` | Gedetailleerde bug-beschrijvingen met bestanden, regelnummers en fix-instructies | Detail-doc — status/prioriteit staat hier in roadmap |
-| `PROMPT-TEMPLATES-IN-WORKFLOW.md` | Spec voor templates + email in workflow | Gepland (dependency: B1 zaakdetail tabs) |
+| `docs/ARCHITECTUUR-KAART.md` | **Verbindingskaart** — hoe alle systemen aan elkaar hangen (2 pag.) | **Elke sessie eerst lezen** (auto via SessionStart-hook); bijwerken bij elke koppeling-wijziging |
+| `docs/audit/inventaris-2026-07-05.md` | Feitelijke feature-inventaris + dubbele systemen + verweer-woordenschat (audit S172) | Referentie — wat er ÍS |
+| `CLAUDE.md` | AI development guide, architectuurregels, werkwijze | Actief (staat ongecommit gewijzigd — eerst met Arsalan afstemmen) |
+| `backend/CLAUDE.md` / `frontend/CLAUDE.md` | Backend/frontend-conventies | Actief |
+| `docs/DECISIONS.md` | Tech stack keuzes + onderbouwing | Deels stale (Celery/Nginx/jose — zie audit S172); paden gecorrigeerd S172 (stonden op repo-root) |
+| `docs/FEATURE-INVENTORY.md` | Markt-checklist: wat een PMS zou kúnnen (concurrent-onderzoek) | Referentie — de "wat zou kunnen" lijst (NIET wat er is) |
+| `docs/research/UX-REVIEW.md` / `UX-VERBETERPLAN.md` / `BUGS-EN-VERBETERPUNTEN.md` / `PROMPT-TEMPLATES-IN-WORKFLOW.md` | Historische detail-docs (feb-mrt 2026) | Archief — status staat in deze roadmap |
 
 ### Op Bureaublad (`C:\Users\arsal\OneDrive\Bureaublad\Kesting Legal\Luxis\`)
 
@@ -392,12 +416,11 @@ Volledige audit: `docs/FULL-AUDIT-110.md`. Score: **7.2/10**. Testplan: Bijlage 
 
 - **Backend:** FastAPI (Python 3.12) + SQLAlchemy 2.0 + Alembic + PostgreSQL 16
 - **Frontend:** Next.js 15 (React 19, App Router) + shadcn/ui + Tailwind CSS
-- **Auth:** Custom JWT (python-jose + bcrypt)
+- **Auth:** Custom JWT (PyJWT + bcrypt — python-jose vervangen S90)
 - **Docs:** docxtpl + WeasyPrint
-- **Queue:** Celery + Redis
-- **Hosting:** Hetzner VPS (CX33, ~5,49/mnd) + Docker Compose + Nginx + Let's Encrypt
-- **Monitoring:** Sentry (~26/mnd)
-- **Kosten:** ~35/mnd totaal
+- **Scheduling:** APScheduler (géén Celery — dode dependency, verwijderen; audit S172). Redis alleen voor rate-limiting/OAuth-nonce
+- **Hosting:** Hetzner VPS (CX33) + Docker Compose + Caddy + Let's Encrypt
+- **Monitoring:** Sentry nog NIET actief (DSN leeg — actiepunt Arsalan sinds S159); self-hosted uptime-cron draait wel
 
 ---
 
@@ -636,7 +659,7 @@ Togglebare modules per tenant: `incasso`, `tijdschrijven`, `facturatie`, `wwft`,
 | FEAT-EMAIL-01 | Templates pixel-perfect BaseNet-stijl — Lisanne wil dat alle sjablonen exact eruit zien als BaseNet origineel (Verdana 12px overal, geen gouden header, handtekening met logo onderaan, schuldhulp+disclaimer 12px zwart cursief) | Hoog | M | ✅ Gebouwd (15 mei, sessie 145) — `_BASE_EMAIL` herontwerp, `_signature` met "Mevr. mr.", `_vordering_table_basenet` BaseNet structuur, schuldhulp+disclaimer 12px zwart, alle 25 templates compliant |
 | FEAT-EMAIL-02 | Schuldhulp+disclaimer in ALLE incasso-mails inclusief Engelse templates | Midden | S | ✅ Gebouwd (15 mei, sessie 145) — `_schuldhulp_disclaimer_en` vertaling toegevoegd, `bevestiging_sluiting` + 5 EN templates krijgen disclaimer |
 | OPS-01 | Tenant-data Kesting Legal op productie ingevuld (address/postal_code/city/phone/email/iban waren NULL — kantoor-info ontbrak in templates) | Hoog | XS | ✅ Gefixt (15 mei, sessie 145) — handmatige SQL via SSH: IJsbaanpad 9 / 1076 CV Amsterdam / etc. |
-| FEAT-MAIL-01 | Slimmere mail-matching: bij multi-dossier afzender niet weigeren maar suggereren — drempels 90% auto / 60-90% suggestie-popup / <60% Ongesorteerd. ML-score op laatste-activiteit + recent-uitgaande-mail-match | Hoog | M | 🟢 Gepland S148 (Lisanne drempels bevestigd S141) |
+| FEAT-MAIL-01 | Slimmere mail-matching: bij multi-dossier afzender niet weigeren maar suggereren — suggest-endpoint + confidence-sortering | Hoog | M | ✅ Gebouwd (geverifieerd audit S172: `email/sync_router.py` suggest_cases_for_email + confidence-sort; roadmap-regel stond onterecht op "Gepland") |
 
 ### Demo Feedback Sprint 2 (afgerond, sessie 78)
 
@@ -1352,10 +1375,10 @@ LF-10 → afhankelijk van LF-11
 > voorbeelden in de prompt + meten; Luxis doet die vorm al (defense_library, verweer-bibliotheek, edit-rate, S160).
 > **Architectuurkeuze:** deterministische selectieve prompt-injectie, GEEN RAG/vector-DB/embeddings (klein begrensd corpus,
 > structurele selectiesleutels, AVG); upgrade-pad pgvector indien ooit nodig.
-> **Plan:** K0-gate (voorwaarden 7 opdrachtgevers verzameld + Lisanne's eerste review-ronde gebeurd — geen bouw vóór die gate) →
-> K1 kennisbank (versie-metadata verplicht, injectie-cap ~1.500 tekens in code, met/zonder-vlag voor edit-rate-vergelijking) →
-> K2 leer-loop verbreden + geaggregeerde meting (per-voorbeeld attributie GESCHRAPT: schijnverbanden bij deze n; autonomie-grendel-test
-> S160 in code) → K3 patroonherkenning GEPARKEERD. Kesting-begrippen richting data (hardcoded-teller mag niet stijgen).
+> **Plan (deels ACHTERHAALD per S171/S172):** ~~K1 kennisbank nieuw bouwen~~ → bestaat al (`ContactTerms`, gevuld S171).
+> Wat overeind blijft: K0-gate (Lisanne's review — loopt), de met/zonder-vlag voor edit-rate-vergelijking (→ S174),
+> K2 geaggregeerde meting (per-voorbeeld attributie GESCHRAPT), K3 GEPARKEERD, Kesting-begrippen richting data.
+> **Nieuwe kern na audit S172: eerst VERBINDEN** — de kennisbank voedt maar 1 van de 3 AI-paden; zie prioriteitenblok bovenaan + PROMPT-S173.
 >
 > Oorspronkelijke omschrijving:
 > De agent heeft een kennisbank nodig (algemene voorwaarden, wettelijke regels, interne richtlijnen) en een feedback/learning loop

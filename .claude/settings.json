@@ -120,6 +120,18 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PROJECT_DIR:-.}/docs/ARCHITECTUUR-KAART.md\" 2>/dev/null || true",
+            "statusMessage": "Verbindingskaart laden"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",

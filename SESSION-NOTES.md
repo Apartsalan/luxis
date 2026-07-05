@@ -1,10 +1,60 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 5 juli 2026 (S171) — AV live voor de 7 opdrachtgevers via de al bestaande `ContactTerms` (S140), dus K1-kennisbank grotendeels al gebouwd; Slim-leren layout-bug gefixt. Detail: S171-entry.
-**Laatste feature/fix:** S171 — Slim-leren `min-w-0`-fix (live, commit `f9f6f41`) + 3 AV-sets gekoppeld aan de 7 opdrachtgevers (end-to-end geverifieerd, data-only).
-**Openstaand:** Geparkeerd tot na de audit — leerstroom-filter, `draft_service` op geversioneerde AV, Collection Company-koppeling. Lisanne's review loopt (12/130). Geen open bugs.
-**Volgende sessie (S172):** Fable-audit code↔roadmap — `docs/sessions/PROMPT-AUDIT-code-vs-roadmap.md` (pointer `PROMPT-S172.md`).
+**Laatst bijgewerkt:** 5 juli 2026 (S172, Fable) — Audit code↔roadmap afgerond: 3 AI-services/3 geheugens (kernbevinding), ±20 vervuilde leer-kandidaten, 13-types verweer-woordenschat, ARCHITECTUUR-KAART + SessionStart-hook, roadmap ontstaled. Detail: S172-entry.
+**Laatste feature/fix:** S172 — geen code (audit-sessie); wel `docs/ARCHITECTUUR-KAART.md` + hook + roadmap-correcties.
+**Openstaand:** Verbind-sprint V1-V3 (PROMPT-S173, Opus) → daarna VERPLICHT Fable-review (V4, S174). Lisanne's review loopt (12/130). Geen open bugs.
+**Volgende sessie (S173):** Verbind-sprint 1 — `docs/sessions/PROMPT-S173.md` (Opus; eerst kaart lezen).
+
+## Wat er gedaan is (sessie 172 — 5 juli 2026, Fable, met Arsalan) — Audit code↔roadmap + verbindingskaart
+
+### A. Audit uitgevoerd (opdracht `PROMPT-AUDIT-code-vs-roadmap.md`) → `docs/audit/inventaris-2026-07-05.md`
+Goedkope structuur-scan (grep/glob) + gericht diep lezen + verificatie in prod-DB (SSH).
+- **Kernbevinding: 3 AI-conceptservices met 3 verschillende geheugens.** Alleen
+  `incasso/automation_service.py` leest AV (geversioneerd) + geleerde voorbeelden + bibliotheek;
+  `draft_service.py` leest legacy `terms_file_path` (leeg sinds wipe); `unified_draft_service.py`
+  (compose-dialog `/api/ai/draft`) leest NIETS van de kennislaag. De kennisbank voedt dus 1 van
+  de 3 paden — dé verklaring voor "het klikt niet in elkaar".
+- **110 "Overig"-kandidaten geanalyseerd (volledige dump uit prod):** (1) type-toekenning via
+  difflib-gelijkenis met de 5 statische teksten kan principieel niet werken (nieuw type lijkt
+  nergens op; 9.3-tekst verschilt per opdrachtgever → onder drempel 0.45); (2) **±10 kandidaten
+  zijn debiteur-tekst** (extractie knipt bij Fwd:/Re: het citaat eruit — 8 gevallen hard
+  geverifieerd tegen synced_emails) + ±10 lege fragmenten → bulk-afwijzen vóór review;
+  (3) woordenschat van **13 types** uit de echte data (afwikkeling_intrekking 28×, verlenging 14×,
+  ongemotiveerde betwisting 12×, …; verjaring 0× → bewust weggelaten).
+- **Stale roadmap/docs:** Celery = dode dependency (alles APScheduler), Nginx→Caddy,
+  python-jose→PyJWT, Sentry DSN leeg, 6 "root-docs" verplaatst naar `docs/` (dode links),
+  FEAT-MAIL-01 stond "Gepland" maar is gebouwd, oud K1-bouwplan stond nog als actueel.
+- **4 sjabloon-opslagplaatsen** naast elkaar; 2 workflow-systemen (bekend). `kimi_client.py`
+  heet legacy maar is 100% Claude.
+
+### B. Arsalans strategische vraag beantwoord (in chat, met bewijs)
+Fundament solide (rekenkern/security/infra/tests); wat uiteenhobbelt is specifiek de AI-laag.
+"Bouwen voelt niet béter" omdat er parallelle paden bijkwamen i.p.v. verbindingen. Obsidian
+niet nodig — markdown-kaart in de repo wél. Weg vooruit: stabiliseren + verbinden (V1-V6).
+
+### C. Verbindingskaart + borging (nooit meer missen)
+- `docs/ARCHITECTUUR-KAART.md` (2 pag.): hoofdstromen, AI-tabel, sjabloonplekken, valkuilen.
+- **SessionStart-hook** in `.claude/settings.json`: kaart wordt élke sessiestart automatisch
+  in de context geladen (getest + gevalideerd). Plus verwijzing bovenaan de roadmap.
+- Onderhoudsregel in de kaart zelf: koppeling gewijzigd → kaart bijwerken, zelfde sessie.
+
+### D. Roadmap ontstaled + verbind-sprint gepland
+Roadmap: nieuw 🎯-prioriteitenblok (V1-V6), tech-stack gefixt, doc-paden gecorrigeerd,
+FEAT-MAIL-01 ✅, K1-plan gemarkeerd als achterhaald, kop-tellingen → circa + verwijzing audit.
+`PROMPT-S173.md`: verbind-sprint voor Opus (context-bouwer, wachtrij-schoonmaak, woordenschat)
+mét verplichte stap: **S174 begint op Fable die het S173-werk reviewt** (afspraak Arsalan).
+
+### Gewijzigde bestanden
+`docs/audit/inventaris-2026-07-05.md` (nieuw) · `docs/ARCHITECTUUR-KAART.md` (nieuw) ·
+`docs/sessions/PROMPT-S173.md` (nieuw) · `.claude/settings.json` (SessionStart-hook) ·
+`LUXIS-ROADMAP.md` · `SESSION-NOTES.md`. Géén code. CLAUDE.md + commands ongemoeid
+(ongecommitte wijzigingen van Arsalan). AV-PDF's niet gecommit.
+
+### Volgende sessie
+`docs/sessions/PROMPT-S173.md` — Opus, verbind-sprint 1. Daarna S174 op Fable (review eerst).
+
+---
 
 ## Wat er gedaan is (sessie 171 — 5 juli 2026, Opus, met Arsalan) — Slim-leren layout-fix + AV live (ContactTerms bestond al) + audit-opdracht
 

@@ -21,7 +21,9 @@ Voeg een nieuwe entry toe BOVENAAN met:
 ### Volgende sessie
 - Concrete actie, geen vage plannen
 ```
-Update ook de header-regels (laatst bijgewerkt, laatste feature/fix, openstaande bugs, volgende sessie).
+Update ook de 4 header-regels (laatst bijgewerkt, laatste feature/fix, openstaand, volgende sessie).
+**Houd die 4 regels KORT — max 1-2 zinnen per regel.** Alle detail hoort in de sessie-entry, NIET in de kop
+(anders groeien ze uit tot alinea's die elke afsluiting traag maken). Verwijs naar de entry voor het detail.
 
 ### LUXIS-ROADMAP.md
 - Controleer of alle afgeronde features als ✅ staan met datum

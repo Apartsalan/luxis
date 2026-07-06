@@ -276,7 +276,27 @@ export function AILerenTab() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Bulk afwijzen mislukt"),
   });
 
-  const pending = approve.isPending || reject.isPending || rejectBulk.isPending;
+  const approveBulk = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await api("/api/ai-agent/learning/candidates/approve-bulk", {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error("Bulk goedkeuren mislukt");
+      return res.json() as Promise<{ approved: number }>;
+    },
+    onSuccess: (r, ids) => {
+      dropFromCache(new Set(ids));
+      setReviewed((n) => n + r.approved);
+      setSelected(new Set());
+      queryClient.invalidateQueries({ queryKey: ["learning-stats"] });
+      toast.success(`${r.approved} goedgekeurd — de AI gebruikt deze voortaan als voorbeeld`);
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Bulk goedkeuren mislukt"),
+  });
+
+  const pending =
+    approve.isPending || reject.isPending || rejectBulk.isPending || approveBulk.isPending;
 
   // Zichtbare kandidaten (na categoriefilter) en gegroepeerd per verweer-type.
   const visible = useMemo(
@@ -353,6 +373,20 @@ export function AILerenTab() {
     )
       return;
     rejectBulk.mutate(ids);
+  };
+
+  const doBulkApprove = () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `${ids.length} kandidaat${ids.length === 1 ? "" : "en"} in één keer goedkeuren? ` +
+          "De AI gebruikt ze voortaan als voorbeeld, elk met de al geanonimiseerde tekst en het " +
+          "voorgestelde verweer-type. Controleer twijfelgevallen liever apart."
+      )
+    )
+      return;
+    approveBulk.mutate(ids);
   };
 
   const catFilters: { id: string; label: string }[] = [
@@ -450,15 +484,26 @@ export function AILerenTab() {
                   {allVisibleSelected ? "Selectie wissen" : "Selecteer zichtbare"}
                 </button>
                 {selected.size > 0 && (
-                  <button
-                    type="button"
-                    onClick={doBulkReject}
-                    disabled={pending}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Wijs {selected.size} af
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={doBulkApprove}
+                      disabled={pending}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Keur {selected.size} goed
+                    </button>
+                    <button
+                      type="button"
+                      onClick={doBulkReject}
+                      disabled={pending}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Wijs {selected.size} af
+                    </button>
+                  </>
                 )}
               </div>
             </div>

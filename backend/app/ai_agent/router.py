@@ -569,15 +569,15 @@ async def learning_reject_candidate(
     return {"ok": True}
 
 
-class RejectBulkRequest(BaseModel):
-    """Bulk-afwijzen: de id's van de kandidaten die in één keer weg mogen."""
+class BulkCandidateRequest(BaseModel):
+    """Bulk-actie: de id's van de kandidaten die in één keer verwerkt mogen worden."""
 
     ids: list[uuid.UUID]
 
 
 @router.post("/learning/candidates/reject-bulk")
 async def learning_reject_candidates_bulk(
-    payload: RejectBulkRequest,
+    payload: BulkCandidateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -587,3 +587,17 @@ async def learning_reject_candidates_bulk(
     rejected = await reject_candidates_bulk(db, current_user.tenant_id, payload.ids)
     await db.commit()
     return {"rejected": rejected}
+
+
+@router.post("/learning/candidates/approve-bulk")
+async def learning_approve_candidates_bulk(
+    payload: BulkCandidateRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Keur meerdere kandidaten tegelijk goed — met hun eigen tekst + voor-gelabeld type."""
+    from app.ai_agent.learned_answers import approve_candidates_bulk
+
+    approved = await approve_candidates_bulk(db, current_user.tenant_id, payload.ids)
+    await db.commit()
+    return {"approved": approved}

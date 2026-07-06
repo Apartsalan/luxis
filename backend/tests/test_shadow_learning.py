@@ -799,6 +799,66 @@ async def test_reject_candidates_bulk_only_touches_own_pending(db, test_tenant):
     assert await reject_candidates_bulk(db, test_tenant.id, []) == 0
 
 
+@pytest.mark.asyncio
+async def test_approve_candidates_bulk_activates_pending_only(db, test_tenant):
+    """Bulk-goedkeuren activeert meerdere kandidaten in één keer met hun eigen tekst +
+    voor-gelabeld type; laat een al afgewezen rij ongemoeid en valt bij ontbrekende
+    geanonimiseerde tekst terug op de ruwe body (nooit een leeg voorbeeld)."""
+    from app.ai_agent.learned_answers import approve_candidates_bulk
+
+    c1 = await _make_candidate(db, test_tenant.id)
+    c2 = await _make_candidate(db, test_tenant.id)
+    c2.anonymized_body = None  # geen geanonimiseerde tekst → moet terugvallen op body
+    # Een al afgewezen rij mag bulk-goedkeuren NIET terugzetten.
+    rejected_row = LearnedAnswer(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        category="betwisting",
+        body="raw afgewezen",
+        anonymized_body="Eerder afgewezen voorbeeld, moet afgewezen blijven, lang genoeg.",
+        status=STATUS_REJECTED,
+        is_active=False,
+    )
+    db.add(rejected_row)
+    await db.flush()
+    # Id's als losse waarden vastleggen vóór het verversen (anders triggert het lezen van
+    # .id op een verlopen ORM-object async-IO op de verkeerde plek → MissingGreenlet).
+    c1_id, c2_id, rej_id = c1.id, c2.id, rejected_row.id
+
+    # Lege lijst is een no-op — vóór de bulk-update, zolang de sessie nog schoon is.
+    assert await approve_candidates_bulk(db, test_tenant.id, []) == 0
+
+    approved = await approve_candidates_bulk(db, test_tenant.id, [c1_id, c2_id, rej_id])
+    assert approved == 2  # alleen de twee kandidaten
+    assert await list_candidates(db, test_tenant.id) == []  # wachtrij leeg
+
+    # Verifieer via kolom-queries (niet via de ORM-objecten): een bulk-UPDATE met
+    # synchronize_session=False laat de identity-map staan, dus objecten teruglezen zou
+    # verouderde waarden geven. Kolom-tuples hitten altijd de database.
+    async def _cols(cid):
+        return (
+            await db.execute(
+                select(
+                    LearnedAnswer.status,
+                    LearnedAnswer.is_active,
+                    LearnedAnswer.defense_type,
+                    LearnedAnswer.anonymized_body,
+                    LearnedAnswer.body,
+                ).where(LearnedAnswer.id == cid)
+            )
+        ).first()
+
+    s1, active1, type1, _, _ = await _cols(c1_id)
+    assert s1 == STATUS_APPROVED and active1 is True
+    assert type1 == "overig"  # eigen voor-gelabelde type behouden
+    # c2 had geen geanonimiseerde tekst → terugval op de ruwe body, niet leeg.
+    s2, _, _, anon2, body2 = await _cols(c2_id)
+    assert s2 == STATUS_APPROVED and anon2 == body2
+    # De eerder afgewezen rij is niet aangeraakt.
+    s_rej, _, _, _, _ = await _cols(rej_id)
+    assert s_rej == STATUS_REJECTED
+
+
 # ── dashboard-stats ──────────────────────────────────────────────────────
 
 

@@ -28,13 +28,13 @@ zodra er getypeerde goedkeuringen zijn én nieuwe inbound-mail geclassificeerd w
    (Let op: testartefacten opruimen — draft verwijderen, use_count terugzetten.)
 4. Rapporteer aan Arsalan: hoeveel goedgekeurd per type, welke groepen leeg bleven.
 
-### Spoor B: K2 — geaggregeerde meting (uit het S169-plan, per-voorbeeld attributie GESCHRAPT)
-Doel: kunnen zien of de leer-loop wérkt. Kleinste zinvolle vorm:
-1. Bestaande `get_learning_stats` (edit-rate, S160) uitbreiden met een uitsplitsing
-   mét/zonder geïnjecteerde geleerde voorbeelden — de "met/zonder-vlag" bestaat mogelijk al
-   op de draft; check eerst wat er al ligt vóór je iets bouwt (S171-les: K1 bestond al!).
-2. Dashboard-weergave in "Slim leren" (klein blok, geen nieuwe pagina).
-3. Geen per-voorbeeld attributie, geen A/B-infrastructuur (bewust geschrapt in de premortem).
+### Spoor B: K2-meting — GESCHRAPT (besluit Arsalan + Fable, 6 juli 2026, ná S175)
+De met/zonder-uitsplitsing van de edit-rate is onderzocht en bewust NIET gebouwd:
+(1) volumes zijn te klein — gesplitst duurt het maanden voor het cijfer iets zegt;
+(2) zodra Lisanne's goedkeuringen live zijn krijgt vrijwel elk verweer-concept voorbeelden
+mee → geen eerlijke "zonder"-groep meer; (3) de bestaande edit-rate-meting (S160, in
+"Slim leren") toont de trend over tijd al. NIET alsnog bouwen zonder nieuw gesprek met
+Arsalan — stabiliseren gaat vóór bijbouwen. Onderzoeksdetail: S175-entry SESSION-NOTES.
 
 ## Openstaand (achtergrond, alleen op verzoek)
 - Consolidatie 3→minder draft-services (opruimklus, latere sprint).

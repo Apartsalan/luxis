@@ -47,6 +47,26 @@ livegang is geen code, maar werkvoorraad + acceptatie.**
 4. **Slim leren**: Lisanne's beoordeling (loopt).
 5. **Parallel draaien** 2-4 weken → BaseNet opzeggen = het einde.
 
+### Vervolg zelfde dag (S175c, Opus→Fable): bulk-goedkeuren + beoordeling verwerkt + dashboard-fix
+- **Bulk-goedkeuren gebouwd** (Arsalans verzoek, Opus): `approve_candidates_bulk` +
+  `/learning/candidates/approve-bulk` + groene "Keur N goed"-knop naast "Wijs N af".
+  Eigen geanonimiseerde tekst + voor-gelabeld type per rij; raakt alleen status
+  'kandidaat'; body-terugval bij lege anonymized_body. Getest (36 groen) + live
+  geverifieerd via Playwright zonder Lisanne's data te raken. Commit `ba8dd8e`.
+- **Alles-goedgekeurd verwerkt (Spoor A):** alle 102 kandidaten waren goedgekeurd (114
+  totaal). PII-check: 0 persoonsnamen/datums; €-treffers = de vaste €25-clausule (hoort).
+  1 echt dossiernummer → `[dossiernummer]`. Opdrachtgever-namen (Incassocenter/Collect 1/
+  INC Zakelijk, 21 rijen) → 'cliënte' (data-sweep). 11 procedurele 'overig'-mailtjes met
+  akkoord Arsalan terug naar afgewezen (4 inhoudelijke behouden). **Eindstand: 103
+  goedgekeurd / 28 afgewezen — de leer-loop is klaar en gevuld.**
+- **Dashboard-fix (Arsalan zag "610 zaken / €4M openstaand" op Lisanne's account):**
+  alle werkvoorraad/geld-KPI's (dashboard + rapporten + `get_portfolio_outstanding`)
+  filteren nu `status != 'afgesloten'` — is_active betekent sinds de import 'zichtbaar',
+  niet 'lopend'. Rode test eerst (archiefzaak mag aantal noch bedrag beïnvloeden), 17+29
+  tests groen, commit `eb12391`, live geverifieerd: 3 actieve zaken / €85.096,64
+  (= de 3 proefzaken, saldi nog te corrigeren). Bonus: dashboard weer snel (rekende
+  eerst live rente over 607 archiefzaken).
+
 ### Openstaand → S176
 - Uitkomst Arsalans check: kan Lisanne met de proefzaken werken?
 - Van Lisanne per proefzaak: betaald bedrag + fase → dan saldi/stappen goed zetten.

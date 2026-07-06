@@ -1,8 +1,15 @@
 """BaseNet → Luxis import-runner (fase 1b: betalingen + betalingsregelingen).
 
-Twee brontypen uit `Xml_..._2400.zip`:
+Drie brontypen uit `Xml_..._2400.zip`:
   * `*.IncassoBetalingAnders.xml`   → betalingen (Payment), met art. 6:44-toerekening
   * `*.IncassoBetalingsRegeling.xml` → betalingsregelingen (PaymentArrangement + termijnen)
+  * `*.CashBankLine.xml`             → bankregel-betalingen voor de "cache-only" zaken
+    (S180): zaken met betalingen in BaseNet's boekhouding zónder los gedateerd record.
+    Koppeling is deterministisch (`cblpcode` = dossiernummer, fallback IN-code in de
+    omschrijving); alleen positieve regels (negatief = doorbetaling aan opdrachtgever);
+    scope strikt tot zaken ZONDER IncassoBetalingAnders-records (anders dubbel gedekt);
+    en per zaak een hard slot: som bankregels moet op de cent gelijk zijn aan BaseNet's
+    eigen `cachedpaymentsadmin` — anders wordt die zaak overgeslagen en gerapporteerd.
 
 Ontwerp (zoals fase 1, `import_basenet.py`):
   * Case-koppeling via `_uid("case", incpincassoid/incbincassoid)` — dezelfde uuid5 die
@@ -32,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import re
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -47,6 +55,9 @@ from scripts.basenet.import_basenet import _uid  # zelfde uuid5-namespace als fa
 from scripts.basenet.parse import parse_entity
 
 _PAYMENT_MARKER = "[BaseNet-betaling systemid="
+_BANK_MARKER = "[BaseNet-bankregel systemid="
+
+_INCODE_RE = re.compile(r"\bIN1\d{5}\b", re.IGNORECASE)
 
 
 # ── Betalingen bouwen ─────────────────────────────────────────────────────────
@@ -93,6 +104,97 @@ def build_payments(export_dir, tenant_id: uuid.UUID) -> BuiltPayments:
             out.credits.append(m["description"])
         if m["exclude_costs"]:
             out.exclude_costs.append(m["description"])
+
+    return out
+
+
+# ── Bankregel-betalingen bouwen (cache-only zaken, S180) ─────────────────────
+
+@dataclass
+class BuiltBankPayments:
+    payments: list[dict] = field(default_factory=list)
+    # per zaak: (som positieve regels, cache-admin, n regels) — alleen EXACT geïmporteerd
+    exact_cases: list[tuple] = field(default_factory=list)       # (code, status, som, n)
+    mismatched_cases: list[tuple] = field(default_factory=list)  # (code, som, cache) → SKIP
+    negative_skipped: int = 0
+
+
+def build_bank_payments(export_dir, tenant_id: uuid.UUID) -> BuiltBankPayments:
+    """Bankregels → betalingen, uitsluitend voor de cache-only zaken.
+
+    Cache-only = cachedpayments* > 0 én geen enkel IncassoBetalingAnders-record
+    (die zaken zijn al gedekt door build_payments; meenemen zou dubbel boeken).
+    Per zaak hard slot: som positieve regels == cachedpaymentsadmin op de cent,
+    anders overslaan + rapporteren (we verzinnen niets).
+    """
+    out = BuiltBankPayments()
+
+    # Welke incasso's hebben losse betaal-records? (die zaken NIET via bankregels)
+    has_payment_record = {
+        rec.get("incpincassoid").strip()
+        for rec in parse_entity(export_dir, "IncassoBetalingAnders").records
+        if rec.get("incpincassoid").strip()
+    }
+
+    # Cache-only zaken: code → (sysid, status, cache-admin)
+    cache_only: dict[str, tuple] = {}
+    for rec in parse_entity(export_dir, "Incasso").records:
+        if not rec.systemid or rec.systemid in has_payment_record:
+            continue
+        cache = (
+            (mapping._decimal(rec.get("cachedpaymentsklant")) or Decimal("0"))
+            + (mapping._decimal(rec.get("cachedpaymentsanders")) or Decimal("0"))
+            + (mapping._decimal(rec.get("cachedpaymentsadmin")) or Decimal("0"))
+        )
+        if cache <= Decimal("0"):
+            continue
+        code = rec.get("inccode").strip() or rec.get("pcode").strip()
+        admin = mapping._decimal(rec.get("cachedpaymentsadmin")) or Decimal("0")
+        cache_only[code] = (rec.systemid, rec.get("pstatus").strip() or "?", admin)
+
+    # Bankregels koppelen: cblpcode is leidend, IN-code in omschrijving als fallback.
+    lines_by_code: dict[str, list] = defaultdict(list)
+    for rec in parse_entity(export_dir, "CashBankLine").records:
+        pcode = rec.get("cblpcode").strip()
+        code = pcode if _INCODE_RE.fullmatch(pcode) else None
+        if code is None:
+            m = _INCODE_RE.search(rec.get("cbldescr") or "")
+            code = m.group(0).upper() if m else None
+        if code in cache_only:
+            lines_by_code[code].append(rec)
+
+    for code, (sysid, status, cache_admin) in cache_only.items():
+        pos = []
+        for rec in lines_by_code.get(code, []):
+            amount = mapping._decimal(rec.get("cblamount"))
+            pay_date = mapping._date(rec.get("cbldate"))
+            if amount is None or pay_date is None:
+                continue
+            if amount <= Decimal("0"):
+                out.negative_skipped += 1  # doorbetaling aan opdrachtgever, geen ontvangst
+                continue
+            pos.append((rec, amount, pay_date))
+
+        som = sum((a for _, a, _ in pos), Decimal("0"))
+        if not pos or abs(som - cache_admin) > Decimal("0.01"):
+            out.mismatched_cases.append((code, som, cache_admin))
+            continue  # hard slot: alleen op-de-cent kloppende zaken
+
+        out.exact_cases.append((code, status, som, len(pos)))
+        for rec, amount, pay_date in pos:
+            descr = (rec.get("cbldescr") or "Bankregel").strip()
+            marker = f" {_BANK_MARKER}{rec.systemid}]"
+            out.payments.append(
+                {
+                    "incasso_sysid": sysid,
+                    "case_id": _uid("case", sysid),
+                    "tenant_id": tenant_id,
+                    "amount": amount,
+                    "payment_date": pay_date,
+                    "description": descr[: 500 - len(marker)] + marker,
+                    "payment_method": "bank",
+                }
+            )
 
     return out
 
@@ -182,18 +284,18 @@ async def _existing_case_ids(db) -> set:
     return {i for (i,) in (await db.execute(text("SELECT id FROM cases"))).all()}
 
 
-async def _already_imported_sysids(db) -> set:
+async def _already_imported_sysids(db, marker: str = _PAYMENT_MARKER) -> set:
     """systemids van betalingen die we al eerder importeerden (idempotentie)."""
     rows = (
         await db.execute(
             text("SELECT description FROM payments WHERE description LIKE :m"),
-            {"m": f"%{_PAYMENT_MARKER}%"},
+            {"m": f"%{marker}%"},
         )
     ).all()
     out = set()
     for (descr,) in rows:
-        if descr and _PAYMENT_MARKER in descr:
-            out.add(descr.split(_PAYMENT_MARKER, 1)[1].rstrip("]").strip())
+        if descr and marker in descr:
+            out.add(descr.split(marker, 1)[1].rstrip("]").strip())
     return out
 
 
@@ -203,6 +305,8 @@ def _print_report(
     existing_case_ids: set,
     already: set,
     execute: bool,
+    bank: BuiltBankPayments | None = None,
+    bank_already: set | None = None,
 ) -> None:
     line = "=" * 68
     print(line)
@@ -267,6 +371,27 @@ def _print_report(
     print(f"    Zaken waar cache ≠ import (deelbetalingen elders):    {len(undercount)}")
     for code, cached, imported in sorted(undercount, key=lambda x: -(x[1] - x[2]))[:6]:
         print(f"          - {code}: cache EUR {cached}  vs  import EUR {imported}")
+
+    if bank is not None:
+        bank_already = bank_already or set()
+        fresh = [
+            p for p in bank.payments
+            if p["description"].split(_BANK_MARKER, 1)[1].rstrip("]").strip() not in bank_already
+        ]
+        print("\n── BANKREGEL-BETALINGEN (cache-only zaken, S180) ──")
+        print(f"  Zaken met EXACT kloppende som (import):  {len(bank.exact_cases)}")
+        print(f"  Zaken met afwijkende som (SKIP!):        {len(bank.mismatched_cases)}")
+        for code, som, cache in bank.mismatched_cases[:8]:
+            print(f"     - {code}: bankregels EUR {som} vs BaseNet-cache EUR {cache}")
+        print(f"  Negatieve regels genegeerd (doorbetaling): {bank.negative_skipped}")
+        print(f"  Al eerder geïmporteerd (skip):           {len(bank.payments) - len(fresh)}")
+        print(f"  TE IMPORTEREN:                           {len(fresh)} regels")
+        tot = sum((p["amount"] for p in fresh), Decimal("0.00"))
+        print(f"  Som te importeren:                       EUR {tot}")
+        lopend = [c for c in bank.exact_cases if c[1] == "Lopend"]
+        print(f"  Lopende zaken hersteld:                  {len(lopend)}")
+        for code, _st, som, n in sorted(lopend, key=lambda x: -x[2])[:20]:
+            print(f"     - {code}: EUR {som} ({n} regels)")
 
     print("\n── BETALINGSREGELINGEN ──")
     print(f"  Termijnen in bron:               {arr.total_termijnen}")
@@ -386,8 +511,11 @@ async def cleanup() -> None:
         )
         n_arr = len(arr.fetchall())
         pay = await db.execute(
-            text("DELETE FROM payments WHERE description LIKE :m RETURNING case_id"),
-            {"m": f"%{_PAYMENT_MARKER}%"},
+            text(
+                "DELETE FROM payments WHERE description LIKE :m1 "
+                "OR description LIKE :m2 RETURNING case_id"
+            ),
+            {"m1": f"%{_PAYMENT_MARKER}%", "m2": f"%{_BANK_MARKER}%"},
         )
         case_ids = {row[0] for row in pay.fetchall()}
         await db.commit()
@@ -420,10 +548,15 @@ async def run(export_dir: str, execute: bool, tenant_arg: str | None) -> None:
         today = date.today()
         pay = build_payments(export_dir, tenant_id)
         arr = build_arrangements(export_dir, tenant_id, today)
+        bank = build_bank_payments(export_dir, tenant_id)
 
         existing_case_ids = await _existing_case_ids(db)
         already = await _already_imported_sysids(db)
-        _print_report(pay, arr, existing_case_ids, already, execute=execute)
+        bank_already = await _already_imported_sysids(db, _BANK_MARKER)
+        _print_report(
+            pay, arr, existing_case_ids, already, execute=execute,
+            bank=bank, bank_already=bank_already,
+        )
 
         if not execute:
             return
@@ -434,15 +567,21 @@ async def run(export_dir: str, execute: bool, tenant_arg: str | None) -> None:
             if p["case_id"] in existing_case_ids
             and p["description"].split(_PAYMENT_MARKER, 1)[1].rstrip("]").strip() not in already
         ]
+        importable_bank = [
+            p
+            for p in bank.payments
+            if p["case_id"] in existing_case_ids
+            and p["description"].split(_BANK_MARKER, 1)[1].rstrip("]").strip() not in bank_already
+        ]
         importable_arr = [a for a in arr.arrangements if a["case_id"] in existing_case_ids]
 
-        n_pay, caps = await _write_payments(db, tenant_id, importable)
+        n_pay, caps = await _write_payments(db, tenant_id, importable + importable_bank)
         n_arr = await _write_arrangements(db, importable_arr)
         await db.commit()
 
         print("\n" + "=" * 68)
         print("GESCHREVEN (idempotent):")
-        print(f"  Betalingen geboekt:  {n_pay}")
+        print(f"  Betalingen geboekt:  {n_pay} (waarvan bankregels: {len(importable_bank)})")
         print(f"  Regelingen geboekt:  {n_arr}")
         if caps:
             print(f"  Gecapt op openstaand ({len(caps)} — overschot niet geboekt):")

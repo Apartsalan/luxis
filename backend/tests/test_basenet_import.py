@@ -376,6 +376,79 @@ def test_build_arrangements_keeps_only_future_termijnen(tmp_path):
     assert [i["installment_number"] for i in a["installments"]] == [1, 2]
 
 
+def test_build_bank_payments_exact_match_gate(tmp_path):
+    """Bankregel-import (S180): alleen cache-only zaken, alleen positieve regels,
+    en per zaak een hard slot — som moet op de cent gelijk zijn aan BaseNet's
+    cachedpaymentsadmin, anders wordt de zaak overgeslagen (niets verzinnen)."""
+    from scripts.basenet.import_payments import build_bank_payments
+
+    def incasso(sysid, code, admin):
+        return (
+            "<advocatuur.incasso><entityname>advocatuur.incasso</entityname>"
+            f"<systemid>{sysid}</systemid><entrylist>"
+            f'<entry key="systemid" value="{sysid}"/>'
+            f'<entry key="inccode" value="{code}"/>'
+            f'<entry key="pstatus" value="Lopend"/>'
+            f'<entry key="cachedpaymentsadmin" value="{admin}"/>'
+            "</entrylist></advocatuur.incasso>"
+        )
+
+    def bankline(sysid, pcode, descr, amount, dt="2025-12-05"):
+        return (
+            "<admin.cashbankline><entityname>admin.cashbankline</entityname>"
+            f"<systemid>{sysid}</systemid><entrylist>"
+            f'<entry key="systemid" value="{sysid}"/>'
+            f'<entry key="cblpcode" value="{pcode}"/>'
+            f'<entry key="cbldescr" value="{descr}"/>'
+            f'<entry key="cblamount" value="{amount}"/>'
+            f'<entry key="cbldate" value="{dt}"/>'
+            "</entrylist></admin.cashbankline>"
+        )
+
+    def betaling(sysid, incassoid):
+        return (
+            "<advocatuur.incassobetaling><entityname>advocatuur.incassobetaling</entityname>"
+            f"<systemid>{sysid}</systemid><entrylist>"
+            f'<entry key="systemid" value="{sysid}"/>'
+            f'<entry key="incpincassoid" value="{incassoid}"/>'
+            f'<entry key="incppaydate" value="2025-01-01"/>'
+            f'<entry key="incpamount" value="10.00"/>'
+            "</entrylist></advocatuur.incassobetaling>"
+        )
+
+    # Zaak 800: exact (100 + 50 = 150, negatieve -75 genegeerd) → import.
+    # Zaak 801: som 40 ≠ cache 99 → SKIP (hard slot).
+    # Zaak 802: heeft al een los betaal-record → NIET via bankregels (dubbel-dekking).
+    (tmp_path / "a.Incasso.xml").write_text(
+        incasso("800", "IN100800", "150.00")
+        + incasso("801", "IN100801", "99.00")
+        + incasso("802", "IN100802", "10.00"),
+        encoding="utf-8",
+    )
+    (tmp_path / "b.IncassoBetalingAnders.xml").write_text(
+        betaling("9001", "802"), encoding="utf-8"
+    )
+    (tmp_path / "c.CashBankLine.xml").write_text(
+        bankline("1", "IN100800", "ontvangst", "100.00")
+        # koppeling via IN-code in omschrijving (pcode leeg) moet ook werken:
+        + bankline("2", "", "Incasso IN100800 / Incassocenter B.V.", "50.00")
+        + bankline("3", "IN100800", "doorbetaald aan client", "-75.00")
+        + bankline("4", "IN100801", "deel", "40.00")
+        + bankline("5", "IN100802", "hoort bij 802 maar die heeft al records", "10.00"),
+        encoding="utf-8",
+    )
+
+    tenant = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    built = build_bank_payments(tmp_path, tenant)
+
+    assert [c[0] for c in built.exact_cases] == ["IN100800"]
+    assert len(built.payments) == 2  # de twee positieve regels van IN100800
+    assert {p["amount"] for p in built.payments} == {Decimal("100.00"), Decimal("50.00")}
+    assert all("[BaseNet-bankregel systemid=" in p["description"] for p in built.payments)
+    assert built.negative_skipped == 1
+    assert [m[0] for m in built.mismatched_cases] == ["IN100801"]  # 40 ≠ 99 → skip
+
+
 # ── Fase 2: e-mailimport (koppeling, richting, scope) ────────────────────────
 
 _INCASSO_XML = """

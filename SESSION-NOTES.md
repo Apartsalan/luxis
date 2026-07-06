@@ -85,6 +85,11 @@ livegang is geen code, maar werkvoorraad + acceptatie.**
 - Betalingen: `cachedpayments*=0.00` op IN100521 — geen deelbetalingen op deze zaak;
   de betalingen-import (fase 1b) blijft nodig voor de batch, bron zit in de metadata-zip.
 
+- **Klantkaart-defaults gezet (nieuwe dossiers meteen goed):** 7 vaste opdrachtgevers op
+  `default_interest_type='contractual'` / 2.00 / `monthly` (BaseNet-patroon: honderden zaken
+  2%/mnd type 8; D-Break bewust wettelijk gelaten, type 1). Nieuw-dossier-formulier neemt
+  dit automatisch over (DF138-13).
+
 ### Openstaand → S177 (S176-spoor grotendeels onderweg afgehandeld)
 - Uitkomst Arsalans check: kan Lisanne met de proefzaken werken? (loopt)
 - Van Lisanne per proefzaak: volgende stap/fase → pijplijnstap zetten (deadline checken!).

@@ -348,7 +348,7 @@ async def _write_arrangements(db, importable_arr: list[dict]) -> int:
                 "start_date": a["start_date"],
                 "end_date": a["end_date"],
                 "notes": f"[BaseNet-import] regeling incasso={a['incasso_sysid']} "
-                f"— alleen toekomstige termijnen overgenomen",
+                f"- alleen toekomstige termijnen overgenomen",
             },
         )
         for inst in a["installments"]:

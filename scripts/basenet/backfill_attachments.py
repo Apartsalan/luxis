@@ -228,6 +228,244 @@ def _print_extract(stats: ExtractStats, include_inline: bool, dry_run: bool, out
     print("=" * 68)
 
 
+# ── losse dossier-documenten → case_files ("Bestanden"-tab) ──────────────────
+# De zip-mappen bevatten naast .eml ook losse bestanden (PDF's, .msg, Excel): de
+# BaseNet-"documenten" (leinout=6). Die zijn nooit geïmporteerd. Koppeling exact als
+# de mails: bestand-prefix = Letter.letterno -> lepcode (dossier) -> case_id. Geen
+# fuzzy matching; letterno's die niet in de XML-snapshot staan worden overgeslagen.
+
+_DOC_DIRECTION = {"3": "uitgaand", "4": "inkomend"}  # 6 = geüpload document -> None
+
+
+@dataclass
+class DocStats:
+    zips: int = 0
+    loose_files: int = 0
+    skip_no_letterno: int = 0
+    skip_no_meta: int = 0       # letterno niet in XML-snapshot
+    skip_not_in: int = 0        # lepcode geen IN-dossier
+    skip_no_case: int = 0       # IN-dossier zonder Luxis-case
+    matched: int = 0
+    matched_bytes: int = 0
+    matched_cases: set = field(default_factory=set)
+    by_ext: Counter = field(default_factory=Counter)
+    samples: list[dict] = field(default_factory=list)
+
+
+def _build_letter_case_index(xml_dir: str):
+    """(letterno -> {leinout,lepcode,subject}, inccode -> case_id-str). Lokaal-only."""
+    from scripts.basenet.parse import parse_entity  # puur, geen app/DB
+
+    letters: dict[str, dict] = {}
+    for rec in parse_entity(xml_dir, "Letter").records:
+        no = rec.get("letterno").strip()
+        if no:
+            letters[no] = {
+                "leinout": rec.get("leinout").strip(),
+                "lepcode": rec.get("lepcode").strip(),
+                "subject": rec.get("lesubject").strip(),
+            }
+    cases: dict[str, str] = {}
+    for rec in parse_entity(xml_dir, "Incasso").records:
+        code = rec.get("inccode").strip()
+        if code and rec.systemid:
+            cases[code] = str(_uid("case", rec.systemid))
+    return letters, cases
+
+
+def extract_docs(
+    zip_dir: str, xml_dir: str, out: str | None, dry_run: bool, known_cases: str | None
+) -> DocStats:
+    import mimetypes
+
+    letters, cases = _build_letter_case_index(xml_dir)
+    known = None
+    if known_cases:
+        known = {ln.strip() for ln in Path(known_cases).read_text().splitlines() if ln.strip()}
+    zip_paths = sorted(Path(zip_dir).glob("1601*.zip"))
+    stats = DocStats(zips=len(zip_paths))
+    manifest: list[dict] = []
+    out_dir = Path(out) if out else None
+
+    for zp in zip_paths:
+        with zipfile.ZipFile(zp) as zf:
+            for info in zf.infolist():
+                name = info.filename
+                if info.is_dir() or name.lower().endswith(".eml"):
+                    continue
+                stats.loose_files += 1
+                base = Path(name).name
+                letterno = base.split("_", 1)[0]
+                if not letterno.isdigit():
+                    stats.skip_no_letterno += 1
+                    continue
+                meta = letters.get(letterno)
+                if meta is None:
+                    stats.skip_no_meta += 1
+                    continue
+                if not meta["lepcode"].startswith("IN"):
+                    stats.skip_not_in += 1
+                    continue
+                case_id = cases.get(meta["lepcode"])
+                if case_id is None:
+                    stats.skip_no_case += 1
+                    continue
+
+                # Bestandsnaam ontdaan van de letterno-prefix, voor de UI.
+                display = base.split("_", 1)[1] if "_" in base else base
+                ext = os.path.splitext(base)[1].lower()
+                content_type = mimetypes.types_map.get(ext, "application/octet-stream")
+                stored_filename = f"{_uid('casefile', name)}{ext}"
+                matched = known is None or case_id in known
+                stats.by_ext[ext or "(geen)"] += 1
+                if matched:
+                    stats.matched += 1
+                    stats.matched_bytes += info.file_size
+                    stats.matched_cases.add(case_id)
+                    if len(stats.samples) < 25:
+                        stats.samples.append(
+                            {"lepcode": meta["lepcode"], "filename": display[:60],
+                             "ext": ext, "size": info.file_size,
+                             "dir": _DOC_DIRECTION.get(meta["leinout"], "-")}
+                        )
+                if known is not None and not matched:
+                    continue
+
+                manifest.append({
+                    "letterno": letterno,
+                    "case_id": case_id,
+                    "original_filename": display[:500],
+                    "stored_filename": stored_filename,
+                    "content_type": content_type,
+                    "file_size": info.file_size,
+                    "document_direction": _DOC_DIRECTION.get(meta["leinout"]),
+                    "description": (meta["subject"] or None),
+                })
+                if out_dir and not dry_run:
+                    dest = out_dir / case_id / stored_filename
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(zf.read(info))
+
+    if out_dir and not dry_run:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / MANIFEST_NAME).write_text(json.dumps(manifest, ensure_ascii=False, indent=1))
+
+    _print_docs(stats, dry_run, out)
+    return stats
+
+
+def _print_docs(stats: DocStats, dry_run: bool, out: str | None) -> None:
+    print("=" * 68)
+    print("BaseNet fase 3b — losse documenten -> Bestanden", "(DRY RUN)" if dry_run else "")
+    print("=" * 68)
+    print(f"  zips gescand:                 {stats.zips:8d}")
+    print(f"  losse bestanden (geen .eml):  {stats.loose_files:8d}")
+    print(f"  overgeslagen: geen letterno   {stats.skip_no_letterno:8d}")
+    print(f"                niet in XML     {stats.skip_no_meta:8d}")
+    print(f"                geen IN-dossier {stats.skip_not_in:8d}")
+    print(f"                geen Luxis-case {stats.skip_no_case:8d}")
+    print("  ---")
+    print(f"  >> TE IMPORTEREN (bij een bestaand dossier):")
+    print(f"     documenten:                {stats.matched:8d}  ({stats.matched_bytes/1e6:8.1f} MB)")
+    print(f"     verdeeld over dossiers:    {len(stats.matched_cases):8d}")
+    print("  ---")
+    print("  Top bestandstypen:")
+    for ext, n in stats.by_ext.most_common(12):
+        print(f"     {ext:12s} {n:6d}")
+    print("\n  Steekproef (eerste 25):")
+    for s in stats.samples:
+        print(f"     [{s['dir']:8s}] {s['ext']:6s} {s['size']:9d}  {s['lepcode']:10s} {s['filename']}")
+    if out and not dry_run:
+        print(f"\n  Geschreven naar: {out}")
+    print("=" * 68)
+
+
+async def load_docs(staging: str, execute: bool) -> None:
+    from sqlalchemy import text
+
+    from app.database import async_session
+
+    staging_dir = Path(staging)
+    manifest = json.loads((staging_dir / MANIFEST_NAME).read_text(encoding="utf-8"))
+    base = Path("/app/uploads")
+
+    matched = written = skipped_no_case = skipped_exists = missing_file = 0
+    async with async_session() as db:
+        case_tenant = {
+            str(i): t
+            for i, t in (await db.execute(text("SELECT id, tenant_id FROM cases"))).all()
+        }
+        tenant_id = next(iter(set(case_tenant.values())), None)
+        user_row = (
+            await db.execute(
+                text("SELECT id FROM users WHERE tenant_id=:t ORDER BY created_at LIMIT 1"),
+                {"t": tenant_id},
+            )
+        ).first() if tenant_id else None
+        uploaded_by = user_row[0] if user_row else None
+        existing = {
+            sf for (sf,) in (
+                await db.execute(text("SELECT stored_filename FROM case_files"))
+            ).all()
+        }
+
+        for m in manifest:
+            tenant = case_tenant.get(m["case_id"])
+            if tenant is None:
+                skipped_no_case += 1
+                continue
+            matched += 1
+            if m["stored_filename"] in existing:
+                skipped_exists += 1
+                continue
+            src = staging_dir / m["case_id"] / m["stored_filename"]
+            if not src.exists():
+                missing_file += 1
+                continue
+            if not execute:
+                written += 1
+                continue
+            dest = base / str(tenant) / m["case_id"] / m["stored_filename"]
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(src.read_bytes())
+            await db.execute(
+                text(
+                    "INSERT INTO case_files "
+                    "(id, tenant_id, case_id, original_filename, stored_filename, "
+                    " file_size, content_type, document_direction, description, "
+                    " uploaded_by, is_active, created_at, updated_at) "
+                    "VALUES (:id, :t, :c, :ofn, :sf, :fs, :ct, :dir, :descr, :ub, true, now(), now()) "
+                    "ON CONFLICT (id) DO NOTHING"
+                ),
+                {
+                    "id": _uid("casefile_row", m["stored_filename"]),
+                    "t": tenant,
+                    "c": m["case_id"],
+                    "ofn": m["original_filename"],
+                    "sf": m["stored_filename"],
+                    "fs": m["file_size"],
+                    "ct": m["content_type"],
+                    "dir": m["document_direction"],
+                    "descr": m["description"],
+                    "ub": uploaded_by,
+                },
+            )
+            written += 1
+        if execute:
+            await db.commit()
+
+    print("=" * 68)
+    print("BaseNet fase 3b — losse documenten (load)", "(EXECUTE)" if execute else "(DRY RUN)")
+    print("=" * 68)
+    print(f"  manifest-regels:              {len(manifest):8d}")
+    print(f"  gematcht aan een dossier:     {matched:8d}")
+    print(f"  geen dossier:                 {skipped_no_case:8d}")
+    print(f"  al aanwezig (idempotent):     {skipped_exists:8d}")
+    print(f"  bestand mist in staging:      {missing_file:8d}")
+    print(f"  {'GESCHREVEN' if execute else 'zou schrijven'}:                 {written:8d}")
+    print("=" * 68)
+
+
 # ── load (in de prod-container) ──────────────────────────────────────────────
 
 async def load(staging: str, execute: bool) -> None:
@@ -322,9 +560,24 @@ def main() -> None:
     pl.add_argument("--staging", required=True, help="Staging-map (van extract, op de VPS)")
     pl.add_argument("--execute", action="store_true", help="Schrijf weg (anders dry-run)")
 
+    ped = sub.add_parser("extract-docs", help="Lokaal: losse documenten uit de zips halen")
+    ped.add_argument("--zip-dir", required=True, help="Map met de 1601*.zip dossier-zips")
+    ped.add_argument("--xml-dir", required=True, help="Map met BaseNet-XML (Letter + Incasso)")
+    ped.add_argument("--out", help="Staging-map om documenten + manifest te schrijven")
+    ped.add_argument("--dry-run", action="store_true", help="Alleen tellen, niets schrijven")
+    ped.add_argument("--known-cases", help="Bestand met bestaande case-id's (1 per regel)")
+
+    pld = sub.add_parser("load-docs", help="In-container: documenten-staging → volume + case_files")
+    pld.add_argument("--staging", required=True, help="Documenten-staging-map (op de VPS)")
+    pld.add_argument("--execute", action="store_true", help="Schrijf weg (anders dry-run)")
+
     args = p.parse_args()
     if args.cmd == "extract":
         extract(args.zip_dir, args.out, args.include_inline, args.dry_run, args.known_emails)
+    elif args.cmd == "extract-docs":
+        extract_docs(args.zip_dir, args.xml_dir, args.out, args.dry_run, args.known_cases)
+    elif args.cmd == "load-docs":
+        asyncio.run(load_docs(args.staging, args.execute))
     else:
         asyncio.run(load(args.staging, args.execute))
 

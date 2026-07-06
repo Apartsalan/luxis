@@ -1,10 +1,45 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 5 juli 2026 (S173, Opus) — Verbind-sprint 1 live: gedeelde AV-resolver in alle 3 AI-paden (incasso byte-identiek), 2 leerlijst-guards, 16 vervuilde kandidaten afgewezen (118→102). Fable-review (GO-MITS) zelfde sessie gedaan + 2 must-fixes toegepast. 57 tests groen. Detail: S173-entry.
+**Laatst bijgewerkt:** 6 juli 2026 (S173b, Fable — laatste Fable-dag) — 13-types-woordenschat gevalideerd op de 102 echte prod-kandidaten (85% zinvol label; valkuil: eerst geciteerde AV-blokken strippen), alle S174-ontwerpbesluiten genomen, 3e vindplaats created_at-bug gevonden (automation_service!), nacheck-draaiboek klaar. Docs-only, geen code gewijzigd.
 **Laatste feature/fix:** S173 — `ai_agent/knowledge_context.resolve_case_terms` + backfill-guards + prod-schoonmaak + Fable-review-fixes. Backend gedeployed (commits bc8923e + 34e2b2d), healthy.
-**Openstaand:** V3 verweer-woordenschat (13 types) + review-opruimpunten → S174 (Fable-review S173 IS al gedaan). Lisanne's review loopt (12 goedgekeurd). Geen open bugs.
-**Volgende sessie (S174):** V3 + open review-punten — `docs/sessions/PROMPT-S174.md` (review al klaar).
+**Openstaand:** S174 (Opus, bouwen): V3+V4 + besloten review-punten + must-fix created_at ×2. Daarna S175: onafhankelijke review (`PROMPT-S175-REVIEW.md`). Lisanne's review loopt (12 goedgekeurd). Geen open bugs.
+**Volgende sessie (S174):** alles bouwen — `docs/sessions/PROMPT-S174.md` (ontwerp volledig besloten, niets meer te gokken).
+
+## Wat er gedaan is (sessie 173b — 6 juli 2026, Fable, met Arsalan) — Laatste Fable-dag: S174 volledig voorbereid
+
+Aanleiding: Arsalans vraag "hoe gaat Slim leren werken voor de Overig-bak, hoe weet Lisanne
+wat ze moet goedkeuren, is hier goed over nagedacht?" Antwoord onderbouwd met echte data i.p.v.
+theorie. Visie bevestigd: herken "dit is zo'n antwoord" → pak schabloon → tailleer (= V4).
+
+### A. Dry-run 13-types-woordenschat op prod (→ `docs/audit/prelabel-dryrun-2026-07-06.md`)
+- Alle 102 open kandidaten van prod gedumpt en gelezen; trefwoord-regels (audit §5.c/d) getest.
+- **85% krijgt zinvol label** (afwikkeling 20, verlenging 12, reeds_betaald 8, regeling 7, …);
+  restant-overig 15 = vrijwel allemaal weggooi-materiaal (procedurele mailtjes) → bulk-afwijzen.
+- **Valkuil gevonden:** geciteerde art. 9.3/20.4-blokken bevatten zelf "betalingsregeling
+  treft"/"schikking treft" → eerst quote-stripping, dán matchen (anders 22 mislabels).
+  Geteste regels: `scripts/prelabel_dryrun_s174.py`.
+
+### B. Alle S174-ontwerpbesluiten genomen (in `PROMPT-S174.md` — Opus hoeft niets te gokken)
+- Staleness-gate: reply altijd injecteren; next_step/free_compose alleen als classificatie bij
+  de LAATSTE inbound-mail hoort. Geen tijdslimiet (KISS).
+- Debiteur-guard skip-logging: teller + ids in log (geen tabel/UI).
+- `generate_client_update`: `audience`-param; bij "client" geen verweer-bib/geleerde voorbeelden
+  (debiteur-gericht), AV blijft.
+- **NIEUW MUST-FIX:** created_at-classificatie-bug (S173-must-fix-patroon) zit óók nog in
+  `draft_service.py:182` én `automation_service.py:377` (incasso-batchpad!) → één gedeelde
+  helper in knowledge_context. Structured schema: geparkeerd (YAGNI).
+- V4-ontwerp (Arsalans visie): classificatie kiest ook `defense_type` uit de 13; 
+  `get_learned_examples` matcht op type eerst, categorieën als één pool.
+- Gaten in review-UX benoemd: bron-context (mail/dossier) tonen bij kandidaat (kolommen bestaan).
+
+### C. Nacheck-draaiboek geschreven (`docs/sessions/PROMPT-S175-REVIEW.md`)
+Onafhankelijke review na de S174-bouw: toetslijst per deliverable + premortem-risico's
+(Lisanne keurt niet / pre-label fout / V4 doorgeschoven / PII-lek / wachtrij groeit terug)
++ prod-rooktest. Uitvoerbaar door elk sterk redeneer-model (Fable is na vandaag weg).
+
+### Status prod (gecheckt via SSH, read-only)
+102 kandidaten open (94 overig), 12 goedgekeurd, 17 afgewezen. Geen wijzigingen aangebracht.
 
 ## Wat er gedaan is (sessie 173 — 5 juli 2026, Opus, met Arsalan) — Verbind-sprint 1: gedeelde AV + leerlijst-guards
 

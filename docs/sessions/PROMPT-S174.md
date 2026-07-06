@@ -18,23 +18,33 @@ uitgevoerd → **GO-MITS**. De twee must-fixes zijn direct toegepast + getest (c
 **Er is dus GEEN nieuwe review nodig.** Wat resteert zijn de door Fable gemarkeerde
 opruimpunten (stap 1) + de bouwtaak V3 (stap 2).
 
-## Stap 1 — Open review-punten afhandelen (kort)
-1. ~~BESLISSING Arsalan (kosten vs kwaliteit): compose→Sonnet?~~ **GEDAAN (S173):** Arsalan
-   koos Sonnet; `kimi_client` plain-text fallback (compose-dialog + client-update) draait nu op
-   Sonnet i.p.v. Haiku (kostenverschil ~paar cent/concept, verwaarloosbaar). Alleen nog te
-   overwegen: naar **structured schema** (tool_use, gegarandeerde JSON) i.p.v. plain-text —
-   optioneel, niet urgent.
-2. **Staleness-grens verweer-injectie** (`unified_draft_service._build_verweer_knowledge`): nu
-   injecteert een oude verweer-classificatie AV+voorbeelden in élke latere compose zolang er geen
-   nieuwere inkomende mail is geclassificeerd. Overweeg: alleen injecteren als de laatste
-   classificatie bij de laatste inkomende mail hoort, of een tijdslimiet.
-3. **Skip-logging debiteur-guard** (`learned_answers._DEBTOR_VOICE`): een teller/logregel zodat
-   per-ongeluk geskipte échte kandidaten (bv. "namens cliënte betwist ik uw stelling") bij
-   calibratie opvallen.
-4. **`draft_service.generate_client_update`**: injecteert AV + verweer-voorbeelden als de laatste
-   dossier-classificatie toevallig verweer is — ook bij een betaal-update aan de opdrachtgever.
-   Bewust? Zo niet: gate op intent.
-5. **Klein/cosmetisch:** unified mist het Engelse bibliotheek-voorbeeld dat het incasso-pad wél
+## Stap 1 — Open review-punten: ONTWERP IS BESLOTEN (Fable, 6 juli) — alleen uitvoeren
+1. ~~Compose→Sonnet~~ **GEDAAN (S173).** Structured schema (tool_use): **GEPARKEERD** — niet in
+   S174 doen (YAGNI zolang plain-text niet aantoonbaar faalt).
+2. **Staleness-grens verweer-injectie — BESLUIT:**
+   - `reply_to_email` mét eigen classificatie → altijd injecteren (gebruiker beantwoordt juist
+     díé mail, ook als hij oud is).
+   - `next_step`/`free_compose` (fallback-pad) → alléén injecteren als de classificatie hoort
+     bij de LAATSTE inkomende mail op het dossier (vergelijk `synced_email_id` met de nieuwste
+     inbound-mail-id). Laatste mail niet geclassificeerd → niet injecteren. Geen aparte
+     tijdslimiet (het criterium "laatste inkomende mail" ís de versheid).
+3. **Skip-logging debiteur-guard — BESLUIT:** teller per backfill-run + één INFO-logregel met
+   de geskipte email-ids (`_DEBTOR_VOICE`-skips). Geen aparte tabel/UI (YAGNI) — log volstaat
+   voor calibratie.
+4. **`generate_client_update` — BESLUIT: gate op doelgroep.** Geef `generate_draft` een
+   `audience`-parameter (`"debtor"` default, `"client"` voor client-updates). Bij
+   `audience="client"`: verweer-bibliotheek + geleerde voorbeelden OVERSLAAN (die zijn
+   debiteur-gericht, "U heeft gesteld…"); AV + financiële context blijven (relevant voor
+   uitleg afwikkeling aan opdrachtgever).
+5. **NIEUW MUST-FIX (Fable 6 juli):** de "laatste classificatie op dit dossier" wordt op
+   TWEE plekken nog op `EmailClassification.created_at` zónder inbound-filter gekozen —
+   exact de bug die de S173-review in unified moest fixen (na BaseNet-import is created_at
+   onbetrouwbaar): `draft_service.py:182-191` én `automation_service.py:377-387` (het
+   incasso-batchpad!). Fix: één gedeelde helper (verplaats unified's
+   `_last_case_classification_category` naar `knowledge_context.py`) en gebruik die op alle
+   drie de plekken: join `SyncedEmail`, `direction='inbound'`, sorteer op `email_date`.
+   (unified:131 en service.py:613 zijn onschuldig — per-mail resp. lijstweergave.)
+6. **Klein/cosmetisch:** unified mist het Engelse bibliotheek-voorbeeld dat het incasso-pad wél
    heeft (`get_relevant_examples` filtert op NL); `draft_service`-promptkop zegt nog "(excerpt)"
    terwijl de 3000-cap weg is.
 
@@ -59,11 +69,17 @@ belandt alles wat 9.3 citeert in `betalingsregeling_schikking`.
    kan Lisanne niet goed beoordelen.
 Tests: pre-labeler per type één bewijzende case; bestaande AI-tests groen.
 
-## V4 (optioneel, na V3 — klein): type-matching bij genereren
-`get_learned_examples` kiest nu op categorie + spreiding, maar kijkt niet welk verweer de
-debiteur NU voert. Fix: de AI-classificatie van inkomende mail ook een `defense_type` uit
-de 13 laten kiezen (één prompt-veld + kolom) en voorbeelden van dat type voorrang geven.
-Maakt de leer-loop pas écht "slim". Zie `docs/audit/prelabel-dryrun-2026-07-06.md` §4.
+## V4 (na V3, zelfde sessie als het past — klein): type-matching bij genereren
+Dit is de kern van Arsalans visie: *herken "dit is zo'n antwoord" → pak het goedgekeurde
+schabloon → tailleer naar de situatie*. Ontwerp (Fable, 6 juli):
+1. De AI-classificatie van inkomende mail kiest óók een `defense_type` uit de 13
+   (één veld in de classificatie-prompt + kolom op `EmailClassification`).
+2. `get_learned_examples`: voorbeelden met matchend `defense_type` eerst, dan pas de
+   bestaande spreiding als aanvulling. Behandel de twee leerbare categorieën
+   (juridisch_verweer/betwisting) daarbij als ÉÉN pool — het verweer-TYPE is het echte
+   matchcriterium, de categorie-grens fragmenteert de bibliotheek onnodig.
+3. Zelfde voorrang voor de statische `DEFENSE_EXAMPLES` (die hebben al een key).
+Zie `docs/audit/prelabel-dryrun-2026-07-06.md` §4.
 
 ## Context S173 (klaar, live)
 - Gedeelde AV-resolver `ai_agent/knowledge_context.resolve_case_terms` in alle 3 draft-paden;

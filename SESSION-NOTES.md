@@ -12,7 +12,7 @@
 **Laatst bijgewerkt:** 6 juli 2026 (S175 t/m S175d, Fable+Opus) — Review S174 GO + livegang gestart: Lisanne's account + 3 proefzaken, bulk-goedkeuren, leer-loop gevuld (103 goedgekeurd), dashboard-archief-fix, rente-fix proefzaken (contractueel 2%/mnd, BaseNet-XML als bron). Details: S175/S175b/c/d-entries.
 **Laatste feature/fix:** S175d — proefzaken op contractrente 2%/mnd enkelvoudig (uit BaseNet-XML `incinterest`/`incssamengesteld`); IN100521 rente nu €7.112,58 t/m vandaag, op peildatum 9 juni €5.942 vs BaseNet €6.275 (BaseNet rekent vanaf verstuurdatum — beoordelingsvraag Lisanne).
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
-**Volgende sessie (S177):** START OP FABLE — stap 0 = kritische nacheck van alle S175-dag-acties (er zijn fouten gemaakt, zie S175d-entry); daarna pas Opus voor de herstel-sprint. Zie `docs/sessions/PROMPT-S177.md`.
+**Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
 
 ## Sessie 177 (6 juli, Fable-nacheck → Opus-bouw, met Arsalan)

@@ -328,7 +328,12 @@ async def get_learned_examples(
                 LearnedAnswer.reviewed_at.desc().nullslast(),
                 LearnedAnswer.created_at.desc(),
             )
-            .limit(max(limit * 4, 12))
+            # S175-fix: geen krappe cap (was 12 nieuwste) — de type-match hieronder moet
+            # het hele goedgekeurde bestand zien, anders valt een ouder voorbeeld van het
+            # gevraagde type stil buiten beeld zodra er >12 goedkeuringen zijn.
+            # ponytail: 200 = ruim boven elk realistisch bestand; aparte per-type query
+            # pas als het bestand ooit echt zo groot wordt.
+            .limit(200)
         )
     ).scalars().all()
 

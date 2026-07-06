@@ -985,6 +985,34 @@ async def test_get_learned_examples_merges_verweer_categories_into_one_pool(db, 
 
 
 @pytest.mark.asyncio
+async def test_get_learned_examples_type_match_survives_many_newer_approvals(db, test_tenant):
+    """S175-fix: het type-matchende voorbeeld wordt óók gevonden als er daarna véél
+    andere goedkeuringen bijkomen. De oude query-cap (12 nieuwste) liet het gevraagde
+    type stil buiten beeld vallen zodra Lisanne meer dan 12 kandidaten goedkeurde —
+    precies het moment waarop V4 zijn werk moet doen."""
+    now = datetime.now(UTC)
+    # Het gezochte type is de OUDSTE goedkeuring...
+    db.add(_approved(
+        test_tenant.id, category="betwisting", defense_type="reeds_betaald_verrekening",
+        body="Het enige reeds-betaald-voorbeeld, goedgekeurd vóór alle andere.",
+        when=now - timedelta(days=30),
+    ))
+    # ...gevolgd door 15 nieuwere goedkeuringen van een ander type.
+    for i in range(15):
+        db.add(_approved(
+            test_tenant.id, category="betwisting", defense_type="verlenging_opzegging",
+            body=f"Nieuwer verlenging-voorbeeld nummer {i}, ruim lang genoeg hiervoor.",
+            when=now - timedelta(days=i),
+        ))
+    await db.flush()
+
+    got = await get_learned_examples(
+        db, test_tenant.id, "betwisting", defense_type="reeds_betaald_verrekening"
+    )
+    assert got and got[0].defense_type == "reeds_betaald_verrekening"
+
+
+@pytest.mark.asyncio
 async def test_get_learned_examples_matches_across_legacy_type_alias(db, test_tenant):
     """Een oude library-key op een goedgekeurd voorbeeld matcht op zijn nieuwe type:
     defense_type='afwikkeling_intrekking' vindt een rij met de oude 'annuleringskosten_9_3'."""

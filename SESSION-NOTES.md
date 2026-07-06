@@ -6,6 +6,52 @@
 **Openstaand:** Lisanne's beoordeling in "Slim leren" (102 kandidaten, per type gegroepeerd, klaar voor haar 30-45-min-pad). Geen open bugs.
 **Volgende sessie (S176):** Lisanne's beoordeling begeleiden / K2-meting — zie `docs/sessions/PROMPT-S176.md`.
 
+## Sessie 175b (zelfde dag, Fable, met Arsalan) — Livegang-koers bepaald + eerste stappen gezet
+
+Na de review vroeg Arsalan: "waar is het einde?" → gebruiksklaar-analyse gedaan (geen
+code-audit; die is overdreven, alles recent gereviewd). **Kernbevinding: de weg naar
+livegang is geen code, maar werkvoorraad + acceptatie.**
+
+### Bevindingen (prod geverifieerd)
+- Prod = schoon: alle 607 dossiers + 1168 relaties zijn puur BaseNet-import (3 juli),
+  0 testdossiers, 0 betalingen, 0 facturen, 0 uren, 0 derdengeld-transacties.
+- ALLE dossiers staan op 'afgesloten' (bewust: passief archief, S168). Originele
+  BaseNet-status bewaard in `debtor_notes`: **372 Lopend** / 148 Gereed / 69 Wacht /
+  15 Geannuleerd / 3 Offerte. Betalingen = fase 1b, bewust overgeslagen → openstaande
+  bedragen van her-opende zaken kloppen pas na verificatie met BaseNet.
+- MX kestinglegal.nl → BaseNet. incasso@kestinglegal.nl bestaat al (BaseNet, van Lisanne).
+- Team-tab (Instellingen) roept `/api/users/invite` + update/deactivate aan — **bestaan
+  niet in de backend** (alleen GET /api/users + POST /api/auth/register). Kapotte façade,
+  klein herstelpunt.
+- Huidige admin-user (seidony@) heet "Lisanne Kesting" — hernoemen naar Arsalan pas na
+  check dat geen uitgaande brief de user-naam gebruikt.
+
+### Gedaan (data-acties op prod, geen code)
+- **Lisanne's eigen account aangemaakt**: lisanne@kestinglegal.nl, rol advocaat, tijdelijk
+  wachtwoord Welkom-KL-2026 (zelf wijzigen via Profiel). Login geverifieerd (200).
+- **3 proefzaken heropend** (IN100215, IN100040, IN100521 — BaseNet-status Lopend, recent
+  mailverkeer): status 'nieuw' (afgesloten is terminal in de API → via SQL), `date_closed`
+  NULL, toegewezen aan Lisanne, PROEFZAAK-notitie in dossier (bedragen/fase nog verifiëren).
+  **Bewust GEEN pijplijnstap** → automatisering (batch/followup filtert op `incasso_step_id
+  IS NOT NULL`) blijft eraf. Via haar login geverifieerd: 3 zaken zichtbaar als open.
+- K2-meetscherm GESCHRAPT na afweging (te weinig volume, geen eerlijke zonder-groep,
+  edit-rate bestaat al) — vastgelegd in PROMPT-S176.
+
+### Livegang-plan (5 blokken, besproken met Arsalan)
+1. **Werkvoorraad**: proef met de 3 zaken (Lisanne levert per zaak: loopt nog? / al betaald? /
+   volgende stap?) → recept → rest van de 372 in groepen, mét betalingen-import (fase 1b).
+2. **Mail live**: Arsalan maakt M365-mailbox incasso@kestinglegal.nl; BaseNet-doorstuurregel
+   naar het interne onmicrosoft-adres (zelfde truc als seidony@); Lisanne koppelt in Luxis.
+3. **Generale repetitie geldstromen**: 1 echt dossier A-Z (bankimport → 6:44 → derdengeld →
+   doorbetalen → afwikkelen → factuur) — modules bestaan maar zijn nooit met echt geld gebruikt.
+4. **Slim leren**: Lisanne's beoordeling (loopt).
+5. **Parallel draaien** 2-4 weken → BaseNet opzeggen = het einde.
+
+### Openstaand → S176
+- Uitkomst Arsalans check: kan Lisanne met de proefzaken werken?
+- Van Lisanne per proefzaak: betaald bedrag + fase → dan saldi/stappen goed zetten.
+- Klein herstelwerk: Team-tab endpoints, admin-naam, IN100555 (Lopend maar 0 vorderingen).
+
 ## Wat er gedaan is (sessie 175 — 6 juli 2026, Fable, solo) — Verplichte onafhankelijke review S174: GO
 
 Verse ogen, schone lei, volgens `PROMPT-S175-REVIEW.md`. Niets aangenomen omdat het

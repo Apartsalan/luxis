@@ -1,4 +1,4 @@
-# Sessieprompt S176 — Lisanne's beoordeling begeleiden + K2-meting
+# Sessieprompt S176 — Livegang-spoor: proefzaken + Lisanne's beoordeling
 
 ```
 cd Documents\luxis && claude --dangerously-skip-permissions
@@ -6,19 +6,26 @@ cd Documents\luxis && claude --dangerously-skip-permissions
 
 ## Model
 **Opus** (uitvoering, klein werk). Lees vooraf: `docs/ARCHITECTUUR-KAART.md` + de
-S174/S175-entries in `SESSION-NOTES.md`.
+S174/S175/S175b-entries in `SESSION-NOTES.md` (S175b = het livegang-plan in 5 blokken!).
 
-## Status na S175 (6 juli 2026)
-De verplichte onafhankelijke review op S174 is gedaan → **GO**. Eén must-fix direct
-toegepast + gedeployed (commit `5fa4592`: `get_learned_examples` keek maar naar de 12
-nieuwste goedkeuringen; cap → 200). Alles live en healthy. Geen open bugs.
+## Status na S175+S175b (6 juli 2026)
+Review S174 → **GO** (must-fix cap→200 live, commit `5fa4592`). Daarna livegang-koers
+bepaald (zie S175b-entry): Lisanne heeft een eigen account (lisanne@kestinglegal.nl, rol
+advocaat) en **3 proefzaken staan open op haar naam** (IN100215, IN100040, IN100521 —
+status 'nieuw', GEEN pijplijnstap = geen automatisering, saldi nog NIET gecorrigeerd,
+PROEFZAAK-notitie in het dossier). Geen open bugs.
 
-**De leer-loop staat er nu volledig:** 102 kandidaten per verweer-type gegroepeerd in
-"Slim leren" (verdeling: afwikkeling 20 / overig 15 / verlenging 12 / reeds_betaald 8 / …),
-dropdown 13 types, bron-context per kandidaat, bulk-afwijzen. Type-matching (V4) werkt
-zodra er getypeerde goedkeuringen zijn én nieuwe inbound-mail geclassificeerd wordt.
+## Hoofdtaak — livegang-spoor, afhankelijk van waar Arsalan mee komt
 
-## Hoofdtaak — afhankelijk van waar Arsalan mee komt
+### Spoor 0 (meest waarschijnlijk): proefzaken afmaken
+1. Arsalan/Lisanne leveren per proefzaak: loopt nog? / wat is al betaald? / welke fase?
+2. Zet per zaak: juiste status + pijplijnstap + corrigeer het openstaande saldo
+   (betaling registreren met datum uit BaseNet). LET OP: pijplijnstap zetten = automatisering
+   AAN voor die zaak — check de stap-deadline vóór je 'm zet (geen onbedoelde batch-mail).
+3. Vergelijk zij-aan-zij met BaseNet (bedrag, volgende actie) en laat Lisanne bevestigen.
+4. Mail-blok: als Arsalan de M365-mailbox incasso@kestinglegal.nl heeft aangemaakt +
+   BaseNet-doorstuur staat → Lisanne koppelen via Instellingen → E-mail, teststuur.
+5. Werkt de proef → recept vastleggen voor de overige ~370 (incl. fase 1b betalingen-import).
 
 ### Spoor A: Lisanne's beoordeling is (deels) gedaan → resultaat verwerken
 1. Check de uitkomst: `SELECT status, defense_type, count(*) FROM learned_answers GROUP BY 1,2;`

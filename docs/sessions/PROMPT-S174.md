@@ -40,6 +40,12 @@ opruimpunten (stap 1) + de bouwtaak V3 (stap 2).
 
 ## Stap 2 — V3: Verweer-woordenschat (13 types), Opus
 Bron: audit `docs/audit/inventaris-2026-07-05.md` §5.c/§5.d.
+**GEVALIDEERD (Fable, 6 juli):** de 13 types + trefwoord-regels zijn droog getest op de
+102 echte prod-kandidaten → 85% krijgt een zinvol label, restant 15 is vooral
+weggooi-materiaal. Zie `docs/audit/prelabel-dryrun-2026-07-06.md` + geteste regels in
+`scripts/prelabel_dryrun_s174.py`. LET OP de valkuil daarin: eerst geciteerde
+AV-blokken (9.3/20.4/NCNP/disclaimer) uit de tekst strippen, dán pas matchen — anders
+belandt alles wat 9.3 citeert in `betalingsregeling_schikking`.
 1. **Woordenschat als constante** (keys EN, labels NL) in `learned_answers.py` of eigen module; de
    2 oude keys (`annuleringskosten_9_3` / `afrekening_voorwaarden_20_4`) mappen op
    `afwikkeling_intrekking`.
@@ -48,7 +54,16 @@ Bron: audit `docs/audit/inventaris-2026-07-05.md` §5.c/§5.d.
 3. **Eenmalig relabel-script** voor de resterende 'overig'-kandidaten (nu 102 kandidaten;
    data-only; **goedgekeurde rijen NIET aanraken**). Draai op prod na verificatie.
 4. **UI**: dropdown met de 13 labels bij goedkeuren (backend accepteert `defense_type` al).
+5. **UI bron-context (Fable 6 juli):** toon per kandidaat op welke inkomende mail/dossier
+   het antwoord was (`source_synced_email_id`/`source_case_id` bestaan al) — zonder context
+   kan Lisanne niet goed beoordelen.
 Tests: pre-labeler per type één bewijzende case; bestaande AI-tests groen.
+
+## V4 (optioneel, na V3 — klein): type-matching bij genereren
+`get_learned_examples` kiest nu op categorie + spreiding, maar kijkt niet welk verweer de
+debiteur NU voert. Fix: de AI-classificatie van inkomende mail ook een `defense_type` uit
+de 13 laten kiezen (één prompt-veld + kolom) en voorbeelden van dat type voorrang geven.
+Maakt de leer-loop pas écht "slim". Zie `docs/audit/prelabel-dryrun-2026-07-06.md` §4.
 
 ## Context S173 (klaar, live)
 - Gedeelde AV-resolver `ai_agent/knowledge_context.resolve_case_terms` in alle 3 draft-paden;

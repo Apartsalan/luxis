@@ -17,6 +17,7 @@ import asyncio
 
 from sqlalchemy import select
 
+import app.main  # noqa: F401 — registreert alle modellen (FK-resolutie buiten de app)
 from app.database import async_session
 from app.relations.models import Contact, ContactTerms
 from app.relations.service import refresh_terms_interest

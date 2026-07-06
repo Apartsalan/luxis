@@ -1,10 +1,10 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 6 juli 2026 (S175, Fable) — Onafhankelijke review S174: **GO** na één must-fix (direct toegepast + gedeployed). Alle draaiboek-checks doorlopen: code-diff, 89 tests zelf gedraaid, prod-rooktest (UI + concept op verweer-dossier + logs + PII-steekproef). Detail: S175-entry.
-**Laatste feature/fix:** S175 — `get_learned_examples` keek maar naar de 12 nieuwste goedkeuringen; type-match (V4) zou stil falen zodra Lisanne >12 kandidaten goedkeurt. Cap → 200, rode test eerst (commit 5fa4592, gedeployed, healthy).
-**Openstaand:** Lisanne's beoordeling in "Slim leren" (102 kandidaten, per type gegroepeerd, klaar voor haar 30-45-min-pad). Geen open bugs.
-**Volgende sessie (S176):** Lisanne's beoordeling begeleiden / K2-meting — zie `docs/sessions/PROMPT-S176.md`.
+**Laatst bijgewerkt:** 6 juli 2026 (S175 t/m S175d, Fable+Opus) — Review S174 GO + livegang gestart: Lisanne's account + 3 proefzaken, bulk-goedkeuren, leer-loop gevuld (103 goedgekeurd), dashboard-archief-fix, rente-fix proefzaken (contractueel 2%/mnd, BaseNet-XML als bron). Details: S175/S175b/c/d-entries.
+**Laatste feature/fix:** S175d — proefzaken op contractrente 2%/mnd enkelvoudig (uit BaseNet-XML `incinterest`/`incssamengesteld`); IN100521 rente nu €7.112,58 t/m vandaag, op peildatum 9 juni €5.942 vs BaseNet €6.275 (BaseNet rekent vanaf verstuurdatum — beoordelingsvraag Lisanne).
+**Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
+**Volgende sessie (S177, Opus):** herstel-sprint — zie `docs/sessions/PROMPT-S177.md` (S176-prompt is deels al onderweg gedaan).
 
 ## Sessie 175b (zelfde dag, Fable, met Arsalan) — Livegang-koers bepaald + eerste stappen gezet
 
@@ -67,9 +67,28 @@ livegang is geen code, maar werkvoorraad + acceptatie.**
   (= de 3 proefzaken, saldi nog te corrigeren). Bonus: dashboard weer snel (rekende
   eerst live rente over 607 archiefzaken).
 
-### Openstaand → S176
-- Uitkomst Arsalans check: kan Lisanne met de proefzaken werken?
-- Van Lisanne per proefzaak: betaald bedrag + fase → dan saldi/stappen goed zetten.
+### Vervolg zelfde dag (S175d, Fable): bevindingen Lisanne uitgezocht + rente-fix live
+- **Lisanne's check proefzaken → 2 bevindingen.** (1) Bijlagen ontbreken: 3.367 import-mails
+  hebben alleen de vlag, 34 echte records (Graph-sync); losse dossier-PDF's (leinout=6)
+  nooit geïmporteerd. Bronnen gelokaliseerd: 11 zips (~8,5 GB) + metadata-zip
+  `Xml_02-07-2026_2400.zip` — ALLES lokaal in `Documents\luxis`, geverifieerd (Letter×4,
+  Incasso incl. `incinterest`, IncassoBetalingAnders/Regeling). → herstel-sprint
+  `PROMPT-S177.md`. (2) Rente IN100521: dossier stond op handelsrente (import: b2b→
+  commercial, contract-tarief verloren). Uit de XML: `incinterest=2.00`,
+  `incssamengesteld=false`, `incinterestdate=2026-06-09`, en BaseNet's eigen som
+  (`inclcalculatedinterest`) = **€6.274,76** — Lisanne's "€2.674" was een omdraaiing.
+- **Fix live (3 proefzaken):** `interest_type='contractual'`, rate 2.00,
+  compound=false, claims `rate_basis='monthly'`. IN100521: €7.112,58 t/m vandaag;
+  op peildatum 9-6: Luxis €5.942,54 vs BaseNet €6.274,76 (+5%) — BaseNet laat rente
+  vóór de vervaldatum ingaan (±verstuurdatum, 30-dagen-maanden); Luxis rekent juridisch
+  zuiver vanaf vervaldatum. **Beoordelingsvraag Lisanne, geen bug.**
+- Betalingen: `cachedpayments*=0.00` op IN100521 — geen deelbetalingen op deze zaak;
+  de betalingen-import (fase 1b) blijft nodig voor de batch, bron zit in de metadata-zip.
+
+### Openstaand → S177 (S176-spoor grotendeels onderweg afgehandeld)
+- Uitkomst Arsalans check: kan Lisanne met de proefzaken werken? (loopt)
+- Van Lisanne per proefzaak: volgende stap/fase → pijplijnstap zetten (deadline checken!).
+- Rente-conventie-vraag aan Lisanne (vanaf vervaldatum vs BaseNet's verstuurdatum).
 - Klein herstelwerk: Team-tab endpoints, admin-naam, IN100555 (Lopend maar 0 vorderingen).
 
 ## Wat er gedaan is (sessie 175 — 6 juli 2026, Fable, solo) — Verplichte onafhankelijke review S174: GO

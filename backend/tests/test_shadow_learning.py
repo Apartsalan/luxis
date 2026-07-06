@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from app.ai_agent.defense_library import DEFENSE_EXAMPLES
 from app.ai_agent.incasso_email_prompts import build_user_prompt
+from app.ai_agent.knowledge_context import last_inbound_defense_category
 from app.ai_agent.learned_answers import (
     STATUS_APPROVED,
     STATUS_CANDIDATE,
@@ -847,3 +848,74 @@ async def test_learning_stats_counts_and_edit_rate(
     assert stats["total_examples"] == 1  # alleen goedgekeurd telt mee
     assert stats["edit_rate"]["matched"] == 1
     assert stats["edit_rate"]["ongewijzigd"] == 1
+
+
+# ── last_inbound_defense_category: staleness-gate (S174) ─────────────────
+
+
+@pytest.mark.asyncio
+async def test_last_inbound_category_returns_newest_inbound_by_email_date(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """De helper kiest de LAATSTE inkomende mail op e-maildatum (niet op
+    classificatie.created_at). Nieuwste inbound is verweer → die categorie wint."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    old = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Oud bericht.", when=t0 - timedelta(days=5),
+    )
+    await _classify(db, test_tenant.id, old.id, case.id, "betwisting")
+    new = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Nieuw verweer.", when=t0,
+    )
+    await _classify(db, test_tenant.id, new.id, case.id, "juridisch_verweer")
+
+    assert await last_inbound_defense_category(db, test_tenant.id, case.id) == "juridisch_verweer"
+
+
+@pytest.mark.asyncio
+async def test_last_inbound_category_none_when_newest_inbound_unclassified(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Staleness-regel: de allernieuwste inkomende mail is NIET geclassificeerd → None,
+    ook al is een oudere mail wél als verweer geclassificeerd. We plakken geen oude
+    verweer-context op een dossier met een verse, ongeclassificeerde mail."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    t0 = datetime.now(UTC)
+    old = await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Oud verweer.", when=t0 - timedelta(days=5),
+    )
+    await _classify(db, test_tenant.id, old.id, case.id, "juridisch_verweer")
+    # Nieuwste inbound zonder classificatie.
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="inbound",
+        body="Verse vraag, nog niet geclassificeerd.", when=t0,
+    )
+
+    assert await last_inbound_defense_category(db, test_tenant.id, case.id) is None
+
+
+@pytest.mark.asyncio
+async def test_last_inbound_category_none_without_inbound(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Geen inkomende mail op het dossier → None (niets om op te matchen)."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user, step=None
+    )
+    acc = await _account(db, test_tenant.id, test_user.id)
+    # Alleen een uitgaande mail — telt niet als inbound.
+    await _email(
+        db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
+        body="Onze sommatie.", when=datetime.now(UTC),
+    )
+    assert await last_inbound_defense_category(db, test_tenant.id, case.id) is None

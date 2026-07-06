@@ -372,19 +372,11 @@ async def gather_case_context(
     # Goedgekeurde extra standaardantwoorden — alleen relevant bij de verweer-stap. We
     # bepalen hier enkel de categorie; de tekst wordt in generate_draft_for_step opgehaald
     # ná de stap-check, zodat use_count niet oploopt bij stappen die de voorbeelden negeren.
-    from app.ai_agent.models import EmailClassification
+    # S174: gedeelde helper i.p.v. een eigen `created_at`-query (dezelfde bug die de S173-
+    # review in het compose-pad fixte: created_at is onbetrouwbaar na de BaseNet-import).
+    from app.ai_agent.knowledge_context import last_inbound_defense_category
 
-    last_cls_category = (
-        await db.execute(
-            select(EmailClassification.category)
-            .where(
-                EmailClassification.tenant_id == tenant_id,
-                EmailClassification.case_id == case_id,
-            )
-            .order_by(EmailClassification.created_at.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+    last_cls_category = await last_inbound_defense_category(db, tenant_id, case_id)
 
     return {
         "case_data": {

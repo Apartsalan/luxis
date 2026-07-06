@@ -509,9 +509,13 @@ async def learning_candidates(
     db: AsyncSession = Depends(get_db),
 ):
     """Kandidaat-antwoorden die op beoordeling wachten (voor het 'Slim leren'-dashboard)."""
-    from app.ai_agent.learned_answers import list_candidates
+    from app.ai_agent.learned_answers import (
+        candidates_source_context,
+        list_candidates,
+    )
 
     rows = await list_candidates(db, current_user.tenant_id)
+    ctx = await candidates_source_context(db, current_user.tenant_id, rows)
     return [
         {
             "id": str(r.id),
@@ -520,6 +524,7 @@ async def learning_candidates(
             "body": r.body,
             "anonymized_body": r.anonymized_body,
             "created_at": r.created_at.isoformat() if r.created_at else None,
+            **ctx.get(r.id, {}),
         }
         for r in rows
     ]

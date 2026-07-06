@@ -302,3 +302,55 @@ def test_prompt_builder_includes_invoices_and_case_files():
     assert "overeenkomst.pdf" in prompt
     assert "Artikel 3" in prompt
     assert "Overeenkomst client en debiteur" in prompt
+
+
+# ─── S174: audience-gate — client-update laat debiteur-gerichte kennis weg ─────
+
+
+def _verweer_context() -> dict:
+    """Minimale context met een verweer-classificatie (triggert de verweer-bibliotheek)."""
+    return {
+        "case_number": "2026-99001",
+        "case_type": "incasso",
+        "status": "nieuw",
+        "client": {"name": "Cliënt BV"},
+        "opposing_party": {"name": "Debiteur BV", "type": "company"},
+        "description": None,
+        "total_principal": "5000.00",
+        "total_paid": "0.00",
+        "claims": [],
+        "emails": [],
+        "invoices": [],
+        "terms_text": None,
+        "case_files": [],
+        "last_classification_category": "juridisch_verweer",
+        "learned_examples_text": "GELEERD-VOORBEELD-XYZ",
+    }
+
+
+def test_prompt_debtor_audience_includes_defense_library():
+    """Default (debtor): bij een verweer-categorie komen de bibliotheek + geleerde
+    voorbeelden mee de prompt in."""
+    prompt = _build_draft_prompt(_verweer_context(), instruction=None, audience="debtor")
+    assert "Verweer-bibliotheek" in prompt
+    assert "GELEERD-VOORBEELD-XYZ" in prompt
+
+
+def test_prompt_client_audience_skips_defense_library():
+    """audience="client": update aan de opdrachtgever — de debiteur-gerichte
+    verweer-bibliotheek wordt NIET meegestuurd."""
+    prompt = _build_draft_prompt(_verweer_context(), instruction=None, audience="client")
+    assert "Verweer-bibliotheek" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_gather_context_client_audience_skips_learned_examples(
+    db: AsyncSession, test_tenant: Tenant, case_with_data: Case
+):
+    """_gather_case_context(audience="client") slaat de geleerde-voorbeelden-ophaal over
+    (lege string) — die zijn debiteur-gericht en horen niet in een cliënt-update."""
+    with patch("app.ai_agent.draft_service.extract_text_from_pdf", return_value=""):
+        ctx = await _gather_case_context(
+            db, test_tenant.id, case_with_data.id, audience="client"
+        )
+    assert ctx["learned_examples_text"] == ""

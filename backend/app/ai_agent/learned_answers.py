@@ -32,6 +32,7 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.defense_library import DEFENSE_EXAMPLES
+from app.ai_agent.defense_types import prelabel_defense_type
 from app.ai_agent.models import AIDraft, EmailClassification, LearnedAnswer
 from app.email.synced_email_models import SyncedEmail
 
@@ -46,10 +47,10 @@ STATUS_APPROVED = "goedgekeurd"
 STATUS_REJECTED = "afgewezen"
 
 # Boven deze gelijkenis met een bestaande standaardtekst kennen we het antwoord al →
-# geen kandidaat (voorkomt het terug-leren van de 5 library-teksten). Daaronder, maar
-# boven de type-drempel, koppelen we het aan dat verweer-type; nog lager = 'overig'.
+# geen kandidaat (voorkomt het terug-leren van de 5 library-teksten). Sinds S174 is dit
+# de ENIGE rol van difflib hier: de type-toewijzing doet de trefwoord-pre-labeler
+# (`defense_types.prelabel_defense_type`).
 _LIBRARY_DUPLICATE_RATIO = 0.85
-_LIBRARY_TYPE_RATIO = 0.45
 
 
 # ── Body opschonen ───────────────────────────────────────────────────────────
@@ -224,17 +225,20 @@ def _strip_leading_intro(core: str) -> str:
     return core
 
 
-def _similarity_to_library(text: str) -> tuple[float, str | None]:
-    """Hoogste gelijkenis (0..1) van `text` met een bestaande standaardtekst + de key ervan."""
+def _max_similarity_to_library(text: str) -> float:
+    """Hoogste gelijkenis (0..1) van `text` met een bestaande standaardtekst.
+
+    Alleen nog de DUPLICAAT-filter in de backfill (kennen-we-al). De verweer-type-toewijzing
+    doet sinds S174 de trefwoord-pre-labeler (`defense_types`), niet meer deze gelijkenis.
+    """
     norm = _norm_ws(text)
-    best_ratio = 0.0
-    best_key: str | None = None
-    for ex in DEFENSE_EXAMPLES:
-        ratio = difflib.SequenceMatcher(None, norm, _norm_ws(ex.body)).ratio()
-        if ratio > best_ratio:
-            best_ratio = ratio
-            best_key = ex.key
-    return best_ratio, best_key
+    return max(
+        (
+            difflib.SequenceMatcher(None, norm, _norm_ws(ex.body)).ratio()
+            for ex in DEFENSE_EXAMPLES
+        ),
+        default=0.0,
+    )
 
 
 # ── Anonimiseren-voorstel ─────────────────────────────────────────────────────
@@ -490,6 +494,7 @@ async def backfill_learned_answers(
     outbound = (await db.execute(outbound_query)).scalars().all()
 
     added = 0
+    debtor_voice_skipped: list[uuid.UUID] = []
     for email in outbound:
         if email.id in seen:
             continue
@@ -513,13 +518,13 @@ async def backfill_learned_answers(
         # (S173-b) Kern in debiteur-stem → geciteerde tegenpartij-tekst die door de knip is
         # geglipt; nooit als modelantwoord leren (ook bij Re:-mails). Fable-review S173.
         if _DEBTOR_VOICE.search(core):
+            debtor_voice_skipped.append(email.id)
             continue
         # (c) te kort / geen echt argument (alleen intro-boilerplate + sommatie).
         if len(_rebuttal_substance(core)) < 60:
             continue
-        ratio, best_key = _similarity_to_library(core)
-        if ratio >= _LIBRARY_DUPLICATE_RATIO:  # (d) dit is een bestaande standaardtekst
-            continue
+        if _max_similarity_to_library(core) >= _LIBRARY_DUPLICATE_RATIO:
+            continue  # (d) dit is een bestaande standaardtekst — kennen we al
         # (e) vrijwel gelijk aan een eerder gevangen/beoordeeld eigen antwoord.
         norm_core = _norm_ws(core)
         if any(
@@ -527,7 +532,8 @@ async def backfill_learned_answers(
             for kb in known_bodies
         ):
             continue
-        defense_type = best_key if ratio >= _LIBRARY_TYPE_RATIO else "overig"
+        # (V3) Verweer-type via de deterministische trefwoord-pre-labeler i.p.v. difflib.
+        defense_type = prelabel_defense_type(core)
         known_bodies.append(norm_core)
         db.add(
             LearnedAnswer(
@@ -548,6 +554,16 @@ async def backfill_learned_answers(
 
     if added:
         await db.flush()
+    # Calibratie-inzicht: welke uitgaande mails door de debiteur-stem-guard zijn geweigerd
+    # (geciteerde tegenpartij-tekst). Eén logregel per run volstaat — geen tabel/UI (S174).
+    if debtor_voice_skipped:
+        logger.info(
+            "Verweer-bibliotheek backfill tenant=%s: %d mail(s) overgeslagen op debiteur-stem "
+            "(ids: %s)",
+            tenant_id,
+            len(debtor_voice_skipped),
+            ", ".join(str(i) for i in debtor_voice_skipped),
+        )
     logger.info("Verweer-bibliotheek backfill tenant=%s: %d nieuwe kandidaten", tenant_id, added)
     return added
 
@@ -571,6 +587,58 @@ async def list_candidates(
             )
         ).scalars().all()
     )
+
+
+async def candidates_source_context(
+    db: AsyncSession, tenant_id: uuid.UUID, rows: list[LearnedAnswer]
+) -> dict[uuid.UUID, dict]:
+    """Bron-context per kandidaat voor het review-scherm.
+
+    Geeft per kandidaat-id: dossiernummer + wederpartij (uit `source_case_id`) en onderwerp
+    + datum van de verstuurde mail waaruit het antwoord is geknipt (`source_synced_email_id`).
+    Zonder deze context ziet Lisanne alleen een losse tekst en kan ze niet goed beoordelen
+    (S174). Batch-queries (geen N+1). Ontbrekende bron → None-velden.
+    """
+    from sqlalchemy.orm import selectinload
+
+    from app.cases.models import Case
+
+    case_ids = {r.source_case_id for r in rows if r.source_case_id}
+    email_ids = {r.source_synced_email_id for r in rows if r.source_synced_email_id}
+
+    cases: dict[uuid.UUID, Case] = {}
+    if case_ids:
+        for c in (
+            await db.execute(
+                select(Case)
+                .where(Case.tenant_id == tenant_id, Case.id.in_(case_ids))
+                .options(selectinload(Case.opposing_party))
+            )
+        ).scalars():
+            cases[c.id] = c
+
+    emails: dict[uuid.UUID, SyncedEmail] = {}
+    if email_ids:
+        for e in (
+            await db.execute(
+                select(SyncedEmail).where(
+                    SyncedEmail.tenant_id == tenant_id, SyncedEmail.id.in_(email_ids)
+                )
+            )
+        ).scalars():
+            emails[e.id] = e
+
+    out: dict[uuid.UUID, dict] = {}
+    for r in rows:
+        c = cases.get(r.source_case_id) if r.source_case_id else None
+        e = emails.get(r.source_synced_email_id) if r.source_synced_email_id else None
+        out[r.id] = {
+            "case_number": c.case_number if c else None,
+            "debtor": (c.opposing_party.name if c and c.opposing_party else None),
+            "source_subject": e.subject if e else None,
+            "source_date": e.email_date.isoformat() if e and e.email_date else None,
+        }
+    return out
 
 
 async def approve_candidate(

@@ -21,7 +21,7 @@ from app.ai_agent.defense_library import (
     get_relevant_examples,
 )
 from app.ai_agent.kimi_client import call_intake_ai
-from app.ai_agent.models import AIDraft, DraftStatus, EmailClassification
+from app.ai_agent.models import AIDraft, DraftStatus
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.cases.files_service import get_file_path
 from app.cases.models import Case, CaseFile, CaseParty
@@ -83,8 +83,14 @@ async def _gather_case_context(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
+    audience: str = "debtor",
 ) -> dict:
-    """Gather full case context for AI draft generation."""
+    """Gather full case context for AI draft generation.
+
+    `audience` bepaalt of de debiteur-gerichte kennislaag mee mag: "debtor" (default) =
+    volledige context incl. verweer-bibliotheek + geleerde voorbeelden; "client" = update
+    aan de OPDRACHTGEVER, waarbij die twee worden overgeslagen (ze spreken de debiteur aan).
+    """
     # Case with parties
     result = await db.execute(
         select(Case)
@@ -178,17 +184,15 @@ async def _gather_case_context(
     )
     case_invoices = list(invoices_result.scalars().all())
 
-    # DF120-10: last email classification for defense library matching
-    classification_result = await db.execute(
-        select(EmailClassification)
-        .where(
-            EmailClassification.case_id == case_id,
-            EmailClassification.tenant_id == tenant_id,
-        )
-        .order_by(EmailClassification.created_at.desc())
-        .limit(1)
+    # DF120-10 / S174: categorie van de LAATSTE inkomende mail (gedeelde helper) — bepaalt
+    # of de verweer-bibliotheek + geleerde voorbeelden meegaan. Op `email_date`, niet op
+    # `EmailClassification.created_at` (onbetrouwbaar na de BaseNet-import), en alleen de
+    # allernieuwste inkomende mail telt (was hier de created_at-bug uit de S173-review).
+    from app.ai_agent.knowledge_context import last_inbound_defense_category
+
+    last_classification_category = await last_inbound_defense_category(
+        db, tenant_id, case_id
     )
-    last_classification = classification_result.scalar_one_or_none()
 
     # Build context dict
     context = {
@@ -197,9 +201,7 @@ async def _gather_case_context(
         "case_type": case.case_type,
         "debtor_type": case.debtor_type,
         "description": case.description,
-        "last_classification_category": (
-            last_classification.category if last_classification else None
-        ),
+        "last_classification_category": last_classification_category,
         "opposing_party": None,
         "client": None,
         "emails": [],
@@ -285,17 +287,29 @@ async def _gather_case_context(
     # Shadow-learning: haal Lisanne's eigen eerdere antwoorden in deze categorie op en
     # zet ze klaar voor de prompt (naast de hand-bibliotheek). Lege string als er nog
     # geen voorbeelden zijn → de prompt valt dan terug op de hand-bibliotheek.
-    from app.ai_agent.learned_answers import build_learned_examples_text
+    # S174: bij een update aan de OPDRACHTGEVER (audience="client") overslaan — die
+    # voorbeelden zijn debiteur-gericht ("U heeft gesteld…"); ze horen niet in een uitleg
+    # aan de cliënt en zouden anders ook use_count onterecht ophogen.
+    if audience == "client":
+        context["learned_examples_text"] = ""
+    else:
+        from app.ai_agent.learned_answers import build_learned_examples_text
 
-    context["learned_examples_text"] = await build_learned_examples_text(
-        db, tenant_id, context.get("last_classification_category")
-    )
+        context["learned_examples_text"] = await build_learned_examples_text(
+            db, tenant_id, context.get("last_classification_category")
+        )
 
     return context
 
 
-def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
-    """Build the user message for draft generation."""
+def _build_draft_prompt(
+    context: dict, instruction: str | None = None, audience: str = "debtor"
+) -> str:
+    """Build the user message for draft generation.
+
+    `audience="client"` laat de debiteur-gerichte verweer-bibliotheek weg (de geleerde
+    voorbeelden zitten dan al niet in de context, zie `_gather_case_context`).
+    """
     parts = [f"Dossier: {context['case_number']} ({context['case_type']})"]
     parts.append(f"Status: {context['status']}")
 
@@ -348,7 +362,7 @@ def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
 
     # Terms
     if context.get("terms_text"):
-        parts.append("\n--- Algemene Voorwaarden cliënt (excerpt) ---")
+        parts.append("\n--- Algemene Voorwaarden cliënt ---")
         parts.append(context["terms_text"])
 
     # DF117-03: case files (overeenkomsten, contracten, etc.)
@@ -364,9 +378,11 @@ def _build_draft_prompt(context: dict, instruction: str | None = None) -> str:
             parts.append(header)
             parts.append(cf["excerpt"])
 
-    # DF120-10: Defense library — add relevant examples for verweer/betwisting
+    # DF120-10: Defense library — add relevant examples for verweer/betwisting.
+    # Bij een update aan de opdrachtgever (audience="client") overslaan: die voorbeelden
+    # zijn debiteur-gericht en horen niet in een cliënt-uitleg (S174).
     category = context.get("last_classification_category")
-    if category in ("juridisch_verweer", "betwisting"):
+    if audience != "client" and category in ("juridisch_verweer", "betwisting"):
         examples = get_relevant_examples(category=category)
         defense_text = format_examples_for_prompt(examples)
         if defense_text:
@@ -397,6 +413,7 @@ async def generate_draft(
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
     instruction: str | None = None,
+    audience: str = "debtor",
 ) -> dict:
     """Generate an AI draft email for a case.
 
@@ -405,12 +422,14 @@ async def generate_draft(
         tenant_id: Tenant UUID
         case_id: Case UUID
         instruction: Optional user instruction for the AI
+        audience: "debtor" (default, volledige verweer-context) of "client" (update aan de
+            opdrachtgever — verweer-bibliotheek + geleerde voorbeelden worden overgeslagen)
 
     Returns:
         Dict with subject, body, tone, sources, reasoning
     """
-    context = await _gather_case_context(db, tenant_id, case_id)
-    user_message = _build_draft_prompt(context, instruction)
+    context = await _gather_case_context(db, tenant_id, case_id, audience=audience)
+    user_message = _build_draft_prompt(context, instruction, audience=audience)
 
     logger.info(
         "Generating AI draft for case %s (%d chars context)",
@@ -564,4 +583,6 @@ async def generate_client_update(
     }
 
     instruction = instructions.get(trigger, instructions["status_change"])
-    return await generate_draft(db, tenant_id, case_id, instruction)
+    # audience="client": dit bericht gaat naar de OPDRACHTGEVER, dus geen debiteur-gerichte
+    # verweer-bibliotheek/geleerde voorbeelden meesturen (S174).
+    return await generate_draft(db, tenant_id, case_id, instruction, audience="client")

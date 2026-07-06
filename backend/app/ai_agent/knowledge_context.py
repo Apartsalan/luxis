@@ -77,6 +77,53 @@ async def _first_invoice_date(
     return min(rows) if rows else None
 
 
+async def last_inbound_defense_category(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> str | None:
+    """Categorie van de LAATSTE inkomende mail op dit dossier — of None.
+
+    Bepaalt of de verweer-kennis (AV + bibliotheek + geleerde voorbeelden) mee de prompt
+    in gaat wanneer er geen expliciete bron-classificatie is (next_step/free_compose, of
+    een reply zonder eigen classificatie). Gedeeld door álle 3 de draft-paden.
+
+    Twee harde regels (Fable-review S173 + besluit S174):
+    1. Sorteer inkomende mails op `SyncedEmail.email_date`, NOOIT op
+       `EmailClassification.created_at`: na de BaseNet-bulkimport (S168) klonteren de
+       created_at-waarden rond het importmoment, dus dat koos een willekeurige/oude
+       classificatie die vervolgens besliste of er 50k+ kennis werd geïnjecteerd.
+    2. Alleen de ALLERNIEUWSTE inkomende mail telt. Is die niet geclassificeerd, dan
+       geven we None terug (geen kennis injecteren) — we plakken géén oude verweer-context
+       op een dossier dat inmiddels een verse, ongeclassificeerde mail heeft.
+    """
+    from app.ai_agent.models import EmailClassification
+    from app.email.synced_email_models import SyncedEmail
+
+    newest_inbound_id = (
+        await db.execute(
+            select(SyncedEmail.id)
+            .where(
+                SyncedEmail.tenant_id == tenant_id,
+                SyncedEmail.case_id == case_id,
+                SyncedEmail.direction == "inbound",
+            )
+            .order_by(SyncedEmail.email_date.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if newest_inbound_id is None:
+        return None
+    return (
+        await db.execute(
+            select(EmailClassification.category).where(
+                EmailClassification.tenant_id == tenant_id,
+                EmailClassification.synced_email_id == newest_inbound_id,
+            )
+        )
+    ).scalar_one_or_none()
+
+
 async def resolve_case_terms(
     db: AsyncSession,
     tenant_id: uuid.UUID,

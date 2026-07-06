@@ -219,34 +219,6 @@ def _build_free_compose_user_msg(case: Case, instruction: str | None) -> str:
 # ── Kennis-injectie (S173) ─────────────────────────────────────────────────
 
 
-async def _last_case_classification_category(
-    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
-) -> str | None:
-    """Categorie van de meest recente INKOMENDE mail op dit dossier.
-
-    Voor next_step/free_compose (geen bron-email) en als fallback bij een reply zonder
-    eigen classificatie: dan bepaalt de laatste bekende verweer-context of we AV +
-    voorbeelden meesturen. Sorteert op `SyncedEmail.email_date`, NIET op
-    `EmailClassification.created_at`: na de BaseNet-bulkimport (S168) klonteren de
-    created_at-waarden rond het importmoment, dus dat zou een willekeurige/oude categorie
-    kunnen opleveren die vervolgens beslist óf er 50k+ kennis wordt geïnjecteerd
-    (Fable-review S173). Spiegelt `learned_answers._category_for_outbound`.
-    """
-    return (
-        await db.execute(
-            select(EmailClassification.category)
-            .join(SyncedEmail, EmailClassification.synced_email_id == SyncedEmail.id)
-            .where(
-                EmailClassification.tenant_id == tenant_id,
-                EmailClassification.case_id == case_id,
-                SyncedEmail.direction == "inbound",
-            )
-            .order_by(SyncedEmail.email_date.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
-
-
 async def _build_verweer_knowledge(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -266,8 +238,8 @@ async def _build_verweer_knowledge(
         return ""
 
     from app.ai_agent.defense_library import (
+        DEFENSE_EXAMPLES,
         format_examples_for_prompt,
-        get_relevant_examples,
     )
     from app.ai_agent.knowledge_context import resolve_case_terms
 
@@ -278,7 +250,10 @@ async def _build_verweer_knowledge(
             "--- Algemene Voorwaarden van cliënt "
             "(citeer artikelnummer + tekst waar relevant) ---\n" + av_text
         )
-    defense_text = format_examples_for_prompt(get_relevant_examples(category))
+    # Alle 5 voorbeelden (incl. de Engelse) net als het incasso-pad — get_relevant_examples
+    # filterde op NL en liet het Engelse voorbeeld vallen (S174). Alle voorbeelden delen de
+    # verweer-categorieën, dus het categorie-filter voegde hier niets toe.
+    defense_text = format_examples_for_prompt(DEFENSE_EXAMPLES, max_chars=8000)
     if defense_text:
         parts.append(defense_text)
     learned_text = await build_learned_examples_text(db, tenant_id, category)
@@ -338,10 +313,12 @@ async def generate_unified_draft(
     # voorbeelden) als het incasso-pad — maar alléén bij een verweer-categorie. Voorheen
     # zag de compose-dialog niets, dus hing de kwaliteit af van welke knop toevallig werd
     # gebruikt. Categorie: van de bron-email (reply) of de laatste dossier-classificatie.
+    from app.ai_agent.knowledge_context import last_inbound_defense_category
+
     category = (
         classification.category
         if classification
-        else await _last_case_classification_category(db, tenant_id, case.id)
+        else await last_inbound_defense_category(db, tenant_id, case.id)
     )
     knowledge = await _build_verweer_knowledge(db, tenant_id, case, category)
     if knowledge:

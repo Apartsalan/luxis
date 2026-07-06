@@ -42,6 +42,11 @@ interface Candidate {
   body: string;
   anonymized_body: string | null;
   created_at: string | null;
+  // Bron-context (S174): waar kwam dit antwoord vandaan?
+  case_number: string | null;
+  debtor: string | null;
+  source_subject: string | null;
+  source_date: string | null;
 }
 
 // Nederlandse labels voor de classificatie-categorieën.
@@ -56,24 +61,63 @@ const CATEGORY_LABELS: Record<string, string> = {
   niet_gerelateerd: "Niet gerelateerd",
 };
 
-// Type verweer — bepaalt waarop de AI dit voorbeeld matcht.
+// Verweer-type (13 types, S174) — bepaalt waarop de AI dit voorbeeld matcht. Gespiegeld
+// aan backend `app/ai_agent/defense_types.py` (DEFENSE_TYPE_LABELS) — houd beide gelijk.
 const DEFENSE_TYPE_LABELS: Record<string, string> = {
-  verlengd_abonnement: "Stilzwijgende verlenging abonnement",
-  annuleringskosten_9_3: "Annuleringskosten (art. 9.3)",
-  afrekening_voorwaarden_20_4: "Afrekening (art. 20.4)",
-  ncnp_verweer_gerechtelijk: "No cure no pay",
-  english_renewal_9_3: "Engels: verlenging / annulering",
+  afwikkeling_intrekking: "Afwikkeling / intrekking opdracht (art. 9.3 / 20.4)",
+  verlenging_opzegging: "Stilzwijgende verlenging / opzegging",
+  betwisting_ongemotiveerd: "Ongemotiveerde betwisting",
+  reeds_betaald_verrekening: "Reeds betaald / verrekening",
+  consumentenbescherming_b2b: "Consumentenberoep (zakelijk → afgewezen)",
+  betalingsregeling_schikking: "Betalingsregeling / schikking",
+  derde_partij: "Advocaat / verzekeraar / derde partij",
+  klacht_dienstverlening: "Klacht over dienstverlening",
+  ncnp_gerechtelijke_fase: "No cure no pay (gerechtelijke fase)",
+  vertegenwoordiging: "Onbevoegde vertegenwoordiging",
+  opschorting_tegenvordering: "Opschorting / tegenvordering",
+  av_toepasselijkheid: "Toepasselijkheid voorwaarden",
+  kosten_rente_hoogte: "Hoogte kosten / rente",
   overig: "Overig / nieuw type",
 };
-const DEFENSE_TYPE_KEYS = Object.keys(DEFENSE_TYPE_LABELS);
+
+// Oude keys (van vóór S174) → nieuwe groep, zodat bestaande kandidaten niet als 'overig'
+// wegvallen tot het relabel-script is gedraaid. Gespiegeld aan backend LEGACY_TYPE_ALIASES.
+const LEGACY_TYPE_ALIASES: Record<string, string> = {
+  annuleringskosten_9_3: "afwikkeling_intrekking",
+  afrekening_voorwaarden_20_4: "afwikkeling_intrekking",
+  ncnp_verweer_gerechtelijk: "ncnp_gerechtelijke_fase",
+  verlengd_abonnement: "verlenging_opzegging",
+  english_renewal_9_3: "afwikkeling_intrekking",
+};
+// Keuzelijst bij goedkeuren: alleen de 13 actuele types + overig (geen oude aliassen).
+const DEFENSE_TYPE_KEYS = [
+  "afwikkeling_intrekking",
+  "verlenging_opzegging",
+  "betwisting_ongemotiveerd",
+  "reeds_betaald_verrekening",
+  "consumentenbescherming_b2b",
+  "betalingsregeling_schikking",
+  "derde_partij",
+  "klacht_dienstverlening",
+  "ncnp_gerechtelijke_fase",
+  "vertegenwoordiging",
+  "opschorting_tegenvordering",
+  "av_toepasselijkheid",
+  "kosten_rente_hoogte",
+  "overig",
+];
 
 function catLabel(key: string): string {
   return CATEGORY_LABELS[key] ?? key;
 }
 
-// Normaliseer het verweer-type naar een bekende groep (null/onbekend → 'overig').
+// Normaliseer het verweer-type naar een actuele groep-key (oude alias → nieuwe groep;
+// null/onbekend → 'overig'). Resultaat zit altijd in DEFENSE_TYPE_KEYS.
 function typeKey(c: Candidate): string {
-  return c.defense_type && DEFENSE_TYPE_LABELS[c.defense_type] ? c.defense_type : "overig";
+  const t = c.defense_type;
+  if (!t) return "overig";
+  if (DEFENSE_TYPE_LABELS[t]) return t;
+  return LEGACY_TYPE_ALIASES[t] ?? "overig";
 }
 
 // ── PII-hulp: mogelijke overgebleven namen opsporen ──────────────────────
@@ -563,11 +607,7 @@ function CandidateRow({
   onReject: (id: string) => void;
 }) {
   const [text, setText] = useState(candidate.anonymized_body ?? candidate.body);
-  const [type, setType] = useState(
-    candidate.defense_type && DEFENSE_TYPE_KEYS.includes(candidate.defense_type)
-      ? candidate.defense_type
-      : "overig"
-  );
+  const [type, setType] = useState(typeKey(candidate));
 
   const preview = (candidate.anonymized_body ?? candidate.body).replace(/\s+/g, " ").trim();
   const suspects = expanded ? suspectNames(text) : [];
@@ -621,6 +661,24 @@ function CandidateRow({
               ))}
             </select>
           </div>
+
+          {/* Bron-context (S174): op welke mail/dossier was dit antwoord? */}
+          {(candidate.case_number || candidate.source_subject) && (
+            <div className="rounded-md border border-border bg-muted/30 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">Bron: </span>
+              {candidate.case_number ? `dossier ${candidate.case_number}` : "onbekend dossier"}
+              {candidate.debtor ? ` · ${candidate.debtor}` : ""}
+              {candidate.source_subject && (
+                <>
+                  <br />
+                  <span className="italic">&ldquo;{candidate.source_subject}&rdquo;</span>
+                  {candidate.source_date
+                    ? ` · ${new Date(candidate.source_date).toLocaleDateString("nl-NL")}`
+                    : ""}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Origineel ter referentie — kan nog namen/bedragen bevatten */}
           <details>

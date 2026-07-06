@@ -380,6 +380,71 @@ async def test_reports_outstanding_includes_interest_and_bik(
     assert Decimal(str(resp.json()["total_outstanding"])) == expected
 
 
+@pytest.mark.asyncio
+async def test_closed_archive_case_not_counted_as_open_work(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant, test_company: Contact
+):
+    """S175b: een AFGESLOTEN dossier (zichtbaar archief, is_active=True — zoals de hele
+    BaseNet-import) telt NIET mee als werkvoorraad of openstaand geld. Vóór deze fix
+    blies het 607-zaken-archief het dashboard op tot '610 actieve zaken / €4M openstaand'."""
+    import uuid as _uuid
+    from datetime import date, timedelta
+
+    from app.cases.models import Case
+    from app.collections.models import Claim
+
+    # Eén echt open zaak…
+    open_case = await _seed_active_incasso_with_interest_bik(
+        db, test_tenant.id, test_company.id
+    )
+    # …en één afgesloten archiefzaak mét vordering en zonder betalingen (à la import).
+    archived = Case(
+        id=_uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="IN999901",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="afgesloten",
+        is_active=True,  # zichtbaar als historie — precies zoals de BaseNet-import
+        client_id=test_company.id,
+        interest_type="statutory",
+        date_opened=date.today() - timedelta(days=900),
+        date_closed=date.today() - timedelta(days=200),
+        total_principal=Decimal("50000.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(archived)
+    db.add(
+        Claim(
+            id=_uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=archived.id,
+            description="archiefvordering",
+            principal_amount=Decimal("50000.00"),
+            invoice_date=date.today() - timedelta(days=900),
+            default_date=date.today() - timedelta(days=870),
+        )
+    )
+    await db.commit()
+
+    fin = await client.get(f"/api/cases/{open_case.id}/financial-summary", headers=auth_headers)
+    expected = Decimal(str(fin.json()["total_outstanding"]))
+
+    # Dashboard: alleen de open zaak telt — in aantal én in geld.
+    resp = await client.get("/api/dashboard/summary", headers=auth_headers)
+    data = resp.json()
+    assert data["total_active_cases"] == 1
+    assert Decimal(str(data["total_outstanding"])) == expected
+    statuses = {s["status"] for s in data["cases_by_status"]}
+    assert "afgesloten" not in statuses
+
+    # Rapporten-KPI's: zelfde regel.
+    resp = await client.get("/api/reports/kpis", headers=auth_headers)
+    kpis = resp.json()
+    assert kpis["active_cases"] == 1
+    assert Decimal(str(kpis["total_outstanding"])) == expected
+
+
 # ── Auth Checks ──────────────────────────────────────────────────────────────
 
 

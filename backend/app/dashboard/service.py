@@ -19,11 +19,14 @@ async def get_dashboard_summary(
 
     Returns counts, totals, and breakdowns for the tenant's cases.
     """
-    # Total active cases
+    # Total active cases. S175b: 'actief' = lopend werk, dus zonder afgesloten
+    # dossiers — is_active betekent sinds de BaseNet-import alleen 'zichtbaar'
+    # (het hele 607-zaken-archief staat op is_active=True als naslagwerk).
     result = await db.execute(
         select(func.count(Case.id)).where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",
         )
     )
     total_active_cases = result.scalar() or 0
@@ -37,7 +40,7 @@ async def get_dashboard_summary(
     )
     total_contacts = result.scalar() or 0
 
-    # Total principal and paid (from active cases)
+    # Total principal and paid (from open cases — archief telt niet mee, S175b)
     result = await db.execute(
         select(
             func.coalesce(func.sum(Case.total_principal), 0),
@@ -45,6 +48,7 @@ async def get_dashboard_summary(
         ).where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",
         )
     )
     row = result.one()
@@ -56,23 +60,26 @@ async def get_dashboard_summary(
 
     total_outstanding = await get_portfolio_outstanding(db, tenant_id)
 
-    # Cases by status
+    # Cases by status — werkvoorraad-verdeling, dus zonder het afgesloten archief
+    # (dat zou met 607 zaken elke andere balk in het niet laten vallen, S175b).
     result = await db.execute(
         select(Case.status, func.count(Case.id))
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",
         )
         .group_by(Case.status)
     )
     cases_by_status = [{"status": row[0], "count": row[1]} for row in result.all()]
 
-    # Cases by type
+    # Cases by type (zelfde werkvoorraad-regel, S175b)
     result = await db.execute(
         select(Case.case_type, func.count(Case.id))
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",
         )
         .group_by(Case.case_type)
     )

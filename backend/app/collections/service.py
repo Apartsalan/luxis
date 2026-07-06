@@ -1114,11 +1114,20 @@ async def get_portfolio_outstanding(
     Luxis's scale (small firms, a handful of active cases) the per-case cost is
     negligible. If a tenant ever has hundreds of simultaneously active cases,
     revisit with cached interest/BIK columns refreshed by a daily job.
+
+    S175b: AFGESLOTEN dossiers tellen niet mee — sinds de BaseNet-import betekent
+    is_active 'zichtbaar' (het hele archief), niet 'lopend'. Zonder dit filter
+    telde het dashboard het 607-zaken-archief als ~€4M openstaand én rekende het
+    per bezoek de rente van al die archiefzaken live door.
     """
     result = await db.execute(
         select(Case)
         .options(selectinload(Case.client))
-        .where(Case.tenant_id == tenant_id, Case.is_active.is_(True))
+        .where(
+            Case.tenant_id == tenant_id,
+            Case.is_active.is_(True),
+            Case.status != "afgesloten",
+        )
     )
     cases = result.scalars().all()
 

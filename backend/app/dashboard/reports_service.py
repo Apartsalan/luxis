@@ -18,18 +18,26 @@ async def get_kpis(
     tenant_id: uuid.UUID,
 ) -> dict:
     """Get high-level KPIs for the reports page."""
-    # Total + active cases
+    # Total + active cases. S175b: 'actief' = lopend (niet afgesloten) — is_active
+    # betekent sinds de BaseNet-import alleen 'zichtbaar' (het archief incluis).
     result = await db.execute(
         select(
             func.count(Case.id),
-            func.count(sql_case((Case.is_active.is_(True), Case.id))),
+            func.count(
+                sql_case(
+                    (
+                        (Case.is_active.is_(True)) & (Case.status != "afgesloten"),
+                        Case.id,
+                    )
+                )
+            ),
         ).where(Case.tenant_id == tenant_id)
     )
     row = result.one()
     total_cases = row[0]
     active_cases = row[1]
 
-    # Outstanding + collected
+    # Outstanding + collected (alleen lopende zaken, S175b)
     result = await db.execute(
         select(
             func.coalesce(func.sum(Case.total_principal), 0),
@@ -37,6 +45,7 @@ async def get_kpis(
         ).where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",
         )
     )
     row = result.one()
@@ -78,6 +87,7 @@ async def get_kpis(
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",  # archief niet als 'Geen stap' tonen (S175b)
             Case.case_type == "incasso",
         )
         .group_by(IncassoPipelineStep.name)
@@ -99,6 +109,7 @@ async def get_kpis(
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",  # werkvoorraad, niet het archief (S175b)
         )
         .group_by(Case.debtor_type)
     )

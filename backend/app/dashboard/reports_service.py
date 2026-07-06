@@ -250,6 +250,7 @@ async def get_phase_distribution(
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
+            Case.status != "afgesloten",  # werkvoorraad, niet het archief (S175b/S177)
             Case.case_type == "incasso",
         )
         .group_by(IncassoPipelineStep.name, IncassoPipelineStep.sort_order)

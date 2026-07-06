@@ -175,6 +175,18 @@ async def classify_email(
     if sentiment not in valid_sentiments:
         sentiment = "neutraal"
 
+    # Validate defense_type (S174 V4) — alleen zinvol bij een verweer-categorie; een
+    # onbekende/ontbrekende keuze bij verweer valt terug op 'overig', bij andere
+    # categorieën op None.
+    from app.ai_agent.defense_types import DEFENSE_TYPE_LABELS
+
+    defense_type = ai_result.get("defense_type")
+    if category in ("betwisting", "juridisch_verweer"):
+        if defense_type not in DEFENSE_TYPE_LABELS:
+            defense_type = "overig"
+    else:
+        defense_type = None
+
     # Parse promise fields for belofte_tot_betaling (AUDIT-18)
     promise_date_val = None
     promise_amount_val = None
@@ -200,6 +212,7 @@ async def classify_email(
         confidence=min(max(float(ai_result.get("confidence", 0.5)), 0.0), 1.0),
         reasoning=ai_result.get("reasoning", ""),
         sentiment=sentiment,
+        defense_type=defense_type,
         suggested_action=action,
         suggested_template_key=ai_result.get("suggested_template_key"),
         suggested_reminder_days=ai_result.get("suggested_reminder_days"),

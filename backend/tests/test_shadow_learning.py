@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.ai_agent.defense_library import DEFENSE_EXAMPLES
 from app.ai_agent.incasso_email_prompts import build_user_prompt
-from app.ai_agent.knowledge_context import last_inbound_defense_category
+from app.ai_agent.knowledge_context import last_inbound_defense
 from app.ai_agent.learned_answers import (
     STATUS_APPROVED,
     STATUS_CANDIDATE,
@@ -25,6 +25,7 @@ from app.ai_agent.learned_answers import (
     build_learned_examples_text,
     clean_answer_body,
     extract_rebuttal,
+    get_learned_examples,
     get_learning_stats,
     list_candidates,
     reject_candidate,
@@ -875,7 +876,8 @@ async def test_last_inbound_category_returns_newest_inbound_by_email_date(
     )
     await _classify(db, test_tenant.id, new.id, case.id, "juridisch_verweer")
 
-    assert await last_inbound_defense_category(db, test_tenant.id, case.id) == "juridisch_verweer"
+    category, _ = await last_inbound_defense(db, test_tenant.id, case.id)
+    assert category == "juridisch_verweer"
 
 
 @pytest.mark.asyncio
@@ -901,7 +903,7 @@ async def test_last_inbound_category_none_when_newest_inbound_unclassified(
         body="Verse vraag, nog niet geclassificeerd.", when=t0,
     )
 
-    assert await last_inbound_defense_category(db, test_tenant.id, case.id) is None
+    assert await last_inbound_defense(db, test_tenant.id, case.id) == (None, None)
 
 
 @pytest.mark.asyncio
@@ -918,4 +920,83 @@ async def test_last_inbound_category_none_without_inbound(
         db, test_tenant.id, acc.id, case_id=case.id, direction="outbound",
         body="Onze sommatie.", when=datetime.now(UTC),
     )
-    assert await last_inbound_defense_category(db, test_tenant.id, case.id) is None
+    assert await last_inbound_defense(db, test_tenant.id, case.id) == (None, None)
+
+
+# ── V4: gerichte matching op verweer-type + één pool ─────────────────────
+
+
+def _approved(tenant_id, *, category, defense_type, body, when):
+    return LearnedAnswer(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        category=category,
+        body=f"raw {body}",
+        anonymized_body=body,
+        defense_type=defense_type,
+        status=STATUS_APPROVED,
+        is_active=True,
+        use_count=0,
+        reviewed_at=when,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_learned_examples_prioritizes_matching_defense_type(db, test_tenant):
+    """V4-kern: een voorbeeld van het gevraagde verweer-type krijgt voorrang, óók als een
+    ander type een NIEUWERE goedkeuring heeft (die anders bovenaan zou staan)."""
+    now = datetime.now(UTC)
+    db.add(_approved(
+        test_tenant.id, category="betwisting", defense_type="reeds_betaald_verrekening",
+        body="NIEUWER voorbeeld over reeds betaald, met genoeg lengte hiervoor.", when=now,
+    ))
+    db.add(_approved(
+        test_tenant.id, category="betwisting", defense_type="verlenging_opzegging",
+        body="OUDER voorbeeld over stilzwijgende verlenging, lang genoeg.",
+        when=now - timedelta(days=10),
+    ))
+    await db.flush()
+
+    # Zonder type: nieuwste (reeds_betaald) staat vooraan.
+    plain = await get_learned_examples(db, test_tenant.id, "betwisting")
+    assert plain[0].defense_type == "reeds_betaald_verrekening"
+
+    # Mét type verlenging_opzegging: dat voorbeeld staat nu vooraan, ondanks ouder.
+    typed = await get_learned_examples(
+        db, test_tenant.id, "betwisting", defense_type="verlenging_opzegging"
+    )
+    assert typed[0].defense_type == "verlenging_opzegging"
+
+
+@pytest.mark.asyncio
+async def test_get_learned_examples_merges_verweer_categories_into_one_pool(db, test_tenant):
+    """V4: juridisch_verweer en betwisting vormen één pool — een onder 'betwisting'
+    goedgekeurd voorbeeld is óók beschikbaar bij een 'juridisch_verweer'-vraag."""
+    db.add(_approved(
+        test_tenant.id, category="betwisting", defense_type="verlenging_opzegging",
+        body="Voorbeeld goedgekeurd onder betwisting, lang genoeg voor de test.",
+        when=datetime.now(UTC),
+    ))
+    await db.flush()
+
+    got = await get_learned_examples(db, test_tenant.id, "juridisch_verweer")
+    assert len(got) == 1
+    assert got[0].category == "betwisting"  # over de categorie-grens heen gevonden
+
+
+@pytest.mark.asyncio
+async def test_get_learned_examples_matches_across_legacy_type_alias(db, test_tenant):
+    """Een oude library-key op een goedgekeurd voorbeeld matcht op zijn nieuwe type:
+    defense_type='afwikkeling_intrekking' vindt een rij met de oude 'annuleringskosten_9_3'."""
+    db.add(_approved(
+        test_tenant.id, category="betwisting", defense_type="annuleringskosten_9_3",
+        body="Oud-gelabeld 9.3-afwikkelingsvoorbeeld, ruim lang genoeg hiervoor.",
+        when=datetime.now(UTC),
+    ))
+    await db.flush()
+
+    got = await get_learned_examples(
+        db, test_tenant.id, "betwisting", defense_type="afwikkeling_intrekking"
+    )
+    assert len(got) == 1
+    assert got[0].defense_type == "annuleringskosten_9_3"

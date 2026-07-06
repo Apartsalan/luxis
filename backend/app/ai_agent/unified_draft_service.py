@@ -224,6 +224,7 @@ async def _build_verweer_knowledge(
     tenant_id: uuid.UUID,
     case: Case,
     category: str | None,
+    defense_type: str | None = None,
 ) -> str:
     """AV + verweer-bibliotheek + goedgekeurde geleerde voorbeelden voor de prompt.
 
@@ -231,6 +232,7 @@ async def _build_verweer_knowledge(
     bericht voegen deze niets toe en vergroten ze alleen de kans dat het model afdwaalt
     (S164-les). Lege string als er niets zinvols is. Gebruikt bewust de bestaande gedeelde
     helpers zodat de bibliotheek/geleerde voorbeelden identiek zijn aan de andere paden.
+    `defense_type` (V4) geeft geleerde voorbeelden van hetzelfde verweer-type voorrang.
     """
     from app.ai_agent.learned_answers import LEARNABLE_CATEGORIES, build_learned_examples_text
 
@@ -256,7 +258,9 @@ async def _build_verweer_knowledge(
     defense_text = format_examples_for_prompt(DEFENSE_EXAMPLES, max_chars=8000)
     if defense_text:
         parts.append(defense_text)
-    learned_text = await build_learned_examples_text(db, tenant_id, category)
+    learned_text = await build_learned_examples_text(
+        db, tenant_id, category, defense_type=defense_type
+    )
     if learned_text:
         parts.append(learned_text)
     return "\n\n".join(parts)
@@ -313,14 +317,14 @@ async def generate_unified_draft(
     # voorbeelden) als het incasso-pad — maar alléén bij een verweer-categorie. Voorheen
     # zag de compose-dialog niets, dus hing de kwaliteit af van welke knop toevallig werd
     # gebruikt. Categorie: van de bron-email (reply) of de laatste dossier-classificatie.
-    from app.ai_agent.knowledge_context import last_inbound_defense_category
+    from app.ai_agent.knowledge_context import last_inbound_defense
 
-    category = (
-        classification.category
-        if classification
-        else await last_inbound_defense_category(db, tenant_id, case.id)
-    )
-    knowledge = await _build_verweer_knowledge(db, tenant_id, case, category)
+    if classification:
+        category = classification.category
+        defense_type = classification.defense_type
+    else:
+        category, defense_type = await last_inbound_defense(db, tenant_id, case.id)
+    knowledge = await _build_verweer_knowledge(db, tenant_id, case, category, defense_type)
     if knowledge:
         user_msg = f"{user_msg}\n\n{knowledge}"
 

@@ -32,7 +32,7 @@ from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.defense_library import DEFENSE_EXAMPLES
-from app.ai_agent.defense_types import prelabel_defense_type
+from app.ai_agent.defense_types import normalize_defense_type, prelabel_defense_type
 from app.ai_agent.models import AIDraft, EmailClassification, LearnedAnswer
 from app.email.synced_email_models import SyncedEmail
 
@@ -292,24 +292,36 @@ async def get_learned_examples(
     tenant_id: uuid.UUID,
     category: str | None,
     *,
+    defense_type: str | None = None,
     language: str = "nl",
     limit: int = 3,
 ) -> list[LearnedAnswer]:
-    """Haal goedgekeurde verweer-voorbeelden op in deze categorie.
+    """Haal goedgekeurde verweer-voorbeelden op — bij voorkeur van hetzelfde verweer-type.
 
-    Gespreid over verweer-TYPEN, en binnen een type wint de NIEUWSTE goedkeuring.
-    Bewust niet op use_count sorteren: elk gebruik verhoogt die teller, dus wie één keer
-    vooraan staat zou eeuwig vooraan blijven — een nieuwer, beter goedgekeurd antwoord
-    kwam dan nooit meer aan bod (Fable-review S167). use_count is alleen dashboard-info.
+    V4: `defense_type` (uit de classificatie van de inkomende mail) krijgt voorrang — dit
+    is de kern van de "herken dit type verweer → pak het goedgekeurde schabloon"-loop. De
+    twee leerbare categorieën (juridisch_verweer/betwisting) vormen daarbij ÉÉN pool: het
+    verweer-TYPE is het echte matchcriterium; de categorie-grens fragmenteert de bibliotheek
+    onnodig. Zonder (matchend) type valt het terug op de spreiding over types.
+
+    Binnen een type wint de NIEUWSTE goedkeuring. Bewust niet op use_count sorteren: elk
+    gebruik verhoogt die teller, dus wie één keer vooraan staat zou eeuwig vooraan blijven —
+    een nieuwer, beter goedgekeurd antwoord kwam dan nooit meer aan bod (Fable-review S167).
+    use_count is alleen dashboard-info.
     """
     if not category:
         return []
+    # Eén pool voor de verweer-categorieën, anders exact deze categorie.
+    if category in LEARNABLE_CATEGORIES:
+        cat_clause = LearnedAnswer.category.in_(LEARNABLE_CATEGORIES)
+    else:
+        cat_clause = LearnedAnswer.category == category
     rows = (
         await db.execute(
             select(LearnedAnswer)
             .where(
                 LearnedAnswer.tenant_id == tenant_id,
-                LearnedAnswer.category == category,
+                cat_clause,
                 LearnedAnswer.status == STATUS_APPROVED,
             )
             .order_by(
@@ -320,11 +332,24 @@ async def get_learned_examples(
         )
     ).scalars().all()
 
-    # Spreid over verweer-typen: max één per type tot de limiet, vul daarna aan.
     picked: list[LearnedAnswer] = []
     seen_types: set[str] = set()
+    want = normalize_defense_type(defense_type) if defense_type else None
+
+    # V4: voorbeelden van het gevraagde verweer-type eerst (kunnen er meerdere zijn).
+    if want and want != "overig":
+        for r in rows:
+            if normalize_defense_type(r.defense_type) == want:
+                picked.append(r)
+                seen_types.add(want)
+                if len(picked) >= limit:
+                    return picked[:limit]
+
+    # Daarna spreiden over de overige verweer-typen (max één per type), dan aanvullen.
     for r in rows:
-        t = r.defense_type or "overig"
+        if r in picked:
+            continue
+        t = normalize_defense_type(r.defense_type)
         if t not in seen_types:
             picked.append(r)
             seen_types.add(t)
@@ -368,10 +393,14 @@ async def build_learned_examples_text(
     tenant_id: uuid.UUID,
     category: str | None,
     *,
+    defense_type: str | None = None,
     max_chars: int = 4000,
 ) -> str:
-    """Ophalen + formatteren + use_count bijwerken — de enige call die de prompt-bouwers nodig hebben."""
-    examples = await get_learned_examples(db, tenant_id, category)
+    """Ophalen + formatteren + use_count bijwerken — de enige call die de prompt-bouwers nodig hebben.
+
+    `defense_type` (V4) geeft voorbeelden van hetzelfde verweer-type voorrang.
+    """
+    examples = await get_learned_examples(db, tenant_id, category, defense_type=defense_type)
     if not examples:
         return ""
     for ex in examples:

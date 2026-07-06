@@ -374,9 +374,12 @@ async def gather_case_context(
     # ná de stap-check, zodat use_count niet oploopt bij stappen die de voorbeelden negeren.
     # S174: gedeelde helper i.p.v. een eigen `created_at`-query (dezelfde bug die de S173-
     # review in het compose-pad fixte: created_at is onbetrouwbaar na de BaseNet-import).
-    from app.ai_agent.knowledge_context import last_inbound_defense_category
+    # Ook het verweer-type erbij (V4) → gerichte voorrang bij de geleerde voorbeelden.
+    from app.ai_agent.knowledge_context import last_inbound_defense
 
-    last_cls_category = await last_inbound_defense_category(db, tenant_id, case_id)
+    last_cls_category, last_cls_defense_type = await last_inbound_defense(
+        db, tenant_id, case_id
+    )
 
     return {
         "case_data": {
@@ -430,6 +433,7 @@ async def gather_case_context(
         "prior_correspondence": [],
         "learned_examples_text": "",
         "_last_cls_category": last_cls_category,
+        "_last_cls_defense_type": last_cls_defense_type,
     }
 
 
@@ -548,11 +552,13 @@ async def generate_draft_for_step(
     # Goedgekeurde extra standaardantwoorden alleen bij de verweer-stap ophalen — dat is de
     # enige stap die ze gebruikt. Zo blijft use_count (het 'meest gebruikt'-dashboard) zuiver.
     last_cls_category = context.pop("_last_cls_category", None)
+    last_cls_defense_type = context.pop("_last_cls_defense_type", None)
     if target_step.name == "Verweer beantwoorden":
         from app.ai_agent.learned_answers import build_learned_examples_text
 
         context["learned_examples_text"] = await build_learned_examples_text(
-            db, tenant_id, last_cls_category, max_chars=4000
+            db, tenant_id, last_cls_category,
+            defense_type=last_cls_defense_type, max_chars=4000,
         )
 
     # Bouw prompt

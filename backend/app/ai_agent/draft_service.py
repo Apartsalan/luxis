@@ -184,13 +184,14 @@ async def _gather_case_context(
     )
     case_invoices = list(invoices_result.scalars().all())
 
-    # DF120-10 / S174: categorie van de LAATSTE inkomende mail (gedeelde helper) — bepaalt
-    # of de verweer-bibliotheek + geleerde voorbeelden meegaan. Op `email_date`, niet op
-    # `EmailClassification.created_at` (onbetrouwbaar na de BaseNet-import), en alleen de
-    # allernieuwste inkomende mail telt (was hier de created_at-bug uit de S173-review).
-    from app.ai_agent.knowledge_context import last_inbound_defense_category
+    # DF120-10 / S174: categorie + verweer-type van de LAATSTE inkomende mail (gedeelde
+    # helper) — bepaalt of de verweer-bibliotheek + geleerde voorbeelden meegaan en welk
+    # type voorrang krijgt. Op `email_date`, niet op `EmailClassification.created_at`
+    # (onbetrouwbaar na de BaseNet-import), en alleen de allernieuwste inkomende mail telt
+    # (was hier de created_at-bug uit de S173-review).
+    from app.ai_agent.knowledge_context import last_inbound_defense
 
-    last_classification_category = await last_inbound_defense_category(
+    last_classification_category, last_defense_type = await last_inbound_defense(
         db, tenant_id, case_id
     )
 
@@ -296,7 +297,10 @@ async def _gather_case_context(
         from app.ai_agent.learned_answers import build_learned_examples_text
 
         context["learned_examples_text"] = await build_learned_examples_text(
-            db, tenant_id, context.get("last_classification_category")
+            db,
+            tenant_id,
+            context.get("last_classification_category"),
+            defense_type=last_defense_type,
         )
 
     return context

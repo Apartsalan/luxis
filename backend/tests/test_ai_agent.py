@@ -176,6 +176,44 @@ async def test_classify_email_creates_record(
 
 @pytest.mark.asyncio
 @patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
+async def test_classify_email_stores_defense_type_for_verweer(
+    mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User, test_company
+):
+    """S174 V4: bij een verweer-categorie wordt het gekozen verweer-type opgeslagen; bij een
+    niet-verweer-categorie blijft defense_type None (ook al noemt de AI er een); en een
+    verweer zonder geldig type valt terug op 'overig'."""
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_incasso_case(db, test_tenant.id, test_company.id, test_company.id)
+
+    # (1) Verweer mét geldig type → opgeslagen.
+    mock_ai.return_value = {**FAKE_AI_RESPONSE_BETWISTING, "defense_type": "verlenging_opzegging"}
+    e1 = await _create_inbound_email(db, test_tenant.id, account.id, case.id, subject="verweer 1")
+    await db.commit()
+    c1 = await classify_email(db, e1.id, test_tenant.id)
+    await db.commit()
+    assert c1.category == "betwisting"
+    assert c1.defense_type == "verlenging_opzegging"
+
+    # (2) Niet-verweer → defense_type genegeerd, ook al geeft de AI er een terug.
+    mock_ai.return_value = {**FAKE_AI_RESPONSE, "defense_type": "verlenging_opzegging"}
+    e2 = await _create_inbound_email(db, test_tenant.id, account.id, case.id, subject="belofte")
+    await db.commit()
+    c2 = await classify_email(db, e2.id, test_tenant.id)
+    await db.commit()
+    assert c2.category == "belofte_tot_betaling"
+    assert c2.defense_type is None
+
+    # (3) Verweer zonder (geldig) type → terugval op 'overig'.
+    mock_ai.return_value = FAKE_AI_RESPONSE_BETWISTING  # geen defense_type-veld
+    e3 = await _create_inbound_email(db, test_tenant.id, account.id, case.id, subject="verweer 2")
+    await db.commit()
+    c3 = await classify_email(db, e3.id, test_tenant.id)
+    await db.commit()
+    assert c3.defense_type == "overig"
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.service._call_classification_ai", new_callable=AsyncMock)
 async def test_classify_email_idempotent(
     mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User, test_company
 ):

@@ -3,7 +3,16 @@
 import html
 import re
 
-CLASSIFICATION_SYSTEM_PROMPT = """\
+from app.ai_agent.defense_types import DEFENSE_TYPE_LABELS
+
+# Verweer-type-opties voor de classificatie (S174 V4), afgeleid uit de woordenschat zodat
+# het één bron blijft. 'overig' expliciet erbij als vangnet-keuze.
+_DEFENSE_TYPE_OPTIONS = "\n".join(
+    f"- {key}: {label}" for key, label in DEFENSE_TYPE_LABELS.items()
+)
+
+CLASSIFICATION_SYSTEM_PROMPT = (
+    """\
 Je bent een AI-assistent voor een Nederlands incassokantoor.
 Je analyseert emails van debiteuren en classificeert ze.
 
@@ -27,7 +36,8 @@ Antwoord ALLEEN met valide JSON:
   "suggested_template_key": "<template key of null>",
   "suggested_reminder_days": <getal of null>,
   "promise_date": "<YYYY-MM-DD of null — alleen bij belofte_tot_betaling>",
-  "promise_amount": <bedrag als getal of null — alleen bij belofte_tot_betaling>
+  "promise_amount": <bedrag als getal of null — alleen bij belofte_tot_betaling>,
+  "defense_type": "<verweer-type of null — zie regels hieronder>"
 }
 
 Extra regels voor belofte_tot_betaling:
@@ -51,7 +61,13 @@ Regels voor suggested_action:
 - juridisch_verweer → escalate (altijd advocaat nodig)
 - ontvangstbevestiging → no_action
 - niet_gerelateerd → dismiss
+
+Regels voor defense_type (ALLEEN bij betwisting of juridisch_verweer — anders null):
+Kies het verweer-type dat de debiteur voert uit deze lijst (of "overig" als niets past):
 """
+    + _DEFENSE_TYPE_OPTIONS
+    + "\n"
+)
 
 
 def build_classification_prompt(

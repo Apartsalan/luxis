@@ -130,6 +130,11 @@ class EmailClassification(TenantBase):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     reasoning: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
+    # Verweer-type (S174 V4): welk van de 13 types de debiteur voert — alleen gezet bij
+    # betwisting/juridisch_verweer, anders None. Voedt de gerichte matching van geleerde
+    # voorbeelden (get_learned_examples geeft hetzelfde type voorrang).
+    defense_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
     # Sentiment (AUDIT-28)
     sentiment: Mapped[str | None] = mapped_column(String(20), nullable=True)
 

@@ -77,16 +77,17 @@ async def _first_invoice_date(
     return min(rows) if rows else None
 
 
-async def last_inbound_defense_category(
+async def last_inbound_defense(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
-) -> str | None:
-    """Categorie van de LAATSTE inkomende mail op dit dossier — of None.
+) -> tuple[str | None, str | None]:
+    """(categorie, verweer-type) van de LAATSTE inkomende mail op dit dossier — of (None, None).
 
     Bepaalt of de verweer-kennis (AV + bibliotheek + geleerde voorbeelden) mee de prompt
     in gaat wanneer er geen expliciete bron-classificatie is (next_step/free_compose, of
-    een reply zonder eigen classificatie). Gedeeld door álle 3 de draft-paden.
+    een reply zonder eigen classificatie), én welk verweer-TYPE voorrang krijgt bij de
+    geleerde voorbeelden (V4). Gedeeld door álle 3 de draft-paden.
 
     Twee harde regels (Fable-review S173 + besluit S174):
     1. Sorteer inkomende mails op `SyncedEmail.email_date`, NOOIT op
@@ -94,8 +95,8 @@ async def last_inbound_defense_category(
        created_at-waarden rond het importmoment, dus dat koos een willekeurige/oude
        classificatie die vervolgens besliste of er 50k+ kennis werd geïnjecteerd.
     2. Alleen de ALLERNIEUWSTE inkomende mail telt. Is die niet geclassificeerd, dan
-       geven we None terug (geen kennis injecteren) — we plakken géén oude verweer-context
-       op een dossier dat inmiddels een verse, ongeclassificeerde mail heeft.
+       geven we (None, None) terug (geen kennis injecteren) — we plakken géén oude
+       verweer-context op een dossier dat inmiddels een verse, ongeclassificeerde mail heeft.
     """
     from app.ai_agent.models import EmailClassification
     from app.email.synced_email_models import SyncedEmail
@@ -113,15 +114,20 @@ async def last_inbound_defense_category(
         )
     ).scalar_one_or_none()
     if newest_inbound_id is None:
-        return None
-    return (
+        return None, None
+    row = (
         await db.execute(
-            select(EmailClassification.category).where(
+            select(
+                EmailClassification.category, EmailClassification.defense_type
+            ).where(
                 EmailClassification.tenant_id == tenant_id,
                 EmailClassification.synced_email_id == newest_inbound_id,
             )
         )
-    ).scalar_one_or_none()
+    ).first()
+    if row is None:
+        return None, None
+    return row[0], row[1]
 
 
 async def resolve_case_terms(

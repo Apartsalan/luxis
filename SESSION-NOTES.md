@@ -1,9 +1,9 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 6 juli 2026 (S179, Opus-bouw fase 1b). LIVE+geverifieerd: 56 betalingen (€165.697, art. 6:44) + 13 betalingsregelingen (121 toekomstige termijnen) geïmporteerd op prod; IN100215-proefzaak toont termijn 12 juli, IN100019 vanaf 9 juli. Team-tab kapotte invite-endpoints → read-only. IN100592 verplaatst naar LegalWork B.V. Details: S179-entry.
-**Openstaand (Fable, S180):** 90 zaken (19 lopend, €33.161) hebben betalingen in BaseNet's boekhouding zónder gedateerd record → niet automatisch te importeren, ogen té open. Herstel vergt fuzzy tekstmatching van bankomschrijvingen (GenericBankLine/CashBankLine) → Fable-onderzoek in `docs/sessions/PROMPT-S180.md`.
-**Vorige kop (S178):** go-live gap-audit (onderzoek). Betalingen fase 1b nodig maar klein; debiteur-AV-registratie bewust NIET. Details: S178-entry.
+**Laatst bijgewerkt:** 6 juli 2026 (S180, Fable — onderzoek + bouw in één). Het "90 cache-only"-gat is DICHT: bankregels bleken deterministisch koppelbaar (`cblpcode` = dossiernummer), som per zaak op de cent = BaseNet-cache → 199 bankregel-betalingen (€152.049) LIVE. Betalingen nu compleet: 255 betalingen op exact de 135 zaken die BaseNet kende. Bijvangst: 8 "lopende" zaken zijn feitelijk voldaan (recept-input). Details: S180-entry.
+**Openstaand:** livegang-blokken zijn nu mensenwerk — werkvoorraad-recept (Lisanne), mail incasso@ M365 (Arsalan), generale repetitie geldstromen. Geen machine-bouwwerk meer nodig vóór de heropening.
+**Vorige kop (S179):** fase 1b LIVE: 56 betalingen + 13 regelingen, Team-tab read-only, IN100592 → LegalWork B.V. Details: S179-entry.
 **AV-correctie (belangrijk):** eerdere claim "Collect 1/Incassocenter-AV bevat geen rentepercentage" was FOUT. Alle 3 opdrachtgever-AV's bevatten artikel 13.3 = 2% per maand vanaf de vervaldag (geverifieerd tegen de prod-PDF's). Zie `project_luxis_av_rente` (memory).
 **Fable-review S177 = GEDAAN, 4 bevindingen gefixt + live:** (1) inline-filter miste echte docs ('Betwisting overeenkomst.pdf') → filter op extensie, delta 3 geladen; (2) 945 paperclips zonder bijlage → vlag gelijkgetrokken (2.422=2.422); (3) onleesbare AV-PDF wiste gelezen waarde → raist nu; (4) AI-intake sloeg ALLE rente-erving over (gat van vóór S177) → gedeelde `resolve_client_interest_defaults` + intake-test. 47 tests groen.
 **Besluiten Arsalan (6 juli avond):** rente ALTIJD per factuur vanaf de vervaldatum van die factuur (geverifieerd: `interest.py` rekent per claim vanaf `default_date`, factuur-lezer haalt vervaldatum uit de PDF — werkt al, niets te bouwen); 2%/mnd Incassocenter-proefzaken akkoord; terms-backfill alle 8 uitvoeren ("Facturen Legalwork" mag erbij — eenmalig ding/foutje, wordt toch niet gebruikt; evt. later opruimen als datavervuiling).
@@ -16,6 +16,47 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 180 (6 juli, Fable — boekhoud-matching: onderzoek → veilig → gebouwd → live)
+
+PROMPT-S180 vroeg een haalbaarheidsonderzoek naar de 90 cache-only zaken; Arsalan gaf
+vooraf mandaat om bij een veilig oordeel direct door te bouwen in deze sessie.
+
+**Onderzoek (kernbevinding: het was geen fuzzy-probleem).**
+- `CashBankLine` heeft een `cblpcode`-veld dat het dossiernummer IS (346/425 regels);
+  nog eens 45 hebben de IN-code letterlijk in de omschrijving. Deterministisch, geen AI.
+- **Alle 90 zaken matchen op de cent**: som positieve bankregels == `cachedpaymentsadmin`
+  (BaseNet's eigen boekhoudtotaal als ijkpunt). 0 deels, 0 zonder regel.
+- Verificaties: alle 199 regels hebben geldige datums (2025/2026); 132 negatieve regels =
+  doorbetalingen aan opdrachtgevers (terecht uitgesloten); positieve regels buiten de 90
+  bestaan alléén op de 29 al-geïmporteerde zaken (dubbel-dekking → strikt uitgesloten);
+  0 regels op zaken zonder cache, 0 onbekende dossiers.
+
+**Bouw (uitbreiding `import_payments.py`, zelfde patroon).** `build_bank_payments`:
+scope strikt tot zaken zónder IncassoBetalingAnders-records; per zaak **hard slot**
+(som == cache op de cent, anders skip+rapport); eigen marker `[BaseNet-bankregel
+systemid=..]` → idempotent + `--cleanup`-dekking. Test: exact-match gate, negatief-filter,
+descr-fallback, dubbel-dekking-scope. 21 basenet-tests groen, ruff schoon.
+
+**Uitvoering (prod, dry-run eerst).** Dry-run: 90/90 exact, 199 regels, €152.049, alle 19
+lopende zaken gedekt. Execute: 199 geboekt; 47 gecapt op openstaand (Luxis rekent rente
+juridisch zuiver vanaf vervaldatum → iets lager openstaand dan BaseNet; die zaken staan nu
+op volledig betaald — bekende S175d-nuance, geen bug). Regelingen idempotent (13/121
+ongewijzigd, geen dubbelingen).
+
+**Eindstand betalingen: COMPLEET.** 255 betalingen (56 + 199) op exact de **135 zaken**
+die BaseNet's boekhouding kende. Geen openstaand betalingen-gat meer richting overstap.
+
+**Bijvangst voor het werkvoorraad-recept:** 8 zaken met BaseNet-status "Lopend" zijn
+feitelijk voldaan (betaald ≥ hoofdsom): IN100256, IN100210, IN100166, IN100197, IN100547,
+IN100334, IN100456, IN100457 → ter bevestiging aan Lisanne (afsluiten i.p.v. heropenen).
+
+**Hygiëne:** export-XML na afloop van de VPS verwijderd; backend/frontend healthy, 0 errors.
+
+**Gewijzigde bestanden:** `scripts/basenet/import_payments.py`, `backend/tests/test_basenet_import.py`.
+
+**Volgende sessie:** geen machine-bouwwerk meer nodig vóór de heropening — de livegang-
+blokken zijn mensenwerk (recept Lisanne / mail Arsalan / generale repetitie). Zie PROMPT-S181.
 
 ## Sessie 179 (6 juli, Opus-bouw fase 1b — betalingen + regelingen)
 

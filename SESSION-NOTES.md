@@ -1,7 +1,9 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 6 juli 2026 (S177, Fable-nacheck + Opus-bouw) — Nacheck S175-dag = alles schoon (klantkaart-rollback compleet, proefzaken-rente conform AV 13.3, geen automatisering geraakt, 103 goedgekeurd, bulk-knop veilig). Bouw: bijlagen-backfill (5.105 → 2.402 mails) + losse documenten (2.619 → 596 dossiers) LIVE+getest, dashboard-gaatje dicht, en taak D (Luxis leest rente uit AV) LIVE. Details: S177-entry.
+**Laatst bijgewerkt:** 6 juli 2026 (S178, go-live gap-audit, onderzoek — geen code). Betalingen fase 1b = WEL nodig maar klein (29/372 lopende zaken, €52.302; ≥5 lijken al voldaan); 12 lopende zaken hebben actieve betalingsregeling (proefzaak IN100215: termijn 12 juli!); debiteur-AV-registratie = bewust NIET bouwen. Details: S178-entry.
+**Volgende sessie (S179):** Opus-bouw betalingen + regelingen-import, zie `docs/sessions/PROMPT-S179.md`.
+**Vorige kop (S177):** Nacheck S175-dag = alles schoon. Bouw: bijlagen-backfill (5.105 → 2.402 mails) + losse documenten (2.619 → 596 dossiers) LIVE+getest, dashboard-gaatje dicht, taak D (Luxis leest rente uit AV) LIVE. Details: S177-entry.
 **AV-correctie (belangrijk):** eerdere claim "Collect 1/Incassocenter-AV bevat geen rentepercentage" was FOUT. Alle 3 opdrachtgever-AV's bevatten artikel 13.3 = 2% per maand vanaf de vervaldag (geverifieerd tegen de prod-PDF's). Zie `project_luxis_av_rente` (memory).
 **Fable-review S177 = GEDAAN, 4 bevindingen gefixt + live:** (1) inline-filter miste echte docs ('Betwisting overeenkomst.pdf') → filter op extensie, delta 3 geladen; (2) 945 paperclips zonder bijlage → vlag gelijkgetrokken (2.422=2.422); (3) onleesbare AV-PDF wiste gelezen waarde → raist nu; (4) AI-intake sloeg ALLE rente-erving over (gat van vóór S177) → gedeelde `resolve_client_interest_defaults` + intake-test. 47 tests groen.
 **Besluiten Arsalan (6 juli avond):** rente ALTIJD per factuur vanaf de vervaldatum van die factuur (geverifieerd: `interest.py` rekent per claim vanaf `default_date`, factuur-lezer haalt vervaldatum uit de PDF — werkt al, niets te bouwen); 2%/mnd Incassocenter-proefzaken akkoord; terms-backfill alle 8 uitvoeren ("Facturen Legalwork" mag erbij — eenmalig ding/foutje, wordt toch niet gebruikt; evt. later opruimen als datavervuiling).
@@ -14,6 +16,58 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 178 (6 juli, go-live gap-audit — onderzoek, geen code)
+
+**Vraag:** wat blokkeert Lisanne nog om BaseNet op te zeggen? Gegrond op de lokale
+BaseNet-XML-export (`Xml_02-07-2026_2400.zip`) + read-only prod-queries. Geen code, geen
+prod-mutaties. NB: `luxis-researcher` bestond niet in deze sessie (gestart buiten de
+projectmap) → zelf gelezen.
+
+### Meetresultaten (bron: XML-export 2 juli + prod 6 juli)
+- **Betalingen (fase 1b):** los betalingenbestand = 56 records / 45 zaken / €165.697
+  (piek 2025: 46 records). BaseNet's eigen cache (`cachedpayments*` op Incasso) = **135
+  zaken / €369.406** — het verschil liep via de boekhouding (geen losse gedateerde records).
+  Voor de overstap telt: **29 van 372 lopende zaken (8%) hebben betalingen, €52.302.**
+  Bij ≥5 daarvan is betaald ≥ hoofdsom (IN100256, IN100210, IN100334, IN100456, IN100547)
+  → staan mogelijk onterecht als lopend; zonder import risico op onterecht aanmanen.
+  4 records zijn creditnota's ("credit" in notitie), 9 hebben `incpuitsluitenkosten=true`
+  (BaseNet-toerekeningsvlag die Luxis 6:44 niet kent) — beslispunten S179.
+- **Betalingsregelingen:** 323 termijnen / 37 zaken; **12 lopende zaken met toekomstige
+  termijnen**, o.a. IN100345 (62 termijnen t/m 2031), IN100329 (t/m 2028) en **proefzaak
+  IN100215 (termijn 12 juli 2026)**. Luxis-module `payment_arrangements` bestaat maar is
+  leeg (0 rijen) → geen bewaking.
+- **Rente/debiteur-AV (prompt-punt 2):** 361/372 lopende zaken staan in BaseNet zelf op
+  2,00% contractueel (`incinterest`), `increntevoorburo=0` overal. De debiteuren zíjn de
+  eigen klanten van de bureaus → art. 13.3 van de bureau-AV beheerst die contractsrelatie;
+  2%/mnd is dus Lisanne's gevestigde praktijk, geen bureau-conventie die wij opdrongen.
+  **Bewust NIET bouwen** (aparte debiteur-AV-registratie): keten dossier>klantkaart>AV>
+  wettelijk dekt uitzonderingen al per dossier. Juridische flag voor Lisanne: bij
+  "voorwaarden nooit ontvangen"-verweer (type `av_toepasselijkheid`, 3× in data) is het
+  tarief aanvechtbaar — procesrisico, geen softwaregat.
+- **"Facturen Legalwork" (prompt-punt 3):** impact nihil — 1 zaak (IN100592) en die is
+  afgesloten; contact heeft 1 dubbele AV + terms_interest 2%. Er bestaan nog 5 andere
+  "Facturen"-contacten (facturen@-adressen) zonder AV/zaken = onschuldige adresboek-ruis.
+  Kleinste opruimactie in PROMPT-S179 taak C (akkoord Arsalan bestond al).
+- **Prod-stand:** 604 afgesloten + 3 proefzaken 'nieuw'; 0 betalingen / 0 facturen /
+  0 uren / 0 derdengeld — geldmodules nooit met echt geld gebruikt (= blok 3 generale
+  repetitie blijft must). Team-tab kapot bevestigd: `use-users.ts:47` roept
+  `/api/users/invite` aan dat backend-side niet bestaat.
+
+### Prioriteitenlijst go-live (must vóór opzegging / nice / bewust niet)
+**MUST:** (1) betalingen-import gericht (fase 1b — S179 taak A); (2) regelingen-import
+12 zaken (S179 taak B, IN100215 vóór 12 juli); (3) werkvoorraad-recept blok 1 (bestond al,
+nu mét de ≥5 "mogelijk voldaan"-lijst als extra check); (4) mail: M365-mailbox incasso@ +
+uiteindelijk MX-verhuizing (Arsalan-actie, techniek bewezen met seidony@); (5) generale
+repetitie geldstromen (blok 3). **NICE:** Team-tab, Facturen-Legalwork-opruiming, IN100555,
+admin-naam (S179 taak C). **BEWUST NIET:** debiteur-AV-registratie, regeling-termijnen als
+betalingen, volledige boekhoud-import, Exact-activatie nu.
+
+### Gewijzigde bestanden
+- `docs/sessions/PROMPT-S179.md` (nieuw), `SESSION-NOTES.md`, `LUXIS-ROADMAP.md` — verder niets.
+
+### Volgende sessie
+S179 (Opus): betalingen + regelingen-import, dry-run eerst. Zie `PROMPT-S179.md`.
 
 ## Sessie 177 (6 juli, Fable-nacheck → Opus-bouw, met Arsalan)
 

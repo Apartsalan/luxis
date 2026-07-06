@@ -5,7 +5,8 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audit/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 5 juli 2026 (sessie 172 — **Fable-audit code↔roadmap**: feature-inventaris opgeleverd (`docs/audit/inventaris-2026-07-05.md`), KERNBEVINDING: 3 AI-conceptservices met 3 verschillende geheugens (alleen het verweer-pad ziet AV+geleerde voorbeelden; compose-dialog ziet NIETS) → verbind-sprint gepland (PROMPT-S173, daarna Fable-review in S174). ±20 van de 110 "Overig"-kandidaten = vervuiling (debiteur-tekst/lege fragmenten, in prod geverifieerd); verweer-woordenschat van 13 types uit de echte data gedestilleerd. `docs/ARCHITECTUUR-KAART.md` gemaakt + SessionStart-hook. Stale roadmap-regels gefixt (Celery/Nginx/jose/Sentry/doc-paden/FEAT-MAIL-01).)
+**Laatst bijgewerkt:** 6 juli 2026 (sessie 174 — **Verbind-sprint 2 LIVE**: staleness-gate (de `created_at`-selectiebug op 3 plekken weg), audience-gate voor client-updates, de 13-types-verweer-woordenschat + deterministische pre-labeler (`defense_types.py`), en **type-matching bij het genereren** (classificatie kiest `defense_type` → `get_learned_examples` geeft matchend type voorrang, verweer-categorieën als één pool). Prod-relabel toegepast (87 kandidaten, verdeling exact als de dryrun); goedgekeurde rijen ongemoeid. 139 relevante tests groen. 2 commits (`0ec6852`+`8817ada`) + migratie `s174` gedeployed. **S175 = verplichte Fable-review.**)
+**Vorige:** 5 juli 2026 (sessie 172 — **Fable-audit code↔roadmap**: feature-inventaris opgeleverd (`docs/audit/inventaris-2026-07-05.md`), KERNBEVINDING: 3 AI-conceptservices met 3 verschillende geheugens (alleen het verweer-pad ziet AV+geleerde voorbeelden; compose-dialog ziet NIETS) → verbind-sprint gepland (PROMPT-S173, daarna Fable-review in S174). ±20 van de 110 "Overig"-kandidaten = vervuiling (debiteur-tekst/lege fragmenten, in prod geverifieerd); verweer-woordenschat van 13 types uit de echte data gedestilleerd. `docs/ARCHITECTUUR-KAART.md` gemaakt + SessionStart-hook. Stale roadmap-regels gefixt (Celery/Nginx/jose/Sentry/doc-paden/FEAT-MAIL-01).)
 **Vorige:** 5 juli 2026 (sessie 171 — **Algemene voorwaarden LIVE voor de 7 opdrachtgevers**: ontdekt dat de geversioneerde AV-upload per cliënt (`ContactTerms`, S140) al bestond incl. AI-injectie in de verweer-prompt → 3 AV-sets gekoppeld + end-to-end geverifieerd (AI laadt nu per zaak de echte voorwaarden). **K1-kennisbank dus grotendeels al gebouwd → alleen gevuld.** + Slim-leren layout-bug gefixt (grid `min-w-0`, live). Audit-opdracht code↔roadmap voor Fable klaargezet. K0-gate poot 2 rond; poot 1 = Lisanne's review loopt (12 goedgekeurd). Volgende: `docs/sessions/PROMPT-AUDIT-code-vs-roadmap.md` / `PROMPT-S172.md`.)
 **Vorige:** 5 juli 2026 (sessie 170 — FIN-2 dossier-afwikkelflow LIVE + Fable-review 3 fixes + source-mount-lek gefixt) · 4 juli (S169 — Slim leren geschaald naar 130 + kennisbank-onderzoek) · 3 juli (S168 — BaseNet-import uitgevoerd)
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
@@ -65,9 +66,11 @@ Volledige onderbouwing: `docs/audit/inventaris-2026-07-05.md`.
 |---|------|--------|--------|
 | V1 | **Gedeelde AI-kennis-bouwer** — AV + geleerde voorbeelden + bibliotheek in álle 3 draft-paden (lost ook `draft_service` legacy-AV op) | S173 (Opus) | ✅ live (`resolve_case_terms`, commit bc8923e) |
 | V2 | **Leer-wachtrij schoonmaken** — ±20 vervuilde kandidaten afwijzen + 2 extractie-guards | S173 (Opus) | ✅ live (16 afgewezen, 118→102) |
-| V3 | **Verweer-woordenschat 13 types** + trefwoord-labeling + relabel 'overig' + dropdown | S174 | 📋 |
-| V4 | **Fable-review van S173-werk** (afspraak Arsalan: na Opus-bouw altijd Fable-check) | S174 (Fable) | 📋 |
-| V5 | Met/zonder-meting edit-rate (K1-vlag) | S174 | 📋 |
+| V3 | **Verweer-woordenschat 13 types** + trefwoord-labeling + relabel 'overig' + dropdown | S174 (Opus) | ✅ live (`defense_types.py`, commit 0ec6852; prod-relabel 87 kandidaten, verdeling = dryrun) |
+| V3b | **Review-punten S173b** — staleness-gate (created_at-bug ×3 weg), audience-gate client-updates, skip-logging, unified Engels vb. | S174 (Opus) | ✅ live (`last_inbound_defense`, commit 0ec6852) |
+| V4 | **Type-matching bij genereren** — classificatie kiest `defense_type`, `get_learned_examples` geeft matchend type voorrang (één pool) | S174 (Opus) | ✅ live (migratie s174, commit 8817ada) |
+| V4-review | **Verplichte onafhankelijke Fable-review op S174** | S175 (Fable) | 📋 `docs/sessions/PROMPT-S175-REVIEW.md` |
+| V5 | Met/zonder-meting edit-rate (K1-vlag) | later | 📋 |
 | V6 | Later: sjablonen→DB (DF122-04), 3 services→1 motor, `kimi_client` hernoemen, Celery-dep weg, `terms_file_path` uitfaseren, H25-besluit | backlog | 📋 |
 
 **Parallel (mensen, kritiek pad):** Lisanne's review van de 130 kandidaten · open beslissingen

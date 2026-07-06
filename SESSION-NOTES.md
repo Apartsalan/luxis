@@ -1,10 +1,65 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 6 juli 2026 (S173b, Fable — laatste Fable-dag) — 13-types-woordenschat gevalideerd op de 102 echte prod-kandidaten (85% zinvol label; valkuil: eerst geciteerde AV-blokken strippen), alle S174-ontwerpbesluiten genomen, 3e vindplaats created_at-bug gevonden (automation_service!), nacheck-draaiboek klaar. Docs-only, geen code gewijzigd.
-**Laatste feature/fix:** S173 — `ai_agent/knowledge_context.resolve_case_terms` + backfill-guards + prod-schoonmaak + Fable-review-fixes. Backend gedeployed (commits bc8923e + 34e2b2d), healthy.
-**Openstaand:** S174 (Opus, bouwen): V3+V4 + besloten review-punten + must-fix created_at ×2. Daarna S175: onafhankelijke review (`PROMPT-S175-REVIEW.md`). Lisanne's review loopt (12 goedgekeurd). Geen open bugs.
-**Volgende sessie (S174):** alles bouwen — `docs/sessions/PROMPT-S174.md` (ontwerp volledig besloten, niets meer te gokken).
+**Laatst bijgewerkt:** 6 juli 2026 (S174, Opus) — Verbind-sprint 2 LIVE: staleness-gate (created_at-bug ×3 weg), audience-gate (client-updates), 13-types-woordenschat + deterministische pre-labeler, en type-matching bij het genereren (V4). 2 commits gedeployed + migratie s174 op prod + prod-relabel toegepast (87 kandidaten, verdeling exact als de dryrun). 139 relevante tests groen, ruff + tsc schoon. Detail: S174-entry.
+**Laatste feature/fix:** S174 — `defense_types.py` + `knowledge_context.last_inbound_defense` + `EmailClassification.defense_type` + `generate_draft(audience=)`. Backend+frontend gedeployed (commits 0ec6852 + 8817ada), healthy.
+**Openstaand:** S175 = VERPLICHTE onafhankelijke Fable-review op S174 (`docs/sessions/PROMPT-S175-REVIEW.md`). Lisanne's review in "Slim leren" loopt — kandidaten nu per verweer-type gegroepeerd. Geen open bugs.
+**Volgende sessie (S175):** Fable-review S174 (verse ogen) — zie `PROMPT-S175-REVIEW.md`.
+
+## Wat er gedaan is (sessie 174 — 6 juli 2026, Opus, met Arsalan) — Verbind-sprint 2: gates + verweer-woordenschat + type-matching
+
+**Twee sessies liepen per ongeluk tegelijk.** Eerst geverifieerd dat de andere sessie niets
+had gecommit (repo stond nog op `sessie-173b`); daarna in déze sessie gebouwd. Model op Opus
+gezet (uitvoersprint). Twee logische commits, elk apart getest + gedeployed.
+
+### Stap 1 — open review-punten (ontwerp was besloten in S173b)
+- **Staleness-gate = de derde created_at-bug weg.** Nieuwe gedeelde helper
+  `ai_agent/knowledge_context.last_inbound_defense(db, tenant, case_id) → (categorie, defense_type)`:
+  categorie/type van de ALLERNIEUWSTE inkomende mail op `email_date` (niet `created_at`), en
+  alléén als díé mail geclassificeerd is (anders geen kennis injecteren). Vervangt de
+  `created_at`-query in `draft_service` **én** `automation_service` (de 3e vindplaats die
+  S173b vond) — dezelfde bug die S173 in unified fixte; na de BaseNet-import is created_at
+  onbetrouwbaar. Geverifieerd dat dit het incasso-golden-pad niet raakt (de 5-voorbeelden-
+  bibliotheek hangt aan `incoming_defense`, niet aan `last_cls_category`).
+- **Audience-gate:** `generate_draft(audience=…)`; `generate_client_update` gebruikt
+  `audience="client"` → debiteur-gerichte bibliotheek + geleerde voorbeelden worden
+  overgeslagen (AV + financiële context blijven).
+- **Skip-logging** debiteur-stem-guard (1 INFO-regel met email-ids per backfill-run).
+- **Cosmetisch:** unified stuurt nu alle 5 bibliotheek-voorbeelden incl. Engels (gelijk aan
+  incasso); `draft_service` AV-kop "(excerpt)" weg.
+
+### Stap 2 — V3: 13-types verweer-woordenschat (gevalideerd op 102 prod-kandidaten)
+- Nieuw `ai_agent/defense_types.py`: 13 types (key EN / label NL) + deterministische
+  **trefwoord-pre-labeler** (regels letterlijk uit de gevalideerde dryrun, incl. de valkuil
+  "eerst geciteerde 9.3/20.4-blokken strippen") + legacy-alias-map + zelfcheck.
+- `learned_answers.backfill` gebruikt de pre-labeler als PRIMAIR toewijzingsmechanisme;
+  difflib is nog alléén de duplicaat-filter.
+- `/learning/candidates` geeft bron-context mee (dossiernummer, wederpartij, onderwerp/datum).
+- Frontend "Slim leren": dropdown met de 13 labels (oude keys via alias naar hun groep) +
+  bron-context per kandidaat.
+- **Prod-relabel toegepast** (`scripts/relabel_defense_types_s174.py --apply`): 102 kandidaten,
+  87 gewijzigd, verdeling **exact** als de dryrun (afwikkeling 20, overig 15, verlenging 12,
+  …). Goedgekeurde rijen ongemoeid (6 overig / 4 annuleringskosten_9_3 / 2 verlengd_abonnement).
+
+### V4 — type-matching bij het genereren (de kern van Arsalans visie)
+- Migratie `s174`: kolom `email_classifications.defense_type`.
+- Classificatie kiest nu óók een `defense_type` (alleen bij betwisting/juridisch_verweer,
+  anders null; ongeldig → 'overig').
+- `get_learned_examples(defense_type=…)`: voorbeelden van hetzelfde type eerst; de twee
+  verweer-categorieën vormen ÉÉN pool; oude keys matchen via alias. De 3 draft-paden geven
+  het type door via `last_inbound_defense`.
+
+### Tests + deploy
+- **139 relevante tests groen** (test_defense_types nieuw, staleness-, audience-, V4-retrieval-
+  en classificatie-defense_type-tests; bestaande AI-tests ongewijzigd groen). ruff + tsc schoon.
+- Commit `0ec6852` (Stap1+V3, backend+frontend), commit `8817ada` (V4, backend+migratie).
+  Beide gedeployed via SSH, migratie op prod, backend healthy (frontend 200 / auth 405 / stats 401).
+
+### Openstaand → S175
+- **Verplichte onafhankelijke Fable-review** op S174 (`docs/sessions/PROMPT-S175-REVIEW.md`).
+- Consolidatie 3→minder draft-services blijft een latere opruimklus (bewust niet gedaan).
+- Lisanne beoordeelt de nu-gegroepeerde kandidaten in "Slim leren"; type-matching wordt pas
+  echt "slim" zodra ze getypeerde voorbeelden goedkeurt.
 
 ## Wat er gedaan is (sessie 173b — 6 juli 2026, Fable, met Arsalan) — Laatste Fable-dag: S174 volledig voorbereid
 

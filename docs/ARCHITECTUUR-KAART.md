@@ -6,7 +6,7 @@
 > dezelfde sessie (hoort bij `/sessie-einde`). Wordt hij langer dan 2 pagina's → inkorten.
 > Feitelijke detail-inventaris: `docs/audit/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 5 juli 2026 (S172, na de code↔roadmap-audit).
+**Laatst bijgewerkt:** 6 juli 2026 (S174, verbind-sprint 2: staleness-gate, audience-gate, 13-types-woordenschat + type-matching).
 
 ---
 
@@ -34,25 +34,38 @@ dossiers (cases) ◄── intake-agent ◄── inkomende mail            verw
    └── betalingen: bankimport CSV ──matcher──► trust-deposit + 6:44-betaling (FIN-1 helper)
 ```
 
-## De AI-laag — LET OP: drie conceptservices, één moet-nog-komen gedeeld geheugen
+## De AI-laag — drie conceptservices, gedeeld geheugen via één resolver + één type-loop
 
 | Pad | Trigger (knop) | Voorwaarden (AV) | Geleerde vb. | Bibliotheek |
 |---|---|---|---|---|
-| `incasso/automation_service.py` | Pipeline "Concept genereren" + verweer-flow | ✅ `ContactTerms` (geversioneerd) | ✅ | ✅ |
-| `ai_agent/draft_service.py` | Orchestrator/classificatie-hook, client-update | ✅ `ContactTerms` (gedeelde resolver, S173) | ✅ | ✅ |
-| `ai_agent/unified_draft_service.py` | Compose-dialog `/api/ai/draft` | ✅ bij verweer (resolver, S173) | ✅ bij verweer | ✅ bij verweer |
+| `incasso/automation_service.py` | Pipeline "Concept genereren" + verweer-flow | ✅ `ContactTerms` (geversioneerd) | ✅ (type-voorrang) | ✅ |
+| `ai_agent/draft_service.py` | Orchestrator/classificatie-hook, client-update | ✅ `ContactTerms` (gedeelde resolver, S173) | ✅ (type-voorrang) | ✅ |
+| `ai_agent/unified_draft_service.py` | Compose-dialog `/api/ai/draft` | ✅ bij verweer (resolver, S173) | ✅ bij verweer (type-voorrang) | ✅ bij verweer |
 
 **Gedaan (S173):** gedeelde AV-resolver `ai_agent/knowledge_context.resolve_case_terms`,
-gebruikt door alle drie de paden. Automation-gedrag byte-identiek (de bibliotheek-injectie
-zit in `incasso_email_prompts`, ongewijzigd). unified injecteert AV + bibliotheek + geleerde
-voorbeelden **alleen bij een verweer-categorie** (S164-les: minder losse tekst = minder
-afdwalen). Consolidatie 3→minder services blijft een latere opruimklus. Type-toekenning
-(13-types-woordenschat) staat nog open → S174.
+gebruikt door alle drie de paden. Automation-gedrag byte-identiek (bibliotheek-injectie zit
+in `incasso_email_prompts`, ongewijzigd). unified injecteert kennis **alleen bij een
+verweer-categorie** (S164-les: minder losse tekst = minder afdwalen).
+
+**Gedaan (S174):**
+- **Staleness-gate** — gedeelde helper `knowledge_context.last_inbound_defense` bepaalt
+  categorie + verweer-type van de ALLERNIEUWSTE inkomende mail (op `email_date`, niet
+  `created_at`); nieuwste inbound niet geclassificeerd → geen kennis injecteren. Fixte de
+  `created_at`-bug in draft_service én automation_service.
+- **Audience-gate** — client-updates (`generate_client_update`) slaan de debiteur-gerichte
+  bibliotheek + geleerde voorbeelden over; AV + financiële context blijven.
+- **13-types-woordenschat + type-matching** — de classificatie kiest een `defense_type`,
+  en `get_learned_examples` geeft goedgekeurde voorbeelden van datzelfde type voorrang.
+  De twee verweer-categorieën vormen daarbij ÉÉN pool.
+
+Consolidatie 3→minder services blijft een latere opruimklus.
 
 **AI-kennisbronnen:**
 - `ContactTerms` (relations) — geversioneerde AV per opdrachtgever, selectie op factuurdatum.
 - `learned_answers` (slim leren) — kandidaten uit verstuurde antwoorden → Lisanne keurt →
-  pas dan prompt-voeding. Type-toekenning = zwak punt (93% "overig", zie audit §5).
+  pas dan prompt-voeding. Type-toekenning nu via `defense_types.prelabel_defense_type`
+  (deterministische trefwoord-regels, 13 types; difflib = alleen nog duplicaat-filter).
+- `defense_types.py` — de 13-types-woordenschat (key EN / label NL) + pre-labeler + aliassen.
 - `defense_library.py` — 5 statische voorbeeldantwoorden (8 apr 2026).
 - AI-client: `ai_agent/kimi_client.py` — **naam is legacy, is 100% Claude** (Sonnet=alle concepten incl. compose-dialog/verweer sinds S173, Haiku=classificatie/intake/invoice).
 - Orchestrator (`events.py` + `orchestrator.py`): event-bus bestaat, **auto-draft bewust UIT** (S160-besluit: assistent, geen autonomie).

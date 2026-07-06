@@ -1,10 +1,10 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 5 juli 2026 (S173, Opus) — Verbind-sprint 1 live: gedeelde AV-resolver in alle 3 AI-paden (incasso byte-identiek), 2 leerlijst-guards, 16 vervuilde kandidaten afgewezen (118→102). 54 tests groen. Detail: S173-entry.
-**Laatste feature/fix:** S173 — `ai_agent/knowledge_context.resolve_case_terms` + backfill-guards + prod-schoonmaak. Backend gedeployed (commit bc8923e), healthy.
-**Openstaand:** V3 verweer-woordenschat (13 types) → S174; V4 VERPLICHT Fable-review van S173 vóór verder bouwen. Lisanne's review loopt (12 goedgekeurd). Geen open bugs.
-**Volgende sessie (S174):** Fable-review S173 (eerst!) → daarna V3 — `docs/sessions/PROMPT-S174.md`.
+**Laatst bijgewerkt:** 5 juli 2026 (S173, Opus) — Verbind-sprint 1 live: gedeelde AV-resolver in alle 3 AI-paden (incasso byte-identiek), 2 leerlijst-guards, 16 vervuilde kandidaten afgewezen (118→102). Fable-review (GO-MITS) zelfde sessie gedaan + 2 must-fixes toegepast. 57 tests groen. Detail: S173-entry.
+**Laatste feature/fix:** S173 — `ai_agent/knowledge_context.resolve_case_terms` + backfill-guards + prod-schoonmaak + Fable-review-fixes. Backend gedeployed (commits bc8923e + 34e2b2d), healthy.
+**Openstaand:** V3 verweer-woordenschat (13 types) + review-opruimpunten → S174 (Fable-review S173 IS al gedaan). Lisanne's review loopt (12 goedgekeurd). Geen open bugs.
+**Volgende sessie (S174):** V3 + open review-punten — `docs/sessions/PROMPT-S174.md` (review al klaar).
 
 ## Wat er gedaan is (sessie 173 — 5 juli 2026, Opus, met Arsalan) — Verbind-sprint 1: gedeelde AV + leerlijst-guards
 
@@ -33,8 +33,17 @@ Engelse, cap 8000 — anders stille regressie op het live verweer-pad); géén 4
   unified wél/niet bij verweer + backfill-guards met echte bodies als fixtures.
 - Commit `bc8923e`, backend gedeployed (rebuild, geen migraties), healthy. Kaart AI-tabel = 3×✅.
 
-### Openstaand → S174
-- **V4 VERPLICHT eerst:** Fable-review van dit S173-werk vóór verder bouwen (zie PROMPT-S174).
+### Fable-review (onafhankelijk, verse ogen, zelfde sessie) → GO-MITS
+Op verzoek Arsalan meteen gedaan i.p.v. uitgesteld naar S174. Fable bevestigde via de volledige
+diff dat het incasso-pad byte-identiek is. Twee must-fixes direct toegepast + getest (commit
+`34e2b2d`, 57 groen, gedeployed): (1) unified categorie-keuze sorteert op `SyncedEmail.email_date`
+i.p.v. `created_at` (BaseNet-import klonterde created_at → willekeurige categorie besliste over
+AV-injectie); (2) `kimi_client` fallback `max_tokens` 1024→8192 (compose/draft kapten anders af).
+Plus resolver-prioriteit-tests + fallback-pad-test (was ongetest) + `_DEBTOR_VOICE` rechte volgorde.
+
+### Openstaand → S174 (geen review meer nodig)
+- Review-opruimpunten: **kosten-keuze** compose→Sonnet of Haiku laten; staleness-grens verweer-
+  injectie; skip-logging debiteur-guard; `generate_client_update`-AV-gating; Engels bibliotheek-vb.
 - V3 verweer-woordenschat (13 types) + trefwoord-labeling + relabel resterende 'overig' + UI-dropdown.
 
 ## Wat er gedaan is (sessie 172 — 5 juli 2026, Fable, met Arsalan) — Audit code↔roadmap + verbindingskaart

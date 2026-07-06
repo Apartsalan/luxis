@@ -1,57 +1,68 @@
-# Sessieprompt S174 — Fable-review S173 (VERPLICHT eerst) → Verweer-woordenschat (V3)
+# Sessieprompt S174 — Verweer-woordenschat (V3) + open review-punten
 
 ```
 cd Documents\luxis && claude --dangerously-skip-permissions
 ```
 
 ## Model
-**Fable eerst** (de review), daarna **Opus** voor de bouwtaken. Zet bij start `/model` → Fable.
-Lees vooraf: `docs/ARCHITECTUUR-KAART.md` + de S173-entry in `SESSION-NOTES.md`.
+**Opus** (uitvoering). Lees vooraf: `docs/ARCHITECTUUR-KAART.md` + de S173-entry in `SESSION-NOTES.md`.
 
-## Stap 1 (VERPLICHT) — Fable-review van het S173-werk
-Afspraak Arsalan (S172): na elke Opus-bouwsprint een onafhankelijke Fable-review vóór er verder
-gebouwd wordt — leverde in S170 3 echte fixes op. Review commit **`bc8923e`** (verbind-sprint 1):
+## Status: Fable-review S173 is AL gedaan (in de S173-sessie)
+De verplichte onafhankelijke Fable-review (verse ogen, schone lei) op commit `bc8923e` is
+uitgevoerd → **GO-MITS**. De twee must-fixes zijn direct toegepast + getest (commit `34e2b2d`,
+57 tests groen, gedeployed):
+- categorie-keuze in unified sorteert nu op `SyncedEmail.email_date` i.p.v. `created_at`
+  (na de BaseNet-bulkimport was created_at onbetrouwbaar);
+- `kimi_client` plain-text fallback `max_tokens` 1024 → 8192 (compose/draft kapten anders af).
 
-1. **Klopt de AV-injectie aantoonbaar in ALLE drie de paden?** `knowledge_context.resolve_case_terms`
-   → `automation_service` / `draft_service` / `unified_draft_service`. Vooral: is automation écht
-   **byte-identiek** gebleven (bibliotheek-injectie in `incasso_email_prompts` onaangeraakt, alle 5
-   voorbeelden incl. de Engelse, cap 8000)? Dit was de grootste stille-regressie-risico.
-2. **Zijn de tests echt bewijzend of schijn-groen?** golden-guard incasso-pad
-   (`test_incasso_prompt_keeps_full_defense_library`), unified wél/niet bij verweer, backfill-guards
-   met echte bodies. Iets stilletjes versimpeld of overgeslagen?
-3. **`_DEBTOR_VOICE`-guard**: te agressief (skipt echte Lisanne-antwoorden) of te los (laat
-   debiteur-tekst door)? Check tegen de resterende prod-kandidaten (nu 102).
-4. **Losse eindjes** uit audit §4/§5 die V1/V2 raakten maar niet gedaan zijn (bv. `terms_file_path`-
-   kolom-deprecatie, `kimi_client.py`-hernoeming — bewust naar later, of vergeten?).
+**Er is dus GEEN nieuwe review nodig.** Wat resteert zijn de door Fable gemarkeerde
+opruimpunten (stap 1) + de bouwtaak V3 (stap 2).
 
-Lever een **GO / GO-MITS / NO-GO** + genummerde concrete fixes. Pas eventuele fixes toe
-(rood→groen) **vóór** V3.
+## Stap 1 — Open review-punten afhandelen (kort)
+1. **BESLISSING Arsalan (kosten vs kwaliteit):** de compose-dialog (`unified_draft_service`)
+   en `draft_service` routeren nu naar **Haiku** (plain-text fallback), terwijl het incasso-pad
+   Sonnet+PDF gebruikt. Wil je de compose/draft-intents óók naar **Sonnet + structured schema**
+   routeren (betere juridische kwaliteit + gegarandeerde JSON), of blijft Haiku met het 8192-
+   vangnet volstaan? Terugkerend gesprekspunt (zie memory `cost_quality_review`).
+2. **Staleness-grens verweer-injectie** (`unified_draft_service._build_verweer_knowledge`): nu
+   injecteert een oude verweer-classificatie AV+voorbeelden in élke latere compose zolang er geen
+   nieuwere inkomende mail is geclassificeerd. Overweeg: alleen injecteren als de laatste
+   classificatie bij de laatste inkomende mail hoort, of een tijdslimiet.
+3. **Skip-logging debiteur-guard** (`learned_answers._DEBTOR_VOICE`): een teller/logregel zodat
+   per-ongeluk geskipte échte kandidaten (bv. "namens cliënte betwist ik uw stelling") bij
+   calibratie opvallen.
+4. **`draft_service.generate_client_update`**: injecteert AV + verweer-voorbeelden als de laatste
+   dossier-classificatie toevallig verweer is — ook bij een betaal-update aan de opdrachtgever.
+   Bewust? Zo niet: gate op intent.
+5. **Klein/cosmetisch:** unified mist het Engelse bibliotheek-voorbeeld dat het incasso-pad wél
+   heeft (`get_relevant_examples` filtert op NL); `draft_service`-promptkop zegt nog "(excerpt)"
+   terwijl de 3000-cap weg is.
 
-## Stap 2 (na de review) — V3: Verweer-woordenschat (13 types), Opus
+## Stap 2 — V3: Verweer-woordenschat (13 types), Opus
 Bron: audit `docs/audit/inventaris-2026-07-05.md` §5.c/§5.d.
-1. **Woordenschat als constante** (keys EN, labels NL) in `learned_answers.py` of eigen module; de 2
-   oude keys (`annuleringskosten_9_3` / `afrekening_voorwaarden_20_4`) mappen op `afwikkeling_intrekking`.
+1. **Woordenschat als constante** (keys EN, labels NL) in `learned_answers.py` of eigen module; de
+   2 oude keys (`annuleringskosten_9_3` / `afrekening_voorwaarden_20_4`) mappen op
+   `afwikkeling_intrekking`.
 2. **Deterministische trefwoord-pre-labeler** (audit §5.d) — vervangt difflib als primair
    toewijzingsmechanisme; difflib blijft alleen duplicaat-filter.
-3. **Eenmalig relabel-script** voor de resterende 'overig'-kandidaten (data-only; **goedgekeurde
-   rijen NIET aanraken**). Draai op prod na verificatie.
+3. **Eenmalig relabel-script** voor de resterende 'overig'-kandidaten (nu 102 kandidaten;
+   data-only; **goedgekeurde rijen NIET aanraken**). Draai op prod na verificatie.
 4. **UI**: dropdown met de 13 labels bij goedkeuren (backend accepteert `defense_type` al).
 Tests: pre-labeler per type één bewijzende case; bestaande AI-tests groen.
 
 ## Context S173 (klaar, live)
-- Gedeelde AV-resolver `ai_agent/knowledge_context.resolve_case_terms` in alle 3 de draft-paden;
-  automation byte-identiek, `draft_service` op ContactTerms i.p.v. legacy, unified injecteert
-  AV+bibliotheek+geleerd **alleen bij verweer-categorie**.
-- 2 backfill-guards (Fwd:-subject + debiteur-stem); 16 vervuilde kandidaten afgewezen (118→102).
-- 54 tests groen. ARCHITECTUUR-KAART AI-tabel = 3×✅.
+- Gedeelde AV-resolver `ai_agent/knowledge_context.resolve_case_terms` in alle 3 draft-paden;
+  automation byte-identiek, `draft_service` op ContactTerms, unified injecteert AV+bibliotheek+
+  geleerd **alleen bij verweer-categorie** (op e-maildatum bepaald).
+- 2 backfill-guards (Fwd + debiteur-stem); 16 vervuilde kandidaten afgewezen (118→102).
+- 57 tests groen. ARCHITECTUUR-KAART AI-tabel = 3×✅. Commits `bc8923e` + `34e2b2d`.
 
 ## NIET doen
-- Geen consolidatie 3→minder draft-services (latere sprint — eerst zelfde geheugen, nu gedeeld).
-- Geen sjablonen-naar-DB (DF122-04). Geen nieuwe features.
+- Geen consolidatie 3→minder draft-services (latere sprint). Geen sjablonen-naar-DB (DF122-04).
 - CLAUDE.md + `.claude/commands/*` staan ongecommit gewijzigd (niet van ons) — met rust laten.
 - 4 AV-PDF's in repo-root niet committen.
 
 ## Kaart-discipline + sessie-einde
 Na elke wijziging aan een systeemkoppeling: `docs/ARCHITECTUUR-KAART.md` bijwerken (zelfde sessie).
-Sessie-einde: SESSION-NOTES + LUXIS-ROADMAP + ARCHITECTUUR-KAART bijwerken, git tag `sessie-174`,
+Sessie-einde: SESSION-NOTES + LUXIS-ROADMAP + ARCHITECTUUR-KAART, git tag `sessie-174`,
 PROMPT-S175 schrijven.

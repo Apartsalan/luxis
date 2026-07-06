@@ -1,10 +1,60 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
+**Laatst bijgewerkt:** 6 juli 2026 (S177, Fable-nacheck + Opus-bouw) — Nacheck S175-dag = alles schoon (klantkaart-rollback compleet, proefzaken-rente conform AV 13.3, geen automatisering geraakt, 103 goedgekeurd, bulk-knop veilig). Bouw: bijlagen-backfill (5.105 → 2.402 mails) + losse documenten (2.619 → 596 dossiers) LIVE+getest, dashboard-gaatje dicht, en taak D (Luxis leest rente uit AV) LIVE. Details: S177-entry.
+**AV-correctie (belangrijk):** eerdere claim "Collect 1/Incassocenter-AV bevat geen rentepercentage" was FOUT. Alle 3 opdrachtgever-AV's bevatten artikel 13.3 = 2% per maand vanaf de vervaldag (geverifieerd tegen de prod-PDF's). Zie `project_luxis_av_rente` (memory).
+**⚠️ Openstaand vóór "klaar":** (1) FABLE-REVIEW van S177 (taak D + de twee backfills) — Arsalans wens. (2) `backfill_terms_interest --execute` nog NIET gedraaid: dry-run toont 8/8 cliënten = 2%/mnd art. 13.3, maar terms_interest_* nog niet weggeschreven — wacht op akkoord ná Fable-review. (3) Bevestigingsvragen Lisanne: rente-conventie (vervaldatum vs BaseNet-verstuurdatum) + 2% Incassocenter-proefzaken.
+
+<details><summary>Oudere kopregels (S175d)</summary>
+
 **Laatst bijgewerkt:** 6 juli 2026 (S175 t/m S175d, Fable+Opus) — Review S174 GO + livegang gestart: Lisanne's account + 3 proefzaken, bulk-goedkeuren, leer-loop gevuld (103 goedgekeurd), dashboard-archief-fix, rente-fix proefzaken (contractueel 2%/mnd, BaseNet-XML als bron). Details: S175/S175b/c/d-entries.
 **Laatste feature/fix:** S175d — proefzaken op contractrente 2%/mnd enkelvoudig (uit BaseNet-XML `incinterest`/`incssamengesteld`); IN100521 rente nu €7.112,58 t/m vandaag, op peildatum 9 juni €5.942 vs BaseNet €6.275 (BaseNet rekent vanaf verstuurdatum — beoordelingsvraag Lisanne).
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S177):** START OP FABLE — stap 0 = kritische nacheck van alle S175-dag-acties (er zijn fouten gemaakt, zie S175d-entry); daarna pas Opus voor de herstel-sprint. Zie `docs/sessions/PROMPT-S177.md`.
+</details>
+
+## Sessie 177 (6 juli, Fable-nacheck → Opus-bouw, met Arsalan)
+
+**Stap 0 — nacheck S175-dag (alles schoon).** Alle 6 punten tegen prod+code gecontroleerd:
+klantkaart-rente-rollback compleet (0 rijen), 3 proefzaken op contractueel 2%/mnd
+enkelvoudig (conform BaseNet-XML én AV art. 13.3), heropening raakte géén automatisering
+(0 followups/drafts/docs/uitgaande mail), slim-leren 103 goedgekeurd + teksten leesbaar +
+0 dossiernummers, dashboard-fix consistent (1 gaatje → hieronder gedicht), bulk-goedkeuren
+raakt alleen status 'kandidaat'. Plan-review: Aanleiding §2 + taken B/C in `PROMPT-S177.md`
+gecorrigeerd (verlezen €2.674→€6.274; proefzaken hebben geen betalingen; C grotendeels klaar).
+
+**AV art. 13.3 (kernpunt).** Eerdere claim "geen rentepercentage in Collect 1/Incassocenter"
+was fout. Drie AV-PDF's van prod gelezen: ALLE bevatten art. 13.3 = 2%/maand vanaf de
+vervaldag. Vastgelegd in `PROMPT-S177.md` + memory `project_luxis_av_rente`.
+
+**Taak A — bijlagen-backfill (LIVE + getest).** `scripts/basenet/backfill_attachments.py`
+(extract lokaal uit de .eml-zips + load in-container). 5.105 echte bijlagen (933 MB) naar
+2.402 mails; inline handtekening-logo's bewust gefilterd (steekproef met Arsalan akkoord).
+Koppeling via letterno→uuid5 (zoals fase 2), geen fuzzy. Download-endpoint getest = HTTP 200
+application/pdf. Idempotent.
+
+**Taak A.3 — losse documenten (LIVE + getest).** `extract-docs/load-docs`: 2.619 documenten
+(502 MB) naar 596 dossiers → `case_files` ("Bestanden"-tab). Koppeling letterno→Letter.xml→
+lepcode→case. Getest: dossier IN100001 toont 54 bestanden, download HTTP 200. Idempotent.
+
+**Dashboard-gaatje (uit nacheck).** `get_phase_distribution` miste het `status!='afgesloten'`-
+filter dat de rest in S175b kreeg — gedicht (was onschadelijk, 0 zaken in een stap).
+
+**Taak D — Luxis leest rente uit de AV (LIVE).** Nieuwe laag in de keten:
+dossier > klantkaart (`default_*`) > **uit-AV (`terms_interest_*`)** > wettelijk.
+- `app/relations/terms_interest.py`: regex "X% per maand/jaar vanaf de vervaldag" (negeert
+  incassokosten 15% / kantoorkosten 6%), Haiku als vangnet. Migratie `s177_terms_interest`
+  voegt `contacts.terms_interest_{rate,basis,compound,source,read_at}` toe — apart van de
+  handmatige `default_*` die altijd wint en NOOIT overschreven wordt.
+- Gelezen bij AV-upload (non-fataal in `create_contact_terms`) + eenmalig via
+  `scripts/backfill_terms_interest.py` (dry-run = controlestap).
+- `create_case`/`create_claim` erven rente + basis uit de AV als niets handmatig gezet is.
+- Frontend: herkomst-regel onder het rentetype in de klantkaart.
+- 6 nieuwe tests + 13 bestaande rente-erf-tests groen; frontend tsc schoon; ruff schoon.
+
+**⚠️ Nog te doen ná Fable-review:** `backfill_terms_interest --execute` draaien (dry-run =
+8/8 cliënten 2%/mnd art. 13.3, nu nog niet weggeschreven). Wacht op akkoord-lijstje +
+Fable-review (Arsalans wens: Fable checkt taak D + de twee backfills vóór definitief).
 
 ## Sessie 175b (zelfde dag, Fable, met Arsalan) — Livegang-koers bepaald + eerste stappen gezet
 

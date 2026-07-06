@@ -40,6 +40,9 @@ diff dat het incasso-pad byte-identiek is. Twee must-fixes direct toegepast + ge
 i.p.v. `created_at` (BaseNet-import klonterde created_at → willekeurige categorie besliste over
 AV-injectie); (2) `kimi_client` fallback `max_tokens` 1024→8192 (compose/draft kapten anders af).
 Plus resolver-prioriteit-tests + fallback-pad-test (was ongetest) + `_DEBTOR_VOICE` rechte volgorde.
+Vervolg (Arsalans keuze): de compose-dialog + client-update draaien nu op **Sonnet** i.p.v. Haiku
+(`kimi_client` plain-text fallback → Sonnet, max_tokens 16384). Kostenverschil ~paar cent/concept,
+verwaarloosbaar; juridische kwaliteit gelijkgetrokken met het pipeline-pad. Classificatie/intake blijft Haiku.
 
 ### Openstaand → S174 (geen review meer nodig)
 - Review-opruimpunten: **kosten-keuze** compose→Sonnet of Haiku laten; staleness-grens verweer-

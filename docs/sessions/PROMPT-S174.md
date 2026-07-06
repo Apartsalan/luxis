@@ -19,11 +19,11 @@ uitgevoerd → **GO-MITS**. De twee must-fixes zijn direct toegepast + getest (c
 opruimpunten (stap 1) + de bouwtaak V3 (stap 2).
 
 ## Stap 1 — Open review-punten afhandelen (kort)
-1. **BESLISSING Arsalan (kosten vs kwaliteit):** de compose-dialog (`unified_draft_service`)
-   en `draft_service` routeren nu naar **Haiku** (plain-text fallback), terwijl het incasso-pad
-   Sonnet+PDF gebruikt. Wil je de compose/draft-intents óók naar **Sonnet + structured schema**
-   routeren (betere juridische kwaliteit + gegarandeerde JSON), of blijft Haiku met het 8192-
-   vangnet volstaan? Terugkerend gesprekspunt (zie memory `cost_quality_review`).
+1. ~~BESLISSING Arsalan (kosten vs kwaliteit): compose→Sonnet?~~ **GEDAAN (S173):** Arsalan
+   koos Sonnet; `kimi_client` plain-text fallback (compose-dialog + client-update) draait nu op
+   Sonnet i.p.v. Haiku (kostenverschil ~paar cent/concept, verwaarloosbaar). Alleen nog te
+   overwegen: naar **structured schema** (tool_use, gegarandeerde JSON) i.p.v. plain-text —
+   optioneel, niet urgent.
 2. **Staleness-grens verweer-injectie** (`unified_draft_service._build_verweer_knowledge`): nu
    injecteert een oude verweer-classificatie AV+voorbeelden in élke latere compose zolang er geen
    nieuwere inkomende mail is geclassificeerd. Overweeg: alleen injecteren als de laatste

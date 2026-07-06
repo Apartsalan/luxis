@@ -15,6 +15,10 @@ DRAFT GENERATIE (juridische kwaliteit kritiek — emails naar wederpartij):
   Bij Verweer beantwoorden + AV-PDF beschikbaar: native PDF input
   (lost truncatie-probleem op, Sonnet leest PDF direct).
 
+COMPOSE-DIALOG / CLIENT-UPDATE (concepten zonder schema — unified_draft/draft_service):
+  Claude Sonnet 4.6 (S173) — zelfde juridische kwaliteit als de pipeline-concepten;
+  het kostenverschil met Haiku is verwaarloosbaar (besluit Arsalan S173).
+
 AI-TECH-03: Tool_use forced as structured output → guarantees valid JSON.
 """
 
@@ -209,14 +213,15 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
         # Shouldn't happen with forced tool_choice, but fallback
         logger.warning("Haiku: no tool_use block in response, falling back to text parse")
 
-    # Fallback: plain text response (no schema detected or tool_use failed).
-    # max_tokens ruim genoeg voor een volledig concept-bericht: de compose-dialog
-    # (unified_draft) en client-updates (draft_service) routeren hierlangs, en sinds
-    # S173 krijgen die bij verweer AV + voorbeelden mee → langere concepten. 1024 kapte
-    # die af → afgekapte JSON → "AI provider failed" (Fable-review S173).
+    # Fallback: plain text response (no schema detected, or tool_use failed).
+    # S173: de compose-dialog (unified_draft) en client-updates (draft_service) routeren
+    # hierlangs (geen schema-match) → nu op Sonnet i.p.v. Haiku, voor juridische kwaliteit
+    # van concepten naar wederpartij/cliënt. Kosten verwaarloosbaar (besluit Arsalan S173).
+    # max_tokens ruim: bij verweer krijgen ze de volledige AV + voorbeelden mee (langere
+    # concepten; 1024 kapte die eerder af → afgekapte JSON → "AI provider failed").
     response = await client.messages.create(
-        model=CLAUDE_HAIKU_MODEL,
-        max_tokens=8192,
+        model=CLAUDE_SONNET_MODEL,
+        max_tokens=16384,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     )
@@ -401,7 +406,11 @@ async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, s
         result = await _call_haiku(system_prompt, user_message)
         schema_info = _detect_schema(system_prompt)
         is_draft = bool(schema_info and schema_info[0] == "generate_incasso_email")
-        model_name = CLAUDE_SONNET_MODEL if is_draft else CLAUDE_HAIKU_MODEL
+        # S173: compose/concept-prompts zonder schema-match (unified_draft + draft_service)
+        # draaien op Sonnet; alleen classificatie/intake/invoice (schema-match, geen draft)
+        # blijft Haiku. Model-naam moet daarop kloppen voor de kosten-/dashboard-logging.
+        uses_sonnet = is_draft or schema_info is None
+        model_name = CLAUDE_SONNET_MODEL if uses_sonnet else CLAUDE_HAIKU_MODEL
         logger.info("Intake AI: %s extraction successful", model_name)
         return result, model_name
     except Exception as e:

@@ -54,7 +54,7 @@ afdwalen). Consolidatie 3→minder services blijft een latere opruimklus. Type-t
 - `learned_answers` (slim leren) — kandidaten uit verstuurde antwoorden → Lisanne keurt →
   pas dan prompt-voeding. Type-toekenning = zwak punt (93% "overig", zie audit §5).
 - `defense_library.py` — 5 statische voorbeeldantwoorden (8 apr 2026).
-- AI-client: `ai_agent/kimi_client.py` — **naam is legacy, is 100% Claude** (Sonnet=draft, Haiku=classificatie).
+- AI-client: `ai_agent/kimi_client.py` — **naam is legacy, is 100% Claude** (Sonnet=alle concepten incl. compose-dialog/verweer sinds S173, Haiku=classificatie/intake/invoice).
 - Orchestrator (`events.py` + `orchestrator.py`): event-bus bestaat, **auto-draft bewust UIT** (S160-besluit: assistent, geen autonomie).
 
 ## Sjablonen — vier opslagplaatsen (bekende schuld)

@@ -79,9 +79,28 @@ IN100215/IN100040 (Incassocenter): tarief navragen. PAS NA de betalingen omzette
 anders schrikt iedereen weer van een hoger bedrag. Daarna: rente naast BaseNet leggen
 op DEZELFDE peildatum (Lisanne opent BaseNet's rente-specificatie).
 
+### D. FEATURE: Luxis leest de rente-afspraak zelf uit de AV van de cliënt (opdracht Arsalan, 6 juli avond)
+**Principe (letterlijk Arsalans wens):** Luxis voert ALTIJD uit wat er in de algemene
+voorwaarden van de cliënt staat. De 2% is maar een voorbeeld — wat er in de AV staat,
+geldt. Luxis LEEST dat zelf en houdt het aan, tenzij wij het veranderen. Override-
+hiërarchie: **dossier > klantkaart > uit-AV-gelezen > wettelijk**. De bestaande
+aanpas-schermen (klantkaart-rente-instellingen + dossier-formulier, DF138-13) blijven
+exact zoals ze zijn — die zíjn de override.
+Bouwrichting (4-stappen-werkwijze: eerst plan presenteren!):
+1. Bij AV-upload (`contact_terms`) én eenmalig voor bestaande AV's: rente-bepaling uit de
+   PDF-tekst halen (regex eerst; AI-extractie als vangnet — Haiku, één call per document).
+2. Gelezen waarde als standaard op de cliënt toepassen, mét zichtbare herkomst in de UI
+   ("uit AV gelezen: 2%/maand, artikel X") zodat het transparant en corrigeerbaar is.
+   Handmatig aangepaste waarden NOOIT overschrijven bij een her-upload.
+3. AV zegt niets over rente (al bekend: de huidige documenten van Collect 1 en
+   Incassocenter bevatten géén rente-percentage — mogelijk moet de echte debiteur-AV
+   nog geüpload worden) → terugval wettelijk + dit zichtbaar melden bij de cliënt.
+4. D-Break is geen vaste opdrachtgever — niet meenemen in tests/voorbeelden.
+
 ## NIET doen
 - Geen zips committen (8,5 GB). Geen fuzzy dossier-koppeling zonder akkoord.
 - Archief-zaken (afgesloten) NIET van tarief wisselen — alleen heropende werkvoorraad.
+- Geen klantkaart-defaults zetten zonder het akkoord-lijstje uit stap D.2.
 
 ## Sessie-einde
 SESSION-NOTES + LUXIS-ROADMAP bijwerken, tag `sessie-177`, PROMPT-S178.

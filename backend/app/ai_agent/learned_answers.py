@@ -394,6 +394,8 @@ _DEBTOR_VOICE = re.compile(
     r"wil ik een (?:betalings)?regeling|"
     r"verzoek ik u(?: om)? een betalingsregeling|"
     r"ben ik het (?:hier ?)?niet mee eens|zijn wij het (?:hier ?)?niet mee eens|"
+    r"ik ben het (?:er |hier )?niet mee eens|wij zijn het (?:er |hier )?niet mee eens|"
+    r"ik ga niet betalen|wij gaan niet betalen|"
     r"heb ik (?:al|reeds) betaald|hebben wij (?:al|reeds) betaald"
     r")\b",
     re.IGNORECASE,

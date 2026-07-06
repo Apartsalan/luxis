@@ -503,3 +503,63 @@ async def test_free_compose_without_verweer_omits_av(
     user_msg = holder["user"]
     assert "Artikel 9.3" not in user_msg
     assert "Verweer-bibliotheek" not in user_msg
+
+
+@pytest.mark.asyncio
+async def test_free_compose_fallback_uses_last_case_classification(
+    db, test_tenant, test_user, test_company, incasso_case, fake_base_context, monkeypatch
+):
+    """Fable-review S173: free_compose heeft geen bron-email, maar valt terug op de laatste
+    INKOMENDE dossier-classificatie. Staat die op verweer, dan injecteert de compose-dialog
+    tóch AV + bibliotheek. Dekt het anders ongeteste fallback-pad (`_last_case_classification_
+    category`) — als dat pad stuk is bleef de S172-kernbevinding stil bestaan."""
+    from app.ai_agent.models import EmailClassification
+    from app.email.oauth_models import EmailAccount
+    from app.relations.models import ContactTerms
+
+    db.add(
+        ContactTerms(
+            id=uuid.uuid4(), tenant_id=test_tenant.id, contact_id=test_company.id,
+            file_path="/tmp/av.pdf", file_name="av.pdf", label="v1", valid_from=date(2026, 1, 1),
+        )
+    )
+    account = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id, provider="outlook",
+        email_address="lisanne@kestinglegal.nl", access_token_enc=b"stub",
+        refresh_token_enc=b"stub", token_expiry=datetime.now(UTC) + timedelta(hours=1),
+    )
+    db.add(account)
+    await db.flush()
+    inbound = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email_account_id=account.id,
+        case_id=incasso_case.id, provider_message_id="in@example.com",
+        from_email="debiteur@example.com", from_name="Debiteur", subject="Ik betwist",
+        body_text="Betwisting.", body_html="", direction="inbound", email_date=datetime.now(UTC),
+    )
+    db.add(inbound)
+    await db.flush()
+    db.add(
+        EmailClassification(
+            id=uuid.uuid4(), tenant_id=test_tenant.id, synced_email_id=inbound.id,
+            case_id=incasso_case.id, category="juridisch_verweer", confidence=0.9,
+            suggested_action="reply",
+        )
+    )
+    await db.commit()
+
+    holder: dict = {}
+    _patch_ai_capture(monkeypatch, holder, subject="X", body="Y")
+    _patch_context(monkeypatch, fake_base_context)
+
+    with patch(
+        "app.ai_agent.knowledge_context._extract_pdf_text",
+        return_value="Artikel 9.3 — commissie bij intrekking.",
+    ):
+        await generate_unified_draft(
+            db, test_tenant.id, test_user.id, case_id=incasso_case.id,
+            intent=DraftIntent.FREE_COMPOSE,
+        )
+
+    user_msg = holder["user"]
+    assert "Artikel 9.3" in user_msg           # AV via fallback-classificatie
+    assert "Verweer-bibliotheek" in user_msg

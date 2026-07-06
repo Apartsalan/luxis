@@ -209,10 +209,14 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
         # Shouldn't happen with forced tool_choice, but fallback
         logger.warning("Haiku: no tool_use block in response, falling back to text parse")
 
-    # Fallback: plain text response (no schema detected or tool_use failed)
+    # Fallback: plain text response (no schema detected or tool_use failed).
+    # max_tokens ruim genoeg voor een volledig concept-bericht: de compose-dialog
+    # (unified_draft) en client-updates (draft_service) routeren hierlangs, en sinds
+    # S173 krijgen die bij verweer AV + voorbeelden mee → langere concepten. 1024 kapte
+    # die af → afgekapte JSON → "AI provider failed" (Fable-review S173).
     response = await client.messages.create(
         model=CLAUDE_HAIKU_MODEL,
-        max_tokens=1024,
+        max_tokens=8192,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     )

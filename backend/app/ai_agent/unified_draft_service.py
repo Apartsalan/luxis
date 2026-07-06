@@ -222,20 +222,26 @@ def _build_free_compose_user_msg(case: Case, instruction: str | None) -> str:
 async def _last_case_classification_category(
     db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
 ) -> str | None:
-    """Meest recente e-mailclassificatie op dit dossier.
+    """Categorie van de meest recente INKOMENDE mail op dit dossier.
 
     Voor next_step/free_compose (geen bron-email) en als fallback bij een reply zonder
     eigen classificatie: dan bepaalt de laatste bekende verweer-context of we AV +
-    voorbeelden meesturen.
+    voorbeelden meesturen. Sorteert op `SyncedEmail.email_date`, NIET op
+    `EmailClassification.created_at`: na de BaseNet-bulkimport (S168) klonteren de
+    created_at-waarden rond het importmoment, dus dat zou een willekeurige/oude categorie
+    kunnen opleveren die vervolgens beslist óf er 50k+ kennis wordt geïnjecteerd
+    (Fable-review S173). Spiegelt `learned_answers._category_for_outbound`.
     """
     return (
         await db.execute(
             select(EmailClassification.category)
+            .join(SyncedEmail, EmailClassification.synced_email_id == SyncedEmail.id)
             .where(
                 EmailClassification.tenant_id == tenant_id,
                 EmailClassification.case_id == case_id,
+                SyncedEmail.direction == "inbound",
             )
-            .order_by(EmailClassification.created_at.desc())
+            .order_by(SyncedEmail.email_date.desc())
             .limit(1)
         )
     ).scalar_one_or_none()

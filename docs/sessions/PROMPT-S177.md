@@ -26,12 +26,13 @@ S168-entry (BaseNet-import, formaat-details in §A) in `SESSION-NOTES.md`.
   NIET committen, `.gitignore` dekt al). Map per dossier `"D{lepcode} {opdrachtgever} _
   {wederpartij}"`, bestand-prefix = `letterno`. Bevat .eml (correspondentie, mét bijlagen
   erin) + losse .pdf/.msg (documenten).
-- **Metadata-XML (Letter/Incasso/betalingen) is WEG van /tmp** (S168 PII-opruiming).
-  → **Vraag Arsalan naar de originele metadata-export-zip** (zijn backup). Die is nodig
-  voor: letterno→systemid-koppeling (exacte match), lepcode→inccode (losse documenten →
-  dossier), én **fase 1b betalingen** (`IncassoBetalingAnders/Regeling`-records)!
-  Fallback zonder XML: eml→synced_email matchen op onderwerp+email_date (goed genoeg voor
-  bijlagen), losse documenten op mapnaam-wederpartij (fuzzy, riskanter).
+- **Metadata-XML GEVONDEN (6 juli):** `C:\Users\arsal\Documents\luxis\Xml_02-07-2026_2400.zip`
+  (3,8 MB, NIET committen). Bevat alles wat nodig is — geverifieerd:
+  `304_68..71 Letter.xml` (4 delen, ~29 MB → letterno→systemid, exacte bijlage-match),
+  `230_55 Incasso.xml` (2,9 MB → lepcode→inccode + **incinterest = contract-tarief per
+  zaak** → rente-config automatisch te zetten), `231_56 IncassoBetalingAnders.xml` +
+  `232_57 IncassoBetalingsRegeling.xml` (= fase 1b betalingen). `Payment.xml` =
+  kantoorfacturen, skippen (S168 §A). Parser-kennis: `scripts/basenet/parse.py`.
 
 ## Taken (volgorde belangrijk)
 ### A. Bijlagen-backfill (grootste zichtbare gemis)

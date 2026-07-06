@@ -164,6 +164,12 @@ class ContactResponse(BaseModel):
     default_bik_minimum_fee: float | None = None
     is_btw_plichtig: bool = True
     terms_file_name: str | None = None
+    # S177: rente zoals gelezen uit de AV van de cliënt (read-only, zichtbare herkomst).
+    terms_interest_rate: float | None = None
+    terms_interest_basis: str | None = None
+    terms_interest_compound: bool | None = None
+    terms_interest_source: str | None = None
+    terms_interest_read_at: datetime | None = None
     notes: str | None
     is_active: bool
     created_at: datetime

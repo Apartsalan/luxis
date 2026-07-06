@@ -425,6 +425,23 @@ export function ContactInfoSection({
                 <option value="government">Overheidsrente (art. 6:119b BW)</option>
                 <option value="contractual">Contractuele rente</option>
               </select>
+              {contact.terms_interest_source && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {contact.terms_interest_rate != null ? (
+                    <>
+                      Uit de algemene voorwaarden gelezen:{" "}
+                      <span className="font-medium text-foreground">
+                        {contact.terms_interest_rate}%{" "}
+                        {contact.terms_interest_basis === "monthly" ? "per maand" : "per jaar"}
+                      </span>{" "}
+                      ({contact.terms_interest_source}). Dit wordt automatisch gebruikt zolang je
+                      hierboven &ldquo;Geen standaard&rdquo; laat staan.
+                    </>
+                  ) : (
+                    <>In de algemene voorwaarden is geen rentetarief gevonden — er wordt teruggevallen op de wettelijke rente.</>
+                  )}
+                </p>
+              )}
             </div>
             {editForm.default_interest_type === "contractual" && (
               <div>

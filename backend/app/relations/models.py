@@ -1,12 +1,13 @@
 """Relations module models — Contacts (companies & persons) and their links."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
@@ -99,6 +100,19 @@ class Contact(TenantBase):
     # Apart van default_minimum_fee zodat factuur naar cliënt en vordering aan
     # debiteur onafhankelijk gestuurd kunnen worden.
     default_bik_minimum_fee: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+
+    # S177: rente-afspraak zoals GELEZEN uit de AV van deze cliënt. Apart van de
+    # handmatige default_*-velden: die zijn de override (klantkaart) en winnen altijd
+    # en worden NOOIT door een her-upload overschreven. Deze terms_*-velden vormen de
+    # laag "uit AV gelezen" in de hiërarchie dossier > klantkaart > uit-AV > wettelijk,
+    # met zichtbare herkomst (`terms_interest_source`) in de UI.
+    terms_interest_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    terms_interest_basis: Mapped[str | None] = mapped_column(String(10), nullable=True)  # monthly/yearly
+    terms_interest_compound: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    terms_interest_source: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    terms_interest_read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # BTW status — determines whether 21% BTW is added to BIK for this client's cases
     is_btw_plichtig: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

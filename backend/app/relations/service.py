@@ -1,7 +1,8 @@
 """Relations module service — Business logic for contacts and links."""
 
+import logging
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,8 @@ from app.relations.schemas import (
     ContactUpdate,
 )
 from app.shared.exceptions import ConflictError, NotFoundError
+
+logger = logging.getLogger(__name__)
 
 # ── Contact CRUD ─────────────────────────────────────────────────────────────
 
@@ -372,7 +375,49 @@ async def create_contact_terms(
     db.add(terms)
     await db.flush()
     await db.refresh(terms)
+
+    # S177: lees de rente-afspraak uit de nieuwe AV en zet die (met zichtbare herkomst)
+    # op de cliënt. Non-fataal — een leesfout mag de upload nooit breken.
+    try:
+        await refresh_terms_interest(db, tenant_id, contact_id, file_path)
+    except Exception:  # noqa: BLE001
+        logger.warning("Rente uit AV lezen mislukt voor contact %s", contact_id, exc_info=True)
+
     return terms
+
+
+async def refresh_terms_interest(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    contact_id: uuid.UUID,
+    file_path: str,
+    *,
+    use_ai_fallback: bool = True,
+):
+    """Lees de rente uit een AV-PDF en zet die op de cliënt (terms_interest_*).
+
+    Raakt NOOIT de handmatige `default_*`-velden — die blijven de override. Vindt de
+    lezer geen tarief, dan wordt dat zichtbaar vastgelegd (`terms_interest_source`) zodat
+    de UI kan tonen dat er teruggevallen wordt op de wettelijke rente. Retourneert het
+    `TermsInterest`-resultaat (of None).
+    """
+    from app.relations.terms_interest import read_terms_interest
+
+    result = await read_terms_interest(file_path, use_ai_fallback=use_ai_fallback)
+    contact = await get_contact(db, tenant_id, contact_id)
+    contact.terms_interest_read_at = datetime.now(UTC)
+    if result is None:
+        contact.terms_interest_rate = None
+        contact.terms_interest_basis = None
+        contact.terms_interest_compound = None
+        contact.terms_interest_source = "geen rentetarief in de AV gevonden — wettelijke rente"
+    else:
+        contact.terms_interest_rate = result.rate
+        contact.terms_interest_basis = result.basis
+        contact.terms_interest_compound = result.compound
+        contact.terms_interest_source = result.source
+    await db.flush()
+    return result
 
 
 async def update_contact_terms(

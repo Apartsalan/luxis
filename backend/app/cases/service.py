@@ -391,6 +391,7 @@ async def create_case(
     # (DF117-22) per klant moeten automatisch overgenomen worden.
     interest_type = data.interest_type
     contractual_rate = data.contractual_rate
+    contractual_compound = data.contractual_compound
     bik_override = data.bik_override
     bik_override_percentage = data.bik_override_percentage
     minimum_fee = data.minimum_fee
@@ -414,11 +415,20 @@ async def create_case(
 
     if interest_type is None:
         if client and client.default_interest_type:
+            # 1. Handmatige klantkaart-instelling (override) — wint altijd.
             interest_type = client.default_interest_type
             if interest_type == "contractual" and contractual_rate is None:
                 contractual_rate = client.default_contractual_rate
+        elif client and client.terms_interest_rate is not None:
+            # 2. S177: geen handmatige keuze → hanteer wat uit de AV van de cliënt is
+            #    gelezen (bv. 2%/maand, art. 13.3). De basis (maand/jaar) loopt mee op
+            #    claim-niveau via terms_interest_basis; AV noemt zelden samengesteld.
+            interest_type = "contractual"
+            contractual_rate = client.terms_interest_rate
+            contractual_compound = bool(client.terms_interest_compound)
         else:
-            interest_type = "statutory"  # System default fallback
+            # 3. Niets bekend → wettelijke rente.
+            interest_type = "statutory"
 
     # DF117-22: BIK inheritance — only inherit when neither field was explicitly set.
     # Percentage takes precedence over fixed amount (matches the case-level precedence).
@@ -466,7 +476,7 @@ async def create_case(
         procedure_phase=data.procedure_phase,
         interest_type=interest_type,
         contractual_rate=contractual_rate,
-        contractual_compound=data.contractual_compound,
+        contractual_compound=contractual_compound,
         client_id=data.client_id,
         opposing_party_id=data.opposing_party_id,
         billing_contact_id=data.billing_contact_id,

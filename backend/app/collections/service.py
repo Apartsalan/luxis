@@ -88,7 +88,8 @@ async def create_claim(
     """Create a new claim for a case.
 
     DF120: rate_basis inheritance — when not explicitly set in `data`,
-    inherit from `case.client.default_rate_basis`, fallback "yearly".
+    inherit from `case.client.default_rate_basis` (handmatig), then S177 the basis
+    read from the client's AV (`terms_interest_basis`), fallback "yearly".
     """
     payload = data.model_dump()
     if payload.get("rate_basis") is None:
@@ -99,11 +100,11 @@ async def create_claim(
             .where(Case.id == case_id, Case.tenant_id == tenant_id)
         )
         case = case_result.scalar_one_or_none()
-        client_default = (
-            case.client.default_rate_basis
-            if case and case.client and case.client.default_rate_basis
-            else None
-        )
+        client = case.client if case else None
+        # Hiërarchie: handmatige klantkaart > uit AV gelezen > wettelijke terugval.
+        client_default = None
+        if client:
+            client_default = client.default_rate_basis or client.terms_interest_basis
         payload["rate_basis"] = client_default or "yearly"
 
     claim = Claim(

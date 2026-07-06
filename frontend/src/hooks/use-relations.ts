@@ -46,6 +46,12 @@ export interface Contact {
   default_interest_type: string | null;
   default_contractual_rate: number | null;
   default_rate_basis: string | null;
+  // S177: rente zoals gelezen uit de AV van de cliënt (read-only, zichtbare herkomst).
+  terms_interest_rate: number | null;
+  terms_interest_basis: string | null;
+  terms_interest_compound: boolean | null;
+  terms_interest_source: string | null;
+  terms_interest_read_at: string | null;
   default_bik_override: number | null;
   default_bik_override_percentage: number | null;
   default_minimum_fee: number | null;

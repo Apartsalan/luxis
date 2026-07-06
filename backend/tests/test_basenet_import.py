@@ -5,6 +5,7 @@ Puur Python, geen DB — draait mee in de gewone suite. Fixtures zijn afgeleid v
 """
 
 import sys
+import uuid
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -21,9 +22,11 @@ for _parent in Path(__file__).resolve().parents:
 
 import pytest  # noqa: E402
 from scripts.basenet.mapping import (  # noqa: E402
+    map_betalingsregeling_termijn,
     map_company,
     map_contactpersoon,
     map_incasso,
+    map_incassobetaling,
     map_incassoline,
     map_person,
     resolve_debtor_type,
@@ -257,6 +260,120 @@ def test_resolve_debtor_and_interest():
     assert resolve_debtor_type(None) == "b2b"
     assert resolve_interest_type("b2c") == "statutory"
     assert resolve_interest_type("b2b") == "commercial"
+
+
+# ── Fase 1b: betalingen + regelingen ─────────────────────────────────────────
+
+def test_map_incassobetaling_basic():
+    rec = _rec(
+        {
+            "incppaydate": "2025-01-10",
+            "incpamount": "108.34",
+            "incpnote": "Betaald aan IVB",
+            "incpincassoid": "691609",
+            "incpuitsluitenkosten": "false",
+        },
+        systemid="456716",
+    )
+    out = map_incassobetaling(rec)
+    assert out["amount"] == Decimal("108.34")
+    assert out["payment_date"] == date(2025, 1, 10)
+    assert out["incasso_sysid"] == "691609"
+    assert out["is_credit"] is False
+    assert out["exclude_costs"] is False
+    # Marker maakt de import idempotent + herkenbaar voor rollback.
+    assert "[BaseNet-betaling systemid=456716]" in out["description"]
+
+
+def test_map_incassobetaling_credit_and_exclude_costs():
+    rec = _rec(
+        {
+            "incppaydate": "2023-06-24",
+            "incpamount": "6675.60",
+            "incpnote": "Credit 2022-0304",
+            "incpincassoid": "693614",
+            "incpuitsluitenkosten": "true",
+        },
+        systemid="458019",
+    )
+    out = map_incassobetaling(rec)
+    assert out["is_credit"] is True          # 'credit' in notitie → beslispunt
+    assert out["exclude_costs"] is True      # BaseNet-vlag bewaard in omschrijving
+    assert "kosten uitgesloten" in out["description"]
+
+
+def test_map_incassobetaling_rejects_incomplete():
+    # Geen bedrag → None (betaling zonder bedrag is geen betaling).
+    assert map_incassobetaling(_rec({"incppaydate": "2025-01-01", "incpincassoid": "1"})) is None
+    # Geen datum → None (betaaldatum bepaalt de rente-knip).
+    assert map_incassobetaling(_rec({"incpamount": "50.00", "incpincassoid": "1"})) is None
+    # Nul/negatief → None.
+    assert map_incassobetaling(
+        _rec({"incppaydate": "2025-01-01", "incpamount": "0.00", "incpincassoid": "1"})
+    ) is None
+
+
+def test_map_betalingsregeling_termijn():
+    rec = _rec(
+        {
+            "incbdate": "2025-01-17",
+            "incbdatestart": "2025-01-10",
+            "incbamount": "108.34",
+            "incbincassoid": "691609",
+        },
+        systemid="2596514",
+    )
+    out = map_betalingsregeling_termijn(rec)
+    assert out["amount"] == Decimal("108.34")
+    assert out["due_date"] == date(2025, 1, 17)
+    assert out["start_date"] == date(2025, 1, 10)
+    assert out["incasso_sysid"] == "691609"
+
+
+def test_build_arrangements_keeps_only_future_termijnen(tmp_path):
+    """Regeling-import mag ALLEEN toekomstige termijnen opnemen — verleden
+    termijnen zeggen niet of ze betaald zijn (geen aanname), en zouden anders
+    de dagelijkse overdue-job vollopen met valse achterstand."""
+    from scripts.basenet.import_payments import build_arrangements
+
+    incasso = (
+        '<advocatuur.incasso><entityname>advocatuur.incasso</entityname>'
+        '<systemid>700</systemid><entrylist>'
+        '<entry key="systemid" value="700"/><entry key="inccode" value="IN100215"/>'
+        '</entrylist></advocatuur.incasso>'
+    )
+    (tmp_path / "x.Incasso.xml").write_text(incasso, encoding="utf-8")
+
+    def termijn(sysid, due, amount):
+        return (
+            '<advocatuur.incassobetalingsregeling>'
+            '<entityname>advocatuur.incassobetalingsregeling</entityname>'
+            f"<systemid>{sysid}</systemid><entrylist>"
+            f'<entry key="systemid" value="{sysid}"/>'
+            f'<entry key="incbincassoid" value="700"/>'
+            f'<entry key="incbdate" value="{due}"/>'
+            f'<entry key="incbamount" value="{amount}"/>'
+            "</entrylist></advocatuur.incassobetalingsregeling>"
+        )
+
+    (tmp_path / "y.IncassoBetalingsRegeling.xml").write_text(
+        termijn("1", "2025-01-01", "100.00")   # verleden → weg
+        + termijn("2", "2099-07-12", "100.00")  # toekomst → blijft
+        + termijn("3", "2099-08-12", "100.00"),  # toekomst → blijft
+        encoding="utf-8",
+    )
+
+    tenant = uuid.UUID("00000000-0000-0000-0000-000000000001")
+    built = build_arrangements(tmp_path, tenant, today=date(2026, 7, 6))
+    assert built.total_termijnen == 3
+    assert built.future_termijnen == 2
+    assert len(built.arrangements) == 1
+    a = built.arrangements[0]
+    assert a["inccode"] == "IN100215"
+    assert len(a["installments"]) == 2
+    assert a["total_amount"] == Decimal("200.00")
+    assert a["start_date"] == date(2099, 7, 12)
+    assert [i["installment_number"] for i in a["installments"]] == [1, 2]
 
 
 # ── Fase 2: e-mailimport (koppeling, richting, scope) ────────────────────────

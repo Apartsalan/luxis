@@ -241,3 +241,60 @@ def map_incassoline(rec: BaseNetRecord) -> dict:
         "invoice_date": send_date,
         "is_active": True,
     }
+
+
+# ── Betalingen (fase 1b) ──────────────────────────────────────────────────────
+
+def map_incassobetaling(rec: BaseNetRecord) -> dict | None:
+    """advocatuur.incassobetaling → betaling-velden (case_id + tenant_id + id
+    voegt de runner toe via incpincassoid). None bij ontbrekend bedrag/datum,
+    want betaaldatum bepaalt de rente-knip en het bedrag de toerekening.
+
+    incpuitsluitenkosten: BaseNet paste deze betaling toe ZONDER de kosten (BIK)
+    aan te raken. Luxis' art. 6:44 kent die vlag niet — we bewaren hem in de
+    notitie zodat de her-toerekening zichtbaar afwijkt, we verzinnen niets.
+    """
+    amount = _decimal(rec.get("incpamount"))
+    pay_date = _date(rec.get("incppaydate"))
+    incasso_sysid = _clean(rec.get("incpincassoid"))
+    if amount is None or amount <= Decimal("0") or pay_date is None or not incasso_sysid:
+        return None
+
+    note = _clean(rec.get("incpnote"))
+    exclude_costs = (rec.get("incpuitsluitenkosten") or "").lower() == "true"
+    is_credit = bool(note and "credit" in note.lower())
+
+    label_parts = [note] if note else []
+    if exclude_costs:
+        label_parts.append("(BaseNet: kosten uitgesloten)")
+    label = " ".join(label_parts) if label_parts else "Betaling"
+    # Marker maakt de import idempotent + herkenbaar voor rollback.
+    description = f"{label} [BaseNet-betaling systemid={rec.systemid}]"[:500]
+
+    return {
+        "incasso_sysid": incasso_sysid,
+        "amount": amount,
+        "payment_date": pay_date,
+        "description": description,
+        "payment_method": "bank",
+        "note": note,
+        "exclude_costs": exclude_costs,
+        "is_credit": is_credit,
+    }
+
+
+def map_betalingsregeling_termijn(rec: BaseNetRecord) -> dict | None:
+    """advocatuur.incassobetalingsregeling → één termijn (installment).
+    None bij ontbrekend bedrag/vervaldatum."""
+    amount = _decimal(rec.get("incbamount"))
+    due_date = _date(rec.get("incbdate"))
+    incasso_sysid = _clean(rec.get("incbincassoid"))
+    if amount is None or amount <= Decimal("0") or due_date is None or not incasso_sysid:
+        return None
+    return {
+        "incasso_sysid": incasso_sysid,
+        "termijn_sysid": rec.systemid,
+        "amount": amount,
+        "due_date": due_date,
+        "start_date": _date(rec.get("incbdatestart")) or due_date,
+    }

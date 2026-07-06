@@ -202,6 +202,7 @@ async def create_payment(
     include_btw_on_bik: bool = False,
     nakosten_type: str | None = None,
     _skip_installment_link: bool = False,
+    _skip_workflow_hook: bool = False,
     cap_to_outstanding: bool = False,
 ) -> Payment:
     """Register a payment for a case.
@@ -311,10 +312,12 @@ async def create_payment(
     await db.flush()
     await db.refresh(payment)
 
-    # Workflow hook: check if case is fully paid
-    from app.workflow.hooks import on_payment_received
+    # Workflow hook: check if case is fully paid. Skipped for historical bulk
+    # imports (BaseNet-migratie) — those must not auto-transition/close a case.
+    if not _skip_workflow_hook:
+        from app.workflow.hooks import on_payment_received
 
-    await on_payment_received(db, tenant_id, case_id, data.amount, user_id)
+        await on_payment_received(db, tenant_id, case_id, data.amount, user_id)
 
     # DF-11: Auto-link payment to installment if active arrangement exists
     if not _skip_installment_link:
@@ -358,6 +361,7 @@ async def create_payment_for_case(
     user_id: uuid.UUID | None = None,
     *,
     _skip_installment_link: bool = False,
+    _skip_workflow_hook: bool = False,
     cap_to_outstanding: bool = False,
 ) -> Payment:
     """Load the case (+ client) and register a payment using its own settings.
@@ -377,6 +381,7 @@ async def create_payment_for_case(
         data,
         user_id,
         _skip_installment_link=_skip_installment_link,
+        _skip_workflow_hook=_skip_workflow_hook,
         cap_to_outstanding=cap_to_outstanding,
         **case_payment_kwargs(case),
     )

@@ -1,9 +1,9 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 6 juli 2026 (S178, go-live gap-audit, onderzoek — geen code). Betalingen fase 1b = WEL nodig maar klein (29/372 lopende zaken, €52.302; ≥5 lijken al voldaan); 12 lopende zaken hebben actieve betalingsregeling (proefzaak IN100215: termijn 12 juli!); debiteur-AV-registratie = bewust NIET bouwen. Details: S178-entry.
-**Volgende sessie (S179):** Opus-bouw betalingen + regelingen-import, zie `docs/sessions/PROMPT-S179.md`.
-**Vorige kop (S177):** Nacheck S175-dag = alles schoon. Bouw: bijlagen-backfill (5.105 → 2.402 mails) + losse documenten (2.619 → 596 dossiers) LIVE+getest, dashboard-gaatje dicht, taak D (Luxis leest rente uit AV) LIVE. Details: S177-entry.
+**Laatst bijgewerkt:** 6 juli 2026 (S179, Opus-bouw fase 1b). LIVE+geverifieerd: 56 betalingen (€165.697, art. 6:44) + 13 betalingsregelingen (121 toekomstige termijnen) geïmporteerd op prod; IN100215-proefzaak toont termijn 12 juli, IN100019 vanaf 9 juli. Team-tab kapotte invite-endpoints → read-only. IN100592 verplaatst naar LegalWork B.V. Details: S179-entry.
+**Openstaand (Fable, S180):** 90 zaken (19 lopend, €33.161) hebben betalingen in BaseNet's boekhouding zónder gedateerd record → niet automatisch te importeren, ogen té open. Herstel vergt fuzzy tekstmatching van bankomschrijvingen (GenericBankLine/CashBankLine) → Fable-onderzoek in `docs/sessions/PROMPT-S180.md`.
+**Vorige kop (S178):** go-live gap-audit (onderzoek). Betalingen fase 1b nodig maar klein; debiteur-AV-registratie bewust NIET. Details: S178-entry.
 **AV-correctie (belangrijk):** eerdere claim "Collect 1/Incassocenter-AV bevat geen rentepercentage" was FOUT. Alle 3 opdrachtgever-AV's bevatten artikel 13.3 = 2% per maand vanaf de vervaldag (geverifieerd tegen de prod-PDF's). Zie `project_luxis_av_rente` (memory).
 **Fable-review S177 = GEDAAN, 4 bevindingen gefixt + live:** (1) inline-filter miste echte docs ('Betwisting overeenkomst.pdf') → filter op extensie, delta 3 geladen; (2) 945 paperclips zonder bijlage → vlag gelijkgetrokken (2.422=2.422); (3) onleesbare AV-PDF wiste gelezen waarde → raist nu; (4) AI-intake sloeg ALLE rente-erving over (gat van vóór S177) → gedeelde `resolve_client_interest_defaults` + intake-test. 47 tests groen.
 **Besluiten Arsalan (6 juli avond):** rente ALTIJD per factuur vanaf de vervaldatum van die factuur (geverifieerd: `interest.py` rekent per claim vanaf `default_date`, factuur-lezer haalt vervaldatum uit de PDF — werkt al, niets te bouwen); 2%/mnd Incassocenter-proefzaken akkoord; terms-backfill alle 8 uitvoeren ("Facturen Legalwork" mag erbij — eenmalig ding/foutje, wordt toch niet gebruikt; evt. later opruimen als datavervuiling).
@@ -16,6 +16,52 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 179 (6 juli, Opus-bouw fase 1b — betalingen + regelingen)
+
+Uitvoering van PROMPT-S179 (gap-audit S178). Dry-run eerst getoond aan Arsalan; hij gaf
+akkoord op alle 56 incl. de 4 creditnota's ("maakt niet uit, zijn afgesloten + oud, we
+houden BaseNet ook nog aan"). Daarna --execute op prod.
+
+**Taak A — betalingen (LIVE+geverifieerd).** `scripts/basenet/import_payments.py`: 56
+betalingen (€165.697) via de gedeelde `create_payment_for_case` (art. 6:44 + dossierrente),
+met **workflow-hook + termijn-koppeling UIT** (nieuwe vlag `_skip_workflow_hook` op
+`create_payment`/`create_payment_for_case`) — een historische betaling mag een dossier niet
+automatisch op 'betaald' zetten/sluiten. Chronologisch per zaak (rente-knip). Overbetaling
+t.o.v. het op de betaaldatum openstaande bedrag gecapt (17×, klein, archiefzaken) en
+gerapporteerd. Idempotent via `[BaseNet-betaling systemid=..]`-marker; `--cleanup` = rollback.
+- **Reconciliatie-inzicht:** de 29 "verschillen" met BaseNet's cache zijn géén gemiste
+  betalingen — BaseNet telt dezelfde betaling dubbel (klant+admin, exact 2×). Ons enkele
+  bedrag is juist.
+- **Eerlijk gat:** 90 zaken hebben cache-betalingen zónder gedateerd record (19 lopend,
+  €33.161) → niet importeerbaar, ogen té open. → S180 Fable (boekhoud-matching).
+
+**Taak B — betalingsregelingen (LIVE+geverifieerd).** 13 regelingen / 121 **toekomstige**
+termijnen (verleden termijnen bewust NIET — bron zegt niet of ze betaald zijn; zou de
+overdue-job vervuilen). Deterministische uuid5-id's, status active/pending. Deadline-zaken
+zichtbaar: IN100019 (9 juli), IN100215-proefzaak (12 juli, via Lisanne's login geverifieerd
+in de API), IN100454 (13 juli). Grootste: IN100345 (62 termijnen t/m 2031).
+
+**Taak C — klein herstel.**
+- Team-tab read-only: uitnodigen/rol-wijzigen/deactiveren riepen niet-bestaande endpoints
+  aan (`/api/users/invite` = 404). Dode UI + mutation-hooks verwijderd i.p.v. een invite-
+  mailflow bouwen (YAGNI, eenpersoonskantoor). Teamlijst blijft zichtbaar. tsc schoon, live.
+- IN100592 verplaatst van "Facturen Legalwork" (facturen-contact, kreeg de zaak per abuis)
+  naar **LegalWork B.V.** (BaseNet-label bevestigt: "LegalWork B.V. / Onbevreesd B.V.").
+  LegalWork nu 20 zaken, Facturen Legalwork 0 (= consistent met z'n 5 facturen@-broertjes;
+  contact bewust NIET gedeactiveerd — zou juist inconsistent zijn).
+- IN100555 = D-Break-zaak met 0 vorderingen (cachedhoofdsom 0) → met rust gelaten
+  (D-Break geen vaste opdrachtgever), lege archiefzaak, ongevaarlijk.
+
+**Tests/verificatie:** 8 nieuwe tests (mapping betalingen/regelingen + toekomst-filter),
+20 basenet-tests groen, 148 payment-tests groen, ruff schoon, frontend tsc schoon. Backend
+gezond na deploy, 0 errors. Export-bestanden na import van de VPS verwijderd (PII).
+
+**Gewijzigde bestanden:** `scripts/basenet/import_payments.py` (nieuw), `mapping.py`,
+`backend/app/collections/service.py` (`_skip_workflow_hook`), `backend/tests/test_basenet_import.py`,
+`frontend/.../instellingen/team-tab.tsx`, `frontend/src/hooks/use-users.ts`.
+
+**Volgende sessie (S180, Fable):** boekhoud-matching 90 cache-only zaken (`PROMPT-S180.md`).
 
 ## Sessie 178 (6 juli, go-live gap-audit — onderzoek, geen code)
 

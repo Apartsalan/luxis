@@ -49,15 +49,20 @@ async def run(execute: bool, use_ai: bool) -> None:
         print("=" * 74)
         print("S177 — rente uit bestaande AV's", "(EXECUTE)" if execute else "(DRY RUN)")
         print("=" * 74)
-        found = none = 0
+        found = none = failed = 0
         for contact_id, terms in newest.items():
-            if execute:
-                result = await refresh_terms_interest(
-                    db, terms.tenant_id, contact_id, terms.file_path, use_ai_fallback=use_ai
-                )
-            else:
-                result = await read_terms_interest(terms.file_path, use_ai_fallback=use_ai)
             naam = (names.get(contact_id) or str(contact_id))[:32]
+            try:
+                if execute:
+                    result = await refresh_terms_interest(
+                        db, terms.tenant_id, contact_id, terms.file_path, use_ai_fallback=use_ai
+                    )
+                else:
+                    result = await read_terms_interest(terms.file_path, use_ai_fallback=use_ai)
+            except Exception as e:  # noqa: BLE001 — één kapotte PDF mag de run niet stoppen
+                failed += 1
+                print(f"  {naam:34s}  !! LEESFOUT ({terms.file_name[:30]}): {e}")
+                continue
             if result is None:
                 none += 1
                 print(f"  {naam:34s}  —  geen tarief gevonden ({terms.file_name[:30]})")
@@ -71,7 +76,10 @@ async def run(execute: bool, use_ai: bool) -> None:
         if execute:
             await db.commit()
         print("-" * 74)
-        print(f"  cliënten met AV: {len(newest)}   tarief gevonden: {found}   geen tarief: {none}")
+        print(
+            f"  cliënten met AV: {len(newest)}   tarief gevonden: {found}   "
+            f"geen tarief: {none}   leesfouten: {failed}"
+        )
         print(f"  {'GESCHREVEN op de cliënt' if execute else 'DRY RUN — niets geschreven'}")
         print("=" * 74)
 

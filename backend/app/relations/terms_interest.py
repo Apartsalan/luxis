@@ -135,12 +135,13 @@ async def _ai_fallback(text: str) -> TermsInterest | None:
 
 
 async def read_terms_interest(pdf_path: str, use_ai_fallback: bool = True) -> TermsInterest | None:
-    """Lees de rente uit een AV-PDF: eerst regex, dan (optioneel) Haiku-vangnet."""
-    try:
-        text = _extract_pdf_text(pdf_path)
-    except Exception as e:  # noqa: BLE001
-        logger.warning("AV-tekst uitlezen mislukt (%s): %s", pdf_path, e)
-        return None
+    """Lees de rente uit een AV-PDF: eerst regex, dan (optioneel) Haiku-vangnet.
+
+    None betekent: de AV is GELEZEN maar bevat geen rentetarief. Een onleesbaar
+    bestand raist (S177-review) — de caller mag een leesfout nooit behandelen als
+    "geen tarief" en daarmee een eerder goed gelezen waarde wissen.
+    """
+    text = _extract_pdf_text(pdf_path)
     result = parse_interest_from_text(text)
     if result is not None:
         return result

@@ -434,6 +434,44 @@ class TestIntakeApprove:
         assert updated_email.case_id == case.id
 
     @patch("app.ai_agent.intake_service.call_intake_ai")
+    async def test_approve_inherits_client_interest_from_av(
+        self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        """S177: intake-dossier erft de uit-AV-gelezen rente van de opdrachtgever
+        (klantkaart > uit-AV > wettelijk), inclusief maand-basis op de vordering."""
+        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "claude-haiku-4-5")
+
+        client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        client.terms_interest_rate = Decimal("2.00")
+        client.terms_interest_basis = "monthly"
+        client.terms_interest_compound = False
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
+        intake = IntakeRequest(
+            tenant_id=test_tenant.id,
+            synced_email_id=email.id,
+            client_contact_id=client.id,
+            status=IntakeStatus.DETECTED,
+        )
+        db.add(intake)
+        await db.commit()
+
+        await process_intake(db, intake.id, test_tenant.id)
+        await db.commit()
+        result = await approve_intake(db, intake.id, test_tenant.id, test_user.id)
+        await db.commit()
+
+        case_result = await db.execute(select(Case).where(Case.id == result.created_case_id))
+        case = case_result.scalar_one()
+        assert case.interest_type == "contractual"
+        assert case.contractual_rate == Decimal("2.00")
+        assert case.contractual_compound is False
+
+        claim_result = await db.execute(select(Claim).where(Claim.case_id == case.id))
+        claim = claim_result.scalar_one()
+        assert claim.rate_basis == "monthly"
+
+    @patch("app.ai_agent.intake_service.call_intake_ai")
     async def test_approve_person_debtor_type(
         self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):

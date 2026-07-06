@@ -36,6 +36,7 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import uuid
 import zipfile
 from collections import Counter
@@ -69,10 +70,13 @@ def _is_real_attachment(part) -> bool:
     disp = (part.get_content_disposition() or "").lower()
     if disp == "attachment":
         return True
-    if disp == "inline":
-        return False
-    # Geen expliciete dispositie: houd het als het een bestandsnaam heeft en geen image is.
-    return bool(part.get_filename()) and not part.get_content_type().startswith("image/")
+    # Inline of geen dispositie: een echt document heeft een niet-image-type ÉN een
+    # bestandsnaam mét extensie (S177-review: 'Betwisting overeenkomst.pdf' zat inline
+    # en werd eerst weggefilterd; naamloze logo-blobs zoals 'img-…'/'_companylogo_'
+    # hebben geen extensie en blijven ruis).
+    fn = part.get_filename() or ""
+    has_ext = bool(re.search(r"\.[A-Za-z0-9]{1,5}$", fn)) and not fn.lower().endswith(".emz")
+    return has_ext and not part.get_content_type().startswith("image/")
 
 
 @dataclass
@@ -211,7 +215,7 @@ def _print_extract(stats: ExtractStats, include_inline: bool, dry_run: bool, out
     print(f"  inline (logo/handtekening):   {stats.inline_parts:8d}  ({stats.inline_bytes/1e6:8.1f} MB)")
     if stats.matched_parts or stats.matched_emails:
         print("  ---")
-        print(f"  >> HOORT BIJ EEN BESTAANDE MAIL (wat Lisanne echt krijgt):")
+        print("  >> HOORT BIJ EEN BESTAANDE MAIL (wat Lisanne echt krijgt):")
         print(f"     bijlagen:                  {stats.matched_parts:8d}  ({stats.matched_bytes/1e6:8.1f} MB)")
         print(f"     verdeeld over mails:       {len(stats.matched_emails):8d}")
     print(f"  -> import-modus: {'ECHT + INLINE' if include_inline else 'alleen ECHTE bijlagen'}")
@@ -365,7 +369,7 @@ def _print_docs(stats: DocStats, dry_run: bool, out: str | None) -> None:
     print(f"                geen IN-dossier {stats.skip_not_in:8d}")
     print(f"                geen Luxis-case {stats.skip_no_case:8d}")
     print("  ---")
-    print(f"  >> TE IMPORTEREN (bij een bestaand dossier):")
+    print("  >> TE IMPORTEREN (bij een bestaand dossier):")
     print(f"     documenten:                {stats.matched:8d}  ({stats.matched_bytes/1e6:8.1f} MB)")
     print(f"     verdeeld over dossiers:    {len(stats.matched_cases):8d}")
     print("  ---")

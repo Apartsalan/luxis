@@ -16,7 +16,7 @@ from app.ai_agent.kimi_client import call_intake_ai
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.ai_agent.prompts import strip_html
 from app.cases.models import Case, CaseActivity
-from app.cases.service import generate_case_number
+from app.cases.service import generate_case_number, resolve_client_interest_defaults
 from app.collections.models import Claim
 from app.email.synced_email_models import SyncedEmail
 from app.relations.models import Contact
@@ -310,6 +310,25 @@ async def approve_intake(
     # Determine debtor_type for case
     debtor_type = "b2b" if intake.debtor_type == "company" else "b2c"
 
+    # S177-review: erf de rente van de opdrachtgever (klantkaart > uit-AV > wettelijk),
+    # exact zoals create_case. Voorheen kreeg elk intake-dossier stilzwijgend de
+    # wettelijke rente, ongeacht de instellingen van de cliënt.
+    client_contact = None
+    if intake.client_contact_id:
+        client_contact = (
+            await db.execute(
+                select(Contact).where(
+                    Contact.id == intake.client_contact_id,
+                    Contact.tenant_id == tenant_id,
+                )
+            )
+        ).scalar_one_or_none()
+    interest_type, contractual_rate, contractual_compound = resolve_client_interest_defaults(
+        client_contact
+    )
+    if interest_type == "contractual" and contractual_rate is None:
+        interest_type = "statutory"  # onvolledige klant-config mag de intake niet breken
+
     case = Case(
         tenant_id=tenant_id,
         case_number=case_number,
@@ -321,6 +340,9 @@ async def approve_intake(
         opposing_party_id=debtor_contact.id,
         assigned_to_id=user_id,
         date_opened=date.today(),
+        interest_type=interest_type,
+        contractual_rate=contractual_rate,
+        **({"contractual_compound": contractual_compound} if contractual_compound is not None else {}),
     )
     db.add(case)
     await db.flush()
@@ -331,6 +353,14 @@ async def approve_intake(
         if intake.invoice_date:
             claim_desc += f" dd. {intake.invoice_date.strftime('%d-%m-%Y')}"
 
+        # Zelfde erving voor de rente-basis (maand/jaar) als create_claim (DF120/S177).
+        claim_rate_basis = "yearly"
+        if client_contact:
+            claim_rate_basis = (
+                client_contact.default_rate_basis
+                or client_contact.terms_interest_basis
+                or "yearly"
+            )
         claim = Claim(
             tenant_id=tenant_id,
             case_id=case.id,
@@ -339,6 +369,7 @@ async def approve_intake(
             default_date=intake.due_date or date.today(),
             invoice_number=intake.invoice_number,
             invoice_date=intake.invoice_date,
+            rate_basis=claim_rate_basis,
         )
         db.add(claim)
 

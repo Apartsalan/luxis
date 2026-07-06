@@ -367,6 +367,25 @@ async def get_case(
     return case
 
 
+def resolve_client_interest_defaults(client) -> tuple[str, Decimal | None, bool | None]:
+    """Rente-hiërarchie voor een nieuw dossier zonder expliciete keuze (S177):
+    klantkaart (default_*, handmatige override) > uit-AV-gelezen (terms_interest_*)
+    > wettelijk. Gedeeld door create_case ÉN de AI-intake (die bouwt het Case-object
+    zelf en sloeg de erving voorheen volledig over — S177-review).
+
+    Returns (interest_type, contractual_rate, contractual_compound); compound None =
+    laat de caller zijn eigen default houden (alleen de AV spreekt zich erover uit).
+    """
+    if client is not None and client.default_interest_type:
+        rate = None
+        if client.default_interest_type == "contractual":
+            rate = client.default_contractual_rate
+        return client.default_interest_type, rate, None
+    if client is not None and client.terms_interest_rate is not None:
+        return "contractual", client.terms_interest_rate, bool(client.terms_interest_compound)
+    return "statutory", None, None
+
+
 async def create_case(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -414,21 +433,12 @@ async def create_case(
         client = client_result.scalar_one_or_none()
 
     if interest_type is None:
-        if client and client.default_interest_type:
-            # 1. Handmatige klantkaart-instelling (override) — wint altijd.
-            interest_type = client.default_interest_type
-            if interest_type == "contractual" and contractual_rate is None:
-                contractual_rate = client.default_contractual_rate
-        elif client and client.terms_interest_rate is not None:
-            # 2. S177: geen handmatige keuze → hanteer wat uit de AV van de cliënt is
-            #    gelezen (bv. 2%/maand, art. 13.3). De basis (maand/jaar) loopt mee op
-            #    claim-niveau via terms_interest_basis; AV noemt zelden samengesteld.
-            interest_type = "contractual"
-            contractual_rate = client.terms_interest_rate
-            contractual_compound = bool(client.terms_interest_compound)
-        else:
-            # 3. Niets bekend → wettelijke rente.
-            interest_type = "statutory"
+        inh_type, inh_rate, inh_compound = resolve_client_interest_defaults(client)
+        interest_type = inh_type
+        if contractual_rate is None:
+            contractual_rate = inh_rate
+        if inh_compound is not None:
+            contractual_compound = inh_compound
 
     # DF117-22: BIK inheritance — only inherit when neither field was explicitly set.
     # Percentage takes precedence over fixed amount (matches the case-level precedence).

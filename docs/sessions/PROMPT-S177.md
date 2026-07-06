@@ -1,12 +1,35 @@
-# Sessieprompt S177 — Herstel-sprint: bijlagen + betalingen + rente (bevindingen Lisanne)
+# Sessieprompt S177 — Stap 0: Fable-nacheck S175-dag → daarna Opus: herstel-sprint
 
 ```
 cd Documents\luxis && claude --dangerously-skip-permissions
 ```
 
-## Model
-**Opus** (uitvoering). Lees vooraf: `docs/ARCHITECTUUR-KAART.md` + S175b/c-entries + de
-S168-entry (BaseNet-import, formaat-details in §A) in `SESSION-NOTES.md`.
+## Model + volgorde (afspraak Arsalan, 6 juli avond)
+**Start op Fable**: kritische nacheck van de S175-dag (stap 0 hieronder) — er zijn die dag
+véél zelfstandige acties op prod gedaan en Arsalan constateerde fouten. Pas na de nacheck
+en zijn akkoord schakelt hij naar **Opus** voor de herstel-sprint (stap A-C).
+Lees vooraf: `docs/ARCHITECTUUR-KAART.md` + S175/b/c/d-entries + de S168-entry
+(BaseNet-import, formaat-details in §A) in `SESSION-NOTES.md`.
+
+## Stap 0 (Fable) — nacheck van alle S175-dag-acties, verse ogen
+Gemaakte fouten die dag (erkend): ongevraagd klantkaart-rente-defaults gezet (7
+opdrachtgevers — TERUGGEDRAAID zelfde avond, verifieer: `default_interest_type` moet
+NULL zijn); D-Break genoemd/meegewogen terwijl dat geen vaste opdrachtgever is.
+Loop kritisch na, tegen de daadwerkelijke prod-data:
+1. **Proefzaken-rente** (IN100215/IN100040/IN100521): contractueel 2.00/monthly/enkelvoudig
+   — klopt dat met BaseNet-XML (`incinterest`/`incssamengesteld`, lokaal:
+   `Xml_02-07-2026_2400.zip`)? En met wat Lisanne verwacht?
+2. **Heropening proefzaken**: status 'nieuw' zonder pijplijnstap — nog steeds geen
+   automatisering geraakt? (`incasso_step_id IS NULL`, geen batch-mail/followup-logs.)
+3. **Slim-leren-opschoning**: 11 rijen terug naar afgewezen + naam-sweep ('cliënte') +
+   1 dossiernummer-vervanging — steekproef: teksten nog leesbaar, niets kapot-vervangen,
+   103 goedgekeurd?
+4. **Dashboard-fix** (`status != 'afgesloten'` in KPI's): geen KPI vergeten/te veel
+   gefilterd? (opened/closed-per-maand bewust ongemoeid.)
+5. **Bulk-goedkeuren-feature**: raakt hij echt alleen status 'kandidaat'?
+6. Beantwoord Arsalans openstaande vragen uit het gesprek en rapporteer in gewoon
+   Nederlands (geen jargon): wat was goed, wat was fout, wat is hersteld.
+Daarna wacht op Arsalans go → hij zet Opus aan voor de herstel-sprint.
 
 ## Aanleiding (Lisanne's check van de proefzaken, 6 juli)
 1. **Bijlagen ontbreken.** 3.367 geïmporteerde mails hebben `has_attachments=true`, maar er

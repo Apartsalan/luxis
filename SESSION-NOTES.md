@@ -4,7 +4,7 @@
 **Laatst bijgewerkt:** 6 juli 2026 (S175 t/m S175d, Fable+Opus) — Review S174 GO + livegang gestart: Lisanne's account + 3 proefzaken, bulk-goedkeuren, leer-loop gevuld (103 goedgekeurd), dashboard-archief-fix, rente-fix proefzaken (contractueel 2%/mnd, BaseNet-XML als bron). Details: S175/S175b/c/d-entries.
 **Laatste feature/fix:** S175d — proefzaken op contractrente 2%/mnd enkelvoudig (uit BaseNet-XML `incinterest`/`incssamengesteld`); IN100521 rente nu €7.112,58 t/m vandaag, op peildatum 9 juni €5.942 vs BaseNet €6.275 (BaseNet rekent vanaf verstuurdatum — beoordelingsvraag Lisanne).
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
-**Volgende sessie (S177, Opus):** herstel-sprint — zie `docs/sessions/PROMPT-S177.md` (S176-prompt is deels al onderweg gedaan).
+**Volgende sessie (S177):** START OP FABLE — stap 0 = kritische nacheck van alle S175-dag-acties (er zijn fouten gemaakt, zie S175d-entry); daarna pas Opus voor de herstel-sprint. Zie `docs/sessions/PROMPT-S177.md`.
 
 ## Sessie 175b (zelfde dag, Fable, met Arsalan) — Livegang-koers bepaald + eerste stappen gezet
 
@@ -85,10 +85,11 @@ livegang is geen code, maar werkvoorraad + acceptatie.**
 - Betalingen: `cachedpayments*=0.00` op IN100521 — geen deelbetalingen op deze zaak;
   de betalingen-import (fase 1b) blijft nodig voor de batch, bron zit in de metadata-zip.
 
-- **Klantkaart-defaults gezet (nieuwe dossiers meteen goed):** 7 vaste opdrachtgevers op
-  `default_interest_type='contractual'` / 2.00 / `monthly` (BaseNet-patroon: honderden zaken
-  2%/mnd type 8; D-Break bewust wettelijk gelaten, type 1). Nieuw-dossier-formulier neemt
-  dit automatisch over (DF138-13).
+- **FOUT + TERUGGEDRAAID — klantkaart-defaults:** ongevraagd `default_interest_type`/
+  rate/basis op 7 opdrachtgever-kaarten gezet; Arsalan: "dat is niet aan jou, heb ik niet
+  gevraagd — rente passen WIJ aan, per klant of per dossier". Zelfde avond teruggedraaid
+  (alle drie velden NULL). Les vastgelegd (geheugen: geen-ongevraagde-wijzigingen).
+  Ook fout: D-Break genoemd/meegewogen — is géén vaste opdrachtgever.
 
 ### Openstaand → S177 (S176-spoor grotendeels onderweg afgehandeld)
 - Uitkomst Arsalans check: kan Lisanne met de proefzaken werken? (loopt)

@@ -1,10 +1,58 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 6 juli 2026 (S174, Opus) — Verbind-sprint 2 LIVE: staleness-gate (created_at-bug ×3 weg), audience-gate (client-updates), 13-types-woordenschat + deterministische pre-labeler, en type-matching bij het genereren (V4). 2 commits gedeployed + migratie s174 op prod + prod-relabel toegepast (87 kandidaten, verdeling exact als de dryrun). 139 relevante tests groen, ruff + tsc schoon. Detail: S174-entry.
-**Laatste feature/fix:** S174 — `defense_types.py` + `knowledge_context.last_inbound_defense` + `EmailClassification.defense_type` + `generate_draft(audience=)`. Backend+frontend gedeployed (commits 0ec6852 + 8817ada), healthy.
-**Openstaand:** S175 = VERPLICHTE onafhankelijke Fable-review op S174 (`docs/sessions/PROMPT-S175-REVIEW.md`). Lisanne's review in "Slim leren" loopt — kandidaten nu per verweer-type gegroepeerd. Geen open bugs.
-**Volgende sessie (S175):** Fable-review S174 (verse ogen) — zie `PROMPT-S175-REVIEW.md`.
+**Laatst bijgewerkt:** 6 juli 2026 (S175, Fable) — Onafhankelijke review S174: **GO** na één must-fix (direct toegepast + gedeployed). Alle draaiboek-checks doorlopen: code-diff, 89 tests zelf gedraaid, prod-rooktest (UI + concept op verweer-dossier + logs + PII-steekproef). Detail: S175-entry.
+**Laatste feature/fix:** S175 — `get_learned_examples` keek maar naar de 12 nieuwste goedkeuringen; type-match (V4) zou stil falen zodra Lisanne >12 kandidaten goedkeurt. Cap → 200, rode test eerst (commit 5fa4592, gedeployed, healthy).
+**Openstaand:** Lisanne's beoordeling in "Slim leren" (102 kandidaten, per type gegroepeerd, klaar voor haar 30-45-min-pad). Geen open bugs.
+**Volgende sessie (S176):** Lisanne's beoordeling begeleiden / K2-meting — zie `docs/sessions/PROMPT-S176.md`.
+
+## Wat er gedaan is (sessie 175 — 6 juli 2026, Fable, solo) — Verplichte onafhankelijke review S174: GO
+
+Verse ogen, schone lei, volgens `PROMPT-S175-REVIEW.md`. Niets aangenomen omdat het
+"getest" heette — alles zelf opnieuw gedraaid.
+
+### Wat er is gecontroleerd (alles ✅ tenzij anders vermeld)
+- **Code-diff beide commits** (`0ec6852` + `8817ada`) regel voor regel gelezen.
+- **A. Review-punten:** staleness-gate (gedeelde helper, op `email_date`, nieuwste-inbound-regel) ✅;
+  grep `EmailClassification.created_at` → alleen de 2 toegestane plekken over (unified per-mail
+  + service.py-lijstweergave) ✅; skip-logging debiteur-guard ✅; audience-gate (client-update
+  zonder bibliotheek/geleerde voorbeelden, AV blijft) ✅.
+- **B. V3:** regels in `defense_types.py` **byte-identiek** aan de gevalideerde dryrun-regels
+  (incl. AV-citaat-strip + 9.3/20.4-vangnet) ✅; prod-verdeling **exact** de dryrun-tabel
+  (102 kandidaten: afwikkeling 20 / overig 15 / verlenging 12 / …) ✅; goedgekeurde rijen
+  onaangeraakt (dragen nog oude keys, `updated_at` 5 juli = vóór relabel) ✅; per type één
+  bewijzende test ✅.
+- **C. V4:** migratie `s174` = enige head, op prod toegepast ✅; classificatie-validatie
+  (verweer→13 types/overig, anders None) ✅; één-pool + alias-match + type-voorrang getest ✅.
+- **Tests zelf gedraaid:** 89 groen (defense_types/draft_context/shadow_learning/ai_agent),
+  zelfcheck-module OK, `uvx ruff` schoon.
+- **Rooktest prod:** login → Slim leren: groepen + aantallen kloppen met de DB, dropdown
+  13 labels, bron-context zichtbaar ("Bron: dossier IN100171 · …"), bulk-selectie aanwezig.
+  Concept gegenereerd op verweer-dossier IN100569 (nieuwste inbound = betwisting) → 3 geleerde
+  voorbeelden geïnjecteerd (use_count 0→1, spreiding klopt want oude classificaties hebben
+  geen type), draft netjes persisted, logs schoon. Testartefacten opgeruimd (draft verwijderd,
+  use_count teruggezet).
+- **Premortem-checks:** PII-steekproef 5 goedgekeurde teksten schoon (namen weg, `[bedrag]`) ✅;
+  nieuwe kandidaten krijgen pre-label in de backfill ✅; niets-goedkeuren blijft veilig
+  (5 vaste teksten gaan altijd mee) ✅.
+
+### Oordeel: GO — met één must-fix, direct toegepast
+**Gevonden fout:** `get_learned_examples` bekeek maar de **12 nieuwste goedkeuringen**
+(`limit(max(limit*4, 12))`). Zodra Lisanne haar review doet (1-2 per groep ≈ 13-26
+goedkeuringen erbij) valt een ouder voorbeeld van het gevraagde type stil buiten het
+venster — V4-type-matching faalt dan precies op het moment dat ze moet gaan werken.
+Rode test eerst (15 nieuwere goedkeuringen verdringen het enige reeds-betaald-voorbeeld),
+cap → 200, 35 shadow-learning-tests groen. Commit `5fa4592`, gedeployed, backend healthy,
+login 200.
+
+### Kleine bevindingen (bewust géén fix, gedocumenteerd)
+- Ontwerp-punt V4.3 ("zelfde type-voorrang voor de statische `DEFENSE_EXAMPLES`") is niet
+  gebouwd — impact nihil: alle 5 passen ruim binnen de 8000-cap (5442 tekens) en gaan dus
+  altijd allemaal mee; volgorde verandert niets aan de inhoud.
+- `language`-parameter in `get_learned_examples` is dood (was al zo vóór S174) — cosmetisch.
+- Type-matching werkt alleen voor mails die ná de S174-deploy geclassificeerd worden
+  (bestaande classificaties hebben `defense_type` NULL → nette terugval op spreiding).
+  Bewust geen her-classificatie van oude mails (kost AI-calls, oude dossiers zijn afgehandeld).
 
 ## Wat er gedaan is (sessie 174 — 6 juli 2026, Opus, met Arsalan) — Verbind-sprint 2: gates + verweer-woordenschat + type-matching
 

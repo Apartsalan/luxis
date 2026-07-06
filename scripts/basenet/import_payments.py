@@ -293,6 +293,7 @@ async def _write_payments(db, tenant_id, importable: list[dict]) -> tuple[int, l
     """Boek elke betaling via de gedeelde helper (art. 6:44 + dossierrente),
     workflow-hook + termijn-koppeling UIT. Chronologisch per zaak zodat de
     rente-knip van latere betalingen de eerdere ziet. Geeft (aantal, caps)."""
+    import app.main  # noqa: F401  — registreer alle ORM-modellen (get_case selectinload's User)
     from app.collections.schemas import PaymentCreate
     from app.collections.service import create_payment_for_case
 

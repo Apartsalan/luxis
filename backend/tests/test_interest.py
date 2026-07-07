@@ -727,6 +727,24 @@ def test_reduction_exactly_on_default_date_reduces_base():
     assert total == expected
 
 
+def test_credit_claim_still_accrues_negative_interest():
+    """S184 review: a credit invoice (negative principal, no reductions) must
+    STILL accrue NEGATIVE interest to offset the positive claims. The pre-start
+    clamp must only fire when there is an actual pre-start payment — otherwise it
+    zeroes the credit and the debtor is over-charged interest on every credit zaak.
+    """
+    principal = Decimal("-200.00")
+    default_date = date(2025, 1, 1)
+    calc_date = date(2026, 1, 1)
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, [], compound=False
+    )
+    expected = _round2(Decimal("-200") * Decimal("6") / Decimal("100"))  # -12.00
+    assert total == expected
+    assert total < Decimal("0")
+
+
 def test_compound_two_years_with_mid_year_payment():
     """Compound interest over 2 years with payment in year 1.
 

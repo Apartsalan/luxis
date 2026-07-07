@@ -275,12 +275,17 @@ def calculate_interest_with_reductions(
     pre_start = sum(
         (amt for d, amt in principal_reductions if d <= default_date), Decimal("0")
     )
-    principal = max(Decimal("0"), principal - pre_start)
+    if pre_start > Decimal("0"):
+        # Only clamp when there IS a pre-start payment. Clamping unconditionally
+        # would zero a credit invoice's NEGATIVE principal and strip its
+        # offsetting negative interest (S184 review — credit claims carry no
+        # reductions, so pre_start is 0 for them and this branch is skipped).
+        principal = max(Decimal("0"), principal - pre_start)
+        if principal == Decimal("0"):
+            return Decimal("0"), []
 
     relevant = [(d, amt) for d, amt in principal_reductions if default_date < d < calc_date]
     if not relevant:
-        if principal <= Decimal("0"):
-            return Decimal("0"), []
         if compound:
             return calculate_compound_interest(principal, default_date, calc_date, rates)
         return calculate_simple_interest(principal, default_date, calc_date, rates)

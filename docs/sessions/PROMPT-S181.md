@@ -7,8 +7,9 @@ cd Documents\luxis && claude --dangerously-skip-permissions
 > `S181-werkvoorraad-recept.csv` (alle 372 zaken met voorgestelde stap + vlaggen) +
 > `LISANNE-A4-heropening.md` (de 3 vragen aan Lisanne, klaar om te sturen).
 > Kern: heropenen is veilig (niets verstuurt vanzelf, vlag uit), maar vóór de
-> auto-draft-vlag ooit aangaat: dubbele timeout-regel fixen (C3) en creditfactuur-rente
-> beslissen (C1, −€2.781 over 32 zaken). Adviesgroep 1: LegalWork B.V. (15 zaken).
+> auto-draft-vlag ooit aangaat: dubbele timeout-regel fixen (C3) en 14-dagenbrief-
+> sjabloon instellen (C5). Creditfactuur-rente (C1) bleek na hertoetsing géén echte
+> fout (werkt als verrekening; restfout €59). Adviesgroep 1: LegalWork B.V. (15 zaken).
 
 ## Model + rol
 **Opus** (data-actie, geen nieuwbouw). De betalingen zijn sinds S180 COMPLEET (255 op de

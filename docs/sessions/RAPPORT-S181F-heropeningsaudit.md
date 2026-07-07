@@ -63,15 +63,17 @@ Alternatief klein: CM Zakelijk (9, maar vooral verweer/dagvaarding = handwerk).
 
 ## C. Bevindingen die aandacht vragen (vóór of bij heropening)
 
-### C1. Rente op creditfacturen is fout (32 werkvoorraad-zaken, −€2.781)
-45 zaken hebben creditfacturen als **negatieve vordering**; de rente-motor rekent daar
-negatieve rente over (en "kapitaliseert" die zelfs). Juridisch loopt er geen rente over
-een creditfactuur. Over de 32 getroffen werkvoorraad-zaken is de som −€2.780,90 —
-de fout valt in het **voordeel van de debiteur** (nooit te veel geëist), maar
-sommatiebedragen zijn te laag. Ergste gevallen: IN100015 (−763), IN100334 (−404),
-IN100070 (−236), IN100596 (−214). **Fix-voorstel (niet gebouwd):** claims met negatieve
-hoofdsom uitsluiten van renteberekening (`interest.py`) + test; alternatief is verrekening
-per creditdatum (juridisch mooier, complexer). Keuze aan Lisanne/Arsalan.
+### C1. Rente op creditfacturen: in de kern correct, één randgeval (−€59, GECORRIGEERD 7/7)
+**Eerdere versie van deze bevinding claimde "−€2.781 te weinig geëist" — dat was fout**
+(Arsalan's tegenvraag leidde tot herberekening per rente-periode via de prod-API).
+45 zaken hebben creditfacturen als negatieve vordering; de rente-motor rekent daar
+negatieve rente over. Dat is wiskundig gelijk aan rente over het ná verrekening verlaagde
+saldo — juridisch verdedigbaar en dus **geen fout** zolang er een positieve vordering
+tegenover staat (−€2.721,51 van het totaal valt in die categorie). De echte fout is de
+rente-mindering die opliep **vóór er überhaupt een positieve vordering opeisbaar was**:
+−€59,38 over 13 zaken, waarvan −€50,81 in IN100603. Immaterieel randgeval; hooguit
+meenemen als latere fine-tune (kapitalisatie-momenten van credits wijken ook marginaal
+af). Geen actie nodig vóór heropening.
 
 ### C2. De "8 feitelijk voldaan" verdienen nuance (Luxis-berekening t/m 7 juli)
 | Zaak | Luxis zegt nog open | Advies |
@@ -83,7 +85,7 @@ per creditdatum (juridisch mooier, complexer). Keuze aan Lisanne/Arsalan.
 | IN100256 | €288,32 | keuze |
 | IN100197 | €456,36 | keuze |
 | IN100166 | €587,86 | keuze |
-| IN100334 | −€216,84 (vervuild door C1; na fix ≈ €187 open) | eerst C1 uitzoeken |
+| IN100334 | −€216,84 = **overbetaald** (verrekening credits klopt, zie C1) | afsluiten; ~€215 te veel ontvangen — Lisanne beslist over teruggave |
 
 Oorzaak restanten: art. 6:44 BW rekent betalingen eerst toe aan kosten en rente;
 "betaald ≥ hoofdsom" (S180-maatstaf) is dus niet hetzelfde als "niets meer verschuldigd".

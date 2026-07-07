@@ -1,7 +1,7 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 7 juli 2026 (S181-F, Fable — laatste Fable-dag: heropeningsaudit compleet, read-only). Werkvoorraad = 372 zaken/€1,89M in recept-tabel met stap per zaak; heropenen bewezen veilig (0 zaken met stap, auto-draft-vlag uit, niets verstuurt zonder klik). Nieuw gevonden: creditfactuur-rente −€2.781 (32 zaken), 4 van de "8 voldaan" hebben restbedrag (art. 6:44), dubbele timeout-regel op Tweede sommatie. Details: S181-F-entry + `docs/sessions/RAPPORT-S181F-heropeningsaudit.md`.
+**Laatst bijgewerkt:** 7 juli 2026 (S181-F, Fable — laatste Fable-dag: heropeningsaudit compleet, read-only). Werkvoorraad = 372 zaken/€1,89M in recept-tabel met stap per zaak; heropenen bewezen veilig (0 zaken met stap, auto-draft-vlag uit, niets verstuurt zonder klik). Nieuw gevonden: 4 van de "8 voldaan" hebben restbedrag (art. 6:44), 1 is overbetaald (~€215), dubbele timeout-regel op Tweede sommatie, 14-dagenbrief-stap zonder sjabloon. Creditfactuur-rente bleek na Arsalans tegenvraag géén fout (verrekening; restfout €59). Details: S181-F-entry + `docs/sessions/RAPPORT-S181F-heropeningsaudit.md`.
 **Vorige kop (S180):** 6 juli 2026 (S180, Fable — onderzoek + bouw in één). Het "90 cache-only"-gat is DICHT: bankregels bleken deterministisch koppelbaar (`cblpcode` = dossiernummer), som per zaak op de cent = BaseNet-cache → 199 bankregel-betalingen (€152.049) LIVE. Betalingen nu compleet: 255 betalingen op exact de 135 zaken die BaseNet kende. Bijvangst: 8 "lopende" zaken zijn feitelijk voldaan (recept-input). Details: S180-entry.
 **Openstaand:** livegang-blokken zijn nu mensenwerk — werkvoorraad-recept (Lisanne), mail incasso@ M365 (Arsalan), generale repetitie geldstromen. Geen machine-bouwwerk meer nodig vóór de heropening.
 **Vorige kop (S179):** fase 1b LIVE: 56 betalingen + 13 regelingen, Team-tab read-only, IN100592 → LegalWork B.V. Details: S179-entry.
@@ -38,10 +38,12 @@ beantwoorden 86, 14-dagenbrief 34. Tweede schil: 69 "Wacht"-zaken. Adviesgroep 1
 LegalWork B.V. (15 zaken, 9× direct Eerste sommatie).
 
 **Nieuwe bevindingen (C1-C9 in rapport):** (1) creditfacturen als negatieve claims →
-rente-motor rekent negatieve rente, −€2.780,90 over 32 werkvoorraad-zaken (voordeel
-debiteur; fix-voorstel: geen rente op negatieve claims); (2) "8 voldaan" genuanceerd via
-prod-API: 3 echt ~nul, 4 met restant €100-588 (art. 6:44-toerekening), IN100334 vervuild
-door creditrente; (3) dubbele default-timeout-regel op Tweede sommatie (één naar oude
+rente-motor rekent negatieve rente: **eerste conclusie "−€2.781 te weinig geëist" was
+FOUT** — Arsalans tegenvraag → herberekening per periode: −€2.721 is correcte
+verrekening (rente over saldo), echte fout slechts −€59,38 (waarvan −€50,81 IN100603:
+mindering vóór eerste opeisbare factuur); (2) "8 voldaan" genuanceerd via
+prod-API: 3 echt ~nul, 4 met restant €100-588 (art. 6:44-toerekening), IN100334
+overbetaald (~€215 te veel ontvangen); (3) dubbele default-timeout-regel op Tweede sommatie (één naar oude
 inactieve stap; eerste-wint=toeval) → opruimen vóór auto-draft-vlag ooit aangaat;
 (4) opvolg-scan slaat hold-stappen niet over (ruis bij heropening); (5) actieve
 14-dagenbrief-stap heeft geen sjabloon (34 B2C-zaken); (6) has_verweer overal false

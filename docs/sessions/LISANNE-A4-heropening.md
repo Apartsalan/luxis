@@ -23,7 +23,7 @@ is betaald:
 | IN100256 | € 288,32 | jouw keuze |
 | IN100197 | € 456,36 | jouw keuze |
 | IN100166 | € 587,86 | jouw keuze |
-| IN100334 | rekenkwestie (zie vraag 3) | even wachten |
+| IN100334 | volledig betaald — er is zelfs ± € 215 te véél ontvangen | sluiten; wil je het teveel terugstorten? |
 
 De restbedragen komen doordat de wet betalingen eerst toerekent aan kosten en rente;
 de hoofdsom is betaald, maar er blijft dan iets staan.
@@ -34,14 +34,11 @@ Ons voorstel: **LegalWork B.V.** (15 dossiers). Daarvan kunnen er 9 direct een e
 sommatie krijgen — dan zie je het systeem meteen echt werken, met een overzichtelijk
 aantal. Daarna schalen we op naar de grotere opdrachtgevers. Andere keuze is prima.
 
-## Vraag 3 — Eén rekenkwestie ter beslissing
-
-In 45 dossiers zitten **creditfacturen**. Die zijn overgenomen als "negatieve vordering",
-en het systeem rekent daar nu negatieve rente over. Daardoor vragen we in 32 lopende
-dossiers samen zo'n **€ 2.780 te wéinig** rente. Nooit te veel gevraagd dus — maar we
-willen het goed zetten. Voorstel: over creditfacturen geen rente rekenen. Akkoord?
-
 ## Verder klaargezet (geen actie nodig)
+
+- In 45 dossiers zitten creditfacturen; het systeem verrekent die netjes met de
+  vordering, inclusief het rente-effect. Nagerekend en akkoord bevonden (er zat één
+  klein randgeval van € 51 bij — verwaarloosbaar).
 
 - Per dossier staat klaar in welke fase het verdergaat (sommatie, verweer, regeling,
   dagvaarding voorstellen) — overgenomen uit waar het in BaseNet gebleven was.

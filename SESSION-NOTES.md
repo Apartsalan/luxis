@@ -91,6 +91,19 @@ van de partial-fix: partial op gedefaultete regeling zou anders alsnog alarmeren
 (3) de generieke PATCH-route sluit open termijnen af bij eindstatus (defaulted→missed,
 cancelled/completed→waived) — de achterdeur is dicht. 7 nieuwe tests, 167 groen totaal.
 
+**Backup-migratie VS→EU: LIVE + BEWEZEN (S182-avond).** Fable blijkt t/m 12 juli
+beschikbaar; Arsalans nieuwe Backblaze-EU-account lukte wél. Uitgevoerd: bucket
+`luxis-backup-eu` (eu-central-003 Amsterdam, private, lifecycle keep-only-last, geverifieerd
+via endpoint), remote `luxis-b2-eu` + versleutelde laag `luxis-backup-eu-crypt` (rclone
+crypt: bestandsnamen + inhoud; rondgang-test bewees cijferbrij op B2-kant), cron omgezet
+(`RCLONE_REMOTE=luxis-backup-eu-crypt RCLONE_BUCKET=backups`), volledige proefrun (db 23 MB
++ uploads 1,2 GB), en de VERPLICHTE restore-test via de crypt-remote: wegwerp-DB geladen,
+tellingen exact live (cases 607/contacts 1168/payments 255), tarball leesbaar. Runbook +
+subverwerkers.md bijgewerkt. Crypt-wachtwoorden: VPS rclone.conf + doorgegeven aan Arsalan
+voor wachtwoordmanager (onvervangbaar!). **Restpunt 10 juli:** na 2 bewezen EU-runs (log
+8+9 juli) oude US-bucket `Luxis-backup` wissen + oude key intrekken + remote `luxis-backup`
+verwijderen, wisbewijs hier. /opt/db-backup.sh gecheckt: alleen lokaal, geen VS-lek.
+
 ## Sessie 181-F (7 juli, Fable — heropeningsaudit, laatste Fable-dag, 100% read-only)
 
 Lisanne was niet bereikbaar; Arsalan gaf mandaat om de laatste Fable-dag te benutten.

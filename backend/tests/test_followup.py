@@ -278,6 +278,51 @@ async def test_scan_skips_case_without_step(db: AsyncSession, test_tenant: Tenan
     assert count == 0
 
 
+@pytest.mark.asyncio
+async def test_scan_skips_hold_step(db: AsyncSession, test_tenant: Tenant, test_user: User):
+    """Case on a hold-step (e.g. Verweer beantwoorden / Bijhouden regeling) gets
+    no calendar-driven recommendation, even long past min_wait_days (S182)."""
+    step = await _create_step(
+        db, test_tenant.id, name="Verweer beantwoorden", min_wait_days=0, max_wait_days=0
+    )
+    step.is_hold_step = True
+    await db.flush()
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=30)
+    await db.commit()
+
+    count = await scan_for_followups(db, test_tenant.id)
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_scan_skips_terminal_step(db: AsyncSession, test_tenant: Tenant, test_user: User):
+    """Case on a terminal step is never recommended (S182)."""
+    step = await _create_step(
+        db, test_tenant.id, name="Afgesloten", min_wait_days=0, max_wait_days=0
+    )
+    step.is_terminal = True
+    await db.flush()
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=30)
+    await db.commit()
+
+    count = await scan_for_followups(db, test_tenant.id)
+    assert count == 0
+
+
+@pytest.mark.asyncio
+async def test_scan_still_recommends_normal_step(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """A normal (non-hold, non-terminal) step still gets a recommendation —
+    the guard must not over-skip (S182)."""
+    step = await _create_step(db, test_tenant.id, min_wait_days=14)
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
+    await db.commit()
+
+    count = await scan_for_followups(db, test_tenant.id)
+    assert count == 1
+
+
 # ---------------------------------------------------------------------------
 # Tests: Approve / Reject
 # ---------------------------------------------------------------------------

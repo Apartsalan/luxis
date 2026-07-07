@@ -102,6 +102,14 @@ async def scan_for_followups(
         if not step:
             continue
 
+        # Hold-stappen (Bijhouden regeling / On hold / Verweer beantwoorden) en
+        # terminale stappen krijgen geen kalender-gedreven aanbeveling: hold-zaken
+        # wachten bewust en verweer-zaken krijgen hun concept al via de e-mail-
+        # trigger. Zonder deze guard zou elke zaak op zo'n stap (~100+ bij de
+        # heropening) elke 30 min een ruis-aanbeveling opleveren.
+        if step.is_hold_step or step.is_terminal:
+            continue
+
         # Calculate days in step
         if case.step_entered_at:
             days_in_step = (today - case.step_entered_at.date()).days

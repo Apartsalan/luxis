@@ -1,7 +1,8 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 6 juli 2026 (S180, Fable — onderzoek + bouw in één). Het "90 cache-only"-gat is DICHT: bankregels bleken deterministisch koppelbaar (`cblpcode` = dossiernummer), som per zaak op de cent = BaseNet-cache → 199 bankregel-betalingen (€152.049) LIVE. Betalingen nu compleet: 255 betalingen op exact de 135 zaken die BaseNet kende. Bijvangst: 8 "lopende" zaken zijn feitelijk voldaan (recept-input). Details: S180-entry.
+**Laatst bijgewerkt:** 7 juli 2026 (S181-F, Fable — laatste Fable-dag: heropeningsaudit compleet, read-only). Werkvoorraad = 372 zaken/€1,89M in recept-tabel met stap per zaak; heropenen bewezen veilig (0 zaken met stap, auto-draft-vlag uit, niets verstuurt zonder klik). Nieuw gevonden: creditfactuur-rente −€2.781 (32 zaken), 4 van de "8 voldaan" hebben restbedrag (art. 6:44), dubbele timeout-regel op Tweede sommatie. Details: S181-F-entry + `docs/sessions/RAPPORT-S181F-heropeningsaudit.md`.
+**Vorige kop (S180):** 6 juli 2026 (S180, Fable — onderzoek + bouw in één). Het "90 cache-only"-gat is DICHT: bankregels bleken deterministisch koppelbaar (`cblpcode` = dossiernummer), som per zaak op de cent = BaseNet-cache → 199 bankregel-betalingen (€152.049) LIVE. Betalingen nu compleet: 255 betalingen op exact de 135 zaken die BaseNet kende. Bijvangst: 8 "lopende" zaken zijn feitelijk voldaan (recept-input). Details: S180-entry.
 **Openstaand:** livegang-blokken zijn nu mensenwerk — werkvoorraad-recept (Lisanne), mail incasso@ M365 (Arsalan), generale repetitie geldstromen. Geen machine-bouwwerk meer nodig vóór de heropening.
 **Vorige kop (S179):** fase 1b LIVE: 56 betalingen + 13 regelingen, Team-tab read-only, IN100592 → LegalWork B.V. Details: S179-entry.
 **AV-correctie (belangrijk):** eerdere claim "Collect 1/Incassocenter-AV bevat geen rentepercentage" was FOUT. Alle 3 opdrachtgever-AV's bevatten artikel 13.3 = 2% per maand vanaf de vervaldag (geverifieerd tegen de prod-PDF's). Zie `project_luxis_av_rente` (memory).
@@ -16,6 +17,40 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 181-F (7 juli, Fable — heropeningsaudit, laatste Fable-dag, 100% read-only)
+
+Lisanne was niet bereikbaar; Arsalan gaf mandaat om de laatste Fable-dag te benutten.
+Keuze: de heropening volledig voorbereiden en aftesten. **Geen enkele schrijfactie op
+prod**; code gelezen op commit `ec633c6` (geverifieerd == VPS).
+
+**Veilig bevonden (bewezen):** 604 afgesloten + 3 proefzaken, 0 zaken met pijplijnstap;
+`pipeline_auto_drafts_enabled=false`; alle scheduler-paden maken hooguit concepten/
+aanbevelingen/taken — versturen is altijd een menselijke klik. 607 zaken matchen 1-op-1
+met BaseNet-XML (2 juli), alle 372 lopende hebben rente-config, `total_paid` == som
+betalingen. Regeling-bewaking (06:30-job) werkt ook op afgesloten zaken; termijnen
+9/12/13/15/18/19 juli.
+
+**Recept-tabel gebouwd** (`docs/sessions/S181-werkvoorraad-recept.csv`): 372 zaken,
+€1.889.750 hoofdsom, per zaak BaseNet-fase (gedecodeerd via CustomProjectStatus) →
+voorgestelde Luxis-stap + vlaggen. Grootste bakken: Voorstel dagvaarding 145, Verweer
+beantwoorden 86, 14-dagenbrief 34. Tweede schil: 69 "Wacht"-zaken. Adviesgroep 1:
+LegalWork B.V. (15 zaken, 9× direct Eerste sommatie).
+
+**Nieuwe bevindingen (C1-C9 in rapport):** (1) creditfacturen als negatieve claims →
+rente-motor rekent negatieve rente, −€2.780,90 over 32 werkvoorraad-zaken (voordeel
+debiteur; fix-voorstel: geen rente op negatieve claims); (2) "8 voldaan" genuanceerd via
+prod-API: 3 echt ~nul, 4 met restant €100-588 (art. 6:44-toerekening), IN100334 vervuild
+door creditrente; (3) dubbele default-timeout-regel op Tweede sommatie (één naar oude
+inactieve stap; eerste-wint=toeval) → opruimen vóór auto-draft-vlag ooit aangaat;
+(4) opvolg-scan slaat hold-stappen niet over (ruis bij heropening); (5) actieve
+14-dagenbrief-stap heeft geen sjabloon (34 B2C-zaken); (6) has_verweer overal false
+(88 betwiste); (7) IN100019 (regeling, termijn 9 juli) staat op "Wacht" → buiten de 372;
+11 regeling-zaken met gestopte regeling; (8) verweer-mail switcht stap automatisch
+(by design); (9) IN100409 leeg dossier.
+
+**Deliverables:** rapport + recept-CSV + `LISANNE-A4-heropening.md` (3 vragen, klaar om
+te sturen) + PROMPT-S181 bijgewerkt. Geen fixes gebouwd (scope: onderzoek).
 
 ## Sessie 180 (6 juli, Fable — boekhoud-matching: onderzoek → veilig → gebouwd → live)
 

@@ -1,0 +1,373 @@
+﻿zaak,opdrachtgever,debiteur_type,fase_basenet,hoofdsom,betaald,open_ruw,rente,voorstel_stap,toelichting,vlaggen
+IN100002,INC Zakelijk B.V.,b2b,Procederen?,11585.12,0.00,11585.12,commercial,Voorstel dagvaarding,,
+IN100004,Incassocenter B.V.,b2c,B2C 3e sommatie verstuurd,2235.78,0.00,2235.78,statutory,Sommatie laatste mogelijkheid,,
+IN100006,Incassocenter B.V.,b2b,Procederen?,2464.35,0.00,2464.35,commercial,Voorstel dagvaarding,,
+IN100009,Incassocenter B.V.,b2c,Procederen?,3839.18,0.00,3839.18,statutory,Voorstel dagvaarding,,
+IN100013,CM Zakelijk B.V.,b2b,Procederen?,1858.20,0.00,1858.20,commercial,Voorstel dagvaarding,,
+IN100014,INC Zakelijk B.V.,b2b,Vordering betwist,19787.91,0.00,19787.91,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100015,CM Zakelijk B.V.,b2b,Vordering betwist,5691.42,0.00,5691.42,commercial,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100017,Incassocenter B.V.,b2b,Procederen?,25452.17,0.00,25452.17,commercial,Voorstel dagvaarding,,
+IN100018,Incassocenter B.V.,b2b,Vordering betwist,13381.39,1633.50,11747.89,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100021,Incassocenter B.V.,b2c,Procederen?,9806.56,0.00,9806.56,statutory,Voorstel dagvaarding,,
+IN100022,Incassocenter B.V.,b2b,Procederen?,6158.59,0.00,6158.59,commercial,Voorstel dagvaarding,,
+IN100023,Incassocenter B.V.,b2c,Procederen?,3660.25,0.00,3660.25,statutory,Voorstel dagvaarding,,
+IN100024,INC Zakelijk B.V.,b2b,Procederen?,11120.92,0.00,11120.92,commercial,Voorstel dagvaarding,,
+IN100026,Incassocenter B.V.,b2c,Bijhouden regelingen,8310.10,4300.00,4010.10,statutory,Bijhouden regeling,actieve betalingsregeling,
+IN100027,Incassocenter B.V.,b2b,Vordering betwist,10126.30,0.00,10126.30,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100028,Incassocenter B.V.,b2b,Procederen?,1622.04,0.00,1622.04,commercial,Voorstel dagvaarding,,
+IN100032,INC Zakelijk B.V.,b2b,Vordering betwist,6041.74,0.00,6041.74,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100033,INC Zakelijk B.V.,b2b,Procederen?,5652.71,0.00,5652.71,commercial,Voorstel dagvaarding,,
+IN100034,INC Zakelijk B.V.,b2b,Procederen?,5009.23,0.00,5009.23,commercial,Voorstel dagvaarding,,
+IN100035,INC Zakelijk B.V.,b2b,Procederen?,4905.40,0.00,4905.40,commercial,Voorstel dagvaarding,,
+IN100037,INC Zakelijk B.V.,b2b,Vordering betwist,3554.49,0.00,3554.49,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100040,Incassocenter B.V.,b2b,Procederen?,3294.77,0.00,3294.77,contractual 2.00%,Voorstel dagvaarding,,proefzaak (al open)
+IN100041,Incassocenter B.V.,b2b,Procederen?,2712.85,0.00,2712.85,commercial,Voorstel dagvaarding,,
+IN100042,SYN Finance 1 B.V.,b2b,B2B 4e sommatie verstuurd,8569.45,0.00,8569.45,commercial,Voorstel dagvaarding,,
+IN100044,Incassocenter B.V.,b2c,Eng 4e sommatie verstuurd,1249.82,0.00,1249.82,statutory,Voorstel dagvaarding,,
+IN100049,Incassocenter B.V.,b2c,14-dagen brief,3735.62,0.00,3735.62,statutory,14-dagenbrief,,
+IN100050,Incassocenter B.V.,b2c,Vordering betwist,5322.41,0.00,5322.41,statutory,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100051,Incassocenter B.V.,b2b,B2B 4e sommatie verstuurd,2823.28,0.00,2823.28,commercial,Voorstel dagvaarding,,
+IN100053,Incassocenter B.V.,b2b,B2B 4e sommatie verstuurd,2258.12,0.00,2258.12,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100054,INC Zakelijk B.V.,b2b,Procederen?,2500.00,0.00,2500.00,commercial,Voorstel dagvaarding,,
+IN100056,INC Zakelijk B.V.,b2b,Eng 4e sommatie verstuurd,6877.06,0.00,6877.06,commercial,Voorstel dagvaarding,,
+IN100057,INC Zakelijk B.V.,b2b,Procederen?,72702.85,0.00,72702.85,commercial,Voorstel dagvaarding,,
+IN100070,INC Zakelijk B.V.,b2b,Procederen?,39550.00,6110.95,33439.05,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100072,Incassocenter B.V.,b2c,14-dagen brief,7647.97,0.00,7647.97,statutory,14-dagenbrief,,
+IN100073,INC Zakelijk B.V.,b2b,Procederen?,6927.30,0.00,6927.30,commercial,Voorstel dagvaarding,,
+IN100074,INC Zakelijk B.V.,b2b,Procederen?,4477.00,0.00,4477.00,commercial,Voorstel dagvaarding,,
+IN100080,INC Zakelijk B.V.,b2b,Eng 3e sommatie verstuurd,5592.63,0.00,5592.63,commercial,Sommatie laatste mogelijkheid,,
+IN100081,SYN Finance 1 B.V.,b2b,Eng 4e sommatie verstuurd,3459.07,0.00,3459.07,commercial,Voorstel dagvaarding,,
+IN100086,INC Zakelijk B.V.,b2b,Vordering betwist,7425.96,0.00,7425.96,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100088,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,1082.95,0.00,1082.95,commercial,Voorstel dagvaarding,,
+IN100089,Incassocenter B.V.,b2c,Vordering betwist,1700.16,0.00,1700.16,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100092,INC Zakelijk B.V.,b2b,B2C 3e sommatie verstuurd,812.61,0.00,812.61,commercial,Sommatie laatste mogelijkheid,,
+IN100094,Incassocenter B.V.,b2b,Procederen?,2092.92,0.00,2092.92,commercial,Voorstel dagvaarding,,
+IN100096,INC Zakelijk B.V.,b2b,Vordering betwist,4485.79,0.00,4485.79,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100098,INC Zakelijk B.V.,b2b,Vordering betwist,19200.96,0.00,19200.96,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100099,Incassocenter B.V.,b2c,Vordering betwist,944.19,0.00,944.19,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100101,Incassocenter B.V.,b2b,Vordering betwist,4134.70,0.00,4134.70,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100103,INC Zakelijk B.V.,b2b,B2C 4e sommatie verstuurd,7099.36,0.00,7099.36,commercial,Voorstel dagvaarding,,
+IN100104,INC Zakelijk B.V.,b2b,Procederen?,76895.50,0.00,76895.50,commercial,Voorstel dagvaarding,,
+IN100106,INC Zakelijk B.V.,b2b,Procederen?,6415.91,0.00,6415.91,commercial,Voorstel dagvaarding,,
+IN100108,INC Zakelijk B.V.,b2b,Vordering betwist,50808.24,0.00,50808.24,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100113,Incassocenter B.V.,b2b,Procederen?,4985.72,0.00,4985.72,commercial,Voorstel dagvaarding,,
+IN100114,SYN Finance 1 B.V.,b2b,Procederen?,31082.27,0.00,31082.27,commercial,Voorstel dagvaarding,,
+IN100117,INC Zakelijk B.V.,b2b,Vordering betwist,3249.56,0.00,3249.56,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100118,INC Zakelijk B.V.,b2b,Regeling treffen,151.77,0.00,151.77,commercial,Treffen van regeling,,
+IN100119,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,304.77,0.00,304.77,commercial,Voorstel dagvaarding,,
+IN100120,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,296.51,0.00,296.51,commercial,Voorstel dagvaarding,,
+IN100121,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,606.44,605.69,0.75,commercial,Voorstel dagvaarding,,
+IN100123,INC Zakelijk B.V.,b2b,Vordering betwist,211.75,0.00,211.75,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100125,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100127,INC Zakelijk B.V.,b2b,Procederen?,8594.93,0.00,8594.93,commercial,Voorstel dagvaarding,,
+IN100128,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100130,INC Zakelijk B.V.,b2b,Vordering betwist,3619.26,0.00,3619.26,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100136,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,1253.01,0.00,1253.01,commercial,Voorstel dagvaarding,,
+IN100139,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,602.71,0.00,602.71,commercial,Voorstel dagvaarding,,
+IN100140,INC Zakelijk B.V.,b2b,Procederen?,743.00,0.00,743.00,commercial,Voorstel dagvaarding,,
+IN100142,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,574.75,0.00,574.75,commercial,Voorstel dagvaarding,,
+IN100145,INC Zakelijk B.V.,b2b,Vordering betwist,538.80,0.00,538.80,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100147,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,1082.95,0.00,1082.95,commercial,Voorstel dagvaarding,,
+IN100149,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,1526.94,0.00,1526.94,commercial,Voorstel dagvaarding,,
+IN100150,INC Zakelijk B.V.,b2b,Procederen?,1097.58,0.00,1097.58,commercial,Voorstel dagvaarding,,
+IN100152,INC Zakelijk B.V.,b2b,Procederen?,2115.54,0.00,2115.54,commercial,Voorstel dagvaarding,,
+IN100156,Incassocenter B.V.,b2c,14-dagen brief,393.25,0.00,393.25,statutory,14-dagenbrief,,
+IN100159,INC Zakelijk B.V.,b2b,Eng 2e sommatie verstuurd,1878.50,0.00,1878.50,commercial,Derde sommatie,,
+IN100162,INC Zakelijk B.V.,b2b,Vordering betwist,1129.62,0.00,1129.62,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100164,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,2489.89,0.00,2489.89,commercial,Voorstel dagvaarding,,
+IN100166,INC Zakelijk B.V.,b2b,Bijhouden regelingen,1987.89,1987.89,0.00,commercial,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,
+IN100173,INC Zakelijk B.V.,b2b,Vordering betwist,1824.34,0.00,1824.34,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100176,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,1545.76,0.00,1545.76,commercial,Voorstel dagvaarding,,
+IN100177,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,10926.52,0.00,10926.52,commercial,Voorstel dagvaarding,,
+IN100181,INC Zakelijk B.V.,b2b,Procederen?,1815.00,0.00,1815.00,commercial,Voorstel dagvaarding,,
+IN100183,INC Zakelijk B.V.,b2b,Vordering betwist,12087.76,0.00,12087.76,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100187,Incassocenter B.V.,b2b,Procederen?,7477.88,0.00,7477.88,commercial,Voorstel dagvaarding,,
+IN100189,Incassocenter B.V.,b2c,Bijhouden regelingen,4931.55,0.00,4931.55,statutory,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100190,Incassocenter B.V.,b2c,Procederen?,928.99,0.00,928.99,statutory,Voorstel dagvaarding,,
+IN100192,Incassocenter B.V.,b2c,14-dagen brief,7532.98,0.00,7532.98,statutory,14-dagenbrief,,
+IN100193,Incassocenter B.V.,b2b,B2B 3e sommatie verstuurd,3989.44,0.00,3989.44,commercial,Sommatie laatste mogelijkheid,,
+IN100194,Incassocenter B.V.,b2b,Vordering betwist,1815.00,0.00,1815.00,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100196,Incassocenter B.V.,b2b,Vordering betwist,6836.50,0.00,6836.50,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100197,Incassocenter B.V.,b2b,Regeling treffen,1809.18,1908.10,-98.92,commercial,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,
+IN100198,INC Zakelijk B.V.,b2b,Procederen?,1500.00,0.00,1500.00,commercial,Voorstel dagvaarding,,
+IN100200,Incassocenter B.V.,b2b,Vordering betwist,4502.17,0.00,4502.17,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100201,Incassocenter B.V.,b2c,B2C 4e sommatie verstuurd,3820.12,0.00,3820.12,statutory,Voorstel dagvaarding,,
+IN100202,COLLECT 1 B.V.,b2c,B2C 1e sommatie verstuurd,1536.70,0.00,1536.70,statutory,Tweede sommatie,,
+IN100204,Incassocenter B.V.,b2c,Vordering betwist,4567.75,0.00,4567.75,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100206,Incassocenter B.V.,b2b,Vordering betwist,3025.00,0.00,3025.00,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100207,Incassocenter B.V.,b2c,14-dagen brief,2792.74,0.00,2792.74,statutory,14-dagenbrief,,
+IN100208,Incassocenter B.V.,b2c,14-dagen brief,2283.17,0.00,2283.17,statutory,14-dagenbrief,,
+IN100209,Incassocenter B.V.,b2c,14-dagen brief,1858.86,0.00,1858.86,statutory,14-dagenbrief,,
+IN100210,Incassocenter B.V.,b2c,Bijhouden regelingen,2024.61,2448.11,-423.50,statutory,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,
+IN100211,Incassocenter B.V.,b2b,Vordering betwist,1824.05,0.00,1824.05,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100212,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,3412.82,0.00,3412.82,commercial,Voorstel dagvaarding,,
+IN100213,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,2626.98,0.00,2626.98,commercial,Voorstel dagvaarding,,
+IN100214,Incassocenter B.V.,b2b,Regeling treffen,1536.70,0.00,1536.70,commercial,Treffen van regeling,,
+IN100215,Incassocenter B.V.,b2b,Bijhouden regelingen,1536.70,0.00,1536.70,contractual 2.00%,Bijhouden regeling,actieve betalingsregeling,proefzaak (al open)
+IN100216,Incassocenter B.V.,b2b,B2B 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100219,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,1522.68,0.00,1522.68,commercial,Voorstel dagvaarding,,
+IN100220,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,514.53,0.00,514.53,commercial,Voorstel dagvaarding,,
+IN100221,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,211.75,0.00,211.75,commercial,Voorstel dagvaarding,,
+IN100223,INC Zakelijk B.V.,b2b,Vordering betwist,1815.00,0.00,1815.00,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100225,Incassocenter B.V.,b2b,Vordering betwist,3932.50,453.75,3478.75,commercial,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100226,Incassocenter B.V.,b2b,Vordering betwist,2409.26,0.00,2409.26,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100227,Incassocenter B.V.,b2b,Procederen?,1233.47,0.00,1233.47,commercial,Voorstel dagvaarding,,
+IN100228,Incassocenter B.V.,b2b,Vordering betwist,1274.74,0.00,1274.74,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100229,Incassocenter B.V.,b2b,Bijhouden regelingen,11371.05,2500.00,8871.05,commercial,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100230,Incassocenter B.V.,b2b,Vordering betwist,14780.35,0.00,14780.35,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100231,Incassocenter B.V.,b2c,Vordering betwist,994.69,0.00,994.69,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100232,Incassocenter B.V.,b2b,Vordering betwist,1353.81,0.00,1353.81,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100233,Incassocenter B.V.,b2c,Vordering betwist,959.31,0.00,959.31,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100235,Incassocenter B.V.,b2b,Regeling treffen,901.45,0.00,901.45,commercial,Treffen van regeling,,
+IN100236,Incassocenter B.V.,b2b,Vordering betwist,1282.07,0.00,1282.07,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100237,Incassocenter B.V.,b2c,Vordering betwist,883.06,0.00,883.06,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100238,Incassocenter B.V.,b2c,14-dagen brief,2528.33,0.00,2528.33,statutory,14-dagenbrief,,
+IN100239,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,1970.64,0.00,1970.64,commercial,Voorstel dagvaarding,,
+IN100240,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,757.86,0.00,757.86,commercial,Voorstel dagvaarding,,
+IN100242,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,1130.99,0.00,1130.99,commercial,Voorstel dagvaarding,,
+IN100243,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,1449.58,0.00,1449.58,commercial,Voorstel dagvaarding,,
+IN100244,Incassocenter B.V.,b2c,Procederen?,2352.05,0.00,2352.05,statutory,Voorstel dagvaarding,,
+IN100245,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,6050.00,0.00,6050.00,commercial,Voorstel dagvaarding,,
+IN100247,INC Zakelijk B.V.,b2b,Vordering betwist,7537.33,0.00,7537.33,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100251,INC Zakelijk B.V.,b2b,Vordering betwist,1378.92,0.00,1378.92,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100253,INC Zakelijk B.V.,b2b,Vordering betwist,4491.50,0.00,4491.50,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100254,INC Zakelijk B.V.,b2b,Vordering betwist,1259.88,0.00,1259.88,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100256,INC Zakelijk B.V.,b2b,Sluiten,3167.34,3503.74,-336.40,commercial,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,
+IN100257,INC Zakelijk B.V.,b2b,Vordering betwist,996.56,0.00,996.56,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100258,INC Zakelijk B.V.,b2b,Vordering betwist,1513.45,0.00,1513.45,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100259,INC Zakelijk B.V.,b2b,Vordering betwist,4609.12,0.00,4609.12,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100264,INC Zakelijk B.V.,b2b,Vordering betwist,2273.77,0.00,2273.77,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100265,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,1464.22,0.00,1464.22,commercial,Voorstel dagvaarding,,
+IN100266,INC Zakelijk B.V.,b2b,Vordering betwist,3307.30,0.00,3307.30,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100267,INC Zakelijk B.V.,b2b,Eng 4e sommatie verstuurd,2499.97,0.00,2499.97,commercial,Voorstel dagvaarding,,
+IN100268,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,393.25,0.00,393.25,commercial,Voorstel dagvaarding,,
+IN100269,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,786.50,0.00,786.50,commercial,Voorstel dagvaarding,,
+IN100270,INC Zakelijk B.V.,b2b,Vordering betwist,2814.91,393.25,2421.66,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100271,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,647.52,0.00,647.52,commercial,Voorstel dagvaarding,,
+IN100274,COLLECT 1 B.V.,b2b,B2B 4e sommatie verstuurd,3389.02,0.00,3389.02,commercial,Voorstel dagvaarding,,
+IN100275,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100277,COLLECT 1 B.V.,b2b,Vordering betwist,1536.70,0.00,1536.70,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100282,INC Zakelijk B.V.,b2b,Procederen?,1939.45,0.00,1939.45,commercial,Voorstel dagvaarding,,
+IN100283,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,1748.05,0.00,1748.05,commercial,Voorstel dagvaarding,,
+IN100285,SYN Finance 1 B.V.,b2b,Vordering betwist,3415.00,0.00,3415.00,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100290,COLLECT 1 B.V.,b2b,Vordering betwist,3084.98,0.00,3084.98,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100291,COLLECT 1 B.V.,b2b,Regeling treffen,6050.00,0.00,6050.00,commercial,Treffen van regeling,,
+IN100293,SYN Finance 1 B.V.,b2b,Eng 4e sommatie verstuurd,1332.75,0.00,1332.75,commercial,Voorstel dagvaarding,,
+IN100295,INC Zakelijk B.V.,b2b,Eng 4e sommatie verstuurd,10512.58,0.00,10512.58,commercial,Voorstel dagvaarding,,
+IN100296,COLLECT 1 B.V.,b2b,Bijhouden regelingen,1536.70,626.96,909.74,commercial,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100297,INC Zakelijk B.V.,b2b,Vordering betwist,3320.64,0.00,3320.64,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100298,SYN Finance 1 B.V.,b2c,Eng 1e sommatie verstuurd,10000.00,0.00,10000.00,statutory,Tweede sommatie,,
+IN100301,SYN Finance 1 B.V.,b2b,Vordering betwist,3559.42,0.00,3559.42,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100304,SYN Finance 1 B.V.,b2b,Eng 4e sommatie verstuurd,998.63,0.00,998.63,commercial,Voorstel dagvaarding,,
+IN100305,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,1622.26,0.00,1622.26,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100306,SYN Finance 1 B.V.,b2b,B2B 4e sommatie verstuurd,2707.50,0.00,2707.50,commercial,Voorstel dagvaarding,,
+IN100307,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,605.50,0.00,605.50,commercial,Voorstel dagvaarding,,
+IN100308,Incassocenter B.V.,b2c,Procederen?,2666.55,0.00,2666.55,statutory,Voorstel dagvaarding,,
+IN100309,Incassocenter B.V.,b2c,Regeling treffen,1859.70,0.00,1859.70,statutory,Treffen van regeling,,
+IN100312,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,430.64,0.00,430.64,commercial,Voorstel dagvaarding,,
+IN100313,Incassocenter B.V.,b2c,Bijhouden regelingen,1025.39,0.00,1025.39,statutory,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100314,Incassocenter B.V.,b2c,14-dagen brief,3600.13,0.00,3600.13,statutory,14-dagenbrief,,
+IN100317,Incassocenter B.V.,b2c,B2C 1e sommatie verstuurd,1497.71,0.00,1497.71,statutory,Tweede sommatie,,
+IN100318,Incassocenter B.V.,b2c,14-dagen brief,2965.00,0.00,2965.00,statutory,14-dagenbrief,,
+IN100319,Incassocenter B.V.,b2c,14-dagen brief,804.49,0.00,804.49,statutory,14-dagenbrief,,
+IN100323,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,732.21,0.00,732.21,commercial,Voorstel dagvaarding,,
+IN100324,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,682.20,0.00,682.20,commercial,Voorstel dagvaarding,,
+IN100325,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,868.09,0.00,868.09,commercial,Voorstel dagvaarding,,
+IN100327,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,724.78,0.00,724.78,commercial,Voorstel dagvaarding,,
+IN100328,Incassocenter B.V.,b2c,Vordering betwist,645.78,0.00,645.78,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100329,Incassocenter B.V.,b2b,Regeling treffen,3645.95,0.00,3645.95,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100330,CM Zakelijk B.V.,b2b,Regeling treffen,4843.91,3754.01,1089.90,commercial,Treffen van regeling,,
+IN100331,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,650.70,0.00,650.70,commercial,Voorstel dagvaarding,,
+IN100332,Incassocenter B.V.,b2b,Vordering betwist,737.25,0.00,737.25,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100334,Incassocenter B.V.,b2b,Bijhouden regelingen,605.00,888.88,-283.88,commercial,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,creditfactuur-rente
+IN100335,Incassocenter B.V.,b2b,Procederen?,964.40,0.00,964.40,commercial,Voorstel dagvaarding,,
+IN100336,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,666.47,0.00,666.47,commercial,Voorstel dagvaarding,,
+IN100337,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,574.75,0.00,574.75,commercial,Voorstel dagvaarding,,
+IN100339,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,510.21,0.00,510.21,commercial,Voorstel dagvaarding,,
+IN100340,Incassocenter B.V.,b2c,Procederen?,504.87,0.00,504.87,statutory,Voorstel dagvaarding,,
+IN100341,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,482.79,0.00,482.79,commercial,Voorstel dagvaarding,,
+IN100342,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,475.21,0.00,475.21,commercial,Voorstel dagvaarding,,
+IN100343,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,474.99,0.00,474.99,commercial,Voorstel dagvaarding,,
+IN100345,Incassocenter B.V.,b2c,Bijhouden regelingen,2603.01,150.00,2453.01,statutory,Bijhouden regeling,actieve betalingsregeling,
+IN100347,Incassocenter B.V.,b2b,Vordering betwist,5403.42,0.00,5403.42,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100348,Incassocenter B.V.,b2c,14-dagen brief,1258.28,0.00,1258.28,statutory,14-dagenbrief,,
+IN100349,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,725.85,0.00,725.85,commercial,Voorstel dagvaarding,,
+IN100350,Incassocenter B.V.,b2c,Bijhouden regelingen,1433.54,1381.50,52.04,statutory,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100351,Incassocenter B.V.,b2b,Vordering betwist,587.19,0.00,587.19,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100352,Incassocenter B.V.,b2b,B2C 1e sommatie verstuurd,423.50,0.00,423.50,commercial,Tweede sommatie,,
+IN100354,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,312.82,0.00,312.82,commercial,Voorstel dagvaarding,,
+IN100355,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,210.06,0.00,210.06,commercial,Voorstel dagvaarding,,
+IN100358,INC Zakelijk B.V.,b2b,Vordering betwist,144633.88,0.00,144633.88,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100359,INC Zakelijk B.V.,b2b,Eng 4e sommatie verstuurd,6344.88,0.00,6344.88,commercial,Voorstel dagvaarding,,
+IN100360,INC Zakelijk B.V.,b2b,Procederen?,2958.38,0.00,2958.38,commercial,Voorstel dagvaarding,,
+IN100362,INC Zakelijk B.V.,b2b,Vordering betwist,1473.99,0.00,1473.99,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100363,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,569.61,0.00,569.61,commercial,Voorstel dagvaarding,,
+IN100371,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,921.10,0.00,921.10,commercial,Voorstel dagvaarding,,
+IN100372,Incassocenter B.V.,b2c,Vordering betwist,838.95,0.00,838.95,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100373,Incassocenter B.V.,b2c,14-dagen brief,480.24,0.00,480.24,statutory,14-dagenbrief,,
+IN100376,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,454.96,0.00,454.96,commercial,Voorstel dagvaarding,,
+IN100379,Incassocenter B.V.,b2c,14-dagen brief,423.68,0.00,423.68,statutory,14-dagenbrief,,
+IN100381,Incassocenter B.V.,b2b,Procederen?,524.08,0.00,524.08,commercial,Voorstel dagvaarding,,
+IN100382,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,399.56,0.00,399.56,commercial,Voorstel dagvaarding,,
+IN100383,Incassocenter B.V.,b2b,Vordering betwist,747.48,0.00,747.48,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100384,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,334.90,0.00,334.90,commercial,Voorstel dagvaarding,,
+IN100385,Incassocenter B.V.,b2b,Vordering betwist,324.28,0.00,324.28,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100387,Incassocenter B.V.,b2b,14-dagen brief,423.22,0.00,423.22,commercial,14-dagenbrief,,
+IN100388,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,289.43,0.00,289.43,commercial,Voorstel dagvaarding,,
+IN100389,Incassocenter B.V.,b2c,14-dagen brief,271.10,0.00,271.10,statutory,14-dagenbrief,,
+IN100392,Incassocenter B.V.,b2c,14-dagen brief,243.43,0.00,243.43,statutory,14-dagenbrief,,creditfactuur-rente
+IN100396,Incassocenter B.V.,b2b,Vordering betwist,210.31,0.00,210.31,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100397,Incassocenter B.V.,b2c,14-dagen brief,209.89,0.00,209.89,statutory,14-dagenbrief,,
+IN100398,Incassocenter B.V.,b2c,14-dagen brief,186.32,0.00,186.32,statutory,14-dagenbrief,,
+IN100399,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,182.71,0.00,182.71,commercial,Voorstel dagvaarding,,
+IN100401,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,167.51,0.00,167.51,commercial,Voorstel dagvaarding,,
+IN100402,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,4477.00,0.00,4477.00,commercial,Voorstel dagvaarding,,
+IN100408,Incassocenter B.V.,b2b,Bijhouden regelingen,900.30,0.00,900.30,commercial,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100409,INC Zakelijk B.V.,b2b,Vordering betwist,0.00,0.00,0.00,commercial,UITZOEKEN,geen vordering-regels in Luxis,verweer-vinkje zetten
+IN100410,LegalWork B.V.,b2b,Procederen?,18311.84,0.00,18311.84,commercial,Voorstel dagvaarding,,
+IN100414,SYN Finance 1 B.V.,b2b,Eng 4e sommatie verstuurd,305.00,0.00,305.00,commercial,Voorstel dagvaarding,,
+IN100415,SYN Finance 1 B.V.,b2b,Eng 4e sommatie verstuurd,1635.85,325.00,1310.85,commercial,Voorstel dagvaarding,,
+IN100416,SYN Finance 1 B.V.,b2b,Eng 4e sommatie verstuurd,5000.00,0.00,5000.00,commercial,Voorstel dagvaarding,,
+IN100421,Incassocenter B.V.,b2b,B2C 1e sommatie verstuurd,433.50,0.00,433.50,commercial,Tweede sommatie,,
+IN100422,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,423.50,0.00,423.50,commercial,Voorstel dagvaarding,,
+IN100423,Incassocenter B.V.,b2b,Vordering betwist,605.00,0.00,605.00,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100427,Incassocenter B.V.,b2c,14-dagen brief,91.13,0.00,91.13,statutory,14-dagenbrief,,
+IN100430,Incassocenter B.V.,b2b,Bijhouden regelingen,605.44,0.00,605.44,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100432,COLLECT 1 B.V.,b2b,Regeling treffen,119.79,0.00,119.79,commercial,Treffen van regeling,,
+IN100433,Incassocenter B.V.,b2b,Vordering betwist,1346.54,0.00,1346.54,commercial,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100435,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,1600.93,0.00,1600.93,commercial,Voorstel dagvaarding,,
+IN100438,Incassocenter B.V.,b2b,Bijhouden regelingen,393.25,0.00,393.25,commercial,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100439,COLLECT 1 B.V.,b2b,Eng 4e sommatie verstuurd,1500.00,0.00,1500.00,commercial,Voorstel dagvaarding,,
+IN100441,Incassocenter B.V.,b2b,Vordering betwist,858.32,0.00,858.32,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100442,COLLECT 1 B.V.,b2b,Vordering betwist,1952.13,0.00,1952.13,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100445,Incassocenter B.V.,b2b,Vordering betwist,833.19,0.00,833.19,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100447,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,1284.95,0.00,1284.95,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100448,COLLECT 1 B.V.,b2b,Vordering betwist,1779.49,0.00,1779.49,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100449,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,1544.07,0.00,1544.07,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100450,Incassocenter B.V.,b2b,Vordering betwist,2656.01,0.00,2656.01,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100451,Incassocenter B.V.,b2b,Vordering betwist,4961.24,0.00,4961.24,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100454,Incassocenter B.V.,b2b,Bijhouden regelingen,1560.23,1494.30,65.93,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100456,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,393.25,452.24,-58.99,commercial,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,
+IN100457,COLLECT 1 B.V.,b2b,Bijhouden regelingen,393.25,393.25,0.00,commercial,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,
+IN100458,LegalWork B.V.,b2b,Vordering betwist,8978.21,0.00,8978.21,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100459,COLLECT 1 B.V.,b2b,Regeling treffen,707.85,0.00,707.85,commercial,Treffen van regeling,,creditfactuur-rente
+IN100460,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,211.75,0.00,211.75,commercial,Voorstel dagvaarding,,
+IN100462,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,1082.95,0.00,1082.95,commercial,Voorstel dagvaarding,,
+IN100463,COLLECT 1 B.V.,b2b,B2C 1e sommatie verstuurd,1536.70,0.00,1536.70,commercial,Tweede sommatie,,
+IN100465,Incassocenter B.V.,b2b,Vordering betwist,491.88,0.00,491.88,commercial,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100467,Incassocenter B.V.,b2c,14-dagen brief,935.99,0.00,935.99,statutory,14-dagenbrief,,
+IN100468,Incassocenter B.V.,b2b,Procederen?,285.08,0.00,285.08,commercial,Voorstel dagvaarding,,
+IN100469,COLLECT 1 B.V.,b2b,Bijhouden regelingen,2722.50,992.81,1729.69,commercial,BEOORDELEN: regeling gestopt/afgelopen,,creditfactuur-rente
+IN100474,Incassocenter B.V.,b2b,Vordering betwist,3174.28,0.00,3174.28,commercial,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100475,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,1756.74,0.00,1756.74,commercial,Voorstel dagvaarding,,
+IN100476,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,2530.64,0.00,2530.64,commercial,Voorstel dagvaarding,,
+IN100478,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,2163.83,0.00,2163.83,commercial,Voorstel dagvaarding,,
+IN100479,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,1197.90,0.00,1197.90,commercial,Voorstel dagvaarding,,
+IN100480,COLLECT 1 B.V.,b2b,Factureren,2246.49,0.00,2246.49,commercial,AFRONDEN: factureren + sluiten,,
+IN100482,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,169.40,0.00,169.40,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100483,LegalWork B.V.,b2b,Vordering betwist,24515.28,0.00,24515.28,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100484,COLLECT 1 B.V.,b2b,B2C 1e sommatie verstuurd,5967.82,0.00,5967.82,commercial,Tweede sommatie,,
+IN100485,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,1567.98,0.00,1567.98,commercial,14-dagenbrief,,
+IN100486,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,13942.83,0.00,13942.83,commercial,Derde sommatie,,
+IN100488,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,1197.90,0.00,1197.90,commercial,Voorstel dagvaarding,,
+IN100489,COLLECT 1 B.V.,b2b,Vordering betwist,428.68,211.75,216.93,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100490,COLLECT 1 B.V.,b2b,Bijhouden regelingen,1408.95,0.00,1408.95,commercial,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100493,Incassocenter B.V.,b2c,14-dagen brief,954.34,0.00,954.34,statutory,14-dagenbrief,,
+IN100494,Incassocenter B.V.,b2b,Bijhouden regelingen,2320.52,0.00,2320.52,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100495,Incassocenter B.V.,b2b,B2B 4e sommatie verstuurd,4431.64,0.00,4431.64,commercial,Voorstel dagvaarding,,
+IN100497,Incassocenter B.V.,b2b,Bijhouden regelingen,3290.16,3192.00,98.16,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100498,Incassocenter B.V.,b2c,Vordering betwist,2505.27,0.00,2505.27,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100499,Incassocenter B.V.,b2c,Vordering betwist,3150.84,0.00,3150.84,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100500,Incassocenter B.V.,b2c,Bijhouden regelingen,1437.51,528.56,908.95,statutory,BEOORDELEN: regeling gestopt/afgelopen,,
+IN100501,Incassocenter B.V.,b2b,B2C 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100502,INC Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,19996.34,0.00,19996.34,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100504,LegalWork B.V.,b2b,B2B 4e sommatie verstuurd,18180.25,0.00,18180.25,commercial,Voorstel dagvaarding,,
+IN100505,COLLECT 1 B.V.,b2b,Bijhouden regelingen,902.12,267.80,634.32,commercial,Bijhouden regeling,actieve betalingsregeling,creditfactuur-rente
+IN100507,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,885.12,0.00,885.12,commercial,Voorstel dagvaarding,,
+IN100510,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,2935.50,0.00,2935.50,commercial,Voorstel dagvaarding,,
+IN100511,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,1081.62,0.00,1081.62,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100512,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,2587.44,0.00,2587.44,commercial,Voorstel dagvaarding,,
+IN100513,COLLECT 1 B.V.,b2b,B2B 3e sommatie verstuurd,417.41,0.00,417.41,commercial,Sommatie laatste mogelijkheid,,
+IN100515,COLLECT 1 B.V.,b2b,Regeling treffen,3025.00,0.00,3025.00,commercial,Treffen van regeling,,
+IN100516,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100518,COLLECT 1 B.V.,b2b,Regeling treffen,1082.95,0.00,1082.95,commercial,Treffen van regeling,,
+IN100520,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100521,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,65904.96,0.00,65904.96,contractual 2.00%,Voorstel dagvaarding,,proefzaak (al open)
+IN100523,COLLECT 1 B.V.,b2b,Vordering betwist,3025.00,0.00,3025.00,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100524,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,1620.01,0.00,1620.01,commercial,Voorstel dagvaarding,,
+IN100525,COLLECT 1 B.V.,b2b,Vordering betwist,2543.69,360.00,2183.69,commercial,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100527,LegalWork B.V.,b2b,B2B 4e sommatie verstuurd,2952.82,0.00,2952.82,commercial,Voorstel dagvaarding,,
+IN100528,CM Zakelijk B.V.,b2b,Vordering betwist,2305.05,0.00,2305.05,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100529,CM Zakelijk B.V.,b2b,Vordering betwist,916.90,0.00,916.90,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100530,CM Zakelijk B.V.,b2b,B2B 2e sommatie verstuurd,1215.92,0.00,1215.92,commercial,Derde sommatie,,
+IN100531,CM Zakelijk B.V.,b2b,Vordering betwist,3491.22,0.00,3491.22,commercial,Verweer beantwoorden,,creditfactuur-rente; verweer-vinkje zetten
+IN100532,CM Zakelijk B.V.,b2b,B2B 4e sommatie verstuurd,768.35,0.00,768.35,commercial,Voorstel dagvaarding,,
+IN100533,CM Zakelijk B.V.,b2b,Vordering betwist,540.62,0.00,540.62,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100535,COLLECT 1 B.V.,b2b,Regeling treffen,2341.35,0.00,2341.35,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100536,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,1529.14,0.00,1529.14,commercial,Derde sommatie,,
+IN100539,COLLECT 1 B.V.,b2b,B2C 4e sommatie verstuurd,1565.00,0.00,1565.00,commercial,Voorstel dagvaarding,,creditfactuur-rente
+IN100540,Verfijnd Bouw & Onderhoudsbedrijf B.V.,b2c,Vordering betwist,34969.00,6069.00,28900.00,statutory,Verweer beantwoorden,,verweer-vinkje zetten
+IN100541,Verfijnd Bouw & Onderhoudsbedrijf B.V.,b2b,Vordering betwist,2487.84,0.00,2487.84,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100542,COLLECT 1 B.V.,b2b,B2C 1e sommatie verstuurd,1202.73,0.00,1202.73,commercial,Tweede sommatie,,
+IN100543,Incassocenter B.V.,b2b,B2C 3e sommatie verstuurd,338.50,0.00,338.50,commercial,Bijhouden regeling,actieve betalingsregeling,
+IN100545,Incassocenter B.V.,b2b,B2C 3e sommatie verstuurd,1014.49,0.00,1014.49,commercial,Sommatie laatste mogelijkheid,,
+IN100547,LegalWork B.V.,b2b,Factureren,937.75,1133.43,-195.68,commercial,NIET HEROPENEN,feitelijk voldaan — afsluiten bevestigen,
+IN100550,COLLECT 1 B.V.,b2b,B2C 1e sommatie verstuurd,881.85,0.00,881.85,commercial,Tweede sommatie,,creditfactuur-rente
+IN100551,COLLECT 1 B.V.,b2b,B2C 3e sommatie verstuurd,393.25,0.00,393.25,commercial,Sommatie laatste mogelijkheid,,
+IN100553,COLLECT 1 B.V.,b2b,Bijhouden regelingen,812.36,356.00,456.36,commercial,BEOORDELEN: regeling gestopt/afgelopen,,creditfactuur-rente
+IN100554,COLLECT 1 B.V.,b2b,B2C 3e sommatie verstuurd,393.25,0.00,393.25,commercial,Sommatie laatste mogelijkheid,,
+IN100555,De heer D. Koppen h.o.d.n. D-Break,b2b,Vordering betwist,0.00,0.00,0.00,commercial,NIET HEROPENEN,D-Break: blijft dicht (besluit Arsalan),verweer-vinkje zetten
+IN100556,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,1564.08,0.00,1564.08,commercial,Derde sommatie,,
+IN100557,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,1905.74,0.00,1905.74,commercial,Derde sommatie,,
+IN100558,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,2092.08,0.00,2092.08,commercial,Derde sommatie,,creditfactuur-rente
+IN100560,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,211.75,0.00,211.75,commercial,Derde sommatie,,
+IN100561,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,751.41,0.00,751.41,commercial,Derde sommatie,,
+IN100562,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,6050.00,0.00,6050.00,commercial,Derde sommatie,,
+IN100563,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,1877.22,0.00,1877.22,commercial,Derde sommatie,,
+IN100564,COLLECT 1 B.V.,b2b,Vordering betwist,2477.55,0.00,2477.55,commercial,Verweer beantwoorden,,verweer-vinkje zetten
+IN100566,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,638.88,0.00,638.88,commercial,Derde sommatie,,
+IN100567,COLLECT 1 B.V.,b2b,Regeling treffen,600.16,0.00,600.16,commercial,Treffen van regeling,,
+IN100568,COLLECT 1 B.V.,b2b,Factureren,540.69,0.00,540.69,commercial,AFRONDEN: factureren + sluiten,,
+IN100569,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,2160.15,0.00,2160.15,commercial,Derde sommatie,,
+IN100570,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,114.60,0.00,114.60,commercial,Derde sommatie,,
+IN100571,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,119.79,0.00,119.79,commercial,Derde sommatie,,
+IN100572,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,6050.00,0.00,6050.00,commercial,Derde sommatie,,
+IN100573,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,3025.00,0.00,3025.00,commercial,Derde sommatie,,
+IN100574,COLLECT 1 B.V.,b2b,B2C 1e sommatie verstuurd,951.06,0.00,951.06,commercial,Tweede sommatie,,
+IN100575,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,583.53,0.00,583.53,commercial,Derde sommatie,,
+IN100576,Incassocenter B.V.,b2b,B2B 2e sommatie verstuurd,211.75,0.00,211.75,commercial,Derde sommatie,,
+IN100577,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,393.25,0.00,393.25,commercial,Derde sommatie,,
+IN100578,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,2763.74,0.00,2763.74,commercial,Derde sommatie,,creditfactuur-rente
+IN100579,COLLECT 1 B.V.,b2b,B2C 1e sommatie verstuurd,2288.21,0.00,2288.21,commercial,Tweede sommatie,,
+IN100580,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,620.86,0.00,620.86,commercial,Derde sommatie,,
+IN100581,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,3025.00,0.00,3025.00,commercial,Derde sommatie,,
+IN100584,COLLECT 1 B.V.,b2b,B2C 2e sommatie verstuurd,1195.09,0.00,1195.09,commercial,Derde sommatie,,
+IN100585,Incassocenter B.V.,b2b,B2C 1e sommatie verstuurd,1154.40,0.00,1154.40,commercial,Tweede sommatie,,
+IN100586,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,19148.21,0.00,19148.21,commercial,14-dagenbrief,,
+IN100587,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,833.62,0.00,833.62,commercial,14-dagenbrief,,
+IN100588,INC Zakelijk B.V.,b2c,14-dagen brief,6363.29,0.00,6363.29,statutory,14-dagenbrief,,
+IN100589,INC Zakelijk B.V.,b2b,B2B Dossier gecontroleerd,2409.31,0.00,2409.31,commercial,Eerste sommatie,,
+IN100590,INC Zakelijk B.V.,b2b,B2B Dossier gecontroleerd,123.48,0.00,123.48,commercial,Eerste sommatie,,
+IN100591,INC Zakelijk B.V.,b2b,B2B Dossier gecontroleerd,142.79,0.00,142.79,commercial,Eerste sommatie,,creditfactuur-rente
+IN100592,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,20104.05,0.00,20104.05,commercial,Eerste sommatie,,
+IN100593,INC Zakelijk B.V.,b2b,B2B Dossier gecontroleerd,81.27,0.00,81.27,commercial,Eerste sommatie,,
+IN100594,COLLECT 1 B.V.,b2b,B2B Dossier gecontroleerd,929.03,0.00,929.03,commercial,Eerste sommatie,,
+IN100595,INC Zakelijk B.V.,b2b,B2B Dossier gecontroleerd,5514.74,0.00,5514.74,commercial,Eerste sommatie,,
+IN100596,INC Zakelijk B.V.,b2b,B2B Dossier gecontroleerd,15567.59,0.00,15567.59,commercial,Eerste sommatie,,creditfactuur-rente
+IN100597,INC Zakelijk B.V.,b2b,B2B Dossier gecontroleerd,1751.40,0.00,1751.40,commercial,Eerste sommatie,,
+IN100598,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,44609.73,0.00,44609.73,commercial,Eerste sommatie,,
+IN100599,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,12100.00,0.00,12100.00,commercial,Eerste sommatie,,
+IN100600,SYN Finance 1 B.V.,b2b,B2C Dossier gecontroleerd,211.75,0.00,211.75,commercial,14-dagenbrief,,
+IN100601,SYN Finance 1 B.V.,b2b,B2C Dossier gecontroleerd,211.75,0.00,211.75,commercial,14-dagenbrief,,
+IN100602,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,18934.11,0.00,18934.11,commercial,Eerste sommatie,,creditfactuur-rente
+IN100603,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,1160.64,0.00,1160.64,commercial,Eerste sommatie,,creditfactuur-rente
+IN100604,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,1082.95,0.00,1082.95,commercial,Eerste sommatie,,
+IN100605,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,1551.66,0.00,1551.66,commercial,Eerste sommatie,,
+IN100606,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,2337.89,0.00,2337.89,commercial,Eerste sommatie,,
+IN100607,LegalWork B.V.,b2b,B2B Dossier gecontroleerd,3219.84,0.00,3219.84,commercial,Eerste sommatie,,
+IN100608,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,3004.94,0.00,3004.94,commercial,14-dagenbrief,,
+IN100609,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,10248.75,0.00,10248.75,commercial,14-dagenbrief,,creditfactuur-rente
+IN100610,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,1106.47,0.00,1106.47,commercial,14-dagenbrief,,
+IN100611,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,1815.00,0.00,1815.00,commercial,14-dagenbrief,,
+IN100612,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,6731.84,0.00,6731.84,commercial,14-dagenbrief,,creditfactuur-rente
+IN100613,COLLECT 1 B.V.,b2b,B2C Dossier gecontroleerd,1585.95,0.00,1585.95,commercial,14-dagenbrief,,creditfactuur-rente

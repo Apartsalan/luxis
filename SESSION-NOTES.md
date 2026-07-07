@@ -1,9 +1,9 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 7 juli 2026 (S182, Opus-bouwsprint + Fable-review + backup-migratie). 4 livegang-taken LIVE: regeling-alarm (gemiste termijn → in-app melding), timeout-regels opgeschoond + deterministisch, opvolg-scan slaat hold/terminale stappen over, getrouwheids-poort op AI-concepten. Fable-review vond 2 gaten (partial-termijn alarmeerde niet; poortwachter kon stil worden) + 1 achterdeur (regeling-beëindiging via PATCH sloot termijnen niet) → alle gefixt. **Backup nu versleuteld in EU (Amsterdam)**, restore-test geslaagd. Details: S182-entry.
-**Vorige kop (S181-F):** 7 juli 2026 (Fable, read-only heropeningsaudit): werkvoorraad 372 zaken/€1,89M in recept-tabel, heropenen bewezen veilig. Details: S181-F-entry + `docs/sessions/RAPPORT-S181F-heropeningsaudit.md`.
-**Openstaand:** (1) **Backblaze US-bucket wissen ~10 juli** na 2 bewezen EU-runs (log 8+9 juli) + oude key/remote intrekken, wisbewijs hier. (2) Arsalan: 2 crypt-wachtwoorden in wachtwoordmanager (onvervangbaar). (3) Heropening werkvoorraad wacht op Lisanne's akkoord. (4) Livegang-mensenwerk (mail incasso@ M365, generale repetitie). (5) S183 = architectuur+beveiliging-audit op Fable (zie PROMPT-S183).
+**Laatst bijgewerkt:** 8 juli 2026 (S183, Fable, read-only architectuur+security-audit). Oordeel livegang: **JA, MITS** — 1 geldbevinding HOOG (pro-rata rekent fout bij creditfacturen, bewezen; 4 zaken in heropeningslijst), 2 beveiligings-vangnetgaten MIDDEN (learned_answers zonder RLS op prod; SET LOCAL vervalt na tussentijdse commit → 31 plekken zonder RLS-vangnet, live bewezen). Rapport: `docs/research/audit-S183-architectuur-security.md`. Details: S183-entry.
+**Vorige kop (S182):** 7 juli 2026 (Opus-bouwsprint + Fable-review + backup-migratie): 4 livegang-taken LIVE, backup versleuteld in EU, restore-test geslaagd. Details: S182-entry.
+**Openstaand:** (1) **Backblaze US-bucket wissen ~10 juli** na 2 bewezen EU-runs (log 8+9 juli) + oude key/remote intrekken, wisbewijs hier (zit ook in PROMPT-S184 als check). (2) Arsalan: 2 crypt-wachtwoorden in wachtwoordmanager (onvervangbaar). (3) Heropening werkvoorraad wacht op Lisanne's akkoord. (4) Livegang-mensenwerk (mail incasso@ M365, generale repetitie). (5) S184 = Opus fix-sprint met auditrapport als werkorder (zie PROMPT-S184).
 **Vorige kop (S179):** fase 1b LIVE: 56 betalingen + 13 regelingen, Team-tab read-only, IN100592 → LegalWork B.V. Details: S179-entry.
 **AV-correctie (belangrijk):** eerdere claim "Collect 1/Incassocenter-AV bevat geen rentepercentage" was FOUT. Alle 3 opdrachtgever-AV's bevatten artikel 13.3 = 2% per maand vanaf de vervaldag (geverifieerd tegen de prod-PDF's). Zie `project_luxis_av_rente` (memory).
 **Fable-review S177 = GEDAAN, 4 bevindingen gefixt + live:** (1) inline-filter miste echte docs ('Betwisting overeenkomst.pdf') → filter op extensie, delta 3 geladen; (2) 945 paperclips zonder bijlage → vlag gelijkgetrokken (2.422=2.422); (3) onleesbare AV-PDF wiste gelezen waarde → raist nu; (4) AI-intake sloeg ALLE rente-erving over (gat van vóór S177) → gedeelde `resolve_client_interest_defaults` + intake-test. 47 tests groen.
@@ -17,6 +17,49 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 183 (8 juli, Fable — architectuur+security-audit, 100% read-only)
+
+**Vraag Arsalan:** "vibe-coded software zou onstabiel/onveilig/niet future-proof/verspillend
+zijn — klopt dat hier?" Antwoord: nee, grotendeels niet — maar de audit vond wél 4 nieuwe
+bevindingen. Volledig rapport (met bewijs, faalscenario's en werkorder):
+**`docs/research/audit-S183-architectuur-security.md`**. Geen enkele schrijfactie op prod.
+
+### Samenvatting (bevindingen)
+- **S183-3 [HOOG, geld]** `_build_claim_reductions` (interest.py) verdeelt betalingen fout
+  bij creditfacturen: negatief aandeel telt mee als "verdeeld" maar wordt niet toegepast →
+  laatste vordering krijgt te veel → rente te laag + creditvordering rent onverminderd door.
+  Bewezen door de echte functie uit te voeren (+1000/−200/+200, betaling 500 → 600 afgeboekt).
+  Prod: 68 negatieve claims (−€22.870) op 45 zaken; 11 zaken met de raak-combinatie; **4 in
+  de heropeningslijst** (IN100334/IN100469/IN100505/IN100553).
+- **S183-1 [MIDDEN, security]** `learned_answers` (S168) is de enige van 48 tenant-tabellen
+  zónder RLS op prod (bewezen met pg_class-query). Oorzaak: RLS-migratie was eenmalige sweep;
+  de RLS-test zet policies zelf aan en ziet drift dus nooit. App-laag filtert overal netjes →
+  geen actueel lek (één tenant), wel structureel: herhaalt zich bij elke nieuwe tabel.
+- **S183-2 [MIDDEN, security]** `SET LOCAL ROLE`/tenant vervalt bij élke tussentijdse
+  `db.commit()` — rest van het verzoek draait als superuser zonder RLS (live bewezen op
+  prod-DB; 31 plekken gemeten waar handlers na commit nog databasewerk doen). Maakt de
+  bekende superuser-residual concreet; handmatige filtering compenseert vandaag overal.
+- **S183-4 [LAAG, geld]** Betaling op/vóór verzuimdatum wordt in de renteberekening
+  weggefilterd (interest.py:276) → rente iets te hoog. Prod: 18 betalingen (€9.486), alle
+  op afgesloten zaken buiten de heropeningslijst.
+- **[LAAG, bekend]** `--no-cache` staat nog in deploy.yml (S162-residual).
+
+### Aantoonbaar op orde (niet meer auditen)
+RLS-beleid zelf (46/48 FORCE+policy), auth/rate-limits/OAuth-state (HMAC+nonce)/uploads
+(Caddy 55MB + per-endpoint caps)/secrets/VPS==HEAD; S172-kernbevinding "3 AI-services/3
+geheugens" ECHT opgeruimd (alle 3 paden op gedeelde `knowledge_context`); scheduler = 1
+proces + foutisolatie + advisory-lock; rekenkernen wet-conform met 65+ tests; `total_paid`
+== som betalingen op 0 zaken afwijkend; geen float op geldpaden.
+
+### Gewijzigde bestanden
+- `docs/research/audit-S183-architectuur-security.md` (nieuw — rapport + werkorder)
+- `docs/sessions/PROMPT-S184.md` (nieuw), SESSION-NOTES.md, LUXIS-ROADMAP.md
+
+### Volgende sessie
+S184 (Opus): fix-sprint met de werkorder uit het rapport — pro-rata-fix eerst (rode test),
+dan RLS-gat + drift-guard-test, dan rolwissel-na-commit, dan de 2 kleine punten. Plus de
+Backblaze-US-wis-check (~10 juli). Zie `docs/sessions/PROMPT-S184.md`.
 
 ## Sessie 182 (7 juli, Opus — bouwsprint livegang)
 

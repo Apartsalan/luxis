@@ -51,8 +51,18 @@ inactieve stap; eerste-wint=toeval) → opruimen vóór auto-draft-vlag ooit aan
 11 regeling-zaken met gestopte regeling; (8) verweer-mail switcht stap automatisch
 (by design); (9) IN100409 leeg dossier.
 
-**Deliverables:** rapport + recept-CSV + `LISANNE-A4-heropening.md` (3 vragen, klaar om
-te sturen) + PROMPT-S181 bijgewerkt. Geen fixes gebouwd (scope: onderzoek).
+**Deliverables:** rapport + recept-CSV + `LISANNE-A4-heropening.md` (klaar om te sturen)
++ PROMPT-S181 bijgewerkt. Geen fixes gebouwd (scope: onderzoek).
+
+**S181-F deel 2 (zelfde dag): 7 uitvoeringsplannen in `docs/plans/`** (README = rangorde),
+elk zo geschreven dat Opus ze zonder vragen kan draaien, met geverifieerde stap-ID's,
+user-ID's, SQL en valkuilen: heropening-werkvoorraad (na akkoord), regeling-alarm
+(NIEUW GAT: overdue termijnen zijn nergens zichtbaar — geen notificatie/dashboard;
+tijdgevoelig, eerste termijn 9 juli), timeout-regels-opschonen, 14-dagenbrief-sjabloon,
+followup-hold-steps, generale-repetitie-geldstromen (draaiboek), automatisering-aanzetten
+(poortwachters). Extra geverifieerd: e-mailsync gezond (ARSALAN-TODO §2 afgevinkt met
+bewijs), geen TODO/FIXME-schulden in code, payment-matching koppelt betalingen NIET aan
+regeling-termijnen (bewuste edge case in plan 2).
 
 ## Sessie 180 (6 juli, Fable — boekhoud-matching: onderzoek → veilig → gebouwd → live)
 

@@ -12,8 +12,8 @@ Bijgewerkt: 10 juni 2026 (na sessie 160).
 - **Regio:** Sentry **EU (Duitsland)** + `send_default_pii=False` → AVG-veilig (geen PII naar Sentry).
 - Serverfouten in productie worden nu automatisch gemeld in het Sentry-dashboard → Issues.
 
-### 2. Outlook opnieuw koppelen
-- [ ] In Luxis → **Instellingen → E-mail → Outlook opnieuw verbinden**.
+### 2. Outlook opnieuw koppelen ✅ KLAAR (vastgesteld 7 juli 2026, S181-F)
+- [x] Sync draait aantoonbaar: 2 accounts, laatste mail 7 juli 13:37 binnengekomen, auto-sync elke 5 min zonder fouten in de logs.
 - **Waarom:** in sessie 159 is de versleutelingssleutel (`TOKEN_ENCRYPTION_KEY`) gewijzigd. Daardoor zijn de oude opgeslagen Outlook-tokens onleesbaar → e-mailsync werkt pas weer ná opnieuw koppelen.
 - **Hoe:** login op **luxis.kestinglegal.nl** (met `seidony@kestinglegal.nl`) → Instellingen → E-mail → opnieuw inloggen bij Microsoft.
 

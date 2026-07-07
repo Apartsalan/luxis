@@ -10,6 +10,11 @@ cd Documents\luxis && claude --dangerously-skip-permissions
 > auto-draft-vlag ooit aangaat: dubbele timeout-regel fixen (C3) en 14-dagenbrief-
 > sjabloon instellen (C5). Creditfactuur-rente (C1) bleek na hertoetsing géén echte
 > fout (werkt als verrekening; restfout €59). Adviesgroep 1: LegalWork B.V. (15 zaken).
+>
+> **Er liggen 7 kant-en-klare uitvoeringsplannen in `docs/plans/` (README = rangorde).**
+> Eerst doen (kan zónder Lisanne): PLAN-regeling-alarm (termijn 9 juli!), daarna
+> PLAN-timeout-regels-opschonen + PLAN-followup-hold-steps. De heropening zelf =
+> PLAN-heropening-werkvoorraad, pas na het A4-akkoord.
 
 ## Model + rol
 **Opus** (data-actie, geen nieuwbouw). De betalingen zijn sinds S180 COMPLEET (255 op de

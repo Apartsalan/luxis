@@ -1,7 +1,8 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 8 juli 2026 (S183, Fable, read-only architectuur+security-audit). Oordeel livegang: **JA, MITS** — 1 geldbevinding HOOG (pro-rata rekent fout bij creditfacturen, bewezen; 4 zaken in heropeningslijst), 2 beveiligings-vangnetgaten MIDDEN (learned_answers zonder RLS op prod; SET LOCAL vervalt na tussentijdse commit → 31 plekken zonder RLS-vangnet, live bewezen). Rapport: `docs/research/audit-S183-architectuur-security.md`. Details: S183-entry.
+**Laatst bijgewerkt:** 8 juli 2026 (S184, Opus fix-sprint + Fable-review). Alle 6 audit-werkorderpunten GEBOUWD op branch `s184-fixes` (**NIET gedeployed** — wacht op deploy-go Arsalan; branch voorkomt auto-deploy). Fable-review vond 1 must-fix (verzuim-clamp zeroede credit-rente) → direct gefixt. Volledige suite 1147 groen, daarna 152 rente/betaling-tests groen na review-fix. Details + deploy-stappen: `docs/sessions/S184-MORGEN-CHECKLIST.md` + S184-entry.
+**Vorige kop (S183):** 8 juli 2026 (Fable, read-only architectuur+security-audit). Oordeel livegang: **JA, MITS** — 1 geldbevinding HOOG (pro-rata rekent fout bij creditfacturen, bewezen; 4 zaken in heropeningslijst), 2 beveiligings-vangnetgaten MIDDEN (learned_answers zonder RLS op prod; SET LOCAL vervalt na tussentijdse commit → 31 plekken zonder RLS-vangnet, live bewezen). Rapport: `docs/research/audit-S183-architectuur-security.md`. Details: S183-entry.
 **Vorige kop (S182):** 7 juli 2026 (Opus-bouwsprint + Fable-review + backup-migratie): 4 livegang-taken LIVE, backup versleuteld in EU, restore-test geslaagd. Details: S182-entry.
 **Openstaand:** (1) **Backblaze US-bucket wissen ~10 juli** na 2 bewezen EU-runs (log 8+9 juli) + oude key/remote intrekken, wisbewijs hier (zit ook in PROMPT-S184 als check). (2) Arsalan: 2 crypt-wachtwoorden in wachtwoordmanager (onvervangbaar). (3) **Akkoord Lisanne heropening is BINNEN (8 juli):** 7 restant-dossiers sluiten, IN100166 blijft open (innen), starten met LegalWork; terugstort-vraag IN100334 (±€215) nog onbeantwoord — antwoordblok in `docs/sessions/LISANNE-A4-heropening.md`. Volgorde: eerst S184-fixes, dan heropening (S185). (4) Livegang-mensenwerk (mail incasso@ M365, generale repetitie). (5) S184 = Opus fix-sprint met auditrapport als werkorder + security-regels verankeren (zie PROMPT-S184).
 **Vorige kop (S179):** fase 1b LIVE: 56 betalingen + 13 regelingen, Team-tab read-only, IN100592 → LegalWork B.V. Details: S179-entry.
@@ -17,6 +18,39 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 184 (8 juli, Opus — fix-sprint audit S183 + Fable-review)
+
+Nachtsessie op verzoek Arsalan: bouw de hele S184-werkorder, laat Fable alles nachecken,
+Arsalan ziet het 's ochtends. **Alles op branch `s184-fixes`, NIET gedeployed** (push naar
+main = auto-deploy; branch gekozen zodat de onomkeerbare prod-stap bij Arsalan blijft).
+Deploy-stappen + open punten: `docs/sessions/S184-MORGEN-CHECKLIST.md`.
+
+**Gebouwd (6 punten):**
+- S183-3 [HOOG] `_build_claim_reductions`: betalingen alleen over POSITIEVE vorderingen →
+  creditfacturen niet meer dubbelgeteld (`sum(reducties)==betaling`).
+- S183-4 [LAAG] betaling op/vóór verzuimdatum verlaagt nu de start-hoofdsom (`pre_start`).
+- S183-1 nieuwe migratie `s184_rls_learned_answers` (her-past `apply_rls`, dicht
+  learned_answers) + `find_unprotected_tenant_tables` + opstartcontrole in `main.lifespan`
+  (**faalt dicht in productie** bij een RLS-gat) + drift-guard-test.
+- S183-2 `after_begin`-event in `middleware/tenant.py`: her-past tenant + rol na elke
+  commit binnen een request (tenant op `session.info`). Structureel, i.p.v. 31 plekken.
+- Deploy: `--no-cache` uit `deploy.yml`. Security-regels + rollen in `docs/security/rollen.md`.
+
+**Fable-review (verse subagent op Fable-model, adversarieel) → 1 must-fix:**
+De verzuim-clamp `max(0, principal - pre_start)` draaide óók bij `pre_start==0` en zette zo
+een creditvordering (negatieve principal) op 0 → verloor zijn verrekenende negatieve rente
+→ debiteur te veel rente op elke credit-zaak. **Zelf gereproduceerd** (credit-rente werd 0
+i.p.v. −€12,00), **gefixt** (clamp alleen bij echte pre-start-betaling) + rode test. Fixes
+1/3/4 keurde Fable goed (geen lek tussen requests, scheduler/migraties niet geraakt,
+migratievolgorde vóór opstartcontrole klopt via Dockerfile-CMD).
+
+**Teststatus:** volledige suite 1147 groen (vóór review-fix); 152 rente/betaling-tests groen
+na review-fix; ruff schoon; 13 nieuwe tests. Niet gecommit: CLAUDE.md security-sectie (staat
+in working tree; CLAUDE.md heeft eerdere niet-afgestemde wijzigingen — regels wél in
+`docs/security/rollen.md`). **Open:** 7 dossiers sluiten (Lisanne akkoord, bewust niet
+autonoom), 4 heropeningszaken herrekenen ná deploy (met akkoord), IN100334-terugstort,
+Backblaze-wis ~10 juli.
 
 ## Sessie 183 (8 juli, Fable — architectuur+security-audit, 100% read-only)
 

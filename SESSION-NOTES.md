@@ -69,11 +69,27 @@ die vervallen naar overdue + melding (paid_amount blijft). (2) `evaluate_timeout
 waarschuwde alleen bij >1 default-regel; een énkele regel naar een inactieve doel-stap
 werd stil weggefilterd → poortwachter zelf stil. Nu warning-log bij elke overgeslagen
 inactief-doel-regel. 61 tests groen, backend gezond.
-**Nog open (uit review, LAAG, NIET van deze sprint):** de generieke `PATCH /arrangements/{id}`
-sluit bij status `defaulted`/`cancelled` de termijnen NIET af (anders dan de dedicated
-`/default` + `/cancel` endpoints) → een zo beëindigde regeling kan later vals alarmeren.
-Alleen via directe API bereikbaar (frontend gebruikt `/default`+`/cancel`). Pre-existing,
-apart oppakken.
+**Taak 4 — getrouwheids-poort: LIVE (code `0c701f1`, op verzoek Arsalan tóch gedaan).**
+Na conceptgeneratie controleert een poort dat dossiernummer, hoofdsom, rentebedrag en
+te-voldoen-bedrag uit de context letterlijk in het concept staan (NL/EN-notatievarianten,
+alleen bedragen > 0, alleen als het sjabloon een bedragen-tabel heeft). Ontbreekt iets →
+regenereren (max 3 AI-calls); blijft fout → concept tóch aangemaakt maar reviewtaak
+gemarkeerd "⚠ … wijkt af — extra controleren" + issues in draft.sources. Nooit stil.
+**Plan-afwijking (bewust):** geen rentepercentage-check — geverifieerd op prod: sjablonen
+tonen rente als bedrag + vaste uitleg-alinea zónder percentage ('%' alleen in "BTW 21%");
+percentage afdwingen = elke contractuele-rente-brief vals geflagd. Rentebedrag-check is
+sterker. **Bijvangst: het XXX-vangnet was al die tijd kapot** — `"XXX" in result` checkte
+dict-sleutels i.p.v. de tekst, vuurde dus nooit; zit nu werkend in de poort (test dekt het).
+**Praktijkproef op 5 echte zaken (plan §1B stap 3) NIET gedaan** — maakt AI-concepten +
+taken aan op prod die Lisanne ziet; wacht op apart akkoord.
+
+**Reviewpunt regeling-achterdeur ook gedicht (zelfde commit, op verzoek Arsalan):**
+(1) regeling-alarm bewaakt alleen ACTIEVE regelingen (join-filter) — beëindigde regeling
+met achtergebleven open termijn alarmeert nooit meer (dit dichtte ook een interactie-bug
+van de partial-fix: partial op gedefaultete regeling zou anders alsnog alarmeren);
+(2) `/default` en `/cancel` sluiten nu ook `partial`-termijnen af (restant komt niet meer);
+(3) de generieke PATCH-route sluit open termijnen af bij eindstatus (defaulted→missed,
+cancelled/completed→waived) — de achterdeur is dicht. 7 nieuwe tests, 167 groen totaal.
 
 ## Sessie 181-F (7 juli, Fable — heropeningsaudit, laatste Fable-dag, 100% read-only)
 

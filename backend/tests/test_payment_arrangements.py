@@ -531,6 +531,70 @@ async def test_overdue_installment_creates_notification(
     assert len(list(result.scalars().all())) == notif_count_first_run
 
 
+@pytest.mark.asyncio
+async def test_overdue_alarm_covers_partial_installment(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """A partially-paid installment that passes its due date must still flip to
+    overdue and alarm — the debtor-defaults-after-one-payment case must not stay
+    invisible (Fable-review S182)."""
+    from sqlalchemy import select
+
+    from app.collections.service import mark_overdue_installments
+    from app.notifications.models import Notification
+
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+
+    past_start = date.today() - timedelta(days=40)
+    arr_resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "900.00",
+            "installment_amount": "300.00",
+            "frequency": "monthly",
+            "start_date": past_start.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert arr_resp.status_code == 201
+    arr_id = arr_resp.json()["id"]
+
+    # Partially pay the first (past-due) installment → status 'partial'
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    first_inst = list_resp.json()[0]["installments"][0]
+    pay_resp = await client.post(
+        f"/api/cases/{case_id}/arrangements/{arr_id}/installments/{first_inst['id']}/record-payment",
+        json={"amount": "100.00", "payment_date": date.today().isoformat()},
+        headers=auth_headers,
+    )
+    assert pay_resp.status_code == 200
+    assert pay_resp.json()["status"] == "partial"
+
+    count = await mark_overdue_installments(db)
+    await db.commit()
+    assert count >= 1
+
+    # The partial installment must now be overdue
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    inst_after = next(
+        i for i in list_resp.json()[0]["installments"] if i["id"] == first_inst["id"]
+    )
+    assert inst_after["status"] == "overdue"
+    assert Decimal(inst_after["paid_amount"]) == Decimal("100.00")  # partial payment retained
+
+    result = await db.execute(
+        select(Notification).where(
+            Notification.type == "installment_overdue",
+            Notification.case_id == uuid.UUID(case_id),
+        )
+    )
+    assert len(list(result.scalars().all())) >= 1
+
+
 # ── Test: weekly frequency ───────────────────────────────────────────────────
 
 

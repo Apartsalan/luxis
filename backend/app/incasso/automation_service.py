@@ -119,7 +119,16 @@ async def evaluate_timeout_rules(
         # Sla regels naar een inactieve doel-stap over: de draft-generator kan
         # geen concept bouwen voor een stap zonder sjabloon → ValueError → zaak
         # blijft stil hangen. Zo wint altijd de regel naar een actieve stap.
+        # Waarschuw altijd bij het overslaan (ook als het de énige regel is),
+        # anders wordt de poortwachter zelf stil: een verkeerd geconfigureerde
+        # stap zou dan geen match én geen signaal geven.
         if r.to_step is None or not r.to_step.is_active:
+            logger.warning(
+                "evaluate_timeout_rules: timeout-regel %s (stap %s) overgeslagen — "
+                "doel-stap is inactief. Wijs de regel naar een actieve stap of "
+                "deactiveer 'm.",
+                r.id, r.from_step_id,
+            )
             continue
         if r.from_step_id not in rules_by_from_step:
             rules_by_from_step[r.from_step_id] = r

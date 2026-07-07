@@ -957,7 +957,11 @@ async def mark_overdue_installments(db: AsyncSession) -> int:
         )
         .join(Case, PaymentArrangement.case_id == Case.id)
         .where(
-            PaymentArrangementInstallment.status == "pending",
+            # 'partial' hoort er ook bij: een deels betaalde termijn die vervalt
+            # is nog steeds niet volledig voldaan → moet alarmeren, anders blijft
+            # precies dat geval onzichtbaar (juist waar debiteur afhaakt na één
+            # deelbetaling). Beide flippen naar overdue → melding, één keer.
+            PaymentArrangementInstallment.status.in_(("pending", "partial")),
             PaymentArrangementInstallment.due_date < today,
         )
     )

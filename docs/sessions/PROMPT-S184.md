@@ -30,6 +30,20 @@ Gebruik de `luxis-researcher` subagent:
    test die na een commit `current_user` controleert.
 4. **S183-4 Betaling op/vóór verzuimdatum** (`interest.py:276`) — kan mee met punt 1.
 5. **`--no-cache` uit `.github/workflows/deploy.yml:29`** (één regel).
+6. **Security-regels verankeren (klein, uit vragen Arsalan 8 juli):** (a) sectie
+   "Security-regels (HARD)" in `CLAUDE.md`: nieuwe tabel met `tenant_id` → RLS-statements
+   in dezelfde migratie verplicht; nieuwe route → auth-dependency verplicht; nooit
+   sleutels/secrets in code (alleen env); uploads via de bestaande gevalideerde helpers.
+   (b) half A4 `docs/security/rollen.md`: wat admin/advocaat/medewerker mogen (22 routes
+   zijn admin-only, rest = elke actieve gebruiker; grep `require_role` als bron).
+
+## Binnengekomen: akkoord Lisanne heropening (8 juli)
+Zie het antwoordblok bovenaan `docs/sessions/LISANNE-A4-heropening.md`: 7 restant-dossiers
+sluiten (NIET IN100166 — blijft open om te innen), starten met LegalWork B.V. De
+heropening zelf is een APARTE sessie ná deze fix-sprint (S185, draaiboek
+`docs/plans/PLAN-heropening-werkvoorraad.md`) — de rentefix van punt 1 moet eerst, die
+raakt 3 zaken uit de heropeningslijst. In deze sessie mag wél: de 7 dossiers sluiten als
+Arsalan dat vraagt (kleine, omkeerbare actie; workflow-guard checkt saldo).
 
 ## Verificatie
 - Backend: `docker compose exec backend pytest tests/ -k "interest or rls or payment" -v`

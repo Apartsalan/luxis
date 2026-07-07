@@ -3,6 +3,18 @@
 *Opgesteld 7 juli 2026. Alles hieronder is gecontroleerd tegen de administratie in
 BaseNet én in Luxis; er is nog niets gewijzigd of verstuurd.*
 
+> ## ✅ ANTWOORD LISANNE (ontvangen 8 juli 2026, via Arsalan)
+> - **Vraag 1:** de dossiers kunnen gesloten worden, **behalve IN100166** (€ 587,86 —
+>   blijft open om te innen). Dicht mogen dus: IN100547, IN100210, IN100456, IN100457,
+>   IN100256, IN100197, IN100334.
+> - **Vraag 2:** "Ja is goed" → starten met **LegalWork B.V.** (15 dossiers, waarvan 9
+>   direct een eerste sommatie kunnen krijgen).
+> - **Nog open (niet beantwoord):** IN100334 is ± € 215 te veel betaald — terugstorten
+>   ja/nee? Arsalan vraagt dit nog na.
+>
+> Uitvoering: ná de fix-sprint S184 (de rentefix raakt o.a. IN100469/IN100505/IN100553
+> uit de heropeningslijst) — heropening volgens `docs/plans/PLAN-heropening-werkvoorraad.md`.
+
 ## De stand
 
 Er staan **372 lopende dossiers** klaar om in Luxis heropend te worden (samen ruim

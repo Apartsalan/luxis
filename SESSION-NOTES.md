@@ -54,6 +54,12 @@ inactieve stap; eerste-wint=toeval) → opruimen vóór auto-draft-vlag ooit aan
 **Deliverables:** rapport + recept-CSV + `LISANNE-A4-heropening.md` (klaar om te sturen)
 + PROMPT-S181 bijgewerkt. Geen fixes gebouwd (scope: onderzoek).
 
+**Sessie-einde S181-F:** Backblaze-EU-aanmelding faalde bij Arsalan (HTTP 400) → migratie
+geblokkeerd tot nieuw account (retry andere browser/werkadres; plan B = Hetzner Storage
+Box). Volgende sessie = S182 Opus-bouwsprint: `docs/sessions/PROMPT-S182.md` (volgorde:
+regeling-alarm → timeout-regels → hold-steps → getrouwheids-poort; heropening/backup/
+14-dagenbrief geblokkeerd op mensen-input).
+
 **S181-F deel 4 (avond): AVG-set geschreven + 🔴 backup-lek gevonden.** Arsalans antwoorden
 verwerkt (sjablonen=goedgekeurd BaseNet → actie B is nu AI-getrouwheidspoort;
 2e bestuurder bestaat; bank=Rabobank ✓). `docs/avg/` aangemaakt: verwerkersovereenkomst-

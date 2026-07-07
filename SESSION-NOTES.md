@@ -33,7 +33,33 @@ mét zaaknummer/bedrag + geen dubbele bij tweede run), ruff schoon, tsc schoon.
 Backend+frontend gedeployed (commit `8f49329`), geen migratie. Job op prod geforceerd =
 foutloze no-op (121 pending termijnen onaangeroerd, eerste vervalt 9 juli → eerste echte
 alarm 10 juli 06:00 UTC). Geen zaakstatus-filter (12/13 regelingen hangen aan afgesloten
-zaken — bedoeld). Volgende: taak 2 (timeout-regels-opschonen), taak 3 (hold-steps).
+zaken — bedoeld).
+
+**Taak 2 — timeout-regels opschonen: LIVE (code `faf3fd6` + data-fix prod).**
+`evaluate_timeout_rules` koos per stap "de eerste" default-regel zónder ORDER BY (toeval);
+bij de dubbele regel op "Tweede sommatie" (→ Derde sommatie ÉN → inactieve
+Ingebrekestelling) kon de regel naar een stap zonder sjabloon winnen → ValueError → zaak
+stil hangen. Nu: ORDER BY created_at,id (oudste wint), regels naar inactieve doel-stap
+overgeslagen (actieve wint altijd), warning-log bij >1 default-regel per stap. 2 tests
+(inactieve-doel overgeslagen ondanks oudere created_at + determinisme), 60 pipeline-tests
+groen, ruff schoon. **Data-fix prod:** 4 dode/dubbele timeout-regels gedeactiveerd (niet
+verwijderd — historie): 3 vanaf inactieve stappen + de Tweede-sommatie→Ingebrekestelling.
+Bewijs ná: 0 actieve regels van/naar inactieve stappen, 0 stappen met >1 default-regel.
+Resterende keten schoon: 14-dagenbrief → Eerste → Tweede → Derde → Sommatie laatste
+mogelijkheid → Verzoekschrift faillissement.
+
+**Taak 3 — opvolg-scan slaat hold/terminale stappen over: LIVE (code `20bb5eb`).**
+`scan_for_followups` maakte voor elke zaak met een stap een aanbeveling zodra
+min_wait_days verstreken was; hold-stappen (Verweer beantwoorden/Bijhouden regeling/On
+hold, min_wait_days=0) gaven zo elke 30 min een ruis-aanbeveling — bij heropening ~100+
+zaken. Guard: `if step.is_hold_step or step.is_terminal: continue` (op de vlag, niet op
+naam). Verweer-zaken krijgen hun concept al via de e-mail-trigger. 3 tests, 22 followup
+groen, ruff schoon. Ruis-opruiming niet nodig: 0 pending aanbevelingen op hold-stappen
+(heropening nog niet gedraaid). Backend gezond na deploy.
+
+**Status sprint:** taken 1-3 (de drie NU-uitvoerbare) LIVE + geverifieerd. Taak 4
+(getrouwheids-poort) = optioneel/"tijd over"; beoordeeld als lager-nut nu (poort geldt pas
+als auto-draft-vlag aangaat, weken later) — overgelaten aan een aparte sessie.
 
 ## Sessie 181-F (7 juli, Fable — heropeningsaudit, laatste Fable-dag, 100% read-only)
 

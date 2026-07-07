@@ -132,6 +132,37 @@ def disable_rls(conn: Connection) -> list[str]:
     return tables
 
 
+def find_unprotected_tenant_tables(conn: Connection) -> list[str]:
+    """Return tenant tables that SHOULD have RLS but lack FORCE RLS or the policy.
+
+    Drift-guard for S183-1: ``learned_answers`` (S168) shipped without RLS because
+    the one-time RLS migration ran before that table existed and nothing re-applied
+    it. This detects exactly that class of drift — a table with a ``tenant_id``
+    column that a migration created without also securing it. Empty list == every
+    tenant table is protected. Uses ``discover_tenant_tables`` as the source of
+    truth so new tables are covered automatically.
+    """
+    unprotected: list[str] = []
+    for table in discover_tenant_tables(conn):
+        forced = conn.execute(
+            text(
+                "SELECT relforcerowsecurity FROM pg_class "
+                "WHERE relname = :t AND relnamespace = 'public'::regnamespace"
+            ),
+            {"t": table},
+        ).scalar()
+        has_policy = conn.execute(
+            text(
+                "SELECT 1 FROM pg_policies WHERE schemaname = 'public' "
+                "AND tablename = :t AND policyname = :p"
+            ),
+            {"t": table, "p": POLICY_NAME},
+        ).scalar()
+        if not forced or not has_policy:
+            unprotected.append(table)
+    return unprotected
+
+
 def apply_rls(conn: Connection) -> list[str]:
     """Apply the full RLS setup (role + grants + per-table policies) on a sync
     connection and return the list of tenant tables that were secured.

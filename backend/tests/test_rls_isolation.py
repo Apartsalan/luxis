@@ -26,7 +26,13 @@ from sqlalchemy.pool import NullPool
 from app.auth.models import Tenant
 from app.config import settings
 from app.relations.models import Contact
-from app.security.rls import apply_rls, disable_rls, discover_tenant_tables
+from app.security.rls import (
+    apply_rls,
+    disable_rls,
+    discover_tenant_tables,
+    find_unprotected_tenant_tables,
+    rls_statements,
+)
 
 # Separate engine to the same test DB so we control role/connection precisely,
 # independent of the ORM session fixture. NullPool → every connect() is a fresh
@@ -187,3 +193,33 @@ async def test_users_table_excluded_from_rls(two_tenants_with_contacts):
     async with _engine.connect() as conn:
         tables = await conn.run_sync(discover_tenant_tables)
     assert "users" not in tables
+
+
+async def test_drift_guard_flags_tenant_table_without_rls(setup_database):
+    """S183-1 drift-guard: a tenant table lacking RLS is detected.
+
+    This is the mechanism the production startup check (app.main.lifespan) runs.
+    Create a throwaway table with a tenant_id column and NO RLS, assert the guard
+    flags it, then secure it and assert the guard clears — proving a
+    learned_answers-style gap (table shipped by a migration without RLS) would be
+    caught at boot instead of silently leaking. Only asserts on the probe table,
+    so it is independent of whatever RLS state the other tables are in."""
+    async with _engine.begin() as conn:
+        await conn.execute(text("DROP TABLE IF EXISTS _drift_probe"))
+        await conn.execute(
+            text("CREATE TABLE _drift_probe (id uuid PRIMARY KEY, tenant_id uuid NOT NULL)")
+        )
+    try:
+        async with _engine.connect() as conn:
+            flagged = await conn.run_sync(find_unprotected_tenant_tables)
+        assert "_drift_probe" in flagged, "guard failed to flag an unprotected tenant table"
+
+        async with _engine.begin() as conn:
+            for stmt in rls_statements("_drift_probe"):
+                await conn.execute(text(stmt))
+        async with _engine.connect() as conn:
+            flagged = await conn.run_sync(find_unprotected_tenant_tables)
+        assert "_drift_probe" not in flagged, "guard flagged a table that IS protected"
+    finally:
+        async with _engine.begin() as conn:
+            await conn.execute(text("DROP TABLE IF EXISTS _drift_probe"))

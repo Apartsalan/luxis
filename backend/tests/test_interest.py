@@ -653,6 +653,80 @@ def test_pro_rata_rounding_residual():
     assert total_distributed == Decimal("100.00")
 
 
+def test_pro_rata_excludes_credit_invoice():
+    """S183-3: a credit invoice (negative claim) must not distort distribution.
+
+    Claims: +1000, -200 (credit), +200. Payment of €500 to principal.
+    Only the two POSITIVE claims (basis 1200) share the payment; the sum of
+    applied reductions must equal exactly €500 and the credit claim gets nothing.
+    BEFORE the fix this double-counted to €600 (the -200 share was subtracted
+    from the running total but never applied, so the last claim got €100 too much).
+    """
+    claims = [
+        {"id": "c1", "principal_amount": Decimal("1000.00")},
+        {"id": "credit", "principal_amount": Decimal("-200.00")},
+        {"id": "c3", "principal_amount": Decimal("200.00")},
+    ]
+    payments = [
+        {"payment_date": date(2025, 6, 1), "allocated_to_principal": Decimal("500.00")},
+    ]
+
+    result = _build_claim_reductions(claims, payments)
+
+    applied = sum(r[1] for lst in result.values() for r in lst)
+    assert applied == Decimal("500.00")  # NOT 600
+    assert result["credit"] == []  # credit invoice is never "paid down"
+    # Positive claims share pro-rata on the 1200 basis; residual on last positive.
+    assert result["c1"][0][1] == _round2(Decimal("500") * Decimal("1000") / Decimal("1200"))
+    assert result["c3"][0][1] == Decimal("500.00") - result["c1"][0][1]
+
+
+def test_pro_rata_all_claims_negative_reduces_nothing():
+    """Net-credit case: no positive claim to reduce → no reductions (no double-count)."""
+    claims = [
+        {"id": "n1", "principal_amount": Decimal("-100.00")},
+        {"id": "n2", "principal_amount": Decimal("-50.00")},
+    ]
+    payments = [
+        {"payment_date": date(2025, 6, 1), "allocated_to_principal": Decimal("500.00")},
+    ]
+    result = _build_claim_reductions(claims, payments)
+    assert result == {"n1": [], "n2": []}
+
+
+def test_reduction_on_or_before_default_date_reduces_base():
+    """S183-4: a payment on/before the default date lowers the STARTING principal.
+
+    €5,000, default 2025-01-01, calc 2026-01-01, 6% simple. A €1,000 principal
+    payment on 2024-12-15 (before verzuim) means interest accrues on €4,000.
+    BEFORE the fix the strict filter dropped it and interest ran on €5,000.
+    """
+    principal = Decimal("5000.00")
+    default_date = date(2025, 1, 1)
+    calc_date = date(2026, 1, 1)
+    reductions = [(date(2024, 12, 15), Decimal("1000.00"))]
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=False
+    )
+    expected = _round2(Decimal("4000") * Decimal("6") / Decimal("100"))  # 365/365
+    assert total == expected  # €240.00, not €300.00
+
+
+def test_reduction_exactly_on_default_date_reduces_base():
+    """A payment exactly on the default date also lowers the starting principal."""
+    principal = Decimal("5000.00")
+    default_date = date(2025, 1, 1)
+    calc_date = date(2026, 1, 1)
+    reductions = [(date(2025, 1, 1), Decimal("1000.00"))]
+
+    total, _ = calculate_interest_with_reductions(
+        principal, default_date, calc_date, FIXED_RATE_6PCT, reductions, compound=False
+    )
+    expected = _round2(Decimal("4000") * Decimal("6") / Decimal("100"))
+    assert total == expected
+
+
 def test_compound_two_years_with_mid_year_payment():
     """Compound interest over 2 years with payment in year 1.
 

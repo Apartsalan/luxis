@@ -268,13 +268,19 @@ def calculate_interest_with_reductions(
         principal_reductions: sorted list of (payment_date, amount_to_principal)
             — only reductions BEFORE calc_date are applied.
     """
-    if not principal_reductions:
-        if compound:
-            return calculate_compound_interest(principal, default_date, calc_date, rates)
-        return calculate_simple_interest(principal, default_date, calc_date, rates)
+    # S183-4: reductions dated on or before the default date reduce the STARTING
+    # principal before any interest accrues. The old strict `default_date < d`
+    # filter silently dropped them, so interest ran on the un-reduced amount
+    # (e.g. a payment during a betalingsregeling on a claim not yet in verzuim).
+    pre_start = sum(
+        (amt for d, amt in principal_reductions if d <= default_date), Decimal("0")
+    )
+    principal = max(Decimal("0"), principal - pre_start)
 
     relevant = [(d, amt) for d, amt in principal_reductions if default_date < d < calc_date]
     if not relevant:
+        if principal <= Decimal("0"):
+            return Decimal("0"), []
         if compound:
             return calculate_compound_interest(principal, default_date, calc_date, rates)
         return calculate_simple_interest(principal, default_date, calc_date, rates)
@@ -527,16 +533,32 @@ def _build_claim_reductions(
 ) -> dict[str, list[tuple[date, Decimal]]]:
     """Distribute payment principal allocations pro-rata across claims.
 
+    Only claims with a POSITIVE principal share in a payment's principal
+    reduction. A credit invoice (negative principal) is not "paid down" by the
+    debtor: it offsets the other claims and its interest effect is already
+    captured per-claim in the case-total summation. Including negative claims in
+    the pro-rata basis double-counted the payment (S183-3) — a claim's negative
+    share was subtracted from the running `distributed` total but never applied,
+    so the last claim absorbed the excess (e.g. +1000/−200/+200, pay 500 → 600
+    applied). Excluding them keeps sum(reductions) == the payment.
+
     Returns: {claim_id: [(payment_date, reduction_amount), ...]} sorted by date.
     """
     if not payments or not claims:
         return {}
 
-    total_principal = sum(Decimal(str(c["principal_amount"])) for c in claims)
-    if total_principal <= Decimal("0"):
-        return {}
-
     result: dict[str, list[tuple[date, Decimal]]] = {c["id"]: [] for c in claims}
+
+    positive_claims = [
+        c for c in claims if Decimal(str(c["principal_amount"])) > Decimal("0")
+    ]
+    total_principal = sum(
+        (Decimal(str(c["principal_amount"])) for c in positive_claims), Decimal("0")
+    )
+    if total_principal <= Decimal("0"):
+        # No positive claim to reduce — a principal payment has nowhere sensible
+        # to land (net credit/zero case). Reduce nothing rather than double-count.
+        return result
 
     for pmt in payments:
         allocated = Decimal(str(pmt["allocated_to_principal"]))
@@ -546,9 +568,9 @@ def _build_claim_reductions(
         pmt_date = pmt["payment_date"]
         distributed = Decimal("0")
 
-        for i, claim in enumerate(claims):
+        for i, claim in enumerate(positive_claims):
             claim_principal = Decimal(str(claim["principal_amount"]))
-            is_last = i == len(claims) - 1
+            is_last = i == len(positive_claims) - 1
 
             if is_last:
                 share = allocated - distributed

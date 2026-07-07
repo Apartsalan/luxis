@@ -85,6 +85,22 @@ if settings.sentry_dsn:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
+    # S183-1 drift-guard: in production, refuse to serve if any tenant table lacks
+    # RLS. A silent tenant-isolation gap is a client-PII leak risk, so we fail
+    # closed — same posture as the luxis_app-role check in app.middleware.tenant.
+    # Skipped outside production: the create_all dev/test schema legitimately has
+    # no RLS applied (only the migration/isolation-test applies it).
+    if settings.app_env == "production":
+        from app.database import engine
+        from app.security.rls import find_unprotected_tenant_tables
+
+        async with engine.connect() as conn:
+            unprotected = await conn.run_sync(find_unprotected_tenant_tables)
+        if unprotected:
+            raise RuntimeError(
+                "CRITICAL: tenant-isolatie-gat — deze tabellen missen RLS in "
+                f"productie: {unprotected}. Draai de migraties (apply_rls)."
+            )
     # Startup: start the workflow scheduler
     start_scheduler()
     yield

@@ -38,3 +38,69 @@ async def test_set_tenant_context_accepts_valid_uuid(db, test_tenant):
         await db.execute(text("SELECT current_setting('app.current_tenant', true)"))
     ).scalar()
     assert current == str(test_tenant.id)
+
+
+# ── S183-2: context must survive a mid-request commit ─────────────────────────
+
+
+async def test_tenant_context_survives_commit(db):
+    """app.current_tenant is still set after a commit, without re-calling set_tenant_context.
+
+    Before the after_begin re-application, SET LOCAL was reset at commit and the
+    rest of the request ran as the bypass-RLS superuser with no tenant set.
+    """
+    import uuid
+
+    tenant_id = str(uuid.uuid4())
+    await set_tenant_context(db, tenant_id)
+
+    before = (
+        await db.execute(text("SELECT current_setting('app.current_tenant', true)"))
+    ).scalar()
+    assert before == tenant_id
+
+    await db.commit()
+
+    # New transaction after the commit — no second set_tenant_context call.
+    after = (
+        await db.execute(text("SELECT current_setting('app.current_tenant', true)"))
+    ).scalar()
+    assert after == tenant_id, "tenant context lost after commit (S183-2 regression)"
+
+
+async def test_role_survives_commit_if_role_exists(db):
+    """If luxis_app exists in this cluster, the role switch also survives a commit.
+
+    Skipped where the role is absent (CI runs as the plain superuser) — there the
+    role switch is a no-op by design and there is nothing to re-apply.
+    """
+    import uuid
+
+    role_exists = (
+        await db.execute(text("SELECT 1 FROM pg_roles WHERE rolname = 'luxis_app'"))
+    ).scalar()
+    if not role_exists:
+        pytest.skip("luxis_app role not present in this test cluster")
+
+    tenant_id = str(uuid.uuid4())
+    await set_tenant_context(db, tenant_id)
+    assert (await db.execute(text("SELECT current_user"))).scalar() == "luxis_app"
+
+    await db.commit()
+
+    assert (
+        await db.execute(text("SELECT current_user"))
+    ).scalar() == "luxis_app", "role reverted to superuser after commit (S183-2 regression)"
+
+
+async def test_plain_session_without_context_is_untouched(db):
+    """A session that never sets a tenant keeps running as-is (migrations/jobs).
+
+    Proves the after_begin listener is a strict no-op when no tenant is stored —
+    it must not force a role or tenant onto background/migration sessions.
+    """
+    await db.commit()  # trigger a fresh transaction via the listener
+    tenant = (
+        await db.execute(text("SELECT current_setting('app.current_tenant', true)"))
+    ).scalar()
+    assert tenant in (None, ""), "listener set a tenant on a context-free session"

@@ -15,6 +15,7 @@ en elke valkuil is op 7 juli in prod/code geverifieerd; bewijs in
 | 5 | `PLAN-followup-hold-steps.md` | NU (het liefst vóór heropening) | Voorkomt ruis-muur op dag 1 van de heropening. |
 | 6 | `PLAN-generale-repetitie-geldstromen.md` | zodra Arsalan dagdeel heeft | Bewijst de geldketen vóór BaseNet-opzegging. |
 | 7 | `PLAN-automatisering-aanzetten.md` | pas 1-2 wk na stabiele heropening | De vlag; poortwachters 1-5 moeten eerst. |
+| 8 | `PLAN-wet-en-regelgeving-livegang.md` | parallel: papierwerk NU, brieven-audit vóór eerste verzending | Wki/Bki geldt inhoudelijk voor advocaten; AVG-papierwerk ontbreekt; derdengelden-besluiten open. Beantwoordt ook de bank-vraag (CSV-upload, geen koppeling nodig). |
 
 **Eerst doen: #2 (regeling-alarm).** Het is de enige met een lopende deadline en het is
 puur additief. Daarna #3 + #5 (samen in één Opus-sessie te doen), dan is alles klaar om

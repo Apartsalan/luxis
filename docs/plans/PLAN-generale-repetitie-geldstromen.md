@@ -11,6 +11,16 @@ bankafschrift importeren → betaling matchen aan zaak → art. 6:44-verdeling
 afwikkeling + factuur. Alle onderdelen bestaan en zijn los getest; deze repetitie test
 de KETEN, met Arsalan als bediener (niet Claude — het gaat erom dat een mens het kan).
 
+## Vooraf: "de rekening is toch niet gekoppeld?" — klopt, en dat hoeft ook niet
+
+Luxis heeft géén live bankkoppeling nodig. Afschriften komen binnen via handmatige
+CSV-upload; de parser ondersteunt het **Rabobank zakelijk**-formaat (26 kolommen) en
+boekt bewust alleen bijschrijvingen (derdengeldrekening). Voorwaarden vóór de repetitie:
+1. Bevestig bij welke bank de stichting-derdengeldenrekening loopt. Rabobank → klaar.
+   Andere bank → eerst een tweede CSV-parser bouwen (klein, ~1 sessie; zelfde patroon).
+2. Download een echte CSV-export van die rekening (mag een oude periode zijn).
+Zie ook `PLAN-wet-en-regelgeving-livegang.md` §3 voor het werkritme na livegang.
+
 ## Voorbereiding (Claude, vooraf)
 
 1. Kies een kandidaat-dossier: een heropende zaak met recente echte betaling, of één

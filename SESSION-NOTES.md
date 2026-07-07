@@ -54,6 +54,16 @@ inactieve stap; eerste-wint=toeval) → opruimen vóór auto-draft-vlag ooit aan
 **Deliverables:** rapport + recept-CSV + `LISANNE-A4-heropening.md` (klaar om te sturen)
 + PROMPT-S181 bijgewerkt. Geen fixes gebouwd (scope: onderzoek).
 
+**S181-F deel 3 (avond): compliance-onderzoek → `PLAN-wet-en-regelgeving-livegang.md`** —
+kern: Wki/Bki geldt materieel WÉL voor advocaten (registratie niet, deken houdt toezicht;
+Bki-eisen aan brief-specificatie → brieven-audit verplicht vóór eerste verzending);
+Voda 6.22 lid 8 tweehandtekeningen = in Luxis al afgedwongen (vier-ogen, strikt bij ≥2
+users); bank = handmatige Rabobank-CSV-upload, géén koppeling nodig (bevestig bank
+stichting!); AVG-papierwerk ontbreekt volledig (verwerkersovereenkomst, register,
+Anthropic-DPA, B2-regio, bewaarbeleid 5/7 jr); NOvA AI-aanbevelingen 2025: Luxis-opzet
+(betaalde API + verplichte review) matcht, documentatie/werkinstructie nodig. Ook
+Word-bestand beslispunten Lisanne gemaakt (Desktop + docs/sessions/).
+
 **S181-F deel 2 (zelfde dag): 7 uitvoeringsplannen in `docs/plans/`** (README = rangorde),
 elk zo geschreven dat Opus ze zonder vragen kan draaien, met geverifieerde stap-ID's,
 user-ID's, SQL en valkuilen: heropening-werkvoorraad (na akkoord), regeling-alarm

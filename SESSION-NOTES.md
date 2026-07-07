@@ -61,6 +61,20 @@ groen, ruff schoon. Ruis-opruiming niet nodig: 0 pending aanbevelingen op hold-s
 (getrouwheids-poort) = optioneel/"tijd over"; beoordeeld als lager-nut nu (poort geldt pas
 als auto-draft-vlag aangaat, weken later) — overgelaten aan een aparte sessie.
 
+**Fable-review (subagent op Fable-model, adversarieel) → 2 fixes LIVE (code `ae4f6e7`).**
+De review vond twee echte gaten die ik heb gedicht: (1) `mark_overdue_installments`
+selecteerde alleen `pending`, maar een deelbetaalde termijn staat op `partial` → een
+debiteur die na één deelbetaling afhaakt bleef onzichtbaar. Nu flippen pending ÉN partial
+die vervallen naar overdue + melding (paid_amount blijft). (2) `evaluate_timeout_rules`
+waarschuwde alleen bij >1 default-regel; een énkele regel naar een inactieve doel-stap
+werd stil weggefilterd → poortwachter zelf stil. Nu warning-log bij elke overgeslagen
+inactief-doel-regel. 61 tests groen, backend gezond.
+**Nog open (uit review, LAAG, NIET van deze sprint):** de generieke `PATCH /arrangements/{id}`
+sluit bij status `defaulted`/`cancelled` de termijnen NIET af (anders dan de dedicated
+`/default` + `/cancel` endpoints) → een zo beëindigde regeling kan later vals alarmeren.
+Alleen via directe API bereikbaar (frontend gebruikt `/default`+`/cancel`). Pre-existing,
+apart oppakken.
+
 ## Sessie 181-F (7 juli, Fable — heropeningsaudit, laatste Fable-dag, 100% read-only)
 
 Lisanne was niet bereikbaar; Arsalan gaf mandaat om de laatste Fable-dag te benutten.

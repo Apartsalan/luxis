@@ -570,9 +570,10 @@ async def daily_deadline_notifications() -> None:
 
 
 async def daily_installment_overdue_check() -> None:
-    """Daily job: mark overdue payment arrangement installments.
+    """Daily job: mark overdue payment arrangement installments + notify.
 
-    Finds pending installments with due_date < today and marks them as overdue.
+    Finds pending installments with due_date < today, marks them as overdue
+    and raises an in-app notification per gemiste termijn (regeling-alarm).
     """
     from app.collections.service import mark_overdue_installments
 

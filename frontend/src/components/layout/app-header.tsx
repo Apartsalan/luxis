@@ -122,6 +122,7 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
         return "taken";
       case "trust_approval_pending":
       case "trust_stale":
+      case "installment_overdue":
         return "betalingen";
       case "invoice_overdue":
         return "facturen";

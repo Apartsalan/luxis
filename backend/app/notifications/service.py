@@ -15,6 +15,7 @@ NOTIF_DEADLINE_OVERDUE = "deadline_overdue"
 NOTIF_INVOICE_OVERDUE = "invoice_overdue"  # CONN-1: eigen declaratie vervallen
 NOTIF_TRUST_APPROVAL_PENDING = "trust_approval_pending"  # CONN-2: vier-ogen wacht
 NOTIF_TRUST_STALE = "trust_stale"  # FIN-2: derdengelden staan te lang stil
+NOTIF_INSTALLMENT_OVERDUE = "installment_overdue"  # regeling-alarm: termijn gemist
 
 
 async def create_notification(
@@ -346,6 +347,54 @@ async def create_invoice_overdue_notification(
         tenant_id,
         NotificationCreate(
             type=NOTIF_INVOICE_OVERDUE,
+            title=title,
+            message=message,
+            case_id=case_id,
+            case_number=case_number,
+        ),
+        dedup_minutes=24 * 60,
+    )
+
+
+async def create_installment_overdue_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    case_id: uuid.UUID,
+    case_number: str,
+    amount,
+    due_date,
+) -> int:
+    """Regeling-alarm: a payment-arrangement installment passed its due date
+    while still 'pending'.
+
+    Installments are only ticked off manually in the dossier-UI (the bank
+    import never touches them), so the wording is "niet gemarkeerd als
+    betaald" — the debtor may well have paid already.
+
+    Notifies ALL active tenant users, matching the sibling financial alarms
+    (invoice_overdue, trust_stale). The plan's assigned-user targeting is
+    dropped on purpose: these are re-opened BaseNet cases whose assigned_to_id
+    can point at a legacy/inactive user, which would silently misdirect the
+    alarm — the exact failure this plan exists to prevent. For a single-lawyer
+    firm the result is identical. Deduped per (user, case, title) within 24h;
+    the title carries bedrag + vervaldatum, so a second missed term on the
+    same case still alerts.
+    """
+    due_label = due_date.strftime("%d-%m-%Y")
+    title = (
+        f"Betalingsregeling {case_number}: termijn van € {amount} "
+        f"(vervaldatum {due_label}) gemist"
+    )
+    message = (
+        "Deze termijn is niet gemarkeerd als betaald — controleer of de "
+        "betaling binnen is en vink de termijn af."
+    )
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_INSTALLMENT_OVERDUE,
             title=title,
             message=message,
             case_id=case_id,

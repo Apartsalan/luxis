@@ -939,21 +939,41 @@ async def _check_arrangement_completion(
 
 
 async def mark_overdue_installments(db: AsyncSession) -> int:
-    """Mark pending installments past due_date as overdue. Returns count updated."""
-    from datetime import date as date_type
+    """Mark pending installments past due_date as overdue + notify (regeling-alarm).
 
-    today = date_type.today()
+    Runs across ALL tenants by design (12 van de 13 regelingen hangen aan
+    afgesloten zaken — dus ook geen filter op zaakstatus); the tenant comes
+    from the installment itself. Each installment flips pending → overdue
+    exactly once, so re-running is a no-op. Returns count marked.
+    """
+    from app.notifications.service import create_installment_overdue_notification
+
+    today = date.today()
     result = await db.execute(
-        select(PaymentArrangementInstallment).where(
+        select(PaymentArrangementInstallment, Case)
+        .join(
+            PaymentArrangement,
+            PaymentArrangementInstallment.arrangement_id == PaymentArrangement.id,
+        )
+        .join(Case, PaymentArrangement.case_id == Case.id)
+        .where(
             PaymentArrangementInstallment.status == "pending",
             PaymentArrangementInstallment.due_date < today,
         )
     )
-    installments = list(result.scalars().all())
-    for inst in installments:
-        inst.status = "overdue"
+    rows = result.all()
+    for installment, case in rows:
+        installment.status = "overdue"
+        await create_installment_overdue_notification(
+            db,
+            installment.tenant_id,
+            case_id=case.id,
+            case_number=case.case_number,
+            amount=installment.amount,
+            due_date=installment.due_date,
+        )
     await db.flush()
-    return len(installments)
+    return len(rows)
 
 
 # ── Interest Rates (reference data) ─────────────────────────────────────────

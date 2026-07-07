@@ -465,6 +465,72 @@ async def test_mark_overdue_installments(
     assert overdue_count >= 1
 
 
+# ── Test: overdue installment → notification (regeling-alarm) ────────────────
+
+
+@pytest.mark.asyncio
+async def test_overdue_installment_creates_notification(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """Marking an installment overdue must create an in-app notification —
+    with zaaknummer + bedrag in the title — and a second run must not
+    create a duplicate."""
+    from sqlalchemy import select
+
+    from app.collections.service import mark_overdue_installments
+    from app.notifications.models import Notification
+
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+
+    # Start 40 days ago → first installment is past due
+    past_start = date.today() - timedelta(days=40)
+    arr_resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "900.00",
+            "installment_amount": "300.00",
+            "frequency": "monthly",
+            "start_date": past_start.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert arr_resp.status_code == 201
+
+    count = await mark_overdue_installments(db)
+    await db.commit()
+    assert count >= 1
+
+    case_resp = await client.get(f"/api/cases/{case_id}", headers=auth_headers)
+    case_number = case_resp.json()["case_number"]
+
+    result = await db.execute(
+        select(Notification).where(
+            Notification.type == "installment_overdue",
+            Notification.case_id == uuid.UUID(case_id),
+        )
+    )
+    notifications = list(result.scalars().all())
+    assert len(notifications) >= 1
+    assert case_number in notifications[0].title
+    assert "300.00" in notifications[0].title
+    assert "niet gemarkeerd als betaald" in notifications[0].message
+    notif_count_first_run = len(notifications)
+
+    # Second run: installments are already 'overdue' → no new notifications
+    await mark_overdue_installments(db)
+    await db.commit()
+    result = await db.execute(
+        select(Notification).where(
+            Notification.type == "installment_overdue",
+            Notification.case_id == uuid.UUID(case_id),
+        )
+    )
+    assert len(list(result.scalars().all())) == notif_count_first_run
+
+
 # ── Test: weekly frequency ───────────────────────────────────────────────────
 
 

@@ -54,6 +54,15 @@ inactieve stap; eerste-wint=toeval) → opruimen vóór auto-draft-vlag ooit aan
 **Deliverables:** rapport + recept-CSV + `LISANNE-A4-heropening.md` (klaar om te sturen)
 + PROMPT-S181 bijgewerkt. Geen fixes gebouwd (scope: onderzoek).
 
+**S181-F deel 4 (avond): AVG-set geschreven + 🔴 backup-lek gevonden.** Arsalans antwoorden
+verwerkt (sjablonen=goedgekeurd BaseNet → actie B is nu AI-getrouwheidspoort;
+2e bestuurder bestaat; bank=Rabobank ✓). `docs/avg/` aangemaakt: verwerkersovereenkomst-
+CONCEPT, subverwerkers, verwerkingsregister, bewaarbeleid-CONCEPT, datalek-procedure,
+werkinstructie-AI. **KRITIEK: off-site backup staat in de VS (`s3.us-east-005`, bewezen
+via account-API) én onversleuteld (backup.sh: kale rclone copy)** — dagelijkse volledige
+DB-dumps met persoonsgegevens. Reparatiestappen in subverwerkers.md; bewust NIET vanavond
+aan de draaiende backup gesleuteld. ARSALAN-TODO §2 (Outlook) ✓ en §3 (B2) beantwoord.
+
 **S181-F deel 3 (avond): compliance-onderzoek → `PLAN-wet-en-regelgeving-livegang.md`** —
 kern: Wki/Bki geldt materieel WÉL voor advocaten (registratie niet, deken houdt toezicht;
 Bki-eisen aan brief-specificatie → brieven-audit verplicht vóór eerste verzending);

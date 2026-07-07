@@ -17,10 +17,9 @@ Bijgewerkt: 10 juni 2026 (na sessie 160).
 - **Waarom:** in sessie 159 is de versleutelingssleutel (`TOKEN_ENCRYPTION_KEY`) gewijzigd. Daardoor zijn de oude opgeslagen Outlook-tokens onleesbaar → e-mailsync werkt pas weer ná opnieuw koppelen.
 - **Hoe:** login op **luxis.kestinglegal.nl** (met `seidony@kestinglegal.nl`) → Instellingen → E-mail → opnieuw inloggen bij Microsoft.
 
-### 3. Backblaze B2-bucket regio = EU bevestigen
-- [ ] Controleren dat de off-site backup-bucket in een **EU-regio** staat.
-- **Waarom:** AVG — debiteur-/cliëntgegevens mogen niet buiten de EU opgeslagen worden.
-- **Hoe:** log in op **Backblaze** → bucket → check de **Region/Endpoint** (moet EU zijn, bv. `s3.eu-central-...`). Staat 'ie buiten de EU → meld het mij, dan maken we samen een EU-bucket + passen de backup-config aan.
+### 3. Backblaze B2-bucket regio = EU ❌ GECHECKT 7 juli (S181-F): staat in de VS, onversleuteld
+- [x] Gecontroleerd via de account-API: regio = `us-east-005` (VS), en het backup-script uploadt de database-dumps **zonder versleuteling**.
+- [ ] **Nieuwe actie (urgent):** nieuw Backblaze-account/bucket aanmaken en bij het aanmaken **regio EU (Amsterdam)** kiezen + nieuwe application key → daarna zet Claude de versleutelde upload om en wist de Amerikaanse data. Volledige stappen: `docs/avg/subverwerkers.md`.
 
 ---
 

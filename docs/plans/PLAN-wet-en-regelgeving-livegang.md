@@ -30,16 +30,30 @@ opdrachtgevers doet. Toezicht: de deken.
 - totaalspecificatie: hoofdsom, rente, incassokosten, btw (indien van toepassing) met tarief;
 - benadering "transparant, ondubbelzinnig, herkenbaar en correct".
 
-**Actie B — brieven-audit (Claude-sessie, ~half dagdeel, vóór de eerste verzending):**
-1. Leg elk actief e-mailsjabloon (Eerste t/m laatste sommatie, straks ook 14-dagenbrief)
-   naast de bovenstaande checklist. De data bestaat al in Luxis (bedragen-tabel +
-   rente-details per periode via de financiële samenvatting) — de vraag is alleen of de
-   sjablonen álle verplichte elementen tonen. Let vooral op: rente-grondslag
-   (wettelijk vs contractueel 2%/mnd) en de opdrachtgever-naam+adres (schuldeiser).
-2. Gaten → sjabloonteksten aanvullen (via Instellingen → Workflow, geen deploy).
-3. Vraag aan Lisanne/deken meenemen: moet er een klachtmogelijkheid-vermelding in de
-   brieven? (Advocaten vallen onder het eigen klacht- en tuchtrecht; de kantoor-
-   klachtenregeling bestaat al — alleen de vermelding in incassobrieven is een keuze.)
+**Aanscherping (Arsalan, 7 juli):** de sjablonen zelf komen uit BaseNet en zijn al
+goedgekeurd — de echte vraag is of de **AI zich aan het goedgekeurde sjabloon houdt**
+wanneer hij er een concept van maakt.
+
+**Actie B — AI-getrouwheidscontrole (Opus-sessie, ~half dagdeel, vóór de eerste
+verzending):**
+1. Wat er al is (geverifieerd in `automation_service.py`): de prompt instrueert
+   sjabloon-volgen, en er zijn server-vangnetten voor drie bekende afwijkingen
+   (dubbel kenmerk in de Betreft-regel, leeg IBAN-kenmerk, achtergebleven
+   'XXX'-plaatshouder → regenereren, max 3×).
+2. Bouw een **getrouwheids-poort** na de generatie, naast die bestaande vangnetten:
+   controleer dat het concept de dragende elementen uit de context letterlijk bevat —
+   ten minste het totaalbedrag, de hoofdsom, het dossiernummer en (bij contractuele
+   rente) het percentage. Ontbreekt er één → regenereren; blijft het fout → het
+   concept tóch aanmaken maar de reviewtaak markeren met "⚠ wijkt af van sjabloon,
+   extra controleren". Nooit stil doorlaten, nooit stil weggooien.
+   Bestanden: `backend/app/incasso/automation_service.py` (naast `_dedupe_subject_slots`
+   en `_ensure_iban_kenmerk`), test ernaast in het bestaande automation-testbestand.
+3. Praktijkproef: genereer op 5 uiteenlopende echte zaken (B2B/B2C, wettelijke/
+   contractuele rente, met/zonder deelbetaling) een concept en leg ze naast de
+   Bki-checklist hierboven; bevindingen naar Lisanne.
+4. Vraag aan Lisanne/deken meenemen: moet er een klachtmogelijkheid-vermelding in de
+   brieven? (Advocaten vallen onder het eigen klacht- en tuchtrecht; alleen de
+   vermelding in incassobrieven is een keuze.)
 
 **Al gedekt:** deugdelijke administratie (volledige audit trail, betalingshistorie,
 stap-historie), correcte kostenberekening (WIK-staffel met wettelijke grenzen, getest),
@@ -57,8 +71,9 @@ vereisen twee goedkeuringen (vier-ogen), stortingen niet; zodra de tenant ≥2 a
 gebruikers heeft is strikt vier-ogen afgedwongen (dat is nu al zo); alles met audit trail.
 
 **Acties (mens):**
-1. Lisanne: wie is de tweede stichtingsbestuurder? → die krijgt een eigen Luxis-account
-   als tweede goedkeurder (de 3 vragen staan al in ARSALAN-TODO §4 en het Word-bestand).
+1. ✅ Tweede bestuurder bestaat (vriend/collega van Lisanne — bevestigd door Arsalan
+   7 juli). Nog te doen: naam + e-mail aanleveren → eigen Luxis-account als tweede
+   goedkeurder aanmaken.
 2. Check bij de **bank** dat het mandaat op de stichtingsrekening ook echt twee
    handtekeningen vereist voor uitbetalingen — dat regelt Luxis niet, dat is een
    bankinstelling.
@@ -77,9 +92,8 @@ bank inloggen → CSV-export downloaden → in Luxis uploaden → voorgestelde m
 goedkeuren.
 
 **Acties:**
-1. Arsalan/Lisanne: bevestig bij welke bank de stichting-derdengeldenrekening loopt.
-   **Rabobank zakelijk → niets te doen.** Andere bank → klein bouwklusje: tweede
-   CSV-parser (zelfde patroon als de Rabobank-parser, ~1 sessie incl. tests).
+1. ✅ Bevestigd door Arsalan (7 juli): de derdengeldenrekening loopt bij **Rabobank
+   zakelijk** — de bestaande parser past, niets te bouwen.
 2. Werkafspraak vastleggen: wie uploadt, hoe vaak (voorstel: 2× per week tijdens de
    eerste maand, daarna wekelijks).
 3. Dit is ook het antwoord op "hoe doen we de generale repetitie zonder koppeling":
@@ -92,22 +106,19 @@ verwerkingsverantwoordelijke**, **Arsalan/Luxis = verwerker**, met subverwerkers
 (Hetzner (DE) hosting, Anthropic (AI), Microsoft (e-mail/M365), Backblaze (backup),
 Sentry (foutmeldingen, EU-regio, zonder persoonsgegevens — al goed ingesteld)).
 
-**Acties (papier, kunnen nu, ~1 dagdeel samen):**
-1. **Verwerkersovereenkomst Kesting ↔ Luxis/Arsalan** opstellen en tekenen — bestaat
-   nog niet en is verplicht (ook, juist, tussen bevriende partijen).
-2. **Subverwerkerslijst + verwerkingsregister** opstellen (1 A4 per verwerking: doel,
-   categorieën gegevens, bewaartermijn, verwerkers). Model: AP-website.
-3. **Anthropic**: verwerkersovereenkomst (DPA) accepteren op het API-account en de
-   instellingen voor dataretentie/training controleren en vastleggen — niet geverifieerd
-   in deze sessie, moet aantoonbaar op papier.
-4. **Backblaze B2-regio EU bevestigen** — staat al open als ARSALAN-TODO §3, nu urgent
-   want onderdeel van het register.
-5. **Bewaarbeleid vastleggen** (bron: NOvA-archiveringshandleiding + art. 7:412 BW):
-   dossiers 5 jaar na afsluiting, financiële administratie en derdengelden-stukken
-   7 jaar (fiscaal), langer bewaren overwegen i.v.m. aansprakelijkheid. Luxis verwijdert
-   nu niets automatisch — dat is voor de livegang prima (bewaren mag), een
-   opschoonfunctie is een latere bouwklus, geen blokkade.
-6. Datalek-werkafspraak: wie meldt, waar, binnen 72 uur (1 alinea in het register).
+**Acties — concepten staan klaar in `docs/avg/` (geschreven 7 juli, S181-F):**
+1. ✅ concept: **verwerkersovereenkomst** (`verwerkersovereenkomst-CONCEPT.md`) —
+   Lisanne toetst, beiden tekenen, PDF archiveren.
+2. ✅ concept: **subverwerkerslijst** (`subverwerkers.md`) + **verwerkingsregister**
+   (`verwerkingsregister.md`) — Lisanne stelt vast.
+3. **Anthropic-DPA**: accepteren op het API-account, retentie-/training-instelling
+   vastleggen (screenshot in docs/avg/) — actie Arsalan, ~15 min.
+4. 🔴 **Backblaze staat in de VS én onversleuteld** — vastgesteld 7 juli via de
+   API van het account (`s3.us-east-005`) en het backup-script (geen encryptie).
+   Reparatiestappen staan in `subverwerkers.md` (nieuw EU-account → versleutelde
+   remote → testrun + restore-test → US-data wissen). Urgentste punt van dit plan.
+5. ✅ concept: **bewaarbeleid** (`bewaarbeleid-CONCEPT.md`) — Lisanne stelt vast.
+6. ✅ concept: **datalek-procedure** (`datalek-procedure.md`).
 
 ## §5. AI en geheimhouding (NOvA "Aanbevelingen AI in de advocatuur 2025")
 

@@ -18,6 +18,23 @@
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
 
+## Sessie 182 (7 juli, Opus — bouwsprint livegang)
+
+**Taak 1 — regeling-alarm: LIVE.** Gat uit S181-F gedicht: de dagelijkse job zette
+vervallen betalingsregeling-termijnen wel op 'overdue' maar er kwam geen melding, dus
+niemand zag een gemiste termijn. Nu maakt `mark_overdue_installments` per gemiste termijn
+een in-app notificatie (nieuw type `installment_overdue`) met zaaknummer + bedrag +
+vervaldatum. **Bewust afgeweken van het plan:** melding gaat naar álle actieve
+kantoorgebruikers i.p.v. `assigned_to_id` — heropende BaseNet-zaken kunnen op een
+legacy/inactieve gebruiker staan, wat het alarm stil zou misleiden (precies wat dit moet
+voorkomen); gelijkgetrokken met de andere financiële alarmen. Frontend: meldingstype
+geregistreerd, linkt naar betalingen-tab. 33 tests groen (incl. nieuwe alarm-test: melding
+mét zaaknummer/bedrag + geen dubbele bij tweede run), ruff schoon, tsc schoon.
+Backend+frontend gedeployed (commit `8f49329`), geen migratie. Job op prod geforceerd =
+foutloze no-op (121 pending termijnen onaangeroerd, eerste vervalt 9 juli → eerste echte
+alarm 10 juli 06:00 UTC). Geen zaakstatus-filter (12/13 regelingen hangen aan afgesloten
+zaken — bedoeld). Volgende: taak 2 (timeout-regels-opschonen), taak 3 (hold-steps).
+
 ## Sessie 181-F (7 juli, Fable — heropeningsaudit, laatste Fable-dag, 100% read-only)
 
 Lisanne was niet bereikbaar; Arsalan gaf mandaat om de laatste Fable-dag te benutten.

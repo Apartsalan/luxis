@@ -90,23 +90,49 @@ async def evaluate_timeout_rules(
 
     step_ids_in_use = {c.incasso_step_id for c in cases if c.incasso_step_id}
 
-    # Pak alle actieve timeout-rules waarvan from_step in gebruik
+    # Pak alle actieve timeout-rules waarvan from_step in gebruik.
+    # Deterministische volgorde (created_at, id): zonder ORDER BY was "welke
+    # regel wint per from_step" afhankelijk van query-uitvoering — een bron van
+    # non-deterministisch gedrag als er per ongeluk twee default-regels bestaan.
     rules_result = await db.execute(
-        select(StepTransition).where(
+        select(StepTransition)
+        .where(
             StepTransition.tenant_id == tenant_id,
             StepTransition.is_active.is_(True),
             StepTransition.trigger_type == "timeout",
             StepTransition.is_default.is_(True),
             StepTransition.from_step_id.in_(step_ids_in_use),
         )
+        .order_by(StepTransition.created_at, StepTransition.id)
     )
     rules = list(rules_result.scalars().all())
 
+    # Waarschuw bij de misconfiguratie zelf: meer dan één default timeout-regel
+    # vanaf dezelfde stap. Hoort er niet te zijn; surface het i.p.v. stil de
+    # "eerste" te pakken.
+    rules_per_step: dict[uuid.UUID, int] = {}
+    for r in rules:
+        rules_per_step[r.from_step_id] = rules_per_step.get(r.from_step_id, 0) + 1
+
     rules_by_from_step: dict[uuid.UUID, StepTransition] = {}
     for r in rules:
-        # Eerste rule per from_step (er zou maar 1 default timeout-rule per stap moeten zijn)
+        # Sla regels naar een inactieve doel-stap over: de draft-generator kan
+        # geen concept bouwen voor een stap zonder sjabloon → ValueError → zaak
+        # blijft stil hangen. Zo wint altijd de regel naar een actieve stap.
+        if r.to_step is None or not r.to_step.is_active:
+            continue
         if r.from_step_id not in rules_by_from_step:
             rules_by_from_step[r.from_step_id] = r
+    for from_step_id, count in rules_per_step.items():
+        if count > 1:
+            chosen = rules_by_from_step.get(from_step_id)
+            logger.warning(
+                "evaluate_timeout_rules: %d actieve default timeout-regels vanaf "
+                "stap %s — deterministisch gekozen: regel %s. Ruim de dubbele "
+                "regel(s) op.",
+                count, from_step_id,
+                chosen.id if chosen else "geen (alle doel-stappen inactief)",
+            )
 
     matches: list[RuleMatch] = []
     for case in cases:

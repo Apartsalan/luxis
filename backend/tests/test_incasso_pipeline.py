@@ -1419,3 +1419,105 @@ async def test_seed_omits_dead_payment_and_debtor_rules(db, test_tenant):
     assert "timeout" in trigger_types
     assert "payment" not in trigger_types
     assert "debtor_response" not in trigger_types
+
+
+# ── S182: dubbele/dode timeout-regels — filter naar inactieve stap + determinisme
+
+
+async def _mk_step(db, tenant_id, name, sort_order, *, is_active=True):
+    step = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=tenant_id, name=name,
+        sort_order=sort_order, min_wait_days=0, max_wait_days=0,
+        is_active=is_active,
+    )
+    db.add(step)
+    await db.flush()
+    return step
+
+
+async def _mk_timeout_rule(db, tenant_id, from_step, to_step, *, days, created_at):
+    from app.incasso.models import StepTransition
+
+    rule = StepTransition(
+        id=uuid.uuid4(), tenant_id=tenant_id,
+        from_step_id=from_step.id, to_step_id=to_step.id,
+        trigger_type="timeout", action="advance_to_step",
+        is_default=True, is_active=True,
+        condition='{"days": %d}' % days,
+        created_at=created_at,
+    )
+    db.add(rule)
+    await db.flush()
+    return rule
+
+
+async def test_timeout_rule_to_inactive_step_is_skipped(
+    db, test_tenant, test_user, test_company, caplog
+):
+    """Two default timeout rules leave the same active step; the OLDER one points
+    at an INACTIVE target (no template → ValueError in the draft-generator), the
+    newer at an active target. The evaluator must skip the inactive-target rule
+    and match the active one — regardless of created_at order — and warn about
+    the duplicate config (S182)."""
+    import logging
+    from datetime import UTC, datetime, timedelta
+
+    from app.incasso.automation_service import evaluate_timeout_rules
+
+    from_step = await _mk_step(db, test_tenant.id, "Tweede sommatie", 5)
+    active_target = await _mk_step(db, test_tenant.id, "Derde sommatie", 6)
+    inactive_target = await _mk_step(
+        db, test_tenant.id, "Ingebrekestelling (oud)", 7, is_active=False
+    )
+    base = datetime(2026, 1, 1, tzinfo=UTC)
+    # Inactive-target rule is the OLDEST → would win without the filter.
+    await _mk_timeout_rule(
+        db, test_tenant.id, from_step, inactive_target, days=1, created_at=base
+    )
+    await _mk_timeout_rule(
+        db, test_tenant.id, from_step, active_target, days=1,
+        created_at=base + timedelta(hours=1),
+    )
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=from_step, case_number="2026-08200", days_in_step=5,
+    )
+
+    with caplog.at_level(logging.WARNING):
+        matches = await evaluate_timeout_rules(db, test_tenant.id)
+
+    case_matches = [m for m in matches if m.case_id == case.id]
+    assert len(case_matches) == 1
+    assert case_matches[0].to_step_id == active_target.id
+    assert any("default timeout-regels" in r.message for r in caplog.records)
+
+
+async def test_timeout_rule_deterministic_oldest_wins(
+    db, test_tenant, test_user, test_company
+):
+    """Two default timeout rules to ACTIVE targets from the same step → the
+    oldest (by created_at) is chosen deterministically (S182)."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.incasso.automation_service import evaluate_timeout_rules
+
+    from_step = await _mk_step(db, test_tenant.id, "Tweede sommatie", 5)
+    older_target = await _mk_step(db, test_tenant.id, "Derde sommatie", 6)
+    newer_target = await _mk_step(db, test_tenant.id, "Dagvaarding", 8)
+    base = datetime(2026, 2, 1, tzinfo=UTC)
+    await _mk_timeout_rule(
+        db, test_tenant.id, from_step, older_target, days=1, created_at=base
+    )
+    await _mk_timeout_rule(
+        db, test_tenant.id, from_step, newer_target, days=1,
+        created_at=base + timedelta(hours=1),
+    )
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=from_step, case_number="2026-08201", days_in_step=5,
+    )
+
+    matches = await evaluate_timeout_rules(db, test_tenant.id)
+    case_matches = [m for m in matches if m.case_id == case.id]
+    assert len(case_matches) == 1
+    assert case_matches[0].to_step_id == older_target.id

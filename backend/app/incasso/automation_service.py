@@ -217,6 +217,64 @@ def _ensure_iban_kenmerk(body: str, case_number: str) -> str:
     return body
 
 
+def _amount_variants(amount: Decimal) -> set[str]:
+    """Alle gangbare schrijfwijzen van een bedrag: NL (1.234,56 / 1234,56),
+    EN (1,234.56 / 1234.56) en bij hele euro's ook '500,-'."""
+    q = amount.quantize(Decimal("0.01"))
+    en_thousands = f"{q:,.2f}"  # 1,234.56
+    nl_thousands = (
+        en_thousands.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+    )  # 1.234,56
+    plain_en = f"{q}"  # 1234.56
+    plain_nl = plain_en.replace(".", ",")  # 1234,56
+    variants = {en_thousands, nl_thousands, plain_en, plain_nl}
+    if q == q.to_integral_value():
+        whole_nl_thousands = f"{int(q):,}".replace(",", ".")  # 1.234
+        variants |= {f"{int(q)},-", f"{whole_nl_thousands},-"}
+    return variants
+
+
+def _draft_fidelity_issues(
+    body: str,
+    *,
+    step_name: str,
+    template_body: str,
+    case_number: str,
+    amounts: dict[str, Decimal],
+) -> list[str]:
+    """Getrouwheids-poort (S182, plan wet-en-regelgeving §1 actie B): de dragende
+    dossier-elementen moeten letterlijk in het concept staan.
+
+    Gecontroleerd: dossiernummer + (als het sjabloon een bedragen-tabel heeft,
+    herkenbaar aan '€') hoofdsom, rentebedrag en te-voldoen-bedrag, elk alleen
+    als > 0. Bewuste plan-afwijking: GEEN rentepercentage-check — de sjablonen
+    vermelden rente als bedrag met een vaste uitleg-alinea zonder percentage;
+    een percentage afdwingen zou elke contractuele-rente-brief vals flaggen én
+    de AI van het sjabloon wegduwen (regel 1: sjabloon is leidend). Het
+    rentebedrag controleren is sterker: dan klopt de daadwerkelijke rente-eis.
+    Bij de verweer-stap hoort ook de 'XXX'-plaatshouder vervangen te zijn (de
+    oude check keek naar de dict-sleutels i.p.v. de tekst en werkte dus nooit).
+    """
+    if not body:
+        return ["lege body"]
+    issues: list[str] = []
+    if case_number and case_number not in body:
+        issues.append(f"dossiernummer {case_number}")
+    if "€" in (template_body or ""):
+        for label, value in (
+            ("hoofdsom", amounts.get("hoofdsom")),
+            ("rente", amounts.get("rente")),
+            ("te voldoen", amounts.get("te_voldoen")),
+        ):
+            if value is None or value <= 0:
+                continue
+            if not any(v in body for v in _amount_variants(value)):
+                issues.append(f"{label} € {value}")
+    if step_name == "Verweer beantwoorden" and "XXX" in body:
+        issues.append("'XXX'-plaatshouder niet vervangen")
+    return issues
+
+
 def _capitalize_name(name: str) -> str:
     """Capitalize eerste letter als naam helemaal lowercase ingevoerd is.
 
@@ -611,28 +669,11 @@ async def generate_draft_for_step(
     )
 
     # Roep AI aan — Sonnet primary, met PDF bij verweer-stap.
-    # Het verweer-sjabloon heeft een 'XXX'-plaatshouder voor de weerlegging die de
-    # AI moet vervangen. Het model laat 'm soms staan (niet-deterministisch, ~50/50)
-    # → bij de verweer-stap regenereren we tot 'XXX' weg is (max 3 pogingen). Zo
-    # krijgt de gebruiker nooit een leeg 'XXX'-concept.
     result, model_name = await call_draft_ai(
         system_prompt,
         user_prompt,
         av_pdf_path=av_pdf_path if use_pdf_route else None,
     )
-    if target_step.name == "Verweer beantwoorden":
-        _attempt = 1
-        while "XXX" in result and _attempt < 3:
-            logger.warning(
-                "Case %s: verweer-draft liet 'XXX'-plaatshouder staan (poging %d) — regenereren",
-                case_id, _attempt,
-            )
-            result, model_name = await call_draft_ai(
-                system_prompt,
-                user_prompt,
-                av_pdf_path=av_pdf_path if use_pdf_route else None,
-            )
-            _attempt += 1
 
     from app.incasso.html_renderer import render_subject, render_template_html
 
@@ -640,17 +681,58 @@ async def generate_draft_for_step(
     # `/ kenmerk / dossiernummer` structuur (zet bv. contactnaam in plaats
     # van dossiernummer in 2e slot).
     case_data = context.get("case_data", {})
+    case_number_str = str(case_data.get("case_number") or "")
     subject = render_subject(
         template_subject,
-        case_number=str(case_data.get("case_number") or ""),
+        case_number=case_number_str,
         kenmerk=str(case_data.get("reference") or ""),
     )
-    body = result.get("body", "") or template_body
-    # Server-side fixes:
-    # 1. Dedupe "/ X / X" in Betreft-regel
-    # 2. Vul leeg kenmerk in IBAN-betalingsinstructie met case_number
-    body = _dedupe_subject_slots(body)
-    body = _ensure_iban_kenmerk(body, str(case_data.get("case_number") or ""))
+
+    def _post_process(res: dict) -> str:
+        # Server-side fixes:
+        # 1. Dedupe "/ X / X" in Betreft-regel
+        # 2. Vul leeg kenmerk in IBAN-betalingsinstructie met case_number
+        b = res.get("body", "") or template_body
+        b = _dedupe_subject_slots(b)
+        return _ensure_iban_kenmerk(b, case_number_str)
+
+    def _issues_for(b: str) -> list[str]:
+        return _draft_fidelity_issues(
+            b,
+            step_name=target_step.name,
+            template_body=template_body,
+            case_number=case_number_str,
+            amounts=context.get("amounts", {}),
+        )
+
+    # Getrouwheids-poort (S182): dragende elementen (dossiernummer, bedragen)
+    # moeten in het concept staan; bij de verweer-stap ook geen achtergebleven
+    # 'XXX'-plaatshouder (vervangt de oude XXX-lus die op de dict-sleutels
+    # checkte en dus nooit vuurde). Ontbreekt iets → regenereren (max 3 AI-
+    # calls totaal); blijft het fout → concept tóch aanmaken maar de
+    # reviewtaak gemarkeerd. Nooit stil doorlaten, nooit stil weggooien.
+    body = _post_process(result)
+    fidelity_issues = _issues_for(body)
+    _attempt = 1
+    while fidelity_issues and _attempt < 3:
+        logger.warning(
+            "Case %s: concept mist dragende elementen (%s) — regenereren (poging %d)",
+            case_id, "; ".join(fidelity_issues), _attempt,
+        )
+        result, model_name = await call_draft_ai(
+            system_prompt,
+            user_prompt,
+            av_pdf_path=av_pdf_path if use_pdf_route else None,
+        )
+        body = _post_process(result)
+        fidelity_issues = _issues_for(body)
+        _attempt += 1
+    if fidelity_issues:
+        logger.error(
+            "Case %s: concept wijkt na %d AI-pogingen nog af van de context (%s) "
+            "— reviewtaak wordt gemarkeerd voor extra controle",
+            case_id, _attempt, "; ".join(fidelity_issues),
+        )
     # AI returnt geen body_html — server rendert HTML uit template + dossier-context.
     # ai_body wordt meegegeven zodat XXX-placeholder (Verweer beantwoorden) gevuld
     # kan worden met de AI-gegenereerde weerlegging.
@@ -674,6 +756,7 @@ async def generate_draft_for_step(
             "rule_id": str(rule_match.rule_id) if rule_match else None,
             "trigger_type": rule_match.trigger_type if rule_match else "manual",
             "reason": rule_match.reason if rule_match else "Handmatig getriggerd",
+            "fidelity_issues": fidelity_issues or None,
         },
         status=DraftStatus.GENERATED,
         model_used=model_name,
@@ -693,6 +776,7 @@ async def generate_draft_for_step(
             db, tenant_id=tenant_id, case_id=case_id,
             draft_id=draft.id, step_name=target_step.name,
             reason=rule_match.reason if rule_match else "Handmatig getriggerd",
+            fidelity_issues=fidelity_issues,
         )
 
     return draft
@@ -841,16 +925,31 @@ async def _create_review_task(
     draft_id: uuid.UUID,
     step_name: str,
     reason: str,
+    fidelity_issues: list[str] | None = None,
 ) -> None:
-    """Maak WorkflowTask aan zodat draft in /taken queue verschijnt."""
+    """Maak WorkflowTask aan zodat draft in /taken queue verschijnt.
+
+    Bij `fidelity_issues` (getrouwheids-poort faalde na regeneraties) wordt de
+    taak zichtbaar gemarkeerd — het concept bestaat, maar wijkt af van de
+    dossier-context en verdient extra controle.
+    """
     from app.workflow.models import WorkflowTask
+
+    title = f"Review concept-email: {step_name}"
+    description = f"AI heeft een concept-email klaargezet ({reason}). Bekijk en verstuur."
+    if fidelity_issues:
+        title = f"⚠ {title}"
+        description += (
+            " LET OP: concept wijkt af van het sjabloon/dossier "
+            f"(ontbreekt: {'; '.join(fidelity_issues)}) — extra controleren."
+        )
 
     task = WorkflowTask(
         tenant_id=tenant_id,
         case_id=case_id,
         task_type="review_ai_draft",
-        title=f"Review concept-email: {step_name}",
-        description=f"AI heeft een concept-email klaargezet ({reason}). Bekijk en verstuur.",
+        title=title,
+        description=description,
         due_date=datetime.now(UTC).date(),
         status="pending",
         action_config={"draft_id": str(draft_id), "step_name": step_name},

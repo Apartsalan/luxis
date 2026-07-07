@@ -1521,3 +1521,182 @@ async def test_timeout_rule_deterministic_oldest_wins(
     case_matches = [m for m in matches if m.case_id == case.id]
     assert len(case_matches) == 1
     assert case_matches[0].to_step_id == older_target.id
+
+
+# ── S182: getrouwheids-poort — concept moet dragende dossier-elementen bevatten
+
+
+def test_fidelity_amount_variants_cover_dutch_and_english():
+    from app.incasso.automation_service import _amount_variants
+
+    variants = _amount_variants(Decimal("1234.56"))
+    assert "1.234,56" in variants  # NL duizendtal-punt + decimaal-komma
+    assert "1234,56" in variants
+    assert "1234.56" in variants
+    whole = _amount_variants(Decimal("500.00"))
+    assert "500,00" in whole
+    assert "500,-" in whole
+
+
+def test_fidelity_issues_detects_missing_elements():
+    from app.incasso.automation_service import _draft_fidelity_issues
+
+    body = "Geachte heer, gelieve € 1.234,56 te voldoen."
+    issues = _draft_fidelity_issues(
+        body,
+        step_name="Eerste sommatie",
+        template_body="Hoofdsom €\nTe voldoen €",
+        case_number="2026-00042",
+        amounts={
+            "hoofdsom": Decimal("1000.00"),
+            "rente": Decimal("0.00"),
+            "te_voldoen": Decimal("1234.56"),
+        },
+    )
+    assert any("2026-00042" in i for i in issues)  # dossiernummer mist
+    assert any("hoofdsom" in i for i in issues)  # hoofdsom mist
+    assert not any("te voldoen" in i for i in issues)  # te_voldoen staat erin
+
+
+def test_fidelity_issues_clean_body_passes():
+    from app.incasso.automation_service import _draft_fidelity_issues
+
+    body = (
+        "Betreft: sommatie / 2026-00042\n"
+        "Hoofdsom € 1.000,00\nRente € 12,34\nTe voldoen € 1.234,56\n"
+    )
+    issues = _draft_fidelity_issues(
+        body,
+        step_name="Eerste sommatie",
+        template_body="Hoofdsom €",
+        case_number="2026-00042",
+        amounts={
+            "hoofdsom": Decimal("1000.00"),
+            "rente": Decimal("12.34"),
+            "te_voldoen": Decimal("1234.56"),
+        },
+    )
+    assert issues == []
+
+
+def test_fidelity_issues_flags_xxx_on_verweer_step():
+    from app.incasso.automation_service import _draft_fidelity_issues
+
+    issues = _draft_fidelity_issues(
+        "Betreft: 2026-00042. XXX",
+        step_name="Verweer beantwoorden",
+        template_body="",
+        case_number="2026-00042",
+        amounts={},
+    )
+    assert any("XXX" in i for i in issues)
+
+
+async def test_draft_gate_regenerates_and_marks_review_task(
+    db, test_tenant, test_user, test_company
+):
+    """Concept zonder dossiernummer → poort regenereert (max 3 AI-calls); blijft
+    het fout, dan wordt het concept tóch aangemaakt maar de reviewtaak gemarkeerd
+    met een waarschuwing. Nooit stil (S182)."""
+    from app.incasso.automation_service import generate_draft_for_step
+
+    steps = await create_pipeline_steps(db, test_tenant.id)
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=steps[0], case_number="2026-07300", days_in_step=1,
+    )
+    bad = {"subject": "s", "body": "Geachte heer, gelieve te betalen."}
+    with patch(
+        "app.ai_agent.kimi_client.call_draft_ai",
+        new=AsyncMock(return_value=(bad, "test-model")),
+    ) as mock_ai:
+        draft = await generate_draft_for_step(
+            db, test_tenant.id, case.id, steps[0].id
+        )
+
+    assert mock_ai.await_count == 3  # initieel + 2 regeneraties
+    assert draft.sources.get("fidelity_issues")
+
+    task = (await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.case_id == case.id,
+            WorkflowTask.task_type == "review_ai_draft",
+        )
+    )).scalars().first()
+    assert task is not None
+    assert task.title.startswith("⚠")
+    assert "wijkt af" in task.description
+
+
+async def test_draft_gate_passes_clean_draft_first_try(
+    db, test_tenant, test_user, test_company
+):
+    """Concept mét dossiernummer → geen regeneratie, gewone reviewtaak."""
+    from app.incasso.automation_service import generate_draft_for_step
+
+    steps = await create_pipeline_steps(db, test_tenant.id)
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=steps[0], case_number="2026-07301", days_in_step=1,
+    )
+    good = {"subject": "s", "body": "Betreft: aanmaning / 2026-07301. Gelieve te betalen."}
+    with patch(
+        "app.ai_agent.kimi_client.call_draft_ai",
+        new=AsyncMock(return_value=(good, "test-model")),
+    ) as mock_ai:
+        draft = await generate_draft_for_step(
+            db, test_tenant.id, case.id, steps[0].id
+        )
+
+    assert mock_ai.await_count == 1
+    assert not draft.sources.get("fidelity_issues")
+
+    task = (await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.case_id == case.id,
+            WorkflowTask.task_type == "review_ai_draft",
+        )
+    )).scalars().first()
+    assert task is not None
+    assert not task.title.startswith("⚠")
+
+
+async def test_draft_gate_fixes_broken_xxx_regeneration(
+    db, test_tenant, test_user, test_company
+):
+    """De oude XXX-check keek naar de dict-sleutels i.p.v. de tekst en heeft dus
+    nooit gewerkt. Nu: verweer-concept met achtergebleven 'XXX' wordt geregenereerd
+    tot de tekst schoon is (S182)."""
+    from app.incasso.automation_service import generate_draft_for_step
+
+    verweer = IncassoPipelineStep(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        name="Verweer beantwoorden",
+        sort_order=10,
+        min_wait_days=0,
+        max_wait_days=0,
+        is_hold_step=True,
+        email_subject_template="Reactie verweer {{ zaak.zaaknummer }}",
+        email_body_template="Geachte, XXX. Betreft 2026-07302.",
+    )
+    db.add(verweer)
+    await db.flush()
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=verweer, case_number="2026-07302", days_in_step=1,
+    )
+    with_xxx = {"subject": "s", "body": "Betreft: 2026-07302. XXX"}
+    clean = {"subject": "s", "body": "Betreft: 2026-07302. Wij weerleggen uw verweer."}
+    with patch(
+        "app.ai_agent.kimi_client.call_draft_ai",
+        new=AsyncMock(side_effect=[(with_xxx, "m"), (clean, "m")]),
+    ) as mock_ai:
+        draft = await generate_draft_for_step(
+            db, test_tenant.id, case.id, verweer.id,
+            incoming_defense="Ik betwist de vordering.",
+        )
+
+    assert mock_ai.await_count == 2
+    assert "XXX" not in draft.body
+    assert not draft.sources.get("fidelity_issues")

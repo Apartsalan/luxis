@@ -663,19 +663,27 @@ async def update_arrangement(
     arrangement_id: uuid.UUID,
     data: ArrangementUpdate,
 ) -> PaymentArrangement:
-    """Update a payment arrangement (e.g. mark as completed/defaulted)."""
-    result = await db.execute(
-        select(PaymentArrangement).where(
-            PaymentArrangement.id == arrangement_id,
-            PaymentArrangement.tenant_id == tenant_id,
-        )
-    )
-    arrangement = result.scalar_one_or_none()
-    if arrangement is None:
-        raise NotFoundError("Betalingsregeling niet gevonden")
+    """Update a payment arrangement (e.g. mark as completed/defaulted).
 
-    for field, value in data.model_dump(exclude_unset=True).items():
+    Een status-wijziging naar een eindtoestand sluit open termijnen af — zelfde
+    gedrag als de dedicated /default en /cancel endpoints. Anders blijven er
+    pending/partial termijnen achter die later vals alarmeren (regeling-alarm).
+    """
+    arrangement = await get_arrangement(db, tenant_id, arrangement_id)
+
+    updates = data.model_dump(exclude_unset=True)
+    for field, value in updates.items():
         setattr(arrangement, field, value)
+
+    closed_status = {
+        "defaulted": "missed",
+        "cancelled": "waived",
+        "completed": "waived",
+    }.get(updates.get("status") or "")
+    if closed_status:
+        for inst in arrangement.installments:
+            if inst.status in ("pending", "partial", "overdue"):
+                inst.status = closed_status
 
     await db.flush()
     await db.refresh(arrangement)
@@ -779,9 +787,10 @@ async def default_arrangement(
 
     arrangement.status = "defaulted"
 
-    # Mark all pending/overdue installments as missed
+    # Mark all open installments as missed — 'partial' hoort erbij: het restant
+    # van een deels betaalde termijn komt niet meer (paid_amount blijft staan).
     for inst in arrangement.installments:
-        if inst.status in ("pending", "overdue"):
+        if inst.status in ("pending", "partial", "overdue"):
             inst.status = "missed"
 
     await db.flush()
@@ -802,7 +811,7 @@ async def cancel_arrangement(
     arrangement.status = "cancelled"
 
     for inst in arrangement.installments:
-        if inst.status in ("pending", "overdue"):
+        if inst.status in ("pending", "partial", "overdue"):
             inst.status = "waived"
 
     await db.flush()
@@ -957,6 +966,10 @@ async def mark_overdue_installments(db: AsyncSession) -> int:
         )
         .join(Case, PaymentArrangement.case_id == Case.id)
         .where(
+            # Alleen ACTIEVE regelingen bewaken: een bewust beëindigde regeling
+            # (wanprestatie/geannuleerd) mag nooit meer alarmeren, ook niet als
+            # er ergens een open termijn is achtergebleven.
+            PaymentArrangement.status == "active",
             # 'partial' hoort er ook bij: een deels betaalde termijn die vervalt
             # is nog steeds niet volledig voldaan → moet alarmeren, anders blijft
             # precies dat geval onzichtbaar (juist waar debiteur afhaakt na één

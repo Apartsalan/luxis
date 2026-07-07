@@ -595,6 +595,111 @@ async def test_overdue_alarm_covers_partial_installment(
     assert len(list(result.scalars().all())) >= 1
 
 
+@pytest.mark.asyncio
+async def test_ended_arrangement_never_alarms(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """A defaulted arrangement with a past-due partial installment must NOT
+    trigger the regeling-alarm: only ACTIVE arrangements are monitored, and
+    ending an arrangement closes its open installments (Fable-review S182)."""
+    from sqlalchemy import select
+
+    from app.collections.service import mark_overdue_installments
+    from app.notifications.models import Notification
+
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+
+    past_start = date.today() - timedelta(days=40)
+    arr_resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "900.00",
+            "installment_amount": "300.00",
+            "frequency": "monthly",
+            "start_date": past_start.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    arr_id = arr_resp.json()["id"]
+
+    # Partial payment on the past-due first installment → status 'partial'
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    first_inst = list_resp.json()[0]["installments"][0]
+    await client.post(
+        f"/api/cases/{case_id}/arrangements/{arr_id}/installments/{first_inst['id']}/record-payment",
+        json={"amount": "100.00", "payment_date": date.today().isoformat()},
+        headers=auth_headers,
+    )
+
+    # Deliberately end the arrangement (wanprestatie)
+    resp = await client.patch(
+        f"/api/cases/{case_id}/arrangements/{arr_id}/default", headers=auth_headers
+    )
+    assert resp.status_code == 200
+
+    # All installments must be closed — including the partial one
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    for inst in list_resp.json()[0]["installments"]:
+        assert inst["status"] == "missed"
+
+    # The daily job must not alarm for this case
+    await mark_overdue_installments(db)
+    await db.commit()
+    result = await db.execute(
+        select(Notification).where(
+            Notification.type == "installment_overdue",
+            Notification.case_id == uuid.UUID(case_id),
+        )
+    )
+    assert list(result.scalars().all()) == []
+
+
+@pytest.mark.asyncio
+async def test_generic_update_closes_open_installments(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """Ending an arrangement via the generic update path (PATCH status) must
+    close open installments just like the dedicated /default and /cancel
+    endpoints — otherwise they linger and later false-alarm (Fable-review S182)."""
+    from app.collections.schemas import ArrangementUpdate
+    from app.collections.service import update_arrangement
+
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+    past_start = date.today() - timedelta(days=40)
+    arr_resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "900.00",
+            "installment_amount": "300.00",
+            "frequency": "monthly",
+            "start_date": past_start.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    arr_id = arr_resp.json()["id"]
+
+    # Tenant-id via de zaak ophalen (service-call is tenant-scoped)
+    case_resp = await client.get(f"/api/cases/{case_id}", headers=auth_headers)
+    tenant_id = uuid.UUID(case_resp.json()["tenant_id"])
+
+    arrangement = await update_arrangement(
+        db, tenant_id, uuid.UUID(arr_id), ArrangementUpdate(status="defaulted")
+    )
+    await db.commit()
+    assert arrangement.status == "defaulted"
+
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    for inst in list_resp.json()[0]["installments"]:
+        assert inst["status"] == "missed"
+
+
 # ── Test: weekly frequency ───────────────────────────────────────────────────
 
 

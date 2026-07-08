@@ -24,6 +24,29 @@ docker compose exec backend python -m alembic revision --autogenerate -m "desc" 
 
 **Multi-tenant:** Models inherit `TenantBase` (has `tenant_id`). Exception: `interest_rates` is global. Every query scoped via middleware + RLS.
 
+## Security-regels (HARD — audit S183)
+
+Deze gelden ALTIJD, ook zonder dat de opdracht ze noemt. Ze bestaan omdat de audit
+bewees dat ze wegdriften zodra iemand ze vergeet.
+
+- **Nieuwe tabel met `tenant_id` → RLS in DEZELFDE migratie.** Roep `apply_rls(op.get_bind())`
+  aan (idempotent, dekt de nieuwe tabel). Vergeet je het, dan blokkeert de opstartcontrole
+  (`app.main.lifespan`, faalt dicht in productie) + de drift-guard-test
+  (`tests/test_rls_isolation.py::test_drift_guard_flags_tenant_table_without_rls`) de deploy.
+  `learned_answers` ontsnapte hier ooit aan (S183-1). Enige uitzondering: `users` (zie
+  `app/security/rls.py`).
+- **Nieuwe route → auth verplicht.** `Depends(get_current_user)` (of `require_role(...)`),
+  tenzij het echt publiek moet (login/OAuth-callback) — dan expliciet + rate-limit.
+- **Geld/tenant-mutatie na een `db.commit()` binnen één request:** de tenant + rol worden
+  automatisch her-toegepast (`after_begin`-event, S183-2) — vertrouw daar niet blind op,
+  filter altijd óók op `tenant_id` in de query zelf.
+- **Nooit secrets/sleutels in code.** Alleen uit env (`app/config.py`). Sleutels van
+  gebruikers (OAuth) versleuteld opslaan. Geen `NEXT_PUBLIC_*` met secrets — sleutels blijven
+  server-side (alle AI/externe calls lopen via de backend).
+- **Uploads:** alleen via de bestaande gevalideerde helpers (extensie-whitelist + grootte-cap
+  + magic-byte-check). Geen rauwe bestandsopslag.
+- **Rollen-matrix:** zie `docs/security/rollen.md` (wat admin/advocaat/medewerker mogen).
+
 ## Architecture
 
 - **Backend:** FastAPI 3.12 + SQLAlchemy 2.0 + Alembic | Module: `router.py`, `service.py`, `models.py`, `schemas.py`
@@ -78,6 +101,13 @@ Na goedkeuring.
 - Conflicterende patronen niet middelen — kies één (recentste/meest getest), licht toe waarom, flag andere voor cleanup.
 - Na correctie: les noteren in CLAUDE.md of memory
 - Minimale impact, root causes fixen, geen workarounds
+
+## Geen aannames — eerst zeker weten (HARDE REGEL)
+
+- **Maak GEEN aannames.** Verifieer alles met de code, git-historie, logs of database vóór je iets aanpast. Twijfel je → eerst onderzoeken, nooit gokken.
+- **Bij regressies** (iets dat eerder werkte, nu niet): zoek in git-historie/SESSION-NOTES wánneer het werkte en wélke commit het brak. Vergelijk oude vs huidige code.
+- **Fix chirurgisch:** alleen de kapotte regressie herstellen. NOOIT features of security-verbeteringen breed terugdraaien om één los symptoom te fixen.
+- **Presenteer bevindingen + voorgestelde fix vóór je wijzigt** (Plan Mode); pas aan na bevestiging.
 
 ## Gedragsregels
 

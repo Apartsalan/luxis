@@ -92,6 +92,11 @@ en een niet-bestaand "heropen"-endpoint vergen.
   `min_wait_days` van de stap verstreken is (0-4 dagen). Dat is gewenst gedrag; het
   verstuurt niets. Verwacht op dag 1 wel ESCALATE-ruis voor hold-stap-zaken zolang
   PLAN-followup-hold-steps niet is uitgevoerd.
+- **Rentetype controleren vóór er brieven met bedragen uitgaan (S185):** Arsalan bevestigt
+  dat de AV-rente van art. 13.3 (2%/mnd, contractueel) geldt; de 4 herrekende zaken
+  (o.a. COLLECT 1) stonden echter op `interest_type='commercial'` (wettelijke handelsrente).
+  Per opdrachtgever-groep checken welk rentetype de zaken dragen en zonodig eerst
+  voorleggen/rechtzetten — anders rekenen sommaties met het verkeerde tarief.
 - Draait de **verweer-mail-trigger**: een binnenkomende mail die als verweer wordt
   geclassificeerd kan een heropende hoofdpad-zaak automatisch naar "Verweer beantwoorden"
   verplaatsen (+ concept + taak). Verstuurt niets; niet als bug rapporteren.
@@ -108,4 +113,15 @@ en een niet-bestaand "heropen"-endpoint vergen.
 4. `SELECT count(*) FROM email_logs` is vóór == ná de operatie (er is niets gemaild).
 5. `pipeline_auto_drafts_enabled` is nog steeds false.
 6. UI-rooktest (stap 5) gedaan en beschreven in SESSION-NOTES.
-7. SESSION-NOTES + LUXIS-ROADMAP bijgewerkt; commit + push + tag.
+7. **Vangnet BaseNet-gesloten dossiers (akkoord Arsalan, S185):** ná elke heropen-batch
+   MOET deze query 0 rijen geven — de 163 dossiers die in BaseNet al dicht waren
+   (148 Gereed + 15 Geannuleerd) mogen nooit heropend worden:
+   ```sql
+   SELECT case_number, status FROM cases
+   WHERE (debtor_notes LIKE '%BaseNet-status: Gereed%'
+          OR debtor_notes LIKE '%BaseNet-status: Geannuleerd%')
+     AND status <> 'afgesloten';
+   ```
+   Nulmeting S185 (8 juli, tegen de originele backup Xml_02-07-2026_2400.zip geverifieerd):
+   alle 163 op 'afgesloten', 0 uitzonderingen. Rijen ≠ 0 → direct terugdraaien + Arsalan.
+8. SESSION-NOTES + LUXIS-ROADMAP bijgewerkt; commit + push + tag.

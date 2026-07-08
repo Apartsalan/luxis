@@ -237,7 +237,9 @@ function ClassificationBadge({ classification }: { classification: Classificatio
 
 function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?: () => void }) {
   const { data: logs, isLoading: logsLoading } = useEmailLogs(caseId);
-  const { data: syncedData, isLoading: syncedLoading } = useCaseEmails(caseId);
+  // ponytail: 200 dekt het drukste dossier ruim (max ~83 nu); voeg echte paging
+  // toe zodra een dossier de 200 nadert.
+  const { data: syncedData, isLoading: syncedLoading } = useCaseEmails(caseId, 200);
   const { data: classifications } = useClassifications(undefined, caseId, 1, 100);
   const oauthStatus = useEmailOAuthStatus();
   const syncEmails = useSyncEmails();

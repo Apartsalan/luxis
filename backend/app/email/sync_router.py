@@ -109,6 +109,7 @@ class SyncedEmailDetail(BaseModel):
     matched_by: str | None = None
     email_date: str
     case_id: str | None
+    case_number: str | None = None
     provider_thread_id: str | None
     provider_message_id: str | None = None  # nodig om een antwoord aan de keten te koppelen
 
@@ -236,6 +237,8 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
         matched_by=email.matched_by,
         email_date=email.email_date.isoformat(),
         case_id=str(email.case_id) if email.case_id else None,
+        # `case` is lazy="selectin" → altijd geladen, geen extra query.
+        case_number=email.case.case_number if email.case_id and email.case else None,
         provider_thread_id=email.provider_thread_id,
         provider_message_id=email.provider_message_id,
     )

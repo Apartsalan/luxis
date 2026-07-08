@@ -19,7 +19,7 @@ from html import unescape as html_unescape
 from pathlib import Path
 
 from dateutil import parser as dateparser
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseParty
@@ -37,12 +37,21 @@ EMAIL_ATTACHMENTS_BASE = Path("/app/uploads/email_attachments")
 
 logger = logging.getLogger(__name__)
 
-# Regex: matches case numbers like "2024-00001", "2026-12345".
+# Luxis-generated dossiernummer, e.g. "2024-00001", "2026-12345".
 # Real dossiernummers are YYYY-NNNNN (generate_case_number uses :05d, so >=5
 # digits). Requiring >=5 digits keeps 4-digit references (invoice/payment
 # numbers) from being mistaken for a dossiernummer, which blocked the
 # contact-email fallback and left such emails unlinked (AUDIT-MEDIUM).
 CASE_NUMBER_RE = re.compile(r"\b(20\d{2}-\d{5,6})\b")
+
+# S185: reference-style identifiers — the BaseNet-imported case_number ("IN100215")
+# and the opdrachtgever-kenmerk stored on Case.reference ("D102913", "N151154";
+# often with a BaseNet invoice suffix like "D102913_I62115417"). 1-3 letters + 5-7
+# digits. These are looked up in case_number AND the reference core (part before
+# "_"). A miss here does NOT block the sender-fallthrough — only a real Luxis
+# dossiernummer (CASE_NUMBER_RE) does — so an email that merely quotes a client's
+# own reference we don't have still gets matched on its sender.
+REFERENCE_TOKEN_RE = re.compile(r"\b([A-Za-z]{1,3}\d{5,7})\b")
 
 # Simple HTML tag stripper — faster than BeautifulSoup for our needs
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
@@ -84,52 +93,77 @@ async def _find_case_by_case_number(
     tenant_id: uuid.UUID,
     text: str,
 ) -> tuple[uuid.UUID | None, str | None, bool]:
-    """Scan text (subject + optionally body) for case numbers like "2026-00012".
+    """Scan text (subject + body) for a dossiernummer or opdrachtgever-kenmerk.
 
-    S144: callers passeren nu full searchable text (subject + body + snippet)
-    zodat dossiernummers in reply-bodies ook gevonden worden, niet alleen
-    in onderwerp.
+    S144: callers passeren full searchable text (subject + body + snippet) zodat
+    nummers in reply-bodies ook gevonden worden.
+    S185: matcht nu ook ons IN-zaaknummer én het kenmerk van de opdrachtgever
+    (Case.reference), met voorrang voor het eigen zaaknummer.
 
     Returns (case_id, matched_by, has_case_number):
-      - (uuid, "case_number", True) — matched to an active case
-      - (None, None, True)          — case number found but dossier doesn't exist
-      - (None, None, False)         — no case number found in text
+      - (uuid, "case_number"|"client_reference", True) — matched to an active case
+      - (None, None, True)   — a Luxis dossiernummer / ambiguous match found, but no
+                               single dossier → bewust NIET doorvallen naar afzender
+      - (None, None, False)  — niets bruikbaars → afzender-matching mag het proberen
     """
     if not text:
         return None, None, False
 
-    matches = CASE_NUMBER_RE.findall(text)
-    if not matches:
+    strict = {m.upper() for m in CASE_NUMBER_RE.findall(text)}
+    tokens = strict | {m.upper() for m in REFERENCE_TOKEN_RE.findall(text)}
+    if not tokens:
         return None, None, False
 
-    # Case number found in subject — look up in DB
+    token_list = list(tokens)
+
+    # Prioriteit A: ons eigen zaaknummer (case_number) — hoogste zekerheid.
+    # Voorrang boven het kenmerk, zodat een dubbelzinnig klant-kenmerk elders in
+    # de mail een duidelijke zaaknummer-match niet blokkeert.
     result = await db.execute(
         select(Case.id).where(
             Case.tenant_id == tenant_id,
             Case.is_active == True,  # noqa: E712
-            Case.case_number.in_(matches),
+            func.upper(Case.case_number).in_(token_list),
         )
     )
     case_ids = {row[0] for row in result.all()}
-
     if len(case_ids) == 1:
         return case_ids.pop(), "case_number", True
-
     if len(case_ids) > 1:
-        logger.info(
-            "Meerdere dossiers (%d) gematcht op dossiernummer %s — niet auto-gekoppeld",
-            len(case_ids),
-            matches,
-        )
+        logger.info("Meerdere dossiers op zaaknummer %s — niet auto-gekoppeld", token_list)
         return None, None, True
 
-    # Case number found in text but no active dossier exists
-    logger.info(
-        "Dossiernummer %s gevonden in email maar dossier bestaat niet"
-        " — niet doorvallen naar contact-matching",
-        matches,
+    # Prioriteit B: kenmerk van de opdrachtgever (Case.reference). De kern staat
+    # vóór een eventueel BaseNet-factuurachtervoegsel ("D102913_I62115417");
+    # sommige kenmerken staan met blokhaken opgeslagen ("[D102760_I56669891]") —
+    # die strippen we (Fable-review S185, grondwaarheidstoets: 0 extra fouten).
+    result = await db.execute(
+        select(Case.id).where(
+            Case.tenant_id == tenant_id,
+            Case.is_active == True,  # noqa: E712
+            func.upper(
+                func.split_part(func.translate(Case.reference, "[]", ""), "_", 1)
+            ).in_(token_list),
+        )
     )
-    return None, None, True
+    ref_ids = {row[0] for row in result.all()}
+    if len(ref_ids) == 1:
+        return ref_ids.pop(), "client_reference", True
+    if len(ref_ids) > 1:
+        logger.info("Meerdere dossiers op kenmerk %s — niet auto-gekoppeld", token_list)
+        return None, None, True
+
+    # Niets gevonden. Alleen een écht Luxis-dossiernummer blokkeert de afzender-
+    # terugval (die mail hoort bij een ander dossier). Een klant-kenmerk of los
+    # IN-nummer dat wij niet kennen mag wél op afzender gematcht worden.
+    if strict:
+        logger.info(
+            "Luxis-dossiernummer %s in email maar dossier bestaat niet"
+            " — niet doorvallen naar contact-matching",
+            sorted(strict),
+        )
+        return None, None, True
+    return None, None, False
 
 
 async def _find_case_by_thread(

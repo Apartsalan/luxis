@@ -523,6 +523,114 @@ async def test_case_number_match_ignores_4digit_invoice_like_number(
     assert matched_by == "case_number"
 
 
+@pytest.mark.asyncio
+async def test_match_on_imported_in_case_number(db: AsyncSession, test_tenant: Tenant):
+    """S185: BaseNet-geïmporteerde zaaknummers (IN######) worden herkend, ook in
+    een antwoord-onderwerp met omringende tekst."""
+    from app.email.sync_service import _find_case_by_case_number
+
+    case = await _create_case(db, test_tenant.id, case_number="IN100215")
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "RE: SOMMATIE TOT BETALING / IN100215 (geen verweer)"
+    )
+    assert case_id == case.id
+    assert matched_by == "case_number"
+    assert has_case_number is True
+
+
+@pytest.mark.asyncio
+async def test_match_on_client_reference_with_invoice_suffix(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """S185: het opdrachtgever-kenmerk matcht op de kern vóór het BaseNet-
+    factuurachtervoegsel ('D102913_I62115417' → klant noemt 'D102913')."""
+    from app.email.sync_service import _find_case_by_case_number
+
+    case = await _create_case(db, test_tenant.id, case_number="IN100330")
+    case.reference = "D102913_I62115417"
+    await db.flush()
+
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "Beste, inzake ons dossier D102913 ontvingen wij..."
+    )
+    assert case_id == case.id
+    assert matched_by == "client_reference"
+    assert has_case_number is True
+
+
+@pytest.mark.asyncio
+async def test_match_on_bracketed_reference(db: AsyncSession, test_tenant: Tenant):
+    """S185 Fable-review: kenmerken die met blokhaken zijn opgeslagen
+    ('[D102760_I56669891]') matchen ook op de kale kern ('D102760')."""
+    from app.email.sync_service import _find_case_by_case_number
+
+    case = await _create_case(db, test_tenant.id, case_number="IN100019")
+    case.reference = "[D102760_I56669891]"
+    await db.flush()
+
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "inzake uw dossier D102760"
+    )
+    assert case_id == case.id
+    assert matched_by == "client_reference"
+
+
+@pytest.mark.asyncio
+async def test_unknown_reference_does_not_block_sender(db: AsyncSession, test_tenant: Tenant):
+    """S185: een IN-/kenmerk-achtig nummer dat wij niet hebben mag de afzender-
+    terugval NIET blokkeren (alleen een echt Luxis-dossiernummer doet dat)."""
+    from app.email.sync_service import _find_case_by_case_number
+
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "Onze referentie IN999999 / D999999"
+    )
+    assert case_id is None
+    assert has_case_number is False  # → caller mag op afzender matchen
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_reference_blocks_without_linking(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """S185: als één kenmerk-kern naar twee zaken wijst → niet auto-koppelen, wél
+    blokkeren (het hoort ergens, maar we weten niet waar)."""
+    from app.email.sync_service import _find_case_by_case_number
+
+    a = await _create_case(db, test_tenant.id, case_number="IN100001")
+    a.reference = "D500000_I11111111"
+    b = await _create_case(db, test_tenant.id, case_number="IN100002")
+    b.reference = "D500000_I22222222"
+    await db.flush()
+
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "inzake D500000"
+    )
+    assert case_id is None
+    assert has_case_number is True
+
+
+@pytest.mark.asyncio
+async def test_own_case_number_beats_ambiguous_reference(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """S185: een duidelijk eigen zaaknummer wint van een dubbelzinnig kenmerk dat
+    óók in dezelfde mail staat."""
+    from app.email.sync_service import _find_case_by_case_number
+
+    target = await _create_case(db, test_tenant.id, case_number="IN100215")
+    a = await _create_case(db, test_tenant.id, case_number="IN100001")
+    a.reference = "D500000_I11111111"
+    b = await _create_case(db, test_tenant.id, case_number="IN100002")
+    b.reference = "D500000_I22222222"
+    await db.flush()
+
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "RE: sommatie IN100215 — ons kenmerk D500000"
+    )
+    assert case_id == target.id
+    assert matched_by == "case_number"
+
+
 def test_determine_direction_handles_none_from_email():
     """A message with from_email=None (e.g. some server-side notifications) must
     not crash the sync loop with AttributeError (crash-guard)."""

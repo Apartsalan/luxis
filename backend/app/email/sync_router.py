@@ -37,6 +37,7 @@ from app.email.sync_service import (
     EMAIL_ATTACHMENTS_BASE,
     bulk_link_emails,
     dismiss_emails,
+    get_all_emails,
     get_case_emails,
     get_unlinked_count,
     get_unlinked_emails,
@@ -80,6 +81,7 @@ class SyncedEmailSummary(BaseModel):
     matched_by: str | None = None
     email_date: str
     case_id: str | None
+    case_number: str | None = None
 
 
 class AttachmentInfo(BaseModel):
@@ -187,6 +189,8 @@ def _email_to_summary(email: SyncedEmail) -> SyncedEmailSummary:
         matched_by=email.matched_by,
         email_date=email.email_date.isoformat(),
         case_id=str(email.case_id) if email.case_id else None,
+        # `case` is lazy="selectin" → altijd geladen, geen extra query per mail.
+        case_number=email.case.case_number if email.case_id and email.case else None,
     )
 
 
@@ -276,6 +280,34 @@ async def get_emails_for_case(
 ):
     """Get all synced emails linked to a specific case."""
     emails, total = await get_case_emails(db, user.tenant_id, case_id, limit=limit, offset=offset)
+    return CaseEmailsResponse(
+        emails=[_email_to_summary(e) for e in emails],
+        total=total,
+    )
+
+
+@router.get("/all", response_model=CaseEmailsResponse)
+async def get_all(
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
+    filter: str = Query(default="all", pattern="^(all|linked|unlinked)$"),
+    search: str | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all synced emails, optioneel gefilterd op koppelstatus + zoekterm.
+
+    Voedt het 'Alle e-mails'-tabblad (volledige mailbox) én het zoeken door
+    álle mail (subject/afzender/ontvanger/snippet/body).
+    """
+    emails, total = await get_all_emails(
+        db,
+        user.tenant_id,
+        filter_linked=filter,
+        search=search,
+        limit=limit,
+        offset=offset,
+    )
     return CaseEmailsResponse(
         emails=[_email_to_summary(e) for e in emails],
         total=total,

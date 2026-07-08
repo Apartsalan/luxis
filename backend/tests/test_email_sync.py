@@ -185,6 +185,51 @@ async def test_unlinked_count(
     assert resp.json()["count"] == 2
 
 
+# ── All Emails (volledige mailbox + zoeken) ──────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_all_emails_filter_and_search(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """'/all' toont alles, filtert op koppelstatus en doorzoekt inhoud."""
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_case(db, test_tenant.id)
+
+    await _create_synced_email(
+        db, test_tenant.id, account.id, case_id=case.id, subject="Sommatie Jansen"
+    )
+    await _create_synced_email(db, test_tenant.id, account.id, subject="Vraag van debiteur")
+    await _create_synced_email(db, test_tenant.id, account.id, is_dismissed=True, subject="Genegeerd")
+    await db.commit()
+
+    # filter=all → gekoppeld + ongekoppeld, maar niet de genegeerde
+    resp = await client.get("/api/email/all?filter=all&limit=200", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 2
+
+    # filter=linked → alleen de gekoppelde, mét dossiernummer
+    resp = await client.get("/api/email/all?filter=linked", headers=auth_headers)
+    linked = resp.json()
+    assert linked["total"] == 1
+    assert linked["emails"][0]["case_number"] == case.case_number
+
+    # filter=unlinked → alleen de ongekoppelde
+    resp = await client.get("/api/email/all?filter=unlinked", headers=auth_headers)
+    assert resp.json()["total"] == 1
+
+    # zoeken op onderwerp
+    resp = await client.get("/api/email/all?search=Sommatie", headers=auth_headers)
+    found = resp.json()
+    assert found["total"] == 1
+    assert found["emails"][0]["subject"] == "Sommatie Jansen"
+
+
 # ── Link Email ───────────────────────────────────────────────────────────────
 
 

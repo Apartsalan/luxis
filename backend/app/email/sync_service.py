@@ -879,6 +879,58 @@ async def get_case_emails(
     return emails, total
 
 
+async def get_all_emails(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    filter_linked: str = "all",  # "all", "linked", "unlinked"
+    search: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[SyncedEmail], int]:
+    """Get all synced emails with optional filters.
+
+    filter_linked: 'all' = alles, 'linked' = met dossier, 'unlinked' = zonder dossier.
+    search doorzoekt onderwerp, afzender, ontvangers, snippet én body-tekst.
+    """
+    base_where = [
+        SyncedEmail.tenant_id == tenant_id,
+        SyncedEmail.is_dismissed == False,  # noqa: E712
+    ]
+
+    if filter_linked == "linked":
+        base_where.append(SyncedEmail.case_id != None)  # noqa: E711
+    elif filter_linked == "unlinked":
+        base_where.append(SyncedEmail.case_id == None)  # noqa: E711
+
+    if search:
+        term = f"%{search}%"
+        base_where.append(
+            or_(
+                SyncedEmail.subject.ilike(term),
+                SyncedEmail.from_email.ilike(term),
+                SyncedEmail.from_name.ilike(term),
+                SyncedEmail.to_emails.ilike(term),
+                SyncedEmail.snippet.ilike(term),
+                SyncedEmail.body_text.ilike(term),
+            )
+        )
+
+    count_result = await db.execute(select(func.count(SyncedEmail.id)).where(*base_where))
+    total = count_result.scalar() or 0
+
+    result = await db.execute(
+        select(SyncedEmail)
+        .where(*base_where)
+        .order_by(SyncedEmail.email_date.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    emails = list(result.scalars().all())
+
+    return emails, total
+
+
 async def get_unlinked_emails(
     db: AsyncSession,
     tenant_id: uuid.UUID,

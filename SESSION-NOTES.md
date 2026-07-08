@@ -58,11 +58,34 @@ Vangnet + rentetype-check toegevoegd aan `PLAN-heropening-werkvoorraad.md` (acce
 (bewezen: bestaand seidony-imap-account). Aangesloten **onder Lisanne's user** (admin bezat al
 een imap-account; store keyt op user+provider → anders overschrijven). Alleen-lezen (`readonly`),
 14-daagse/100-venster → geen stortvloed. Eerste sync: 5 opgehaald, 5 nieuw, **2 auto-gekoppeld
-via afzender**. **Bevinding:** veel incasso-mails dragen een BaseNet-dossiernummer (`2026-00xxx`)
-in het onderwerp; Luxis herkent het formaat, vindt geen zaak, en stopt (valt niet door naar
-afzender-matching) → beperkt het koppelpercentage nu. Verbetert zodra de werkvoorraad heropend
-is (debiteuren worden bekende contacten); niet-gekoppelde mail gaat naar "Ongesorteerd".
-Verzenden áls incasso@ = aparte latere stap.
+via afzender**. ~~Bevinding "BaseNet-dossiernummers blokkeren matching"~~ → **CORRECTIE
+(Fable-audit):** die `2026-00xxx`-nummers bleken verweesde Luxis-testmails (apr–jun,
+dossiers weggeveegd bij schone lei) in seidony's mailbox — geen BaseNet-nummers en geen
+incasso-mail-probleem. Verzenden áls incasso@ = aparte latere stap.
+
+**Mail-koppel-audit + fix (Fable-audit → Opus-bouw → Fable-review, alles S185):**
+- **Audit (gemeten):** nummer-herkenning kende alleen Luxis-formaat `20xx-xxxxx` → 0 van
+  607 geïmporteerde zaken (allemaal `IN######`) herkenbaar; live-matcher had ooit maar 2
+  successen. Dekking na heropening sterk: 369/372 debiteuren met e-mail, slechts 3 zaken
+  bij multi-zaak-debiteur. Opdrachtgever-kenmerk (`Case.reference`, 592/607 gevuld,
+  kern vóór `_`) werd nergens doorzocht.
+- **Fix (`_find_case_by_case_number`, commit `b489e04`):** voorrang (A) eigen zaaknummer
+  incl. IN-formaat, (B) kenmerk-kern opdrachtgever (blokhaken gestript — 9 zaken), en
+  onbekend kenmerk blokkeert de afzender-terugval niet meer (alleen echt Luxis-nummer doet dat).
+- **Fable-review = grondwaarheidstoets op 6.393 archiefmails** (bekende juiste koppeling):
+  4.407 juist / 4 fout (0,06%). **Label-lezen `[D..._I...]` bewust UIT** (zou +1.440 juist
+  maar +17 fout geven; precisie eerst — besluit Arsalan; heroverwegen als Ongesorteerd vol
+  raakt). LET OP: eerste toets-script OOM'de de exec (6.393 mails in één keer, exit 137,
+  backend zelf bleef gezond) → porties van 200.
+- **Live bewezen na deploy:** sync koppelde exact de 3 voorspelde mails op zaaknummer
+  (IN100092, IN100330, IN100166 — die laatste is de blijft-innen-zaak). 5e mail
+  (Incassocenter, onbekend kenmerk) terecht naar Ongesorteerd. 23 tests groen, ruff schoon.
+- **Ongesorteerd-vangbak geverifieerd:** Correspondentie-tab + zijbalk-teller +
+  dossier-suggesties per mail + (bulk-)koppelen/dismiss bestaan en zijn getest (DF-03, S115).
+- **Volgende sessie (wens Arsalan): kritische doorlichting mail-functionaliteit** — is het
+  mailgedeelte zelfstandig genoeg als "mailprogramma" (beantwoorden, versturen áls incasso@,
+  mappen, zoeken), plus label-lezen-heroverweging en de gesprek-ketting (IMAP-thread-matching
+  werkt maar één antwoord diep — bekende beperking uit de audit).
 
 ## Sessie 184 (8 juli, Opus — fix-sprint audit S183 + Fable-review)
 

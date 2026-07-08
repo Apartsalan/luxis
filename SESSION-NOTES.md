@@ -1,7 +1,8 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 8 juli 2026 (S185, Opus + Fable — uitrol S184 + nazorg + mail incasso@). S184-fixes LIVE (merge→main, zelf-SSH-deploy in juiste volgorde migreren→starten; RLS-gat learned_answers dicht=`t`, opstartcontrole liet gezond door, extern gezond). Vóór/na van de 4 creditfactuur-zaken getoond en door Arsalan/Lisanne akkoord bevonden (rekening klopt). incasso@kestinglegal.nl aangesloten als IMAP onder Lisanne. Details: S185-entry.
+**Laatst bijgewerkt:** 8 juli 2026 (S186, Opus + Fable — mailfunctie). Versturen áls incasso@ via BaseNet-SMTP LIVE (+ Verzonden-kopie); blok 2 (dood "Alle e-mails" hersteld, zoeken door álle mail, ketting-fix, beantwoorden/doorsturen) LIVE + browser-geverifieerd; huisstijl-opmaak (handtekening+logo+schuldhulp) onder álle uitgaande mail LIVE (prod-render 7/7). Details: S186-entry. **Volgende sessie = mailfunctie AFMAKEN, plan `docs/plans/PLAN-mail-afmaken.md` (blok A+B), Opus.**
+**Vorige kop (S185):** 8 juli 2026 (Opus + Fable — uitrol S184 + nazorg + mail incasso@). S184-fixes LIVE; incasso@kestinglegal.nl aangesloten als IMAP onder Lisanne. Details: S185-entry.
 **Vorige kop (S184):** 8 juli 2026 (S184, Opus fix-sprint + Fable-review). Alle 6 audit-werkorderpunten GEBOUWD op branch `s184-fixes`, nu LIVE via S185. Fable-review vond 1 must-fix (verzuim-clamp zeroede credit-rente) → direct gefixt. Volledige suite 1147 groen, daarna 152 rente/betaling-tests groen na review-fix. Details + deploy-stappen: `docs/sessions/S184-MORGEN-CHECKLIST.md` + S184-entry.
 **Vorige kop (S183):** 8 juli 2026 (Fable, read-only architectuur+security-audit). Oordeel livegang: **JA, MITS** — 1 geldbevinding HOOG (pro-rata rekent fout bij creditfacturen, bewezen; 4 zaken in heropeningslijst), 2 beveiligings-vangnetgaten MIDDEN (learned_answers zonder RLS op prod; SET LOCAL vervalt na tussentijdse commit → 31 plekken zonder RLS-vangnet, live bewezen). Rapport: `docs/research/audit-S183-architectuur-security.md`. Details: S183-entry.
 **Vorige kop (S182):** 7 juli 2026 (Opus-bouwsprint + Fable-review + backup-migratie): 4 livegang-taken LIVE, backup versleuteld in EU, restore-test geslaagd. Details: S182-entry.
@@ -19,6 +20,61 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 186 (8 juli, Opus + Fable — mailfunctie: versturen als incasso@ + blok 2 + huisstijl)
+
+### Samenvatting
+Doel: mailmodule doorlichten (menu + dossierniveau) en versturen áls incasso@ bouwen; daarna
+de mailfunctie verder afmaken. Onderzoek=Fable, bouw=Opus, alles live geverifieerd.
+
+**Verzenden als incasso@ (blok 1, commits `4d47fb1`/`4a5896e`/`f5ef4d7`):**
+- `ImapProvider.send_message` = echte SMTP via `smtp.basenet.nl:587` (STARTTLS+AUTH, zelfde inlog
+  als IMAP-ontvangst; was `NotImplementedError`). Afzender = het account (Lisanne = incasso@).
+- **Gemeten: BaseNet bewaart SMTP-verzonden mail NIET in Verzonden** → Luxis doet zelf IMAP APPEND
+  naar `INBOX.Sent` na elke send (faalt nooit de verzending). 2 proefmails aangekomen + kopie in
+  Verzonden bewezen.
+- `imap_smtp_kwargs()` (SMTP-host afgeleid uit IMAP-scope) doorgegeven in `send_service` +
+  `compose_router` → incasso-machine, facturen, opvolging én compose-knop versturen nu correct.
+- Bijlage-lek `/compose/send` gedicht (vielen stil weg); document-send omgeleid van Gmail-noodroute
+  → `send_with_attachment`; dossier-mailtab 50→200 mails.
+
+**Blok 2 (commits `ee41b72`/`8a98315`/`3b26a37`/`9aebb45`):**
+- Dood `/api/email/all` HERSTELD (verloren bij shadow-map-opruiming) → "Alle e-mails"-tab toont
+  6446 mails. Browser-geverifieerd.
+- Zoeken door álle mail server-side (onderwerp/afzender/ontvanger/snippet/body). "faillissement"
+  = 2009 treffers, browser-geverifieerd.
+- Gesprekketting-fix: thread_id = References-WORTEL (was directe voorganger → keten brak na 1 antwoord).
+- Beantwoorden/doorsturen vanuit dossier ÉN Ongesorteerd (`lib/email-reply.ts`), koppelt via
+  In-Reply-To/References. Browser-geverifieerd (prefill klopt).
+
+**Huisstijl-opmaak (commit `fd4ea8f`):** afspraak Arsalan = álles vanuit de incasso-mailbox draagt
+de sjabloon-opmaak (handtekening+logo+schuldhulpblok+disclaimer); alleen de tekst verschilt.
+`ensure_branded_body()` centraal; al-opgemaakte HTML (templates/AI-concept) via `already_branded`
+overgeslagen (robuust tegen geciteerd 'Betreft:'). Prod-render 7/7 groen. 346 tests groen.
+
+### Gewijzigde bestanden
+- Backend: `email/providers/imap_provider.py`, `email/oauth_service.py`, `email/send_service.py`,
+  `email/compose_router.py`, `email/sync_router.py`, `email/sync_service.py`,
+  `email/incasso_templates.py`, `documents/router.py`; tests `test_imap_send.py`/`test_email_sync.py`/`test_email_branding.py`.
+- Frontend: `components/email-compose-dialog.tsx`, `lib/email-reply.ts`, `hooks/use-email-sync.ts`,
+  `zaken/[id]/page.tsx`, `zaken/[id]/components/CorrespondentieTab.tsx`, `correspondentie/page.tsx`.
+
+### Bekende issues
+- **NIET geverifieerd:** hoe een aangeklede mail er in een échte inbox uitziet (kleuren/logo);
+  geen echt antwoord/bijlage-mail verzonden (verzendpad wel bewezen). Reply-citaat staat vóór
+  de handtekening (cosmetisch).
+- **DMARC ontbreekt** voor kestinglegal.nl (Gmail-aflevering → mogelijk spam). Later regelen bij
+  BaseNet/registrar. SPF bevat wel `_spf.basenet.nl`.
+- Testspoor: "Luxis diagnose SELF" in incasso@-INBOX (dismissen); enkele proefmails naar
+  arsalanseidony@gmail.com.
+- Later: incasso@-accountnaam hernoemen.
+
+### Volgende sessie
+**Mailfunctie AFMAKEN — plan `docs/plans/PLAN-mail-afmaken.md`, blok A+B, op Opus.**
+Blok A: mails openen in "Alle e-mails" (leesvenster ontbreekt), verder bladeren >200, ongelezen-status,
+sjabloonkiezer begrijpelijk maken (werkt alleen mét dossier), ophaalvenster >14 dagen.
+Blok B: "Nieuwe aanvragen"-tab via de BESTAANDE intake-detectie (draait al, 2 wachten op review),
+domein-match op de 7 opdrachtgevers, "maak dossier van deze mail". Blok C = géén vrije mappen.
 
 ## Sessie 185 (8 juli, Opus + Fable — uitrol S184 + nazorg + mail incasso@)
 

@@ -37,6 +37,7 @@ from app.email.oauth_service import (
     imap_smtp_kwargs,
 )
 from app.email.providers.base import OutgoingAttachment
+from app.email.send_service import ensure_branded_body
 from app.shared.exceptions import BadRequestError, NotFoundError
 
 # AUD124-06: templates die automatisch factuur-PDF's als bijlage krijgen
@@ -92,6 +93,9 @@ class ComposeRequest(BaseModel):
     )
     case_file_ids: list[uuid.UUID] | None = None
     inline_attachments: list[InlineAttachment] | None = None
+    # True = de body draagt de huisstijl al (template of AI-concept) → niet
+    # opnieuw aankleden. False (vrije mail/antwoord/doorsturen) → wel aankleden.
+    already_branded: bool = False
 
 
 class CaseComposeRequest(BaseModel):
@@ -234,12 +238,27 @@ async def send_via_provider(
             data.inline_attachments,
         )
 
+    # Huisstijl: vrije mail, beantwoorden en doorsturen krijgen dezelfde
+    # sjabloon-opmaak (handtekening + logo + schuldhulpblok). Een via een
+    # template of AI-concept opgestelde mail draagt de opmaak al → dan slaat de
+    # voorkant `already_branded` aan en laten we 'm met rust.
+    body_html = data.body_html
+    if not data.already_branded:
+        body_html = await ensure_branded_body(
+            db,
+            user.tenant_id,
+            subject=data.subject,
+            body_html=data.body_html,
+            case_id=data.case_id,
+            force=True,
+        )
+
     try:
         message_id = await provider.send_message(
             access_token,
             to=data.to,
             subject=data.subject,
-            body_html=data.body_html,
+            body_html=body_html,
             cc=data.cc,
             reply_to_message_id=data.reply_to_message_id,
             attachments=resolved_attachments or None,

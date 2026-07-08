@@ -7,11 +7,13 @@ document sending. Handles logging (EmailLog, SyncedEmail, CaseActivity).
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cases.models import CaseActivity
+from app.cases.models import Case, CaseActivity
+from app.email.incasso_templates import is_branded, render_plain_branded
 from app.email.models import EmailLog
 from app.email.oauth_service import (
     get_email_account,
@@ -24,6 +26,64 @@ from app.email.service import send_email as smtp_send_email
 from app.email.synced_email_models import SyncedEmail
 
 logger = logging.getLogger(__name__)
+
+
+async def build_branding_context(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case | None = None,
+) -> dict:
+    """Context voor de huisstijl-aankleding (handtekening, disclaimer, Betreft).
+
+    Mét dossier: de volledige briefcontext (zelfde als de sjablonen).
+    Zonder dossier: een minimale context — de handtekening en het
+    schuldhulpblok hebben alleen kantoorgegevens nodig.
+    """
+    from app.documents.docx_service import _tenant_ctx, build_base_context, load_tenant
+
+    if case is not None:
+        return await build_base_context(db, tenant_id, case)
+
+    tenant = await load_tenant(db, tenant_id)
+    return {
+        "kantoor": _tenant_ctx(tenant),
+        "wederpartij": {"naam": ""},
+        "zaak": {"referentie_regel": "", "type": "incasso"},
+        "vandaag": date.today().strftime("%d-%m-%Y"),
+    }
+
+
+async def ensure_branded_body(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    subject: str,
+    body_html: str,
+    case_id: uuid.UUID | None = None,
+    quoted_html: str = "",
+    force: bool = False,
+) -> str:
+    """Geef body_html terug in de huisstijl; al-aangeklede HTML blijft onaangeraakt.
+
+    Afspraak S186: alles wat Luxis verstuurt draagt de sjabloon-opmaak
+    (handtekening + logo + schuldhulpblok); alleen de tekst verschilt.
+
+    `force=True` slaat de is_branded-detectie over — gebruikt op het compose-pad,
+    waar een geciteerd antwoord zelf "Betreft:" kan bevatten en de detectie dus
+    onbetrouwbaar is; de aanroeper weet daar zeker dat de tekst kaal is.
+    """
+    if not force and is_branded(body_html):
+        return body_html
+
+    case = None
+    if case_id is not None:
+        result = await db.execute(
+            select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+        )
+        case = result.scalar_one_or_none()
+
+    ctx = await build_branding_context(db, tenant_id, case)
+    return render_plain_branded(ctx, subject, body_html, quoted_html)
 
 
 async def send_with_attachment(
@@ -63,6 +123,13 @@ async def send_with_attachment(
     Returns:
         The EmailLog record (check .status for "sent" or "failed").
     """
+    # Huisstijl: kale tekst (facturen, opvolging, AI-agent) krijgt de sjabloon-
+    # opmaak (handtekening + logo + schuldhulpblok). Al-opgemaakte HTML (incasso-
+    # stappen, documentmails) wordt herkend door is_branded en niet aangeraakt.
+    body_html = await ensure_branded_body(
+        db, tenant_id, subject=subject, body_html=body_html, case_id=case_id
+    )
+
     account = await get_email_account(db, user_id, tenant_id)
 
     email_log = EmailLog(

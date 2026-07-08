@@ -40,6 +40,7 @@ export interface EmailComposeData {
   inline_attachments?: ComposeInlineAttachment[];
   template_type?: string;
   reply_to_message_id?: string | null;
+  already_branded?: boolean;
 }
 
 export interface EmailRecipient {
@@ -663,6 +664,10 @@ export function EmailComposeDialog({
       inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
       template_type: selectedTemplate || undefined,
       reply_to_message_id: replyToMessageId ?? null,
+      // Een gekozen incasso-template levert al opgemaakte HTML (met betreft +
+      // handtekening); vrije mail/antwoord niet. AI-concepten markeert de
+      // aanroepende pagina zelf (die weet dat het concept al opgemaakt is).
+      already_branded: !!selectedTemplate,
     };
   };
 

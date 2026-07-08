@@ -391,6 +391,8 @@ export default function ZaakDetailPage() {
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,
           reply_to_message_id: data.reply_to_message_id,
+          // AI-concept is al opgemaakt (huisstijl); niet opnieuw aankleden.
+          already_branded: data.already_branded || !!activeDraftId,
         }),
       });
 

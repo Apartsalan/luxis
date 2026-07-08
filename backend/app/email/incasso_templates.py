@@ -82,6 +82,44 @@ style="font-family:Verdana,Geneva,sans-serif;font-size:12px;">
 _base_tpl = _env.from_string(_BASE_EMAIL)
 
 
+def is_branded(html: str) -> bool:
+    """True als de HTML al de huisstijl draagt of een compleet HTML-document is.
+
+    Detectie op de Betreft-tabel (overleeft de editor-sanitizer, die <html>
+    strips) én op een compleet document (dubbel wrappen kan sowieso niet).
+    ponytail: substring-check; een vrije mail die zelf "Betreft:" bevat wordt
+    dan niet aangekleed — zeldzaam, en niet schadelijk.
+    """
+    lowered = html.lower()
+    return "betreft:" in lowered or "<html" in lowered
+
+
+def render_plain_branded(
+    context: dict,
+    betreft: str,
+    content_html: str,
+    quoted_html: str = "",
+) -> str:
+    """Kleed losse tekst (vrije mail, reply, AI-agent-antwoord) aan met de
+    volledige huisstijl: Betreft-regel, tekst, handtekening + logo,
+    schuldhulpblok + disclaimer, en (bij een antwoord) het geciteerde
+    origineel helemaal onderaan — zoals Lisanne's echte BaseNet-replies.
+
+    Afspraak S186 (Arsalan): álles wat vanuit de incasso-mailbox vertrekt
+    krijgt dit blok, ongeacht ontvanger.
+    """
+    disclaimer = _schuldhulp_disclaimer(context)
+    if quoted_html:
+        disclaimer = disclaimer + quoted_html
+    return _render_branded(
+        context,
+        betreft,
+        content_html,
+        _signature(context),
+        disclaimer,
+    )
+
+
 def _render_branded(
     context: dict,
     betreft: str,

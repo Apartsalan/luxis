@@ -44,10 +44,10 @@ cd Documents\luxis && git checkout main && git merge s184-fixes && git push orig
 > `ssh ... "cd /opt/luxis && docker compose logs backend --tail 20"`.
 
 ## Nog open (jouw beslissing / mensenwerk)
-1. **CLAUDE.md security-sectie** staat klaar in de working tree maar is **niet gecommit** —
-   CLAUDE.md heeft nog eerdere niet-afgestemde wijzigingen (jouw "kijk er ooit naar"). De
-   regels staan wél gecommit in `docs/security/rollen.md`. Fold de sectie in CLAUDE.md zodra
-   je die oude wijzigingen hebt bekeken.
+1. ~~CLAUDE.md security-sectie niet gecommit~~ → **AFGEROND** (8 juli, met Arsalan
+   afgestemd): security-regels + de eerdere "geen-aannames"-regel zijn vastgelegd in
+   CLAUDE.md (commit `743e471`); de regeleinde-ruis in de 8 `.claude/commands/`-bestanden is
+   teruggedraaid (was geen inhoud).
 2. **7 dossiers sluiten** (Lisanne akkoord: alle behalve IN100166). Bewust NIET 's nachts
    autonoom gedaan (prod-mutatie). Kleine, omkeerbare actie — zeg het woord, dan doe ik het.
 3. **IN100334 ±€215 te veel betaald** — terugstorten? Vraag aan Lisanne (staat in het A4).

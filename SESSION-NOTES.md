@@ -46,11 +46,12 @@ i.p.v. −€12,00), **gefixt** (clamp alleen bij echte pre-start-betaling) + ro
 migratievolgorde vóór opstartcontrole klopt via Dockerfile-CMD).
 
 **Teststatus:** volledige suite 1147 groen (vóór review-fix); 152 rente/betaling-tests groen
-na review-fix; ruff schoon; 13 nieuwe tests. Niet gecommit: CLAUDE.md security-sectie (staat
-in working tree; CLAUDE.md heeft eerdere niet-afgestemde wijzigingen — regels wél in
-`docs/security/rollen.md`). **Open:** 7 dossiers sluiten (Lisanne akkoord, bewust niet
-autonoom), 4 heropeningszaken herrekenen ná deploy (met akkoord), IN100334-terugstort,
-Backblaze-wis ~10 juli.
+na review-fix; ruff schoon; 13 nieuwe tests. **CLAUDE.md nu wél vastgelegd** (commit `743e471`,
+met Arsalan afgestemd): security-regels + de eerdere "geen-aannames"-regel; regeleinde-ruis in
+8 `.claude/commands/`-bestanden teruggedraaid (geen inhoud). **Open:** deploy-go (branch mergen
+→ auto-deploy + tag sessie-184), 4 heropeningszaken herrekenen ná deploy (met akkoord), 7
+dossiers sluiten (Lisanne akkoord, niet autonoom), IN100334-terugstort, Backblaze-wis ~10 juli.
+Volgende sessie = uitrol + nazorg: `docs/sessions/PROMPT-S185.md`.
 
 ## Sessie 183 (8 juli, Fable — architectuur+security-audit, 100% read-only)
 

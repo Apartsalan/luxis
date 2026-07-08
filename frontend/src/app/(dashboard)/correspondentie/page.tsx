@@ -43,6 +43,8 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRelativeTime } from "@/lib/utils";
+import { buildReplyPrefill, buildForwardPrefill, type ReplyPrefill } from "@/lib/email-reply";
+import { Reply, Forward } from "lucide-react";
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 
@@ -64,6 +66,7 @@ export default function CorrespondentiePage() {
   const [emailFilter, setEmailFilter] = useState("");
   const [caseSearch, setCaseSearch] = useState("");
   const [showComposeDialog, setShowComposeDialog] = useState(false);
+  const [replyPrefill, setReplyPrefill] = useState<ReplyPrefill | null>(null);
 
   // Free-compose verzending via OutlookProvider (geen dossier-context)
   const handleFreeComposeSend = async (data: EmailComposeData) => {
@@ -80,6 +83,7 @@ export default function CorrespondentiePage() {
           case_id: data.case_id,
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,
+          reply_to_message_id: data.reply_to_message_id,
         }),
       });
       if (!res.ok) {
@@ -329,14 +333,28 @@ export default function CorrespondentiePage() {
         </div>
       </div>
 
-      {/* Free-compose dialog (zonder dossier-context) */}
+      {/* Compose dialog — nieuw, beantwoorden of doorsturen */}
       {showComposeDialog && (
         <EmailComposeDialog
           open={showComposeDialog}
-          onOpenChange={setShowComposeDialog}
-          title="Nieuwe e-mail"
+          onOpenChange={(open) => {
+            setShowComposeDialog(open);
+            if (!open) setReplyPrefill(null);
+          }}
+          title={
+            replyPrefill
+              ? replyPrefill.replyToMessageId
+                ? "Beantwoorden"
+                : "Doorsturen"
+              : "Nieuwe e-mail"
+          }
+          defaultTo={replyPrefill?.to ?? ""}
+          defaultToName={replyPrefill?.toName ?? ""}
+          defaultSubject={replyPrefill?.subject ?? ""}
+          defaultBodyHtml={replyPrefill?.bodyHtml ?? ""}
+          replyToMessageId={replyPrefill?.replyToMessageId ?? null}
+          caseId={emailDetail?.case_id ?? undefined}
           onSend={async (data) => {
-            // Free-compose: gebruik direct-send via OutlookProvider
             await handleFreeComposeSend(data);
           }}
           onSendDirect={async (data) => {
@@ -501,13 +519,27 @@ export default function CorrespondentiePage() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setSelectedEmailId(null)}
-                    aria-label="E-mail sluiten"
-                    className="rounded-md p-1 hover:bg-muted transition-colors"
-                  >
-                    <XCircle className="h-4 w-4 text-muted-foreground" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => { setReplyPrefill(buildReplyPrefill(emailDetail)); setShowComposeDialog(true); }}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors"
+                    >
+                      <Reply className="h-3.5 w-3.5" /> Beantwoorden
+                    </button>
+                    <button
+                      onClick={() => { setReplyPrefill(buildForwardPrefill(emailDetail)); setShowComposeDialog(true); }}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors"
+                    >
+                      <Forward className="h-3.5 w-3.5" /> Doorsturen
+                    </button>
+                    <button
+                      onClick={() => setSelectedEmailId(null)}
+                      aria-label="E-mail sluiten"
+                      className="rounded-md p-1 hover:bg-muted transition-colors"
+                    >
+                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Attachments */}

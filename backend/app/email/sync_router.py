@@ -110,6 +110,7 @@ class SyncedEmailDetail(BaseModel):
     email_date: str
     case_id: str | None
     provider_thread_id: str | None
+    provider_message_id: str | None = None  # nodig om een antwoord aan de keten te koppelen
 
 
 class CaseEmailsResponse(BaseModel):
@@ -236,6 +237,7 @@ def _email_to_detail(email: SyncedEmail) -> SyncedEmailDetail:
         email_date=email.email_date.isoformat(),
         case_id=str(email.case_id) if email.case_id else None,
         provider_thread_id=email.provider_thread_id,
+        provider_message_id=email.provider_message_id,
     )
 
 

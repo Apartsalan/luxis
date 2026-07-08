@@ -10,9 +10,11 @@ import {
   Download,
   File,
   FolderInput,
+  Forward,
   Loader2,
   Mail,
   Plus,
+  Reply,
   XCircle,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
@@ -30,6 +32,7 @@ import {
   buildSyncToastMessage,
   useSaveAttachmentToCase,
   type SyncedEmailSummary,
+  type SyncedEmailDetail,
   type EmailAttachmentInfo,
 } from "@/hooks/use-email-sync";
 import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
@@ -40,7 +43,17 @@ import { tokenStore } from "@/lib/token-store";
 
 // ── Email Detail Panel ──────────────────────────────────────────────────────
 
-function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseId: string; onClose: () => void }) {
+function EmailDetailPanel({
+  emailId,
+  caseId,
+  onClose,
+  onReply,
+}: {
+  emailId: string;
+  caseId: string;
+  onClose: () => void;
+  onReply?: (email: SyncedEmailDetail, mode: "reply" | "forward") => void;
+}) {
   const { data: email, isLoading } = useSyncedEmailDetail(emailId);
   const saveToCase = useSaveAttachmentToCase();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -107,13 +120,33 @@ function EmailDetailPanel({ emailId, caseId, onClose }: { emailId: string; caseI
       <div className="border-b border-border p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-foreground">{email.subject}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 hover:bg-muted transition-colors"
-          >
-            <XCircle className="h-4 w-4 text-muted-foreground" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {onReply && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onReply(email, "reply")}
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors"
+                >
+                  <Reply className="h-3.5 w-3.5" /> Beantwoorden
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onReply(email, "forward")}
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted transition-colors"
+                >
+                  <Forward className="h-3.5 w-3.5" /> Doorsturen
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-1 hover:bg-muted transition-colors"
+            >
+              <XCircle className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
         </div>
         <div className="space-y-1 text-xs text-muted-foreground">
           <div className="flex gap-2">
@@ -235,7 +268,15 @@ function ClassificationBadge({ classification }: { classification: Classificatio
 
 // ── Correspondentie Tab ─────────────────────────────────────────────────────
 
-function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?: () => void }) {
+function CorrespondentieTab({
+  caseId,
+  onCompose,
+  onReply,
+}: {
+  caseId: string;
+  onCompose?: () => void;
+  onReply?: (email: SyncedEmailDetail, mode: "reply" | "forward") => void;
+}) {
   const { data: logs, isLoading: logsLoading } = useEmailLogs(caseId);
   // ponytail: 200 dekt het drukste dossier ruim (max ~83 nu); voeg echte paging
   // toe zodra een dossier de 200 nadert.
@@ -499,6 +540,7 @@ function CorrespondentieTab({ caseId, onCompose }: { caseId: string; onCompose?:
             emailId={selectedEmailId}
             caseId={caseId}
             onClose={() => setSelectedEmailId(null)}
+            onReply={onReply}
           />
         )}
       </div>

@@ -42,7 +42,8 @@ import {
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, getTimerSeconds, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
-import { useSendViaProvider } from "@/hooks/use-email-sync";
+import { useSendViaProvider, type SyncedEmailDetail } from "@/hooks/use-email-sync";
+import { buildReplyPrefill, buildForwardPrefill, type ReplyPrefill } from "@/lib/email-reply";
 import { useIncassoPipelineSteps, useGenerateDraftForCase } from "@/hooks/use-incasso";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -183,8 +184,14 @@ export default function ZaakDetailPage() {
 
   // ── Freestanding email compose (F11) ────────────────────────────────────
   const [caseEmailOpen, setCaseEmailOpen] = useState(false);
+  const [replyPrefill, setReplyPrefill] = useState<ReplyPrefill | null>(null);
   const sendCaseEmail = useSendCaseEmail(id);
   const sendViaProvider = useSendViaProvider(id);
+
+  const handleReplyForward = (email: SyncedEmailDetail, mode: "reply" | "forward") => {
+    setReplyPrefill(mode === "reply" ? buildReplyPrefill(email) : buildForwardPrefill(email));
+    setCaseEmailOpen(true);
+  };
 
   // ── AI-draft auto-open via ?draft=X query (sessie 133) ─────────────────
   const draftIdFromQuery = searchParams?.get("draft") ?? null;
@@ -383,6 +390,7 @@ export default function ZaakDetailPage() {
           case_id: data.case_id ?? id,
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,
+          reply_to_message_id: data.reply_to_message_id,
         }),
       });
 
@@ -629,7 +637,7 @@ export default function ZaakDetailPage() {
             )}
             {safeTab === "correspondentie" && (
               <ErrorBoundary key="correspondentie" fallback={<TabErrorFallback tabName="Correspondentie" />}>
-                <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} />
+                <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} onReply={handleReplyForward} />
               </ErrorBoundary>
             )}
             {safeTab === "activiteiten" && (
@@ -654,6 +662,7 @@ export default function ZaakDetailPage() {
         open={caseEmailOpen}
         onOpenChange={(open) => {
           setCaseEmailOpen(open);
+          if (!open) setReplyPrefill(null);
           if (!open && activeDraftId) {
             setActiveDraftId(null);
             setDraftSubject("");
@@ -665,14 +674,23 @@ export default function ZaakDetailPage() {
         onSend={handleOpenInOutlook}
         onSendDirect={handleDirectSend}
         isSending={sendCaseEmail.isPending}
-        title={activeDraftId ? "AI-concept reviewen & versturen" : "E-mail opstellen"}
-        defaultSubject={
-          activeDraftId
-            ? draftSubject
-            : zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""
+        title={
+          replyPrefill
+            ? replyPrefill.replyToMessageId ? "Beantwoorden" : "Doorsturen"
+            : activeDraftId ? "AI-concept reviewen & versturen" : "E-mail opstellen"
         }
-        defaultBody={activeDraftId ? draftBody : ""}
-        defaultBodyHtml={activeDraftId ? draftBodyHtml : ""}
+        defaultTo={replyPrefill?.to ?? ""}
+        defaultToName={replyPrefill?.toName ?? ""}
+        defaultSubject={
+          replyPrefill
+            ? replyPrefill.subject
+            : activeDraftId
+              ? draftSubject
+              : zaak ? `${zaak.case_number}${zaak.client ? ` — ${zaak.client.name}` : ""}` : ""
+        }
+        defaultBody={!replyPrefill && activeDraftId ? draftBody : ""}
+        defaultBodyHtml={replyPrefill ? replyPrefill.bodyHtml : activeDraftId ? draftBodyHtml : ""}
+        replyToMessageId={replyPrefill?.replyToMessageId ?? null}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
         caseId={id}
       />

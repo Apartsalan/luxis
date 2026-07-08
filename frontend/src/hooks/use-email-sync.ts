@@ -34,6 +34,7 @@ export interface SyncedEmailDetail extends SyncedEmailSummary {
   body_text: string;
   attachments: EmailAttachmentInfo[];
   provider_thread_id: string | null;
+  provider_message_id: string | null;
 }
 
 export interface CaseEmailsResponse {

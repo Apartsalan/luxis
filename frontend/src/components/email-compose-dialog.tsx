@@ -39,6 +39,7 @@ export interface EmailComposeData {
   case_file_ids?: string[];
   inline_attachments?: ComposeInlineAttachment[];
   template_type?: string;
+  reply_to_message_id?: string | null;
 }
 
 export interface EmailRecipient {
@@ -184,6 +185,7 @@ export interface EmailComposeDialogProps {
   title?: string;
   recipients?: EmailRecipient[];
   caseId?: string;
+  replyToMessageId?: string | null;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -203,6 +205,7 @@ export function EmailComposeDialog({
   title = "Nieuwe e-mail",
   recipients,
   caseId,
+  replyToMessageId,
 }: EmailComposeDialogProps) {
   // ── State ─────────────────────────────────────────────────────────────
   const [to, setTo] = useState(defaultTo);
@@ -659,6 +662,7 @@ export function EmailComposeDialog({
       case_file_ids: Array.from(caseFileIds).length > 0 ? Array.from(caseFileIds) : undefined,
       inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
       template_type: selectedTemplate || undefined,
+      reply_to_message_id: replyToMessageId ?? null,
     };
   };
 

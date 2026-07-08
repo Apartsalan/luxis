@@ -17,6 +17,19 @@ S186 leverde al: versturen als incasso@, "Alle e-mails"-tab (data werkt, geen le
 zoeken door alle mail, beantwoorden/doorsturen (vanuit dossier + Ongesorteerd), huisstijl-
 aankleding onder alle uitgaande mail.
 
+## Taak 0 — VERPLICHT EERST: onafhankelijke review van al het S186-mailwerk
+Voordat je iets bouwt: een verse, tegensprekende review van alles wat S186 opleverde
+(versturen als incasso@, Verzonden-kopie, blok 2, huisstijl-aankleding). Dit is het
+vaste vangnet (zoals de S175-review) — de waarde zit in de vérse blik, niet in het model.
+- **Start op Fable** (`/effort max`, read-only past bij Fable + de discipline-skills).
+  Schuift de beveiliging je naar Opus → prima, ga door op Opus; de onafhankelijkheid blijft.
+- Adversarieel: probeer elke claim te weerleggen. **Bewijs elke bevinding tegen de code
+  én de productieserver** (SSH + DB, read-only) — niet op het woord van de vorige sessie.
+- Scope: commits `4d47fb1`, `4a5896e`, `f5ef4d7`, `ee41b72`, `8a98315`, `3b26a37`,
+  `9aebb45`, `fd4ea8f`. Let extra op: huisstijl-aankleding (dubbel aankleden? kale mail
+  ontsnapt?), reply-threading, bijlage-pad, `already_branded`-signaal.
+- Must-fix bevindingen → eerst fixen (rode test → groen), dán pas blok A+B.
+
 ## Taak — blok A (mailbasis afmaken)
 1. **Mails openen in "Alle e-mails"**: hang het bestaande leesvenster (zoals Ongesorteerd:
    `correspondentie/page.tsx` detail + `EmailDetailPanel`) aan de "Alle e-mails"-lijst —

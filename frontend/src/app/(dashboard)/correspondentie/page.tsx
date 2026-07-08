@@ -51,7 +51,6 @@ export default function CorrespondentiePage() {
   const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd">("alle");
 
   // Data hooks
-  const { data: allEmailsData, isLoading: allLoading } = useAllEmails("all", undefined, 200);
   const { data: unlinkedData, isLoading } = useUnlinkedEmails(100);
   const { data: countData } = useUnlinkedCount();
   const syncEmails = useSyncEmails();
@@ -100,6 +99,17 @@ export default function CorrespondentiePage() {
     }
   };
   const debouncedSearch = useDebounce(caseSearch, 300);
+
+  // "Alle e-mails": zoek server-side door de HÉLE mailbox (niet alleen de
+  // geladen 200). Alleen actief op dit tabblad; de Ongesorteerd-tab filtert
+  // client-side. Limiet 200 → toont de nieuwste 200 treffers; `total` toont
+  // hoeveel er in totaal matchen.
+  const debouncedEmailFilter = useDebounce(emailFilter, 300);
+  const serverSearch =
+    activeTab === "alle" && debouncedEmailFilter.trim()
+      ? debouncedEmailFilter.trim()
+      : undefined;
+  const { data: allEmailsData, isLoading: allLoading } = useAllEmails("all", serverSearch, 200);
 
   // Case search for manual linking
   const { data: casesData } = useCases(
@@ -339,8 +349,9 @@ export default function CorrespondentiePage() {
       {activeTab === "alle" && (
         <AllEmailsView
           emails={allEmailsData?.emails ?? []}
+          total={allEmailsData?.total ?? 0}
           isLoading={allLoading}
-          emailFilter={emailFilter}
+          emailFilter={debouncedEmailFilter}
         />
       )}
 
@@ -647,30 +658,21 @@ export default function CorrespondentiePage() {
 
 function AllEmailsView({
   emails,
+  total,
   isLoading,
   emailFilter,
 }: {
   emails: SyncedEmailSummary[];
+  total: number;
   isLoading: boolean;
   emailFilter: string;
 }) {
-  const filtered = useMemo(() => {
-    if (!emailFilter.trim()) return emails;
-    const q = emailFilter.toLowerCase();
-    return emails.filter(
-      (e) =>
-        e.subject.toLowerCase().includes(q) ||
-        e.from_email.toLowerCase().includes(q) ||
-        e.from_name.toLowerCase().includes(q) ||
-        e.snippet.toLowerCase().includes(q)
-    );
-  }, [emails, emailFilter]);
-
+  // Server heeft al gefilterd/gezocht — hier alleen groeperen op datum.
   const grouped = useMemo(() => {
-    if (filtered.length === 0) return [];
-    const groups: { label: string; emails: typeof filtered }[] = [];
+    if (emails.length === 0) return [];
+    const groups: { label: string; emails: typeof emails }[] = [];
     let currentLabel = "";
-    for (const email of filtered) {
+    for (const email of emails) {
       const label = getDateGroupLabel(email.email_date);
       if (label !== currentLabel) {
         currentLabel = label;
@@ -680,7 +682,7 @@ function AllEmailsView({
       }
     }
     return groups;
-  }, [filtered]);
+  }, [emails]);
 
   if (isLoading) {
     return (
@@ -690,7 +692,7 @@ function AllEmailsView({
     );
   }
 
-  if (filtered.length === 0) {
+  if (emails.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
@@ -705,6 +707,14 @@ function AllEmailsView({
   }
 
   return (
+    <div className="space-y-2">
+      {/* Teller — bij zoeken door de hele mailbox kan `total` groter zijn dan
+          de getoonde 200 (nieuwste eerst). */}
+      <p className="px-1 text-xs text-muted-foreground">
+        {emailFilter
+          ? `${total} resultaten voor "${emailFilter}"${total > emails.length ? ` — nieuwste ${emails.length} getoond` : ""}`
+          : `${total} e-mails${total > emails.length ? ` — nieuwste ${emails.length} getoond` : ""}`}
+      </p>
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       {grouped.map((group) => (
         <div key={group.label}>
@@ -763,6 +773,7 @@ function AllEmailsView({
           ))}
         </div>
       ))}
+    </div>
     </div>
   );
 }

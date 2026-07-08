@@ -87,6 +87,10 @@ class ComposeRequest(BaseModel):
     reply_to_message_id: str | None = Field(
         default=None, description="Provider message ID om op te antwoorden"
     )
+    references_root: str | None = Field(
+        default=None,
+        description="Wortel van de gespreksdraad (References-root van het origineel)",
+    )
     # Bijlagen — zonder deze velden liet /compose/send bijlagen stil vallen (S186).
     case_id: uuid.UUID | None = Field(
         default=None, description="Dossier voor het oplossen van dossierbijlagen"
@@ -261,6 +265,7 @@ async def send_via_provider(
             body_html=body_html,
             cc=data.cc,
             reply_to_message_id=data.reply_to_message_id,
+            references_root=data.references_root,
             attachments=resolved_attachments or None,
             **imap_smtp_kwargs(account),
         )

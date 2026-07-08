@@ -306,6 +306,7 @@ class OutlookProvider(EmailProvider):
         body_html: str,
         cc: list[str] | None = None,
         reply_to_message_id: str | None = None,
+        references_root: str | None = None,  # Graph threadt zelf; niet gebruikt
         attachments: list[OutgoingAttachment] | None = None,
     ) -> str:
         """Send an email via Microsoft Graph API.

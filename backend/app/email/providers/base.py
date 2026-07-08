@@ -159,6 +159,7 @@ class EmailProvider(ABC):
         body_html: str,
         cc: list[str] | None = None,
         reply_to_message_id: str | None = None,
+        references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
     ) -> str:
         """Send an email through the provider.
@@ -170,6 +171,8 @@ class EmailProvider(ABC):
             body_html: HTML body content.
             cc: Optional CC recipients.
             reply_to_message_id: If replying, the original message ID.
+            references_root: Root of the conversation thread (References-root of
+                the original), so a reply shares the whole chain's thread id.
             attachments: Optional list of files to attach.
 
         Returns:

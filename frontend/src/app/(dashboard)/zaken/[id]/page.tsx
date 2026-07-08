@@ -391,8 +391,13 @@ export default function ZaakDetailPage() {
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,
           reply_to_message_id: data.reply_to_message_id,
+          references_root: data.references_root,
           // AI-concept is al opgemaakt (huisstijl); niet opnieuw aankleden.
-          already_branded: data.already_branded || !!activeDraftId,
+          // Alleen overslaan als er ook écht opgemaakte HTML is: mislukt de
+          // huisstijl-wrap van een concept (body_html leeg), dan sturen we de
+          // kale tekst en moet de achterkant hem wél aankleden.
+          already_branded:
+            data.already_branded || (!!activeDraftId && !!data.body_html),
         }),
       });
 
@@ -693,6 +698,7 @@ export default function ZaakDetailPage() {
         defaultBody={!replyPrefill && activeDraftId ? draftBody : ""}
         defaultBodyHtml={replyPrefill ? replyPrefill.bodyHtml : activeDraftId ? draftBodyHtml : ""}
         replyToMessageId={replyPrefill?.replyToMessageId ?? null}
+        referencesRoot={replyPrefill?.referencesRoot ?? null}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
         caseId={id}
       />

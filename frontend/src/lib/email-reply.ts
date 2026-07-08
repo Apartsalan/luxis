@@ -10,6 +10,10 @@ export interface ReplyPrefill {
   subject: string;
   bodyHtml: string;
   replyToMessageId: string | null;
+  // Wortel van de gespreksdraad (References-root van het origineel). Zo krijgt
+  // het verzonden antwoord dezelfde draad-identiteit als de rest van de keten —
+  // ook bij een antwoord op een mail middenin een lang gesprek.
+  referencesRoot: string | null;
 }
 
 function stripPrefix(subject: string, prefixes: string[]): string {
@@ -52,6 +56,7 @@ export function buildReplyPrefill(email: SyncedEmailDetail): ReplyPrefill {
     subject: subject.toLowerCase().startsWith("re:") ? subject : `Re: ${subject}`,
     bodyHtml: quoteBlock(email),
     replyToMessageId: email.provider_message_id ?? null,
+    referencesRoot: email.provider_thread_id ?? null,
   };
 }
 
@@ -74,5 +79,6 @@ export function buildForwardPrefill(email: SyncedEmailDetail): ReplyPrefill {
     subject: subject.toLowerCase().startsWith("fwd:") ? subject : `Fwd: ${subject}`,
     bodyHtml: `<p></p><p></p>${header}${original}`,
     replyToMessageId: null,
+    referencesRoot: null, // doorsturen = nieuwe keten
   };
 }

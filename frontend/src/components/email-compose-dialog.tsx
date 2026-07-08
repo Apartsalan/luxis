@@ -40,6 +40,7 @@ export interface EmailComposeData {
   inline_attachments?: ComposeInlineAttachment[];
   template_type?: string;
   reply_to_message_id?: string | null;
+  references_root?: string | null;
   already_branded?: boolean;
 }
 
@@ -187,6 +188,7 @@ export interface EmailComposeDialogProps {
   recipients?: EmailRecipient[];
   caseId?: string;
   replyToMessageId?: string | null;
+  referencesRoot?: string | null;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -207,6 +209,7 @@ export function EmailComposeDialog({
   recipients,
   caseId,
   replyToMessageId,
+  referencesRoot,
 }: EmailComposeDialogProps) {
   // ── State ─────────────────────────────────────────────────────────────
   const [to, setTo] = useState(defaultTo);
@@ -664,6 +667,7 @@ export function EmailComposeDialog({
       inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
       template_type: selectedTemplate || undefined,
       reply_to_message_id: replyToMessageId ?? null,
+      references_root: referencesRoot ?? null,
       // Een gekozen incasso-template levert al opgemaakte HTML (met betreft +
       // handtekening); vrije mail/antwoord niet. AI-concepten markeert de
       // aanroepende pagina zelf (die weet dat het concept al opgemaakt is).

@@ -130,6 +130,60 @@ async def test_imap_send_sets_thread_headers(monkeypatch, no_sent_append):
 
 
 @pytest.mark.asyncio
+async def test_imap_reply_references_start_at_thread_root(monkeypatch, no_sent_append):
+    """Antwoord middenin een keten: References begint bij de wortel, niet de
+    directe voorganger — zo deelt het verzonden antwoord dezelfde thread_id als
+    de rest van het gesprek."""
+    captured: dict = {}
+
+    async def fake_send(msg, **kwargs):
+        captured["msg"] = msg
+
+    monkeypatch.setattr(aiosmtplib, "send", fake_send)
+
+    await ImapProvider().send_message(
+        "pw",
+        to=["a@example.com"],
+        subject="Re: iets",
+        body_html="<p>antwoord</p>",
+        reply_to_message_id="<parent@basenet.nl>",
+        references_root="<root@basenet.nl>",
+        smtp_host="smtp.basenet.nl",
+        smtp_port=587,
+        username="incasso@kestinglegal.nl",
+    )
+    msg = captured["msg"]
+    assert msg["In-Reply-To"] == "<parent@basenet.nl>"
+    # Wortel eerst → References[0] = de echte draad-wortel.
+    assert msg["References"] == "<root@basenet.nl> <parent@basenet.nl>"
+    assert msg["References"].split()[0] == "<root@basenet.nl>"
+
+
+@pytest.mark.asyncio
+async def test_imap_reply_root_equals_parent_not_duplicated(monkeypatch, no_sent_append):
+    """Antwoord op de wortel zelf: geen dubbele Message-ID in References."""
+    captured: dict = {}
+
+    async def fake_send(msg, **kwargs):
+        captured["msg"] = msg
+
+    monkeypatch.setattr(aiosmtplib, "send", fake_send)
+
+    await ImapProvider().send_message(
+        "pw",
+        to=["a@example.com"],
+        subject="Re: iets",
+        body_html="<p>antwoord</p>",
+        reply_to_message_id="<root@basenet.nl>",
+        references_root="<root@basenet.nl>",
+        smtp_host="smtp.basenet.nl",
+        smtp_port=587,
+        username="incasso@kestinglegal.nl",
+    )
+    assert captured["msg"]["References"] == "<root@basenet.nl>"
+
+
+@pytest.mark.asyncio
 async def test_imap_send_requires_smtp_host_and_username():
     with pytest.raises(ValueError):
         await ImapProvider().send_message(

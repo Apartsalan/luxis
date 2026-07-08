@@ -480,6 +480,7 @@ class ImapProvider(EmailProvider):
         body_html: str,
         cc: list[str] | None = None,
         reply_to_message_id: str | None = None,
+        references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
         smtp_host: str = "",
         smtp_port: int = 587,
@@ -512,9 +513,19 @@ class ImapProvider(EmailProvider):
         message_id = make_msgid(domain=username.split("@")[-1])
         msg["Message-ID"] = message_id
         # Thread-headers: laat een antwoord bij de originele mail horen.
+        # In-Reply-To = de directe voorganger; References begint bij de WORTEL
+        # van de keten (zodat de latere sync dit antwoord op dezelfde thread_id
+        # groepeert als de rest van het gesprek — óók bij een antwoord op een
+        # mail middenin een lange draad). We bewaren de volledige References van
+        # het origineel niet, dus wortel + directe voorganger is het maximum;
+        # dat volstaat voor de thread-groepering (die kijkt naar References[0]).
+        # ponytail: root+parent, niet de hele keten — genoeg voor onze matching.
         if reply_to_message_id:
             msg["In-Reply-To"] = reply_to_message_id
-            msg["References"] = reply_to_message_id
+            if references_root and references_root != reply_to_message_id:
+                msg["References"] = f"{references_root} {reply_to_message_id}"
+            else:
+                msg["References"] = reply_to_message_id
         msg.set_content("Deze e-mail bevat opgemaakte (HTML) inhoud.")
         msg.add_alternative(body_html, subtype="html")
 

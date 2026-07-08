@@ -1,7 +1,8 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 8 juli 2026 (S186, Opus + Fable — mailfunctie). Versturen áls incasso@ via BaseNet-SMTP LIVE (+ Verzonden-kopie); blok 2 (dood "Alle e-mails" hersteld, zoeken door álle mail, ketting-fix, beantwoorden/doorsturen) LIVE + browser-geverifieerd; huisstijl-opmaak (handtekening+logo+schuldhulp) onder álle uitgaande mail LIVE (prod-render 7/7). Details: S186-entry. **Volgende sessie = mailfunctie AFMAKEN, plan `docs/plans/PLAN-mail-afmaken.md` (blok A+B), Opus.**
+**Laatst bijgewerkt:** 8 juli 2026 (S187, Opus-bouw + Fable-review — mailfunctie AFGEMAAKT). Blok A+B LIVE + browser-geverifieerd: leesvenster in "Alle e-mails" (gedeeld `EmailDetailPanel`, ook Ongesorteerd), "meer laden" voorbij 200 (infinite query/offset), echte gelezen-status (IMAP `\Seen` meegelezen + her-sync-update), sjabloonkiezer altijd zichtbaar met uitleg, ophaalvenster 14→90 dagen; tab "Nieuwe aanvragen" (bestaande intake zichtbaar) + domein-herkenning opdrachtgevers + "Maak dossier van deze mail". 2 bestaande bugs onderweg gevonden+gefixt: suggesties-crash (`Contact.display_name`→`name`, 500 bij elke match) en `case_number` ontbrak in mail-detail (toonde gekoppelde mail als ongekoppeld). Ook S187-review-fixes vooraf: reply deelt draad-wortel + kale AI-mail krijgt alsnog huisstijl. Fable-review = geen nieuwe fouten. ⚠️ **Openstaand verificatiegat:** Ongesorteerd-tab + de "Maak dossier"-flow met een echt nieuw dossier zijn NIET apart live doorgeklikt (delen wel het bewezen component). **Volgende sessie: die twee live verifiëren, dan heropening werkvoorraad.** Details: S187-entry.
+**Vorige kop (S186):** 8 juli 2026 (Opus + Fable — mailfunctie). Versturen áls incasso@ via BaseNet-SMTP LIVE (+ Verzonden-kopie); blok 2 (dood "Alle e-mails" hersteld, zoeken door álle mail, ketting-fix, beantwoorden/doorsturen) LIVE; huisstijl-opmaak onder álle uitgaande mail LIVE. Details: S186-entry.
 **Vorige kop (S185):** 8 juli 2026 (Opus + Fable — uitrol S184 + nazorg + mail incasso@). S184-fixes LIVE; incasso@kestinglegal.nl aangesloten als IMAP onder Lisanne. Details: S185-entry.
 **Vorige kop (S184):** 8 juli 2026 (S184, Opus fix-sprint + Fable-review). Alle 6 audit-werkorderpunten GEBOUWD op branch `s184-fixes`, nu LIVE via S185. Fable-review vond 1 must-fix (verzuim-clamp zeroede credit-rente) → direct gefixt. Volledige suite 1147 groen, daarna 152 rente/betaling-tests groen na review-fix. Details + deploy-stappen: `docs/sessions/S184-MORGEN-CHECKLIST.md` + S184-entry.
 **Vorige kop (S183):** 8 juli 2026 (Fable, read-only architectuur+security-audit). Oordeel livegang: **JA, MITS** — 1 geldbevinding HOOG (pro-rata rekent fout bij creditfacturen, bewezen; 4 zaken in heropeningslijst), 2 beveiligings-vangnetgaten MIDDEN (learned_answers zonder RLS op prod; SET LOCAL vervalt na tussentijdse commit → 31 plekken zonder RLS-vangnet, live bewezen). Rapport: `docs/research/audit-S183-architectuur-security.md`. Details: S183-entry.
@@ -20,6 +21,61 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 187 (8 juli, Opus-bouw + Fable-review — mailfunctie afmaken, blok A+B)
+
+### Samenvatting
+Mailmodule afgemaakt volgens `docs/plans/PLAN-mail-afmaken.md`. Onderzoek/review op Fable,
+bouw op Opus (mailwerk triggert het Fable-veiligheidsfilter het hardst → wisselt vaak naar
+Opus; dat is een filter aan Anthropic-kant, niet in onze code — zie memory `feedback_model_choice`).
+Alles in de ingelogde prod-app doorgeklikt (m.u.v. het openstaande gat hieronder).
+
+### Taak 0 — Fable-review S186-mailwerk (vooraf), 2 fixes LIVE (commit `13f18df`)
+- **Reply-threading**: `References` begon bij de directe voorganger i.p.v. de draad-wortel →
+  antwoord middenin een lange keten kreeg (na sync) een andere `thread_id` → auto-koppeling
+  kon terugvallen naar Ongesorteerd. Nu stuurt de voorkant `references_root` mee; IMAP-provider
+  bouwt `References = "root parent"`. Outlook-signatuur meegetrokken (negeert het veld).
+- **Kale-mail-ontsnapping**: AI-concept met mislukte huisstijl-wrap (`body_html` leeg) ging tóch
+  als `already_branded` de deur uit → kaal. Nu alleen overslaan bij écht opgemaakte HTML.
+
+### Blok A — mailbasis (commit `7b91704`, + fixes `1fce49c`/`7decaf2`)
+- **Leesvenster in "Alle e-mails"**: inline detail-JSX van Ongesorteerd geëxtraheerd naar één
+  gedeeld `EmailDetailPanel` (lezen, bijlagen, beantwoorden/doorsturen, koppelen). Gekoppelde
+  mail toont "Gekoppeld dossier" + Open-dossier; niet-gekoppelde: koppelen + Negeren + Maak-dossier.
+- **"Meer laden"**: `useAllEmails` → `useInfiniteQuery` (offset, 200/pagina). Teller = totaal.
+- **Gelezen-status**: IMAP-fetch vraagt nu `(FLAGS RFC822)`; `_seen_flag_present` leest `\Seen` uit
+  de descriptor; `is_read` volgt de vlag (was hard True). Her-sync werkt bestaande mail bij (alleen
+  bij verschil, geen rij-load). Ongelezen = blauwe stip + vet. Live: stippen verschenen na sync.
+- **Sjabloonkiezer** altijd zichtbaar; zonder dossier disabled met uitleg "Kies eerst een dossier".
+- **Ophaalvenster** `since_days` 14 → 90.
+
+### Blok B — Nieuwe aanvragen (zelfde commit)
+- Tab **"Nieuwe aanvragen"** met teller (pending_review), AI-uittreksel per aanvraag + Maak-dossier/
+  Afwijzen (bestaande intake-acties). Detail bewerken linkt naar `/intake/[id]`.
+- **Domein-herkenning**: `detect_intake_emails` + `create_intake_from_email` matchen ook op
+  bedrijfsdomein van de opdrachtgevers; vrije providers (gmail e.d.) + ambigue domeinen uitgesloten.
+- **"Maak dossier van deze mail"**: `POST /api/intake/from-email/{email_id}` (idempotent), knop in
+  het leesvenster op niet-gekoppelde mail.
+
+### Bugs onderweg gevonden + gefixt (live geverifieerd)
+- **Suggesties gaven 500** (`Contact.display_name` bestaat niet → `Contact.name`). Trof élke mail
+  met een suggestie; zichtbaar geworden nu je in "Alle e-mails" ook uitgaande/gekoppelde mail opent.
+  Commit `7decaf2` + regressietest; endpoint nu 200.
+- **`case_number` ontbrak in mail-detail** → gekoppelde mail toonde "Koppel aan dossier" i.p.v.
+  "Gekoppeld dossier". Toegevoegd (relatie is `lazy="selectin"`). Commit `1fce49c`, live bevestigd.
+
+### Verificatie
+Backend 121 mail/intake-tests groen, ruff schoon; frontend tsc + `next build` schoon. Browser
+(ingelogd, prod): 3 tabs + tellers, leesvenster open/lezen/reply-knoppen, paginering "6450 — 200
+getoond", ongelezen-stippen, gekoppeld/niet-gekoppeld-varianten, aanvragen-tab met AI-uittreksel,
+sjabloon-uitleg. Sync draaide foutloos met de nieuwe vlag-fetch. `suggest-cases` na fix → 200.
+
+### Openstaand (voor S188)
+- ⚠️ **Ongesorteerd-tab** en de **"Maak dossier"-flow met een echt nieuw dossier** niet apart live
+  doorgeklikt (delen wel het bewezen `EmailDetailPanel`; risico laag, maar niet 0-bewezen).
+- Fable-filter blijft mailwerk naar Opus schuiven — Arsalan gaf feedback via `/feedback`. Knop om
+  auto-wissel uit te zetten staat in claude.ai-accountinstellingen (niet betrouwbaar in de terminal).
+- Nog steeds open sinds S186: DMARC voor kestinglegal.nl; testspoor "Luxis diagnose SELF" opruimen.
 
 ## Sessie 186 (8 juli, Opus + Fable — mailfunctie: versturen als incasso@ + blok 2 + huisstijl)
 

@@ -1,10 +1,11 @@
 # Sessie Notities — Luxis
 
 <!-- Kopregels KORT houden: 1-2 zinnen per regel. Alle detail hoort in de sessie-entry hieronder, niet in deze kop. -->
-**Laatst bijgewerkt:** 8 juli 2026 (S184, Opus fix-sprint + Fable-review). Alle 6 audit-werkorderpunten GEBOUWD op branch `s184-fixes` (**NIET gedeployed** — wacht op deploy-go Arsalan; branch voorkomt auto-deploy). Fable-review vond 1 must-fix (verzuim-clamp zeroede credit-rente) → direct gefixt. Volledige suite 1147 groen, daarna 152 rente/betaling-tests groen na review-fix. Details + deploy-stappen: `docs/sessions/S184-MORGEN-CHECKLIST.md` + S184-entry.
+**Laatst bijgewerkt:** 8 juli 2026 (S185, Opus + Fable — uitrol S184 + nazorg + mail incasso@). S184-fixes LIVE (merge→main, zelf-SSH-deploy in juiste volgorde migreren→starten; RLS-gat learned_answers dicht=`t`, opstartcontrole liet gezond door, extern gezond). Vóór/na van de 4 creditfactuur-zaken getoond en door Arsalan/Lisanne akkoord bevonden (rekening klopt). incasso@kestinglegal.nl aangesloten als IMAP onder Lisanne. Details: S185-entry.
+**Vorige kop (S184):** 8 juli 2026 (S184, Opus fix-sprint + Fable-review). Alle 6 audit-werkorderpunten GEBOUWD op branch `s184-fixes`, nu LIVE via S185. Fable-review vond 1 must-fix (verzuim-clamp zeroede credit-rente) → direct gefixt. Volledige suite 1147 groen, daarna 152 rente/betaling-tests groen na review-fix. Details + deploy-stappen: `docs/sessions/S184-MORGEN-CHECKLIST.md` + S184-entry.
 **Vorige kop (S183):** 8 juli 2026 (Fable, read-only architectuur+security-audit). Oordeel livegang: **JA, MITS** — 1 geldbevinding HOOG (pro-rata rekent fout bij creditfacturen, bewezen; 4 zaken in heropeningslijst), 2 beveiligings-vangnetgaten MIDDEN (learned_answers zonder RLS op prod; SET LOCAL vervalt na tussentijdse commit → 31 plekken zonder RLS-vangnet, live bewezen). Rapport: `docs/research/audit-S183-architectuur-security.md`. Details: S183-entry.
 **Vorige kop (S182):** 7 juli 2026 (Opus-bouwsprint + Fable-review + backup-migratie): 4 livegang-taken LIVE, backup versleuteld in EU, restore-test geslaagd. Details: S182-entry.
-**Openstaand:** (1) **Backblaze US-bucket wissen ~10 juli** na 2 bewezen EU-runs (log 8+9 juli) + oude key/remote intrekken, wisbewijs hier (zit ook in PROMPT-S184 als check). (2) Arsalan: 2 crypt-wachtwoorden in wachtwoordmanager (onvervangbaar). (3) **Akkoord Lisanne heropening is BINNEN (8 juli):** 7 restant-dossiers sluiten, IN100166 blijft open (innen), starten met LegalWork; terugstort-vraag IN100334 (±€215) nog onbeantwoord — antwoordblok in `docs/sessions/LISANNE-A4-heropening.md`. Volgorde: eerst S184-fixes, dan heropening (S185). (4) Livegang-mensenwerk (mail incasso@ M365, generale repetitie). (5) S184 = Opus fix-sprint met auditrapport als werkorder + security-regels verankeren (zie PROMPT-S184).
+**Openstaand:** (1) **Backblaze US-bucket wissen ~10 juli** na 2 bewezen EU-runs (log 8+9 juli) + oude key/remote intrekken, wisbewijs hier (zit ook in PROMPT-S184 als check). (2) Arsalan: 2 crypt-wachtwoorden in wachtwoordmanager (onvervangbaar). (3) **Heropening werkvoorraad = volgende sessie (S186):** starten met LegalWork B.V., draaiboek `docs/plans/PLAN-heropening-werkvoorraad.md`; daarbij IN100166 weer openzetten (innen), rentetype per opdrachtgever checken (AV 2%/mnd vs `commercial`), en de 163 BaseNet-gesloten dossiers-vangnetquery draaien. De 11 twijfel-regelingen (o.a. IN100469/IN100553) = beslissing Lisanne. (4) Mail incasso@ = LIVE (IMAP, S185); koppelpercentage groeit mee met heropening. Verzenden-als-incasso@ = latere stap. ~~S184 fix-sprint~~ = LIVE via S185.
 **Vorige kop (S179):** fase 1b LIVE: 56 betalingen + 13 regelingen, Team-tab read-only, IN100592 → LegalWork B.V. Details: S179-entry.
 **AV-correctie (belangrijk):** eerdere claim "Collect 1/Incassocenter-AV bevat geen rentepercentage" was FOUT. Alle 3 opdrachtgever-AV's bevatten artikel 13.3 = 2% per maand vanaf de vervaldag (geverifieerd tegen de prod-PDF's). Zie `project_luxis_av_rente` (memory).
 **Fable-review S177 = GEDAAN, 4 bevindingen gefixt + live:** (1) inline-filter miste echte docs ('Betwisting overeenkomst.pdf') → filter op extensie, delta 3 geladen; (2) 945 paperclips zonder bijlage → vlag gelijkgetrokken (2.422=2.422); (3) onleesbare AV-PDF wiste gelezen waarde → raist nu; (4) AI-intake sloeg ALLE rente-erving over (gat van vóór S177) → gedeelde `resolve_client_interest_defaults` + intake-test. 47 tests groen.
@@ -18,6 +19,50 @@
 **Openstaand:** S177 herstel-sprint (bijlagen-backfill + betalingen fase 1b + rente-config batch) — alle bronnen lokaal aanwezig en geverifieerd. Bevindingen Lisanne: bijlagen ontbreken (3.367 mails, herstelbaar), rente was misgelezen (6.274 ≠ 2.674) én stond echt fout (handelsrente) — proefzaken nu gefixt.
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
+
+## Sessie 185 (8 juli, Opus + Fable — uitrol S184 + nazorg + mail incasso@)
+
+Uitrol- en nazorgsessie met Arsalan (deels naast Lisanne). Prod-mutaties met geld:
+vóór/na getoond, pas na akkoord.
+
+**Taak 1 — S184 LIVE gezet (bewezen gezond):**
+- `git checkout main && merge s184-fixes && push` → daarna **zelf via SSH gedeployd in de
+  juiste volgorde** (build → migreren via `run --rm` → `up -d backend`). Reden: de CI-deploy
+  doet `up` vóór `migrate`, wat mét de nieuwe fail-closed opstartcontrole een kip-ei zou geven
+  (app weigert te starten zolang learned_answers RLS mist). Handmatig migreren-eerst omzeilt dat.
+- Verificatie: backend `Up (healthy)`, geen RuntimeError; `alembic current`=`s184_rls_learned_answers`;
+  `relforcerowsecurity` op learned_answers = `t` (was `f`); extern `/health` = ok. Tag `sessie-184` gezet.
+
+**Taak 2 — 4 heropeningszaken herrekend (vóór/na, alleen-lezen op prod):** rente wordt live
+berekend, dus prod toont sinds de deploy al de "na"-cijfers; niets aan te passen. Verschillen
+(peildatum 8 juli): IN100334 rente −€24,34→€110,89 (**te veel betaald was €217,47, nu €82,24**),
+IN100469 +€0,26, IN100505 +€0,20, IN100553 +€1,94. Fout was: oude `_build_claim_reductions`
+boekte per betaling méér af op de positieve vordering dan er binnenkwam (creditfacturen in de
+pro-rata-basis). Bewijs dat de fix klopt: van de betalingen ging precies €605,00 (=netto
+verschuldigd) naar hoofdsom; oude uitkomst "liep" €20/mnd terwijl de zaak stillag. Arsalan:
+rente = AV art. 13.3 (2%/mnd) — LET OP: de 4 zaken staan op `interest_type='commercial'`
+(handelsrente), moet per opdrachtgever gecheckt/rechtgezet vóór brieven met bedragen.
+Berekening door Arsalan/Lisanne akkoord bevonden.
+
+**Taak 3 — "7 dossiers sluiten": GEEN actie nodig.** Meten wees uit: alle 8 (incl. IN100166
+en IN100334) staan op prod al op `afgesloten` — dat is de parkeerstand van de hele BaseNet-import,
+niet een besluit. Niets gemuteerd. IN100334: geen terugstorting (besluit Arsalan/Lisanne).
+IN100166 moet later juist wél weer open (innen) → hoort bij de heropening.
+
+**BaseNet-gesloten dossiers geverifieerd (vraag Lisanne):** uit de originele backup
+`Xml_02-07-2026_2400.zip` (projectlezer): 148 Gereed + 15 Geannuleerd = **163 in BaseNet
+al dicht**. Alle 163 op naam opgezocht op prod → **alle 163 `afgesloten`, 0 uitzonderingen**.
+Vangnet + rentetype-check toegevoegd aan `PLAN-heropening-werkvoorraad.md` (acceptatiecrit. 7).
+
+**Mail incasso@kestinglegal.nl aangesloten (IMAP, live):** BaseNet-mailserver = `imap.basenet.nl:993`
+(bewezen: bestaand seidony-imap-account). Aangesloten **onder Lisanne's user** (admin bezat al
+een imap-account; store keyt op user+provider → anders overschrijven). Alleen-lezen (`readonly`),
+14-daagse/100-venster → geen stortvloed. Eerste sync: 5 opgehaald, 5 nieuw, **2 auto-gekoppeld
+via afzender**. **Bevinding:** veel incasso-mails dragen een BaseNet-dossiernummer (`2026-00xxx`)
+in het onderwerp; Luxis herkent het formaat, vindt geen zaak, en stopt (valt niet door naar
+afzender-matching) → beperkt het koppelpercentage nu. Verbetert zodra de werkvoorraad heropend
+is (debiteuren worden bekende contacten); niet-gekoppelde mail gaat naar "Ongesorteerd".
+Verzenden áls incasso@ = aparte latere stap.
 
 ## Sessie 184 (8 juli, Opus — fix-sprint audit S183 + Fable-review)
 

@@ -8,13 +8,26 @@ de juiste SMTP-parameters worden doorgegeven.
 import aiosmtplib
 import pytest
 
+import app.email.providers.imap_provider as imap_provider_module
 from app.email.oauth_service import imap_smtp_kwargs
 from app.email.providers.base import OutgoingAttachment
 from app.email.providers.imap_provider import ImapProvider
 
 
+@pytest.fixture
+def no_sent_append(monkeypatch):
+    """Schakel de Verzonden-kopie (IMAP APPEND) uit; vang de aanroep op."""
+    calls: list = []
+
+    def fake_append(host, port, username, password, raw):
+        calls.append({"host": host, "username": username, "raw": raw})
+
+    monkeypatch.setattr(imap_provider_module, "_append_to_sent", fake_append)
+    return calls
+
+
 @pytest.mark.asyncio
-async def test_imap_send_builds_message_and_smtp_params(monkeypatch):
+async def test_imap_send_builds_message_and_smtp_params(monkeypatch, no_sent_append):
     captured: dict = {}
 
     async def fake_send(msg, **kwargs):
@@ -61,9 +74,39 @@ async def test_imap_send_builds_message_and_smtp_params(monkeypatch):
     filenames = [p.get_filename() for p in msg.walk() if p.get_filename()]
     assert "factuur.pdf" in filenames
 
+    # Kopie gaat naar de Verzonden-map via de IMAP-tegenhanger van de SMTP-host.
+    assert len(no_sent_append) == 1
+    assert no_sent_append[0]["host"] == "imap.basenet.nl"
+    assert no_sent_append[0]["username"] == "incasso@kestinglegal.nl"
+
 
 @pytest.mark.asyncio
-async def test_imap_send_sets_thread_headers(monkeypatch):
+async def test_imap_send_survives_failing_sent_append(monkeypatch):
+    """De Verzonden-kopie mag de verzending nooit laten falen."""
+
+    async def fake_send(msg, **kwargs):
+        pass
+
+    def broken_append(*args):
+        raise ConnectionError("IMAP down")
+
+    monkeypatch.setattr(aiosmtplib, "send", fake_send)
+    monkeypatch.setattr(imap_provider_module, "_append_to_sent", broken_append)
+
+    message_id = await ImapProvider().send_message(
+        "pw",
+        to=["a@example.com"],
+        subject="x",
+        body_html="<p>x</p>",
+        smtp_host="smtp.basenet.nl",
+        smtp_port=587,
+        username="incasso@kestinglegal.nl",
+    )
+    assert message_id  # verzending geslaagd ondanks kapotte Verzonden-kopie
+
+
+@pytest.mark.asyncio
+async def test_imap_send_sets_thread_headers(monkeypatch, no_sent_append):
     captured: dict = {}
 
     async def fake_send(msg, **kwargs):

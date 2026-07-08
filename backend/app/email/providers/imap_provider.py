@@ -328,6 +328,44 @@ def _fetch_attachment_from_imap(
             pass
 
 
+def _append_to_sent(
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    raw_message: bytes,
+) -> None:
+    """Zet een verzonden mail in de Verzonden-map via IMAP APPEND.
+
+    BaseNet bewaart SMTP-verzonden mail niet zelf (gemeten S186); zonder deze
+    APPEND ziet de gebruiker verzonden mail niet terug in de mailbox.
+    Probeert de gangbare mapnamen; de eerste die bestaat wint.
+    """
+    import imaplib as _imaplib
+    import time as _time
+
+    imap = _imaplib.IMAP4_SSL(host, port)
+    imap.login(username, password)
+    try:
+        for folder in ("INBOX.Sent", "Sent", "Sent Items", "Verzonden items"):
+            status, _ = imap.select(folder, readonly=True)
+            if status != "OK":
+                continue
+            imap.close()
+            status, _ = imap.append(
+                folder, r"(\Seen)", _imaplib.Time2Internaldate(_time.time()), raw_message
+            )
+            if status == "OK":
+                logger.info("IMAP: kopie opgeslagen in '%s' voor %s", folder, username)
+                return
+        raise ValueError("Geen Verzonden-map gevonden om de kopie in op te slaan")
+    finally:
+        try:
+            imap.logout()
+        except Exception:
+            pass
+
+
 class ImapProvider(EmailProvider):
     """IMAP email provider for BaseNet and similar IMAP servers.
 
@@ -439,9 +477,10 @@ class ImapProvider(EmailProvider):
         """Send an email via the account's outgoing SMTP server (e.g. BaseNet).
 
         Spiegelbeeld van de IMAP-ontvangst: dezelfde inlog, maar dan via de
-        uitgaande server. De afzender is `username` (incasso@...) en BaseNet
-        bewaart automatisch een kopie in de Verzonden-map. Retourneert de
-        Message-ID die we zelf zetten, zodat de latere sync de teruggehaalde
+        uitgaande server. De afzender is `username` (incasso@...). Na het
+        versturen wordt de mail zelf via IMAP APPEND in de Verzonden-map
+        gezet — BaseNet doet dat NIET automatisch bij SMTP (gemeten S186).
+        Retourneert de Message-ID die we zelf zetten, zodat de latere sync de
         Sent-kopie hierop dedupliceert.
         """
         from email.message import EmailMessage as MimeMessage
@@ -491,6 +530,17 @@ class ImapProvider(EmailProvider):
             smtp_host,
             smtp_port,
         )
+
+        # Kopie naar de Verzonden-map (IMAP APPEND). Mag nooit de verzending
+        # laten falen — de mail is al onderweg; loggen en doorgaan.
+        imap_host = "imap." + smtp_host[len("smtp.") :] if smtp_host.startswith("smtp.") else smtp_host
+        try:
+            await asyncio.to_thread(
+                _append_to_sent, imap_host, 993, username, access_token, msg.as_bytes()
+            )
+        except Exception as e:
+            logger.warning("IMAP: kopie naar Verzonden-map mislukt (mail is wel verzonden): %s", e)
+
         return message_id
 
     async def create_draft(

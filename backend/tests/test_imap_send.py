@@ -142,6 +142,46 @@ async def test_imap_send_requires_smtp_host_and_username():
         )
 
 
+def _raw_email(message_id: str, in_reply_to: str = "", references: str = "") -> bytes:
+    headers = [
+        f"Message-ID: {message_id}",
+        "From: iemand@example.com",
+        "To: incasso@kestinglegal.nl",
+        "Subject: test",
+        "Date: Tue, 08 Jul 2026 10:00:00 +0000",
+    ]
+    if in_reply_to:
+        headers.append(f"In-Reply-To: {in_reply_to}")
+    if references:
+        headers.append(f"References: {references}")
+    return ("\r\n".join(headers) + "\r\n\r\nBody.\r\n").encode()
+
+
+def test_thread_id_root_uses_own_message_id():
+    from app.email.providers.imap_provider import _imap_message_to_email
+
+    msg = _imap_message_to_email("1", _raw_email("<root@x>"))
+    assert msg.thread_id == "<root@x>"
+
+
+def test_thread_id_uses_references_root_across_the_chain():
+    from app.email.providers.imap_provider import _imap_message_to_email
+
+    # Diepe reply: References = "root parent grootouder..." → wortel wint,
+    # zodat hij dezelfde thread deelt als de allereerste mail.
+    deep = _imap_message_to_email(
+        "3", _raw_email("<c@x>", in_reply_to="<b@x>", references="<root@x> <b@x>")
+    )
+    assert deep.thread_id == "<root@x>"
+
+
+def test_thread_id_falls_back_to_in_reply_to_without_references():
+    from app.email.providers.imap_provider import _imap_message_to_email
+
+    msg = _imap_message_to_email("2", _raw_email("<b@x>", in_reply_to="<root@x>"))
+    assert msg.thread_id == "<root@x>"
+
+
 def test_imap_smtp_kwargs_derives_basenet_host():
     class Acc:
         provider = "imap"

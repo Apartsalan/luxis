@@ -172,10 +172,21 @@ def _imap_message_to_email(
     except Exception:
         date_iso = datetime.now(UTC).isoformat()
 
-    # Thread ID from References/In-Reply-To
+    # Stabiele conversatie-id = de WORTEL van de keten (oudste Message-ID in
+    # References), zodat elke reply — hoe diep ook — dezelfde thread_id deelt.
+    # Zonder References: het directe antwoord (In-Reply-To) of, voor de eerste
+    # mail zelf, de eigen Message-ID (dan matchen latere replies erop terug).
+    # (Fout vóór S186: In-Reply-To kreeg voorrang → elke laag een andere id →
+    # keten brak na één antwoord.)
     references = msg.get("References", "")
     in_reply_to = msg.get("In-Reply-To", "")
-    thread_id = in_reply_to.strip() or (references.split()[0] if references else None)
+    ref_parts = references.split()
+    if ref_parts:
+        thread_id = ref_parts[0]
+    elif in_reply_to.strip():
+        thread_id = in_reply_to.strip()
+    else:
+        thread_id = message_id
 
     # Body
     text_body, html_body = _get_text_parts(msg)

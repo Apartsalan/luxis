@@ -634,6 +634,32 @@ async def test_unknown_reference_does_not_block_sender(db: AsyncSession, test_te
 
 
 @pytest.mark.asyncio
+async def test_suggest_cases_returns_client_name(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S187: suggesties met een match crashten op het niet-bestaande
+    Contact.display_name; nu komt de cliëntnaam (Contact.name) correct mee."""
+    from app.email.sync_service import suggest_cases_for_email
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_case(db, test_tenant.id, case_number="2026-00001")
+    email = await _create_synced_email(
+        db,
+        test_tenant.id,
+        account.id,
+        subject="Inzake dossier 2026-00001",
+    )
+    await db.flush()
+
+    suggestions = await suggest_cases_for_email(db, test_tenant.id, email.id)
+
+    match = next((s for s in suggestions if s["case_id"] == str(case.id)), None)
+    assert match is not None
+    # Vóór de fix wierp deze aanroep een AttributeError.
+    assert match["client_name"] == "Test Debiteur B.V."
+
+
+@pytest.mark.asyncio
 async def test_ambiguous_reference_blocks_without_linking(
     db: AsyncSession, test_tenant: Tenant
 ):

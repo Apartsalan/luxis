@@ -1275,7 +1275,7 @@ async def suggest_cases_for_email(
     client_names: dict[str, str] = {}
     if case_ids_to_fetch:
         cn_result = await db.execute(
-            select(Case.id, Contact.display_name)
+            select(Case.id, Contact.name)
             .join(Contact, Case.client_id == Contact.id, isouter=True)
             .where(Case.id.in_(case_ids_to_fetch))
         )

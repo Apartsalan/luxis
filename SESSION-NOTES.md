@@ -82,10 +82,21 @@ incasso-mail-probleem. Verzenden áls incasso@ = aparte latere stap.
   (Incassocenter, onbekend kenmerk) terecht naar Ongesorteerd. 23 tests groen, ruff schoon.
 - **Ongesorteerd-vangbak geverifieerd:** Correspondentie-tab + zijbalk-teller +
   dossier-suggesties per mail + (bulk-)koppelen/dismiss bestaan en zijn getest (DF-03, S115).
-- **Volgende sessie (wens Arsalan): kritische doorlichting mail-functionaliteit** — is het
-  mailgedeelte zelfstandig genoeg als "mailprogramma" (beantwoorden, versturen áls incasso@,
-  mappen, zoeken), plus label-lezen-heroverweging en de gesprek-ketting (IMAP-thread-matching
-  werkt maar één antwoord diep — bekende beperking uit de audit).
+- **Volgende sessie = MAIL-doorlichting (S186, `docs/sessions/PROMPT-S186.md`):** is het
+  mailgedeelte zelfstandig genoeg als "mailprogramma" + **eerste taak: versturen áls incasso@**.
+  - **Versturen-bevinding (S185, gemeten):** `ImapProvider.send_message` = `NotImplementedError`
+    (BaseNet-koppeling is alleen-ontvangen). De compose-knop verstuurt via `OutlookProvider`
+    (Graph, alleen als seidony@/M365). De losse SMTP-brug (`app/email/service.py`, aiosmtplib,
+    één globale `smtp_from`) staat op prod op **`arsalanseidony@gmail.com`** (test-restje →
+    opruimen). Om áls incasso@ te versturen: SMTP via BaseNet's uitgaande server
+    (waarsch. `smtp.basenet.nl:587`, zel.fde inlog) — spiegelbeeld van de IMAP-ontvangst,
+    afzender + Verzonden-map kloppen dan. **Nodig van Arsalan:** BaseNet SMTP-host bevestigen +
+    of BaseNet relay namens incasso@ toestaat. Buildkeuze: per-account SMTP-send in ImapProvider
+    (netjes, multi-afzender) vs globale brug herpunten (snel, één afzender).
+  - Verder op de agenda: label-lezen-heroverweging (`[D..._I...]`: +1.440 juist/+17 fout),
+    gesprek-ketting (IMAP-thread één antwoord diep), mappen/zoeken/beantwoorden in de UI.
+- **Heropening werkvoorraad** blijft klaarstaan (`docs/plans/PLAN-heropening-werkvoorraad.md`)
+  als het andere grote item — koppel-fix + vangnetten zijn er nu klaar voor; inplannen na/naast S186.
 
 ## Sessie 184 (8 juli, Opus — fix-sprint audit S183 + Fable-review)
 

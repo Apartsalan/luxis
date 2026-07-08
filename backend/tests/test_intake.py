@@ -207,6 +207,60 @@ class TestIntakeDetection:
         count = await detect_intake_emails(db, test_tenant.id)
         assert count == 0
 
+    async def test_detect_email_from_client_domain(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        """Ander adres binnen hetzelfde bedrijfsdomein → herkend via domein-match."""
+        client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+        # Zelfde domein als client@opdrachtgever.nl, ander lokaal deel.
+        email = await _create_inbound_email(
+            db, test_tenant.id, account.id, from_email="insolventie@opdrachtgever.nl"
+        )
+        await db.commit()
+
+        count = await detect_intake_emails(db, test_tenant.id)
+        assert count == 1
+
+        result = await db.execute(
+            select(IntakeRequest).where(IntakeRequest.synced_email_id == email.id)
+        )
+        intake = result.scalar_one()
+        assert intake.client_contact_id == client.id
+
+    async def test_skip_domain_match_for_free_provider(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        """Vrije-mailprovider (gmail) → nooit op domein matchen."""
+        client = Contact(
+            tenant_id=test_tenant.id,
+            contact_type="company",
+            name="Opdrachtgever Gmail",
+            email="baas@gmail.com",
+        )
+        db.add(client)
+        await db.flush()
+        case = Case(
+            tenant_id=test_tenant.id,
+            case_number="2026-00098",
+            case_type="incasso",
+            debtor_type="b2b",
+            status="sommatie",
+            client_id=client.id,
+            assigned_to_id=test_user.id,
+            date_opened=date.today(),
+        )
+        db.add(case)
+        await db.flush()
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+        await _create_inbound_email(
+            db, test_tenant.id, account.id, from_email="iemandanders@gmail.com"
+        )
+        await db.commit()
+
+        count = await detect_intake_emails(db, test_tenant.id)
+        assert count == 0
+
     async def test_skip_already_processed_email(
         self, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):

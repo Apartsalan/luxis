@@ -195,6 +195,28 @@ export function useRejectIntake() {
   });
 }
 
+/**
+ * Handmatig een intake-aanvraag maken van een bestaande mail (+ AI-uittreksel).
+ */
+export function useCreateIntakeFromEmail() {
+  const queryClient = useQueryClient();
+
+  return useMutation<IntakeResponse, Error, { emailId: string }>({
+    mutationFn: async ({ emailId }) => {
+      const res = await api(`/api/intake/from-email/${emailId}`, { method: "POST" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Aanvraag maken mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["intakes"] });
+      queryClient.invalidateQueries({ queryKey: ["intake-pending-count"] });
+    },
+  });
+}
+
 export function useProcessIntake() {
   const queryClient = useQueryClient();
 

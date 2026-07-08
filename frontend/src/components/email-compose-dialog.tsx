@@ -896,9 +896,12 @@ export function EmailComposeDialog({
             {errors.subject && <p className="text-xs text-destructive ml-14">{errors.subject}</p>}
 
             {/* ── Template selector ────────────────────────────────── */}
-            {effectiveCaseId && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground w-12 shrink-0">Sjabloon</span>
+            {/* Altijd zichtbaar zodat de volgorde "kies eerst een dossier →
+                dan een sjabloon" duidelijk is. Zonder dossier: uitgeschakeld
+                met uitleg i.p.v. onzichtbaar. */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground w-12 shrink-0">Sjabloon</span>
+              {effectiveCaseId ? (
                 <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
                   <SelectTrigger className="flex-1 h-8 text-sm">
                     <SelectValue placeholder="Geen sjabloon" />
@@ -918,13 +921,19 @@ export function EmailComposeDialog({
                     ))}
                   </SelectContent>
                 </Select>
-                {selectedTemplate && (
-                  <button type="button" onClick={() => { setSelectedTemplate(""); setTemplateHtml(null); }} className="text-xs text-muted-foreground hover:text-foreground">
-                    Wissen
-                  </button>
-                )}
-              </div>
-            )}
+              ) : (
+                <div className="flex-1 flex h-8 items-center rounded-md border border-dashed border-input px-3 text-sm text-muted-foreground">
+                  {caseId
+                    ? "Geen sjablonen beschikbaar"
+                    : "Kies eerst een dossier hierboven voor sjablonen"}
+                </div>
+              )}
+              {effectiveCaseId && selectedTemplate && (
+                <button type="button" onClick={() => { setSelectedTemplate(""); setTemplateHtml(null); }} className="text-xs text-muted-foreground hover:text-foreground">
+                  Wissen
+                </button>
+              )}
+            </div>
 
             {/* ── Divider ─────────────────────────────────────────── */}
             <div className="border-t border-border" />

@@ -1,6 +1,11 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -132,15 +137,31 @@ export function useCaseEmails(caseId: string | undefined, limit = 50) {
 /**
  * Get unlinked emails (not assigned to any case).
  */
-export function useAllEmails(filter: "all" | "linked" | "unlinked" = "all", search?: string, limit = 50) {
-  return useQuery<CaseEmailsResponse>({
-    queryKey: ["all-emails", filter, search, limit],
-    queryFn: async () => {
-      const params = new URLSearchParams({ filter, limit: String(limit) });
+// Paginagrootte voor "Alle e-mails" — backend cap is 200 per pagina.
+export const ALL_EMAILS_PAGE_SIZE = 200;
+
+/**
+ * Alle gesynchte e-mails, gepagineerd met "meer laden" (offset). `total` is het
+ * totaal aantal treffers; de flat-lijst groeit met elke geladen pagina.
+ */
+export function useAllEmails(filter: "all" | "linked" | "unlinked" = "all", search?: string) {
+  return useInfiniteQuery<CaseEmailsResponse>({
+    queryKey: ["all-emails", filter, search],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({
+        filter,
+        limit: String(ALL_EMAILS_PAGE_SIZE),
+        offset: String(pageParam ?? 0),
+      });
       if (search) params.set("search", search);
       const res = await api(`/api/email/all?${params}`);
       if (!res.ok) throw new Error("Kon e-mails niet ophalen");
       return res.json();
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((n, p) => n + p.emails.length, 0);
+      return loaded < lastPage.total ? loaded : undefined;
     },
   });
 }

@@ -17,6 +17,7 @@ from app.ai_agent.intake_schemas import (
 )
 from app.ai_agent.intake_service import (
     approve_intake,
+    create_intake_from_email,
     get_intake_by_id,
     get_intake_requests,
     get_pending_intake_count,
@@ -132,6 +133,27 @@ async def get_intake(
 # ---------------------------------------------------------------------------
 # Action endpoints
 # ---------------------------------------------------------------------------
+
+
+@router.post("/from-email/{email_id}", response_model=IntakeResponse)
+async def create_from_email(
+    email_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Maak handmatig een intake-aanvraag van een bestaande mail (+ AI-uittreksel).
+
+    Voor mails die de automaat niet als opdracht herkende.
+    """
+    intake = await create_intake_from_email(db, email_id, current_user.tenant_id)
+    if not intake:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="E-mail niet gevonden",
+        )
+    await db.commit()
+    refreshed = await get_intake_by_id(db, intake.id, current_user.tenant_id)
+    return _intake_to_response(refreshed)
 
 
 @router.post("/{intake_id}/process", response_model=IntakeResponse)

@@ -256,3 +256,26 @@ def test_imap_smtp_kwargs_empty_for_oauth_provider():
         email_address = "seidony@kestinglegal.nl"
 
     assert imap_smtp_kwargs(Acc()) == {}
+
+
+# ── Gelezen-status (\Seen) meelezen ─────────────────────────────────────────
+
+
+def test_seen_flag_present_reads_descriptor_not_body():
+    from app.email.providers.imap_provider import _seen_flag_present
+
+    # Typische imaplib-vorm: (descriptor-bytes, body-bytes), gevolgd door b')'.
+    seen = [(b"1 (FLAGS (\\Seen) RFC822 {12}", b"body zonder vlag"), b")"]
+    unseen = [(b"2 (FLAGS () RFC822 {12}", b"body \\Seen in tekst"), b")"]
+    assert _seen_flag_present(seen) is True
+    # Body noemt "\\Seen" maar de descriptor niet → als ongelezen zien.
+    assert _seen_flag_present(unseen) is False
+
+
+def test_imap_message_to_email_respects_is_read():
+    from app.email.providers.imap_provider import _imap_message_to_email
+
+    read = _imap_message_to_email("1", _raw_email("<a@x>"), is_read=True)
+    unread = _imap_message_to_email("2", _raw_email("<b@x>"), is_read=False)
+    assert read.is_read is True
+    assert unread.is_read is False

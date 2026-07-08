@@ -145,8 +145,13 @@ def _get_attachments(msg: email_lib.message.Message) -> list[AttachmentInfo]:
 def _imap_message_to_email(
     uid: str,
     raw_bytes: bytes,
+    is_read: bool = True,
 ) -> EmailMessage | None:
-    """Parse raw IMAP message bytes into an EmailMessage."""
+    """Parse raw IMAP message bytes into an EmailMessage.
+
+    is_read weerspiegelt de IMAP \\Seen-vlag (meegelezen in dezelfde fetch);
+    default True voor plekken die de vlag niet opvragen (bv. losse bijlage-fetch).
+    """
     try:
         msg = email_lib.message_from_bytes(raw_bytes)
     except Exception as e:
@@ -207,10 +212,24 @@ def _imap_message_to_email(
         snippet=snippet,
         body_text=text_body,
         body_html=html_body,
-        is_read=True,  # IMAP doesn't easily expose this in bulk fetch
+        is_read=is_read,  # IMAP \Seen-vlag, meegelezen in dezelfde fetch
         has_attachments=len(attachments) > 0,
         attachments=attachments,
     )
+
+
+def _seen_flag_present(msg_data) -> bool:
+    """True als de IMAP \\Seen-vlag in de fetch-descriptor staat.
+
+    Bij een fetch met FLAGS zit de vlaggenlijst in het beschrijvende deel
+    (bv. b'1 (FLAGS (\\Seen) RFC822 {1234}'), niet in de ruwe body. We kijken
+    daarom alleen naar dat descriptor-deel, nooit naar de body-inhoud.
+    """
+    for part in msg_data:
+        descriptor = part[0] if isinstance(part, tuple) else part
+        if isinstance(descriptor, bytes) and b"\\Seen" in descriptor:
+            return True
+    return False
 
 
 def _fetch_from_imap(
@@ -219,7 +238,7 @@ def _fetch_from_imap(
     username: str,
     password: str,
     max_results: int,
-    since_days: int = 14,
+    since_days: int = 90,
     folder: str = "INBOX",
 ) -> list[EmailMessage]:
     """Synchronous IMAP fetch — runs in asyncio.to_thread()."""
@@ -249,7 +268,9 @@ def _fetch_from_imap(
         uids = uids[-max_results:]
 
         for uid in uids:
-            status, msg_data = imap.fetch(uid, "(RFC822)")
+            # FLAGS meevragen zodat we de echte gelezen-status (\Seen) weten.
+            # readonly select → het lezen zet zélf geen \Seen (blijft ongewijzigd).
+            status, msg_data = imap.fetch(uid, "(FLAGS RFC822)")
             if status != "OK" or not msg_data or not msg_data[0]:
                 continue
 
@@ -257,7 +278,8 @@ def _fetch_from_imap(
             if not isinstance(raw_bytes, bytes):
                 continue
 
-            email_msg = _imap_message_to_email(uid.decode(), raw_bytes)
+            is_read = _seen_flag_present(msg_data)
+            email_msg = _imap_message_to_email(uid.decode(), raw_bytes, is_read=is_read)
             if email_msg:
                 messages.append(email_msg)
 

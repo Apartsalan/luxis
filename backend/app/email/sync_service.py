@@ -19,7 +19,7 @@ from html import unescape as html_unescape
 from pathlib import Path
 
 from dateutil import parser as dateparser
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseParty
@@ -512,13 +512,23 @@ async def sync_emails_for_account(
     for msg in messages:
         # Check if already synced (dedup by provider_message_id)
         existing = await db.execute(
-            select(SyncedEmail.id, SyncedEmail.case_id).where(
+            select(SyncedEmail.id, SyncedEmail.case_id, SyncedEmail.is_read).where(
                 SyncedEmail.email_account_id == account.id,
                 SyncedEmail.provider_message_id == msg.provider_message_id,
             )
         )
         existing_row = existing.first()
         if existing_row is not None:
+            # Gelezen-status van de mailbox overnemen als die veranderd is. Luxis
+            # houdt zelf geen aparte gelezen-status bij, dus de \Seen-vlag is de
+            # enige waarheid — geen conflict. Alleen schrijven bij een verschil
+            # (geen rij laden per mail → geen trage sync).
+            if existing_row[2] != msg.is_read:
+                await db.execute(
+                    update(SyncedEmail)
+                    .where(SyncedEmail.id == existing_row[0])
+                    .values(is_read=msg.is_read)
+                )
             # If already synced but unlinked → try to link it
             if existing_row[1] is None:
                 # Respecteer eerst het eigen dossiernummer van de mail; val alleen

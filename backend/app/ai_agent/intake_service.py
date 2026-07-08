@@ -26,6 +26,15 @@ logger = logging.getLogger(__name__)
 # Path where email attachments are stored
 ATTACHMENTS_BASE = "/app/uploads/email_attachments"
 
+# Vrije-mailproviders: hun domein zegt niets over de opdrachtgever, dus nooit
+# op domein matchen (anders geldt élk gmail-adres als bekende opdrachtgever).
+FREE_EMAIL_DOMAINS = {
+    "gmail.com", "googlemail.com", "hotmail.com", "hotmail.nl", "outlook.com",
+    "outlook.nl", "live.nl", "live.com", "icloud.com", "me.com", "yahoo.com",
+    "yahoo.nl", "ziggo.nl", "kpnmail.nl", "planet.nl", "home.nl", "casema.nl",
+    "chello.nl", "xs4all.nl", "telfort.nl", "protonmail.com", "proton.me",
+}
+
 
 # ---------------------------------------------------------------------------
 # Detection — find new intake-eligible emails
@@ -83,13 +92,34 @@ async def detect_intake_emails(
     )
     client_contacts = {c.email.lower(): c for c in client_result.scalars().all() if c.email}
 
+    # Domein-match: een opdrachtgever stuurt nieuwe zaken vaak vanaf verschillende
+    # adressen binnen hetzelfde bedrijfsdomein (bv. jan@ én insolventie@incassocenter.nl).
+    # Bouw een domein→contact-kaart, maar sla vrije-mailproviders over (anders matcht
+    # elk gmail-adres) en domeinen die naar meerdere verschillende opdrachtgevers
+    # wijzen (ambigu). De handmatige "Maak dossier van deze mail" blijft het vangnet.
+    domain_contacts: dict[str, Contact] = {}
+    ambiguous_domains: set[str] = set()
+    for contact in client_contacts.values():
+        domain = contact.email.split("@")[-1].lower()
+        if domain in FREE_EMAIL_DOMAINS:
+            continue
+        existing = domain_contacts.get(domain)
+        if existing is not None and existing.id != contact.id:
+            ambiguous_domains.add(domain)
+        else:
+            domain_contacts[domain] = contact
+
     created = 0
     for email in emails:
         sender = email.from_email.lower()
-        if sender not in client_contacts:
+        client_contact = client_contacts.get(sender)
+        if client_contact is None:
+            # Terugval: exact adres onbekend → probeer het bedrijfsdomein.
+            sender_domain = sender.split("@")[-1] if "@" in sender else ""
+            if sender_domain and sender_domain not in ambiguous_domains:
+                client_contact = domain_contacts.get(sender_domain)
+        if client_contact is None:
             continue
-
-        client_contact = client_contacts[sender]
 
         intake = IntakeRequest(
             tenant_id=tenant_id,
@@ -109,6 +139,78 @@ async def detect_intake_emails(
         )
 
     return created
+
+
+async def _find_client_contact_for_sender(
+    db: AsyncSession, tenant_id: uuid.UUID, sender: str
+):
+    """Vind de opdrachtgever-contact bij een afzender (exact adres, anders domein).
+
+    Zelfde regels als de batch-detectie: vrije-mailproviders en domeinen die naar
+    meerdere opdrachtgevers wijzen tellen niet als domein-match.
+    """
+    sender = (sender or "").lower()
+    client_result = await db.execute(
+        select(Contact)
+        .join(Case, Case.client_id == Contact.id)
+        .where(Contact.tenant_id == tenant_id, Contact.email.isnot(None))
+        .distinct()
+    )
+    contacts = [c for c in client_result.scalars().all() if c.email]
+    for c in contacts:
+        if c.email.lower() == sender:
+            return c
+    domain = sender.split("@")[-1] if "@" in sender else ""
+    if not domain or domain in FREE_EMAIL_DOMAINS:
+        return None
+    matches = {c.id: c for c in contacts if c.email.split("@")[-1].lower() == domain}
+    return next(iter(matches.values())) if len(matches) == 1 else None
+
+
+async def create_intake_from_email(
+    db: AsyncSession,
+    email_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+) -> IntakeRequest | None:
+    """Handmatige intake: maak een aanvraag van een bestaande mail en verwerk 'm.
+
+    Voor wat de automaat mist (afzender niet herkend als opdrachtgever). Idempotent:
+    bestaat er al een aanvraag voor deze mail, dan geven we die terug. Retourneert
+    None als de mail niet bestaat.
+    """
+    email = (
+        await db.execute(
+            select(SyncedEmail).where(
+                SyncedEmail.id == email_id, SyncedEmail.tenant_id == tenant_id
+            )
+        )
+    ).scalar_one_or_none()
+    if email is None:
+        return None
+
+    existing = (
+        await db.execute(
+            select(IntakeRequest).where(
+                IntakeRequest.synced_email_id == email_id,
+                IntakeRequest.tenant_id == tenant_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+
+    client_contact = await _find_client_contact_for_sender(db, tenant_id, email.from_email)
+    intake = IntakeRequest(
+        tenant_id=tenant_id,
+        synced_email_id=email.id,
+        client_contact_id=client_contact.id if client_contact else None,
+        status=IntakeStatus.DETECTED,
+    )
+    db.add(intake)
+    await db.flush()
+
+    processed = await process_intake(db, intake.id, tenant_id)
+    return processed or intake
 
 
 # ---------------------------------------------------------------------------

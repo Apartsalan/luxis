@@ -35,6 +35,7 @@ export interface EmailComposeData {
   custom_subject?: string | null;
   custom_body?: string | null;
   body_html?: string | null;
+  case_id?: string | null;
   case_file_ids?: string[];
   inline_attachments?: ComposeInlineAttachment[];
   template_type?: string;
@@ -654,6 +655,7 @@ export function EmailComposeDialog({
       custom_subject: subject.trim() || null,
       custom_body: currentTemplateHtml ? null : (body.trim() || null),
       body_html: currentTemplateHtml || null,
+      case_id: effectiveCaseId ?? null,
       case_file_ids: Array.from(caseFileIds).length > 0 ? Array.from(caseFileIds) : undefined,
       inline_attachments: Array.from(inlineFiles.values()).length > 0 ? Array.from(inlineFiles.values()) : undefined,
       template_type: selectedTemplate || undefined,

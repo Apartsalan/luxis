@@ -13,7 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import CaseActivity
 from app.email.models import EmailLog
-from app.email.oauth_service import get_email_account, get_provider, get_valid_access_token
+from app.email.oauth_service import (
+    get_email_account,
+    get_provider,
+    get_valid_access_token,
+    imap_smtp_kwargs,
+)
 from app.email.providers.base import OutgoingAttachment
 from app.email.service import send_email as smtp_send_email
 from app.email.synced_email_models import SyncedEmail
@@ -30,6 +35,7 @@ async def send_with_attachment(
     subject: str,
     body_html: str,
     attachments: list[tuple[str, bytes, str]],  # (filename, data, mime_subtype)
+    cc: list[str] | None = None,
     case_id: uuid.UUID | None = None,
     document_id: uuid.UUID | None = None,
     recipient_name: str = "",
@@ -92,7 +98,9 @@ async def send_with_attachment(
                 to=[to],
                 subject=subject,
                 body_html=body_html,
+                cc=cc,
                 attachments=outgoing_attachments,
+                **imap_smtp_kwargs(account),
             )
             used_provider = True
             logger.info(
@@ -111,6 +119,7 @@ async def send_with_attachment(
                 to=to,
                 subject=subject,
                 html_body=body_html,
+                cc=cc,
                 attachments=attachments,
             )
             logger.info("Email met bijlage verzonden via SMTP naar %s", to)
@@ -134,7 +143,7 @@ async def send_with_attachment(
             from_email=account.email_address,
             from_name=sender_name,
             to_emails=json.dumps([to]),
-            cc_emails=json.dumps([]),
+            cc_emails=json.dumps(cc or []),
             snippet=subject[:200],
             body_text="",
             body_html=body_html,

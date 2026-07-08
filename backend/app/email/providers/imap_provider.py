@@ -424,7 +424,7 @@ class ImapProvider(EmailProvider):
 
     async def send_message(
         self,
-        access_token: str,
+        access_token: str,  # For IMAP: this is the password
         *,
         to: list[str],
         subject: str,
@@ -432,8 +432,66 @@ class ImapProvider(EmailProvider):
         cc: list[str] | None = None,
         reply_to_message_id: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
+        smtp_host: str = "",
+        smtp_port: int = 587,
+        username: str = "",
     ) -> str:
-        raise NotImplementedError("Use OutlookProvider for sending via Graph API")
+        """Send an email via the account's outgoing SMTP server (e.g. BaseNet).
+
+        Spiegelbeeld van de IMAP-ontvangst: dezelfde inlog, maar dan via de
+        uitgaande server. De afzender is `username` (incasso@...) en BaseNet
+        bewaart automatisch een kopie in de Verzonden-map. Retourneert de
+        Message-ID die we zelf zetten, zodat de latere sync de teruggehaalde
+        Sent-kopie hierop dedupliceert.
+        """
+        from email.message import EmailMessage as MimeMessage
+        from email.utils import formatdate, make_msgid
+
+        import aiosmtplib
+
+        if not smtp_host or not username:
+            raise ValueError("IMAP-verzending vereist smtp_host en username")
+
+        msg = MimeMessage()
+        msg["From"] = username
+        msg["To"] = ", ".join(to)
+        if cc:
+            msg["Cc"] = ", ".join(cc)
+        msg["Subject"] = subject
+        msg["Date"] = formatdate(localtime=True)
+        message_id = make_msgid(domain=username.split("@")[-1])
+        msg["Message-ID"] = message_id
+        # Thread-headers: laat een antwoord bij de originele mail horen.
+        if reply_to_message_id:
+            msg["In-Reply-To"] = reply_to_message_id
+            msg["References"] = reply_to_message_id
+        msg.set_content("Deze e-mail bevat opgemaakte (HTML) inhoud.")
+        msg.add_alternative(body_html, subtype="html")
+
+        for att in attachments or []:
+            maintype, _, subtype = att.content_type.partition("/")
+            if not subtype:
+                maintype, subtype = "application", "octet-stream"
+            msg.add_attachment(
+                att.data, maintype=maintype, subtype=subtype, filename=att.filename
+            )
+
+        await aiosmtplib.send(
+            msg,
+            hostname=smtp_host,
+            port=smtp_port,
+            start_tls=True,
+            username=username,
+            password=access_token,
+        )
+        logger.info(
+            "IMAP/SMTP: e-mail verzonden als %s naar %s via %s:%d",
+            username,
+            to,
+            smtp_host,
+            smtp_port,
+        )
+        return message_id
 
     async def create_draft(
         self,

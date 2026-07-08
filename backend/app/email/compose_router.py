@@ -30,7 +30,12 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.documents.docx_service import build_base_context
 from app.email.incasso_templates import render_incasso_email
-from app.email.oauth_service import get_email_account, get_provider, get_valid_access_token
+from app.email.oauth_service import (
+    get_email_account,
+    get_provider,
+    get_valid_access_token,
+    imap_smtp_kwargs,
+)
 from app.email.providers.base import OutgoingAttachment
 from app.shared.exceptions import BadRequestError, NotFoundError
 
@@ -67,6 +72,12 @@ MAX_ATTACHMENTS = 10
 # ── Schemas ──────────────────────────────────────────────────────────────────
 
 
+class InlineAttachment(BaseModel):
+    filename: str = Field(..., max_length=255)
+    data_base64: str
+    content_type: str = Field(..., max_length=100)
+
+
 class ComposeRequest(BaseModel):
     to: list[str] = Field(..., description="Ontvangers e-mailadressen")
     cc: list[str] | None = Field(default=None, description="CC e-mailadressen")
@@ -75,12 +86,12 @@ class ComposeRequest(BaseModel):
     reply_to_message_id: str | None = Field(
         default=None, description="Provider message ID om op te antwoorden"
     )
-
-
-class InlineAttachment(BaseModel):
-    filename: str = Field(..., max_length=255)
-    data_base64: str
-    content_type: str = Field(..., max_length=100)
+    # Bijlagen — zonder deze velden liet /compose/send bijlagen stil vallen (S186).
+    case_id: uuid.UUID | None = Field(
+        default=None, description="Dossier voor het oplossen van dossierbijlagen"
+    )
+    case_file_ids: list[uuid.UUID] | None = None
+    inline_attachments: list[InlineAttachment] | None = None
 
 
 class CaseComposeRequest(BaseModel):
@@ -201,13 +212,27 @@ async def send_via_provider(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Send an email via the connected email provider (Gmail/Outlook)."""
+    """Send an email via the connected email provider (Outlook/BaseNet-IMAP)."""
     account = await get_email_account(db, user.id, user.tenant_id)
     if not account:
         raise BadRequestError("Geen e-mailaccount verbonden. Ga naar Instellingen → E-mail.")
 
     provider = get_provider(account.provider)
     access_token = await get_valid_access_token(db, account)
+
+    # Bijlagen oplossen (dossierbestanden + inline uploads). Vereist een dossier
+    # voor de dossierbestanden; inline uploads kunnen ook zonder.
+    resolved_attachments: list[OutgoingAttachment] = []
+    if data.case_file_ids or data.inline_attachments:
+        if data.case_file_ids and not data.case_id:
+            raise BadRequestError("Dossier ontbreekt voor de geselecteerde dossierbijlagen.")
+        resolved_attachments = await _resolve_attachments(
+            db,
+            user.tenant_id,
+            data.case_id,
+            data.case_file_ids,
+            data.inline_attachments,
+        )
 
     try:
         message_id = await provider.send_message(
@@ -217,6 +242,8 @@ async def send_via_provider(
             body_html=data.body_html,
             cc=data.cc,
             reply_to_message_id=data.reply_to_message_id,
+            attachments=resolved_attachments or None,
+            **imap_smtp_kwargs(account),
         )
         return ComposeResponse(
             success=True,

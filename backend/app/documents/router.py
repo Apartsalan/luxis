@@ -41,7 +41,6 @@ from app.documents.schemas import (
 )
 from app.documents.template_router import router as template_router
 from app.email.models import EmailLog
-from app.email.service import send_email
 from app.email.templates import _render_base, document_sent
 from app.shared.exceptions import BadRequestError, NotFoundError
 from app.shared.sanitize import content_disposition
@@ -462,33 +461,28 @@ async def send_document(
         )
         template_name = "document_sent"
 
-    # Send email
-    email_log = EmailLog(
-        tenant_id=user.tenant_id,
+    # Verstuur via het verbonden account (incasso@/Outlook) — niet via de globale
+    # SMTP-noodroute. Zo klopt de afzender en verschijnt de mail in Verzonden.
+    # send_with_attachment regelt zelf EmailLog + SyncedEmail + CaseActivity.
+    from app.email.send_service import send_with_attachment
+
+    email_log = await send_with_attachment(
+        db,
+        user.id,
+        user.tenant_id,
+        to=data.recipient_email,
+        subject=subject,
+        body_html=html_body,
+        cc=data.cc,
+        attachments=[(pdf_filename, pdf_bytes, "pdf")],
         case_id=case.id,
         document_id=doc.id,
-        template=template_name,
-        recipient=data.recipient_email,
-        subject=subject,
-        status="sent",
+        recipient_name=data.recipient_name or "",
     )
-
-    try:
-        await send_email(
-            to=data.recipient_email,
-            subject=subject,
-            html_body=html_body,
-            cc=data.cc,
-            attachments=[(pdf_filename, pdf_bytes, "pdf")],
-        )
-    except Exception as e:
-        email_log.status = "failed"
-        email_log.error_message = str(e)
-        logger.error(f"Email verzenden mislukt voor document {document_id}: {e}")
-
-    db.add(email_log)
+    # Houd het sjabloontype vast op de log (send_with_attachment zet een generieke
+    # template-naam) — handig voor het correspondentie-overzicht.
+    email_log.template = template_name
     await db.flush()
-    await db.refresh(email_log)
 
     if email_log.status == "failed":
         raise BadRequestError(f"E-mail verzenden mislukt: {email_log.error_message}")

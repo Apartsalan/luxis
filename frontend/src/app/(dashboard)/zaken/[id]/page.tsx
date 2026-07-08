@@ -380,6 +380,9 @@ export default function ZaakDetailPage() {
           subject,
           body_html: data.body_html || `<p>${body.replace(/\n/g, "<br>")}</p>`,
           cc: data.cc,
+          case_id: data.case_id ?? id,
+          case_file_ids: data.case_file_ids,
+          inline_attachments: data.inline_attachments,
         }),
       });
 
@@ -394,7 +397,7 @@ export default function ZaakDetailPage() {
         throw new Error(msg);
       }
 
-      toast.success("E-mail verzonden via Outlook");
+      toast.success("E-mail verzonden");
       setCaseEmailOpen(false);
       if (activeDraftId) await handleDraftSendComplete();
     } catch (err: unknown) {

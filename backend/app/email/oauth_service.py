@@ -50,6 +50,32 @@ def get_provider(provider_name: str) -> EmailProvider:
     raise ValueError(f"Onbekende email provider: {provider_name}")
 
 
+def imap_smtp_kwargs(account: EmailAccount) -> dict:
+    """Extra `send_message` kwargs voor een IMAP-account (SMTP-host/poort/gebruiker).
+
+    Voor OAuth-providers (Outlook) leeg — die versturen via hun eigen API.
+    De uitgaande server wordt afgeleid van de IMAP-host: `imap.basenet.nl` →
+    `smtp.basenet.nl`, poort 587 (STARTTLS). Het wachtwoord (`access_token`)
+    en de afzender (`username`) blijven gelijk aan de ontvangst.
+
+    ponytail: één IMAP-provider vandaag (BaseNet). Komt er een tweede met een
+    afwijkende SMTP-host bij, sla die dan expliciet op bij het account i.p.v.
+    hier af te leiden.
+    """
+    if account.provider != "imap":
+        return {}
+    imap_host = (account.scopes or "imap.basenet.nl:993").split(":")[0]
+    if imap_host.startswith("imap."):
+        smtp_host = "smtp." + imap_host[len("imap.") :]
+    else:
+        smtp_host = imap_host
+    return {
+        "smtp_host": smtp_host,
+        "smtp_port": 587,
+        "username": account.email_address,
+    }
+
+
 async def encode_oauth_state(user_id: str, tenant_id: str, provider: str) -> str:
     """Encode and HMAC-sign user context into the OAuth state parameter.
 

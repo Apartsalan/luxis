@@ -2,12 +2,46 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S188b, Fable) — eerste heropeningsbatch LIVE: 14 LegalWork-zaken open met 2%/mnd AV-rente; rate_basis-valkuil gevonden+gefixt. Details: S188b-entry.
-**Laatste feature/fix:** (data, S188b) 14 zaken heropend + 43 vorderingen van jaar- naar maandrente; plan-stap 4b toegevoegd. Details: S188b-entry.
-**Openstaand:** volgende heropeningsbatches (akkoord per groep); terugstort IN100334 (±€215) bij Lisanne; Backblaze US-bucket wissen ~10 juli; DMARC/DKIM kestinglegal.nl; testspoor "Luxis diagnose SELF"; 2 crypt-wachtwoorden (Arsalan).
-**Volgende sessie (S189):** volgende heropeningsbatch met plan-stap 4b, of Lisanne aan het werk op de 14 open LegalWork-zaken. Draaiboek: `docs/plans/PLAN-heropening-werkvoorraad.md`.
+**Laatst bijgewerkt:** 9 juli 2026 (S188c) — Fable-review mailwerk S185-187 + 2 fixes op Opus (aanvraag-detectie liep vast; "Negeren" nu heilig). 52 tests groen. Details: S188c-entry.
+**Laatste feature/fix:** (code, S188c) detect-kandidaatfilter + rematch respecteert is_dismissed; 3 regressietests. Commit edf88da. Details: S188c-entry.
+**Openstaand:** Fable-review van de 2 S188c-fixes (Arsalan); 6 kleine mail-verbeterpunten (niet urgent); CI-rood test_role (niet-mail); volgende heropeningsbatches; terugstort IN100334.
+**Volgende sessie:** Fable-review S188c-fixes; daarna volgende heropeningsbatch of de kleine mail-verbeterpunten.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 188c (9 juli 2026, Opus-bouw + Fable-review-fixes — mailwerk-review + 2 fixes)
+
+### Samenvatting
+Eerst Fable-review van het mailwerk S185-187 (read-only, alleen broncode/git/tests — bewust
+geen echte mails of mailschermen om het model-filter niet te triggeren). Oordeel: goed en veilig
+gebouwd; 26/26 endpoints geauth, XSS twee keer afgedekt (inkomende weergave + geciteerd origineel
+bij reply/forward), koppeling voorzichtig. Twee ECHTE gebreken gevonden + op Opus gefixt:
+
+**Fix 1 — aanvraag-detectie liep vast (bewezen op prod).** `detect_intake_emails` pakte de 10
+oudste onverwerkte mails maar markeerde niet-matches nooit → venster slibde dicht met oude
+systeem-/eigen mail (32 wachtend, 10 oudste kansloos). Root-cause-fix: alleen mail van een bekende
+opdrachtgever (adres of niet-ambigu domein) is nog kandidaat; opdrachtgever-kaart wordt vóór de
+mailquery gebouwd en mee-gefilterd, dus elke kandidaat matcht en verlaat de wachtrij. Geen migratie.
+
+**Fix 2 — "Negeren" niet heilig.** `_rematch_unlinked_emails` filterde niet op `is_dismissed` →
+een genegeerde mail kon bij een latere sync alsnog gekoppeld worden (0 gevallen op prod, sluimerend).
+Eén filterregel toegevoegd.
+
+### Verificatie
+3 regressietests toegevoegd (detectie-venster slibt niet dicht; her-koppeling respecteert Negeren
++ koppelt niet-genegeerde wél). **52 tests groen** in test_intake.py + test_email_sync.py, gedraaid
+in een geïsoleerde wegwerp-postgres op de VPS (bind-mount van de wijzigingen; prod-data niet geraakt,
+wegwerp-db daarna verwijderd). Commit `edf88da`, gepusht. Lint niet los gedraaid (uvx ontbrak in de
+wegwerp-container) → teststraat pikt ruff op.
+
+### Openstaand
+- **Fable-review van déze 2 fixes door Arsalan** (afgesproken werkwijze Opus-bouw → Fable-review).
+- NIET gebouwd (bewust, geen van alle urgent): de 6 kleinere review-punten — neptekst-versie van
+  uitgaande mail, doorsturen mist bijlagen, geen server-side e-mailadres-validatie, bijlage-fetch
+  ontsmet zoekterm niet, afzender toont alleen kaal adres, Verzonden-map-volgorde. Lijst in
+  de review hierboven; oppakken op verzoek.
+- CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,
+  géén mailwerk) → deploy skipt. Verdient losse fix of skip-markering.
 
 ## Sessie 188b (9 juli 2026, Fable — heropening LegalWork LIVE, eerste batch)
 
@@ -458,75 +492,4 @@ subverwerkers.md bijgewerkt. Crypt-wachtwoorden: VPS rclone.conf + doorgegeven a
 voor wachtwoordmanager (onvervangbaar!). **Restpunt 10 juli:** na 2 bewezen EU-runs (log
 8+9 juli) oude US-bucket `Luxis-backup` wissen + oude key intrekken + remote `luxis-backup`
 verwijderen, wisbewijs hier. /opt/db-backup.sh gecheckt: alleen lokaal, geen VS-lek.
-
-## Sessie 181-F (7 juli, Fable — heropeningsaudit, laatste Fable-dag, 100% read-only)
-
-Lisanne was niet bereikbaar; Arsalan gaf mandaat om de laatste Fable-dag te benutten.
-Keuze: de heropening volledig voorbereiden en aftesten. **Geen enkele schrijfactie op
-prod**; code gelezen op commit `ec633c6` (geverifieerd == VPS).
-
-**Veilig bevonden (bewezen):** 604 afgesloten + 3 proefzaken, 0 zaken met pijplijnstap;
-`pipeline_auto_drafts_enabled=false`; alle scheduler-paden maken hooguit concepten/
-aanbevelingen/taken — versturen is altijd een menselijke klik. 607 zaken matchen 1-op-1
-met BaseNet-XML (2 juli), alle 372 lopende hebben rente-config, `total_paid` == som
-betalingen. Regeling-bewaking (06:30-job) werkt ook op afgesloten zaken; termijnen
-9/12/13/15/18/19 juli.
-
-**Recept-tabel gebouwd** (`docs/sessions/S181-werkvoorraad-recept.csv`): 372 zaken,
-€1.889.750 hoofdsom, per zaak BaseNet-fase (gedecodeerd via CustomProjectStatus) →
-voorgestelde Luxis-stap + vlaggen. Grootste bakken: Voorstel dagvaarding 145, Verweer
-beantwoorden 86, 14-dagenbrief 34. Tweede schil: 69 "Wacht"-zaken. Adviesgroep 1:
-LegalWork B.V. (15 zaken, 9× direct Eerste sommatie).
-
-**Nieuwe bevindingen (C1-C9 in rapport):** (1) creditfacturen als negatieve claims →
-rente-motor rekent negatieve rente: **eerste conclusie "−€2.781 te weinig geëist" was
-FOUT** — Arsalans tegenvraag → herberekening per periode: −€2.721 is correcte
-verrekening (rente over saldo), echte fout slechts −€59,38 (waarvan −€50,81 IN100603:
-mindering vóór eerste opeisbare factuur); (2) "8 voldaan" genuanceerd via
-prod-API: 3 echt ~nul, 4 met restant €100-588 (art. 6:44-toerekening), IN100334
-overbetaald (~€215 te veel ontvangen); (3) dubbele default-timeout-regel op Tweede sommatie (één naar oude
-inactieve stap; eerste-wint=toeval) → opruimen vóór auto-draft-vlag ooit aangaat;
-(4) opvolg-scan slaat hold-stappen niet over (ruis bij heropening); (5) actieve
-14-dagenbrief-stap heeft geen sjabloon (34 B2C-zaken); (6) has_verweer overal false
-(88 betwiste); (7) IN100019 (regeling, termijn 9 juli) staat op "Wacht" → buiten de 372;
-11 regeling-zaken met gestopte regeling; (8) verweer-mail switcht stap automatisch
-(by design); (9) IN100409 leeg dossier.
-
-**Deliverables:** rapport + recept-CSV + `LISANNE-A4-heropening.md` (klaar om te sturen)
-+ PROMPT-S181 bijgewerkt. Geen fixes gebouwd (scope: onderzoek).
-
-**Sessie-einde S181-F:** Backblaze-EU-aanmelding faalde bij Arsalan (HTTP 400) → migratie
-geblokkeerd tot nieuw account (retry andere browser/werkadres; plan B = Hetzner Storage
-Box). Volgende sessie = S182 Opus-bouwsprint: `docs/sessions/PROMPT-S182.md` (volgorde:
-regeling-alarm → timeout-regels → hold-steps → getrouwheids-poort; heropening/backup/
-14-dagenbrief geblokkeerd op mensen-input).
-
-**S181-F deel 4 (avond): AVG-set geschreven + 🔴 backup-lek gevonden.** Arsalans antwoorden
-verwerkt (sjablonen=goedgekeurd BaseNet → actie B is nu AI-getrouwheidspoort;
-2e bestuurder bestaat; bank=Rabobank ✓). `docs/avg/` aangemaakt: verwerkersovereenkomst-
-CONCEPT, subverwerkers, verwerkingsregister, bewaarbeleid-CONCEPT, datalek-procedure,
-werkinstructie-AI. **KRITIEK: off-site backup staat in de VS (`s3.us-east-005`, bewezen
-via account-API) én onversleuteld (backup.sh: kale rclone copy)** — dagelijkse volledige
-DB-dumps met persoonsgegevens. Reparatiestappen in subverwerkers.md; bewust NIET vanavond
-aan de draaiende backup gesleuteld. ARSALAN-TODO §2 (Outlook) ✓ en §3 (B2) beantwoord.
-
-**S181-F deel 3 (avond): compliance-onderzoek → `PLAN-wet-en-regelgeving-livegang.md`** —
-kern: Wki/Bki geldt materieel WÉL voor advocaten (registratie niet, deken houdt toezicht;
-Bki-eisen aan brief-specificatie → brieven-audit verplicht vóór eerste verzending);
-Voda 6.22 lid 8 tweehandtekeningen = in Luxis al afgedwongen (vier-ogen, strikt bij ≥2
-users); bank = handmatige Rabobank-CSV-upload, géén koppeling nodig (bevestig bank
-stichting!); AVG-papierwerk ontbreekt volledig (verwerkersovereenkomst, register,
-Anthropic-DPA, B2-regio, bewaarbeleid 5/7 jr); NOvA AI-aanbevelingen 2025: Luxis-opzet
-(betaalde API + verplichte review) matcht, documentatie/werkinstructie nodig. Ook
-Word-bestand beslispunten Lisanne gemaakt (Desktop + docs/sessions/).
-
-**S181-F deel 2 (zelfde dag): 7 uitvoeringsplannen in `docs/plans/`** (README = rangorde),
-elk zo geschreven dat Opus ze zonder vragen kan draaien, met geverifieerde stap-ID's,
-user-ID's, SQL en valkuilen: heropening-werkvoorraad (na akkoord), regeling-alarm
-(NIEUW GAT: overdue termijnen zijn nergens zichtbaar — geen notificatie/dashboard;
-tijdgevoelig, eerste termijn 9 juli), timeout-regels-opschonen, 14-dagenbrief-sjabloon,
-followup-hold-steps, generale-repetitie-geldstromen (draaiboek), automatisering-aanzetten
-(poortwachters). Extra geverifieerd: e-mailsync gezond (ARSALAN-TODO §2 afgevinkt met
-bewijs), geen TODO/FIXME-schulden in code, payment-matching koppelt betalingen NIET aan
-regeling-termijnen (bewuste edge case in plan 2).
 

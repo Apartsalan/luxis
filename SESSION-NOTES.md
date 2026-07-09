@@ -2,10 +2,10 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S188c/d) — Fable-review mailwerk S185-187 + 2 fixes, daarna óók de 6 kleinere verbeterpunten gebouwd (op verzoek). 91 mail/intake-tests groen. Details: S188c-entry.
-**Laatste feature/fix:** (code, S188d) 6 mailverbeteringen — echte tekstversie, doorsturen-met-bijlage, adres-validatie, IMAP-ontsmetting, afzendernaam, Verzonden-map-constante. Commit 2806a9e. Details: S188c-entry.
-**Openstaand:** **Fable-review van ál het S188c/d-werk (Arsalan)**; CI-rood test_role (niet-mail); volgende heropeningsbatches; terugstort IN100334.
-**Volgende sessie:** Fable-review S188c/d; daarna volgende heropeningsbatch.
+**Laatst bijgewerkt:** 9 juli 2026 (S188c/d/e) — mailwerk-review + 2 fixes + 6 verbeteringen + Fable-eindreview (GO, 1 restfout gevonden+gefixt: CR/LF-injectie). Uitrol gestart. Details: S188c-entry.
+**Laatste feature/fix:** (code, S188e) `_imap_quote` ontsmet ook CR/LF/NUL — commit 8b658c7. Details: S188c-entry.
+**Openstaand:** deploy-verificatie S188-werk; CI-rood test_role (niet-mail); volgende heropeningsbatches; terugstort IN100334.
+**Volgende sessie:** volgende heropeningsbatch (draaiboek + stap 4b), of de rode CI-test fixen.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
 
@@ -46,10 +46,21 @@ wegwerp-postgres, prod-data niet geraakt).
 5. **Afzendernaam**: "Kesting Legal <incasso@...>" via `from_name` (kantoornaam) op beide verzendpaden.
 6. **Verzonden-map-namen** in één constante (`SENT_FOLDER_CANDIDATES`), consistent gebruikt.
 
+### S188e — Fable-review van het S188c/d-werk: GO met 1 gevonden+gefixte restfout
+Volledige diff-review op Fable (beide commits regel voor regel + randgevallen tegen prod-metadata
+en de modellen gehouden). Uitkomsten:
+- **Detectie-fix klopt**: databasefilter en nazorg-lus consistent (ambigue domeinen, hoofdletters,
+  exacte-adres-voorrang); NULL-valkuil in de NOT-IN-subquery kán niet (kolom verplicht, prod 0 NULLs).
+- **Alle 3 providers** accepteren `from_name` (geen kapotte aanroep); huisstijl heeft geen
+  `<style>`-blok dus de tekstversie blijft schoon; prefill wordt op beide pagina's gewist.
+- **Restfout gevonden + direct gefixt** (commit `8b658c7`): `_imap_quote` ontsmette `"` en `\`
+  maar niet CR/LF — een gevouwen Message-ID-header kon in theorie een eigen IMAP-commando
+  injecteren bij het bijlage-ophalen. CR/LF/NUL → spatie + injectie-regressietest (groen).
+- Deploy van al het S188c/d/e-werk gestart (losgekoppeld op de VPS, log `/root/deploy-s188d.log`).
+
 ### Openstaand
-- **Fable-review van ál het S188c/d-werk door Arsalan** (afgesproken werkwijze Opus-bouw → Fable-review).
 - CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,
-  géén mailwerk) → deploy skipt. Verdient losse fix of skip-markering.
+  géén mailwerk) → CI-deploy skipt; uitrol gaat via SSH. Verdient losse fix of skip-markering.
 
 ## Sessie 188b (9 juli 2026, Fable — heropening LegalWork LIVE, eerste batch)
 

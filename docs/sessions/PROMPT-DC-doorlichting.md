@@ -1,4 +1,4 @@
-# Sessie-prompt — Kijk-sessie D-C: financieel + systeem doorlichten (Fable, read-only)
+# Sessie-prompt — EERST Codex-onderzoek, DAN kijk-sessie D-C (Fable, read-only)
 
 Kopieer alles onder de streep in een nieuwe sessie (model: Fable).
 
@@ -7,8 +7,26 @@ Kopieer alles onder de streep in een nieuwe sessie (model: Fable).
 **Stap 0 — sessiestart.** Draai eerst `/sessie-start`. Dat leest via de researcher-subagent
 SESSION-NOTES.md + LUXIS-ROADMAP.md, scant de bestaande modules/pagina's, en laadt (via de
 SessionStart-hook) automatisch `docs/ARCHITECTUUR-KAART.md`. Geef daarna de korte
-start-samenvatting en ga zonder te wachten door met de taak hieronder (de prioriteit van
-deze sessie staat vast — dit is 'm).
+start-samenvatting en ga zonder te wachten door met taak 0 hieronder.
+
+**Taak 0 — EERST (verzoek Arsalan, 9 juli): onderzoek Claude Code + Codex samenwerken.**
+Arsalan heeft een OpenAI-abonnement (~€103/mnd) met de nieuwste modellen (GPT-5.6 "Sol" /
+"Sol Ultra") en wil Codex in déze terminal naast/samen met Claude Code gebruiken. Doe
+web-onderzoek (niet uit het hoofd — modellen/tools zijn nieuw) en lever een kort advies:
+1. **Installatie/aansluiting:** hoe draait Codex CLI op deze Windows-machine naast Claude
+   Code, en hoe roept Claude Code Codex aan (of andersom) — CLI-aanroep, MCP-koppeling, of
+   een plugin/skill.
+2. **Samenwerk-patronen vergelijken:** de "grill-me"-skill (Chase AI) waarbij Claude en
+   Codex elkaars werk bediscussiëren, én alternatieven (andere skills/plugins, zelfgebouwde
+   review-loop, planner-bouwer-splitsing). Wat bestaat er, wat is volwassen, wat past hier?
+3. **Concreet werkmodel voorstellen** voor dit huishouden (Luxis + Recruit): wie plant, wie
+   bouwt, wie reviewt — bijv. Fable/Opus plant + reviewt, GPT-5.6 bouwt mee of grillt het
+   plan, met de bestaande fable-skills als tegenspreker-laag. Benoem ook wat het NIET moet
+   worden (dubbel werk, twee kapiteins op prod).
+4. **Kosten/risico's:** wat kost het per sessie extra, en welke afspraken zijn nodig
+   (bijv. alleen Claude deployt/commit, Codex alleen voorstellen).
+Uitkomst: kort adviesdocument `docs/research/advies-codex-samenwerking.md` + voorstel aan
+Arsalan. Pas daarna door naar de doorlichting hieronder.
 
 **Stap 1 — extra taak-context lezen** (bovenop wat `/sessie-start` al las):
 - `docs/plans/PLAN-doorlichting-menu.md` — het plan + de 3 lagen per onderdeel

@@ -53,13 +53,26 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 9 juli 2026, S189)
+## 🎯 Huidige prioriteit (bijgewerkt 9 juli 2026, S190)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-1. **Menu-doorlichting "Luxis afmaken" (loopt, Fable-kijkwerk vóór 12 juli):** heel Luxis kritisch langs per menu-onderdeel op techniek + productwaarde + UX/UI. Plan `docs/plans/PLAN-doorlichting-menu.md`. D-A (Dashboard/Taken/Agenda/Documenten) klaar → `docs/research/audit-DA-werkschil.md`. Volgende: D-B (`docs/sessions/PROMPT-DB-doorlichting.md`), dan D-C. Daarna fase-2-beslislijst met Arsalan → Opus-bouwblokken.
-2. **Verjaringsalarm zichtbaar maken (HOOG, uit D-A):** monitor vindt verjaarde zaken maar de taken zijn voor iedereen onzichtbaar (geen eigenaar). Meenemen in bouwfase; juridisch oordeel (stuitingen) bij Lisanne.
+> ⚠️ **MAILSLOT AAN (9 juli, verzoek Arsalan):** alle uitgaande mail is geblokkeerd tijdens de
+> bouwfase (`OUTBOUND_MAIL_LOCK=true` in `/opt/luxis/.env`). Slot eraf (rond maandag 13 juli,
+> alleen op verzoek Arsalan): regel weghalen of op false + `docker compose up -d backend`.
+> Ontvangen/sync werkt gewoon door.
+
+1. **Menu-doorlichting "Luxis afmaken" (loopt, Fable-kijkwerk vóór 12 juli):** heel Luxis kritisch langs per menu-onderdeel op techniek + productwaarde + UX/UI. Plan `docs/plans/PLAN-doorlichting-menu.md`. D-A klaar → `docs/research/audit-DA-werkschil.md`; D-B klaar → `docs/research/audit-DB-kernmotor.md` (o.a. B1 verstuurpad sommaties kapot, HOOG). Volgende: D-C (`docs/sessions/PROMPT-DC-doorlichting.md`, met taak 0 = Codex-samenwerkingsonderzoek). Daarna fase-2-beslislijst met Arsalan → Opus-bouwblokken.
+2. **Verjaringsalarm zichtbaar maken (HOOG, uit D-A+D-B):** monitor-taken eigenaarloos onzichtbaar (A1), dossier-badge rekent vanaf verkeerde datum en monitor mist zaken met sluitdatum — IN100016 verjaart 23-09-2026 (B2). Juridisch oordeel (stuitingen) bij Lisanne.
 3. **Heropening werkvoorraad:** volgende batch per opdrachtgever mét stap 4b (rente-valkuil) — draaiboek `docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
+
+**Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende
+betalingsregelingen zijn alleen zinvol te bewaken als Luxis ook *ziet* dat er betaald is —
+en er is (nog) geen koppeling met de derdengeldrekening/bank. Denkrichtingen voor het plan:
+(a) periodieke MT940/CSV-bankexport inlezen via de bestaande Bankimport-pagina (D-C kijkt of
+die af is), (b) een bankkoppeling (PSD2-dienst zoals Enable Banking/Ponto) als structurele
+oplossing, (c) tot die tijd: termijn-alarm behandelen als "check de bank handmatig"-taak
+i.p.v. "debiteur heeft niet betaald". Meenemen in de fase-2-beslislijst na D-C.
 
 ---
 

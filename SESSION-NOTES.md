@@ -3,9 +3,9 @@
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 9 juli 2026 (S190, Fable) — kijk-sessie D-B klaar (Relaties/Dossiers/Incasso/Follow-up/Intake, 100% read-only): sommatie-verstuurpad kapot bewezen, status-engine leeg, verjaring ook in dossier onzichtbaar. Details: S190-entry.
-**Laatste feature/fix:** geen code (read-only); rapport `docs/research/audit-DB-kernmotor.md` + 13 werkorder-kandidaten B1-B13.
-**Openstaand:** B1 verstuurpad sommaties (HOOG, vóór eerste echte verzendronde); verjaring onzichtbaar (D-A A1 + D-B B2/B3, IN100016 verjaart 23-09-2026); regeling-termijn IN100019 was 9 juli; kijk-sessie D-C; volgende heropeningsbatch; terugstort IN100334.
-**Volgende sessie:** kijk-sessie D-C (`docs/sessions/PROMPT-DC-doorlichting.md`, Fable — laatste kijk-sessie), daarna fase-2-beslislijst met Arsalan → Opus-bouwblokken.
+**Laatste feature/fix:** (email, S190b) MAILSLOT LIVE op verzoek Arsalan — `OUTBOUND_MAIL_LOCK=true` blokkeert alle uitgaande mail op alle 3 verzendpunten (bewezen in container); slot eraf ~maandag 13 juli alleen op verzoek Arsalan (.env-regel weg/false + backend herstart). Ontvangen werkt door.
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli, verzoek Arsalan); B1 verstuurpad sommaties (HOOG, vóór eerste echte verzendronde); verjaring onzichtbaar (D-A A1 + D-B B2/B3, IN100016 verjaart 23-09-2026); regeling-termijn IN100019 was 9 juli; betaalzicht regelingen zonder bankkoppeling (backlog-gedachte in roadmap); kijk-sessie D-C; heropeningsbatch; terugstort IN100334.
+**Volgende sessie:** EERST Codex/OpenAI-samenwerkingsonderzoek (taak 0 in `docs/sessions/PROMPT-DC-doorlichting.md`), daarna kijk-sessie D-C — beide in die prompt (Fable). Daarna fase-2-beslislijst met Arsalan → Opus-bouwblokken.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
 

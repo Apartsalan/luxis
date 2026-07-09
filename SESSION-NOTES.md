@@ -2,12 +2,62 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S190, Fable) — kijk-sessie D-B klaar (Relaties/Dossiers/Incasso/Follow-up/Intake, 100% read-only): sommatie-verstuurpad kapot bewezen, status-engine leeg, verjaring ook in dossier onzichtbaar. Details: S190-entry.
-**Laatste feature/fix:** (email, S190b) MAILSLOT LIVE op verzoek Arsalan — `OUTBOUND_MAIL_LOCK=true` blokkeert alle uitgaande mail op alle 3 verzendpunten (bewezen in container); slot eraf ~maandag 13 juli alleen op verzoek Arsalan (.env-regel weg/false + backend herstart). Ontvangen werkt door.
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli, verzoek Arsalan); B1 verstuurpad sommaties (HOOG, vóór eerste echte verzendronde); verjaring onzichtbaar (D-A A1 + D-B B2/B3, IN100016 verjaart 23-09-2026); regeling-termijn IN100019 was 9 juli; betaalzicht regelingen zonder bankkoppeling (backlog-gedachte in roadmap); kijk-sessie D-C; heropeningsbatch; terugstort IN100334.
-**Volgende sessie:** EERST Codex/OpenAI-samenwerkingsonderzoek (taak 0 in `docs/sessions/PROMPT-DC-doorlichting.md`), daarna kijk-sessie D-C — beide in die prompt (Fable). Daarna fase-2-beslislijst met Arsalan → Opus-bouwblokken.
+**Laatst bijgewerkt:** 9 juli 2026 (S191, Fable) — Codex-advies klaar (`docs/research/advies-codex-samenwerking.md`) + kijk-sessie D-C klaar (financiële laag = af maar nooit gebruikt; derdengelden-IBAN = kantoor-IBAN). Alle 3 kijk-sessies af; beslislijst in D-C-rapport §9. Details: S191-entry.
+**Laatste feature/fix:** geen code deze sessie (100% read-only) — laatste fix blijft mailslot S190b (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli alleen op verzoek Arsalan).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); B1 verstuurpad sommaties (HOOG, vóór eerste verzendronde); verjaring onzichtbaar (A1+B2, IN100016 verjaart 23-09-2026); C2 stichting-IBAN invullen vóór bankimport-start; heropeningsbatch; terugstort IN100334.
+**Volgende sessie:** fase-2-beslisgesprek met Arsalan over de totaal-beslislijst (D-C-rapport §9, 34 punten in 5 blokken) → Opus-bouwblokken. Prompt: `docs/sessions/PROMPT-S192-fase2.md`. Codex-installatie kan maandag mee (advies-doc).
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 191 (9 juli 2026, Fable — Codex-advies + kijk-sessie D-C: financieel + systeem, 100% read-only)
+
+### Samenvatting
+Twee taken uit `docs/sessions/PROMPT-DC-doorlichting.md`:
+
+**Taak 0 — Codex/OpenAI-samenwerkingsadvies** (webonderzoek, niet uit het hoofd):
+`docs/research/advies-codex-samenwerking.md`. Kern: Codex CLI draait native op Windows
+onder het bestaande OpenAI-abonnement (€0 extra binnen limieten); het "grill-me-codex"-
+patroon (Chase AI, MIT, ±500 sterren) bestaat en is volwassen. Voorstel: Claude blijft
+enige kapitein (bouwt/commit/deployt), GPT-5.6 via Codex wordt alleen-lezen tegenlezer
+op 2 vaste momenten — rapporten grillen (kijkfase) en Opus-diffs reviewen vóór deploy
+(bouwfase). Akte 3 (Codex bouwt) bewust UIT. Maandag ±30 min installeren + proefrit.
+
+**Kijk-sessie D-C (laatste van 3)** — Bankimport, Derdengelden, Uren, Facturen,
+Rapportages, Instellingen. Rapport: **`docs/research/audit-DC-financieel-systeem.md`**
+(9 werkorder-kandidaten C1-C9 + totaal-beslislijst D-A+D-B+D-C in §9, 34 punten in
+5 blokken). Gemeten in prod-DB + code + doorgeklikt (0 consolefouten).
+
+### Belangrijkste vondsten D-C
+- **KERN — financiële laag is af maar nooit gebruikt, géén relieken**: bankimport,
+  derdengelden, uren, facturen, Exact alle exact 0 rijen ooit; onderling wél netjes
+  verbonden (uren→factuurregels, derdengelden→verrekening, bankimport→derdengelden→
+  art. 6:44-betaling) en test-gedekt. Verwachting "meeste eilanden" klopte niet —
+  het zijn stilstaande machines, geen kapotte.
+- **Bankimport = het regelingen-betaalzicht en is al af**: Rabobank-CSV upload →
+  automatch → beoordelen → uitvoeren (+terugdraai). Backlog-gedachte (a) vergt géén
+  bouw, alleen een wekelijks upload-ritueel. Eerst C2!
+- **HOOG vóór ingebruikname — derdengelden-IBAN = kantoor-IBAN** (beide
+  NL20RABO0388506520 in tenants; UI zegt zelf "apart"). SEPA/NOvA-output zou nu
+  verkeerd ogen. BTW-nummer ook leeg.
+- **Rapportages leeft maar vertelt scheef**: "Geïnd €0/0,0%" (kijkt alleen naar
+  lopende zaken; €311.547,70 aan 255 echte betalingen onzichtbaar) en faseverdeling
+  15≠18 (inner join skipt de 3 stap-loze proefzaken IN100040/215/521 die het KPI-blok
+  ernaast wél telt).
+- Klein: uren-relatiefilter laadt alle 1169 relaties; Workflow-tab toont lege
+  status-engine zonder uitleg; beide accounts heten "Lisanne Kesting"; meldingen-kop
+  264 vs DB 299 ongelezen (onverklaard); producten-catalogus (30, Exact-grootboek)
+  ligt klaar voor een facturatie-besluit.
+
+### Verificatie
+Alle dragende beweringen zelf gemeten (SQL op prod / code / klik); geen enkele mutatie
+op prod; expliciete "niet geverifieerd"-lijst in rapport §7 (o.a. upload-keten niet
+gedraaid, vier-ogen-afdwinging niet getest). Tegenspreker-correctie toegepast: claim
+"alle 12 tabs bekeken" teruggebracht naar de 5 echt geklikte.
+
+### Volgende sessie
+Fase-2-beslisgesprek met Arsalan: de 34 punten (blok 1 repareren / blok 2 aansluiten /
+blok 3 beslispunten / blok 4 veegwerk / blok 5 later) doornemen → volgorde + akkoorden
+→ Opus-bouwblokken. Prompt: `docs/sessions/PROMPT-S192-fase2.md`.
 
 ## Sessie 190 (9 juli 2026, Fable — kijk-sessie D-B: kern-motor, 100% read-only)
 
@@ -447,37 +497,3 @@ incasso-mail-probleem. Verzenden áls incasso@ = aparte latere stap.
     gesprek-ketting (IMAP-thread één antwoord diep), mappen/zoeken/beantwoorden in de UI.
 - **Heropening werkvoorraad** blijft klaarstaan (`docs/plans/PLAN-heropening-werkvoorraad.md`)
   als het andere grote item — koppel-fix + vangnetten zijn er nu klaar voor; inplannen na/naast S186.
-
-## Sessie 184 (8 juli, Opus — fix-sprint audit S183 + Fable-review)
-
-Nachtsessie op verzoek Arsalan: bouw de hele S184-werkorder, laat Fable alles nachecken,
-Arsalan ziet het 's ochtends. **Alles op branch `s184-fixes`, NIET gedeployed** (push naar
-main = auto-deploy; branch gekozen zodat de onomkeerbare prod-stap bij Arsalan blijft).
-Deploy-stappen + open punten: `docs/sessions/S184-MORGEN-CHECKLIST.md`.
-
-**Gebouwd (6 punten):**
-- S183-3 [HOOG] `_build_claim_reductions`: betalingen alleen over POSITIEVE vorderingen →
-  creditfacturen niet meer dubbelgeteld (`sum(reducties)==betaling`).
-- S183-4 [LAAG] betaling op/vóór verzuimdatum verlaagt nu de start-hoofdsom (`pre_start`).
-- S183-1 nieuwe migratie `s184_rls_learned_answers` (her-past `apply_rls`, dicht
-  learned_answers) + `find_unprotected_tenant_tables` + opstartcontrole in `main.lifespan`
-  (**faalt dicht in productie** bij een RLS-gat) + drift-guard-test.
-- S183-2 `after_begin`-event in `middleware/tenant.py`: her-past tenant + rol na elke
-  commit binnen een request (tenant op `session.info`). Structureel, i.p.v. 31 plekken.
-- Deploy: `--no-cache` uit `deploy.yml`. Security-regels + rollen in `docs/security/rollen.md`.
-
-**Fable-review (verse subagent op Fable-model, adversarieel) → 1 must-fix:**
-De verzuim-clamp `max(0, principal - pre_start)` draaide óók bij `pre_start==0` en zette zo
-een creditvordering (negatieve principal) op 0 → verloor zijn verrekenende negatieve rente
-→ debiteur te veel rente op elke credit-zaak. **Zelf gereproduceerd** (credit-rente werd 0
-i.p.v. −€12,00), **gefixt** (clamp alleen bij echte pre-start-betaling) + rode test. Fixes
-1/3/4 keurde Fable goed (geen lek tussen requests, scheduler/migraties niet geraakt,
-migratievolgorde vóór opstartcontrole klopt via Dockerfile-CMD).
-
-**Teststatus:** volledige suite 1147 groen (vóór review-fix); 152 rente/betaling-tests groen
-na review-fix; ruff schoon; 13 nieuwe tests. **CLAUDE.md nu wél vastgelegd** (commit `743e471`,
-met Arsalan afgestemd): security-regels + de eerdere "geen-aannames"-regel; regeleinde-ruis in
-8 `.claude/commands/`-bestanden teruggedraaid (geen inhoud). **Open:** deploy-go (branch mergen
-→ auto-deploy + tag sessie-184), 4 heropeningszaken herrekenen ná deploy (met akkoord), 7
-dossiers sluiten (Lisanne akkoord, niet autonoom), IN100334-terugstort, Backblaze-wis ~10 juli.
-Volgende sessie = uitrol + nazorg: `docs/sessions/PROMPT-S185.md`.

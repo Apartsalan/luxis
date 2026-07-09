@@ -7741,3 +7741,37 @@ proces + foutisolatie + advisory-lock; rekenkernen wet-conform met 65+ tests; `t
 S184 (Opus): fix-sprint met de werkorder uit het rapport — pro-rata-fix eerst (rode test),
 dan RLS-gat + drift-guard-test, dan rolwissel-na-commit, dan de 2 kleine punten. Plus de
 Backblaze-US-wis-check (~10 juli). Zie `docs/sessions/PROMPT-S184.md`.
+
+## Sessie 184 (8 juli, Opus — fix-sprint audit S183 + Fable-review)
+
+Nachtsessie op verzoek Arsalan: bouw de hele S184-werkorder, laat Fable alles nachecken,
+Arsalan ziet het 's ochtends. **Alles op branch `s184-fixes`, NIET gedeployed** (push naar
+main = auto-deploy; branch gekozen zodat de onomkeerbare prod-stap bij Arsalan blijft).
+Deploy-stappen + open punten: `docs/sessions/S184-MORGEN-CHECKLIST.md`.
+
+**Gebouwd (6 punten):**
+- S183-3 [HOOG] `_build_claim_reductions`: betalingen alleen over POSITIEVE vorderingen →
+  creditfacturen niet meer dubbelgeteld (`sum(reducties)==betaling`).
+- S183-4 [LAAG] betaling op/vóór verzuimdatum verlaagt nu de start-hoofdsom (`pre_start`).
+- S183-1 nieuwe migratie `s184_rls_learned_answers` (her-past `apply_rls`, dicht
+  learned_answers) + `find_unprotected_tenant_tables` + opstartcontrole in `main.lifespan`
+  (**faalt dicht in productie** bij een RLS-gat) + drift-guard-test.
+- S183-2 `after_begin`-event in `middleware/tenant.py`: her-past tenant + rol na elke
+  commit binnen een request (tenant op `session.info`). Structureel, i.p.v. 31 plekken.
+- Deploy: `--no-cache` uit `deploy.yml`. Security-regels + rollen in `docs/security/rollen.md`.
+
+**Fable-review (verse subagent op Fable-model, adversarieel) → 1 must-fix:**
+De verzuim-clamp `max(0, principal - pre_start)` draaide óók bij `pre_start==0` en zette zo
+een creditvordering (negatieve principal) op 0 → verloor zijn verrekenende negatieve rente
+→ debiteur te veel rente op elke credit-zaak. **Zelf gereproduceerd** (credit-rente werd 0
+i.p.v. −€12,00), **gefixt** (clamp alleen bij echte pre-start-betaling) + rode test. Fixes
+1/3/4 keurde Fable goed (geen lek tussen requests, scheduler/migraties niet geraakt,
+migratievolgorde vóór opstartcontrole klopt via Dockerfile-CMD).
+
+**Teststatus:** volledige suite 1147 groen (vóór review-fix); 152 rente/betaling-tests groen
+na review-fix; ruff schoon; 13 nieuwe tests. **CLAUDE.md nu wél vastgelegd** (commit `743e471`,
+met Arsalan afgestemd): security-regels + de eerdere "geen-aannames"-regel; regeleinde-ruis in
+8 `.claude/commands/`-bestanden teruggedraaid (geen inhoud). **Open:** deploy-go (branch mergen
+→ auto-deploy + tag sessie-184), 4 heropeningszaken herrekenen ná deploy (met akkoord), 7
+dossiers sluiten (Lisanne akkoord, niet autonoom), IN100334-terugstort, Backblaze-wis ~10 juli.
+Volgende sessie = uitrol + nazorg: `docs/sessions/PROMPT-S185.md`.

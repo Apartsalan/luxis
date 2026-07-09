@@ -25,8 +25,19 @@ web-onderzoek (niet uit het hoofd — modellen/tools zijn nieuw) en lever een ko
    worden (dubbel werk, twee kapiteins op prod).
 4. **Kosten/risico's:** wat kost het per sessie extra, en welke afspraken zijn nodig
    (bijv. alleen Claude deployt/commit, Codex alleen voorstellen).
+5. **Toepassen op de HUIDIGE manier van werken (belangrijk, verzoek Arsalan):** nadat het
+   plan er staat, meteen concreet maken hoe Codex past in het ritme dat NU al draait —
+   niet abstract. Dat ritme is: Fable doet nu het kijk-/onderzoekswerk (deze menu-
+   doorlichting D-A/D-B/D-C = "de grote review"), en straks bouwt Opus de werkorders uit.
+   Vertaal het advies dus naar: waar zou GPT-5.6 in díe keten passen — grillt hij het
+   Fable-onderzoek/rapport (tegenspreker op de bevindingen), of reviewt hij straks de
+   Opus-bouwblokken (tweede paar ogen op de code vóór deploy), of allebei? Geef een
+   concreet voorbeeld met een bestaand stuk werk uit deze review (bv. werkorder B1
+   verstuurpad sommaties: Opus bouwt → Codex grillt → Fable/Opus verwerkt). Zo weet
+   Arsalan meteen wat het maandag praktisch betekent, niet alleen "het kan".
 Uitkomst: kort adviesdocument `docs/research/advies-codex-samenwerking.md` + voorstel aan
-Arsalan. Pas daarna door naar de doorlichting hieronder.
+Arsalan (incl. het concrete toepas-voorbeeld op de lopende review/bouw). Pas daarna door
+naar de doorlichting hieronder.
 
 **Stap 1 — extra taak-context lezen** (bovenop wat `/sessie-start` al las):
 - `docs/plans/PLAN-doorlichting-menu.md` — het plan + de 3 lagen per onderdeel

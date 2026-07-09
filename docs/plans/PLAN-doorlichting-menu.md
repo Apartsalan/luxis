@@ -19,12 +19,26 @@ Drie sessies, geclusterd op samenhang. Mail is klaar (S185–S188) en doet niet 
 | **D-B: Kern-motor** | Relaties, Dossiers, Incasso (8), Follow-up (13), Intake (6) | Deels bekend (S183-audit, heropening); hier géén herhaling van security — alleen gebruik/aansluiting/waarde |
 | **D-C: Financieel + systeem** | Bankimport, Derdengelden, Uren, Facturen, Rapportages, Instellingen | Vermoedelijk de meeste eilanden/relieken |
 
-### Per onderdeel — de 5 vragen (van Arsalan)
+### Per onderdeel — drie lagen (van Arsalan, 9 juli: "een complete check")
+
+**Laag 1 — Techniek (de 5 vragen):**
 1. **Doet het het?** Doorklikken in de ingelogde prod-app + fouten/consolefouten noteren.
 2. **Wordt het gebruikt?** Meten op prod (aantallen rijen, laatste-gebruik-datums) — niet gokken.
 3. **Is het ergens aan verbonden of een eiland?** Code-tracering: voedt het iets, leest iets het uit?
 4. **Verdict:** houden / repareren / aansluiten / verwijderen / bewust laten liggen.
 5. **Missen we iets** dat we juist wél zouden moeten gebruiken (bestaat al maar ligt stil)?
+
+**Laag 2 — Partner-blik (product/waarde, specialist advocatuur + SaaS):**
+- Zou een willekeurig advocatenkantoor dit willen (CLAUDE.md-toets)? Wat doet de
+  concurrentie hier (Clio, BaseNet, Legalsense, Smokeball)?
+- Lost het een écht probleem van Lisanne op, of is het "gebouwd omdat het kon"?
+- Kansen: wat zou dit onderdeel nóg waardevoller maken (alleen als voorstel, geen bouwbesluit)?
+- Denk vanuit de dagelijkse praktijk: incassokantoor, 1 advocaat, honderden dossiers.
+
+**Laag 3 — Gebruiksblik (UX/UI):**
+- Minimale clicks naar de kerntaak? Logische flow? Lege-staten en foutmeldingen netjes?
+- Consistent met de rest (Gmail/HubSpot-stijl, data-dense, Nederlands, geen jargon buiten vakmodules)?
+- Ziet het er professioneel uit — zou je dit aan een betalende klant durven tonen?
 
 ### Spelregels doorlichting
 - 100% read-only op prod (zoals S181-F/S183): niets muteren, niets versturen.

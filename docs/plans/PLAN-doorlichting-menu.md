@@ -58,7 +58,7 @@ onderdeel expliciet akkoord. Daarna volgorde van bouwen vaststellen (belangrijks
 - Verwijderingen: archiveren/uitzetten boven hard weggooien waar dat kan.
 
 ## Status
-- [ ] D-A Werkschil — doorlichting
+- [x] D-A Werkschil — doorlichting (9 juli, rapport: `docs/research/audit-DA-werkschil.md`)
 - [ ] D-B Kern-motor — doorlichting
 - [ ] D-C Financieel + systeem — doorlichting
 - [ ] Fase 2 beslislijst met Arsalan

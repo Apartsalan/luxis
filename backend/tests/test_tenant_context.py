@@ -82,15 +82,27 @@ async def test_role_survives_commit_if_role_exists(db):
     if not role_exists:
         pytest.skip("luxis_app role not present in this test cluster")
 
-    tenant_id = str(uuid.uuid4())
-    await set_tenant_context(db, tenant_id)
-    assert (await db.execute(text("SELECT current_user"))).scalar() == "luxis_app"
+    # set_tenant_context caches role-availability once per process. In a full-suite
+    # run an earlier authenticated request caches it as False (test_rls_isolation
+    # only CREATEs luxis_app partway through the suite), which would make the role
+    # switch a silent no-op here and fail this guard for the wrong reason. Force a
+    # fresh check for this test, then restore so no later test's behaviour shifts.
+    from app.middleware import tenant as tenant_mod
 
-    await db.commit()
+    saved = (tenant_mod._rls_role_checked, tenant_mod._rls_role_available)
+    tenant_mod._rls_role_checked = False
+    try:
+        tenant_id = str(uuid.uuid4())
+        await set_tenant_context(db, tenant_id)
+        assert (await db.execute(text("SELECT current_user"))).scalar() == "luxis_app"
 
-    assert (
-        await db.execute(text("SELECT current_user"))
-    ).scalar() == "luxis_app", "role reverted to superuser after commit (S183-2 regression)"
+        await db.commit()
+
+        assert (
+            await db.execute(text("SELECT current_user"))
+        ).scalar() == "luxis_app", "role reverted to superuser after commit (S183-2 regression)"
+    finally:
+        tenant_mod._rls_role_checked, tenant_mod._rls_role_available = saved
 
 
 async def test_plain_session_without_context_is_untouched(db):

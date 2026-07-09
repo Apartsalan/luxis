@@ -2,10 +2,10 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S191, Fable) — Codex-advies klaar (`docs/research/advies-codex-samenwerking.md`) + kijk-sessie D-C klaar (financiële laag = af maar nooit gebruikt; derdengelden-IBAN = kantoor-IBAN). Alle 3 kijk-sessies af; beslislijst in D-C-rapport §9. Details: S191-entry.
+**Laatst bijgewerkt:** 9 juli 2026 (S191+S191b, Fable) — Codex-advies + kijk-sessie D-C klaar ÉN het fase-2-beslisgesprek met Arsalan is al gevoerd: besluiten vastgelegd in `docs/plans/PLAN-fase2-bouwblokken.md`. Details: S191-entry.
 **Laatste feature/fix:** geen code deze sessie (100% read-only) — laatste fix blijft mailslot S190b (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli alleen op verzoek Arsalan).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); B1 verstuurpad sommaties (HOOG, vóór eerste verzendronde); verjaring onzichtbaar (A1+B2, IN100016 verjaart 23-09-2026); C2 stichting-IBAN invullen vóór bankimport-start; heropeningsbatch; terugstort IN100334.
-**Volgende sessie:** fase-2-beslisgesprek met Arsalan over de totaal-beslislijst (D-C-rapport §9, 34 punten in 5 blokken) → Opus-bouwblokken. Prompt: `docs/sessions/PROMPT-S192-fase2.md`. Codex-installatie kan maandag mee (advies-doc).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); bouwblok 1 (B1 verstuurpad/B13/B2+A1/A2); C2-gegevens (stichting-IBAN + BTW) levert Arsalan 10 juli; ⚠️ persoonlijke Claude-instelling start op Fable — vóór bouwsessie `/model opus`; heropeningsbatch; terugstort IN100334.
+**Volgende sessie:** S193 bouwblok 1 op Opus — prompt `docs/sessions/PROMPT-S193-bouwblok1.md`. Daarna bouwblok 2 zodra C2-gegevens binnen zijn.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
 
@@ -54,10 +54,22 @@ op prod; expliciete "niet geverifieerd"-lijst in rapport §7 (o.a. upload-keten 
 gedraaid, vier-ogen-afdwinging niet getest). Tegenspreker-correctie toegepast: claim
 "alle 12 tabs bekeken" teruggebracht naar de 5 echt geklikte.
 
+### S191b — fase-2-beslisgesprek DIRECT gevoerd (zelfde avond, met Arsalan)
+Arsalan wilde niet wachten: alle 5 stapels ter plekke doorgenomen. Besluiten integraal
+in **`docs/plans/PLAN-fase2-bouwblokken.md`**. Kern: stapel 1 akkoord (= bouwblok 1);
+C2-gegevens (stichting-IBAN + BTW) levert Arsalan 10 juli; termijn-vooruitblik alleen
+als overzicht (dossierniveau bestaat al); **Uren + Facturatie blijven AAN (keuze
+Arsalan)** — C5 + dashboard-netjes naar de veegsessie; rest stapel 3 conform
+aanbeveling; stapel 4 en 5 akkoord. Codex-besluit herzien na tegenargument Arsalan:
+**bouwproef GPT-5.6 onder Claude-toezicht** op een stapel-4-klus na installatie
+(~13 juli) — Claude blijft de enige die commit/deployt. PROMPT-S192 (beslisgesprek)
+daarmee overbodig → archief. Ook gevonden: persoonlijke Claude-instellingen pinnen
+Fable als startmodel voor élke nieuwe sessie — advies aan Arsalan: default op Opus,
+Fable per sessie (melding gedaan, niet zelf aangepast).
+
 ### Volgende sessie
-Fase-2-beslisgesprek met Arsalan: de 34 punten (blok 1 repareren / blok 2 aansluiten /
-blok 3 beslispunten / blok 4 veegwerk / blok 5 later) doornemen → volgorde + akkoorden
-→ Opus-bouwblokken. Prompt: `docs/sessions/PROMPT-S192-fase2.md`.
+S193 = bouwblok 1 op Opus (`docs/sessions/PROMPT-S193-bouwblok1.md`): B1 verstuurpad +
+B13 vangrails + B2/A1 verjaring + A2 dashboardfix, alles vóór het mailslot eraf gaat.
 
 ## Sessie 190 (9 juli 2026, Fable — kijk-sessie D-B: kern-motor, 100% read-only)
 

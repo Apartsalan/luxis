@@ -115,7 +115,7 @@ Na goedkeuring.
 - "Sla checks over" = geen lint/tests/build
 - Geen lint/tests/build draaien tenzij expliciet gevraagd of in workflow
 - Geen git worktrees tenzij gebruiker "worktree" zegt
-- `LUXIS-ROADMAP.md` = enige source of truth
+- `LUXIS-ROADMAP.md` = enige source of truth; levende docs klein houden: SESSION-NOTES max 10 entries, roadmap één prioriteit-sectie, historie → `docs/archief/` (verplaatsen, nooit weggooien — archief-regels in `/sessie-einde`)
 - Scripts/commands altijd in voorgrond
 - Commit + push na elke taak. **Na ELKE commit ALTIJD `git push origin main`.**
 - Bij parallelle terminals: **ALTIJD kant-en-klare prompts meegeven**

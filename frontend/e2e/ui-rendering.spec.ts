@@ -1,5 +1,5 @@
 /**
- * UI rendering E2E tests — Groep D uit GOAL-TEST-SUITE.
+ * UI rendering E2E tests — Groep D uit docs/archief/GOAL-TEST-SUITE.md.
  *
  * Tests dekken: status-badges, bedrag-format, datum-format, mailto/tel links,
  * sidebar nav, skeleton loader, en toast notifications.

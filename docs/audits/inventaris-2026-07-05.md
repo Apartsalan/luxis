@@ -170,7 +170,7 @@ Opvallend afwezig in de data: **verjaring** (0×) — niet toevoegen tot hij ech
 2. **Tech-stack-blok fixen** (roadmap + CLAUDE.md + DECISIONS): Celery eruit (+ dependency
    verwijderen), Nginx→Caddy, python-jose→PyJWT, Sentry = "nog niet actief".
 3. **Projectdocumenten-tabel**: paden naar `docs/…` corrigeren; noteren dat
-   `FEATURE-INVENTORY.md` de markt-checklist is en `docs/audit/inventaris-2026-07-05.md`
+   `FEATURE-INVENTORY.md` de markt-checklist is en `docs/audits/inventaris-2026-07-05.md`
    de feitelijke inventaris.
 4. **FEAT-MAIL-01** op ✅ zetten (gebouwd; regel zegt "Gepland S148").
 5. **Kennisbank-sectie**: het oude K1-bouwplan (knowledge_documents) inkorten tot één regel

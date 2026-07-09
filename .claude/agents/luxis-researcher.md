@@ -16,11 +16,11 @@ Je bent een research-agent voor het Luxis project (praktijkmanagementsysteem, Fa
 - Wat de volgende taken zijn
 
 **Belangrijke bestanden:**
-- `LUXIS-ROADMAP.md` — status, bugs, planning
-- `docs/sessions/` — sessie-archief
-- `docs/completed-work.md` — wat al af is
+- `LUXIS-ROADMAP.md` — status, prioriteit, backlog (compact sinds 9 juli 2026)
+- `SESSION-NOTES.md` — laatste 10 sessies
+- `docs/archief/` — alles ouder: SESSION-ARCHIVE.md, ROADMAP-ARCHIEF.md, oude prompts/audits
 - `docs/future-modules.md` — toekomstplannen
-- `docs/research/` — UX research
+- `docs/research/` — onderzoeksrapporten en audits
 
 **Regels:**
 - Geef NOOIT meer dan 100 regels terug

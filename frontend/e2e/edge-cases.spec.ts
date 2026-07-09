@@ -1,5 +1,5 @@
 /**
- * Edge-case E2E tests — Groep B uit GOAL-TEST-SUITE.
+ * Edge-case E2E tests — Groep B uit docs/archief/GOAL-TEST-SUITE.md.
  *
  * Tests dekken: lege staten, paginering, filter-combinaties, foutpaden,
  * mobile rendering, en zoek zonder resultaten.

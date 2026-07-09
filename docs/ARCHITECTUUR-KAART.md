@@ -4,7 +4,7 @@
 > medewerker") binnen 5 minuten het complete plaatje heeft. **LEES DIT ALS EERSTE.**
 > **Onderhoudsregel:** wijzig je een koppeling tussen systemen → werk deze kaart bij in
 > dezelfde sessie (hoort bij `/sessie-einde`). Wordt hij langer dan 2 pagina's → inkorten.
-> Feitelijke detail-inventaris: `docs/audit/inventaris-2026-07-05.md`.
+> Feitelijke detail-inventaris: `docs/audits/inventaris-2026-07-05.md`.
 
 **Laatst bijgewerkt:** 6 juli 2026 (S174, verbind-sprint 2: staleness-gate, audience-gate, 13-types-woordenschat + type-matching).
 
@@ -96,7 +96,7 @@ belofte-extractie (ai_agent) · orchestrator-events · mail-suggesties (FEAT-MAI
 
 ## Waar staat wat (documenten)
 - `LUXIS-ROADMAP.md` — status/prioriteit (source of truth, maar kop-tellingen ijlen na)
-- `docs/audit/inventaris-2026-07-05.md` — feitelijke feature-inventaris + dubbele systemen
+- `docs/audits/inventaris-2026-07-05.md` — feitelijke feature-inventaris + dubbele systemen
 - `docs/FEATURE-INVENTORY.md` — markt-checklist ("wat zou een PMS kunnen"), geen inventaris
 - `SESSION-NOTES.md` — per sessie wat er gebeurd is · `docs/sessions/PROMPT-S17x.md` — volgende taak
 - Skills: `deploy-regels`, `bekende-fouten`, `incasso-workflow`, `template-systeem`

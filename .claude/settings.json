@@ -128,6 +128,11 @@
             "type": "command",
             "command": "cat \"${CLAUDE_PROJECT_DIR:-.}/docs/ARCHITECTUUR-KAART.md\" 2>/dev/null || true",
             "statusMessage": "Verbindingskaart laden"
+          },
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && s=$(wc -c < SESSION-NOTES.md 2>/dev/null || echo 0) && r=$(wc -c < LUXIS-ROADMAP.md 2>/dev/null || echo 0) && if [ \"$s\" -gt 150000 ] || [ \"$r\" -gt 60000 ]; then echo \"⚠️ ARCHIEF-REGEL OVERTREDEN: SESSION-NOTES.md ($s bytes, max 150000) of LUXIS-ROADMAP.md ($r bytes, max 60000) te groot. Archiveer per /sessie-einde-regels naar docs/archief/ (max 10 sessie-entries, één prioriteit-sectie).\"; fi",
+            "statusMessage": "Archief-waakhond"
           }
         ]
       }

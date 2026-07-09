@@ -3,7 +3,7 @@
 Zet `defense_type` op elke kandidaat (status='kandidaat') via
 `defense_types.prelabel_defense_type` — het mechanisme dat sinds S174 de difflib-gelijkenis
 vervangt (audit S172 §5, gevalideerd op 102 prod-kandidaten in
-`docs/audit/prelabel-dryrun-2026-07-06.md`). Goedgekeurde/afgewezen rijen blijven ONGEMOEID.
+`docs/audits/prelabel-dryrun-2026-07-06.md`). Goedgekeurde/afgewezen rijen blijven ONGEMOEID.
 
 Data-only + idempotent. Standaard DRY-RUN (rapporteert alleen, rollback); `--apply` schrijft.
 

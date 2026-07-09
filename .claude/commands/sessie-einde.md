@@ -25,6 +25,18 @@ Update ook de 4 header-regels (laatst bijgewerkt, laatste feature/fix, openstaan
 **Houd die 4 regels KORT — max 1-2 zinnen per regel.** Alle detail hoort in de sessie-entry, NIET in de kop
 (anders groeien ze uit tot alinea's die elke afsluiting traag maken). Verwijs naar de entry voor het detail.
 
+### Archief-regels (VERPLICHT — houden de levende docs klein, sinds 9 juli 2026)
+- **SESSION-NOTES.md: max 10 sessie-entries.** Nieuwe entry erbij → verplaats de oudste entry
+  VERBATIM naar `docs/archief/SESSION-ARCHIVE.md` (onderaan Blok 2, chronologisch oplopend).
+- **Kop = exact de 4 regels.** Géén "Vorige kop"-stapels — de oude kopregel vervalt gewoon
+  (die informatie staat al in de sessie-entry).
+- **LUXIS-ROADMAP.md: precies één prioriteit-sectie** ("🎯 Huidige prioriteit") en in de intro
+  precies één "Laatst bijgewerkt"-regel (géén "Vorige:"-stapels). Afgeronde sprints, audits en
+  volgelopen bug-tabellen → `docs/archief/ROADMAP-ARCHIEF.md`. Open punten eerst overnemen in Backlog.
+- **Sessieprompts:** na het schrijven van `PROMPT-S(N+1)` → verplaats `PROMPT-S(N-1)` en ouder
+  naar `docs/archief/prompts/`.
+- **Verplaatsen, nooit verwijderen.** Archiefbestanden niet herformuleren.
+
 ### LUXIS-ROADMAP.md
 - Controleer of alle afgeronde features als ✅ staan met datum
 - Nieuwe bugs → voeg BUG-# entry toe

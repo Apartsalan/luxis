@@ -12,6 +12,7 @@ Endpoints:
 
 import base64
 import logging
+import re
 import uuid
 from email.message import EmailMessage
 from email.utils import formataddr
@@ -19,16 +20,17 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import User
+from app.auth.models import Tenant, User
 from app.cases.models import Case, CaseActivity, CaseFile
 from app.collections.models import Claim
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.documents.docx_service import build_base_context
+from app.email.attachment_models import EmailAttachment
 from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import (
     get_email_account,
@@ -38,7 +40,12 @@ from app.email.oauth_service import (
 )
 from app.email.providers.base import OutgoingAttachment
 from app.email.send_service import ensure_branded_body
+from app.email.sync_service import EMAIL_ATTACHMENTS_BASE
 from app.shared.exceptions import BadRequestError, NotFoundError
+
+# Simpele adres-vorm-check aan de serverkant (de voorkant valideert ook, maar een
+# API-call kan dat omzeilen). Niet volledig RFC 5322 — vangt de reële typefouten.
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 # AUD124-06: templates die automatisch factuur-PDF's als bijlage krijgen
 AUTO_ATTACH_INVOICE_TYPES = {
@@ -80,7 +87,7 @@ class InlineAttachment(BaseModel):
 
 
 class ComposeRequest(BaseModel):
-    to: list[str] = Field(..., description="Ontvangers e-mailadressen")
+    to: list[str] = Field(..., min_length=1, description="Ontvangers e-mailadressen")
     cc: list[str] | None = Field(default=None, description="CC e-mailadressen")
     subject: str = Field(..., max_length=500, description="Onderwerp")
     body_html: str = Field(..., max_length=100000, description="HTML body")
@@ -97,9 +104,21 @@ class ComposeRequest(BaseModel):
     )
     case_file_ids: list[uuid.UUID] | None = None
     inline_attachments: list[InlineAttachment] | None = None
+    # Doorsturen: neem de bijlagen van de oorspronkelijke (gesyncte) mail mee.
+    forward_from_email_id: uuid.UUID | None = Field(
+        default=None, description="SyncedEmail-id om de bijlagen van door te sturen"
+    )
     # True = de body draagt de huisstijl al (template of AI-concept) → niet
     # opnieuw aankleden. False (vrije mail/antwoord/doorsturen) → wel aankleden.
     already_branded: bool = False
+
+    @field_validator("to", "cc")
+    @classmethod
+    def _validate_email_addresses(cls, v: list[str] | None) -> list[str] | None:
+        for addr in v or []:
+            if not _EMAIL_RE.match((addr or "").strip()):
+                raise ValueError(f"Ongeldig e-mailadres: {addr!r}")
+        return v
 
 
 class CaseComposeRequest(BaseModel):
@@ -211,6 +230,48 @@ async def _resolve_attachments(
     return attachments
 
 
+async def _load_forwarded_attachments(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    email_id: uuid.UUID,
+) -> list[OutgoingAttachment]:
+    """Laad de bijlagen van een gesyncte mail van schijf, voor doorsturen.
+
+    Ontbrekende bestanden of te grote bijlagen worden overgeslagen (loggen +
+    doorgaan) — doorsturen mag niet stuklopen op één ontbrekende bijlage.
+    """
+    result = await db.execute(
+        select(EmailAttachment).where(
+            EmailAttachment.synced_email_id == email_id,
+            EmailAttachment.tenant_id == tenant_id,
+        )
+    )
+    out: list[OutgoingAttachment] = []
+    for att in result.scalars().all():
+        file_path = (
+            EMAIL_ATTACHMENTS_BASE / str(tenant_id) / str(email_id) / att.stored_filename
+        )
+        if not file_path.exists():
+            logger.warning("Doorstuur-bijlage niet op schijf: %s", file_path)
+            continue
+        data = file_path.read_bytes()
+        if len(data) > MAX_ATTACHMENT_SIZE:
+            logger.warning(
+                "Doorstuur-bijlage '%s' te groot (%d MB) — overgeslagen",
+                att.filename,
+                len(data) // (1024 * 1024),
+            )
+            continue
+        out.append(
+            OutgoingAttachment(
+                filename=att.filename,
+                data=data,
+                content_type=att.content_type or "application/octet-stream",
+            )
+        )
+    return out
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 
@@ -242,6 +303,14 @@ async def send_via_provider(
             data.inline_attachments,
         )
 
+    # Doorsturen: de bijlagen van de oorspronkelijke mail meesturen.
+    if data.forward_from_email_id:
+        resolved_attachments += await _load_forwarded_attachments(
+            db, user.tenant_id, data.forward_from_email_id
+        )
+        if len(resolved_attachments) > MAX_ATTACHMENTS:
+            raise BadRequestError(f"Maximaal {MAX_ATTACHMENTS} bijlagen toegestaan")
+
     # Huisstijl: vrije mail, beantwoorden en doorsturen krijgen dezelfde
     # sjabloon-opmaak (handtekening + logo + schuldhulpblok). Een via een
     # template of AI-concept opgestelde mail draagt de opmaak al → dan slaat de
@@ -257,6 +326,10 @@ async def send_via_provider(
             force=True,
         )
 
+    from_name = (
+        await db.execute(select(Tenant.name).where(Tenant.id == user.tenant_id))
+    ).scalar() or ""
+
     try:
         message_id = await provider.send_message(
             access_token,
@@ -267,6 +340,7 @@ async def send_via_provider(
             reply_to_message_id=data.reply_to_message_id,
             references_root=data.references_root,
             attachments=resolved_attachments or None,
+            from_name=from_name,
             **imap_smtp_kwargs(account),
         )
         return ComposeResponse(

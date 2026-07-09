@@ -160,6 +160,12 @@ async def send_with_attachment(
                 for fname, data, mime_sub in attachments
             ]
 
+            from app.auth.models import Tenant
+
+            from_name = (
+                await db.execute(select(Tenant.name).where(Tenant.id == tenant_id))
+            ).scalar() or ""
+
             provider_message_id = await provider.send_message(
                 access_token,
                 to=[to],
@@ -167,6 +173,7 @@ async def send_with_attachment(
                 body_html=body_html,
                 cc=cc,
                 attachments=outgoing_attachments,
+                from_name=from_name,
                 **imap_smtp_kwargs(account),
             )
             used_provider = True

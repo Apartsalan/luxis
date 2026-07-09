@@ -14,6 +14,9 @@ export interface ReplyPrefill {
   // het verzonden antwoord dezelfde draad-identiteit als de rest van de keten —
   // ook bij een antwoord op een mail middenin een lang gesprek.
   referencesRoot: string | null;
+  // Bij doorsturen: het id van de oorspronkelijke mail, zodat de achterkant de
+  // bijlagen daarvan meestuurt. Bij beantwoorden null (geen bijlagen meesturen).
+  forwardFromEmailId: string | null;
 }
 
 function stripPrefix(subject: string, prefixes: string[]): string {
@@ -57,6 +60,7 @@ export function buildReplyPrefill(email: SyncedEmailDetail): ReplyPrefill {
     bodyHtml: quoteBlock(email),
     replyToMessageId: email.provider_message_id ?? null,
     referencesRoot: email.provider_thread_id ?? null,
+    forwardFromEmailId: null, // beantwoorden = geen bijlagen meesturen
   };
 }
 
@@ -80,5 +84,6 @@ export function buildForwardPrefill(email: SyncedEmailDetail): ReplyPrefill {
     bodyHtml: `<p></p><p></p>${header}${original}`,
     replyToMessageId: null,
     referencesRoot: null, // doorsturen = nieuwe keten
+    forwardFromEmailId: email.id, // bijlagen van het origineel meesturen
   };
 }

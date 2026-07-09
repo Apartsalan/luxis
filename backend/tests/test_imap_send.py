@@ -279,3 +279,86 @@ def test_imap_message_to_email_respects_is_read():
     unread = _imap_message_to_email("2", _raw_email("<b@x>"), is_read=False)
     assert read.is_read is True
     assert unread.is_read is False
+
+
+# ── S188c-review-fixes: tekstversie, afzendernaam, IMAP-ontsmetting ──────────
+
+
+def test_html_to_text_strips_tags_and_keeps_lines():
+    from app.email.providers.imap_provider import _html_to_text
+
+    out = _html_to_text("<p>Regel een</p><p>Regel twee</p>Drie<br>Vier")
+    assert "Regel een" in out and "Regel twee" in out
+    assert "Drie" in out and "Vier" in out
+    assert "<" not in out and ">" not in out
+    assert _html_to_text("") == ""
+
+
+def test_html_to_text_placeholder_for_markup_without_text():
+    from app.email.providers.imap_provider import _html_to_text
+
+    assert _html_to_text("<div><img src='x'></div>").startswith("(deze e-mail")
+
+
+def test_imap_quote_escapes_quote_and_backslash():
+    from app.email.providers.imap_provider import _imap_quote
+
+    assert _imap_quote('a"b') == 'a\\"b'
+    assert _imap_quote("a\\b") == "a\\\\b"
+    assert _imap_quote("<normaal@id>") == "<normaal@id>"
+
+
+@pytest.mark.asyncio
+async def test_imap_send_uses_display_name_and_real_text_part(monkeypatch, no_sent_append):
+    """Afzender krijgt een weergavenaam en het text/plain-deel komt uit de HTML
+    (niet meer de placeholder-zin)."""
+    captured: dict = {}
+
+    async def fake_send(msg, **kwargs):
+        captured["msg"] = msg
+
+    monkeypatch.setattr(aiosmtplib, "send", fake_send)
+
+    await ImapProvider().send_message(
+        "pw",
+        to=["a@example.com"],
+        subject="Test",
+        body_html="<p>Gelieve <b>te betalen</b>.</p><p>Met groet</p>",
+        from_name="Kesting Legal",
+        smtp_host="smtp.basenet.nl",
+        smtp_port=587,
+        username="incasso@kestinglegal.nl",
+    )
+    msg = captured["msg"]
+    assert msg["From"] == "Kesting Legal <incasso@kestinglegal.nl>"
+
+    text_parts = [
+        p.get_content() for p in msg.walk() if p.get_content_type() == "text/plain"
+    ]
+    joined = "\n".join(text_parts)
+    assert "Gelieve te betalen." in joined
+    assert "Met groet" in joined
+    assert "opgemaakte (HTML) inhoud" not in joined
+
+
+def test_compose_request_rejects_invalid_email():
+    from pydantic import ValidationError
+
+    from app.email.compose_router import ComposeRequest
+
+    # Geldig adres → oké
+    ComposeRequest(to=["goed@example.com"], subject="x", body_html="<p>x</p>")
+
+    # Ongeldig adres → afgewezen
+    with pytest.raises(ValidationError):
+        ComposeRequest(to=["geen-adres"], subject="x", body_html="<p>x</p>")
+
+    # Lege ontvangerslijst → afgewezen
+    with pytest.raises(ValidationError):
+        ComposeRequest(to=[], subject="x", body_html="<p>x</p>")
+
+    # Ongeldig CC-adres → afgewezen
+    with pytest.raises(ValidationError):
+        ComposeRequest(
+            to=["goed@example.com"], cc=["fout"], subject="x", body_html="<p>x</p>"
+        )

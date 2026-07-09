@@ -8,9 +8,11 @@ import asyncio
 import email as email_lib
 import imaplib
 import logging
+import re
 from datetime import UTC, datetime, timedelta
 from email.header import decode_header
-from email.utils import parseaddr, parsedate_to_datetime
+from email.utils import formataddr, parseaddr, parsedate_to_datetime
+from html import unescape as _html_unescape
 
 from app.email.providers.base import (
     AttachmentInfo,
@@ -21,6 +23,39 @@ from app.email.providers.base import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Verzonden-map: BaseNet gebruikt "INBOX.Sent"; andere IMAP-servers variëren.
+# Eén bron van waarheid zodat ophalen, opslaan en listen dezelfde volgorde
+# aanhouden (voorheen stond de volgorde op 3 plekken verschillend).
+SENT_FOLDER_CANDIDATES = ("INBOX.Sent", "Sent", "Sent Items", "Verzonden items")
+
+
+def _imap_quote(value: str) -> str:
+    """Escape een string voor een IMAP quoted-string (RFC 3501 §4.3).
+
+    Beschermt de HEADER-zoekopdracht tegen een Message-ID met een " of \\ erin
+    (die staat in de mail en is dus door de afzender te beïnvloeden).
+    """
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _html_to_text(html: str) -> str:
+    """Platte-tekstversie van een HTML-body voor het text/plain-alternatief.
+
+    Zonder dit viel elke uitgaande mail terug op één placeholder-zin — dat is
+    wat tekst-only clients tonen, wat in maillijst-previews verschijnt, en wat
+    spamfilters negatief meewegen (geen echte tekstvariant).
+    """
+    if not html:
+        return ""
+    # Structuur-einde → nieuwe regel, vóór het strippen van de tags.
+    text = re.sub(r"(?i)<\s*br\s*/?>", "\n", html)
+    text = re.sub(r"(?i)</\s*(?:p|div|tr|li|h[1-6])\s*>", "\n", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = _html_unescape(text)
+    lines = [ln.strip() for ln in text.splitlines()]
+    out = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+    return out or "(deze e-mail heeft alleen opgemaakte inhoud)"
 
 
 def _decode_header_value(value: str | None) -> str:
@@ -314,9 +349,9 @@ def _fetch_attachment_from_imap(
         raise
 
     try:
-        # Try multiple folders to find the message
-        folders_to_try = [folder, "INBOX.Sent", "INBOX"]
-        # Deduplicate while preserving order
+        # Try multiple folders to find the message (INBOX first, dan de Verzonden-
+        # mappen). Deduplicate while preserving order.
+        folders_to_try = [folder, "INBOX", *SENT_FOLDER_CANDIDATES]
         seen = set()
         unique_folders = []
         for f in folders_to_try:
@@ -324,13 +359,14 @@ def _fetch_attachment_from_imap(
                 seen.add(f)
                 unique_folders.append(f)
 
+        safe_message_id = _imap_quote(message_id)
         raw_bytes = None
         for try_folder in unique_folders:
             try:
                 status, _ = imap.select(try_folder, readonly=True)
                 if status != "OK":
                     continue
-                status, data = imap.search(None, f'(HEADER Message-ID "{message_id}")')
+                status, data = imap.search(None, f'(HEADER Message-ID "{safe_message_id}")')
                 if status != "OK" or not data[0]:
                     continue
                 uid = data[0].split()[0]
@@ -380,7 +416,7 @@ def _append_to_sent(
     imap = _imaplib.IMAP4_SSL(host, port)
     imap.login(username, password)
     try:
-        for folder in ("INBOX.Sent", "Sent", "Sent Items", "Verzonden items"):
+        for folder in SENT_FOLDER_CANDIDATES:
             status, _ = imap.select(folder, readonly=True)
             if status != "OK":
                 continue
@@ -459,7 +495,7 @@ class ImapProvider(EmailProvider):
         all_messages.extend(inbox_msgs)
 
         # Also fetch from Sent Items (try common folder names)
-        for sent_folder in ("Sent", "Sent Items", "Verzonden items", "INBOX.Sent"):
+        for sent_folder in SENT_FOLDER_CANDIDATES:
             try:
                 sent_msgs = await asyncio.to_thread(
                     _fetch_from_imap,
@@ -504,6 +540,7 @@ class ImapProvider(EmailProvider):
         reply_to_message_id: str | None = None,
         references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
+        from_name: str = "",
         smtp_host: str = "",
         smtp_port: int = 587,
         username: str = "",
@@ -526,7 +563,9 @@ class ImapProvider(EmailProvider):
             raise ValueError("IMAP-verzending vereist smtp_host en username")
 
         msg = MimeMessage()
-        msg["From"] = username
+        # Afzender met weergavenaam ("Kesting Legal <incasso@...>") als die er is,
+        # anders het kale adres.
+        msg["From"] = formataddr((from_name, username)) if from_name else username
         msg["To"] = ", ".join(to)
         if cc:
             msg["Cc"] = ", ".join(cc)
@@ -548,7 +587,7 @@ class ImapProvider(EmailProvider):
                 msg["References"] = f"{references_root} {reply_to_message_id}"
             else:
                 msg["References"] = reply_to_message_id
-        msg.set_content("Deze e-mail bevat opgemaakte (HTML) inhoud.")
+        msg.set_content(_html_to_text(body_html))
         msg.add_alternative(body_html, subtype="html")
 
         for att in attachments or []:

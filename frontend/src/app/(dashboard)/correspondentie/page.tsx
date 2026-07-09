@@ -96,6 +96,7 @@ export default function CorrespondentiePage() {
           inline_attachments: data.inline_attachments,
           reply_to_message_id: data.reply_to_message_id,
           references_root: data.references_root,
+          forward_from_email_id: data.forward_from_email_id,
           already_branded: data.already_branded,
         }),
       });
@@ -409,6 +410,7 @@ export default function CorrespondentiePage() {
           defaultBodyHtml={replyPrefill?.bodyHtml ?? ""}
           replyToMessageId={replyPrefill?.replyToMessageId ?? null}
           referencesRoot={replyPrefill?.referencesRoot ?? null}
+          forwardFromEmailId={replyPrefill?.forwardFromEmailId ?? null}
           caseId={emailDetail?.case_id ?? undefined}
           onSend={async (data) => {
             await handleFreeComposeSend(data);

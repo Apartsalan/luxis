@@ -392,6 +392,7 @@ export default function ZaakDetailPage() {
           inline_attachments: data.inline_attachments,
           reply_to_message_id: data.reply_to_message_id,
           references_root: data.references_root,
+          forward_from_email_id: data.forward_from_email_id,
           // AI-concept is al opgemaakt (huisstijl); niet opnieuw aankleden.
           // Alleen overslaan als er ook écht opgemaakte HTML is: mislukt de
           // huisstijl-wrap van een concept (body_html leeg), dan sturen we de
@@ -699,6 +700,7 @@ export default function ZaakDetailPage() {
         defaultBodyHtml={replyPrefill ? replyPrefill.bodyHtml : activeDraftId ? draftBodyHtml : ""}
         replyToMessageId={replyPrefill?.replyToMessageId ?? null}
         referencesRoot={replyPrefill?.referencesRoot ?? null}
+        forwardFromEmailId={replyPrefill?.forwardFromEmailId ?? null}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
         caseId={id}
       />

@@ -377,6 +377,61 @@ async def test_rematch_respects_dismissed(
     assert active.case_id == case.id  # niet-genegeerd wordt wel gekoppeld
 
 
+@pytest.mark.asyncio
+async def test_load_forwarded_attachments_reads_and_skips_missing(
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    tmp_path,
+    monkeypatch,
+):
+    """Doorsturen laadt de bijlagen van het origineel van schijf; een ontbrekend
+    bestand wordt overgeslagen (geen crash) — S188c punt 2."""
+    from app.email import compose_router
+    from app.email.compose_router import _load_forwarded_attachments
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    email = await _create_synced_email(db, test_tenant.id, account.id, subject="Met bijlage")
+    db.add(
+        EmailAttachment(
+            tenant_id=test_tenant.id,
+            synced_email_id=email.id,
+            provider_attachment_id="att-1",
+            filename="factuur.pdf",
+            stored_filename="abc.pdf",
+            content_type="application/pdf",
+            file_size=8,
+        )
+    )
+    await db.commit()
+
+    monkeypatch.setattr(compose_router, "EMAIL_ATTACHMENTS_BASE", tmp_path)
+    dest = tmp_path / str(test_tenant.id) / str(email.id)
+    dest.mkdir(parents=True)
+    (dest / "abc.pdf").write_bytes(b"%PDF-1.4")
+
+    out = await _load_forwarded_attachments(db, test_tenant.id, email.id)
+    assert len(out) == 1
+    assert out[0].filename == "factuur.pdf"
+    assert out[0].data == b"%PDF-1.4"
+
+    # Tweede bijlage met ontbrekend bestand → overgeslagen, rest blijft werken.
+    db.add(
+        EmailAttachment(
+            tenant_id=test_tenant.id,
+            synced_email_id=email.id,
+            provider_attachment_id="att-2",
+            filename="weg.pdf",
+            stored_filename="ontbreekt.pdf",
+            content_type="application/pdf",
+            file_size=1,
+        )
+    )
+    await db.commit()
+    out2 = await _load_forwarded_attachments(db, test_tenant.id, email.id)
+    assert len(out2) == 1
+
+
 # ── Message Detail ───────────────────────────────────────────────────────────
 
 

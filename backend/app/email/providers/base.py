@@ -161,6 +161,7 @@ class EmailProvider(ABC):
         reply_to_message_id: str | None = None,
         references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
+        from_name: str = "",
     ) -> str:
         """Send an email through the provider.
 

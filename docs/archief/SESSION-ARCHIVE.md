@@ -7465,6 +7465,48 @@ gezond na deploy, 0 errors. Export-bestanden na import van de VPS verwijderd (PI
 **Volgende sessie (S180, Fable):** boekhoud-matching 90 cache-only zaken (`PROMPT-S180.md`).
 
 
+## Sessie 180 (6 juli, Fable — boekhoud-matching: onderzoek → veilig → gebouwd → live)
+
+PROMPT-S180 vroeg een haalbaarheidsonderzoek naar de 90 cache-only zaken; Arsalan gaf
+vooraf mandaat om bij een veilig oordeel direct door te bouwen in deze sessie.
+
+**Onderzoek (kernbevinding: het was geen fuzzy-probleem).**
+- `CashBankLine` heeft een `cblpcode`-veld dat het dossiernummer IS (346/425 regels);
+  nog eens 45 hebben de IN-code letterlijk in de omschrijving. Deterministisch, geen AI.
+- **Alle 90 zaken matchen op de cent**: som positieve bankregels == `cachedpaymentsadmin`
+  (BaseNet's eigen boekhoudtotaal als ijkpunt). 0 deels, 0 zonder regel.
+- Verificaties: alle 199 regels hebben geldige datums (2025/2026); 132 negatieve regels =
+  doorbetalingen aan opdrachtgevers (terecht uitgesloten); positieve regels buiten de 90
+  bestaan alléén op de 29 al-geïmporteerde zaken (dubbel-dekking → strikt uitgesloten);
+  0 regels op zaken zonder cache, 0 onbekende dossiers.
+
+**Bouw (uitbreiding `import_payments.py`, zelfde patroon).** `build_bank_payments`:
+scope strikt tot zaken zónder IncassoBetalingAnders-records; per zaak **hard slot**
+(som == cache op de cent, anders skip+rapport); eigen marker `[BaseNet-bankregel
+systemid=..]` → idempotent + `--cleanup`-dekking. Test: exact-match gate, negatief-filter,
+descr-fallback, dubbel-dekking-scope. 21 basenet-tests groen, ruff schoon.
+
+**Uitvoering (prod, dry-run eerst).** Dry-run: 90/90 exact, 199 regels, €152.049, alle 19
+lopende zaken gedekt. Execute: 199 geboekt; 47 gecapt op openstaand (Luxis rekent rente
+juridisch zuiver vanaf vervaldatum → iets lager openstaand dan BaseNet; die zaken staan nu
+op volledig betaald — bekende S175d-nuance, geen bug). Regelingen idempotent (13/121
+ongewijzigd, geen dubbelingen).
+
+**Eindstand betalingen: COMPLEET.** 255 betalingen (56 + 199) op exact de **135 zaken**
+die BaseNet's boekhouding kende. Geen openstaand betalingen-gat meer richting overstap.
+
+**Bijvangst voor het werkvoorraad-recept:** 8 zaken met BaseNet-status "Lopend" zijn
+feitelijk voldaan (betaald ≥ hoofdsom): IN100256, IN100210, IN100166, IN100197, IN100547,
+IN100334, IN100456, IN100457 → ter bevestiging aan Lisanne (afsluiten i.p.v. heropenen).
+
+**Hygiëne:** export-XML na afloop van de VPS verwijderd; backend/frontend healthy, 0 errors.
+
+**Gewijzigde bestanden:** `scripts/basenet/import_payments.py`, `backend/tests/test_basenet_import.py`.
+
+**Volgende sessie:** geen machine-bouwwerk meer nodig vóór de heropening — de livegang-
+blokken zijn mensenwerk (recept Lisanne / mail Arsalan / generale repetitie). Zie PROMPT-S181.
+
+
 ---
 
 # Blok 3 — oude kopregels uit SESSION-NOTES.md (verbatim, gearchiveerd 9 juli 2026)

@@ -67,6 +67,21 @@ en een niet-bestaand "heropen"-endpoint vergen.
      AND has_verweer=false;
    ```
    (88 zaken totaal hebben fase "Vordering betwist" — zie recept-CSV kolom `vlaggen`.)
+4b. **Rente (besluit Arsalan 9 juli, S188b — geen vraag meer per groep):** alle **b2b**-zaken
+   van de 7 holding-opdrachtgevers krijgen bij heropening de contractuele AV-rente
+   (art. 13.3 = 2%/mnd enkelvoudig); **B2C-zaken blijven op wettelijke rente** (55 in het
+   recept op `statutory` — niet blind omzetten). Twee lagen, allebei nodig:
+   ```sql
+   -- laag 1: het dossier (tarief + type)
+   UPDATE cases SET interest_type='contractual', contractual_rate=2.00,
+     contractual_compound=false WHERE case_number IN (<b2b van deze groep>);
+   -- laag 2: de vorderingen (periode-eenheid!) — VERGETEN = rente rekent 2%/JAAR
+   UPDATE claims SET rate_basis='monthly', updated_at=now()
+   WHERE rate_basis='yearly' AND case_id IN (SELECT id FROM cases WHERE case_number IN (...));
+   ```
+   S188b-bewijs: zonder laag 2 toonde IN100598 €50,02 rente (2%/jaar); mét laag 2 €600,23
+   (2%/mnd pro-rata, conform proefzaken-ijkpunt). Controleer ná de update het renteoverzicht
+   van 1 dossier in de UI: maandbedrag ≈ hoofdsom × 2% × dagen/30.
 5. **Rooktest in de UI** (login lisanne@ of seidony@): incasso-werkstroom toont de zaken
    in de juiste kolom; open 3 dossiers: saldo klopt met kolom `open_ruw` uit het recept
    (± rente/kosten — Luxis toont meer dan de ruwe kolom, dat is juist), deadline-kleur

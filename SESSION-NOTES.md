@@ -2,12 +2,50 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S188, Opus) — de 2 mailverificatie-gaten uit S187 live dichtgeklikt (Ongesorteerd-tab + "Maak dossier van deze mail"). Geen code. Details: S188-entry.
-**Laatste feature/fix:** (code, S187) mailfunctie afgemaakt — blok A+B live + browser-geverifieerd. Details: S187-entry.
-**Openstaand:** heropening werkvoorraad (wacht op input Lisanne/Arsalan); Backblaze US-bucket wissen ~10 juli na 2 bewezen EU-runs; DMARC/DKIM kestinglegal.nl; testspoor "Luxis diagnose SELF" dismissen; 2 crypt-wachtwoorden in wachtwoordmanager (Arsalan).
-**Volgende sessie (S189):** heropening werkvoorraad starten met LegalWork B.V. zodra input er is. Prompt: `docs/sessions/PROMPT-S188.md` (nog geldig; S188-verificatie is klaar).
+**Laatst bijgewerkt:** 9 juli 2026 (S188b, Fable) — eerste heropeningsbatch LIVE: 14 LegalWork-zaken open met 2%/mnd AV-rente; rate_basis-valkuil gevonden+gefixt. Details: S188b-entry.
+**Laatste feature/fix:** (data, S188b) 14 zaken heropend + 43 vorderingen van jaar- naar maandrente; plan-stap 4b toegevoegd. Details: S188b-entry.
+**Openstaand:** volgende heropeningsbatches (akkoord per groep); terugstort IN100334 (±€215) bij Lisanne; Backblaze US-bucket wissen ~10 juli; DMARC/DKIM kestinglegal.nl; testspoor "Luxis diagnose SELF"; 2 crypt-wachtwoorden (Arsalan).
+**Volgende sessie (S189):** volgende heropeningsbatch met plan-stap 4b, of Lisanne aan het werk op de 14 open LegalWork-zaken. Draaiboek: `docs/plans/PLAN-heropening-werkvoorraad.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 188b (9 juli 2026, Fable — heropening LegalWork LIVE, eerste batch)
+
+### Samenvatting
+Eerste heropeningsbatch uitgevoerd op prod volgens `docs/plans/PLAN-heropening-werkvoorraad.md`,
+met akkoord Arsalan (rente-besluit + go, deze sessie). **14 LegalWork-zaken heropend** in één
+atomische transactie met rijenaantal-sloten (afwijking = automatische rollback):
+- 9 × Eerste sommatie (IN100592/598/599/602/603/604/605/606/607)
+- 3 × Voorstel dagvaarding (IN100410/504/527)
+- 2 × Verweer beantwoorden + verweer-vinkje (IN100458/483)
+- Alle 14: status nieuw, toegewezen aan Lisanne, `date_closed` leeg. IN100547 (voldaan) bleef dicht.
+
+**Rente-besluit Arsalan (staand beleid):** alle b2b-zaken van de 7 holding-opdrachtgevers
+(Invorderingsbedrijf-groep) bij heropening op contractuele AV-rente 2%/mnd enkelvoudig;
+B2C blijft wettelijk. Geen vraag meer per groep. Voor nieuwe zaken dekt de AV-laag
+(terms_interest, S177) dit al automatisch.
+
+**Rente-valkuil gevonden + gefixt (tegenspreker-check on de cijfers):** dossier-update alleen
+(`interest_type=contractual, rate=2.00`) liet de rente **2%/JAAR** rekenen — IN100598 toonde
+€50,02 (= exact 31.477,36 × 2% × 29/365). De periode-eenheid zit op de **vorderingen**:
+`claims.rate_basis` stond op `yearly` (proefzaken-ijkpunt: `monthly`). Fix: 43 claims van de
+14 zaken → `monthly` (guarded, andere zaken ongemoeid: 1511 yearly elders intact).
+Ná fix: €600,23 + €181,20 (2%/mnd pro-rata), derde factuur terecht €0 (verzuim 01-08).
+Draaiboek bijgewerkt met stap 4b zodat volgende batches dit meenemen.
+
+### Verificatie (alle acceptatiecriteria van het plan)
+1. 14 zaken status=nieuw met juiste stap + rente-config — query groen (tabel in transcript).
+2. 0 zonder toewijzing, 0 met date_closed — groen. 3. Vangnet BaseNet-Gereed/Geannuleerd: 0 rijen.
+4. email_logs vóór==ná==0 (niets gemaild); auto_drafts false. 5. IN100547 nog afgesloten.
+6. UI-rooktest: werkstroom 4→18 dossiers, bedragen op de cent gelijk aan recept (o.a. 44.609,73 /
+   12.100,00 / 18.934,11), deadline-kleuren zichtbaar; 3 dossiers geopend (598 sommatie /
+   458 verweer / 410 dagvaarding): juiste stap, "Contractuele rente", renteoverzicht klopt, geen crash.
+Bekende cosmetische beperking (gepland): SQL-heropening schrijft geen case_step_history-regel.
+
+### Volgende sessie
+Volgende heropeningsbatch (per opdrachtgever, expliciet akkoord per groep blijft de afspraak) mét
+stap 4b; de 11 gestopte-regeling-zaken en de regeling-groep (incl. IN100019) apart. Terugstort-vraag
+IN100334 (±€215) nog open bij Lisanne.
 
 ## Sessie 188 (9 juli 2026, Opus — mailverificatie live, geen code)
 
@@ -491,45 +529,4 @@ followup-hold-steps, generale-repetitie-geldstromen (draaiboek), automatisering-
 (poortwachters). Extra geverifieerd: e-mailsync gezond (ARSALAN-TODO §2 afgevinkt met
 bewijs), geen TODO/FIXME-schulden in code, payment-matching koppelt betalingen NIET aan
 regeling-termijnen (bewuste edge case in plan 2).
-
-## Sessie 180 (6 juli, Fable — boekhoud-matching: onderzoek → veilig → gebouwd → live)
-
-PROMPT-S180 vroeg een haalbaarheidsonderzoek naar de 90 cache-only zaken; Arsalan gaf
-vooraf mandaat om bij een veilig oordeel direct door te bouwen in deze sessie.
-
-**Onderzoek (kernbevinding: het was geen fuzzy-probleem).**
-- `CashBankLine` heeft een `cblpcode`-veld dat het dossiernummer IS (346/425 regels);
-  nog eens 45 hebben de IN-code letterlijk in de omschrijving. Deterministisch, geen AI.
-- **Alle 90 zaken matchen op de cent**: som positieve bankregels == `cachedpaymentsadmin`
-  (BaseNet's eigen boekhoudtotaal als ijkpunt). 0 deels, 0 zonder regel.
-- Verificaties: alle 199 regels hebben geldige datums (2025/2026); 132 negatieve regels =
-  doorbetalingen aan opdrachtgevers (terecht uitgesloten); positieve regels buiten de 90
-  bestaan alléén op de 29 al-geïmporteerde zaken (dubbel-dekking → strikt uitgesloten);
-  0 regels op zaken zonder cache, 0 onbekende dossiers.
-
-**Bouw (uitbreiding `import_payments.py`, zelfde patroon).** `build_bank_payments`:
-scope strikt tot zaken zónder IncassoBetalingAnders-records; per zaak **hard slot**
-(som == cache op de cent, anders skip+rapport); eigen marker `[BaseNet-bankregel
-systemid=..]` → idempotent + `--cleanup`-dekking. Test: exact-match gate, negatief-filter,
-descr-fallback, dubbel-dekking-scope. 21 basenet-tests groen, ruff schoon.
-
-**Uitvoering (prod, dry-run eerst).** Dry-run: 90/90 exact, 199 regels, €152.049, alle 19
-lopende zaken gedekt. Execute: 199 geboekt; 47 gecapt op openstaand (Luxis rekent rente
-juridisch zuiver vanaf vervaldatum → iets lager openstaand dan BaseNet; die zaken staan nu
-op volledig betaald — bekende S175d-nuance, geen bug). Regelingen idempotent (13/121
-ongewijzigd, geen dubbelingen).
-
-**Eindstand betalingen: COMPLEET.** 255 betalingen (56 + 199) op exact de **135 zaken**
-die BaseNet's boekhouding kende. Geen openstaand betalingen-gat meer richting overstap.
-
-**Bijvangst voor het werkvoorraad-recept:** 8 zaken met BaseNet-status "Lopend" zijn
-feitelijk voldaan (betaald ≥ hoofdsom): IN100256, IN100210, IN100166, IN100197, IN100547,
-IN100334, IN100456, IN100457 → ter bevestiging aan Lisanne (afsluiten i.p.v. heropenen).
-
-**Hygiëne:** export-XML na afloop van de VPS verwijderd; backend/frontend healthy, 0 errors.
-
-**Gewijzigde bestanden:** `scripts/basenet/import_payments.py`, `backend/tests/test_basenet_import.py`.
-
-**Volgende sessie:** geen machine-bouwwerk meer nodig vóór de heropening — de livegang-
-blokken zijn mensenwerk (recept Lisanne / mail Arsalan / generale repetitie). Zie PROMPT-S181.
 

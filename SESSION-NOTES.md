@@ -4,7 +4,7 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 9 juli 2026 (S188c/d/e) — mailwerk-review + 2 fixes + 6 verbeteringen + Fable-eindreview (GO, 1 restfout gevonden+gefixt: CR/LF-injectie). Uitrol gestart. Details: S188c-entry.
 **Laatste feature/fix:** (code, S188e) `_imap_quote` ontsmet ook CR/LF/NUL — commit 8b658c7. Details: S188c-entry.
-**Openstaand:** deploy-verificatie S188-werk; CI-rood test_role (niet-mail); volgende heropeningsbatches; terugstort IN100334.
+**Openstaand:** CI-rood test_role (niet-mail); volgende heropeningsbatches; terugstort IN100334.
 **Volgende sessie:** volgende heropeningsbatch (draaiboek + stap 4b), of de rode CI-test fixen.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
@@ -56,7 +56,7 @@ en de modellen gehouden). Uitkomsten:
 - **Restfout gevonden + direct gefixt** (commit `8b658c7`): `_imap_quote` ontsmette `"` en `\`
   maar niet CR/LF — een gevouwen Message-ID-header kon in theorie een eigen IMAP-commando
   injecteren bij het bijlage-ophalen. CR/LF/NUL → spatie + injectie-regressietest (groen).
-- Deploy van al het S188c/d/e-werk gestart (losgekoppeld op de VPS, log `/root/deploy-s188d.log`).
+- **Deploy S188c/d/e GESLAAGD + geverifieerd**: nieuwe code aantoonbaar in de draaiende backend (grep in container), VPS op 8b658c7, alle containers healthy, site 200. (Container-rename-botsing tijdens up was onschuldig; eindtoestand correct.)
 
 ### Openstaand
 - CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,

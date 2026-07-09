@@ -2,12 +2,38 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 8 juli 2026 (S187, Opus-bouw + Fable-review) — mailfunctie afgemaakt: blok A+B live + browser-geverifieerd. Details: S187-entry.
-**Laatste feature/fix:** gedeeld leesvenster in "Alle e-mails", tab "Nieuwe aanvragen", "Maak dossier van deze mail"; onderweg 2 bestaande bugs gefixt (suggesties-500, case_number). Details: S187-entry.
+**Laatst bijgewerkt:** 9 juli 2026 (tussensessie, Fable) — documentatie-opruiming: levende docs klein, historie naar `docs/archief/`. Details: tussensessie-entry.
+**Laatste feature/fix:** (code, S187) mailfunctie afgemaakt — blok A+B live + browser-geverifieerd. Details: S187-entry.
 **Openstaand:** ⚠️ 2 verificatiegaten S187 (Ongesorteerd-tab + "Maak dossier"-flow live doorklikken); Backblaze US-bucket wissen ~10 juli na 2 bewezen EU-runs; DMARC/DKIM kestinglegal.nl; testspoor "Luxis diagnose SELF" dismissen; 2 crypt-wachtwoorden in wachtwoordmanager (Arsalan); heropening werkvoorraad wacht op input Lisanne/Arsalan.
 **Volgende sessie (S188):** eerst de 2 verificatiegaten dichtklikken, dan heropening werkvoorraad. Prompt: `docs/sessions/PROMPT-S188.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Tussensessie (9 juli 2026, Fable — documentatie-opruiming, geen code)
+
+### Samenvatting
+Levende docs opgeruimd — alles verplaatst naar `docs/archief/`, niets verwijderd (commit `04b6248`):
+- **SESSION-NOTES.md 540KB→42KB**: max 10 entries (regel), 168 oudere entries verbatim naar
+  `docs/archief/SESSION-ARCHIVE.md`; kop teruggebracht van 15 opgestapelde regels naar 4.
+- **LUXIS-ROADMAP.md 180KB→26KB**: 8 afgeronde secties (verbind-sprint, systeem-audit-backlog,
+  GTM, audits 110/124, bug-log, volgorde van werken, LF-sprint) + 15 "Vorige:"-regels naar
+  `docs/archief/ROADMAP-ARCHIEF.md`. Nu precies één 🎯 prioriteit-sectie. Enig open punt
+  (AI Factuur Parsing Validatie, LF-10) overgenomen in Backlog.
+- **Mappen**: oude prompts → `docs/archief/prompts/`, mei-audits → `docs/archief/audits/`,
+  `docs/audit` hernoemd naar `docs/audits` (verwijzingen bijgewerkt), backups → `docs/archief/sessions/`.
+- **Dood duplicaat weg**: `.github/skills/impeccable` (330KB, door niets gebruikt; `.claude`-versie is de echte).
+- **Verankering**: archief-regels in `/sessie-einde` + CLAUDE.md; waakhond-hook bij sessiestart
+  waarschuwt bij SESSION-NOTES >150KB of roadmap >60KB; luxis-researcher-leeslijst bijgewerkt.
+Aanleiding: doorlichting op verzoek Arsalan, getoetst aan officiële Claude Code-documentatie
+("pruning is het primaire onderhoud"; instructiebestanden waren al op maat: 116/38/39 regels).
+
+### Verificatie
+Tellingen sluitend: 178+25=203 sessie-koppen vóór = 10 live + 193 archief ná; roadmap 17 secties
+= 9 behouden + 8 archief (+1 nieuwe prioriteit-sectie). Git toont elke verplaatsing als rename (100%).
+settings.json valide JSON; waakhond-logica getest (stil bij huidige maten, vuurt bij lage drempel).
+
+### Volgende sessie
+Ongewijzigd S188: eerst de 2 mailverificatie-gaten, dan heropening werkvoorraad (`docs/sessions/PROMPT-S188.md`).
 
 ## Sessie 187 (8 juli, Opus-bouw + Fable-review — mailfunctie afmaken, blok A+B)
 
@@ -517,56 +543,4 @@ gezond na deploy, 0 errors. Export-bestanden na import van de VPS verwijderd (PI
 `frontend/.../instellingen/team-tab.tsx`, `frontend/src/hooks/use-users.ts`.
 
 **Volgende sessie (S180, Fable):** boekhoud-matching 90 cache-only zaken (`PROMPT-S180.md`).
-
-## Sessie 178 (6 juli, go-live gap-audit — onderzoek, geen code)
-
-**Vraag:** wat blokkeert Lisanne nog om BaseNet op te zeggen? Gegrond op de lokale
-BaseNet-XML-export (`Xml_02-07-2026_2400.zip`) + read-only prod-queries. Geen code, geen
-prod-mutaties. NB: `luxis-researcher` bestond niet in deze sessie (gestart buiten de
-projectmap) → zelf gelezen.
-
-### Meetresultaten (bron: XML-export 2 juli + prod 6 juli)
-- **Betalingen (fase 1b):** los betalingenbestand = 56 records / 45 zaken / €165.697
-  (piek 2025: 46 records). BaseNet's eigen cache (`cachedpayments*` op Incasso) = **135
-  zaken / €369.406** — het verschil liep via de boekhouding (geen losse gedateerde records).
-  Voor de overstap telt: **29 van 372 lopende zaken (8%) hebben betalingen, €52.302.**
-  Bij ≥5 daarvan is betaald ≥ hoofdsom (IN100256, IN100210, IN100334, IN100456, IN100547)
-  → staan mogelijk onterecht als lopend; zonder import risico op onterecht aanmanen.
-  4 records zijn creditnota's ("credit" in notitie), 9 hebben `incpuitsluitenkosten=true`
-  (BaseNet-toerekeningsvlag die Luxis 6:44 niet kent) — beslispunten S179.
-- **Betalingsregelingen:** 323 termijnen / 37 zaken; **12 lopende zaken met toekomstige
-  termijnen**, o.a. IN100345 (62 termijnen t/m 2031), IN100329 (t/m 2028) en **proefzaak
-  IN100215 (termijn 12 juli 2026)**. Luxis-module `payment_arrangements` bestaat maar is
-  leeg (0 rijen) → geen bewaking.
-- **Rente/debiteur-AV (prompt-punt 2):** 361/372 lopende zaken staan in BaseNet zelf op
-  2,00% contractueel (`incinterest`), `increntevoorburo=0` overal. De debiteuren zíjn de
-  eigen klanten van de bureaus → art. 13.3 van de bureau-AV beheerst die contractsrelatie;
-  2%/mnd is dus Lisanne's gevestigde praktijk, geen bureau-conventie die wij opdrongen.
-  **Bewust NIET bouwen** (aparte debiteur-AV-registratie): keten dossier>klantkaart>AV>
-  wettelijk dekt uitzonderingen al per dossier. Juridische flag voor Lisanne: bij
-  "voorwaarden nooit ontvangen"-verweer (type `av_toepasselijkheid`, 3× in data) is het
-  tarief aanvechtbaar — procesrisico, geen softwaregat.
-- **"Facturen Legalwork" (prompt-punt 3):** impact nihil — 1 zaak (IN100592) en die is
-  afgesloten; contact heeft 1 dubbele AV + terms_interest 2%. Er bestaan nog 5 andere
-  "Facturen"-contacten (facturen@-adressen) zonder AV/zaken = onschuldige adresboek-ruis.
-  Kleinste opruimactie in PROMPT-S179 taak C (akkoord Arsalan bestond al).
-- **Prod-stand:** 604 afgesloten + 3 proefzaken 'nieuw'; 0 betalingen / 0 facturen /
-  0 uren / 0 derdengeld — geldmodules nooit met echt geld gebruikt (= blok 3 generale
-  repetitie blijft must). Team-tab kapot bevestigd: `use-users.ts:47` roept
-  `/api/users/invite` aan dat backend-side niet bestaat.
-
-### Prioriteitenlijst go-live (must vóór opzegging / nice / bewust niet)
-**MUST:** (1) betalingen-import gericht (fase 1b — S179 taak A); (2) regelingen-import
-12 zaken (S179 taak B, IN100215 vóór 12 juli); (3) werkvoorraad-recept blok 1 (bestond al,
-nu mét de ≥5 "mogelijk voldaan"-lijst als extra check); (4) mail: M365-mailbox incasso@ +
-uiteindelijk MX-verhuizing (Arsalan-actie, techniek bewezen met seidony@); (5) generale
-repetitie geldstromen (blok 3). **NICE:** Team-tab, Facturen-Legalwork-opruiming, IN100555,
-admin-naam (S179 taak C). **BEWUST NIET:** debiteur-AV-registratie, regeling-termijnen als
-betalingen, volledige boekhoud-import, Exact-activatie nu.
-
-### Gewijzigde bestanden
-- `docs/sessions/PROMPT-S179.md` (nieuw), `SESSION-NOTES.md`, `LUXIS-ROADMAP.md` — verder niets.
-
-### Volgende sessie
-S179 (Opus): betalingen + regelingen-import, dry-run eerst. Zie `PROMPT-S179.md`.
 

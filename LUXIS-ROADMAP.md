@@ -53,12 +53,13 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 9 juli 2026)
+## 🎯 Huidige prioriteit (bijgewerkt 9 juli 2026, S189)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-1. **Mailfunctie-verificatie (S188, verplicht eerst):** de 2 openstaande verificatiegaten uit S187 live doorklikken — Ongesorteerd-tab én "Maak dossier van deze mail" met een echt nieuw dossier. Zie `docs/sessions/PROMPT-S188.md`.
-2. **Heropening werkvoorraad:** starten met LegalWork B.V. zodra input Lisanne/Arsalan er is — draaiboek `docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
+1. **Menu-doorlichting "Luxis afmaken" (loopt, Fable-kijkwerk vóór 12 juli):** heel Luxis kritisch langs per menu-onderdeel op techniek + productwaarde + UX/UI. Plan `docs/plans/PLAN-doorlichting-menu.md`. D-A (Dashboard/Taken/Agenda/Documenten) klaar → `docs/research/audit-DA-werkschil.md`. Volgende: D-B (`docs/sessions/PROMPT-DB-doorlichting.md`), dan D-C. Daarna fase-2-beslislijst met Arsalan → Opus-bouwblokken.
+2. **Verjaringsalarm zichtbaar maken (HOOG, uit D-A):** monitor vindt verjaarde zaken maar de taken zijn voor iedereen onzichtbaar (geen eigenaar). Meenemen in bouwfase; juridisch oordeel (stuitingen) bij Lisanne.
+3. **Heropening werkvoorraad:** volgende batch per opdrachtgever mét stap 4b (rente-valkuil) — draaiboek `docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
 
 ---
 

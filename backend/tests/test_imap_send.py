@@ -308,6 +308,16 @@ def test_imap_quote_escapes_quote_and_backslash():
     assert _imap_quote("<normaal@id>") == "<normaal@id>"
 
 
+def test_imap_quote_neutralises_crlf_injection():
+    """Een 'gevouwen' Message-ID met CR/LF mag geen eigen IMAP-commando kunnen
+    injecteren — regeleindes worden spaties (S188d-review-fix)."""
+    from app.email.providers.imap_provider import _imap_quote
+
+    out = _imap_quote("<a@x>\r\nA1 DELETE INBOX")
+    assert "\r" not in out and "\n" not in out
+    assert _imap_quote("nul\x00byte") == "nul byte"
+
+
 @pytest.mark.asyncio
 async def test_imap_send_uses_display_name_and_real_text_part(monkeypatch, no_sent_append):
     """Afzender krijgt een weergavenaam en het text/plain-deel komt uit de HTML

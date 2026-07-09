@@ -33,9 +33,12 @@ SENT_FOLDER_CANDIDATES = ("INBOX.Sent", "Sent", "Sent Items", "Verzonden items")
 def _imap_quote(value: str) -> str:
     """Escape een string voor een IMAP quoted-string (RFC 3501 §4.3).
 
-    Beschermt de HEADER-zoekopdracht tegen een Message-ID met een " of \\ erin
-    (die staat in de mail en is dus door de afzender te beïnvloeden).
+    Beschermt de HEADER-zoekopdracht tegen een Message-ID met een " of \\ erin,
+    én tegen regeleinde-tekens (een 'gevouwen' Message-ID-header kan CR/LF
+    bevatten — rauw doorgegeven zou dat een eigen IMAP-commando injecteren).
+    De waarde staat in de mail en is dus door de afzender te beïnvloeden.
     """
+    value = re.sub(r"[\r\n\x00]", " ", value)
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 

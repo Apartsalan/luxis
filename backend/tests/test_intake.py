@@ -6,7 +6,7 @@ multi-tenant isolation, pending count, and API endpoints.
 """
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -293,6 +293,38 @@ class TestIntakeDetection:
 
         count = await detect_intake_emails(db, test_tenant.id)
         assert count == 0
+
+    async def test_window_not_clogged_by_non_client_mail(
+        self, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        """Regressie S188c: veel oude niet-opdrachtgever-mail mag het detectie-
+        venster niet dichtslibben zodat een echte opdrachtgever-mail nooit aan de
+        beurt komt. Vóór de fix vulde de 10-oudste-selectie zich met kansloze
+        systeem-/vreemde mail en werd de opdrachtgever-mail nooit gezien."""
+        client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+
+        base = datetime(2026, 3, 1, tzinfo=UTC)
+        # 15 oudere niet-opdrachtgever-mails (ander, niet-vrij domein → nooit match).
+        for i in range(15):
+            e = await _create_inbound_email(
+                db, test_tenant.id, account.id, from_email=f"noreply{i}@vreemd.nl"
+            )
+            e.email_date = base + timedelta(minutes=i)
+        # 1 nieuwere opdrachtgever-mail — staat qua datum ACHTER de 15 hierboven.
+        client_email = await _create_inbound_email(
+            db, test_tenant.id, account.id, from_email=client.email
+        )
+        client_email.email_date = base + timedelta(hours=1)
+        await db.commit()
+
+        count = await detect_intake_emails(db, test_tenant.id)
+        assert count == 1
+
+        result = await db.execute(
+            select(IntakeRequest).where(IntakeRequest.synced_email_id == client_email.id)
+        )
+        assert result.scalar_one().client_contact_id == client.id
 
 
 # ---------------------------------------------------------------------------

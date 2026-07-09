@@ -346,6 +346,37 @@ async def test_dismiss_emails(
     assert count_resp.json()["count"] == 0
 
 
+@pytest.mark.asyncio
+async def test_rematch_respects_dismissed(
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """Regressie S188c: de her-koppelronde mag een GENEGEERDE mail niet alsnog aan
+    een dossier hangen. Een niet-genegeerde mail met dezelfde afzender wordt wél
+    gekoppeld — zo bewijzen we dat het filter precies is en niets extra's breekt."""
+    from app.email.sync_service import _rematch_unlinked_emails
+
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    case = await _create_case(db, test_tenant.id)  # client-contact = debiteur@test.nl
+
+    dismissed = await _create_synced_email(
+        db, test_tenant.id, account.id, from_email="debiteur@test.nl", is_dismissed=True
+    )
+    active = await _create_synced_email(
+        db, test_tenant.id, account.id, from_email="debiteur@test.nl", is_dismissed=False
+    )
+    await db.commit()
+
+    linked = await _rematch_unlinked_emails(db, test_tenant.id)
+    await db.refresh(dismissed)
+    await db.refresh(active)
+
+    assert linked == 1
+    assert dismissed.case_id is None  # genegeerd blijft ongekoppeld
+    assert active.case_id == case.id  # niet-genegeerd wordt wel gekoppeld
+
+
 # ── Message Detail ───────────────────────────────────────────────────────────
 
 

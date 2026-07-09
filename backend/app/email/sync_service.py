@@ -784,6 +784,7 @@ async def _rematch_unlinked_emails(
             SyncedEmail.tenant_id == tenant_id,
             SyncedEmail.case_id == None,  # noqa: E711
             SyncedEmail.is_bounce == False,  # noqa: E712 — skip bounces
+            SyncedEmail.is_dismissed == False,  # noqa: E712 — "Negeren" respecteren (S188c)
         )
     )
     unlinked = list(result.scalars().all())

@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 
-from sqlalchemy import func, select
+from sqlalchemy import false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -56,47 +56,25 @@ async def detect_intake_emails(
 
     Returns the number of new intake requests created.
     """
-    # Already processed email IDs
-    already_processed = select(IntakeRequest.synced_email_id).where(
-        IntakeRequest.tenant_id == tenant_id
-    )
-
-    # Find eligible emails
-    result = await db.execute(
-        select(SyncedEmail)
-        .options(selectinload(SyncedEmail.attachments))
-        .where(
-            SyncedEmail.tenant_id == tenant_id,
-            SyncedEmail.direction == "inbound",
-            SyncedEmail.case_id.is_(None),  # Not linked to a case
-            SyncedEmail.is_dismissed.is_(False),
-            SyncedEmail.id.notin_(already_processed),
-        )
-        .order_by(SyncedEmail.email_date.asc())
-        .limit(10)  # Process max 10 per batch
-    )
-    emails = list(result.scalars().all())
-
-    if not emails:
-        return 0
-
-    # Get all client contacts for this tenant (to match sender emails)
+    # Kandidaat-mail = alleen mail van een BEKENDE opdrachtgever. Door dit in de
+    # query mee te filteren blijft het detectie-venster (10 oudste) niet hangen op
+    # oude niet-opdrachtgever-mail die nooit matcht (systeem-/eigen mail). Dat was
+    # de bug (S188c): de automaat kauwde elke ronde dezelfde 10 kansloze mails en
+    # kwam nooit toe aan echte nieuwe aanvragen. Daarom bouwen we de opdrachtgever-
+    # kaart VÓÓR de mailquery en filteren we de kandidaten erop.
     client_result = await db.execute(
         select(Contact)
         .join(Case, Case.client_id == Contact.id)
-        .where(
-            Contact.tenant_id == tenant_id,
-            Contact.email.isnot(None),
-        )
+        .where(Contact.tenant_id == tenant_id, Contact.email.isnot(None))
         .distinct()
     )
     client_contacts = {c.email.lower(): c for c in client_result.scalars().all() if c.email}
 
     # Domein-match: een opdrachtgever stuurt nieuwe zaken vaak vanaf verschillende
     # adressen binnen hetzelfde bedrijfsdomein (bv. jan@ én insolventie@incassocenter.nl).
-    # Bouw een domein→contact-kaart, maar sla vrije-mailproviders over (anders matcht
-    # elk gmail-adres) en domeinen die naar meerdere verschillende opdrachtgevers
-    # wijzen (ambigu). De handmatige "Maak dossier van deze mail" blijft het vangnet.
+    # Vrije-mailproviders overslaan (anders matcht elk gmail-adres) en domeinen die
+    # naar meerdere opdrachtgevers wijzen (ambigu) uitsluiten. De handmatige
+    # "Maak dossier van deze mail" blijft het vangnet voor de rest.
     domain_contacts: dict[str, Contact] = {}
     ambiguous_domains: set[str] = set()
     for contact in client_contacts.values():
@@ -109,9 +87,44 @@ async def detect_intake_emails(
         else:
             domain_contacts[domain] = contact
 
+    client_emails = list(client_contacts.keys())
+    client_domains = list(set(domain_contacts.keys()) - ambiguous_domains)
+    if not client_emails and not client_domains:
+        return 0  # geen opdrachtgevers met e-mail → niets te herkennen
+
+    already_processed = select(IntakeRequest.synced_email_id).where(
+        IntakeRequest.tenant_id == tenant_id
+    )
+
+    # Afzender (genormaliseerd) in de bekende opdrachtgever-adressen OF -domeinen.
+    db_sender = func.lower(SyncedEmail.from_email)
+    db_domain = func.split_part(db_sender, "@", 2)
+    candidate = or_(
+        db_sender.in_(client_emails) if client_emails else false(),
+        db_domain.in_(client_domains) if client_domains else false(),
+    )
+
+    result = await db.execute(
+        select(SyncedEmail)
+        .options(selectinload(SyncedEmail.attachments))
+        .where(
+            SyncedEmail.tenant_id == tenant_id,
+            SyncedEmail.direction == "inbound",
+            SyncedEmail.case_id.is_(None),  # Not linked to a case
+            SyncedEmail.is_dismissed.is_(False),
+            SyncedEmail.id.notin_(already_processed),
+            candidate,
+        )
+        .order_by(SyncedEmail.email_date.asc())
+        .limit(10)  # Process max 10 per batch
+    )
+    emails = list(result.scalars().all())
+    if not emails:
+        return 0
+
     created = 0
     for email in emails:
-        sender = email.from_email.lower()
+        sender = (email.from_email or "").lower()
         client_contact = client_contacts.get(sender)
         if client_contact is None:
             # Terugval: exact adres onbekend → probeer het bedrijfsdomein.
@@ -119,7 +132,7 @@ async def detect_intake_emails(
             if sender_domain and sender_domain not in ambiguous_domains:
                 client_contact = domain_contacts.get(sender_domain)
         if client_contact is None:
-            continue
+            continue  # defensief — de kandidaatfilter zou dit al moeten uitsluiten
 
         intake = IntakeRequest(
             tenant_id=tenant_id,

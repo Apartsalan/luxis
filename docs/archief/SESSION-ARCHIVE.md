@@ -7607,3 +7607,92 @@ regeling-termijnen (bewuste edge case in plan 2).
 **Volgende sessie (S178):** START OP FABLE — go-live gap-audit: wat blokkeert Lisanne nog om volledig van BaseNet naar Luxis over te stappen? Concreet mee te wegen: betalingen fase 1b (nodig?), debiteur-AV-nuance, "Facturen Legalwork"-opruiming. Onderzoek, niet bouwen. Zie `docs/sessions/PROMPT-S178.md`.
 </details>
 
+
+---
+
+## Sessie 182 (7 juli, Opus — bouwsprint livegang)
+
+**Taak 1 — regeling-alarm: LIVE.** Gat uit S181-F gedicht: de dagelijkse job zette
+vervallen betalingsregeling-termijnen wel op 'overdue' maar er kwam geen melding, dus
+niemand zag een gemiste termijn. Nu maakt `mark_overdue_installments` per gemiste termijn
+een in-app notificatie (nieuw type `installment_overdue`) met zaaknummer + bedrag +
+vervaldatum. **Bewust afgeweken van het plan:** melding gaat naar álle actieve
+kantoorgebruikers i.p.v. `assigned_to_id` — heropende BaseNet-zaken kunnen op een
+legacy/inactieve gebruiker staan, wat het alarm stil zou misleiden (precies wat dit moet
+voorkomen); gelijkgetrokken met de andere financiële alarmen. Frontend: meldingstype
+geregistreerd, linkt naar betalingen-tab. 33 tests groen (incl. nieuwe alarm-test: melding
+mét zaaknummer/bedrag + geen dubbele bij tweede run), ruff schoon, tsc schoon.
+Backend+frontend gedeployed (commit `8f49329`), geen migratie. Job op prod geforceerd =
+foutloze no-op (121 pending termijnen onaangeroerd, eerste vervalt 9 juli → eerste echte
+alarm 10 juli 06:00 UTC). Geen zaakstatus-filter (12/13 regelingen hangen aan afgesloten
+zaken — bedoeld).
+
+**Taak 2 — timeout-regels opschonen: LIVE (code `faf3fd6` + data-fix prod).**
+`evaluate_timeout_rules` koos per stap "de eerste" default-regel zónder ORDER BY (toeval);
+bij de dubbele regel op "Tweede sommatie" (→ Derde sommatie ÉN → inactieve
+Ingebrekestelling) kon de regel naar een stap zonder sjabloon winnen → ValueError → zaak
+stil hangen. Nu: ORDER BY created_at,id (oudste wint), regels naar inactieve doel-stap
+overgeslagen (actieve wint altijd), warning-log bij >1 default-regel per stap. 2 tests
+(inactieve-doel overgeslagen ondanks oudere created_at + determinisme), 60 pipeline-tests
+groen, ruff schoon. **Data-fix prod:** 4 dode/dubbele timeout-regels gedeactiveerd (niet
+verwijderd — historie): 3 vanaf inactieve stappen + de Tweede-sommatie→Ingebrekestelling.
+Bewijs ná: 0 actieve regels van/naar inactieve stappen, 0 stappen met >1 default-regel.
+Resterende keten schoon: 14-dagenbrief → Eerste → Tweede → Derde → Sommatie laatste
+mogelijkheid → Verzoekschrift faillissement.
+
+**Taak 3 — opvolg-scan slaat hold/terminale stappen over: LIVE (code `20bb5eb`).**
+`scan_for_followups` maakte voor elke zaak met een stap een aanbeveling zodra
+min_wait_days verstreken was; hold-stappen (Verweer beantwoorden/Bijhouden regeling/On
+hold, min_wait_days=0) gaven zo elke 30 min een ruis-aanbeveling — bij heropening ~100+
+zaken. Guard: `if step.is_hold_step or step.is_terminal: continue` (op de vlag, niet op
+naam). Verweer-zaken krijgen hun concept al via de e-mail-trigger. 3 tests, 22 followup
+groen, ruff schoon. Ruis-opruiming niet nodig: 0 pending aanbevelingen op hold-stappen
+(heropening nog niet gedraaid). Backend gezond na deploy.
+
+**Status sprint:** taken 1-3 (de drie NU-uitvoerbare) LIVE + geverifieerd. Taak 4
+(getrouwheids-poort) = optioneel/"tijd over"; beoordeeld als lager-nut nu (poort geldt pas
+als auto-draft-vlag aangaat, weken later) — overgelaten aan een aparte sessie.
+
+**Fable-review (subagent op Fable-model, adversarieel) → 2 fixes LIVE (code `ae4f6e7`).**
+De review vond twee echte gaten die ik heb gedicht: (1) `mark_overdue_installments`
+selecteerde alleen `pending`, maar een deelbetaalde termijn staat op `partial` → een
+debiteur die na één deelbetaling afhaakt bleef onzichtbaar. Nu flippen pending ÉN partial
+die vervallen naar overdue + melding (paid_amount blijft). (2) `evaluate_timeout_rules`
+waarschuwde alleen bij >1 default-regel; een énkele regel naar een inactieve doel-stap
+werd stil weggefilterd → poortwachter zelf stil. Nu warning-log bij elke overgeslagen
+inactief-doel-regel. 61 tests groen, backend gezond.
+**Taak 4 — getrouwheids-poort: LIVE (code `0c701f1`, op verzoek Arsalan tóch gedaan).**
+Na conceptgeneratie controleert een poort dat dossiernummer, hoofdsom, rentebedrag en
+te-voldoen-bedrag uit de context letterlijk in het concept staan (NL/EN-notatievarianten,
+alleen bedragen > 0, alleen als het sjabloon een bedragen-tabel heeft). Ontbreekt iets →
+regenereren (max 3 AI-calls); blijft fout → concept tóch aangemaakt maar reviewtaak
+gemarkeerd "⚠ … wijkt af — extra controleren" + issues in draft.sources. Nooit stil.
+**Plan-afwijking (bewust):** geen rentepercentage-check — geverifieerd op prod: sjablonen
+tonen rente als bedrag + vaste uitleg-alinea zónder percentage ('%' alleen in "BTW 21%");
+percentage afdwingen = elke contractuele-rente-brief vals geflagd. Rentebedrag-check is
+sterker. **Bijvangst: het XXX-vangnet was al die tijd kapot** — `"XXX" in result` checkte
+dict-sleutels i.p.v. de tekst, vuurde dus nooit; zit nu werkend in de poort (test dekt het).
+**Praktijkproef op 5 echte zaken (plan §1B stap 3) NIET gedaan** — maakt AI-concepten +
+taken aan op prod die Lisanne ziet; wacht op apart akkoord.
+
+**Reviewpunt regeling-achterdeur ook gedicht (zelfde commit, op verzoek Arsalan):**
+(1) regeling-alarm bewaakt alleen ACTIEVE regelingen (join-filter) — beëindigde regeling
+met achtergebleven open termijn alarmeert nooit meer (dit dichtte ook een interactie-bug
+van de partial-fix: partial op gedefaultete regeling zou anders alsnog alarmeren);
+(2) `/default` en `/cancel` sluiten nu ook `partial`-termijnen af (restant komt niet meer);
+(3) de generieke PATCH-route sluit open termijnen af bij eindstatus (defaulted→missed,
+cancelled/completed→waived) — de achterdeur is dicht. 7 nieuwe tests, 167 groen totaal.
+
+**Backup-migratie VS→EU: LIVE + BEWEZEN (S182-avond).** Fable blijkt t/m 12 juli
+beschikbaar; Arsalans nieuwe Backblaze-EU-account lukte wél. Uitgevoerd: bucket
+`luxis-backup-eu` (eu-central-003 Amsterdam, private, lifecycle keep-only-last, geverifieerd
+via endpoint), remote `luxis-b2-eu` + versleutelde laag `luxis-backup-eu-crypt` (rclone
+crypt: bestandsnamen + inhoud; rondgang-test bewees cijferbrij op B2-kant), cron omgezet
+(`RCLONE_REMOTE=luxis-backup-eu-crypt RCLONE_BUCKET=backups`), volledige proefrun (db 23 MB
++ uploads 1,2 GB), en de VERPLICHTE restore-test via de crypt-remote: wegwerp-DB geladen,
+tellingen exact live (cases 607/contacts 1168/payments 255), tarball leesbaar. Runbook +
+subverwerkers.md bijgewerkt. Crypt-wachtwoorden: VPS rclone.conf + doorgegeven aan Arsalan
+voor wachtwoordmanager (onvervangbaar!). **Restpunt 10 juli:** na 2 bewezen EU-runs (log
+8+9 juli) oude US-bucket `Luxis-backup` wissen + oude key intrekken + remote `luxis-backup`
+verwijderen, wisbewijs hier. /opt/db-backup.sh gecheckt: alleen lokaal, geen VS-lek.
+

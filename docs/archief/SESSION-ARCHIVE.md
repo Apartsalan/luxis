@@ -7696,3 +7696,48 @@ voor wachtwoordmanager (onvervangbaar!). **Restpunt 10 juli:** na 2 bewezen EU-r
 8+9 juli) oude US-bucket `Luxis-backup` wissen + oude key intrekken + remote `luxis-backup`
 verwijderen, wisbewijs hier. /opt/db-backup.sh gecheckt: alleen lokaal, geen VS-lek.
 
+
+---
+
+## Sessie 183 (8 juli, Fable — architectuur+security-audit, 100% read-only)
+
+**Vraag Arsalan:** "vibe-coded software zou onstabiel/onveilig/niet future-proof/verspillend
+zijn — klopt dat hier?" Antwoord: nee, grotendeels niet — maar de audit vond wél 4 nieuwe
+bevindingen. Volledig rapport (met bewijs, faalscenario's en werkorder):
+**`docs/research/audit-S183-architectuur-security.md`**. Geen enkele schrijfactie op prod.
+
+### Samenvatting (bevindingen)
+- **S183-3 [HOOG, geld]** `_build_claim_reductions` (interest.py) verdeelt betalingen fout
+  bij creditfacturen: negatief aandeel telt mee als "verdeeld" maar wordt niet toegepast →
+  laatste vordering krijgt te veel → rente te laag + creditvordering rent onverminderd door.
+  Bewezen door de echte functie uit te voeren (+1000/−200/+200, betaling 500 → 600 afgeboekt).
+  Prod: 68 negatieve claims (−€22.870) op 45 zaken; 11 zaken met de raak-combinatie; **4 in
+  de heropeningslijst** (IN100334/IN100469/IN100505/IN100553).
+- **S183-1 [MIDDEN, security]** `learned_answers` (S168) is de enige van 48 tenant-tabellen
+  zónder RLS op prod (bewezen met pg_class-query). Oorzaak: RLS-migratie was eenmalige sweep;
+  de RLS-test zet policies zelf aan en ziet drift dus nooit. App-laag filtert overal netjes →
+  geen actueel lek (één tenant), wel structureel: herhaalt zich bij elke nieuwe tabel.
+- **S183-2 [MIDDEN, security]** `SET LOCAL ROLE`/tenant vervalt bij élke tussentijdse
+  `db.commit()` — rest van het verzoek draait als superuser zonder RLS (live bewezen op
+  prod-DB; 31 plekken gemeten waar handlers na commit nog databasewerk doen). Maakt de
+  bekende superuser-residual concreet; handmatige filtering compenseert vandaag overal.
+- **S183-4 [LAAG, geld]** Betaling op/vóór verzuimdatum wordt in de renteberekening
+  weggefilterd (interest.py:276) → rente iets te hoog. Prod: 18 betalingen (€9.486), alle
+  op afgesloten zaken buiten de heropeningslijst.
+- **[LAAG, bekend]** `--no-cache` staat nog in deploy.yml (S162-residual).
+
+### Aantoonbaar op orde (niet meer auditen)
+RLS-beleid zelf (46/48 FORCE+policy), auth/rate-limits/OAuth-state (HMAC+nonce)/uploads
+(Caddy 55MB + per-endpoint caps)/secrets/VPS==HEAD; S172-kernbevinding "3 AI-services/3
+geheugens" ECHT opgeruimd (alle 3 paden op gedeelde `knowledge_context`); scheduler = 1
+proces + foutisolatie + advisory-lock; rekenkernen wet-conform met 65+ tests; `total_paid`
+== som betalingen op 0 zaken afwijkend; geen float op geldpaden.
+
+### Gewijzigde bestanden
+- `docs/research/audit-S183-architectuur-security.md` (nieuw — rapport + werkorder)
+- `docs/sessions/PROMPT-S184.md` (nieuw), SESSION-NOTES.md, LUXIS-ROADMAP.md
+
+### Volgende sessie
+S184 (Opus): fix-sprint met de werkorder uit het rapport — pro-rata-fix eerst (rode test),
+dan RLS-gat + drift-guard-test, dan rolwissel-na-commit, dan de 2 kleine punten. Plus de
+Backblaze-US-wis-check (~10 juli). Zie `docs/sessions/PROMPT-S184.md`.

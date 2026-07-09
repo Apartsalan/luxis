@@ -2,12 +2,55 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S189, Opus+Fable) — CI-rood test_role GEFIXT (rood→groen bewezen, CI volledig groen) + menu-doorlichting D-A klaar (Dashboard/Taken/Agenda/Documenten, read-only). Details: S189-entry.
-**Laatste feature/fix:** (test, S189) rolwissel-test bestand tegen stale rol-cache — commit 375b2f0; CI-deploy skipt niet meer. Details: S189-entry.
-**Openstaand:** verjaringsalarm onzichtbaar (HOOG, D-A); kijk-sessies D-B + D-C; volgende heropeningsbatch; terugstort IN100334.
-**Volgende sessie:** kijk-sessie D-B (`docs/sessions/PROMPT-DB-doorlichting.md`, Fable), of Opus-bouwblokken na fase-2-beslislijst, of volgende heropeningsbatch.
+**Laatst bijgewerkt:** 9 juli 2026 (S190, Fable) — kijk-sessie D-B klaar (Relaties/Dossiers/Incasso/Follow-up/Intake, 100% read-only): sommatie-verstuurpad kapot bewezen, status-engine leeg, verjaring ook in dossier onzichtbaar. Details: S190-entry.
+**Laatste feature/fix:** geen code (read-only); rapport `docs/research/audit-DB-kernmotor.md` + 13 werkorder-kandidaten B1-B13.
+**Openstaand:** B1 verstuurpad sommaties (HOOG, vóór eerste echte verzendronde); verjaring onzichtbaar (D-A A1 + D-B B2/B3, IN100016 verjaart 23-09-2026); regeling-termijn IN100019 was 9 juli; kijk-sessie D-C; volgende heropeningsbatch; terugstort IN100334.
+**Volgende sessie:** kijk-sessie D-C (`docs/sessions/PROMPT-DC-doorlichting.md`, Fable — laatste kijk-sessie), daarna fase-2-beslislijst met Arsalan → Opus-bouwblokken.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 190 (9 juli 2026, Fable — kijk-sessie D-B: kern-motor, 100% read-only)
+
+### Samenvatting
+Tweede van drie kijk-sessies uit `docs/plans/PLAN-doorlichting-menu.md`: Relaties, Dossiers,
+Incasso, Follow-up en Intake doorgelicht op techniek (5 vragen), partner-blik en UX/UI.
+Gemeten in prod-DB (exacte tellingen, niet de tabel-schattingen — die bleken bij
+managed_templates 2 vs 9 fout) + code gelezen + app doorgeklikt (0 consolefouten).
+Volledig rapport: **`docs/research/audit-DB-kernmotor.md`** (13 werkorder-kandidaten B1-B13).
+
+### Belangrijkste vondsten
+- **HOOG — sommatie-verstuurpad kapot + fout wordt gemaskeerd**: stap-sjabloonsleutels
+  `sommatie_drukte`/`faillissement_dreigbrief` zijn e-mailsjablonen, maar Follow-up-"Uitvoeren"
+  en Incasso-batch "Document genereren" proberen er eerst een DOCX mee te renderen — sleutel
+  bestaat in geen van beide DOCX-registers → faalt. Follow-up markeert de aanbeveling dan tóch
+  "Uitgevoerd" (fout weggestopt in execution_result), er gaat niets de deur uit. Raakt 10 van
+  13 openstaande aanbevelingen (Eerste sommatie). Consistent: email_logs=0, generated_documents=0.
+  De AI-conceptroute per dossier is de gezonde weg. (Code+data-bewijs; niet live geklikt.)
+- **HOOG — status-engine leeg**: workflow_statuses/transities/regels alle 0 (exact geteld) →
+  dossierstatus onwijzigbaar via UI, "Volgende stap"-knoppen (hardcoded fallback) op elk
+  dossier zouden falen, statusfilter Dossiers-lijst is leeg, date_closed wordt nooit gezet.
+- **HOOG — verjaring ook in het dossier onzichtbaar**: VerjaringBadge rekent vanaf date_opened
+  (IN100015: badge zou jan 2030 zeggen, echt verjaard okt 2025) en verbergt zich op afgesloten
+  zaken; de monitor (juiste basis) skipt zaken mét date_closed → IN100016 (verjaart 23-09-2026,
+  €16.020) en IN100064 (jun 2027, €37.002) volledig onzichtbaar.
+- **Regelingen buiten beeld**: 13 actieve regelingen (121 termijnen, 0 betaald), 12 op
+  afgesloten zaken; eerstvolgende termijnen 9/12/13/15/18 juli; alleen alarm achteraf.
+- **Vervuiling**: 17 inactieve pipeline-stappen + dode transities (2 actieve wijzen naar
+  inactieve stappen); case_step_history 1 rij; "AI-suggestie"-badge op alle 18 rijen door
+  het classificatie-eiland; intake = 7 testaanvragen, 0 echte dossiers ooit.
+- **Positief**: Relaties gezond (delete-guard, AV-versies); dossier-detail professioneel,
+  rente op de cent (S188b-ijkpunt); slim-leren beoordeeld: 103 goedgekeurd / 28 afgewezen.
+
+### Verificatie
+Alle dragende beweringen deze sessie zelf gemeten (SQL op prod / code / klik); schrijfacties
+bewust niet uitgevoerd — expliciete "niet geverifieerd"-lijst in het rapport (§7). Geen
+enkele mutatie op prod. Sessie-afronding: rapport + PROMPT-DC aangemaakt, plan D-B afgevinkt,
+S183-entry naar archief (max-10-regel).
+
+### Volgende sessie
+Kijk-sessie D-C (Bankimport, Derdengelden, Uren, Facturen, Rapportages, Instellingen) —
+kant-en-klare prompt `docs/sessions/PROMPT-DC-doorlichting.md`, Fable. Sluit af met de
+totale beslislijst D-A+D-B+D-C voor fase 2 met Arsalan.
 
 ## Sessie 189 (9 juli 2026, Opus+Fable — CI-fix + start menu-doorlichting D-A)
 
@@ -438,46 +481,3 @@ met Arsalan afgestemd): security-regels + de eerdere "geen-aannames"-regel; rege
 → auto-deploy + tag sessie-184), 4 heropeningszaken herrekenen ná deploy (met akkoord), 7
 dossiers sluiten (Lisanne akkoord, niet autonoom), IN100334-terugstort, Backblaze-wis ~10 juli.
 Volgende sessie = uitrol + nazorg: `docs/sessions/PROMPT-S185.md`.
-
-## Sessie 183 (8 juli, Fable — architectuur+security-audit, 100% read-only)
-
-**Vraag Arsalan:** "vibe-coded software zou onstabiel/onveilig/niet future-proof/verspillend
-zijn — klopt dat hier?" Antwoord: nee, grotendeels niet — maar de audit vond wél 4 nieuwe
-bevindingen. Volledig rapport (met bewijs, faalscenario's en werkorder):
-**`docs/research/audit-S183-architectuur-security.md`**. Geen enkele schrijfactie op prod.
-
-### Samenvatting (bevindingen)
-- **S183-3 [HOOG, geld]** `_build_claim_reductions` (interest.py) verdeelt betalingen fout
-  bij creditfacturen: negatief aandeel telt mee als "verdeeld" maar wordt niet toegepast →
-  laatste vordering krijgt te veel → rente te laag + creditvordering rent onverminderd door.
-  Bewezen door de echte functie uit te voeren (+1000/−200/+200, betaling 500 → 600 afgeboekt).
-  Prod: 68 negatieve claims (−€22.870) op 45 zaken; 11 zaken met de raak-combinatie; **4 in
-  de heropeningslijst** (IN100334/IN100469/IN100505/IN100553).
-- **S183-1 [MIDDEN, security]** `learned_answers` (S168) is de enige van 48 tenant-tabellen
-  zónder RLS op prod (bewezen met pg_class-query). Oorzaak: RLS-migratie was eenmalige sweep;
-  de RLS-test zet policies zelf aan en ziet drift dus nooit. App-laag filtert overal netjes →
-  geen actueel lek (één tenant), wel structureel: herhaalt zich bij elke nieuwe tabel.
-- **S183-2 [MIDDEN, security]** `SET LOCAL ROLE`/tenant vervalt bij élke tussentijdse
-  `db.commit()` — rest van het verzoek draait als superuser zonder RLS (live bewezen op
-  prod-DB; 31 plekken gemeten waar handlers na commit nog databasewerk doen). Maakt de
-  bekende superuser-residual concreet; handmatige filtering compenseert vandaag overal.
-- **S183-4 [LAAG, geld]** Betaling op/vóór verzuimdatum wordt in de renteberekening
-  weggefilterd (interest.py:276) → rente iets te hoog. Prod: 18 betalingen (€9.486), alle
-  op afgesloten zaken buiten de heropeningslijst.
-- **[LAAG, bekend]** `--no-cache` staat nog in deploy.yml (S162-residual).
-
-### Aantoonbaar op orde (niet meer auditen)
-RLS-beleid zelf (46/48 FORCE+policy), auth/rate-limits/OAuth-state (HMAC+nonce)/uploads
-(Caddy 55MB + per-endpoint caps)/secrets/VPS==HEAD; S172-kernbevinding "3 AI-services/3
-geheugens" ECHT opgeruimd (alle 3 paden op gedeelde `knowledge_context`); scheduler = 1
-proces + foutisolatie + advisory-lock; rekenkernen wet-conform met 65+ tests; `total_paid`
-== som betalingen op 0 zaken afwijkend; geen float op geldpaden.
-
-### Gewijzigde bestanden
-- `docs/research/audit-S183-architectuur-security.md` (nieuw — rapport + werkorder)
-- `docs/sessions/PROMPT-S184.md` (nieuw), SESSION-NOTES.md, LUXIS-ROADMAP.md
-
-### Volgende sessie
-S184 (Opus): fix-sprint met de werkorder uit het rapport — pro-rata-fix eerst (rode test),
-dan RLS-gat + drift-guard-test, dan rolwissel-na-commit, dan de 2 kleine punten. Plus de
-Backblaze-US-wis-check (~10 juli). Zie `docs/sessions/PROMPT-S184.md`.

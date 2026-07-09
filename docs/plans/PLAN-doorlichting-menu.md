@@ -59,7 +59,7 @@ onderdeel expliciet akkoord. Daarna volgorde van bouwen vaststellen (belangrijks
 
 ## Status
 - [x] D-A Werkschil — doorlichting (9 juli, rapport: `docs/research/audit-DA-werkschil.md`)
-- [ ] D-B Kern-motor — doorlichting
+- [x] D-B Kern-motor — doorlichting (9 juli, rapport: `docs/research/audit-DB-kernmotor.md`)
 - [ ] D-C Financieel + systeem — doorlichting
 - [ ] Fase 2 beslislijst met Arsalan
 - [ ] Bouwblokken (volgorde na fase 2)

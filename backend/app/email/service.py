@@ -19,6 +19,20 @@ def is_configured() -> bool:
     return bool(settings.smtp_host) and bool(settings.smtp_from)
 
 
+def check_outbound_lock() -> None:
+    """Bouwfase-noodslot: blokkeer álle uitgaande mail zolang het slot aan staat.
+
+    Aangevraagd 9 juli 2026 (Arsalan): tijdens de bouwfase mag er niets naar
+    wederpartijen/debiteuren gemaild worden. Slot eraf = OUTBOUND_MAIL_LOCK
+    weghalen (of op false zetten) in /opt/luxis/.env + backend herstarten.
+    """
+    if settings.outbound_mail_lock:
+        raise RuntimeError(
+            "Mailverzending staat op slot (bouwfase). Zet OUTBOUND_MAIL_LOCK=false "
+            "op de server om weer te kunnen versturen."
+        )
+
+
 async def send_email(
     *,
     to: str,
@@ -41,6 +55,7 @@ async def send_email(
         RuntimeError: If SMTP is not configured.
         aiosmtplib.SMTPException: On SMTP delivery failure.
     """
+    check_outbound_lock()
     if not is_configured():
         raise RuntimeError("SMTP niet geconfigureerd. Stel SMTP_HOST en SMTP_FROM in.")
 

@@ -56,6 +56,8 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      # Bouwfase-noodslot uitgaande mail (9 juli 2026); weghalen/false = slot eraf
+      OUTBOUND_MAIL_LOCK: ${OUTBOUND_MAIL_LOCK:-false}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}

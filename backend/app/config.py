@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     smtp_pass: str = ""
     smtp_from: str = ""
     smtp_use_tls: bool = True
+    # Bouwfase-noodslot: True = álle uitgaande mail geblokkeerd (alle providers + SMTP).
+    outbound_mail_lock: bool = False
 
     # Google OAuth (Gmail API)
     google_client_id: str = ""

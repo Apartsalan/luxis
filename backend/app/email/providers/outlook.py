@@ -315,6 +315,9 @@ class OutlookProvider(EmailProvider):
         The message appears in the user's Sent Items folder automatically.
         Supports file attachments inline via contentBytes (max ~4MB per attachment).
         """
+        from app.email.service import check_outbound_lock
+
+        check_outbound_lock()
         # S145: convert non-ASCII chars to HTML entities to avoid Graph's
         # Windows-1252 charset header from corrupting € / ë / é etc.
         body_html = _to_html_entities(body_html)

@@ -562,6 +562,9 @@ class ImapProvider(EmailProvider):
 
         import aiosmtplib
 
+        from app.email.service import check_outbound_lock
+
+        check_outbound_lock()
         if not smtp_host or not username:
             raise ValueError("IMAP-verzending vereist smtp_host en username")
 

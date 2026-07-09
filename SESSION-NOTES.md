@@ -2,10 +2,10 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S188c) — Fable-review mailwerk S185-187 + 2 fixes op Opus (aanvraag-detectie liep vast; "Negeren" nu heilig). 52 tests groen. Details: S188c-entry.
-**Laatste feature/fix:** (code, S188c) detect-kandidaatfilter + rematch respecteert is_dismissed; 3 regressietests. Commit edf88da. Details: S188c-entry.
-**Openstaand:** Fable-review van de 2 S188c-fixes (Arsalan); 6 kleine mail-verbeterpunten (niet urgent); CI-rood test_role (niet-mail); volgende heropeningsbatches; terugstort IN100334.
-**Volgende sessie:** Fable-review S188c-fixes; daarna volgende heropeningsbatch of de kleine mail-verbeterpunten.
+**Laatst bijgewerkt:** 9 juli 2026 (S188c/d) — Fable-review mailwerk S185-187 + 2 fixes, daarna óók de 6 kleinere verbeterpunten gebouwd (op verzoek). 91 mail/intake-tests groen. Details: S188c-entry.
+**Laatste feature/fix:** (code, S188d) 6 mailverbeteringen — echte tekstversie, doorsturen-met-bijlage, adres-validatie, IMAP-ontsmetting, afzendernaam, Verzonden-map-constante. Commit 2806a9e. Details: S188c-entry.
+**Openstaand:** **Fable-review van ál het S188c/d-werk (Arsalan)**; CI-rood test_role (niet-mail); volgende heropeningsbatches; terugstort IN100334.
+**Volgende sessie:** Fable-review S188c/d; daarna volgende heropeningsbatch.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
 
@@ -34,12 +34,20 @@ in een geïsoleerde wegwerp-postgres op de VPS (bind-mount van de wijzigingen; p
 wegwerp-db daarna verwijderd). Commit `edf88da`, gepusht. Lint niet los gedraaid (uvx ontbrak in de
 wegwerp-container) → teststraat pikt ruff op.
 
+### S188d — de 6 kleinere verbeterpunten alsnog gebouwd (op verzoek Arsalan, commit `2806a9e`)
+Allemaal op Opus, met tests; frontend tsc + ruff schoon; 91 mail/intake-tests groen (geïsoleerde
+wegwerp-postgres, prod-data niet geraakt).
+1. **Echte tekstversie** van uitgaande mail, afgeleid uit de HTML (`_html_to_text`) i.p.v. de
+   placeholder-zin — beter voor tekst-only clients + spamscore.
+2. **Doorsturen met bijlagen**: `forward_from_email_id` → achterkant laadt de bijlagen van de
+   oorspronkelijke mail van schijf (`_load_forwarded_attachments`); voor- en achterkant bedraad.
+3. **Server-side adres-validatie** op `/compose/send` (to + cc, lege to afgewezen).
+4. **IMAP-ontsmetting**: Message-ID in de HEADER-zoekopdracht wordt geëscaped (`_imap_quote`).
+5. **Afzendernaam**: "Kesting Legal <incasso@...>" via `from_name` (kantoornaam) op beide verzendpaden.
+6. **Verzonden-map-namen** in één constante (`SENT_FOLDER_CANDIDATES`), consistent gebruikt.
+
 ### Openstaand
-- **Fable-review van déze 2 fixes door Arsalan** (afgesproken werkwijze Opus-bouw → Fable-review).
-- NIET gebouwd (bewust, geen van alle urgent): de 6 kleinere review-punten — neptekst-versie van
-  uitgaande mail, doorsturen mist bijlagen, geen server-side e-mailadres-validatie, bijlage-fetch
-  ontsmet zoekterm niet, afzender toont alleen kaal adres, Verzonden-map-volgorde. Lijst in
-  de review hierboven; oppakken op verzoek.
+- **Fable-review van ál het S188c/d-werk door Arsalan** (afgesproken werkwijze Opus-bouw → Fable-review).
 - CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,
   géén mailwerk) → deploy skipt. Verdient losse fix of skip-markering.
 

@@ -2,12 +2,47 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (tussensessie, Fable) — documentatie-opruiming: levende docs klein, historie naar `docs/archief/`. Details: tussensessie-entry.
+**Laatst bijgewerkt:** 9 juli 2026 (S188, Opus) — de 2 mailverificatie-gaten uit S187 live dichtgeklikt (Ongesorteerd-tab + "Maak dossier van deze mail"). Geen code. Details: S188-entry.
 **Laatste feature/fix:** (code, S187) mailfunctie afgemaakt — blok A+B live + browser-geverifieerd. Details: S187-entry.
-**Openstaand:** ⚠️ 2 verificatiegaten S187 (Ongesorteerd-tab + "Maak dossier"-flow live doorklikken); Backblaze US-bucket wissen ~10 juli na 2 bewezen EU-runs; DMARC/DKIM kestinglegal.nl; testspoor "Luxis diagnose SELF" dismissen; 2 crypt-wachtwoorden in wachtwoordmanager (Arsalan); heropening werkvoorraad wacht op input Lisanne/Arsalan.
-**Volgende sessie (S188):** eerst de 2 verificatiegaten dichtklikken, dan heropening werkvoorraad. Prompt: `docs/sessions/PROMPT-S188.md`.
+**Openstaand:** heropening werkvoorraad (wacht op input Lisanne/Arsalan); Backblaze US-bucket wissen ~10 juli na 2 bewezen EU-runs; DMARC/DKIM kestinglegal.nl; testspoor "Luxis diagnose SELF" dismissen; 2 crypt-wachtwoorden in wachtwoordmanager (Arsalan).
+**Volgende sessie (S189):** heropening werkvoorraad starten met LegalWork B.V. zodra input er is. Prompt: `docs/sessions/PROMPT-S188.md` (nog geldig; S188-verificatie is klaar).
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 188 (9 juli 2026, Opus — mailverificatie live, geen code)
+
+### Samenvatting
+De 2 openstaande verificatiegaten uit S187 live dichtgeklikt in de ingelogde prod-app
+(seidony@kestinglegal.nl). Geen code gewijzigd; niets verstuurd.
+
+**Gat 1 — Ongesorteerd-tab (gedeeld `EmailDetailPanel`): volledig groen.**
+- Bulk-selectie: "Selecteer alles" → "67 geselecteerd" + actiebalk (Koppel aan dossier /
+  Negeren / Deselecteer); Deselecteer wist de selectie. Per-rij-vinkjes werken.
+- Leesvenster op een mail mét bijlage: afzender/ontvanger/datum, bijlage getoond
+  (`LISANNE-A4-heropening… 2 KB`), mailtekst, knoppen aanwezig.
+- Beantwoorden opent: "Aan" voorgevuld met afzender, onderwerp "Re: …", origineel als citaat.
+- Doorsturen opent: onderwerp "Fwd: …", leeg "Aan", doorgestuurd-blok, Versturen terecht
+  uitgeschakeld zonder ontvanger. Beide geannuleerd — niets verstuurd.
+
+**Gat 2 — "Maak dossier van deze mail" (nieuwe knop/endpoint): groen.**
+- Klik op de knop → intake-aanvraag aangemaakt, app sprong naar "Nieuwe aanvragen" (2→3).
+- AI-uittreksel draaide (model claude-haiku-4-5, zekerheid getoond); op een testmail zonder
+  incasso-inhoud kwam het uittreksel terecht leeg (<UNKNOWN>, 10%) — correct gedrag.
+- "Details bewerken" navigeert naar `/intake/[id]` (debiteur/factuur/AI-analyse/bron-mail +
+  Afwijzen/Goedkeuren). Testaanvraag opgeruimd via Afwijzen (met reden) → teller 3→2.
+
+### Niet uitgevoerd (bewust, met reden)
+De laatste deelstap "Maak dossier/Goedkeuren → PERMANENT dossier" niet geklikt: de enige
+beschikbare ongekoppelde mails zijn test/self-mails waaruit de AI (terecht) niets haalt, dus
+goedkeuren zou een leeg junk-dossier op prod zetten waarvan het opruimen (Case verwijderen)
+een echt destructieve prod-actie is. Die deelstap is bovendien bestáánde intake-code (al in
+gebruik); het NIEUWE werk uit S187 (mail→aanvraag + domein-herkenning) is hiermee geverifieerd.
+Een echte eind-tot-eind dossier-aanmaak kan zodra er een echte nieuwe opdrachtgever-aanvraag
+binnenkomt (of op expliciet verzoek een wegwerp-dossier + opruiming).
+
+### Volgende sessie
+Heropening werkvoorraad — wacht op input Lisanne/Arsalan. Draaiboek
+`docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
 
 ## Tussensessie (9 juli 2026, Fable — documentatie-opruiming, geen code)
 
@@ -497,50 +532,4 @@ IN100334, IN100456, IN100457 → ter bevestiging aan Lisanne (afsluiten i.p.v. h
 
 **Volgende sessie:** geen machine-bouwwerk meer nodig vóór de heropening — de livegang-
 blokken zijn mensenwerk (recept Lisanne / mail Arsalan / generale repetitie). Zie PROMPT-S181.
-
-## Sessie 179 (6 juli, Opus-bouw fase 1b — betalingen + regelingen)
-
-Uitvoering van PROMPT-S179 (gap-audit S178). Dry-run eerst getoond aan Arsalan; hij gaf
-akkoord op alle 56 incl. de 4 creditnota's ("maakt niet uit, zijn afgesloten + oud, we
-houden BaseNet ook nog aan"). Daarna --execute op prod.
-
-**Taak A — betalingen (LIVE+geverifieerd).** `scripts/basenet/import_payments.py`: 56
-betalingen (€165.697) via de gedeelde `create_payment_for_case` (art. 6:44 + dossierrente),
-met **workflow-hook + termijn-koppeling UIT** (nieuwe vlag `_skip_workflow_hook` op
-`create_payment`/`create_payment_for_case`) — een historische betaling mag een dossier niet
-automatisch op 'betaald' zetten/sluiten. Chronologisch per zaak (rente-knip). Overbetaling
-t.o.v. het op de betaaldatum openstaande bedrag gecapt (17×, klein, archiefzaken) en
-gerapporteerd. Idempotent via `[BaseNet-betaling systemid=..]`-marker; `--cleanup` = rollback.
-- **Reconciliatie-inzicht:** de 29 "verschillen" met BaseNet's cache zijn géén gemiste
-  betalingen — BaseNet telt dezelfde betaling dubbel (klant+admin, exact 2×). Ons enkele
-  bedrag is juist.
-- **Eerlijk gat:** 90 zaken hebben cache-betalingen zónder gedateerd record (19 lopend,
-  €33.161) → niet importeerbaar, ogen té open. → S180 Fable (boekhoud-matching).
-
-**Taak B — betalingsregelingen (LIVE+geverifieerd).** 13 regelingen / 121 **toekomstige**
-termijnen (verleden termijnen bewust NIET — bron zegt niet of ze betaald zijn; zou de
-overdue-job vervuilen). Deterministische uuid5-id's, status active/pending. Deadline-zaken
-zichtbaar: IN100019 (9 juli), IN100215-proefzaak (12 juli, via Lisanne's login geverifieerd
-in de API), IN100454 (13 juli). Grootste: IN100345 (62 termijnen t/m 2031).
-
-**Taak C — klein herstel.**
-- Team-tab read-only: uitnodigen/rol-wijzigen/deactiveren riepen niet-bestaande endpoints
-  aan (`/api/users/invite` = 404). Dode UI + mutation-hooks verwijderd i.p.v. een invite-
-  mailflow bouwen (YAGNI, eenpersoonskantoor). Teamlijst blijft zichtbaar. tsc schoon, live.
-- IN100592 verplaatst van "Facturen Legalwork" (facturen-contact, kreeg de zaak per abuis)
-  naar **LegalWork B.V.** (BaseNet-label bevestigt: "LegalWork B.V. / Onbevreesd B.V.").
-  LegalWork nu 20 zaken, Facturen Legalwork 0 (= consistent met z'n 5 facturen@-broertjes;
-  contact bewust NIET gedeactiveerd — zou juist inconsistent zijn).
-- IN100555 = D-Break-zaak met 0 vorderingen (cachedhoofdsom 0) → met rust gelaten
-  (D-Break geen vaste opdrachtgever), lege archiefzaak, ongevaarlijk.
-
-**Tests/verificatie:** 8 nieuwe tests (mapping betalingen/regelingen + toekomst-filter),
-20 basenet-tests groen, 148 payment-tests groen, ruff schoon, frontend tsc schoon. Backend
-gezond na deploy, 0 errors. Export-bestanden na import van de VPS verwijderd (PII).
-
-**Gewijzigde bestanden:** `scripts/basenet/import_payments.py` (nieuw), `mapping.py`,
-`backend/app/collections/service.py` (`_skip_workflow_hook`), `backend/tests/test_basenet_import.py`,
-`frontend/.../instellingen/team-tab.tsx`, `frontend/src/hooks/use-users.ts`.
-
-**Volgende sessie (S180, Fable):** boekhoud-matching 90 cache-only zaken (`PROMPT-S180.md`).
 

@@ -7418,6 +7418,53 @@ betalingen, volledige boekhoud-import, Exact-activatie nu.
 S179 (Opus): betalingen + regelingen-import, dry-run eerst. Zie `PROMPT-S179.md`.
 
 
+## Sessie 179 (6 juli, Opus-bouw fase 1b — betalingen + regelingen)
+
+Uitvoering van PROMPT-S179 (gap-audit S178). Dry-run eerst getoond aan Arsalan; hij gaf
+akkoord op alle 56 incl. de 4 creditnota's ("maakt niet uit, zijn afgesloten + oud, we
+houden BaseNet ook nog aan"). Daarna --execute op prod.
+
+**Taak A — betalingen (LIVE+geverifieerd).** `scripts/basenet/import_payments.py`: 56
+betalingen (€165.697) via de gedeelde `create_payment_for_case` (art. 6:44 + dossierrente),
+met **workflow-hook + termijn-koppeling UIT** (nieuwe vlag `_skip_workflow_hook` op
+`create_payment`/`create_payment_for_case`) — een historische betaling mag een dossier niet
+automatisch op 'betaald' zetten/sluiten. Chronologisch per zaak (rente-knip). Overbetaling
+t.o.v. het op de betaaldatum openstaande bedrag gecapt (17×, klein, archiefzaken) en
+gerapporteerd. Idempotent via `[BaseNet-betaling systemid=..]`-marker; `--cleanup` = rollback.
+- **Reconciliatie-inzicht:** de 29 "verschillen" met BaseNet's cache zijn géén gemiste
+  betalingen — BaseNet telt dezelfde betaling dubbel (klant+admin, exact 2×). Ons enkele
+  bedrag is juist.
+- **Eerlijk gat:** 90 zaken hebben cache-betalingen zónder gedateerd record (19 lopend,
+  €33.161) → niet importeerbaar, ogen té open. → S180 Fable (boekhoud-matching).
+
+**Taak B — betalingsregelingen (LIVE+geverifieerd).** 13 regelingen / 121 **toekomstige**
+termijnen (verleden termijnen bewust NIET — bron zegt niet of ze betaald zijn; zou de
+overdue-job vervuilen). Deterministische uuid5-id's, status active/pending. Deadline-zaken
+zichtbaar: IN100019 (9 juli), IN100215-proefzaak (12 juli, via Lisanne's login geverifieerd
+in de API), IN100454 (13 juli). Grootste: IN100345 (62 termijnen t/m 2031).
+
+**Taak C — klein herstel.**
+- Team-tab read-only: uitnodigen/rol-wijzigen/deactiveren riepen niet-bestaande endpoints
+  aan (`/api/users/invite` = 404). Dode UI + mutation-hooks verwijderd i.p.v. een invite-
+  mailflow bouwen (YAGNI, eenpersoonskantoor). Teamlijst blijft zichtbaar. tsc schoon, live.
+- IN100592 verplaatst van "Facturen Legalwork" (facturen-contact, kreeg de zaak per abuis)
+  naar **LegalWork B.V.** (BaseNet-label bevestigt: "LegalWork B.V. / Onbevreesd B.V.").
+  LegalWork nu 20 zaken, Facturen Legalwork 0 (= consistent met z'n 5 facturen@-broertjes;
+  contact bewust NIET gedeactiveerd — zou juist inconsistent zijn).
+- IN100555 = D-Break-zaak met 0 vorderingen (cachedhoofdsom 0) → met rust gelaten
+  (D-Break geen vaste opdrachtgever), lege archiefzaak, ongevaarlijk.
+
+**Tests/verificatie:** 8 nieuwe tests (mapping betalingen/regelingen + toekomst-filter),
+20 basenet-tests groen, 148 payment-tests groen, ruff schoon, frontend tsc schoon. Backend
+gezond na deploy, 0 errors. Export-bestanden na import van de VPS verwijderd (PII).
+
+**Gewijzigde bestanden:** `scripts/basenet/import_payments.py` (nieuw), `mapping.py`,
+`backend/app/collections/service.py` (`_skip_workflow_hook`), `backend/tests/test_basenet_import.py`,
+`frontend/.../instellingen/team-tab.tsx`, `frontend/src/hooks/use-users.ts`.
+
+**Volgende sessie (S180, Fable):** boekhoud-matching 90 cache-only zaken (`PROMPT-S180.md`).
+
+
 ---
 
 # Blok 3 — oude kopregels uit SESSION-NOTES.md (verbatim, gearchiveerd 9 juli 2026)

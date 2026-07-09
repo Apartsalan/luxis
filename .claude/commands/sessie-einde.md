@@ -58,6 +58,12 @@ cd Documents\luxis && claude --dangerously-skip-permissions
 ```
 Dit is de eerste regel van elke sessie-prompt. De gebruiker kopieert dit in PowerShell om Claude Code te openen met permission bypass.
 
+**VERPLICHT: de eerste INHOUDELIJKE stap van elke prompt is `/sessie-start`.**
+Dat commando leest via de researcher-subagent SESSION-NOTES.md + LUXIS-ROADMAP.md, scant de
+bestaande modules/pagina's (existence-check-discipline) en laadt de verbindingskaart. Zet dit
+dus altijd bovenaan — niet zelf de docs opsommen die `/sessie-start` al leest. Alleen
+taak-specifieke extra docs (een plan, een auditrapport) apart benoemen ná `/sessie-start`.
+
 **Daarna het sessie-prompt format:**
 
 ```
@@ -65,9 +71,10 @@ cd Documents\luxis && claude --dangerously-skip-permissions
 
 Sessie N — [onderwerp]
 
-## Context laden bij start
-Gebruik de luxis-researcher subagent:
-"Lees LUXIS-ROADMAP.md (sectie [relevant]) en SESSION-NOTES.md (sessie N-1). Geef compacte samenvatting."
+## Start
+Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant modules,
+laadt de verbindingskaart). Ga daarna zonder te wachten door met de taak hieronder.
+Extra taak-context (alleen wat `/sessie-start` NIET al leest): [plan/rapport-bestand, of "geen"].
 
 ## Taak
 [Concrete beschrijving — wat moet er gebouwd/gefixt worden]

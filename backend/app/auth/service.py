@@ -112,7 +112,7 @@ async def create_user(
     email: str,
     password: str,
     full_name: str,
-    role: str = "medewerker",
+    role: str = "admin",
 ) -> User:
     """Create a new user in the given tenant. Raises ConflictError on duplicate email."""
     from app.auth.schemas import ROLES

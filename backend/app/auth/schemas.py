@@ -27,7 +27,7 @@ class RegisterRequest(BaseModel):
     email: str = Field(max_length=320)
     password: str = Field(min_length=12)
     full_name: str = Field(min_length=1, max_length=255)
-    role: str = Field(default="medewerker", description="admin, advocaat, or medewerker")
+    role: str = Field(default="admin", description="admin, advocaat, or medewerker")
 
     @field_validator("password")
     @classmethod

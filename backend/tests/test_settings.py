@@ -92,6 +92,33 @@ async def test_update_tenant_settings_non_admin_forbidden(
 
 
 @pytest.mark.asyncio
+async def test_new_user_is_admin_and_can_save_settings(
+    client: AsyncClient, db: AsyncSession, test_tenant: Tenant
+):
+    """S194: create_user defaults to admin, so a freshly created user can save settings."""
+    from app.auth.service import create_user
+
+    user = await create_user(
+        db,
+        tenant_id=test_tenant.id,
+        email="nieuw@kestinglegal.nl",
+        password="Wachtwoord12345",
+        full_name="Nieuwe Gebruiker",
+    )
+    await db.commit()
+    assert user.role == "admin"
+
+    token = create_access_token(str(user.id), str(test_tenant.id))
+    resp = await client.put(
+        "/api/settings/tenant",
+        json={"city": "Amsterdam"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["city"] == "Amsterdam"
+
+
+@pytest.mark.asyncio
 async def test_update_preserves_unset_fields(
     client: AsyncClient, auth_headers: dict, test_tenant: Tenant
 ):

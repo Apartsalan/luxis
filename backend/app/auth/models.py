@@ -66,8 +66,10 @@ class User(Base, TimestampMixin):
     email: Mapped[str] = mapped_column(String(320), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Roles: admin, advocaat, medewerker
-    role: Mapped[str] = mapped_column(String(50), default="medewerker")
+    # Roles: admin, advocaat, medewerker. Default admin: Kesting is een klein
+    # kantoor waar iedereen alles mag (wens Arsalan, S194) — de rollen-matrix
+    # blijft bestaan voor toekomstige meer-persoons-tenants.
+    role: Mapped[str] = mapped_column(String(50), default="admin")
     is_active: Mapped[bool] = mapped_column(default=True)
     default_hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     password_reset_token: Mapped[str | None] = mapped_column(

@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 9 juli 2026 (sessie 191, Fable — **menu-doorlichting COMPLEET: D-A + D-B + D-C alle drie klaar**). D-C-rapport `docs/research/audit-DC-financieel-systeem.md`: financiële laag (bankimport/derdengelden/uren/facturen/Exact) is af en test-gedekt maar nooit gebruikt (alle tabellen 0 rijen); bankimport = het regelingen-betaalzicht, alleen voeden; derdengelden-IBAN = kantoor-IBAN (fixen vóór ingebruikname). Totaal-beslislijst D-A+D-B+D-C (34 punten, 5 blokken) in §9 van dat rapport. Plus Codex-samenwerkingsadvies (`docs/research/advies-codex-samenwerking.md`). **Next: S192 = fase-2-beslisgesprek met Arsalan → Opus-bouwblokken.** Details: SESSION-NOTES S191-entry.
+**Laatst bijgewerkt:** 10 juli 2026 (sessie 193, Opus + Codex-review — **bouwblok 1 GEBOUWD + uitgerold**). B1 verstuurpad (e-mailroute + nooit valse "Uitgevoerd"), B13 vast kanaal incasso@ + preview vóór verzenden, B2+A1 verjaring zichtbaar (monitor/badge/taken), A2 dashboardfilter. Codex (Sol Ultra, alleen-lezen) reviewde beide porties tot APPROVED. Live op prod, mailslot bleef aan. **Next: S194 = bouwblok 2 zodra C2 binnen (bankimport-proef) of bouwblok 3.** Details: SESSION-NOTES S193-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 9 juli 2026, S190)
+## 🎯 Huidige prioriteit (bijgewerkt 10 juli 2026, S193)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -62,8 +62,8 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > alleen op verzoek Arsalan): regel weghalen of op false + `docker compose up -d backend`.
 > Ontvangen/sync werkt gewoon door.
 
-1. **Fase 2 "Luxis afmaken" — BESLOTEN (9 juli, S191b), nu bouwen:** doorlichting compleet (D-A/D-B/D-C in `docs/research/`), beslisgesprek gevoerd, besluiten in `docs/plans/PLAN-fase2-bouwblokken.md`. Volgorde: **bouwblok 1 = S193 op Opus** (B1 verstuurpad + B13 vangrails + B2/A1 verjaring + A2 — prompt `docs/sessions/PROMPT-S193-bouwblok1.md`, vóór mailslot eraf); blok 2 zodra Arsalan de C2-gegevens levert (10 juli, stichting-IBAN + BTW) → eerste bankimport-proef; blok 3 (B3-versimpeling + A5-pauze + A3 + A7); veegsessie; Codex-bouwproef na installatie ~13 juli. Uren + Facturatie blijven AAN (keuze Arsalan).
-2. **Verjaringsalarm zichtbaar maken (HOOG, uit D-A+D-B):** monitor-taken eigenaarloos onzichtbaar (A1), dossier-badge rekent vanaf verkeerde datum en monitor mist zaken met sluitdatum — IN100016 verjaart 23-09-2026 (B2). Juridisch oordeel (stuitingen) bij Lisanne.
+1. **Bouwblok 1 — GEBOUWD + LIVE (S193, Opus + Codex-review APPROVED).** B1 verstuurpad + geen valse "Uitgevoerd", B13 vast kanaal incasso@ + preview, B2+A1 verjaring zichtbaar, A2 dashboardfilter. ⚠️ **Openstaand vóór mailslot eraf:** visuele doorklik prod + checken/zetten dat `Tenant.email` in prod = incasso@ (anders valt de afzender terug op de klikkende gebruiker).
+2. **Bouwblok 2 (zodra C2-gegevens binnen zijn) — volgende bouwprioriteit:** C2 invullen (stichting-IBAN + BTW van Arsalan) → C1 eerste bankimport-proef (samen) → B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken. Anders **bouwblok 3** (B3-versimpeling + A5-pauze + A3 dagstart + A7 sjablonen). Daarna veegsessie. Plan: `docs/plans/PLAN-fase2-bouwblokken.md`. Uren + Facturatie blijven AAN.
 3. **Heropening werkvoorraad:** volgende batch per opdrachtgever mét stap 4b (rente-valkuil) — draaiboek `docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
 
 **Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende

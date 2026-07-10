@@ -2,12 +2,74 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 10 juli 2026 (S192, Opus) — Codex-werkmodel LIVE opgezet: Codex bleek al geïnstalleerd+ingelogd, drie-bedrijven-model AAN (Claude plant+reviewt, Codex bouwt), 4 grill-me-skills globaal + `codex`-shims. Details: S192-entry.
-**Laatste feature/fix:** geen Luxis-code deze sessie — alleen `docs/research/advies-codex-samenwerking.md` bijgewerkt. Mailslot blijft S190b (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli alleen op verzoek Arsalan).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); bouwblok 1 (B1 verstuurpad/B13/B2+A1/A2); C2-gegevens (stichting-IBAN + BTW) van Arsalan; ⚠️ sleutels in `.codex/config.toml` nog niet afgeschermd (wacht op akkoord); ⚠️ Claude-instelling start op Fable — vóór bouwsessie `/model opus`; heropeningsbatch; terugstort IN100334.
-**Volgende sessie:** S193 bouwblok 1 op Opus — prompt `docs/sessions/PROMPT-S193-bouwblok1.md` (taak 0 Codex is nu klaar). Gebruik het meteen als eerste echte `/codex-build`-proefrit. Daarna bouwblok 2 zodra C2 binnen is.
+**Laatst bijgewerkt:** 10 juli 2026 (S193, Opus) — bouwblok 1 GEBOUWD + uitgerold (backend+frontend, geen migraties) + Codex-review (Sol Ultra) op beide porties tot APPROVED. Details: S193-entry.
+**Laatste feature/fix:** bouwblok 1 live: B1 verstuurpad (e-mailroute + nooit valse "Uitgevoerd"), B13 vast kanaal incasso@ + preview vóór verzenden, B2+A1 verjaring zichtbaar (monitor/badge/taken), A2 dashboardfilter. Mailslot blijft aan (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); visuele doorklik prod nog te doen; ⚠️ check vóór go-live of `Tenant.email` in prod = incasso@ (anders valt afzender terug op klikker); ⚠️ sleutels in `.codex/config.toml` nog niet afgeschermd (wacht op akkoord); idempotency dubbel-verzenden bij rollback-na-send (bekende grens, mailslot dekt); C2-gegevens (stichting-IBAN + BTW) van Arsalan; heropeningsbatch; terugstort IN100334.
+**Volgende sessie:** S194 — bouwblok 2 zodra C2 binnen is (bankimport-proef C1 + termijn-vooruitblik B4/A8 + 3 proefzaken B11), anders bouwblok 3. Prompt: `docs/sessions/PROMPT-S194.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 193 (10 juli 2026, Opus + Codex-review — bouwblok 1 gebouwd + uitgerold)
+
+### Samenvatting
+Bouwblok 1 (`PROMPT-S193-bouwblok1.md`) volledig gebouwd, getest, door Codex (Sol Ultra,
+alleen-lezen) gereviewd tot **APPROVED** op beide porties, en uitgerold naar prod. Mailslot
+bleef aan — niets echt verstuurd; alles bewezen via tests + preview.
+
+**De 4 werkorders (allemaal live):**
+- **B1 — verstuurpad sommaties + geen valse "Uitgevoerd".** Follow-up "Uitvoeren" én de
+  incasso-batch riepen `render_docx` als eerste aan met e-mailsjabloonsleutels
+  (`sommatie_drukte`/`faillissement_dreigbrief`) → `NotFoundError` vóór de mailstap; follow-up
+  ving de fout en zette 'm tóch op "Uitgevoerd" (niets verstuurd, wél "klaar"). Nu: beide paden
+  proberen eerst `render_incasso_email` (brief = e-mailtekst, geen bijlage), DOCX-route alleen
+  voor echte briefsjablonen. `execute_recommendation` werpt een fout op bij mislukte/onmogelijke
+  verzending → nooit meer vals "Uitgevoerd". E-mailroute archiveert in `content_html`.
+- **B13 — vast kanaal incasso@ + preview.** `get_tenant_send_account` (adres = `Tenant.email`,
+  hoofdletterongevoelig, nieuwste koppeling eerst) + opt-in vlag `send_as_tenant_account` op de
+  4 pijplijn-verzendingen (facturen/handmatig ongewijzigd). `GET /api/followup/{id}/preview` +
+  `SendPreviewDialog`: geen één-klik-verzending meer, eerst afzender/ontvanger/onderwerp/tekst.
+- **B2+A1 — verjaring zichtbaar.** Monitor filterde op `date_closed` (dat komt uit BaseNet-import,
+  niet uit de app → heropende zaken vielen weg); nu op terminale status (`WorkflowStatus.is_terminal`
+  per tenant + betaald/afgesloten vangnet). Badge rekent op `verjaring_date` (server-berekend,
+  `compute_verjaring_date`, klemt 29 feb → 28 feb net als de monitor). Eigenaarloze tenant-taken
+  komen mee in Mijn Taken (`list_tasks include_unassigned`) → verjaring-alarmen zichtbaar.
+- **A2 — dashboardblok "Nieuwe Dossiers":** filter `pending` → `pending_review`.
+
+**Codex-review (drie-bedrijven-model, GPT-5.6 Sol Ultra, alleen-lezen):**
+- Portie 1 (verstuurpad/afzender/preview): 3 rondes. Codex vond o.a. 2 maskering-zij-ingangen
+  (dossier/stap-sjabloon weg → stil "Uitgevoerd"), batch die bij mislukte verzending tóch
+  doorschoof, `html_to_pdf` dat `file://` toestond (lokale-bestand-lek via WeasyPrint), escalatie-knop
+  die ik permanent blokkeerde, preview-XSS, Word-context die renteoverzicht oversloeg, tenant-scoping.
+  Alle verwerkt; ronde 2 ving mijn te-zwakke XSS-fix (verkeerde sanitizer); ronde 3 APPROVED.
+- Portie 2 (verjaring): 2 rondes. Badge-datum week 1 dag af rond 29 feb; oninbaar/schikking werden
+  niet als eindstatus herkend. Beide gefixt → APPROVED.
+- Zelf-review vooraf vond al 2 punten (HTML-doc-preview brak; misleidende afzender in preview).
+
+### Gewijzigde bestanden
+- Backend: `ai_agent/followup_service.py` (+`_router`/`_schemas`), `incasso/service.py`,
+  `email/oauth_service.py` + `send_service.py`, `documents/pdf_service.py` + `router.py`,
+  `documents/docx_service.py`, `workflow/service.py`, `dashboard/router.py`, `cases/service.py`
+  + `router.py` + `schemas.py`. Tests: `test_followup.py`, `test_incasso_pipeline.py`,
+  `test_workflow.py`, `test_tenant_send_account.py` (nieuw), `test_documents.py`.
+- Frontend: `followup/page.tsx` (preview-dialog), `taken/page.tsx`, `zaken/[id]/.../DossierHeader.tsx`,
+  `hooks/use-followup.ts` + `use-cases.ts`.
+- 8 commits (`d6f0037`..`569db64`), uitgerold (backend+frontend, geen migraties). VPS HEAD=569db64,
+  container draait vers image, healthy.
+
+### Bekende issues
+- ⚠️ **Visuele doorklik prod nog niet gedaan** (preview-dialog + verjaring-badge live bekijken).
+- ⚠️ **`Tenant.email` moet in prod incasso@ zijn** — anders vindt `get_tenant_send_account` geen
+  account en valt de afzender terug op de klikkende gebruiker (geen regressie, wél doel gemist).
+  Checken/zetten in Instellingen vóór het mailslot eraf gaat.
+- Idempotency: e-mail verstuurd → DB-commit faalt → rollback → retry kan dubbel sturen. Bekende
+  grens (1-gebruiker-kantoor, mailslot dicht); outbox bewust niet gebouwd.
+- `.codex/config.toml` bevat leesbare sleutels, nog niet in `.gitignore` (wacht op akkoord Arsalan).
+
+### Volgende sessie
+- **Visuele doorklik prod** van de nieuwe schermen (kan direct, mailslot dekt).
+- **Bouwblok 2** zodra C2-gegevens binnen zijn: C2 invullen → C1 bankimport-proef (samen) →
+  B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken. Anders **bouwblok 3**.
+- Prompt: `docs/sessions/PROMPT-S194.md`.
 
 ## Sessie 192 (10 juli 2026, Opus — Codex-werkmodel opgezet, geen Luxis-code)
 
@@ -469,80 +531,3 @@ sjabloonkiezer begrijpelijk maken (werkt alleen mét dossier), ophaalvenster >14
 Blok B: "Nieuwe aanvragen"-tab via de BESTAANDE intake-detectie (draait al, 2 wachten op review),
 domein-match op de 7 opdrachtgevers, "maak dossier van deze mail". Blok C = géén vrije mappen.
 
-## Sessie 185 (8 juli, Opus + Fable — uitrol S184 + nazorg + mail incasso@)
-
-Uitrol- en nazorgsessie met Arsalan (deels naast Lisanne). Prod-mutaties met geld:
-vóór/na getoond, pas na akkoord.
-
-**Taak 1 — S184 LIVE gezet (bewezen gezond):**
-- `git checkout main && merge s184-fixes && push` → daarna **zelf via SSH gedeployd in de
-  juiste volgorde** (build → migreren via `run --rm` → `up -d backend`). Reden: de CI-deploy
-  doet `up` vóór `migrate`, wat mét de nieuwe fail-closed opstartcontrole een kip-ei zou geven
-  (app weigert te starten zolang learned_answers RLS mist). Handmatig migreren-eerst omzeilt dat.
-- Verificatie: backend `Up (healthy)`, geen RuntimeError; `alembic current`=`s184_rls_learned_answers`;
-  `relforcerowsecurity` op learned_answers = `t` (was `f`); extern `/health` = ok. Tag `sessie-184` gezet.
-
-**Taak 2 — 4 heropeningszaken herrekend (vóór/na, alleen-lezen op prod):** rente wordt live
-berekend, dus prod toont sinds de deploy al de "na"-cijfers; niets aan te passen. Verschillen
-(peildatum 8 juli): IN100334 rente −€24,34→€110,89 (**te veel betaald was €217,47, nu €82,24**),
-IN100469 +€0,26, IN100505 +€0,20, IN100553 +€1,94. Fout was: oude `_build_claim_reductions`
-boekte per betaling méér af op de positieve vordering dan er binnenkwam (creditfacturen in de
-pro-rata-basis). Bewijs dat de fix klopt: van de betalingen ging precies €605,00 (=netto
-verschuldigd) naar hoofdsom; oude uitkomst "liep" €20/mnd terwijl de zaak stillag. Arsalan:
-rente = AV art. 13.3 (2%/mnd) — LET OP: de 4 zaken staan op `interest_type='commercial'`
-(handelsrente), moet per opdrachtgever gecheckt/rechtgezet vóór brieven met bedragen.
-Berekening door Arsalan/Lisanne akkoord bevonden.
-
-**Taak 3 — "7 dossiers sluiten": GEEN actie nodig.** Meten wees uit: alle 8 (incl. IN100166
-en IN100334) staan op prod al op `afgesloten` — dat is de parkeerstand van de hele BaseNet-import,
-niet een besluit. Niets gemuteerd. IN100334: geen terugstorting (besluit Arsalan/Lisanne).
-IN100166 moet later juist wél weer open (innen) → hoort bij de heropening.
-
-**BaseNet-gesloten dossiers geverifieerd (vraag Lisanne):** uit de originele backup
-`Xml_02-07-2026_2400.zip` (projectlezer): 148 Gereed + 15 Geannuleerd = **163 in BaseNet
-al dicht**. Alle 163 op naam opgezocht op prod → **alle 163 `afgesloten`, 0 uitzonderingen**.
-Vangnet + rentetype-check toegevoegd aan `PLAN-heropening-werkvoorraad.md` (acceptatiecrit. 7).
-
-**Mail incasso@kestinglegal.nl aangesloten (IMAP, live):** BaseNet-mailserver = `imap.basenet.nl:993`
-(bewezen: bestaand seidony-imap-account). Aangesloten **onder Lisanne's user** (admin bezat al
-een imap-account; store keyt op user+provider → anders overschrijven). Alleen-lezen (`readonly`),
-14-daagse/100-venster → geen stortvloed. Eerste sync: 5 opgehaald, 5 nieuw, **2 auto-gekoppeld
-via afzender**. ~~Bevinding "BaseNet-dossiernummers blokkeren matching"~~ → **CORRECTIE
-(Fable-audit):** die `2026-00xxx`-nummers bleken verweesde Luxis-testmails (apr–jun,
-dossiers weggeveegd bij schone lei) in seidony's mailbox — geen BaseNet-nummers en geen
-incasso-mail-probleem. Verzenden áls incasso@ = aparte latere stap.
-
-**Mail-koppel-audit + fix (Fable-audit → Opus-bouw → Fable-review, alles S185):**
-- **Audit (gemeten):** nummer-herkenning kende alleen Luxis-formaat `20xx-xxxxx` → 0 van
-  607 geïmporteerde zaken (allemaal `IN######`) herkenbaar; live-matcher had ooit maar 2
-  successen. Dekking na heropening sterk: 369/372 debiteuren met e-mail, slechts 3 zaken
-  bij multi-zaak-debiteur. Opdrachtgever-kenmerk (`Case.reference`, 592/607 gevuld,
-  kern vóór `_`) werd nergens doorzocht.
-- **Fix (`_find_case_by_case_number`, commit `b489e04`):** voorrang (A) eigen zaaknummer
-  incl. IN-formaat, (B) kenmerk-kern opdrachtgever (blokhaken gestript — 9 zaken), en
-  onbekend kenmerk blokkeert de afzender-terugval niet meer (alleen echt Luxis-nummer doet dat).
-- **Fable-review = grondwaarheidstoets op 6.393 archiefmails** (bekende juiste koppeling):
-  4.407 juist / 4 fout (0,06%). **Label-lezen `[D..._I...]` bewust UIT** (zou +1.440 juist
-  maar +17 fout geven; precisie eerst — besluit Arsalan; heroverwegen als Ongesorteerd vol
-  raakt). LET OP: eerste toets-script OOM'de de exec (6.393 mails in één keer, exit 137,
-  backend zelf bleef gezond) → porties van 200.
-- **Live bewezen na deploy:** sync koppelde exact de 3 voorspelde mails op zaaknummer
-  (IN100092, IN100330, IN100166 — die laatste is de blijft-innen-zaak). 5e mail
-  (Incassocenter, onbekend kenmerk) terecht naar Ongesorteerd. 23 tests groen, ruff schoon.
-- **Ongesorteerd-vangbak geverifieerd:** Correspondentie-tab + zijbalk-teller +
-  dossier-suggesties per mail + (bulk-)koppelen/dismiss bestaan en zijn getest (DF-03, S115).
-- **Volgende sessie = MAIL-doorlichting (S186, `docs/sessions/PROMPT-S186.md`):** is het
-  mailgedeelte zelfstandig genoeg als "mailprogramma" + **eerste taak: versturen áls incasso@**.
-  - **Versturen-bevinding (S185, gemeten):** `ImapProvider.send_message` = `NotImplementedError`
-    (BaseNet-koppeling is alleen-ontvangen). De compose-knop verstuurt via `OutlookProvider`
-    (Graph, alleen als seidony@/M365). De losse SMTP-brug (`app/email/service.py`, aiosmtplib,
-    één globale `smtp_from`) staat op prod op **`arsalanseidony@gmail.com`** (test-restje →
-    opruimen). Om áls incasso@ te versturen: SMTP via BaseNet's uitgaande server
-    (waarsch. `smtp.basenet.nl:587`, zel.fde inlog) — spiegelbeeld van de IMAP-ontvangst,
-    afzender + Verzonden-map kloppen dan. **Nodig van Arsalan:** BaseNet SMTP-host bevestigen +
-    of BaseNet relay namens incasso@ toestaat. Buildkeuze: per-account SMTP-send in ImapProvider
-    (netjes, multi-afzender) vs globale brug herpunten (snel, één afzender).
-  - Verder op de agenda: label-lezen-heroverweging (`[D..._I...]`: +1.440 juist/+17 fout),
-    gesprek-ketting (IMAP-thread één antwoord diep), mappen/zoeken/beantwoorden in de UI.
-- **Heropening werkvoorraad** blijft klaarstaan (`docs/plans/PLAN-heropening-werkvoorraad.md`)
-  als het andere grote item — koppel-fix + vangnetten zijn er nu klaar voor; inplannen na/naast S186.

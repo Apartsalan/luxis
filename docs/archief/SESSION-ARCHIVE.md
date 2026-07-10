@@ -7775,3 +7775,81 @@ met Arsalan afgestemd): security-regels + de eerdere "geen-aannames"-regel; rege
 → auto-deploy + tag sessie-184), 4 heropeningszaken herrekenen ná deploy (met akkoord), 7
 dossiers sluiten (Lisanne akkoord, niet autonoom), IN100334-terugstort, Backblaze-wis ~10 juli.
 Volgende sessie = uitrol + nazorg: `docs/sessions/PROMPT-S185.md`.
+
+## Sessie 185 (8 juli, Opus + Fable — uitrol S184 + nazorg + mail incasso@)
+
+Uitrol- en nazorgsessie met Arsalan (deels naast Lisanne). Prod-mutaties met geld:
+vóór/na getoond, pas na akkoord.
+
+**Taak 1 — S184 LIVE gezet (bewezen gezond):**
+- `git checkout main && merge s184-fixes && push` → daarna **zelf via SSH gedeployd in de
+  juiste volgorde** (build → migreren via `run --rm` → `up -d backend`). Reden: de CI-deploy
+  doet `up` vóór `migrate`, wat mét de nieuwe fail-closed opstartcontrole een kip-ei zou geven
+  (app weigert te starten zolang learned_answers RLS mist). Handmatig migreren-eerst omzeilt dat.
+- Verificatie: backend `Up (healthy)`, geen RuntimeError; `alembic current`=`s184_rls_learned_answers`;
+  `relforcerowsecurity` op learned_answers = `t` (was `f`); extern `/health` = ok. Tag `sessie-184` gezet.
+
+**Taak 2 — 4 heropeningszaken herrekend (vóór/na, alleen-lezen op prod):** rente wordt live
+berekend, dus prod toont sinds de deploy al de "na"-cijfers; niets aan te passen. Verschillen
+(peildatum 8 juli): IN100334 rente −€24,34→€110,89 (**te veel betaald was €217,47, nu €82,24**),
+IN100469 +€0,26, IN100505 +€0,20, IN100553 +€1,94. Fout was: oude `_build_claim_reductions`
+boekte per betaling méér af op de positieve vordering dan er binnenkwam (creditfacturen in de
+pro-rata-basis). Bewijs dat de fix klopt: van de betalingen ging precies €605,00 (=netto
+verschuldigd) naar hoofdsom; oude uitkomst "liep" €20/mnd terwijl de zaak stillag. Arsalan:
+rente = AV art. 13.3 (2%/mnd) — LET OP: de 4 zaken staan op `interest_type='commercial'`
+(handelsrente), moet per opdrachtgever gecheckt/rechtgezet vóór brieven met bedragen.
+Berekening door Arsalan/Lisanne akkoord bevonden.
+
+**Taak 3 — "7 dossiers sluiten": GEEN actie nodig.** Meten wees uit: alle 8 (incl. IN100166
+en IN100334) staan op prod al op `afgesloten` — dat is de parkeerstand van de hele BaseNet-import,
+niet een besluit. Niets gemuteerd. IN100334: geen terugstorting (besluit Arsalan/Lisanne).
+IN100166 moet later juist wél weer open (innen) → hoort bij de heropening.
+
+**BaseNet-gesloten dossiers geverifieerd (vraag Lisanne):** uit de originele backup
+`Xml_02-07-2026_2400.zip` (projectlezer): 148 Gereed + 15 Geannuleerd = **163 in BaseNet
+al dicht**. Alle 163 op naam opgezocht op prod → **alle 163 `afgesloten`, 0 uitzonderingen**.
+Vangnet + rentetype-check toegevoegd aan `PLAN-heropening-werkvoorraad.md` (acceptatiecrit. 7).
+
+**Mail incasso@kestinglegal.nl aangesloten (IMAP, live):** BaseNet-mailserver = `imap.basenet.nl:993`
+(bewezen: bestaand seidony-imap-account). Aangesloten **onder Lisanne's user** (admin bezat al
+een imap-account; store keyt op user+provider → anders overschrijven). Alleen-lezen (`readonly`),
+14-daagse/100-venster → geen stortvloed. Eerste sync: 5 opgehaald, 5 nieuw, **2 auto-gekoppeld
+via afzender**. ~~Bevinding "BaseNet-dossiernummers blokkeren matching"~~ → **CORRECTIE
+(Fable-audit):** die `2026-00xxx`-nummers bleken verweesde Luxis-testmails (apr–jun,
+dossiers weggeveegd bij schone lei) in seidony's mailbox — geen BaseNet-nummers en geen
+incasso-mail-probleem. Verzenden áls incasso@ = aparte latere stap.
+
+**Mail-koppel-audit + fix (Fable-audit → Opus-bouw → Fable-review, alles S185):**
+- **Audit (gemeten):** nummer-herkenning kende alleen Luxis-formaat `20xx-xxxxx` → 0 van
+  607 geïmporteerde zaken (allemaal `IN######`) herkenbaar; live-matcher had ooit maar 2
+  successen. Dekking na heropening sterk: 369/372 debiteuren met e-mail, slechts 3 zaken
+  bij multi-zaak-debiteur. Opdrachtgever-kenmerk (`Case.reference`, 592/607 gevuld,
+  kern vóór `_`) werd nergens doorzocht.
+- **Fix (`_find_case_by_case_number`, commit `b489e04`):** voorrang (A) eigen zaaknummer
+  incl. IN-formaat, (B) kenmerk-kern opdrachtgever (blokhaken gestript — 9 zaken), en
+  onbekend kenmerk blokkeert de afzender-terugval niet meer (alleen echt Luxis-nummer doet dat).
+- **Fable-review = grondwaarheidstoets op 6.393 archiefmails** (bekende juiste koppeling):
+  4.407 juist / 4 fout (0,06%). **Label-lezen `[D..._I...]` bewust UIT** (zou +1.440 juist
+  maar +17 fout geven; precisie eerst — besluit Arsalan; heroverwegen als Ongesorteerd vol
+  raakt). LET OP: eerste toets-script OOM'de de exec (6.393 mails in één keer, exit 137,
+  backend zelf bleef gezond) → porties van 200.
+- **Live bewezen na deploy:** sync koppelde exact de 3 voorspelde mails op zaaknummer
+  (IN100092, IN100330, IN100166 — die laatste is de blijft-innen-zaak). 5e mail
+  (Incassocenter, onbekend kenmerk) terecht naar Ongesorteerd. 23 tests groen, ruff schoon.
+- **Ongesorteerd-vangbak geverifieerd:** Correspondentie-tab + zijbalk-teller +
+  dossier-suggesties per mail + (bulk-)koppelen/dismiss bestaan en zijn getest (DF-03, S115).
+- **Volgende sessie = MAIL-doorlichting (S186, `docs/sessions/PROMPT-S186.md`):** is het
+  mailgedeelte zelfstandig genoeg als "mailprogramma" + **eerste taak: versturen áls incasso@**.
+  - **Versturen-bevinding (S185, gemeten):** `ImapProvider.send_message` = `NotImplementedError`
+    (BaseNet-koppeling is alleen-ontvangen). De compose-knop verstuurt via `OutlookProvider`
+    (Graph, alleen als seidony@/M365). De losse SMTP-brug (`app/email/service.py`, aiosmtplib,
+    één globale `smtp_from`) staat op prod op **`arsalanseidony@gmail.com`** (test-restje →
+    opruimen). Om áls incasso@ te versturen: SMTP via BaseNet's uitgaande server
+    (waarsch. `smtp.basenet.nl:587`, zel.fde inlog) — spiegelbeeld van de IMAP-ontvangst,
+    afzender + Verzonden-map kloppen dan. **Nodig van Arsalan:** BaseNet SMTP-host bevestigen +
+    of BaseNet relay namens incasso@ toestaat. Buildkeuze: per-account SMTP-send in ImapProvider
+    (netjes, multi-afzender) vs globale brug herpunten (snel, één afzender).
+  - Verder op de agenda: label-lezen-heroverweging (`[D..._I...]`: +1.440 juist/+17 fout),
+    gesprek-ketting (IMAP-thread één antwoord diep), mappen/zoeken/beantwoorden in de UI.
+- **Heropening werkvoorraad** blijft klaarstaan (`docs/plans/PLAN-heropening-werkvoorraad.md`)
+  als het andere grote item — koppel-fix + vangnetten zijn er nu klaar voor; inplannen na/naast S186.

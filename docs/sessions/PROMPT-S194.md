@@ -27,14 +27,29 @@ controleer met eigen ogen:
    IN100016 = 23-09-2026). **Mijn Taken** toont de eigenaarloze verjaring-alarmen.
 3. **Dashboardblok "Nieuwe Dossiers"** toont weer aanvragen (niet leeg).
 
-## Taak 2 — Go-live-check vaste afzender (vóór het mailslot eraf gaat)
-Controleer in Instellingen of het **kantoor-e-mailadres = incasso@kestinglegal.nl**. Zo niet:
-zet het (ná akkoord Arsalan). Zonder dit valt de pipeline-mail terug op de mailbox van wie
-klikt i.p.v. vast incasso@ (B13). Alleen dán werkt het vaste kanaal echt.
+## Taak 2 — Instellingen-blokkade + afzender + C2-gegevens (uit S193-nagesprek)
+Drie samenhangende punten die in S193 boven kwamen:
+1. **Admin-rechten-bug (BLOKKEREND):** Arsalan kan Instellingen niet opslaan — melding "admin
+   nodig", terwijl hij het éérst aangemaakte account gebruikt. Uitzoeken: waarom heeft dat
+   account geen admin-rol, en de wens is dat **alle accounts admin-rechten hebben**. Fix zodat
+   opslaan werkt (anders kan geen van onderstaande waarden gezet worden).
+2. **Vaste afzender:** op prod staat de kantoor-e-mail (`Tenant.email`) nog op
+   `kesting@kestinglegal.nl` — Arsalans wijziging naar incasso@ landde niet. Zet 'm op
+   **incasso@kestinglegal.nl** (het incasso@-account ís al gekoppeld → dan werkt B13's vaste
+   kanaal). Ná akkoord op de waarde.
+3. **Derdengelden-rekening als apart veld (ONDERZOEK + BOUW):** Lisanne heeft een **eigen
+   Kesting-rekening** (waar ze straks facturen mee int) én een **derdengeldenrekening**
+   (Stg. Beh. Derdengelden Kesting, `NL20 RABO 0388 5065 20`). Instellingen moet dus een apart
+   veld "derdengelden-rekening" krijgen, los van de kantoorrekening. C2-waarden van Arsalan om
+   in te vullen (ná akkoord): **BTW-nummer `NL869343610B01`**, **derdengelden-IBAN
+   `NL20 RABO 0388 5065 20`**. (D-C-audit: derdengelden-IBAN stond nog verkeerd op de kantoor-IBAN.)
 
-## Taak 3 — Bouwblok 2 (ALS C2-gegevens binnen zijn), anders bouwblok 3
-- **C2 binnen (stichting-IBAN + BTW van Arsalan)?** → C2 invullen via Instellingen (ná akkoord
-  op de waarden) → C1 eerste bankimport-proef sámen met Arsalan → B4/A8 termijn-vooruitblik
+## Taak 3 — Bouwblok 2: bankimport (CSV komt volgende sessie van Lisanne)
+LET OP: de bestaande Luxis-bankimport leest een **Rabobank-CSV (kommagescheiden, 26 kolommen,
+`parse_rabobank_csv`)** — géén MT940/CAMT. Lisanne haalt die CSV van de derdengeldenrekening
+(niet via het "Downloadformaat"-scherm met MT940/CAMT, maar via het transactie-overzicht →
+Exporteren → CSV). 6 maanden periode.
+- **CSV binnen?** → C1 eerste bankimport-proef sámen met Arsalan → B4/A8 termijn-vooruitblik
   (alleen het overzicht over zaken heen; op dossierniveau bestaat het al) → B11 stappen voor
   de 3 proefzaken. Details in `docs/plans/PLAN-fase2-bouwblokken.md` + D-C-rapport.
 - **C2 nog niet binnen?** → begin met **bouwblok 3**: B3-versimpeling (status volgt pijplijn),

@@ -86,3 +86,6 @@ reactie_verweer.html
 *.zip
 *.base.*.xml
 basenet-export/
+
+# Leesbare API-sleutels — nooit meecommitten (akkoord Arsalan S193)
+.codex/

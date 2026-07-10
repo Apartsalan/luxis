@@ -33,7 +33,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
-import { sanitizeOutgoingHtml } from "@/lib/sanitize";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { QueryError } from "@/components/query-error";
 import { toast } from "sonner";
 
@@ -630,10 +630,11 @@ function SendPreviewDialog({
 
             <div
               className="max-h-[45vh] overflow-y-auto rounded-md border bg-white p-4 text-sm text-black"
-              // Geschoond vóór weergave (Codex-review portie 1): strip scripts/
-              // handlers, behoud de huisstijl-opmaak.
+              // Onvertrouwde debiteur-data in de preview → strikte sanitizeHtml
+              // (schoont de string direct via DOMPurify, geen rauwe innerHTML-
+              // toewijzing vooraf). Codex-review portie 1, ronde 2.
               // eslint-disable-next-line react/no-danger
-              dangerouslySetInnerHTML={{ __html: sanitizeOutgoingHtml(preview.body_html) }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(preview.body_html) }}
             />
           </div>
         )}

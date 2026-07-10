@@ -17,33 +17,22 @@ Draai eerst `/sessie-start`. Extra taak-context daarna:
 - `docs/research/audit-DB-kernmotor.md` — details B1 (verstuurpad, §Follow-up/Incasso)
   en B13; `docs/research/audit-DA-werkschil.md` — details A1 (eigenaarloze taken) en A2
 
-## Taak 0 — EERST: Codex naast Claude werkend krijgen (verzoek Arsalan, 9 juli avond)
-Arsalan wil dit als eerste geregeld: Codex (GPT-5.6) en Claude Code beide in deze
-terminal gebruiken **zonder dat ze elkaar in de weg lopen** — hij is ervan overtuigd dat
-dat schoon kan. Doel van dit blok:
-1. **Installeren + inloggen** volgens het advies-doc: `npm install -g @openai/codex`
-   (Node 22+, mét `@openai/`-scope) → `codex login` met zijn ChatGPT-account. Verifieer
-   met `codex --version` en een mini-testopdracht (read-only).
-2. **De al klaarliggende inrichting nalopen** (`.codex/` in de repo bestaat al:
-   `config.toml`, `hooks.json`, agents). ⚠️ **Belangrijk vóór gebruik:** `.codex/config.toml`
-   bevat nu leesbare API-sleutels (OpenAI, Milvus, Stitch, Tavily) in platte tekst.
-   Bespreek met Arsalan: sleutels naar omgevingsvariabelen halen en/of `.codex/` in
-   `.gitignore` (het staat nu untracked — nog niet gecommit, dat moet zo blijven tot de
-   sleutels eruit zijn). Nooit die sleutels in een commit laten belanden.
-3. **"Zonder elkaar in de weg lopen" concreet maken** — het model uit het advies vastleggen
-   als werkafspraak (niet alleen praten): Claude is de enige die schrijft/commit/deployt;
-   Codex draait **read-only** als tegenlezer (`--sandbox read-only` / geen `--yolo`).
-   Kies de aanroep-route (directe `codex exec` + bestandsoverdracht is de aanbevolen,
-   betrouwbaarste — MCP-koppeling nu niet). Vraag Arsalan hoe híj het voor zich ziet als
-   hij zegt "er is een manier om allebei te gebruiken" — misschien bedoelt hij twee aparte
-   terminals (Claude in de één, Codex in de ander) i.p.v. de één die de ander aanroept.
-   Leg de gekozen afspraak vast in `docs/research/advies-codex-samenwerking.md` (sectie
-   "Werkafspraak — vastgesteld 10 juli").
-4. **Proefrit**: laat Codex read-only één bestaand stuk grillen — bv. het D-B-rapport of
-   de bouwblok-1-diff zodra die er is (zie taak-koppeling hieronder). Beoordeel of de
-   uitkomst bruikbaar is.
-Pas als taak 0 staat: door naar bouwblok 1. Als Arsalan er bij is, kan Codex bouwblok 1
-meteen als eerste echte tegenlezer gebruiken (grillt de diff vóór deploy).
+## Taak 0 — ✅ KLAAR (S192, 10 juli). Codex staat.
+Codex bleek al geïnstalleerd (OpenAI desktop-app) + ingelogd op Arsalans ChatGPT-account
+(`gpt-5.6-sol`/`ultra`). Werkafspraak vastgelegd in `docs/research/advies-codex-samenwerking.md`
+(sectie "Werkafspraak vastgesteld 10 juli"). **Besluit: volledig drie-bedrijven-model AAN,
+inclusief Codex-bouwt.** Gereedschap staat globaal klaar:
+- `/codex-review` — plan door Codex laten grillen (read-only, VERDICT APPROVED/REVISE).
+- `/codex-build` — Codex bouwt van bevroren spec; Claude leest diff + draait bewijstest;
+  Arsalan keurt goed vóór commit; commit/deploy uitsluitend Claude.
+- `codex` werkt als gewoon commando (shim in `~/.local/bin/`).
+
+⚠️ **Nog te doen vóór/bij gebruik:** vraag Arsalan of de sleutels afgeschermd mogen worden
+— `.codex/config.toml` bevat leesbare API-sleutels, is untracked maar NIET in `.gitignore`.
+`.codex/` toevoegen aan `.gitignore` na zijn "ja". Nooit die sleutels laten meecommitten.
+
+**Gebruik bouwblok 1 hieronder als eerste echte proefrit:** `/codex-review` op het plan,
+dan `/codex-build` per werkorder (of begin met alleen B1). Zo zie je het werkmodel live.
 
 ## Taak 1 — Bouwblok 1 (4 werkorders, in deze volgorde)
 1. **B1 — verstuurpad sommaties repareren.** De stap-sjabloonsleutels

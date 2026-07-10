@@ -2,12 +2,49 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 9 juli 2026 (S191+S191b, Fable) — Codex-advies + kijk-sessie D-C klaar ÉN het fase-2-beslisgesprek met Arsalan is al gevoerd: besluiten vastgelegd in `docs/plans/PLAN-fase2-bouwblokken.md`. Details: S191-entry.
-**Laatste feature/fix:** geen code deze sessie (100% read-only) — laatste fix blijft mailslot S190b (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli alleen op verzoek Arsalan).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); bouwblok 1 (B1 verstuurpad/B13/B2+A1/A2); C2-gegevens (stichting-IBAN + BTW) levert Arsalan 10 juli; ⚠️ persoonlijke Claude-instelling start op Fable — vóór bouwsessie `/model opus`; heropeningsbatch; terugstort IN100334.
-**Volgende sessie:** S193 bouwblok 1 op Opus — prompt `docs/sessions/PROMPT-S193-bouwblok1.md`. Daarna bouwblok 2 zodra C2-gegevens binnen zijn.
+**Laatst bijgewerkt:** 10 juli 2026 (S192, Opus) — Codex-werkmodel LIVE opgezet: Codex bleek al geïnstalleerd+ingelogd, drie-bedrijven-model AAN (Claude plant+reviewt, Codex bouwt), 4 grill-me-skills globaal + `codex`-shims. Details: S192-entry.
+**Laatste feature/fix:** geen Luxis-code deze sessie — alleen `docs/research/advies-codex-samenwerking.md` bijgewerkt. Mailslot blijft S190b (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli alleen op verzoek Arsalan).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); bouwblok 1 (B1 verstuurpad/B13/B2+A1/A2); C2-gegevens (stichting-IBAN + BTW) van Arsalan; ⚠️ sleutels in `.codex/config.toml` nog niet afgeschermd (wacht op akkoord); ⚠️ Claude-instelling start op Fable — vóór bouwsessie `/model opus`; heropeningsbatch; terugstort IN100334.
+**Volgende sessie:** S193 bouwblok 1 op Opus — prompt `docs/sessions/PROMPT-S193-bouwblok1.md` (taak 0 Codex is nu klaar). Gebruik het meteen als eerste echte `/codex-build`-proefrit. Daarna bouwblok 2 zodra C2 binnen is.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 192 (10 juli 2026, Opus — Codex-werkmodel opgezet, geen Luxis-code)
+
+### Samenvatting
+Taak 0 uit `PROMPT-S193-bouwblok1.md` uitgevoerd: Codex (GPT-5.6) naast Claude werkend
+gekregen. **Kernbevinding:** Codex was al geïnstalleerd (via de OpenAI desktop-app, niet
+npm) en ingelogd op Arsalans ChatGPT-account (`arsalanir@hotmail.com`, model `gpt-5.6-sol`,
+effort `ultra`). Dus niet opnieuw installeren — alleen bruikbaar maken + werkafspraak vast.
+
+**Besluit Arsalan (herzien t.o.v. S191-advies):** het volledige drie-bedrijven-model van
+grill-me-codex AAN, **inclusief bedrijf 3 (Codex bouwt)**. Zijn redenering, die klopt: er
+is nog steeds één bouwer per klus, Claude doet kop (plan) + staart (diff-review, bewijstest,
+commit), en GPT-5.6 is sterk + goedkoper in het typwerk (valt onder het abo). Mijn eerdere
+"bedrijf 3 UIT"-voorbehoud bleek al als harde regel in de skill te zitten (schone tree,
+verplichte diff-lezing, bewijstest door Claude, jij keurt goed vóór commit) → overgenomen.
+
+### Gewijzigde/aangemaakte bestanden
+- `docs/research/advies-codex-samenwerking.md` — sectie "Werkafspraak vastgesteld 10 juli":
+  geïnstalleerd-status, gekozen model (bedrijf 3 AAN), rolverdeling Fable=brein/Codex=bouwer,
+  vangrails, veiligheidsvalkuil `codex exec resume` kent geen `-s`.
+- **Globaal (buiten de repo):** 4 skills in `~/.claude/skills/` (`/grill-me-codex`,
+  `/grill-with-docs-codex`, `/codex-review`, `/codex-build`); `codex`-shims in
+  `~/.local/bin/` (`codex` voor Git Bash, `codex.cmd` voor PowerShell) die de nieuwste
+  Codex-versiemap pakken (overleeft app-updates). Beide getest — `codex` werkt als commando.
+- Geheugen bijgewerkt: `project_codex_openai.md` + `MEMORY.md`.
+
+### Bekende issues
+- ⚠️ `.codex/config.toml` in de repo bevat leesbare API-sleutels (OpenAI/Milvus/Stitch/
+  Tavily); untracked maar NIET in `.gitignore`. Afschermen wacht op Arsalans "ja". Nooit
+  laten meecommitten.
+- Nog géén echte `/codex-build`-proefrit gedaan — alleen een read-only plumbing-test
+  (`PLUMBING_OK`) geslaagd. Eerste echte test = bouwblok 1 (S193).
+
+### Volgende sessie
+- **S193 bouwblok 1 op Opus** (`PROMPT-S193-bouwblok1.md`), taak 0 is nu klaar. Gebruik het
+  als eerste `/codex-review` → `/codex-build`-proefrit. Vraag Arsalan eerst of de sleutels
+  afgeschermd mogen worden (`.codex/` in `.gitignore`).
 
 ## Sessie 191 (9 juli 2026, Fable — Codex-advies + kijk-sessie D-C: financieel + systeem, 100% read-only)
 

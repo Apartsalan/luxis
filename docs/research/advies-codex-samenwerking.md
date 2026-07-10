@@ -128,6 +128,59 @@ commit- en deployrechten bij Claude.
 
 ---
 
+## Werkafspraak — vastgesteld 10 juli 2026 (S193 taak 0)
+
+**Bevinding bij nalopen:** Codex stond bij aanvang van deze sessie al geïnstalleerd én
+ingelogd — niet meer te doen. Concreet (geverifieerd deze sessie, niet uit het hoofd):
+
+- Geïnstalleerd via de OpenAI Codex desktop-app, binary op
+  `C:\Users\arsal\AppData\Local\OpenAI\Codex\bin\<hash>\codex.exe` (**niet** via
+  `npm install -g @openai/codex`; er is dus geen `codex`-commando op PATH — aanroepen via
+  het volledige pad).
+- `codex-cli 0.144.0-alpha.4`, ingelogd via ChatGPT-account (`arsalanir@hotmail.com`),
+  model `gpt-5.6-sol`, denk-inspanning `ultra` (staat in `~/.codex/config.toml`).
+- Alleen-lezen proefrit gelukt: `codex exec --sandbox read-only --skip-git-repo-check`
+  vanuit de repo geeft nette tekst terug zonder iets te wijzigen (PLUMBING_OK-test).
+
+**Gekozen samenwerkmodel (besluit Arsalan, 10 juli — herzien dezelfde dag):** **Claude
+roept Codex aan**, en het volledige drie-bedrijven-model van grill-me-codex staat AAN —
+inclusief bedrijf 3 (Codex bouwt). Arsalans redenering, en die klopt: er is nog steeds één
+bouwer per klus, Claude doet de kop (plan) én de staart (diff-review + bewijstest + commit),
+en GPT-5.6 is sterk én goedkoper in het typwerk (valt onder het ChatGPT-abonnement).
+"Best of both worlds." Het eerdere "bedrijf 3 UIT" uit §2/§3 hierboven is hiermee
+achterhaald.
+
+**Geïnstalleerd (10 juli):**
+- De 4 skills uit chaseai-yt/grill-me-codex staan globaal in `~/.claude/skills/`:
+  `/grill-me-codex`, `/grill-with-docs-codex`, `/codex-review`, `/codex-build` —
+  beschikbaar in élk project (Luxis + Recruit).
+- `codex` werkt nu als gewoon commando: doorgeefluik-shims in `~/.local/bin/` (`codex`
+  voor Git Bash, `codex.cmd` voor PowerShell) die automatisch de nieuwste versiemap
+  onder `%LOCALAPPDATA%\OpenAI\Codex\bin\` pakken — overleeft app-updates. Beide getest.
+
+**Vaste regels (grotendeels afgedwongen dóór de skills zelf):**
+- **Plannen/reviewen (bedrijf 1-2):** Codex altijd read-only (`-s read-only`; bij resume
+  `-c sandbox_mode="read-only"` — resume kent geen `-s`, en zonder die vlag erft hij de
+  config en kan hij schrijven; dit is de belangrijkste veiligheidsregel in de skill).
+- **Bouwen (bedrijf 3, `/codex-build`):** mag alleen vanaf een bevroren, gereviewde spec;
+  schone git-tree verplicht vóór start (diff isoleerbaar + terugdraaibaar); Claude leest
+  daarna ALTIJD de volledige diff en draait zelf de bewijstest (Codex' eigen rapport telt
+  niet als bewijs); max 2 herstelrondes, daarna neemt Claude het over.
+- **Commit/push/deploy: uitsluitend Claude, ná Arsalans akkoord op de diff.** Codex commit
+  nooit — de skill verbiedt het expliciet.
+- Bevindingen over en weer = input, geen bevel; afwijzingen worden mét reden gelogd in
+  `PLAN-REVIEW-LOG.md` (dat logboek is het bewijsstuk van de hele discussie).
+- Nooit blokkerend voor een deploy die al groen is via de eigen keten.
+- **Model-rolverdeling (Arsalan, 10 juli):** Fable/Claude = het brein (kop + staart:
+  grillen, plannen, diff-review, eindoordeel); Codex/GPT-5.6 = de bouwer daartussen.
+
+**Open veiligheidspunt:** `.codex/config.toml` in de repo bevat leesbare API-sleutels
+(OpenAI/Milvus/Stitch/Tavily). Staat nu `untracked` maar is **niet** genegeerd → risico bij
+een brede `git add`. Fix: `.codex/` aan `.gitignore` toevoegen (wacht op akkoord Arsalan).
+Sleutels nooit in een commit laten belanden.
+
+---
+
 ## Bronnen
 
 - OpenAI Codex CLI: https://developers.openai.com/codex/cli · quickstart: https://developers.openai.com/codex/quickstart

@@ -257,6 +257,41 @@ class TestRabobankCsvParser:
         result = parse_rabobank_csv(csv)
         assert result.transactions[0].amount == Decimal("123.45")
 
+    def test_parse_amount_comma_decimal(self):
+        """S194: echte Rabobank-export gebruikt komma als decimaalteken.
+
+        Vóór de fix werd de komma gestript en kwam +1013,74 binnen als 101374
+        (100× te hoog). Rij letterlijk uit het echte afschrift van de
+        derdengeldenrekening (CSV_A_NL20RABO0388506520, 2025-07-09).
+        """
+        row = (
+            '"NL20RABO0388506520","EUR","RABONL2U","000000000000000093",'
+            '"2025-07-09","2025-07-09","+1013,74","+16208,87",'
+            '"NL31ABNA0413912485","HATENBOER WATER BV","","","ABNANL2A",'
+            '"cb","","NONREF","","","",'
+            '"Dossier IN100260 INC Zakelijk B.V. / Hatenboer-Water"," ","","","","",""'
+        )
+        csv = f"{RABOBANK_HEADER}\n{row}"
+        result = parse_rabobank_csv(csv)
+        assert result.credit_count == 1
+        assert result.transactions[0].amount == Decimal("1013.74")
+
+    def test_parse_amount_debit_comma_decimal(self):
+        """Komma-decimale debet blijft debet (geen credit door tekenverlies)."""
+        row = _make_rabobank_row("-3000,00")
+        csv = f"{RABOBANK_HEADER}\n{row}"
+        result = parse_rabobank_csv(csv)
+        assert result.debit_count == 1
+        assert result.credit_count == 0
+
+    def test_parse_amount_thousands_separators(self):
+        """Beide duizendtal-notaties: 1.013,74 en 1,013.74 → 1013.74."""
+        for raw in ("+1.013,74", "+1,013.74"):
+            row = _make_rabobank_row(raw)
+            csv = f"{RABOBANK_HEADER}\n{row}"
+            result = parse_rabobank_csv(csv)
+            assert result.transactions[0].amount == Decimal("1013.74"), raw
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # Match Algorithm Tests

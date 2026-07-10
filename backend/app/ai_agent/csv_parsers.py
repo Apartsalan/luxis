@@ -12,6 +12,26 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 
+def _parse_amount(raw: str) -> Decimal:
+    """Parse a Rabobank amount in either decimal notation.
+
+    Rabobank exporteert afhankelijk van de taalinstelling met een komma
+    ("+1013,74") of een punt ("+1013.74") als decimaalteken, eventueel met
+    duizendtal-scheiding ("1.013,74" / "1,013.74"). Vóór S194 werd de komma
+    blind gestript, waardoor komma-decimale bedragen 100× te hoog uitkwamen.
+    Regel: staan beide tekens erin, dan is het meest rechtse het decimaalteken.
+    """
+    s = raw.replace(" ", "")
+    if "," in s and "." in s:
+        if s.rfind(",") > s.rfind("."):
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            s = s.replace(",", "")
+    elif "," in s:
+        s = s.replace(",", ".")
+    return Decimal(s)
+
+
 @dataclass
 class ParsedTransaction:
     """A parsed bank transaction from CSV."""
@@ -54,7 +74,7 @@ def parse_rabobank_csv(content: str) -> ParseResult:
     3:  Volgnr (sequence number)
     4:  Datum (transaction date, YYYY-MM-DD)
     5:  Rentedatum (entry date, YYYY-MM-DD)
-    6:  Bedrag (amount, +/- with dot as decimal separator)
+    6:  Bedrag (amount, +/- with comma or dot as decimal separator)
     7:  Saldo na trn (balance after transaction)
     8:  Tegenrekening IBAN/BBAN (counterparty IBAN)
     9:  Naam tegenpartij (counterparty name)
@@ -143,9 +163,8 @@ def parse_rabobank_csv(content: str) -> ParseResult:
                 except ValueError:
                     pass
 
-            # Parse amount
-            amount_str = row[6].strip().strip('"').replace(",", "")
-            amount = Decimal(amount_str)
+            # Parse amount (komma- óf punt-decimaal, zie _parse_amount)
+            amount = _parse_amount(row[6].strip().strip('"'))
 
             # Currency
             currency = row[1].strip().strip('"') or "EUR"

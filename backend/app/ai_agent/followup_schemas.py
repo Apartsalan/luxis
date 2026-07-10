@@ -68,3 +68,20 @@ class FollowupRejectIn(BaseModel):
     """Request body for rejecting a recommendation."""
 
     note: str | None = None
+
+
+class FollowupPreviewOut(BaseModel):
+    """B13 — wat er precies uitgaat als je deze aanbeveling uitvoert.
+
+    Toont de gebruiker vóór de één-klik-verzending: onderwerp, afzender (vast
+    incasso@), ontvanger en de volledige e-mailtekst. Verzendt niets.
+    """
+
+    subject: str
+    body_html: str
+    sender_email: str
+    recipient_email: str | None = None
+    recipient_name: str | None = None
+    has_attachment: bool = False
+    can_send: bool = True
+    warning: str | None = None

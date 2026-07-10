@@ -49,6 +49,17 @@ export interface FollowupStats {
   executed: number;
 }
 
+export interface FollowupPreview {
+  subject: string;
+  body_html: string;
+  sender_email: string;
+  recipient_email: string | null;
+  recipient_name: string | null;
+  has_attachment: boolean;
+  can_send: boolean;
+  warning: string | null;
+}
+
 // ── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useFollowupRecommendations(
@@ -120,6 +131,22 @@ export function useFollowupForCase(caseId: string | undefined) {
       return res.json();
     },
     enabled: !!caseId,
+  });
+}
+
+export function useFollowupPreview(id: string | null) {
+  return useQuery<FollowupPreview>({
+    queryKey: ["followup-preview", id],
+    queryFn: async () => {
+      const res = await api(`/api/followup/${id}/preview`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Voorvertoning laden mislukt");
+      }
+      return res.json();
+    },
+    enabled: !!id,
+    staleTime: 0,
   });
 }
 

@@ -25,6 +25,7 @@ from app.ai_agent.followup_service import (
     get_recommendation,
     get_recommendation_stats,
     list_recommendations,
+    preview_recommendation,
     reject_recommendation,
     scan_for_followups,
 )
@@ -679,6 +680,35 @@ async def test_execute_failed_send_is_never_marked_executed(
     # execute muteert hetzelfde aanbeveling-object; het is nooit op EXECUTED gezet.
     assert rec.status != RecommendationStatus.EXECUTED
     assert rec.executed_at is None
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+async def test_preview_shows_email_without_sending(
+    mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """B13 — preview rendert wat eruit gaat (onderwerp, ontvanger, tekst) en laat
+    de aanbeveling ongemoeid: er wordt niets verstuurd of uitgevoerd."""
+    mock_ctx.return_value = {}
+    mock_render.return_value = "<p>Sommatie (drukte)</p>"
+
+    step = await _create_step(db, test_tenant.id, name="Eerste sommatie",
+                              template_type="sommatie_drukte")
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    rec = await _create_pending_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    preview = await preview_recommendation(db, test_tenant.id, rec.id)
+
+    assert preview is not None
+    assert preview.body_html == "<p>Sommatie (drukte)</p>"
+    assert preview.recipient_email == "debiteur@example.com"
+    assert preview.has_attachment is False
+    assert preview.can_send is True
+    # Niets verstuurd/uitgevoerd — aanbeveling blijft PENDING.
+    assert rec.status == RecommendationStatus.PENDING
 
 
 @pytest.mark.asyncio

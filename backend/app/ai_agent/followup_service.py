@@ -17,6 +17,7 @@ from app.ai_agent.followup_models import (
     RecommendedAction,
 )
 from app.ai_agent.followup_schemas import (
+    FollowupPreviewOut,
     FollowupRecommendationList,
     FollowupRecommendationOut,
     FollowupStatsOut,
@@ -26,6 +27,7 @@ from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
 from app.email.incasso_templates import render_incasso_email
+from app.email.oauth_service import get_tenant_send_account
 from app.email.send_service import send_with_attachment
 from app.incasso.models import IncassoPipelineStep
 from app.incasso.service import (
@@ -574,3 +576,112 @@ async def approve_and_execute_recommendation(
     if not rec:
         return None
     return await execute_recommendation(db, tenant_id, rec_id, user_id)
+
+
+async def preview_recommendation(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    rec_id: uuid.UUID,
+) -> FollowupPreviewOut | None:
+    """B13 — render wat er precies uitgaat, zónder te versturen.
+
+    Bouwt exact dezelfde e-mail als `execute_recommendation` (e-mailroute), maar
+    verzendt niets. Zo kan de gebruiker vóór de één-klik-verzending zien wat er
+    de deur uitgaat en via welk afzender-adres.
+    """
+    result = await db.execute(
+        select(FollowupRecommendation).where(
+            FollowupRecommendation.tenant_id == tenant_id,
+            FollowupRecommendation.id == rec_id,
+        )
+    )
+    rec = result.scalar_one_or_none()
+    if not rec:
+        return None
+
+    case = (
+        await db.execute(select(Case).where(Case.id == rec.case_id))
+    ).scalar_one_or_none()
+    if not case:
+        return None
+
+    step = (
+        await db.execute(
+            select(IncassoPipelineStep).where(IncassoPipelineStep.id == rec.incasso_step_id)
+        )
+    ).scalar_one_or_none()
+
+    recipient_email = case.opposing_party.email if case.opposing_party else None
+    recipient_name = case.opposing_party.name if case.opposing_party else None
+
+    # Vast afzenderkanaal (incasso@); toon wat er echt gebruikt wordt.
+    sender_account = await get_tenant_send_account(db, tenant_id)
+    sender_email = (
+        sender_account.email_address if sender_account else "(vaste kantoor-afzender)"
+    )
+
+    is_generate = (
+        rec.recommended_action == RecommendedAction.GENERATE_DOCUMENT
+        and step
+        and step.template_type
+    )
+    if not is_generate:
+        return FollowupPreviewOut(
+            subject="(geen verzending)",
+            body_html=(
+                "<p>Deze aanbeveling verstuurt geen e-mail — er wordt een taak voor "
+                "handmatige beoordeling aangemaakt.</p>"
+            ),
+            sender_email=sender_email,
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            can_send=False,
+            warning="Deze aanbeveling maakt een taak aan i.p.v. een verzending.",
+        )
+
+    can_send = bool(recipient_email)
+    warning = (
+        None
+        if can_send
+        else "Geen e-mailadres bij de wederpartij — er kan niets verstuurd worden."
+    )
+
+    context = await build_base_context(db, tenant_id, case)
+    inline_html = render_incasso_email(step.template_type, context)
+
+    if inline_html is not None:
+        return FollowupPreviewOut(
+            subject=f"{step.name} inzake dossier {case.case_number}",
+            body_html=inline_html,
+            sender_email=sender_email,
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            has_attachment=False,
+            can_send=can_send,
+            warning=warning,
+        )
+
+    # DOCX-route (dagvaarding e.d.) — brief als PDF-bijlage.
+    subject = step.email_subject_template or f"{step.name} - {case.case_number}"
+    body = step.email_body_template or (
+        f"Geachte heer/mevrouw,\n\nBijgevoegd treft u de {step.name.lower()} aan "
+        f"inzake dossier {case.case_number}."
+    )
+    for old, new in [
+        ("{{ zaak.zaaknummer }}", case.case_number),
+        ("{{ zaak.omschrijving }}", case.description or ""),
+        ("{{ wederpartij.naam }}", recipient_name or ""),
+    ]:
+        subject = subject.replace(old, new)
+        body = body.replace(old, new)
+
+    return FollowupPreviewOut(
+        subject=subject,
+        body_html=f"<p>{body.replace(chr(10), '<br>')}</p>",
+        sender_email=sender_email,
+        recipient_email=recipient_email,
+        recipient_name=recipient_name,
+        has_attachment=True,
+        can_send=can_send,
+        warning=warning,
+    )

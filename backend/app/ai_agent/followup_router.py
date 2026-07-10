@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.followup_schemas import (
+    FollowupPreviewOut,
     FollowupRecommendationList,
     FollowupRecommendationOut,
     FollowupRejectIn,
@@ -18,6 +19,7 @@ from app.ai_agent.followup_service import (
     get_recommendation,
     get_recommendation_stats,
     list_recommendations,
+    preview_recommendation,
     reject_recommendation,
 )
 from app.auth.models import User
@@ -108,6 +110,22 @@ async def reject_followup(
     await db.commit()
     result = await get_recommendation(db, current_user.tenant_id, rec_id)
     return result
+
+
+@router.get("/{rec_id}/preview", response_model=FollowupPreviewOut)
+async def preview_followup(
+    rec_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """B13 — toon wat er uitgaat vóór de verzending (verstuurt niets)."""
+    preview = await preview_recommendation(db, current_user.tenant_id, rec_id)
+    if preview is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aanbeveling niet gevonden",
+        )
+    return preview
 
 
 @router.post("/{rec_id}/execute", response_model=FollowupRecommendationOut)

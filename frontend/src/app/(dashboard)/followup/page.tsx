@@ -13,13 +13,25 @@ import {
   Play,
   AlertTriangle,
   Clock,
+  Send,
+  Loader2,
+  Mail,
 } from "lucide-react";
 import {
   useFollowupRecommendations,
   useFollowupStats,
   useApproveAndExecuteFollowup,
+  useFollowupPreview,
   useRejectFollowup,
 } from "@/hooks/use-followup";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { toast } from "sonner";
@@ -92,6 +104,8 @@ export default function FollowupPage() {
   const { data: stats } = useFollowupStats();
   const approveAndExecute = useApproveAndExecuteFollowup();
   const reject = useRejectFollowup();
+  // B13 — geen één-klik-verzending: eerst een voorvertoning tonen.
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -100,14 +114,19 @@ export default function FollowupPage() {
   function handleApproveAndExecute(id: string, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    setPreviewId(id);
+  }
+
+  function handleConfirmSend(id: string) {
     approveAndExecute.mutate(
       { id },
       {
         onSuccess: () => {
-          toast.success("Aanbeveling goedgekeurd en uitgevoerd");
+          setPreviewId(null);
+          toast.success("Aanbeveling goedgekeurd en verstuurd");
         },
         onError: (err) => {
-          toast.error(err.message || "Goedkeuren en uitvoeren mislukt");
+          toast.error(err.message || "Versturen mislukt");
         },
       },
     );
@@ -513,6 +532,116 @@ export default function FollowupPage() {
           </div>
         </div>
       )}
+
+      <SendPreviewDialog
+        previewId={previewId}
+        onClose={() => setPreviewId(null)}
+        onConfirm={handleConfirmSend}
+        isSending={approveAndExecute.isPending}
+      />
     </div>
+  );
+}
+
+// ── Voorvertoning vóór verzenden (B13) ──────────────────────────────────────
+
+function SendPreviewDialog({
+  previewId,
+  onClose,
+  onConfirm,
+  isSending,
+}: {
+  previewId: string | null;
+  onClose: () => void;
+  onConfirm: (id: string) => void;
+  isSending: boolean;
+}) {
+  const { data: preview, isLoading, error } = useFollowupPreview(previewId);
+
+  return (
+    <Dialog open={!!previewId} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Controleer vóór verzenden
+          </DialogTitle>
+          <DialogDescription>
+            Dit gaat er precies uit. Er wordt niets verstuurd zolang je niet op
+            &quot;Versturen&quot; klikt.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            Voorvertoning laden mislukt: {error.message}
+          </div>
+        )}
+
+        {preview && (
+          <div className="space-y-3">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+              <dt className="text-muted-foreground">Afzender</dt>
+              <dd className="font-medium">{preview.sender_email}</dd>
+              <dt className="text-muted-foreground">Aan</dt>
+              <dd className="font-medium">
+                {preview.recipient_email ?? (
+                  <span className="text-destructive">geen e-mailadres</span>
+                )}
+                {preview.recipient_name ? ` (${preview.recipient_name})` : ""}
+              </dd>
+              <dt className="text-muted-foreground">Onderwerp</dt>
+              <dd className="font-medium">{preview.subject}</dd>
+            </dl>
+
+            {preview.has_attachment && (
+              <p className="text-xs text-muted-foreground">
+                De brief gaat als PDF-bijlage mee.
+              </p>
+            )}
+
+            {preview.warning && (
+              <div className="flex items-start gap-2 rounded-md bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{preview.warning}</span>
+              </div>
+            )}
+
+            <div
+              className="max-h-[45vh] overflow-y-auto rounded-md border bg-white p-4 text-sm text-black"
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{ __html: preview.body_html }}
+            />
+          </div>
+        )}
+
+        <DialogFooter>
+          <button
+            onClick={onClose}
+            className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
+          >
+            Annuleren
+          </button>
+          <button
+            onClick={() => previewId && onConfirm(previewId)}
+            disabled={isSending || !preview?.can_send}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Versturen
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

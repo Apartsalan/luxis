@@ -63,6 +63,8 @@ export interface CaseDetail extends CaseSummary {
     description: string | null;
     created_at: string;
   }[];
+  // B2 — basisdatum verjaring (verzuimdatum oudste vordering; terugval openingsdatum).
+  verjaring_basis_date: string | null;
 }
 
 interface PaginatedCases {

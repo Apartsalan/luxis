@@ -40,8 +40,12 @@ async def get_my_tasks(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Get open tasks assigned to the current user (due + overdue first)."""
-    tasks = await wf_list_tasks(db, user.tenant_id, assigned_to_id=user.id)
+    """Get open tasks for the current user + ownerless tenant tasks (due + overdue first)."""
+    # A1 — óók eigenaarloze taken (bv. verjaring-alarmen van de monitor) tonen,
+    # anders ziet niemand ze.
+    tasks = await wf_list_tasks(
+        db, user.tenant_id, assigned_to_id=user.id, include_unassigned=True
+    )
     # Filter to non-completed tasks and sort: overdue first, then due, then pending
     status_order = {"overdue": 0, "due": 1, "pending": 2}
     open_tasks = [t for t in tasks if t.status in ("pending", "due", "overdue")]

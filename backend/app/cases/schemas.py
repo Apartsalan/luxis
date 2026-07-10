@@ -337,6 +337,9 @@ class CaseDetailResponse(CaseResponse):
 
     parties: list[CasePartyResponse] = []
     recent_activities: list[CaseActivityResponse] = []
+    # B2 — basisdatum verjaring (verzuimdatum oudste vordering, terugval
+    # openingsdatum); de dossier-badge rekent hierop i.p.v. op date_opened.
+    verjaring_basis_date: date | None = None
 
 
 # ── CaseFile Schemas (E4: Document uploads) ─────────────────────────────────

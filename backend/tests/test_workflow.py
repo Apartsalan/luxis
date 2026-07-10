@@ -727,6 +727,192 @@ async def test_check_verjaring_uses_oldest_claim_default_date(
     assert mine[0]["is_expired"] is False
 
 
+@pytest.mark.asyncio
+async def test_check_verjaring_includes_reopened_case_with_date_closed(
+    db: AsyncSession, test_tenant: Tenant, test_company: Contact
+):
+    """B2 — een heropende zaak draagt een oude `date_closed` uit de BaseNet-import
+    maar is inhoudelijk actief (status != afgesloten). De monitor moet 'm meenemen."""
+    from decimal import Decimal
+
+    from dateutil.relativedelta import relativedelta
+
+    from app.collections.models import Claim
+    from app.workflow.service import check_verjaring
+
+    almost_expired = date.today() - relativedelta(years=5) + timedelta(days=30)
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-VERJREOPEN",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="sommatie",  # actief, niet afgesloten
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today() - timedelta(days=2000),
+        date_closed=date.today() - timedelta(days=400),  # oude sluitdatum uit import
+        total_principal=Decimal("1000.00"),
+        total_paid=Decimal("0.00"),
+    )
+    db.add(case)
+    db.add(
+        Claim(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            description="Oude vordering",
+            principal_amount=Decimal("1000.00"),
+            default_date=almost_expired,
+        )
+    )
+    await db.commit()
+
+    warnings = await check_verjaring(db, test_tenant.id)
+    assert any(w["case_number"] == "2026-VERJREOPEN" for w in warnings), (
+        "heropende zaak met oude date_closed moet gemonitord worden"
+    )
+
+
+@pytest.mark.asyncio
+async def test_check_verjaring_skips_paid_and_closed_status(
+    db: AsyncSession, test_tenant: Tenant, test_company: Contact
+):
+    """B2 — betaalde/afgesloten zaken geven géén verjaringswaarschuwing, ook al
+    is er een bijna-verjaarde vordering."""
+    from decimal import Decimal
+
+    from dateutil.relativedelta import relativedelta
+
+    from app.collections.models import Claim
+    from app.workflow.service import check_verjaring
+
+    almost_expired = date.today() - relativedelta(years=5) + timedelta(days=30)
+    for status_val, nr in (("betaald", "2026-VERJPAID"), ("afgesloten", "2026-VERJCLOSED")):
+        case = Case(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_number=nr,
+            case_type="incasso",
+            debtor_type="b2b",
+            status=status_val,
+            is_active=True,
+            client_id=test_company.id,
+            date_opened=date.today() - timedelta(days=2000),
+            date_closed=None,
+            total_principal=Decimal("1000.00"),
+            total_paid=Decimal("1000.00"),
+        )
+        db.add(case)
+        db.add(
+            Claim(
+                id=uuid.uuid4(),
+                tenant_id=test_tenant.id,
+                case_id=case.id,
+                description="Oude vordering",
+                principal_amount=Decimal("1000.00"),
+                default_date=almost_expired,
+            )
+        )
+    await db.commit()
+
+    warnings = await check_verjaring(db, test_tenant.id)
+    nrs = {w["case_number"] for w in warnings}
+    assert "2026-VERJPAID" not in nrs
+    assert "2026-VERJCLOSED" not in nrs
+
+
+@pytest.mark.asyncio
+async def test_list_tasks_include_unassigned(
+    db: AsyncSession, test_tenant: Tenant, test_user: User, test_company: Contact
+):
+    """A1 — met include_unassigned komen óók eigenaarloze tenant-taken mee
+    (zoals de verjaring-alarmen van de monitor)."""
+    from app.workflow.models import WorkflowTask
+    from app.workflow.service import list_tasks
+
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-TASKS",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today(),
+    )
+    db.add(case)
+    await db.flush()
+
+    mine = WorkflowTask(
+        tenant_id=test_tenant.id, case_id=case.id, assigned_to_id=test_user.id,
+        task_type="manual_review", title="Mijn taak", due_date=date.today(), status="due",
+    )
+    ownerless = WorkflowTask(
+        tenant_id=test_tenant.id, case_id=case.id, assigned_to_id=None,
+        task_type="verjaring_warning", title="VERJARING: eigenaarloos",
+        due_date=date.today(), status="overdue",
+    )
+    db.add_all([mine, ownerless])
+    await db.commit()
+
+    only_mine = await list_tasks(db, test_tenant.id, assigned_to_id=test_user.id)
+    titles_mine = {t.title for t in only_mine}
+    assert "Mijn taak" in titles_mine
+    assert "VERJARING: eigenaarloos" not in titles_mine
+
+    with_unassigned = await list_tasks(
+        db, test_tenant.id, assigned_to_id=test_user.id, include_unassigned=True
+    )
+    titles_both = {t.title for t in with_unassigned}
+    assert "Mijn taak" in titles_both
+    assert "VERJARING: eigenaarloos" in titles_both
+
+
+@pytest.mark.asyncio
+async def test_get_verjaring_basis_date_uses_oldest_claim(
+    db: AsyncSession, test_tenant: Tenant, test_company: Contact
+):
+    """B2 — badge-basisdatum = verzuimdatum oudste actieve vordering; terugval op
+    de openingsdatum als er geen vorderingen zijn."""
+    from decimal import Decimal
+
+    from app.cases.service import get_verjaring_basis_date
+    from app.collections.models import Claim
+
+    opened = date(2024, 1, 1)
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-BASIS",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=opened,
+    )
+    db.add(case)
+    await db.flush()
+
+    # Geen vorderingen → terugval openingsdatum
+    assert await get_verjaring_basis_date(db, test_tenant.id, case) == opened
+
+    older = date(2022, 3, 5)
+    db.add_all([
+        Claim(id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+              description="Nieuwere", principal_amount=Decimal("100.00"),
+              default_date=date(2023, 6, 1)),
+        Claim(id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+              description="Oudste", principal_amount=Decimal("100.00"),
+              default_date=older),
+    ])
+    await db.commit()
+
+    assert await get_verjaring_basis_date(db, test_tenant.id, case) == older
+
+
 # ── System task types in canonical TASK_TYPES (AUDIT-MEDIUM) ──────────────────
 
 

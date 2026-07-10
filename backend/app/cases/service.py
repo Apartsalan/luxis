@@ -367,6 +367,33 @@ async def get_case(
     return case
 
 
+async def get_verjaring_basis_date(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+) -> date:
+    """B2 — basisdatum voor de verjaringstermijn.
+
+    De verjaring (art. 3:307 BW) loopt vanaf de opeisbaarheid van de vordering,
+    in Luxis benaderd door de verzuimdatum (`default_date`) van de OUDSTE actieve
+    vordering. De openingsdatum van het dossier is de terugval voor dossiers
+    zonder vorderingen. Zelfde bron als de verjaring-monitor
+    (`workflow.service.check_verjaring`), zodat badge en alarm dezelfde datum tonen.
+    """
+    from app.collections.models import Claim
+
+    oldest = (
+        await db.execute(
+            select(func.min(Claim.default_date)).where(
+                Claim.tenant_id == tenant_id,
+                Claim.case_id == case.id,
+                Claim.is_active.is_(True),
+            )
+        )
+    ).scalar()
+    return oldest or case.date_opened
+
+
 def resolve_client_interest_defaults(client) -> tuple[str, Decimal | None, bool | None]:
     """Rente-hiërarchie voor een nieuw dossier zonder expliciete keuze (S177):
     klantkaart (default_*, handmatige override) > uit-AV-gelezen (terms_interest_*)

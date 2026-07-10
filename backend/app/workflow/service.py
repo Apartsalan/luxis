@@ -10,7 +10,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
@@ -534,8 +534,15 @@ async def list_tasks(
     case_id: uuid.UUID | None = None,
     status: str | None = None,
     assigned_to_id: uuid.UUID | None = None,
+    include_unassigned: bool = False,
 ) -> list[WorkflowTask]:
-    """List workflow tasks with optional filters."""
+    """List workflow tasks with optional filters.
+
+    `include_unassigned` (alleen zinvol samen met `assigned_to_id`): naast de
+    taken van die gebruiker óók eigenaarloze tenant-taken meenemen. A1 — de
+    verjaring-monitor maakt taken zonder eigenaar aan; zonder dit blijven ze
+    onzichtbaar in Mijn Taken.
+    """
     query = select(WorkflowTask).where(
         WorkflowTask.tenant_id == tenant_id,
         WorkflowTask.is_active.is_(True),
@@ -545,7 +552,15 @@ async def list_tasks(
     if status:
         query = query.where(WorkflowTask.status == status)
     if assigned_to_id:
-        query = query.where(WorkflowTask.assigned_to_id == assigned_to_id)
+        if include_unassigned:
+            query = query.where(
+                or_(
+                    WorkflowTask.assigned_to_id == assigned_to_id,
+                    WorkflowTask.assigned_to_id.is_(None),
+                )
+            )
+        else:
+            query = query.where(WorkflowTask.assigned_to_id == assigned_to_id)
     query = query.order_by(WorkflowTask.due_date, WorkflowTask.created_at)
     result = await db.execute(query)
     return list(result.scalars().all())
@@ -831,13 +846,18 @@ async def check_verjaring(
         .subquery()
     )
 
+    # B2 — de monitor sloeg zaken met een `date_closed` over. Maar `date_closed`
+    # wordt door de app zelf nooit gezet: het komt uit de BaseNet-import, dus de
+    # heropende (nog lopende) zaken dragen een oude sluitdatum mee en vielen zo
+    # buiten de verjaringsbewaking. Filter op het échte "klaar"-signaal (`status`
+    # = betaald/afgesloten), consistent met de rest van de codebase.
     result = await db.execute(
         select(Case, oldest_claim.c.oldest_default)
         .outerjoin(oldest_claim, oldest_claim.c.case_id == Case.id)
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-            Case.date_closed.is_(None),
+            Case.status.notin_(("betaald", "afgesloten")),
         )
     )
 

@@ -54,16 +54,19 @@ import { toast } from "sonner";
 
 function VerjaringBadge({
   dateOpened,
+  basisDate,
   status,
 }: {
   dateOpened: string;
+  // B2 — verzuimdatum oudste vordering (server); valt terug op openingsdatum.
+  basisDate?: string | null;
   status: string;
 }) {
   const VERJARING_YEARS = 5;
   const terminalStatuses = ["betaald", "afgesloten"];
   if (terminalStatuses.includes(status)) return null;
 
-  const opened = new Date(dateOpened);
+  const opened = new Date(basisDate ?? dateOpened);
   const verjaringDate = new Date(opened);
   verjaringDate.setFullYear(verjaringDate.getFullYear() + VERJARING_YEARS);
 
@@ -233,7 +236,13 @@ export default function DossierHeader({
                   {zaak.debtor_type === "b2b" ? "B2B" : "B2C"}
                 </span>
               )}
-              {isIncasso && <VerjaringBadge dateOpened={zaak.date_opened} status={zaak.status} />}
+              {isIncasso && (
+                <VerjaringBadge
+                  dateOpened={zaak.date_opened}
+                  basisDate={zaak.verjaring_basis_date}
+                  status={zaak.status}
+                />
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
               {TYPE_LABELS[zaak.case_type]} · Geopend{" "}

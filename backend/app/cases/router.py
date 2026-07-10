@@ -131,6 +131,9 @@ async def get_case(
     response = CaseDetailResponse.model_validate(case)
     response.parties = [CasePartyResponse.model_validate(p) for p in case.parties]
     response.recent_activities = [CaseActivityResponse.model_validate(a) for a in activities]
+    response.verjaring_basis_date = await service.get_verjaring_basis_date(
+        db, current_user.tenant_id, case
+    )
     return response
 
 

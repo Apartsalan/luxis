@@ -36,8 +36,10 @@ overzichtelijke klus uit stapel 4, ná de Codex-installatie (~13 juli,
 
 ## Status
 - [x] Beslisgesprek (9 juli, in S191 — deze pagina)
-- [ ] Bouwblok 1 (S193) — `docs/sessions/PROMPT-S193-bouwblok1.md`
-- [ ] Bouwblok 2 (wacht op C2-gegevens van Arsalan, 10 juli)
+- [x] Bouwblok 1 (S193 gebouwd + S194 visueel geverifieerd op prod)
+- [~] Bouwblok 2 (S194): C2 ingevuld ✅ + bankimport-parser gefixt + droogloop klaar
+      (`docs/sessions/S194-bankimport-droogloop.md`). RESTEERT: C1-import SAMEN met Arsalan
+      (beslislijst 4 groepen) → B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken.
 - [ ] Bouwblok 3
 - [ ] Veegsessie
 - [ ] Codex-proef

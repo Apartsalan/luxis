@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 10 juli 2026 (sessie 193, Opus + Codex-review — **bouwblok 1 GEBOUWD + uitgerold**). B1 verstuurpad (e-mailroute + nooit valse "Uitgevoerd"), B13 vast kanaal incasso@ + preview vóór verzenden, B2+A1 verjaring zichtbaar (monitor/badge/taken), A2 dashboardfilter. Codex (Sol Ultra, alleen-lezen) reviewde beide porties tot APPROVED. Live op prod, mailslot bleef aan. **Next: S194 = bouwblok 2 zodra C2 binnen (bankimport-proef) of bouwblok 3.** Details: SESSION-NOTES S193-entry.
+**Laatst bijgewerkt:** 10 juli 2026 (sessie 194, Opus — **taak 2 + 3 + 1, alles live/klaar**). Admin-fix (alle accounts admin, opslaan-blokkade weg); instellingen-waarden live (afzender incasso@, BTW, kantoorrekening `NL79KNAB0606569456` los van derdengelden `NL20RABO0388506520` — kantoor-IBAN stond fout op het derdengelden-nummer); bankimport-parser komma-decimaal gefixt + droogloop (import zelf samen met Arsalan); taak 1 visuele doorklik prod groen. **Next: bouwblok 2 restant (C1 bankimport-proef samen + B4/A8 + B11) of bouwblok 3.** Details: SESSION-NOTES S194-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 10 juli 2026, S193)
+## 🎯 Huidige prioriteit (bijgewerkt 10 juli 2026, S194)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -62,9 +62,9 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > alleen op verzoek Arsalan): regel weghalen of op false + `docker compose up -d backend`.
 > Ontvangen/sync werkt gewoon door.
 
-1. **Bouwblok 1 — GEBOUWD + LIVE (S193, Opus + Codex-review APPROVED).** B1 verstuurpad + geen valse "Uitgevoerd", B13 vast kanaal incasso@ + preview, B2+A1 verjaring zichtbaar, A2 dashboardfilter. ⚠️ **Openstaand vóór mailslot eraf:** visuele doorklik prod + checken/zetten dat `Tenant.email` in prod = incasso@ (anders valt de afzender terug op de klikkende gebruiker).
-2. **Bouwblok 2 (zodra C2-gegevens binnen zijn) — volgende bouwprioriteit:** C2 invullen (stichting-IBAN + BTW van Arsalan) → C1 eerste bankimport-proef (samen) → B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken. Anders **bouwblok 3** (B3-versimpeling + A5-pauze + A3 dagstart + A7 sjablonen). Daarna veegsessie. Plan: `docs/plans/PLAN-fase2-bouwblokken.md`. Uren + Facturatie blijven AAN.
-3. **Heropening werkvoorraad:** volgende batch per opdrachtgever mét stap 4b (rente-valkuil) — draaiboek `docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
+1. **Bouwblok 1 — GEBOUWD + LIVE + visueel geverifieerd (S193 bouw, S194 doorklik).** B1 verstuurpad, B13 vast kanaal incasso@ + preview, B2+A1 verjaring, A2 dashboardfilter. S194: voorbeeldvenster werkt (afzender = incasso@, bevestigd), verjaring IN100016 = 23-09-2026 exact, dashboard/intake niet leeg. ✅ `Tenant.email` = incasso@ staat live.
+2. **Bouwblok 2 restant — volgende bouwprioriteit (C2 is binnen + ingevuld):** ⚠️ **C1 eerste bankimport-proef SAMEN met Arsalan** — CSV + droogloop klaar, beslislijst 4 groepen in `docs/sessions/S194-bankimport-droogloop.md` (dubbeltel-valkuil: 138 credits al geboekt buiten de pijplijn, H17-dedup ziet ze niet). Daarna **B4/A8 termijn-vooruitblik** (alleen overzicht over zaken heen) → **B11 stappen 3 proefzaken**. Anders **bouwblok 3** (B3-versimpeling + A5-pauze + A3 dagstart + A7 sjablonen). Daarna veegsessie. Plan: `docs/plans/PLAN-fase2-bouwblokken.md`. Uren + Facturatie blijven AAN.
+3. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer gereconstrueerd); 2 verweesde verjaringstaken op afgesloten zaken (IN100015/IN100127) opruimen (akkoord). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b — `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`.
 
 **Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende
 betalingsregelingen zijn alleen zinvol te bewaken als Luxis ook *ziet* dat er betaald is —

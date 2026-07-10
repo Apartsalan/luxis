@@ -2,12 +2,76 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 10 juli 2026 (S193, Opus) — bouwblok 1 GEBOUWD + uitgerold (backend+frontend, geen migraties) + Codex-review (Sol Ultra) op beide porties tot APPROVED. Details: S193-entry.
-**Laatste feature/fix:** bouwblok 1 live: B1 verstuurpad (e-mailroute + nooit valse "Uitgevoerd"), B13 vast kanaal incasso@ + preview vóór verzenden, B2+A1 verjaring zichtbaar (monitor/badge/taken), A2 dashboardfilter. Mailslot blijft aan (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); visuele doorklik prod nog te doen; ⚠️ **Instellingen-opslaan blokkeert op "admin nodig"** (Arsalans eerste account mist admin-rol → S194 fixen, wens: alle accounts admin) — hierdoor kan `Tenant.email`→incasso@ nog niet gezet (staat nog op kesting@; incasso@-account is al gekoppeld); ⚠️ **apart derdengelden-rekening-veld bouwen** (S194: Lisanne heeft eigen Kesting-rekening + derdengelden `NL20 RABO 0388 5065 20`); C2-waarden ontvangen (BTW `NL869343610B01` + derdengelden-IBAN) — invullen ná admin-fix; CSV-bankexport komt S194 van Lisanne; idempotency dubbel-verzenden (bekende grens, mailslot dekt); heropeningsbatch; terugstort IN100334. ✅ `.codex/` op .gitignore.
-**Volgende sessie:** S194 — bouwblok 2 zodra C2 binnen is (bankimport-proef C1 + termijn-vooruitblik B4/A8 + 3 proefzaken B11), anders bouwblok 3. Prompt: `docs/sessions/PROMPT-S194.md`.
+**Laatst bijgewerkt:** 10 juli 2026 (S194, Opus) — taak 2 (admin-fix + instellingen-waarden), taak 3 (bankimport parser-fix + droogloop) en taak 1 (visuele doorklik prod) allemaal LIVE/klaar. Details: S194-entry.
+**Laatste feature/fix:** alle accounts admin (opslaan-blokkade "admin nodig" weg, migratie s194); instellingen live gezet (afzender incasso@, BTW `NL869343610B01`, kantoorrekening `NL79KNAB0606569456` los van derdengelden `NL20RABO0388506520` — kantoor-IBAN stond fout op het derdengelden-nummer); bankimport-bedragen komma-decimaal gefixt (waren 100× te hoog). Mailslot blijft aan (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); ⚠️ **kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas/factuur checken** (Arsalan leverde 1 cijfer te weinig → via IBAN-checksum gereconstrueerd, hij gaf "ja"); **bankimport C1-proef samen met Arsalan** (beslislijst 4 groepen in `docs/sessions/S194-bankimport-droogloop.md`: 17 echt-nieuw, 29 gaten op afgesloten zaken, 22 onbekende zaken, 138 al-geboekt = dubbeltel-valkuil H17 ziet ze niet); **B4/A8 termijn-vooruitblik + B11 3 proefzaken** (bouwblok 2 restant); **2 verweesde verjaringstaken** op afgesloten zaken (IN100015/IN100127) opruimen (akkoord Arsalan nodig); heropeningsbatch; terugstort IN100334; idempotency dubbel-verzenden (bekende grens, mailslot dekt).
+**Volgende sessie:** bouwblok 2 restant (C1 bankimport-proef samen + B4/A8 termijn-vooruitblik + B11 3 proefzaken), anders bouwblok 3. Plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 194 (10 juli 2026, Opus — taak 2 + taak 3 + taak 1, alles live/klaar)
+
+### Samenvatting
+`PROMPT-S194.md` uitgevoerd: taak 2 (instellingen-blokkade + waarden), taak 3 (bankimport),
+taak 1 (visuele doorklik). Ontdekking vooraf: het aparte derdengelden-veld bestónd al (model
++ scherm), dus taak 2 punt 3 was al gebouwd — alleen waarden restten.
+
+### Taak 2 — admin-fix + instellingen-waarden (LIVE, commit `a5c4332`)
+- **Root cause admin-blokkade:** `create_user`/`RegisterRequest`/`User`-model gaven standaard
+  rol `medewerker`; `PUT /api/settings/tenant` eist `require_role("admin")` → Arsalans eerste
+  account kon niet opslaan. Wens Arsalan: alle accounts admin. Fix: default → `admin` op alle
+  drie de plekken + **migratie `s194_all_users_admin`** (idempotent, promoot bestaande users).
+  Beide prod-accounts nu admin. `require_role`-mechaniek blijft (security-posture). Test toegevoegd.
+  ⚠️ Bijeffect (bewust, gemeld): admin dekt ook Exact/sjablonen/workflow/user-aanmaak — prima voor 1-2-persoons.
+- **Instellingen-waarden op prod gezet (ná expliciet akkoord Arsalan):** `Tenant.email` kesting@ →
+  **incasso@kestinglegal.nl** (B13 vast kanaal werkt nu), BTW leeg → **NL869343610B01**.
+  Derdengelden-IBAN stond al goed (NL20RABO0388506520).
+- **Kantoorrekening-datafout gecorrigeerd (D-C-audit-punt):** het veld `iban` (kantoorrekening)
+  bevatte óók het derdengelden-nummer → elke factuur aan een opdrachtgever vroeg betaling op de
+  derdengeldenrekening. Gezet op Lisannes eigen Kesting-rekening **NL79KNAB0606569456**. ⚠️ Arsalan
+  leverde `NL79KNAB060656945` (9 cijfers i.p.v. 10); via IBAN-checksum was er precies één geldige
+  reconstructie (…9456) → met zijn "ja" gezet. **Nog 1× tegen bankpas checken.** Rekening-scheiding
+  in de code klopt: factuur→kantoor-IBAN (2 plekken), sommatie/aanmaning/regeling→derdengelden
+  (luide placeholder bij leeg, audit #61), SEPA→derdengelden.
+
+### Taak 3 — bankimport droogloop + parser-fix (commit `19743e8`, LIVE; import zelf NIET gedaan)
+- **Parser-bug gevonden + gefixt:** het echte afschrift (`CSV_A_NL20RABO0388506520`, derdengelden,
+  1 jaar, 368 regels) gebruikt komma-decimaal (+1013,74); `parse_rabobank_csv` stripte komma's →
+  élk bedrag 100× te hoog (droogloop-som €17,7 mln i.p.v. €176.905,81). `_parse_amount` (komma/punt/
+  duizendtallen, meest-rechtse scheidingsteken = decimaal) + 3 tests met echte rij. 53 tests groen.
+- **Droogloop op prod (100% alleen-lezen, echte parser+matcher):** 212 credits €176.905,81;
+  **138 al geboekt** (S179/S180, exact op datum+bedrag) — ⚠️ dubbeltel-valkuil: H17-dedup ziet ze
+  NIET (die boekingen liepen buiten de import-pijplijn om) → blind importeren = honderden dubbelen.
+  **17 echt-nieuw** na 30 mei (€8.836), **29 gaten** op bekende maar afgesloten zaken (€43.744),
+  **22 onbekende** zaken (€40.462, D-/FN-nummers). Matcher kijkt alleen naar 18 actieve zaken.
+  Beslislijst 4 groepen → **C1-import samen met Arsalan.** Rapport: `docs/sessions/S194-bankimport-droogloop.md`.
+
+### Taak 1 — visuele doorklik prod (Playwright, seidony@, niets verstuurd)
+- **Follow-up "Uitvoeren" → voorbeeldvenster werkt** (B13): afzender/ontvanger/onderwerp/brief;
+  afzender = **incasso@kestinglegal.nl** (bewijst afzender-fix + sluit S193-openstaand punt);
+  "Versturen" grijs zonder e-mailadres. Getest op testdossier 2026-00001. Escalatie-direct-uitvoeren
+  NIET geklikt (zou echte cliëntzaak muteren) — code-pad wel bevestigd.
+- **Verjaring:** IN100016 rekent exact op **23-09-2026** (via API, `verjaring_basis_date` 2021-09-23
+  + 5 jr); afgesloten zaak toont terecht geen badge; Mijn Taken toont de alarmen. Geen actieve zaak
+  heeft nu een verjaring binnen 90 dagen → badge-render niet live te tonen (data, geen bug).
+- **Dashboard/Intake niet leeg:** 18 nieuwe dossiers + 6 intake-aanvragen.
+- **Instellingen opslaan werkt** (admin-fix live bewezen: tijdelijke wijziging opgeslagen + hersteld,
+  geen "admin nodig"); alle waarden correct in beeld.
+
+### Bevinding (klein, niet gefixt — akkoord nodig)
+2 verweesde "VERJAARD"-taken op **afgesloten** zaken (IN100015, IN100127), aangemaakt 4 juli vóór de
+S193-monitorfix. De monitor maakt ze niet meer aan (filtert nu op terminale status), maar deze twee
+blijven in Mijn Taken staan tot iemand ze afvinkt. Opruimen = data-mutatie → wacht op akkoord.
+
+### Verificatie
+Backend: test_settings (8) + test_payment_matching (53) + auth/exact/role (72) groen; ruff schoon;
+migratie s194 lokaal + op prod toegepast (s184→s194). 3 commits (`a5c4332`/`19743e8`/`8279a29`),
+alle gepusht + backend gedeployed via SSH, containers healthy. Prod-waarden via SQL geverifieerd.
+Codex-tegenlezer op de parser-diff getimed uit (5 min) → overgeslagen; parser gedekt door 3 nieuwe tests.
+
+### Volgende sessie
+Bouwblok 2 restant: C1 bankimport-proef **samen** (beslislijst in droogloop-rapport) → B4/A8
+termijn-vooruitblik (alleen overzicht over zaken heen) → B11 stappen 3 proefzaken. Anders bouwblok 3.
 
 ## Sessie 193 (10 juli 2026, Opus + Codex-review — bouwblok 1 gebouwd + uitgerold)
 
@@ -420,114 +484,4 @@ settings.json valide JSON; waakhond-logica getest (stil bij huidige maten, vuurt
 
 ### Volgende sessie
 Ongewijzigd S188: eerst de 2 mailverificatie-gaten, dan heropening werkvoorraad (`docs/sessions/PROMPT-S188.md`).
-
-## Sessie 187 (8 juli, Opus-bouw + Fable-review — mailfunctie afmaken, blok A+B)
-
-### Samenvatting
-Mailmodule afgemaakt volgens `docs/plans/PLAN-mail-afmaken.md`. Onderzoek/review op Fable,
-bouw op Opus (mailwerk triggert het Fable-veiligheidsfilter het hardst → wisselt vaak naar
-Opus; dat is een filter aan Anthropic-kant, niet in onze code — zie memory `feedback_model_choice`).
-Alles in de ingelogde prod-app doorgeklikt (m.u.v. het openstaande gat hieronder).
-
-### Taak 0 — Fable-review S186-mailwerk (vooraf), 2 fixes LIVE (commit `13f18df`)
-- **Reply-threading**: `References` begon bij de directe voorganger i.p.v. de draad-wortel →
-  antwoord middenin een lange keten kreeg (na sync) een andere `thread_id` → auto-koppeling
-  kon terugvallen naar Ongesorteerd. Nu stuurt de voorkant `references_root` mee; IMAP-provider
-  bouwt `References = "root parent"`. Outlook-signatuur meegetrokken (negeert het veld).
-- **Kale-mail-ontsnapping**: AI-concept met mislukte huisstijl-wrap (`body_html` leeg) ging tóch
-  als `already_branded` de deur uit → kaal. Nu alleen overslaan bij écht opgemaakte HTML.
-
-### Blok A — mailbasis (commit `7b91704`, + fixes `1fce49c`/`7decaf2`)
-- **Leesvenster in "Alle e-mails"**: inline detail-JSX van Ongesorteerd geëxtraheerd naar één
-  gedeeld `EmailDetailPanel` (lezen, bijlagen, beantwoorden/doorsturen, koppelen). Gekoppelde
-  mail toont "Gekoppeld dossier" + Open-dossier; niet-gekoppelde: koppelen + Negeren + Maak-dossier.
-- **"Meer laden"**: `useAllEmails` → `useInfiniteQuery` (offset, 200/pagina). Teller = totaal.
-- **Gelezen-status**: IMAP-fetch vraagt nu `(FLAGS RFC822)`; `_seen_flag_present` leest `\Seen` uit
-  de descriptor; `is_read` volgt de vlag (was hard True). Her-sync werkt bestaande mail bij (alleen
-  bij verschil, geen rij-load). Ongelezen = blauwe stip + vet. Live: stippen verschenen na sync.
-- **Sjabloonkiezer** altijd zichtbaar; zonder dossier disabled met uitleg "Kies eerst een dossier".
-- **Ophaalvenster** `since_days` 14 → 90.
-
-### Blok B — Nieuwe aanvragen (zelfde commit)
-- Tab **"Nieuwe aanvragen"** met teller (pending_review), AI-uittreksel per aanvraag + Maak-dossier/
-  Afwijzen (bestaande intake-acties). Detail bewerken linkt naar `/intake/[id]`.
-- **Domein-herkenning**: `detect_intake_emails` + `create_intake_from_email` matchen ook op
-  bedrijfsdomein van de opdrachtgevers; vrije providers (gmail e.d.) + ambigue domeinen uitgesloten.
-- **"Maak dossier van deze mail"**: `POST /api/intake/from-email/{email_id}` (idempotent), knop in
-  het leesvenster op niet-gekoppelde mail.
-
-### Bugs onderweg gevonden + gefixt (live geverifieerd)
-- **Suggesties gaven 500** (`Contact.display_name` bestaat niet → `Contact.name`). Trof élke mail
-  met een suggestie; zichtbaar geworden nu je in "Alle e-mails" ook uitgaande/gekoppelde mail opent.
-  Commit `7decaf2` + regressietest; endpoint nu 200.
-- **`case_number` ontbrak in mail-detail** → gekoppelde mail toonde "Koppel aan dossier" i.p.v.
-  "Gekoppeld dossier". Toegevoegd (relatie is `lazy="selectin"`). Commit `1fce49c`, live bevestigd.
-
-### Verificatie
-Backend 121 mail/intake-tests groen, ruff schoon; frontend tsc + `next build` schoon. Browser
-(ingelogd, prod): 3 tabs + tellers, leesvenster open/lezen/reply-knoppen, paginering "6450 — 200
-getoond", ongelezen-stippen, gekoppeld/niet-gekoppeld-varianten, aanvragen-tab met AI-uittreksel,
-sjabloon-uitleg. Sync draaide foutloos met de nieuwe vlag-fetch. `suggest-cases` na fix → 200.
-
-### Openstaand (voor S188)
-- ⚠️ **Ongesorteerd-tab** en de **"Maak dossier"-flow met een echt nieuw dossier** niet apart live
-  doorgeklikt (delen wel het bewezen `EmailDetailPanel`; risico laag, maar niet 0-bewezen).
-- Fable-filter blijft mailwerk naar Opus schuiven — Arsalan gaf feedback via `/feedback`. Knop om
-  auto-wissel uit te zetten staat in claude.ai-accountinstellingen (niet betrouwbaar in de terminal).
-- Nog steeds open sinds S186: DMARC voor kestinglegal.nl; testspoor "Luxis diagnose SELF" opruimen.
-
-## Sessie 186 (8 juli, Opus + Fable — mailfunctie: versturen als incasso@ + blok 2 + huisstijl)
-
-### Samenvatting
-Doel: mailmodule doorlichten (menu + dossierniveau) en versturen áls incasso@ bouwen; daarna
-de mailfunctie verder afmaken. Onderzoek=Fable, bouw=Opus, alles live geverifieerd.
-
-**Verzenden als incasso@ (blok 1, commits `4d47fb1`/`4a5896e`/`f5ef4d7`):**
-- `ImapProvider.send_message` = echte SMTP via `smtp.basenet.nl:587` (STARTTLS+AUTH, zelfde inlog
-  als IMAP-ontvangst; was `NotImplementedError`). Afzender = het account (Lisanne = incasso@).
-- **Gemeten: BaseNet bewaart SMTP-verzonden mail NIET in Verzonden** → Luxis doet zelf IMAP APPEND
-  naar `INBOX.Sent` na elke send (faalt nooit de verzending). 2 proefmails aangekomen + kopie in
-  Verzonden bewezen.
-- `imap_smtp_kwargs()` (SMTP-host afgeleid uit IMAP-scope) doorgegeven in `send_service` +
-  `compose_router` → incasso-machine, facturen, opvolging én compose-knop versturen nu correct.
-- Bijlage-lek `/compose/send` gedicht (vielen stil weg); document-send omgeleid van Gmail-noodroute
-  → `send_with_attachment`; dossier-mailtab 50→200 mails.
-
-**Blok 2 (commits `ee41b72`/`8a98315`/`3b26a37`/`9aebb45`):**
-- Dood `/api/email/all` HERSTELD (verloren bij shadow-map-opruiming) → "Alle e-mails"-tab toont
-  6446 mails. Browser-geverifieerd.
-- Zoeken door álle mail server-side (onderwerp/afzender/ontvanger/snippet/body). "faillissement"
-  = 2009 treffers, browser-geverifieerd.
-- Gesprekketting-fix: thread_id = References-WORTEL (was directe voorganger → keten brak na 1 antwoord).
-- Beantwoorden/doorsturen vanuit dossier ÉN Ongesorteerd (`lib/email-reply.ts`), koppelt via
-  In-Reply-To/References. Browser-geverifieerd (prefill klopt).
-
-**Huisstijl-opmaak (commit `fd4ea8f`):** afspraak Arsalan = álles vanuit de incasso-mailbox draagt
-de sjabloon-opmaak (handtekening+logo+schuldhulpblok+disclaimer); alleen de tekst verschilt.
-`ensure_branded_body()` centraal; al-opgemaakte HTML (templates/AI-concept) via `already_branded`
-overgeslagen (robuust tegen geciteerd 'Betreft:'). Prod-render 7/7 groen. 346 tests groen.
-
-### Gewijzigde bestanden
-- Backend: `email/providers/imap_provider.py`, `email/oauth_service.py`, `email/send_service.py`,
-  `email/compose_router.py`, `email/sync_router.py`, `email/sync_service.py`,
-  `email/incasso_templates.py`, `documents/router.py`; tests `test_imap_send.py`/`test_email_sync.py`/`test_email_branding.py`.
-- Frontend: `components/email-compose-dialog.tsx`, `lib/email-reply.ts`, `hooks/use-email-sync.ts`,
-  `zaken/[id]/page.tsx`, `zaken/[id]/components/CorrespondentieTab.tsx`, `correspondentie/page.tsx`.
-
-### Bekende issues
-- **NIET geverifieerd:** hoe een aangeklede mail er in een échte inbox uitziet (kleuren/logo);
-  geen echt antwoord/bijlage-mail verzonden (verzendpad wel bewezen). Reply-citaat staat vóór
-  de handtekening (cosmetisch).
-- **DMARC ontbreekt** voor kestinglegal.nl (Gmail-aflevering → mogelijk spam). Later regelen bij
-  BaseNet/registrar. SPF bevat wel `_spf.basenet.nl`.
-- Testspoor: "Luxis diagnose SELF" in incasso@-INBOX (dismissen); enkele proefmails naar
-  arsalanseidony@gmail.com.
-- Later: incasso@-accountnaam hernoemen.
-
-### Volgende sessie
-**Mailfunctie AFMAKEN — plan `docs/plans/PLAN-mail-afmaken.md`, blok A+B, op Opus.**
-Blok A: mails openen in "Alle e-mails" (leesvenster ontbreekt), verder bladeren >200, ongelezen-status,
-sjabloonkiezer begrijpelijk maken (werkt alleen mét dossier), ophaalvenster >14 dagen.
-Blok B: "Nieuwe aanvragen"-tab via de BESTAANDE intake-detectie (draait al, 2 wachten op review),
-domein-match op de 7 opdrachtgevers, "maak dossier van deze mail". Blok C = géén vrije mappen.
 

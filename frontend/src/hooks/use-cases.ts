@@ -63,8 +63,10 @@ export interface CaseDetail extends CaseSummary {
     description: string | null;
     created_at: string;
   }[];
-  // B2 — basisdatum verjaring (verzuimdatum oudste vordering; terugval openingsdatum).
+  // B2 — basisdatum verjaring (verzuimdatum oudste vordering; terugval
+  // openingsdatum) + de server-berekende verjaringsdatum voor de badge.
   verjaring_basis_date: string | null;
+  verjaring_date: string | null;
 }
 
 interface PaginatedCases {

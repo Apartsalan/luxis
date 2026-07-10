@@ -131,9 +131,10 @@ async def get_case(
     response = CaseDetailResponse.model_validate(case)
     response.parties = [CasePartyResponse.model_validate(p) for p in case.parties]
     response.recent_activities = [CaseActivityResponse.model_validate(a) for a in activities]
-    response.verjaring_basis_date = await service.get_verjaring_basis_date(
-        db, current_user.tenant_id, case
-    )
+    basis = await service.get_verjaring_basis_date(db, current_user.tenant_id, case)
+    response.verjaring_basis_date = basis
+    # Server-side berekend (relativedelta klemt 29 feb → 28 feb; JS niet).
+    response.verjaring_date = service.compute_verjaring_date(basis)
     return response
 
 

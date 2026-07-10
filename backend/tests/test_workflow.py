@@ -823,6 +823,67 @@ async def test_check_verjaring_skips_paid_and_closed_status(
 
 
 @pytest.mark.asyncio
+async def test_check_verjaring_skips_tenant_terminal_statuses(
+    db: AsyncSession, test_tenant: Tenant, test_company: Contact
+):
+    """Codex-review portie 2: ook de kantoor-eigen terminale statussen
+    (oninbaar/schikking via WorkflowStatus.is_terminal) worden overgeslagen."""
+    from decimal import Decimal
+
+    from dateutil.relativedelta import relativedelta
+
+    from app.collections.models import Claim
+    from app.workflow.models import WorkflowStatus
+    from app.workflow.service import check_verjaring
+
+    db.add(
+        WorkflowStatus(
+            tenant_id=test_tenant.id,
+            slug="oninbaar",
+            label="Oninbaar",
+            phase="afgerond",
+            is_terminal=True,
+        )
+    )
+    almost_expired = date.today() - relativedelta(years=5) + timedelta(days=30)
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-VERJONINB",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="oninbaar",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today() - timedelta(days=2000),
+    )
+    db.add(case)
+    db.add(
+        Claim(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            description="Afgeschreven vordering",
+            principal_amount=Decimal("1000.00"),
+            default_date=almost_expired,
+        )
+    )
+    await db.commit()
+
+    warnings = await check_verjaring(db, test_tenant.id)
+    assert "2026-VERJONINB" not in {w["case_number"] for w in warnings}
+
+
+def test_compute_verjaring_date_clamps_leap_day():
+    """Codex-review portie 2: 29 feb + 5 jaar = 28 feb (dateutil klemt), zodat
+    badge en monitor exact dezelfde datum tonen."""
+    from app.cases.service import compute_verjaring_date
+
+    assert compute_verjaring_date(date(2024, 2, 29)) == date(2029, 2, 28)
+    assert compute_verjaring_date(date(2024, 3, 1)) == date(2029, 3, 1)
+
+
+@pytest.mark.asyncio
 async def test_list_tasks_include_unassigned(
     db: AsyncSession, test_tenant: Tenant, test_user: User, test_company: Contact
 ):

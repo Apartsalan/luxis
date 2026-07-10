@@ -54,21 +54,27 @@ import { toast } from "sonner";
 
 function VerjaringBadge({
   dateOpened,
-  basisDate,
+  serverVerjaringDate,
   status,
 }: {
   dateOpened: string;
-  // B2 — verzuimdatum oudste vordering (server); valt terug op openingsdatum.
-  basisDate?: string | null;
+  // B2 — server-berekende verjaringsdatum (zelfde bron + jaarrekenwerk als de
+  // monitor; JS setFullYear wijkt af rond 29 februari). Terugval: zelf rekenen
+  // vanaf de openingsdatum.
+  serverVerjaringDate?: string | null;
   status: string;
 }) {
   const VERJARING_YEARS = 5;
-  const terminalStatuses = ["betaald", "afgesloten"];
+  const terminalStatuses = ["betaald", "afgesloten", "oninbaar", "schikking"];
   if (terminalStatuses.includes(status)) return null;
 
-  const opened = new Date(basisDate ?? dateOpened);
-  const verjaringDate = new Date(opened);
-  verjaringDate.setFullYear(verjaringDate.getFullYear() + VERJARING_YEARS);
+  let verjaringDate: Date;
+  if (serverVerjaringDate) {
+    verjaringDate = new Date(serverVerjaringDate);
+  } else {
+    verjaringDate = new Date(dateOpened);
+    verjaringDate.setFullYear(verjaringDate.getFullYear() + VERJARING_YEARS);
+  }
 
   const now = new Date();
   const daysLeft = Math.ceil(
@@ -239,7 +245,7 @@ export default function DossierHeader({
               {isIncasso && (
                 <VerjaringBadge
                   dateOpened={zaak.date_opened}
-                  basisDate={zaak.verjaring_basis_date}
+                  serverVerjaringDate={zaak.verjaring_date}
                   status={zaak.status}
                 />
               )}

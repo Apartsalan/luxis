@@ -849,15 +849,24 @@ async def check_verjaring(
     # B2 — de monitor sloeg zaken met een `date_closed` over. Maar `date_closed`
     # wordt door de app zelf nooit gezet: het komt uit de BaseNet-import, dus de
     # heropende (nog lopende) zaken dragen een oude sluitdatum mee en vielen zo
-    # buiten de verjaringsbewaking. Filter op het échte "klaar"-signaal (`status`
-    # = betaald/afgesloten), consistent met de rest van de codebase.
+    # buiten de verjaringsbewaking. Filter op het échte "klaar"-signaal: de
+    # terminale statussen van dit kantoor (WorkflowStatus.is_terminal, dekt ook
+    # oninbaar/schikking) + de vaste kern als vangnet (Codex-review portie 2).
+    terminal_result = await db.execute(
+        select(WorkflowStatus.slug).where(
+            WorkflowStatus.tenant_id == tenant_id,
+            WorkflowStatus.is_terminal.is_(True),
+        )
+    )
+    terminal_slugs = {"betaald", "afgesloten"} | set(terminal_result.scalars())
+
     result = await db.execute(
         select(Case, oldest_claim.c.oldest_default)
         .outerjoin(oldest_claim, oldest_claim.c.case_id == Case.id)
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-            Case.status.notin_(("betaald", "afgesloten")),
+            Case.status.notin_(terminal_slugs),
         )
     )
 

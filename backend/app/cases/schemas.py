@@ -338,8 +338,11 @@ class CaseDetailResponse(CaseResponse):
     parties: list[CasePartyResponse] = []
     recent_activities: list[CaseActivityResponse] = []
     # B2 — basisdatum verjaring (verzuimdatum oudste vordering, terugval
-    # openingsdatum); de dossier-badge rekent hierop i.p.v. op date_opened.
+    # openingsdatum) + de server-berekende verjaringsdatum zelf. De badge toont
+    # de server-datum: JS-jaarrekenwerk wijkt af rond 29 februari
+    # (Codex-review portie 2).
     verjaring_basis_date: date | None = None
+    verjaring_date: date | None = None
 
 
 # ── CaseFile Schemas (E4: Document uploads) ─────────────────────────────────

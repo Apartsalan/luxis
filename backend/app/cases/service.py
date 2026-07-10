@@ -394,6 +394,20 @@ async def get_verjaring_basis_date(
     return oldest or case.date_opened
 
 
+def compute_verjaring_date(basis_date: date) -> date:
+    """Verjaringsdatum = basisdatum + wettelijke termijn (art. 3:307 BW).
+
+    Server-side omdat dateutil 29 februari correct klemt naar 28 februari;
+    JavaScript's setFullYear rolt door naar 1 maart (Codex-review portie 2).
+    Zelfde formule als de monitor (workflow.service.check_verjaring).
+    """
+    from dateutil.relativedelta import relativedelta
+
+    from app.workflow.schemas import LEGAL_CONSTRAINTS
+
+    return basis_date + relativedelta(years=LEGAL_CONSTRAINTS["verjaring_years"])
+
+
 def resolve_client_interest_defaults(client) -> tuple[str, Decimal | None, bool | None]:
     """Rente-hiërarchie voor een nieuw dossier zonder expliciete keuze (S177):
     klantkaart (default_*, handmatige override) > uit-AV-gelezen (terms_interest_*)

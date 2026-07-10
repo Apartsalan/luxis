@@ -729,6 +729,25 @@ async def test_execute_without_opposing_email_fails_loud(
 
 
 @pytest.mark.asyncio
+async def test_execute_generate_without_template_never_executed(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Codex-review: een GENERATE_DOCUMENT-aanbeveling waarvan de stap geen
+    sjabloon (meer) heeft, mag NOOIT stil op 'Uitgevoerd' belanden."""
+    step = await _create_step(db, test_tenant.id, name="Losse stap", template_type=None)
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    with pytest.raises(BadRequestError):
+        await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+
+    assert rec.status != RecommendationStatus.EXECUTED
+    assert rec.executed_at is None
+
+
+@pytest.mark.asyncio
 async def test_api_approve_and_reject(client, db: AsyncSession, test_tenant, test_user):
     """POST approve and reject endpoints work."""
     step = await _create_step(db, test_tenant.id)

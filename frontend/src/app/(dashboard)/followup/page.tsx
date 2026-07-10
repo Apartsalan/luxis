@@ -33,6 +33,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils";
+import { sanitizeOutgoingHtml } from "@/lib/sanitize";
 import { QueryError } from "@/components/query-error";
 import { toast } from "sonner";
 
@@ -111,25 +112,39 @@ export default function FollowupPage() {
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PER_PAGE);
 
-  function handleApproveAndExecute(id: string, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setPreviewId(id);
-  }
-
-  function handleConfirmSend(id: string) {
+  function runApproveAndExecute(id: string, successMsg: string) {
     approveAndExecute.mutate(
       { id },
       {
         onSuccess: () => {
           setPreviewId(null);
-          toast.success("Aanbeveling goedgekeurd en verstuurd");
+          toast.success(successMsg);
         },
         onError: (err) => {
-          toast.error(err.message || "Versturen mislukt");
+          toast.error(err.message || "Uitvoeren mislukt");
         },
       },
     );
+  }
+
+  function handleApproveAndExecute(
+    id: string,
+    action: string,
+    e: React.MouseEvent,
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Escalatie verstuurt niets (maakt alleen een taak) → geen verzend-preview,
+    // direct uitvoeren. Alleen document-verzendingen krijgen het preview-venster.
+    if (action !== "generate_document") {
+      runApproveAndExecute(id, "Taak aangemaakt");
+      return;
+    }
+    setPreviewId(id);
+  }
+
+  function handleConfirmSend(id: string) {
+    runApproveAndExecute(id, "Aanbeveling goedgekeurd en verstuurd");
   }
 
   function handleReject(id: string) {
@@ -347,7 +362,7 @@ export default function FollowupPage() {
                       {item.status === "pending" && (
                         <>
                           <button
-                            onClick={(e) => handleApproveAndExecute(item.id, e)}
+                            onClick={(e) => handleApproveAndExecute(item.id, item.recommended_action, e)}
                             disabled={approveAndExecute.isPending}
                             className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
                             title="Goedkeuren & Uitvoeren"
@@ -475,7 +490,7 @@ export default function FollowupPage() {
                           {item.status === "pending" && (
                             <div className="flex items-center gap-2 pt-2 md:hidden">
                               <button
-                                onClick={(e) => handleApproveAndExecute(item.id, e)}
+                                onClick={(e) => handleApproveAndExecute(item.id, item.recommended_action, e)}
                                 disabled={approveAndExecute.isPending}
                                 className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                               >
@@ -615,8 +630,10 @@ function SendPreviewDialog({
 
             <div
               className="max-h-[45vh] overflow-y-auto rounded-md border bg-white p-4 text-sm text-black"
+              // Geschoond vóór weergave (Codex-review portie 1): strip scripts/
+              // handlers, behoud de huisstijl-opmaak.
               // eslint-disable-next-line react/no-danger
-              dangerouslySetInnerHTML={{ __html: preview.body_html }}
+              dangerouslySetInnerHTML={{ __html: sanitizeOutgoingHtml(preview.body_html) }}
             />
           </div>
         )}

@@ -1235,6 +1235,11 @@ async def batch_execute(
                 # nooit iets de deur uit.
                 inline_html = render_incasso_email(step.template_type, base_context)
 
+                # Codex-review portie 1: als verzending is gevraagd maar er gaat
+                # niets de deur uit, mag de zaak niet doorschuiven (zelfde regel
+                # als B1). We houden per zaak bij of er echt iets verstuurd is.
+                sent_this_case = False
+
                 if inline_html is not None:
                     # E-mailroute: de brief ís de e-mailtekst, geen bijlage.
                     doc = GeneratedDocument(
@@ -1269,6 +1274,7 @@ async def batch_execute(
                             )
                             if email_log.status == "sent":
                                 emails_sent += 1
+                                sent_this_case = True
                             else:
                                 emails_failed += 1
                                 errors.append(
@@ -1329,6 +1335,7 @@ async def batch_execute(
                             )
                             if email_log.status == "sent":
                                 emails_sent += 1
+                                sent_this_case = True
                             else:
                                 emails_failed += 1
                                 errors.append(
@@ -1340,6 +1347,17 @@ async def batch_execute(
                             logger.error(
                                 "Batch email failed for %s: %s", case.case_number, email_exc
                             )
+
+                # Codex-review portie 1: verzending gevraagd maar niets verstuurd
+                # (mislukt of geen e-mailadres) → document blijft staan mét fout,
+                # maar de zaak schuift NIET door en taken worden niet afgerond.
+                if send_email and not sent_this_case:
+                    if not (case.opposing_party and case.opposing_party.email):
+                        errors.append(
+                            f"{case.case_number}: geen e-mailadres wederpartij — "
+                            "niet verstuurd, zaak niet doorgeschoven"
+                        )
+                    continue
 
                 # Auto-complete matching pipeline tasks for this step
                 completed_count = await _auto_complete_tasks(

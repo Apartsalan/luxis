@@ -381,19 +381,22 @@ async def execute_recommendation(
     if not rec:
         return None
 
-    # Load case with relationships
-    case_result = await db.execute(select(Case).where(Case.id == rec.case_id))
+    # Load case with relationships (tenant-scoped — Codex-review portie 1)
+    case_result = await db.execute(
+        select(Case).where(Case.id == rec.case_id, Case.tenant_id == tenant_id)
+    )
     case = case_result.scalar_one_or_none()
     if not case:
-        rec.status = RecommendationStatus.EXECUTED
-        rec.executed_at = datetime.now(UTC)
-        rec.execution_result = "Dossier niet gevonden"
-        await db.flush()
-        return rec
+        # Dossier weg tussen scan en uitvoeren → NOOIT stil op "Uitgevoerd"
+        # zetten (dat maskeert dat er niets gebeurd is).
+        raise BadRequestError("Dossier niet gevonden — niets uitgevoerd")
 
-    # Load the step
+    # Load the step (tenant-scoped)
     step_result = await db.execute(
-        select(IncassoPipelineStep).where(IncassoPipelineStep.id == rec.incasso_step_id)
+        select(IncassoPipelineStep).where(
+            IncassoPipelineStep.id == rec.incasso_step_id,
+            IncassoPipelineStep.tenant_id == tenant_id,
+        )
     )
     step = step_result.scalar_one_or_none()
 
@@ -557,6 +560,15 @@ async def execute_recommendation(
         )
         db.add(activity)
 
+    else:
+        # GENERATE_DOCUMENT zonder (nog) een stap/sjabloon, of een onbekende
+        # actie: er is niets gebeurd. Nooit stil op "Uitgevoerd" zetten
+        # (Codex-review portie 1) — laat het luid falen zodat het zichtbaar blijft.
+        raise BadRequestError(
+            f"{case.case_number}: geen uitvoerbare actie (stap/sjabloon ontbreekt) — "
+            "niets uitgevoerd"
+        )
+
     rec.status = RecommendationStatus.EXECUTED
     rec.executed_at = datetime.now(UTC)
     rec.execution_result = ". ".join(execution_parts) if execution_parts else "Uitgevoerd"
@@ -601,14 +613,19 @@ async def preview_recommendation(
         return None
 
     case = (
-        await db.execute(select(Case).where(Case.id == rec.case_id))
+        await db.execute(
+            select(Case).where(Case.id == rec.case_id, Case.tenant_id == tenant_id)
+        )
     ).scalar_one_or_none()
     if not case:
         return None
 
     step = (
         await db.execute(
-            select(IncassoPipelineStep).where(IncassoPipelineStep.id == rec.incasso_step_id)
+            select(IncassoPipelineStep).where(
+                IncassoPipelineStep.id == rec.incasso_step_id,
+                IncassoPipelineStep.tenant_id == tenant_id,
+            )
         )
     ).scalar_one_or_none()
 

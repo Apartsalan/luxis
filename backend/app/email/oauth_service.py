@@ -187,10 +187,14 @@ async def get_tenant_send_account(
         return None
 
     result = await db.execute(
-        select(EmailAccount).where(
+        select(EmailAccount)
+        .where(
             EmailAccount.tenant_id == tenant_id,
             func.lower(EmailAccount.email_address) == tenant_email.strip().lower(),
         )
+        # Deterministisch: nieuwste koppeling eerst (meerdere gebruikers kunnen
+        # ooit dezelfde mailbox gekoppeld hebben — Codex-review portie 1).
+        .order_by(EmailAccount.connected_at.desc())
     )
     rows = result.scalars().all()
     if not rows:

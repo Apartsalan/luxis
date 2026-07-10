@@ -593,11 +593,15 @@ async def render_docx(
         template_snapshot = template_path.read_bytes()
         tpl = DocxTemplate(str(template_path))
 
-    # Build context based on template type (skip if pre-built context provided)
-    if pre_built_context is not None:
-        context = pre_built_context
-    elif template_type == "renteoverzicht":
+    # Build context based on template type. Sjablonen met een eigen
+    # context-opbouw (renteoverzicht) MOETEN die krijgen — ook als de aanroeper
+    # een generieke pre_built_context meegaf (Codex-review portie 1): anders
+    # verliest het renteoverzicht rente_regels/BIK-velden. Voor alle andere
+    # sjablonen mag de meegegeven basiscontext hergebruikt worden.
+    if template_type == "renteoverzicht":
         context = await _build_renteoverzicht_context(db, tenant_id, case)
+    elif pre_built_context is not None:
+        context = pre_built_context
     else:
         context = await build_base_context(db, tenant_id, case)
 

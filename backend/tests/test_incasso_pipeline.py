@@ -974,7 +974,8 @@ class TestBatchExecute:
     async def test_email_failure_doesnt_block_document(
         self, client, auth_headers, db, test_tenant, test_user, test_company, test_person
     ):
-        """Email failure doesn't prevent document generation. emails_failed=1."""
+        """Email failure: document blijft bestaan (emails_failed=1), maar de zaak
+        schuift NIET door en taken worden niet afgerond (Codex-review portie 1)."""
         await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
         case = await create_incasso_case(
@@ -1020,6 +1021,9 @@ class TestBatchExecute:
         assert data["emails_sent"] == 0
         assert data["emails_failed"] == 1
         assert len(data["generated_document_ids"]) == 1
+        # Niets verstuurd → zaak niet doorgeschoven, taken niet afgerond.
+        assert data["tasks_auto_completed"] == 0
+        assert data["cases_auto_advanced"] == 0
 
     async def test_empty_case_ids_returns_400(self, client, auth_headers):
         """Empty case_ids → 400 error."""

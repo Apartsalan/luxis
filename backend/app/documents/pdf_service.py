@@ -63,16 +63,29 @@ async def docx_to_pdf(docx_bytes: bytes) -> bytes:
         return pdf_bytes
 
 
+def _data_only_url_fetcher(url: str, timeout: int = 10, ssl_context=None):
+    """Sta ALLEEN `data:`-URI's toe (ingebedde logo's e.d.).
+
+    Anders dan de facturen-fetcher blokkeert deze óók `file://`. De HTML hier is
+    documentinhoud die opgeslagen case-data (namen, omschrijvingen, AI-concepten)
+    kan bevatten; een `<link rel=attachment href=file://...>` zou anders lokale
+    bestanden in de PDF kunnen embedden (Codex-review portie 1, CRITICAL).
+    """
+    from weasyprint import default_url_fetcher
+
+    if url.startswith("data:"):
+        return default_url_fetcher(url, timeout=timeout, ssl_context=ssl_context)
+    logger.warning("html_to_pdf blokkeerde niet-data URL: %s", url)
+    return {"string": "", "mime_type": "text/plain"}
+
+
 def html_to_pdf(html: str) -> bytes:
     """Convert stored document HTML to PDF via WeasyPrint.
 
     B1 — e-mailroute-documenten worden als HTML gearchiveerd (`content_html`),
     niet als DOCX. Voor de dossier-preview maken we daar direct een PDF van:
-    exact wat er verstuurd is. Hergebruikt de SSRF-veilige URL-fetcher van de
-    facturenmodule.
+    exact wat er verstuurd is. Alleen `data:`-bronnen toegestaan (geen file://).
     """
     import weasyprint
 
-    from app.invoices.invoice_pdf_service import _safe_url_fetcher
-
-    return weasyprint.HTML(string=html, url_fetcher=_safe_url_fetcher).write_pdf()
+    return weasyprint.HTML(string=html, url_fetcher=_data_only_url_fetcher).write_pdf()

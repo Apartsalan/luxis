@@ -14,7 +14,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import redis.asyncio as aioredis
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -159,6 +159,42 @@ async def get_email_account(
     if len(rows) == 1:
         return rows[0]
     # Multiple accounts — prefer outlook (Graph API) for sending/compose
+    for row in rows:
+        if row.provider == "outlook":
+            return row
+    return rows[0]
+
+
+async def get_tenant_send_account(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> EmailAccount | None:
+    """Return the connected account for the tenant's fixed sender channel.
+
+    B13 — verzend-vangrail: pipeline-mail (follow-up/incasso-batch) moet altijd
+    vanaf het vaste kantoorkanaal (incasso@) de deur uit, ongeacht wie klikt.
+    Zoekt het verbonden account waarvan het adres overeenkomt met de ingestelde
+    kantoor-e-mail (`Tenant.email`). None als geen kantoor-e-mail is ingesteld of
+    er geen verbonden account met dat adres bestaat → beller valt dan terug op het
+    account van de klikkende gebruiker (geen regressie).
+    """
+    from app.auth.models import Tenant
+
+    tenant_email = (
+        await db.execute(select(Tenant.email).where(Tenant.id == tenant_id))
+    ).scalar()
+    if not tenant_email:
+        return None
+
+    result = await db.execute(
+        select(EmailAccount).where(
+            EmailAccount.tenant_id == tenant_id,
+            func.lower(EmailAccount.email_address) == tenant_email.strip().lower(),
+        )
+    )
+    rows = result.scalars().all()
+    if not rows:
+        return None
     for row in rows:
         if row.provider == "outlook":
             return row

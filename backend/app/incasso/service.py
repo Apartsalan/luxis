@@ -1265,6 +1265,7 @@ async def batch_execute(
                                 case_id=case.id,
                                 document_id=doc.id,
                                 recipient_name=(case.opposing_party.name or ""),
+                                send_as_tenant_account=True,
                             )
                             if email_log.status == "sent":
                                 emails_sent += 1
@@ -1324,6 +1325,7 @@ async def batch_execute(
                                 case_id=case.id,
                                 document_id=doc.id,
                                 recipient_name=(case.opposing_party.name or ""),
+                                send_as_tenant_account=True,
                             )
                             if email_log.status == "sent":
                                 emails_sent += 1

@@ -18,6 +18,7 @@ from app.email.models import EmailLog
 from app.email.oauth_service import (
     get_email_account,
     get_provider,
+    get_tenant_send_account,
     get_valid_access_token,
     imap_smtp_kwargs,
 )
@@ -100,6 +101,7 @@ async def send_with_attachment(
     document_id: uuid.UUID | None = None,
     recipient_name: str = "",
     sender_name: str = "",
+    send_as_tenant_account: bool = False,
 ) -> EmailLog:
     """Send an email with attachments via provider (preferred) or SMTP fallback.
 
@@ -130,7 +132,14 @@ async def send_with_attachment(
         db, tenant_id, subject=subject, body_html=body_html, case_id=case_id
     )
 
-    account = await get_email_account(db, user_id, tenant_id)
+    # B13 — verzend-vangrail: pipeline-mail gaat vast via het kantoorkanaal
+    # (incasso@), niet via de mailbox van de klikkende gebruiker. Valt terug op
+    # het gebruikersaccount als er geen vast kantoor-account verbonden is.
+    account = None
+    if send_as_tenant_account:
+        account = await get_tenant_send_account(db, tenant_id)
+    if account is None:
+        account = await get_email_account(db, user_id, tenant_id)
 
     email_log = EmailLog(
         tenant_id=tenant_id,

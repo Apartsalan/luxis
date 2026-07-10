@@ -444,6 +444,7 @@ async def execute_recommendation(
                 case_id=case.id,
                 document_id=doc.id,
                 recipient_name=case.opposing_party.name or "",
+                send_as_tenant_account=True,
             )
         else:
             # DOCX-route (dagvaarding e.d.): brief als PDF-bijlage.
@@ -491,6 +492,7 @@ async def execute_recommendation(
                 case_id=case.id,
                 document_id=doc.id,
                 recipient_name=case.opposing_party.name or "",
+                send_as_tenant_account=True,
             )
 
         if email_log.status != "sent":

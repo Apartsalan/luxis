@@ -7,6 +7,8 @@ and API endpoints.
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import select
@@ -19,6 +21,7 @@ from app.ai_agent.followup_models import (
 )
 from app.ai_agent.followup_service import (
     approve_recommendation,
+    execute_recommendation,
     get_recommendation,
     get_recommendation_stats,
     list_recommendations,
@@ -29,6 +32,7 @@ from app.auth.models import Tenant, User
 from app.cases.models import Case
 from app.incasso.models import IncassoPipelineStep
 from app.relations.models import Contact
+from app.shared.exceptions import BadRequestError
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -566,6 +570,132 @@ async def test_api_stats(client, db: AsyncSession, test_tenant, test_user):
     assert resp.status_code == 200
     data = resp.json()
     assert data["pending"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# Tests: Execute (B1 — verstuurpad + geen maskering)
+# ---------------------------------------------------------------------------
+
+
+async def _add_opposing_with_email(
+    db: AsyncSession, tenant_id: uuid.UUID, case: Case, email: str = "debiteur@example.com"
+) -> Contact:
+    """Attach an opposing party with an e-mail address to a case."""
+    opp = Contact(
+        tenant_id=tenant_id,
+        name="Debiteur BV",
+        contact_type="company",
+        email=email,
+    )
+    db.add(opp)
+    await db.flush()
+    # Zet de relatie zelf (niet alleen de FK) — anders blijft de al-geladen lege
+    # opposing_party in de sessie-cache hangen bij de her-select in execute.
+    case.opposing_party = opp
+    await db.flush()
+    return opp
+
+
+async def _create_approved_rec(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    step_id: uuid.UUID,
+) -> FollowupRecommendation:
+    rec = FollowupRecommendation(
+        tenant_id=tenant_id,
+        case_id=case_id,
+        incasso_step_id=step_id,
+        recommended_action=RecommendedAction.GENERATE_DOCUMENT,
+        reasoning="Test",
+        days_in_step=16,
+        outstanding_amount=Decimal("5000.00"),
+        urgency="normal",
+        status=RecommendationStatus.APPROVED,
+    )
+    db.add(rec)
+    await db.flush()
+    await db.refresh(rec)
+    return rec
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+@patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
+async def test_execute_email_template_sends_via_email_route(
+    mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Een e-mailsjabloonstap (sommatie_drukte) verstuurt via de e-mailroute:
+    de brief ís de e-mailtekst (geen PDF-bijlage) en de aanbeveling wordt pas
+    daarna als 'Uitgevoerd' gemarkeerd."""
+    mock_ctx.return_value = {}
+    mock_render.return_value = "<p>Sommatie (drukte)</p>"
+    mock_send.return_value = SimpleNamespace(status="sent", error_message=None)
+
+    step = await _create_step(db, test_tenant.id, name="Eerste sommatie",
+                              template_type="sommatie_drukte")
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    result = await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+    await db.commit()
+
+    assert result is not None
+    assert result.status == RecommendationStatus.EXECUTED
+    assert result.generated_document_id is not None
+    # E-mailroute → geen bijlage, brief ís de body
+    mock_send.assert_called_once()
+    assert mock_send.call_args.kwargs["attachments"] == []
+    assert mock_send.call_args.kwargs["body_html"] == "<p>Sommatie (drukte)</p>"
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+@patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
+async def test_execute_failed_send_is_never_marked_executed(
+    mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Kernfix B1: als de verzending mislukt, mag de aanbeveling NOOIT als
+    'Uitgevoerd' worden geregistreerd (de oude code maskeerde de fout en zette
+    'm tóch op Uitgevoerd)."""
+    mock_ctx.return_value = {}
+    mock_render.return_value = "<p>Sommatie (drukte)</p>"
+    mock_send.return_value = SimpleNamespace(status="failed", error_message="SMTP dicht")
+
+    step = await _create_step(db, test_tenant.id, name="Eerste sommatie",
+                              template_type="sommatie_drukte")
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    with pytest.raises(BadRequestError):
+        await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+
+    # execute muteert hetzelfde aanbeveling-object; het is nooit op EXECUTED gezet.
+    assert rec.status != RecommendationStatus.EXECUTED
+    assert rec.executed_at is None
+
+
+@pytest.mark.asyncio
+async def test_execute_without_opposing_email_fails_loud(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Geen e-mailadres wederpartij → fout opwerpen, niet stilletjes 'Uitgevoerd'."""
+    step = await _create_step(db, test_tenant.id, name="Eerste sommatie",
+                              template_type="sommatie_drukte")
+    case = await _create_case(db, test_tenant.id, test_user.id, step)  # geen wederpartij
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    with pytest.raises(BadRequestError):
+        await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+
+    assert rec.status != RecommendationStatus.EXECUTED
 
 
 @pytest.mark.asyncio

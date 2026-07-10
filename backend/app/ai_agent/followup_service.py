@@ -22,9 +22,10 @@ from app.ai_agent.followup_schemas import (
     FollowupStatsOut,
 )
 from app.cases.models import Case, CaseActivity
-from app.documents.docx_service import render_docx
+from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
+from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
 from app.incasso.models import IncassoPipelineStep
 from app.incasso.service import (
@@ -32,6 +33,7 @@ from app.incasso.service import (
     _try_auto_advance,
     list_pipeline_steps,
 )
+from app.shared.exceptions import BadRequestError
 
 logger = logging.getLogger(__name__)
 
@@ -401,12 +403,53 @@ async def execute_recommendation(
         and step.template_type
     )
     if is_generate:
-        try:
-            # Render the document
-            docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
-                db, tenant_id, case, step.template_type
+        # B1 — verstuurpad. De meeste incassostappen (sommatie, faillissement-
+        # dreigbrief, ...) zijn E-MAIL-sjablonen, geen Word-brieven. Probeer daarom
+        # eerst de e-mailrenderer; alleen als die de sleutel niet kent val je terug
+        # op een DOCX-brief met PDF-bijlage. Cruciaal: een mislukte verzending werpt
+        # een fout op i.p.v. door te vallen — zo wordt niets meer vals als
+        # "Uitgevoerd" geregistreerd terwijl er in werkelijkheid niets de deur uitging.
+        if not (case.opposing_party and case.opposing_party.email):
+            raise BadRequestError(
+                f"{case.case_number}: geen e-mailadres wederpartij — er is niets verstuurd"
             )
 
+        context = await build_base_context(db, tenant_id, case)
+        inline_html = render_incasso_email(step.template_type, context)
+
+        if inline_html is not None:
+            # E-mailroute: de brief ís de e-mailtekst, geen bijlage.
+            doc = GeneratedDocument(
+                tenant_id=tenant_id,
+                case_id=case.id,
+                generated_by_id=user_id,
+                title=f"{step.name} - {case.case_number}",
+                document_type=step.template_type,
+                template_type=step.template_type,
+                content_html=inline_html,
+            )
+            db.add(doc)
+            await db.flush()
+            await db.refresh(doc)
+            rec.generated_document_id = doc.id
+
+            email_log = await send_with_attachment(
+                db,
+                user_id,
+                tenant_id,
+                to=case.opposing_party.email,
+                subject=f"{step.name} inzake dossier {case.case_number}",
+                body_html=inline_html,
+                attachments=[],
+                case_id=case.id,
+                document_id=doc.id,
+                recipient_name=case.opposing_party.name or "",
+            )
+        else:
+            # DOCX-route (dagvaarding e.d.): brief als PDF-bijlage.
+            docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
+                db, tenant_id, case, step.template_type, pre_built_context=context
+            )
             doc = GeneratedDocument(
                 tenant_id=tenant_id,
                 case_id=case.id,
@@ -419,85 +462,66 @@ async def execute_recommendation(
             db.add(doc)
             await db.flush()
             await db.refresh(doc)
-
             rec.generated_document_id = doc.id
-            execution_parts.append(f"Document '{tpl_type}' gegenereerd")
 
-            # Send email with PDF if possible
-            if case.opposing_party and case.opposing_party.email:
-                try:
-                    pdf_bytes = await docx_to_pdf(docx_bytes)
-                    pdf_filename = filename.replace(".docx", ".pdf")
+            pdf_bytes = await docx_to_pdf(docx_bytes)
+            pdf_filename = filename.replace(".docx", ".pdf")
 
-                    # Build email from step templates or use defaults
-                    email_subject = (
-                        step.email_subject_template or f"{step.name} - {case.case_number}"
-                    )
-                    email_body = step.email_body_template or (
-                        f"Geachte heer/mevrouw,\n\nBijgevoegd treft u de "
-                        f"{step.name.lower()} aan inzake dossier {case.case_number}."
-                    )
-
-                    # Simple Jinja2-style replacements
-                    for old, new in [
-                        ("{{ zaak.zaaknummer }}", case.case_number),
-                        ("{{ zaak.omschrijving }}", case.description or ""),
-                        ("{{ wederpartij.naam }}", case.opposing_party.name or ""),
-                    ]:
-                        email_subject = email_subject.replace(old, new)
-                        email_body = email_body.replace(old, new)
-
-                    email_log = await send_with_attachment(
-                        db,
-                        user_id,
-                        tenant_id,
-                        to=case.opposing_party.email,
-                        subject=email_subject,
-                        body_html=f"<p>{email_body.replace(chr(10), '<br>')}</p>",
-                        attachments=[(pdf_filename, pdf_bytes, "pdf")],
-                        case_id=case.id,
-                        document_id=doc.id,
-                        recipient_name=case.opposing_party.name or "",
-                    )
-
-                    if email_log.status == "sent":
-                        execution_parts.append(f"Email verstuurd naar {case.opposing_party.email}")
-                    else:
-                        execution_parts.append("Email verzending mislukt")
-                except Exception as e:
-                    logger.error("Follow-up email failed for %s: %s", case.case_number, e)
-                    execution_parts.append(f"Email fout: {e}")
-            else:
-                execution_parts.append("Geen email verstuurd (geen emailadres wederpartij)")
-
-            # Auto-complete pipeline tasks for this step
-            completed = await _auto_complete_tasks(db, tenant_id, case.id, step_id=step.id)
-            if completed:
-                execution_parts.append(f"{completed} taak/taken afgerond")
-
-            # Try auto-advance to next step
-            advanced = await _try_auto_advance(db, tenant_id, case, user_id)
-            if advanced:
-                execution_parts.append("Doorgeschoven naar volgende stap")
-
-            # Log activity
-            activity = CaseActivity(
-                tenant_id=tenant_id,
-                case_id=case.id,
-                user_id=user_id,
-                activity_type="automation",
-                title=f"Follow-up uitgevoerd: {step.name}",
-                description=(
-                    "Automatische follow-up aanbeveling uitgevoerd. "
-                    + ". ".join(execution_parts)
-                    + "."
-                ),
+            email_subject = step.email_subject_template or f"{step.name} - {case.case_number}"
+            email_body = step.email_body_template or (
+                f"Geachte heer/mevrouw,\n\nBijgevoegd treft u de "
+                f"{step.name.lower()} aan inzake dossier {case.case_number}."
             )
-            db.add(activity)
+            for old, new in [
+                ("{{ zaak.zaaknummer }}", case.case_number),
+                ("{{ zaak.omschrijving }}", case.description or ""),
+                ("{{ wederpartij.naam }}", case.opposing_party.name or ""),
+            ]:
+                email_subject = email_subject.replace(old, new)
+                email_body = email_body.replace(old, new)
 
-        except Exception as e:
-            logger.error("Follow-up execution failed for %s: %s", case.case_number, e)
-            execution_parts.append(f"Fout: {e}")
+            email_log = await send_with_attachment(
+                db,
+                user_id,
+                tenant_id,
+                to=case.opposing_party.email,
+                subject=email_subject,
+                body_html=f"<p>{email_body.replace(chr(10), '<br>')}</p>",
+                attachments=[(pdf_filename, pdf_bytes, "pdf")],
+                case_id=case.id,
+                document_id=doc.id,
+                recipient_name=case.opposing_party.name or "",
+            )
+
+        if email_log.status != "sent":
+            raise BadRequestError(
+                f"{case.case_number}: e-mail niet verstuurd — "
+                f"{getattr(email_log, 'error_message', None) or 'onbekende fout'}"
+            )
+        execution_parts.append(f"E-mail verstuurd naar {case.opposing_party.email}")
+
+        # Vanaf hier is de verzending gelukt — nu pas de administratie bijwerken.
+        completed = await _auto_complete_tasks(db, tenant_id, case.id, step_id=step.id)
+        if completed:
+            execution_parts.append(f"{completed} taak/taken afgerond")
+
+        advanced = await _try_auto_advance(db, tenant_id, case, user_id)
+        if advanced:
+            execution_parts.append("Doorgeschoven naar volgende stap")
+
+        activity = CaseActivity(
+            tenant_id=tenant_id,
+            case_id=case.id,
+            user_id=user_id,
+            activity_type="automation",
+            title=f"Follow-up uitgevoerd: {step.name}",
+            description=(
+                "Automatische follow-up aanbeveling uitgevoerd. "
+                + ". ".join(execution_parts)
+                + "."
+            ),
+        )
+        db.add(activity)
 
     elif rec.recommended_action == RecommendedAction.ESCALATE:
         from app.workflow.models import WorkflowTask

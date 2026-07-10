@@ -945,6 +945,9 @@ class TestBatchExecute:
             return _MOCK_DOCX
 
         with (
+            # Dwing de DOCX-route af (geen e-mailsjabloon) zodat render_docx wordt
+            # aangeroepen — dit test de veerkracht van de Word-brief-route.
+            patch("app.incasso.service.render_incasso_email", return_value=None),
             patch("app.incasso.service.render_docx", side_effect=_render_docx_maybe_fail),
             patch(
                 "app.incasso.service.docx_to_pdf",

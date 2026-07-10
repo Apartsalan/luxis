@@ -1224,55 +1224,88 @@ async def batch_execute(
                 continue
 
             try:
-                # Build context once — reused for DOCX archive + HTML email
+                # Build context once — reused for e-mail body or DOCX archive.
                 base_context = await build_base_context(db, tenant_id, case)
 
-                docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
-                    db,
-                    tenant_id,
-                    case,
-                    step.template_type,
-                    pre_built_context=base_context,
-                )
+                # B1 — verstuurpad: incasso-stappen zijn meestal E-MAIL-sjablonen.
+                # Probeer eerst de e-mailrenderer; val alleen terug op een DOCX-brief
+                # (PDF-bijlage) als die sleutel géén e-mailsjabloon is (bv. dagvaarding).
+                # De oude volgorde riep render_docx als eerste aan en klapte daarop voor
+                # de e-mailsleutels (sommatie_drukte/faillissement_dreigbrief) → er ging
+                # nooit iets de deur uit.
+                inline_html = render_incasso_email(step.template_type, base_context)
 
-                doc = GeneratedDocument(
-                    tenant_id=tenant_id,
-                    case_id=case.id,
-                    generated_by_id=user_id,
-                    title=f"{tpl_type} - {case.case_number}",
-                    document_type=tpl_type,
-                    template_type=tpl_type,
-                    template_snapshot=tpl_snapshot,
-                )
-                db.add(doc)
-                await db.flush()
-                await db.refresh(doc)
-                generated_doc_ids.append(doc.id)
-                processed += 1
+                if inline_html is not None:
+                    # E-mailroute: de brief ís de e-mailtekst, geen bijlage.
+                    doc = GeneratedDocument(
+                        tenant_id=tenant_id,
+                        case_id=case.id,
+                        generated_by_id=user_id,
+                        title=f"{step.name} - {case.case_number}",
+                        document_type=step.template_type,
+                        template_type=step.template_type,
+                        content_html=inline_html,
+                    )
+                    db.add(doc)
+                    await db.flush()
+                    await db.refresh(doc)
+                    generated_doc_ids.append(doc.id)
+                    processed += 1
 
-                # Send email if requested
-                if send_email and case.opposing_party and case.opposing_party.email:
-                    try:
-                        # Try HTML body (brief as email content, no attachment)
-                        inline_html = render_incasso_email(step.template_type, base_context)
-
-                        if inline_html:
-                            # Brief IS the email body — no PDF attachment
-                            email_subject = f"{step.name} inzake dossier {case.case_number}"
+                    if send_email and case.opposing_party and case.opposing_party.email:
+                        try:
                             email_log = await send_with_attachment(
                                 db,
                                 user_id,
                                 tenant_id,
                                 to=case.opposing_party.email,
-                                subject=email_subject,
+                                subject=f"{step.name} inzake dossier {case.case_number}",
                                 body_html=inline_html,
                                 attachments=[],
                                 case_id=case.id,
                                 document_id=doc.id,
                                 recipient_name=(case.opposing_party.name or ""),
                             )
-                        else:
-                            # Fallback: PDF as attachment (dagvaarding, etc.)
+                            if email_log.status == "sent":
+                                emails_sent += 1
+                            else:
+                                emails_failed += 1
+                                errors.append(
+                                    f"{case.case_number}: e-mail mislukt — {email_log.error_message}"
+                                )
+                        except Exception as email_exc:
+                            emails_failed += 1
+                            errors.append(f"{case.case_number}: e-mail fout — {email_exc}")
+                            logger.error(
+                                "Batch email failed for %s: %s", case.case_number, email_exc
+                            )
+                else:
+                    # DOCX-route (dagvaarding e.d.): brief als PDF-bijlage.
+                    docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
+                        db,
+                        tenant_id,
+                        case,
+                        step.template_type,
+                        pre_built_context=base_context,
+                    )
+
+                    doc = GeneratedDocument(
+                        tenant_id=tenant_id,
+                        case_id=case.id,
+                        generated_by_id=user_id,
+                        title=f"{tpl_type} - {case.case_number}",
+                        document_type=tpl_type,
+                        template_type=tpl_type,
+                        template_snapshot=tpl_snapshot,
+                    )
+                    db.add(doc)
+                    await db.flush()
+                    await db.refresh(doc)
+                    generated_doc_ids.append(doc.id)
+                    processed += 1
+
+                    if send_email and case.opposing_party and case.opposing_party.email:
+                        try:
                             pdf_bytes = await docx_to_pdf(docx_bytes)
                             pdf_filename = filename.replace(".docx", ".pdf")
 
@@ -1292,22 +1325,19 @@ async def batch_execute(
                                 document_id=doc.id,
                                 recipient_name=(case.opposing_party.name or ""),
                             )
-
-                        if email_log.status == "sent":
-                            emails_sent += 1
-                        else:
+                            if email_log.status == "sent":
+                                emails_sent += 1
+                            else:
+                                emails_failed += 1
+                                errors.append(
+                                    f"{case.case_number}: e-mail mislukt — {email_log.error_message}"
+                                )
+                        except Exception as email_exc:
                             emails_failed += 1
-                            errors.append(
-                                f"{case.case_number}: e-mail mislukt — {email_log.error_message}"
+                            errors.append(f"{case.case_number}: e-mail fout — {email_exc}")
+                            logger.error(
+                                "Batch email failed for %s: %s", case.case_number, email_exc
                             )
-                    except Exception as email_exc:
-                        emails_failed += 1
-                        errors.append(f"{case.case_number}: e-mail fout — {email_exc}")
-                        logger.error(
-                            "Batch email failed for %s: %s",
-                            case.case_number,
-                            email_exc,
-                        )
 
                 # Auto-complete matching pipeline tasks for this step
                 completed_count = await _auto_complete_tasks(

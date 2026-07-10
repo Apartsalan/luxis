@@ -700,7 +700,7 @@ async def test_preview_shows_email_without_sending(
     rec = await _create_pending_rec(db, test_tenant.id, case.id, step.id)
     await db.commit()
 
-    preview = await preview_recommendation(db, test_tenant.id, rec.id)
+    preview = await preview_recommendation(db, test_tenant.id, rec.id, test_user.id)
 
     assert preview is not None
     assert preview.body_html == "<p>Sommatie (drukte)</p>"

@@ -582,6 +582,7 @@ async def preview_recommendation(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     rec_id: uuid.UUID,
+    user_id: uuid.UUID,
 ) -> FollowupPreviewOut | None:
     """B13 — render wat er precies uitgaat, zónder te versturen.
 
@@ -614,11 +615,20 @@ async def preview_recommendation(
     recipient_email = case.opposing_party.email if case.opposing_party else None
     recipient_name = case.opposing_party.name if case.opposing_party else None
 
-    # Vast afzenderkanaal (incasso@); toon wat er echt gebruikt wordt.
+    # Toon de afzender die de verzending ÉCHT gaat gebruiken — zelfde volgorde
+    # als send_with_attachment: vast kantoorkanaal → account van de klikkende
+    # gebruiker → vaste server-afzender (SMTP).
     sender_account = await get_tenant_send_account(db, tenant_id)
-    sender_email = (
-        sender_account.email_address if sender_account else "(vaste kantoor-afzender)"
-    )
+    if sender_account is None:
+        from app.email.oauth_service import get_email_account
+
+        sender_account = await get_email_account(db, user_id, tenant_id)
+    if sender_account is not None:
+        sender_email = sender_account.email_address
+    else:
+        from app.config import settings
+
+        sender_email = settings.smtp_from or "(vaste server-afzender)"
 
     is_generate = (
         rec.recommended_action == RecommendedAction.GENERATE_DOCUMENT

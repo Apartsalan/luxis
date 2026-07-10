@@ -981,3 +981,11 @@ def test_tenant_ctx_surfaces_office_iban_phone_email():
     assert empty["iban"] == ""
     assert empty["telefoon"] == ""
     assert empty["email"] == ""
+
+
+def test_html_to_pdf_produces_valid_pdf():
+    """B1 — e-mailroute-documenten (content_html) moeten als PDF te previewen zijn."""
+    from app.documents.pdf_service import html_to_pdf
+
+    pdf = html_to_pdf("<p>Sommatie inzake dossier 2026-00001</p>")
+    assert pdf[:4] == b"%PDF"

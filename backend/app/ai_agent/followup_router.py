@@ -119,7 +119,9 @@ async def preview_followup(
     db: AsyncSession = Depends(get_db),
 ):
     """B13 — toon wat er uitgaat vóór de verzending (verstuurt niets)."""
-    preview = await preview_recommendation(db, current_user.tenant_id, rec_id)
+    preview = await preview_recommendation(
+        db, current_user.tenant_id, rec_id, current_user.id
+    )
     if preview is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -19,7 +19,7 @@ from app.documents.docx_service import (
     render_docx,
 )
 from app.documents.models import GeneratedDocument
-from app.documents.pdf_service import docx_to_pdf
+from app.documents.pdf_service import docx_to_pdf, html_to_pdf
 from app.documents.schemas import (
     DocumentTemplateCreate,
     DocumentTemplateResponse,
@@ -358,6 +358,18 @@ async def preview_document(
     Returns PDF bytes with Content-Disposition: inline for browser preview.
     """
     doc = await service.get_generated_document(db, user.tenant_id, document_id)
+
+    # B1 — e-mailroute-documenten bestaan als HTML (content_html), niet als
+    # DOCX-sjabloon. Maak de PDF direct van de opgeslagen inhoud: dat is exact
+    # wat er verstuurd is (en werkt óók voor oude HTML-sjabloon-documenten).
+    if doc.content_html:
+        pdf_bytes = html_to_pdf(doc.content_html)
+        safe_title = (doc.title or "document").replace('"', "")
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": content_disposition("inline", f"{safe_title}.pdf")},
+        )
 
     if not doc.template_type:
         raise BadRequestError("Document heeft geen sjabloontype — preview niet mogelijk")

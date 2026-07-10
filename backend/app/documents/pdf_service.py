@@ -61,3 +61,18 @@ async def docx_to_pdf(docx_bytes: bytes) -> bytes:
         pdf_bytes = output_path.read_bytes()
         logger.info(f"DOCX naar PDF geconverteerd ({len(docx_bytes)} → {len(pdf_bytes)} bytes)")
         return pdf_bytes
+
+
+def html_to_pdf(html: str) -> bytes:
+    """Convert stored document HTML to PDF via WeasyPrint.
+
+    B1 — e-mailroute-documenten worden als HTML gearchiveerd (`content_html`),
+    niet als DOCX. Voor de dossier-preview maken we daar direct een PDF van:
+    exact wat er verstuurd is. Hergebruikt de SSRF-veilige URL-fetcher van de
+    facturenmodule.
+    """
+    import weasyprint
+
+    from app.invoices.invoice_pdf_service import _safe_url_fetcher
+
+    return weasyprint.HTML(string=html, url_fetcher=_safe_url_fetcher).write_pdf()

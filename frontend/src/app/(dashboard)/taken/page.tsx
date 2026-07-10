@@ -386,7 +386,9 @@ function confidenceBadge(confidence: number | null) {
 }
 
 function IntakeSection() {
-  const { data: intakes, isLoading } = useIntakes("pending", 1, 5);
+  // A2 — prod-aanvragen hebben status "pending_review" (na AI-extractie);
+  // "pending" bestond niet meer → blok stond altijd leeg.
+  const { data: intakes, isLoading } = useIntakes("pending_review", 1, 5);
 
   const items = intakes ?? [];
 

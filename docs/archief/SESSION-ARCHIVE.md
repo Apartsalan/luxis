@@ -8026,3 +8026,41 @@ binnenkomt (of op expliciet verzoek een wegwerp-dossier + opruiming).
 ### Volgende sessie
 Heropening werkvoorraad — wacht op input Lisanne/Arsalan. Draaiboek
 `docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
+
+## Sessie 188b (9 juli 2026, Fable — heropening LegalWork LIVE, eerste batch)
+
+### Samenvatting
+Eerste heropeningsbatch uitgevoerd op prod volgens `docs/plans/PLAN-heropening-werkvoorraad.md`,
+met akkoord Arsalan (rente-besluit + go, deze sessie). **14 LegalWork-zaken heropend** in één
+atomische transactie met rijenaantal-sloten (afwijking = automatische rollback):
+- 9 × Eerste sommatie (IN100592/598/599/602/603/604/605/606/607)
+- 3 × Voorstel dagvaarding (IN100410/504/527)
+- 2 × Verweer beantwoorden + verweer-vinkje (IN100458/483)
+- Alle 14: status nieuw, toegewezen aan Lisanne, `date_closed` leeg. IN100547 (voldaan) bleef dicht.
+
+**Rente-besluit Arsalan (staand beleid):** alle b2b-zaken van de 7 holding-opdrachtgevers
+(Invorderingsbedrijf-groep) bij heropening op contractuele AV-rente 2%/mnd enkelvoudig;
+B2C blijft wettelijk. Geen vraag meer per groep. Voor nieuwe zaken dekt de AV-laag
+(terms_interest, S177) dit al automatisch.
+
+**Rente-valkuil gevonden + gefixt (tegenspreker-check on de cijfers):** dossier-update alleen
+(`interest_type=contractual, rate=2.00`) liet de rente **2%/JAAR** rekenen — IN100598 toonde
+€50,02 (= exact 31.477,36 × 2% × 29/365). De periode-eenheid zit op de **vorderingen**:
+`claims.rate_basis` stond op `yearly` (proefzaken-ijkpunt: `monthly`). Fix: 43 claims van de
+14 zaken → `monthly` (guarded, andere zaken ongemoeid: 1511 yearly elders intact).
+Ná fix: €600,23 + €181,20 (2%/mnd pro-rata), derde factuur terecht €0 (verzuim 01-08).
+Draaiboek bijgewerkt met stap 4b zodat volgende batches dit meenemen.
+
+### Verificatie (alle acceptatiecriteria van het plan)
+1. 14 zaken status=nieuw met juiste stap + rente-config — query groen (tabel in transcript).
+2. 0 zonder toewijzing, 0 met date_closed — groen. 3. Vangnet BaseNet-Gereed/Geannuleerd: 0 rijen.
+4. email_logs vóór==ná==0 (niets gemaild); auto_drafts false. 5. IN100547 nog afgesloten.
+6. UI-rooktest: werkstroom 4→18 dossiers, bedragen op de cent gelijk aan recept (o.a. 44.609,73 /
+   12.100,00 / 18.934,11), deadline-kleuren zichtbaar; 3 dossiers geopend (598 sommatie /
+   458 verweer / 410 dagvaarding): juiste stap, "Contractuele rente", renteoverzicht klopt, geen crash.
+Bekende cosmetische beperking (gepland): SQL-heropening schrijft geen case_step_history-regel.
+
+### Volgende sessie
+Volgende heropeningsbatch (per opdrachtgever, expliciet akkoord per groep blijft de afspraak) mét
+stap 4b; de 11 gestopte-regeling-zaken en de regeling-groep (incl. IN100019) apart. Terugstort-vraag
+IN100334 (±€215) nog open bij Lisanne.

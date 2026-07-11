@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 11 juli 2026 (sessie 196, Opus — **bouwblok 2 AFGEROND**). B4/A8 termijn-vooruitblik live: dashboardblok "Aankomende termijnen" (open regeling-termijnen over alle zaken, gemist rood bovenaan, klik → Betalingen-tab). B11: 3 proefzaken op hun stap gezet (IN100215 Bijhouden regeling; IN100040/IN100521 Voorstel dagvaarding) — akkoord Arsalan, niets gemaild. **Next: bouwblok 3 (B3-versimpeling + A5-pauze + A3 dagstart + A7 sjablonen).** Details: SESSION-NOTES S196-entry.
+**Laatst bijgewerkt:** 11 juli 2026 (sessie 197, Opus+Fable). Codex-hang opgelost (achtergrond + hartslag-bewaker `scripts/codex-review.sh`, geen tijdslimiet meer — ultra blijft). S196-review (Codex ultra) + 4 dashboard-fixes live. **Mailslot-knop live** in Instellingen → E-mail (DB-vlag, fail-safe dicht); env-noodslot van prod verwijderd → mail staat UIT via de knop, Arsalan zet het zelf aan. **Bouwblok 3 NIET gedaan → S198 (autonoom).** Details: SESSION-NOTES S197-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,17 +53,22 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 11 juli 2026, S196)
+## 🎯 Huidige prioriteit (bijgewerkt 11 juli 2026, S197)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ⚠️ **MAILSLOT AAN (9 juli, verzoek Arsalan):** alle uitgaande mail is geblokkeerd tijdens de
-> bouwfase (`OUTBOUND_MAIL_LOCK=true` in `/opt/luxis/.env`). Slot eraf (rond maandag 13 juli,
-> alleen op verzoek Arsalan): regel weghalen of op false + `docker compose up -d backend`.
-> Ontvangen/sync werkt gewoon door.
+> ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
+> (DB-vlag, fail-safe dicht). Env-noodslot van prod verwijderd (`.env` OUTBOUND_MAIL_LOCK=false,
+> backup `.env.bak-s197`). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
+> autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-1. **Bouwblok 1 + 2 — AFGEROND.** Blok 1 (S193/S194): B1 verstuurpad, B13 incasso@ + preview, B2+A1 verjaring, A2 dashboardfilter. Blok 2 (S194/S195/S196): C2 ingevuld, C1 bankimport uitgevoerd (17 betalingen €14.922,60 + Saltik; 12 onverklaarde credits per besluit Arsalan niet geboekt), B4/A8 termijn-vooruitblik live (dashboardblok), B11 3 proefzaken op hun stap (IN100215/040/521).
-2. **Bouwblok 3 — volgende bouwprioriteit:** B3-versimpeling (status volgt pijplijn) + A5-pauze (classificatie/meldingen uit) + A3 dagstart-lijst + A7 sjablonen op één plek. Plan: `docs/plans/PLAN-fase2-bouwblokken.md`. Daarna veegsessie. Uren + Facturatie blijven AAN.
+1. **Bouwblok 1 + 2 + S197 — AFGEROND.** Blok 1 (S193/S194) + blok 2 (S194/S195/S196): zie archief.
+   S197: Codex-hang opgelost (`scripts/codex-review.sh`, ultra blijft), S196-review + 4 dashboard-fixes
+   live, mailslot-knop live (env-noodslot eraf, mail op UIT).
+2. **Bouwblok 3 — volgende bouwprioriteit (S198, AUTONOOM):** B3-versimpeling (status → 4 waarden die
+   de pijplijn volgen + nieuw "Stap"-filter op Dossiers-lijst) + A5-pauze (classificatie/meldingen uit)
+   + A3 dagstart-lijst + A7 sjablonen op één plek. Plan: `docs/plans/PLAN-fase2-bouwblokken.md`; prompt:
+   `docs/sessions/PROMPT-S198.md`. Daarna Fable-review + Codex code-review. Daarna veegsessie.
 3. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer gereconstrueerd); 2 verweesde verjaringstaken op afgesloten zaken (IN100015/IN100127) opruimen (akkoord). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b — `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`. Voorstel (niet gebouwd): heropening-slot dat gecapte betaling flagt (67 notities dekken het nu).
 
 **Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende

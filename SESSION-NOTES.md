@@ -2,12 +2,79 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 11 juli 2026 (S196, Opus) — bouwblok 2 AF: B4/A8 termijn-vooruitblik live (dashboardblok) + B11 3 proefzaken op hun stap. Details: S196-entry.
-**Laatste feature/fix:** `GET /api/dashboard/upcoming-installments` + dashboardblok "Aankomende termijnen" — open regeling-termijnen over alle zaken (gemist rood bovenaan, klik → Betalingen-tab). Live geverifieerd op prod (14 termijnen, doorklik klopt).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); 12 onverklaarde bankbetalingen (€21.738,96) = géén incassozaken → bewust NIET geboekt (besluit Arsalan, S195); voorstel: heropening-slot dat gecapte betaling flagt (nu 67 notities); derdengelden-ijkpunt blijft Lisanne's BaseNet-maandproces; Codex-tegenlezer timet uit (2e sessie op rij) → werkvorm herzien.
-**Volgende sessie:** bouwblok 3 (B3-versimpeling + A5-pauze + A3 dagstart + A7 sjablonen). Prompt: `docs/sessions/PROMPT-S197.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
+**Laatst bijgewerkt:** 11 juli 2026 (S197, Opus+Fable) — Codex-hang opgelost (achtergrond + hartslag-bewaker, ultra blijft); S196-review + 4 dashboard-fixes live; mailslot-knop live in Instellingen (user-gestuurd, staat UIT). Details: S197-entry.
+**Laatste feature/fix:** mailslot als schakelaar in Instellingen → E-mail (DB-vlag, fail-safe dicht, env-noodslot van prod verwijderd) + 4 review-fixes op het termijn-blok (fout i.p.v. verdwijnen, ververst na regeling-actie, footer-tekst, lichtere query). Live geverifieerd op prod.
+**Openstaand:** ⚠️ MAILSLOT staat UIT via de knop — env-noodslot eraf (`.env.bak-s197` op VPS); Arsalan zet mail zélf aan wanneer nodig. Bouwblok 3 nog NIET gedaan → S198 (autonoom). 12 onverklaarde bankbetalingen bewust niet geboekt (S195).
+**Volgende sessie:** S198 = AUTONOOM bouwblok 3 (klus 1-4) + Fable-review + Codex code-review. Prompt: `docs/sessions/PROMPT-S198.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 197 (11 juli 2026, Opus+Fable — Codex-hang opgelost + S196-review + mailslot-knop; bouwblok 3 NIET gedaan)
+
+### Samenvatting
+Sessie liep anders dan PROMPT-S197 (bouwblok 3): Arsalan wilde eerst de Codex-hang oplossen +
+een review van S196 vóór verder bouwen, en een mailslot-knop erbij. Bouwblok 3 verschuift daardoor
+volledig naar S198 (autonoom).
+
+**1 — Codex-hang opgelost (kernbevinding).** Twee sessies (S194/S196) timede Codex "na 10 min" uit.
+Oorzaak was NIET Codex/ultra maar een botte 10-min-grens: (a) de skill-guard van 600s + (b) de max
+foreground-timeout van de Bash-tool. Bewijs gemeten: een triviale `codex exec` antwoordt in 9,5s
+(→ opstart/MCP is níét de blokkade), en een échte S196-review op ultra duurde **21 min** en rondde
+gewoon af toen hij op de ACHTERGROND liep. Codex heeft zelf al een 5-min stream-retry
+(openai/codex#23807). Oplossing: `scripts/codex-review.sh` — draait de review op de achtergrond
+zónder tijdslimiet en bewaakt de HARTSLAG (output-mtime): 6 min écht stil = als vastgelopen stoppen
++ melden, anders onbeperkt nadenken. **Ultra blijft** (Arsalans keuze; ultra vond 4 punten waar
+"hoog" er 3 vond).
+
+**2 — S196-review + 4 fixes LIVE.** Codex-review (ultra) van commit `42c3e4c` (termijn-vooruitblik).
+Geld/beveiliging/tenant-scoping in orde; 4 robuustheidspunten zelf geverifieerd + gefixt (commit
+`f2b526b`): (1) laadfout verborg het hele dashboard-blok stil → nu foutmelding; (2) regeling-acties
+(aanmaken/betaling/wanprestatie/annuleren/kwijtschelden) verversten `["dashboard"]` niet → nu wel
+(anders tot 30s verouderd); (3) footer "+N meer in de komende 30 dagen" kon liegen → "+N meer";
+(4) query laadde volledige Case/Contact-entiteiten (selectin-fan-out) → scalar-kolomprojectie.
+23 termijn-tests groen.
+
+**3 — Mailslot-knop LIVE + env-noodslot eraf (op expliciet verzoek Arsalan).** Het bouwfase-mailslot
+zat als env-var (`OUTBOUND_MAIL_LOCK`, alleen via SSH+herstart). Nu als DB-vlag in nieuwe globale
+`app_config`-tabel (geen tenant_id → geen RLS, zoals interest_rates), schakelbaar via Instellingen →
+E-mail. Eén chokepoint blijft: `check_outbound_lock()` leest env OF DB-vlag; de 3 verzendwegen
+ongewijzigd. **Fail-safe:** `load_mail_lock` gaat bij ontbrekende rij/DB-fout op slot; geseede rij op
+DICHT; stand in geheugen geladen vóór requests (single-proces backend). Env-noodslot op prod op
+`false` gezet (`.env.bak-s197` als backup) → **de knop is nu de enige controle en staat op UIT**;
+Arsalan zet mail zelf aan wanneer nodig. Openen vraagt bevestiging. Live geverifieerd (screenshot:
+"op slot", "Openen" actief, geen server-noodslot-melding). Commits `fc151ed` + `25ec657`.
+
+### Klus 1 (bouwblok 3) — onderzoek gedaan + aanpak MET Arsalan afgestemd (nog niet gebouwd)
+Gemeten op prod: status kent feitelijk 2 waarden (afgesloten 580, nieuw 28); `workflow_statuses/
+transitions/rules` alle 0 → élke statuswijziging faalt ("Status bestaat niet"), "Volgende stap"-
+knoppen kapot, statusfilter leeg, auto-"betaald" vuurt nooit, `date_closed` nooit gezet, de
+pijplijn→status-koppeling (S166) checkt het lege systeem en vuurt dus nooit. Pijplijn = de echte
+motor (15 actieve stappen, 18 zaken erop, 10 heropende zonder stap). **Afgestemde aanpak:** status
+reduceren tot 4 (Nieuw / In behandeling / Betaald / Afgesloten), pijplijn stuurt de status (bestaande
+dode koppeling repareren, niet iets nieuws), auto-"betaald" + `date_closed` (met bestaande €0-guard),
+Afsluiten/Heropenen-acties i.p.v. kapotte knoppen, statusfilter = 4 waarden, **+ nieuw "Stap"-filter
+op de Dossiers-lijst** (Arsalans punt: kunnen filteren op sommatie/dagvaarding/vonnis — dat is de
+pijplijn-stap, niet status). Lege status-engine NIET slopen (veegsessie-voorstel).
+
+### Gewijzigde/aangemaakte bestanden
+- Backend: `app/settings/models.py` (nieuw, AppConfig), `alembic/versions/s197_mail_lock.py` (nieuw),
+  `app/email/service.py` (DB-vlag + fail-safe), `app/main.py` (load bij opstart),
+  `app/settings/router.py` + `schemas.py` (GET/PUT mail-lock), `app/collections/service.py`
+  (scalar-projectie), `tests/test_mail_lock.py` + `conftest.py`.
+- Frontend: `instellingen/email-tab.tsx` (mailslot-kaart), `hooks/use-settings.ts` (mail-lock hooks),
+  `(dashboard)/page.tsx` (foutstaat + footer), `hooks/use-collections.ts` (dashboard-invalidatie).
+- Tooling: `scripts/codex-review.sh` (hartslag-bewaker).
+- Prod: migratie s197 gedraaid (app_config geseed dicht), `.env` OUTBOUND_MAIL_LOCK=false
+  (`.env.bak-s197` backup). 4 commits (`fc151ed`/`9a61399`/`f2b526b`/`25ec657`) + docs, tag sessie-197.
+
+### Bekende issues / aandachtspunten
+- Mail staat UIT via de knop; env-noodslot is eraf. Enige controle = de DB-vlag (fail-safe dicht).
+- Bouwblok 3 volledig open → S198 autonoom.
+
+### Volgende sessie
+S198 = AUTONOOM (Arsalan is weg): op Opus klus 1-4 van bouwblok 3 bouwen + deployen, dan Fable-review
+(subagent) + Codex code-review via `scripts/codex-review.sh`, findings verwerken. Prompt:
+`docs/sessions/PROMPT-S198.md`.
 
 ## Sessie 196 (11 juli 2026, Opus — bouwblok 2 afgerond: termijn-vooruitblik + 3 proefzaken)
 
@@ -515,41 +582,3 @@ en de modellen gehouden). Uitkomsten:
 ### Openstaand
 - CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,
   géén mailwerk) → CI-deploy skipt; uitrol gaat via SSH. Verdient losse fix of skip-markering.
-
-## Sessie 188b (9 juli 2026, Fable — heropening LegalWork LIVE, eerste batch)
-
-### Samenvatting
-Eerste heropeningsbatch uitgevoerd op prod volgens `docs/plans/PLAN-heropening-werkvoorraad.md`,
-met akkoord Arsalan (rente-besluit + go, deze sessie). **14 LegalWork-zaken heropend** in één
-atomische transactie met rijenaantal-sloten (afwijking = automatische rollback):
-- 9 × Eerste sommatie (IN100592/598/599/602/603/604/605/606/607)
-- 3 × Voorstel dagvaarding (IN100410/504/527)
-- 2 × Verweer beantwoorden + verweer-vinkje (IN100458/483)
-- Alle 14: status nieuw, toegewezen aan Lisanne, `date_closed` leeg. IN100547 (voldaan) bleef dicht.
-
-**Rente-besluit Arsalan (staand beleid):** alle b2b-zaken van de 7 holding-opdrachtgevers
-(Invorderingsbedrijf-groep) bij heropening op contractuele AV-rente 2%/mnd enkelvoudig;
-B2C blijft wettelijk. Geen vraag meer per groep. Voor nieuwe zaken dekt de AV-laag
-(terms_interest, S177) dit al automatisch.
-
-**Rente-valkuil gevonden + gefixt (tegenspreker-check on de cijfers):** dossier-update alleen
-(`interest_type=contractual, rate=2.00`) liet de rente **2%/JAAR** rekenen — IN100598 toonde
-€50,02 (= exact 31.477,36 × 2% × 29/365). De periode-eenheid zit op de **vorderingen**:
-`claims.rate_basis` stond op `yearly` (proefzaken-ijkpunt: `monthly`). Fix: 43 claims van de
-14 zaken → `monthly` (guarded, andere zaken ongemoeid: 1511 yearly elders intact).
-Ná fix: €600,23 + €181,20 (2%/mnd pro-rata), derde factuur terecht €0 (verzuim 01-08).
-Draaiboek bijgewerkt met stap 4b zodat volgende batches dit meenemen.
-
-### Verificatie (alle acceptatiecriteria van het plan)
-1. 14 zaken status=nieuw met juiste stap + rente-config — query groen (tabel in transcript).
-2. 0 zonder toewijzing, 0 met date_closed — groen. 3. Vangnet BaseNet-Gereed/Geannuleerd: 0 rijen.
-4. email_logs vóór==ná==0 (niets gemaild); auto_drafts false. 5. IN100547 nog afgesloten.
-6. UI-rooktest: werkstroom 4→18 dossiers, bedragen op de cent gelijk aan recept (o.a. 44.609,73 /
-   12.100,00 / 18.934,11), deadline-kleuren zichtbaar; 3 dossiers geopend (598 sommatie /
-   458 verweer / 410 dagvaarding): juiste stap, "Contractuele rente", renteoverzicht klopt, geen crash.
-Bekende cosmetische beperking (gepland): SQL-heropening schrijft geen case_step_history-regel.
-
-### Volgende sessie
-Volgende heropeningsbatch (per opdrachtgever, expliciet akkoord per groep blijft de afspraak) mét
-stap 4b; de 11 gestopte-regeling-zaken en de regeling-groep (incl. IN100019) apart. Terugstort-vraag
-IN100334 (±€215) nog open bij Lisanne.

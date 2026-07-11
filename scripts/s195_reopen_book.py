@@ -122,11 +122,24 @@ async def run(mode: str) -> None:
                 nakosten_type=case.nakosten_type,
             )
             outstanding = summary["total_outstanding"]
+
+            # Al volledig voldaan → niets te boeken (de betaling is een overbetaling
+            # die elders/in BaseNet is afgehandeld). Overslaan, niet €0 boeken.
+            if outstanding <= Decimal("0.01"):
+                print(f"{case_nr:10} {pay_date} {amount:>10,.2f} {outstanding:>16,.2f} "
+                      f"{'—':>10} {'—':>8}  al voldaan — OVERGESLAGEN")
+                skipped += 1
+                continue
+
             will_cap = amount > outstanding
             booked_amount = min(amount, outstanding) if will_cap else amount
+            remaining = outstanding - booked_amount
 
             old_status = case.status
-            new_status = "nieuw" if case.status == "afgesloten" else case.status
+            # Alleen heropenen als er ná de betaling nog iets openstaat; een zaak die
+            # de betaling volledig afbetaalt blijft (terecht) afgesloten.
+            new_status = ("nieuw" if case.status == "afgesloten"
+                          and remaining > Decimal("0.01") else case.status)
 
             print(f"{case_nr:10} {pay_date} {amount:>10,.2f} {outstanding:>16,.2f} "
                   f"{booked_amount:>10,.2f} {'JA' if will_cap else 'nee':>8}  "

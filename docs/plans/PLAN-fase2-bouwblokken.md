@@ -37,9 +37,11 @@ overzichtelijke klus uit stapel 4, ná de Codex-installatie (~13 juli,
 ## Status
 - [x] Beslisgesprek (9 juli, in S191 — deze pagina)
 - [x] Bouwblok 1 (S193 gebouwd + S194 visueel geverifieerd op prod)
-- [~] Bouwblok 2 (S194): C2 ingevuld ✅ + bankimport-parser gefixt + droogloop klaar
-      (`docs/sessions/S194-bankimport-droogloop.md`). RESTEERT: C1-import SAMEN met Arsalan
-      (beslislijst 4 groepen) → B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken.
+- [x] Bouwblok 2 — AFGEROND: C2 ingevuld ✅ (S194) + C1 bankimport uitgevoerd ✅ (S195:
+      17 betalingen €14.922,60 incl. Saltik, 10 zaken heropend, 12 onverklaarde credits
+      bewust niet geboekt) + B4/A8 termijn-vooruitblik live ✅ (S196: dashboardblok
+      "Aankomende termijnen") + B11 3 proefzaken op hun stap ✅ (S196: IN100215 Bijhouden
+      regeling, IN100040/IN100521 Voorstel dagvaarding).
 - [ ] Bouwblok 3
 - [ ] Veegsessie
 - [ ] Codex-proef

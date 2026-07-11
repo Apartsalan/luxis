@@ -7965,3 +7965,64 @@ sjabloon-uitleg. Sync draaide foutloos met de nieuwe vlag-fetch. `suggest-cases`
   auto-wissel uit te zetten staat in claude.ai-accountinstellingen (niet betrouwbaar in de terminal).
 - Nog steeds open sinds S186: DMARC voor kestinglegal.nl; testspoor "Luxis diagnose SELF" opruimen.
 
+
+## Tussensessie (9 juli 2026, Fable — documentatie-opruiming, geen code)
+
+### Samenvatting
+Levende docs opgeruimd — alles verplaatst naar `docs/archief/`, niets verwijderd (commit `04b6248`):
+- **SESSION-NOTES.md 540KB→42KB**: max 10 entries (regel), 168 oudere entries verbatim naar
+  `docs/archief/SESSION-ARCHIVE.md`; kop teruggebracht van 15 opgestapelde regels naar 4.
+- **LUXIS-ROADMAP.md 180KB→26KB**: 8 afgeronde secties (verbind-sprint, systeem-audit-backlog,
+  GTM, audits 110/124, bug-log, volgorde van werken, LF-sprint) + 15 "Vorige:"-regels naar
+  `docs/archief/ROADMAP-ARCHIEF.md`. Nu precies één 🎯 prioriteit-sectie. Enig open punt
+  (AI Factuur Parsing Validatie, LF-10) overgenomen in Backlog.
+- **Mappen**: oude prompts → `docs/archief/prompts/`, mei-audits → `docs/archief/audits/`,
+  `docs/audit` hernoemd naar `docs/audits` (verwijzingen bijgewerkt), backups → `docs/archief/sessions/`.
+- **Dood duplicaat weg**: `.github/skills/impeccable` (330KB, door niets gebruikt; `.claude`-versie is de echte).
+- **Verankering**: archief-regels in `/sessie-einde` + CLAUDE.md; waakhond-hook bij sessiestart
+  waarschuwt bij SESSION-NOTES >150KB of roadmap >60KB; luxis-researcher-leeslijst bijgewerkt.
+Aanleiding: doorlichting op verzoek Arsalan, getoetst aan officiële Claude Code-documentatie
+("pruning is het primaire onderhoud"; instructiebestanden waren al op maat: 116/38/39 regels).
+
+### Verificatie
+Tellingen sluitend: 178+25=203 sessie-koppen vóór = 10 live + 193 archief ná; roadmap 17 secties
+= 9 behouden + 8 archief (+1 nieuwe prioriteit-sectie). Git toont elke verplaatsing als rename (100%).
+settings.json valide JSON; waakhond-logica getest (stil bij huidige maten, vuurt bij lage drempel).
+
+### Volgende sessie
+Ongewijzigd S188: eerst de 2 mailverificatie-gaten, dan heropening werkvoorraad (`docs/sessions/PROMPT-S188.md`).
+
+## Sessie 188 (9 juli 2026, Opus — mailverificatie live, geen code)
+
+### Samenvatting
+De 2 openstaande verificatiegaten uit S187 live dichtgeklikt in de ingelogde prod-app
+(seidony@kestinglegal.nl). Geen code gewijzigd; niets verstuurd.
+
+**Gat 1 — Ongesorteerd-tab (gedeeld `EmailDetailPanel`): volledig groen.**
+- Bulk-selectie: "Selecteer alles" → "67 geselecteerd" + actiebalk (Koppel aan dossier /
+  Negeren / Deselecteer); Deselecteer wist de selectie. Per-rij-vinkjes werken.
+- Leesvenster op een mail mét bijlage: afzender/ontvanger/datum, bijlage getoond
+  (`LISANNE-A4-heropening… 2 KB`), mailtekst, knoppen aanwezig.
+- Beantwoorden opent: "Aan" voorgevuld met afzender, onderwerp "Re: …", origineel als citaat.
+- Doorsturen opent: onderwerp "Fwd: …", leeg "Aan", doorgestuurd-blok, Versturen terecht
+  uitgeschakeld zonder ontvanger. Beide geannuleerd — niets verstuurd.
+
+**Gat 2 — "Maak dossier van deze mail" (nieuwe knop/endpoint): groen.**
+- Klik op de knop → intake-aanvraag aangemaakt, app sprong naar "Nieuwe aanvragen" (2→3).
+- AI-uittreksel draaide (model claude-haiku-4-5, zekerheid getoond); op een testmail zonder
+  incasso-inhoud kwam het uittreksel terecht leeg (<UNKNOWN>, 10%) — correct gedrag.
+- "Details bewerken" navigeert naar `/intake/[id]` (debiteur/factuur/AI-analyse/bron-mail +
+  Afwijzen/Goedkeuren). Testaanvraag opgeruimd via Afwijzen (met reden) → teller 3→2.
+
+### Niet uitgevoerd (bewust, met reden)
+De laatste deelstap "Maak dossier/Goedkeuren → PERMANENT dossier" niet geklikt: de enige
+beschikbare ongekoppelde mails zijn test/self-mails waaruit de AI (terecht) niets haalt, dus
+goedkeuren zou een leeg junk-dossier op prod zetten waarvan het opruimen (Case verwijderen)
+een echt destructieve prod-actie is. Die deelstap is bovendien bestáánde intake-code (al in
+gebruik); het NIEUWE werk uit S187 (mail→aanvraag + domein-herkenning) is hiermee geverifieerd.
+Een echte eind-tot-eind dossier-aanmaak kan zodra er een echte nieuwe opdrachtgever-aanvraag
+binnenkomt (of op expliciet verzoek een wegwerp-dossier + opruiming).
+
+### Volgende sessie
+Heropening werkvoorraad — wacht op input Lisanne/Arsalan. Draaiboek
+`docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.

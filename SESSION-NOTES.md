@@ -2,12 +2,62 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 11 juli 2026 (S195, Opus) — 1-op-1 audit (alles klopt, 64 gecapt→notities) ÉN C1 bankimport afgerond: 17 juli/juni-betalingen geboekt (€14.922,60), 10 zaken heropend. Details: S195-entry.
-**Laatste feature/fix:** `scripts/s195_reopen_book.py` — boekt de betalingen die nog niet in BaseNet zaten (Lisanne loopt 1 maand achter) als gewone betaling op de zaak (art. 6:44, géén derdengelden, consistent met de 255), heropent afgesloten zaken met restant. Live+geverifieerd via app. 64 heropen-notities op gecapte zaken (eerder deze sessie). Mailslot blijft aan (eraf ~13 juli).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); **12 onverklaarde bankbetalingen (€21.738,96, o.a. Donker €17.500 + Dinc 6×€300 — gecorrigeerd van "16/~23k" door Fable-hercontrole: 8 waren bankkant van gecapte boekingen) = géén incassozaken → bewust NIET geboekt** (besluit Arsalan); **B4/A8 termijn-vooruitblik + B11 3 proefzaken** (bouwblok 2 restant); voorstel: heropening-slot dat gecapte betaling flagt (nu 67 notities); derdengelden-ijkpunt (Luxis-ledger leeg, blijft Lisanne's BaseNet-maandproces).
-**Volgende sessie:** bouwblok 2 restant (B4/A8 termijn-vooruitblik + B11 3 proefzaken), anders bouwblok 3. Prompt: `docs/sessions/PROMPT-S196.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
+**Laatst bijgewerkt:** 11 juli 2026 (S196, Opus) — bouwblok 2 AF: B4/A8 termijn-vooruitblik live (dashboardblok) + B11 3 proefzaken op hun stap. Details: S196-entry.
+**Laatste feature/fix:** `GET /api/dashboard/upcoming-installments` + dashboardblok "Aankomende termijnen" — open regeling-termijnen over alle zaken (gemist rood bovenaan, klik → Betalingen-tab). Live geverifieerd op prod (14 termijnen, doorklik klopt).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); 12 onverklaarde bankbetalingen (€21.738,96) = géén incassozaken → bewust NIET geboekt (besluit Arsalan, S195); voorstel: heropening-slot dat gecapte betaling flagt (nu 67 notities); derdengelden-ijkpunt blijft Lisanne's BaseNet-maandproces; Codex-tegenlezer timet uit (2e sessie op rij) → werkvorm herzien.
+**Volgende sessie:** bouwblok 3 (B3-versimpeling + A5-pauze + A3 dagstart + A7 sjablonen). Prompt: `docs/sessions/PROMPT-S197.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 196 (11 juli 2026, Opus — bouwblok 2 afgerond: termijn-vooruitblik + 3 proefzaken)
+
+### Samenvatting
+Sessie begon met een correctie: `PROMPT-S196.md` was geschreven vóór de C1-uitvoering op de
+S195-avond en droeg de bankimport nog als open taak — Arsalan kreeg daardoor voor de derde
+keer dezelfde beslisvragen. Stand gecheckt (SESSION-NOTES + Fable-hercontrole): **C1 was al
+af**. Prompt kreeg een achterhaald-banner; alleen taak 2 + 3 uitgevoerd.
+
+**Taak 2 — B4/A8 termijn-vooruitblik (LIVE, commit `42c3e4c`).** Dashboardblok "Aankomende
+termijnen" in de incasso-kolom: open termijnen van actieve regelingen over álle zaken
+(pending binnen 30 dagen; overdue/partial altijd, rood/geel gemarkeerd), gesorteerd op
+vervaldatum, max 8 + "+N meer"-voet, klik → Betalingen-tab van het dossier. Backend:
+`list_upcoming_installments` (collections-service, tenant-gefilterd, zelfde
+geen-zaakstatus-filter-keuze als het regeling-alarm) + `GET /api/dashboard/upcoming-installments`
+(auth). Bewust geen aparte pagina (besluit S191: alleen overzicht; 13 regelingen).
+
+**Taak 3 — B11 proefzaken op hun stap (per zaak akkoord Arsalan).** Conform draaiboek
+PLAN-heropening-werkvoorraad regel 118-120, alleen `incasso_step_id`+`step_entered_at`
+gezet (guarded SQL, transactie): IN100215 → Bijhouden regeling (actieve regeling, termijn
+12 juli deels betaald), IN100040 → Voorstel dagvaarding (BaseNet "Procederen?"), IN100521 →
+Voorstel dagvaarding (4e sommatie). email_logs 0 vóór==ná; status bleef 'nieuw'.
+Kanttekening genoteerd: draaiboek noemt IN100521 B2C, systeem zegt b2b — maakt voor de stap
+niet uit, wél later voor rente/14-dagenbrief.
+
+### Verificatie
+- 23 tests groen (`test_payment_arrangements.py`, incl. 2 nieuwe: overview + tenant-isolatie);
+  ruff schoon; `tsc --noEmit` + `npm run build` groen.
+- Deploy backend+frontend via SSH, containers healthy.
+- Live: endpoint geeft 14 termijnen die exact matchen met eerdere sessies (IN100019 gemist
+  9 juli bovenaan; IN100215 partial €250 — de S195-Fable-fix zichtbaar); Playwright-doorklik
+  dashboard → IN100019 Betalingen-tab: zelfde termijn "Achterstallig". Proefzaken via app-API
+  bevestigd op de juiste stap.
+- **Codex-tegenlezer overgeslagen:** timede na 10 min uit (S194: zelfde). Werkvorm herzien
+  vóór volgende bouwsessie; diff was klein + testgedekt.
+
+### Gewijzigde bestanden
+- `backend/app/collections/service.py` (+`list_upcoming_installments`),
+  `backend/app/dashboard/router.py` + `schemas.py`, `backend/tests/test_payment_arrangements.py`
+- `frontend/src/app/(dashboard)/page.tsx` (widget), `docs/sessions/PROMPT-S196.md` (banner)
+- prod-DB: 3 rijen `cases` (stap gezet). Commit `42c3e4c` + docs-commit, tag `sessie-196`.
+
+### Bekende issues
+- Codex-tegenlezer 2× op rij onbruikbaar (timeout) — beslissen: andere aanroepvorm of
+  voorlopig uit het sessieprotocol.
+- IN100521 debtor_type b2b vs draaiboek "B2C" — checken vóór er brieven/rente uitgaan.
+
+### Volgende sessie
+Bouwblok 3: B3-versimpeling (status volgt pijplijn) + A5-pauze + A3 dagstart + A7 sjablonen.
+Prompt: `docs/sessions/PROMPT-S197.md`.
 
 ## Sessie 195 (11 juli 2026, Opus — grondige 1-op-1 betalingsaudit + heropenings-notities live)
 
@@ -503,65 +553,3 @@ Bekende cosmetische beperking (gepland): SQL-heropening schrijft geen case_step_
 Volgende heropeningsbatch (per opdrachtgever, expliciet akkoord per groep blijft de afspraak) mét
 stap 4b; de 11 gestopte-regeling-zaken en de regeling-groep (incl. IN100019) apart. Terugstort-vraag
 IN100334 (±€215) nog open bij Lisanne.
-
-## Sessie 188 (9 juli 2026, Opus — mailverificatie live, geen code)
-
-### Samenvatting
-De 2 openstaande verificatiegaten uit S187 live dichtgeklikt in de ingelogde prod-app
-(seidony@kestinglegal.nl). Geen code gewijzigd; niets verstuurd.
-
-**Gat 1 — Ongesorteerd-tab (gedeeld `EmailDetailPanel`): volledig groen.**
-- Bulk-selectie: "Selecteer alles" → "67 geselecteerd" + actiebalk (Koppel aan dossier /
-  Negeren / Deselecteer); Deselecteer wist de selectie. Per-rij-vinkjes werken.
-- Leesvenster op een mail mét bijlage: afzender/ontvanger/datum, bijlage getoond
-  (`LISANNE-A4-heropening… 2 KB`), mailtekst, knoppen aanwezig.
-- Beantwoorden opent: "Aan" voorgevuld met afzender, onderwerp "Re: …", origineel als citaat.
-- Doorsturen opent: onderwerp "Fwd: …", leeg "Aan", doorgestuurd-blok, Versturen terecht
-  uitgeschakeld zonder ontvanger. Beide geannuleerd — niets verstuurd.
-
-**Gat 2 — "Maak dossier van deze mail" (nieuwe knop/endpoint): groen.**
-- Klik op de knop → intake-aanvraag aangemaakt, app sprong naar "Nieuwe aanvragen" (2→3).
-- AI-uittreksel draaide (model claude-haiku-4-5, zekerheid getoond); op een testmail zonder
-  incasso-inhoud kwam het uittreksel terecht leeg (<UNKNOWN>, 10%) — correct gedrag.
-- "Details bewerken" navigeert naar `/intake/[id]` (debiteur/factuur/AI-analyse/bron-mail +
-  Afwijzen/Goedkeuren). Testaanvraag opgeruimd via Afwijzen (met reden) → teller 3→2.
-
-### Niet uitgevoerd (bewust, met reden)
-De laatste deelstap "Maak dossier/Goedkeuren → PERMANENT dossier" niet geklikt: de enige
-beschikbare ongekoppelde mails zijn test/self-mails waaruit de AI (terecht) niets haalt, dus
-goedkeuren zou een leeg junk-dossier op prod zetten waarvan het opruimen (Case verwijderen)
-een echt destructieve prod-actie is. Die deelstap is bovendien bestáánde intake-code (al in
-gebruik); het NIEUWE werk uit S187 (mail→aanvraag + domein-herkenning) is hiermee geverifieerd.
-Een echte eind-tot-eind dossier-aanmaak kan zodra er een echte nieuwe opdrachtgever-aanvraag
-binnenkomt (of op expliciet verzoek een wegwerp-dossier + opruiming).
-
-### Volgende sessie
-Heropening werkvoorraad — wacht op input Lisanne/Arsalan. Draaiboek
-`docs/plans/PLAN-heropening-werkvoorraad.md` + recept `docs/sessions/S181-werkvoorraad-recept.csv`.
-
-## Tussensessie (9 juli 2026, Fable — documentatie-opruiming, geen code)
-
-### Samenvatting
-Levende docs opgeruimd — alles verplaatst naar `docs/archief/`, niets verwijderd (commit `04b6248`):
-- **SESSION-NOTES.md 540KB→42KB**: max 10 entries (regel), 168 oudere entries verbatim naar
-  `docs/archief/SESSION-ARCHIVE.md`; kop teruggebracht van 15 opgestapelde regels naar 4.
-- **LUXIS-ROADMAP.md 180KB→26KB**: 8 afgeronde secties (verbind-sprint, systeem-audit-backlog,
-  GTM, audits 110/124, bug-log, volgorde van werken, LF-sprint) + 15 "Vorige:"-regels naar
-  `docs/archief/ROADMAP-ARCHIEF.md`. Nu precies één 🎯 prioriteit-sectie. Enig open punt
-  (AI Factuur Parsing Validatie, LF-10) overgenomen in Backlog.
-- **Mappen**: oude prompts → `docs/archief/prompts/`, mei-audits → `docs/archief/audits/`,
-  `docs/audit` hernoemd naar `docs/audits` (verwijzingen bijgewerkt), backups → `docs/archief/sessions/`.
-- **Dood duplicaat weg**: `.github/skills/impeccable` (330KB, door niets gebruikt; `.claude`-versie is de echte).
-- **Verankering**: archief-regels in `/sessie-einde` + CLAUDE.md; waakhond-hook bij sessiestart
-  waarschuwt bij SESSION-NOTES >150KB of roadmap >60KB; luxis-researcher-leeslijst bijgewerkt.
-Aanleiding: doorlichting op verzoek Arsalan, getoetst aan officiële Claude Code-documentatie
-("pruning is het primaire onderhoud"; instructiebestanden waren al op maat: 116/38/39 regels).
-
-### Verificatie
-Tellingen sluitend: 178+25=203 sessie-koppen vóór = 10 live + 193 archief ná; roadmap 17 secties
-= 9 behouden + 8 archief (+1 nieuwe prioriteit-sectie). Git toont elke verplaatsing als rename (100%).
-settings.json valide JSON; waakhond-logica getest (stil bij huidige maten, vuurt bij lage drempel).
-
-### Volgende sessie
-Ongewijzigd S188: eerst de 2 mailverificatie-gaten, dan heropening werkvoorraad (`docs/sessions/PROMPT-S188.md`).
-

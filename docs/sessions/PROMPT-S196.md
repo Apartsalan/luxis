@@ -1,4 +1,10 @@
-# Sessie-prompt S196 — bouwblok 2 afmaken (bankimport-proef + termijn-vooruitblik + 3 proefzaken)
+# Sessie-prompt S196 — bouwblok 2 afmaken (termijn-vooruitblik + 3 proefzaken)
+
+> ⚠️ **ACHTERHAALD (11 juli, avond): Taak 1 (C1 bankimport) is in S195 al UITGEVOERD.**
+> 17 betalingen geboekt (€14.922,60) incl. Saltik 4×€50, 10 zaken heropend, 12 onverklaarde
+> credits per besluit Arsalan niet geboekt (geen incassozaken), derdengelden blijft Lisanne's
+> BaseNet-maandproces. Zie SESSION-NOTES S195 + Fable-hercontrole in `S195-1op1-audit.md`.
+> **Alleen Taak 2 en Taak 3 zijn nog te doen.**
 
 Kopieer alles onder de streep in een nieuwe sessie. **Model: Opus** (check met `/model` dat je
 NIET op Fable zit; bouwen doen we op Opus). Codex (alleen-lezen tegenlezer) mag meekijken op

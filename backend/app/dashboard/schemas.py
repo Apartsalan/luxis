@@ -1,7 +1,7 @@
 """Dashboard module schemas — response models for KPIs and activity."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -56,3 +56,16 @@ class RecentActivityResponse(BaseModel):
 
     items: list[RecentActivityItem]
     total: int
+
+
+class UpcomingInstallmentItem(BaseModel):
+    """B4/A8: one open regeling-termijn in the cross-case vooruitblik."""
+
+    id: uuid.UUID
+    case_id: uuid.UUID
+    case_number: str
+    debtor_name: str | None
+    due_date: date
+    amount: Decimal
+    paid_amount: Decimal
+    status: str  # pending | partial | overdue

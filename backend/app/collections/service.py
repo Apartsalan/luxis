@@ -1,7 +1,7 @@
 """Collections module service — Claims, Payments, Arrangements."""
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
@@ -945,6 +945,54 @@ async def _check_arrangement_completion(
         if arrangement and arrangement.status == "active":
             arrangement.status = "completed"
             await db.flush()
+
+
+async def list_upcoming_installments(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    days: int = 30,
+) -> list[dict]:
+    """Cross-case termijn-vooruitblik (B4/A8): open termijnen van actieve regelingen.
+
+    Returns overdue/partial installments (no date limit — missed money stays
+    visible until resolved) plus pending ones due within `days`, ordered by
+    due_date. Geen filter op zaakstatus: 12 van de 13 regelingen hangen aan
+    afgesloten zaken (zelfde ontwerpkeuze als mark_overdue_installments).
+    """
+    from app.relations.models import Contact
+
+    horizon = date.today() + timedelta(days=days)
+    result = await db.execute(
+        select(PaymentArrangementInstallment, Case, Contact)
+        .join(
+            PaymentArrangement,
+            PaymentArrangementInstallment.arrangement_id == PaymentArrangement.id,
+        )
+        .join(Case, PaymentArrangement.case_id == Case.id)
+        .outerjoin(Contact, Case.opposing_party_id == Contact.id)
+        .where(
+            PaymentArrangementInstallment.tenant_id == tenant_id,
+            PaymentArrangement.status == "active",
+            PaymentArrangementInstallment.status.in_(("pending", "partial", "overdue")),
+            # pending pas binnen de horizon; overdue/partial altijd tonen
+            (PaymentArrangementInstallment.status != "pending")
+            | (PaymentArrangementInstallment.due_date <= horizon),
+        )
+        .order_by(PaymentArrangementInstallment.due_date)
+    )
+    return [
+        {
+            "id": installment.id,
+            "case_id": case.id,
+            "case_number": case.case_number,
+            "debtor_name": contact.name if contact else None,
+            "due_date": installment.due_date,
+            "amount": installment.amount,
+            "paid_amount": installment.paid_amount,
+            "status": installment.status,
+        }
+        for installment, case, contact in result.all()
+    ]
 
 
 async def mark_overdue_installments(db: AsyncSession) -> int:

@@ -382,6 +382,9 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* B4/A8: Aankomende regeling-termijnen (overzicht over zaken heen) */}
+            <UpcomingInstallmentsWidget />
+
           </div>
         )}
 
@@ -811,6 +814,107 @@ function MyTasksWidget() {
             Alle {totalOpen} taken bekijken →
           </span>
         </Link>
+      )}
+    </div>
+  );
+}
+
+// ── B4/A8: Aankomende termijnen widget ──────────────────────────────────────
+
+interface UpcomingInstallment {
+  id: string;
+  case_id: string;
+  case_number: string;
+  debtor_name: string | null;
+  due_date: string;
+  amount: number | string; // Decimal uit de backend — alleen tonen, niet rekenen
+  paid_amount: number | string;
+  status: "pending" | "partial" | "overdue";
+}
+
+function UpcomingInstallmentsWidget() {
+  const { data: installments } = useQuery<UpcomingInstallment[]>({
+    queryKey: ["dashboard", "upcoming-installments"],
+    queryFn: async () => {
+      const res = await api("/api/dashboard/upcoming-installments");
+      if (!res.ok) throw new Error("Fout bij laden termijnen");
+      return res.json();
+    },
+  });
+
+  if (!installments || installments.length === 0) return null;
+
+  const shown = installments.slice(0, 8);
+
+  return (
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-card-foreground">
+            Aankomende termijnen
+          </h2>
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            {installments.length}
+          </span>
+        </div>
+      </div>
+      <div className="divide-y divide-border">
+        {shown.map((t) => {
+          const isOverdue = t.status === "overdue";
+          const isPartial = t.status === "partial";
+          return (
+            <Link
+              key={t.id}
+              href={`/zaken/${t.case_id}?tab=betalingen`}
+              className={`flex items-center justify-between px-5 py-3 hover:bg-muted/50 transition-colors ${
+                isOverdue ? TONES.danger.surfaceSoft : ""
+              }`}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-card-foreground">
+                    {t.case_number}
+                  </span>
+                  {t.debtor_name && (
+                    <span className="text-sm text-muted-foreground truncate">
+                      {t.debtor_name}
+                    </span>
+                  )}
+                  {isOverdue && (
+                    <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${TONES.danger.chip}`}>
+                      Gemist
+                    </span>
+                  )}
+                  {isPartial && (
+                    <span className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${TONES.warning.chip}`}>
+                      Deels betaald
+                    </span>
+                  )}
+                </div>
+                <p
+                  className={`text-xs mt-0.5 ${
+                    isOverdue ? `${TONES.danger.text} font-medium` : "text-muted-foreground"
+                  }`}
+                >
+                  Vervalt {formatDateShort(t.due_date)}
+                  {isPartial &&
+                    ` · ${formatCurrency(t.paid_amount)} ontvangen`}
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-foreground tabular-nums ml-4">
+                {formatCurrency(t.amount)}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+      {installments.length > 8 && (
+        <div className="px-5 py-3 border-t border-border text-center">
+          <span className="text-xs text-muted-foreground">
+            +{installments.length - 8} meer in de komende 30 dagen
+          </span>
+        </div>
       )}
     </div>
   );

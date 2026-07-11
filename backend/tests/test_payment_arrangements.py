@@ -1004,3 +1004,76 @@ async def test_df11_sequential_partial_payments(
     assert installments[0]["status"] == "paid"
     assert Decimal(installments[0]["paid_amount"]) == Decimal("300.00")
     assert installments[1]["status"] == "pending"
+
+
+# ── B4/A8: cross-case termijn-vooruitblik (dashboard) ────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_upcoming_installments_overview(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db: AsyncSession
+):
+    """Dashboard vooruitblik: pending binnen horizon, overdue altijd, gesorteerd."""
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+    arr = await _create_arrangement_for_case(
+        client, auth_headers, case_id, total="1200.00", installment="300.00"
+    )
+    installments = await _get_installments(client, auth_headers, case_id, arr["id"])
+    # Termijn 1 vervalt morgen (binnen 30 dagen), termijn 2 over ~1 maand.
+
+    resp = await client.get("/api/dashboard/upcoming-installments", headers=auth_headers)
+    assert resp.status_code == 200
+    items = resp.json()
+    ours = [i for i in items if i["case_id"] == case_id]
+    assert len(ours) >= 1
+    assert ours[0]["due_date"] == installments[0]["due_date"]
+    assert Decimal(ours[0]["amount"]) == Decimal("300.00")
+    assert ours[0]["status"] == "pending"
+    assert ours[0]["case_number"]
+    # Gesorteerd op vervaldatum
+    dates = [i["due_date"] for i in items]
+    assert dates == sorted(dates)
+
+    # Strakke horizon (1 dag): alleen termijn 1 valt erbinnen
+    resp = await client.get(
+        "/api/dashboard/upcoming-installments?days=1", headers=auth_headers
+    )
+    ours = [i for i in resp.json() if i["case_id"] == case_id]
+    assert [i["due_date"] for i in ours] == [installments[0]["due_date"]]
+
+    # Overdue verschijnt ALTIJD, ook buiten de horizon
+    from sqlalchemy import update
+
+    from app.collections.models import PaymentArrangementInstallment
+
+    await db.execute(
+        update(PaymentArrangementInstallment)
+        .where(PaymentArrangementInstallment.id == uuid.UUID(installments[0]["id"]))
+        .values(status="overdue", due_date=date.today() - timedelta(days=5))
+    )
+    await db.commit()
+
+    resp = await client.get(
+        "/api/dashboard/upcoming-installments?days=1", headers=auth_headers
+    )
+    ours = [i for i in resp.json() if i["case_id"] == case_id]
+    assert any(i["status"] == "overdue" for i in ours)
+
+
+@pytest.mark.asyncio
+async def test_upcoming_installments_tenant_isolation(
+    client: AsyncClient,
+    auth_headers: dict,
+    second_auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """Andere tenant ziet onze termijnen niet."""
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+    await _create_arrangement_for_case(client, auth_headers, case_id)
+
+    resp = await client.get(
+        "/api/dashboard/upcoming-installments", headers=second_auth_headers
+    )
+    assert resp.status_code == 200
+    assert [i for i in resp.json() if i["case_id"] == case_id] == []

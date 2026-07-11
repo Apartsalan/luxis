@@ -4,9 +4,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
+from app.collections.service import list_upcoming_installments
 from app.dashboard import service
 from app.dashboard.reports_service import get_kpis, get_monthly_stats, get_phase_distribution
-from app.dashboard.schemas import DashboardSummary, RecentActivityResponse
+from app.dashboard.schemas import (
+    DashboardSummary,
+    RecentActivityResponse,
+    UpcomingInstallmentItem,
+)
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.workflow.schemas import WorkflowTaskResponse
@@ -51,6 +56,19 @@ async def get_my_tasks(
     open_tasks = [t for t in tasks if t.status in ("pending", "due", "overdue")]
     open_tasks.sort(key=lambda t: (status_order.get(t.status, 3), t.due_date))
     return open_tasks
+
+
+@router.get("/upcoming-installments", response_model=list[UpcomingInstallmentItem])
+async def get_upcoming_installments(
+    days: int = Query(default=30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """B4/A8 termijn-vooruitblik: open regeling-termijnen over alle zaken heen.
+
+    Overdue/partial altijd; pending binnen `days` dagen. Gesorteerd op vervaldatum.
+    """
+    return await list_upcoming_installments(db, user.tenant_id, days)
 
 
 # ── Reports endpoints ────────────────────────────────────────────────────

@@ -101,6 +101,18 @@ async def lifespan(app: FastAPI):
                 "CRITICAL: tenant-isolatie-gat — deze tabellen missen RLS in "
                 f"productie: {unprotected}. Draai de migraties (apply_rls)."
             )
+    # Laad de persistente mailslot-stand in het geheugen (S197), vóórdat er ook
+    # maar één request wordt bediend. Fail-safe: lukt het laden niet, dan blijft
+    # de stand ongewijzigd en dekt het env-noodslot productie.
+    from app.database import async_session
+    from app.email.service import load_mail_lock
+
+    try:
+        async with async_session() as _lock_db:
+            await load_mail_lock(_lock_db)
+    except Exception:
+        logging.exception("Kon mailslot-stand niet laden bij opstart (fail-safe: blijft dicht).")
+
     # Startup: start the workflow scheduler
     start_scheduler()
     yield

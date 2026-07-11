@@ -123,3 +123,43 @@ export function useUpdateTenant() {
     },
   });
 }
+
+// ── Mailslot (bouwfase) ────────────────────────────────────────────────────────
+
+export interface MailLockState {
+  locked: boolean; // effectief: gaat er nu ook echt niets de deur uit?
+  db_locked: boolean; // de vanuit de UI schakelbare vlag
+  env_hard_lock: boolean; // server-noodslot — staat dit aan, dan kan de knop niet openen
+}
+
+export function useMailLock() {
+  return useQuery<MailLockState>({
+    queryKey: ["mail-lock"],
+    queryFn: async () => {
+      const res = await api("/api/settings/mail-lock");
+      if (!res.ok) throw new Error("Kon mailslot-stand niet ophalen");
+      return res.json();
+    },
+  });
+}
+
+export function useSetMailLock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (locked: boolean) => {
+      const res = await api("/api/settings/mail-lock", {
+        method: "PUT",
+        body: JSON.stringify({ locked }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Kon mailslot niet omzetten");
+      }
+      return res.json() as Promise<MailLockState>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mail-lock"] });
+    },
+  });
+}

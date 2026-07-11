@@ -29,6 +29,18 @@ class TenantSettingsResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MailLockResponse(BaseModel):
+    """Stand van het bouwfase-mailslot."""
+
+    locked: bool  # effectief: gaat er nu ook echt niets de deur uit?
+    db_locked: bool  # de vanuit de UI schakelbare vlag
+    env_hard_lock: bool  # server-noodslot (env) — staat dit aan, dan kan de knop niet openen
+
+
+class MailLockUpdate(BaseModel):
+    locked: bool
+
+
 class TenantSettingsUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     kvk_number: str | None = None

@@ -39,6 +39,7 @@ for _mod in [
     "app.products.models",
     "app.notifications.models",
     "app.relations.kyc_models",
+    "app.settings.models",
     "app.time_entries.models",
     "app.trust_funds.models",
 ]:

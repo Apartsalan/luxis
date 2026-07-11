@@ -65,6 +65,7 @@ const TEMPLATE_TYPE_LABELS: Record<string, string> = {
   vaststellingsovereenkomst: "Vaststellingsovereenkomst",
   faillissement_dreigbrief: "Faillissement (dreiging)",
   bevestiging_sluiting: "Bevestiging sluiting",
+  verzoekschrift_faillissement: "Concept verzoekschrift faillissement",
 };
 
 const TEMPLATE_TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -82,6 +83,8 @@ const TEMPLATE_TYPE_DESCRIPTIONS: Record<string, string> = {
     "Concept dagvaarding — moet worden afgerond door advocaat",
   renteoverzicht:
     "Gedetailleerd overzicht van rente per vordering en periode",
+  verzoekschrift_faillissement:
+    "Concept verzoekschrift tot faillietverklaring (art. 1 Fw) — als PDF-bijlage bij de dreigbrief",
 };
 
 export function getTemplateLabel(type: string): string {

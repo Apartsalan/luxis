@@ -17,6 +17,14 @@ NOTIF_TRUST_APPROVAL_PENDING = "trust_approval_pending"  # CONN-2: vier-ogen wac
 NOTIF_TRUST_STALE = "trust_stale"  # FIN-2: derdengelden staan te lang stil
 NOTIF_INSTALLMENT_OVERDUE = "installment_overdue"  # regeling-alarm: termijn gemist
 
+# A5/A11 (S198): meldings-typen die de bel verbergt. De classificatielijn staat op
+# pauze — 'classification_done' verzoop de bel (264 ongelezen, niemand verwerkt ze).
+# 'email_received' dubbelt met de Mail-teller in het menu. Niet-destructief: de rijen
+# blijven in de DB (o.a. voor de case-actiefeed), maar tellen niet mee in de bel-lijst
+# en de ongelezen-teller. Nieuwe classification_done-meldingen worden niet meer
+# aangemaakt (ai_agent.service).
+HIDDEN_BELL_TYPES = (NOTIF_CLASSIFICATION_DONE, NOTIF_EMAIL_RECEIVED)
+
 
 async def create_notification(
     db: AsyncSession,
@@ -81,12 +89,13 @@ async def list_notifications(
     user_id: uuid.UUID,
     limit: int = 15,
 ) -> list[Notification]:
-    """List notifications for a user, newest first."""
+    """List notifications for a user, newest first (verborgen bel-typen uitgezonderd)."""
     stmt = (
         select(Notification)
         .where(
             Notification.tenant_id == tenant_id,
             Notification.user_id == user_id,
+            Notification.type.notin_(HIDDEN_BELL_TYPES),
         )
         .order_by(Notification.created_at.desc())
         .limit(limit)
@@ -100,11 +109,12 @@ async def get_unread_count(
     tenant_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> int:
-    """Count unread notifications for a user."""
+    """Count unread notifications for a user (verborgen bel-typen uitgezonderd)."""
     stmt = select(func.count()).select_from(Notification).where(
         Notification.tenant_id == tenant_id,
         Notification.user_id == user_id,
         Notification.is_read == False,  # noqa: E712
+        Notification.type.notin_(HIDDEN_BELL_TYPES),
     )
     result = await db.execute(stmt)
     return result.scalar_one()

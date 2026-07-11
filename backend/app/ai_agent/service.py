@@ -232,28 +232,10 @@ async def classify_email(
         action,
     )
 
-    # Notify tenant users that AI classification finished (CaseActionFeed S146)
-    try:
-        from app.notifications.service import (
-            create_classification_done_notification,
-        )
-
-        from_label = email.from_name or email.from_email or "(onbekend)"
-        await create_classification_done_notification(
-            db,
-            tenant_id,
-            case.id,
-            case.case_number,
-            category if isinstance(category, str) else getattr(category, "value", str(category)),
-            sentiment if isinstance(sentiment, str) else (
-                getattr(sentiment, "value", None) if sentiment is not None else None
-            ),
-            from_label,
-        )
-    except Exception:
-        logger.exception(
-            "Notification voor classification_done mislukt — classificatie is wel opgeslagen"
-        )
+    # A5/A11 (S198): de classificatielijn staat op PAUZE — geen 'classification_done'-
+    # meldingen meer. Ze verzopen de meldingenbel (264 ongelezen) zolang niemand de
+    # classificaties verwerkt. De classificatie zelf wordt nog wél opgeslagen; de bel
+    # verbergt bestaande classification_done-meldingen (notifications.service).
 
     # Emit event for the orchestrator
     from app.ai_agent.events import EMAIL_CLASSIFIED, event_bus

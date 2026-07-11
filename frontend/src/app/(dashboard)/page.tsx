@@ -15,7 +15,6 @@ import {
   FileText,
   CreditCard,
   ArrowUpRight,
-  Mail,
   Users,
   Receipt,
   Timer,
@@ -45,7 +44,6 @@ import {
 import { useMyTodayEntries, useTimeEntrySummary } from "@/hooks/use-time-entries";
 import { useInvoices, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hooks/use-invoices";
 import { useKycDashboard } from "@/hooks/use-kyc";
-import { usePendingCount, useClassifications, type Classification } from "@/hooks/use-ai-agent";
 import { useFollowupStats } from "@/hooks/use-followup";
 import { useUnlinkedCount } from "@/hooks/use-email-sync";
 import {
@@ -54,7 +52,6 @@ import {
   EVENT_TYPE_COLORS,
   type UserCalendarEvent,
 } from "@/hooks/use-calendar-events";
-import { confidenceLabelText, confidenceTextColor as confidenceTextCls } from "@/lib/confidence";
 
 interface DashboardSummary {
   total_active_cases: number;
@@ -939,15 +936,14 @@ function UpcomingInstallmentsWidget() {
 }
 
 function AiSuggestionsWidget() {
-  const { data: pendingCount } = usePendingCount();
+  // A5 (S198): de AI-classificatielijn staat op pauze — deze widget toont alleen
+  // nog de follow-up-aanbevelingen (een werkende feature). De 473 wachtende
+  // classificaties zijn ontkoppeld van dit blok en de badge.
   const { data: followupStats } = useFollowupStats();
-  const { data: pendingClassifications } = useClassifications("pending", undefined, 1, 5);
 
-  const classificationCount = pendingCount?.count ?? 0;
   const followupCount = followupStats?.pending ?? 0;
-  const totalPending = classificationCount + followupCount;
 
-  if (totalPending === 0) return null;
+  if (followupCount === 0) return null;
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5">
@@ -961,58 +957,18 @@ function AiSuggestionsWidget() {
             AI
           </span>
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-semibold text-primary">
-            {totalPending}
+            {followupCount}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {classificationCount > 0 && (
-            <Link
-              href="/taken"
-              className="text-xs text-primary hover:underline"
-            >
-              {classificationCount} classificatie{classificationCount !== 1 ? "s" : ""} →
-            </Link>
-          )}
-          {followupCount > 0 && (
-            <Link
-              href="/followup"
-              className="text-xs text-primary hover:underline"
-            >
-              {followupCount} follow-up{followupCount !== 1 ? "s" : ""} →
-            </Link>
-          )}
+          <Link
+            href="/followup"
+            className="text-xs text-primary hover:underline"
+          >
+            {followupCount} follow-up{followupCount !== 1 ? "s" : ""} →
+          </Link>
         </div>
       </div>
-
-      {pendingClassifications && pendingClassifications.length > 0 && (
-        <div className="divide-y divide-border/50">
-          {pendingClassifications.slice(0, 3).map((c: Classification) => (
-            <Link
-              key={c.id}
-              href={`/zaken/${c.case_id}?tab=correspondentie`}
-              className="flex items-start gap-3 px-5 py-3 hover:bg-primary/10 transition-colors"
-            >
-              <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${TONES.ai.iconBox}`}>
-                <Mail className={`h-3.5 w-3.5 ${TONES.ai.text}`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {c.category_label}
-                  </p>
-                  <span className={`shrink-0 text-[10px] font-medium ${confidenceTextCls(c.confidence)}`}>
-                    {confidenceLabelText(c.confidence)}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  {c.case_number} — {c.suggested_action_label}
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
-            </Link>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

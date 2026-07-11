@@ -338,3 +338,35 @@ async def test_tenant_isolation_between_users(
     b_count = await _count(db, second_tenant.id, NOTIF_EMAIL_RECEIVED)
     assert a_count == 1
     assert b_count == 0
+
+
+@pytest.mark.asyncio
+async def test_bell_hides_classification_and_email_types(
+    db: AsyncSession, test_user: User, test_tenant: Tenant
+):
+    """A5/A11 (S198): de meldingenbel verbergt classification_done en
+    email_received uit lijst én ongelezen-teller, maar toont andere typen."""
+    from app.notifications.service import get_unread_count, list_notifications
+
+    case = await _make_case(db, test_tenant.id, "2026-00120")
+    # Twee verborgen typen + één zichtbaar type.
+    await create_classification_done_notification(
+        db, test_tenant.id, case.id, case.case_number, "betaling_toezegging", "positief", "Jan"
+    )
+    await create_email_received_notification(
+        db, test_tenant.id, case.id, case.case_number, "Jan", "Re: aanmaning"
+    )
+    await create_draft_ready_notification(
+        db, test_tenant.id, case.id, case.case_number, "next_step", "Concept..."
+    )
+    await db.flush()
+
+    shown = await list_notifications(db, test_tenant.id, test_user.id)
+    types = {n.type for n in shown}
+    assert NOTIF_AI_DRAFT_READY in types
+    assert NOTIF_CLASSIFICATION_DONE not in types
+    assert NOTIF_EMAIL_RECEIVED not in types
+
+    # Ongelezen-teller telt alleen het zichtbare type (1), niet de 2 verborgen.
+    unread = await get_unread_count(db, test_tenant.id, test_user.id)
+    assert unread == 1

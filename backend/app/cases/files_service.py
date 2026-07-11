@@ -15,6 +15,7 @@ from app.cases.schemas import (
     MAX_FILE_SIZE,
     CaseFileResponse,
 )
+from app.search.extract import extract_text
 
 # Base upload directory — inside Docker container
 UPLOADS_BASE = Path("/app/uploads")
@@ -75,6 +76,8 @@ async def upload_case_file(
             f"Maximum: {MAX_FILE_SIZE // (1024 * 1024)} MB."
         )
 
+    extracted_text = extract_text(content, content_type)
+
     # Generate unique stored filename
     stored_filename = f"{uuid.uuid4()}{ext}"
     storage_path = _get_storage_path(tenant_id, case_id)
@@ -93,6 +96,7 @@ async def upload_case_file(
         content_type=content_type,
         document_direction=document_direction,
         description=description,
+        extracted_text=extracted_text,
         uploaded_by=user_id,
     )
     db.add(case_file)

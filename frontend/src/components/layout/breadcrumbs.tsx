@@ -15,7 +15,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   taken: "Mijn Taken",
   uren: "Uren",
   facturen: "Facturen",
-  documenten: "Documenten",
   instellingen: "Instellingen",
   agenda: "Agenda",
   nieuw: "Nieuw",

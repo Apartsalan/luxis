@@ -2,7 +2,8 @@
 
 import uuid
 
-from sqlalchemy import or_, select
+from sqlalchemy import Text, and_, bindparam, cast, func, literal, or_, select
+from sqlalchemy.dialects.postgresql import REGCONFIG
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseFile
@@ -23,6 +24,10 @@ async def global_search(
     Returns up to `limit` results total, balanced across types
     (a few per type to ensure variety).
     """
+    query = query.strip()
+    if not query:
+        return []
+
     search_term = f"%{query}%"
     per_type_limit = max(limit // 3, 3)  # At least 3 per type
     results: list[SearchResultItem] = []
@@ -101,32 +106,72 @@ async def global_search(
         )
 
     # ── Search Documents (uploaded files) ───────────────────────────────
+    doc_fts_param = bindparam("doc_fts_query", type_=Text)
+    doc_ts_query = func.websearch_to_tsquery(
+        cast(literal("dutch"), REGCONFIG), doc_fts_param
+    )
+    doc_fts_match = CaseFile.search_vector.op("@@")(doc_ts_query)
+    doc_rank = func.ts_rank(CaseFile.search_vector, doc_ts_query)
     doc_query = (
-        select(CaseFile)
+        select(
+            CaseFile.id,
+            CaseFile.case_id,
+            CaseFile.original_filename,
+            CaseFile.content_type,
+            CaseFile.description,
+            doc_fts_match.label("fts_match"),
+        )
         .where(
             CaseFile.tenant_id == tenant_id,
             CaseFile.is_active == True,  # noqa: E712
             or_(
                 CaseFile.original_filename.ilike(search_term),
                 CaseFile.description.ilike(search_term),
+                doc_fts_match,
             ),
         )
-        .order_by(CaseFile.created_at.desc())
+        .order_by(doc_rank.desc(), CaseFile.created_at.desc())
         .limit(per_type_limit)
     )
-    doc_result = await db.execute(doc_query)
-    documents = list(doc_result.scalars().all())
+    documents = list((await db.execute(doc_query, {"doc_fts_query": query})).all())
+
+    doc_fts_ids = [doc.id for doc in documents if doc.fts_match]
+    document_headlines: dict[uuid.UUID, str] = {}
+    if doc_fts_ids:
+        headline_query = select(
+            CaseFile.id,
+            func.ts_headline(
+                cast(literal("dutch"), REGCONFIG),
+                func.left(CaseFile.extracted_text, 5000),
+                doc_ts_query,
+                literal("MaxWords=14, MinWords=6"),
+            ).label("headline"),
+        ).where(
+            CaseFile.tenant_id == tenant_id,
+            CaseFile.id.in_(doc_fts_ids),
+            doc_fts_match,
+        )
+        document_headlines = {
+            row.id: row.headline or ""
+            for row in (
+                await db.execute(headline_query, {"doc_fts_query": query})
+            ).all()
+        }
 
     for doc in documents:
-        subtitle_parts = [doc.content_type.split("/")[-1].upper()]
-        if doc.description:
-            subtitle_parts.append(doc.description[:60])
+        if doc.fts_match:
+            subtitle = document_headlines.get(doc.id, "")
+        else:
+            subtitle_parts = [doc.content_type.split("/")[-1].upper()]
+            if doc.description:
+                subtitle_parts.append(doc.description[:60])
+            subtitle = " · ".join(subtitle_parts)
         results.append(
             SearchResultItem(
                 id=str(doc.id),
                 type="document",
                 title=doc.original_filename,
-                subtitle=" · ".join(subtitle_parts),
+                subtitle=subtitle,
                 href=f"/zaken/{doc.case_id}",
             )
         )
@@ -165,27 +210,76 @@ async def global_search(
         )
 
     # ── Search Emails (CONN-11) ────────────────────────────────────────
+    email_fts_param = bindparam("email_fts_query", type_=Text)
+    email_ts_query = func.websearch_to_tsquery(
+        cast(literal("dutch"), REGCONFIG), email_fts_param
+    )
+    email_fts_match = SyncedEmail.search_vector.op("@@")(email_ts_query)
+    email_rank = func.ts_rank(SyncedEmail.search_vector, email_ts_query)
     email_query = (
-        select(SyncedEmail)
+        select(
+            SyncedEmail.id,
+            SyncedEmail.case_id,
+            SyncedEmail.subject,
+            SyncedEmail.from_email,
+            SyncedEmail.from_name,
+            SyncedEmail.email_date,
+            Case.case_number,
+            email_fts_match.label("fts_match"),
+        )
+        .outerjoin(
+            Case,
+            and_(
+                Case.id == SyncedEmail.case_id,
+                Case.tenant_id == tenant_id,
+            ),
+        )
         .where(
             SyncedEmail.tenant_id == tenant_id,
             or_(
                 SyncedEmail.subject.ilike(search_term),
                 SyncedEmail.from_email.ilike(search_term),
                 SyncedEmail.from_name.ilike(search_term),
+                email_fts_match,
             ),
         )
-        .order_by(SyncedEmail.email_date.desc())
+        .order_by(email_rank.desc(), SyncedEmail.email_date.desc())
         .limit(per_type_limit)
     )
-    email_result = await db.execute(email_query)
-    emails = list(email_result.scalars().all())
+    emails = list((await db.execute(email_query, {"email_fts_query": query})).all())
+
+    email_fts_ids = [email.id for email in emails if email.fts_match]
+    email_headlines: dict[uuid.UUID, str] = {}
+    if email_fts_ids:
+        headline_query = select(
+            SyncedEmail.id,
+            func.ts_headline(
+                cast(literal("dutch"), REGCONFIG),
+                func.left(SyncedEmail.body_text, 5000),
+                email_ts_query,
+                literal("MaxWords=14, MinWords=6"),
+            ).label("headline"),
+        ).where(
+            SyncedEmail.tenant_id == tenant_id,
+            SyncedEmail.id.in_(email_fts_ids),
+            email_fts_match,
+        )
+        email_headlines = {
+            row.id: row.headline
+            for row in (
+                await db.execute(headline_query, {"email_fts_query": query})
+            ).all()
+        }
 
     for em in emails:
-        sender = em.from_name or em.from_email
-        subtitle_parts = [sender] if sender else []
-        if em.case is not None:
-            subtitle_parts.append(em.case.case_number)
+        if em.fts_match:
+            subtitle = email_headlines.get(em.id, "")
+        else:
+            sender = em.from_name or em.from_email
+            subtitle_parts = [sender] if sender else []
+            if em.case_number:
+                subtitle_parts.append(em.case_number)
+            subtitle = " · ".join(filter(None, subtitle_parts))
         href = (
             f"/zaken/{em.case_id}?tab=correspondentie"
             if em.case_id
@@ -196,7 +290,7 @@ async def global_search(
                 id=str(em.id),
                 type="email",
                 title=(em.subject or "(geen onderwerp)")[:120],
-                subtitle=" · ".join(filter(None, subtitle_parts)),
+                subtitle=subtitle,
                 href=href,
             )
         )

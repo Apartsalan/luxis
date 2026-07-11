@@ -116,7 +116,6 @@ herhaling te voorkomen. Zie `regression.spec.ts`.
 - `agenda.spec.ts` — agenda CRUD
 - `taken.spec.ts` — taken CRUD
 - `correspondentie.spec.ts` — correspondentie
-- `documenten.spec.ts` — documenten
 - `dashboard.spec.ts` — dashboard
 - `sidebar.spec.ts` — sidebar navigatie
 - `instellingen.spec.ts` — instellingen

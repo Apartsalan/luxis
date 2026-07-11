@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Users,
   Briefcase,
-  FileText,
   Settings,
   Scale,
   Clock,
@@ -71,7 +70,6 @@ const ALL_SECTIONS: NavSection[] = [
       { name: "Intake", href: "/intake", icon: Inbox, badge: "ai-pending" },
       { name: "Mail", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
       { name: "Agenda", href: "/agenda", icon: Calendar },
-      { name: "Documenten", href: "/documenten", icon: FileText },
     ],
   },
   {

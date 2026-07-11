@@ -22,7 +22,6 @@ test.describe("Sidebar Navigation", () => {
       "Mijn Taken",
       "Relaties",
       "Dossiers",
-      "Documenten",
       "Instellingen",
     ];
 

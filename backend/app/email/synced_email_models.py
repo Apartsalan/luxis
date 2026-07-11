@@ -7,7 +7,8 @@ Each synced email is matched to a case (dossier) via:
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Uuid
+from sqlalchemy import Boolean, Computed, DateTime, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -17,6 +18,9 @@ class SyncedEmail(TenantBase):
     """An email fetched from Gmail/Outlook, optionally linked to a case."""
 
     __tablename__ = "synced_emails"
+    __table_args__ = (
+        Index("ix_synced_emails_search", "search_vector", postgresql_using="gin"),
+    )
 
     email_account_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("email_accounts.id", ondelete="CASCADE"), nullable=False, index=True
@@ -38,6 +42,16 @@ class SyncedEmail(TenantBase):
     snippet: Mapped[str] = mapped_column(Text, nullable=False, default="")
     body_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     body_html: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('dutch', "
+            "coalesce(subject,'') || ' ' || "
+            "coalesce(left(body_text, 300000),''))",
+            persisted=True,
+        ),
+        deferred=True,
+    )
 
     # Direction: did we send it or receive it?
     direction: Mapped[str] = mapped_column(

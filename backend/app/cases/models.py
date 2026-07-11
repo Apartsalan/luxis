@@ -6,15 +6,18 @@ from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
     Text,
     Uuid,
 )
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.models import TenantBase
@@ -276,6 +279,9 @@ class CaseFile(TenantBase):
     """Uploaded file attached to a case (e.g. contracts, court decisions, evidence)."""
 
     __tablename__ = "case_files"
+    __table_args__ = (
+        Index("ix_case_files_search", "search_vector", postgresql_using="gin"),
+    )
 
     case_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("cases.id"), nullable=False, index=True
@@ -288,6 +294,18 @@ class CaseFile(TenantBase):
         String(20), nullable=True
     )  # inkomend / uitgaand
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('dutch', "
+            "coalesce(original_filename,'') || ' ' || "
+            "coalesce(description,'') || ' ' || "
+            "coalesce(left(extracted_text, 300000),''))",
+            persisted=True,
+        ),
+        deferred=True,
+    )
     uploaded_by: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

@@ -9,7 +9,7 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
-from app.cases.models import Case
+from app.cases.models import Case, CaseFile
 from app.email.oauth_models import EmailAccount
 from app.email.synced_email_models import SyncedEmail
 from app.invoices.models import Invoice
@@ -153,6 +153,83 @@ async def test_search_finds_email_by_subject(
 
 
 @pytest.mark.asyncio
+async def test_search_finds_email_body_with_dutch_stemming(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """Een vervoegde Nederlandse term in de mailinhoud is doorzoekbaar."""
+    account = EmailAccount(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        user_id=test_user.id,
+        provider="outlook",
+        email_address="zoeken@kestinglegal.nl",
+        access_token_enc=b"x",
+        refresh_token_enc=b"y",
+    )
+    db.add(account)
+    await db.flush()
+
+    email = SyncedEmail(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        email_account_id=account.id,
+        provider_message_id="msg-powersearch-stemming",
+        subject="Inhoudelijke reactie",
+        from_email="afzender@voorbeeld.nl",
+        from_name="Afzender",
+        body_text="Wij betwisten alle betalingen aan Jansen.",
+        email_date=datetime.now(UTC),
+    )
+    db.add(email)
+    await db.commit()
+
+    resp = await client.get("/api/search?q=betaling", headers=auth_headers)
+
+    assert resp.status_code == 200
+    matches = [result for result in resp.json()["results"] if result["id"] == str(email.id)]
+    assert matches, "Expected an email body result using Dutch stemming"
+    assert "betalingen" in matches[0]["subtitle"].lower()
+
+
+@pytest.mark.asyncio
+async def test_search_finds_document_extracted_text(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """Geëxtraheerde documenttekst levert een documentresultaat met snippet."""
+    seeded = await _seed_data(db, test_tenant.id)
+    case_file = CaseFile(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_id=seeded["case"].id,
+        original_filename="contract.pdf",
+        stored_filename="contract.pdf",
+        file_size=123,
+        content_type="application/pdf",
+        extracted_text="huurovereenkomst kantoorpand",
+        uploaded_by=test_user.id,
+    )
+    db.add(case_file)
+    await db.commit()
+
+    resp = await client.get("/api/search?q=huurovereenkomst", headers=auth_headers)
+
+    assert resp.status_code == 200
+    matches = [
+        result for result in resp.json()["results"] if result["id"] == str(case_file.id)
+    ]
+    assert matches, "Expected a document content result"
+    assert "huurovereenkomst" in matches[0]["subtitle"].lower()
+
+
+@pytest.mark.asyncio
 async def test_search_empty_result(client: AsyncClient, auth_headers: dict):
     """Search for nonexistent term returns empty results."""
     resp = await client.get("/api/search?q=xyznonexistent123", headers=auth_headers)
@@ -209,6 +286,46 @@ async def test_search_tenant_isolation(
     resp = await client.get("/api/search?q=Zonneveld", headers=second_auth_headers)
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_search_fts_tenant_isolation(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    second_tenant: Tenant,
+    second_user: User,
+):
+    """Mailinhoud van een andere tenant verschijnt niet in FTS-resultaten."""
+    account = EmailAccount(
+        id=uuid.uuid4(),
+        tenant_id=second_tenant.id,
+        user_id=second_user.id,
+        provider="outlook",
+        email_address="tenant-b@voorbeeld.nl",
+        access_token_enc=b"x",
+        refresh_token_enc=b"y",
+    )
+    db.add(account)
+    await db.flush()
+    email = SyncedEmail(
+        id=uuid.uuid4(),
+        tenant_id=second_tenant.id,
+        email_account_id=account.id,
+        provider_message_id="msg-powersearch-tenant-b",
+        subject="Alleen voor tenant B",
+        from_email="afzender@tenant-b.nl",
+        from_name="Tenant B",
+        body_text="onzichtbarezoekterm in vertrouwelijke inhoud",
+        email_date=datetime.now(UTC),
+    )
+    db.add(email)
+    await db.commit()
+
+    resp = await client.get("/api/search?q=onzichtbarezoekterm", headers=auth_headers)
+
+    assert resp.status_code == 200
+    assert all(result["id"] != str(email.id) for result in resp.json()["results"])
 
 
 # ── Auth ─────────────────────────────────────────────────────────────────────

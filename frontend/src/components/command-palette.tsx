@@ -43,7 +43,6 @@ const QUICK_ACTIONS = [
   { label: "Uren", href: "/uren", icon: Clock },
   { label: "Facturen", href: "/facturen", icon: Receipt },
   { label: "Bankimport", href: "/betalingen", icon: Banknote },
-  { label: "Documenten", href: "/documenten", icon: FileText },
   { label: "Instellingen", href: "/instellingen", icon: Settings },
 ];
 

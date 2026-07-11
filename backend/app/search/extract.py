@@ -25,6 +25,9 @@ def extract_text(content: bytes, content_type: str) -> str | None:
         else:
             return None
 
+        # PostgreSQL-tekstvelden weigeren NUL-bytes (0x00) — sommige PDF's
+        # leveren die in hun tekstlaag (backfill-run 12 juli, prod-bewezen).
+        text = text.replace("\x00", "")
         return text.strip()[:MAX_EXTRACTED_TEXT_LENGTH] or None
     except Exception:
         logger.warning("Tekstextractie mislukt voor content-type %s", content_type, exc_info=True)

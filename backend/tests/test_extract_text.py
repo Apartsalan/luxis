@@ -21,3 +21,8 @@ def test_extract_text_ignores_unsupported_excel() -> None:
 
 def test_extract_text_handles_corrupt_pdf() -> None:
     assert extract_text(b"geen geldige pdf", "application/pdf") is None
+
+
+def test_extract_text_strips_nul_bytes() -> None:
+    """PostgreSQL weigert 0x00 in tekst — NUL-bytes uit PDF-tekstlagen moeten weg."""
+    assert extract_text(b"voor" + bytes([0]) + b"na", "text/plain") == "voorna"

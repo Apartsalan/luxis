@@ -2,10 +2,10 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 11 juli 2026 (S195, Opus) — grondige 1-op-1 audit BaseNet-bron vs Luxis: alle 255 betalingen + 13 regelingen kloppen (juiste dossier/datum, 0 dubbel/ontbrekend); 64 betalingen bewust gecapt → waarschuwingsnotitie op elk van die 64 dossiers gezet (live). Details: S195-entry.
-**Laatste feature/fix:** 64 dossier-notities "let op bij heropening" op prod geschreven (met exacte bron- vs geboekt-bedragen, idempotent); 2 auditrapporten in `docs/sessions/` (`S195-1op1-audit.md` + `S195-bankimport-indeling.md`). Geen code-deploy — alleen data (notities) + docs. Mailslot blijft aan (`OUTBOUND_MAIL_LOCK=true`, eraf ~13 juli).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); **bankimport C1-proef samen met Arsalan** — beslislijst nu VEEL kleiner na audit (B/C waren geen gaten): alleen 17 echt-nieuw (waarvan 11 al doorgestort), Saltik-regeling IN100345 (4×€50 onboekt), 21 onbekende zaken (D-/FN-nummers), derdengelden-ijkpunt (Luxis-ledger leeg vs bank €12.544,99); **B4/A8 termijn-vooruitblik + B11 3 proefzaken** (bouwblok 2 restant); voorstel: heropening-slot dat gecapte betaling flagt; heropeningsbatch; terugstort IN100334.
-**Volgende sessie:** bouwblok 2 restant (C1 bankimport-proef samen + B4/A8 termijn-vooruitblik + B11 3 proefzaken), anders bouwblok 3. Prompt: `docs/sessions/PROMPT-S196.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
+**Laatst bijgewerkt:** 11 juli 2026 (S195, Opus) — 1-op-1 audit (alles klopt, 64 gecapt→notities) ÉN C1 bankimport afgerond: 17 juli/juni-betalingen geboekt (€14.922,60), 10 zaken heropend. Details: S195-entry.
+**Laatste feature/fix:** `scripts/s195_reopen_book.py` — boekt de betalingen die nog niet in BaseNet zaten (Lisanne loopt 1 maand achter) als gewone betaling op de zaak (art. 6:44, géén derdengelden, consistent met de 255), heropent afgesloten zaken met restant. Live+geverifieerd via app. 64 heropen-notities op gecapte zaken (eerder deze sessie). Mailslot blijft aan (eraf ~13 juli).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); **16 onbekende bankbetalingen (~€23k, o.a. Donker €17.500 + Dinc 6×€300) = géén incassozaken → bewust NIET geboekt** (besluit Arsalan; Donker = "Grave/Donker", eventueel apart uitzoeken); IN100097 (€500, in BaseNet "Gereed") + IN100547 (€14,52, al voldaan) overgeslagen; **B4/A8 termijn-vooruitblik + B11 3 proefzaken** (bouwblok 2 restant); voorstel: heropening-slot dat gecapte betaling flagt; derdengelden-ijkpunt (Luxis-ledger leeg, blijft Lisanne's BaseNet-maandproces).
+**Volgende sessie:** bouwblok 2 restant (B4/A8 termijn-vooruitblik + B11 3 proefzaken), anders bouwblok 3. Prompt: `docs/sessions/PROMPT-S196.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
 
@@ -57,9 +57,27 @@ Voorwaarde Arsalan: alleen als ook in BaseNet gesloten. Bron-status was **Lopend
   waarschuwing bij heropening van een zaak met `[S195-audit]`-notitie.
 - Kantoorrekening `NL79KNAB0606569456`: Arsalan bevestigde "ja"; stond al goed in systeem.
 
+### C1 bankimport UITGEVOERD (zelfde sessie, ná de audit — op akkoord Arsalan)
+Lisanne's werkwijze verklaarde de gaten: zij verwerkt betalingen maandelijks in BaseNet en
+stort maandelijks door aan cliënten; de export (2 juli) loopt dus 1 maand achter — juli-
+betalingen van debiteuren stonden nog niet in BaseNet, vandaar niet in Luxis.
+- **Reconciliatie (gecorrigeerd, na eigen telfout gevonden):** van 212 afschrift-credits →
+  138 exact geboekt, 39 gecapt-geboekt, **35 echt niet geboekt**. Die 35: 17 op zaken die in
+  BaseNet nog Lopend waren (maar in Luxis dicht), 16 op partijen zónder Luxis-dossier, 1 al
+  voldaan, 1 BaseNet-"Gereed".
+- **Geboekt:** `scripts/s195_reopen_book.py --execute` → **17 betalingen (€14.922,60)** op de
+  Lopend-zaken, als gewone betaling (art. 6:44, workflow-hook UIT, cap op openstaand, marker
+  `[S195-heropen …]`), consistent met de 255 bestaande. **10 zaken heropend** (status afgesloten
+  →nieuw) waar restant openstond; 3 die de betaling volledig afbetaalt bleven dicht; IN100547
+  (al voldaan) + IN100097 (BaseNet "Gereed") overgeslagen. Saltik IN100345: 4×€50, rente-knip
+  chronologisch correct.
+- **Geverifieerd:** DB (17 betalingen, 18→28 open zaken) + app-API (betaling zichtbaar op
+  IN100002/IN100215/IN100345). `--cleanup` beschikbaar als terugrol.
+- **Bewust NIET geboekt (besluit Arsalan):** 16 onbekende betalingen ~€23k (Donker €17.500 =
+  "Grave/Donker", Dinc 6×€300, e.a.) — geen incassozaken in Luxis.
+
 ### Volgende sessie
-Bouwblok 2 restant: C1 bankimport-proef SAMEN (beslislijst nu klein — zie openstaand), B4/A8
-termijn-vooruitblik, B11 3 proefzaken. Prompt: `PROMPT-S196.md`.
+Bouwblok 2 restant: B4/A8 termijn-vooruitblik, B11 3 proefzaken. Prompt: `PROMPT-S196.md`.
 
 ## Sessie 194 (10 juli 2026, Opus — taak 2 + taak 3 + taak 1, alles live/klaar)
 

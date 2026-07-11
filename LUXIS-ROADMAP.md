@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 11 juli 2026 (sessie 195, Opus — **grondige 1-op-1 betalingsaudit, geen code**). Alle 255 betalingen + 13 regelingen kloppen (juiste dossier/datum, 0 dubbel/ontbrekend, onafhankelijk herberekend tegen BaseNet-bron + afschrift); 64 betalingen bewust gecapt (€6.198,46 lager dan werkelijk betaald) → waarschuwingsnotitie op elk van die 64 dossiers gezet (live, geverifieerd). Bankimport-beslislijst hierdoor veel kleiner (B/C waren geen gaten). **Next: bouwblok 2 restant (C1 bankimport-proef samen + B4/A8 + B11) of bouwblok 3.** Details: SESSION-NOTES S195-entry + `docs/sessions/S195-1op1-audit.md`.
+**Laatst bijgewerkt:** 11 juli 2026 (sessie 195, Opus — **1-op-1 betalingsaudit + C1 bankimport afgerond**). Audit: alle 255 betalingen + 13 regelingen kloppen; 64 gecapt → notities op die dossiers. C1: 17 juli/juni-betalingen geboekt (€14.922,60) + 10 zaken heropend (die stonden in BaseNet nog open — Lisanne loopt 1 mnd achter); 16 onbekende betalingen (~€23k, geen incassozaken) bewust niet geboekt. **Next: bouwblok 2 restant (B4/A8 termijn-vooruitblik + B11 3 proefzaken) of bouwblok 3.** Details: SESSION-NOTES S195-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

@@ -2,7 +2,7 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 11 juli 2026 (S198, AUTONOOM Opus + Fable-review + Codex-review) — bouwblok 3 (klus 1-4) LIVE + reviewronde-fixes LIVE. Details: S198-entry.
+**Laatst bijgewerkt:** 12 juli 2026 (S198-verlengstuk: eerste /codex-build-rit) — PowerSearch LIVE (zoeken op inhoud van 6.509 mails + 1.951 dossierstukken, NL-stemming, snippets) + "Documenten"-pagina/menu-item weg. Sol (Codex gpt-5.6-sol, xhigh) bouwde op Fable's bevroren spec; Fable reviewde + vond/fixte 1 prod-bug (NUL-bytes in PDF-tekst). Details: S198-entry §PowerSearch.
 **Laatste feature/fix:** B3 status→4 vaste waarden (pijplijn stuurt status) + stap-filter; classificatielijn op pauze (bel van 342→23 ongelezen); Mijn Taken ontdubbeld + badge-fix; HTML-sjablonen-tab weg. Daarna 8 Fable/Codex-review-fixes (geen stille heropening van betaalde zaken, €0-guard, correcte openstaand-berekening mét BIK, symmetrische heropening bij teruggedraaide betaling). Alles live op prod, tests groen.
 **Openstaand:** ⚠️ MAILSLOT staat UIT via de knop (Arsalan zet zelf aan). Veegsessie (stapel 4) is de volgende bouwprioriteit. Review-voorstellen die NIET gebouwd zijn (bewust): 'betaald' telt in dashboard/rapportages nog als actief (filter `!= afgesloten`, gebruik `TERMINAL_STATUSES`); dode workflow-engine + `NEXT_STATUSES`/`PIPELINE_STEPS` opruimen; `/api/cases/bulk/status` bestaat niet (404, pre-existing). Zie S198-entry §Voorstellen.
 **Volgende sessie:** S199 = veegsessie (stapel 4: C5 urenfilter, lege dashboard-widgets netjes, testdossier 2026-00001 opruimen mét akkoord, dubbele 'Eerste sommatie'-stap) + de review-voorstellen hierboven. Plan: `docs/plans/PLAN-fase2-bouwblokken.md` (stapel 4).
@@ -87,9 +87,30 @@ Stale comments bijgewerkt. Nieuwe tests voor elk. **Prod-check:** 0 zaken op een
   bewust blijven staan (veegsessie mét akkoord).
 - CI-rood `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184) → uitrol via SSH.
 
+### Verlengstuk (12 juli, na terugkomst Arsalan) — PowerSearch + Documenten-opruiming LIVE (eerste /codex-build)
+**Onderzoek eerst (Fable):** concurrenten hebben géén centrale documenten-bladerpagina behalve Clio;
+BaseNet (Lisanne's referentie) lost het op met centraal ZOEKEN op inhoud (PowerSearch). Luxis had al
+een globale zoek, maar alleen op namen/onderwerpen. Besluit Arsalan: Documenten-pagina helemaal weg
+(sjabloonbeheer zit al in Instellingen) + PowerSearch bouwen.
+**Werkvorm (nieuw, eerste rit):** Fable schreef de bevroren spec (`docs/plans/PLAN-powersearch.md`),
+**Sol (Codex gpt-5.6-sol, xhigh)** bouwde 'm end-to-end (commit `bc194ae`), Fable reviewde de
+volledige diff + draaide alle bewijzen zelf. **Geleverd:** migratie s199 (NL-tsvector-kolommen +
+GIN op mails/dossierstukken), extractie (PDF via pymupdf/HTML/tekst) + upload-hook + idempotente
+backfill, hybride zoek (substring op nummers/namen blijft; inhoud met NL-stemming, ts_rank-relevantie,
+ts_headline-snippets; alles gebonden parameters + tenant-gefilterd), Documenten-pagina/nav/e2e weg.
+**Reviewbevindingen:** 1 spec-afwijking terecht (regconfig-cast); 1 prod-bug door Fable gevonden bij
+de backfill: PDF-tekstlagen met NUL-bytes (0x00) klapten op PostgreSQL → fix `054d0b9` + regressietest.
+**Regelbreuk vastgelegd:** Sol committe+pushte zelf (volgde repo-regel "commit+push na elke taak");
+auto-deploy door Fable gecanceld vóór review; volgende contracten krijgen expliciet commit-verbod.
+**Live bewezen (prod):** backfill 1.951/2.055 stukken met tekst (104 = scans, OCR bewust later);
+zoek op "betalingsregeling" vindt factuur-PDF op inhoud mét snippet; "verjaring" vindt mail-body's.
+**Besluit Arsalan (definitief):** 12 onverklaarde bankontvangsten (±€21,7k Donker/Dinc) VERVALLEN —
+niet bij de 7 vaste opdrachtgevers → geen incasso, nooit boeken.
+**S199-plan klaar:** `docs/sessions/PROMPT-S199.md` (veegsessie + S198-review-voorstellen).
+
 ### Volgende sessie
 S199 = veegsessie (stapel 4) + de review-voorstellen hierboven (m.n. 'betaald'-als-actief in
-dashboard/rapportages + dode code).
+dashboard/rapportages + dode code). Prompt: `docs/sessions/PROMPT-S199.md`.
 
 ## Sessie 197 (11 juli 2026, Opus+Fable — Codex-hang opgelost + S196-review + mailslot-knop; bouwblok 3 NIET gedaan)
 

@@ -1,5 +1,11 @@
 # S195 — Complete indeling bankafschrift derdengelden (alle 212 bijschrijvingen)
 
+> ⚠️ **CORRECTIE (zelfde dag, na 1-op-1 audit — zie `S195-1op1-audit.md`):** de groepen B en C
+> hieronder zijn GEEN gaten. 34 van de 36 rijen zijn wél geboekt, maar op een bewust gecapt
+> (lager) bedrag — de datum+bedrag-match zag ze daardoor onterecht als 'nooit geboekt'.
+> Echt onboekt uit B+C: alleen de 2 Saltik-termijnen (IN100345, 2×€50). De audit bevat de
+> volledige lijst van 64 gecapte betalingen (totaal €6.198,46) met heropenings-instructie.
+
 Afschrift NL20 RABO 0388 5065 20, 9 juli 2025 t/m 9 juli 2026. Alleen-lezen analyse tegen prod, 11 juli 2026. Vervolg op `S194-bankimport-droogloop.md`.
 
 ## Kernfeiten
@@ -282,7 +288,7 @@ Lezing: dit zijn de slottermijnen — de debiteur betaalde de vaste termijn, de 
 
 1. **138 GEBOEKT** — bij import per stuk afwijzen of vooraf uitsluiten (dubbeltel-valkuil H17 ziet ze niet).
 2. **Groep A (17, €8.836,39)** — 11 al doorgestort, 6 vermoedelijk nog op de rekening. Boeken op afgesloten zaak of eerst heropenen? En: doorgestorte bedragen wel/niet als derdengelden-bijschrijving boeken (zonder uitbetaling erbij klopt het saldo niet)?
-3. **Groep B (8, €3.575,50)** — 6 slottermijnen zijn feitelijk al (deels) geboekt → NIET bijboeken zonder correctie; 2+2 Saltik-termijnen zijn echt onboekt maar ook al doorgestort.
-4. **Groep C (28, €44.540,91)** — historie op afgesloten zaken, geld al doorgestort: bijboeken of laten?
+3. **Groep B** — VERVALLEN op de Saltik-termijnen na: de 6 slottermijnen zijn gecapt geboekt (audit), alleen Saltik IN100345 (2×€50, plus 2×€50 in groep A) is echt onboekt.
+4. ~~Groep C bijboeken of laten~~ — VERVALLEN na audit: al geboekt (gecapt), zie correctie bovenaan.
 5. **Groep D (21, €39.565,49)** — zaken niet in Luxis (D-/FN-nummers, losse facturen): negeren of dossiers aanmaken?
 6. **Derdengelden-ijkpunt** — Luxis-saldo is €0, bank zegt €12.544,99 (8 juli). Voorstel: kies een ijkdatum en boek alleen vanaf daar in+uit volledig; historie reconstrueren = ~370 boekingen handwerk.

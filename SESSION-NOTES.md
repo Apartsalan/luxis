@@ -4,7 +4,7 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 11 juli 2026 (S195, Opus) — 1-op-1 audit (alles klopt, 64 gecapt→notities) ÉN C1 bankimport afgerond: 17 juli/juni-betalingen geboekt (€14.922,60), 10 zaken heropend. Details: S195-entry.
 **Laatste feature/fix:** `scripts/s195_reopen_book.py` — boekt de betalingen die nog niet in BaseNet zaten (Lisanne loopt 1 maand achter) als gewone betaling op de zaak (art. 6:44, géén derdengelden, consistent met de 255), heropent afgesloten zaken met restant. Live+geverifieerd via app. 64 heropen-notities op gecapte zaken (eerder deze sessie). Mailslot blijft aan (eraf ~13 juli).
-**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); **16 onbekende bankbetalingen (~€23k, o.a. Donker €17.500 + Dinc 6×€300) = géén incassozaken → bewust NIET geboekt** (besluit Arsalan; Donker = "Grave/Donker", eventueel apart uitzoeken); IN100097 (€500, in BaseNet "Gereed") + IN100547 (€14,52, al voldaan) overgeslagen; **B4/A8 termijn-vooruitblik + B11 3 proefzaken** (bouwblok 2 restant); voorstel: heropening-slot dat gecapte betaling flagt; derdengelden-ijkpunt (Luxis-ledger leeg, blijft Lisanne's BaseNet-maandproces).
+**Openstaand:** ⚠️ MAILSLOT AAN (eraf ~13 juli); **12 onverklaarde bankbetalingen (€21.738,96, o.a. Donker €17.500 + Dinc 6×€300 — gecorrigeerd van "16/~23k" door Fable-hercontrole: 8 waren bankkant van gecapte boekingen) = géén incassozaken → bewust NIET geboekt** (besluit Arsalan); **B4/A8 termijn-vooruitblik + B11 3 proefzaken** (bouwblok 2 restant); voorstel: heropening-slot dat gecapte betaling flagt (nu 67 notities); derdengelden-ijkpunt (Luxis-ledger leeg, blijft Lisanne's BaseNet-maandproces).
 **Volgende sessie:** bouwblok 2 restant (B4/A8 termijn-vooruitblik + B11 3 proefzaken), anders bouwblok 3. Prompt: `docs/sessions/PROMPT-S196.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
@@ -73,8 +73,18 @@ betalingen van debiteuren stonden nog niet in BaseNet, vandaar niet in Luxis.
   chronologisch correct.
 - **Geverifieerd:** DB (17 betalingen, 18→28 open zaken) + app-API (betaling zichtbaar op
   IN100002/IN100215/IN100345). `--cleanup` beschikbaar als terugrol.
-- **Bewust NIET geboekt (besluit Arsalan):** 16 onbekende betalingen ~€23k (Donker €17.500 =
-  "Grave/Donker", Dinc 6×€300, e.a.) — geen incassozaken in Luxis.
+- **Bewust NIET geboekt (besluit Arsalan):** onbekende betalingen — na Fable-hercontrole
+  gecorrigeerd naar **12 rijen, €21.738,96** (Donker €17.500 = "Grave/Donker", Dinc 6×€300+€100,
+  Königel €1.708, Makkinga €116, Van der Hem €500); 8 eerder-als-onbekend-getelde bleken de
+  bankkant van gecapte boekingen.
+
+### Fable-hercontrole van de Opus-uitvoering (zelfde avond, op verzoek Arsalan)
+Verse reconciliatie na het boeken: 138 exact + 14 S195-vol + 48 gecapt (incl. 3 van vanavond)
++ 12 onverklaard = 212 ✓. Geen dubbele boekingen (maandreeksen sluiten aan). **2 fixes:**
+(1) IN100215's €250 gekoppeld aan regeling-termijn 12-07 als deelbetaling (anders vals
+regeling-alarm); (2) de 3 nieuwe gecapte zaken (IN100480/532/585) kregen dezelfde
+heropen-notitie als de 64 → totaal 67. Cap-verschil droogloop-vs-boeking verklaard
+(openstaand per betaaldag, juridisch juist). Details: `S195-1op1-audit.md` §Fable-hercontrole.
 
 ### Volgende sessie
 Bouwblok 2 restant: B4/A8 termijn-vooruitblik, B11 3 proefzaken. Prompt: `PROMPT-S196.md`.

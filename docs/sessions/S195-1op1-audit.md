@@ -102,3 +102,40 @@ Resterende echte beslispunten:
 
 ## Verjaringstaken — bevinding
 IN100015 en IN100127 stonden in BaseNet op **Lopend** (geen finish-reason, geen afrondingsdatum). Arsalans voorwaarde was: alleen afvinken als ze óók in BaseNet gesloten waren → niet voldaan, taken blijven staan. (Dat ze in Luxis 'afgesloten' zijn komt door de generieke werkvoorraad-sluiting bij de import; deze twee zijn kandidaten voor de heropeningsbatches.)
+
+---
+
+## Fable-hercontrole (zelfde avond, na de C1-uitvoering op Opus)
+
+Op verzoek Arsalan is al het niet-op-Fable gedane werk (de C1-boekingen + afsluitdocs)
+onafhankelijk herbeoordeeld. Verse reconciliatie van alle 212 afschrift-credits tegen de
+prod-stand ná het boeken, nu met bron-gebaseerde herkenning (BaseNet-record op datum+bedrag
+i.p.v. alleen naam):
+
+| Categorie | Aantal | Som |
+|---|---|---|
+| Exact geboekt (historisch) | 138 | €80.387,52 |
+| S195-geboekt (11 juli, vol bedrag) | 14 | €9.896,75 |
+| Gecapt geboekt (zelfde zaak+datum, lager bedrag — incl. 3 van 11 juli) | 48 | €64.882,58 |
+| Onverklaard | 12 | €21.738,96 |
+
+**Bevindingen + herstel:**
+1. ✅ **Geen dubbele boekingen** — alle maandreeksen (o.a. IN100350/IN100469/IN100553) lopen
+   aansluitend door; de 17 nieuwe boekingen overlappen nergens met bestaande.
+2. 🔧 **Gefixt: termijn-koppeling IN100215** — de €250 (07-07) was niet aan de regeling-termijn
+   van 12-07 (€1.049,21) gekoppeld → regeling-alarm zou "niets betaald" melden. Nu gekoppeld
+   als deelbetaling (paid_amount 250, status partial, payment_id gezet). Saltik-termijnen
+   (apr–jul) bestaan niet in Luxis (import nam alleen toekomst) → daar viel niets te koppelen.
+3. 🔧 **Gefixt: 3 nieuwe gecapte zaken kregen dezelfde heropen-notitie** als de 64
+   (IN100480 €98,22 · IN100532 €87,17 · IN100585 €61,17 verschil). Totaal nu 67 notities.
+4. ✏️ **Correctie op het eerdere "16 onbekende betalingen ~€23k":** 8 daarvan waren de bankkant
+   van gecapte boekingen (o.a. Braspenning→IN100322, Van Zaanen→IN100374, FayeCare→IN100491,
+   Van den Boom→IN100380, Groenendijk→IN100393, Masrour→IN100456, Pauw→IN100334,
+   Bottenburg→IN100400) — geld is gewoon geadministreerd. Echt onverklaard: **12 rijen,
+   €21.738,96** — Donker €17.500 ("Grave/Donker"), Dinc 6×€300+1×€100, Königel €1.708,
+   Makkinga €116,44, Van der Hem €500 (géén BaseNet-record gevonden; naam lijkt op IN100097
+   maar bedrag past niet in diens betaal-cache) — per besluit Arsalan géén incassozaken, niet
+   geboekt.
+5. ✅ **Cap-verschil droogloop vs uitvoering verklaard** — droogloop rekende openstaand per
+   vandaag, de boeking capt (correct) op openstaand per betaaldag; restant €0,66 op IN100480
+   is hetzelfde bekende recompute-artefact als bij de 64 (notitie dekt het).

@@ -774,6 +774,7 @@ export function useCreateArrangement() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -809,6 +810,7 @@ export function useRecordInstallmentPayment() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -835,6 +837,7 @@ export function useDefaultArrangement() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -861,6 +864,7 @@ export function useCancelArrangement() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -889,6 +893,7 @@ export function useWaiveInstallment() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["cases", vars.caseId] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

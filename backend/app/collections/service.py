@@ -962,8 +962,20 @@ async def list_upcoming_installments(
     from app.relations.models import Contact
 
     horizon = date.today() + timedelta(days=days)
+    # Alleen de kolommen die het dashboardblok toont (scalar-projectie): hele
+    # Case/Contact-entiteiten laden zou hun lazy="selectin"-relaties meetrekken
+    # (activiteiten, partijen, links, ...) die we hier weggooien.
     result = await db.execute(
-        select(PaymentArrangementInstallment, Case, Contact)
+        select(
+            PaymentArrangementInstallment.id,
+            PaymentArrangementInstallment.due_date,
+            PaymentArrangementInstallment.amount,
+            PaymentArrangementInstallment.paid_amount,
+            PaymentArrangementInstallment.status,
+            Case.id.label("case_id"),
+            Case.case_number,
+            Contact.name.label("debtor_name"),
+        )
         .join(
             PaymentArrangement,
             PaymentArrangementInstallment.arrangement_id == PaymentArrangement.id,
@@ -982,16 +994,16 @@ async def list_upcoming_installments(
     )
     return [
         {
-            "id": installment.id,
-            "case_id": case.id,
-            "case_number": case.case_number,
-            "debtor_name": contact.name if contact else None,
-            "due_date": installment.due_date,
-            "amount": installment.amount,
-            "paid_amount": installment.paid_amount,
-            "status": installment.status,
+            "id": row.id,
+            "case_id": row.case_id,
+            "case_number": row.case_number,
+            "debtor_name": row.debtor_name,
+            "due_date": row.due_date,
+            "amount": row.amount,
+            "paid_amount": row.paid_amount,
+            "status": row.status,
         }
-        for installment, case, contact in result.all()
+        for row in result.all()
     ]
 
 

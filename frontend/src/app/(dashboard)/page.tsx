@@ -833,7 +833,7 @@ interface UpcomingInstallment {
 }
 
 function UpcomingInstallmentsWidget() {
-  const { data: installments } = useQuery<UpcomingInstallment[]>({
+  const { data: installments, isError } = useQuery<UpcomingInstallment[]>({
     queryKey: ["dashboard", "upcoming-installments"],
     queryFn: async () => {
       const res = await api("/api/dashboard/upcoming-installments");
@@ -841,6 +841,24 @@ function UpcomingInstallmentsWidget() {
       return res.json();
     },
   });
+
+  // Fout != "geen termijnen": bij een laadfout een melding tonen i.p.v. het blok
+  // stil laten verdwijnen (anders lijkt het of er geen deadlines zijn).
+  if (isError) {
+    return (
+      <div className="rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-card-foreground">
+            Aankomende termijnen
+          </h2>
+        </div>
+        <p className="px-5 py-4 text-sm text-muted-foreground">
+          Kon de aankomende termijnen niet laden. Ververs de pagina om het opnieuw te proberen.
+        </p>
+      </div>
+    );
+  }
 
   if (!installments || installments.length === 0) return null;
 
@@ -912,7 +930,7 @@ function UpcomingInstallmentsWidget() {
       {installments.length > 8 && (
         <div className="px-5 py-3 border-t border-border text-center">
           <span className="text-xs text-muted-foreground">
-            +{installments.length - 8} meer in de komende 30 dagen
+            +{installments.length - 8} meer
           </span>
         </div>
       )}

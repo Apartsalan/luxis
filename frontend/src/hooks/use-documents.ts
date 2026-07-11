@@ -123,23 +123,25 @@ export function getTemplatesForStatus(
   status: string,
   debtorType?: string | null
 ): { recommended: string[]; available: string[] } {
-  const mapping = STATUS_TEMPLATE_MAP[status];
-  if (!mapping) {
-    // Fallback: all templates available, none recommended
-    return { recommended: [], available: Object.keys(TEMPLATE_TYPE_LABELS) };
-  }
-
   const filterByDebtor = (types: string[]) => {
     if (debtorType === "b2b") {
-      // B2B: verwijder 14_dagenbrief
+      // B2B: verwijder de B2C-only 14_dagenbrief
       return types.filter((t) => t !== "14_dagenbrief");
     }
-    if (debtorType === "b2c") {
-      // B2C: bij aanmaning-status, 14_dagenbrief als eerste aanbevolen
-      return types;
-    }
+    // B2C / onbekend: alle sjablonen relevant
     return types;
   };
+
+  const mapping = STATUS_TEMPLATE_MAP[status];
+  if (!mapping) {
+    // Fallback (o.a. de nieuwe status 'in_behandeling', S198): alle sjablonen
+    // beschikbaar, niets aanbevolen — maar wél gefilterd op debiteurtype, anders
+    // krijgt een B2B-zaak de consumentgerichte 14-dagenbrief aangeboden (Codex #9).
+    return {
+      recommended: [],
+      available: filterByDebtor(Object.keys(TEMPLATE_TYPE_LABELS)),
+    };
+  }
 
   return {
     recommended: filterByDebtor(mapping.recommended),

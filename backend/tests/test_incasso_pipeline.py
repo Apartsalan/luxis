@@ -1409,6 +1409,69 @@ async def test_verweer_switch_routes_through_move_case_to_step(
     assert len(activities) >= 1
 
 
+async def test_verweer_email_does_not_reopen_paid_case(
+    db, test_tenant, test_user, test_company
+):
+    """S198-review (Fable #2): een verweer-email mag een volledig BETAALDE zaak niet
+    stil heropenen. Sinds S198 zet move_case_to_step de status mee (→ in_behandeling +
+    date_closed leeg); zonder guard zou een betaald dossier reactiveren."""
+    from datetime import UTC, date, datetime
+    from unittest.mock import AsyncMock, patch
+
+    from app.email.oauth_models import EmailAccount
+    from app.email.synced_email_models import SyncedEmail
+    from app.incasso.automation_service import trigger_defense_response_for_email
+
+    eerste = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Eerste sommatie",
+        sort_order=1, min_wait_days=0, max_wait_days=4,
+    )
+    verweer = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Verweer beantwoorden",
+        sort_order=10, min_wait_days=0, max_wait_days=0, is_hold_step=True,
+    )
+    db.add_all([eerste, verweer])
+    await db.flush()
+
+    # Betaalde zaak die (na auto-betaald) nog op een werkstap staat.
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=eerste, case_number="2026-09101", days_in_step=3, status="betaald",
+    )
+    case.date_closed = date.today()
+    await db.flush()
+
+    account = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="gmail", email_address="kantoor@test.nl",
+        access_token_enc=b"x", refresh_token_enc=b"y",
+    )
+    db.add(account)
+    await db.flush()
+    email = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email_account_id=account.id,
+        case_id=case.id, provider_message_id="defense-paid",
+        from_email="debiteur@example.nl", direction="inbound",
+        body_text="Ik betwist de vordering.", email_date=datetime.now(UTC),
+    )
+    db.add(email)
+    await db.flush()
+
+    with patch(
+        "app.incasso.automation_service.generate_draft_for_step",
+        new=AsyncMock(return_value=None),
+    ):
+        result = await trigger_defense_response_for_email(
+            db, test_tenant.id, email.id, "juridisch_verweer"
+        )
+
+    await db.refresh(case)
+    assert result is None
+    assert case.status == "betaald"          # niet heropend
+    assert case.incasso_step_id == eerste.id  # stap ongewijzigd
+    assert case.date_closed is not None       # sluitdatum behouden
+
+
 # ── AUDIT-H12: only evaluable (timeout) rules are seeded ─────────────────────
 
 

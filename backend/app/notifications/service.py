@@ -17,13 +17,14 @@ NOTIF_TRUST_APPROVAL_PENDING = "trust_approval_pending"  # CONN-2: vier-ogen wac
 NOTIF_TRUST_STALE = "trust_stale"  # FIN-2: derdengelden staan te lang stil
 NOTIF_INSTALLMENT_OVERDUE = "installment_overdue"  # regeling-alarm: termijn gemist
 
-# A5/A11 (S198): meldings-typen die de bel verbergt. De classificatielijn staat op
-# pauze — 'classification_done' verzoop de bel (264 ongelezen, niemand verwerkt ze).
-# 'email_received' dubbelt met de Mail-teller in het menu. Niet-destructief: de rijen
-# blijven in de DB (o.a. voor de case-actiefeed), maar tellen niet mee in de bel-lijst
-# en de ongelezen-teller. Nieuwe classification_done-meldingen worden niet meer
-# aangemaakt (ai_agent.service).
-HIDDEN_BELL_TYPES = (NOTIF_CLASSIFICATION_DONE, NOTIF_EMAIL_RECEIVED)
+# A5/A11 (S198): meldings-typen die uit de meldingenlijst + ongelezen-teller worden
+# gefilterd. De classificatielijn staat op pauze en 'classification_done' verzoop de
+# bel (306 ongelezen, niemand verwerkt ze). Niet-destructief: de rijen blijven in de DB.
+# Nieuwe classification_done-meldingen worden ook niet meer aangemaakt (ai_agent.service).
+# LET OP (S198-review, Codex #6): 'email_received' wordt BEWUST niet verborgen — dezelfde
+# lijst voedt óók de dossier-actiefeed, en de Mail-teller telt alleen ONgekoppelde mail;
+# verbergen zou een correct gekoppelde (verweer)mail overal onzichtbaar maken.
+HIDDEN_BELL_TYPES = (NOTIF_CLASSIFICATION_DONE,)
 
 
 async def create_notification(

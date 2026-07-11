@@ -56,8 +56,13 @@ def status_for_step(step: IncassoPipelineStep) -> str:
     """Zaak-status die hoort bij een pijplijn-stap (B3, S198).
 
     Terminale eindstappen → betaald/afgesloten; elke werk-stap → in_behandeling.
+    Sleutelt op `is_terminal` (niet op naam): een hernoemde of eigen terminale stap
+    sluit de zaak veilig af i.p.v. 'm in in_behandeling-limbo op een verborgen
+    terminale stap achter te laten (S198-review, Fable #4).
     """
-    return _TERMINAL_STEP_STATUS.get(step.name, "in_behandeling")
+    if step.is_terminal:
+        return _TERMINAL_STEP_STATUS.get(step.name, "afgesloten")
+    return "in_behandeling"
 
 # ── Pipeline Step CRUD ────────────────────────────────────────────────────
 
@@ -465,6 +470,25 @@ async def move_case_to_step(
         if reason:
             raise BadRequestError(reason)
 
+    # S198-review (Codex #2): een zaak handmatig of via batch naar de 'Betaald'-
+    # eindstap slepen mag alleen als er niets meer openstaat — anders wordt een zaak
+    # mét openstaand saldo als betaald weggeboekt en verdwijnt uit de werkvoorraad.
+    # Sluiten mét restant loopt via 'Afsluiten' (status afgesloten). De auto-paden
+    # (creatie/auto-advance) sturen nooit naar een terminale eindstap, dus die raakt
+    # dit niet.
+    if trigger_type in ("manual", "batch") and status_for_step(target_step) == "betaald":
+        from app.collections.service import get_case_outstanding
+
+        try:
+            outstanding = await get_case_outstanding(db, tenant_id, case)
+        except Exception:
+            outstanding = Decimal("0")  # fail-open: nooit blokkeren op een rekenfout
+        if outstanding > Decimal("0.01"):
+            raise BadRequestError(
+                f"Zaak kan niet op de 'Betaald'-stap gezet worden: er staat nog "
+                f"€ {outstanding} open. Gebruik 'Afsluiten' om met een restant af te sluiten."
+            )
+
     now = datetime.now(UTC)
     old_step_name = None
 
@@ -753,10 +777,11 @@ async def get_pipeline_overview(
         )
     )
     all_cases = list(result.scalars().all())
-    # AUDIT-H11: a case parked on a terminal step ("Betaald"/"Afgesloten") is
-    # closed and must leave the active board. The status filter above only
-    # catches cases closed via the workflow-status dropdown — move_case_to_step
-    # never writes case.status, so pipeline-closed cases would otherwise linger.
+    # AUDIT-H11 / B3 (S198): sinds S198 zet move_case_to_step de status wél mee
+    # (terminale stap → betaald/afgesloten), dus de status-filter hierboven vangt
+    # pijplijn-gesloten zaken al af. Deze terminale-stap-filter blijft als vangnet
+    # voor de randgevallen (bv. een betaald-op-werkstap dat later op een terminale
+    # stap belandt zonder statuswissel).
     all_cases = [c for c in all_cases if c.incasso_step_id not in terminal_step_ids]
 
     # Group cases by step
@@ -1520,9 +1545,9 @@ async def get_queue_counts(
         )
     )
     all_cases = list(result.scalars().all())
-    # AUDIT-H11: exclude cases parked on a terminal step — closed cases have no
-    # next step and must not inflate the queue counts (case.status is never
-    # written by the pipeline, so the status filter alone misses them).
+    # AUDIT-H11 / B3 (S198): sluit zaken op een terminale stap uit — gesloten zaken
+    # hebben geen volgende stap. De status-filter hierboven vangt ze sinds S198 al af
+    # (move_case_to_step zet de status mee); dit blijft als vangnet.
     all_cases = [c for c in all_cases if c.incasso_step_id not in terminal_step_ids]
 
     ready_next_step = 0

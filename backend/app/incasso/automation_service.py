@@ -840,6 +840,17 @@ async def trigger_defense_response_for_email(
     if not case or not case.incasso_step_id:
         return None
 
+    # S198-review (Fable #2): een volledig betaalde of afgesloten zaak mag NIET stil
+    # heropend worden door een binnenkomende verweer-mail. move_case_to_step zet sinds
+    # S198 de status terug op in_behandeling + wist date_closed — dat zou een afgehandeld
+    # dossier ongemerkt reactiveren. Consistent met de auto-advance/batch-guards.
+    if case.status in ("betaald", "afgesloten"):
+        logger.info(
+            "Verweer-email op case %s met status '%s' — zaak is afgehandeld, geen auto-heropening",
+            case.case_number, case.status,
+        )
+        return None
+
     current_step = (await db.execute(
         select(IncassoPipelineStep).where(
             IncassoPipelineStep.id == case.incasso_step_id,

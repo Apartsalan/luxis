@@ -472,6 +472,7 @@ async def update_payment(
     await db.flush()
     await db.refresh(payment)
     await _refresh_case_financials(db, tenant_id, payment.case_id)
+    await _reopen_case_if_no_longer_paid(db, tenant_id, payment.case_id)
     return payment
 
 
@@ -494,6 +495,7 @@ async def delete_payment(
     payment.is_active = False
     await db.flush()
     await _refresh_case_financials(db, tenant_id, case_id)
+    await _reopen_case_if_no_longer_paid(db, tenant_id, case_id)
 
 
 # ── Payment Arrangements ─────────────────────────────────────────────────────
@@ -1069,6 +1071,71 @@ async def list_interest_rates(
 
 
 # ── Financial Summary ────────────────────────────────────────────────────────
+
+
+async def get_case_outstanding(db: AsyncSession, tenant_id: uuid.UUID, case) -> Decimal:
+    """Openstaand saldo van een zaak met ALLE zaakinstellingen.
+
+    S198-review (Codex #3): auto-betaald en de handmatige 'betaald'-guard moeten
+    exact rekenen zoals de betalingsboeking — dus mét de BIK-override, het
+    BIK-percentage en het nakosten-type van de zaak, niet met de kale WIK-staffel.
+    Anders sluit een betaling een zaak terwijl er (door een afwijkende BIK) nog
+    een restant openstaat, of andersom.
+    """
+    summary = await get_financial_summary(
+        db,
+        tenant_id,
+        case.id,
+        case.interest_type,
+        case.contractual_rate,
+        case.contractual_compound,
+        bik_override=case.bik_override,
+        bik_override_percentage=case.bik_override_percentage,
+        include_btw_on_bik=(not case.client.is_btw_plichtig) if case.client else False,
+        nakosten_type=case.nakosten_type,
+    )
+    return summary.get("total_outstanding", Decimal("0"))
+
+
+async def _reopen_case_if_no_longer_paid(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> None:
+    """Symmetrisch aan de auto-betaald-hook (S198-review, Codex #4).
+
+    Wordt een betaling verlaagd of verwijderd terwijl de zaak op 'betaald' stond en er
+    nu weer een saldo openstaat, dan heropent dit de zaak (in_behandeling, sluitdatum
+    leeg). Zonder dit blijft een teruggedraaide (bank)betaling de zaak ten onrechte als
+    betaald tonen. Alleen vanuit 'betaald' — 'afgesloten' is een bewuste handmatige
+    sluiting en wordt niet automatisch heropend.
+    """
+    from app.cases.models import Case, CaseActivity
+
+    case = (
+        await db.execute(
+            select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+        )
+    ).scalar_one_or_none()
+    if case is None or case.status != "betaald":
+        return
+    outstanding = await get_case_outstanding(db, tenant_id, case)
+    if outstanding > Decimal("0.01"):
+        case.status = "in_behandeling"
+        case.date_closed = None
+        db.add(
+            CaseActivity(
+                tenant_id=tenant_id,
+                case_id=case.id,
+                user_id=None,
+                activity_type="status_change",
+                title="Status automatisch heropend: betaald → in_behandeling",
+                description=(
+                    f"Betaling teruggedraaid — er staat weer € {outstanding} open."
+                ),
+                old_status="betaald",
+                new_status="in_behandeling",
+            )
+        )
+        await db.flush()
 
 
 async def get_financial_summary(

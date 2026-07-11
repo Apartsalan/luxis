@@ -548,6 +548,76 @@ async def test_betaald_allowed_when_nothing_outstanding(
     assert result.allowed is True
 
 
+# ── S198-review: handmatig 'betaald' + symmetrische heropening ────────────────
+
+
+def _case_with_open_claim(tenant_id, client_id, case_number, status="nieuw"):
+    """Case + rente + openstaande vordering van €5000 (geen betaling)."""
+    from decimal import Decimal
+
+    from app.collections.models import Claim, InterestRate
+
+    rate = InterestRate(
+        id=uuid.uuid4(), rate_type="statutory",
+        effective_from=date(2024, 1, 1), rate=Decimal("6.00"), source="Test fixture",
+    )
+    case = Case(
+        id=uuid.uuid4(), tenant_id=tenant_id, case_number=case_number,
+        case_type="incasso", debtor_type="b2b", status=status, is_active=True,
+        client_id=client_id, date_opened=date.today(),
+        total_principal=Decimal("5000.00"), total_paid=Decimal("0.00"),
+    )
+    claim = Claim(
+        id=uuid.uuid4(), tenant_id=tenant_id, case_id=case.id, description="Factuur",
+        principal_amount=Decimal("5000.00"), default_date=date.today() - timedelta(days=60),
+    )
+    return rate, case, claim
+
+
+@pytest.mark.asyncio
+async def test_manual_betaald_blocked_when_outstanding(
+    db: AsyncSession, test_tenant: Tenant, test_user, test_company: Contact
+):
+    """Codex #2: de status-API mag een zaak niet handmatig op 'betaald' zetten
+    zolang er nog een saldo openstaat — dat hoort via 'Afsluiten' (afgesloten)."""
+    from app.cases.schemas import CaseStatusUpdate
+    from app.cases.service import update_case_status
+    from app.shared.exceptions import BadRequestError
+
+    rate, case, claim = _case_with_open_claim(
+        test_tenant.id, test_company.id, "2026-08050"
+    )
+    db.add_all([rate, case, claim])
+    await db.commit()
+
+    with pytest.raises(BadRequestError, match="open"):
+        await update_case_status(
+            db, test_tenant.id, case.id, test_user.id,
+            CaseStatusUpdate(new_status="betaald"),
+        )
+
+
+@pytest.mark.asyncio
+async def test_reopen_helper_reopens_paid_case_when_balance_returns(
+    db: AsyncSession, test_tenant: Tenant, test_company: Contact
+):
+    """Codex #4: draait een betaling terug (saldo weer open) terwijl de zaak op
+    'betaald' stond, dan heropent de helper de zaak (in_behandeling, sluitdatum leeg)."""
+    from app.collections.service import _reopen_case_if_no_longer_paid
+
+    rate, case, claim = _case_with_open_claim(
+        test_tenant.id, test_company.id, "2026-08051", status="betaald"
+    )
+    case.date_closed = date.today()
+    db.add_all([rate, case, claim])
+    await db.commit()
+
+    await _reopen_case_if_no_longer_paid(db, test_tenant.id, case.id)
+    await db.refresh(case)
+    assert case.status == "in_behandeling"
+    assert case.date_closed is None
+
+
 # ── Effective task status (AUDIT-H22) ────────────────────────────────────────
 
 

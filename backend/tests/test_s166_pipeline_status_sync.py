@@ -200,3 +200,62 @@ async def test_create_case_b2b_skips_14dagenbrief_starts_on_eerste_sommatie(
         )
     ).scalar_one()
     assert step.name == "Eerste sommatie"
+
+
+# ── S198-review fixes ───────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_move_to_custom_terminal_step_closes_as_afgesloten(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Fable #4: een terminale stap met een EIGEN naam sluit de zaak veilig af
+    (afgesloten) i.p.v. 'm in in_behandeling-limbo achter te laten."""
+    custom = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Oninbaar",
+        sort_order=98, min_wait_days=0, max_wait_days=0, is_terminal=True,
+    )
+    db.add(custom)
+    await db.flush()
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user,
+        step=None, status="in_behandeling",
+    )
+    await move_case_to_step(db, test_tenant.id, case, custom, user_id=test_user.id)
+    await db.refresh(case)
+    assert case.status == "afgesloten"
+    assert case.date_closed is not None
+
+
+@pytest.mark.asyncio
+async def test_reopen_clears_terminal_step(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Fable #3: heropenen wist een terminale stap zodat de zaak terugkomt op het
+    bord/in de wachtrijen (die op terminale stap-id filteren)."""
+    from app.cases.schemas import CaseStatusUpdate
+    from app.cases.service import update_case_status
+
+    betaald_step = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Betaald",
+        sort_order=99, min_wait_days=0, max_wait_days=0, is_terminal=True,
+    )
+    db.add(betaald_step)
+    await db.flush()
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user,
+        step=None, status="in_behandeling",
+    )
+    await move_case_to_step(db, test_tenant.id, case, betaald_step, user_id=test_user.id)
+    await db.refresh(case)
+    assert case.status == "betaald"
+    assert case.incasso_step_id == betaald_step.id
+
+    await update_case_status(
+        db, test_tenant.id, case.id, test_user.id,
+        CaseStatusUpdate(new_status="in_behandeling"),
+    )
+    await db.refresh(case)
+    assert case.status == "in_behandeling"
+    assert case.incasso_step_id is None
+    assert case.date_closed is None

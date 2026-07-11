@@ -197,7 +197,7 @@ async def on_payment_received(
     Checks if the case is fully paid and automatically transitions to 'betaald'.
     Returns the case if status was changed, None otherwise.
     """
-    from app.collections.service import get_financial_summary
+    from app.collections.service import get_case_outstanding
 
     # Get the case
     result = await db.execute(select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id))
@@ -209,24 +209,14 @@ async def on_payment_received(
     if case.status in ("betaald", "afgesloten"):
         return None
 
-    # Calculate financial summary to check if fully paid
+    # Openstaand saldo mét alle zaakinstellingen (BIK-override etc. — Codex #3).
     try:
-        summary = await get_financial_summary(
-            db,
-            tenant_id,
-            case_id,
-            case.interest_type,
-            case.contractual_rate,
-            case.contractual_compound,
-            include_btw_on_bik=not case.client.is_btw_plichtig if case.client else False,
-        )
+        total_outstanding = await get_case_outstanding(db, tenant_id, case)
     except Exception:
         logger.exception(
-            f"Workflow hook: failed to calculate financial summary for case {case.case_number}"
+            f"Workflow hook: failed to calculate outstanding for case {case.case_number}"
         )
         return None
-
-    total_outstanding = summary.get("total_outstanding", Decimal("1"))
 
     if total_outstanding <= Decimal("0"):
         # B3 (S198): bij €0 openstaand direct op 'betaald' + date_closed. De vroegere

@@ -737,12 +737,45 @@ async def update_case_status(
         if reason:
             raise BadRequestError(reason)
 
+    # 'betaald' betekent letterlijk volledig voldaan — niet handmatig sluiten met een
+    # openstaand saldo (S198-review, Codex #2). Afsluiten mét restant = 'afgesloten'.
+    if new_status == "betaald":
+        from app.collections.service import get_case_outstanding
+
+        try:
+            outstanding = await get_case_outstanding(db, tenant_id, case)
+        except Exception:
+            outstanding = Decimal("0")  # fail-open: nooit blokkeren op een rekenfout
+        if outstanding > Decimal("0.01"):
+            raise BadRequestError(
+                f"Zaak kan niet op 'betaald' gezet worden: er staat nog € {outstanding} "
+                f"open. Gebruik 'Afsluiten' om de zaak met een restant af te sluiten."
+            )
+
     case.status = new_status
     if new_status in ("betaald", "afgesloten"):
         case.date_closed = date.today()
     else:
         # Heropenen: dossier is weer in behandeling → sluitdatum leeg.
         case.date_closed = None
+        # S198-review (Fable #3): stond de zaak op een TERMINALE eindstap
+        # (Betaald/Afgesloten)? Met status in_behandeling zou ze onzichtbaar blijven op
+        # het pijplijn-bord en in de wachtrijen (die op terminale stap-id filteren).
+        # Wis de stap → de zaak komt als "niet toegewezen" terug op het bord.
+        if case.incasso_step_id is not None:
+            from app.incasso.models import IncassoPipelineStep
+
+            step = (
+                await db.execute(
+                    select(IncassoPipelineStep).where(
+                        IncassoPipelineStep.id == case.incasso_step_id,
+                        IncassoPipelineStep.tenant_id == tenant_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if step is not None and step.is_terminal:
+                case.incasso_step_id = None
+                case.step_entered_at = None
 
     activity = CaseActivity(
         tenant_id=tenant_id,

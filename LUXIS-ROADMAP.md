@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 11 juli 2026 (sessie 197, Opus+Fable). Codex-hang opgelost (achtergrond + hartslag-bewaker `scripts/codex-review.sh`, geen tijdslimiet meer — ultra blijft). S196-review (Codex ultra) + 4 dashboard-fixes live. **Mailslot-knop live** in Instellingen → E-mail (DB-vlag, fail-safe dicht); env-noodslot van prod verwijderd → mail staat UIT via de knop, Arsalan zet het zelf aan. **Bouwblok 3 NIET gedaan → S198 (autonoom).** Details: SESSION-NOTES S197-entry.
+**Laatst bijgewerkt:** 11 juli 2026 (sessie 198, AUTONOOM Opus + Fable-review + Codex-review). **Bouwblok 3 (klus 1-4) LIVE:** status → 4 vaste waarden die de pijplijn volgen + stap-filter (B3), classificatielijn op pauze (A5, bel 342→23 ongelezen), Mijn Taken ontdubbeld + badge-fix (A3), HTML-sjablonen-tab weg (A7). Daarna verplichte Fable+Codex-reviewronde: 8 bevestigde fixes live (geen stille heropening van betaalde zaken, €0-guard bij handmatig 'betaald', openstaand-berekening mét BIK-override, symmetrische heropening bij teruggedraaide betaling). Mailslot staat nog UIT. Details: SESSION-NOTES S198-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 11 juli 2026, S197)
+## 🎯 Huidige prioriteit (bijgewerkt 11 juli 2026, S198)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -62,13 +62,17 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > backup `.env.bak-s197`). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-1. **Bouwblok 1 + 2 + S197 — AFGEROND.** Blok 1 (S193/S194) + blok 2 (S194/S195/S196): zie archief.
-   S197: Codex-hang opgelost (`scripts/codex-review.sh`, ultra blijft), S196-review + 4 dashboard-fixes
-   live, mailslot-knop live (env-noodslot eraf, mail op UIT).
-2. **Bouwblok 3 — volgende bouwprioriteit (S198, AUTONOOM):** B3-versimpeling (status → 4 waarden die
-   de pijplijn volgen + nieuw "Stap"-filter op Dossiers-lijst) + A5-pauze (classificatie/meldingen uit)
-   + A3 dagstart-lijst + A7 sjablonen op één plek. Plan: `docs/plans/PLAN-fase2-bouwblokken.md`; prompt:
-   `docs/sessions/PROMPT-S198.md`. Daarna Fable-review + Codex code-review. Daarna veegsessie.
+1. **Bouwblok 1 + 2 + 3 + S197 — AFGEROND.** Blok 1 (S193/S194) + blok 2 (S194/S195/S196): zie archief.
+   S197: Codex-hang opgelost, S196-review + mailslot-knop. **S198 (AUTONOOM): bouwblok 3 klus 1-4 LIVE**
+   — B3 status→4 waarden (pijplijn stuurt) + stap-filter, A5-classificatiepauze (bel 342→23), A3 Taken
+   ontdubbeld, A7 HTML-tab weg. Plus Fable+Codex-reviewronde: 8 fixes live (geen stille heropening van
+   betaalde zaken, €0-guard, openstaand mét BIK, symmetrische heropening). Details: SESSION-NOTES S198.
+2. **Veegsessie (stapel 4) — volgende bouwprioriteit (S199):** C5 urenfilter (alleen opdrachtgevers),
+   lege dashboard-widgets netjes, testdossier 2026-00001 opruimen (mét akkoord), dubbele 'Eerste
+   sommatie'-stap. **PLUS de S198-review-voorstellen:** 'betaald' telt in dashboard/rapportages nog als
+   actief (filter `!= afgesloten` → `TERMINAL_STATUSES`); dode workflow-engine + `NEXT_STATUSES`/
+   `PIPELINE_STEPS` opruimen; `/api/cases/bulk/status` bestaat niet (404, pre-existing). Plan:
+   `docs/plans/PLAN-fase2-bouwblokken.md` (stapel 4).
 3. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer gereconstrueerd); 2 verweesde verjaringstaken op afgesloten zaken (IN100015/IN100127) opruimen (akkoord). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b — `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`. Voorstel (niet gebouwd): heropening-slot dat gecapte betaling flagt (67 notities dekken het nu).
 
 **Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende

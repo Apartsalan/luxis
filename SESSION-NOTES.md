@@ -2,12 +2,94 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 11 juli 2026 (S197, Opus+Fable) — Codex-hang opgelost (achtergrond + hartslag-bewaker, ultra blijft); S196-review + 4 dashboard-fixes live; mailslot-knop live in Instellingen (user-gestuurd, staat UIT). Details: S197-entry.
-**Laatste feature/fix:** mailslot als schakelaar in Instellingen → E-mail (DB-vlag, fail-safe dicht, env-noodslot van prod verwijderd) + 4 review-fixes op het termijn-blok (fout i.p.v. verdwijnen, ververst na regeling-actie, footer-tekst, lichtere query). Live geverifieerd op prod.
-**Openstaand:** ⚠️ MAILSLOT staat UIT via de knop — env-noodslot eraf (`.env.bak-s197` op VPS); Arsalan zet mail zélf aan wanneer nodig. Bouwblok 3 nog NIET gedaan → S198 (autonoom). 12 onverklaarde bankbetalingen bewust niet geboekt (S195).
-**Volgende sessie:** S198 = AUTONOOM bouwblok 3 (klus 1-4) + Fable-review + Codex code-review. Prompt: `docs/sessions/PROMPT-S198.md`; plan: `docs/plans/PLAN-fase2-bouwblokken.md`.
+**Laatst bijgewerkt:** 11 juli 2026 (S198, AUTONOOM Opus + Fable-review + Codex-review) — bouwblok 3 (klus 1-4) LIVE + reviewronde-fixes LIVE. Details: S198-entry.
+**Laatste feature/fix:** B3 status→4 vaste waarden (pijplijn stuurt status) + stap-filter; classificatielijn op pauze (bel van 342→23 ongelezen); Mijn Taken ontdubbeld + badge-fix; HTML-sjablonen-tab weg. Daarna 8 Fable/Codex-review-fixes (geen stille heropening van betaalde zaken, €0-guard, correcte openstaand-berekening mét BIK, symmetrische heropening bij teruggedraaide betaling). Alles live op prod, tests groen.
+**Openstaand:** ⚠️ MAILSLOT staat UIT via de knop (Arsalan zet zelf aan). Veegsessie (stapel 4) is de volgende bouwprioriteit. Review-voorstellen die NIET gebouwd zijn (bewust): 'betaald' telt in dashboard/rapportages nog als actief (filter `!= afgesloten`, gebruik `TERMINAL_STATUSES`); dode workflow-engine + `NEXT_STATUSES`/`PIPELINE_STEPS` opruimen; `/api/cases/bulk/status` bestaat niet (404, pre-existing). Zie S198-entry §Voorstellen.
+**Volgende sessie:** S199 = veegsessie (stapel 4: C5 urenfilter, lege dashboard-widgets netjes, testdossier 2026-00001 opruimen mét akkoord, dubbele 'Eerste sommatie'-stap) + de review-voorstellen hierboven. Plan: `docs/plans/PLAN-fase2-bouwblokken.md` (stapel 4).
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
+
+## Sessie 198 (11 juli 2026, AUTONOOM Opus + Fable-review + Codex-review — bouwblok 3 klus 1-4 LIVE + reviewronde)
+
+### Samenvatting
+Autonome sessie (Arsalan weg): bouwblok 3 gebouwd, per klus gedeployd, daarna verplichte
+Fable- + Codex-reviewronde met eigen bron-verificatie en fixes. Alles live op prod.
+
+**Klus 1 — B3: status → 4 vaste waarden + pijplijn stuurt status + stap-filter (LIVE).**
+Kernbevinding vooraf bevestigd: de oude `update_case_status` liep via `execute_transition` →
+`get_status_by_slug` op de LEGE `workflow_statuses`-tabel → *élke* statuswijziging faalde al.
+Nieuw model: status = `nieuw`/`in_behandeling`/`betaald`/`afgesloten`. `move_case_to_step`
+stuurt de status (werk-stap → in_behandeling; terminale eindstap → betaald/afgesloten +
+date_closed); dode `STEP_NAME_TO_STATUS`-koppeling vervangen. `on_payment_received`: bij €0
+direct betaald+date_closed (geen dode validate_transition). `update_case_status`: 4-status-logica
+(Afsluiten mét FIN-2-derdengelden-guard, Heropenen wist date_closed). Nieuw **stap-filter** op de
+Dossiers-lijst (`incasso_step_id`). Statusfilter + bulk-dropdown → 4 vaste waarden (waren leeg via
+de lege workflow-API). DossierHeader: Afsluiten/Heropenen i.p.v. kapotte "Volgende stap"-knoppen.
+Migratie `s198_status_simplify` (idempotent, guarded). **Prod-migratie:** 580 afgesloten
+onaangeraakt, 18 in_behandeling (op stap), 10 nieuw (zonder stap), 0 legacy-status. Stap-filter
+live bewezen (Eerste sommatie 10, Voorstel dagvaarding 5, Bijhouden regeling 1 …).
+
+**Klus 2 — A5: classificatielijn op pauze (LIVE).** `ai_agent`: geen `classification_done`-
+meldingen meer (lijn op pauze; de 473 wachtende classificaties NIET aangeraakt). Meldingenbel
+verbergt `classification_done` (niet-destructief). Dashboard "AI-suggesties"-widget ontkoppeld
+van pending-classificaties → toont alleen follow-ups. **Bel viel van ~342 → 23 ongelezen.**
+
+**Klus 3 — A3: Mijn Taken ontdubbeld (LIVE).** Ontwerpkeuze (autonoom): pure werklijst (optie b).
+A1/A2 (eigenaarloze taken zichtbaar + intake pending_review) bleken al gefixt in eerdere sessies.
+Zijbalk-badge `taken-combined` telde overdue+follow-up+intake bij elkaar op (dubbeltelling met
+eigen badges) → nu exact de openstaande eigen taken (einde "badge 19 vs. Alles gedaan"). Follow-up-
+en Intake-kaartblokken (1-op-1 kopie van hun eigen pagina's) vervangen door een compacte verwijs-strip.
+
+**Klus 4 — A7: sjabloonbeheer alleen in Instellingen (LIVE).** HTML-Sjablonen-tab (lege DEPRECATED
+tabel + ontwikkelaarstaal) weg; slug-titel `verzoekschrift_faillissement` → "Concept verzoekschrift
+faillissement". Documentenbibliotheek bewust NIET gebouwd.
+
+### Reviewronde (Fable-subagent + Codex ultra, beide op de volledige diff)
+Elk punt zelf in bron + prod-data geverifieerd. **8 bevestigde fixes** (commit `3cba97d`):
+1. **Verweer-mail heropende een BETAALDE zaak stil** (Fable#2/Codex#5, HOOG): guard in
+   `trigger_defense_response_for_email`.
+2. **€0-guard voor handmatig 'betaald' was weg** (Codex#2, HOOG): terug in `update_case_status`
+   én `move_case_to_step` (manual/batch → 'Betaald'-stap).
+3. **Auto-betaald rekende openstaand zonder BIK-override** (Codex#3, HOOG): gedeelde helper
+   `get_case_outstanding` (mét alle zaakinstellingen).
+4. **Teruggedraaide betaling liet zaak op 'betaald'** (Codex#4, HOOG): `update_payment`/
+   `delete_payment` heropenen symmetrisch.
+5. **email_received niet meer verbergen** (Codex#6, HOOG): dezelfde lijst voedt de dossier-
+   actiefeed; alleen classification_done blijft verborgen.
+6. `status_for_step` op `is_terminal` i.p.v. stapnaam (Fable#4/Codex#7).
+7. Heropenen wist een terminale stap (Fable#3/Codex#8) — geen bord-limbo.
+8. Sjabloon-fallback filtert op B2B/B2C (Codex#9) — geen 14-dagenbrief bij B2B.
+Stale comments bijgewerkt. Nieuwe tests voor elk. **Prod-check:** 0 zaken op een terminale stap
+→ migratie-bevinding (Fable#1/Codex#1) had 0 data-impact; going-forward-code dekt het af.
+
+### Voorstellen (bewust NIET gebouwd — scope)
+- **'betaald' telt in dashboard/rapportages nog als actief** (filter `!= afgesloten`; nu betaald een
+  frequente auto-eindstatus is → gebruik de nieuwe `TERMINAL_STATUSES`-constante). Fable#5/Codex.
+- **Dode code opruimen:** `on_status_change` (0 callers), `execute_transition`/`validate_transition`
+  (alleen tests), frontend `NEXT_STATUSES`/`PIPELINE_STEPS`, ongebruikte `TERMINAL_STATUSES`.
+- **`/api/cases/bulk/status` bestaat niet** (frontend `zaken/page.tsx` → 404, pre-existing).
+- Fase-stepper in DossierHeader leunt nog op de lege `workflow_statuses` (toont blanco).
+
+### Gewijzigde/aangemaakte bestanden
+- Backend: `cases/{schemas,models,service,router}.py`, `incasso/service.py` +
+  `incasso/automation_service.py`, `workflow/hooks.py`, `collections/service.py`,
+  `notifications/service.py`, `ai_agent/service.py`, migratie `s198_status_simplify.py`.
+- Frontend: `lib/status-constants.ts`, `hooks/use-cases.ts`, `hooks/use-documents.ts`,
+  `zaken/page.tsx` + `zaken/[id]/components/DossierHeader.tsx`, `taken/page.tsx`,
+  `components/layout/app-sidebar.tsx`, `(dashboard)/page.tsx`, `documenten/page.tsx`.
+- Tests: test_cases, test_integration_api, test_s166_pipeline_status_sync, test_incasso_pipeline,
+  test_workflow, test_notifications_service (nieuw + aangepast).
+- 5 commits (`b6b2a4a` klus1 / `cc4ccab` klus2 / `738ac0d` klus3 / `207e906` klus4 / `3cba97d`
+  reviewfixes) + docs. Prod-migratie s198 gedraaid. Tag `sessie-198`.
+
+### Bekende issues / aandachtspunten
+- Mail blijft UIT (niet geraakt). De 473 wachtende classificaties + testdossier 2026-00001
+  bewust blijven staan (veegsessie mét akkoord).
+- CI-rood `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184) → uitrol via SSH.
+
+### Volgende sessie
+S199 = veegsessie (stapel 4) + de review-voorstellen hierboven (m.n. 'betaald'-als-actief in
+dashboard/rapportages + dode code).
 
 ## Sessie 197 (11 juli 2026, Opus+Fable — Codex-hang opgelost + S196-review + mailslot-knop; bouwblok 3 NIET gedaan)
 
@@ -529,56 +611,3 @@ Kijk-sessie D-B (Relaties/Dossiers/Incasso/Follow-up/Intake) — kant-en-klare p
 `docs/sessions/PROMPT-DB-doorlichting.md`, start op Fable. Daarna D-C (Financieel +
 Systeem). Pas ná alle 3 de kijk-sessies: fase-2-beslislijst met Arsalan → Opus-bouwblokken.
 Heropening werkvoorraad blijft parallel klaarstaan.
-
-## Sessie 188c (9 juli 2026, Opus-bouw + Fable-review-fixes — mailwerk-review + 2 fixes)
-
-### Samenvatting
-Eerst Fable-review van het mailwerk S185-187 (read-only, alleen broncode/git/tests — bewust
-geen echte mails of mailschermen om het model-filter niet te triggeren). Oordeel: goed en veilig
-gebouwd; 26/26 endpoints geauth, XSS twee keer afgedekt (inkomende weergave + geciteerd origineel
-bij reply/forward), koppeling voorzichtig. Twee ECHTE gebreken gevonden + op Opus gefixt:
-
-**Fix 1 — aanvraag-detectie liep vast (bewezen op prod).** `detect_intake_emails` pakte de 10
-oudste onverwerkte mails maar markeerde niet-matches nooit → venster slibde dicht met oude
-systeem-/eigen mail (32 wachtend, 10 oudste kansloos). Root-cause-fix: alleen mail van een bekende
-opdrachtgever (adres of niet-ambigu domein) is nog kandidaat; opdrachtgever-kaart wordt vóór de
-mailquery gebouwd en mee-gefilterd, dus elke kandidaat matcht en verlaat de wachtrij. Geen migratie.
-
-**Fix 2 — "Negeren" niet heilig.** `_rematch_unlinked_emails` filterde niet op `is_dismissed` →
-een genegeerde mail kon bij een latere sync alsnog gekoppeld worden (0 gevallen op prod, sluimerend).
-Eén filterregel toegevoegd.
-
-### Verificatie
-3 regressietests toegevoegd (detectie-venster slibt niet dicht; her-koppeling respecteert Negeren
-+ koppelt niet-genegeerde wél). **52 tests groen** in test_intake.py + test_email_sync.py, gedraaid
-in een geïsoleerde wegwerp-postgres op de VPS (bind-mount van de wijzigingen; prod-data niet geraakt,
-wegwerp-db daarna verwijderd). Commit `edf88da`, gepusht. Lint niet los gedraaid (uvx ontbrak in de
-wegwerp-container) → teststraat pikt ruff op.
-
-### S188d — de 6 kleinere verbeterpunten alsnog gebouwd (op verzoek Arsalan, commit `2806a9e`)
-Allemaal op Opus, met tests; frontend tsc + ruff schoon; 91 mail/intake-tests groen (geïsoleerde
-wegwerp-postgres, prod-data niet geraakt).
-1. **Echte tekstversie** van uitgaande mail, afgeleid uit de HTML (`_html_to_text`) i.p.v. de
-   placeholder-zin — beter voor tekst-only clients + spamscore.
-2. **Doorsturen met bijlagen**: `forward_from_email_id` → achterkant laadt de bijlagen van de
-   oorspronkelijke mail van schijf (`_load_forwarded_attachments`); voor- en achterkant bedraad.
-3. **Server-side adres-validatie** op `/compose/send` (to + cc, lege to afgewezen).
-4. **IMAP-ontsmetting**: Message-ID in de HEADER-zoekopdracht wordt geëscaped (`_imap_quote`).
-5. **Afzendernaam**: "Kesting Legal <incasso@...>" via `from_name` (kantoornaam) op beide verzendpaden.
-6. **Verzonden-map-namen** in één constante (`SENT_FOLDER_CANDIDATES`), consistent gebruikt.
-
-### S188e — Fable-review van het S188c/d-werk: GO met 1 gevonden+gefixte restfout
-Volledige diff-review op Fable (beide commits regel voor regel + randgevallen tegen prod-metadata
-en de modellen gehouden). Uitkomsten:
-- **Detectie-fix klopt**: databasefilter en nazorg-lus consistent (ambigue domeinen, hoofdletters,
-  exacte-adres-voorrang); NULL-valkuil in de NOT-IN-subquery kán niet (kolom verplicht, prod 0 NULLs).
-- **Alle 3 providers** accepteren `from_name` (geen kapotte aanroep); huisstijl heeft geen
-  `<style>`-blok dus de tekstversie blijft schoon; prefill wordt op beide pagina's gewist.
-- **Restfout gevonden + direct gefixt** (commit `8b658c7`): `_imap_quote` ontsmette `"` en `\`
-  maar niet CR/LF — een gevouwen Message-ID-header kon in theorie een eigen IMAP-commando
-  injecteren bij het bijlage-ophalen. CR/LF/NUL → spatie + injectie-regressietest (groen).
-- **Deploy S188c/d/e GESLAAGD + geverifieerd**: nieuwe code aantoonbaar in de draaiende backend (grep in container), VPS op 8b658c7, alle containers healthy, site 200. (Container-rename-botsing tijdens up was onschuldig; eindtoestand correct.)
-
-### Openstaand
-- CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,
-  géén mailwerk) → CI-deploy skipt; uitrol gaat via SSH. Verdient losse fix of skip-markering.

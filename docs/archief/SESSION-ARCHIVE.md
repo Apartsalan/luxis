@@ -8064,3 +8064,57 @@ Bekende cosmetische beperking (gepland): SQL-heropening schrijft geen case_step_
 Volgende heropeningsbatch (per opdrachtgever, expliciet akkoord per groep blijft de afspraak) mét
 stap 4b; de 11 gestopte-regeling-zaken en de regeling-groep (incl. IN100019) apart. Terugstort-vraag
 IN100334 (±€215) nog open bij Lisanne.
+
+
+## Sessie 188c (9 juli 2026, Opus-bouw + Fable-review-fixes — mailwerk-review + 2 fixes)
+
+### Samenvatting
+Eerst Fable-review van het mailwerk S185-187 (read-only, alleen broncode/git/tests — bewust
+geen echte mails of mailschermen om het model-filter niet te triggeren). Oordeel: goed en veilig
+gebouwd; 26/26 endpoints geauth, XSS twee keer afgedekt (inkomende weergave + geciteerd origineel
+bij reply/forward), koppeling voorzichtig. Twee ECHTE gebreken gevonden + op Opus gefixt:
+
+**Fix 1 — aanvraag-detectie liep vast (bewezen op prod).** `detect_intake_emails` pakte de 10
+oudste onverwerkte mails maar markeerde niet-matches nooit → venster slibde dicht met oude
+systeem-/eigen mail (32 wachtend, 10 oudste kansloos). Root-cause-fix: alleen mail van een bekende
+opdrachtgever (adres of niet-ambigu domein) is nog kandidaat; opdrachtgever-kaart wordt vóór de
+mailquery gebouwd en mee-gefilterd, dus elke kandidaat matcht en verlaat de wachtrij. Geen migratie.
+
+**Fix 2 — "Negeren" niet heilig.** `_rematch_unlinked_emails` filterde niet op `is_dismissed` →
+een genegeerde mail kon bij een latere sync alsnog gekoppeld worden (0 gevallen op prod, sluimerend).
+Eén filterregel toegevoegd.
+
+### Verificatie
+3 regressietests toegevoegd (detectie-venster slibt niet dicht; her-koppeling respecteert Negeren
++ koppelt niet-genegeerde wél). **52 tests groen** in test_intake.py + test_email_sync.py, gedraaid
+in een geïsoleerde wegwerp-postgres op de VPS (bind-mount van de wijzigingen; prod-data niet geraakt,
+wegwerp-db daarna verwijderd). Commit `edf88da`, gepusht. Lint niet los gedraaid (uvx ontbrak in de
+wegwerp-container) → teststraat pikt ruff op.
+
+### S188d — de 6 kleinere verbeterpunten alsnog gebouwd (op verzoek Arsalan, commit `2806a9e`)
+Allemaal op Opus, met tests; frontend tsc + ruff schoon; 91 mail/intake-tests groen (geïsoleerde
+wegwerp-postgres, prod-data niet geraakt).
+1. **Echte tekstversie** van uitgaande mail, afgeleid uit de HTML (`_html_to_text`) i.p.v. de
+   placeholder-zin — beter voor tekst-only clients + spamscore.
+2. **Doorsturen met bijlagen**: `forward_from_email_id` → achterkant laadt de bijlagen van de
+   oorspronkelijke mail van schijf (`_load_forwarded_attachments`); voor- en achterkant bedraad.
+3. **Server-side adres-validatie** op `/compose/send` (to + cc, lege to afgewezen).
+4. **IMAP-ontsmetting**: Message-ID in de HEADER-zoekopdracht wordt geëscaped (`_imap_quote`).
+5. **Afzendernaam**: "Kesting Legal <incasso@...>" via `from_name` (kantoornaam) op beide verzendpaden.
+6. **Verzonden-map-namen** in één constante (`SENT_FOLDER_CANDIDATES`), consistent gebruikt.
+
+### S188e — Fable-review van het S188c/d-werk: GO met 1 gevonden+gefixte restfout
+Volledige diff-review op Fable (beide commits regel voor regel + randgevallen tegen prod-metadata
+en de modellen gehouden). Uitkomsten:
+- **Detectie-fix klopt**: databasefilter en nazorg-lus consistent (ambigue domeinen, hoofdletters,
+  exacte-adres-voorrang); NULL-valkuil in de NOT-IN-subquery kán niet (kolom verplicht, prod 0 NULLs).
+- **Alle 3 providers** accepteren `from_name` (geen kapotte aanroep); huisstijl heeft geen
+  `<style>`-blok dus de tekstversie blijft schoon; prefill wordt op beide pagina's gewist.
+- **Restfout gevonden + direct gefixt** (commit `8b658c7`): `_imap_quote` ontsmette `"` en `\`
+  maar niet CR/LF — een gevouwen Message-ID-header kon in theorie een eigen IMAP-commando
+  injecteren bij het bijlage-ophalen. CR/LF/NUL → spatie + injectie-regressietest (groen).
+- **Deploy S188c/d/e GESLAAGD + geverifieerd**: nieuwe code aantoonbaar in de draaiende backend (grep in container), VPS op 8b658c7, alle containers healthy, site 200. (Container-rename-botsing tijdens up was onschuldig; eindtoestand correct.)
+
+### Openstaand
+- CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,
+  géén mailwerk) → CI-deploy skipt; uitrol gaat via SSH. Verdient losse fix of skip-markering.

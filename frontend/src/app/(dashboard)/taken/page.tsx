@@ -18,15 +18,12 @@ import {
   Repeat,
   X,
   Zap,
-  Bot,
-  Check,
   Eye,
   ArrowUpRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { cn, formatDateShort, formatCurrency } from "@/lib/utils";
-import { confidenceBadgeClasses, confidenceLabelText } from "@/lib/confidence";
+import { cn, formatDateShort } from "@/lib/utils";
 import { TASK_STATUS_BADGE, TASK_STATUS_BADGE_FALLBACK } from "@/lib/status-constants";
 import {
   useMyTasks,
@@ -40,13 +37,8 @@ import {
 } from "@/hooks/use-workflow";
 import { useAuth } from "@/hooks/use-auth";
 import { useCases } from "@/hooks/use-cases";
-import {
-  useFollowupRecommendations,
-  useApproveAndExecuteFollowup,
-  useRejectFollowup,
-  type FollowupRecommendation,
-} from "@/hooks/use-followup";
-import { useIntakes, type IntakeResponse } from "@/hooks/use-intake";
+import { useFollowupPendingCount } from "@/hooks/use-followup";
+import { useIntakePendingCount } from "@/hooks/use-intake";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -273,190 +265,41 @@ function TaskRow({
   );
 }
 
-// ── AI Aanbevelingen (Follow-ups) ────────────────────────────────────────────
+// ── Dagstart-verwijzingen (Follow-up + Intake) ───────────────────────────────
+// A3 (S198): geen gekopieerde kaartlijsten meer op Taken — Follow-up en Intake
+// hebben hun eigen pagina + zijbalk-badge. Hier alleen een compacte verwijzing,
+// zodat Taken de dagstart-hub blijft zonder te dubbelen.
 
-const URGENCY_STYLES: Record<string, string> = {
-  high: "border-red-200 bg-red-50/50",
-  medium: "border-amber-200 bg-amber-50/50",
-  low: "border-border bg-card",
-};
+function DagstartLinks() {
+  const { data: followupData } = useFollowupPendingCount();
+  const { data: intakeData } = useIntakePendingCount();
+  const followupCount = followupData?.count ?? 0;
+  const intakeCount = intakeData?.count ?? 0;
 
-const URGENCY_BADGE: Record<string, string> = {
-  high: "bg-red-50 text-red-700 ring-red-600/20",
-  medium: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  low: "bg-slate-50 text-slate-600 ring-slate-500/20",
-};
-
-function FollowupSection() {
-  const { data, isLoading } = useFollowupRecommendations("pending", 1, 5);
-  const approveAndExecute = useApproveAndExecuteFollowup();
-  const reject = useRejectFollowup();
-
-  const items = data?.items ?? [];
-
-  if (isLoading) return null;
+  if (followupCount === 0 && intakeCount === 0) return null;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">AI Aanbevelingen</h2>
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-          {data?.total ?? items.length}
-        </span>
-        <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 uppercase tracking-wider">
-          AI
-        </span>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic pl-6">
-          Geen AI-aanbevelingen op dit moment
-        </p>
-      ) : null}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className={cn(
-              "rounded-lg border p-3 transition-colors",
-              URGENCY_STYLES[item.urgency] ?? URGENCY_STYLES.low,
-            )}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={`/zaken/${item.case_id}`}
-                  className="text-sm font-medium text-foreground hover:text-primary transition-colors"
-                >
-                  {item.case_number}
-                </Link>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">
-                  {item.opposing_party_name ?? item.client_name ?? ""}
-                </p>
-              </div>
-              <span
-                className={cn(
-                  "shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
-                  URGENCY_BADGE[item.urgency] ?? URGENCY_BADGE.low,
-                )}
-              >
-                {item.urgency_label || item.urgency}
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-foreground font-medium">
-              {item.action_label || item.recommended_action}
-            </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-2">
-              {item.reasoning}
-            </p>
-            <div className="mt-2.5 flex items-center gap-1.5">
-              <button
-                onClick={() => approveAndExecute.mutate({ id: item.id }, {
-                  onSuccess: () => toast.success("Aanbeveling uitgevoerd"),
-                })}
-                disabled={approveAndExecute.isPending}
-                className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-              >
-                <Check className="h-3 w-3" />
-                Akkoord
-              </button>
-              <button
-                onClick={() => reject.mutate({ id: item.id }, {
-                  onSuccess: () => toast.success("Aanbeveling afgewezen"),
-                })}
-                disabled={reject.isPending}
-                className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-50 transition-colors"
-              >
-                <X className="h-3 w-3" />
-                Afwijzen
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Nieuwe Dossiers (Intakes) ────────────────────────────────────────────────
-
-function confidenceBadge(confidence: number | null) {
-  if (!confidence) return "bg-slate-50 text-slate-600 ring-slate-500/20";
-  return confidenceBadgeClasses(confidence / 100);
-}
-
-function IntakeSection() {
-  // A2 — prod-aanvragen hebben status "pending_review" (na AI-extractie);
-  // "pending" bestond niet meer → blok stond altijd leeg.
-  const { data: intakes, isLoading } = useIntakes("pending_review", 1, 5);
-
-  const items = intakes ?? [];
-
-  if (isLoading) return null;
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Bot className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Nieuwe Dossiers</h2>
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-          {items.length}
-        </span>
-        <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-[9px] font-semibold text-violet-700 uppercase tracking-wider">
-          AI
-        </span>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic pl-6">
-          Geen nieuwe dossierverzoeken gevonden
-        </p>
-      ) : null}
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="rounded-lg border bg-card p-3 hover:bg-accent/5 transition-colors"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {item.email_subject}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {item.email_from}
-                </p>
-              </div>
-              <span
-                className={cn(
-                  "shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
-                  confidenceBadge(item.ai_confidence),
-                )}
-              >
-                {item.ai_confidence ? confidenceLabelText(item.ai_confidence / 100) : "?"}
-              </span>
-            </div>
-            {(item.debtor_name || item.principal_amount) && (
-              <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                {item.debtor_name && <span>{item.debtor_name}</span>}
-                {item.principal_amount && (
-                  <span className="font-medium text-foreground tabular-nums">
-                    {formatCurrency(item.principal_amount)}
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="mt-2.5">
-              <Link
-                href={`/intake/${item.id}`}
-                className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-              >
-                <Eye className="h-3 w-3" />
-                Bekijken
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="flex flex-wrap items-center gap-2">
+      {followupCount > 0 && (
+        <Link
+          href="/followup"
+          className="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Zap className="h-3.5 w-3.5" />
+          {followupCount} AI-aanbeveling{followupCount !== 1 ? "en" : ""}
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      )}
+      {intakeCount > 0 && (
+        <Link
+          href="/intake"
+          className="inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+        >
+          <Inbox className="h-3.5 w-3.5" />
+          {intakeCount} nieuwe aanvra{intakeCount !== 1 ? "gen" : "ag"}
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      )}
     </div>
   );
 }
@@ -649,9 +492,10 @@ export default function TakenPage() {
         </div>
       </div>
 
-      {/* AI Sections */}
-      <FollowupSection />
-      <IntakeSection />
+      {/* A3 (S198): Taken = pure werklijst. Follow-up en Intake hebben hun eigen
+          pagina + zijbalk-badge; hier alleen een compacte verwijzing (dagstart-hub)
+          i.p.v. de volledige gekopieerde kaartlijsten. */}
+      <DagstartLinks />
 
       {/* Create task form */}
       {showForm && (

@@ -118,8 +118,11 @@ export function AppSidebar({
   const { data: paymentPendingData } = usePaymentPendingCount();
   const paymentPendingCount = paymentPendingData?.count ?? 0;
   const { data: myTasks } = useMyTasks();
-  const overdueTaskCount = myTasks?.filter((t) => t.status === "overdue").length ?? 0;
-  const takenCombinedCount = overdueTaskCount + followupPendingCount + intakePendingCount;
+  // A3 (S198): de Taken-badge telt exact de openstaande eigen taken — niet meer
+  // follow-up + intake erbij opgeteld (die hebben hun eigen zijbalk-badge). Zo
+  // klopt de badge weer met wat de pagina toont (einde "19 vs. alles gedaan").
+  const takenOpenCount =
+    myTasks?.filter((t) => t.status !== "completed" && t.status !== "skipped").length ?? 0;
 
   const sections = useMemo(
     () =>
@@ -235,7 +238,7 @@ export function AppSidebar({
                     item.badge === "incasso-action" ? incassoActionCount :
                     item.badge === "ai-pending" ? intakePendingCount :
                     item.badge === "followup-pending" ? followupPendingCount :
-                    item.badge === "taken-combined" ? takenCombinedCount :
+                    item.badge === "taken-combined" ? takenOpenCount :
                     item.badge === "payment-pending" ? paymentPendingCount : 0;
 
                   return (

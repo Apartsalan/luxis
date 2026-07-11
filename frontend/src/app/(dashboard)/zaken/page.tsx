@@ -27,12 +27,12 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useModules } from "@/hooks/use-modules";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useUsers } from "@/hooks/use-users";
-import { useWorkflowStatuses } from "@/hooks/use-workflow";
+import { useIncassoPipelineSteps, type PipelineStep } from "@/hooks/use-incasso";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import {
   CASE_STATUS_LABELS as STATUS_LABELS,
   CASE_STATUS_BADGE as STATUS_BADGE,
-  CASE_STATUS_BADGE_FALLBACK,
+  CASE_STATUS_OPTIONS,
   CASE_TYPE_LABELS as TYPE_LABELS,
   CASE_TYPE_BADGE as TYPE_BADGE,
 } from "@/lib/status-constants";
@@ -99,6 +99,7 @@ export default function ZakenPage() {
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [caseType, setCaseType] = useState(() => searchParams.get("case_type") ?? "");
   const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
+  const [incassoStep, setIncassoStep] = useState(() => searchParams.get("incasso_step_id") ?? "");
   const [assignedTo, setAssignedTo] = useState("");
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("date_from") ?? "");
   const [dateTo, setDateTo] = useState(() => searchParams.get("date_to") ?? "");
@@ -112,8 +113,10 @@ export default function ZakenPage() {
   const [bulkStatus, setBulkStatus] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
   const { hasModule } = useModules();
-  const { data: workflowStatuses } = useWorkflowStatuses();
   const { data: users } = useUsers();
+  // Stap-filter (B3, S198): filter dossiers op pijplijn-STAP (sommatie/dagvaarding/…).
+  const { data: pipelineSteps } = useIncassoPipelineSteps(true);
+  const activeSteps = (pipelineSteps ?? []).filter((s: PipelineStep) => s.is_active);
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const toggleSort = (field: CaseSortField) => {
@@ -134,24 +137,15 @@ export default function ZakenPage() {
     setPage(1);
   };
 
-  // Build status labels from workflow API, fallback to hardcoded
-  const dynamicStatusLabels: Record<string, string> = workflowStatuses
-    ? Object.fromEntries(workflowStatuses.map((s) => [s.slug, s.label]))
-    : STATUS_LABELS;
-
-  const dynamicStatusBadge: Record<string, string> = workflowStatuses
-    ? Object.fromEntries(
-        workflowStatuses.map((s) => [
-          s.slug,
-          STATUS_BADGE[s.slug] ?? "bg-slate-50 text-slate-600 ring-slate-500/20",
-        ])
-      )
-    : STATUS_BADGE;
+  // B3 (S198): status = 4 vaste waarden (single source of truth in status-constants).
+  const dynamicStatusLabels = STATUS_LABELS;
+  const dynamicStatusBadge = STATUS_BADGE;
 
   const { data, isLoading, isError, error, refetch } = useCases({
     page,
     case_type: caseType || undefined,
     status: status || undefined,
+    incasso_step_id: incassoStep || undefined,
     search: debouncedSearch || undefined,
     assigned_to_id: assignedTo || undefined,
     date_from: dateFrom || undefined,
@@ -160,7 +154,7 @@ export default function ZakenPage() {
     sort_dir: sortDir,
   });
 
-  const activeFilters = [caseType, status, assignedTo, dateFrom, dateTo].filter(Boolean).length;
+  const activeFilters = [caseType, status, incassoStep, assignedTo, dateFrom, dateTo].filter(Boolean).length;
   const allIds = data?.items?.map((z) => z.id) ?? [];
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
   const someSelected = selectedIds.size > 0;
@@ -335,12 +329,30 @@ export default function ZakenPage() {
             className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           >
             <option value="">Alle statussen</option>
-            {Object.entries(dynamicStatusLabels).map(([value, label]) => (
+            {CASE_STATUS_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
           </select>
+          {hasModule("incasso") && activeSteps.length > 0 && (
+            <select
+              value={incassoStep}
+              onChange={(e) => {
+                setIncassoStep(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter op incassostap"
+              className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+            >
+              <option value="">Alle stappen</option>
+              {activeSteps.map((step: PipelineStep) => (
+                <option key={step.id} value={step.id}>
+                  {step.name}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={() => setShowMoreFilters(!showMoreFilters)}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
@@ -362,6 +374,7 @@ export default function ZakenPage() {
               onClick={() => {
                 setCaseType("");
                 setStatus("");
+                setIncassoStep("");
                 setSearch("");
                 setAssignedTo("");
                 setDateFrom("");
@@ -468,7 +481,7 @@ export default function ZakenPage() {
             className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           >
             <option value="">Kies status...</option>
-            {Object.entries(dynamicStatusLabels).map(([value, label]) => (
+            {CASE_STATUS_OPTIONS.map(({ value, label }) => (
               <option key={value} value={value}>{label}</option>
             ))}
           </select>

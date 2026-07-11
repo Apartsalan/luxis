@@ -374,9 +374,8 @@ async def test_case_status_workflow(
     client: AsyncClient,
     test_user: User,
     test_tenant: Tenant,
-    workflow_data,
 ):
-    """Case status follows the correct workflow: nieuw → sommatie → dagvaarding."""
+    """B3 (S198): status volgt de 4 vaste waarden: nieuw → in_behandeling → afgesloten."""
     headers = await login(client, "lisanne@kestinglegal.nl", "testpassword123")
 
     # Create contact + case
@@ -399,23 +398,23 @@ async def test_case_status_workflow(
     case_id = case_resp.json()["id"]
     assert case_resp.json()["status"] == "nieuw"
 
-    # Transition: nieuw → sommatie (skipping 14-dagenbrief is allowed)
+    # Transition: nieuw → in_behandeling
     status_resp = await client.post(
         f"/api/cases/{case_id}/status",
-        json={"new_status": "sommatie", "note": "Sommatiebrief verstuurd"},
+        json={"new_status": "in_behandeling", "note": "In behandeling genomen"},
         headers=headers,
     )
     assert status_resp.status_code == 200
-    assert status_resp.json()["status"] == "sommatie"
+    assert status_resp.json()["status"] == "in_behandeling"
 
-    # Transition: sommatie → dagvaarding
+    # Transition: in_behandeling → afgesloten
     status_resp = await client.post(
         f"/api/cases/{case_id}/status",
-        json={"new_status": "dagvaarding"},
+        json={"new_status": "afgesloten"},
         headers=headers,
     )
     assert status_resp.status_code == 200
-    assert status_resp.json()["status"] == "dagvaarding"
+    assert status_resp.json()["status"] == "afgesloten"
 
 
 # ── Test: Invalid status transition ────────────────────────────────────────
@@ -426,9 +425,8 @@ async def test_invalid_status_transition(
     client: AsyncClient,
     test_user: User,
     test_tenant: Tenant,
-    workflow_data,
 ):
-    """Cannot skip from 'nieuw' directly to 'vonnis'."""
+    """B3 (S198): 'vonnis' bestaat niet meer als status → 400."""
     headers = await login(client, "lisanne@kestinglegal.nl", "testpassword123")
 
     contact_resp = await client.post(
@@ -449,13 +447,13 @@ async def test_invalid_status_transition(
     )
     case_id = case_resp.json()["id"]
 
-    # Try invalid transition: nieuw → vonnis (should fail)
+    # Try invalid status: 'vonnis' is geen geldige status meer (should fail)
     status_resp = await client.post(
         f"/api/cases/{case_id}/status",
         json={"new_status": "vonnis"},
         headers=headers,
     )
-    assert status_resp.status_code == 409
+    assert status_resp.status_code == 400
 
 
 # ── Test: Claim CRUD ───────────────────────────────────────────────────────

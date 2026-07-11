@@ -249,6 +249,7 @@ async def list_cases(
     per_page: int = 20,
     case_type: str | None = None,
     status: str | None = None,
+    incasso_step_id: uuid.UUID | None = None,
     search: str | None = None,
     client_id: uuid.UUID | None = None,
     assigned_to_id: uuid.UUID | None = None,
@@ -273,6 +274,11 @@ async def list_cases(
 
     if status:
         query = query.where(Case.status == status)
+
+    # B3 (S198): filter op pijplijn-STAP (sommatie/dagvaarding/vonnis = de stap,
+    # niet de status). Arsalans punt: alle zaken op één stap kunnen tonen.
+    if incasso_step_id:
+        query = query.where(Case.incasso_step_id == incasso_step_id)
 
     if client_id:
         # Filter cases where this contact is client, opposing party, OR a case party
@@ -696,26 +702,61 @@ async def update_case_status(
     user_id: uuid.UUID,
     data: CaseStatusUpdate,
 ) -> Case:
-    """Update the status of a case using the database-driven workflow engine.
+    """Zet de zaak-status (B3, S198 — 4 vaste waarden).
 
-    Validates transitions against WorkflowTransition table and enforces
-    legal constraints (14-dagenbrief, verjaring).
-    After transition, triggers automation hooks (task creation + audit trail).
+    De grote workflow-engine (execute_transition) leunde op de lege
+    workflow_statuses/transitions-tabellen en liet ELKE statuswijziging falen.
+    Vervangen door directe 4-status-logica:
+      - Afsluiten  → 'afgesloten' (+ date_closed); geblokkeerd zolang er nog
+        onafgewikkelde derdengelden op de zaak staan (FIN-2, Voda art. 6.19).
+      - Heropenen  → 'nieuw'/'in_behandeling' (date_closed leeg).
+      - 'betaald'  → (+ date_closed); normaal automatisch bij €0 openstaand.
+    De incasso-pijplijn stuurt de status verder (move_case_to_step).
     """
-    from app.workflow.hooks import on_status_change
-    from app.workflow.service import execute_transition
+    from app.cases.schemas import CASE_STATUSES
+
+    new_status = data.new_status
+    if new_status not in CASE_STATUSES:
+        raise BadRequestError(
+            f"Ongeldige status: {new_status}. Kies uit: {', '.join(CASE_STATUSES)}"
+        )
 
     case = await get_case(db, tenant_id, case_id)
     old_status = case.status
 
-    # Use the workflow engine for validation + execution
-    case, validation = await execute_transition(
-        db, tenant_id, case, data.new_status, user_id, note=data.note
+    if new_status == old_status:
+        return case
+
+    # Afsluiten mag niet zolang er nog client-geld op de derdengeldenrekening staat
+    # (of trust-transacties op goedkeuring wachten) — zelfde guard als archiveren
+    # en de terminale 'Afgesloten'-pijplijnstap.
+    if new_status == "afgesloten":
+        from app.trust_funds.service import get_unsettled_reason
+
+        reason = await get_unsettled_reason(db, tenant_id, case_id)
+        if reason:
+            raise BadRequestError(reason)
+
+    case.status = new_status
+    if new_status in ("betaald", "afgesloten"):
+        case.date_closed = date.today()
+    else:
+        # Heropenen: dossier is weer in behandeling → sluitdatum leeg.
+        case.date_closed = None
+
+    activity = CaseActivity(
+        tenant_id=tenant_id,
+        case_id=case.id,
+        user_id=user_id,
+        activity_type="status_change",
+        title=f"Status gewijzigd: {old_status} → {new_status}",
+        description=data.note,
+        old_status=old_status,
+        new_status=new_status,
     )
-
-    # Trigger automation hooks (task creation + audit trail)
-    await on_status_change(db, tenant_id, case, old_status, data.new_status, user_id)
-
+    db.add(activity)
+    await db.flush()
+    await db.refresh(case)
     return case
 
 

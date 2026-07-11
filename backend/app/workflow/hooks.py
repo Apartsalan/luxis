@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
-from app.workflow.models import WorkflowStatus, WorkflowTask
+from app.workflow.models import WorkflowTask
 
 logger = logging.getLogger(__name__)
 
@@ -205,16 +205,8 @@ async def on_payment_received(
     if case is None:
         return None
 
-    # Don't auto-close already terminal cases
-    to_status = await db.execute(
-        select(WorkflowStatus).where(
-            WorkflowStatus.tenant_id == tenant_id,
-            WorkflowStatus.slug == case.status,
-            WorkflowStatus.is_active.is_(True),
-        )
-    )
-    current_status = to_status.scalar_one_or_none()
-    if current_status and current_status.is_terminal:
+    # Don't auto-close already terminal cases (B3, S198: 4 vaste statussen).
+    if case.status in ("betaald", "afgesloten"):
         return None
 
     # Calculate financial summary to check if fully paid
@@ -237,37 +229,12 @@ async def on_payment_received(
     total_outstanding = summary.get("total_outstanding", Decimal("1"))
 
     if total_outstanding <= Decimal("0"):
-        # Case is fully paid — transition to 'betaald'
+        # B3 (S198): bij €0 openstaand direct op 'betaald' + date_closed. De vroegere
+        # workflow-transitievalidatie leunde op de lege workflow_statuses-tabel en
+        # vuurde dus nóóit — vervangen door deze directe zet. De €0-guard hierboven
+        # blijft: 'betaald' betekent letterlijk volledig voldaan.
         old_status = case.status
 
-        # Check that 'betaald' transition is allowed
-        from app.workflow.service import validate_transition
-
-        validation = await validate_transition(db, tenant_id, case, "betaald")
-        if not validation.allowed:
-            logger.warning(
-                f"Workflow hook: case {case.case_number} is fully paid but "
-                f"transition to 'betaald' not allowed: {validation.errors}"
-            )
-            # Log the warning anyway
-            activity = CaseActivity(
-                tenant_id=tenant_id,
-                case_id=case.id,
-                user_id=None,
-                activity_type="automation",
-                title="Zaak volledig betaald — handmatige statuswijziging nodig",
-                description=(
-                    f"Totaal openstaand: € 0,00. "
-                    f"Automatische transitie naar 'betaald' niet "
-                    f"mogelijk vanuit status '{old_status}'. "
-                    f"Wijzig de status handmatig."
-                ),
-            )
-            db.add(activity)
-            await db.flush()
-            return None
-
-        # Execute the transition
         case.status = "betaald"
         case.date_closed = date.today()
         await db.flush()
@@ -293,9 +260,6 @@ async def on_payment_received(
             f"Workflow hook: case {case.case_number} auto-transitioned to 'betaald' "
             f"after payment of EUR {payment_amount}"
         )
-
-        # Also evaluate rules for the betaald status
-        await on_status_change(db, tenant_id, case, old_status, "betaald")
 
         await db.refresh(case)
         return case

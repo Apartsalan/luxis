@@ -33,34 +33,31 @@ from app.incasso.schemas import (
     TransitionUpdate,
 )
 from app.shared.exceptions import BadRequestError, NotFoundError
-from app.workflow.models import WorkflowStatus, WorkflowTask
+from app.workflow.models import WorkflowTask
 
 logger = logging.getLogger(__name__)
 
-# ── Pipeline ↔ status koppeling (S166, punt 4: "stappen moeten gelijk lopen") ──
-# De dossierheader toont twee voortgangs-weergaven: de fase-stepper + status-badge
-# (gevoed door Case.status) én de incasso-pipeline (Case.incasso_step_id, met
-# "Concept genereren"). Die liepen niet gelijk: de pipeline schoof op bij verzenden,
-# maar de status/fase bleef staan. Met deze mapping schuift de status mee zodra de
-# pipeline-stap verandert (via move_case_to_step — het enige pad voor stap-wissels),
-# zodat fase-stepper, status-badge en "Volgende stap" de pipeline volgen.
-#
-# Mapping op stap-NAAM → status-slug (de standaard-statussen uit de workflow-seed).
-# Bewust géén status voor administratieve/hold-stappen (Verweer beantwoorden, Opvragen
-# stukken, Voorstel/Akkoord dagvaarden, On hold) en voor "Afgesloten": daar is geen
-# eenduidige juridische tegenhanger → die laten de status ongemoeid. Dit is een
-# afgeleide mapping; Lisanne kan de exacte koppeling later bevestigen/bijstellen.
-STEP_NAME_TO_STATUS: dict[str, str] = {
-    "14-dagenbrief": "14_dagenbrief",
-    "Eerste sommatie": "sommatie",
-    "Tweede sommatie": "tweede_sommatie",
-    "Derde sommatie": "tweede_sommatie",
-    "Sommatie laatste mogelijkheid": "tweede_sommatie",
-    "Verzoekschrift faillissement": "faillissementsaanvraag",
-    "Treffen van regeling": "betalingsregeling",
-    "Bijhouden regeling": "betalingsregeling",
+# ── Pipeline → status koppeling (B3, S198) ─────────────────────────────────────
+# De status kent 4 vaste waarden (nieuw / in_behandeling / betaald / afgesloten).
+# De incasso-PIJPLIJN is de motor; de status wordt door de pijplijn-stap gestuurd:
+#   - een terminale eindstap "Betaald"   → status 'betaald'   (+ date_closed)
+#   - een terminale eindstap "Afgesloten" → status 'afgesloten' (+ date_closed)
+#   - elke andere (werk-)stap             → status 'in_behandeling' (date_closed leeg)
+# De vroegere mapping naar de lege workflow_statuses-tabel (STEP_NAME_TO_STATUS +
+# existence-check) vuurde nooit — die is vervangen door deze directe 4-status-logica.
+# Terminale eindstappen worden herkend aan hun naam (de seed kent er precies 2).
+_TERMINAL_STEP_STATUS: dict[str, str] = {
     "Betaald": "betaald",
+    "Afgesloten": "afgesloten",
 }
+
+
+def status_for_step(step: IncassoPipelineStep) -> str:
+    """Zaak-status die hoort bij een pijplijn-stap (B3, S198).
+
+    Terminale eindstappen → betaald/afgesloten; elke werk-stap → in_behandeling.
+    """
+    return _TERMINAL_STEP_STATUS.get(step.name, "in_behandeling")
 
 # ── Pipeline Step CRUD ────────────────────────────────────────────────────
 
@@ -505,23 +502,18 @@ async def move_case_to_step(
     case.incasso_step_id = target_step.id
     case.step_entered_at = now
 
-    # Houd de zaak-status gelijk met de pipeline-stap (S166, punt 4). Alleen bij een
-    # eenduidige mapping én als die status echt bestaat voor deze tenant; anders blijft
-    # de status ongemoeid. We zetten de status direct — de pipeline_change-activity
-    # hieronder is het audit-spoor; we draaien de workflow-transitievalidatie hier
-    # bewust niet (een pipeline-sprong is niet altijd een toegestane status-transitie).
-    mapped_status = STEP_NAME_TO_STATUS.get(target_step.name)
-    if mapped_status and mapped_status != case.status:
-        status_exists = (
-            await db.execute(
-                select(WorkflowStatus).where(
-                    WorkflowStatus.tenant_id == tenant_id,
-                    WorkflowStatus.slug == mapped_status,
-                )
-            )
-        ).scalar_one_or_none()
-        if status_exists is not None:
-            case.status = mapped_status
+    # B3 (S198): de pijplijn stuurt de status. Een terminale eindstap sluit de zaak
+    # (betaald/afgesloten + date_closed); elke werk-stap zet de zaak op
+    # 'in_behandeling' en maakt een eventuele oude sluitdatum leeg (een zaak op een
+    # actieve stap is niet gesloten — dit dekt ook heropenen via de stap-selector).
+    # De pipeline_change-activity hieronder is het audit-spoor.
+    new_status = status_for_step(target_step)
+    if new_status != case.status:
+        case.status = new_status
+    if new_status in ("betaald", "afgesloten"):
+        case.date_closed = now.date()
+    else:
+        case.date_closed = None
 
     await db.flush()
     await db.refresh(history)

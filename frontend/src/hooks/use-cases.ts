@@ -111,6 +111,7 @@ export function useCases(params?: {
   per_page?: number;
   case_type?: string;
   status?: string;
+  incasso_step_id?: string;
   search?: string;
   client_id?: string;
   assigned_to_id?: string;
@@ -125,6 +126,7 @@ export function useCases(params?: {
   const per_page = params?.per_page ?? 20;
   const case_type = params?.case_type ?? "";
   const status = params?.status ?? "";
+  const incasso_step_id = params?.incasso_step_id ?? "";
   const search = params?.search ?? "";
   const client_id = params?.client_id ?? "";
   const assigned_to_id = params?.assigned_to_id ?? "";
@@ -136,7 +138,7 @@ export function useCases(params?: {
   const sort_dir: CaseSortDir = params?.sort_dir ?? "desc";
 
   return useQuery<PaginatedCases>({
-    queryKey: ["cases", { page, per_page, case_type, status, search, client_id, assigned_to_id, date_from, date_to, min_amount, max_amount, sort_by, sort_dir }],
+    queryKey: ["cases", { page, per_page, case_type, status, incasso_step_id, search, client_id, assigned_to_id, date_from, date_to, min_amount, max_amount, sort_by, sort_dir }],
     queryFn: async () => {
       const queryParams = new URLSearchParams({
         page: String(page),
@@ -146,6 +148,7 @@ export function useCases(params?: {
       });
       if (case_type) queryParams.set("case_type", case_type);
       if (status) queryParams.set("status", status);
+      if (incasso_step_id) queryParams.set("incasso_step_id", incasso_step_id);
       if (search) queryParams.set("search", search);
       if (client_id) queryParams.set("client_id", client_id);
       if (assigned_to_id) queryParams.set("assigned_to_id", assigned_to_id);

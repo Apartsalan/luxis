@@ -24,9 +24,10 @@ class Case(TenantBase):
     """A legal case (zaak).
 
     Case types: incasso, insolventie, advies, overig
-    Status workflow:
-        nieuw → 14_dagenbrief → sommatie → dagvaarding →
-        vonnis → executie → betaald → afgesloten
+    Status (B3, S198 — 4 vaste waarden; de incasso-pijplijn stuurt de status):
+        nieuw → in_behandeling → betaald / afgesloten
+    De pijplijn-stap (incasso_step_id) bepaalt het echte werk; de status is
+    een grove fase-indicator die door de pijplijn wordt meegestuurd.
     """
 
     __tablename__ = "cases"

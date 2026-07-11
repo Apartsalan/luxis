@@ -8,29 +8,18 @@ from pydantic import BaseModel, Field, field_validator
 
 # Valid case types and statuses
 CASE_TYPES = ("incasso", "dossier", "advies")
-CASE_STATUSES = (
-    "nieuw",
-    "14_dagenbrief",
-    "sommatie",
-    "dagvaarding",
-    "vonnis",
-    "executie",
-    "betaald",
-    "afgesloten",
-)
+# B3 (S198): status versimpeld tot 4 vaste waarden. De incasso-PIJPLIJN is de
+# echte motor (welke stap, welke brief); de status is alleen nog een grove
+# fase-indicator. De oude 8-staps-statusketen (14_dagenbrief/sommatie/… ) is
+# vervangen — de pijplijn-stap bepaalt nu wat er gebeurt.
+#   nieuw          — aangemaakt, nog geen stap / geen actie
+#   in_behandeling — op een (niet-terminale) pijplijn-stap, loopt
+#   betaald        — volledig voldaan (auto bij €0 openstaand, of handmatig)
+#   afgesloten     — dossier gesloten
+CASE_STATUSES = ("nieuw", "in_behandeling", "betaald", "afgesloten")
+# Terminale statussen: dossier is klaar (uit de actieve wachtrijen/monitoring).
+TERMINAL_STATUSES = ("betaald", "afgesloten")
 INTEREST_TYPES = ("statutory", "commercial", "government", "contractual")
-
-# Status workflow — defines allowed transitions
-STATUS_TRANSITIONS: dict[str, list[str]] = {
-    "nieuw": ["14_dagenbrief", "sommatie", "afgesloten"],
-    "14_dagenbrief": ["sommatie", "betaald", "afgesloten"],
-    "sommatie": ["dagvaarding", "betaald", "afgesloten"],
-    "dagvaarding": ["vonnis", "betaald", "afgesloten"],
-    "vonnis": ["executie", "betaald", "afgesloten"],
-    "executie": ["betaald", "afgesloten"],
-    "betaald": ["afgesloten"],
-    "afgesloten": [],  # Terminal state
-}
 
 
 # ── Request Schemas ──────────────────────────────────────────────────────────

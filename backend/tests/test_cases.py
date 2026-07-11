@@ -322,10 +322,9 @@ async def test_update_case_step_change_logs_history(
 
 @pytest.mark.asyncio
 async def test_status_workflow(
-    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
+    client: AsyncClient, auth_headers: dict, test_company: Contact
 ):
-    """Status transitions should follow the allowed workflow."""
-    # Create case (status: nieuw)
+    """B3 (S198): de 4 vaste statussen zijn los instelbaar."""
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
@@ -334,31 +333,28 @@ async def test_status_workflow(
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
 
-    # nieuw → herinnering (valid for both debtor types)
     response = await client.post(
         f"/api/cases/{case_id}/status",
-        json={"new_status": "herinnering", "note": "Herinnering verstuurd"},
+        json={"new_status": "in_behandeling", "note": "In behandeling genomen"},
         headers=auth_headers,
     )
     assert response.status_code == 200
-    assert response.json()["status"] == "herinnering"
+    assert response.json()["status"] == "in_behandeling"
 
-    # herinnering → aanmaning (valid for both debtor types)
     response = await client.post(
         f"/api/cases/{case_id}/status",
-        json={"new_status": "aanmaning"},
+        json={"new_status": "afgesloten"},
         headers=auth_headers,
     )
     assert response.status_code == 200
-    assert response.json()["status"] == "aanmaning"
+    assert response.json()["status"] == "afgesloten"
 
 
 @pytest.mark.asyncio
 async def test_status_invalid_transition(
-    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
+    client: AsyncClient, auth_headers: dict, test_company: Contact
 ):
-    """Invalid status transitions should return 409."""
-    # Create case (status: nieuw)
+    """B3 (S198): een status buiten de 4 vaste waarden wordt geweigerd (400)."""
     payload = {
         "case_type": "incasso",
         "client_id": str(test_company.id),
@@ -367,18 +363,18 @@ async def test_status_invalid_transition(
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
 
-    # nieuw → vonnis (NOT allowed — must go through 14_dagenbrief, sommatie, dagvaarding first)
+    # 'vonnis' bestaat niet meer als status → 400.
     response = await client.post(
         f"/api/cases/{case_id}/status",
         json={"new_status": "vonnis"},
         headers=auth_headers,
     )
-    assert response.status_code == 409
+    assert response.status_code == 400
 
 
 @pytest.mark.asyncio
 async def test_status_change_sets_date_closed(
-    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
+    client: AsyncClient, auth_headers: dict, test_company: Contact
 ):
     """Moving to a terminal status ('betaald') should set date_closed."""
     payload = {
@@ -389,7 +385,6 @@ async def test_status_change_sets_date_closed(
     create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
     case_id = create_response.json()["id"]
 
-    # nieuw → betaald (terminal status, valid for both debtor types)
     response = await client.post(
         f"/api/cases/{case_id}/status",
         json={"new_status": "betaald"},
@@ -397,6 +392,35 @@ async def test_status_change_sets_date_closed(
     )
     assert response.status_code == 200
     assert response.json()["date_closed"] is not None
+
+
+@pytest.mark.asyncio
+async def test_reopen_from_terminal_clears_date_closed(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """B3 (S198): heropenen vanuit een terminale status wist date_closed."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+    }
+    create_response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    case_id = create_response.json()["id"]
+
+    await client.post(
+        f"/api/cases/{case_id}/status",
+        json={"new_status": "afgesloten"},
+        headers=auth_headers,
+    )
+    # Heropenen → in_behandeling, date_closed leeg.
+    response = await client.post(
+        f"/api/cases/{case_id}/status",
+        json={"new_status": "in_behandeling"},
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "in_behandeling"
+    assert response.json()["date_closed"] is None
 
 
 # ── Case Parties ─────────────────────────────────────────────────────────────
@@ -680,11 +704,13 @@ async def test_tenant_isolation_delete_case(
 
 
 @pytest.mark.asyncio
-async def test_terminal_status_blocks_further_transitions(
-    client: AsyncClient, auth_headers: dict, test_company: Contact, workflow_data
+async def test_terminal_status_rejects_invalid_status(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
 ):
-    """A case in terminal status (betaald) should not allow further transitions."""
-    # Create case → move to betaald
+    """B3 (S198): een gesloten zaak weigert een status buiten de 4 vaste waarden.
+
+    (Heropenen naar nieuw/in_behandeling mág wél — zie
+    test_reopen_from_terminal_clears_date_closed.)"""
     create_resp = await client.post(
         "/api/cases",
         json={
@@ -702,13 +728,13 @@ async def test_terminal_status_blocks_further_transitions(
         headers=auth_headers,
     )
 
-    # Try to move from betaald → herinnering (should fail)
+    # 'herinnering' bestaat niet meer als status → 400.
     response = await client.post(
         f"/api/cases/{case_id}/status",
         json={"new_status": "herinnering"},
         headers=auth_headers,
     )
-    assert response.status_code == 409
+    assert response.status_code == 400
 
 
 # ── AUDIT-H24: archiving a case closes its open tasks ────────────────────────

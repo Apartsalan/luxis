@@ -22,7 +22,6 @@ from app.incasso.service import (
     move_case_to_step,
     seed_default_steps,
 )
-from app.workflow.models import WorkflowStatus
 from tests.helpers.incasso_fixtures import create_incasso_case, create_pipeline_steps
 
 # ── Punt 2: verzending wordt gelogd op de huidige stap ──────────────────────
@@ -72,83 +71,69 @@ async def test_mark_current_step_without_active_step_returns_none(
     assert result is None
 
 
-# ── Punt 4: status loopt mee met de pipeline-stap ───────────────────────────
+# ── Punt 4 (B3, S198): de pijplijn stuurt de 4-status ───────────────────────
 
 
 @pytest.mark.asyncio
-async def test_move_to_mapped_step_syncs_status(
+async def test_move_to_working_step_sets_in_behandeling(
     db, test_tenant, test_user, test_company, test_person
 ):
-    """Een stap met eenduidige status-tegenhanger schuift de zaak-status mee."""
-    db.add(
-        WorkflowStatus(
-            id=uuid.uuid4(),
-            tenant_id=test_tenant.id,
-            slug="sommatie",
-            label="Sommatie",
-            phase="minnelijk",
-            sort_order=50,
-        )
-    )
-    eerste = IncassoPipelineStep(
-        id=uuid.uuid4(),
-        tenant_id=test_tenant.id,
-        name="Eerste sommatie",
-        sort_order=1,
-        min_wait_days=0,
-        max_wait_days=4,
-    )
-    db.add(eerste)
-    await db.flush()
-    case = await create_incasso_case(
-        db, test_tenant.id, test_company, test_person, test_user,
-        step=None, status="nieuw",
-    )
-
-    await move_case_to_step(db, test_tenant.id, case, eerste, user_id=test_user.id)
-    await db.refresh(case)
-    assert case.incasso_step_id == eerste.id
-    assert case.status == "sommatie"
-
-
-@pytest.mark.asyncio
-async def test_move_to_unmapped_step_keeps_status(
-    db, test_tenant, test_user, test_company, test_person
-):
-    """Een administratieve/ongemapte stap (Aanmaning) laat de status ongemoeid."""
-    steps = await create_pipeline_steps(db, test_tenant.id)  # Aanmaning: niet in mapping
+    """Een werk-stap zet de zaak op 'in_behandeling' (B3, S198)."""
+    steps = await create_pipeline_steps(db, test_tenant.id)  # Aanmaning = werk-stap
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user,
         step=None, status="nieuw",
     )
     await move_case_to_step(db, test_tenant.id, case, steps[0], user_id=test_user.id)
     await db.refresh(case)
-    assert case.status == "nieuw"
+    assert case.incasso_step_id == steps[0].id
+    assert case.status == "in_behandeling"
+    assert case.date_closed is None
 
 
 @pytest.mark.asyncio
-async def test_move_to_mapped_step_without_status_record_keeps_status(
+async def test_move_to_betaald_step_closes_case(
     db, test_tenant, test_user, test_company, test_person
 ):
-    """Mapping bestaat (Eerste sommatie→sommatie) maar de tenant heeft die status
-    niet → status blijft ongemoeid; we forceren geen onbekende status."""
-    eerste = IncassoPipelineStep(
+    """De terminale eindstap 'Betaald' zet status 'betaald' + date_closed."""
+    betaald_step = IncassoPipelineStep(
         id=uuid.uuid4(),
         tenant_id=test_tenant.id,
-        name="Eerste sommatie",
-        sort_order=1,
+        name="Betaald",
+        sort_order=99,
         min_wait_days=0,
-        max_wait_days=4,
+        max_wait_days=0,
+        is_terminal=True,
     )
-    db.add(eerste)
+    db.add(betaald_step)
     await db.flush()
     case = await create_incasso_case(
         db, test_tenant.id, test_company, test_person, test_user,
-        step=None, status="nieuw",
+        step=None, status="in_behandeling",
     )
-    await move_case_to_step(db, test_tenant.id, case, eerste, user_id=test_user.id)
+    await move_case_to_step(db, test_tenant.id, case, betaald_step, user_id=test_user.id)
     await db.refresh(case)
-    assert case.status == "nieuw"
+    assert case.status == "betaald"
+    assert case.date_closed is not None
+
+
+@pytest.mark.asyncio
+async def test_move_back_to_working_step_reopens(
+    db, test_tenant, test_user, test_company, test_person
+):
+    """Een gesloten zaak terug op een werk-stap = heropenen: in_behandeling,
+    sluitdatum leeg."""
+    steps = await create_pipeline_steps(db, test_tenant.id)
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, test_person, test_user,
+        step=None, status="afgesloten",
+    )
+    case.date_closed = date.today()
+    await db.flush()
+    await move_case_to_step(db, test_tenant.id, case, steps[0], user_id=test_user.id)
+    await db.refresh(case)
+    assert case.status == "in_behandeling"
+    assert case.date_closed is None
 
 
 # ── Punt 3: 14-dagenbrief als eerste B2C-stap ───────────────────────────────

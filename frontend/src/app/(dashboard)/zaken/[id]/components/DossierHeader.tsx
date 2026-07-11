@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  ArrowRight,
   Briefcase,
   CalendarDays,
   CheckCircle2,
@@ -16,6 +15,7 @@ import {
   MessageSquare,
   Phone,
   Receipt,
+  RotateCcw,
   Trash2,
   Users,
   XCircle,
@@ -24,19 +24,16 @@ import {
 import {
   STATUS_LABELS,
   STATUS_BADGE,
-  NEXT_STATUSES,
   TYPE_LABELS,
   INTEREST_LABELS,
 } from "../types";
 import {
   getTemplateLabel,
-  getTemplatesForStatus,
 } from "@/hooks/use-documents";
 import {
   PHASE_LABELS,
   PHASE_ORDER,
   getPhaseForStatus,
-  getAvailableTransitions,
 } from "@/hooks/use-workflow";
 import type { WorkflowStatus, WorkflowTransition } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -193,19 +190,7 @@ export default function DossierHeader({
     ? PHASE_ORDER.indexOf(currentPhase)
     : -1;
   const isTerminal =
-    currentPhase === "afgerond" ||
-    zaak.status === "betaald" ||
-    zaak.status === "afgesloten";
-
-  // Available transitions from workflow data, with fallback to hardcoded
-  const availableNextStatuses = workflowStatuses && workflowTransitions
-    ? getAvailableTransitions(
-        workflowTransitions,
-        zaak.status,
-        zaak.debtor_type ?? "both",
-        workflowStatuses
-      )
-    : null;
+    zaak.status === "betaald" || zaak.status === "afgesloten";
 
   return (
     <>
@@ -358,50 +343,31 @@ export default function DossierHeader({
             </div>
           )}
 
-          {/* Status transition buttons */}
-          {!isTerminal && (
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
-              <span className="text-xs text-muted-foreground self-center mr-1">
-                Volgende stap:
-              </span>
-              {availableNextStatuses && availableNextStatuses.length > 0 ? (
-                availableNextStatuses.map((nextStatus) => {
-                  const isTerminalStatus = nextStatus.is_terminal;
-                  return (
-                    <button
-                      key={nextStatus.slug}
-                      onClick={() => handleStatusChange(nextStatus.slug)}
-                      disabled={updateStatusPending}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                        isTerminalStatus
-                          ? "border border-border hover:bg-muted text-muted-foreground"
-                          : "bg-primary/10 text-primary hover:bg-primary/20"
-                      }`}
-                    >
-                      <ArrowRight className="h-3 w-3" />
-                      {nextStatus.label}
-                    </button>
-                  );
-                })
-              ) : (
-                NEXT_STATUSES[zaak.status]?.map((nextStatus) => (
-                  <button
-                    key={nextStatus}
-                    onClick={() => handleStatusChange(nextStatus)}
-                    disabled={updateStatusPending}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                      nextStatus === "betaald" || nextStatus === "afgesloten"
-                        ? "border border-border hover:bg-muted text-muted-foreground"
-                        : "bg-primary/10 text-primary hover:bg-primary/20"
-                    }`}
-                  >
-                    <ArrowRight className="h-3 w-3" />
-                    {STATUS_LABELS[nextStatus]}
-                  </button>
-                ))
-              )}
-            </div>
-          )}
+          {/* Afsluiten / Heropenen (B3, S198): de pijplijn-stap stuurt het werk;
+              hier alleen het dossier sluiten of weer heropenen. */}
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+            {!isTerminal ? (
+              <button
+                onClick={() => handleStatusChange("afgesloten")}
+                disabled={updateStatusPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                Dossier afsluiten
+              </button>
+            ) : (
+              <button
+                onClick={() =>
+                  handleStatusChange(zaak.incasso_step_id ? "in_behandeling" : "nieuw")
+                }
+                disabled={updateStatusPending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 text-primary px-3 py-1.5 text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Dossier heropenen
+              </button>
+            )}
+          </div>
         </div>
       )}
 

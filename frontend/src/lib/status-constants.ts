@@ -4,28 +4,43 @@
 
 import { TONES } from "@/lib/tones";
 
-// --- Case statuses (incasso workflow + general) ---
+// --- Case statuses (B3, S198: 4 vaste waarden; de incasso-pijplijn is de motor) ---
+// De 4 kern-statussen staan bovenaan. De legacy-keys (14_dagenbrief/sommatie/…)
+// blijven staan zodat historische statuswijzigingen in de tijdlijn nog een label
+// + badge krijgen — ze worden NIET meer als keuze aangeboden.
+
+// De 4 vaste statussen voor filter- en actie-dropdowns.
+export const CASE_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "nieuw", label: "Nieuw" },
+  { value: "in_behandeling", label: "In behandeling" },
+  { value: "betaald", label: "Betaald" },
+  { value: "afgesloten", label: "Afgesloten" },
+];
 
 export const CASE_STATUS_LABELS: Record<string, string> = {
   nieuw: "Nieuw",
+  in_behandeling: "In behandeling",
+  betaald: "Betaald",
+  afgesloten: "Afgesloten",
+  // Legacy (vóór S198) — alleen historische weergave
   "14_dagenbrief": "14-dagenbrief",
   sommatie: "Sommatie",
   dagvaarding: "Dagvaarding",
   vonnis: "Vonnis",
   executie: "Executie",
-  betaald: "Betaald",
-  afgesloten: "Afgesloten",
 };
 
 export const CASE_STATUS_BADGE: Record<string, string> = {
   nieuw: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  in_behandeling: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
+  // Legacy
   "14_dagenbrief": "bg-sky-50 text-sky-700 ring-sky-600/20",
   sommatie: "bg-amber-50 text-amber-700 ring-amber-600/20",
   dagvaarding: "bg-red-50 text-red-700 ring-red-600/20",
   vonnis: "bg-purple-50 text-purple-700 ring-purple-600/20",
   executie: "bg-red-50 text-red-800 ring-red-700/20",
-  betaald: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  afgesloten: "bg-slate-50 text-slate-600 ring-slate-500/20",
 };
 
 export const CASE_STATUS_BADGE_FALLBACK = "bg-slate-50 text-slate-600 ring-slate-500/20";
@@ -35,13 +50,15 @@ export const CASE_STATUS_COLOR_FALLBACK = "bg-slate-400";
 // Solid colors for pipeline visualization (dashboard bar chart)
 export const CASE_STATUS_COLORS: Record<string, string> = {
   nieuw: "bg-blue-500",
+  in_behandeling: "bg-amber-500",
+  betaald: "bg-emerald-500",
+  afgesloten: "bg-slate-400",
+  // Legacy
   "14_dagenbrief": "bg-blue-400",
   sommatie: "bg-amber-500",
   dagvaarding: "bg-purple-500",
   vonnis: "bg-purple-500",
   executie: "bg-purple-600",
-  betaald: "bg-emerald-500",
-  afgesloten: "bg-slate-400",
 };
 
 // --- Case type labels and badges ---

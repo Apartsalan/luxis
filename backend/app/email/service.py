@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 # DB geladen (app.main.lifespan) vóór er ook maar één request wordt bediend, en
 # bijgewerkt bij elke toggle. De backend draait één proces, dus deze
 # module-waarde is consistent voor de web-handlers én de scheduler die 'm lezen.
-# Default False = "nog niet geladen"; de echte persistente stand is de geseede
-# app_config-rij (dicht). Productie is vóór de handover sowieso gedekt door het
-# env-noodslot (settings.outbound_mail_lock).
+# Default False alleen relevant in tests (die draaien lifespan niet); in productie
+# zet load_mail_lock 'm altijd vóór het bedienen van requests, en fail-safe DICHT
+# bij twijfel (zie load_mail_lock).
 _db_mail_locked: bool = False
 
 
@@ -55,14 +55,18 @@ def check_outbound_lock() -> None:
 
 
 async def load_mail_lock(db: AsyncSession) -> bool:
-    """Laad de persistente mailslot-stand in het geheugen. Rij ontbreekt of fout
-    -> stand blijft ongewijzigd (fail-safe: env-noodslot dekt prod)."""
+    """Laad de persistente mailslot-stand in het geheugen. Fail-safe: als de rij
+    ontbreekt of de DB onleesbaar is -> op slot (True), zodat er nooit per ongeluk
+    mail uit gaat wanneer het env-noodslot eraf is."""
     global _db_mail_locked
     from app.settings.models import AppConfig
 
-    row = (await db.execute(select(AppConfig).limit(1))).scalar_one_or_none()
-    if row is not None:
-        _db_mail_locked = bool(row.outbound_mail_locked)
+    try:
+        row = (await db.execute(select(AppConfig).limit(1))).scalar_one_or_none()
+        _db_mail_locked = bool(row.outbound_mail_locked) if row is not None else True
+    except Exception:
+        _db_mail_locked = True
+        raise
     return _db_mail_locked
 
 

@@ -34,6 +34,8 @@ class DashboardSummary(BaseModel):
     cases_this_month: int
     cases_closed_this_month: int
     contacts_this_month: int
+    # S203 #2: leesbare waarschuwingen voor stilgevallen achtergrondtaken.
+    scheduler_alerts: list[str] = []
 
 
 class RecentActivityItem(BaseModel):

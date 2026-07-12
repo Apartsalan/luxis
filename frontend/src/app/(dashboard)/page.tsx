@@ -64,6 +64,7 @@ interface DashboardSummary {
   cases_this_month: number;
   cases_closed_this_month: number;
   contacts_this_month: number;
+  scheduler_alerts?: string[];
 }
 
 interface RecentActivity {
@@ -191,6 +192,30 @@ export default function DashboardPage() {
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      {/* S203 #2: waarschuwing als een kritieke achtergrondtaak (bv. de
+          verjaringscontrole) is gestopt met draaien. */}
+      {summary?.scheduler_alerts && summary.scheduler_alerts.length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+            <div>
+              <p className="text-sm font-medium text-red-800">
+                Achtergrondtaken vereisen aandacht
+              </p>
+              <ul className="mt-1 list-disc pl-4 text-xs text-red-700">
+                {summary.scheduler_alerts.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-red-600">
+                Neem contact op met de beheerder — automatische controles draaien
+                mogelijk niet meer.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

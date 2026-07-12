@@ -1,7 +1,7 @@
 """Dashboard module service — aggregation queries for KPIs and activity."""
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -14,6 +14,43 @@ from app.relations.models import Contact
 # Marker die de BaseNet-import op elke geschreven rij zet (contacts.notes,
 # cases.debtor_notes). Zie scripts/basenet/import_basenet.py::_MARKER.
 IMPORT_MARKER = "[BaseNet-import]"
+
+# S203 #2: dagelijkse achtergrondtaken waarvan een uitblijvende run juridisch/
+# operationeel gevaarlijk is. job_id → leesbare naam. Een run ouder dan 25 uur
+# (24u interval + speling) telt als 'staat stil'.
+_CRITICAL_DAILY_JOBS = {
+    "daily_verjaring_check": "Verjaringscontrole",
+    "daily_task_status_update": "Taakstatus-bijwerken",
+    "daily_deadline_notifications": "Deadline-meldingen",
+    "daily_installment_overdue_check": "Termijn-achterstandcontrole",
+    "daily_invoice_overdue_check": "Factuur-achterstandcontrole",
+}
+_STALE_AFTER = timedelta(hours=25)
+
+
+async def get_scheduler_alerts(db: AsyncSession) -> list[str]:
+    """Signaleer kritieke dagelijkse jobs die zijn gestopt met draaien.
+
+    Alleen alarm als een job ééns heeft gedraaid en zijn laatste run > 25u oud is
+    (een job die na een verse deploy nog niet aan de beurt was, heeft geen rij en
+    geeft dus geen vals alarm). Globaal, niet tenant-gebonden — de scheduler draait
+    installatiebreed.
+    """
+    from app.settings.models import SchedulerHeartbeat
+
+    rows = (await db.execute(select(SchedulerHeartbeat))).scalars().all()
+    by_id = {r.job_id: r for r in rows}
+    now = datetime.now(UTC)
+    alerts: list[str] = []
+    for job_id, label in _CRITICAL_DAILY_JOBS.items():
+        row = by_id.get(job_id)
+        if row is None or row.last_run_at is None:
+            continue  # nog nooit gedraaid → geen vals alarm na verse deploy
+        age = now - row.last_run_at
+        if age > _STALE_AFTER:
+            hours = int(age.total_seconds() // 3600)
+            alerts.append(f"{label} draaide voor het laatst {hours} uur geleden.")
+    return alerts
 
 
 async def get_dashboard_summary(
@@ -128,6 +165,8 @@ async def get_dashboard_summary(
     )
     contacts_this_month = result.scalar() or 0
 
+    scheduler_alerts = await get_scheduler_alerts(db)
+
     return {
         "total_active_cases": total_active_cases,
         "total_contacts": total_contacts,
@@ -139,6 +178,7 @@ async def get_dashboard_summary(
         "cases_this_month": cases_this_month,
         "cases_closed_this_month": cases_closed_this_month,
         "contacts_this_month": contacts_this_month,
+        "scheduler_alerts": scheduler_alerts,
     }
 
 

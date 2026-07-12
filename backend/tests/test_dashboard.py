@@ -771,3 +771,42 @@ async def test_reports_collection_rate_same_population_and_capped(
     data = response.json()
     assert data["collection_rate"] == 50.0
     assert data["collection_rate"] <= 100.0
+
+
+@pytest.mark.asyncio
+async def test_scheduler_alerts_flags_stale_critical_job(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession
+):
+    """S203 #2: een kritieke dagelijkse job die > 25u niet meer draaide geeft een
+    dashboard-waarschuwing; een verse (nooit-gedraaide) job níét (geen vals alarm)."""
+    import uuid
+    from datetime import UTC, datetime, timedelta
+
+    from app.settings.models import SchedulerHeartbeat
+
+    now = datetime.now(UTC)
+    # Verjaringscheck 30u geleden → stale. Deadline-job net gedraaid → ok.
+    db.add(SchedulerHeartbeat(
+        job_id="daily_verjaring_check", last_run_at=now - timedelta(hours=30),
+    ))
+    db.add(SchedulerHeartbeat(
+        job_id="daily_deadline_notifications", last_run_at=now - timedelta(minutes=5),
+    ))
+    # Nooit-gedraaide job (geen rij) → geen alarm.
+    await db.commit()
+
+    resp = await client.get("/api/dashboard/summary", headers=auth_headers)
+    assert resp.status_code == 200
+    alerts = resp.json()["scheduler_alerts"]
+    assert any("Verjaringscontrole" in a for a in alerts)
+    assert not any("Deadline" in a for a in alerts)
+
+
+@pytest.mark.asyncio
+async def test_scheduler_alerts_empty_when_all_fresh(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession
+):
+    """Geen heartbeat-rijen (verse install) → geen waarschuwingen."""
+    resp = await client.get("/api/dashboard/summary", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["scheduler_alerts"] == []

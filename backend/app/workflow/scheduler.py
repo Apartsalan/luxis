@@ -8,10 +8,12 @@ Includes:
 Uses APScheduler with AsyncIOScheduler, started on FastAPI startup event.
 """
 
+import asyncio
 import logging
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
@@ -22,6 +24,42 @@ from app.database import async_session
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
+
+
+async def _write_heartbeat(job_id: str, error: str | None) -> None:
+    """Upsert de laatste-run/-fout van een job (S203 #2). Eigen sessie: draait
+    losgekoppeld van de job-transactie zodat een job-rollback dit niet meesleept."""
+    from app.settings.models import SchedulerHeartbeat
+
+    try:
+        async with async_session() as session:
+            now = datetime.now(UTC)
+            row = await session.get(SchedulerHeartbeat, job_id)
+            if row is None:
+                row = SchedulerHeartbeat(job_id=job_id)
+                session.add(row)
+            row.last_run_at = now
+            if error is not None:
+                row.last_error = error[:2000]
+                row.last_error_at = now
+            await session.commit()
+    except Exception:
+        logger.exception("Scheduler: heartbeat schrijven mislukt voor %s", job_id)
+
+
+def _on_job_event(event) -> None:
+    """APScheduler-listener (sync): registreer elke job-run als heartbeat. Vangt de
+    dead-man-switch af (job draait niet meer → last_run_at loopt achter). NB: de jobs
+    vangen hun eigen excepties af, dus EVENT_JOB_ERROR vuurt zelden; de run-registratie
+    is het signaal dat telt."""
+    error = None
+    if getattr(event, "exception", None) is not None:
+        error = f"{type(event.exception).__name__}: {event.exception}"
+    try:
+        asyncio.ensure_future(_write_heartbeat(event.job_id, error))
+    except RuntimeError:
+        # Geen draaiende loop (bv. in tests) — sla de heartbeat stil over.
+        pass
 
 
 async def daily_task_status_update() -> None:
@@ -862,6 +900,9 @@ def start_scheduler() -> None:
     from app.ai_agent.orchestrator import register_handlers
 
     register_handlers()
+
+    # S203 #2: registreer elke job-run als heartbeat (dead-man-switch).
+    scheduler.add_listener(_on_job_event, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
 
     scheduler.start()
     ai_status = (

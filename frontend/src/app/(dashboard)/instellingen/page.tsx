@@ -5,8 +5,6 @@ import {
   User,
   Users,
   Building2,
-  Palette,
-  Bell,
   GitBranch,
   Mail,
   Puzzle,
@@ -22,9 +20,7 @@ import { ModulesTab } from "./modules-tab";
 import { TeamTab } from "./team-tab";
 import { WorkflowTab } from "./workflow-tab";
 import { EmailTab } from "./email-tab";
-import { MeldingenTab } from "./meldingen-tab";
 import { SjablonenTab } from "./sjablonen-tab";
-import { WeergaveTab } from "./weergave-tab";
 import { ExactTab } from "./exact-tab";
 import { ProductenTab } from "./producten-tab";
 import { AILerenTab } from "./ai-leren-tab";
@@ -37,11 +33,9 @@ const TABS = [
   { id: "workflow", label: "Workflow", icon: GitBranch },
   { id: "ai-leren", label: "Slim leren", icon: Sparkles },
   { id: "email", label: "E-mail", icon: Mail },
-  { id: "meldingen", label: "Meldingen", icon: Bell },
   { id: "sjablonen", label: "Sjablonen", icon: FileText },
   { id: "producten", label: "Producten", icon: Package },
   { id: "exact", label: "Exact Online", icon: Cloud },
-  { id: "weergave", label: "Weergave", icon: Palette },
 ];
 
 export default function InstellingenPage() {
@@ -91,11 +85,9 @@ export default function InstellingenPage() {
           {activeTab === "workflow" && <WorkflowTab />}
           {activeTab === "ai-leren" && <AILerenTab />}
           {activeTab === "email" && <EmailTab />}
-          {activeTab === "meldingen" && <MeldingenTab />}
           {activeTab === "sjablonen" && <SjablonenTab />}
           {activeTab === "producten" && <ProductenTab />}
           {activeTab === "exact" && <ExactTab />}
-          {activeTab === "weergave" && <WeergaveTab />}
         </div>
       </div>
     </div>

@@ -248,6 +248,64 @@ export function EmailTab() {
                 </button>
               </div>
             </div>
+
+            {/* S203 #1: sync-gezondheid. Zonder dit kon de 5-min-sync stil doodgaan
+                (verlopen token) zonder enig signaal in de UI. */}
+            {(() => {
+              const lastSync = account.last_sync_at
+                ? new Date(account.last_sync_at)
+                : null;
+              const lastSyncLabel = lastSync
+                ? lastSync.toLocaleString("nl-NL", {
+                    day: "numeric",
+                    month: "long",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "nog niet gesynchroniseerd";
+              const staleMs = Date.now() - (lastSync?.getTime() ?? 0);
+              const isStale = !lastSync || staleMs > 60 * 60 * 1000; // > 60 min
+              if (account.last_sync_error) {
+                return (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                      <div>
+                        <p className="text-sm font-medium text-red-800">
+                          Laatste synchronisatie mislukt
+                        </p>
+                        <p className="mt-1 text-xs text-red-700">
+                          {account.last_sync_error}
+                        </p>
+                        <p className="mt-1 text-xs text-red-600">
+                          Laatst geslaagd: {lastSyncLabel}. Nieuwe e-mails worden nu
+                          mogelijk niet opgehaald — ontkoppel en verbind opnieuw als dit
+                          blijft.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              if (isStale) {
+                return (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                      <p className="text-sm text-amber-800">
+                        Synchronisatie loopt achter — laatst gesynchroniseerd{" "}
+                        {lastSyncLabel}. Normaal gebeurt dit elke 5 minuten.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Laatst gesynchroniseerd om {lastSyncLabel}.
+                </p>
+              );
+            })()}
           </div>
         ) : (
           /* Not connected state */

@@ -202,6 +202,9 @@ async def email_auto_sync() -> None:
                     )
                     total_new += stats["new"]
                     total_linked += stats["linked"]
+                    # Commit per account → een latere account-fout kan deze geslaagde
+                    # sync (incl. gewiste last_sync_error) niet terugrollen.
+                    await session.commit()
 
                     if stats["new"] > 0:
                         logger.info(
@@ -210,6 +213,19 @@ async def email_auto_sync() -> None:
                         )
                 except Exception as e:
                     logger.error(f"Scheduler: email sync mislukt voor {account.email_address}: {e}")
+                    # S203 #1: fout zichtbaar maken i.p.v. stil doodgaan. De mislukte
+                    # sync kan de sessie hebben vervuild → eerst terugrollen, daarna in
+                    # een schone transactie alleen het foutveld op het account zetten.
+                    await session.rollback()
+                    try:
+                        account.last_sync_error = str(e)[:1000]
+                        await session.commit()
+                    except Exception:
+                        logger.exception(
+                            "Scheduler: kon sync-fout niet vastleggen voor %s",
+                            account.email_address,
+                        )
+                        await session.rollback()
 
             # Verweer-bibliotheek (S167): vang continu KANDIDAAT-antwoorden uit nieuw
             # verzonden mail. Kandidaten voeden de AI niet — Lisanne keurt ze goed in het

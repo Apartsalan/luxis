@@ -46,6 +46,9 @@ class EmailAccountStatus(BaseModel):
     provider: str | None = None
     email_address: str | None = None
     connected_at: str | None = None
+    # S203 #1: sync-gezondheid zichtbaar maken.
+    last_sync_at: str | None = None
+    last_sync_error: str | None = None
 
 
 class DisconnectResponse(BaseModel):
@@ -137,6 +140,8 @@ async def get_oauth_status(
         provider=account.provider,
         email_address=account.email_address,
         connected_at=account.connected_at.isoformat() if account.connected_at else None,
+        last_sync_at=account.last_sync_at.isoformat() if account.last_sync_at else None,
+        last_sync_error=account.last_sync_error,
     )
 
 

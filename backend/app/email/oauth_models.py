@@ -39,6 +39,9 @@ class EmailAccount(TenantBase):
     sync_cursor: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # Gmail historyId or Outlook deltaLink
+    # S203 #1: laatste sync-fout (NULL = laatste sync geslaagd). Zonder dit kon de
+    # 5-min-sync stil doodgaan (alleen server-log) — geen signaal in de UI.
+    last_sync_error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     connected_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

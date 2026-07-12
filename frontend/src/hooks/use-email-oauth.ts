@@ -10,6 +10,8 @@ export interface EmailAccountStatus {
   provider: string | null;
   email_address: string | null;
   connected_at: string | null;
+  last_sync_at: string | null;
+  last_sync_error: string | null;
 }
 
 interface AuthorizeResponse {

@@ -806,3 +806,26 @@ def test_determine_direction_outbound_matches_account():
 
     msg = EmailMessage(provider_message_id="x", from_email="Lisanne@KestingLegal.nl")
     assert _determine_direction(msg, "lisanne@kestinglegal.nl") == "outbound"
+
+
+@pytest.mark.asyncio
+async def test_oauth_status_surfaces_sync_error(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """S203 #1: het status-endpoint geeft last_sync_at + last_sync_error door, zodat
+    de UI een stil doodgegane sync kan tonen."""
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    account.last_sync_at = datetime(2026, 7, 1, 10, 0, tzinfo=UTC)
+    account.last_sync_error = "invalid_grant: token expired"
+    await db.commit()
+
+    resp = await client.get("/api/email/oauth/status", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["connected"] is True
+    assert data["last_sync_error"] == "invalid_grant: token expired"
+    assert data["last_sync_at"] is not None

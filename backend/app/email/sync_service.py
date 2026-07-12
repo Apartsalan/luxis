@@ -719,8 +719,9 @@ async def sync_emails_for_account(
                     "Notification voor email_received mislukt — sync gaat door"
                 )
 
-    # Update last sync timestamp
+    # Update last sync timestamp; wis een eerdere sync-fout (S203 #1: NULL = geslaagd).
     account.last_sync_at = datetime.now(UTC)
+    account.last_sync_error = None
     await db.flush()
 
     # Download attachments for new emails

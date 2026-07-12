@@ -2,10 +2,48 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S203 deel 2, Opus — voorkant-fixes UITGEVOERD + LIVE). Codex' audits (Fase A+B, read-only) eerst nagecontroleerd (kloppen), daarna 11 van de 12 S200-voorkantbevindingen gebouwd, getest en uitgerold in 4 deploys.
-**Laatste feature/fix:** 16 commits, migraties `s203`+`s203b` op prod. Live-fixes o.a.: tijdlijn-crash, hernoem-knop, AI-concept €0-markering, "1169→1 deze maand", batch-foutmelding, nep-tabs weg, ratio 49,1%→5,3%, mailsync-gezondheidsbanner, scheduler-heartbeat+dashboard-alarm, intake-startstap, 14-dagenbrief = **harde blokkade incl. 15-dagentermijn** (besluit Arsalan), logout-token-intrekking, Gmail-knop verborgen.
-**Openstaand:** Mailverzending blijft op slot (Arsalan zet zelf aan). Vervolg: 35-route backend-sloop (eigen verificatie nodig), #7 document-audittrail, #15 regeling-badge, log-persistentie VPS. S201-facturatie-import (439 facturen) nog niet uitgevoerd.
-**Volgende sessie:** S204 = **Fable-review** van de S203-voorkant-fixes (`docs/sessions/PROMPT-S204-fable-review.md`), read-only + tests; daarna pas nieuw bouwen (S201-import óf route-sloop).
+**Laatst bijgewerkt:** 12 juli 2026 (S204, Fable — review S203-fixes, 100% read-only). 9 van 11 fixes bevestigd; 2 vervolg-punten gevonden. Rapport: `docs/sessions/S204-review.md`.
+**Laatste feature/fix:** geen code gewijzigd (reviewsessie). Bewezen defect: mailsync-foutpad vergiftigt volgende accounts (MissingGreenlet na rollback); 14-dagenbrief-gate heeft 2 zijdeuren (follow-up "Uitvoeren" + AI-concept-verzendpad) en een zwakke verstuurd-proxy.
+**Openstaand:** S205 = fix-sessie beslislijst S204 (2× juridisch 🔴). Daarna: 35-route-sloop, #7 audittrail, #15 regeling-badge, log-persistentie, S201-import. Mailslot blijft DICHT.
+**Volgende sessie:** S205 = gate-zijdeuren + mailsync-fix (`docs/sessions/PROMPT-S205-gate-zijdeuren.md`); checklist morgen: dagelijkse-job-rijen in `scheduler_heartbeat`.
+
+## Sessie 204 (12 juli 2026, Fable — review S203-voorkant-fixes, 100% read-only)
+
+### Samenvatting
+Alle S203-fixes (15 commits + na-tag `27842a2`) in de bron nagelezen, tegengesproken en op prod
+gecontroleerd (GET-API + read-only SQL). **9 van 11 bevestigd zonder voorbehoud**: tijdlijn (#13),
+hernoem-PATCH incl. cross-tenant-404 (#4), €0-markering incl. pop-vóór-prompt + end-to-end test (#3),
+1169→1 (#6, prod: 1168/1169 met marker, de ene = "Arsalan"), batch-toast (#9), ratio zelfde populatie
++ cap (#10, prod 5,3), openstaand-labels (#14), intake-startstap = kopie van creatiepad (#8),
+logout/Gmail (#16/#17). Heartbeat (#2) werkt bewezen op prod (5 verse rijen). Volledig rapport mét
+bewijs per fix: **`docs/sessions/S204-review.md`**.
+
+### Twee gevonden punten (vervolg-bouwsessie nodig)
+1. **Mailsync-foutpad (#1) — bewezen latent defect:** `rollback()` in de except expireert álle
+   account-objecten (negeert `expire_on_commit=False`); het volgende account crasht op zijn eerste
+   attribuutlezing met MissingGreenlet en de log-f-string in de except gooit een tweede → hele run
+   stopt. Eén structureel falend account (verlopen token) blokkeert zo elke 5 min de sync van de
+   accounts erná, zonder eigen foutmelding en zonder dashboard-alarm. Bewezen met probe op de echte
+   sessie-factory. Het gevreesde "geslaagde sync teruggerold" is wél afgedekt (commit per account).
+2. **14-dagenbrief-gate (#5) — batch-gate zelf correct, maar 2 zijdeuren + zwakke proxy:**
+   follow-up "Uitvoeren" (`execute_recommendation`, 14 pending aanbevelingen op prod) en het
+   AI-concept-verzendpad (compose/send + advance-after-send) versturen sommaties zónder gate;
+   en `entered_at` = stap-binnenkomst, niet verzending (doorschuiven zonder versturen telt als
+   "verstuurd"). Operationeel gat: de 14-dagenbrief-stap heeft op prod geen sjabloon → Luxis kan de
+   brief zelf nu niet versturen; beide actieve B2C-zaken (IN100345/350) staan stap-loos → vandaag
+   geen acuut risico (batch skipt ze al eerder).
+
+### Verificatie
+155 tests groen (8 S203-suites, docker), ruff schoon, prod `alembic_version=s203b`. Prod-API:
+`contacts_this_month=1`, `collection_rate=5.3`, `scheduler_alerts=[]`; SQL: 3 sync-accounts vers +
+foutveld leeg, heartbeats 18:47, `case_step_history=0` (verwacht: nog geen intake/stap-actie sinds
+deploy). Niet geverifieerd: frontend visueel (alleen code + S203-livecheck), dagelijkse
+heartbeat-rijen (bestaan pas na de nacht), live logout (zou prod-tokens intrekken — bewust overgeslagen).
+
+### Volgende sessie
+S205: beslislijst uit `S204-review.md` §Beslislijst — (1) gate in follow-up, (2) gate in
+concept-verzendpad, (3) verzend-proxy verstevigen, (4) mailsync-foutpad, (5) dagenbrief-sjabloon
+op de stap (besluit), (6) heartbeat-last_error bij interne jobfouten, (7) check dagelijkse-job-rijen.
 
 ## Sessie 203 deel 2 (12 juli 2026, Opus — voorkant-fixes UITGEVOERD + LIVE)
 
@@ -505,67 +543,3 @@ heropen-notitie als de 64 → totaal 67. Cap-verschil droogloop-vs-boeking verkl
 
 ### Volgende sessie
 Bouwblok 2 restant: B4/A8 termijn-vooruitblik, B11 3 proefzaken. Prompt: `PROMPT-S196.md`.
-
-## Sessie 194 (10 juli 2026, Opus — taak 2 + taak 3 + taak 1, alles live/klaar)
-
-### Samenvatting
-`PROMPT-S194.md` uitgevoerd: taak 2 (instellingen-blokkade + waarden), taak 3 (bankimport),
-taak 1 (visuele doorklik). Ontdekking vooraf: het aparte derdengelden-veld bestónd al (model
-+ scherm), dus taak 2 punt 3 was al gebouwd — alleen waarden restten.
-
-### Taak 2 — admin-fix + instellingen-waarden (LIVE, commit `a5c4332`)
-- **Root cause admin-blokkade:** `create_user`/`RegisterRequest`/`User`-model gaven standaard
-  rol `medewerker`; `PUT /api/settings/tenant` eist `require_role("admin")` → Arsalans eerste
-  account kon niet opslaan. Wens Arsalan: alle accounts admin. Fix: default → `admin` op alle
-  drie de plekken + **migratie `s194_all_users_admin`** (idempotent, promoot bestaande users).
-  Beide prod-accounts nu admin. `require_role`-mechaniek blijft (security-posture). Test toegevoegd.
-  ⚠️ Bijeffect (bewust, gemeld): admin dekt ook Exact/sjablonen/workflow/user-aanmaak — prima voor 1-2-persoons.
-- **Instellingen-waarden op prod gezet (ná expliciet akkoord Arsalan):** `Tenant.email` kesting@ →
-  **incasso@kestinglegal.nl** (B13 vast kanaal werkt nu), BTW leeg → **NL869343610B01**.
-  Derdengelden-IBAN stond al goed (NL20RABO0388506520).
-- **Kantoorrekening-datafout gecorrigeerd (D-C-audit-punt):** het veld `iban` (kantoorrekening)
-  bevatte óók het derdengelden-nummer → elke factuur aan een opdrachtgever vroeg betaling op de
-  derdengeldenrekening. Gezet op Lisannes eigen Kesting-rekening **NL79KNAB0606569456**. ⚠️ Arsalan
-  leverde `NL79KNAB060656945` (9 cijfers i.p.v. 10); via IBAN-checksum was er precies één geldige
-  reconstructie (…9456) → met zijn "ja" gezet. **Nog 1× tegen bankpas checken.** Rekening-scheiding
-  in de code klopt: factuur→kantoor-IBAN (2 plekken), sommatie/aanmaning/regeling→derdengelden
-  (luide placeholder bij leeg, audit #61), SEPA→derdengelden.
-
-### Taak 3 — bankimport droogloop + parser-fix (commit `19743e8`, LIVE; import zelf NIET gedaan)
-- **Parser-bug gevonden + gefixt:** het echte afschrift (`CSV_A_NL20RABO0388506520`, derdengelden,
-  1 jaar, 368 regels) gebruikt komma-decimaal (+1013,74); `parse_rabobank_csv` stripte komma's →
-  élk bedrag 100× te hoog (droogloop-som €17,7 mln i.p.v. €176.905,81). `_parse_amount` (komma/punt/
-  duizendtallen, meest-rechtse scheidingsteken = decimaal) + 3 tests met echte rij. 53 tests groen.
-- **Droogloop op prod (100% alleen-lezen, echte parser+matcher):** 212 credits €176.905,81;
-  **138 al geboekt** (S179/S180, exact op datum+bedrag) — ⚠️ dubbeltel-valkuil: H17-dedup ziet ze
-  NIET (die boekingen liepen buiten de import-pijplijn om) → blind importeren = honderden dubbelen.
-  **17 echt-nieuw** na 30 mei (€8.836), **29 gaten** op bekende maar afgesloten zaken (€43.744),
-  **22 onbekende** zaken (€40.462, D-/FN-nummers). Matcher kijkt alleen naar 18 actieve zaken.
-  Beslislijst 4 groepen → **C1-import samen met Arsalan.** Rapport: `docs/sessions/S194-bankimport-droogloop.md`.
-
-### Taak 1 — visuele doorklik prod (Playwright, seidony@, niets verstuurd)
-- **Follow-up "Uitvoeren" → voorbeeldvenster werkt** (B13): afzender/ontvanger/onderwerp/brief;
-  afzender = **incasso@kestinglegal.nl** (bewijst afzender-fix + sluit S193-openstaand punt);
-  "Versturen" grijs zonder e-mailadres. Getest op testdossier 2026-00001. Escalatie-direct-uitvoeren
-  NIET geklikt (zou echte cliëntzaak muteren) — code-pad wel bevestigd.
-- **Verjaring:** IN100016 rekent exact op **23-09-2026** (via API, `verjaring_basis_date` 2021-09-23
-  + 5 jr); afgesloten zaak toont terecht geen badge; Mijn Taken toont de alarmen. Geen actieve zaak
-  heeft nu een verjaring binnen 90 dagen → badge-render niet live te tonen (data, geen bug).
-- **Dashboard/Intake niet leeg:** 18 nieuwe dossiers + 6 intake-aanvragen.
-- **Instellingen opslaan werkt** (admin-fix live bewezen: tijdelijke wijziging opgeslagen + hersteld,
-  geen "admin nodig"); alle waarden correct in beeld.
-
-### Bevinding (klein, niet gefixt — akkoord nodig)
-2 verweesde "VERJAARD"-taken op **afgesloten** zaken (IN100015, IN100127), aangemaakt 4 juli vóór de
-S193-monitorfix. De monitor maakt ze niet meer aan (filtert nu op terminale status), maar deze twee
-blijven in Mijn Taken staan tot iemand ze afvinkt. Opruimen = data-mutatie → wacht op akkoord.
-
-### Verificatie
-Backend: test_settings (8) + test_payment_matching (53) + auth/exact/role (72) groen; ruff schoon;
-migratie s194 lokaal + op prod toegepast (s184→s194). 3 commits (`a5c4332`/`19743e8`/`8279a29`),
-alle gepusht + backend gedeployed via SSH, containers healthy. Prod-waarden via SQL geverifieerd.
-Codex-tegenlezer op de parser-diff getimed uit (5 min) → overgeslagen; parser gedekt door 3 nieuwe tests.
-
-### Volgende sessie
-Bouwblok 2 restant: C1 bankimport-proef **samen** (beslislijst in droogloop-rapport) → B4/A8
-termijn-vooruitblik (alleen overzicht over zaken heen) → B11 stappen 3 proefzaken. Anders bouwblok 3.

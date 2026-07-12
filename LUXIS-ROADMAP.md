@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 12 juli 2026 (sessie 203 deel 2, Opus — S200-voorkantfixes UITGEVOERD + LIVE). 11 van 12 fixes gebouwd, getest en uitgerold (4 deploys, migraties s203/s203b). Codex' audits eerst nagecontroleerd (kloppen). Openstaand: 35-route-sloop, S201-import, S202-securityfixes. Mailverzending blijft op slot. Details: SESSION-NOTES S203 deel 2.
+**Laatst bijgewerkt:** 12 juli 2026 (sessie 204, Fable — review S203-fixes, read-only). 9 van 11 fixes bevestigd; 2 vervolg-punten: mailsync-foutpad vergiftigt volgende accounts (bewezen) + 14-dagenbrief-gate heeft 2 zijdeuren en een zwakke verstuurd-proxy. Rapport: `docs/sessions/S204-review.md`. Volgende sessie = S205 fix-sessie.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S203 deel 2)
+## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S204)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -61,15 +61,14 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-1. ✅ **S200 voorkant-fixes (Fase C) — 11 van 12 AFGEROND + LIVE (12 juli, Opus).** Alle "de
-   voorkant liegt"-bevindingen behalve de 35-route backend-sloop zijn gebouwd, getest en uitgerold
-   (4 deploys, migraties `s203`/`s203b`). Statusregel per bevinding: `docs/sessions/S200-BEVINDINGEN.md`.
-2. ✅ **Codex-audits nagecontroleerd — betrouwbaar.** 8 security-bevindingen zelf in de bron
-   teruggevonden; facturatie-cijfers onafhankelijk hergeteld tegen de BaseNet-export (klopt op de cent).
-   **Volgende sessie = S204 Fable-review** van deze fixes (`docs/sessions/PROMPT-S204-fable-review.md`):
-   read-only, bron + prod nalezen, tests draaien, elke fix tegenspreken (m.n. de juridische
-   14-dagenbrief-blokkade: bestaan er andere verzendpaden die de gate omzeilen?). Pas daarna nieuw bouwen.
-3. **Openstaand ná de review (kies één spoor):**
+1. ✅ **S204 Fable-review AFGEROND (12 juli).** 9 van 11 S203-fixes bevestigd; batch-gate #5 zelf
+   correct. Twee vervolg-punten met bewijs in `docs/sessions/S204-review.md` (§Beslislijst):
+   14-dagenbrief-gate ontbreekt in follow-up "Uitvoeren" én in het AI-concept-verzendpad (🔴 juridisch),
+   verstuurd-proxy = stap-binnenkomst (🟠), mailsync-foutpad vergiftigt volgende accounts (🟠, bewezen),
+   heartbeat ziet "draait maar faalt" niet (🟡), dagenbrief-stap heeft geen sjabloon op prod (besluit).
+2. **Volgende sessie = S205 fix-sessie** (`docs/sessions/PROMPT-S205-gate-zijdeuren.md`): de
+   beslislijst hierboven, juridische punten eerst. Checklist: dagelijkse-job-rijen in `scheduler_heartbeat`.
+3. **Openstaand ná S205 (kies één spoor):**
    - **S201 facturatie-import** — 439 conflict-vrije facturen; recept + droogloop-poorten klaar in
      `docs/research/S201-facturatie-recept.md`. Aparte, naar-buiten-gerichte schrijfactie → apart akkoord.
    - **S203-restpunten** — 35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail,
@@ -77,7 +76,8 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
    - **S202 security-fixes (Fase D)** — H1 cross-tenant CaseFile, H2 fail-open "betaald"-guard, H3
      "Geïnd" telt verwijderde betalingen, M1/M2 + mailhardening. Rapport `docs/security/S202-delta-audit.md`.
      M3 (DB-superuser/RLS Fase 2) bewust apart.
-4. **Beslissingen voor Lisanne/Arsalan:** juridisch #5 (14-dagenbrief harde blokkade vs. waarschuwing);
+4. **Beslissingen voor Lisanne/Arsalan:** 14-dagenbrief versturen vanuit Luxis (sjabloon op de stap
+   zetten — bestaat al in code) óf buiten Luxis + handmatige registratie (S204 beslispunt 5);
    derdengelden-werkwijze (272 betalingen buiten derdengeldenkanaal — S200 #18); kantoorrekening
    `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer gereconstrueerd).
 5. **Heropening werkvoorraad:** volgende batch per opdrachtgever mét stap 4b —

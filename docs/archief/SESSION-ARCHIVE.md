@@ -8379,3 +8379,67 @@ bleef aan — niets echt verstuurd; alles bewezen via tests + preview.
 - **Bouwblok 2** zodra C2-gegevens binnen zijn: C2 invullen → C1 bankimport-proef (samen) →
   B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken. Anders **bouwblok 3**.
 - Prompt: `docs/sessions/PROMPT-S194.md`.
+
+## Sessie 194 (10 juli 2026, Opus — taak 2 + taak 3 + taak 1, alles live/klaar)
+
+### Samenvatting
+`PROMPT-S194.md` uitgevoerd: taak 2 (instellingen-blokkade + waarden), taak 3 (bankimport),
+taak 1 (visuele doorklik). Ontdekking vooraf: het aparte derdengelden-veld bestónd al (model
++ scherm), dus taak 2 punt 3 was al gebouwd — alleen waarden restten.
+
+### Taak 2 — admin-fix + instellingen-waarden (LIVE, commit `a5c4332`)
+- **Root cause admin-blokkade:** `create_user`/`RegisterRequest`/`User`-model gaven standaard
+  rol `medewerker`; `PUT /api/settings/tenant` eist `require_role("admin")` → Arsalans eerste
+  account kon niet opslaan. Wens Arsalan: alle accounts admin. Fix: default → `admin` op alle
+  drie de plekken + **migratie `s194_all_users_admin`** (idempotent, promoot bestaande users).
+  Beide prod-accounts nu admin. `require_role`-mechaniek blijft (security-posture). Test toegevoegd.
+  ⚠️ Bijeffect (bewust, gemeld): admin dekt ook Exact/sjablonen/workflow/user-aanmaak — prima voor 1-2-persoons.
+- **Instellingen-waarden op prod gezet (ná expliciet akkoord Arsalan):** `Tenant.email` kesting@ →
+  **incasso@kestinglegal.nl** (B13 vast kanaal werkt nu), BTW leeg → **NL869343610B01**.
+  Derdengelden-IBAN stond al goed (NL20RABO0388506520).
+- **Kantoorrekening-datafout gecorrigeerd (D-C-audit-punt):** het veld `iban` (kantoorrekening)
+  bevatte óók het derdengelden-nummer → elke factuur aan een opdrachtgever vroeg betaling op de
+  derdengeldenrekening. Gezet op Lisannes eigen Kesting-rekening **NL79KNAB0606569456**. ⚠️ Arsalan
+  leverde `NL79KNAB060656945` (9 cijfers i.p.v. 10); via IBAN-checksum was er precies één geldige
+  reconstructie (…9456) → met zijn "ja" gezet. **Nog 1× tegen bankpas checken.** Rekening-scheiding
+  in de code klopt: factuur→kantoor-IBAN (2 plekken), sommatie/aanmaning/regeling→derdengelden
+  (luide placeholder bij leeg, audit #61), SEPA→derdengelden.
+
+### Taak 3 — bankimport droogloop + parser-fix (commit `19743e8`, LIVE; import zelf NIET gedaan)
+- **Parser-bug gevonden + gefixt:** het echte afschrift (`CSV_A_NL20RABO0388506520`, derdengelden,
+  1 jaar, 368 regels) gebruikt komma-decimaal (+1013,74); `parse_rabobank_csv` stripte komma's →
+  élk bedrag 100× te hoog (droogloop-som €17,7 mln i.p.v. €176.905,81). `_parse_amount` (komma/punt/
+  duizendtallen, meest-rechtse scheidingsteken = decimaal) + 3 tests met echte rij. 53 tests groen.
+- **Droogloop op prod (100% alleen-lezen, echte parser+matcher):** 212 credits €176.905,81;
+  **138 al geboekt** (S179/S180, exact op datum+bedrag) — ⚠️ dubbeltel-valkuil: H17-dedup ziet ze
+  NIET (die boekingen liepen buiten de import-pijplijn om) → blind importeren = honderden dubbelen.
+  **17 echt-nieuw** na 30 mei (€8.836), **29 gaten** op bekende maar afgesloten zaken (€43.744),
+  **22 onbekende** zaken (€40.462, D-/FN-nummers). Matcher kijkt alleen naar 18 actieve zaken.
+  Beslislijst 4 groepen → **C1-import samen met Arsalan.** Rapport: `docs/sessions/S194-bankimport-droogloop.md`.
+
+### Taak 1 — visuele doorklik prod (Playwright, seidony@, niets verstuurd)
+- **Follow-up "Uitvoeren" → voorbeeldvenster werkt** (B13): afzender/ontvanger/onderwerp/brief;
+  afzender = **incasso@kestinglegal.nl** (bewijst afzender-fix + sluit S193-openstaand punt);
+  "Versturen" grijs zonder e-mailadres. Getest op testdossier 2026-00001. Escalatie-direct-uitvoeren
+  NIET geklikt (zou echte cliëntzaak muteren) — code-pad wel bevestigd.
+- **Verjaring:** IN100016 rekent exact op **23-09-2026** (via API, `verjaring_basis_date` 2021-09-23
+  + 5 jr); afgesloten zaak toont terecht geen badge; Mijn Taken toont de alarmen. Geen actieve zaak
+  heeft nu een verjaring binnen 90 dagen → badge-render niet live te tonen (data, geen bug).
+- **Dashboard/Intake niet leeg:** 18 nieuwe dossiers + 6 intake-aanvragen.
+- **Instellingen opslaan werkt** (admin-fix live bewezen: tijdelijke wijziging opgeslagen + hersteld,
+  geen "admin nodig"); alle waarden correct in beeld.
+
+### Bevinding (klein, niet gefixt — akkoord nodig)
+2 verweesde "VERJAARD"-taken op **afgesloten** zaken (IN100015, IN100127), aangemaakt 4 juli vóór de
+S193-monitorfix. De monitor maakt ze niet meer aan (filtert nu op terminale status), maar deze twee
+blijven in Mijn Taken staan tot iemand ze afvinkt. Opruimen = data-mutatie → wacht op akkoord.
+
+### Verificatie
+Backend: test_settings (8) + test_payment_matching (53) + auth/exact/role (72) groen; ruff schoon;
+migratie s194 lokaal + op prod toegepast (s184→s194). 3 commits (`a5c4332`/`19743e8`/`8279a29`),
+alle gepusht + backend gedeployed via SSH, containers healthy. Prod-waarden via SQL geverifieerd.
+Codex-tegenlezer op de parser-diff getimed uit (5 min) → overgeslagen; parser gedekt door 3 nieuwe tests.
+
+### Volgende sessie
+Bouwblok 2 restant: C1 bankimport-proef **samen** (beslislijst in droogloop-rapport) → B4/A8
+termijn-vooruitblik (alleen overzicht over zaken heen) → B11 stappen 3 proefzaken. Anders bouwblok 3.

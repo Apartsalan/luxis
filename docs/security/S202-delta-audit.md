@@ -1,13 +1,14 @@
 # S202 — Security- & consistentie-audit van de delta sinds S183
 
-**Datum:** 12 juli 2026 · **Model:** Fable (read-only) · **Scope:** `git diff sessie-183..HEAD`
-(49 commits, 122 bestanden, +6843/−3956). **Status:** 6 van de 7 blokken afgerond in deze
-sessie; **Blok 2 (mailpad) is afgebroken en overgedragen aan Sol/Codex** — zie onderaan de
-kant-en-klare vervolgprompt.
+**Datum:** 12 juli 2026 · **Model:** Fable + Sol Ultra (read-only) · **Scope:**
+`git diff sessie-183..HEAD` (49 commits, 122 bestanden, +6843/−3956). **Status:** alle 7
+blokken afgerond; Blok 2 (mailpad) is op 12 juli door Sol Ultra afgemaakt met code-, test-
+en read-only productiebewijs.
 
-Alle bevindingen zijn met bewijs uit déze sessie (code-regel of prod-query, read-only).
-Niets is gewijzigd, geen mail verstuurd, geen mutaties op prod. Fixen gebeurt in een latere
-Opus/Sol-sessie.
+Alle bevindingen zijn onderbouwd met bewijs uit de audit (code-regel, gerichte test of
+read-only prod-query). Alleen dit rapport is bijgewerkt: geen productcode of productiedata is
+gewijzigd. Tijdens de hervatte verificatie is geen mail verstuurd; dat is voor de eerdere,
+afgebroken auditrun niet afzonderlijk achteraf te bewijzen. Fixen gebeurt later.
 
 ---
 
@@ -17,15 +18,16 @@ Opus/Sol-sessie.
 |---|---|---|
 | Kritiek | 0 | — |
 | Hoog | 3 | Cross-tenant CaseFile-lek bij mailbijlage-opslag · 2× fail-open op "betaald"-guard · "Geïnd"-rapportage telt verwijderde betalingen |
-| Middel | 3 | Bulk-status geen lengtecap (DoS) · auto-advance mist terminale-stap-check · app draait als DB-superuser (RLS alleen via SET ROLE) |
-| Laag | 3 | Settings-GET niet admin-only (afwijking rollen.md) · SendDocument geen e-mailformaat-check · collection_rate via float |
-| Info | 4 | Globaal mailslot zonder tenant_id · e-mailadressen in prod-logs · `.codex/config.toml` leesbare sleutels (lokaal) · PowerSearch cosmetische punten |
+| Middel | 5 | Bulk-status zonder lengtecap · auto-advance zonder terminale-stap-check · app als DB-superuser · opgeslagen dossierdata ongeëscapet in systeemmail-HTML · ontvangers niet centraal/cap-gelimiteerd |
+| Laag | 5 | Settings-GET niet admin-only · collection_rate via float · base64-bijlagecaps te laat · mailslotcache vóór commit · logvervalsing via gevouwen mailheaders/bestandsnaam |
+| Info | 4 | Globaal mailslot zonder tenant_id · adressen/onderwerpen/bestandsnamen in prod-logs · `.codex/config.toml` leesbare sleutels (lokaal) · PowerSearch cosmetische punten |
 
 **Grote geruststellingen (geverifieerd OK):** RLS op prod is compleet en zonder drift
 (44/44 tenant-tabellen FORCE + policy, alleen `users` bewust uitgezonderd). Geen secrets in
 de repo of de delta-diff. Frontend-bundle bevat geen `NEXT_PUBLIC_*`-sleutels. PowerSearch
 is injectie-veilig en tenant-gescoped. De bulk-status- en pipeline-batch-paden zijn
-tenant-gescoped in de query zelf.
+tenant-gescoped in de query zelf. Alle drie applicatiemailtransporten blokkeren op het
+mailslot; prod stond tijdens de controle effectief dicht.
 
 ---
 
@@ -67,12 +69,6 @@ risico — wel een afwijking van de gedocumenteerde matrix.
 - **Fix (keuze):** ofwel rollen.md nuanceren ("schrijven = admin, lezen = alle rollen"),
   ofwel de GET's ook achter `require_role("admin")`. Productbeslissing, niet chirurgisch fixen.
 
-### L2 (LAAG) — SendDocument mist e-mailformaat-check
-`backend/app/documents/schemas.py:170-174` (`SendDocumentRequest.recipient_email`): alleen
-`max_length=320`, geen formaat-check — terwijl `compose_router.py:48,115-121` dat wél doet via
-`_EMAIL_RE`. Inconsistente validatie tussen twee verzendpaden, geen beveiligingsrisico.
-- **Fix:** hergebruik `_EMAIL_RE` op `recipient_email`/`cc`.
-
 ### Geverifieerd OK (Blok 1)
 - `PUT /api/cases/bulk/status` — elke `case_id` via `get_case(db, tenant_id, case_id)`
   (tenant-gescoped), `new_status` gevalideerd tegen `CASE_STATUSES`, elke wijziging schrijft
@@ -85,8 +81,9 @@ risico — wel een afwijking van de gedocumenteerde matrix.
 - `POST /intake/from-email/{email_id}` — tenant-gescoped, idempotent, audit-velden gezet.
 - `GET /dashboard/upcoming-installments` — leaf-tabel `PaymentArrangementInstallment` op
   `tenant_id` gefilterd (`collections/service.py:953-998`).
-- `compose_router.py` — alle 4 endpoints valideren `Case.tenant_id`; bijlagen op
-  `CaseFile.tenant_id`+`case_id`; cap 3 MB × max 10; e-mailadressen serverzijdig gevalideerd.
+- `compose_router.py` — alle 4 endpoints valideren `Case.tenant_id`; dossierbijlagen op
+  `CaseFile.tenant_id`+`case_id`. De bestaande 3 MB- en 10-bijlagencaps staan er, met de
+  volgorde-beperking uit L4. Ontvangervalidatie is niet overal gelijk (zie M5).
 - `documents/router.py` — elke `case_id`/`document_id` tenant-gefilterd; `html_to_pdf` via
   `_data_only_url_fetcher` (alleen `data:`-URI's) → SSRF/LFI gemitigeerd.
 - `incasso/router.py` move-step/batch — `Case` geladen met `tenant_id`-filter, batch-`case_ids`
@@ -96,18 +93,126 @@ risico — wel een afwijking van de gedocumenteerde matrix.
 
 ---
 
-## Blok 2 — Mailpad (S185-S187) — ⚠️ AFGEBROKEN, OVERGEDRAGEN AAN SOL/CODEX
+## Blok 2 — Mailpad (S185-S187) — afgerond
 
-Deze audit is door de gebruiker afgebroken vóór afronding (tokens). **Nog niet geauditeerd.**
-Kant-en-klare vervolgprompt staat onderaan dit document ("Vervolgprompt voor Sol/Codex").
-Bekende aanknopingspunten uit deze sessie (niet geverifieerd als bevinding, wel als startpunt):
-- IMAP CR/LF-injectiefix in `_imap_quote` (commit `8b658c7`, S188e) moet heraudit worden +
-  gecheckt of hetzelfde patroon elders voorkomt (subject in MIME-headers, folder-namen).
-- Mailslot-vlag: `email/service.py:40` combineert env (`OUTBOUND_MAIL_LOCK`) OF DB-vlag met
-  OR-logica, en `email/service.py:66` valt bij een ontbrekende DB-rij terug op `True` (dicht) —
-  dit **lijkt** fail-safe, maar moet per verstuurpad (compose, batch, followup, AI-agent)
-  geverifieerd worden. Prod-stand nu: `app_config.outbound_mail_locked = true` (dicht),
-  env `OUTBOUND_MAIL_LOCK=false`.
+Scope: het volledige uitgaande applicatiemailpad vanaf de routes en systeemtaken tot aan de drie
+transporten: generieke SMTP, Outlook Graph en IMAP/SMTP. Bewijs bestaat uit
+de actuele code, git-commit `8b658c7`, gerichte lokale probes, de bestaande regressietests
+en read-only prod-SQL. Er is geen mail verstuurd.
+
+### M4 (MIDDEL) — Opgeslagen dossierdata kan HTML injecteren in systeemmails
+`backend/app/documents/docx_service.py:344-438` bouwt de e-mailcontext rechtstreeks uit
+contact-, dossier- en vorderingsvelden. `backend/app/email/incasso_templates.py:123-145`
+markeert vervolgens de volledige samengestelde inhoud als vertrouwde `Markup`, terwijl onder
+meer omschrijving en factuurnummer ongeëscapet met f-strings worden ingevoegd
+(`:168-175,356-365`). Hetzelfde patroon staat in `invoices/service.py:615-620` en
+`followup_service.py:476-495`. Jinja's auto-escaping wordt daarmee bewust gepasseerd.
+
+- **Meetbewijs:** een lokale renderprobe met de fictieve cliëntnaam `<b>INJECTED</b>`
+  leverde letterlijk die tag in de HTML op; `&lt;b&gt;` kwam niet voor.
+- **Prod-stand:** een read-only telling vond **0** hoekhaken in de gecontroleerde naam-,
+  adres-, plaats-, dossierkenmerk-, dossieromschrijving-, vorderingsomschrijving- en
+  factuurnummervelden. Er is dus geen aangetoonde actuele besmetting.
+- **Faalscenario:** geïmporteerde of handmatig opgeslagen tekst kan de opmaak/inhoud van een
+  uitgaande juridische systeemmail veranderen, bijvoorbeeld een misleidende link of verborgen
+  tekst toevoegen. Scriptuitvoering bij de ontvanger hangt van diens mailclient af en is
+  **niet geverifieerd**; inhoudsintegriteit is al zonder scriptuitvoering geraakt.
+- **Fix-recept:** escape alle data-afkomstige tekst op de grens van de systeemmailrenderer en
+  markeer alleen de eigen vaste HTML-fragmenten als vertrouwd. Laat vrije, door de gebruiker
+  gemaakte mail-HTML ongemoeid. Voeg een regressietest toe met naam, kenmerk, omschrijving en
+  factuurnummer met HTML-tekens. **Omvang:** klein/middel (renderer + tests).
+
+### M5 (MIDDEL) — Ontvangers worden niet centraal gevalideerd of begrensd
+De vrije compose-route valideert syntactisch via `_EMAIL_RE`, maar `ComposeRequest.to/cc`
+hebben geen maximale lijstlengte (`compose_router.py:89-121`); een lokale schema-probe
+accepteerde 10.000 ontvangers. Andere systeempaden hebben soms alleen `max_length=320` en
+geen formaatcheck (`documents/schemas.py:170-186`, `compose_router.py:124-131`). De centrale
+service accepteert één ruwe `to: str`
+(`send_service.py:95-116`) en dwingt geen normalisatie, adreslimiet of bestemmingbeleid af.
+De compose-sendroute heeft ook geen route-specifieke rate-limit.
+
+- **Meetbewijs prod:** **39 van 894** gevulde contactadressen bevatten een komma/witruimte en
+  meer dan één `@`. Gesplitst zijn dit **83** afzonderlijke, syntactisch geldige adressen.
+  Aan zulke contacten hangen **27** dossiers totaal, waarvan **1 actief**. `email_logs` bevatte
+  tijdens de meting in totaal **0 rijen**, dus ook geen bewezen eerdere meervoudige verzending.
+- **Faalscenario:** hetzelfde opgeslagen veld kan door SMTP als meerdere ontvangers worden
+  geïnterpreteerd, terwijl Outlook Graph het als één ongeldig adres kan weigeren. Dat
+  providerverschil is uit de payloadopbouw afgeleid en **niet extern verstuurd/geverifieerd**.
+  Een gecompromitteerde ingelogde sessie kan bovendien zonder recipient-cap een grote externe
+  lijst aanbieden. Alle rollen mogen volgens `docs/security/rollen.md` dagelijks mailen; dat
+  deel is dus geen rollenafwijking.
+- **Fix-recept:** één centrale parser/validator vóór elk transport, één canonieke opslagvorm
+  (één adres per waarde of expliciete lijst), een redelijke recipient-cap en route-rate-limit.
+  Reinig de 39 bestaande velden pas in een aparte, gecontroleerde datamigratie.
+  **Omvang:** middel (schema's, service, tests en aparte datacorrectie).
+
+### L4 (LAAG) — Base64-bijlagecaps worden pas na volledig decoderen afgedwongen
+`InlineAttachment.data_base64` is onbegrensd; de code decodeert elk item volledig en controleert
+daarna pas 3 MB en na de hele lus pas maximaal 10 bijlagen
+(`compose_router.py:83-86,207-228`). De reverse proxy begrenst de totale request op 55 MB,
+waardoor dit geen onbeperkte DoS is, maar een ingelogde gebruiker kan wel onnodige piekbelasting
+veroorzaken.
+- **Fix:** cap de lijst in het schema en weiger op base64-lengte vóór decoderen; behoud de
+  bestaande controle op gedecodeerde bytes. **Omvang:** klein + regressietest.
+
+### L5 (LAAG) — Mailslotcache wijzigt vóór de request-commit
+`email/service.py:73-86` doet `flush()` en zet daarna de procesglobale
+`_db_mail_locked`; de requestdependency commit pas later. Mislukt die commit na een unlock,
+dan kan het geheugen open blijven terwijl de DB nog dicht staat, totdat een restart of volgende
+toggle de waarden weer gelijk trekt.
+- **Beperking:** de trigger is smal en prod draait aantoonbaar met één Uvicorn-worker; de
+  afwijkende toestand zelf heeft echter geen tijdslimiet. Er is geen verzending aangetoond.
+- **Fix:** wijzig de cache pas na succesvolle commit of herlaad bij rollback. **Omvang:** klein.
+
+### L6 (LAAG) — Gevouwen mailheaders/bestandsnaam kunnen logregels vervalsen
+De compat32-mailparser die de IMAP-code werkelijk gebruikt behoudt CR/LF in geldige gevouwen
+`Subject`- en `Message-ID`-headers. Onderwerpen komen op INFO in
+`email/sync_service.py:586,848`; Message-ID op `:750`. Bestandsnamen komen vooral in
+warning/error-logs, onder meer op `:442`. Een lokale loggingprobe produceerde met zo'n gevouwen
+waarde twee fysieke logregels. Dit voert geen code uit, maar kan containerlogs misleidend maken.
+- **Fix:** vervang CR/LF/NUL door spaties vóór loggen en vóór bestandsnaamvorming; log waar
+  mogelijk stabiele IDs. **Omvang:** klein + regressietest.
+
+### I2 (INFO) — Adressen, onderwerpen en bestandsnamen in INFO-logs
+Er zijn geen tokens, wachtwoorden of mailbodies in de gecontroleerde logger-calls gevonden.
+Wel loggen onder meer `sync_service.py:485,586,762-767,848-850`, `send_service.py:189-212`,
+`service.py:145`, `providers/imap_provider.py:289,431,615`, `providers/outlook.py:377`,
+`oauth_router.py:219`, `oauth_service.py:240-310`, `auth/router.py:224-249` en
+`workflow/scheduler.py:208-212` adressen, onderwerpen of bestandsnamen. De actuele
+prodcontainer bevatte bij de hermeting **417** adresbevattende "Sync klaar"-regels. Dat is persoonsgegevens-
+en metadataretentie in containerlogs.
+- **Advies:** maskeer adressen en onderwerp/bestandsnaam op INFO; zet detail alleen tijdelijk
+  op DEBUG met beperkte retentie.
+
+### Geverifieerd OK (Blok 2)
+- **Applicatiemailslot compleet:** generieke SMTP controleert in `email/service.py:89-111`, Outlook
+  vóór `/sendMail` in `providers/outlook.py:300-365`, en IMAP/SMTP vóór verzending in
+  `providers/imap_provider.py:535-568`. Het hostscript `scripts/setup-uptime-monitoring.sh:34`
+  kent daarnaast een los `mail`-alarm buiten de app en buiten het mailslot. De cron staat op prod,
+  maar het `mail`-commando ontbreekt daar; dit pad kan nu dus geen alertmail versturen.
+- **Prod effectief dicht:** `app_config.outbound_mail_locked=true`, precies één configrij;
+  env `OUTBOUND_MAIL_LOCK=false`. De effectieve OR-logica blijft dus dicht.
+- **Regressietests:** in de backendcontainer:
+  `python -m pytest tests/test_mail_lock.py tests/test_imap_send.py -q -p no:cacheprovider`
+  → **26 passed, 1 warning**. De transports waren gemonkeypatcht/geblokkeerd; er is geen mail
+  verstuurd.
+- **Header-/IMAP-injectie:** commit `8b658c7` laat `_imap_quote` CR/LF/NUL verwijderen.
+  Python `EmailMessage` weigert CR/LF in `Subject`, `To` en de uiteindelijke `From`-
+  header. Foldernamen zijn interne constanten.
+- **Mailbox read-only:** bronmappen worden met `readonly=True` geopend
+  (`imap_provider.py:293,369,423`). Repo-breed zijn geen `STORE`, `DELETE`, `EXPUNGE`,
+  `COPY` of `MOVE` gevonden; alleen de bedoelde `APPEND` naar Verzonden na SMTP-succes.
+- **Credentials versleuteld:** OAuth- en IMAP-geheimen gaan via Fernet in
+  `email/token_encryption.py` en `oauth_service.py`. Prod-ciphertexts waren voor 3 echte
+  accounts minimaal 100 bytes. De ene korte `provider='import'`-waarde is aantoonbaar de
+  vaste BaseNet-importplaceholder en wordt niet door de scheduler geselecteerd.
+- **Menselijke verzendpoort:** follow-up/classificatie voert alleen uit na een expliciete,
+  geauthenticeerde approve/execute-request; batchverzending is eveneens expliciet. Er is geen
+  automatische antwoordcaller gevonden. De AI-tool `email_compose` is dormant: geen
+  productie-instantiatie/caller gevonden (en de handler mist nu het verplichte `attachments`).
+- **Rolmatrix:** alle normale compose-/sendroutes eisen authenticatie. Dat alle drie rollen
+  dagelijkse mail mogen verzenden is conform `docs/security/rollen.md`, niet per ongeluk publiek.
+  `/api/auth/forgot-password` is bewust publiek, rate-limited en gebruikt hetzelfde mailslot.
 
 ---
 
@@ -275,51 +380,12 @@ weergave. Alleen een weergavepercentage, niet geboekt. Stijlafwijking van "ALL m
 
 ---
 
-## Vervolgprompt voor Sol/Codex — Blok 2 (mailpad) afmaken
-
-> **Taak:** maak Blok 2 van de S202-security-audit af. 100% read-only (prod-queries mogen,
-> geen mutaties, geen mail versturen, geen fixes bouwen — alles als bevinding naar het rapport).
-> Voeg je bevindingen toe onder "## Blok 2 — Mailpad" in `docs/security/S202-delta-audit.md`
-> (vervang de ⚠️-placeholder), gerangschikt op ernst met bewijs (bestand:regel of prod-query).
->
-> **Scope:** het mail-verstuurpad gebouwd sinds tag `sessie-183` (S185-S187, S188e, S197).
-> Bestanden: `backend/app/email/send_service.py`, `email/providers/imap_provider.py`,
-> `email/compose_router.py`, `email/sync_service.py`, `email/service.py`, `email/oauth_service.py`,
-> `email/incasso_templates.py`, `settings/models.py` + `settings/router.py`, `config.py`.
-> Tests als referentie: `backend/tests/test_imap_send.py`, `test_mail_lock.py`.
->
-> **Check:**
-> 1. **Header-/CR-LF-injectie** — verifieer de `_imap_quote`-fix (commit `8b658c7`) en zoek
->    hetzelfde patroon elders: subject/naam/adres in SMTP-MIME-headers, IMAP-commando's,
->    folder-namen. Kan een debiteurnaam of onderwerp headers injecteren?
-> 2. **Mailslot fail-safe** — `email/service.py:40` (OR van env + DB-vlag) en `:66` (ontbrekende
->    DB-rij → `True`). Verifieer dat élk verstuurpad (compose, pipeline/batch, followup, AI-agent)
->    de vlag checkt, niet slechts één. Prod-stand: `app_config.outbound_mail_locked=true`,
->    env `OUTBOUND_MAIL_LOCK=false`.
-> 3. **Wie mag versturen** — rol-checks op compose/send-endpoints? Kan elke ingelogde gebruiker
->    als `incasso@` naar willekeurige adressen mailen (spam/phishing bij gecompromitteerd account)?
-> 4. **Log-lekken** — mail-body/adressen/credentials in `logger`-calls? (Bekend: sync logt
->    e-mailadressen op INFO-niveau — zie I2 hieronder, bevestig scope.)
-> 5. **IMAP read-only** — geen STORE/DELETE/EXPUNGE op de bron-mailbox behalve de bedoelde
->    APPEND-naar-Verzonden. Worden SMTP/IMAP-credentials versleuteld opgeslagen (TOKEN_ENCRYPTION_KEY)
->    of plaintext?
-> 6. **Recipient-validatie op systeempaden** — voorkomt iets dat een batch/followup naar een
->    verkeerd/extern adres mailt zonder menselijke actie?
->
-> Rapporteer per bevinding: [ernst] — bestand:regel — wat — faalscenario — fix-recept + geschatte
-> fix-grootte. Plus een "geverifieerd OK"-lijst met bestand:regel. Onzeker = label "niet geverifieerd".
-
-### I2 (INFO) — E-mailadressen in prod-logs
-`app.email.sync_service` logt op INFO-niveau regels als
-`Sync klaar voor <adres>@kestinglegal.nl: 43 opgehaald, …`. Geen sleutels/inhoud, wel PII
-(mailboxadressen) in de container-logs. Laag; overweeg maskeren als logs ooit extern gaan.
-
----
-
 ## Fix-prioriteit voor een latere Opus/Sol-fix-sessie
 1. **H1** cross-tenant CaseFile (kleinste fix, duidelijkste tenant-lek) — ~5 regels.
 2. **H2** fail-open "betaald"-guard (2 plekken) — geld sluit stil weg — ~8 regels.
 3. **H3** "Geïnd" telt verwijderde betalingen — ~2 regels, rapportage-integriteit.
-4. **M1** bulk-status lengtecap — ~1 regel. **M2** auto-advance terminale-check — ~3 regels.
-5. **M3** app-als-superuser (Fase 2) — grote klus, apart plannen.
-6. Blok 2 (mailpad) — **eerst auditen via de bovenstaande Codex-prompt**, dán fixen.
+4. **M4** systeemmail-HTML escapen bij de datagrens — eerst regressietest met dossierdata.
+5. **M5** centrale ontvangerparser/-cap; datacorrectie van 39 velden apart en gecontroleerd.
+6. **M1** bulk-status lengtecap + **M2** auto-advance terminale-check — beide chirurgisch.
+7. **M3** app-als-superuser (RLS Fase 2) — grote klus, apart plannen.
+8. **L4-L6** meenemen als kleine hardeningtests wanneer het mailpad wordt aangepast.

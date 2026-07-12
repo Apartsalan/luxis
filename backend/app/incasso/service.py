@@ -1137,6 +1137,21 @@ async def _try_auto_advance(
         return False
 
     next_step = step_list[current_idx + 1]
+
+    # AUDIT-M2: auto-advance mag een zaak nooit naar een terminale eindstap
+    # (Betaald/Afgesloten) of een hold-stap schuiven. De saldo-guard in
+    # move_case_to_step draait alleen voor manual/batch, dus zonder deze check zou
+    # een herordende of eigen terminale stap mét template een dossier mét saldo
+    # stil als betaald wegboeken. Terminale + hold-stappen worden bewust handmatig
+    # of via een expliciete trigger bereikt, niet via lineaire auto-advance.
+    if next_step.is_terminal or next_step.is_hold_step:
+        logger.debug(
+            "Case %s: auto-advance gestopt vóór stap '%s' (terminaal/hold)",
+            case.case_number,
+            next_step.name,
+        )
+        return False
+
     old_step_name = step_list[current_idx].name
 
     await move_case_to_step(

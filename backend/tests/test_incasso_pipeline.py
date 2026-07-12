@@ -1515,6 +1515,38 @@ async def test_move_to_betaald_fails_closed_on_calc_error(
     assert case.incasso_step_id == werk.id     # nog op de werkstap
 
 
+async def test_auto_advance_stops_before_terminal_step(
+    db, test_tenant, test_user, test_company
+):
+    """AUDIT-M2: auto-advance mag een zaak nooit stil naar een terminale eindstap
+    schuiven. De saldo-guard in move_case_to_step draait alleen voor manual/batch,
+    dus zonder een terminale-check zou auto-advance een dossier mét saldo als betaald
+    wegboeken. Auto-advance stopt vóór terminale (en hold) stappen."""
+    from app.incasso.service import _try_auto_advance
+
+    werk = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Eerste sommatie",
+        sort_order=1, min_wait_days=0, max_wait_days=0,
+    )
+    betaald = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Betaald",
+        sort_order=2, min_wait_days=0, max_wait_days=0, is_terminal=True,
+    )
+    db.add_all([werk, betaald])
+    await db.flush()
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=werk, case_number="2026-09301", status="in_behandeling",
+    )
+
+    advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id)
+
+    assert advanced is False
+    await db.refresh(case)
+    assert case.incasso_step_id == werk.id   # bleef op de werkstap
+    assert case.status != "betaald"
+
+
 # ── AUDIT-H12: only evaluable (timeout) rules are seeded ─────────────────────
 
 

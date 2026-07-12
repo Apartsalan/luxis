@@ -34,18 +34,11 @@ import { formatCurrency } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useTimer, useTimerSeconds } from "@/hooks/use-timer";
 import { useAuth } from "@/hooks/use-auth";
-import { api } from "@/lib/api";
 import { toast } from "sonner";
 
 // ── Types ────────────────────────────────────────────────────────────────
 
 type ViewMode = "week" | "month" | "day";
-
-interface Contact {
-  id: string;
-  name: string;
-  contact_type: string;
-}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -350,17 +343,6 @@ export default function UrenPage() {
   const [filterBillable, setFilterBillable] = useState<string>("");
   const [filterContactId, setFilterContactId] = useState("");
 
-  // Contacts for filter
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  useEffect(() => {
-    api("/api/relations?contact_type=company&per_page=200")
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (data?.items) setContacts(data.items);
-      })
-      .catch(() => {});
-  }, []);
-
   // Query data
   const {
     data: entries,
@@ -384,7 +366,14 @@ export default function UrenPage() {
   const { data: todayEntries } = useMyTodayEntries();
 
   const { data: casesData } = useCases({ per_page: 200 });
-  const cases = casesData?.items ?? [];
+  const cases = useMemo(() => casesData?.items ?? [], [casesData?.items]);
+  const contacts = useMemo(() => {
+    const clients = new Map<string, { id: string; name: string }>();
+    for (const item of cases) {
+      if (item.client) clients.set(item.client.id, item.client);
+    }
+    return [...clients.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [cases]);
 
   // Mutations
   const createMutation = useCreateTimeEntry();
@@ -721,10 +710,10 @@ export default function UrenPage() {
             <select
               value={filterContactId}
               onChange={(e) => setFilterContactId(e.target.value)}
-              aria-label="Filter op relatie"
+              aria-label="Filter op cliënt"
               className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
             >
-              <option value="">Alle relaties</option>
+              <option value="">Alle cliënten</option>
               {contacts.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

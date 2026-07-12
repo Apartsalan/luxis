@@ -206,7 +206,7 @@ export default function DashboardPage() {
           icon={<Users className="h-5 w-5" />}
           label="Relaties"
           value={summary?.total_contacts ?? 0}
-          subtitle={`${summary?.contacts_this_month ?? 0} nieuw deze maand`}
+          subtitle={`${summary?.contacts_this_month ?? 0} toegevoegd deze maand`}
           color="success"
           href="/relaties"
         />
@@ -562,7 +562,22 @@ function WeekSummaryWidget() {
         </Link>
       </div>
       <div className="p-5">
-        <div className="grid grid-cols-3 gap-4 text-center">
+        {!summary || summary.total_minutes === 0 ? (
+          <div className="flex flex-col items-center py-3 text-center">
+            <Timer className="mb-2 h-8 w-8 text-muted-foreground/30" />
+            <p className="text-sm font-medium text-foreground">
+              Nog geen uren deze week
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Registreer tijd op een dossier om hier je weekoverzicht te zien.
+            </p>
+            <Link href="/uren" className="mt-3 text-xs font-medium text-primary hover:underline">
+              Uren registreren
+            </Link>
+          </div>
+        ) : (
+          <>
+          <div className="grid grid-cols-3 gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-foreground tabular-nums">
               {totalHours}:{String(totalMins).padStart(2, "0")}
@@ -598,6 +613,8 @@ function WeekSummaryWidget() {
               </div>
             ))}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
@@ -654,7 +671,16 @@ function RecentInvoicesWidget() {
         ) : (
           <div className="px-5 py-8 text-center">
             <Receipt className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Nog geen facturen</p>
+            <p className="text-sm font-medium text-foreground">Nog geen facturen</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Maak een factuur zodra er declarabele werkzaamheden zijn.
+            </p>
+            <Link
+              href="/facturen/nieuw"
+              className="mt-3 inline-block text-xs font-medium text-primary hover:underline"
+            >
+              Factuur aanmaken
+            </Link>
           </div>
         )}
       </div>

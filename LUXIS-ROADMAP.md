@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 11 juli 2026 (sessie 198, AUTONOOM Opus + Fable-review + Codex-review). **Bouwblok 3 (klus 1-4) LIVE:** status → 4 vaste waarden die de pijplijn volgen + stap-filter (B3), classificatielijn op pauze (A5, bel 342→23 ongelezen), Mijn Taken ontdubbeld + badge-fix (A3), HTML-sjablonen-tab weg (A7). Daarna verplichte Fable+Codex-reviewronde: 8 bevestigde fixes live (geen stille heropening van betaalde zaken, €0-guard bij handmatig 'betaald', openstaand-berekening mét BIK-override, symmetrische heropening bij teruggedraaide betaling). Mailslot staat nog UIT. **Verlengstuk 12 juli — PowerSearch LIVE** (eerste /codex-build: Fable-spec → Sol/Codex xhigh bouwt → Fable reviewt): zoeken op inhoud van 6.509 mails + 1.951 dossierstukken (NL-stemming, relevantie, snippets) + "Documenten"-pagina/menu weg. Details: SESSION-NOTES S198-entry.
+**Laatst bijgewerkt:** 12 juli 2026 (sessie 199, /codex-build: Sol bouwt xhigh, Fable verifieert). **Veegsessie LIVE:** 'betaald' telt overal als eindstatus (`TERMINAL_STATUSES`); bulk-status-endpoint gebouwd (was 404); dode workflow-status-engine gesloopt (−2.492 regels + 3 lege tabellen weg op prod) + fasebalk uit pijplijnstap; rapportage "Geïnd" €135.354,77 (was €0) + faseverdeling sluit; urenfilter alleen cliënten + lege-staten. 1218 tests groen, live-geverifieerd. Mailslot staat nog UIT. Details: SESSION-NOTES S199-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,27 +53,31 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 11 juli 2026, S198)
+## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S199)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
-> (DB-vlag, fail-safe dicht). Env-noodslot van prod verwijderd (`.env` OUTBOUND_MAIL_LOCK=false,
-> backup `.env.bak-s197`). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
+> (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-1. **Bouwblok 1 + 2 + 3 + S197 — AFGEROND.** Blok 1 (S193/S194) + blok 2 (S194/S195/S196): zie archief.
-   S197: Codex-hang opgelost, S196-review + mailslot-knop. **S198 (AUTONOOM): bouwblok 3 klus 1-4 LIVE**
-   — B3 status→4 waarden (pijplijn stuurt) + stap-filter, A5-classificatiepauze (bel 342→23), A3 Taken
-   ontdubbeld, A7 HTML-tab weg. Plus Fable+Codex-reviewronde: 8 fixes live (geen stille heropening van
-   betaalde zaken, €0-guard, openstaand mét BIK, symmetrische heropening). Details: SESSION-NOTES S198.
-2. **Veegsessie (stapel 4) — volgende bouwprioriteit (S199):** C5 urenfilter (alleen opdrachtgevers),
-   lege dashboard-widgets netjes, testdossier 2026-00001 opruimen (mét akkoord), dubbele 'Eerste
-   sommatie'-stap. **PLUS de S198-review-voorstellen:** 'betaald' telt in dashboard/rapportages nog als
-   actief (filter `!= afgesloten` → `TERMINAL_STATUSES`); dode workflow-engine + `NEXT_STATUSES`/
-   `PIPELINE_STEPS` opruimen; `/api/cases/bulk/status` bestaat niet (404, pre-existing). Plan:
-   `docs/plans/PLAN-fase2-bouwblokken.md` (stapel 4).
-3. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer gereconstrueerd); 2 verweesde verjaringstaken op afgesloten zaken (IN100015/IN100127) opruimen (akkoord). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b — `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`. Voorstel (niet gebouwd): heropening-slot dat gecapte betaling flagt (67 notities dekken het nu).
+1. **Bouwblok 1/2/3 + S197 + S198 + S199-veegsessie — AFGEROND.** Blokken en reviews: zie archief +
+   SESSION-NOTES. **S199 (codex-build, Sol bouwt/Fable verifieert) LIVE:** 'betaald' = eindstatus overal
+   (`TERMINAL_STATUSES`), bulk-status-endpoint (was 404), dode workflow-status-engine gesloopt + 3 lege
+   tabellen weg, fasebalk uit pijplijnstap, "Geïnd" telt echte betalingen, faseverdeling sluit,
+   urenfilter alleen cliënten + lege-staten. 1218 tests groen.
+2. **Nog afmaken mét Arsalan (per stuk akkoord — restant S199):** taak 6 (testdossier 2026-00001
+   verwijderen; 6 test-aanvragen afwijzen + "AI Intake"→"Nieuwe aanvragen"); A12 accountnaam seidony@
+   ("Lisanne Kesting"→"Arsalan Seidony"); 2 verweesde verjaringstaken (IN100015/IN100127); 16 inactieve
+   reliek-pijplijnstappen + dubbele inactieve "Eerste sommatie" (FK-check vóór delete); samen visueel
+   doorklikken (dossierkop + bulk-status op 2 testzaken).
+3. **S200 = "de voorkant liegt"-audit** (`docs/sessions/PROMPT-S200.md`): systematische jacht op
+   dode/lege/misleidende features — 8 vegen op de zes fout-families (loszittende knoppen, lege bronnen,
+   liegende cijfers, stil falen, half-af, relieken) + prod-logs + Lisanne-dag als sluitstuk. Read-only
+   meten (Fable), fixes = S201.
+4. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer
+   gereconstrueerd). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b —
+   `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`.
 
 **Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende
 betalingsregelingen zijn alleen zinvol te bewaken als Luxis ook *ziet* dat er betaald is —

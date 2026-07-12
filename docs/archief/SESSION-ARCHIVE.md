@@ -8118,3 +8118,59 @@ en de modellen gehouden). Uitkomsten:
 ### Openstaand
 - CI-rood blijft: `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184-security,
   géén mailwerk) → CI-deploy skipt; uitrol gaat via SSH. Verdient losse fix of skip-markering.
+
+## Sessie 189 (9 juli 2026, Opus+Fable — CI-fix + start menu-doorlichting D-A)
+
+### Samenvatting
+Twee dingen: (1) de al sessies rode CI-test gefixt zodat de auto-deploy niet meer stil
+overslaat, en (2) op verzoek Arsalan een complete menu-doorlichting van heel Luxis
+opgezet — élk menu-onderdeel kritisch langs op techniek + productwaarde + UX/UI — en
+de eerste kijk-sessie (D-A) uitgevoerd.
+
+### Taak 1 — CI-rood `test_role_survives_commit_if_role_exists` GEFIXT (commit `375b2f0`)
+Oorzaak (bewezen via code + reproductie): `set_tenant_context` cachet rol-beschikbaarheid
+één keer per proces. In een volle suite-run zet een eerdere ingelogd-verzoek-test die
+cache op False (`luxis_app` bestaat dan nog niet); `test_rls_isolation` maakt de rol pas
+halverwege aan. De directe pg_roles-check in de test ziet de rol dán wel → skip niet →
+maar de stale cache blokkeert de SET ROLE → `current_user` bleef 'luxis' → rood. In CI's
+verse postgres exact dit patroon; lokaal groen omdat luxis_app cluster-breed al bestaat.
+**Rood→groen bewezen** op een verse wegwerp-postgres zonder luxis_app (1 failed→44 passed).
+Fix chirurgisch in de test (cache resetten + herstellen, nul impact op andere tests);
+productiecode ongemoeid (daar bestaat de rol altijd vóór het eerste verzoek). **Volledige
+CI groen** na push (alle 8 checks). Openstaand-punt "CI-rood test_role" is hiermee weg.
+
+### Taak 2 — Menu-doorlichting opgezet + D-A uitgevoerd (100% read-only)
+Plan: `docs/plans/PLAN-doorlichting-menu.md`. Kernkeuze: Fable is er t/m 12 juli → ALLE
+kijkwerk eerst (3 sessies D-A/D-B/D-C), bouwen daarna met Opus (geen deadline). Per
+onderdeel 3 lagen: techniek (5 vragen), partner-blik (advocatuur/SaaS-specialist),
+UX/UI. Mail valt buiten scope (S185-188 klaar).
+
+**D-A Werkschil (Dashboard, Mijn Taken, Agenda, Documenten) — rapport
+`docs/research/audit-DA-werkschil.md`.** Gemeten in prod-DB + code + doorgeklikt.
+Belangrijkste vondsten:
+- **HOOG:** verjaringsalarm structureel onzichtbaar — monitor vond 2 verjaarde zaken
+  (IN100015/IN100127, beide in heropeningslijst, samen €14.286) maar maakt taken zónder
+  eigenaar aan, terwijl "Mijn Taken" alleen taken mét eigenaar toont. IN100016 verjaart
+  23-09-2026. (Let op: monitor kent stuitingen niet — juridisch oordeel Lisanne.)
+- **BUG:** "Nieuwe Dossiers"-blok filtert `pending`, prod = `pending_review` → altijd 0.
+- **BUG/tegenstrijdig:** Mijn-Taken-badge 19 vs "Alles gedaan!" (dubbeltelling tellers).
+- **Eiland:** 394 e-mail-classificaties allemaal onverwerkt; 264 ongelezen
+  "classificatie klaar"-meldingen verzuipen de bel.
+- **Product:** dashboard ~40% dood (uren/facturen 0 in 4+ mnd); agenda 0 afspraken ooit
+  + Lisanne kan niet syncen; "Documenten" toont alleen sjablonen (2619 echte stukken
+  nergens centraal vindbaar).
+- **Opruimen (met akkoord):** testdossier 2026-00001 telt mee in werkvoorraad (18 i.p.v. 17).
+12 werkorder-kandidaten (A1-A12) in het rapport, voor de fase-2-beslislijst.
+
+### Verificatie
+CI-fix: rood→groen op verse wegwerp-postgres (weggegooid na afloop), volledige CI-run
+groen (`gh run` 8/8). Doorlichting: alle beweringen gemeten deze sessie (SQL op prod,
+code gelezen, app doorgeklikt als seidony@); geen enkele mutatie op prod; "niet
+geverifieerd"-punten expliciet benoemd in het rapport (o.a. genereer-flow, verjaring
+juridisch).
+
+### Volgende sessie
+Kijk-sessie D-B (Relaties/Dossiers/Incasso/Follow-up/Intake) — kant-en-klare prompt
+`docs/sessions/PROMPT-DB-doorlichting.md`, start op Fable. Daarna D-C (Financieel +
+Systeem). Pas ná alle 3 de kijk-sessies: fase-2-beslislijst met Arsalan → Opus-bouwblokken.
+Heropening werkvoorraad blijft parallel klaarstaan.

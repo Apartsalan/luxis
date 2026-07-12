@@ -2,10 +2,65 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S198-verlengstuk: eerste /codex-build-rit) — PowerSearch LIVE (zoeken op inhoud van 6.509 mails + 1.951 dossierstukken, NL-stemming, snippets) + "Documenten"-pagina/menu-item weg. Sol (Codex gpt-5.6-sol, xhigh) bouwde op Fable's bevroren spec; Fable reviewde + vond/fixte 1 prod-bug (NUL-bytes in PDF-tekst). Details: S198-entry §PowerSearch.
-**Laatste feature/fix:** B3 status→4 vaste waarden (pijplijn stuurt status) + stap-filter; classificatielijn op pauze (bel van 342→23 ongelezen); Mijn Taken ontdubbeld + badge-fix; HTML-sjablonen-tab weg. Daarna 8 Fable/Codex-review-fixes (geen stille heropening van betaalde zaken, €0-guard, correcte openstaand-berekening mét BIK, symmetrische heropening bij teruggedraaide betaling). Alles live op prod, tests groen.
-**Openstaand:** ⚠️ MAILSLOT staat UIT via de knop (Arsalan zet zelf aan). Veegsessie (stapel 4) is de volgende bouwprioriteit. Review-voorstellen die NIET gebouwd zijn (bewust): 'betaald' telt in dashboard/rapportages nog als actief (filter `!= afgesloten`, gebruik `TERMINAL_STATUSES`); dode workflow-engine + `NEXT_STATUSES`/`PIPELINE_STEPS` opruimen; `/api/cases/bulk/status` bestaat niet (404, pre-existing). Zie S198-entry §Voorstellen.
-**Volgende sessie:** S199 = veegsessie (stapel 4: C5 urenfilter, lege dashboard-widgets netjes, testdossier 2026-00001 opruimen mét akkoord, dubbele 'Eerste sommatie'-stap) + de review-voorstellen hierboven. Plan: `docs/plans/PLAN-fase2-bouwblokken.md` (stapel 4).
+**Laatst bijgewerkt:** 12 juli 2026 (S199 veegsessie — tweede /codex-build-rit, Sol bouwt/Fable verifieert). Vijf opruim-taken LIVE op prod. Details: S199-entry.
+**Laatste feature/fix:** 'betaald' telt overal als eindstatus (`TERMINAL_STATUSES`); bulk-status-endpoint gebouwd (was 404); dode workflow-status-engine gesloopt (−2.492 regels + 3 lege tabellen weg op prod) + fasebalk uit pijplijnstap; rapportage "Geïnd" toont nu €135.354,77 (was €0) + faseverdeling sluit; urenfilter alleen cliënten + lege-staten widgets. 1218 tests groen, live-geverifieerd.
+**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). **Met Arsalan, per stuk:** taak 6 (testdossier 2026-00001 + 6 test-aanvragen), data-vegen taak 5 (A12 accountnaam seidony@, 2 verweesde verjaringstaken IN100015/IN100127, 16+ reliek-pijplijnstappen), + samen visueel doorklikken (dossierkop + bulk-knop op 2 testzaken). Zie S199-entry §Nog open.
+**Volgende sessie:** S200 = "de voorkant liegt"-audit (systematische jacht op dode/lege/misleidende features, 8 vegen + Lisanne-dag). Prompt: `docs/sessions/PROMPT-S200.md`. Eerst de per-stuk-opruimacties hierboven afronden met Arsalan.
+
+## Sessie 199 (12 juli 2026, nacht — /codex-build: Sol bouwt xhigh, Fable verifieert — veegsessie LIVE)
+
+### Samenvatting
+Tweede codex-build-rit met Sols write-toegang. Sol (`gpt-5.6-sol`, effort xhigh, sessie
+`019f534a…`) bouwde de bevroren veegspec `PROMPT-S199.md` (taak 1–4 + code-delen taak 5)
+in één run, geen fix-rondes. Claude (Fable) las de volledige diff na, draaide álle bewijzen
+zélf opnieuw en zette per taak live onder Arsalans nacht-akkoord. Bouwlog: `docs/sessions/
+S199-BUILD-LOG.md`.
+
+**Taak 1 — 'betaald' = eindstatus overal (`TERMINAL_STATUSES`).** Dashboard-werkvoorraad,
+portefeuille-openstaand, AI-classificatie-sweep, betaalhook en `check_verjaring` sloten alleen
+'afgesloten' uit; betaalde zaken telden onterecht mee (incl. AI-kosten). Per plek beoordeeld
+(rapportage "Geïnd" telt betaald juist wél als geïnd — geen blinde vervanging).
+
+**Taak 2 — bulk-status-endpoint `PUT /api/cases/bulk/status`.** Frontend riep een niet-bestaand
+endpoint aan (altijd 404 → "Statuswijziging mislukt"). Nieuw endpoint loopt per zaak via
+`update_case_status` (guards intact: €0 voor 'betaald', derdengelden voor 'afsluiten'), slaat
+geweigerde zaken over met reden: `{updated, skipped, errors}`, auth verplicht. Tests: happy/
+guard-skip/tenant-isolatie. Live: 401 zonder token, {0,0,[]} met token.
+
+**Taak 3 — dode workflow-status-engine gesloopt.** −2.492 regels: CRUD-routes, engine-service,
+`on_status_change`/auto-mail-hook, modellen, schemas, frontend-beheer + `NEXT_STATUSES`/
+`PIPELINE_STEPS`. Blijft levend: taken, agenda, verjaring. Fasebalk in dossierkop las uit de
+lege `workflow_statuses` (blanco) → nu fase uit `step_category` van de actuele pijplijnstap;
+geen stap → geen balk. Guarded migratie `s199_cleanup_workflow_engine` dropt 3 tabellen
+(weigert bij data). **Prod:** 0/0/0 vóór drop → 3 tabellen weg, `workflow_tasks` (4) intact.
+
+**Taak 4 — rapportages eerlijk.** "Geïnd" = som betalingen met `payment_date` in de gekozen
+periode (maandenparam door router→hook→pagina); definitie in comment. Faseverdeling: outer join
++ "Geen stap"-rij → telling sluit. Live: **Geïnd €135.354,77** (was €0); faseverdeling
+10+2+5+1+10 = 28 = KPI-som = dashboard.
+
+**Taak 5 (code-deel) — kleine vegen.** Urenfilter toont alleen cliënten (uit dossiers, was alle
+1.169 relaties); uren/facturen-widgets nette lege staat; label "nieuw"→"toegevoegd deze maand".
+
+### Verificatie
+Eigen proof (niet Sols woord): **1218 passed** (18m49s), `uvx ruff check` schoon, `tsc --noEmit`
++ `npm run build` groen. Migratie zelf gedraaid (lokaal + prod). Deploy geslaagd: alle containers
+healthy, migratie = head. Live-checks via API als seidony@ (auth-guard, bulk, KPI's, faseverdeling,
+dashboard) allemaal kloppend. Valkuil genoteerd: afgekapte `docker exec pytest` laat het proces
+dóórlopen → twee reeksen botsten (vals-rood); voortaan detached ín de container draaien.
+
+### Nog open (met Arsalan, per stuk akkoord — bewust NIET autonoom)
+- **Taak 6:** testdossier 2026-00001 verwijderen; 6 test-aanvragen afwijzen + "AI Intake" →
+  "Nieuwe aanvragen".
+- **Data-vegen taak 5:** A12 accountnaam seidony@ ("Lisanne Kesting" → "Arsalan Seidony");
+  2 verweesde verjaringstaken (IN100015/IN100127); 16 inactieve reliek-pijplijnstappen +
+  dubbele inactieve "Eerste sommatie" (FK-check vóór delete).
+- **Visueel:** samen doorklikken — dossierkop zonder blanke balk, bulk-status op 2 testzaken.
+
+### Volgende sessie
+S200 = "de voorkant liegt"-audit (`docs/sessions/PROMPT-S200.md`): 8 systematische vegen op de
+zes fout-families + prod-logs + Lisanne-dag als sluitstuk. Read-only meten (Fable), fixes = S201.
+Eerst de per-stuk-opruimacties hierboven met Arsalan afmaken.
 
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
 
@@ -577,58 +632,4 @@ Kijk-sessie D-C (Bankimport, Derdengelden, Uren, Facturen, Rapportages, Instelli
 kant-en-klare prompt `docs/sessions/PROMPT-DC-doorlichting.md`, Fable. Sluit af met de
 totale beslislijst D-A+D-B+D-C voor fase 2 met Arsalan.
 
-## Sessie 189 (9 juli 2026, Opus+Fable — CI-fix + start menu-doorlichting D-A)
-
-### Samenvatting
-Twee dingen: (1) de al sessies rode CI-test gefixt zodat de auto-deploy niet meer stil
-overslaat, en (2) op verzoek Arsalan een complete menu-doorlichting van heel Luxis
-opgezet — élk menu-onderdeel kritisch langs op techniek + productwaarde + UX/UI — en
-de eerste kijk-sessie (D-A) uitgevoerd.
-
-### Taak 1 — CI-rood `test_role_survives_commit_if_role_exists` GEFIXT (commit `375b2f0`)
-Oorzaak (bewezen via code + reproductie): `set_tenant_context` cachet rol-beschikbaarheid
-één keer per proces. In een volle suite-run zet een eerdere ingelogd-verzoek-test die
-cache op False (`luxis_app` bestaat dan nog niet); `test_rls_isolation` maakt de rol pas
-halverwege aan. De directe pg_roles-check in de test ziet de rol dán wel → skip niet →
-maar de stale cache blokkeert de SET ROLE → `current_user` bleef 'luxis' → rood. In CI's
-verse postgres exact dit patroon; lokaal groen omdat luxis_app cluster-breed al bestaat.
-**Rood→groen bewezen** op een verse wegwerp-postgres zonder luxis_app (1 failed→44 passed).
-Fix chirurgisch in de test (cache resetten + herstellen, nul impact op andere tests);
-productiecode ongemoeid (daar bestaat de rol altijd vóór het eerste verzoek). **Volledige
-CI groen** na push (alle 8 checks). Openstaand-punt "CI-rood test_role" is hiermee weg.
-
-### Taak 2 — Menu-doorlichting opgezet + D-A uitgevoerd (100% read-only)
-Plan: `docs/plans/PLAN-doorlichting-menu.md`. Kernkeuze: Fable is er t/m 12 juli → ALLE
-kijkwerk eerst (3 sessies D-A/D-B/D-C), bouwen daarna met Opus (geen deadline). Per
-onderdeel 3 lagen: techniek (5 vragen), partner-blik (advocatuur/SaaS-specialist),
-UX/UI. Mail valt buiten scope (S185-188 klaar).
-
-**D-A Werkschil (Dashboard, Mijn Taken, Agenda, Documenten) — rapport
-`docs/research/audit-DA-werkschil.md`.** Gemeten in prod-DB + code + doorgeklikt.
-Belangrijkste vondsten:
-- **HOOG:** verjaringsalarm structureel onzichtbaar — monitor vond 2 verjaarde zaken
-  (IN100015/IN100127, beide in heropeningslijst, samen €14.286) maar maakt taken zónder
-  eigenaar aan, terwijl "Mijn Taken" alleen taken mét eigenaar toont. IN100016 verjaart
-  23-09-2026. (Let op: monitor kent stuitingen niet — juridisch oordeel Lisanne.)
-- **BUG:** "Nieuwe Dossiers"-blok filtert `pending`, prod = `pending_review` → altijd 0.
-- **BUG/tegenstrijdig:** Mijn-Taken-badge 19 vs "Alles gedaan!" (dubbeltelling tellers).
-- **Eiland:** 394 e-mail-classificaties allemaal onverwerkt; 264 ongelezen
-  "classificatie klaar"-meldingen verzuipen de bel.
-- **Product:** dashboard ~40% dood (uren/facturen 0 in 4+ mnd); agenda 0 afspraken ooit
-  + Lisanne kan niet syncen; "Documenten" toont alleen sjablonen (2619 echte stukken
-  nergens centraal vindbaar).
-- **Opruimen (met akkoord):** testdossier 2026-00001 telt mee in werkvoorraad (18 i.p.v. 17).
-12 werkorder-kandidaten (A1-A12) in het rapport, voor de fase-2-beslislijst.
-
-### Verificatie
-CI-fix: rood→groen op verse wegwerp-postgres (weggegooid na afloop), volledige CI-run
-groen (`gh run` 8/8). Doorlichting: alle beweringen gemeten deze sessie (SQL op prod,
-code gelezen, app doorgeklikt als seidony@); geen enkele mutatie op prod; "niet
-geverifieerd"-punten expliciet benoemd in het rapport (o.a. genereer-flow, verjaring
-juridisch).
-
-### Volgende sessie
-Kijk-sessie D-B (Relaties/Dossiers/Incasso/Follow-up/Intake) — kant-en-klare prompt
-`docs/sessions/PROMPT-DB-doorlichting.md`, start op Fable. Daarna D-C (Financieel +
-Systeem). Pas ná alle 3 de kijk-sessies: fase-2-beslislijst met Arsalan → Opus-bouwblokken.
-Heropening werkvoorraad blijft parallel klaarstaan.
+<!-- S189 verplaatst naar docs/archief/SESSION-ARCHIVE.md (S199-afsluiting, 12 juli); oudste actieve entry = S190 -->

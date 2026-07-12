@@ -1121,7 +1121,31 @@ function WerkstroomTab() {
             parts.push(`${result.tasks_auto_completed} taak/taken afgerond`);
           if (result.cases_auto_advanced > 0)
             parts.push(`${result.cases_auto_advanced} dossier(s) doorgeschoven`);
-          toast.success(parts.join(", "));
+
+          // S203 #9: overgeslagen dossiers / mislukte mails niet in een groene
+          // succes-toast verstoppen — toon ze als waarschuwing mét de redenen,
+          // zodat Lisanne ziet WELKE dossiers niet doorgingen.
+          const hadFailures =
+            result.skipped > 0 ||
+            result.emails_failed > 0 ||
+            (result.errors?.length ?? 0) > 0;
+          const errorLines = result.errors ?? [];
+          const description =
+            errorLines.length > 0
+              ? errorLines.slice(0, 5).join("\n") +
+                (errorLines.length > 5
+                  ? `\n… en ${errorLines.length - 5} meer`
+                  : "")
+              : undefined;
+
+          if (hadFailures) {
+            toast.warning(parts.join(", "), {
+              description,
+              duration: 10000,
+            });
+          } else {
+            toast.success(parts.join(", "));
+          }
           setShowPreview(false);
           setSelectedIds(new Set());
           setBatchAction(null);

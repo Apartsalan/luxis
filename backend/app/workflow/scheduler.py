@@ -212,26 +212,36 @@ async def email_auto_sync() -> None:
 
     logger.info("Scheduler: starting email auto-sync")
     try:
+        # Laad eerst alleen de account-IDs (korte sessie). Elke account krijgt daarna
+        # een EIGEN sessie (S205): zo kan een rollback bij één kapotte postbus (bv. een
+        # verlopen token) de al-geladen objecten van de ANDERE accounts niet expireren.
+        # De oude code deelde één sessie → na de rollback crashte het volgende account
+        # op zijn eerste attribuutlezing (MissingGreenlet) en stopte de hele run; alle
+        # accounts ná de kapotte werden dan elke 5 min stil overgeslagen. Sla het
+        # BaseNet-import-account (provider='import') over: geen echte provider/tokens.
         async with async_session() as session:
-            # Get all connected email accounts across all tenants.
-            # Sla het BaseNet-import-account over (provider='import'): dat heeft geen
-            # echte provider/tokens en dient alleen als houder voor geïmporteerde
-            # archief-mails — de 5-min-sync zou er anders elke keer op stuklopen.
             result = await session.execute(
-                select(EmailAccount).where(
+                select(EmailAccount.id).where(
                     EmailAccount.refresh_token_enc.isnot(None),
                     EmailAccount.provider != "import",
                 )
             )
-            accounts = list(result.scalars().all())
+            account_ids = [row[0] for row in result.all()]
 
-            if not accounts:
-                logger.debug("Scheduler: geen email accounts verbonden, skip sync")
-                return
+        if not account_ids:
+            logger.debug("Scheduler: geen email accounts verbonden, skip sync")
+            return
 
-            total_new = 0
-            total_linked = 0
-            for account in accounts:
+        tenant_ids: set[uuid.UUID] = set()
+        total_new = 0
+        total_linked = 0
+        for account_id in account_ids:
+            async with async_session() as session:
+                account = await session.get(EmailAccount, account_id)
+                if account is None:
+                    continue  # tussentijds ontkoppeld
+                email_address = account.email_address  # lokaal — nooit ná rollback lezen
+                tenant_ids.add(account.tenant_id)
                 try:
                     stats = await sync_emails_for_account(
                         session,
@@ -240,55 +250,57 @@ async def email_auto_sync() -> None:
                     )
                     total_new += stats["new"]
                     total_linked += stats["linked"]
-                    # Commit per account → een latere account-fout kan deze geslaagde
-                    # sync (incl. gewiste last_sync_error) niet terugrollen.
                     await session.commit()
 
                     if stats["new"] > 0:
                         logger.info(
-                            f"Scheduler: email sync {account.email_address} — "
+                            f"Scheduler: email sync {email_address} — "
                             f"{stats['new']} nieuw, {stats['linked']} gekoppeld"
                         )
                 except Exception as e:
-                    logger.error(f"Scheduler: email sync mislukt voor {account.email_address}: {e}")
-                    # S203 #1: fout zichtbaar maken i.p.v. stil doodgaan. De mislukte
-                    # sync kan de sessie hebben vervuild → eerst terugrollen, daarna in
-                    # een schone transactie alleen het foutveld op het account zetten.
+                    logger.error(f"Scheduler: email sync mislukt voor {email_address}: {e}")
+                    # S203 #1: fout zichtbaar maken i.p.v. stil doodgaan. Rol de vervuilde
+                    # sessie terug en herlaad het account schoon om alleen het foutveld te
+                    # zetten. Blijft binnen DEZE sessie — raakt andere accounts niet.
                     await session.rollback()
                     try:
-                        account.last_sync_error = str(e)[:1000]
-                        await session.commit()
+                        account = await session.get(EmailAccount, account_id)
+                        if account is not None:
+                            account.last_sync_error = str(e)[:1000]
+                            await session.commit()
                     except Exception:
                         logger.exception(
                             "Scheduler: kon sync-fout niet vastleggen voor %s",
-                            account.email_address,
+                            email_address,
                         )
                         await session.rollback()
 
-            # Verweer-bibliotheek (S167): vang continu KANDIDAAT-antwoorden uit nieuw
-            # verzonden mail. Kandidaten voeden de AI niet — Lisanne keurt ze goed in het
-            # 'Slim leren'-dashboard. Idempotent + goedkoop (dedup op bron-mail).
-            from app.ai_agent.learned_answers import backfill_learned_answers
+        # Verweer-bibliotheek (S167): vang continu KANDIDAAT-antwoorden uit nieuw
+        # verzonden mail. Kandidaten voeden de AI niet — Lisanne keurt ze goed in het
+        # 'Slim leren'-dashboard. Idempotent + goedkoop (dedup op bron-mail). Eigen
+        # sessie per tenant, om dezelfde isolatie-reden.
+        from app.ai_agent.learned_answers import backfill_learned_answers
 
-            for learn_tenant_id in {a.tenant_id for a in accounts}:
-                try:
+        for learn_tenant_id in tenant_ids:
+            try:
+                async with async_session() as session:
                     learned = await backfill_learned_answers(session, learn_tenant_id)
-                    if learned:
-                        logger.info(
-                            "Scheduler: verweer-bibliotheek +%d kandidaten (tenant=%s)",
-                            learned, learn_tenant_id,
-                        )
-                except Exception as e:
-                    logger.error(
-                        "Scheduler: verweer-bibliotheek backfill mislukt (tenant=%s): %s",
-                        learn_tenant_id, e,
+                    await session.commit()
+                if learned:
+                    logger.info(
+                        "Scheduler: verweer-bibliotheek +%d kandidaten (tenant=%s)",
+                        learned, learn_tenant_id,
                     )
+            except Exception as e:
+                logger.error(
+                    "Scheduler: verweer-bibliotheek backfill mislukt (tenant=%s): %s",
+                    learn_tenant_id, e,
+                )
 
-            await session.commit()
-            logger.info(
-                f"Scheduler: email auto-sync klaar — "
-                f"{len(accounts)} accounts, {total_new} nieuw, {total_linked} gekoppeld"
-            )
+        logger.info(
+            f"Scheduler: email auto-sync klaar — "
+            f"{len(account_ids)} accounts, {total_new} nieuw, {total_linked} gekoppeld"
+        )
     except Exception:
         logger.exception("Scheduler: email auto-sync failed")
 

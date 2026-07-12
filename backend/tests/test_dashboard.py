@@ -810,3 +810,37 @@ async def test_scheduler_alerts_empty_when_all_fresh(
     resp = await client.get("/api/dashboard/summary", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["scheduler_alerts"] == []
+
+
+@pytest.mark.asyncio
+async def test_scheduler_alerts_flags_internally_failing_job(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession
+):
+    """S205: een job die recent draaide maar intern faalde (last_error gezet) geeft
+    een waarschuwing — de dead-man-switch alleen ziet dat niet (last_run_at is vers)."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.settings.models import SchedulerHeartbeat
+
+    now = datetime.now(UTC)
+    # Draaide 5 min geleden (dus NIET stale) maar faalde intern.
+    db.add(SchedulerHeartbeat(
+        job_id="daily_verjaring_check",
+        last_run_at=now - timedelta(minutes=5),
+        last_error="RuntimeError: database weg",
+        last_error_at=now - timedelta(minutes=5),
+    ))
+    # Draaide met een OUDE fout (30u) maar sindsdien schoon → geen alarm.
+    db.add(SchedulerHeartbeat(
+        job_id="daily_task_status_update",
+        last_run_at=now - timedelta(minutes=5),
+        last_error="OldError: ooit",
+        last_error_at=now - timedelta(hours=30),
+    ))
+    await db.commit()
+
+    resp = await client.get("/api/dashboard/summary", headers=auth_headers)
+    assert resp.status_code == 200
+    alerts = resp.json()["scheduler_alerts"]
+    assert any("Verjaringscontrole" in a and "faalde" in a for a in alerts)
+    assert not any("Taakstatus" in a for a in alerts)

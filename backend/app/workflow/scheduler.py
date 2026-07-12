@@ -75,8 +75,11 @@ async def daily_task_status_update() -> None:
                 "Scheduler: task status update complete — "
                 f"marked_due={counts['marked_due']}, marked_overdue={counts['marked_overdue']}"
             )
-    except Exception:
+    except Exception as e:
         logger.exception("Scheduler: task status update failed")
+        # S205: intern falen zichtbaar maken (dead-man-switch ziet alleen 'draait niet
+        # meer', niet 'draait maar faalt'). Gegarandeerde schrijf, geen fire-and-forget.
+        await _write_heartbeat("daily_task_status_update", f"{type(e).__name__}: {e}")
 
 
 async def daily_verjaring_check() -> None:
@@ -195,8 +198,9 @@ async def daily_verjaring_check() -> None:
                 tasks_created,
                 len(tenants),
             )
-    except Exception:
+    except Exception as e:
         logger.exception("Scheduler: verjaring check failed")
+        await _write_heartbeat("daily_verjaring_check", f"{type(e).__name__}: {e}")
 
 
 async def email_auto_sync() -> None:
@@ -631,8 +635,9 @@ async def daily_deadline_notifications() -> None:
                     "Scheduler: deadline notifications — %d notificaties aangemaakt",
                     total_created,
                 )
-    except Exception:
+    except Exception as e:
         logger.exception("Scheduler: deadline notification check failed")
+        await _write_heartbeat("daily_deadline_notifications", f"{type(e).__name__}: {e}")
 
 
 async def daily_installment_overdue_check() -> None:
@@ -653,8 +658,9 @@ async def daily_installment_overdue_check() -> None:
                     "Scheduler: installment overdue — %d termijnen achterstallig",
                     count,
                 )
-    except Exception:
+    except Exception as e:
         logger.exception("Scheduler: installment overdue check failed")
+        await _write_heartbeat("daily_installment_overdue_check", f"{type(e).__name__}: {e}")
 
 
 async def daily_invoice_overdue_check() -> None:
@@ -681,8 +687,9 @@ async def daily_invoice_overdue_check() -> None:
                     "Scheduler: invoice overdue — %d facturen op 'te laat' gezet",
                     total,
                 )
-    except Exception:
+    except Exception as e:
         logger.exception("Scheduler: invoice overdue check failed")
+        await _write_heartbeat("daily_invoice_overdue_check", f"{type(e).__name__}: {e}")
 
 
 async def daily_trust_stale_check() -> None:

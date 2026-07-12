@@ -50,6 +50,14 @@ async def get_scheduler_alerts(db: AsyncSession) -> list[str]:
         if age > _STALE_AFTER:
             hours = int(age.total_seconds() // 3600)
             alerts.append(f"{label} draaide voor het laatst {hours} uur geleden.")
+            continue
+        # S205: 'draait maar faalt intern' — de job draaide recent, maar slikte een
+        # exceptie. De dead-man-switch hierboven ziet dat niet (last_run_at is vers).
+        # Alarmeer als er een recente fout op de heartbeat staat (< 25u).
+        if row.last_error and row.last_error_at is not None:
+            error_age = now - row.last_error_at
+            if error_age <= _STALE_AFTER:
+                alerts.append(f"{label} faalde bij de laatste run: {row.last_error}")
     return alerts
 
 

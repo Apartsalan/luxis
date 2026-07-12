@@ -170,7 +170,7 @@ async def seed_default_steps(
         # B2C-only startstap: de 14-dagenbrief (WIK art. 6:96 lid 6 BW) is bij een
         # particulier wettelijk verplicht en moet vóór de sommaties komen. Staat
         # daarom als eerste in de lijst → laagste sort_order → eerste stap voor B2C.
-        {"name": "14-dagenbrief", "min_wait_days": 0, "max_wait_days": 15, "step_category": "minnelijk", "debtor_type": "b2c"},
+        {"name": "14-dagenbrief", "min_wait_days": 0, "max_wait_days": 15, "step_category": "minnelijk", "debtor_type": "b2c", "template_type": "14_dagenbrief"},
         # Hoofdpad (B2B verzoekschrift faillissement)
         {"name": "Eerste sommatie", "min_wait_days": 0, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
         {"name": "Tweede sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},

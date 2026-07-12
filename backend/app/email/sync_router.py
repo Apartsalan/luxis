@@ -266,6 +266,12 @@ async def trigger_sync(
     2. Auto-link all matching emails to the case
     3. Re-link previously unlinked emails that match
     """
+    # AUDIT-H1 (Fable-review): case_id komt rechtstreeks uit de query en wordt in de
+    # sync als force_case_id op mails gezet — zonder deze check kan een gebruiker
+    # eigen mails aan het dossier van een ander kantoor koppelen (cross-tenant).
+    if case_id is not None:
+        await _assert_case_in_tenant(db, user.tenant_id, case_id)
+
     account = await get_email_account(db, user.id, user.tenant_id)
     if not account:
         raise BadRequestError("Geen e-mailaccount verbonden. Ga naar Instellingen → E-mail.")

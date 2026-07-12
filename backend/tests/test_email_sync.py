@@ -747,6 +747,33 @@ async def test_save_attachment_same_tenant_succeeds(
 
 
 @pytest.mark.asyncio
+async def test_sync_rejects_foreign_tenant_case(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """AUDIT-H1 (Fable-review): POST /api/email/sync?case_id=... zet case_id als
+    force_case_id op gesyncte mails. Een case van een ander kantoor moet 404 geven
+    (guard vuurt vóór de account-check), zodat er niets cross-tenant gekoppeld wordt."""
+    other = Tenant(
+        id=uuid.uuid4(), name="Other Firm Sync", slug="other-firm-sync", kvk_number="44444444"
+    )
+    db.add(other)
+    await db.flush()
+    foreign_case = await _create_case(db, other.id, case_number="2026-99994")
+    foreign_case_id = foreign_case.id
+    await db.commit()
+
+    resp = await client.post(
+        f"/api/email/sync?case_id={foreign_case_id}",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_case_number_match_ignores_4digit_invoice_like_number(
     db: AsyncSession, test_tenant: Tenant
 ):

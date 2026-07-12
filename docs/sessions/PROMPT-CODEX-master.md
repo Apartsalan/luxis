@@ -40,7 +40,13 @@ eerst alle uitzoekwerk (Ultra), daarna al het bouwwerk (High).
 
 ## 1. Onboarding — lees deze bestanden vóór je iets doet
 
-Lees, in deze volgorde, zodat je Luxis volledig begrijpt (het zijn er niet veel, allemaal kort):
+**`AGENTS.md` (repo-root) is je permanente instructiebestand — Codex laadt het automatisch. Dáár
+staat de volledige overgenomen werkwijze 1-op-1** (gedragsmodi Ponytail + Fable-discipline,
+kritieke regels, git/SSH/deploy-toegang, geleerde lessen/feedback = je "memory", skills als
+naslag, MCP-realiteit, sessie-start/einde). Lees het eerst en volledig. De rest hieronder is
+aanvulling/samenvatting — bij twijfel wint `AGENTS.md`.
+
+Lees daarna, in deze volgorde, zodat je Luxis volledig begrijpt (allemaal kort):
 
 1. `CLAUDE.md` (repo-root) — dé regels: financiële precisie, multi-tenant, security, werkwijze.
 2. `backend/CLAUDE.md` + `frontend/CLAUDE.md` — module-patroon backend/frontend.

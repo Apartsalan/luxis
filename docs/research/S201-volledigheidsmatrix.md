@@ -1,6 +1,7 @@
 # S201 — Volledigheidsmatrix BaseNet → Luxis
 
-**Status:** read-only gap-analyse, 12 juli 2026  
+**Status:** read-only gap-analyse, 12 juli 2026
+
 **Hoofdconclusie:** de eerdere IN-migratie is voor relaties, incassodossiers en IN-correspondentie grotendeels sluitend. De grootste echte ontbrekende ruggengraat is **187 D-dossiers**; daardoor ontbreken ook vrijwel alle D-correspondentie en kunnen 1.236 urenregels niet correct worden gekoppeld.
 
 ## 1. Reikwijdte en bewijs

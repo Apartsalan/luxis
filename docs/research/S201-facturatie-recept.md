@@ -1,6 +1,7 @@
 # S201 — Bouwrecept BaseNet-facturatie
 
-**Status:** onderzoeksrecept, read-only opgesteld op 12 juli 2026  
+**Status:** onderzoeksrecept, read-only opgesteld op 12 juli 2026
+
 **Besluit in één zin:** importeer 439 definitieve kantoorfacturen met 630 regels, zet 7 facturen met een Mollie/kop-conflict apart voor menselijke reconciliatie en importeer de 90 derdengelden-/verrekenstaten niet als omzetfacturen.
 
 Bedragen in dit document zijn bruto, inclusief btw, tenzij expliciet anders vermeld. Alle tellingen komen uit de BaseNet-export `Xml_02-07-2026_2400.zip`, een volledige parserrun en read-only controles op de productiedatabase. Tijdens dit onderzoek zijn geen facturen, betalingen, uren of andere productiegegevens geschreven en is geen e-mail verstuurd.
@@ -18,9 +19,9 @@ Luxis bevat op productie nog geen facturen, factuurregels, factuurbetalingen of 
 | Derdengelden-/verrekenfamilie | **90** | **90** | **−€ 90.718,21** | **−€ 74.959,30** | Niet als verkoopfactuur importeren |
 | Losse conceptregels zonder kop | — | 31 | € 6.779,81 | — | Overslaan en als controlelijst bewaren |
 
-Controlesom koppen: `439 + 7 + 12 + 19 + 90 = 567`.  
-Controlesom regels: `630 + 13 + 9 + 90 + 31 = 773`.  
-Controlesom kopbedragen: `€ 302.750,39 + € 10.854,66 + € 13.013,07 − € 90.718,21 = € 235.899,91`, exact het totaal van alle 567 BaseNet-koppen.
+- Controlesom koppen: `439 + 7 + 12 + 19 + 90 = 567`.
+- Controlesom regels: `630 + 13 + 9 + 90 + 31 = 773`.
+- Controlesom kopbedragen: `€ 302.750,39 + € 10.854,66 + € 13.013,07 − € 90.718,21 = € 235.899,91`, exact het totaal van alle 567 BaseNet-koppen.
 
 De automatische groep bestaat uit:
 

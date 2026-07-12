@@ -118,6 +118,9 @@ Na goedkeuring.
 - `LUXIS-ROADMAP.md` = enige source of truth; levende docs klein houden: SESSION-NOTES max 10 entries, roadmap één prioriteit-sectie, historie → `docs/archief/` (verplaatsen, nooit weggooien — archief-regels in `/sessie-einde`)
 - Scripts/commands altijd in voorgrond
 - Commit + push na elke taak. **Na ELKE commit ALTIJD `git push origin main`.**
+- **NOOIT `git add -A` of `git add .`** — stage altijd expliciete paden. De repo bevat bewust-untracked
+  bestanden (bank-CSV, AV-PDF's, `.agents/`, tmp-SQL); één `git add -A` veegde ze in S203 mee de
+  historie in (history-rewrite nodig om het bankafschrift te wissen). Zie `.gitignore`.
 - Bij parallelle terminals: **ALTIJD kant-en-klare prompts meegeven**
 
 **Deploy:** Na commit+push → deploy automatisch via SSH. Details in skill `deploy-regels`.

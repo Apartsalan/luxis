@@ -52,6 +52,17 @@ in `build_user_prompt` — beide door de draft-gate-tests gevangen vóór deploy
 - De 10 bestaande stap-loze intake-zaken zijn een aparte data-actie (going-forward-fix raakt ze niet).
 - Mailslot bleef DICHT; niets verstuurd. Statusregel per bevinding: `docs/sessions/S200-BEVINDINGEN.md` (tabel bijgewerkt).
 
+### Incident bij afsluiting — per ongeluk gecommitte bestanden, historie herschreven (mét akkoord)
+Bij het sessie-einde veegde één `git add -A` **110 bewust-untracked bestanden** mee in een docs-commit,
+waaronder het **derdengelden-bankafschrift** (CSV, 1 jaar), AV-PDF's, `.agents/` en tmp-audit-SQL.
+Afhandeling (expliciet akkoord Arsalan): laatste 3 commits vervangen door één schone (`3f5e183`),
+force-push, lokaal én op de VPS alle oude objecten vernietigd (reflog+gc; CSV-blob aantoonbaar weg
+op beide), VPS-HEAD gelijkgetrokken (ff-pull werkt weer normaal). Tag `sessie-203-fixes` stond vóór
+de foute commit → ongemoeid. **Restrisico:** GitHub kan de weggegooide commits server-side nog even
+vasthouden tot hun eigen opruiming (privérepo; niet meer bereikbaar via branch/tag). **Borging:**
+`.gitignore` dekt de paden nu; harde regel "nooit `git add -A`, stage expliciete paden" toegevoegd
+aan CLAUDE.md + AGENTS.md + Claude-memory.
+
 ### Volgende sessie
 **S204 = Fable-review van deze S203-fixes** (`docs/sessions/PROMPT-S204-fable-review.md`): read-only,
 bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouwen (S201-import óf route-sloop).

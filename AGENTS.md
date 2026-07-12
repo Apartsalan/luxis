@@ -95,6 +95,9 @@ voordat je erop leunt.
 - Verifieer bij twijfel: `git remote -v` en `git push` (de laatste push slaagde).
 - Commit alleen wat bij je taak hoort. Losse bestanden in de repo-root (PDF's, bank-CSV,
   Word-lockbestanden `~$…`) NIET meecommitten.
+- **NOOIT `git add -A` of `git add .` — stage expliciete paden.** In S203 veegde één `git add -A`
+  110 bewust-untracked bestanden (incl. het derdengelden-bankafschrift) de historie in; dat kostte
+  een history-rewrite + force-push. `.gitignore` dekt de paden nu, maar de regel blijft: expliciet stagen.
 
 ### Server / SSH / deploy (VPS)
 - Host: `root@46.225.115.216`, key: `~/.ssh/luxis_deploy` (passphrase-vrij, ligt op de machine).

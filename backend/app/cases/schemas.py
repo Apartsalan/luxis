@@ -127,7 +127,9 @@ class CaseStatusUpdate(BaseModel):
 
 
 class CaseBulkStatusUpdate(BaseModel):
-    case_ids: list[uuid.UUID]
+    # AUDIT-M1: lengtecap (net als de per_page-cap le=200 elders) — één DB-call per
+    # item, dus een lijst van tienduizenden UUID's = lange transactie/lock (DoS).
+    case_ids: list[uuid.UUID] = Field(min_length=1, max_length=200)
     status: str
 
 

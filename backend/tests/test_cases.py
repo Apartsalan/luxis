@@ -513,6 +513,21 @@ async def test_update_status_betaald_fails_closed_on_calc_error(
 
 
 @pytest.mark.asyncio
+async def test_bulk_status_rejects_oversized_list(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    """AUDIT-M1: de bulk-status-lijst is gecapt op 200 (één DB-call per item → een
+    lijst van tienduizenden UUID's = lange lock/DoS)."""
+    resp = await client.put(
+        "/api/cases/bulk/status",
+        json={"case_ids": [str(uuid.uuid4()) for _ in range(201)], "status": "nieuw"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_bulk_status_tenant_isolation(
     client: AsyncClient,
     auth_headers: dict,

@@ -229,3 +229,82 @@ async def test_provisie_fixed_costs_added_without_minimum(
     over_claim = data["provisie"]["over_claim"]
     assert Decimal(str(over_claim["amount"])) == Decimal("1200.00")
     assert over_claim["is_minimum_applied"] is False
+
+
+# ─── AUDIT-H3 (Fable-review): soft-deleted betalingen tellen niet als 'geïnd' ──
+
+
+@pytest.mark.asyncio
+async def test_provisie_excludes_soft_deleted_payments(
+    client: AsyncClient, auth_headers: dict, incasso_case: Case, db: AsyncSession
+):
+    """De succesprovisie op de cliëntfactuur mag verwijderde (soft-deleted)
+    betalingen niet als 'geïnd' meetellen — anders staat er te veel provisie op de
+    factuur aan de eigen cliënt (facturatiegeld, niet alleen rapportage)."""
+    from app.collections.models import Payment
+
+    incasso_case.provisie_percentage = Decimal("15.00")
+    db.add_all(
+        [
+            Payment(
+                tenant_id=incasso_case.tenant_id,
+                case_id=incasso_case.id,
+                amount=Decimal("1000.00"),
+                payment_date=date.today(),
+                is_active=True,
+            ),
+            Payment(
+                tenant_id=incasso_case.tenant_id,
+                case_id=incasso_case.id,
+                amount=Decimal("500.00"),
+                payment_date=date.today(),
+                is_active=False,  # verwijderd — mag niet meetellen in de provisie
+            ),
+        ]
+    )
+    await db.commit()
+
+    resp = await client.get(
+        f"/api/cases/{incasso_case.id}/provisie", headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert Decimal(str(data["collected_amount"])) == Decimal("1000.00")
+    # 15% van 1000, niet van 1500
+    assert Decimal(str(data["provisie_amount"])) == Decimal("150.00")
+
+
+@pytest.mark.asyncio
+async def test_incasso_preview_excludes_soft_deleted_payments(
+    client: AsyncClient, auth_headers: dict, incasso_case: Case, db: AsyncSession
+):
+    """Zelfde als hierboven maar via het factuurvoorstel (get_incasso_invoice_preview):
+    het 'geïnd'-bedrag telt geen verwijderde betaling mee."""
+    from app.collections.models import Payment
+
+    db.add_all(
+        [
+            Payment(
+                tenant_id=incasso_case.tenant_id,
+                case_id=incasso_case.id,
+                amount=Decimal("2000.00"),
+                payment_date=date.today(),
+                is_active=True,
+            ),
+            Payment(
+                tenant_id=incasso_case.tenant_id,
+                case_id=incasso_case.id,
+                amount=Decimal("750.00"),
+                payment_date=date.today(),
+                is_active=False,
+            ),
+        ]
+    )
+    await db.commit()
+
+    resp = await client.get(
+        f"/api/cases/{incasso_case.id}/incasso-invoice-preview", headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert Decimal(str(data["collected_amount"])) == Decimal("2000.00")

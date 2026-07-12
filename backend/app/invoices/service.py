@@ -1125,6 +1125,7 @@ async def calculate_provisie(
         select(func.coalesce(func.sum(Payment.amount), Decimal("0.00"))).where(
             Payment.tenant_id == tenant_id,
             Payment.case_id == case_id,
+            Payment.is_active.is_(True),  # AUDIT-H3: verwijderde betalingen niet meetellen
         )
     )
     collected_amount = pay_result.scalar_one()
@@ -1185,6 +1186,7 @@ async def get_incasso_invoice_preview(
         select(func.coalesce(func.sum(Payment.amount), Decimal("0.00"))).where(
             Payment.tenant_id == tenant_id,
             Payment.case_id == case_id,
+            Payment.is_active.is_(True),  # AUDIT-H3: verwijderde betalingen niet meetellen
         )
     )
     collected_amount = pay_result.scalar_one()

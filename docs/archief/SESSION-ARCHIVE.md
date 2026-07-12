@@ -8280,3 +8280,40 @@ Fable per sessie (melding gedaan, niet zelf aangepast).
 ### Volgende sessie
 S193 = bouwblok 1 op Opus (`docs/sessions/PROMPT-S193-bouwblok1.md`): B1 verstuurpad +
 B13 vangrails + B2/A1 verjaring + A2 dashboardfix, alles vóór het mailslot eraf gaat.
+
+## Sessie 192 (10 juli 2026, Opus — Codex-werkmodel opgezet, geen Luxis-code)
+
+### Samenvatting
+Taak 0 uit `PROMPT-S193-bouwblok1.md` uitgevoerd: Codex (GPT-5.6) naast Claude werkend
+gekregen. **Kernbevinding:** Codex was al geïnstalleerd (via de OpenAI desktop-app, niet
+npm) en ingelogd op Arsalans ChatGPT-account (`arsalanir@hotmail.com`, model `gpt-5.6-sol`,
+effort `ultra`). Dus niet opnieuw installeren — alleen bruikbaar maken + werkafspraak vast.
+
+**Besluit Arsalan (herzien t.o.v. S191-advies):** het volledige drie-bedrijven-model van
+grill-me-codex AAN, **inclusief bedrijf 3 (Codex bouwt)**. Zijn redenering, die klopt: er
+is nog steeds één bouwer per klus, Claude doet kop (plan) + staart (diff-review, bewijstest,
+commit), en GPT-5.6 is sterk + goedkoper in het typwerk (valt onder het abo). Mijn eerdere
+"bedrijf 3 UIT"-voorbehoud bleek al als harde regel in de skill te zitten (schone tree,
+verplichte diff-lezing, bewijstest door Claude, jij keurt goed vóór commit) → overgenomen.
+
+### Gewijzigde/aangemaakte bestanden
+- `docs/research/advies-codex-samenwerking.md` — sectie "Werkafspraak vastgesteld 10 juli":
+  geïnstalleerd-status, gekozen model (bedrijf 3 AAN), rolverdeling Fable=brein/Codex=bouwer,
+  vangrails, veiligheidsvalkuil `codex exec resume` kent geen `-s`.
+- **Globaal (buiten de repo):** 4 skills in `~/.claude/skills/` (`/grill-me-codex`,
+  `/grill-with-docs-codex`, `/codex-review`, `/codex-build`); `codex`-shims in
+  `~/.local/bin/` (`codex` voor Git Bash, `codex.cmd` voor PowerShell) die de nieuwste
+  Codex-versiemap pakken (overleeft app-updates). Beide getest — `codex` werkt als commando.
+- Geheugen bijgewerkt: `project_codex_openai.md` + `MEMORY.md`.
+
+### Bekende issues
+- ⚠️ `.codex/config.toml` in de repo bevat leesbare API-sleutels (OpenAI/Milvus/Stitch/
+  Tavily); untracked maar NIET in `.gitignore`. Afschermen wacht op Arsalans "ja". Nooit
+  laten meecommitten.
+- Nog géén echte `/codex-build`-proefrit gedaan — alleen een read-only plumbing-test
+  (`PLUMBING_OK`) geslaagd. Eerste echte test = bouwblok 1 (S193).
+
+### Volgende sessie
+- **S193 bouwblok 1 op Opus** (`PROMPT-S193-bouwblok1.md`), taak 0 is nu klaar. Gebruik het
+  als eerste `/codex-review` → `/codex-build`-proefrit. Vraag Arsalan eerst of de sleutels
+  afgeschermd mogen worden (`.codex/` in `.gitignore`).

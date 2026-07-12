@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 12 juli 2026 (sessie 202, Fable — security-delta-audit S184–S199, read-only). 6/7 blokken; rapport `docs/security/S202-delta-audit.md` (H1 cross-tenant CaseFile-lek, H2 fail-open "betaald", H3 "Geïnd" telt verwijderde betalingen). RLS op prod compleet zonder drift. Al het vervolgwerk → Codex (`docs/sessions/PROMPT-CODEX-master.md`). Mailslot staat nog UIT. Details: SESSION-NOTES S202-entry.
+**Laatst bijgewerkt:** 12 juli 2026 (sessie 203 deel 1, Sol Ultra — Codex-master Fase A+B, read-only). S202-mailpad en S201-BaseNetonderzoek afgerond; volgende stap is Sol High voor S200-voorkantfixes en S202-securityfixes. Mailverzending blijft op slot. Details: SESSION-NOTES S203-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S202)
+## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S203 deel 1)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -61,20 +61,23 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-> 🔀 **Al het vervolgwerk is overgedragen aan Codex/Sol** (Arsalan werkt ~3 uur direct in Codex
-> omdat de Claude-tokens op zijn). Eén masterprompt: `docs/sessions/PROMPT-CODEX-master.md` —
-> Ultra voor uitzoekwerk, High voor bouwwerk. Daarna checkt Fable Codex' werk na.
+> 🔀 **Sol Ultra heeft Fase A+B afgerond.** Eén masterprompt blijft leidend:
+> `docs/sessions/PROMPT-CODEX-master.md`. Zet nu op Sol High voor Fase C+D; daarna checkt Fable
+> het bouwwerk na.
 
-1. **S202 security-delta-audit S184–S199 — AFGEROND op Blok 2 na (12 juli, Fable, read-only).**
-   6/7 blokken; rapport op ernst `docs/security/S202-delta-audit.md`. Hoog: cross-tenant CaseFile-lek
-   (H1), fail-open "betaald"-guard (H2, 2 plekken), "Geïnd" telt verwijderde betalingen (H3). RLS op
-   prod compleet zonder drift; geen secrets in repo. **Blok 2 (mailpad) → Codex Fase A.**
+1. ✅ **S202 security-delta-audit S184–S199 — ALLE 7 BLOKKEN AFGEROND (12 juli, Fable + Sol Ultra, read-only).**
+   Rapport `docs/security/S202-delta-audit.md`. H1/H2/H3 blijven hoogste bouwprioriteit; mailpad voegt
+   HTML-inhoudsintegriteit, ontvangerbegrenzing en kleine hardening toe. RLS op prod compleet zonder
+   drift; mailslot op alle drie applicatietransporten bewezen. **Fixes = Codex Fase D (Sol High).**
 2. **S200 "de voorkant liegt"-audit — AFGEROND (12 juli, Fable, read-only).** 19 bevindingen met
    bewijs in `docs/sessions/S200-BEVINDINGEN.md`. **Fixes = Codex Fase C** (`PROMPT-S203-voorkant-fixes.md`).
-3. **S201 facturatie-onderzoek — GESTART, overgedragen** (`S201-HANDOFF-naar-Sol.md` +
-   `PROMPT-S201-onderzoek-facturatie.md`). **→ Codex Fase B.**
-4. **Codex-werkvolgorde:** Fase A mailpad-audit + Fase B facturatie (Ultra) → Fase C voorkant-fixes +
-   Fase D security-fixes (High). Alles in `docs/sessions/PROMPT-CODEX-master.md`.
+3. ✅ **S201 BaseNet-volledigheid + facturatie-recept — AFGEROND (12 juli, Sol Ultra, read-only).**
+   `docs/research/S201-facturatie-recept.md` + `S201-volledigheidsmatrix.md`: 439 conflict-vrije
+   facturen geadviseerd; 7 Mollie/kop-conflicten eerst reconciliëren; 90 derdengeldposten uitsluiten;
+   187 D-dossiers zijn de ontbrekende ruggengraat. Geen import uitgevoerd.
+4. **Nu: Codex Fase C + D op Sol High.** Eerst de 19 S200-voorkantfixes, daarna S202 H1/H2/H3,
+   M1/M2 en mailhardening; M3 (DB-superuser/RLS Fase 2) blijft bewust apart. Per fix testen,
+   committen, pushen en deployen volgens `docs/sessions/PROMPT-CODEX-master.md`.
 5. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer
    gereconstrueerd). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b —
    `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`.

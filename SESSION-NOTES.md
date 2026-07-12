@@ -2,10 +2,39 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S202 security-delta-audit S184-S199, Fable, read-only). 6/7 blokken af; Blok 2 (mailpad) overgedragen aan Codex. Rapport: `docs/security/S202-delta-audit.md`. Details: S202-entry.
-**Laatste feature/fix:** geen code gewijzigd (audit-sessie). Grootste vondsten: cross-tenant CaseFile-lek (H1), 2× fail-open op "betaald"-guard (H2), "Geïnd" telt verwijderde betalingen (H3). RLS op prod compleet zonder drift; geen secrets in repo.
-**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). Alle vervolgwerk (S200-voorkant-fixes, S201-facturatie-onderzoek, S202-mailpad-audit + security-fixes) overgedragen aan Codex/Sol: `docs/sessions/PROMPT-CODEX-master.md`.
-**Volgende sessie:** Codex draait de 4 fasen uit de masterprompt (Ultra: mailpad-audit + facturatie; High: voorkant-fixes + security-fixes). Daarna checkt Fable Codex' werk na.
+**Laatst bijgewerkt:** 12 juli 2026 (S203 deel 1, Sol Ultra — Codex-master Fase A+B, read-only). Mailaudit en BaseNet-volledigheid/facturatie zijn afgerond; rapporten staan in `docs/security/` en `docs/research/`.
+**Laatste feature/fix:** geen productcode of productiedata gewijzigd. Mailpad: 5 middel/5 laag totaal in S202; BaseNet: 439 conflict-vrije facturen geadviseerd, 7 Mollie/kop-conflicten apart, 90 derdengeldposten uitgesloten.
+**Openstaand:** Mailverzending blijft op slot; Arsalan zet die zelf aan. Codex-master Fase C (19 voorkantbevindingen) en Fase D (security-fixes) wachten op Sol High; S201-import is niet uitgevoerd.
+**Volgende sessie:** zet Codex op Sol High en vervolg `docs/sessions/PROMPT-CODEX-master.md` vanaf Fase C; daarna Fase D, volledige verificatie en deploy per kleine commit.
+
+## Sessie 203 (12 juli 2026, Sol Ultra — Codex-master Fase A+B, read-only)
+
+### Samenvatting
+- **Fase A mailpadaudit afgerond.** Blok 2 in `docs/security/S202-delta-audit.md` is gevuld en onafhankelijk tegengesproken. Nieuwe kern: ongeëscapete dossierdata in systeemmail-HTML, ontvangers niet centraal gevalideerd/begrensd, late bijlagecaps, mailslotcache vóór commit en logvervalsing/PII in logs. Alle drie applicatietransporten controleren het mailslot; prod stond effectief dicht.
+- **Fase B BaseNet-onderzoek afgerond.** De parser las 133 entiteiten, 65.761 records en 2 defecte LetterTemplate-fragmenten. De twee gevraagde bouwdocumenten bestaan: facturatierecept plus een volledige 133-rijenmatrix die exact terugtelt.
+- **Factuurbesluit:** van 567 koppen/773 regels zijn 439 koppen/630 regels conflict-vrij en automatisch importeerbaar (€302.750,39 bruto; €72.762,09 open). Zeven koppen (€10.854,66) hebben een harde Mollie-`paid` versus volledig-open-koptegenstrijdigheid en blijven buiten automatische import. Negentig derdengeld-/verrekenposten (−€90.718,21) horen niet in omzet.
+- **Grootste migratiegat:** 187 niet-geïmporteerde D-dossiers dragen 8.637 correspondentiestukken en 1.236 urenregels. De 1.320 uren worden pas na die dossiers apart geïmporteerd. Donker/Dinc: 12 credits (€21.738,96) zijn geen kantoorfactuurbetalingen; bestaand besluit blijft staan.
+- Geen productie-mutatie, geen import, geen mail en geen deploy uitgevoerd.
+
+### Gewijzigde bestanden
+- `docs/security/S202-delta-audit.md` — mailpadblok, samenvatting en fixvolgorde bijgewerkt.
+- `docs/research/S201-facturatie-recept.md` — gemeten veldmapping, disjuncte importgroepen, betalingen, urenadvies, Donker/Dinc en bouw-/testrecept.
+- `docs/research/S201-volledigheidsmatrix.md` — alle 133 entiteiten, relevante gaten en concrete acties.
+- `SESSION-NOTES.md` + `LUXIS-ROADMAP.md` — overdracht naar Sol High; S192-entry naar archief.
+
+### Verificatie
+- Mailregressie: 26 passed, 1 warning; transports geblokkeerd, geen mail verstuurd. Read-only prod: mailslot dicht, 3 echte accounts versleuteld, 0 `email_logs`.
+- Bronasserties: kopgroepen `439+7+12+19+90=567`; regelgroepen `630+13+9+0+90+31=773`; geldsom exact €235.899,91. Regelformule 773/773 en kop-regelsom 542/542 exact. Voor 305 historische betalingen blijft de betaaldatum eerlijk onbekend; memoriaaldatum wordt alleen boekingsmetadata.
+- Matrixassertie tegen verse parserrun: 133/133 entiteiten, 65.761/65.761 records, geen ontbrekende/extra/mismatched rij.
+- Productie read-only: 58/58 debiteurcodes en 146/146 IN-codes matchen elk exact één Luxis-record; factuur-/uren-doeltabellen staan op 0.
+
+### Bekende issues
+- De zeven Mollie/kop-conflicten vereisen per factuur bevestiging door Lisanne/boekhouding vóór import.
+- Niet geverifieerd: of de reeks “Facturen met Stephanie” en zeven toekomstige D-afspraken al in Outlook staan; Outlook was niet via een connector beschikbaar.
+- S200's 19 voorkantbevindingen en S202-fixes H1/H2/H3/M1/M2 plus mailhardening zijn nog niet gebouwd. M3 (DB-superuser/RLS Fase 2) blijft bewust buiten deze fixronde.
+
+### Volgende sessie
+- Zet Codex op Sol High en vervolg `docs/sessions/PROMPT-CODEX-master.md` vanaf Fase C. Werk per fix rood→groen→commit→push→deploy; daarna Fase D en Fable-nacontrole.
 
 ## Sessie 202 (12 juli 2026, Fable — security- & consistentie-audit van de delta sinds S183, read-only)
 
@@ -540,40 +569,3 @@ bleef aan — niets echt verstuurd; alles bewezen via tests + preview.
 - **Bouwblok 2** zodra C2-gegevens binnen zijn: C2 invullen → C1 bankimport-proef (samen) →
   B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken. Anders **bouwblok 3**.
 - Prompt: `docs/sessions/PROMPT-S194.md`.
-
-## Sessie 192 (10 juli 2026, Opus — Codex-werkmodel opgezet, geen Luxis-code)
-
-### Samenvatting
-Taak 0 uit `PROMPT-S193-bouwblok1.md` uitgevoerd: Codex (GPT-5.6) naast Claude werkend
-gekregen. **Kernbevinding:** Codex was al geïnstalleerd (via de OpenAI desktop-app, niet
-npm) en ingelogd op Arsalans ChatGPT-account (`arsalanir@hotmail.com`, model `gpt-5.6-sol`,
-effort `ultra`). Dus niet opnieuw installeren — alleen bruikbaar maken + werkafspraak vast.
-
-**Besluit Arsalan (herzien t.o.v. S191-advies):** het volledige drie-bedrijven-model van
-grill-me-codex AAN, **inclusief bedrijf 3 (Codex bouwt)**. Zijn redenering, die klopt: er
-is nog steeds één bouwer per klus, Claude doet kop (plan) + staart (diff-review, bewijstest,
-commit), en GPT-5.6 is sterk + goedkoper in het typwerk (valt onder het abo). Mijn eerdere
-"bedrijf 3 UIT"-voorbehoud bleek al als harde regel in de skill te zitten (schone tree,
-verplichte diff-lezing, bewijstest door Claude, jij keurt goed vóór commit) → overgenomen.
-
-### Gewijzigde/aangemaakte bestanden
-- `docs/research/advies-codex-samenwerking.md` — sectie "Werkafspraak vastgesteld 10 juli":
-  geïnstalleerd-status, gekozen model (bedrijf 3 AAN), rolverdeling Fable=brein/Codex=bouwer,
-  vangrails, veiligheidsvalkuil `codex exec resume` kent geen `-s`.
-- **Globaal (buiten de repo):** 4 skills in `~/.claude/skills/` (`/grill-me-codex`,
-  `/grill-with-docs-codex`, `/codex-review`, `/codex-build`); `codex`-shims in
-  `~/.local/bin/` (`codex` voor Git Bash, `codex.cmd` voor PowerShell) die de nieuwste
-  Codex-versiemap pakken (overleeft app-updates). Beide getest — `codex` werkt als commando.
-- Geheugen bijgewerkt: `project_codex_openai.md` + `MEMORY.md`.
-
-### Bekende issues
-- ⚠️ `.codex/config.toml` in de repo bevat leesbare API-sleutels (OpenAI/Milvus/Stitch/
-  Tavily); untracked maar NIET in `.gitignore`. Afschermen wacht op Arsalans "ja". Nooit
-  laten meecommitten.
-- Nog géén echte `/codex-build`-proefrit gedaan — alleen een read-only plumbing-test
-  (`PLUMBING_OK`) geslaagd. Eerste echte test = bouwblok 1 (S193).
-
-### Volgende sessie
-- **S193 bouwblok 1 op Opus** (`PROMPT-S193-bouwblok1.md`), taak 0 is nu klaar. Gebruik het
-  als eerste `/codex-review` → `/codex-build`-proefrit. Vraag Arsalan eerst of de sleutels
-  afgeschermd mogen worden (`.codex/` in `.gitignore`).

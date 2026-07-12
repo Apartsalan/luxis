@@ -16,7 +16,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.cases.models import Case
 from app.collections.models import Claim
 from app.collections.wik import calculate_bik
-from app.documents.models import GeneratedDocument
+from app.incasso.models import CaseStepHistory, IncassoPipelineStep
+
+# Naam van de wettelijk verplichte B2C-startstap (art. 6:96 lid 6 BW). Zie
+# incasso.service.DEFAULT_PIPELINE_STEPS.
+DAGENBRIEF_STEP_NAME = "14-dagenbrief"
+
+
+async def get_dagenbrief_entered_at(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> date | None:
+    """Datum waarop de zaak de 14-dagenbrief-stap binnenkwam, of None als de zaak
+    die stap nooit heeft doorlopen. Leest het ECHTE spoor (CaseStepHistory) i.p.v.
+    de generated_documents-tabel, die het live verzendpad niet meer vult (S203 #5/#7).
+    """
+    result = await db.execute(
+        select(CaseStepHistory.entered_at)
+        .join(IncassoPipelineStep, CaseStepHistory.step_id == IncassoPipelineStep.id)
+        .where(
+            CaseStepHistory.tenant_id == tenant_id,
+            CaseStepHistory.case_id == case_id,
+            IncassoPipelineStep.name == DAGENBRIEF_STEP_NAME,
+        )
+        .order_by(CaseStepHistory.entered_at.asc())
+        .limit(1)
+    )
+    entered = result.scalar_one_or_none()
+    return entered.date() if entered else None
 
 
 async def pre_send_compliance_check(
@@ -54,22 +80,16 @@ async def pre_send_compliance_check(
 
     # ── Check 1: 14-dagenbrief requirement (B2C only) ──────────────────
     if is_b2c and document_type in ("sommatie", "tweede_sommatie", "dagvaarding"):
-        # Check if 14-dagenbrief was already generated
-        doc_result = await db.execute(
-            select(GeneratedDocument).where(
-                GeneratedDocument.case_id == case_id,
-                GeneratedDocument.tenant_id == tenant_id,
-                GeneratedDocument.template_type == "14_dagenbrief",
-            )
-        )
-        dagenbrief = doc_result.scalar_one_or_none()
-        if not dagenbrief:
+        # Leest het echte pijplijn-spoor (stap-historie), niet de lege
+        # generated_documents-tabel (S203 #5).
+        entered_at = await get_dagenbrief_entered_at(db, tenant_id, case_id)
+        if entered_at is None:
             errors.append(
                 "14-dagenbrief is nog niet verstuurd. Dit is verplicht bij consumenten "
                 "(Art. 6:96 lid 6 BW) voordat incassokosten gevorderd mogen worden."
             )
-        elif dagenbrief.created_at:
-            days_since = (date.today() - dagenbrief.created_at.date()).days
+        else:
+            days_since = (date.today() - entered_at).days
             if days_since < 15:
                 errors.append(
                     f"14-dagentermijn is nog niet verstreken. Brief verstuurd {days_since} "

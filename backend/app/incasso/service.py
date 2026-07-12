@@ -1240,6 +1240,25 @@ async def batch_execute(
                 )
                 continue
 
+            # S203 #5: wettelijke waarborg art. 6:96 lid 6 BW. Bij een consument mag
+            # geen BIK-claimende sommatie de deur uit vóór de 14-dagenbrief is verstuurd.
+            # De pijplijn zet de 14-dagenbrief als eerste B2C-stap; deze gate vangt een
+            # zaak die daar handmatig langs is gezet. Overslaan mét reden (niet stil).
+            from app.collections.compliance import (
+                DAGENBRIEF_STEP_NAME,
+                get_dagenbrief_entered_at,
+            )
+
+            if case.debtor_type == "b2c" and step.name != DAGENBRIEF_STEP_NAME:
+                dagenbrief_at = await get_dagenbrief_entered_at(db, tenant_id, case.id)
+                if dagenbrief_at is None:
+                    skipped += 1
+                    errors.append(
+                        f"{case.case_number}: 14-dagenbrief nog niet verstuurd — "
+                        f"verplicht bij consumenten vóór incassokosten (art. 6:96 lid 6 BW)"
+                    )
+                    continue
+
             try:
                 # Build context once — reused for e-mail body or DOCX archive.
                 base_context = await build_base_context(db, tenant_id, case)

@@ -398,6 +398,12 @@ class CaseFileResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CaseFileRename(BaseModel):
+    """Request schema to rename a case file (only the display filename changes)."""
+
+    original_filename: str = Field(..., min_length=1, max_length=255)
+
+
 class CaseEmailAttachmentResponse(BaseModel):
     """Email attachment linked to a case via synced email."""
 

@@ -164,6 +164,18 @@ async def delete_case_file(
     await db.flush()
 
 
+async def rename_case_file(
+    db: AsyncSession,
+    case_file: CaseFile,
+    new_filename: str,
+) -> CaseFile:
+    """Change the display filename. The stored file on disk is untouched."""
+    case_file.original_filename = new_filename
+    await db.flush()
+    await db.refresh(case_file)
+    return case_file
+
+
 def to_response(case_file: CaseFile) -> CaseFileResponse:
     """Convert CaseFile model to response schema."""
     uploader_name = None

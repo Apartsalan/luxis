@@ -19,6 +19,7 @@ from app.cases.schemas import (
     CaseCreate,
     CaseDetailResponse,
     CaseEmailAttachmentResponse,
+    CaseFileRename,
     CaseFileResponse,
     CasePartyCreate,
     CasePartyResponse,
@@ -527,6 +528,25 @@ async def preview_file(
         )
 
     raise HTTPException(status_code=415, detail="Preview niet ondersteund")
+
+
+@router.patch("/{case_id}/files/{file_id}", response_model=CaseFileResponse)
+async def rename_file(
+    case_id: uuid.UUID,
+    file_id: uuid.UUID,
+    payload: CaseFileRename,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rename a case file (changes only the display filename, not the stored file)."""
+    case_file = await files_service.get_case_file(db, current_user.tenant_id, case_id, file_id)
+    if not case_file:
+        raise HTTPException(status_code=404, detail="Bestand niet gevonden")
+
+    case_file = await files_service.rename_case_file(
+        db, case_file, payload.original_filename.strip()
+    )
+    return files_service.to_response(case_file)
 
 
 @router.delete("/{case_id}/files/{file_id}", status_code=status.HTTP_204_NO_CONTENT)

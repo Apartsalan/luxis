@@ -1295,7 +1295,10 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                                 if (e.key === "Enter" && renameValue.trim()) {
                                   renameCaseFile.mutate(
                                     { fileId: item.id, filename: renameValue.trim() },
-                                    { onSuccess: () => setRenamingFileId(null) }
+                                    {
+                                      onSuccess: () => setRenamingFileId(null),
+                                      onError: () => setRenamingFileId(null),
+                                    }
                                   );
                                 }
                                 if (e.key === "Escape") setRenamingFileId(null);
@@ -1304,7 +1307,10 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
                                 if (renameValue.trim() && renameValue.trim() !== item.filename) {
                                   renameCaseFile.mutate(
                                     { fileId: item.id, filename: renameValue.trim() },
-                                    { onSuccess: () => setRenamingFileId(null) }
+                                    {
+                                      onSuccess: () => setRenamingFileId(null),
+                                      onError: () => setRenamingFileId(null),
+                                    }
                                   );
                                 } else {
                                   setRenamingFileId(null);

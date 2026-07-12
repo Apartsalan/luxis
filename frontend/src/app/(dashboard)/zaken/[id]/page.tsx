@@ -35,16 +35,12 @@ import {
   type EmailComposeData,
   type EmailRecipient,
 } from "@/components/email-compose-dialog";
-import {
-  useWorkflowStatuses,
-  useWorkflowTransitions,
-} from "@/hooks/use-workflow";
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, getTimerSeconds, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 import { useSendViaProvider, type SyncedEmailDetail } from "@/hooks/use-email-sync";
 import { buildReplyPrefill, buildForwardPrefill, type ReplyPrefill } from "@/lib/email-reply";
-import { useIncassoPipelineSteps, useGenerateDraftForCase } from "@/hooks/use-incasso";
+import { useGenerateDraftForCase } from "@/hooks/use-incasso";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { STATUS_LABELS } from "./types";
@@ -89,11 +85,6 @@ export default function ZaakDetailPage() {
   const deleteCase = useDeleteCase();
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
   const { prompt: promptDialog, PromptDialog: PromptDialogEl } = usePrompt();
-  const { data: workflowStatuses } = useWorkflowStatuses();
-  const { data: workflowTransitions } = useWorkflowTransitions();
-
-  const { data: pipelineSteps } = useIncassoPipelineSteps(true);
-
   // Set breadcrumb label to case number
   useBreadcrumbs(zaak ? [{ segment: id, label: zaak.case_number }] : []);
   const { hasModule } = useModules();
@@ -558,8 +549,6 @@ export default function ZaakDetailPage() {
         updateStatusPending={updateStatus.isPending}
         statusSuggestion={statusSuggestion}
         setStatusSuggestion={setStatusSuggestion}
-        workflowStatuses={workflowStatuses}
-        workflowTransitions={workflowTransitions}
         timer={timer}
         startTimer={startTimer}
         setCaseEmailOpen={setCaseEmailOpen}

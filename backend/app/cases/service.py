@@ -704,9 +704,8 @@ async def update_case_status(
 ) -> Case:
     """Zet de zaak-status (B3, S198 — 4 vaste waarden).
 
-    De grote workflow-engine (execute_transition) leunde op de lege
-    workflow_statuses/transitions-tabellen en liet ELKE statuswijziging falen.
-    Vervangen door directe 4-status-logica:
+    De verwijderde workflow-engine leunde op lege configuratietabellen en liet
+    elke statuswijziging falen. De directe 4-status-logica is leidend:
       - Afsluiten  → 'afgesloten' (+ date_closed); geblokkeerd zolang er nog
         onafgewikkelde derdengelden op de zaak staan (FIN-2, Voda art. 6.19).
       - Heropenen  → 'nieuw'/'in_behandeling' (date_closed leeg).

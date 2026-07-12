@@ -22,27 +22,6 @@ export {
   TASK_STATUS_BADGE,
 } from "@/lib/status-constants";
 
-export const PIPELINE_STEPS = [
-  "nieuw",
-  "14_dagenbrief",
-  "sommatie",
-  "dagvaarding",
-  "vonnis",
-  "executie",
-  "betaald",
-];
-
-export const NEXT_STATUSES: Record<string, string[]> = {
-  nieuw: ["14_dagenbrief", "afgesloten"],
-  "14_dagenbrief": ["sommatie", "betaald", "afgesloten"],
-  sommatie: ["dagvaarding", "betaald", "afgesloten"],
-  dagvaarding: ["vonnis", "betaald", "afgesloten"],
-  vonnis: ["executie", "betaald", "afgesloten"],
-  executie: ["betaald", "afgesloten"],
-  betaald: [],
-  afgesloten: [],
-};
-
 export const INTEREST_LABELS: Record<string, string> = {
   statutory: "Wettelijke rente (art. 6:119 BW)",
   commercial: "Handelsrente (art. 6:119a BW)",

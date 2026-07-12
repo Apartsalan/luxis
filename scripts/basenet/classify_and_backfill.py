@@ -42,7 +42,7 @@ from app.relations.kyc_models import KycVerification  # noqa: F401
 from app.relations.models import Contact, ContactLink, ContactTerms  # noqa: F401
 from app.time_entries.models import TimeEntry  # noqa: F401
 from app.trust_funds.models import TrustTransaction  # noqa: F401
-from app.workflow.models import WorkflowRule, WorkflowStatus, WorkflowTask  # noqa: F401
+from app.workflow.models import WorkflowTask  # noqa: F401
 
 import argparse  # noqa: E402
 import asyncio  # noqa: E402

@@ -30,12 +30,6 @@ import {
 import {
   getTemplateLabel,
 } from "@/hooks/use-documents";
-import {
-  PHASE_LABELS,
-  PHASE_ORDER,
-  getPhaseForStatus,
-} from "@/hooks/use-workflow";
-import type { WorkflowStatus, WorkflowTransition } from "@/hooks/use-workflow";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CASE_STATUS_BADGE_FALLBACK, DEBTOR_TYPE_BADGE } from "@/lib/status-constants";
 import { TONES } from "@/lib/tones";
@@ -46,6 +40,30 @@ import { useUpdateCase } from "@/hooks/use-cases";
 import type { CaseDetail } from "@/hooks/use-cases";
 import type { TimerState } from "@/hooks/use-timer";
 import { toast } from "sonner";
+
+const PHASE_ORDER = [
+  "minnelijk",
+  "gerechtelijk",
+  "regeling",
+  "administratief",
+  "afsluiting",
+];
+
+const PHASE_LABELS: Record<string, string> = {
+  minnelijk: "Minnelijk",
+  gerechtelijk: "Gerechtelijk",
+  regeling: "Regeling",
+  administratief: "Administratief",
+  afsluiting: "Afsluiting",
+};
+
+const PHASE_ACTIVE_CLASSES: Record<string, string> = {
+  minnelijk: `ring-4 ${TONES.info.stepper}`,
+  gerechtelijk: `ring-4 ${TONES.legal.stepper}`,
+  regeling: `ring-4 ${TONES.warning.stepper}`,
+  administratief: `ring-4 ${TONES.neutral.solid} text-white ring-slate-500/20`,
+  afsluiting: `ring-4 ${TONES.success.stepper}`,
+};
 
 // ── VerjaringBadge ──────────────────────────────────────────────────────────
 
@@ -120,8 +138,6 @@ interface DossierHeaderProps {
   updateStatusPending: boolean;
   statusSuggestion: { status: string; templates: string[] } | null;
   setStatusSuggestion: (v: { status: string; templates: string[] } | null) => void;
-  workflowStatuses: WorkflowStatus[] | undefined;
-  workflowTransitions: WorkflowTransition[] | undefined;
   timer: TimerState;
   startTimer: (caseId: string, label: string) => void;
   setCaseEmailOpen: (v: boolean) => void;
@@ -140,8 +156,6 @@ export default function DossierHeader({
   updateStatusPending,
   statusSuggestion,
   setStatusSuggestion,
-  workflowStatuses,
-  workflowTransitions,
   timer,
   startTimer,
   setCaseEmailOpen,
@@ -182,10 +196,14 @@ export default function DossierHeader({
     }
   };
 
-  // Determine current phase from workflow data or fallback
-  const currentPhase = workflowStatuses
-    ? getPhaseForStatus(workflowStatuses, zaak.status)
-    : null;
+  // S199: de actuele pijplijnstap is de enige bron voor de dossierfase.
+  const currentStep = pipelineSteps?.find(
+    (step: PipelineStep) => step.id === zaak.incasso_step_id
+  );
+  const currentPhase =
+    currentStep && PHASE_ORDER.includes(currentStep.step_category)
+      ? currentStep.step_category
+      : null;
   const currentPhaseIndex = currentPhase
     ? PHASE_ORDER.indexOf(currentPhase)
     : -1;
@@ -256,18 +274,11 @@ export default function DossierHeader({
       {/* Phase Pipeline Stepper — only for incasso cases */}
       {isIncasso && (
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {currentPhase && (
+            <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {PHASE_ORDER.map((phase, index) => {
               const isActive = phase === currentPhase;
               const isPast = currentPhaseIndex >= 0 && index < currentPhaseIndex;
-              const PHASE_ACTIVE_CLASSES: Record<string, string> = {
-                minnelijk: `ring-4 ${TONES.info.stepper}`,
-                regeling: `ring-4 ${TONES.warning.stepper}`,
-                gerechtelijk: `ring-4 ${TONES.legal.stepper}`,
-                executie: `ring-4 ${TONES.danger.stepper}`,
-                afgerond: `ring-4 ${TONES.success.stepper}`,
-              };
-
               return (
                 <div key={phase} className="flex items-center flex-1 min-w-0">
                   <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
@@ -308,11 +319,16 @@ export default function DossierHeader({
                 </div>
               );
             })}
-          </div>
+            </div>
+          )}
 
           {/* DF2-09: Pipeline step selector */}
           {activeSteps.length > 0 && (
-            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border flex-wrap">
+            <div
+              className={`flex items-center gap-3 flex-wrap ${
+                currentPhase ? "mt-4 border-t border-border pt-4" : ""
+              }`}
+            >
               <span className="text-xs text-muted-foreground whitespace-nowrap">
                 Incassostap:
               </span>

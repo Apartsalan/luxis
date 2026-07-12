@@ -1,4 +1,4 @@
-"""Tests for the workflow module — statuses, transitions, tasks, rules, calendar."""
+"""Tests for workflow tasks, calendar, payments, and verjaring."""
 
 import uuid
 from datetime import date, timedelta
@@ -47,133 +47,6 @@ async def _create_case(
     return case
 
 
-# ── Statuses ─────────────────────────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_list_statuses(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """List statuses should return all seeded statuses."""
-    resp = await client.get("/api/workflow/statuses", headers=auth_headers)
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data) >= 10  # We seeded 15 statuses
-    slugs = [s["slug"] for s in data]
-    assert "nieuw" in slugs
-    assert "betaald" in slugs
-
-
-@pytest.mark.asyncio
-async def test_create_status(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """Creating a new status should return 201."""
-    payload = {
-        "slug": "test_status",
-        "label": "Test Status",
-        "phase": "minnelijk",
-        "sort_order": 99,
-        "color": "#ff0000",
-    }
-    resp = await client.post("/api/workflow/statuses", json=payload, headers=auth_headers)
-    assert resp.status_code == 201
-    assert resp.json()["slug"] == "test_status"
-    assert resp.json()["label"] == "Test Status"
-
-
-@pytest.mark.asyncio
-async def test_create_duplicate_slug_fails(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
-    """Creating a status with existing slug should fail (409)."""
-    payload = {
-        "slug": "nieuw",
-        "label": "Duplicate",
-        "phase": "minnelijk",
-    }
-    resp = await client.post("/api/workflow/statuses", json=payload, headers=auth_headers)
-    assert resp.status_code == 409
-
-
-@pytest.mark.asyncio
-async def test_update_status(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """Updating a status should change the specified fields."""
-    status_id = str(workflow_data["herinnering"])
-    resp = await client.put(
-        f"/api/workflow/statuses/{status_id}",
-        json={"label": "Herinnering (aangepast)", "color": "#00ff00"},
-        headers=auth_headers,
-    )
-    assert resp.status_code == 200
-    assert resp.json()["label"] == "Herinnering (aangepast)"
-    assert resp.json()["color"] == "#00ff00"
-
-
-@pytest.mark.asyncio
-async def test_delete_unused_status(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """Deleting an unused status should succeed (204)."""
-    # Create a status that's not used by any case
-    create_resp = await client.post(
-        "/api/workflow/statuses",
-        json={"slug": "temp_status", "label": "Temp", "phase": "minnelijk"},
-        headers=auth_headers,
-    )
-    temp_id = create_resp.json()["id"]
-
-    resp = await client.delete(f"/api/workflow/statuses/{temp_id}", headers=auth_headers)
-    assert resp.status_code == 204
-
-
-# ── Transitions ──────────────────────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_list_transitions(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """List transitions should return seeded transitions."""
-    resp = await client.get("/api/workflow/transitions", headers=auth_headers)
-    assert resp.status_code == 200
-    data = resp.json()
-    assert len(data) >= 10  # Many transitions seeded
-
-
-@pytest.mark.asyncio
-async def test_allowed_transitions_from_nieuw(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
-    """Allowed transitions from 'nieuw' should include herinnering and betaald."""
-    resp = await client.get(
-        "/api/workflow/transitions/allowed?from_status=nieuw&debtor_type=b2b",
-        headers=auth_headers,
-    )
-    assert resp.status_code == 200
-    slugs = [t["to_slug"] for t in resp.json()]
-    assert "herinnering" in slugs
-    assert "betaald" in slugs
-
-
-@pytest.mark.asyncio
-async def test_b2c_transitions_include_14_dagenbrief(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
-    """B2C transitions from 'nieuw' should include 14_dagenbrief."""
-    resp = await client.get(
-        "/api/workflow/transitions/allowed?from_status=nieuw&debtor_type=b2c",
-        headers=auth_headers,
-    )
-    slugs = [t["to_slug"] for t in resp.json()]
-    assert "14_dagenbrief" in slugs
-
-
-@pytest.mark.asyncio
-async def test_b2b_transitions_include_sommatie(
-    client: AsyncClient, auth_headers: dict, workflow_data: dict
-):
-    """B2B transitions from 'nieuw' should include direct sommatie."""
-    resp = await client.get(
-        "/api/workflow/transitions/allowed?from_status=nieuw&debtor_type=b2b",
-        headers=auth_headers,
-    )
-    slugs = [t["to_slug"] for t in resp.json()]
-    assert "sommatie" in slugs
-
-
 # ── Tasks ────────────────────────────────────────────────────────────────────
 
 
@@ -184,7 +57,6 @@ async def test_create_task(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """Creating a task should return 201 with correct fields."""
     case = await _create_case(db, test_tenant.id)
@@ -211,7 +83,6 @@ async def test_list_tasks_filter_by_case(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """Filtering tasks by case_id should return only that case's tasks."""
     case_a = await _create_case(db, test_tenant.id, "2026-00001")
@@ -240,7 +111,6 @@ async def test_update_task_to_completed(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """Completing a task should set completed_at."""
     case = await _create_case(db, test_tenant.id)
@@ -274,7 +144,6 @@ async def test_delete_task(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """Deleting a task should soft-delete it (204)."""
     case = await _create_case(db, test_tenant.id)
@@ -306,7 +175,6 @@ async def test_invalid_task_type_rejected(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """Invalid task_type should be rejected (400)."""
     case = await _create_case(db, test_tenant.id)
@@ -324,60 +192,6 @@ async def test_invalid_task_type_rejected(
     assert resp.status_code == 400
 
 
-# ── Rules ────────────────────────────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_create_rule(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """Creating a rule should return 201."""
-    payload = {
-        "name": "Auto-herinnering",
-        "trigger_status_id": str(workflow_data["herinnering"]),
-        "action_type": "send_letter",
-        "days_delay": 7,
-    }
-    resp = await client.post("/api/workflow/rules", json=payload, headers=auth_headers)
-    assert resp.status_code == 201
-    assert resp.json()["name"] == "Auto-herinnering"
-    assert resp.json()["days_delay"] == 7
-
-
-@pytest.mark.asyncio
-async def test_list_rules(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """Listing rules after creating one should return it."""
-    await client.post(
-        "/api/workflow/rules",
-        json={
-            "name": "Test rule",
-            "trigger_status_id": str(workflow_data["sommatie"]),
-            "action_type": "check_payment",
-        },
-        headers=auth_headers,
-    )
-
-    resp = await client.get("/api/workflow/rules", headers=auth_headers)
-    assert resp.status_code == 200
-    assert len(resp.json()) >= 1
-
-
-@pytest.mark.asyncio
-async def test_delete_rule(client: AsyncClient, auth_headers: dict, workflow_data: dict):
-    """Deleting a rule should soft-delete it (204)."""
-    create_resp = await client.post(
-        "/api/workflow/rules",
-        json={
-            "name": "To delete",
-            "trigger_status_id": str(workflow_data["nieuw"]),
-            "action_type": "manual_review",
-        },
-        headers=auth_headers,
-    )
-    rule_id = create_resp.json()["id"]
-
-    resp = await client.delete(f"/api/workflow/rules/{rule_id}", headers=auth_headers)
-    assert resp.status_code == 204
-
-
 # ── Calendar ─────────────────────────────────────────────────────────────────
 
 
@@ -388,7 +202,6 @@ async def test_calendar_events(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """Calendar should return tasks within the date range."""
     case = await _create_case(db, test_tenant.id)
@@ -426,7 +239,6 @@ async def test_verjaring_check(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """Verjaring check should flag cases approaching 5-year deadline."""
     contact = await _create_contact(db, test_tenant.id)
@@ -438,7 +250,7 @@ async def test_verjaring_check(
         tenant_id=test_tenant.id,
         case_number="2021-00001",
         case_type="incasso",
-        status="sommatie",
+        status="in_behandeling",
         debtor_type="b2b",
         date_opened=old_date,
         client_id=contact.id,
@@ -452,100 +264,6 @@ async def test_verjaring_check(
     assert len(data) >= 1
     assert data[0]["case_number"] == "2021-00001"
     assert data[0]["days_remaining"] <= 90
-
-
-# ── AUDIT-H1: financial guard on transition to 'betaald' ─────────────────────
-
-
-@pytest.mark.asyncio
-async def test_betaald_blocked_when_outstanding(
-    db: AsyncSession,
-    test_tenant: Tenant,
-    test_company: Contact,
-    workflow_data: dict,
-):
-    """A case with an outstanding balance may not transition to 'betaald'
-    (AUDIT-H1) — 'oninbaar'/'schikking' is the route to close with a remainder."""
-    from decimal import Decimal
-
-    from app.cases.service import get_case
-    from app.collections.models import Claim, InterestRate
-    from app.workflow.service import validate_transition
-
-    db.add(
-        InterestRate(
-            id=uuid.uuid4(),
-            rate_type="statutory",
-            effective_from=date(2024, 1, 1),
-            rate=Decimal("6.00"),
-            source="Test fixture",
-        )
-    )
-    case = Case(
-        id=uuid.uuid4(),
-        tenant_id=test_tenant.id,
-        case_number="2026-08040",
-        case_type="incasso",
-        debtor_type="b2b",
-        status="nieuw",
-        is_active=True,
-        client_id=test_company.id,
-        date_opened=date.today(),
-        total_principal=Decimal("5000.00"),
-        total_paid=Decimal("0.00"),
-    )
-    db.add(case)
-    db.add(
-        Claim(
-            id=uuid.uuid4(),
-            tenant_id=test_tenant.id,
-            case_id=case.id,
-            description="Factuur",
-            principal_amount=Decimal("5000.00"),
-            default_date=date.today() - timedelta(days=60),
-        )
-    )
-    await db.commit()
-
-    loaded = await get_case(db, test_tenant.id, case.id)
-    result = await validate_transition(db, test_tenant.id, loaded, "betaald")
-    assert result.allowed is False
-    assert any("betaald" in e.lower() and "open" in e.lower() for e in result.errors)
-
-
-@pytest.mark.asyncio
-async def test_betaald_allowed_when_nothing_outstanding(
-    db: AsyncSession,
-    test_tenant: Tenant,
-    test_company: Contact,
-    workflow_data: dict,
-):
-    """A case with no outstanding balance may transition to 'betaald' — the
-    auto-transition path must not be broken by the guard (AUDIT-H1)."""
-    from decimal import Decimal
-
-    from app.cases.service import get_case
-    from app.workflow.service import validate_transition
-
-    case = Case(
-        id=uuid.uuid4(),
-        tenant_id=test_tenant.id,
-        case_number="2026-08041",
-        case_type="incasso",
-        debtor_type="b2b",
-        status="nieuw",
-        is_active=True,
-        client_id=test_company.id,
-        date_opened=date.today(),
-        total_principal=Decimal("0.00"),
-        total_paid=Decimal("0.00"),
-    )
-    db.add(case)
-    await db.commit()
-
-    loaded = await get_case(db, test_tenant.id, case.id)
-    result = await validate_transition(db, test_tenant.id, loaded, "betaald")
-    assert result.allowed is True
 
 
 # ── S198-review: handmatig 'betaald' + symmetrische heropening ────────────────
@@ -642,7 +360,6 @@ async def test_task_response_status_overdue_when_past_due(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """A past-due task still stored as 'pending' (daily batch not run) must
     serialize as 'overdue' in the takenlijst response (AUDIT-H22)."""
@@ -675,7 +392,6 @@ async def test_calendar_event_overdue_status_and_color_from_due_date(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """A past-due task on the agenda must be 'overdue' + red, not 'pending' +
     blue, even when the daily batch hasn't materialized the status (AUDIT-H22)."""
@@ -802,7 +518,7 @@ async def test_check_verjaring_includes_reopened_case_with_date_closed(
     db: AsyncSession, test_tenant: Tenant, test_company: Contact
 ):
     """B2 — een heropende zaak draagt een oude `date_closed` uit de BaseNet-import
-    maar is inhoudelijk actief (status != afgesloten). De monitor moet 'm meenemen."""
+    maar is inhoudelijk actief (status is niet terminaal). De monitor moet 'm meenemen."""
     from decimal import Decimal
 
     from dateutil.relativedelta import relativedelta
@@ -817,7 +533,7 @@ async def test_check_verjaring_includes_reopened_case_with_date_closed(
         case_number="2026-VERJREOPEN",
         case_type="incasso",
         debtor_type="b2b",
-        status="sommatie",  # actief, niet afgesloten
+        status="in_behandeling",  # actief, niet afgesloten
         is_active=True,
         client_id=test_company.id,
         date_opened=date.today() - timedelta(days=2000),
@@ -890,58 +606,6 @@ async def test_check_verjaring_skips_paid_and_closed_status(
     nrs = {w["case_number"] for w in warnings}
     assert "2026-VERJPAID" not in nrs
     assert "2026-VERJCLOSED" not in nrs
-
-
-@pytest.mark.asyncio
-async def test_check_verjaring_skips_tenant_terminal_statuses(
-    db: AsyncSession, test_tenant: Tenant, test_company: Contact
-):
-    """Codex-review portie 2: ook de kantoor-eigen terminale statussen
-    (oninbaar/schikking via WorkflowStatus.is_terminal) worden overgeslagen."""
-    from decimal import Decimal
-
-    from dateutil.relativedelta import relativedelta
-
-    from app.collections.models import Claim
-    from app.workflow.models import WorkflowStatus
-    from app.workflow.service import check_verjaring
-
-    db.add(
-        WorkflowStatus(
-            tenant_id=test_tenant.id,
-            slug="oninbaar",
-            label="Oninbaar",
-            phase="afgerond",
-            is_terminal=True,
-        )
-    )
-    almost_expired = date.today() - relativedelta(years=5) + timedelta(days=30)
-    case = Case(
-        id=uuid.uuid4(),
-        tenant_id=test_tenant.id,
-        case_number="2026-VERJONINB",
-        case_type="incasso",
-        debtor_type="b2b",
-        status="oninbaar",
-        is_active=True,
-        client_id=test_company.id,
-        date_opened=date.today() - timedelta(days=2000),
-    )
-    db.add(case)
-    db.add(
-        Claim(
-            id=uuid.uuid4(),
-            tenant_id=test_tenant.id,
-            case_id=case.id,
-            description="Afgeschreven vordering",
-            principal_amount=Decimal("1000.00"),
-            default_date=almost_expired,
-        )
-    )
-    await db.commit()
-
-    warnings = await check_verjaring(db, test_tenant.id)
-    assert "2026-VERJONINB" not in {w["case_number"] for w in warnings}
 
 
 def test_compute_verjaring_date_clamps_leap_day():
@@ -1067,7 +731,6 @@ async def test_create_review_ai_draft_task_accepted(
     db: AsyncSession,
     test_tenant: Tenant,
     test_user: User,
-    workflow_data: dict,
 ):
     """A 'review_ai_draft' task must be accepted by create_task (AUDIT-MEDIUM).
 

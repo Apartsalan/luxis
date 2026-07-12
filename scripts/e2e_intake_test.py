@@ -45,7 +45,7 @@ from app.relations.models import Contact, ContactLink  # noqa: F401
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 from app.time_entries.models import TimeEntry  # noqa: F401
 from app.trust_funds.models import TrustTransaction  # noqa: F401
-from app.workflow.models import WorkflowRule, WorkflowStatus, WorkflowTask, WorkflowTransition  # noqa: F401,E501
+from app.workflow.models import WorkflowTask  # noqa: F401
 
 from app.ai_agent.intake_models import IntakeRequest, IntakeStatus
 from app.ai_agent.intake_service import (

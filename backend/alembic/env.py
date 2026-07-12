@@ -40,12 +40,7 @@ from app.relations.kyc_models import KycVerification  # noqa: F401
 from app.relations.models import Contact, ContactLink  # noqa: F401
 from app.time_entries.models import TimeEntry  # noqa: F401
 from app.trust_funds.models import TrustTransaction  # noqa: F401
-from app.workflow.models import (  # noqa: F401,E501
-    WorkflowRule,
-    WorkflowStatus,
-    WorkflowTask,
-    WorkflowTransition,
-)
+from app.workflow.models import WorkflowTask  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

@@ -398,6 +398,7 @@ async def gather_case_context(
     include_btw_on_bik = (
         not client_contact.is_btw_plichtig if client_contact is not None else False
     )
+    amounts_fallback = False
     try:
         summary = await get_financial_summary(
             db,
@@ -418,6 +419,7 @@ async def gather_case_context(
         totaal = summary["grand_total"].quantize(Decimal("0.01"))
         te_voldoen = summary["total_outstanding"].quantize(Decimal("0.01"))
     except Exception:
+        amounts_fallback = True
         # Fail-safe: bij berekeningsfout vallen we terug op hoofdsom-only zodat
         # draft-generatie niet volledig faalt. Wordt gelogd voor opvolg.
         logger.exception(
@@ -527,6 +529,10 @@ async def gather_case_context(
         "learned_examples_text": "",
         "_last_cls_category": last_cls_category,
         "_last_cls_defense_type": last_cls_defense_type,
+        # True = get_financial_summary faalde → rente/BIK/BTW staan op 0. De draft
+        # mag niet stil met te lage bedragen de review in; generate_draft_for_step
+        # zet dit als getrouwheids-issue (markeert draft + reviewtaak "controleren").
+        "_amounts_fallback": amounts_fallback,
     }
 
 
@@ -733,6 +739,14 @@ async def generate_draft_for_step(
             "— reviewtaak wordt gemarkeerd voor extra controle",
             case_id, _attempt, "; ".join(fidelity_issues),
         )
+    # S203 #3: viel de bedragenberekening terug op hoofdsom-only (rente/BIK/BTW = 0),
+    # dan is de brief onvolledig. Nooit stil laten passeren — als getrouwheids-issue
+    # markeren zodat draft én reviewtaak "bedragen controleren" tonen.
+    if context.get("_amounts_fallback"):
+        fidelity_issues = (fidelity_issues or []) + [
+            "bedragen onvolledig — rente/incassokosten konden niet worden berekend, "
+            "controleer de bedragen vóór verzending"
+        ]
     # AI returnt geen body_html — server rendert HTML uit template + dossier-context.
     # ai_body wordt meegegeven zodat XXX-placeholder (Verweer beantwoorden) gevuld
     # kan worden met de AI-gegenereerde weerlegging.

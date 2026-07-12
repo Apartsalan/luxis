@@ -2,12 +2,60 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S203 deel 1, Sol Ultra — Codex-master Fase A+B, read-only). Mailaudit en BaseNet-volledigheid/facturatie zijn afgerond; rapporten staan in `docs/security/` en `docs/research/`.
-**Laatste feature/fix:** geen productcode of productiedata gewijzigd. Mailpad: 5 middel/5 laag totaal in S202; BaseNet: 439 conflict-vrije facturen geadviseerd, 7 Mollie/kop-conflicten apart, 90 derdengeldposten uitgesloten.
-**Openstaand:** Mailverzending blijft op slot; Arsalan zet die zelf aan. Codex-master Fase C (19 voorkantbevindingen) en Fase D (security-fixes) wachten op Sol High; S201-import is niet uitgevoerd.
-**Volgende sessie:** zet Codex op Sol High en vervolg `docs/sessions/PROMPT-CODEX-master.md` vanaf Fase C; daarna Fase D, volledige verificatie en deploy per kleine commit.
+**Laatst bijgewerkt:** 12 juli 2026 (S203 deel 2, Opus — voorkant-fixes UITGEVOERD + LIVE). Codex' audits (Fase A+B, read-only) eerst nagecontroleerd (kloppen), daarna 11 van de 12 S200-voorkantbevindingen gebouwd, getest en uitgerold in 4 deploys.
+**Laatste feature/fix:** 15 commits, migraties `s203`+`s203b` op prod. Live-fixes o.a.: tijdlijn-crash, hernoem-knop, AI-concept €0-markering, "1169→1 deze maand", batch-foutmelding, nep-tabs weg, ratio 49,1%→5,3%, mailsync-gezondheidsbanner, scheduler-heartbeat+dashboard-alarm, intake-startstap, 14-dagenbrief-waarborg (batch-gate), logout-token-intrekking, Gmail-knop verborgen.
+**Openstaand:** Mailverzending blijft op slot (Arsalan zet zelf aan). Vervolg: 35-route backend-sloop (eigen verificatie nodig), #7 document-audittrail, #15 regeling-badge, log-persistentie VPS. Juridische beslissing #5 (harde blokkade vs. waarschuwing) ligt bij Lisanne. S201-facturatie-import (439 facturen) nog niet uitgevoerd.
+**Volgende sessie:** kies één spoor — óf S201-facturatie-import (recept + droogloop-poorten klaar), óf de S203-restpunten (route-sloop met per-route verificatie). Werk per taak rood→groen→commit→push→deploy.
 
-## Sessie 203 (12 juli 2026, Sol Ultra — Codex-master Fase A+B, read-only)
+## Sessie 203 deel 2 (12 juli 2026, Opus — voorkant-fixes UITGEVOERD + LIVE)
+
+### Samenvatting
+Eerst Codex' read-only audits nagecontroleerd (fable-diepte): 8 security-bevindingen zelf in de
+bron teruggevonden (alle 8 kloppen), facturatie-onderzoek onafhankelijk hergeteld tegen de
+BaseNet-export (567/773/€235.899,91 + de 7 Mollie-conflicten op de seconde) — **Codex-review
+betrouwbaar, eerste keer goed gegaan**. Daarna: 11 van 12 S203-taken gebouwd, per fix
+rood→groen→commit→push→deploy, 4 deploys, migraties `s203`/`s203b` op prod, alle containers healthy.
+
+**Ronde 1 (klein, live):** (13) tijdlijn-crash `duration_seconds`/`entry_date` → `duration_minutes`/
+`date` (+ sibling-bug). (4) hernoem-knop: PATCH `/api/cases/{id}/files/{id}` gebouwd + onError.
+(3) AI-concept bij €0-terugval markeert draft + reviewtaak (gegate op €-sjabloon; regressie in
+draft-gate zelf gevangen+gefixt). (6) "1169 toegevoegd deze maand" → import-marker uitgesloten,
+**live 1169→1**. (9) batch-fouten als waarschuwing mét redenen i.p.v. groene toast. (11/12) nep-tabs
+Meldingen+Weergave verwijderd. (10/14) incasso-ratio zelfde populatie + gecapt **49,1%→5,3% live**;
+negatief "Openstaand" → "teveel betaald"; lijstkolom "Openstaand (hoofdsom)".
+
+**Ronde 2 (middel, live):** (1) mailsync-gezondheid: `last_sync_error`-veld + banner (rood mislukt /
+amber >60min / laatst-gesynct), scheduler zet fout per account atomisch. (2) scheduler-heartbeat:
+nieuwe `scheduler_heartbeat`-tabel + APScheduler-listener legt elke job-run vast; dashboard toont
+rood alarm als een kritieke dagelijkse job (o.a. verjaringscontrole) >25u niet draaide. (8) intake
+wijst nu de eerste pijplijn-stap + historie-rij toe (Staphistorie vult zich weer; going-forward).
+(5) 14-dagenbrief-waarborg leest het echte spoor (`CaseStepHistory`) i.p.v. de lege tabel én de
+batch slaat een B2C-sommatie zonder 14-dagenbrief over mét reden (art. 6:96 lid 6). (16/17)
+logout trekt tokens server-side in, Gmail-knop verborgen, dode hook `usePendingCount` weg.
+
+### Verificatie
+Elke fix: gerichte tests groen (nieuwe tests bij elke fix), `uvx ruff` schoon, `tsc --noEmit` groen.
+Betrokken suites samen groen (incasso-pipeline 51, dashboard 23, intake 27, email-sync 28, RLS-drift 8,
+compliance-14dagenbrief 3, e.a.). Migraties `s203`+`s203b` op prod = head, containers healthy. Live
+via API bevestigd: `contacts_this_month` 1→ (was 1169), `collection_rate` 5.3 (was 49,1), `scheduler_alerts`
+veld werkt. Valkuil-les: mijn eerste fix-3 markeerde óók bedragenloze sjablonen + lekte een context-sleutel
+in `build_user_prompt` — beide door de draft-gate-tests gevangen vóór deploy (fable-tegenspreker).
+
+### Bekende issues / bewust niet gedaan (scope)
+- **35-route backend-sloop niet uitgevoerd** — ⚠️-trace + 3 "niet slopen zonder besluit"-uitzonderingen;
+  vraagt een eigen per-route-verificatieronde, niet aan het eind van deze lange sessie geforceerd.
+- **#7 document-audittrail** en **#15 regeling-badge** stonden niet in de S203-takenlijst → open.
+- **Juridische beslissing #5** (harde blokkade vs. waarschuwing; buiten Luxis verstuurde 14-dagenbrief) → Lisanne.
+- De 10 bestaande stap-loze intake-zaken zijn een aparte data-actie (going-forward-fix raakt ze niet).
+- Mailslot bleef DICHT; niets verstuurd. Statusregel per bevinding: `docs/sessions/S200-BEVINDINGEN.md` (tabel bijgewerkt).
+
+### Volgende sessie
+Eén spoor kiezen: S201-facturatie-import (439 facturen, recept+poorten klaar) óf S203-restpunten
+(route-sloop met verificatie). Prompt volgt bij sessiestart.
+
+---
+
+## Sessie 203 deel 1 (12 juli 2026, Sol Ultra — Codex-master Fase A+B, read-only)
 
 ### Samenvatting
 - **Fase A mailpadaudit afgerond.** Blok 2 in `docs/security/S202-delta-audit.md` is gevuld en onafhankelijk tegengesproken. Nieuwe kern: ongeëscapete dossierdata in systeemmail-HTML, ontvangers niet centraal gevalideerd/begrensd, late bijlagecaps, mailslotcache vóór commit en logvervalsing/PII in logs. Alle drie applicatietransporten controleren het mailslot; prod stond effectief dicht.
@@ -507,65 +555,3 @@ Codex-tegenlezer op de parser-diff getimed uit (5 min) → overgeslagen; parser 
 ### Volgende sessie
 Bouwblok 2 restant: C1 bankimport-proef **samen** (beslislijst in droogloop-rapport) → B4/A8
 termijn-vooruitblik (alleen overzicht over zaken heen) → B11 stappen 3 proefzaken. Anders bouwblok 3.
-
-## Sessie 193 (10 juli 2026, Opus + Codex-review — bouwblok 1 gebouwd + uitgerold)
-
-### Samenvatting
-Bouwblok 1 (`PROMPT-S193-bouwblok1.md`) volledig gebouwd, getest, door Codex (Sol Ultra,
-alleen-lezen) gereviewd tot **APPROVED** op beide porties, en uitgerold naar prod. Mailslot
-bleef aan — niets echt verstuurd; alles bewezen via tests + preview.
-
-**De 4 werkorders (allemaal live):**
-- **B1 — verstuurpad sommaties + geen valse "Uitgevoerd".** Follow-up "Uitvoeren" én de
-  incasso-batch riepen `render_docx` als eerste aan met e-mailsjabloonsleutels
-  (`sommatie_drukte`/`faillissement_dreigbrief`) → `NotFoundError` vóór de mailstap; follow-up
-  ving de fout en zette 'm tóch op "Uitgevoerd" (niets verstuurd, wél "klaar"). Nu: beide paden
-  proberen eerst `render_incasso_email` (brief = e-mailtekst, geen bijlage), DOCX-route alleen
-  voor echte briefsjablonen. `execute_recommendation` werpt een fout op bij mislukte/onmogelijke
-  verzending → nooit meer vals "Uitgevoerd". E-mailroute archiveert in `content_html`.
-- **B13 — vast kanaal incasso@ + preview.** `get_tenant_send_account` (adres = `Tenant.email`,
-  hoofdletterongevoelig, nieuwste koppeling eerst) + opt-in vlag `send_as_tenant_account` op de
-  4 pijplijn-verzendingen (facturen/handmatig ongewijzigd). `GET /api/followup/{id}/preview` +
-  `SendPreviewDialog`: geen één-klik-verzending meer, eerst afzender/ontvanger/onderwerp/tekst.
-- **B2+A1 — verjaring zichtbaar.** Monitor filterde op `date_closed` (dat komt uit BaseNet-import,
-  niet uit de app → heropende zaken vielen weg); nu op terminale status (`WorkflowStatus.is_terminal`
-  per tenant + betaald/afgesloten vangnet). Badge rekent op `verjaring_date` (server-berekend,
-  `compute_verjaring_date`, klemt 29 feb → 28 feb net als de monitor). Eigenaarloze tenant-taken
-  komen mee in Mijn Taken (`list_tasks include_unassigned`) → verjaring-alarmen zichtbaar.
-- **A2 — dashboardblok "Nieuwe Dossiers":** filter `pending` → `pending_review`.
-
-**Codex-review (drie-bedrijven-model, GPT-5.6 Sol Ultra, alleen-lezen):**
-- Portie 1 (verstuurpad/afzender/preview): 3 rondes. Codex vond o.a. 2 maskering-zij-ingangen
-  (dossier/stap-sjabloon weg → stil "Uitgevoerd"), batch die bij mislukte verzending tóch
-  doorschoof, `html_to_pdf` dat `file://` toestond (lokale-bestand-lek via WeasyPrint), escalatie-knop
-  die ik permanent blokkeerde, preview-XSS, Word-context die renteoverzicht oversloeg, tenant-scoping.
-  Alle verwerkt; ronde 2 ving mijn te-zwakke XSS-fix (verkeerde sanitizer); ronde 3 APPROVED.
-- Portie 2 (verjaring): 2 rondes. Badge-datum week 1 dag af rond 29 feb; oninbaar/schikking werden
-  niet als eindstatus herkend. Beide gefixt → APPROVED.
-- Zelf-review vooraf vond al 2 punten (HTML-doc-preview brak; misleidende afzender in preview).
-
-### Gewijzigde bestanden
-- Backend: `ai_agent/followup_service.py` (+`_router`/`_schemas`), `incasso/service.py`,
-  `email/oauth_service.py` + `send_service.py`, `documents/pdf_service.py` + `router.py`,
-  `documents/docx_service.py`, `workflow/service.py`, `dashboard/router.py`, `cases/service.py`
-  + `router.py` + `schemas.py`. Tests: `test_followup.py`, `test_incasso_pipeline.py`,
-  `test_workflow.py`, `test_tenant_send_account.py` (nieuw), `test_documents.py`.
-- Frontend: `followup/page.tsx` (preview-dialog), `taken/page.tsx`, `zaken/[id]/.../DossierHeader.tsx`,
-  `hooks/use-followup.ts` + `use-cases.ts`.
-- 8 commits (`d6f0037`..`569db64`), uitgerold (backend+frontend, geen migraties). VPS HEAD=569db64,
-  container draait vers image, healthy.
-
-### Bekende issues
-- ⚠️ **Visuele doorklik prod nog niet gedaan** (preview-dialog + verjaring-badge live bekijken).
-- ⚠️ **`Tenant.email` moet in prod incasso@ zijn** — anders vindt `get_tenant_send_account` geen
-  account en valt de afzender terug op de klikkende gebruiker (geen regressie, wél doel gemist).
-  Checken/zetten in Instellingen vóór het mailslot eraf gaat.
-- Idempotency: e-mail verstuurd → DB-commit faalt → rollback → retry kan dubbel sturen. Bekende
-  grens (1-gebruiker-kantoor, mailslot dicht); outbox bewust niet gebouwd.
-- `.codex/config.toml` bevat leesbare sleutels, nog niet in `.gitignore` (wacht op akkoord Arsalan).
-
-### Volgende sessie
-- **Visuele doorklik prod** van de nieuwe schermen (kan direct, mailslot dekt).
-- **Bouwblok 2** zodra C2-gegevens binnen zijn: C2 invullen → C1 bankimport-proef (samen) →
-  B4/A8 termijn-vooruitblik → B11 stappen 3 proefzaken. Anders **bouwblok 3**.
-- Prompt: `docs/sessions/PROMPT-S194.md`.

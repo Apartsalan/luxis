@@ -126,25 +126,32 @@ Read-only doorlopen met netwerk-tab + console: dashboard, nieuw-dossier-wizard (
 
 ---
 
-## Samenvatting voor de fix-sessie S203 (fix-volgorde)
+## Samenvatting voor de fix-sessie S203 (fix-volgorde) — STATUS na S203
 
-| # | Bevinding | Ernst | Fix |
-|---|---|---|---|
-| 13 | Tijdlijn-crash `duration_seconds` | 🔴 latent, 1 regel | XS |
-| 4 | Hernoemen-knop 405 + geen foutmelding | 🔴 | S |
-| 3 | AI-draft stil €0-fallback | 🔴 | S |
-| 6 | "1169 toegevoegd deze maand" | 🟠 zichtbaar elke dag | S |
-| 9 | Batch-fouten in groene toast | 🟠 | S |
-| 1 | Mailsync-gezondheid onzichtbaar | 🔴 | M |
-| 2 | Scheduler/verjaring dead-man-switch | 🔴 | M |
-| 5 | 14-dagenbrief-check aansluiten | 🟠 juridisch | M |
-| 8 | Intake seedt geen startstap/historie | 🟠 | S/M |
-| 7 | Document-audittrail (generated_documents) | 🟠 | M |
-| 10,14 | Cijfer-definities (ratio, openstaand, negatief) | 🟠 | S |
-| 11,12 | Nep-tabs Meldingen/Weergave weg | 🟠 | S |
-| 15 | Afgesloten-dossier-met-regeling uitleggen | 🟡 | S |
-| 16,17 | Sloopronde 35 routes + Gmail-knop + logout aansluiten | 🟡 | M |
-| — | Log-persistentie op VPS | 🟡 proces | S |
-| 18 | Derdengelden-werkwijze | vraag aan Lisanne | — |
+Legenda: ✅ = gebouwd, getest en LIVE op prod (S203, 12 juli) · ⬜ = open.
+
+| # | Bevinding | Ernst | Fix | Status |
+|---|---|---|---|---|
+| 13 | Tijdlijn-crash `duration_seconds` | 🔴 latent, 1 regel | XS | ✅ (+`entry_date` sibling-bug) |
+| 4 | Hernoemen-knop 405 + geen foutmelding | 🔴 | S | ✅ PATCH-route + onError |
+| 3 | AI-draft stil €0-fallback | 🔴 | S | ✅ markeert draft + reviewtaak |
+| 6 | "1169 toegevoegd deze maand" | 🟠 zichtbaar elke dag | S | ✅ live 1169→1 |
+| 9 | Batch-fouten in groene toast | 🟠 | S | ✅ waarschuwing + redenen |
+| 1 | Mailsync-gezondheid onzichtbaar | 🔴 | M | ✅ last_sync_error + banner |
+| 2 | Scheduler/verjaring dead-man-switch | 🔴 | M | ✅ heartbeat + dashboard-alarm |
+| 5 | 14-dagenbrief-check aansluiten | 🟠 juridisch | M | ✅ echt spoor + batch-gate (blok-vs-warn = Lisanne) |
+| 8 | Intake seedt geen startstap/historie | 🟠 | S/M | ✅ going-forward (10 bestaande = aparte data-actie) |
+| 7 | Document-audittrail (generated_documents) | 🟠 | M | ⬜ niet in S203-takenlijst |
+| 10,14 | Cijfer-definities (ratio, openstaand, negatief) | 🟠 | S | ✅ ratio 49,1%→5,3%, "teveel betaald", herlabeld |
+| 11,12 | Nep-tabs Meldingen/Weergave weg | 🟠 | S | ✅ verwijderd |
+| 15 | Afgesloten-dossier-met-regeling uitleggen | 🟡 | S | ⬜ niet in S203-rondes |
+| 16,17 | Sloopronde 35 routes + Gmail-knop + logout aansluiten | 🟡 | M | ◑ Gmail-knop + logout + dode hook ✅; 35-route-sloop ⬜ (eigen verificatie) |
+| — | Log-persistentie op VPS | 🟡 proces | S | ⬜ |
+| 18 | Derdengelden-werkwijze | vraag aan Lisanne | — | — gesprek |
+
+**S203-uitvoering (12 juli, Opus):** 11 van 12 taken LIVE in 4 deploys, elke fix rood→groen→commit
+→push→deploy, migraties s203/s203b op prod. Openstaand voor een vervolgsessie: 35-route backend-sloop
+(per-route verificatie), #7 document-audittrail, #15 regeling-badge, log-persistentie VPS. Juridische
+beslissing #5 (harde blokkade vs. waarschuwing) ligt bij Lisanne.
 
 **Niet geverifieerd deze sessie:** exacte werking van alle 12 scheduler-jobs behalve de 2 gelezen (claim subagent); de 141-mutations-scan (steekproef klopte); Exact Online end-to-end (geen connectie om mee te testen); of de write-flows na het submit-punt correct afronden (read-only-regel).

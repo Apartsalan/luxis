@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 12 juli 2026 (sessie 203 deel 1, Sol Ultra — Codex-master Fase A+B, read-only). S202-mailpad en S201-BaseNetonderzoek afgerond; volgende stap is Sol High voor S200-voorkantfixes en S202-securityfixes. Mailverzending blijft op slot. Details: SESSION-NOTES S203-entry.
+**Laatst bijgewerkt:** 12 juli 2026 (sessie 203 deel 2, Opus — S200-voorkantfixes UITGEVOERD + LIVE). 11 van 12 fixes gebouwd, getest en uitgerold (4 deploys, migraties s203/s203b). Codex' audits eerst nagecontroleerd (kloppen). Openstaand: 35-route-sloop, S201-import, S202-securityfixes. Mailverzending blijft op slot. Details: SESSION-NOTES S203 deel 2.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S203 deel 1)
+## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S203 deel 2)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -61,28 +61,24 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-> 🔀 **Sol Ultra heeft Fase A+B afgerond.** Eén masterprompt blijft leidend:
-> `docs/sessions/PROMPT-CODEX-master.md`. Zet nu op Sol High voor Fase C+D; daarna checkt Fable
-> het bouwwerk na.
-
-1. ✅ **S202 security-delta-audit S184–S199 — ALLE 7 BLOKKEN AFGEROND (12 juli, Fable + Sol Ultra, read-only).**
-   Rapport `docs/security/S202-delta-audit.md`. H1/H2/H3 blijven hoogste bouwprioriteit; mailpad voegt
-   HTML-inhoudsintegriteit, ontvangerbegrenzing en kleine hardening toe. RLS op prod compleet zonder
-   drift; mailslot op alle drie applicatietransporten bewezen. **Fixes = Codex Fase D (Sol High).**
-2. **S200 "de voorkant liegt"-audit — AFGEROND (12 juli, Fable, read-only).** 19 bevindingen met
-   bewijs in `docs/sessions/S200-BEVINDINGEN.md`. **Fixes = Codex Fase C** (`PROMPT-S203-voorkant-fixes.md`).
-3. ✅ **S201 BaseNet-volledigheid + facturatie-recept — AFGEROND (12 juli, Sol Ultra, read-only).**
-   `docs/research/S201-facturatie-recept.md` + `S201-volledigheidsmatrix.md`: 439 conflict-vrije
-   facturen geadviseerd; 7 Mollie/kop-conflicten eerst reconciliëren; 90 derdengeldposten uitsluiten;
-   187 D-dossiers zijn de ontbrekende ruggengraat. Geen import uitgevoerd.
-4. **Nu: Codex Fase C + D op Sol High.** Eerst de 19 S200-voorkantfixes, daarna S202 H1/H2/H3,
-   M1/M2 en mailhardening; M3 (DB-superuser/RLS Fase 2) blijft bewust apart. Per fix testen,
-   committen, pushen en deployen volgens `docs/sessions/PROMPT-CODEX-master.md`.
-5. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer
-   gereconstrueerd). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b —
+1. ✅ **S200 voorkant-fixes (Fase C) — 11 van 12 AFGEROND + LIVE (12 juli, Opus).** Alle "de
+   voorkant liegt"-bevindingen behalve de 35-route backend-sloop zijn gebouwd, getest en uitgerold
+   (4 deploys, migraties `s203`/`s203b`). Statusregel per bevinding: `docs/sessions/S200-BEVINDINGEN.md`.
+2. ✅ **Codex-audits nagecontroleerd — betrouwbaar.** 8 security-bevindingen zelf in de bron
+   teruggevonden; facturatie-cijfers onafhankelijk hergeteld tegen de BaseNet-export (klopt op de cent).
+3. **Openstaand na S203 (kies één spoor volgende sessie):**
+   - **S201 facturatie-import** — 439 conflict-vrije facturen; recept + droogloop-poorten klaar in
+     `docs/research/S201-facturatie-recept.md`. Aparte, naar-buiten-gerichte schrijfactie → apart akkoord.
+   - **S203-restpunten** — 35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail,
+     #15 regeling-badge, log-persistentie VPS.
+   - **S202 security-fixes (Fase D)** — H1 cross-tenant CaseFile, H2 fail-open "betaald"-guard, H3
+     "Geïnd" telt verwijderde betalingen, M1/M2 + mailhardening. Rapport `docs/security/S202-delta-audit.md`.
+     M3 (DB-superuser/RLS Fase 2) bewust apart.
+4. **Beslissingen voor Lisanne/Arsalan:** juridisch #5 (14-dagenbrief harde blokkade vs. waarschuwing);
+   derdengelden-werkwijze (272 betalingen buiten derdengeldenkanaal — S200 #18); kantoorrekening
+   `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer gereconstrueerd).
+5. **Heropening werkvoorraad:** volgende batch per opdrachtgever mét stap 4b —
    `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`.
-   Log-persistentie VPS (S200-aanbeveling: containerlogs overleven geen deploy). Derdengelden-werkwijze
-   bespreken met Lisanne (272 betalingen buiten derdengeldenkanaal geboekt — S200 #18).
 
 **Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende
 betalingsregelingen zijn alleen zinvol te bewaken als Luxis ook *ziet* dat er betaald is —

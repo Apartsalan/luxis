@@ -436,3 +436,29 @@ async def test_tenant_isolation(
     resp = await client.get("/api/time-entries", headers=other_headers)
     assert resp.status_code == 200
     assert len(resp.json()) == 0
+
+
+@pytest.mark.asyncio
+async def test_timeline_includes_time_entry(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Regressie S203#13: de dossier-tijdlijn las `duration_seconds`/`entry_date` —
+    velden die niet bestaan op TimeEntry (heeft `duration_minutes`/`date`). Eén
+    time entry liet de tijdlijn met een 500 crashen. Nu moet het pad 200 geven."""
+    case = await _create_case(db, test_tenant.id)
+    await db.commit()
+
+    payload = _entry_payload(case.id, duration_minutes=90, date="2026-03-01")
+    create_resp = await client.post("/api/time-entries", json=payload, headers=auth_headers)
+    assert create_resp.status_code == 201
+
+    resp = await client.get(
+        f"/api/cases/{case.id}/timeline?event_type=time_entry", headers=auth_headers
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    items = data["items"] if isinstance(data, dict) else data
+    time_items = [i for i in items if i["type"] == "time_entry"]
+    assert len(time_items) == 1
+    assert time_items[0]["title"] == "Tijdregistratie: 1:30"
+    assert time_items[0]["metadata"]["duration_minutes"] == 90

@@ -116,7 +116,7 @@ async def get_case_timeline(
             .options(selectinload(TimeEntry.user))
         )
         for t in result.scalars().all():
-            minutes = t.duration_seconds // 60 if t.duration_seconds else 0
+            minutes = t.duration_minutes or 0
             hours = minutes // 60
             mins = minutes % 60
             items.append({
@@ -125,7 +125,7 @@ async def get_case_timeline(
                 "subtype": "time",
                 "title": f"Tijdregistratie: {hours}:{mins:02d}",
                 "description": t.description,
-                "date": datetime.combine(t.entry_date, datetime.min.time()).isoformat() if t.entry_date else t.created_at.isoformat(),
+                "date": datetime.combine(t.date, datetime.min.time()).isoformat() if t.date else t.created_at.isoformat(),
                 "metadata": {
                     "user": t.user.full_name if t.user else None,
                     "duration_minutes": minutes,

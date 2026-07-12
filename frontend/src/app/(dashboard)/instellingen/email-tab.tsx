@@ -262,23 +262,14 @@ export function EmailTab() {
                     Geen e-mailaccount verbonden
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Verbind Gmail of Outlook om e-mail integratie te activeren
+                    Verbind Outlook om e-mail integratie te activeren
                   </p>
                 </div>
               </div>
+              {/* S203 #17: Gmail-knop verborgen — beleid sinds feb 2026 is 'alleen
+                  Outlook/Microsoft 365' (docs/future-modules.md). De Gmail-OAuth-route
+                  blijft in de backend als herstelpad, maar wordt niet meer aangeboden. */}
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handleConnect("gmail")}
-                  disabled={authorize.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                >
-                  {authorize.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Link className="h-4 w-4" />
-                  )}
-                  Verbind met Gmail
-                </button>
                 <button
                   onClick={() => handleConnect("outlook")}
                   disabled={authorize.isPending}

@@ -67,7 +67,15 @@ export function useAuthProvider() {
     fetchUser();
   }, [fetchUser]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // S203 #16: trek de refresh-tokens server-side in (was puur client-side, waardoor
+    // een gestolen refresh-token na 'uitloggen' geldig bleef). Faalt de call, dan
+    // ruimen we lokaal alsnog op — uitloggen mag nooit blijven hangen.
+    try {
+      await api("/api/auth/logout", { method: "POST" });
+    } catch {
+      // negeren — lokale opruiming hieronder gaat altijd door
+    }
     tokenStore.clear();
     setUser(null);
     router.push("/login");

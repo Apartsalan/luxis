@@ -35,6 +35,7 @@ from app.email.attachment_models import EmailAttachment
 from app.email.oauth_service import get_email_account
 from app.email.sync_service import (
     EMAIL_ATTACHMENTS_BASE,
+    _assert_case_in_tenant,
     bulk_link_emails,
     dismiss_emails,
     get_all_emails,
@@ -545,6 +546,11 @@ async def save_attachment_to_case(
     attachment = result.scalar_one_or_none()
     if not attachment:
         raise NotFoundError("Bijlage niet gevonden")
+
+    # 1b. Guard: the target case must belong to this tenant (AUDIT-H1). case_id
+    # comes straight from the URL; without this check a caller could copy their
+    # own attachment into another tenant's dossier (cross-tenant CaseFile).
+    await _assert_case_in_tenant(db, user.tenant_id, case_id)
 
     # 2. Verify source file exists
     source_path = (

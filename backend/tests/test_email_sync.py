@@ -625,6 +625,127 @@ async def test_bulk_link_same_tenant_still_works(
     assert e2.case_id == case.id
 
 
+# ── save_attachment_to_case cross-tenant guard (AUDIT-H1) ─────────────────────
+
+
+async def _make_attachment_with_file(
+    db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, attach_base
+) -> tuple[EmailAttachment, "SyncedEmail"]:
+    """Create an attachment record + a real source file on disk under attach_base."""
+    account = await _create_email_account(db, tenant_id, user_id)
+    email = await _create_synced_email(db, tenant_id, account.id, subject="Met bijlage")
+    stored = f"{uuid.uuid4()}.pdf"
+    attachment = EmailAttachment(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        synced_email_id=email.id,
+        provider_attachment_id="att-h1",
+        filename="geheim.pdf",
+        stored_filename=stored,
+        content_type="application/pdf",
+        file_size=8,
+    )
+    db.add(attachment)
+    src_dir = attach_base / str(tenant_id) / str(email.id)
+    src_dir.mkdir(parents=True, exist_ok=True)
+    (src_dir / stored).write_bytes(b"%PDF-1.4")
+    return attachment, email
+
+
+async def _count_case_files(session_factory, case_id: uuid.UUID) -> int:
+    """Count CaseFile rows for a case via a FRESH session — the shared request
+    session is left in a rolled-back state after a 4xx and cannot be reused."""
+    from sqlalchemy import func
+    from sqlalchemy import select as sa_select
+
+    from app.cases.models import CaseFile
+
+    async with session_factory() as s:
+        return (
+            await s.execute(
+                sa_select(func.count()).select_from(CaseFile).where(CaseFile.case_id == case_id)
+            )
+        ).scalar_one()
+
+
+@pytest.mark.asyncio
+async def test_save_attachment_rejects_foreign_tenant_case(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    session_factory,
+    tmp_path,
+    monkeypatch,
+):
+    """save_attachment_to_case must refuse a case from another tenant (AUDIT-H1).
+
+    The attachment is tenant-scoped, but case_id arrives straight from the URL and
+    was never validated. A real source file exists on disk, so WITHOUT the guard the
+    copy succeeds and a CaseFile is created pointing at another tenant's dossier."""
+    from app.email import sync_router
+
+    monkeypatch.setattr(sync_router, "EMAIL_ATTACHMENTS_BASE", tmp_path / "attach")
+    monkeypatch.setattr(sync_router, "CASE_FILES_UPLOADS_BASE", tmp_path / "casefiles")
+
+    attachment, _ = await _make_attachment_with_file(
+        db, test_tenant.id, test_user.id, tmp_path / "attach"
+    )
+    other = Tenant(
+        id=uuid.uuid4(), name="Other Firm H1", slug="other-firm-h1", kvk_number="33333333"
+    )
+    db.add(other)
+    await db.flush()
+    foreign_case = await _create_case(db, other.id, case_number="2026-99993")
+    # Capture ids before the request — a 4xx rolls back the shared session and
+    # expires these instances, so reading .id afterwards would trigger lazy IO.
+    attachment_id = attachment.id
+    foreign_case_id = foreign_case.id
+    await db.commit()
+
+    resp = await client.post(
+        f"/api/email/attachments/{attachment_id}/save-to-case/{foreign_case_id}",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 404
+
+    # nothing was attached to the foreign dossier
+    assert await _count_case_files(session_factory, foreign_case_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_save_attachment_same_tenant_succeeds(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+    session_factory,
+    tmp_path,
+    monkeypatch,
+):
+    """The H1 guard must not break a normal same-tenant save-to-case."""
+    from app.email import sync_router
+
+    monkeypatch.setattr(sync_router, "EMAIL_ATTACHMENTS_BASE", tmp_path / "attach")
+    monkeypatch.setattr(sync_router, "CASE_FILES_UPLOADS_BASE", tmp_path / "casefiles")
+
+    attachment, _ = await _make_attachment_with_file(
+        db, test_tenant.id, test_user.id, tmp_path / "attach"
+    )
+    case = await _create_case(db, test_tenant.id, case_number="2026-00051")
+    await db.commit()
+
+    resp = await client.post(
+        f"/api/email/attachments/{attachment.id}/save-to-case/{case.id}",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+
+    assert await _count_case_files(session_factory, case.id) == 1
+
+
 @pytest.mark.asyncio
 async def test_case_number_match_ignores_4digit_invoice_like_number(
     db: AsyncSession, test_tenant: Tenant

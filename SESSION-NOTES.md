@@ -3,9 +3,9 @@
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 12 juli 2026 (S203 deel 2, Opus — voorkant-fixes UITGEVOERD + LIVE). Codex' audits (Fase A+B, read-only) eerst nagecontroleerd (kloppen), daarna 11 van de 12 S200-voorkantbevindingen gebouwd, getest en uitgerold in 4 deploys.
-**Laatste feature/fix:** 15 commits, migraties `s203`+`s203b` op prod. Live-fixes o.a.: tijdlijn-crash, hernoem-knop, AI-concept €0-markering, "1169→1 deze maand", batch-foutmelding, nep-tabs weg, ratio 49,1%→5,3%, mailsync-gezondheidsbanner, scheduler-heartbeat+dashboard-alarm, intake-startstap, 14-dagenbrief-waarborg (batch-gate), logout-token-intrekking, Gmail-knop verborgen.
-**Openstaand:** Mailverzending blijft op slot (Arsalan zet zelf aan). Vervolg: 35-route backend-sloop (eigen verificatie nodig), #7 document-audittrail, #15 regeling-badge, log-persistentie VPS. Juridische beslissing #5 (harde blokkade vs. waarschuwing) ligt bij Lisanne. S201-facturatie-import (439 facturen) nog niet uitgevoerd.
-**Volgende sessie:** kies één spoor — óf S201-facturatie-import (recept + droogloop-poorten klaar), óf de S203-restpunten (route-sloop met per-route verificatie). Werk per taak rood→groen→commit→push→deploy.
+**Laatste feature/fix:** 16 commits, migraties `s203`+`s203b` op prod. Live-fixes o.a.: tijdlijn-crash, hernoem-knop, AI-concept €0-markering, "1169→1 deze maand", batch-foutmelding, nep-tabs weg, ratio 49,1%→5,3%, mailsync-gezondheidsbanner, scheduler-heartbeat+dashboard-alarm, intake-startstap, 14-dagenbrief = **harde blokkade incl. 15-dagentermijn** (besluit Arsalan), logout-token-intrekking, Gmail-knop verborgen.
+**Openstaand:** Mailverzending blijft op slot (Arsalan zet zelf aan). Vervolg: 35-route backend-sloop (eigen verificatie nodig), #7 document-audittrail, #15 regeling-badge, log-persistentie VPS. S201-facturatie-import (439 facturen) nog niet uitgevoerd.
+**Volgende sessie:** S204 = **Fable-review** van de S203-voorkant-fixes (`docs/sessions/PROMPT-S204-fable-review.md`), read-only + tests; daarna pas nieuw bouwen (S201-import óf route-sloop).
 
 ## Sessie 203 deel 2 (12 juli 2026, Opus — voorkant-fixes UITGEVOERD + LIVE)
 
@@ -29,9 +29,10 @@ amber >60min / laatst-gesynct), scheduler zet fout per account atomisch. (2) sch
 nieuwe `scheduler_heartbeat`-tabel + APScheduler-listener legt elke job-run vast; dashboard toont
 rood alarm als een kritieke dagelijkse job (o.a. verjaringscontrole) >25u niet draaide. (8) intake
 wijst nu de eerste pijplijn-stap + historie-rij toe (Staphistorie vult zich weer; going-forward).
-(5) 14-dagenbrief-waarborg leest het echte spoor (`CaseStepHistory`) i.p.v. de lege tabel én de
-batch slaat een B2C-sommatie zonder 14-dagenbrief over mét reden (art. 6:96 lid 6). (16/17)
-logout trekt tokens server-side in, Gmail-knop verborgen, dode hook `usePendingCount` weg.
+(5) 14-dagenbrief-waarborg leest het echte spoor (`CaseStepHistory`) i.p.v. de lege tabel; de batch
+blokkeert een B2C-sommatie **hard** als de 14-dagenbrief niet verstuurd is óf binnen 15 dagen daarna
+(besluit Arsalan: nooit eerder dan 15 dagen; `DAGENBRIEF_MIN_DAYS=15`). (16/17) logout trekt tokens
+server-side in, Gmail-knop verborgen, dode hook `usePendingCount` weg.
 
 ### Verificatie
 Elke fix: gerichte tests groen (nieuwe tests bij elke fix), `uvx ruff` schoon, `tsc --noEmit` groen.
@@ -45,13 +46,15 @@ in `build_user_prompt` — beide door de draft-gate-tests gevangen vóór deploy
 - **35-route backend-sloop niet uitgevoerd** — ⚠️-trace + 3 "niet slopen zonder besluit"-uitzonderingen;
   vraagt een eigen per-route-verificatieronde, niet aan het eind van deze lange sessie geforceerd.
 - **#7 document-audittrail** en **#15 regeling-badge** stonden niet in de S203-takenlijst → open.
-- **Juridische beslissing #5** (harde blokkade vs. waarschuwing; buiten Luxis verstuurde 14-dagenbrief) → Lisanne.
+- **#5 juridisch besloten (Arsalan):** harde blokkade, nooit een sommatie eerder dan 15 dagen ná de
+  14-dagenbrief. Open detail voor Lisanne: een buiten Luxis verstuurde 14-dagenbrief moet handmatig
+  in het systeem geregistreerd worden, anders blokkeert de gate terecht.
 - De 10 bestaande stap-loze intake-zaken zijn een aparte data-actie (going-forward-fix raakt ze niet).
 - Mailslot bleef DICHT; niets verstuurd. Statusregel per bevinding: `docs/sessions/S200-BEVINDINGEN.md` (tabel bijgewerkt).
 
 ### Volgende sessie
-Eén spoor kiezen: S201-facturatie-import (439 facturen, recept+poorten klaar) óf S203-restpunten
-(route-sloop met verificatie). Prompt volgt bij sessiestart.
+**S204 = Fable-review van deze S203-fixes** (`docs/sessions/PROMPT-S204-fable-review.md`): read-only,
+bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouwen (S201-import óf route-sloop).
 
 ---
 

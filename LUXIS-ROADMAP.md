@@ -66,7 +66,10 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
    (4 deploys, migraties `s203`/`s203b`). Statusregel per bevinding: `docs/sessions/S200-BEVINDINGEN.md`.
 2. ✅ **Codex-audits nagecontroleerd — betrouwbaar.** 8 security-bevindingen zelf in de bron
    teruggevonden; facturatie-cijfers onafhankelijk hergeteld tegen de BaseNet-export (klopt op de cent).
-3. **Openstaand na S203 (kies één spoor volgende sessie):**
+   **Volgende sessie = S204 Fable-review** van deze fixes (`docs/sessions/PROMPT-S204-fable-review.md`):
+   read-only, bron + prod nalezen, tests draaien, elke fix tegenspreken (m.n. de juridische
+   14-dagenbrief-blokkade: bestaan er andere verzendpaden die de gate omzeilen?). Pas daarna nieuw bouwen.
+3. **Openstaand ná de review (kies één spoor):**
    - **S201 facturatie-import** — 439 conflict-vrije facturen; recept + droogloop-poorten klaar in
      `docs/research/S201-facturatie-recept.md`. Aparte, naar-buiten-gerichte schrijfactie → apart akkoord.
    - **S203-restpunten** — 35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail,

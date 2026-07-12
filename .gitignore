@@ -89,3 +89,16 @@ basenet-export/
 
 # Leesbare API-sleutels — nooit meecommitten (akkoord Arsalan S193)
 .codex/
+
+# Parallel Codex-spoor + gevoelige bron-bestanden — bewust NIET in de repo
+# (S200-afspraak: Arsalan beslist). Per ongeluk mee-gecommit in eda3f2b (S203),
+# daarna weer verwijderd. Blijven lokaal op schijf staan.
+.agents/
+.claude/scheduled_tasks.lock
+tmp_*.sql
+templates/.s201-prod-match.sql
+# Bank-afschrift derdengelden + algemene voorwaarden (PDF) — gevoelig
+CSV_A_*.csv
+Algemene-voorwaarden-*.pdf
+Terms*.pdf
+Terms-and-conditions-*.pdf

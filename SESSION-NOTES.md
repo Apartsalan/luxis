@@ -4,8 +4,8 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 12 juli 2026 (S199 veegsessie — tweede /codex-build-rit, Sol bouwt/Fable verifieert). Vijf opruim-taken LIVE op prod. Details: S199-entry.
 **Laatste feature/fix:** 'betaald' telt overal als eindstatus (`TERMINAL_STATUSES`); bulk-status-endpoint gebouwd (was 404); dode workflow-status-engine gesloopt (−2.492 regels + 3 lege tabellen weg op prod) + fasebalk uit pijplijnstap; rapportage "Geïnd" toont nu €135.354,77 (was €0) + faseverdeling sluit; urenfilter alleen cliënten + lege-staten widgets. 1218 tests groen, live-geverifieerd.
-**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). **Met Arsalan, per stuk:** taak 6 (testdossier 2026-00001 + 6 test-aanvragen), data-vegen taak 5 (A12 accountnaam seidony@, 2 verweesde verjaringstaken IN100015/IN100127, 16+ reliek-pijplijnstappen), + samen visueel doorklikken (dossierkop + bulk-knop op 2 testzaken). Zie S199-entry §Nog open.
-**Volgende sessie:** S200 = "de voorkant liegt"-audit (systematische jacht op dode/lege/misleidende features, 8 vegen + Lisanne-dag). Prompt: `docs/sessions/PROMPT-S200.md`. Eerst de per-stuk-opruimacties hierboven afronden met Arsalan.
+**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). S199 is VOLLEDIG af — ook de opruimronde (taak 6 + data-vegen) én de bulk-knop live-getest (omkeerbaar, nul spoor). Geen S199-restpunten meer.
+**Volgende sessie:** S200 = "de voorkant liegt"-audit (systematische jacht op dode/lege/misleidende features, 8 vegen + Lisanne-dag). Prompt: `docs/sessions/PROMPT-S200.md`.
 
 ## Sessie 199 (12 juli 2026, nacht — /codex-build: Sol bouwt xhigh, Fable verifieert — veegsessie LIVE)
 
@@ -49,13 +49,19 @@ healthy, migratie = head. Live-checks via API als seidony@ (auth-guard, bulk, KP
 dashboard) allemaal kloppend. Valkuil genoteerd: afgekapte `docker exec pytest` laat het proces
 dóórlopen → twee reeksen botsten (vals-rood); voortaan detached ín de container draaien.
 
-### Nog open (met Arsalan, per stuk akkoord — bewust NIET autonoom)
-- **Taak 6:** testdossier 2026-00001 verwijderen; 6 test-aanvragen afwijzen + "AI Intake" →
-  "Nieuwe aanvragen".
-- **Data-vegen taak 5:** A12 accountnaam seidony@ ("Lisanne Kesting" → "Arsalan Seidony");
-  2 verweesde verjaringstaken (IN100015/IN100127); 16 inactieve reliek-pijplijnstappen +
-  dubbele inactieve "Eerste sommatie" (FK-check vóór delete).
-- **Visueel:** samen doorklikken — dossierkop zonder blanke balk, bulk-status op 2 testzaken.
+### Opruimronde + doorklik — UITGEVOERD (12 juli, mét Arsalans go; prod, elk read-only gemeten vóór mutatie)
+- **A12 accountnaam** seidony@ "Lisanne Kesting" → "Arsalan Seidony" (live in UI bevestigd).
+- **6 test-aanvragen** alle `pending_review` → `rejected` (0 over). **"AI Intake" → "Nieuwe aanvragen"**
+  (kop+broodkruimel+terug-knop, commit `bce1bc7`, gedeployed).
+- **2 verweesde verjaringstaken** (IN100015/IN100127, afgesloten+eigenaarloos) verwijderd.
+- **Spookstappen:** 17 inactieve stappen + 14 dode transities weg (FK-check: 0 zaken/geschiedenis/
+  followup verwezen); 15 actieve stappen + 15 transities intact.
+- **Testdossier 2026-00001** hard verwijderd — **20 échte mails eerst ONTKOPPELD** (niet vernietigd);
+  test-rommel mee weg. Werkvoorraad 28 → 27.
+- **Bulk-status-knop live getest** (omkeerbaar): IN100345+IN100197 via UI naar 'in behandeling'
+  ("2 dossiers bijgewerkt"), daarna exact terug naar 'nieuw' + testlogregels verwijderd — nul spoor.
+  Dropdown toont enkel de 4 vaste statussen. Fasebalk data-geverifieerd (17 gevuld / 10 verborgen).
+- Geen S199-restpunten meer open.
 
 ### Volgende sessie
 S200 = "de voorkant liegt"-audit (`docs/sessions/PROMPT-S200.md`): 8 systematische vegen op de

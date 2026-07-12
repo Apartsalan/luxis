@@ -66,11 +66,10 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
    (`TERMINAL_STATUSES`), bulk-status-endpoint (was 404), dode workflow-status-engine gesloopt + 3 lege
    tabellen weg, fasebalk uit pijplijnstap, "Geïnd" telt echte betalingen, faseverdeling sluit,
    urenfilter alleen cliënten + lege-staten. 1218 tests groen.
-2. **Nog afmaken mét Arsalan (per stuk akkoord — restant S199):** taak 6 (testdossier 2026-00001
-   verwijderen; 6 test-aanvragen afwijzen + "AI Intake"→"Nieuwe aanvragen"); A12 accountnaam seidony@
-   ("Lisanne Kesting"→"Arsalan Seidony"); 2 verweesde verjaringstaken (IN100015/IN100127); 16 inactieve
-   reliek-pijplijnstappen + dubbele inactieve "Eerste sommatie" (FK-check vóór delete); samen visueel
-   doorklikken (dossierkop + bulk-status op 2 testzaken).
+2. **Opruimronde S199 — AFGEROND (12 juli, mét Arsalan):** A12 accountnaam rechtgezet, 6 test-aanvragen
+   afgewezen + "AI Intake"→"Nieuwe aanvragen", 2 verweesde verjaringstaken weg, 17 reliek-stappen +
+   14 dode transities weg (FK-veilig), testdossier 2026-00001 verwijderd (20 echte mails ontkoppeld
+   bewaard, werkvoorraad 28→27), bulk-status-knop live omkeerbaar getest (nul spoor). Details: SESSION-NOTES S199.
 3. **S200 = "de voorkant liegt"-audit** (`docs/sessions/PROMPT-S200.md`): systematische jacht op
    dode/lege/misleidende features — 8 vegen op de zes fout-families (loszittende knoppen, lege bronnen,
    liegende cijfers, stil falen, half-af, relieken) + prod-logs + Lisanne-dag als sluitstuk. Read-only

@@ -8443,3 +8443,84 @@ Codex-tegenlezer op de parser-diff getimed uit (5 min) → overgeslagen; parser 
 ### Volgende sessie
 Bouwblok 2 restant: C1 bankimport-proef **samen** (beslislijst in droogloop-rapport) → B4/A8
 termijn-vooruitblik (alleen overzicht over zaken heen) → B11 stappen 3 proefzaken. Anders bouwblok 3.
+
+
+## Sessie 195 (11 juli 2026, Opus — grondige 1-op-1 betalingsaudit + heropenings-notities live)
+
+### Samenvatting
+Geen bouwsessie — controle op verzoek Arsalan: "is alles één-op-één overgezet, bij het juiste
+dossier, kloppend met bron en bankrekening?" Alle betalingen + regelingen onafhankelijk
+herberekend met de echte parser (`scripts/basenet/parse.py` + `mapping.py`) tegen de
+BaseNet-export (`Xml_02-07-2026_2400.zip`) én het bankafschrift, alleen-lezen. Eén materiële
+bevinding → op verzoek waarschuwingsnotities op de betrokken dossiers gezet.
+
+### Wat gecontroleerd + resultaat
+- **56 losse betaal-records (IncassoBetalingAnders):** alle 56 in Luxis, juiste dossier, juiste
+  datum, 0 dubbel, 0 ontbrekend. **199 bankregel-betalingen (CashBankLine, S180):** idem, koppeling
+  via `cblpcode` klopt. Totaal 255 betalingen ✅.
+- **Bedragen:** 191 op de cent; **64 bewust gecapt** — Luxis rekent rente vanaf verzuimdatum → iets
+  lager openstaand dan BaseNet → import capte op openstaand (S179: 17×, S180: 47×; deze audit
+  reproduceert exact diezelfde aantallen onafhankelijk). Samen €6.198,46 lager geboekt dan werkelijk
+  betaald. **Heropeningsrisico:** heropenen + herrekenen zonder correctie doet debiteur te weinig
+  lijken te hebben betaald.
+- **13 regelingen / 121 termijnen:** exact — juiste zaak, vervaldatum, bedrag; niets mist/dubbel.
+  Bron heeft 323 termijnen/37 zaken; bewust alleen 121 toekomstige (vanaf 9 juli 2026) over 13 zaken
+  (S179-afspraak: verleden-termijnen niet, want bron zegt niet of ze betaald zijn). Geen zaak met
+  toekomstige termijnen ontbreekt.
+- **Bankafschrift-kruiscontrole:** 138 credits exact geboekt; alle 57 venster-boekingen zonder exacte
+  credit verklaard (gecapt óf "rechtstreeks aan cliënt" — nooit via derdengeldenrekening).
+- **Correctie op de eerdere S195-indeling:** groepen B/C (36 rijen ~€48k) waren GEEN gaten — 34/36 zijn
+  gewoon geboekt op het gecapte bedrag; datum+bedrag-match zag ze onterecht als "nooit geboekt". Echt
+  onboekt uit B+C: alleen Saltik IN100345 (2×€50, plus 2×€50 in groep A).
+
+### Actie op prod (op expliciet verzoek Arsalan)
+- **64 dossier-notities** (`case_activities` type `note`) geschreven, één per gecapte zaak, met de exacte
+  bron- vs geboekt-bedragen en de instructie "corrigeer betaalbedrag vóór herrekenen bij heropening".
+  Idempotent (`[S195-audit]`-marker → NOT EXISTS-guard). Geverifieerd: 64 notities op 64 zaken, en via
+  de app-API zichtbaar bovenaan de recente activiteiten van het dossier.
+
+### Verjaringstaken IN100015/IN100127 — NIET afgevinkt
+Voorwaarde Arsalan: alleen als ook in BaseNet gesloten. Bron-status was **Lopend** → taken blijven staan
+(kandidaten voor heropeningsbatch).
+
+### Gewijzigde/aangemaakte bestanden
+- `docs/sessions/S195-1op1-audit.md` (nieuw — volledige bevindingen + 64-rijen gecapte-lijst)
+- `docs/sessions/S195-bankimport-indeling.md` (nieuw — complete indeling 212 credits + correctie-banner)
+- prod-DB: 64 rijen `case_activities` (notities). Géén code-wijziging, géén deploy.
+
+### Bekende issues / open
+- Gecapte betalingen: notitie is een handmatig vangnet. **Voorstel (niet gebouwd):** automatisch slot/
+  waarschuwing bij heropening van een zaak met `[S195-audit]`-notitie.
+- Kantoorrekening `NL79KNAB0606569456`: Arsalan bevestigde "ja"; stond al goed in systeem.
+
+### C1 bankimport UITGEVOERD (zelfde sessie, ná de audit — op akkoord Arsalan)
+Lisanne's werkwijze verklaarde de gaten: zij verwerkt betalingen maandelijks in BaseNet en
+stort maandelijks door aan cliënten; de export (2 juli) loopt dus 1 maand achter — juli-
+betalingen van debiteuren stonden nog niet in BaseNet, vandaar niet in Luxis.
+- **Reconciliatie (gecorrigeerd, na eigen telfout gevonden):** van 212 afschrift-credits →
+  138 exact geboekt, 39 gecapt-geboekt, **35 echt niet geboekt**. Die 35: 17 op zaken die in
+  BaseNet nog Lopend waren (maar in Luxis dicht), 16 op partijen zónder Luxis-dossier, 1 al
+  voldaan, 1 BaseNet-"Gereed".
+- **Geboekt:** `scripts/s195_reopen_book.py --execute` → **17 betalingen (€14.922,60)** op de
+  Lopend-zaken, als gewone betaling (art. 6:44, workflow-hook UIT, cap op openstaand, marker
+  `[S195-heropen …]`), consistent met de 255 bestaande. **10 zaken heropend** (status afgesloten
+  →nieuw) waar restant openstond; 3 die de betaling volledig afbetaalt bleven dicht; IN100547
+  (al voldaan) + IN100097 (BaseNet "Gereed") overgeslagen. Saltik IN100345: 4×€50, rente-knip
+  chronologisch correct.
+- **Geverifieerd:** DB (17 betalingen, 18→28 open zaken) + app-API (betaling zichtbaar op
+  IN100002/IN100215/IN100345). `--cleanup` beschikbaar als terugrol.
+- **Bewust NIET geboekt (besluit Arsalan):** onbekende betalingen — na Fable-hercontrole
+  gecorrigeerd naar **12 rijen, €21.738,96** (Donker €17.500 = "Grave/Donker", Dinc 6×€300+€100,
+  Königel €1.708, Makkinga €116, Van der Hem €500); 8 eerder-als-onbekend-getelde bleken de
+  bankkant van gecapte boekingen.
+
+### Fable-hercontrole van de Opus-uitvoering (zelfde avond, op verzoek Arsalan)
+Verse reconciliatie na het boeken: 138 exact + 14 S195-vol + 48 gecapt (incl. 3 van vanavond)
++ 12 onverklaard = 212 ✓. Geen dubbele boekingen (maandreeksen sluiten aan). **2 fixes:**
+(1) IN100215's €250 gekoppeld aan regeling-termijn 12-07 als deelbetaling (anders vals
+regeling-alarm); (2) de 3 nieuwe gecapte zaken (IN100480/532/585) kregen dezelfde
+heropen-notitie als de 64 → totaal 67. Cap-verschil droogloop-vs-boeking verklaard
+(openstaand per betaaldag, juridisch juist). Details: `S195-1op1-audit.md` §Fable-hercontrole.
+
+### Volgende sessie
+Bouwblok 2 restant: B4/A8 termijn-vooruitblik, B11 3 proefzaken. Prompt: `PROMPT-S196.md`.

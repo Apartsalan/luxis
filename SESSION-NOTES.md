@@ -2,10 +2,70 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S204, Fable — review S203-fixes, 100% read-only). 9 van 11 fixes bevestigd; 2 vervolg-punten gevonden. Rapport: `docs/sessions/S204-review.md`.
-**Laatste feature/fix:** geen code gewijzigd (reviewsessie). Bewezen defect: mailsync-foutpad vergiftigt volgende accounts (MissingGreenlet na rollback); 14-dagenbrief-gate heeft 2 zijdeuren (follow-up "Uitvoeren" + AI-concept-verzendpad) en een zwakke verstuurd-proxy.
-**Openstaand:** S205 = fix-sessie beslislijst S204 (2× juridisch 🔴). Daarna: 35-route-sloop, #7 audittrail, #15 regeling-badge, log-persistentie, S201-import. Mailslot blijft DICHT.
-**Volgende sessie:** S205 = gate-zijdeuren + mailsync-fix (`docs/sessions/PROMPT-S205-gate-zijdeuren.md`); checklist morgen: dagelijkse-job-rijen in `scheduler_heartbeat`.
+**Laatst bijgewerkt:** 12 juli 2026 (S205, Fable+Opus — S204-beslislijst gebouwd + LIVE). Alle 6 punten af; 128 tests groen; migratie s205 op prod.
+**Laatste feature/fix:** 14-dagenbrief-gate nu op alle 3 verzendwegen (bulk + follow-up "Uitvoeren" + AI-concept) via één gedeelde controle; verstuurd-proxy verstevigd (echte send); simpele "toch versturen"-noodknop; mailsync-foutpad gefixt (eigen sessie per postbus, LIVE bevestigd); heartbeat toont "draait maar faalt".
+**Openstaand:** S206 = kies één spoor: S201-import / S202-securityfixes / S203-restpunten. Waarschuwingstekst noodknop langs Lisanne vóór B2C-livegang. Mailslot blijft DICHT.
+**Volgende sessie:** S206 (`docs/sessions/PROMPT-S206.md`). Eerst checklist: staan de 5 dagelijkse-job-rijen nu in `scheduler_heartbeat` (na 13 juli 06:40 UTC)?
+
+## Sessie 205 (12 juli 2026, Fable+Opus — S204-beslislijst: 14-dagenbrief-zijdeuren dicht + mailsync-fix, LIVE)
+
+### Samenvatting
+Alle 6 punten uit de S204-beslislijst gebouwd, per taak rood→groen→commit→push, en de volledige
+stack gedeployd (migratie s205, alle containers healthy).
+
+**Juridisch — 14-dagenbrief-gate (art. 6:96 lid 6 BW) nu op ALLE drie de verzendwegen** via één
+gedeelde controle (`check_dagenbrief_gate` in `collections/compliance.py`): (1) de bulk-knop
+(bestond al, hergebruikt de helper), (2) de follow-up "Uitvoeren"-knop (`execute_recommendation`,
+hard geblokkeerd mét reden — dekt ook approve-and-execute), (3) het AI-concept-verzendpad
+(`compose/send`: verse niet-reply case-mail op een sommatie/dagvaarding-stap bij een consument →
+422 `DAGENBRIEF_GATE`). **Verstuurd-proxy verstevigd:** de brief telt alleen nog als verstuurd bij
+een échte verzending (`CaseStepHistory.email_sent`), niet meer bij stap-binnenkomst — sluit de
+"doorschuiven telt als verstuurd"-zijdeur; het batch-pad zet die vlag nu ook na een geslaagde send.
+
+**"Toch versturen"-noodknop — SIMPEL (instructie Arsalan):** géén verplicht redenveld. De frontend
+toont bij een blokkade een ja/nee-bevestiging (consequentie in gewone taal); bij doorzetten legt
+`record_dagenbrief_override` automatisch een onuitwisbaar spoor vast (CaseActivity + staphistorie-
+notitie). ⚠️ Waarschuwingstekst = concept, nog langs Lisanne vóór B2C-livegang (haar beroepsrisico).
+
+**14-dagenbrief zelf verstuurbaar (akkoord Arsalan, "allebei mogelijk"):** `template_type=
+'14_dagenbrief'` op de stap (seed + idempotente migratie s205). LIVE bevestigd op prod.
+
+**Mailsync-foutpad (bewezen defect, S204):** `email_auto_sync` deelde één sessie → een rollback bij
+één kapotte postbus (verlopen token) expireerde álle accounts → het volgende crashte
+(MissingGreenlet) en de hele run stopte. Nu een eigen sessie per account. LIVE bevestigd:
+`email_auto_sync` draaide om 20:19 op prod zonder fout.
+
+**Heartbeat "draait maar faalt":** de 5 kritieke dagelijkse jobs leggen bij intern falen nu
+`last_error` vast; het dashboard-alarm toont dat (klaart vanzelf op na een schone run).
+
+### Gewijzigde bestanden
+- Backend: `collections/compliance.py` (gedeelde gate + sterke proxy + override-spoor),
+  `incasso/service.py` (batch hergebruikt helper + mark-sent), `ai_agent/followup_service.py` (gate),
+  `email/compose_router.py` (gate + `compliance_override`-veld), `workflow/scheduler.py` (sessie per
+  account + heartbeat-fout), `dashboard/service.py` (alarm), migratie `s205_dagenbrief_template.py`.
+- Frontend: `zaken/[id]/page.tsx` ("toch versturen"-bevestiging via `useConfirm`).
+- Tests: `test_compliance_14dagenbrief`, `test_followup`, `test_compose_dagenbrief_gate` (nieuw),
+  `test_scheduler_email_sync` (nieuw), `test_dashboard`. 7 commits (`d440081`…`ee465b9`) + deploy.
+
+### Verificatie
+128 tests groen over de geraakte suites (compliance/followup/compose-gate/scheduler-email/dashboard/
+incasso-pipeline/s166), `uvx ruff check backend/app/` schoon, `tsc --noEmit` + `npm run build` groen.
+Prod: `alembic=s205_dagenbrief_template`, 14-dagenbrief-stap draagt het sjabloon, `email_auto_sync`
+draaide vers zonder fout. **Niet live end-to-end getest:** de gate zelf (mailslot DICHT; de 2 actieve
+B2C-zaken IN100345/350 zijn stap-loos → gate vuurt niet). Frontend "toch versturen" alleen via
+build/tsc, niet doorgeklikt.
+
+### Bekende issues / aandachtspunten
+- **Checklist (S204 ⚠a) — nog open:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` ontbreken
+  nog (jobs draaien 06:xx UTC; sinds de heartbeat-deploy niet aan de beurt geweest). De 5 periodieke
+  jobs hebben wél rijen → mechanisme werkt. **Opnieuw checken na 13 juli 06:40 UTC.**
+- Waarschuwingstekst noodknop moet langs Lisanne vóór echte B2C-verzending.
+- Mailslot blijft DICHT; niets verstuurd.
+
+### Volgende sessie
+S206: kies één spoor — S201 facturatie-import (439 conflict-vrije facturen, apart akkoord nodig),
+S202 security-fixes (H1/H2/H3), of S203-restpunten (35-route-sloop, #7 audittrail, #15 regeling-badge,
+log-persistentie). Prompt: `docs/sessions/PROMPT-S206.md`. Eerst de checklist hierboven.
 
 ## Sessie 204 (12 juli 2026, Fable — review S203-voorkant-fixes, 100% read-only)
 
@@ -464,82 +524,3 @@ niet uit, wél later voor rente/14-dagenbrief.
 Bouwblok 3: B3-versimpeling (status volgt pijplijn) + A5-pauze + A3 dagstart + A7 sjablonen.
 Prompt: `docs/sessions/PROMPT-S197.md`.
 
-## Sessie 195 (11 juli 2026, Opus — grondige 1-op-1 betalingsaudit + heropenings-notities live)
-
-### Samenvatting
-Geen bouwsessie — controle op verzoek Arsalan: "is alles één-op-één overgezet, bij het juiste
-dossier, kloppend met bron en bankrekening?" Alle betalingen + regelingen onafhankelijk
-herberekend met de echte parser (`scripts/basenet/parse.py` + `mapping.py`) tegen de
-BaseNet-export (`Xml_02-07-2026_2400.zip`) én het bankafschrift, alleen-lezen. Eén materiële
-bevinding → op verzoek waarschuwingsnotities op de betrokken dossiers gezet.
-
-### Wat gecontroleerd + resultaat
-- **56 losse betaal-records (IncassoBetalingAnders):** alle 56 in Luxis, juiste dossier, juiste
-  datum, 0 dubbel, 0 ontbrekend. **199 bankregel-betalingen (CashBankLine, S180):** idem, koppeling
-  via `cblpcode` klopt. Totaal 255 betalingen ✅.
-- **Bedragen:** 191 op de cent; **64 bewust gecapt** — Luxis rekent rente vanaf verzuimdatum → iets
-  lager openstaand dan BaseNet → import capte op openstaand (S179: 17×, S180: 47×; deze audit
-  reproduceert exact diezelfde aantallen onafhankelijk). Samen €6.198,46 lager geboekt dan werkelijk
-  betaald. **Heropeningsrisico:** heropenen + herrekenen zonder correctie doet debiteur te weinig
-  lijken te hebben betaald.
-- **13 regelingen / 121 termijnen:** exact — juiste zaak, vervaldatum, bedrag; niets mist/dubbel.
-  Bron heeft 323 termijnen/37 zaken; bewust alleen 121 toekomstige (vanaf 9 juli 2026) over 13 zaken
-  (S179-afspraak: verleden-termijnen niet, want bron zegt niet of ze betaald zijn). Geen zaak met
-  toekomstige termijnen ontbreekt.
-- **Bankafschrift-kruiscontrole:** 138 credits exact geboekt; alle 57 venster-boekingen zonder exacte
-  credit verklaard (gecapt óf "rechtstreeks aan cliënt" — nooit via derdengeldenrekening).
-- **Correctie op de eerdere S195-indeling:** groepen B/C (36 rijen ~€48k) waren GEEN gaten — 34/36 zijn
-  gewoon geboekt op het gecapte bedrag; datum+bedrag-match zag ze onterecht als "nooit geboekt". Echt
-  onboekt uit B+C: alleen Saltik IN100345 (2×€50, plus 2×€50 in groep A).
-
-### Actie op prod (op expliciet verzoek Arsalan)
-- **64 dossier-notities** (`case_activities` type `note`) geschreven, één per gecapte zaak, met de exacte
-  bron- vs geboekt-bedragen en de instructie "corrigeer betaalbedrag vóór herrekenen bij heropening".
-  Idempotent (`[S195-audit]`-marker → NOT EXISTS-guard). Geverifieerd: 64 notities op 64 zaken, en via
-  de app-API zichtbaar bovenaan de recente activiteiten van het dossier.
-
-### Verjaringstaken IN100015/IN100127 — NIET afgevinkt
-Voorwaarde Arsalan: alleen als ook in BaseNet gesloten. Bron-status was **Lopend** → taken blijven staan
-(kandidaten voor heropeningsbatch).
-
-### Gewijzigde/aangemaakte bestanden
-- `docs/sessions/S195-1op1-audit.md` (nieuw — volledige bevindingen + 64-rijen gecapte-lijst)
-- `docs/sessions/S195-bankimport-indeling.md` (nieuw — complete indeling 212 credits + correctie-banner)
-- prod-DB: 64 rijen `case_activities` (notities). Géén code-wijziging, géén deploy.
-
-### Bekende issues / open
-- Gecapte betalingen: notitie is een handmatig vangnet. **Voorstel (niet gebouwd):** automatisch slot/
-  waarschuwing bij heropening van een zaak met `[S195-audit]`-notitie.
-- Kantoorrekening `NL79KNAB0606569456`: Arsalan bevestigde "ja"; stond al goed in systeem.
-
-### C1 bankimport UITGEVOERD (zelfde sessie, ná de audit — op akkoord Arsalan)
-Lisanne's werkwijze verklaarde de gaten: zij verwerkt betalingen maandelijks in BaseNet en
-stort maandelijks door aan cliënten; de export (2 juli) loopt dus 1 maand achter — juli-
-betalingen van debiteuren stonden nog niet in BaseNet, vandaar niet in Luxis.
-- **Reconciliatie (gecorrigeerd, na eigen telfout gevonden):** van 212 afschrift-credits →
-  138 exact geboekt, 39 gecapt-geboekt, **35 echt niet geboekt**. Die 35: 17 op zaken die in
-  BaseNet nog Lopend waren (maar in Luxis dicht), 16 op partijen zónder Luxis-dossier, 1 al
-  voldaan, 1 BaseNet-"Gereed".
-- **Geboekt:** `scripts/s195_reopen_book.py --execute` → **17 betalingen (€14.922,60)** op de
-  Lopend-zaken, als gewone betaling (art. 6:44, workflow-hook UIT, cap op openstaand, marker
-  `[S195-heropen …]`), consistent met de 255 bestaande. **10 zaken heropend** (status afgesloten
-  →nieuw) waar restant openstond; 3 die de betaling volledig afbetaalt bleven dicht; IN100547
-  (al voldaan) + IN100097 (BaseNet "Gereed") overgeslagen. Saltik IN100345: 4×€50, rente-knip
-  chronologisch correct.
-- **Geverifieerd:** DB (17 betalingen, 18→28 open zaken) + app-API (betaling zichtbaar op
-  IN100002/IN100215/IN100345). `--cleanup` beschikbaar als terugrol.
-- **Bewust NIET geboekt (besluit Arsalan):** onbekende betalingen — na Fable-hercontrole
-  gecorrigeerd naar **12 rijen, €21.738,96** (Donker €17.500 = "Grave/Donker", Dinc 6×€300+€100,
-  Königel €1.708, Makkinga €116, Van der Hem €500); 8 eerder-als-onbekend-getelde bleken de
-  bankkant van gecapte boekingen.
-
-### Fable-hercontrole van de Opus-uitvoering (zelfde avond, op verzoek Arsalan)
-Verse reconciliatie na het boeken: 138 exact + 14 S195-vol + 48 gecapt (incl. 3 van vanavond)
-+ 12 onverklaard = 212 ✓. Geen dubbele boekingen (maandreeksen sluiten aan). **2 fixes:**
-(1) IN100215's €250 gekoppeld aan regeling-termijn 12-07 als deelbetaling (anders vals
-regeling-alarm); (2) de 3 nieuwe gecapte zaken (IN100480/532/585) kregen dezelfde
-heropen-notitie als de 64 → totaal 67. Cap-verschil droogloop-vs-boeking verklaard
-(openstaand per betaaldag, juridisch juist). Details: `S195-1op1-audit.md` §Fable-hercontrole.
-
-### Volgende sessie
-Bouwblok 2 restant: B4/A8 termijn-vooruitblik, B11 3 proefzaken. Prompt: `PROMPT-S196.md`.

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.trust_funds.models import TrustTransaction
 
 from app.cases.models import Case
+from app.cases.schemas import TERMINAL_STATUSES
 from app.collections.interest import _round2, calculate_case_interest
 from app.collections.models import (
     Claim,
@@ -1285,7 +1286,7 @@ async def get_portfolio_outstanding(
     negligible. If a tenant ever has hundreds of simultaneously active cases,
     revisit with cached interest/BIK columns refreshed by a daily job.
 
-    S175b: AFGESLOTEN dossiers tellen niet mee — sinds de BaseNet-import betekent
+    S175b/S199: terminale dossiers tellen niet mee — sinds de BaseNet-import betekent
     is_active 'zichtbaar' (het hele archief), niet 'lopend'. Zonder dit filter
     telde het dashboard het 607-zaken-archief als ~€4M openstaand én rekende het
     per bezoek de rente van al die archiefzaken live door.
@@ -1296,7 +1297,7 @@ async def get_portfolio_outstanding(
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-            Case.status != "afgesloten",
+            Case.status.notin_(TERMINAL_STATUSES),
         )
     )
     cases = result.scalars().all()

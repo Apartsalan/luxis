@@ -27,6 +27,7 @@ from app.ai_agent.prompts import (
 )
 from app.auth.models import Tenant
 from app.cases.models import Case, CaseActivity
+from app.cases.schemas import TERMINAL_STATUSES
 from app.email.send_service import send_with_attachment
 from app.email.synced_email_models import SyncedEmail
 from app.workflow.models import WorkflowTask
@@ -276,11 +277,11 @@ async def classify_new_emails(
             SyncedEmail.case_id.isnot(None),
             SyncedEmail.is_dismissed.is_(False),
             Case.case_type == "incasso",
-            # Klasseer NOOIT mails op afgesloten (archief-)dossiers. Zonder dit filter
+            # Klasseer NOOIT mails op terminale dossiers. Zonder dit filter
             # zou dit sleepnet na de BaseNet-import automatisch ~3.100 geïmporteerde
             # inbound-mails classificeren (~uren AI-kosten, ongevraagd). Fase 3 doet de
             # import-mails gericht via directe classify_email-aanroepen.
-            Case.status != "afgesloten",
+            Case.status.notin_(TERMINAL_STATUSES),
             SyncedEmail.id.notin_(already_classified),
         )
         .order_by(SyncedEmail.email_date.asc())

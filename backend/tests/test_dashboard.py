@@ -690,3 +690,33 @@ async def test_monthly_stats_excludes_inactive_cases(
     rows = resp.json()
     # Only the active case is counted; the two inactive (seed-style) ones are not.
     assert sum(r["new_cases"] for r in rows) == 1
+
+
+@pytest.mark.asyncio
+async def test_contacts_this_month_excludes_import(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant,
+):
+    """S203 #6: geïmporteerde relaties (marker in notes) tellen niet als
+    'nieuw deze maand', ook al is created_at de importdag."""
+    import uuid
+
+    db.add(Contact(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, contact_type="company",
+        name="Echt nieuwe relatie", email="nieuw@example.nl",
+    ))
+    db.add(Contact(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, contact_type="company",
+        name="Geimporteerde relatie", email="import@example.nl",
+        notes="[BaseNet-import] rcode=12345",
+    ))
+    await db.commit()
+
+    response = await client.get("/api/dashboard/summary", headers=auth_headers)
+    data = response.json()
+    # Alleen de echte nieuwe relatie telt; de import-relatie niet.
+    assert data["contacts_this_month"] == 1
+    # Totaal telt beide nog wel.
+    assert data["total_contacts"] >= 2

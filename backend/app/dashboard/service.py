@@ -11,6 +11,10 @@ from app.cases.models import Case, CaseActivity
 from app.cases.schemas import TERMINAL_STATUSES
 from app.relations.models import Contact
 
+# Marker die de BaseNet-import op elke geschreven rij zet (contacts.notes,
+# cases.debtor_notes). Zie scripts/basenet/import_basenet.py::_MARKER.
+IMPORT_MARKER = "[BaseNet-import]"
+
 
 async def get_dashboard_summary(
     db: AsyncSession,
@@ -89,11 +93,15 @@ async def get_dashboard_summary(
     # Cases opened this month
     today = date.today()
     first_of_month = today.replace(day=1)
+    # "Deze maand" = werkelijk nieuw, niet de BaseNet-import (S203 #6). Import-rijen
+    # dragen de marker in debtor_notes; zonder deze uitsluiting telt een her-import
+    # van een deze-maand-geopende zaak onterecht mee.
     result = await db.execute(
         select(func.count(Case.id)).where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
             Case.date_opened >= first_of_month,
+            func.coalesce(Case.debtor_notes, "").not_like(f"%{IMPORT_MARKER}%"),
         )
     )
     cases_this_month = result.scalar() or 0
@@ -108,11 +116,14 @@ async def get_dashboard_summary(
     )
     cases_closed_this_month = result.scalar() or 0
 
-    # Contacts created this month
+    # Contacts created this month — sluit de BaseNet-import uit (S203 #6): alle 1169
+    # geïmporteerde relaties dragen een created_at-stempel van de importdag, wat het
+    # dashboard "1169 nieuw deze maand" liet tonen. Import-rijen dragen de marker in notes.
     result = await db.execute(
         select(func.count(Contact.id)).where(
             Contact.tenant_id == tenant_id,
             Contact.created_at >= first_of_month,
+            func.coalesce(Contact.notes, "").not_like(f"%{IMPORT_MARKER}%"),
         )
     )
     contacts_this_month = result.scalar() or 0

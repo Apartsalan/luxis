@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 12 juli 2026 (sessie 199, /codex-build: Sol bouwt xhigh, Fable verifieert). **Veegsessie LIVE:** 'betaald' telt overal als eindstatus (`TERMINAL_STATUSES`); bulk-status-endpoint gebouwd (was 404); dode workflow-status-engine gesloopt (−2.492 regels + 3 lege tabellen weg op prod) + fasebalk uit pijplijnstap; rapportage "Geïnd" €135.354,77 (was €0) + faseverdeling sluit; urenfilter alleen cliënten + lege-staten. 1218 tests groen, live-geverifieerd. Mailslot staat nog UIT. Details: SESSION-NOTES S199-entry.
+**Laatst bijgewerkt:** 12 juli 2026 (sessie 200, Fable — "de voorkant liegt"-audit, 100% read-only). 19 bevindingen met bewijs in `docs/sessions/S200-BEVINDINGEN.md`; fixes = S203. Alle overige dashboard/rapportage-cijfers kloppen op de cent met SQL. Mailslot staat nog UIT. Details: SESSION-NOTES S200-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S199)
+## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S200)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -61,22 +61,23 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-1. **Bouwblok 1/2/3 + S197 + S198 + S199-veegsessie — AFGEROND.** Blokken en reviews: zie archief +
-   SESSION-NOTES. **S199 (codex-build, Sol bouwt/Fable verifieert) LIVE:** 'betaald' = eindstatus overal
-   (`TERMINAL_STATUSES`), bulk-status-endpoint (was 404), dode workflow-status-engine gesloopt + 3 lege
-   tabellen weg, fasebalk uit pijplijnstap, "Geïnd" telt echte betalingen, faseverdeling sluit,
-   urenfilter alleen cliënten + lege-staten. 1218 tests groen.
-2. **Opruimronde S199 — AFGEROND (12 juli, mét Arsalan):** A12 accountnaam rechtgezet, 6 test-aanvragen
-   afgewezen + "AI Intake"→"Nieuwe aanvragen", 2 verweesde verjaringstaken weg, 17 reliek-stappen +
-   14 dode transities weg (FK-veilig), testdossier 2026-00001 verwijderd (20 echte mails ontkoppeld
-   bewaard, werkvoorraad 28→27), bulk-status-knop live omkeerbaar getest (nul spoor). Details: SESSION-NOTES S199.
-3. **S200 = "de voorkant liegt"-audit** (`docs/sessions/PROMPT-S200.md`): systematische jacht op
-   dode/lege/misleidende features — 8 vegen op de zes fout-families (loszittende knoppen, lege bronnen,
-   liegende cijfers, stil falen, half-af, relieken) + prod-logs + Lisanne-dag als sluitstuk. Read-only
-   meten (Fable), fixes = S201.
-4. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer
+1. **S200 "de voorkant liegt"-audit — AFGEROND (12 juli, Fable, 100% read-only).** 8 vegen + Lisanne-dag
+   uitgevoerd; **19 bevindingen met bewijs/ernst/fix-grootte in `docs/sessions/S200-BEVINDINGEN.md`**.
+   Hoog: stil-dode mailsync, onzichtbaar falende scheduler/verjaringscheck, AI-concept met stille
+   €0-fallback, kapotte hernoemen-knop, dode 14-dagenbrief-check (juridisch), "1169 toegevoegd deze
+   maand". Plus latente tijdlijn-crash (1 regel) en 35 dode routes. Alle overige cijfers kloppen op de
+   cent; S191-meldingen-mysterie verklaard. **Fixes = S203** (`docs/sessions/PROMPT-S203-voorkant-fixes.md`).
+2. **S201 = facturatie-onderzoek — GESTART, overgedragen aan Sol** (tokens op):
+   `docs/sessions/S201-HANDOFF-naar-Sol.md` + `docs/sessions/PROMPT-S201-onderzoek-facturatie.md`.
+3. **S202 = security-delta-audit S184–S199** (`docs/sessions/PROMPT-S202-security-delta-audit.md`) —
+   prompt staat klaar.
+4. **S203 = voorkant-fixes** (bouwsessie Opus/Sol) — werkt de S200-lijst af in de volgorde van de
+   samenvattingstabel onderin het rapport.
+5. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer
    gereconstrueerd). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b —
    `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`.
+   Log-persistentie VPS (S200-aanbeveling: containerlogs overleven geen deploy). Derdengelden-werkwijze
+   bespreken met Lisanne (272 betalingen buiten derdengeldenkanaal geboekt — S200 #18).
 
 **Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende
 betalingsregelingen zijn alleen zinvol te bewaken als Luxis ook *ziet* dat er betaald is —

@@ -8174,3 +8174,47 @@ Kijk-sessie D-B (Relaties/Dossiers/Incasso/Follow-up/Intake) — kant-en-klare p
 `docs/sessions/PROMPT-DB-doorlichting.md`, start op Fable. Daarna D-C (Financieel +
 Systeem). Pas ná alle 3 de kijk-sessies: fase-2-beslislijst met Arsalan → Opus-bouwblokken.
 Heropening werkvoorraad blijft parallel klaarstaan.
+## Sessie 190 (9 juli 2026, Fable — kijk-sessie D-B: kern-motor, 100% read-only)
+
+### Samenvatting
+Tweede van drie kijk-sessies uit `docs/plans/PLAN-doorlichting-menu.md`: Relaties, Dossiers,
+Incasso, Follow-up en Intake doorgelicht op techniek (5 vragen), partner-blik en UX/UI.
+Gemeten in prod-DB (exacte tellingen, niet de tabel-schattingen — die bleken bij
+managed_templates 2 vs 9 fout) + code gelezen + app doorgeklikt (0 consolefouten).
+Volledig rapport: **`docs/research/audit-DB-kernmotor.md`** (13 werkorder-kandidaten B1-B13).
+
+### Belangrijkste vondsten
+- **HOOG — sommatie-verstuurpad kapot + fout wordt gemaskeerd**: stap-sjabloonsleutels
+  `sommatie_drukte`/`faillissement_dreigbrief` zijn e-mailsjablonen, maar Follow-up-"Uitvoeren"
+  en Incasso-batch "Document genereren" proberen er eerst een DOCX mee te renderen — sleutel
+  bestaat in geen van beide DOCX-registers → faalt. Follow-up markeert de aanbeveling dan tóch
+  "Uitgevoerd" (fout weggestopt in execution_result), er gaat niets de deur uit. Raakt 10 van
+  13 openstaande aanbevelingen (Eerste sommatie). Consistent: email_logs=0, generated_documents=0.
+  De AI-conceptroute per dossier is de gezonde weg. (Code+data-bewijs; niet live geklikt.)
+- **HOOG — status-engine leeg**: workflow_statuses/transities/regels alle 0 (exact geteld) →
+  dossierstatus onwijzigbaar via UI, "Volgende stap"-knoppen (hardcoded fallback) op elk
+  dossier zouden falen, statusfilter Dossiers-lijst is leeg, date_closed wordt nooit gezet.
+- **HOOG — verjaring ook in het dossier onzichtbaar**: VerjaringBadge rekent vanaf date_opened
+  (IN100015: badge zou jan 2030 zeggen, echt verjaard okt 2025) en verbergt zich op afgesloten
+  zaken; de monitor (juiste basis) skipt zaken mét date_closed → IN100016 (verjaart 23-09-2026,
+  €16.020) en IN100064 (jun 2027, €37.002) volledig onzichtbaar.
+- **Regelingen buiten beeld**: 13 actieve regelingen (121 termijnen, 0 betaald), 12 op
+  afgesloten zaken; eerstvolgende termijnen 9/12/13/15/18 juli; alleen alarm achteraf.
+- **Vervuiling**: 17 inactieve pipeline-stappen + dode transities (2 actieve wijzen naar
+  inactieve stappen); case_step_history 1 rij; "AI-suggestie"-badge op alle 18 rijen door
+  het classificatie-eiland; intake = 7 testaanvragen, 0 echte dossiers ooit.
+- **Positief**: Relaties gezond (delete-guard, AV-versies); dossier-detail professioneel,
+  rente op de cent (S188b-ijkpunt); slim-leren beoordeeld: 103 goedgekeurd / 28 afgewezen.
+
+### Verificatie
+Alle dragende beweringen deze sessie zelf gemeten (SQL op prod / code / klik); schrijfacties
+bewust niet uitgevoerd — expliciete "niet geverifieerd"-lijst in het rapport (§7). Geen
+enkele mutatie op prod. Sessie-afronding: rapport + PROMPT-DC aangemaakt, plan D-B afgevinkt,
+S183-entry naar archief (max-10-regel).
+
+### Volgende sessie
+Kijk-sessie D-C (Bankimport, Derdengelden, Uren, Facturen, Rapportages, Instellingen) —
+kant-en-klare prompt `docs/sessions/PROMPT-DC-doorlichting.md`, Fable. Sluit af met de
+totale beslislijst D-A+D-B+D-C voor fase 2 met Arsalan.
+
+<!-- S189 verplaatst naar docs/archief/SESSION-ARCHIVE.md (S199-afsluiting, 12 juli); oudste actieve entry = S190 -->

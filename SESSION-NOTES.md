@@ -2,10 +2,33 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S199 veegsessie — tweede /codex-build-rit, Sol bouwt/Fable verifieert). Vijf opruim-taken LIVE op prod. Details: S199-entry.
-**Laatste feature/fix:** 'betaald' telt overal als eindstatus (`TERMINAL_STATUSES`); bulk-status-endpoint gebouwd (was 404); dode workflow-status-engine gesloopt (−2.492 regels + 3 lege tabellen weg op prod) + fasebalk uit pijplijnstap; rapportage "Geïnd" toont nu €135.354,77 (was €0) + faseverdeling sluit; urenfilter alleen cliënten + lege-staten widgets. 1218 tests groen, live-geverifieerd.
-**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). S199 is VOLLEDIG af — ook de opruimronde (taak 6 + data-vegen) én de bulk-knop live-getest (omkeerbaar, nul spoor). Geen S199-restpunten meer.
-**Volgende sessie:** S200 = "de voorkant liegt"-audit (systematische jacht op dode/lege/misleidende features, 8 vegen + Lisanne-dag). Prompt: `docs/sessions/PROMPT-S200.md`.
+**Laatst bijgewerkt:** 12 juli 2026 (S200 "de voorkant liegt"-audit, Fable, 100% read-only). 19 genummerde bevindingen met bewijs in `docs/sessions/S200-BEVINDINGEN.md`. Details: S200-entry.
+**Laatste feature/fix:** geen code gewijzigd (audit-sessie). Grootste vondsten: 6 hoge bevindingen (o.a. stil-dode mailsync, kapotte hernoemen-knop, dode 14-dagenbrief-check, "1169 toegevoegd deze maand") + latente tijdlijn-crash. Alle overige dashboard/rapportage-cijfers kloppen op de cent.
+**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). S200-fixes wachten op bouwsessie (PROMPT-S203). Untracked bestanden van parallel S201-spoor (handoff naar Sol + S202-delta-audit) staan oncommit in de werkkopie — niet door S200 aangeraakt.
+**Volgende sessie:** S201-afronding door Sol (facturatie, `docs/sessions/S201-HANDOFF-naar-Sol.md`) of S202 (security-delta). S200-fixes daarna: `docs/sessions/PROMPT-S203-voorkant-fixes.md`.
+
+## Sessie 200 (12 juli 2026, Fable — "de voorkant liegt"-audit, 100% read-only op prod)
+
+### Samenvatting
+- Alle 8 vegen uit `PROMPT-S200.md` uitgevoerd + Lisanne-dag doorgeklikt op prod (ingelogd via gemint token, alleen GET/kijken). Resultaat: **19 genummerde bevindingen** met bewijs, ernst en fix-grootte in `docs/sessions/S200-BEVINDINGEN.md`, gerangschikt op impact voor Lisanne.
+- **Hoog (6):** mailsync kan stil doodgaan (geen sync-gezondheid in UI); alle 12 scheduler-jobs incl. verjaringscheck falen alleen naar server-log; AI-concept valt bij rekenfout stil terug op €0 rente/BIK; "Hernoemen" dossierbestand = kapotte knop (PATCH-route bestaat niet + geen onError); 14-dagenbrief-compliancecheck dubbel dood (leest lege tabel én nul UI-callers — juridisch relevant); dashboard "1169 toegevoegd deze maand" (allemaal import-stempels).
+- **Middel:** "Gegenereerde documenten"-sectie blijvend leeg (live briefpad persisteert niets); Staphistorie-tab altijd leeg (AI-intake seedt geen stap/historie; 10 stap-loze zaken); batch-fouten verdwijnen in groene toast; incasso-ratio deelt appels door peren; nep-tabs Instellingen→Meldingen/Weergave; latente 500 op dossier-tijdlijn (`duration_seconds` vs `duration_minutes`, 1-regel-fix); negatieve "Openstaand"-bedragen + twee definities van "Openstaand".
+- **Relieken:** 35 dode routes (lijst in rapport), dode hook `usePendingCount`, Gmail-knop nog live tegen beleid in, `POST /api/auth/logout` juist nooit aangesloten (security-flag), `document_templates`/`email_logs` reliek.
+- **Goed nieuws:** alle 30+ gecontroleerde cijfers op dashboard/rapportages/badges kloppen exact met SQL; 0 console-errors/4xx/5xx bij doorklikken; S191-meldingen-mysterie (264 vs 299) verklaard: bel verbergt `classification_done` per gebruiker — badge 20 is correct.
+- Audit 7-beperking: prod-logs bestaan maar ~9 uur (containerlogs weg bij elke deploy) → aanbeveling log-persistentie. Caddy: 29× 502 geclusterd rond S199-deploys (1 mislukte login).
+
+### Gewijzigde bestanden
+- `docs/sessions/S200-BEVINDINGEN.md` (nieuw — het rapport)
+- `docs/sessions/PROMPT-S203-voorkant-fixes.md` (nieuw — fix-bouwsessie)
+- `SESSION-NOTES.md` + `LUXIS-ROADMAP.md` (deze afsluiting); S190-entry → archief
+- Geen code, geen prod-data (100% read-only nageleefd; alle DB-toegang was SELECT, API-toegang alleen GET)
+
+### Bekende issues
+- Alles in `S200-BEVINDINGEN.md` (fixes = S203). Snelste winst: tijdlijn-crash (1 regel), hernoemen-knop, €0-fallback-markering.
+- Untracked in werkkopie (niet van S200): `S201-HANDOFF-naar-Sol.md`, `docs/security/S202-delta-audit.md`, AV-PDF's, bank-CSV, `.agents/`, `AGENTS.md` — laten staan voor het parallelle spoor; Arsalan beslist over committen.
+
+### Volgende sessie
+- Sol rondt S201 af (facturatie-onderzoek, handoff-doc) → daarna S202 (security-delta) → daarna S203 (voorkant-fixes, prompt klaar).
 
 ## Sessie 199 (12 juli 2026, nacht — /codex-build: Sol bouwt xhigh, Fable verifieert — veegsessie LIVE)
 
@@ -594,48 +617,3 @@ Fable per sessie (melding gedaan, niet zelf aangepast).
 ### Volgende sessie
 S193 = bouwblok 1 op Opus (`docs/sessions/PROMPT-S193-bouwblok1.md`): B1 verstuurpad +
 B13 vangrails + B2/A1 verjaring + A2 dashboardfix, alles vóór het mailslot eraf gaat.
-
-## Sessie 190 (9 juli 2026, Fable — kijk-sessie D-B: kern-motor, 100% read-only)
-
-### Samenvatting
-Tweede van drie kijk-sessies uit `docs/plans/PLAN-doorlichting-menu.md`: Relaties, Dossiers,
-Incasso, Follow-up en Intake doorgelicht op techniek (5 vragen), partner-blik en UX/UI.
-Gemeten in prod-DB (exacte tellingen, niet de tabel-schattingen — die bleken bij
-managed_templates 2 vs 9 fout) + code gelezen + app doorgeklikt (0 consolefouten).
-Volledig rapport: **`docs/research/audit-DB-kernmotor.md`** (13 werkorder-kandidaten B1-B13).
-
-### Belangrijkste vondsten
-- **HOOG — sommatie-verstuurpad kapot + fout wordt gemaskeerd**: stap-sjabloonsleutels
-  `sommatie_drukte`/`faillissement_dreigbrief` zijn e-mailsjablonen, maar Follow-up-"Uitvoeren"
-  en Incasso-batch "Document genereren" proberen er eerst een DOCX mee te renderen — sleutel
-  bestaat in geen van beide DOCX-registers → faalt. Follow-up markeert de aanbeveling dan tóch
-  "Uitgevoerd" (fout weggestopt in execution_result), er gaat niets de deur uit. Raakt 10 van
-  13 openstaande aanbevelingen (Eerste sommatie). Consistent: email_logs=0, generated_documents=0.
-  De AI-conceptroute per dossier is de gezonde weg. (Code+data-bewijs; niet live geklikt.)
-- **HOOG — status-engine leeg**: workflow_statuses/transities/regels alle 0 (exact geteld) →
-  dossierstatus onwijzigbaar via UI, "Volgende stap"-knoppen (hardcoded fallback) op elk
-  dossier zouden falen, statusfilter Dossiers-lijst is leeg, date_closed wordt nooit gezet.
-- **HOOG — verjaring ook in het dossier onzichtbaar**: VerjaringBadge rekent vanaf date_opened
-  (IN100015: badge zou jan 2030 zeggen, echt verjaard okt 2025) en verbergt zich op afgesloten
-  zaken; de monitor (juiste basis) skipt zaken mét date_closed → IN100016 (verjaart 23-09-2026,
-  €16.020) en IN100064 (jun 2027, €37.002) volledig onzichtbaar.
-- **Regelingen buiten beeld**: 13 actieve regelingen (121 termijnen, 0 betaald), 12 op
-  afgesloten zaken; eerstvolgende termijnen 9/12/13/15/18 juli; alleen alarm achteraf.
-- **Vervuiling**: 17 inactieve pipeline-stappen + dode transities (2 actieve wijzen naar
-  inactieve stappen); case_step_history 1 rij; "AI-suggestie"-badge op alle 18 rijen door
-  het classificatie-eiland; intake = 7 testaanvragen, 0 echte dossiers ooit.
-- **Positief**: Relaties gezond (delete-guard, AV-versies); dossier-detail professioneel,
-  rente op de cent (S188b-ijkpunt); slim-leren beoordeeld: 103 goedgekeurd / 28 afgewezen.
-
-### Verificatie
-Alle dragende beweringen deze sessie zelf gemeten (SQL op prod / code / klik); schrijfacties
-bewust niet uitgevoerd — expliciete "niet geverifieerd"-lijst in het rapport (§7). Geen
-enkele mutatie op prod. Sessie-afronding: rapport + PROMPT-DC aangemaakt, plan D-B afgevinkt,
-S183-entry naar archief (max-10-regel).
-
-### Volgende sessie
-Kijk-sessie D-C (Bankimport, Derdengelden, Uren, Facturen, Rapportages, Instellingen) —
-kant-en-klare prompt `docs/sessions/PROMPT-DC-doorlichting.md`, Fable. Sluit af met de
-totale beslislijst D-A+D-B+D-C voor fase 2 met Arsalan.
-
-<!-- S189 verplaatst naar docs/archief/SESSION-ARCHIVE.md (S199-afsluiting, 12 juli); oudste actieve entry = S190 -->

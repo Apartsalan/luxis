@@ -354,6 +354,67 @@ async def test_reports_collected_sums_payments_in_selected_period(
 
 
 @pytest.mark.asyncio
+async def test_reports_collected_excludes_soft_deleted_payments(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant,
+    test_company: Contact,
+):
+    """AUDIT-H3: 'Geïnd' mag verwijderde (soft-deleted) betalingen niet meetellen —
+    niet in de KPI en niet in de maandgrafiek. delete_payment zet is_active=False;
+    de rij blijft bestaan, dus zonder filter telt hij eeuwig mee."""
+    import uuid
+    from datetime import date
+
+    from app.cases.models import Case
+    from app.collections.models import Payment
+
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-H3DEL",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="betaald",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today(),
+    )
+    db.add(case)
+    await db.flush()
+    db.add_all(
+        [
+            Payment(
+                tenant_id=test_tenant.id,
+                case_id=case.id,
+                amount=Decimal("100.00"),
+                payment_date=date.today(),
+                is_active=True,
+            ),
+            Payment(
+                tenant_id=test_tenant.id,
+                case_id=case.id,
+                amount=Decimal("500.00"),
+                payment_date=date.today(),
+                is_active=False,  # verwijderd — mag niet meetellen
+            ),
+        ]
+    )
+    await db.commit()
+
+    kpis = await client.get("/api/reports/kpis?months=6", headers=auth_headers)
+    assert kpis.status_code == 200
+    assert Decimal(kpis.json()["total_collected"]) == Decimal("100.00")
+
+    monthly = await client.get("/api/reports/monthly?months=6", headers=auth_headers)
+    assert monthly.status_code == 200
+    month_key = date.today().strftime("%Y-%m")
+    row = next(r for r in monthly.json() if r["month"] == month_key)
+    assert Decimal(row["amount_collected"]) == Decimal("100.00")
+
+
+@pytest.mark.asyncio
 async def test_phase_distribution_includes_cases_without_step(
     client: AsyncClient,
     auth_headers: dict,

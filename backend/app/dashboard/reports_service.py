@@ -62,6 +62,7 @@ async def get_kpis(
     result = await db.execute(
         select(func.coalesce(func.sum(Payment.amount), 0)).where(
             Payment.tenant_id == tenant_id,
+            Payment.is_active.is_(True),  # AUDIT-H3: verwijderde betalingen niet meetellen
             Payment.payment_date >= period_start,
         )
     )
@@ -241,6 +242,7 @@ async def get_monthly_stats(
         select(pay_month, func.coalesce(func.sum(Payment.amount), 0))
         .where(
             Payment.tenant_id == tenant_id,
+            Payment.is_active.is_(True),  # AUDIT-H3: verwijderde betalingen niet meetellen
             Payment.payment_date >= start_date,
         )
         .group_by(pay_month)

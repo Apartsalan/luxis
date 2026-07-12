@@ -49,9 +49,25 @@ Live-checks: bulk 401 zonder token / {0,0,[]} met token; **Geïnd €135.354,77*
 (was €0); faseverdeling sluit: 10+2+5+1+10 = 28 = KPI-som = dashboard (18
 in_behandeling + 10 nieuw). Rond 1 ronde, 0 fix-rondes.
 
-**Nog open (met Arsalan, per stuk):** taak 6 (testdossier, test-aanvragen),
-data-vegen taak 5 (A12 accountnaam, 2 verweesde verjaringstaken, 16+
-reliek-stappen), visuele doorklik (dossierkop, bulk op 2 testzaken).
+## Opruimronde (12 juli, mét Arsalans go — prod, per stuk gemeten vóór mutatie)
+
+Alle data-vegen + taak 6 UITGEVOERD op prod (elk eerst read-only geverifieerd):
+- **A12 accountnaam:** seidony@ `full_name` "Lisanne Kesting" → "Arsalan Seidony" (UPDATE 1).
+- **6 test-aanvragen:** alle `pending_review` → `rejected` (UPDATE 6; 0 pending over). Soft.
+- **2 verweesde verjaringstaken:** IN100015/IN100127 (afgesloten, eigenaarloos) verwijderd (DELETE 2).
+- **Spookstappen:** 14 dode transities + 17 inactieve stappen weg (sort 100-115 + dubbele "Eerste
+  sommatie"). FK-check vooraf: 0 zaken/0 geschiedenis/0 followup verwijzen ernaar; 15 actieve
+  stappen + 15 actief↔actief-transities intact.
+- **Testdossier 2026-00001:** hard verwijderd (transactie) — **20 échte mails eerst ONTKOPPELD
+  (case_id=NULL), niet vernietigd**; test-rommel weg (4 classificaties, 10 meldingen, 1 followup,
+  2 activiteiten, 1 geschiedenis). Werkvoorraad 28 → 27.
+- **"AI Intake" → "Nieuwe aanvragen"** (paginakop + broodkruimel + terug-knop; commit `bce1bc7`,
+  frontend gedeployed).
+- **Fasebalk data-geverifieerd:** 17 actieve zaken met geldige categorie (9 minnelijk/7 admin/1
+  regeling) → balk gevuld; 10 zonder stap → balk verborgen. Blanco kan niet meer.
+
+**Nog samen te doen (Arsalan wilde dit expliciet "samen"):** live bulk-status-knop op 2 testzaken
+klikken (verandert echte zaakstatus → met hem erbij). Endpoint zelf al bewezen (401-guard + tests).
 
 Notities (geen blokkades):
 - Incassopercentage mengt nu periode-geïnd met lopende hoofdsom — bestaand grof

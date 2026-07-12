@@ -8524,3 +8524,53 @@ heropen-notitie als de 64 → totaal 67. Cap-verschil droogloop-vs-boeking verkl
 
 ### Volgende sessie
 Bouwblok 2 restant: B4/A8 termijn-vooruitblik, B11 3 proefzaken. Prompt: `PROMPT-S196.md`.
+
+## Sessie 196 (11 juli 2026, Opus — bouwblok 2 afgerond: termijn-vooruitblik + 3 proefzaken)
+
+### Samenvatting
+Sessie begon met een correctie: `PROMPT-S196.md` was geschreven vóór de C1-uitvoering op de
+S195-avond en droeg de bankimport nog als open taak — Arsalan kreeg daardoor voor de derde
+keer dezelfde beslisvragen. Stand gecheckt (SESSION-NOTES + Fable-hercontrole): **C1 was al
+af**. Prompt kreeg een achterhaald-banner; alleen taak 2 + 3 uitgevoerd.
+
+**Taak 2 — B4/A8 termijn-vooruitblik (LIVE, commit `42c3e4c`).** Dashboardblok "Aankomende
+termijnen" in de incasso-kolom: open termijnen van actieve regelingen over álle zaken
+(pending binnen 30 dagen; overdue/partial altijd, rood/geel gemarkeerd), gesorteerd op
+vervaldatum, max 8 + "+N meer"-voet, klik → Betalingen-tab van het dossier. Backend:
+`list_upcoming_installments` (collections-service, tenant-gefilterd, zelfde
+geen-zaakstatus-filter-keuze als het regeling-alarm) + `GET /api/dashboard/upcoming-installments`
+(auth). Bewust geen aparte pagina (besluit S191: alleen overzicht; 13 regelingen).
+
+**Taak 3 — B11 proefzaken op hun stap (per zaak akkoord Arsalan).** Conform draaiboek
+PLAN-heropening-werkvoorraad regel 118-120, alleen `incasso_step_id`+`step_entered_at`
+gezet (guarded SQL, transactie): IN100215 → Bijhouden regeling (actieve regeling, termijn
+12 juli deels betaald), IN100040 → Voorstel dagvaarding (BaseNet "Procederen?"), IN100521 →
+Voorstel dagvaarding (4e sommatie). email_logs 0 vóór==ná; status bleef 'nieuw'.
+Kanttekening genoteerd: draaiboek noemt IN100521 B2C, systeem zegt b2b — maakt voor de stap
+niet uit, wél later voor rente/14-dagenbrief.
+
+### Verificatie
+- 23 tests groen (`test_payment_arrangements.py`, incl. 2 nieuwe: overview + tenant-isolatie);
+  ruff schoon; `tsc --noEmit` + `npm run build` groen.
+- Deploy backend+frontend via SSH, containers healthy.
+- Live: endpoint geeft 14 termijnen die exact matchen met eerdere sessies (IN100019 gemist
+  9 juli bovenaan; IN100215 partial €250 — de S195-Fable-fix zichtbaar); Playwright-doorklik
+  dashboard → IN100019 Betalingen-tab: zelfde termijn "Achterstallig". Proefzaken via app-API
+  bevestigd op de juiste stap.
+- **Codex-tegenlezer overgeslagen:** timede na 10 min uit (S194: zelfde). Werkvorm herzien
+  vóór volgende bouwsessie; diff was klein + testgedekt.
+
+### Gewijzigde bestanden
+- `backend/app/collections/service.py` (+`list_upcoming_installments`),
+  `backend/app/dashboard/router.py` + `schemas.py`, `backend/tests/test_payment_arrangements.py`
+- `frontend/src/app/(dashboard)/page.tsx` (widget), `docs/sessions/PROMPT-S196.md` (banner)
+- prod-DB: 3 rijen `cases` (stap gezet). Commit `42c3e4c` + docs-commit, tag `sessie-196`.
+
+### Bekende issues
+- Codex-tegenlezer 2× op rij onbruikbaar (timeout) — beslissen: andere aanroepvorm of
+  voorlopig uit het sessieprotocol.
+- IN100521 debtor_type b2b vs draaiboek "B2C" — checken vóór er brieven/rente uitgaan.
+
+### Volgende sessie
+Bouwblok 3: B3-versimpeling (status volgt pijplijn) + A5-pauze + A3 dagstart + A7 sjablonen.
+Prompt: `docs/sessions/PROMPT-S197.md`.

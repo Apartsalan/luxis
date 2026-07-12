@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 12 juli 2026 (sessie 205, Fable+Opus — S204-beslislijst gebouwd + LIVE). 14-dagenbrief-gate nu op alle 3 verzendwegen (gedeelde controle) + sterke verstuurd-proxy + simpele "toch versturen"-noodknop; 14-dagenbrief zelf verstuurbaar (sjabloon op stap, migratie s205); mailsync-foutpad gefixt (LIVE); heartbeat toont "draait maar faalt". 128 tests groen. Details: SESSION-NOTES S205. Volgende = S206.
+**Laatst bijgewerkt:** 13 juli 2026 (sessie 206, Opus autonoom + Fable-review — spoor S202 security/correctheids-fixes LIVE). H1 cross-tenant bijlage/sync-guard, H2 fail-closed betaald-guard (+ 2 verborgen bugs), H3 "geïnd"/provisie telt geen verwijderde betalingen, M1 bulk-cap, M2 auto-advance stopt vóór eindstap. 5 audit-fixes + 2 Fable-must-fixes; 1259 tests groen; gedeployd (geen migratie). Details: SESSION-NOTES S206. Volgende = S207.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -61,23 +61,27 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-1. ✅ **S205 fix-sessie AFGEROND + LIVE (12 juli).** Alle 6 S204-beslislijst-punten gebouwd, 128 tests
-   groen, migratie s205 op prod. 14-dagenbrief-gate nu op alle 3 verzendwegen (gedeelde
-   `check_dagenbrief_gate`); verstuurd-proxy verstevigd (echte `email_sent`, niet stap-binnenkomst);
-   simpele "toch versturen"-noodknop (ja/nee, auto-spoor); 14-dagenbrief zelf verstuurbaar (sjabloon op
-   stap); mailsync-foutpad gefixt (sessie per postbus, LIVE); heartbeat toont "draait maar faalt".
-   Details: SESSION-NOTES S205.
-2. **Openstaand na S205:**
+1. ✅ **S206 AFGEROND + LIVE (13 juli).** Spoor S202 security/correctheids-fixes gebouwd + Fable-reviewd
+   + gedeployd. **5 audit-fixes:** H1 (cross-tenant `CaseFile` bij mailbijlage — guard), H2 (fail-closed
+   betaald-guard + 2 verborgen bugs: `get_case_outstanding` lazy-load + `calculate_case_interest`
+   lege-zaak-tarief), H3 ("Geïnd" KPI/maandgrafiek `is_active`), M1 (bulk-status-cap 200), M2 (auto-advance
+   stopt vóór terminale/hold-stap). **+ 2 Fable-must-fixes:** provisie/factuurvoorstel `is_active`
+   (facturatiegeld) + tenant-guard op `POST /api/email/sync?case_id=`. 7 commits (`f1800f1`…`7ade2f1`),
+   1259 tests groen, geen migratie, live rooktest groen. Details: SESSION-NOTES S206.
+2. **Openstaand na S206:**
+   - **Mail-verstevigingen (M4/M5/L4/L5/L6) — overgedragen naar S207.** Mailslot dicht (0 risico);
+     M4 = HTML-escaping legal-mail (visuele check nodig); M5 = 39-velden-datacorrectie (prod-akkoord).
+     Recept: `docs/security/S202-delta-audit.md`. M3 (RLS Fase 2) bewust apart.
    - ⚠️ **Waarschuwingstekst noodknop langs Lisanne** vóór echte B2C-verzending (haar beroepsrisico).
-   - **Checklist:** staan de 5 dagelijkse-job-rijen nu in `scheduler_heartbeat` (na 13 juli 06:40 UTC)?
-3. **Volgende sessie = S206 (kies één spoor):**
+   - **Checklist:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` — morgenochtend na 06:35 UTC
+     herbevestigen (ze zijn geregistreerd; verschijnen na de eerste ochtendrun; zie SESSION-NOTES S206).
+3. **Volgende sessie = S207 (kies één spoor):**
+   - **Mail-verstevigingen** — M4 HTML-escaping + L4/L5/L6 (test-baar zonder mailslot) + M5-recipient-cap
+     (code) + apart de 39-velden-datacorrectie (mét akkoord). `docs/security/S202-delta-audit.md`.
    - **S201 facturatie-import** — 439 conflict-vrije facturen; recept + droogloop-poorten klaar in
      `docs/research/S201-facturatie-recept.md`. Aparte, naar-buiten-gerichte schrijfactie → apart akkoord.
    - **S203-restpunten** — 35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail,
      #15 regeling-badge, log-persistentie VPS.
-   - **S202 security-fixes (Fase D)** — H1 cross-tenant CaseFile, H2 fail-open "betaald"-guard, H3
-     "Geïnd" telt verwijderde betalingen, M1/M2 + mailhardening. Rapport `docs/security/S202-delta-audit.md`.
-     M3 (DB-superuser/RLS Fase 2) bewust apart.
 4. **Beslissingen voor Lisanne/Arsalan:** (14-dagenbrief-verzending is besloten S205: "allebei
    mogelijk" — sjabloon staat op de stap + handmatige "toch versturen"-route.)
    derdengelden-werkwijze (272 betalingen buiten derdengeldenkanaal — S200 #18); kantoorrekening

@@ -1,0 +1,63 @@
+cd Documents\luxis && claude --dangerously-skip-permissions
+
+Sessie 207 — mail-verstevigingen (S202-restant) óf ander S202-restspoor
+
+## Start
+Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant modules,
+laadt de verbindingskaart). Ga daarna zonder te wachten door met de taak hieronder.
+Extra taak-context (alleen wat `/sessie-start` NIET al leest): `docs/security/S202-delta-audit.md`
+(bevindingen M4/M5/L4/L5/L6 met locaties + fix-recept per punt).
+
+## Eerst: mini-checklist (klein, read-only)
+Staan de 5 dagelijkse-job-rijen nu in `scheduler_heartbeat` op prod (ná 06:35 UTC)? Verwacht:
+`daily_task_status_update`, `daily_verjaring_check`, `daily_deadline_notifications`,
+`daily_installment_overdue_check`, `daily_invoice_overdue_check`. Read-only via SSH:
+`docker compose exec -T db psql -U luxis -d luxis -c "SELECT job_id, last_run_at, last_error FROM scheduler_heartbeat ORDER BY job_id;"`
+In S206 bewezen: alle 5 zijn geregistreerd + ingepland (opstartlog); ze verschijnen na de eerste
+ochtendrun. Zo nee ná 06:35 UTC → uitzoeken waarom de dagelijkse jobs niet vuren.
+
+## Taak — kies één spoor (leg de keuze kort aan Arsalan voor, met aanbeveling)
+
+### A. Mail-verstevigingen (S202-restant) — AANBEVOLEN vervolg van S206
+Werk per fix rood→groen→commit→push→deploy. **Mailslot blijft DICHT** — al deze fixes zijn
+test-baar zónder mail te versturen (render-probe / schema-probe / unit).
+- **M4 (MIDDEL) — HTML-injectie in systeemmails.** Dossierdata (omschrijving, factuurnummer, naam)
+  gaat ongeëscapet via f-strings de mail-HTML in; `_render_branded` markeert alles als vertrouwd
+  (`Markup`). Escape data-afkomstige tekst op de rendergrens, laat alleen eigen vaste HTML als
+  `Markup`. Builders: `email/incasso_templates.py` (`_claims_table`, `_summary_row`, e.a.),
+  `invoices/service.py:615-620`, `ai_agent/followup_service.py:476-495`. Regressietest met naam/
+  kenmerk/omschrijving/factuurnummer met HTML-tekens (audit beschrijft de render-probe). ⚠️ Raakt
+  de opmaak van júridische brieven — verifieer dat legitieme content niet breekt (bestaande
+  `test_email_branding.py` + nieuwe test).
+- **L6 (LAAG)** — CR/LF/NUL uit mailheaders/bestandsnaam strippen vóór loggen (`email/sync_service.py`
+  onderwerp/message-id/bestandsnaam-logregels). Klein + regressietest.
+- **L4 (LAAG)** — base64-bijlagecap vóór decoderen afdwingen (`compose_router.py:83-86,207-228`).
+- **L5 (LAAG)** — mailslot-cache pas na succesvolle commit wijzigen (`email/service.py:73-86`).
+- **M5 (MIDDEL) — ontvangers.** Code-kant: één centrale parser/validator + recipient-cap + route-
+  rate-limit vóór elk transport. **De 39 bestaande adresvelden opschonen = aparte prod-data-migratie
+  → EERST expliciet akkoord Arsalan, droogloop eerst.**
+
+### B. S201 facturatie-import
+439 conflict-vrije facturen; recept + droogloop-poorten in `docs/research/S201-facturatie-recept.md`.
+Naar-buiten-gerichte schrijfactie op prod → **apart akkoord vereist**, droogloop eerst.
+
+### C. S203-restpunten
+35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail, #15 regeling-badge,
+log-persistentie VPS.
+
+## Verificatie
+- Backend: `docker compose exec -T backend python -m pytest tests/ -k "<relevant>" -v` (relevante modules).
+  Volledige suite alleen bij gedeelde-functie-wijziging — **detached draaien** (S206-les: achtergrond-
+  taken worden gekild; `docker compose exec -d backend sh -c '... > /tmp/run.log 2>&1; echo done'` +
+  pollen op het logbestand).
+- Lint: `uvx ruff check backend/app/`
+- Frontend geraakt? `cd frontend && npx tsc --noEmit && npm run build`.
+
+## Constraints (wat NIET doen)
+- Mailslot blijft DICHT; niets versturen.
+- Geen prod-instellingen/data wijzigen zonder apart akkoord (m.n. M5's 39-velden-opschoning).
+- Nooit `git add -A` — alleen expliciete paden stagen.
+- Sporen niet mengen — kies er één.
+
+## Commit
+Commit + push naar main per afgeronde taak. Deploy via SSH (deploy-regels). Werk af met /sessie-einde.

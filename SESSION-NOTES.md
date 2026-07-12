@@ -2,10 +2,79 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S205, Fable+Opus — S204-beslislijst gebouwd + LIVE). Alle 6 punten af; 128 tests groen; migratie s205 op prod.
-**Laatste feature/fix:** 14-dagenbrief-gate nu op alle 3 verzendwegen (bulk + follow-up "Uitvoeren" + AI-concept) via één gedeelde controle; verstuurd-proxy verstevigd (echte send); simpele "toch versturen"-noodknop; mailsync-foutpad gefixt (eigen sessie per postbus, LIVE bevestigd); heartbeat toont "draait maar faalt".
-**Openstaand:** S206 = kies één spoor: S201-import / S202-securityfixes / S203-restpunten. Waarschuwingstekst noodknop langs Lisanne vóór B2C-livegang. Mailslot blijft DICHT.
-**Volgende sessie:** S206 (`docs/sessions/PROMPT-S206.md`). Eerst checklist: staan de 5 dagelijkse-job-rijen nu in `scheduler_heartbeat` (na 13 juli 06:40 UTC)?
+**Laatst bijgewerkt:** 13 juli 2026 (S206, Opus autonoom + Fable-review — spoor S202 security/correctheids-fixes LIVE). 5 audit-fixes + 2 Fable-must-fixes; 1259 tests groen; gedeployd + live rooktest groen; geen migratie.
+**Laatste feature/fix:** H1 cross-tenant bijlage/sync-guard; H2 fail-closed betaald-guard (+ 2 verborgen bugs mee-gefixt); H3 "geïnd"/provisie telt geen verwijderde betalingen; M1 bulk-lijst gecapt; M2 auto-advance stopt vóór eindstap.
+**Openstaand:** Mail-verstevigingen (M4/M5/L4/L5/L6) NIET gedaan — overgedragen naar S207 (mailslot dicht = 0 risico; M5 = prod-data-akkoord nodig). Dagelijkse-job-rijen morgenochtend herbevestigen. Mailslot DICHT.
+**Volgende sessie:** S207 (`docs/sessions/PROMPT-S207.md`) = mail-verstevigingen, óf ander S202-restspoor (S201-import / S203-restpunten).
+
+## Sessie 206 (13 juli 2026, Opus autonoom + Fable-review — spoor S202: security/correctheids-fixes H1/H2/H3/M1/M2 + 2 review-must-fixes, LIVE)
+
+### Samenvatting
+Spoor S202 gekozen (na checklist S204/S205, zie onder). Alle 5 audit-fixes gebouwd
+rood→groen→commit→push, daarna een adversariële **Fable-review** (die 2 extra must-fixes vond),
+volledige suite (**1259 passed**), gedeployd (backend-only, geen migratie), live rooktest groen.
+
+- **H1** — `save_attachment_to_case` hing een mailbijlage aan een dossier zónder tenant-check →
+  cross-tenant `CaseFile`. Hergebruikt `_assert_case_in_tenant`. **Fable-vervolg:** zelfde gat op
+  `POST /api/email/sync?case_id=` (force_case_id zonder check) → guard toegevoegd.
+- **H2** — betaald-guard (`update_case_status` + `move_case_to_step`) nam bij een rekenfout stil €0
+  aan (fail-open) → dossier mét saldo sloot geruisloos. Nu **fail-closed**. Twee verborgen bugs die
+  het fail-open verborg mee-gefixt: `get_case_outstanding` lazy-loadde `case.client` (nu expliciete
+  query op `is_btw_plichtig`); `calculate_case_interest` eiste tarieven ook bij een lege zaak (nu
+  kortsluiting naar €0 vóór de tarief-check). **Prod ongewijzigd** (tarieven zijn geseed).
+- **H3** — "Geïnd" (KPI + maandgrafiek) telde verwijderde betalingen (geen `is_active`-filter).
+  **Fable-vervolg (erger):** 2 ongefilterde `Payment`-sommen in de **facturatie** (`calculate_provisie`
+  + `get_incasso_invoice_preview`) → provisie op de cliëntfactuur telde verwijderde betalingen mee
+  (bij 15% €750 te veel). `is_active` toegevoegd.
+- **M1** — `CaseBulkStatusUpdate.case_ids` gecapt op 200 (was ongelimiteerd → lange lock/DoS).
+- **M2** — `_try_auto_advance` schoof zonder saldo-check naar de volgende stap → weigert nu een
+  terminale (Betaald/Afgesloten) én hold-stap.
+
+### Fable-review-oordeel (adversarieel, read-only, model=fable)
+H2 **SOLIDE** (diepst gecheckt: BTW-semantiek exact equivalent — `is_btw_plichtig` is NOT NULL;
+kortsluiting raakt geen zaak mét vorderingen — alle aanroepers nagelopen; fail-closed prod-veilig —
+batch vangt per zaak). H1/H3-fixes solide maar **onvolledig** → 2 must-fixes gebouwd (commits
+`fc84b94` + `7ade2f1`), elk rood→groen bewezen. M1/M2 solide, elk 1 randgeval (backlog). Twee
+H2-nitpicks (geen fix nodig): "probeer opnieuw"-tekst misleidend bij een persistente config-fout;
+de "lazy-load"-diagnose in de H2-commit is onnauwkeurig (`Case.client` is mapper-`lazy=selectin`,
+brak pas ná rollback/expiry — S204-vondst; de expliciete query is hoe dan ook robuuster).
+
+### Gewijzigde bestanden
+Backend: `email/sync_router.py` (H1 + sync-guard), `cases/service.py` + `incasso/service.py`
+(H2 fail-closed + M2), `collections/service.py` + `collections/interest.py` (H2 wortel-fixes),
+`dashboard/reports_service.py` (H3), `cases/schemas.py` (M1), `invoices/service.py` (H3-facturatie).
+Test bij elke fix. **7 commits** (`f1800f1` H1 · `bf578e5` H2 · `57952e8` H3 · `f7835fd` M1 ·
+`224b07c` M2 · `fc84b94` H3-facturatie · `7ade2f1` sync-guard). Geen migratie.
+
+### Verificatie
+Volledige suite **1259 passed** (20 min, detached in container). Elke fix eigen rood→groen bewezen.
+`uvx ruff check backend/app/` schoon. Deploy: container healthy, code-markers (AUDIT-H1/H2/H3) in de
+draaiende container bevestigd, image-ID matcht, HEAD=`7ade2f1`. Live rooktest (read-only): login +
+`reports/kpis` + `reports/monthly` + `dashboard/summary` alle 200. Mailslot bleef DICHT.
+
+### Checklist S204/S205 — afgevinkt
+De 5 dagelijkse-job-rijen in `scheduler_heartbeat` ontbraken nog TERECHT: servertijd bij de controle
+was 12 juli 20:47 UTC, de jobs draaien 06:00–06:35 UTC, en de backend herstartte 20:25. De opstartlog
+toont alle 5 "Added job… Scheduler started" → geregistreerd en ingepland. Verschijnen ná 13 juli
+06:35 UTC. Mechanisme gezond (de 5 periodieke jobs draaien vers, foutveld leeg). **Morgenochtend na
+06:35 UTC herbevestigen.**
+
+### Bekende issues / bewust NIET gedaan
+- **Mail-verstevigingen (M4/M5/L4/L5/L6) overgedragen naar S207.** Reden: mailslot staat DICHT
+  (0 actueel risico); **M4** (HTML-escaping van dossierdata in systeemmails, meerdere builders in
+  `email/incasso_templates.py` + `invoices/service.py` + `followup_service.py`) raakt de opmaak van
+  júridische brieven → verdient visuele controle die met de slot dicht niet kan; **M5** = opschoning
+  van 39 bestaande adresvelden = schrijfactie op prod-data → apart akkoord. Locaties + recept per punt:
+  `docs/security/S202-delta-audit.md`. **M3** (app-als-DB-superuser / RLS Fase 2) blijft bewust apart.
+- Fable-randgevallen (backlog, geen fix): M1 — een selectie >200 dossiers geeft een kale 422-toast
+  (later frontend-melding); M2 — zaken schuiven niet meer auto de hold-stap "Verweer beantwoorden"
+  in (Lisanne verplaatst handmatig). Idem "Treffen van regeling" → "Bijhouden regeling".
+- Mailslot blijft DICHT; niets verstuurd; geen prod-data gewijzigd.
+
+### Volgende sessie
+S207: mail-verstevigingen (M4 HTML-escaping + L4/L5/L6, test-baar zónder mailslot; M5-recipient-cap
+in code + apart de 39-velden-datacorrectie mét akkoord). Óf ander S202-restspoor (S201-facturatie-import
+/ S203-restpunten). Prompt: `docs/sessions/PROMPT-S207.md`.
 
 ## Sessie 205 (12 juli 2026, Fable+Opus — S204-beslislijst: 14-dagenbrief-zijdeuren dicht + mailsync-fix, LIVE)
 
@@ -473,54 +542,4 @@ pijplijn-stap, niet status). Lege status-engine NIET slopen (veegsessie-voorstel
 S198 = AUTONOOM (Arsalan is weg): op Opus klus 1-4 van bouwblok 3 bouwen + deployen, dan Fable-review
 (subagent) + Codex code-review via `scripts/codex-review.sh`, findings verwerken. Prompt:
 `docs/sessions/PROMPT-S198.md`.
-
-## Sessie 196 (11 juli 2026, Opus — bouwblok 2 afgerond: termijn-vooruitblik + 3 proefzaken)
-
-### Samenvatting
-Sessie begon met een correctie: `PROMPT-S196.md` was geschreven vóór de C1-uitvoering op de
-S195-avond en droeg de bankimport nog als open taak — Arsalan kreeg daardoor voor de derde
-keer dezelfde beslisvragen. Stand gecheckt (SESSION-NOTES + Fable-hercontrole): **C1 was al
-af**. Prompt kreeg een achterhaald-banner; alleen taak 2 + 3 uitgevoerd.
-
-**Taak 2 — B4/A8 termijn-vooruitblik (LIVE, commit `42c3e4c`).** Dashboardblok "Aankomende
-termijnen" in de incasso-kolom: open termijnen van actieve regelingen over álle zaken
-(pending binnen 30 dagen; overdue/partial altijd, rood/geel gemarkeerd), gesorteerd op
-vervaldatum, max 8 + "+N meer"-voet, klik → Betalingen-tab van het dossier. Backend:
-`list_upcoming_installments` (collections-service, tenant-gefilterd, zelfde
-geen-zaakstatus-filter-keuze als het regeling-alarm) + `GET /api/dashboard/upcoming-installments`
-(auth). Bewust geen aparte pagina (besluit S191: alleen overzicht; 13 regelingen).
-
-**Taak 3 — B11 proefzaken op hun stap (per zaak akkoord Arsalan).** Conform draaiboek
-PLAN-heropening-werkvoorraad regel 118-120, alleen `incasso_step_id`+`step_entered_at`
-gezet (guarded SQL, transactie): IN100215 → Bijhouden regeling (actieve regeling, termijn
-12 juli deels betaald), IN100040 → Voorstel dagvaarding (BaseNet "Procederen?"), IN100521 →
-Voorstel dagvaarding (4e sommatie). email_logs 0 vóór==ná; status bleef 'nieuw'.
-Kanttekening genoteerd: draaiboek noemt IN100521 B2C, systeem zegt b2b — maakt voor de stap
-niet uit, wél later voor rente/14-dagenbrief.
-
-### Verificatie
-- 23 tests groen (`test_payment_arrangements.py`, incl. 2 nieuwe: overview + tenant-isolatie);
-  ruff schoon; `tsc --noEmit` + `npm run build` groen.
-- Deploy backend+frontend via SSH, containers healthy.
-- Live: endpoint geeft 14 termijnen die exact matchen met eerdere sessies (IN100019 gemist
-  9 juli bovenaan; IN100215 partial €250 — de S195-Fable-fix zichtbaar); Playwright-doorklik
-  dashboard → IN100019 Betalingen-tab: zelfde termijn "Achterstallig". Proefzaken via app-API
-  bevestigd op de juiste stap.
-- **Codex-tegenlezer overgeslagen:** timede na 10 min uit (S194: zelfde). Werkvorm herzien
-  vóór volgende bouwsessie; diff was klein + testgedekt.
-
-### Gewijzigde bestanden
-- `backend/app/collections/service.py` (+`list_upcoming_installments`),
-  `backend/app/dashboard/router.py` + `schemas.py`, `backend/tests/test_payment_arrangements.py`
-- `frontend/src/app/(dashboard)/page.tsx` (widget), `docs/sessions/PROMPT-S196.md` (banner)
-- prod-DB: 3 rijen `cases` (stap gezet). Commit `42c3e4c` + docs-commit, tag `sessie-196`.
-
-### Bekende issues
-- Codex-tegenlezer 2× op rij onbruikbaar (timeout) — beslissen: andere aanroepvorm of
-  voorlopig uit het sessieprotocol.
-- IN100521 debtor_type b2b vs draaiboek "B2C" — checken vóór er brieven/rente uitgaan.
-
-### Volgende sessie
-Bouwblok 3: B3-versimpeling (status volgt pijplijn) + A5-pauze + A3 dagstart + A7 sjablonen.
-Prompt: `docs/sessions/PROMPT-S197.md`.
 

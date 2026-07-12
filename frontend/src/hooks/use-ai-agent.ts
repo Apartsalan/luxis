@@ -88,21 +88,6 @@ export function useEmailClassification(syncedEmailId: string | undefined) {
 }
 
 /**
- * Get pending classification count (for badges).
- */
-export function usePendingCount() {
-  return useQuery<{ count: number }>({
-    queryKey: ["ai-pending-count"],
-    queryFn: async () => {
-      const res = await api("/api/ai-agent/pending-count");
-      if (!res.ok) return { count: 0 };
-      return res.json();
-    },
-    refetchInterval: 60 * 1000, // Refresh every minute
-  });
-}
-
-/**
  * Approve a pending classification.
  */
 export function useApproveClassification() {

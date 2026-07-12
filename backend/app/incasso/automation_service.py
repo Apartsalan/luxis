@@ -652,6 +652,8 @@ async def generate_draft_for_step(
     # enige stap die ze gebruikt. Zo blijft use_count (het 'meest gebruikt'-dashboard) zuiver.
     last_cls_category = context.pop("_last_cls_category", None)
     last_cls_defense_type = context.pop("_last_cls_defense_type", None)
+    # Pop vóór de **context-spread naar build_user_prompt (dat deze sleutel niet kent).
+    amounts_fallback = context.pop("_amounts_fallback", False)
     if target_step.name == "Verweer beantwoorden":
         from app.ai_agent.learned_answers import build_learned_examples_text
 
@@ -741,8 +743,10 @@ async def generate_draft_for_step(
         )
     # S203 #3: viel de bedragenberekening terug op hoofdsom-only (rente/BIK/BTW = 0),
     # dan is de brief onvolledig. Nooit stil laten passeren — als getrouwheids-issue
-    # markeren zodat draft én reviewtaak "bedragen controleren" tonen.
-    if context.get("_amounts_fallback"):
+    # markeren zodat draft én reviewtaak "bedragen controleren" tonen. Alleen relevant
+    # als het sjabloon daadwerkelijk bedragen toont (zelfde '€'-conditie als de poort);
+    # een sjabloon zonder bedragentabel wordt niet geraakt door een €0-rente.
+    if amounts_fallback and "€" in (template_body or ""):
         fidelity_issues = (fidelity_issues or []) + [
             "bedragen onvolledig — rente/incassokosten konden niet worden berekend, "
             "controleer de bedragen vóór verzending"

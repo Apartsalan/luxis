@@ -1770,3 +1770,47 @@ async def test_draft_gate_fixes_broken_xxx_regeneration(
     assert mock_ai.await_count == 2
     assert "XXX" not in draft.body
     assert not draft.sources.get("fidelity_issues")
+
+
+async def test_draft_gate_marks_amounts_fallback_on_amount_template(
+    db, test_tenant, test_user, test_company
+):
+    """S203 #3: faalt de bedragenberekening (geen rentetarief geseed) én toont het
+    sjabloon bedragen (€), dan markeert de poort 'bedragen onvolledig' op draft +
+    reviewtaak. Zonder geseede InterestRate valt get_financial_summary terug."""
+    from app.incasso.automation_service import generate_draft_for_step
+
+    step = IncassoPipelineStep(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        name="Eerste sommatie",
+        sort_order=1,
+        min_wait_days=0,
+        max_wait_days=0,
+        email_subject_template="Sommatie {{ zaak.zaaknummer }}",
+        email_body_template="Betreft 2026-07310. Hoofdsom € {{ bedragen.hoofdsom }}.",
+    )
+    db.add(step)
+    await db.flush()
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=step, case_number="2026-07310", days_in_step=1,
+    )
+    good = {"subject": "s", "body": "Betreft: sommatie / 2026-07310. Hoofdsom € 5000,00."}
+    with patch(
+        "app.ai_agent.kimi_client.call_draft_ai",
+        new=AsyncMock(return_value=(good, "test-model")),
+    ):
+        draft = await generate_draft_for_step(db, test_tenant.id, case.id, step.id)
+
+    issues = draft.sources.get("fidelity_issues") or []
+    assert any("bedragen onvolledig" in i for i in issues)
+
+    task = (await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.case_id == case.id,
+            WorkflowTask.task_type == "review_ai_draft",
+        )
+    )).scalars().first()
+    assert task is not None
+    assert task.title.startswith("⚠")

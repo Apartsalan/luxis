@@ -38,6 +38,21 @@ Volledige diff gelezen + bewijzen zelf gedraaid:
 Zelf gedraaid: `uvx ruff check backend/app/` schoon · `tsc --noEmit` ok ·
 `npm run build` ok · volledige pytest-suite → zie onder.
 
+## Uitslag (nacht 12 juli, met nacht-akkoord Arsalan)
+
+Eigen proof-run: **1218 passed** (18m49s; eerste run vervuild door dubbele
+pytest — afgekapte docker-exec liet proces doorlopen, les genoteerd), ruff/tsc/
+build zelf groen. 6 commits (28d4555…16cc905) gepusht. Prod-hermeting vóór
+migratie: 0/0/0 (4 taken). **Deploy gelukt**: migratie `s199_cleanup_workflow_engine`
+= head, 3 tabellen weg op prod, 4 taken intact, containers healthy.
+Live-checks: bulk 401 zonder token / {0,0,[]} met token; **Geïnd €135.354,77**
+(was €0); faseverdeling sluit: 10+2+5+1+10 = 28 = KPI-som = dashboard (18
+in_behandeling + 10 nieuw). Rond 1 ronde, 0 fix-rondes.
+
+**Nog open (met Arsalan, per stuk):** taak 6 (testdossier, test-aanvragen),
+data-vegen taak 5 (A12 accountnaam, 2 verweesde verjaringstaken, 16+
+reliek-stappen), visuele doorklik (dossierkop, bulk op 2 testzaken).
+
 Notities (geen blokkades):
 - Incassopercentage mengt nu periode-geïnd met lopende hoofdsom — bestaand grof
   cijfer, meenemen in S200-narekenen-audit.

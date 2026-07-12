@@ -2,10 +2,32 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 12 juli 2026 (S200 "de voorkant liegt"-audit, Fable, 100% read-only). 19 genummerde bevindingen met bewijs in `docs/sessions/S200-BEVINDINGEN.md`. Details: S200-entry.
-**Laatste feature/fix:** geen code gewijzigd (audit-sessie). Grootste vondsten: 6 hoge bevindingen (o.a. stil-dode mailsync, kapotte hernoemen-knop, dode 14-dagenbrief-check, "1169 toegevoegd deze maand") + latente tijdlijn-crash. Alle overige dashboard/rapportage-cijfers kloppen op de cent.
-**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). S200-fixes wachten op bouwsessie (PROMPT-S203). Untracked bestanden van parallel S201-spoor (handoff naar Sol + S202-delta-audit) staan oncommit in de werkkopie — niet door S200 aangeraakt.
-**Volgende sessie:** S201-afronding door Sol (facturatie, `docs/sessions/S201-HANDOFF-naar-Sol.md`) of S202 (security-delta). S200-fixes daarna: `docs/sessions/PROMPT-S203-voorkant-fixes.md`.
+**Laatst bijgewerkt:** 12 juli 2026 (S202 security-delta-audit S184-S199, Fable, read-only). 6/7 blokken af; Blok 2 (mailpad) overgedragen aan Codex. Rapport: `docs/security/S202-delta-audit.md`. Details: S202-entry.
+**Laatste feature/fix:** geen code gewijzigd (audit-sessie). Grootste vondsten: cross-tenant CaseFile-lek (H1), 2× fail-open op "betaald"-guard (H2), "Geïnd" telt verwijderde betalingen (H3). RLS op prod compleet zonder drift; geen secrets in repo.
+**Openstaand:** ⚠️ MAILSLOT staat UIT (Arsalan zet zelf aan). Alle vervolgwerk (S200-voorkant-fixes, S201-facturatie-onderzoek, S202-mailpad-audit + security-fixes) overgedragen aan Codex/Sol: `docs/sessions/PROMPT-CODEX-master.md`.
+**Volgende sessie:** Codex draait de 4 fasen uit de masterprompt (Ultra: mailpad-audit + facturatie; High: voorkant-fixes + security-fixes). Daarna checkt Fable Codex' werk na.
+
+## Sessie 202 (12 juli 2026, Fable — security- & consistentie-audit van de delta sinds S183, read-only)
+
+### Samenvatting
+- Security-audit van álle wijzigingen `sessie-183..HEAD` (49 commits, 122 bestanden). 6 van 7 blokken deze sessie afgerond; **Blok 2 (mailpad S185-S187) afgebroken door tokengebrek en overgedragen aan Codex**. Rapport op ernst: `docs/security/S202-delta-audit.md`.
+- **Hoog (3):** (H1) `save_attachment_to_case` (`email/sync_router.py:527-581`) controleert `case_id` niet tegen tenant vóór het aanmaken van een `CaseFile` → cross-tenant integriteitslek; de guard staat elders in datzelfde bestand al. (H2) fail-open op de "betaald"-guard (`cases/service.py:744-747` + `incasso/service.py:479-490`): rekenfout → €0 aangenomen → dossier mét saldo kan stil op "betaald". (H3) "Geïnd"-rapportage (`reports_service.py:62,220`) sommeert `Payment.amount` zonder `is_active`-filter → verwijderde betalingen tellen eeuwig mee.
+- **Middel (3):** bulk-status zonder lengtecap (DoS); auto-advance mist terminale-stap-check; app verbindt als DB-superuser (RLS hangt volledig aan `SET ROLE luxis_app` — bekende "Fase 2").
+- **Geruststellingen (op prod gemeten):** RLS compleet zonder drift — 44/44 tenant-tabellen FORCE+policy, alleen `users` bewust uitgezonderd. Geen secrets in repo of delta-diff; `.codex/config.toml` staat nu wél in `.gitignore` (anders dan notities zeiden). Geen `NEXT_PUBLIC_*`-sleutels. PowerSearch injectie-veilig + tenant-gescoped. Bulk-status en pipeline-batch tenant-gescoped in de query zelf.
+
+### Gewijzigde bestanden
+- `docs/security/S202-delta-audit.md` (nieuw — het auditrapport, incl. kant-en-klare Codex-vervolgprompt voor Blok 2)
+- `docs/sessions/PROMPT-CODEX-master.md` (nieuw — complete Codex-onboarding + 4-fasen-werkvolgorde voor S200/S201/S202-vervolg)
+- `docs/sessions/S201-HANDOFF-naar-Sol.md` (van parallel S201-spoor — mee-gecommit voor Codex)
+- `SESSION-NOTES.md` + `LUXIS-ROADMAP.md` (afsluiting); S191-entry → archief
+- Geen code, geen prod-mutatie (100% read-only nageleefd; DB-toegang alleen SELECT)
+
+### Bekende issues
+- Alles in `S202-delta-audit.md`. Blok 2 (mailpad) nog te auditen — prompt staat onderin dat rapport.
+- Fix-volgorde voor de bouwsessie: H1 (klein, duidelijkst tenant-lek) → H2 → H3 → M1/M2. M3 (app-als-superuser/Fase 2) is een aparte grote klus.
+
+### Volgende sessie
+- Codex neemt over via `docs/sessions/PROMPT-CODEX-master.md` (Ultra: mailpad-audit + facturatie-onderzoek; High: voorkant-fixes + security-fixes). Over ~3 uur checkt Fable Codex' werk na.
 
 ## Sessie 200 (12 juli 2026, Fable — "de voorkant liegt"-audit, 100% read-only op prod)
 
@@ -555,65 +577,3 @@ verplichte diff-lezing, bewijstest door Claude, jij keurt goed vóór commit) �
 - **S193 bouwblok 1 op Opus** (`PROMPT-S193-bouwblok1.md`), taak 0 is nu klaar. Gebruik het
   als eerste `/codex-review` → `/codex-build`-proefrit. Vraag Arsalan eerst of de sleutels
   afgeschermd mogen worden (`.codex/` in `.gitignore`).
-
-## Sessie 191 (9 juli 2026, Fable — Codex-advies + kijk-sessie D-C: financieel + systeem, 100% read-only)
-
-### Samenvatting
-Twee taken uit `docs/sessions/PROMPT-DC-doorlichting.md`:
-
-**Taak 0 — Codex/OpenAI-samenwerkingsadvies** (webonderzoek, niet uit het hoofd):
-`docs/research/advies-codex-samenwerking.md`. Kern: Codex CLI draait native op Windows
-onder het bestaande OpenAI-abonnement (€0 extra binnen limieten); het "grill-me-codex"-
-patroon (Chase AI, MIT, ±500 sterren) bestaat en is volwassen. Voorstel: Claude blijft
-enige kapitein (bouwt/commit/deployt), GPT-5.6 via Codex wordt alleen-lezen tegenlezer
-op 2 vaste momenten — rapporten grillen (kijkfase) en Opus-diffs reviewen vóór deploy
-(bouwfase). Akte 3 (Codex bouwt) bewust UIT. Maandag ±30 min installeren + proefrit.
-
-**Kijk-sessie D-C (laatste van 3)** — Bankimport, Derdengelden, Uren, Facturen,
-Rapportages, Instellingen. Rapport: **`docs/research/audit-DC-financieel-systeem.md`**
-(9 werkorder-kandidaten C1-C9 + totaal-beslislijst D-A+D-B+D-C in §9, 34 punten in
-5 blokken). Gemeten in prod-DB + code + doorgeklikt (0 consolefouten).
-
-### Belangrijkste vondsten D-C
-- **KERN — financiële laag is af maar nooit gebruikt, géén relieken**: bankimport,
-  derdengelden, uren, facturen, Exact alle exact 0 rijen ooit; onderling wél netjes
-  verbonden (uren→factuurregels, derdengelden→verrekening, bankimport→derdengelden→
-  art. 6:44-betaling) en test-gedekt. Verwachting "meeste eilanden" klopte niet —
-  het zijn stilstaande machines, geen kapotte.
-- **Bankimport = het regelingen-betaalzicht en is al af**: Rabobank-CSV upload →
-  automatch → beoordelen → uitvoeren (+terugdraai). Backlog-gedachte (a) vergt géén
-  bouw, alleen een wekelijks upload-ritueel. Eerst C2!
-- **HOOG vóór ingebruikname — derdengelden-IBAN = kantoor-IBAN** (beide
-  NL20RABO0388506520 in tenants; UI zegt zelf "apart"). SEPA/NOvA-output zou nu
-  verkeerd ogen. BTW-nummer ook leeg.
-- **Rapportages leeft maar vertelt scheef**: "Geïnd €0/0,0%" (kijkt alleen naar
-  lopende zaken; €311.547,70 aan 255 echte betalingen onzichtbaar) en faseverdeling
-  15≠18 (inner join skipt de 3 stap-loze proefzaken IN100040/215/521 die het KPI-blok
-  ernaast wél telt).
-- Klein: uren-relatiefilter laadt alle 1169 relaties; Workflow-tab toont lege
-  status-engine zonder uitleg; beide accounts heten "Lisanne Kesting"; meldingen-kop
-  264 vs DB 299 ongelezen (onverklaard); producten-catalogus (30, Exact-grootboek)
-  ligt klaar voor een facturatie-besluit.
-
-### Verificatie
-Alle dragende beweringen zelf gemeten (SQL op prod / code / klik); geen enkele mutatie
-op prod; expliciete "niet geverifieerd"-lijst in rapport §7 (o.a. upload-keten niet
-gedraaid, vier-ogen-afdwinging niet getest). Tegenspreker-correctie toegepast: claim
-"alle 12 tabs bekeken" teruggebracht naar de 5 echt geklikte.
-
-### S191b — fase-2-beslisgesprek DIRECT gevoerd (zelfde avond, met Arsalan)
-Arsalan wilde niet wachten: alle 5 stapels ter plekke doorgenomen. Besluiten integraal
-in **`docs/plans/PLAN-fase2-bouwblokken.md`**. Kern: stapel 1 akkoord (= bouwblok 1);
-C2-gegevens (stichting-IBAN + BTW) levert Arsalan 10 juli; termijn-vooruitblik alleen
-als overzicht (dossierniveau bestaat al); **Uren + Facturatie blijven AAN (keuze
-Arsalan)** — C5 + dashboard-netjes naar de veegsessie; rest stapel 3 conform
-aanbeveling; stapel 4 en 5 akkoord. Codex-besluit herzien na tegenargument Arsalan:
-**bouwproef GPT-5.6 onder Claude-toezicht** op een stapel-4-klus na installatie
-(~13 juli) — Claude blijft de enige die commit/deployt. PROMPT-S192 (beslisgesprek)
-daarmee overbodig → archief. Ook gevonden: persoonlijke Claude-instellingen pinnen
-Fable als startmodel voor élke nieuwe sessie — advies aan Arsalan: default op Opus,
-Fable per sessie (melding gedaan, niet zelf aangepast).
-
-### Volgende sessie
-S193 = bouwblok 1 op Opus (`docs/sessions/PROMPT-S193-bouwblok1.md`): B1 verstuurpad +
-B13 vangrails + B2/A1 verjaring + A2 dashboardfix, alles vóór het mailslot eraf gaat.

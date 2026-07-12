@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 12 juli 2026 (sessie 200, Fable — "de voorkant liegt"-audit, 100% read-only). 19 bevindingen met bewijs in `docs/sessions/S200-BEVINDINGEN.md`; fixes = S203. Alle overige dashboard/rapportage-cijfers kloppen op de cent met SQL. Mailslot staat nog UIT. Details: SESSION-NOTES S200-entry.
+**Laatst bijgewerkt:** 12 juli 2026 (sessie 202, Fable — security-delta-audit S184–S199, read-only). 6/7 blokken; rapport `docs/security/S202-delta-audit.md` (H1 cross-tenant CaseFile-lek, H2 fail-open "betaald", H3 "Geïnd" telt verwijderde betalingen). RLS op prod compleet zonder drift. Al het vervolgwerk → Codex (`docs/sessions/PROMPT-CODEX-master.md`). Mailslot staat nog UIT. Details: SESSION-NOTES S202-entry.
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S200)
+## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S202)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
@@ -61,18 +61,20 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
 > autonoom openzetten. Ontvangen/sync werkt altijd door.
 
-1. **S200 "de voorkant liegt"-audit — AFGEROND (12 juli, Fable, 100% read-only).** 8 vegen + Lisanne-dag
-   uitgevoerd; **19 bevindingen met bewijs/ernst/fix-grootte in `docs/sessions/S200-BEVINDINGEN.md`**.
-   Hoog: stil-dode mailsync, onzichtbaar falende scheduler/verjaringscheck, AI-concept met stille
-   €0-fallback, kapotte hernoemen-knop, dode 14-dagenbrief-check (juridisch), "1169 toegevoegd deze
-   maand". Plus latente tijdlijn-crash (1 regel) en 35 dode routes. Alle overige cijfers kloppen op de
-   cent; S191-meldingen-mysterie verklaard. **Fixes = S203** (`docs/sessions/PROMPT-S203-voorkant-fixes.md`).
-2. **S201 = facturatie-onderzoek — GESTART, overgedragen aan Sol** (tokens op):
-   `docs/sessions/S201-HANDOFF-naar-Sol.md` + `docs/sessions/PROMPT-S201-onderzoek-facturatie.md`.
-3. **S202 = security-delta-audit S184–S199** (`docs/sessions/PROMPT-S202-security-delta-audit.md`) —
-   prompt staat klaar.
-4. **S203 = voorkant-fixes** (bouwsessie Opus/Sol) — werkt de S200-lijst af in de volgorde van de
-   samenvattingstabel onderin het rapport.
+> 🔀 **Al het vervolgwerk is overgedragen aan Codex/Sol** (Arsalan werkt ~3 uur direct in Codex
+> omdat de Claude-tokens op zijn). Eén masterprompt: `docs/sessions/PROMPT-CODEX-master.md` —
+> Ultra voor uitzoekwerk, High voor bouwwerk. Daarna checkt Fable Codex' werk na.
+
+1. **S202 security-delta-audit S184–S199 — AFGEROND op Blok 2 na (12 juli, Fable, read-only).**
+   6/7 blokken; rapport op ernst `docs/security/S202-delta-audit.md`. Hoog: cross-tenant CaseFile-lek
+   (H1), fail-open "betaald"-guard (H2, 2 plekken), "Geïnd" telt verwijderde betalingen (H3). RLS op
+   prod compleet zonder drift; geen secrets in repo. **Blok 2 (mailpad) → Codex Fase A.**
+2. **S200 "de voorkant liegt"-audit — AFGEROND (12 juli, Fable, read-only).** 19 bevindingen met
+   bewijs in `docs/sessions/S200-BEVINDINGEN.md`. **Fixes = Codex Fase C** (`PROMPT-S203-voorkant-fixes.md`).
+3. **S201 facturatie-onderzoek — GESTART, overgedragen** (`S201-HANDOFF-naar-Sol.md` +
+   `PROMPT-S201-onderzoek-facturatie.md`). **→ Codex Fase B.**
+4. **Codex-werkvolgorde:** Fase A mailpad-audit + Fase B facturatie (Ultra) → Fase C voorkant-fixes +
+   Fase D security-fixes (High). Alles in `docs/sessions/PROMPT-CODEX-master.md`.
 5. **Kleine losse punten:** kantoorrekening `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer
    gereconstrueerd). Heropening werkvoorraad: volgende batch per opdrachtgever mét stap 4b —
    `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`.

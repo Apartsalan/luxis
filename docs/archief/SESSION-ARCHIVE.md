@@ -8218,3 +8218,65 @@ kant-en-klare prompt `docs/sessions/PROMPT-DC-doorlichting.md`, Fable. Sluit af 
 totale beslislijst D-A+D-B+D-C voor fase 2 met Arsalan.
 
 <!-- S189 verplaatst naar docs/archief/SESSION-ARCHIVE.md (S199-afsluiting, 12 juli); oudste actieve entry = S190 -->
+
+## Sessie 191 (9 juli 2026, Fable — Codex-advies + kijk-sessie D-C: financieel + systeem, 100% read-only)
+
+### Samenvatting
+Twee taken uit `docs/sessions/PROMPT-DC-doorlichting.md`:
+
+**Taak 0 — Codex/OpenAI-samenwerkingsadvies** (webonderzoek, niet uit het hoofd):
+`docs/research/advies-codex-samenwerking.md`. Kern: Codex CLI draait native op Windows
+onder het bestaande OpenAI-abonnement (€0 extra binnen limieten); het "grill-me-codex"-
+patroon (Chase AI, MIT, ±500 sterren) bestaat en is volwassen. Voorstel: Claude blijft
+enige kapitein (bouwt/commit/deployt), GPT-5.6 via Codex wordt alleen-lezen tegenlezer
+op 2 vaste momenten — rapporten grillen (kijkfase) en Opus-diffs reviewen vóór deploy
+(bouwfase). Akte 3 (Codex bouwt) bewust UIT. Maandag ±30 min installeren + proefrit.
+
+**Kijk-sessie D-C (laatste van 3)** — Bankimport, Derdengelden, Uren, Facturen,
+Rapportages, Instellingen. Rapport: **`docs/research/audit-DC-financieel-systeem.md`**
+(9 werkorder-kandidaten C1-C9 + totaal-beslislijst D-A+D-B+D-C in §9, 34 punten in
+5 blokken). Gemeten in prod-DB + code + doorgeklikt (0 consolefouten).
+
+### Belangrijkste vondsten D-C
+- **KERN — financiële laag is af maar nooit gebruikt, géén relieken**: bankimport,
+  derdengelden, uren, facturen, Exact alle exact 0 rijen ooit; onderling wél netjes
+  verbonden (uren→factuurregels, derdengelden→verrekening, bankimport→derdengelden→
+  art. 6:44-betaling) en test-gedekt. Verwachting "meeste eilanden" klopte niet —
+  het zijn stilstaande machines, geen kapotte.
+- **Bankimport = het regelingen-betaalzicht en is al af**: Rabobank-CSV upload →
+  automatch → beoordelen → uitvoeren (+terugdraai). Backlog-gedachte (a) vergt géén
+  bouw, alleen een wekelijks upload-ritueel. Eerst C2!
+- **HOOG vóór ingebruikname — derdengelden-IBAN = kantoor-IBAN** (beide
+  NL20RABO0388506520 in tenants; UI zegt zelf "apart"). SEPA/NOvA-output zou nu
+  verkeerd ogen. BTW-nummer ook leeg.
+- **Rapportages leeft maar vertelt scheef**: "Geïnd €0/0,0%" (kijkt alleen naar
+  lopende zaken; €311.547,70 aan 255 echte betalingen onzichtbaar) en faseverdeling
+  15≠18 (inner join skipt de 3 stap-loze proefzaken IN100040/215/521 die het KPI-blok
+  ernaast wél telt).
+- Klein: uren-relatiefilter laadt alle 1169 relaties; Workflow-tab toont lege
+  status-engine zonder uitleg; beide accounts heten "Lisanne Kesting"; meldingen-kop
+  264 vs DB 299 ongelezen (onverklaard); producten-catalogus (30, Exact-grootboek)
+  ligt klaar voor een facturatie-besluit.
+
+### Verificatie
+Alle dragende beweringen zelf gemeten (SQL op prod / code / klik); geen enkele mutatie
+op prod; expliciete "niet geverifieerd"-lijst in rapport §7 (o.a. upload-keten niet
+gedraaid, vier-ogen-afdwinging niet getest). Tegenspreker-correctie toegepast: claim
+"alle 12 tabs bekeken" teruggebracht naar de 5 echt geklikte.
+
+### S191b — fase-2-beslisgesprek DIRECT gevoerd (zelfde avond, met Arsalan)
+Arsalan wilde niet wachten: alle 5 stapels ter plekke doorgenomen. Besluiten integraal
+in **`docs/plans/PLAN-fase2-bouwblokken.md`**. Kern: stapel 1 akkoord (= bouwblok 1);
+C2-gegevens (stichting-IBAN + BTW) levert Arsalan 10 juli; termijn-vooruitblik alleen
+als overzicht (dossierniveau bestaat al); **Uren + Facturatie blijven AAN (keuze
+Arsalan)** — C5 + dashboard-netjes naar de veegsessie; rest stapel 3 conform
+aanbeveling; stapel 4 en 5 akkoord. Codex-besluit herzien na tegenargument Arsalan:
+**bouwproef GPT-5.6 onder Claude-toezicht** op een stapel-4-klus na installatie
+(~13 juli) — Claude blijft de enige die commit/deployt. PROMPT-S192 (beslisgesprek)
+daarmee overbodig → archief. Ook gevonden: persoonlijke Claude-instellingen pinnen
+Fable als startmodel voor élke nieuwe sessie — advies aan Arsalan: default op Opus,
+Fable per sessie (melding gedaan, niet zelf aangepast).
+
+### Volgende sessie
+S193 = bouwblok 1 op Opus (`docs/sessions/PROMPT-S193-bouwblok1.md`): B1 verstuurpad +
+B13 vangrails + B2/A1 verjaring + A2 dashboardfix, alles vóór het mailslot eraf gaat.

@@ -558,6 +558,48 @@ class TestIntakeApprove:
         assert claim.rate_basis == "monthly"
 
     @patch("app.ai_agent.intake_service.call_intake_ai")
+    async def test_approve_assigns_first_step_and_history(
+        self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        """S203 #8: een via intake goedgekeurd incassodossier krijgt de eerste
+        pijplijn-stap + een CaseStepHistory-rij (zoals gewone dossier-creatie).
+        Zonder pijplijn-stappen blijft de zaak stap-loos (geen crash)."""
+        from app.incasso.models import CaseStepHistory
+        from tests.helpers.incasso_fixtures import create_pipeline_steps
+
+        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "claude-haiku-4-5")
+        steps = await create_pipeline_steps(db, test_tenant.id)
+        first_step = min(steps, key=lambda s: s.sort_order)
+
+        client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
+        intake = IntakeRequest(
+            tenant_id=test_tenant.id, synced_email_id=email.id,
+            client_contact_id=client.id, status=IntakeStatus.DETECTED,
+        )
+        db.add(intake)
+        await db.commit()
+
+        await process_intake(db, intake.id, test_tenant.id)
+        await db.commit()
+        result = await approve_intake(db, intake.id, test_tenant.id, test_user.id, note="ok")
+        await db.commit()
+
+        case = (await db.execute(
+            select(Case).where(Case.id == result.created_case_id)
+        )).scalar_one()
+        assert case.incasso_step_id == first_step.id
+        # Werk-stap → status in_behandeling (pijplijn stuurt de status, B3/S198).
+        assert case.status == "in_behandeling"
+
+        history = (await db.execute(
+            select(CaseStepHistory).where(CaseStepHistory.case_id == case.id)
+        )).scalars().all()
+        assert len(history) == 1
+        assert history[0].step_id == first_step.id
+
+    @patch("app.ai_agent.intake_service.call_intake_ai")
     async def test_approve_person_debtor_type(
         self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):

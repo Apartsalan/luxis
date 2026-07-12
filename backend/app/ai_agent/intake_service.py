@@ -520,6 +520,24 @@ async def approve_intake(
 
     await db.flush()
 
+    # S203 #8: wijs de eerste pijplijn-stap toe (zoals gewone dossier-creatie in
+    # cases.service). Zonder dit kwam een via intake aangemaakt dossier stap-loos én
+    # zonder CaseStepHistory binnen — de Staphistorie-tab bleef daardoor altijd leeg
+    # en het dossier viel buiten de incasso-batchtoolbar. move_case_to_step is de enige
+    # bron voor stapovergangen en schrijft de historie-rij + zet de status.
+    if case.case_type == "incasso":
+        from app.incasso.service import list_pipeline_steps, move_case_to_step
+
+        steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+        valid_steps = [s for s in steps if s.debtor_type in ("both", case.debtor_type)]
+        first_step = (
+            min(valid_steps, key=lambda s: s.sort_order) if valid_steps else None
+        )
+        if first_step:
+            await move_case_to_step(
+                db, tenant_id, case, first_step, user_id=user_id, trigger_type="auto"
+            )
+
     logger.info(
         "Intake %s approved → case %s, contact %s",
         intake_id,

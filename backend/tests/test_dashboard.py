@@ -720,3 +720,54 @@ async def test_contacts_this_month_excludes_import(
     assert data["contacts_this_month"] == 1
     # Totaal telt beide nog wel.
     assert data["total_contacts"] >= 2
+
+
+@pytest.mark.asyncio
+async def test_reports_collection_rate_same_population_and_capped(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_company: Contact,
+):
+    """S203 #10: de incasso-ratio telt teller én noemer over dezelfde populatie
+    (actieve, niet-terminale zaken) en is gecapt op 100%. Een grote betaling op
+    een afgesloten zaak mag de ratio niet boven 100% duwen."""
+    import uuid
+    from datetime import date
+
+    from app.cases.models import Case
+    from app.collections.models import InterestRate, Payment
+
+    # get_portfolio_outstanding rekent rente over actieve zaken → tarief nodig.
+    db.add(InterestRate(
+        id=uuid.uuid4(), rate_type="statutory", rate=Decimal("8.00"),
+        effective_from=date(2023, 1, 1),
+    ))
+
+    active = Case(
+        id=uuid.uuid4(), tenant_id=test_company.tenant_id, case_number="2026-70001",
+        case_type="incasso", status="nieuw", debtor_type="b2b",
+        date_opened=date.today(), client_id=test_company.id,
+        total_principal=Decimal("1000.00"), total_paid=Decimal("500.00"),
+    )
+    closed = Case(
+        id=uuid.uuid4(), tenant_id=test_company.tenant_id, case_number="2026-70002",
+        case_type="incasso", status="afgesloten", debtor_type="b2b",
+        date_opened=date.today(), date_closed=date.today(), client_id=test_company.id,
+        total_principal=Decimal("1000.00"), total_paid=Decimal("9000.00"),
+    )
+    db.add_all([active, closed])
+    await db.flush()
+    db.add_all([
+        Payment(id=uuid.uuid4(), tenant_id=test_company.tenant_id, case_id=active.id,
+                amount=Decimal("500.00"), payment_date=date.today(), is_active=True),
+        Payment(id=uuid.uuid4(), tenant_id=test_company.tenant_id, case_id=closed.id,
+                amount=Decimal("9000.00"), payment_date=date.today(), is_active=True),
+    ])
+    await db.commit()
+
+    response = await client.get("/api/reports/kpis", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["collection_rate"] == 50.0
+    assert data["collection_rate"] <= 100.0

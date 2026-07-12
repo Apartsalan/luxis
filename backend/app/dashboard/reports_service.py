@@ -67,9 +67,28 @@ async def get_kpis(
     )
     total_collected = Decimal(str(result.scalar_one()))
 
-    # Collection rate
+    # Incasso-ratio (S203 #10): teller én noemer over DEZELFDE populatie — het deel
+    # van de hoofdsom van de actieve, niet-terminale zaken dat is geïnd. De losse
+    # "Geïnd"-KPI (total_collected) blijft periode-breed over álle zaken; die twee
+    # niet mengen (dat gaf eerder een ratio die 100% kon overschrijden).
+    result = await db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0))
+        .join(Case, Payment.case_id == Case.id)
+        .where(
+            Payment.tenant_id == tenant_id,
+            Payment.is_active.is_(True),
+            Case.is_active.is_(True),
+            Case.status.notin_(TERMINAL_STATUSES),
+        )
+    )
+    collected_on_active = Decimal(str(result.scalar_one()))
+
+    # Ratio = geïnd op actieve zaken / (hoofdsom van diezelfde zaken). Gecapt op
+    # 100% zodat meegeïnde rente/BIK de rate niet boven de hoofdsom laat uitkomen.
     collection_rate = (
-        float(total_collected / total_principal * 100) if total_principal > 0 else 0.0
+        min(float(collected_on_active / total_principal * 100), 100.0)
+        if total_principal > 0
+        else 0.0
     )
 
     # Average days to collect (closed cases with date_opened and date_closed)

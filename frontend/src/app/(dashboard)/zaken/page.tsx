@@ -49,6 +49,21 @@ const CASE_SORT_FIELDS: ReadonlySet<CaseSortField> = new Set([
   "total_paid",
 ]);
 
+// S203 #14: "Openstaand" in de lijst = hoofdsom − betaald (zonder rente/BIK; het
+// dossier toont het volledige bedrag). Negatief = de debiteur betaalde meer dan de
+// hoofdsom → toon "teveel betaald" i.p.v. een rauw negatief bedrag.
+function openstaandHoofdsom(
+  principal: number | null | undefined,
+  paid: number | null | undefined,
+): { text: string; className: string } {
+  const open = (principal ?? 0) - (paid ?? 0);
+  if (open < 0) return { text: "teveel betaald", className: "text-emerald-600" };
+  return {
+    text: formatCurrency(open),
+    className: open > 0 ? "text-amber-600" : "text-emerald-600",
+  };
+}
+
 function CaseSortHeader({
   label,
   field,
@@ -586,10 +601,8 @@ export default function ZakenPage() {
                 {hasModule("incasso") && ((zaak.total_principal ?? 0) > 0) && (
                   <div className="mt-2 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">Hoofdsom: <span className="font-semibold text-foreground tabular-nums">{formatCurrency(zaak.total_principal)}</span></span>
-                    <span className={`font-semibold tabular-nums ${
-                      ((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0)) > 0 ? "text-amber-600" : "text-emerald-600"
-                    }`}>
-                      Open: {formatCurrency((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0))}
+                    <span className={`font-semibold tabular-nums ${openstaandHoofdsom(zaak.total_principal, zaak.total_paid).className}`}>
+                      Open: {openstaandHoofdsom(zaak.total_principal, zaak.total_paid).text}
                     </span>
                   </div>
                 )}
@@ -653,7 +666,7 @@ export default function ZakenPage() {
                         />
                       </th>
                       <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Openstaand
+                        Openstaand (hoofdsom)
                       </th>
                     </>
                   )}
@@ -749,12 +762,8 @@ export default function ZakenPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-right">
-                          <span className={`text-sm font-semibold tabular-nums ${
-                            ((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0)) > 0
-                              ? "text-amber-600"
-                              : "text-emerald-600"
-                          }`}>
-                            {formatCurrency((zaak.total_principal ?? 0) - (zaak.total_paid ?? 0))}
+                          <span className={`text-sm font-semibold tabular-nums ${openstaandHoofdsom(zaak.total_principal, zaak.total_paid).className}`}>
+                            {openstaandHoofdsom(zaak.total_principal, zaak.total_paid).text}
                           </span>
                         </td>
                       </>

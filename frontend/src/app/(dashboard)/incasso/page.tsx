@@ -1270,7 +1270,7 @@ function WerkstroomTab() {
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Stap</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Type</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Hoofdsom</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Openstaand</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Openstaand (hoofdsom)</th>
                   <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Dagen</th>
                 </tr>
               </thead>
@@ -1333,8 +1333,8 @@ function WerkstroomTab() {
                       </td>
                       <td className="px-3 py-2 text-right font-mono">{formatCurrency(c.total_principal)}</td>
                       <td className="px-3 py-2 text-right font-mono">
-                        <span className={c.outstanding > 0 ? TONES.danger.text : TONES.success.text}>
-                          {formatCurrency(c.outstanding)}
+                        <span className={openstaandDisplay(c.outstanding).className}>
+                          {openstaandDisplay(c.outstanding).text}
                         </span>
                       </td>
                       <td className={`px-3 py-2 text-right font-medium ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.text ?? "text-muted-foreground"}`}>
@@ -1566,7 +1566,7 @@ function PipelineColumnView({
               <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Cli&euml;nt</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Wederpartij</th>
               <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Hoofdsom</th>
-              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Openstaand</th>
+              <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Openstaand (hoofdsom)</th>
               <th className="px-3 py-2 text-right text-xs font-medium text-muted-foreground">Dagen</th>
             </tr>
           </thead>
@@ -1620,8 +1620,8 @@ function PipelineColumnView({
                     {formatCurrency(c.total_principal)}
                   </td>
                   <td className="px-3 py-2 text-right font-mono">
-                    <span className={c.outstanding > 0 ? TONES.danger.text : TONES.success.text}>
-                      {formatCurrency(c.outstanding)}
+                    <span className={openstaandDisplay(c.outstanding).className}>
+                      {openstaandDisplay(c.outstanding).text}
                     </span>
                   </td>
                   <td className={`px-3 py-2 text-right font-medium ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.text ?? "text-muted-foreground"}`}>
@@ -1870,4 +1870,15 @@ function formatCurrency(amount: number): string {
     style: "currency",
     currency: "EUR",
   }).format(amount);
+}
+
+// S203 #14: negatief openstaand (debiteur betaalde meer dan de hoofdsom) tonen
+// als "teveel betaald" i.p.v. een rauw negatief bedrag.
+function openstaandDisplay(outstanding: number): { text: string; className: string } {
+  if (outstanding < 0)
+    return { text: "teveel betaald", className: TONES.success.text };
+  return {
+    text: formatCurrency(outstanding),
+    className: outstanding > 0 ? TONES.danger.text : TONES.success.text,
+  };
 }

@@ -481,8 +481,13 @@ async def move_case_to_step(
 
         try:
             outstanding = await get_case_outstanding(db, tenant_id, case)
-        except Exception:
-            outstanding = Decimal("0")  # fail-open: nooit blokkeren op een rekenfout
+        except Exception as e:
+            # AUDIT-H2: fail-CLOSED (zelfde reden als update_case_status). Een
+            # onberekenbaar saldo mag een zaak nooit stil op de 'Betaald'-stap
+            # wegboeken; oud fail-open nam €0 aan.
+            raise BadRequestError(
+                "Kan het openstaande saldo niet berekenen — probeer het opnieuw."
+            ) from e
         if outstanding > Decimal("0.01"):
             raise BadRequestError(
                 f"Zaak kan niet op de 'Betaald'-stap gezet worden: er staat nog "

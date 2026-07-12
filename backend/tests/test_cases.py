@@ -467,6 +467,52 @@ async def test_bulk_status_skips_case_blocked_by_paid_guard(
 
 
 @pytest.mark.asyncio
+async def test_update_status_betaald_fails_closed_on_calc_error(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user,
+    test_company: Contact,
+    monkeypatch,
+):
+    """AUDIT-H2: als het openstaand saldo niet te berekenen is, mag de zaak NIET
+    stil op 'betaald' sluiten. Het oude fail-open nam €0 aan → een dossier mét
+    saldo verdween geruisloos uit de werkvoorraad."""
+    from app.cases import service as cases_service
+    from app.cases.schemas import CaseStatusUpdate
+    from app.shared.exceptions import BadRequestError
+
+    created = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": date.today().isoformat(),
+        },
+        headers=auth_headers,
+    )
+    case_id = uuid.UUID(created.json()["id"])
+
+    async def _boom(*args, **kwargs):
+        raise ValueError("rente-tarieven ontbreken")
+
+    monkeypatch.setattr("app.collections.service.get_case_outstanding", _boom)
+
+    with pytest.raises(BadRequestError):
+        await cases_service.update_case_status(
+            db,
+            test_tenant.id,
+            case_id,
+            test_user.id,
+            CaseStatusUpdate(new_status="betaald"),
+        )
+
+    refreshed = await cases_service.get_case(db, test_tenant.id, case_id)
+    assert refreshed.status != "betaald"  # not silently closed
+
+
+@pytest.mark.asyncio
 async def test_bulk_status_tenant_isolation(
     client: AsyncClient,
     auth_headers: dict,

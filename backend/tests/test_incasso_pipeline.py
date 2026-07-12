@@ -12,6 +12,7 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from sqlalchemy import select
 
 from app.cases.models import CaseActivity
@@ -1472,6 +1473,48 @@ async def test_verweer_email_does_not_reopen_paid_case(
     assert case.date_closed is not None       # sluitdatum behouden
 
 
+async def test_move_to_betaald_fails_closed_on_calc_error(
+    db, test_tenant, test_user, test_company
+):
+    """AUDIT-H2: move_case_to_step naar de terminale 'Betaald'-stap mag bij een
+    onberekenbaar saldo niet stil doorgaan. Oud fail-open nam €0 aan → een zaak
+    mét openstaand saldo werd geruisloos als betaald weggeboekt."""
+    from unittest.mock import patch
+
+    from app.incasso.service import move_case_to_step
+    from app.shared.exceptions import BadRequestError
+
+    werk = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Eerste sommatie",
+        sort_order=1, min_wait_days=0, max_wait_days=4,
+    )
+    betaald = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Betaald",
+        sort_order=99, min_wait_days=0, max_wait_days=0, is_terminal=True,
+    )
+    db.add_all([werk, betaald])
+    await db.flush()
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=werk, case_number="2026-09201", status="in_behandeling",
+    )
+
+    async def _boom(*args, **kwargs):
+        raise ValueError("rente-tarieven ontbreken")
+
+    with patch("app.collections.service.get_case_outstanding", new=_boom):
+        with pytest.raises(BadRequestError):
+            await move_case_to_step(
+                db, test_tenant.id, case, betaald,
+                user_id=test_user.id, trigger_type="manual",
+            )
+
+    await db.refresh(case)
+    assert case.status != "betaald"           # niet stil weggeboekt
+    assert case.incasso_step_id == werk.id     # nog op de werkstap
+
+
 # ── AUDIT-H12: only evaluable (timeout) rules are seeded ─────────────────────
 
 
@@ -1796,6 +1839,18 @@ async def test_draft_gate_marks_amounts_fallback_on_amount_template(
         db, test_tenant.id, test_company, None, test_user,
         step=step, case_number="2026-07310", days_in_step=1,
     )
+    # Een echte vordering (statutory) → de rente-opzoeking loopt en faalt zonder
+    # geseede InterestRate, precies het faalpad dat de fallback moet markeren. Een
+    # zaak zónder vorderingen is nu triviaal €0 (AUDIT-H2-kortsluiting) en gooit niet.
+    db.add(Claim(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_id=case.id,
+        description="Hoofdsom",
+        principal_amount=Decimal("5000.00"),
+        default_date=date(2026, 1, 1),
+    ))
+    await db.flush()
     good = {"subject": "s", "body": "Betreft: sommatie / 2026-07310. Hoofdsom € 5000,00."}
     with patch(
         "app.ai_agent.kimi_client.call_draft_ai",

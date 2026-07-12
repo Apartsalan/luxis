@@ -743,8 +743,14 @@ async def update_case_status(
 
         try:
             outstanding = await get_case_outstanding(db, tenant_id, case)
-        except Exception:
-            outstanding = Decimal("0")  # fail-open: nooit blokkeren op een rekenfout
+        except Exception as e:
+            # AUDIT-H2: fail-CLOSED. Kan het saldo niet berekend worden (bv. rente
+            # zonder geseede tarieven), dan mag de zaak niet stil op 'betaald'
+            # sluiten — het oude fail-open nam €0 aan, waardoor een dossier mét
+            # openstaand saldo geruisloos uit de werkvoorraad verdween.
+            raise BadRequestError(
+                "Kan het openstaande saldo niet berekenen — probeer het opnieuw."
+            ) from e
         if outstanding > Decimal("0.01"):
             raise BadRequestError(
                 f"Zaak kan niet op 'betaald' gezet worden: er staat nog € {outstanding} "

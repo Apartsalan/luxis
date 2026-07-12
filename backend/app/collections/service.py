@@ -1083,6 +1083,23 @@ async def get_case_outstanding(db: AsyncSession, tenant_id: uuid.UUID, case) -> 
     Anders sluit een betaling een zaak terwijl er (door een afwijkende BIK) nog
     een restant openstaat, of andersom.
     """
+    # AUDIT-H2: get_case() eager-loads only parties, NOT client, so a bare
+    # `case.client` access here lazy-loads → MissingGreenlet in async context.
+    # The old betaald-guard swallowed that exception as €0, silently masking the
+    # whole outstanding calculation. Fetch the BTW-status with an explicit query
+    # so this stays valid no matter how the caller loaded the case.
+    from app.relations.models import Contact
+
+    include_btw_on_bik = False
+    if case.client_id is not None:
+        is_btw_plichtig = (
+            await db.execute(
+                select(Contact.is_btw_plichtig).where(Contact.id == case.client_id)
+            )
+        ).scalar_one_or_none()
+        # Alleen BTW bovenop de BIK als de schuldeiser NIET btw-plichtig is.
+        include_btw_on_bik = is_btw_plichtig is False
+
     summary = await get_financial_summary(
         db,
         tenant_id,
@@ -1092,7 +1109,7 @@ async def get_case_outstanding(db: AsyncSession, tenant_id: uuid.UUID, case) -> 
         case.contractual_compound,
         bik_override=case.bik_override,
         bik_override_percentage=case.bik_override_percentage,
-        include_btw_on_bik=(not case.client.is_btw_plichtig) if case.client else False,
+        include_btw_on_bik=include_btw_on_bik,
         nakosten_type=case.nakosten_type,
     )
     return summary.get("total_outstanding", Decimal("0"))

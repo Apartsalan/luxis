@@ -447,6 +447,21 @@ async def calculate_case_interest(
 
     Returns: Dict with total_principal, total_interest, and per-claim details
     """
+    # AUDIT-H2: no claims → no principal → trivially €0 interest. Short-circuit
+    # BEFORE the rate lookup so an empty case never requires seeded rates. The
+    # betaald-guard calls this for cases without claim rows; the old rate-required
+    # path threw there, and the guard's fail-open swallowed it as €0 — masking the
+    # calculation. An empty case is genuinely €0, not "unknown".
+    if not claims:
+        return {
+            "case_id": case_id,
+            "calculation_date": calc_date,
+            "interest_type": interest_type,
+            "total_principal": Decimal("0"),
+            "total_interest": Decimal("0"),
+            "claims": [],
+        }
+
     # Get rate history based on interest type
     if interest_type == "contractual":
         if contractual_rate is None:

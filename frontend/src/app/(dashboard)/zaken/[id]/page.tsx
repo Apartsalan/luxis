@@ -366,41 +366,73 @@ export default function ZaakDetailPage() {
     }
   };
 
-  const handleDirectSend = async (data: EmailComposeData) => {
+  const postCompose = (data: EmailComposeData, complianceOverride: boolean) => {
     const subject = data.custom_subject || `${zaak?.case_number || ""}`;
     const body = data.custom_body || "";
+    return api("/api/email/compose/send", {
+      method: "POST",
+      body: JSON.stringify({
+        to: [data.recipient_email],
+        subject,
+        body_html: data.body_html || `<p>${body.replace(/\n/g, "<br>")}</p>`,
+        cc: data.cc,
+        case_id: data.case_id ?? id,
+        case_file_ids: data.case_file_ids,
+        inline_attachments: data.inline_attachments,
+        reply_to_message_id: data.reply_to_message_id,
+        references_root: data.references_root,
+        forward_from_email_id: data.forward_from_email_id,
+        // AI-concept is al opgemaakt (huisstijl); niet opnieuw aankleden.
+        // Alleen overslaan als er ook écht opgemaakte HTML is: mislukt de
+        // huisstijl-wrap van een concept (body_html leeg), dan sturen we de
+        // kale tekst en moet de achterkant hem wél aankleden.
+        already_branded:
+          data.already_branded || (!!activeDraftId && !!data.body_html),
+        // S205: alleen true na de 'toch versturen'-bevestiging hieronder.
+        compliance_override: complianceOverride,
+      }),
+    });
+  };
 
+  const handleDirectSend = async (data: EmailComposeData) => {
     try {
-      const res = await api("/api/email/compose/send", {
-        method: "POST",
-        body: JSON.stringify({
-          to: [data.recipient_email],
-          subject,
-          body_html: data.body_html || `<p>${body.replace(/\n/g, "<br>")}</p>`,
-          cc: data.cc,
-          case_id: data.case_id ?? id,
-          case_file_ids: data.case_file_ids,
-          inline_attachments: data.inline_attachments,
-          reply_to_message_id: data.reply_to_message_id,
-          references_root: data.references_root,
-          forward_from_email_id: data.forward_from_email_id,
-          // AI-concept is al opgemaakt (huisstijl); niet opnieuw aankleden.
-          // Alleen overslaan als er ook écht opgemaakte HTML is: mislukt de
-          // huisstijl-wrap van een concept (body_html leeg), dan sturen we de
-          // kale tekst en moet de achterkant hem wél aankleden.
-          already_branded:
-            data.already_branded || (!!activeDraftId && !!data.body_html),
-        }),
-      });
+      let res = await postCompose(data, false);
+
+      // S205 — 14-dagenbrief-blokkade: geen harde fout, maar een 'toch versturen'-
+      // bevestiging. De backend stuurt code DAGENBRIEF_GATE (422). Simpel gehouden
+      // (bewuste keuze Arsalan): één ja/nee, géén verplicht redenveld; het systeem
+      // legt zelf een spoor op het dossier vast bij 'Toch versturen'.
+      // ⚠️ Waarschuwingstekst = concept — juridisch nog langs Lisanne vóór livegang.
+      if (res.status === 422) {
+        const gateErr = await res.clone().json().catch(() => null);
+        const gateDetail = gateErr?.detail;
+        if (gateDetail && typeof gateDetail === "object" && gateDetail.code === "DAGENBRIEF_GATE") {
+          const ok = await confirm({
+            title: "Weet je het zeker?",
+            description:
+              "Voor deze consument is nog geen verstreken 14-dagenbrief geregistreerd. " +
+              "Zonder die brief zijn de incassokosten bij een consument mogelijk niet " +
+              "opeisbaar (art. 6:96 lid 6 BW). Heeft de consument de 14-dagenbrief al " +
+              "ontvangen? Kies 'Toch versturen' om de sommatie alsnog te versturen.",
+            confirmText: "Toch versturen",
+            cancelText: "Annuleren",
+            variant: "destructive",
+          });
+          if (!ok) return;
+          res = await postCompose(data, true);
+        }
+      }
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         const detail = err?.detail;
         const msg = typeof detail === "string"
           ? detail
-          : Array.isArray(detail)
-            ? detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(", ")
-            : "E-mail verzenden mislukt";
+          : detail && typeof detail === "object" && typeof detail.message === "string"
+            ? detail.message
+            : Array.isArray(detail)
+              ? detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(", ")
+              : "E-mail verzenden mislukt";
         throw new Error(msg);
       }
 

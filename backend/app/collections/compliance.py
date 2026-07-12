@@ -115,6 +115,104 @@ async def check_dagenbrief_gate(
     return None
 
 
+# Stap-categorieën die BIK/incassokosten claimen (sommaties + gerechtelijk). Alleen
+# op deze stappen geldt de 14-dagenbrief-gate voor het losse verzendpad; op
+# administratieve/regeling-stappen (bv. 'Opvragen stukken', 'Treffen van regeling')
+# is een consumenten-mail géén BIK-claimende sommatie en blokkeren we niets.
+SOMMATIE_STEP_CATEGORIES = ("minnelijk", "gerechtelijk")
+
+
+async def check_dagenbrief_gate_for_case(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> str | None:
+    """14-dagenbrief-gate voor het LOSSE verzendpad (compose/send), waar alleen een
+    case_id meekomt. Laadt zelf de zaak + huidige stap en gate't alleen als de zaak
+    op een BIK-claimende sommatie-/dagvaardingsstap staat. Geeft None (geen blokkade)
+    voor een zaak zonder stap of op een niet-sommatie-stap.
+    """
+    from app.incasso.models import IncassoPipelineStep
+
+    case = (
+        await db.execute(
+            select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+        )
+    ).scalar_one_or_none()
+    if case is None or case.incasso_step_id is None:
+        return None
+
+    step = (
+        await db.execute(
+            select(IncassoPipelineStep).where(
+                IncassoPipelineStep.id == case.incasso_step_id,
+                IncassoPipelineStep.tenant_id == tenant_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if step is None or step.step_category not in SOMMATIE_STEP_CATEGORIES:
+        return None
+
+    return await check_dagenbrief_gate(
+        db, tenant_id, case, step.name, case_number=case.case_number
+    )
+
+
+async def record_dagenbrief_override(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    reason: str,
+) -> None:
+    """Onuitwisbaar spoor van een 'toch versturen'-override (S205). Legt vast WIE,
+    WANNEER en welke zaak — de gebruiker hoeft géén reden te typen (bewuste keuze
+    Arsalan: de knop mag niet moeilijker zijn dan een ja/nee). Schrijft een
+    CaseActivity én een notitie op de open staphistorie-rij van de huidige stap.
+    """
+    from app.cases.models import CaseActivity
+
+    db.add(
+        CaseActivity(
+            tenant_id=tenant_id,
+            case_id=case_id,
+            user_id=user_id,
+            activity_type="compliance_override",
+            title="14-dagenbrief-waarschuwing overschreven ('toch versturen')",
+            description=(
+                "Sommatie handmatig verstuurd ondanks de 14-dagenbrief-blokkade. "
+                f"Systeemwaarschuwing was: {reason}"
+            ),
+        )
+    )
+
+    # Notitie op de open staphistorie-rij (indien aanwezig) — extra spoor in de
+    # pijplijn-tijdlijn naast de activiteit.
+    case = (
+        await db.execute(
+            select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+        )
+    ).scalar_one_or_none()
+    if case is not None and case.incasso_step_id is not None:
+        history = (
+            await db.execute(
+                select(CaseStepHistory)
+                .where(
+                    CaseStepHistory.tenant_id == tenant_id,
+                    CaseStepHistory.case_id == case_id,
+                    CaseStepHistory.step_id == case.incasso_step_id,
+                    CaseStepHistory.exited_at.is_(None),
+                )
+                .order_by(CaseStepHistory.entered_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if history is not None:
+            stamp = date.today().strftime("%d-%m-%Y")
+            note = f"[{stamp}] 14-dagenbrief-blokkade overschreven ('toch versturen')."
+            history.notes = f"{history.notes}\n{note}" if history.notes else note
+
+    await db.flush()
+
+
 async def pre_send_compliance_check(
     db: AsyncSession,
     tenant_id: uuid.UUID,

@@ -18,7 +18,7 @@ from email.message import EmailMessage
 from email.utils import formataddr
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
@@ -111,6 +111,10 @@ class ComposeRequest(BaseModel):
     # True = de body draagt de huisstijl al (template of AI-concept) → niet
     # opnieuw aankleden. False (vrije mail/antwoord/doorsturen) → wel aankleden.
     already_branded: bool = False
+    # S205: 'toch versturen'-override. False = de 14-dagenbrief-gate mag blokkeren;
+    # True = de gebruiker heeft de blokkade-waarschuwing gezien en bewust doorgezet
+    # (er wordt dan een onuitwisbaar spoor op het dossier gelegd).
+    compliance_override: bool = False
 
     @field_validator("to", "cc")
     @classmethod
@@ -282,6 +286,31 @@ async def send_via_provider(
     db: AsyncSession = Depends(get_db),
 ):
     """Send an email via the connected email provider (Outlook/BaseNet-IMAP)."""
+    # S205 — wettelijke waarborg art. 6:96 lid 6 BW op het AI-concept/losse verzendpad
+    # (de derde deur naast batch en follow-up). Alleen voor een VERSE case-mail (geen
+    # antwoord/doorsturen) op een BIK-claimende sommatie-stap bij een consument. Zonder
+    # override blokkeren met een herkenbare code zodat de voorkant de 'toch versturen'-
+    # knop kan tonen; mét override gaat de mail door + onuitwisbaar spoor op het dossier.
+    is_reply_or_forward = bool(data.reply_to_message_id or data.forward_from_email_id)
+    if data.case_id and not is_reply_or_forward:
+        from app.collections.compliance import (
+            check_dagenbrief_gate_for_case,
+            record_dagenbrief_override,
+        )
+
+        gate_reason = await check_dagenbrief_gate_for_case(db, user.tenant_id, data.case_id)
+        if gate_reason is not None:
+            if not data.compliance_override:
+                raise HTTPException(
+                    status_code=422,
+                    detail={"code": "DAGENBRIEF_GATE", "message": gate_reason},
+                )
+            # Spoor vastleggen; commit gebeurt aan het eind van de request (get_db)
+            # samen met de verzending — mislukt de send, dan rolt ook dit terug.
+            await record_dagenbrief_override(
+                db, user.tenant_id, data.case_id, user.id, gate_reason
+            )
+
     account = await get_email_account(db, user.id, user.tenant_id)
     if not account:
         raise BadRequestError("Geen e-mailaccount verbonden. Ga naar Instellingen → E-mail.")

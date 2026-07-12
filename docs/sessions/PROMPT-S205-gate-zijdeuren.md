@@ -35,11 +35,21 @@ Extra taak-context (alleen wat `/sessie-start` NIET al leest):
    b. Het versturen van de 14-dagenbrief ZELF mag nooit geblokkeerd worden — een zaak die laat
       binnenkomt zonder eerdere brief moet direct de brief kunnen sturen (dat kan nu al: de gate
       zondert de dagenbrief-stap uit — bewaken dat dat zo blijft in alle paden).
-   c. Wat NIET komt: een "toch versturen"-knop die de wachttijd van een sommatie-mét-kosten
-      overslaat — de 14 dagen zijn wet (art. 6:96 lid 6 BW), geen systeemkeuze. Flexibiliteit =
-      registreren wat buiten het systeem al gebeurd is, niet de wettelijke termijn omzeilen.
-   Bouw a. als eerste-klas flow (geen "sleep de zaak stiekem door de stap"-truc) en zorg dat de
-   proxy-verharding deze registratie als geldig bewijs blijft zien.
+   c. **"Toch versturen"-noodknop (eis Arsalan, 13 juli — aangescherpt):** naast de registratie
+      moet er een expliciete override zijn voor situaties die we nu niet kunnen voorzien. Ontwerp
+      als break-glass, niet als gemaksknop:
+      - verschijnt pas NADAT de blokkade heeft gevuurd (nooit preventief zichtbaar);
+      - verplicht een reden (vrij tekstveld, niet leeg);
+      - toont eerst de consequentie in gewone taal ("zonder verstreken 14-dagentermijn zijn de
+        incassokosten bij een consument mogelijk niet opeisbaar — art. 6:96 lid 6 BW");
+      - laat een onuitwisbaar spoor na op het dossier (wie, wanneer, reden) — CaseActivity +
+        vermelding in de staphistorie-notitie;
+      - werkt per dossier per actie (geen "voor alles uitzetten").
+      De standaard blijft: blokkade. De override is de uitzondering mét handtekening.
+      ⚠️ Juridische vormgeving (tekst van de waarschuwing, wie de knop mag gebruiken) vóór
+      livegang even langs Lisanne — het is haar beroepsrisico.
+   Bouw a. en c. als eerste-klas flows (geen "sleep de zaak stiekem door de stap"-truc) en zorg
+   dat de proxy-verharding de registratie én de override als geldig bewijs/besluit blijft zien.
 4. **Mailsync-foutpad** (🟠, bewezen defect): in `email_auto_sync` (workflow/scheduler.py:234-266)
    expireert de `rollback()` álle accounts → volgend account crasht met MissingGreenlet en de hele
    run stopt. Fix: e-mailadres per account in een lokale variabele vóór de try + na een rollback de

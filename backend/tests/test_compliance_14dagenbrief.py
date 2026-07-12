@@ -14,10 +14,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
 from app.cases.models import Case
-from app.collections.compliance import get_dagenbrief_entered_at
-from app.incasso.models import IncassoPipelineStep
+from app.collections.compliance import (
+    get_dagenbrief_entered_at,
+    get_dagenbrief_sent_at,
+)
+from app.incasso.models import CaseStepHistory, IncassoPipelineStep
 from app.incasso.service import batch_execute, move_case_to_step
 from app.relations.models import Contact
+
+
+async def _mark_dagenbrief_sent(db, case_id, step_id, *, days_ago: int):
+    """Simuleer een ECHT verstuurde 14-dagenbrief: backdate de historie-rij én zet
+    email_sent (het bewijs dat de gate sinds S205 eist — niet enkel stap-binnenkomst)."""
+    from sqlalchemy import update
+
+    await db.execute(
+        update(CaseStepHistory)
+        .where(CaseStepHistory.case_id == case_id, CaseStepHistory.step_id == step_id)
+        .values(entered_at=date.today() - timedelta(days=days_ago), email_sent=True)
+    )
 
 
 async def _b2c_case_with_steps(db, tenant_id, user_id):
@@ -73,6 +88,26 @@ async def test_dagenbrief_detection_reads_step_history(
 
 
 @pytest.mark.asyncio
+async def test_sent_proxy_requires_real_send(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S205 verstuurd-proxy: alléén binnenkomen in de 14-dagenbrief-stap telt NIET.
+    Pas als email_sent gezet is (echt verstuurd) geeft get_dagenbrief_sent_at een datum."""
+    case, dagenbrief, _sommatie = await _b2c_case_with_steps(db, test_tenant.id, test_user.id)
+
+    await move_case_to_step(db, test_tenant.id, case, dagenbrief, user_id=test_user.id)
+    await db.flush()
+    # Wél binnengekomen in de stap, maar NIET verstuurd → geen bewijs.
+    assert await get_dagenbrief_entered_at(db, test_tenant.id, case.id) == date.today()
+    assert await get_dagenbrief_sent_at(db, test_tenant.id, case.id) is None
+
+    # Nu markeren als echt verstuurd → proxy vindt de datum.
+    await _mark_dagenbrief_sent(db, case.id, dagenbrief.id, days_ago=0)
+    await db.flush()
+    assert await get_dagenbrief_sent_at(db, test_tenant.id, case.id) == date.today()
+
+
+@pytest.mark.asyncio
 async def test_batch_blocks_b2c_sommatie_without_dagenbrief(
     db: AsyncSession, test_tenant: Tenant, test_user: User
 ):
@@ -106,10 +141,32 @@ async def test_batch_allows_b2c_sommatie_after_dagenbrief(
     await move_case_to_step(db, test_tenant.id, case, dagenbrief, user_id=test_user.id)
     case.incasso_step_id = sommatie.id
     await db.flush()
-    # Backdate de historie zodat de gate 'verstuurd' herkent.
-    from sqlalchemy import update
+    # Backdate + markeer als echt verstuurd zodat de gate 'verstuurd' herkent.
+    await _mark_dagenbrief_sent(db, case.id, dagenbrief.id, days_ago=20)
+    await db.commit()
 
-    from app.incasso.models import CaseStepHistory
+    result = await batch_execute(
+        db, test_tenant.id, test_user.id,
+        case_ids=[case.id], action="generate_document", send_email=False,
+    )
+    assert result.processed == 1
+    assert not any("14-dagenbrief" in e for e in result.errors)
+
+
+@pytest.mark.asyncio
+async def test_batch_blocks_when_dagenbrief_entered_but_not_sent(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S205 kernversteviging: een zaak die door de 14-dagenbrief-stap is GESCHOVEN
+    (entered_at 20 dagen geleden) maar waar nooit een brief is verstuurd (email_sent
+    blijft False) → de sommatie wordt alsnog geblokkeerd. Sluit de 'doorschuiven telt
+    als verstuurd'-zijdeur."""
+    case, dagenbrief, sommatie = await _b2c_case_with_steps(db, test_tenant.id, test_user.id)
+    await move_case_to_step(db, test_tenant.id, case, dagenbrief, user_id=test_user.id)
+    case.incasso_step_id = sommatie.id
+    await db.flush()
+    from sqlalchemy import update
+    # Wel 20 dagen geleden binnengekomen, maar NIET verstuurd.
     await db.execute(
         update(CaseStepHistory)
         .where(CaseStepHistory.case_id == case.id, CaseStepHistory.step_id == dagenbrief.id)
@@ -121,8 +178,9 @@ async def test_batch_allows_b2c_sommatie_after_dagenbrief(
         db, test_tenant.id, test_user.id,
         case_ids=[case.id], action="generate_document", send_email=False,
     )
-    assert result.processed == 1
-    assert not any("14-dagenbrief" in e for e in result.errors)
+    assert result.processed == 0
+    assert result.skipped == 1
+    assert any("nog niet verstuurd" in e for e in result.errors)
 
 
 @pytest.mark.asyncio
@@ -135,15 +193,8 @@ async def test_batch_blocks_b2c_sommatie_within_15_days(
     await move_case_to_step(db, test_tenant.id, case, dagenbrief, user_id=test_user.id)
     case.incasso_step_id = sommatie.id
     await db.flush()
-    from sqlalchemy import update
-
-    from app.incasso.models import CaseStepHistory
-    # 14-dagenbrief pas 5 dagen geleden → binnen de termijn.
-    await db.execute(
-        update(CaseStepHistory)
-        .where(CaseStepHistory.case_id == case.id, CaseStepHistory.step_id == dagenbrief.id)
-        .values(entered_at=date.today() - timedelta(days=5))
-    )
+    # 14-dagenbrief pas 5 dagen geleden verstuurd → binnen de termijn.
+    await _mark_dagenbrief_sent(db, case.id, dagenbrief.id, days_ago=5)
     await db.commit()
 
     result = await batch_execute(

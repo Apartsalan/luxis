@@ -50,6 +50,71 @@ async def get_dagenbrief_entered_at(
     return entered.date() if entered else None
 
 
+async def get_dagenbrief_sent_at(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> date | None:
+    """Datum waarop de 14-dagenbrief AANTOONBAAR is verstuurd, of None.
+
+    Sterker dan `get_dagenbrief_entered_at` (S205, verstuurd-proxy verstevigd): telt
+    alleen een 14-dagenbrief-staphistorie-rij waarvan `email_sent` is gezet — bewijs
+    dat er echt een brief de deur uitging. Een zaak die door de stap is geschoven
+    zonder ooit iets te versturen telt dus NIET meer als 'verstuurd'. Een buiten
+    Luxis verstuurde brief wordt via de 'toch versturen'-override afgehandeld, niet
+    hier. Het echte verzendpad (`mark_current_step_communication_sent`, aangeroepen
+    op batch- en concept-verzendpad) zet die vlag.
+    """
+    result = await db.execute(
+        select(CaseStepHistory.entered_at)
+        .join(IncassoPipelineStep, CaseStepHistory.step_id == IncassoPipelineStep.id)
+        .where(
+            CaseStepHistory.tenant_id == tenant_id,
+            CaseStepHistory.case_id == case_id,
+            IncassoPipelineStep.name == DAGENBRIEF_STEP_NAME,
+            CaseStepHistory.email_sent.is_(True),
+        )
+        .order_by(CaseStepHistory.entered_at.asc())
+        .limit(1)
+    )
+    entered = result.scalar_one_or_none()
+    return entered.date() if entered else None
+
+
+async def check_dagenbrief_gate(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case,
+    step_name: str,
+    *,
+    case_number: str,
+) -> str | None:
+    """Wettelijke waarborg art. 6:96 lid 6 BW — de ENIGE bron van waarheid voor de
+    14-dagenbrief-blokkade. Wordt gedeeld door alle verzendpaden (batch, follow-up
+    'Uitvoeren', AI-concept) zodat de regel niet uit elkaar loopt.
+
+    Geeft een blokkade-REDEN (str) terug als een BIK-claimende sommatie bij een
+    consument NIET verstuurd mag worden, anders None. De gate geldt alleen voor b2c
+    en NOOIT voor de 14-dagenbrief-stap zelf (die brief moet altijd verstuurd kunnen
+    worden). Een reden betekent: blokkeren (overslaan mét reden, of 'toch versturen').
+    """
+    if getattr(case, "debtor_type", None) != "b2c" or step_name == DAGENBRIEF_STEP_NAME:
+        return None
+
+    sent_at = await get_dagenbrief_sent_at(db, tenant_id, case.id)
+    if sent_at is None:
+        return (
+            f"{case_number}: 14-dagenbrief nog niet verstuurd — verplicht bij "
+            f"consumenten vóór incassokosten (art. 6:96 lid 6 BW)"
+        )
+    days_since = (date.today() - sent_at).days
+    if days_since < DAGENBRIEF_MIN_DAYS:
+        return (
+            f"{case_number}: 14-dagentermijn nog niet verstreken — 14-dagenbrief "
+            f"{days_since} dag(en) geleden, minimaal {DAGENBRIEF_MIN_DAYS} dagen "
+            f"wachten (art. 6:96 lid 6 BW)"
+        )
+    return None
+
+
 async def pre_send_compliance_check(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -85,9 +150,9 @@ async def pre_send_compliance_check(
 
     # ── Check 1: 14-dagenbrief requirement (B2C only) ──────────────────
     if is_b2c and document_type in ("sommatie", "tweede_sommatie", "dagvaarding"):
-        # Leest het echte pijplijn-spoor (stap-historie), niet de lege
-        # generated_documents-tabel (S203 #5).
-        entered_at = await get_dagenbrief_entered_at(db, tenant_id, case_id)
+        # Leest het echte VERZEND-spoor (stap-historie met email_sent), niet de lege
+        # generated_documents-tabel (S203 #5) en niet enkel stap-binnenkomst (S205).
+        entered_at = await get_dagenbrief_sent_at(db, tenant_id, case_id)
         if entered_at is None:
             errors.append(
                 "14-dagenbrief is nog niet verstuurd. Dit is verplicht bij consumenten "

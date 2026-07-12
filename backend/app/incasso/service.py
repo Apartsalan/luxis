@@ -1240,36 +1240,21 @@ async def batch_execute(
                 )
                 continue
 
-            # S203 #5: wettelijke waarborg art. 6:96 lid 6 BW. Bij een consument mag geen
-            # BIK-claimende sommatie de deur uit (a) vóór de 14-dagenbrief is verstuurd,
-            # én (b) binnen 15 dagen ná die brief (de termijn loopt vanaf de dag ná
-            # ontvangst). Harde blokkade — overslaan mét reden (niet stil). De pijplijn
-            # zet de 14-dagenbrief als eerste B2C-stap; deze gate vangt een zaak die daar
-            # handmatig langs of te snel doorheen is gezet.
-            from app.collections.compliance import (
-                DAGENBRIEF_MIN_DAYS,
-                DAGENBRIEF_STEP_NAME,
-                get_dagenbrief_entered_at,
-            )
+            # S203 #5 / S205: wettelijke waarborg art. 6:96 lid 6 BW. Bij een consument
+            # mag geen BIK-claimende sommatie de deur uit (a) vóór de 14-dagenbrief is
+            # verstuurd, én (b) binnen 15 dagen ná die brief. De regel woont sinds S205
+            # in één gedeelde helper (`check_dagenbrief_gate`) zodat batch, follow-up
+            # 'Uitvoeren' en het AI-conceptpad niet uit elkaar lopen. Harde blokkade —
+            # overslaan mét reden (niet stil).
+            from app.collections.compliance import check_dagenbrief_gate
 
-            if case.debtor_type == "b2c" and step.name != DAGENBRIEF_STEP_NAME:
-                dagenbrief_at = await get_dagenbrief_entered_at(db, tenant_id, case.id)
-                if dagenbrief_at is None:
-                    skipped += 1
-                    errors.append(
-                        f"{case.case_number}: 14-dagenbrief nog niet verstuurd — "
-                        f"verplicht bij consumenten vóór incassokosten (art. 6:96 lid 6 BW)"
-                    )
-                    continue
-                days_since = (date.today() - dagenbrief_at).days
-                if days_since < DAGENBRIEF_MIN_DAYS:
-                    skipped += 1
-                    errors.append(
-                        f"{case.case_number}: 14-dagentermijn nog niet verstreken — "
-                        f"14-dagenbrief {days_since} dag(en) geleden, minimaal "
-                        f"{DAGENBRIEF_MIN_DAYS} dagen wachten (art. 6:96 lid 6 BW)"
-                    )
-                    continue
+            gate_reason = await check_dagenbrief_gate(
+                db, tenant_id, case, step.name, case_number=case.case_number
+            )
+            if gate_reason is not None:
+                skipped += 1
+                errors.append(gate_reason)
+                continue
 
             try:
                 # Build context once — reused for e-mail body or DOCX archive.
@@ -1406,6 +1391,15 @@ async def batch_execute(
                             "niet verstuurd, zaak niet doorgeschoven"
                         )
                     continue
+
+                # S205: leg de daadwerkelijke verzending vast op de HUIDIGE stap
+                # (vóór de auto-advance de stap verlaat). Zo telt een via de batch
+                # verstuurde 14-dagenbrief mee als 'aantoonbaar verstuurd' voor de
+                # gate (email_sent), i.p.v. alleen stap-binnenkomst. Ontbrak hier.
+                if sent_this_case:
+                    await mark_current_step_communication_sent(
+                        db, tenant_id, case, document_id=doc.id
+                    )
 
                 # Auto-complete matching pipeline tasks for this step
                 completed_count = await _auto_complete_tasks(

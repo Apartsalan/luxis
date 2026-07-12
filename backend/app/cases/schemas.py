@@ -126,6 +126,17 @@ class CaseStatusUpdate(BaseModel):
     note: str | None = None
 
 
+class CaseBulkStatusUpdate(BaseModel):
+    case_ids: list[uuid.UUID]
+    status: str
+
+
+class CaseBulkStatusResult(BaseModel):
+    updated: int
+    skipped: int
+    errors: list[str]
+
+
 # ── Afwikkelflow (FIN-2) ────────────────────────────────────────────────────
 
 SETTLEMENT_ROUTES = ("verrekenen", "doorbetalen")

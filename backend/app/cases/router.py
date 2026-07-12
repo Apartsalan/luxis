@@ -14,6 +14,8 @@ from app.cases import files_service, service, settlement_service
 from app.cases.schemas import (
     CaseActivityCreate,
     CaseActivityResponse,
+    CaseBulkStatusResult,
+    CaseBulkStatusUpdate,
     CaseCreate,
     CaseDetailResponse,
     CaseEmailAttachmentResponse,
@@ -179,6 +181,39 @@ async def update_status(
         db, current_user.tenant_id, case_id, current_user.id, data
     )
     return case
+
+
+@router.put("/bulk/status", response_model=CaseBulkStatusResult)
+async def bulk_update_status(
+    data: CaseBulkStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update selected case statuses, skipping guarded or inaccessible cases."""
+    from app.shared.exceptions import BadRequestError, NotFoundError
+
+    updated = 0
+    errors: list[str] = []
+
+    for case_id in data.case_ids:
+        try:
+            await service.update_case_status(
+                db,
+                current_user.tenant_id,
+                case_id,
+                current_user.id,
+                CaseStatusUpdate(new_status=data.status),
+            )
+        except (BadRequestError, NotFoundError) as exc:
+            errors.append(f"{case_id}: {exc.detail}")
+            continue
+        updated += 1
+
+    return CaseBulkStatusResult(
+        updated=updated,
+        skipped=len(errors),
+        errors=errors,
+    )
 
 
 # ── Afwikkelflow (FIN-2) ─────────────────────────────────────────────────────

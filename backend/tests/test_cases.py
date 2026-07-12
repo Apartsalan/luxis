@@ -373,6 +373,139 @@ async def test_status_invalid_transition(
 
 
 @pytest.mark.asyncio
+async def test_bulk_status_happy_path(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    case_ids = []
+    for _ in range(2):
+        response = await client.post(
+            "/api/cases",
+            json={
+                "case_type": "incasso",
+                "client_id": str(test_company.id),
+                "date_opened": date.today().isoformat(),
+            },
+            headers=auth_headers,
+        )
+        case_ids.append(response.json()["id"])
+
+    response = await client.put(
+        "/api/cases/bulk/status",
+        json={"case_ids": case_ids, "status": "in_behandeling"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"updated": 2, "skipped": 0, "errors": []}
+
+
+@pytest.mark.asyncio
+async def test_bulk_status_skips_case_blocked_by_paid_guard(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_company: Contact,
+):
+    from app.collections.models import Claim, InterestRate
+
+    payable = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": date.today().isoformat(),
+        },
+        headers=auth_headers,
+    )
+    blocked = await client.post(
+        "/api/cases",
+        json={
+            "case_type": "incasso",
+            "client_id": str(test_company.id),
+            "date_opened": date.today().isoformat(),
+        },
+        headers=auth_headers,
+    )
+    blocked_id = uuid.UUID(blocked.json()["id"])
+    db.add(
+        InterestRate(
+            id=uuid.uuid4(),
+            rate_type="statutory",
+            effective_from=date.today() - timedelta(days=365),
+            rate=Decimal("6.00"),
+            source="Bulkstatus-test",
+        )
+    )
+    db.add(
+        Claim(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_id=blocked_id,
+            description="Openstaande factuur",
+            principal_amount=Decimal("500.00"),
+            default_date=date.today() - timedelta(days=30),
+        )
+    )
+    await db.commit()
+
+    response = await client.put(
+        "/api/cases/bulk/status",
+        json={
+            "case_ids": [payable.json()["id"], blocked.json()["id"]],
+            "status": "betaald",
+        },
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["updated"] == 1
+    assert data["skipped"] == 1
+    assert len(data["errors"]) == 1
+    assert "open" in data["errors"][0]
+
+
+@pytest.mark.asyncio
+async def test_bulk_status_tenant_isolation(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    second_tenant: Tenant,
+):
+    other_client = Contact(
+        id=uuid.uuid4(),
+        tenant_id=second_tenant.id,
+        contact_type="company",
+        name="Andere cliënt B.V.",
+    )
+    other_case = Case(
+        id=uuid.uuid4(),
+        tenant_id=second_tenant.id,
+        case_number="2026-OTHER",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="nieuw",
+        client_id=other_client.id,
+        date_opened=date.today(),
+    )
+    db.add_all([other_client, other_case])
+    await db.commit()
+
+    response = await client.put(
+        "/api/cases/bulk/status",
+        json={"case_ids": [str(other_case.id)], "status": "in_behandeling"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["updated"] == 0
+    assert response.json()["skipped"] == 1
+    await db.refresh(other_case)
+    assert other_case.status == "nieuw"
+
+
+@pytest.mark.asyncio
 async def test_status_change_sets_date_closed(
     client: AsyncClient, auth_headers: dict, test_company: Contact
 ):

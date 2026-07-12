@@ -408,6 +408,19 @@ async def execute_recommendation(
         and step.template_type
     )
     if is_generate:
+        # S205 — wettelijke waarborg art. 6:96 lid 6 BW, óók op dit verzendpad.
+        # De "Uitvoeren"-knop rendert en verstuurt exact dezelfde stap-sommaties als
+        # de batch; zonder deze gate was dit de tweede open zijdeur (S204-review).
+        # Zelfde gedeelde helper → de regel loopt niet uit elkaar. Fout = luid falen
+        # mét reden (niet stil op 'Uitgevoerd'); dekt ook approve_and_execute.
+        from app.collections.compliance import check_dagenbrief_gate
+
+        gate_reason = await check_dagenbrief_gate(
+            db, tenant_id, case, step.name, case_number=case.case_number
+        )
+        if gate_reason is not None:
+            raise BadRequestError(gate_reason)
+
         # B1 — verstuurpad. De meeste incassostappen (sommatie, faillissement-
         # dreigbrief, ...) zijn E-MAIL-sjablonen, geen Word-brieven. Probeer daarom
         # eerst de e-mailrenderer; alleen als die de sleutel niet kent val je terug

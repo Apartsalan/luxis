@@ -748,6 +748,77 @@ async def test_execute_generate_without_template_never_executed(
 
 
 @pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+@patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
+async def test_execute_b2c_blocked_without_dagenbrief(
+    mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S205 zijdeur 1: 'Uitvoeren' bij een B2C-sommatie zónder verstuurde 14-dagenbrief
+    → hard geblokkeerd (art. 6:96 lid 6 BW). Niets verstuurd, aanbeveling niet Uitgevoerd."""
+    mock_ctx.return_value = {}
+    mock_render.return_value = "<p>Sommatie</p>"
+    mock_send.return_value = SimpleNamespace(status="sent", error_message=None)
+
+    sommatie = await _create_step(
+        db, test_tenant.id, name="Eerste sommatie", template_type="sommatie_drukte"
+    )
+    case = await _create_case(db, test_tenant.id, test_user.id, sommatie)
+    case.debtor_type = "b2c"
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, sommatie.id)
+    await db.commit()
+
+    with pytest.raises(BadRequestError) as exc:
+        await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+    assert "14-dagenbrief" in str(exc.value.detail)
+    mock_send.assert_not_called()  # er ging niets de deur uit
+    assert rec.status != RecommendationStatus.EXECUTED
+    assert rec.executed_at is None
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+@patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
+async def test_execute_b2c_allowed_after_dagenbrief_sent(
+    mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Ná een aantoonbaar verstuurde 14-dagenbrief (>15 dagen) mag 'Uitvoeren' de
+    B2C-sommatie wél versturen."""
+    mock_ctx.return_value = {}
+    mock_render.return_value = "<p>Sommatie</p>"
+    mock_send.return_value = SimpleNamespace(status="sent", error_message=None)
+
+    dagenbrief = await _create_step(
+        db, test_tenant.id, name="14-dagenbrief", sort_order=0, template_type=None
+    )
+    sommatie = await _create_step(
+        db, test_tenant.id, name="Eerste sommatie", template_type="sommatie_drukte"
+    )
+    case = await _create_case(db, test_tenant.id, test_user.id, sommatie)
+    case.debtor_type = "b2c"
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    # Aantoonbaar verstuurde 14-dagenbrief, 20 dagen geleden.
+    from app.incasso.models import CaseStepHistory
+
+    db.add(CaseStepHistory(
+        tenant_id=test_tenant.id, case_id=case.id, step_id=dagenbrief.id,
+        entered_at=datetime.now(UTC) - timedelta(days=20), email_sent=True,
+        trigger_type="manual",
+    ))
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, sommatie.id)
+    await db.commit()
+
+    result = await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+    await db.commit()
+
+    assert result is not None
+    assert result.status == RecommendationStatus.EXECUTED
+    mock_send.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_api_approve_and_reject(client, db: AsyncSession, test_tenant, test_user):
     """POST approve and reject endpoints work."""
     step = await _create_step(db, test_tenant.id)

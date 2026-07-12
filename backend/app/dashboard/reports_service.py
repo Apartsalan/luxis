@@ -4,11 +4,13 @@ import uuid
 from datetime import date, timedelta
 from decimal import Decimal
 
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import and_, func, select
 from sqlalchemy import case as sql_case
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case
+from app.cases.schemas import TERMINAL_STATUSES
 from app.collections.models import Payment
 from app.incasso.models import IncassoPipelineStep
 
@@ -16,17 +18,19 @@ from app.incasso.models import IncassoPipelineStep
 async def get_kpis(
     db: AsyncSession,
     tenant_id: uuid.UUID,
+    months: int = 12,
 ) -> dict:
     """Get high-level KPIs for the reports page."""
-    # Total + active cases. S175b: 'actief' = lopend (niet afgesloten) — is_active
-    # betekent sinds de BaseNet-import alleen 'zichtbaar' (het archief incluis).
+    # Total + active cases. S175b/S199: 'actief' = niet-terminaal lopend werk;
+    # is_active betekent sinds de BaseNet-import alleen 'zichtbaar'.
     result = await db.execute(
         select(
             func.count(Case.id),
             func.count(
                 sql_case(
                     (
-                        (Case.is_active.is_(True)) & (Case.status != "afgesloten"),
+                        (Case.is_active.is_(True))
+                        & Case.status.notin_(TERMINAL_STATUSES),
                         Case.id,
                     )
                 )
@@ -37,27 +41,31 @@ async def get_kpis(
     total_cases = row[0]
     active_cases = row[1]
 
-    # Outstanding + collected (alleen lopende zaken, S175b)
+    # Outstanding basis (alleen niet-terminale lopende zaken, S175b/S199)
     result = await db.execute(
-        select(
-            func.coalesce(func.sum(Case.total_principal), 0),
-            func.coalesce(func.sum(Case.total_paid), 0),
-        ).where(
+        select(func.coalesce(func.sum(Case.total_principal), 0)).where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-            Case.status != "afgesloten",
+            Case.status.notin_(TERMINAL_STATUSES),
         )
     )
-    row = result.one()
-    total_principal = Decimal(str(row[0]))
-    total_paid = Decimal(str(row[1]))
+    total_principal = Decimal(str(result.scalar_one()))
     # AUDIT-H4: 'openstaand' must include interest + BIK (same grand_total logic
     # as the case detail), not just principal − paid. collected/collection_rate
     # stay principal-based (separate metrics).
     from app.collections.service import get_portfolio_outstanding
 
     total_outstanding = await get_portfolio_outstanding(db, tenant_id)
-    total_collected = total_paid
+    period_start = date.today().replace(day=1) - relativedelta(months=months - 1)
+    # Definitie "Geïnd": de som van werkelijk geboekte betalingen waarvan de
+    # payment_date binnen de geselecteerde rapportageperiode valt.
+    result = await db.execute(
+        select(func.coalesce(func.sum(Payment.amount), 0)).where(
+            Payment.tenant_id == tenant_id,
+            Payment.payment_date >= period_start,
+        )
+    )
+    total_collected = Decimal(str(result.scalar_one()))
 
     # Collection rate
     collection_rate = (
@@ -83,11 +91,18 @@ async def get_kpis(
             IncassoPipelineStep.name,
             func.count(Case.id),
         )
-        .join(IncassoPipelineStep, Case.incasso_step_id == IncassoPipelineStep.id, isouter=True)
+        .join(
+            IncassoPipelineStep,
+            and_(
+                Case.incasso_step_id == IncassoPipelineStep.id,
+                IncassoPipelineStep.tenant_id == tenant_id,
+            ),
+            isouter=True,
+        )
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-            Case.status != "afgesloten",  # archief niet als 'Geen stap' tonen (S175b)
+            Case.status.notin_(TERMINAL_STATUSES),
             Case.case_type == "incasso",
         )
         .group_by(IncassoPipelineStep.name)
@@ -109,7 +124,7 @@ async def get_kpis(
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-            Case.status != "afgesloten",  # werkvoorraad, niet het archief (S175b)
+            Case.status.notin_(TERMINAL_STATUSES),
         )
         .group_by(Case.debtor_type)
     )
@@ -246,19 +261,26 @@ async def get_phase_distribution(
             func.count(Case.id),
             func.coalesce(func.sum(Case.total_principal - Case.total_paid), 0),
         )
-        .join(IncassoPipelineStep, Case.incasso_step_id == IncassoPipelineStep.id)
+        .join(
+            IncassoPipelineStep,
+            and_(
+                Case.incasso_step_id == IncassoPipelineStep.id,
+                IncassoPipelineStep.tenant_id == tenant_id,
+            ),
+            isouter=True,
+        )
         .where(
             Case.tenant_id == tenant_id,
             Case.is_active.is_(True),
-            Case.status != "afgesloten",  # werkvoorraad, niet het archief (S175b/S177)
+            Case.status.notin_(TERMINAL_STATUSES),
             Case.case_type == "incasso",
         )
         .group_by(IncassoPipelineStep.name, IncassoPipelineStep.sort_order)
-        .order_by(IncassoPipelineStep.sort_order)
+        .order_by(IncassoPipelineStep.sort_order.nulls_last())
     )
     return [
         {
-            "phase": row[0],
+            "phase": row[0] or "Geen stap",
             "count": row[1],
             "total_amount": str(row[2]),
         }

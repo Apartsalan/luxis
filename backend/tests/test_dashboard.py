@@ -300,6 +300,112 @@ async def test_reports_kpis_debtor_type_uses_case_debtor_type(
     assert breakdown.get("Bedrijf") == 1  # the b2b debtor
 
 
+@pytest.mark.asyncio
+async def test_reports_collected_sums_payments_in_selected_period(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant,
+    test_company: Contact,
+):
+    import uuid
+    from datetime import date
+
+    from dateutil.relativedelta import relativedelta
+
+    from app.cases.models import Case
+    from app.collections.models import Payment
+
+    case = Case(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="2026-COLLECTED",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="betaald",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today() - relativedelta(months=18),
+    )
+    db.add(case)
+    await db.flush()
+    db.add_all(
+        [
+            Payment(
+                tenant_id=test_tenant.id,
+                case_id=case.id,
+                amount=Decimal("125.50"),
+                payment_date=date.today(),
+            ),
+            Payment(
+                tenant_id=test_tenant.id,
+                case_id=case.id,
+                amount=Decimal("999.00"),
+                payment_date=date.today() - relativedelta(months=7),
+            ),
+        ]
+    )
+    await db.commit()
+
+    response = await client.get("/api/reports/kpis?months=6", headers=auth_headers)
+
+    assert response.status_code == 200
+    assert Decimal(response.json()["total_collected"]) == Decimal("125.50")
+
+
+@pytest.mark.asyncio
+async def test_phase_distribution_includes_cases_without_step(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant,
+    test_company: Contact,
+):
+    import uuid
+    from datetime import date
+
+    from app.cases.models import Case
+    from app.incasso.models import IncassoPipelineStep
+
+    step = IncassoPipelineStep(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        name="Minnelijke behandeling",
+        sort_order=10,
+        min_wait_days=0,
+        max_wait_days=0,
+        step_category="minnelijk",
+        debtor_type="both",
+    )
+    db.add(step)
+    await db.flush()
+
+    def make_case(number: str, step_id=None) -> Case:
+        return Case(
+            id=uuid.uuid4(),
+            tenant_id=test_tenant.id,
+            case_number=number,
+            case_type="incasso",
+            debtor_type="b2b",
+            status="in_behandeling",
+            is_active=True,
+            client_id=test_company.id,
+            incasso_step_id=step_id,
+            date_opened=date.today(),
+            total_principal=Decimal("100.00"),
+            total_paid=Decimal("0.00"),
+        )
+
+    db.add_all([make_case("2026-PHASE1", step.id), make_case("2026-PHASE2")])
+    await db.commit()
+
+    response = await client.get("/api/reports/phase-distribution", headers=auth_headers)
+
+    assert response.status_code == 200
+    counts = {row["phase"]: row["count"] for row in response.json()}
+    assert counts == {"Minnelijke behandeling": 1, "Geen stap": 1}
+
+
 async def _seed_active_incasso_with_interest_bik(db, tenant_id, client_id):
     """Active incasso case + claim + statutory rate, so its financial summary has
     interest + BIK on top of the €1000 principal."""
@@ -414,6 +520,21 @@ async def test_closed_archive_case_not_counted_as_open_work(
         total_paid=Decimal("0.00"),
     )
     db.add(archived)
+    paid = Case(
+        id=_uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_number="IN999902",
+        case_type="incasso",
+        debtor_type="b2b",
+        status="betaald",
+        is_active=True,
+        client_id=test_company.id,
+        date_opened=date.today() - timedelta(days=100),
+        date_closed=date.today(),
+        total_principal=Decimal("9000.00"),
+        total_paid=Decimal("9000.00"),
+    )
+    db.add(paid)
     db.add(
         Claim(
             id=_uuid.uuid4(),
@@ -437,6 +558,7 @@ async def test_closed_archive_case_not_counted_as_open_work(
     assert Decimal(str(data["total_outstanding"])) == expected
     statuses = {s["status"] for s in data["cases_by_status"]}
     assert "afgesloten" not in statuses
+    assert "betaald" not in statuses
 
     # Rapporten-KPI's: zelfde regel.
     resp = await client.get("/api/reports/kpis", headers=auth_headers)

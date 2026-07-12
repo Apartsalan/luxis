@@ -32,11 +32,11 @@ export interface PhaseDistribution {
 }
 
 // ─── Queries ──────────────────────────────────────────────────────
-export function useDashboardKPIs() {
+export function useDashboardKPIs(months = 12) {
   return useQuery<DashboardKPIs>({
-    queryKey: ["reports", "kpis"],
+    queryKey: ["reports", "kpis", months],
     queryFn: async () => {
-      const res = await api("/api/reports/kpis");
+      const res = await api(`/api/reports/kpis?months=${months}`);
       if (!res.ok) throw new Error("Kan KPI's niet ophalen");
       return res.json();
     },

@@ -76,11 +76,12 @@ async def get_upcoming_installments(
 
 @reports_router.get("/kpis")
 async def reports_kpis(
+    months: int = Query(default=12, ge=1, le=36),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """Get high-level KPIs for the reports page."""
-    return await get_kpis(db, user.tenant_id)
+    return await get_kpis(db, user.tenant_id, months)
 
 
 @reports_router.get("/monthly")

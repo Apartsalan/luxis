@@ -64,7 +64,9 @@ function monthRange(yyyymm: string): { from: string; to: string } {
 
 export default function RapportagesPage() {
   const [period, setPeriod] = useState<Period>("12");
-  const { data: kpis, isLoading: kpisLoading } = useDashboardKPIs();
+  const { data: kpis, isLoading: kpisLoading } = useDashboardKPIs(
+    parseInt(period)
+  );
   const { data: monthly, isLoading: monthlyLoading } = useMonthlyStats(
     parseInt(period)
   );
@@ -124,7 +126,7 @@ export default function RapportagesPage() {
             href="/incasso"
           />
           <KpiCard
-            label="Geind"
+            label="Geïnd"
             value={formatCurrency(kpis.total_collected)}
             icon={TrendingDown}
             color="text-emerald-600"

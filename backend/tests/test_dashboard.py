@@ -779,7 +779,6 @@ async def test_scheduler_alerts_flags_stale_critical_job(
 ):
     """S203 #2: een kritieke dagelijkse job die > 25u niet meer draaide geeft een
     dashboard-waarschuwing; een verse (nooit-gedraaide) job níét (geen vals alarm)."""
-    import uuid
     from datetime import UTC, datetime, timedelta
 
     from app.settings.models import SchedulerHeartbeat

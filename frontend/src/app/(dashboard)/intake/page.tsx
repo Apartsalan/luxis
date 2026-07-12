@@ -129,7 +129,7 @@ export default function IntakePage() {
         <div>
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
-            AI Intake
+            Nieuwe aanvragen
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Inkomende incassoverzoeken automatisch verwerkt door AI

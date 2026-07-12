@@ -294,7 +294,7 @@ export default function IntakeDetailPage() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Terug naar AI Intake
+          Terug naar Nieuwe aanvragen
         </Link>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

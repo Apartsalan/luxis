@@ -1240,11 +1240,14 @@ async def batch_execute(
                 )
                 continue
 
-            # S203 #5: wettelijke waarborg art. 6:96 lid 6 BW. Bij een consument mag
-            # geen BIK-claimende sommatie de deur uit vóór de 14-dagenbrief is verstuurd.
-            # De pijplijn zet de 14-dagenbrief als eerste B2C-stap; deze gate vangt een
-            # zaak die daar handmatig langs is gezet. Overslaan mét reden (niet stil).
+            # S203 #5: wettelijke waarborg art. 6:96 lid 6 BW. Bij een consument mag geen
+            # BIK-claimende sommatie de deur uit (a) vóór de 14-dagenbrief is verstuurd,
+            # én (b) binnen 15 dagen ná die brief (de termijn loopt vanaf de dag ná
+            # ontvangst). Harde blokkade — overslaan mét reden (niet stil). De pijplijn
+            # zet de 14-dagenbrief als eerste B2C-stap; deze gate vangt een zaak die daar
+            # handmatig langs of te snel doorheen is gezet.
             from app.collections.compliance import (
+                DAGENBRIEF_MIN_DAYS,
                 DAGENBRIEF_STEP_NAME,
                 get_dagenbrief_entered_at,
             )
@@ -1256,6 +1259,15 @@ async def batch_execute(
                     errors.append(
                         f"{case.case_number}: 14-dagenbrief nog niet verstuurd — "
                         f"verplicht bij consumenten vóór incassokosten (art. 6:96 lid 6 BW)"
+                    )
+                    continue
+                days_since = (date.today() - dagenbrief_at).days
+                if days_since < DAGENBRIEF_MIN_DAYS:
+                    skipped += 1
+                    errors.append(
+                        f"{case.case_number}: 14-dagentermijn nog niet verstreken — "
+                        f"14-dagenbrief {days_since} dag(en) geleden, minimaal "
+                        f"{DAGENBRIEF_MIN_DAYS} dagen wachten (art. 6:96 lid 6 BW)"
                     )
                     continue
 

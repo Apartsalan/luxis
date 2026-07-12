@@ -22,6 +22,11 @@ from app.incasso.models import CaseStepHistory, IncassoPipelineStep
 # incasso.service.DEFAULT_PIPELINE_STEPS.
 DAGENBRIEF_STEP_NAME = "14-dagenbrief"
 
+# Minimum aantal dagen tussen de 14-dagenbrief en een BIK-claimende sommatie.
+# 14 dagen termijn + 1 dag (de termijn loopt vanaf de dag NÁ ontvangst) → nooit
+# eerder dan 15 dagen versturen.
+DAGENBRIEF_MIN_DAYS = 15
+
 
 async def get_dagenbrief_entered_at(
     db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
@@ -90,10 +95,11 @@ async def pre_send_compliance_check(
             )
         else:
             days_since = (date.today() - entered_at).days
-            if days_since < 15:
+            if days_since < DAGENBRIEF_MIN_DAYS:
                 errors.append(
                     f"14-dagentermijn is nog niet verstreken. Brief verstuurd {days_since} "
-                    f"dag(en) geleden, minimaal 15 dagen wachten (dag NA ontvangst)."
+                    f"dag(en) geleden, minimaal {DAGENBRIEF_MIN_DAYS} dagen wachten "
+                    f"(dag NA ontvangst)."
                 )
 
     # ── Check 2: BIK override validation (B2C) ────────────────────────

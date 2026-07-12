@@ -24,8 +24,22 @@ Extra taak-context (alleen wat `/sessie-start` NIET al leest):
    stap-BINNENKOMST. Sterker anker: bewijs van echte verzending — de `email_sent`-vlag op de
    historierij (advance-after-send zet die al) en/of EmailLog/GeneratedDocument. Het batchpad
    moet dan óók `mark_current_step_communication_sent` aanroepen na een geslaagde send
-   (ontbreekt nu). Let op de bestaande situatie: buiten Luxis verstuurde brieven → handmatige
-   registratie moet mogelijk blijven (dat pad niet breken).
+   (ontbreekt nu).
+
+   **HARDE EIS Arsalan (13 juli, S204-nagesprek) — flexibiliteit voor laat-binnengekomen zaken:**
+   een opdrachtgever kan een consumentenzaak aanleveren waarbij de 14-dagenbrief al eerder is
+   verstuurd (door de opdrachtgever zelf of vóór de overdracht), of waarbij de zaak hals-over-kop
+   instroomt. De gate mag zo'n zaak niet muurvast zetten:
+   a. Er moet een expliciete registratie zijn: "14-dagenbrief al verstuurd buiten Luxis, op datum
+      X" (bewuste handeling mét datum, door een mens). De gate rekent dan vanaf die datum.
+   b. Het versturen van de 14-dagenbrief ZELF mag nooit geblokkeerd worden — een zaak die laat
+      binnenkomt zonder eerdere brief moet direct de brief kunnen sturen (dat kan nu al: de gate
+      zondert de dagenbrief-stap uit — bewaken dat dat zo blijft in alle paden).
+   c. Wat NIET komt: een "toch versturen"-knop die de wachttijd van een sommatie-mét-kosten
+      overslaat — de 14 dagen zijn wet (art. 6:96 lid 6 BW), geen systeemkeuze. Flexibiliteit =
+      registreren wat buiten het systeem al gebeurd is, niet de wettelijke termijn omzeilen.
+   Bouw a. als eerste-klas flow (geen "sleep de zaak stiekem door de stap"-truc) en zorg dat de
+   proxy-verharding deze registratie als geldig bewijs blijft zien.
 4. **Mailsync-foutpad** (🟠, bewezen defect): in `email_auto_sync` (workflow/scheduler.py:234-266)
    expireert de `rollback()` álle accounts → volgend account crasht met MissingGreenlet en de hele
    run stopt. Fix: e-mailadres per account in een lokale variabele vóór de try + na een rollback de

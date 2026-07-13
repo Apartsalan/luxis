@@ -153,6 +153,12 @@ def _basenet_note(rec: BaseNetRecord, extra: str | None = None) -> str:
 
 # BaseNet pstatus → leesbaar; alles komt binnen als Luxis-status 'afgesloten'
 # (passief archief, besluit Arsalan). De originele status bewaren we in de notitie.
+# ⚠ VALKUIL (S207c): pstatus is de HOOFDgroep; de echte werkstatus zit in
+# `incstatus` (id → CustomProjectStatus.psdescription). Het kantoor hing de
+# werkstatus "Procedure loopt" (57310) per ongeluk onder hoofdgroep "Offerte" —
+# zaken die actief in procedure zijn tonen dan pstatus='Offerte'. Bij een
+# volgende import: incstatus 57310 als Lopend behandelen (IN100310/IN100407
+# zijn op prod al handmatig gecorrigeerd).
 _INCASSO_STATUS_LABELS = {
     "Lopend": "lopend",
     "Wacht": "wachtend",

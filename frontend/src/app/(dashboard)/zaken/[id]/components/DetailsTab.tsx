@@ -120,6 +120,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     interest_type: zaak.interest_type || "statutory",
     contractual_rate: zaak.contractual_rate != null ? String(zaak.contractual_rate) : "",
     contractual_compound: zaak.contractual_compound ?? true,
+    interest_freeze_date: zaak.interest_freeze_date || "",
     nakosten_type: zaak.nakosten_type || "",
   });
 
@@ -187,6 +188,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
             contractual_compound: editForm.interest_type === "contractual"
               ? editForm.contractual_compound
               : null,
+            interest_freeze_date: editForm.interest_freeze_date || null,
             nakosten_type: editForm.nakosten_type || null,
           }),
         },
@@ -216,6 +218,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       interest_type: zaak.interest_type || "statutory",
       contractual_rate: zaak.contractual_rate != null ? String(zaak.contractual_rate) : "",
       contractual_compound: zaak.contractual_compound ?? true,
+      interest_freeze_date: zaak.interest_freeze_date || "",
       nakosten_type: zaak.nakosten_type || "",
     });
     setIsEditing(false);
@@ -671,6 +674,21 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                     </div>
                   </>
                 )}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs text-muted-foreground mb-1">
+                    Rentedatum (bevriezing)
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.interest_freeze_date}
+                    onChange={(e) => setEditForm(f => ({ ...f, interest_freeze_date: e.target.value }))}
+                    className={editInputClass}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Rente stopt op deze datum en het systeem rekent terug. Leeg = rente loopt door tot vandaag.
+                    Wordt bij afsluiten automatisch op de laatste betaaldatum gezet.
+                  </p>
+                </div>
                 <div>
                   <label className="block text-xs text-muted-foreground mb-1">
                     Nakosten
@@ -765,6 +783,15 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                     <dt className="text-xs text-muted-foreground mb-1">Contractueel rentepercentage</dt>
                     <dd className="text-sm text-foreground">
                       {zaak.contractual_rate}%{zaak.contractual_compound ? " (samengesteld)" : " (enkelvoudig)"}
+                    </dd>
+                  </div>
+                )}
+                {zaak.interest_freeze_date && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground mb-1">Rentedatum (bevroren)</dt>
+                    <dd className="text-sm text-foreground">
+                      {new Date(zaak.interest_freeze_date).toLocaleDateString("nl-NL")}
+                      <span className="text-muted-foreground"> — rente stopt op deze datum</span>
                     </dd>
                   </div>
                 )}

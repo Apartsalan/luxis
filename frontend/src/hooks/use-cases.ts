@@ -41,6 +41,7 @@ export interface CaseDetail extends CaseSummary {
   procedure_phase: string | null;
   contractual_rate: number | null;
   contractual_compound: boolean;
+  interest_freeze_date: string | null;
   bik_override: number | null;
   bik_override_percentage: number | null;
   nakosten_type: string | null;

@@ -1140,6 +1140,10 @@ async def _reopen_case_if_no_longer_paid(
     if outstanding > Decimal("0.01"):
         case.status = "in_behandeling"
         case.date_closed = None
+        # S207: heropend → rente moet weer gaan lopen tot vandaag. Wis de
+        # automatische bevriezing (een handmatig gezette datum blijft staan
+        # is óók verdedigbaar, maar bij heropening is doorlopen de bedoeling).
+        case.interest_freeze_date = None
         db.add(
             CaseActivity(
                 tenant_id=tenant_id,
@@ -1175,7 +1179,18 @@ async def get_financial_summary(
     Combines: claims + interest + BIK + payments + trust funds (derdengelden)
     """
     if calc_date is None:
-        calc_date = date.today()
+        # S207: geen expliciete peildatum → gebruik de bevroren rentedatum van de
+        # zaak (afgewikkeld/afgesloten stopt de rente daar), anders vandaag. Zo
+        # respecteert ELKE caller (overzicht, documenten, automatisering, AI) de
+        # bevriezing zonder dat elke aanroep het apart hoeft mee te geven.
+        freeze = (
+            await db.execute(
+                select(Case.interest_freeze_date).where(
+                    Case.id == case_id, Case.tenant_id == tenant_id
+                )
+            )
+        ).scalar_one_or_none()
+        calc_date = freeze or date.today()
 
     # Get claims and payments
     claims = await list_claims(db, tenant_id, case_id)

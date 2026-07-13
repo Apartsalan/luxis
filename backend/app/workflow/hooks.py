@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
@@ -63,6 +63,23 @@ async def on_payment_received(
 
         case.status = "betaald"
         case.date_closed = date.today()
+        # S207: bevries de rente op het afwikkelmoment = de laatste betaaldatum.
+        # Zonder dit blijft de rente ná volledige voldoening doorlopen en toont
+        # een afgewikkelde zaak later alsnog een (spook)restant (IN100350). Alleen
+        # zetten als er nog geen handmatige rentedatum staat.
+        if case.interest_freeze_date is None:
+            from app.collections.models import Payment
+
+            last_pay = (
+                await db.execute(
+                    select(func.max(Payment.payment_date)).where(
+                        Payment.case_id == case_id,
+                        Payment.tenant_id == tenant_id,
+                        Payment.is_active.is_(True),
+                    )
+                )
+            ).scalar()
+            case.interest_freeze_date = last_pay or date.today()
         await db.flush()
 
         # Log the auto-transition

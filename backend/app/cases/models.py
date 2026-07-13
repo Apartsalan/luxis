@@ -89,6 +89,14 @@ class Case(TenantBase):
         Boolean, default=True, nullable=False
     )  # Whether contractual interest is compound
 
+    # S207: rentedatum / bevriezing. De datum tot waar rente wordt berekend.
+    # NULL = tot vandaag (lopende rente). Gezet = rente stopt op die datum en
+    # het systeem rekent terug. Wordt bij het afsluiten van een zaak automatisch
+    # gezet op de laatste betaaldatum (het moment van afwikkeling), maar is ook
+    # handmatig aanpasbaar — zodat een afgewikkelde zaak niet eeuwig doorrent
+    # (IN100350) en je een berekening op een gekozen peildatum kunt vastzetten.
+    interest_freeze_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
     # Related contacts
     client_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("contacts.id"), nullable=False)
     opposing_party_id: Mapped[uuid.UUID | None] = mapped_column(

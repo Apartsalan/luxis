@@ -90,6 +90,7 @@ class CaseUpdate(BaseModel):
     interest_type: str | None = None
     contractual_rate: Decimal | None = None
     contractual_compound: bool | None = None
+    interest_freeze_date: date | None = None  # S207: rentedatum / bevriezing
     opposing_party_id: uuid.UUID | None = None
     billing_contact_id: uuid.UUID | None = None
     contact_terms_id: uuid.UUID | None = None  # S140
@@ -275,6 +276,7 @@ class CaseResponse(BaseModel):
     interest_type: str
     contractual_rate: Decimal | None
     contractual_compound: bool
+    interest_freeze_date: date | None = None  # S207: rentedatum / bevriezing
     client: ContactBrief
     opposing_party: ContactBrief | None
     billing_contact: ContactBrief | None

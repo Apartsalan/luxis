@@ -760,9 +760,27 @@ async def update_case_status(
     case.status = new_status
     if new_status in ("betaald", "afgesloten"):
         case.date_closed = date.today()
+        # S207: bevries de rente op het afwikkelmoment (laatste betaaldatum,
+        # anders sluitdatum). Zo rent een handmatig afgesloten zaak niet door.
+        # Een reeds handmatig gezette rentedatum blijft staan.
+        if case.interest_freeze_date is None:
+            from app.collections.models import Payment
+
+            last_pay = (
+                await db.execute(
+                    select(func.max(Payment.payment_date)).where(
+                        Payment.case_id == case_id,
+                        Payment.tenant_id == tenant_id,
+                        Payment.is_active.is_(True),
+                    )
+                )
+            ).scalar()
+            case.interest_freeze_date = last_pay or date.today()
     else:
         # Heropenen: dossier is weer in behandeling → sluitdatum leeg.
         case.date_closed = None
+        # S207: heropend → rente weer laten lopen; automatische bevriezing wissen.
+        case.interest_freeze_date = None
         # S198-review (Fable #3): stond de zaak op een TERMINALE eindstap
         # (Betaald/Afgesloten)? Met status in_behandeling zou ze onzichtbaar blijven op
         # het pijplijn-bord en in de wachtrijen (die op terminale stap-id filteren).

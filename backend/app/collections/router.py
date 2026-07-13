@@ -126,7 +126,8 @@ async def calculate_interest(
     from app.collections.interest import calculate_case_interest
 
     case = await get_case(db, current_user.tenant_id, case_id)
-    calc_date = as_of or date.today()
+    # S207: expliciete as_of wint; anders de bevroren rentedatum; anders vandaag.
+    calc_date = as_of or case.interest_freeze_date or date.today()
 
     claims = await service.list_claims(db, current_user.tenant_id, case_id)
     claim_dicts = [

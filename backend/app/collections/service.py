@@ -238,6 +238,7 @@ async def create_payment(
             {
                 "payment_date": p.payment_date,
                 "allocated_to_principal": p.allocated_to_principal,
+                "allocated_to_interest": p.allocated_to_interest,
             }
             for p in existing_payments
         ]
@@ -1195,6 +1196,7 @@ async def get_financial_summary(
         {
             "payment_date": p.payment_date,
             "allocated_to_principal": p.allocated_to_principal,
+            "allocated_to_interest": p.allocated_to_interest,
         }
         for p in payments
     ]

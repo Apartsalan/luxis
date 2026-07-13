@@ -136,6 +136,7 @@ async def calculate_interest(
             "principal_amount": c.principal_amount,
             "default_date": c.default_date,
             "rate_basis": c.rate_basis,
+            "interest_rate": c.interest_rate,
         }
         for c in claims
     ]
@@ -147,6 +148,7 @@ async def calculate_interest(
         {
             "payment_date": p.payment_date,
             "allocated_to_principal": p.allocated_to_principal,
+            "allocated_to_interest": p.allocated_to_interest,
         }
         for p in payments
     ]

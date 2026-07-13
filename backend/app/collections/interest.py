@@ -232,6 +232,128 @@ def _add_years(d: date, years: int) -> date:
         return d.replace(year=d.year + years, day=28)
 
 
+def _add_months(d: date, months: int) -> date:
+    """Add months to a date; a nonexistent day clamps to the month's last day.
+
+    Jan 31 + 1 month → Feb 28/29. Always computed from the anchor date, so
+    repeated boundaries don't drift (Jan 31 + 2 → Mar 31, not Mar 28).
+    """
+    import calendar
+
+    year = d.year + (d.month - 1 + months) // 12
+    month = (d.month - 1 + months) % 12 + 1
+    return date(year, month, min(d.day, calendar.monthrange(year, month)[1]))
+
+
+# ── Monthly Compound Interest (contractual, e.g. AV "2% per maand") ──────────
+
+
+def calculate_monthly_compound_interest(
+    principal: Decimal,
+    default_date: date,
+    calc_date: date,
+    monthly_rate: Decimal,
+    payments: list[tuple[date, Decimal]] | None = None,
+) -> tuple[Decimal, list[dict]]:
+    """Maandelijks samengestelde contractuele rente, BaseNet-conventie.
+
+    Dit is de methode waarmee de opdrachtgevers (AV art. 13.3, "2% per maand")
+    zelf rekenen — geverifieerd regel-voor-regel tegen de BaseNet-specificatie
+    van IN100197 (zie tests/test_interest_monthly.py):
+
+    - Maandperiodes lopen vanaf de verzuimdag (25e → 24e); een volle maand
+      telt het volle maandtarief, een deelperiode pro-rata dagen/bucketdagen.
+    - De rentedragende basis blijft ONafgerond en kapitaliseert de exacte
+      maandrente aan het eind van elke volle maand (rente-op-rente per maand).
+      Alleen de getoonde renteregels ronden af; het totaal is de som van die
+      afgeronde regels — precies zoals de BaseNet-specificatie optelt.
+    - `payments` = (datum, bedrag ná kosten): eerst gaat de lopende (afgeronde)
+      maandrente eraf, de rest verlaagt de basis. Omdat gekapitaliseerde rente
+      in de basis zit, is dit het art. 6:44-effect kosten → rente → hoofdsom.
+    - `calc_date` is exclusief (rente t/m de dag ervóór); een BaseNet-rentedatum
+      R reproduceer je met calc_date = R + 1 dag.
+    """
+    if calc_date <= default_date or principal == Decimal("0"):
+        return Decimal("0"), []
+
+    if principal < Decimal("0"):
+        # Creditfactuur: negatieve hoofdsom draagt negatieve (verrekenende)
+        # rente — spiegel de berekening (S184: nooit stil naar €0 clampen).
+        pos_total, pos_periods = calculate_monthly_compound_interest(
+            -principal, default_date, calc_date, monthly_rate, None
+        )
+        for p in pos_periods:
+            p["principal"] = -p["principal"]
+            p["interest"] = -p["interest"]
+        return -pos_total, pos_periods
+
+    rate = monthly_rate / Decimal("100")
+    pmts = sorted((d, a) for d, a in (payments or []) if a > Decimal("0"))
+
+    base = principal
+    idx = 0
+    # Betalingen op of vóór de verzuimdatum verlagen de startbasis (S183-4).
+    while idx < len(pmts) and pmts[idx][0] <= default_date:
+        base -= pmts[idx][1]
+        idx += 1
+    if base <= Decimal("0"):
+        return Decimal("0"), []
+
+    total = Decimal("0")
+    periods: list[dict] = []
+    month = 0
+
+    while True:
+        bucket_start = _add_months(default_date, month)
+        if bucket_start >= calc_date:
+            break
+        bucket_end = _add_months(default_date, month + 1)
+        bucket_days = Decimal((bucket_end - bucket_start).days)
+        cursor = bucket_start
+        pending = Decimal("0")  # exacte (onafgeronde) rente van deze maand
+
+        def _accrue(seg_end: date) -> None:
+            nonlocal total, pending, cursor
+            days = (seg_end - cursor).days
+            exact = base * rate * Decimal(days) / bucket_days
+            line = _round2(exact)
+            total += line
+            pending += exact
+            periods.append(
+                {
+                    "start_date": cursor,
+                    "end_date": seg_end,
+                    "days": days,
+                    "rate": monthly_rate,
+                    "principal": _round2(base),
+                    "interest": line,
+                }
+            )
+            cursor = seg_end
+
+        while idx < len(pmts) and pmts[idx][0] < min(bucket_end, calc_date):
+            pay_date, amount = pmts[idx]
+            if cursor < pay_date and base > Decimal("0"):
+                _accrue(pay_date)
+            # Eerst de lopende maandrente (zoals geboekt: afgerond), rest → basis.
+            paid_interest = min(_round2(pending), amount)
+            pending -= paid_interest
+            base = max(Decimal("0"), base - (amount - paid_interest))
+            cursor = pay_date
+            idx += 1
+
+        seg_end = min(bucket_end, calc_date)
+        if cursor < seg_end and base > Decimal("0"):
+            _accrue(seg_end)
+
+        if bucket_end <= calc_date:
+            # Volle maand voorbij → exacte maandrente kapitaliseren.
+            base += pending
+        month += 1
+
+    return _round2(total), periods
+
+
 # ── Contractual Interest Helper ──────────────────────────────────────────────
 
 
@@ -489,6 +611,7 @@ async def calculate_case_interest(
 
     # Build per-claim principal reductions from payments (pro-rata)
     claim_reductions = _build_claim_reductions(claims, payments or [])
+    non_cost_reductions: dict[str, list[tuple[date, Decimal]]] | None = None
 
     # Calculate interest per claim
     total_principal = Decimal("0")
@@ -503,13 +626,16 @@ async def calculate_case_interest(
         claim_id = claim["id"]
 
         # DF122-06: per-claim rate override takes precedence over case-level rate
+        fixed_monthly_rate: Decimal | None = None
         if claim_override_rate is not None:
             override_rate = Decimal(str(claim_override_rate))
             if claim_rate_basis == "monthly":
+                fixed_monthly_rate = override_rate
                 override_rate = override_rate * Decimal("12")
             claim_rate_history = [(date(1900, 1, 1), override_rate)]
             use_compound = is_compound
         elif interest_type == "contractual" and claim_rate_basis == "monthly":
+            fixed_monthly_rate = contractual_rate
             effective_rate = contractual_rate * Decimal("12")
             claim_rate_history = [(date(1900, 1, 1), effective_rate)]
             use_compound = is_compound
@@ -517,11 +643,26 @@ async def calculate_case_interest(
             claim_rate_history = rate_history
             use_compound = is_compound
 
-        reductions = claim_reductions.get(claim_id, [])
-        interest, periods = calculate_interest_with_reductions(
-            principal, default_dt, calc_date, claim_rate_history,
-            reductions, use_compound,
-        )
+        if fixed_monthly_rate is not None and use_compound:
+            # AV-conventie "X% per maand" samengesteld: maandelijkse
+            # kapitalisatie (BaseNet-methode), niet ×12 met jaarkapitalisatie.
+            # Betalingen verlagen hier de rentedragende basis met het volledige
+            # niet-kostendeel (rente + hoofdsom), want gekapitaliseerde rente
+            # zit al in die basis.
+            if non_cost_reductions is None:
+                non_cost_reductions = _build_claim_reductions(
+                    claims, payments or [], non_cost=True
+                )
+            interest, periods = calculate_monthly_compound_interest(
+                principal, default_dt, calc_date, fixed_monthly_rate,
+                non_cost_reductions.get(claim_id, []),
+            )
+        else:
+            reductions = claim_reductions.get(claim_id, [])
+            interest, periods = calculate_interest_with_reductions(
+                principal, default_dt, calc_date, claim_rate_history,
+                reductions, use_compound,
+            )
 
         total_principal += principal
         total_interest += interest
@@ -550,8 +691,13 @@ async def calculate_case_interest(
 def _build_claim_reductions(
     claims: list[dict],
     payments: list[dict],
+    non_cost: bool = False,
 ) -> dict[str, list[tuple[date, Decimal]]]:
     """Distribute payment principal allocations pro-rata across claims.
+
+    With ``non_cost=True`` the distributed amount is rente + hoofdsom
+    (alles behalve kosten) — the reduction base for monthly-compound claims,
+    where gekapitaliseerde rente onderdeel is van de rentedragende basis.
 
     Only claims with a POSITIVE principal share in a payment's principal
     reduction. A credit invoice (negative principal) is not "paid down" by the
@@ -582,6 +728,8 @@ def _build_claim_reductions(
 
     for pmt in payments:
         allocated = Decimal(str(pmt["allocated_to_principal"]))
+        if non_cost:
+            allocated += Decimal(str(pmt.get("allocated_to_interest", "0")))
         if allocated <= Decimal("0"):
             continue
 

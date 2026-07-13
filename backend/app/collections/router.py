@@ -5,9 +5,11 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from fastapi import status as http_status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User
+from app.cases.models import Case
 from app.cases.service import get_case
 from app.collections import service
 from app.collections.schemas import (
@@ -228,15 +230,24 @@ async def create_payment(
             data,
             current_user.id,
         )
-        return payment
-    return await service.create_payment(
-        db,
-        current_user.tenant_id,
-        case_id,
-        data,
-        current_user.id,
-        **service.case_payment_kwargs(case),
-    )
+    else:
+        payment = await service.create_payment(
+            db,
+            current_user.tenant_id,
+            case_id,
+            data,
+            current_user.id,
+            **service.case_payment_kwargs(case),
+        )
+    # S207: signaleer of deze betaling de zaak volledig heeft voldaan, zodat de
+    # frontend kan vragen of de cliënt gefactureerd moet worden.
+    new_status = (
+        await db.execute(
+            select(Case.status).where(Case.id == case_id, Case.tenant_id == current_user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    payment.case_fully_paid = new_status == "betaald"
+    return payment
 
 
 @router.put("/payments/{payment_id}", response_model=PaymentResponse)

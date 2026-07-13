@@ -33,6 +33,7 @@ export interface Payment {
   allocated_to_principal: number;
   is_active: boolean;
   created_at: string;
+  case_fully_paid?: boolean; // S207: zaak nu volledig voldaan → factuur-prompt
 }
 
 export interface InterestPeriod {

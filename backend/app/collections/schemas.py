@@ -84,6 +84,10 @@ class PaymentResponse(BaseModel):
     allocated_to_principal: Decimal
     is_active: bool
     created_at: datetime
+    # S207: True als deze betaling de zaak volledig heeft voldaan (status →
+    # 'betaald'). De frontend toont dan de vraag of de cliënt gefactureerd moet
+    # worden. Niet-kolom veld; door de endpoint gezet.
+    case_fully_paid: bool = False
 
     model_config = {"from_attributes": True}
 

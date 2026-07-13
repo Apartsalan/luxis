@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import { Loader2, Plus, Receipt } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
@@ -8,11 +9,14 @@ import { toast } from "sonner";
 import { usePayments, useCreatePayment } from "@/hooks/use-collections";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export function BetalingenTab({ caseId }: { caseId: string }) {
+  const router = useRouter();
   const { data: payments, isLoading, isError, error, refetch } = usePayments(caseId);
   const createPayment = useCreatePayment();
   const [showForm, setShowForm] = useState(false);
+  const [showInvoicePrompt, setShowInvoicePrompt] = useState(false);
   const [form, setForm] = useState({
     amount: "",
     payment_date: new Date().toISOString().split("T")[0],
@@ -38,7 +42,7 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
       return;
     }
     try {
-      await createPayment.mutateAsync({
+      const created = await createPayment.mutateAsync({
         caseId,
         data: {
           amount: form.amount,
@@ -56,6 +60,10 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
         description: "",
         payment_method: "",
       });
+      // S207: zaak nu volledig voldaan → vraag of de cliënt gefactureerd moet worden.
+      if (created?.case_fully_paid) {
+        setShowInvoicePrompt(true);
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Er ging iets mis");
     }
@@ -255,6 +263,19 @@ export function BetalingenTab({ caseId }: { caseId: string }) {
           action={{ label: "Betaling registreren", onClick: () => setShowForm(true) }}
         />
       )}
+
+      <ConfirmDialog
+        open={showInvoicePrompt}
+        title="Zaak volledig betaald"
+        description="De vordering is volledig voldaan. Wil je de cliënt hiervoor factureren (provisie/honorarium)?"
+        confirmText="Ja, factuur opstellen"
+        cancelText="Later"
+        onConfirm={() => {
+          setShowInvoicePrompt(false);
+          router.push(`/facturen/nieuw?case_id=${caseId}&provisie=true`);
+        }}
+        onCancel={() => setShowInvoicePrompt(false)}
+      />
     </div>
   );
 }

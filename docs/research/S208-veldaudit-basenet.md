@@ -159,6 +159,28 @@ agenda-handcontrole (P0). Niets in deze veld-audit spreekt die prioritering tege
   S201 §3 resp. S180/S195-audits).
 - Of Lisanne bij de 19 afwijkers bewust van de AV afweek, weet alleen Lisanne.
 
+## 7b. EINDVERIFICATIE RENTE (13 juli, avond — max effort, alles herbevestigd)
+
+Op verzoek van Arsalan is de volledige rente-stand nog één keer van de grond af
+geverifieerd, alle lagen, alle dossiers. Resultaat: **607/607 conform, 0 onverklaard.**
+
+| Laag | Meting (deze sessie, prod tenzij anders vermeld) | Resultaat |
+|---|---|---|
+| Patroon | Kruistabel alle 607 zaken × AV-klant × debiteurtype × rentetype | Exact 4 combinaties, alle conform besluit: 519 AV-b2b contractual 2,00 · 79 AV-b2c statutory · 8 niet-AV-b2b commercial · 1 niet-AV-b2c statutory |
+| Per dossier | Machine-match alle 607: verwachting (besluitregels) vs feit vs BaseNet-type | 607 conform; verschillen met BaseNet volledig verklaard: 497 identiek · 75 b2c-besluit (S207c) · 22 AV-besluit (S188b) · 5 b2c-laag · 8 niet-AV; export↔prod 0 missend/0 extra |
+| Vorderingen | Alle actieve claims op contractual-zaken | 1.373/1.373 op maandbasis, 0 eigen tarief, 0 jaar-lekken (S188b-valkuil afwezig) |
+| Bevriezing | Statusconsistentie + grenzen | 580/580 gesloten bevroren · 0/27 open bevroren · 0 in de toekomst · 5 vóór dossieropening = exact de laatste betaaldatum (per ontwerp; alle 5 tegen de export gematcht) |
+| Motor | 107 rentetests (basis/maand/bevriezing/randgevallen/overerving/art. 6:44) in dev-container | 107/107 groen |
+| Eindketen-ijk | IN100197 op prod, peildatum 8 juli (BaseNet-rentedatum 7 juli, halfopen) | **€ 723,31 — op de cent gelijk aan BaseNet's officiële renteoverzicht**, incl. betaling + toerekening; t/m vandaag € 725,39 (rente loopt correct door) |
+| Code | `rate_basis` in de motor | Alleen actief bij contractual; statutory/commercial ongevoelig |
+
+Bekende, bewust aanvaarde grenzen (geen fouten): (a) debiteurtype-conventie persoon=
+consument / bedrijf=zakelijk — BaseNet's eigen consumentenrente-keuzes (type 2) vallen
+1-op-1 samen met onze b2c-classificatie, onafhankelijke bevestiging; (b) de S185-controle
+"rentetype per groep nakijken vóór brieven" blijft staan in het heropening-draaiboek.
+Plan §4b is bijgewerkt: rente-SQL bij heropening is vervallen (al uitgerold) en de
+verouderde "enkelvoudig"-regel is gecorrigeerd naar samengesteld.
+
 ## 8. Voorgestelde volgorde (voorstellen — niets uitgevoerd)
 
 1. ~~Beslislijst rente-afwijkers naar Lisanne~~ **VERVALLEN na tegenonderzoek** — besluit

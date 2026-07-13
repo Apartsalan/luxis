@@ -999,8 +999,8 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
 
   const handleSendEmail = async (data: EmailComposeData) => {
     if (!emailDoc) return;
-    try {
-      await sendDocument.mutateAsync({
+    const send = (complianceOverride: boolean) =>
+      sendDocument.mutateAsync({
         documentId: emailDoc.id,
         data: {
           recipient_email: data.recipient_email,
@@ -1008,8 +1008,34 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
           cc: data.cc,
           custom_subject: data.custom_subject,
           custom_body: data.custom_body,
+          compliance_override: complianceOverride,
         },
       });
+    try {
+      try {
+        await send(false);
+      } catch (err: unknown) {
+        // S207 — 14-dagenbrief-blokkade: zelfde 'toch versturen'-bevestiging als
+        // op het losse verzendpad. Simpel (keuze Arsalan): ja/nee, geen redenveld;
+        // het systeem legt zelf een spoor op het dossier vast.
+        // ⚠️ Waarschuwingstekst = concept — juridisch nog langs Lisanne vóór livegang.
+        if (!(err instanceof Error && (err as Error & { code?: string }).code === "DAGENBRIEF_GATE")) {
+          throw err;
+        }
+        const ok = await confirmDelete({
+          title: "Weet je het zeker?",
+          description:
+            "Voor deze consument is nog geen verstreken 14-dagenbrief geregistreerd. " +
+            "Zonder die brief zijn de incassokosten bij een consument mogelijk niet " +
+            "opeisbaar (art. 6:96 lid 6 BW). Heeft de consument de 14-dagenbrief al " +
+            "ontvangen? Kies 'Toch versturen' om het document alsnog te versturen.",
+          confirmText: "Toch versturen",
+          cancelText: "Annuleren",
+          variant: "destructive",
+        });
+        if (!ok) return;
+        await send(true);
+      }
       toast.success("E-mail verzonden");
       setEmailDialogOpen(false);
       setEmailDoc(null);

@@ -190,6 +190,10 @@ class SendDocumentRequest(BaseModel):
         None,
         description="Eigen e-mail body tekst (wordt gewrapt in de standaard HTML layout)",
     )
+    # S207: 'toch versturen'-override voor de 14-dagenbrief-gate (zelfde patroon
+    # als compose/send). False = de gate mag blokkeren; True = de gebruiker heeft
+    # de waarschuwing gezien en bewust doorgezet (onuitwisbaar spoor op het dossier).
+    compliance_override: bool = False
 
 
 class SendDocumentResponse(BaseModel):

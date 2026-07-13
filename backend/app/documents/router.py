@@ -3,7 +3,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -435,6 +435,27 @@ async def send_document(
     case = result.scalar_one_or_none()
     if case is None:
         raise NotFoundError("Zaak niet gevonden")
+
+    # S207 — wettelijke waarborg art. 6:96 lid 6 BW, óók op dit verzendpad (de
+    # vierde deur, gevonden in de S205-review): dit endpoint rendert élk eerder
+    # gegenereerd document opnieuw en mailt het — dus ook een sommatie op een
+    # consumentendossier zónder verstreken 14-dagenbrief. Zelfde gedeelde helper
+    # + zelfde 'toch versturen'-patroon als compose/send.
+    from app.collections.compliance import (
+        check_dagenbrief_gate_for_case,
+        record_dagenbrief_override,
+    )
+
+    gate_reason = await check_dagenbrief_gate_for_case(db, user.tenant_id, case.id)
+    if gate_reason is not None:
+        if not data.compliance_override:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "DAGENBRIEF_GATE", "message": gate_reason},
+            )
+        await record_dagenbrief_override(
+            db, user.tenant_id, case.id, user.id, gate_reason
+        )
 
     # Re-render the DOCX with current case data
     docx_bytes, filename, _, _ = await render_docx(db, user.tenant_id, case, doc.template_type)

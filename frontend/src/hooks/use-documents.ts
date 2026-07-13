@@ -258,6 +258,8 @@ export interface SendDocumentInput {
   cc?: string[] | null;
   custom_subject?: string | null;
   custom_body?: string | null;
+  // S207: alleen true na de 'toch versturen'-bevestiging (14-dagenbrief-gate).
+  compliance_override?: boolean;
 }
 
 export interface SendDocumentResponse {
@@ -280,7 +282,17 @@ export function useSendDocument(caseId: string) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.detail ?? "Fout bij verzenden e-mail");
+        const detail = err?.detail;
+        // S207: 14-dagenbrief-gate — herkenbare code zodat de voorkant de
+        // 'toch versturen'-bevestiging kan tonen (zelfde patroon als compose).
+        if (detail && typeof detail === "object" && detail.code === "DAGENBRIEF_GATE") {
+          const gateError = new Error(detail.message) as Error & { code?: string };
+          gateError.code = "DAGENBRIEF_GATE";
+          throw gateError;
+        }
+        throw new Error(
+          typeof detail === "string" ? detail : "Fout bij verzenden e-mail"
+        );
       }
       return res.json();
     },

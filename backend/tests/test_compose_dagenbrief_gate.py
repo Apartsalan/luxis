@@ -187,6 +187,89 @@ async def test_compose_send_blocks_with_gate_code(
 
 
 @pytest.mark.asyncio
+async def test_document_send_blocks_with_gate_code(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S207 — vierde verzenddeur (review S205): 'document per e-mail versturen'
+    rendert élk eerder gegenereerd document opnieuw en mailt het. Op een
+    consumentendossier op een sommatie-stap zonder verstreken 14-dagenbrief moet
+    dezelfde gate vuren, mét de herkenbare code voor de voorkant."""
+    from app.documents.models import GeneratedDocument
+
+    case, _d, _s = await _b2c_case_on_sommatie(db, test_tenant.id)
+    doc = GeneratedDocument(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        generated_by_id=test_user.id, title="Eerste sommatie",
+        document_type="sommatie_drukte", template_type="sommatie_drukte",
+    )
+    db.add(doc)
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    resp = await client.post(
+        f"/api/documents/{doc.id}/send",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"recipient_email": "debiteur@example.nl"},
+    )
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert detail["code"] == "DAGENBRIEF_GATE"
+    assert "14-dagenbrief" in detail["message"]
+
+
+@pytest.mark.asyncio
+async def test_document_send_override_sends_and_leaves_trail(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Met 'toch versturen' (compliance_override) gaat het document wél de deur
+    uit én ligt er een onuitwisbaar spoor op het dossier."""
+    from unittest.mock import AsyncMock, patch
+
+    from app.documents.models import GeneratedDocument
+
+    case, _d, _s = await _b2c_case_on_sommatie(db, test_tenant.id)
+    doc = GeneratedDocument(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        generated_by_id=test_user.id, title="Eerste sommatie",
+        document_type="sommatie_drukte", template_type="sommatie_drukte",
+    )
+    db.add(doc)
+    await db.commit()
+
+    from types import SimpleNamespace
+
+    email_log = SimpleNamespace(
+        id=uuid.uuid4(), recipient="debiteur@example.nl",
+        subject="Eerste sommatie", status="sent", error_message=None, template=None,
+    )
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.documents.router.render_docx", new_callable=AsyncMock) as mock_render,
+        patch("app.documents.router.docx_to_pdf", new_callable=AsyncMock) as mock_pdf,
+        patch("app.email.send_service.send_with_attachment", new_callable=AsyncMock) as mock_send,
+    ):
+        mock_render.return_value = (b"docx", "sommatie.docx", "sommatie_drukte", None)
+        mock_pdf.return_value = b"pdf"
+        mock_send.return_value = email_log
+        resp = await client.post(
+            f"/api/documents/{doc.id}/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"recipient_email": "debiteur@example.nl", "compliance_override": True},
+        )
+
+    assert resp.status_code == 200, resp.text
+    mock_send.assert_called_once()
+
+    activity = (await db.execute(
+        select(CaseActivity).where(
+            CaseActivity.case_id == case.id,
+            CaseActivity.activity_type == "compliance_override",
+        )
+    )).scalar_one()
+    assert "toch versturen" in activity.title.lower()
+
+
+@pytest.mark.asyncio
 async def test_compose_send_reply_bypasses_gate(
     client, db: AsyncSession, test_tenant: Tenant, test_user: User
 ):

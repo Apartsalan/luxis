@@ -23,6 +23,7 @@ import type { CaseDetail } from "@/hooks/use-cases";
 import { useRelations } from "@/hooks/use-relations";
 import { useModules } from "@/hooks/use-modules";
 import { formatDate, formatRelativeTime } from "@/lib/utils";
+import { basenetOrigin } from "@/lib/status-constants";
 import { ACTIVITY_ICONS, ACTIVITY_COLORS, stripHtml } from "../types";
 import { RichNoteEditor, isNoteEmpty } from "@/components/rich-note-editor-lazy";
 
@@ -795,6 +796,18 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                     </dd>
                   </div>
                 )}
+                {(() => {
+                  const origin = basenetOrigin(zaak.basenet_origin_status);
+                  return origin ? (
+                    <div>
+                      <dt className="text-xs text-muted-foreground mb-1">Herkomst (BaseNet)</dt>
+                      <dd className="text-sm text-foreground">
+                        {origin.label}
+                        <span className="text-muted-foreground"> — {origin.title}</span>
+                      </dd>
+                    </div>
+                  ) : null;
+                })()}
                 <div>
                   <dt className="text-xs text-muted-foreground mb-1">Nakosten</dt>
                   <dd className="text-sm text-foreground">

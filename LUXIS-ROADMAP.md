@@ -82,7 +82,11 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
    - ⚠️ **Waarschuwingstekst noodknop langs Lisanne** vóór echte B2C-verzending (haar beroepsrisico).
    - **Checklist:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` — morgenochtend na 06:35 UTC
      herbevestigen (ze zijn geregistreerd; verschijnen na de eerste ochtendrun; zie SESSION-NOTES S206).
-3. **S207 halverwege onderbroken 13 juli (demo Lisanne) — hervatten, zie STAND-blok in `PROMPT-S207.md`:**
+3. **S207-track (mail-verstevigingen) — LATER, NIET de eerstvolgende sessie** (Arsalan, 13 juli:
+   eerstvolgende sessie = Fable/demo-vervolg; deze track een ander keertje afmaken). Hervatten
+   via STAND-blok in `PROMPT-S207.md`. ⚠️ De 5 M4-bestanden staan nog **ongecommit in de werkmap**
+   (`incasso_templates.py`, `invoices/service.py`, `test_followup.py`, `test_incasso_templates.py`,
+   `test_invoice_send_email.py`) — niet aanraken tot deze track hervat wordt.
    - ✅ **Blok 0 KLAAR: Fable-review S205-fixes** — rapport `docs/sessions/S207-review-S205.md`
      (5/6 dicht; klok-gat + vierde verzenddeur gevonden), 3 must-fixes gebouwd + gedeployd.
    - ✅ **L4/L5/L6 gebouwd** (commit `584b63c`) maar **NIET gedeployd** (VPS op `7f3e559`) → eerst uitrollen.

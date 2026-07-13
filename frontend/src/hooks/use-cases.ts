@@ -33,6 +33,8 @@ export interface CaseSummary {
   // S207c: originele BaseNet-status bij import. Lopend/Wacht = nog te heropenen;
   // Gereed/Geannuleerd/Offerte = in BaseNet al afgehandeld; null = in Luxis gemaakt.
   basenet_origin_status: string | null;
+  // S207d: fijne BaseNet-werkfase ("B2C 3e sommatie verstuurd", "Procedure loopt").
+  basenet_origin_phase: string | null;
 }
 
 export interface CaseDetail extends CaseSummary {

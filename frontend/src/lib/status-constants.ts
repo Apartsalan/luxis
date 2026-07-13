@@ -71,20 +71,22 @@ const BASENET_AFGEHANDELD = new Set(["Gereed", "Geannuleerd", "Offerte"]);
 
 export function basenetOrigin(
   status: string | null | undefined,
+  phase?: string | null,
 ): { label: string; badge: string; title: string } | null {
   if (!status) return null;
+  const fase = phase ? ` · fase: ${phase}` : "";
   if (BASENET_HEROPENEN.has(status)) {
     return {
       label: "Nog te openen",
       badge: "bg-amber-50 text-amber-700 ring-amber-600/20",
-      title: `In BaseNet nog "${status.toLowerCase()}" — geparkeerd, wordt in fases heropend`,
+      title: `In BaseNet nog "${status.toLowerCase()}"${fase} — geparkeerd, wordt in fases heropend`,
     };
   }
   if (BASENET_AFGEHANDELD.has(status)) {
     return {
       label: "BaseNet-archief",
       badge: "bg-slate-50 text-slate-500 ring-slate-400/20",
-      title: `In BaseNet al "${status.toLowerCase()}" — afgehandeld, blijft gesloten`,
+      title: `In BaseNet al "${status.toLowerCase()}"${fase} — afgehandeld, blijft gesloten`,
     };
   }
   return null;

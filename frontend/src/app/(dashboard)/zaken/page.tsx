@@ -598,7 +598,7 @@ export default function ZakenPage() {
                     <span className="truncate max-w-[140px]">{zaak.client.name}</span>
                   )}
                   {(() => {
-                    const origin = basenetOrigin(zaak.basenet_origin_status);
+                    const origin = basenetOrigin(zaak.basenet_origin_status, zaak.basenet_origin_phase);
                     return origin ? (
                       <span
                         title={origin.title}
@@ -742,7 +742,7 @@ export default function ZakenPage() {
                         {dynamicStatusLabels[zaak.status] ?? zaak.status}
                       </span>
                       {(() => {
-                        const origin = basenetOrigin(zaak.basenet_origin_status);
+                        const origin = basenetOrigin(zaak.basenet_origin_status, zaak.basenet_origin_phase);
                         return origin ? (
                           <span
                             title={origin.title}

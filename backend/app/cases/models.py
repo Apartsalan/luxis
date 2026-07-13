@@ -104,6 +104,13 @@ class Case(TenantBase):
     # (in Luxis zelf aangemaakt). Waarde = de originele BaseNet-status, letterlijk.
     basenet_origin_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
+    # S207d: de fijne BaseNet-WERKFASE (CustomProjectStatus.psdescription, bv.
+    # "B2C 3e sommatie verstuurd", "Procedure loopt"). De hoofdgroep hierboven
+    # zegt óf een zaak nog moet lopen; deze fase zegt wáár hij gebleven was —
+    # nodig om bij de fase-heropening elke zaak op de juiste pijplijnstap te
+    # zetten (IN100310/IN100407 bewezen: hoofdgroep kan liegen, de fase niet).
+    basenet_origin_phase: Mapped[str | None] = mapped_column(String(60), nullable=True)
+
     # Related contacts
     client_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("contacts.id"), nullable=False)
     opposing_party_id: Mapped[uuid.UUID | None] = mapped_column(

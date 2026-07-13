@@ -425,7 +425,7 @@ def create_renteoverzicht():
 
     _p(doc, "")
     _p(doc, "Mevr. mr. L. Kesting", bold=True, size=Pt(9))
-    _p(doc, "Kesting Legal | IJsbaanpad 9 | 1076 CV Amsterdam",
+    _p(doc, "{{ kantoor.naam }} | {{ kantoor.adres }} | {{ kantoor.postcode_stad }}",
        size=Pt(9), color=RGBColor(0x88, 0x88, 0x88))
     _p(doc,
        "Berekening gegenereerd op {{ vandaag }} | "

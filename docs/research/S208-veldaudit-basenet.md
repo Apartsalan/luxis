@@ -16,7 +16,17 @@ import-runners daadwerkelijk lezen. Recordtellingen komen exact overeen met de S
 **Niet gedekt:** de velden van `Letter` (17.928 records) — de aansluiting daarvan is op
 record-niveau al sluitend verklaard in S201 §3; een veld-audit daarvan is apart werk.
 
-## 1. HOOFDBEVINDING — rentetype per dossier nooit geïmporteerd (financieel, deels al scheef op prod)
+## 1. Rentetype per dossier nooit geïmporteerd — GECORRIGEERD: besluit S188b dekt dit al
+
+> **Correctie 13 juli (zelfde dag, na tegenonderzoek):** de eerste versie van dit rapport
+> presenteerde de 19 afwijkende zaken als open beslispunt voor Lisanne. Dat was fout:
+> **besluit Arsalan 9 juli (S188b, `docs/plans/PLAN-heropening-werkvoorraad.md` §4b)** legt
+> vast dat alle b2b-zaken van de holding-opdrachtgevers de contractuele AV-rente (art. 13.3,
+> 2%/mnd) krijgen en b2c wettelijke rente — óók waar BaseNet iets anders had staan (de
+> COLLECT 1-afwijkers worden daar zelfs expliciet genoemd, S185-regel). De prod-stand is
+> dus **conform het genomen besluit; er hoeft aan de rente niets te veranderen.** De waarde
+> van deze sectie is documentair: wélke zaken het oude systeem lager had staan, zodat
+> niemand dat later voor een fout aanziet.
 
 BaseNet heeft per dossier een veld `incinteresttype`. Dat is nooit geïmporteerd; de
 rente-uitrol van 13 juli (`rollout_av_rente.py`) selecteerde daardoor **per opdrachtgever**
@@ -57,12 +67,25 @@ IN100082, IN100167, IN100405, IN100470, IN100541); IN100540 (BaseNet ~10%/jr) st
 statutory (≈7%) = aan de lage, veilige kant. IN100441 (type 6) klopt. IN100276 (type 5)
 staat op statutory (~6–7% waar 2%/jr hoort) — klein te hoog.
 
-**Kanttekening (geen automatische fix):** juridisch kán 2%/mnd tóch juist zijn als de AV
-van de opdrachtgever op die zaak van toepassing is en BaseNet "te voorzichtig" stond.
-Dat is een oordeel per zaak voor Lisanne — de lijst van 19 + het teruggerekende
-BaseNet-tempo is daarvoor het beslisdocument. Aanbeveling: `incinteresttype` (en
-`incssamengesteld`) bij de volgende import als veld meenemen, en de 19 zaken vóór de
-fase-heropening laten beoordelen.
+**Duiding na tegenonderzoek (13 juli):**
+- Alle afwijkers op contractual zijn **b2b van de 8 AV-opdrachtgevers** (prod-query:
+  CM Zakelijk, COLLECT 1, Facturen Legalwork, INC Zakelijk, Incassocenter,
+  Invorderingsbedrijf, LegalWork, SYN Finance — allemaal 2%/mnd uit de AV) → besluit
+  S188b van toepassing, geen correctie.
+- De 3 zakelijke type-5-zaken (IN100277/278/291, 2%/jr in BaseNet) hebben **4 verschillende
+  debiteuren in één opeenvolgende invoerreeks** (IN100276–278 + 291) — geen gezamenlijke
+  debiteur-deal, vrijwel zeker een BaseNet-invoerkeuze. IN100276 is b2c en staat al goed
+  (wettelijke rente). Het heropening-draaiboek bevat al de S185-controle "rentetype per
+  groep checken vóór er brieven met bedragen uitgaan" — dit lijstje is daarvoor de input.
+- De 6 type-9-zaken (geen rente) zijn allemaal Geannuleerd = BaseNet-archief, gaan nooit
+  open → geen actie.
+- IN100598 was zelf het S188b-ijkpunt (€600,23 bij 2%/mnd) — bewust zo gezet.
+- Blijvend nuttig: `incinteresttype` + `incssamengesteld` bij de volgende import als
+  veld meenemen (documentatie/context, niet ter correctie).
+- ⚠ Doc-afwijking gevonden: plan §4b zegt `contractual_compound=false` (enkelvoudig);
+  de uitrol van 13 juli zette bewezen-correct `true` (samengesteld, op de cent gelijk aan
+  BaseNet's rentespecificatie IN100197). Plan-regel is verouderd → bijwerken, anders zet
+  een toekomstige uitvoerder de heropende groepen per ongeluk op enkelvoudig.
 
 Los daarvan: `incssamengesteld` staat op **false bij 606/607** dossiers, óók bij IN100197
 waarvan de rentespecificatie regel-voor-regel maandelijkse kapitalisatie toont. De vlag
@@ -138,8 +161,11 @@ agenda-handcontrole (P0). Niets in deze veld-audit spreekt die prioritering tege
 
 ## 8. Voorgestelde volgorde (voorstellen — niets uitgevoerd)
 
-1. **Beslislijst rente-afwijkers naar Lisanne** (de 19 + IN100276/IN100540) — vóór de
-   fase-heropening; IN100598 (actief) als eerste.
+1. ~~Beslislijst rente-afwijkers naar Lisanne~~ **VERVALLEN na tegenonderzoek** — besluit
+   S188b dekt de rente al; er hoeft niets te veranderen. Wel: (a) plan §4b-regel
+   `contractual_compound` bijwerken naar samengesteld (doc-fix), (b) het type-5-lijstje
+   (IN100277/278/291) meenemen in de bestaande S185-controle bij heropening van de
+   COLLECT 1-groep.
 2. **pmemo/palert-import** naar dossiernotities (klein, idempotent, vóór heropening).
 3. **Land-veld** toevoegen + backfill (52 buitenlandse relaties).
 4. **Provisie- en geboortedatum-backfill** (39 + 28 records, velden bestaan al).

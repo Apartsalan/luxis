@@ -977,3 +977,19 @@ async def test_oauth_status_surfaces_sync_error(
     assert data["connected"] is True
     assert data["last_sync_error"] == "invalid_grant: token expired"
     assert data["last_sync_at"] is not None
+
+
+# ── Log-injectie via gevouwen headers/bestandsnaam (S202 L6) ─────────────────
+
+
+def test_log_safe_strips_cr_lf_nul():
+    """Een gevouwen Subject/Message-ID-header of bestandsnaam mag geen extra
+    fysieke logregel kunnen produceren (CR/LF) of NUL-bytes doorgeven."""
+    from app.email.sync_service import _log_safe
+
+    assert _log_safe("Factuur\r\nlogger.error(FAKE ADMIN LOGIN)") == (
+        "Factuur  logger.error(FAKE ADMIN LOGIN)"
+    )
+    assert _log_safe("bijlage\x00.pdf.exe") == "bijlage.pdf.exe"
+    assert _log_safe(None) == ""
+    assert _log_safe("gewoon een onderwerp") == "gewoon een onderwerp"

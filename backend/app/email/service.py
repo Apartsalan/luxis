@@ -71,7 +71,13 @@ async def load_mail_lock(db: AsyncSession) -> bool:
 
 
 async def set_mail_lock(db: AsyncSession, locked: bool) -> bool:
-    """Zet de mailslot-stand: persisteer in de DB én werk het geheugen bij."""
+    """Zet de mailslot-stand: persisteer in de DB én werk het geheugen bij.
+
+    S202 L5: commit hier zelf i.p.v. te vertrouwen op de latere request-commit
+    (`get_db`). Het geheugen wordt pas bijgewerkt NA een geslaagde commit — zo
+    kan een mislukte commit het geheugen niet open laten terwijl de DB nog dicht
+    staat (de oude volgorde deed `flush()` + geheugen-update vóór de commit).
+    """
     global _db_mail_locked
     from app.settings.models import AppConfig
 
@@ -81,7 +87,7 @@ async def set_mail_lock(db: AsyncSession, locked: bool) -> bool:
         db.add(row)
     else:
         row.outbound_mail_locked = locked
-    await db.flush()
+    await db.commit()
     _db_mail_locked = bool(locked)
     return _db_mail_locked
 

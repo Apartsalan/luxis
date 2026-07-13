@@ -65,6 +65,28 @@ async def test_mail_lock_toggle_via_api(
 
 
 @pytest.mark.asyncio
+async def test_set_mail_lock_leaves_memory_unchanged_on_failed_commit(
+    db: AsyncSession, restore_mail_lock, monkeypatch
+):
+    """S202 L5: als de commit mislukt, mag het geheugen niet alvast zijn
+    bijgewerkt — anders staat de knop 'open' in het geheugen terwijl de DB nog
+    op slot staat, tot een herstart of de volgende toggle."""
+    from app.email import service as email_service_module
+
+    email_service_module._db_mail_locked = True  # startpunt: dicht
+
+    async def _boom():
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(db, "commit", _boom)
+
+    with pytest.raises(RuntimeError, match="connection lost"):
+        await email_service_module.set_mail_lock(db, False)
+
+    assert email_service_module._db_mail_locked is True  # ongewijzigd, nog dicht
+
+
+@pytest.mark.asyncio
 async def test_load_mail_lock_failsafe_locked_without_row(db: AsyncSession, restore_mail_lock):
     """Fail-safe: geen app_config-rij -> op slot (True), niet per ongeluk open."""
     result = await load_mail_lock(db)

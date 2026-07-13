@@ -75,6 +75,10 @@ UPLOADS_BASE = Path("/app/uploads")
 # Attachment limits
 MAX_ATTACHMENT_SIZE = 3 * 1024 * 1024  # 3 MB (Graph API base64 limit ~4MB)
 MAX_ATTACHMENTS = 10
+# S202 L4: bovengrens op de base64-STRING (vóór decoderen) die exact overeenkomt
+# met MAX_ATTACHMENT_SIZE gedecodeerd — zodat het schema al weigert in plaats van
+# eerst volledig te decoderen en pas daarna de gedecodeerde grootte te checken.
+MAX_ATTACHMENT_B64_LEN = ((MAX_ATTACHMENT_SIZE + 2) // 3) * 4
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -82,7 +86,10 @@ MAX_ATTACHMENTS = 10
 
 class InlineAttachment(BaseModel):
     filename: str = Field(..., max_length=255)
-    data_base64: str
+    # S202 L4: cap op de RUWE base64-string, vóór decoderen — voorkomt dat een
+    # oneindig grote payload eerst volledig gedecodeerd wordt en pas daarna op
+    # grootte wordt afgewezen.
+    data_base64: str = Field(..., max_length=MAX_ATTACHMENT_B64_LEN)
     content_type: str = Field(..., max_length=100)
 
 
@@ -103,7 +110,9 @@ class ComposeRequest(BaseModel):
         default=None, description="Dossier voor het oplossen van dossierbijlagen"
     )
     case_file_ids: list[uuid.UUID] | None = None
-    inline_attachments: list[InlineAttachment] | None = None
+    inline_attachments: list[InlineAttachment] | None = Field(
+        default=None, max_length=MAX_ATTACHMENTS
+    )
     # Doorsturen: neem de bijlagen van de oorspronkelijke (gesyncte) mail mee.
     forward_from_email_id: uuid.UUID | None = Field(
         default=None, description="SyncedEmail-id om de bijlagen van door te sturen"
@@ -135,7 +144,9 @@ class CaseComposeRequest(BaseModel):
         default=None, max_length=200000, description="HTML body (van template)"
     )
     case_file_ids: list[uuid.UUID] | None = None
-    inline_attachments: list[InlineAttachment] | None = None
+    inline_attachments: list[InlineAttachment] | None = Field(
+        default=None, max_length=MAX_ATTACHMENTS
+    )
     template_type: str | None = Field(
         default=None,
         max_length=50,

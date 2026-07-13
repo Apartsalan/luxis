@@ -57,6 +57,19 @@ REFERENCE_TOKEN_RE = re.compile(r"\b([A-Za-z]{1,3}\d{5,7})\b")
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 
 
+def _log_safe(value: str | None) -> str:
+    """Strip CR/LF/NUL before a value lands in a log line (S202 L6).
+
+    The compat32 mail parser keeps CR/LF from valid folded Subject/Message-ID
+    headers intact, so an unsanitized value can split into extra fake log
+    lines. Filenames go through the same helper — they're attacker-influenced
+    too (original attachment name from the sender).
+    """
+    if not value:
+        return ""
+    return value.replace("\r", " ").replace("\n", " ").replace("\x00", "")
+
+
 def _strip_html(html: str) -> str:
     """Strip HTML tags and decode entities to plain text."""
     if not html:
@@ -439,7 +452,7 @@ async def _download_attachments(
             downloaded += 1
 
         except Exception as e:
-            logger.error(f"Bijlage '{att.filename}' downloaden mislukt: {e}")
+            logger.error(f"Bijlage '{_log_safe(att.filename)}' downloaden mislukt: {e}")
 
     return downloaded
 
@@ -583,7 +596,7 @@ async def sync_emails_for_account(
                 # Update existing record with real IDs from Graph
                 dedup_match.provider_message_id = msg.provider_message_id
                 dedup_match.provider_thread_id = msg.thread_id
-                logger.info(f"Dedup merge: updated synthetic ID for '{msg.subject[:50]}'")
+                logger.info(f"Dedup merge: updated synthetic ID for '{_log_safe(msg.subject)[:50]}'")
                 stats["skipped"] += 1
                 continue
 
@@ -748,7 +761,7 @@ async def sync_emails_for_account(
             )
             attachments_downloaded += downloaded
         except Exception as e:
-            logger.error(f"Bijlagen downloaden mislukt voor {msg.provider_message_id}: {e}")
+            logger.error(f"Bijlagen downloaden mislukt voor {_log_safe(msg.provider_message_id)}: {e}")
 
     if attachments_downloaded:
         await db.flush()
@@ -847,7 +860,7 @@ async def _rematch_unlinked_emails(
             email.matched_by = matched_by
             linked_count += 1
             logger.info(
-                f"Re-match: email '{email.subject}' gekoppeld aan case {case_id} via {matched_by}"
+                f"Re-match: email '{_log_safe(email.subject)}' gekoppeld aan case {case_id} via {matched_by}"
             )
 
     if linked_count:

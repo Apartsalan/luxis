@@ -4,6 +4,11 @@ Practice management system for Dutch law firms. First client: Kesting Legal (1 l
 
 **Dutch UI, English code.**
 
+> 📌 **LEES EERST `WERKWIJZE.md`** — hoe er aan Luxis gewerkt wordt: communicatiestijl
+> (gewoon Nederlands, geen jargon — harde regel), werkdiscipline (meet in de bron, spreek
+> jezelf tegen, blijf binnen de opdracht, rond netjes af) en veiligheidsregels. Geldt voor
+> iedere Claude Code die in deze map werkt, ongeacht account of computer.
+
 ## Commands
 
 ```bash

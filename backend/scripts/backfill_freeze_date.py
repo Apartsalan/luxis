@@ -9,13 +9,17 @@ alleen going-forward; dit script trekt de bestaande gesloten zaken recht.
 Recept per zaak (status afgesloten/betaald, nog zonder bevriesdatum):
 1. laatste actieve betaaldatum          → afwikkelmoment (134 zaken, gemeten)
 2. anders date_closed (BaseNet pdateend) → einddatum uit de bron (67 zaken)
-3. anders EXPORT_DATE (2 juli 2026)      → stand-bij-overname: deze 379 zaken
-   hebben geen betaling én geen einddatum (BaseNet-archief zonder pdateend;
-   de ruwe export bestaat niet meer). De rente wordt bevroren op het moment
-   dat BaseNet ophield de waarheid te zijn — Luxis extrapoleert niet verder.
+3. anders BaseNet-rentedatum (incinterestdate uit de XML-export van 2 juli,
+   via /tmp/basenet_rente.json) → de datum tot waar BaseNet zelf voor het
+   laatst rente berekende; bij 299 dossiers is dat de aanmaakdatum (nooit
+   apart berekend) — óók dan is het exact de stand die BaseNet toonde.
+4. anders EXPORT_DATE (2 juli 2026)      → stand-bij-overname (restgroep).
 
 Rollback: het script print per zaak oud → nieuw; vóór dit script stond het
 veld overal op NULL, dus terugdraaien = dezelfde selectie weer op NULL zetten.
+
+Vooraf (eenmalig): de rentedatum-JSON in de container zetten —
+    docker compose exec -T backend sh -c 'cat > /tmp/basenet_rente.json' < basenet_rente.json
 
     python /app/scripts/backfill_freeze_date.py            # dry-run + meting
     python /app/scripts/backfill_freeze_date.py --execute
@@ -25,6 +29,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
+import os
 from datetime import date
 from decimal import Decimal
 
@@ -39,6 +45,19 @@ from app.relations.models import Contact
 
 CLOSED = ("afgesloten", "betaald")
 EXPORT_DATE = date(2026, 7, 2)  # BaseNet-exportdatum (overnamemoment)
+RENTEDATUM_JSON = "/tmp/basenet_rente.json"  # inccode → {rentedatum: ...}
+
+
+def _load_rentedatums() -> dict[str, date]:
+    if not os.path.exists(RENTEDATUM_JSON):
+        print(f"  ⚠ {RENTEDATUM_JSON} ontbreekt — anker 3 (BaseNet-rentedatum) vervalt")
+        return {}
+    data = json.load(open(RENTEDATUM_JSON))
+    return {
+        code: date.fromisoformat(v["rentedatum"])
+        for code, v in data.items()
+        if v.get("rentedatum")
+    }
 
 
 async def _outstanding_at(db, tenant_id, case: Case, calc_date: date | None) -> Decimal:
@@ -92,7 +111,8 @@ async def run(execute: bool) -> None:
               "(EXECUTE)" if execute else "(DRY RUN)")
         print("=" * 78)
 
-        bron_telling = {"betaaldatum": 0, "date_closed": 0, "exportdatum": 0}
+        rentedatums = _load_rentedatums()
+        bron_telling = {"betaaldatum": 0, "date_closed": 0, "rentedatum": 0, "exportdatum": 0}
         som_voor = som_na = Decimal("0.00")
         fouten = 0
         movers: list[tuple[str, str, date, Decimal, Decimal]] = []
@@ -103,6 +123,8 @@ async def run(execute: bool) -> None:
                 freeze, bron = last_pay, "betaaldatum"
             elif case.date_closed is not None:
                 freeze, bron = case.date_closed, "date_closed"
+            elif case.case_number in rentedatums:
+                freeze, bron = rentedatums[case.case_number], "rentedatum"
             else:
                 freeze, bron = EXPORT_DATE, "exportdatum"
             bron_telling[bron] += 1

@@ -102,6 +102,11 @@ async def run(execute: bool, only_case: str | None) -> None:
             cases = (await db.execute(q)).scalars().all()
 
             for case in cases:
+                if case.debtor_type == "b2c":
+                    # S207c: consumenten NOOIT op AV-rente — ambtshalve toetsing
+                    # (Richtlijn 93/13) vernietigt ≥1%/mnd vrijwel altijd, en dan
+                    # vervalt zelfs de wettelijke rente. Zie revert_b2c_rente.py.
+                    continue
                 old = (case.interest_type, case.contractual_rate, case.contractual_compound)
                 case.interest_type = "contractual"
                 case.contractual_rate = contact.terms_interest_rate

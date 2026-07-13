@@ -183,6 +183,9 @@ def map_incasso(
         "case_number": inccode,
         "case_type": "incasso",
         "status": "afgesloten",  # passief archief
+        # S207c: originele BaseNet-status als echt veld (Lopend/Wacht = nog te
+        # heropenen; Gereed/Geannuleerd/Offerte = afgehandeld, blijft dicht).
+        "basenet_origin_status": basenet_status if basenet_status != "?" else None,
         "is_active": True,  # zichtbaar als historie, maar terminale status → geen automatisering
         "debtor_type": debtor_type,
         "interest_type": interest_type,

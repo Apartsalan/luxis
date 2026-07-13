@@ -140,3 +140,17 @@ en een niet-bestaand "heropen"-endpoint vergen.
    Nulmeting S185 (8 juli, tegen de originele backup Xml_02-07-2026_2400.zip geverifieerd):
    alle 163 op 'afgesloten', 0 uitzonderingen. Rijen ≠ 0 → direct terugdraaien + Arsalan.
 8. SESSION-NOTES + LUXIS-ROADMAP bijgewerkt; commit + push + tag.
+9. **Rente-bevriezing wissen bij heropenen (S207c, 13 juli).** Alle 580 gesloten
+   zaken kregen een `interest_freeze_date` (rente bevroren op afwikkel-/rentedatum).
+   Heropenen via de UI/service (`update_case_status`, `_reopen_case_on_new_debt`)
+   wist dat veld automatisch → rente loopt weer door. Maar een heropening via een
+   **script dat `case.status` rechtstreeks zet** (zoals `s195_reopen_book.py`) doet
+   dat NIET. Voor de fase-heropening dus verplicht: bij het openzetten óók
+   `interest_freeze_date = NULL` zetten, anders blijft de rente bevroren staan en
+   loopt een heropende, weer-lopende zaak niet meer op. Controlequery ná elke batch:
+   ```sql
+   SELECT case_number FROM cases
+   WHERE status IN ('nieuw','in_behandeling') AND interest_freeze_date IS NOT NULL;
+   ```
+   moet 0 rijen geven (een handmatig gezette peildatum op een lopende zaak is de
+   enige legitieme uitzondering — controleer dan per geval).

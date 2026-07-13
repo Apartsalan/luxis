@@ -61,6 +61,35 @@ export const CASE_STATUS_COLORS: Record<string, string> = {
   executie: "bg-purple-600",
 };
 
+// --- BaseNet-herkomst (S207c) ---
+// Onderscheidt geïmporteerde dossiers die in BaseNet nog LIEPEN (worden in fases
+// heropend) van dossiers die daar al AFGEHANDELD waren (blijven dicht). Vertaalt
+// de ruwe BaseNet-status naar een leesbare herkomst-badge.
+
+const BASENET_HEROPENEN = new Set(["Lopend", "Wacht"]);
+const BASENET_AFGEHANDELD = new Set(["Gereed", "Geannuleerd", "Offerte"]);
+
+export function basenetOrigin(
+  status: string | null | undefined,
+): { label: string; badge: string; title: string } | null {
+  if (!status) return null;
+  if (BASENET_HEROPENEN.has(status)) {
+    return {
+      label: "Nog te openen",
+      badge: "bg-amber-50 text-amber-700 ring-amber-600/20",
+      title: `In BaseNet nog "${status.toLowerCase()}" — geparkeerd, wordt in fases heropend`,
+    };
+  }
+  if (BASENET_AFGEHANDELD.has(status)) {
+    return {
+      label: "BaseNet-archief",
+      badge: "bg-slate-50 text-slate-500 ring-slate-400/20",
+      title: `In BaseNet al "${status.toLowerCase()}" — afgehandeld, blijft gesloten`,
+    };
+  }
+  return null;
+}
+
 // --- Case type labels and badges ---
 
 export const CASE_TYPE_LABELS: Record<string, string> = {

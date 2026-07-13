@@ -277,6 +277,7 @@ class CaseResponse(BaseModel):
     contractual_rate: Decimal | None
     contractual_compound: bool
     interest_freeze_date: date | None = None  # S207: rentedatum / bevriezing
+    basenet_origin_status: str | None = None  # S207c: BaseNet-status bij import
     client: ContactBrief
     opposing_party: ContactBrief | None
     billing_contact: ContactBrief | None
@@ -325,6 +326,7 @@ class CaseSummary(BaseModel):
     description: str | None
     reference: str | None
     incasso_step_id: uuid.UUID | None = None
+    basenet_origin_status: str | None = None  # S207c: BaseNet-status bij import
     client: ContactBrief
     opposing_party: ContactBrief | None
     date_opened: date

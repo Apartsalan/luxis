@@ -97,6 +97,13 @@ class Case(TenantBase):
     # (IN100350) en je een berekening op een gekozen peildatum kunt vastzetten.
     interest_freeze_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    # S207c: met welke status een BaseNet-import-dossier binnenkwam. Onderscheidt
+    # zaken die in BaseNet nog LIEPEN (Lopend/Wacht) — geparkeerd in Luxis, worden
+    # in fases heropend — van zaken die daar al AFGEHANDELD waren (Gereed/
+    # Geannuleerd/Offerte) en dicht blijven. NULL = niet uit de BaseNet-import
+    # (in Luxis zelf aangemaakt). Waarde = de originele BaseNet-status, letterlijk.
+    basenet_origin_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     # Related contacts
     client_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("contacts.id"), nullable=False)
     opposing_party_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -35,6 +35,7 @@ import {
   CASE_STATUS_OPTIONS,
   CASE_TYPE_LABELS as TYPE_LABELS,
   CASE_TYPE_BADGE as TYPE_BADGE,
+  basenetOrigin,
 } from "@/lib/status-constants";
 import { QueryError } from "@/components/query-error";
 import { api } from "@/lib/api";
@@ -596,6 +597,17 @@ export default function ZakenPage() {
                   {zaak.client && (
                     <span className="truncate max-w-[140px]">{zaak.client.name}</span>
                   )}
+                  {(() => {
+                    const origin = basenetOrigin(zaak.basenet_origin_status);
+                    return origin ? (
+                      <span
+                        title={origin.title}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${origin.badge}`}
+                      >
+                        {origin.label}
+                      </span>
+                    ) : null;
+                  })()}
                   <span className="ml-auto tabular-nums">{formatDateShort(zaak.date_opened)}</span>
                 </div>
                 {hasModule("incasso") && ((zaak.total_principal ?? 0) > 0) && (
@@ -729,6 +741,17 @@ export default function ZakenPage() {
                       >
                         {dynamicStatusLabels[zaak.status] ?? zaak.status}
                       </span>
+                      {(() => {
+                        const origin = basenetOrigin(zaak.basenet_origin_status);
+                        return origin ? (
+                          <span
+                            title={origin.title}
+                            className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${origin.badge}`}
+                          >
+                            {origin.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </td>
                     <td className="px-4 py-3.5">
                       {zaak.client ? (

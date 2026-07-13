@@ -30,6 +30,9 @@ export interface CaseSummary {
   client: { id: string; name: string; email?: string | null } | null;
   opposing_party: { id: string; name: string; email?: string | null } | null;
   created_at: string;
+  // S207c: originele BaseNet-status bij import. Lopend/Wacht = nog te heropenen;
+  // Gereed/Geannuleerd/Offerte = in BaseNet al afgehandeld; null = in Luxis gemaakt.
+  basenet_origin_status: string | null;
 }
 
 export interface CaseDetail extends CaseSummary {

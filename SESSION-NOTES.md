@@ -2,10 +2,60 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 13 juli 2026 (S207c, Fable-review→Opus-uitvoer, LIVE). Rentesprint-review OK; b2c-rente teruggezet, bevriesdatum-backfill uitgevoerd, BaseNet-herkomst als vast veld. Migraties t/m `s207c_basenet_origin_status` live.
-**Laatste feature/fix:** (1) 79 consumentenzaken van 2%/mnd AV-rente TERUG naar wettelijke rente (ambtshalve toetsing Richtlijn 93/13); (2) `interest_freeze_date` gebackfilld op alle 580 gesloten zaken (anker: betaaldatum→date_closed→BaseNet-rentedatum uit `Xml_02-07-2026_2400.zip`); (3) `Case.basenet_origin_status` — onderscheid "Nog te openen" (Lopend/Wacht 441) vs "BaseNet-archief" (Gereed/Geannuleerd/Offerte 166), badge in dossierlijst + detail.
-**Openstaand — volgende sessie (startprompt: `docs/sessions/PROMPT-S208.md`):** (1) 🔴 **KRITISCHE HER-AUDIT BaseNet-export** (Arsalan: "er is blijkbaar toch veel wat niet mee is genomen") — veld-voor-veld door `Xml_02-07-2026_2400.zip` langs de Luxis-modellen, zie roadmap-prioriteit + memory `project_basenet_export_reaudit`. (2) WIK-rentebijlage (wacht op KvK-API). (3) Invoer nieuwe zaken = verse export + import-status-fix. Voorstel: filter "Nog te openen" op dossierlijst.
-**Volgende sessie:** WIK-bijlage bouwen zodra KvK-koppeling er is. Prompt: `docs/sessions/PROMPT-demo-vervolg.md`. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) staat hier LOS van — niet mengen.
+**Laatst bijgewerkt:** 13 juli 2026 (S208, Fable max effort — BaseNet-veldaudit + eindverificatie rente; read-only + docs). Rente is AF: 607/607 dossiers conform besluiten, ijkdossier op de cent.
+**Laatste feature/fix:** geen code. Rapport `docs/research/S208-veldaudit-basenet.md` (veld-voor-veld-audit + 7b-eindverificatie) + `PLAN-heropening-werkvoorraad.md` §4b gecorrigeerd (rente al uitgerold; samengesteld, niet enkelvoudig).
+**Openstaand — volgende sessie (startprompt: `docs/sessions/PROMPT-S209.md`):** (1) import-backfills na akkoord per stuk: 99 dossiernotities + 13 alerts, land-veld (52 buitenlandse relaties), provisie 15% (39 zaken), 28 geboortedatums; (2) WIK-rentebijlage wacht op KvK-API (Arsalan); (3) verse export voor nieuwe zaken + mapping-uitbreiding (rentetype e.a., zie rapport §8.5).
+**Volgende sessie:** S209. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) loopt parallel in ander venster — niet mengen; werkkopie bevat hun niet-gecommitte wijzigingen.
+
+
+## Sessie 208 (13 juli 2026, Fable max — BaseNet-veldaudit + EINDVERIFICATIE rente, read-only)
+
+### Samenvatting
+Hoofdtaak S208-prompt: veld-voor-veld door `Xml_02-07-2026_2400.zip` (137 bestanden; 9 in
+gebruik door de import; elk veld geteld op vul-graad, kruising met `mapping.py`). Rapport:
+`docs/research/S208-veldaudit-basenet.md`. Daarna, op verzoek Arsalan, volledige
+eindverificatie van de rente-stand ("100% zeker, dan afsluiten").
+
+- **Veld-gaten gevonden (gekwantificeerd):** `incinteresttype` per dossier nooit geïmporteerd;
+  99 dossiernotities (`pmemo`) + 13 waarschuwingen (`palert`, o.a. "Failliet", "NIET REAGEREN
+  — procedure aanhangig") niet overgenomen; geen land-veld in Luxis-adressen (52 buitenlandse
+  relaties); provisie 15% (39 zaken, veld bestaat), 28 geboortedatums, 3 BSN's (bewust NIET
+  importeren). Betalingen-aan-cliënt bewezen compleet: €165.697,01 == BaseNet-totaal, 0 verschil.
+- **Rente-scare ontzenuwd + eigen rapport gecorrigeerd.** Eerste rapportversie zette 19
+  "afwijkende" zaken als beslispunt — fout: besluit S188b (9 juli, plan §4b) dekte ze al
+  (b2b holding-opdrachtgevers = AV 2%/mnd). Rapport zelfde dag gecorrigeerd; les: eerst het
+  heropening-draaiboek lezen. BaseNet-rentetypen ontcijferd via terugrekening (type 1≈handels-
+  rente, 2≈consumentenrente, 5=2%/jr, 9=geen; controlegroep type 8 = 24,6–27,5%/jr ✓).
+- **EINDVERIFICATIE (alles prod, read-only):** kruistabel 607/607 in exact 4 besluit-conforme
+  combinaties (519 AV-b2b contractual 2,00 / 79 AV-b2c statutory / 8 commercial / 1 statutory);
+  machine-match per dossier tegen BaseNet-type: 0 onverklaard (497 identiek, 75 S207c-besluit,
+  22 S188b-besluit, 5 b2c-laag, 8 niet-AV); claims-laag 1.373/1.373 monthly (S188b-valkuil
+  afwezig); freeze 580/580 gesloten bevroren + 0/27 open + 5 "vóór opening" allemaal exact =
+  laatste betaaldatum; motor 107/107 rentetests groen; **ijk IN100197 op prod = €723,31 op de
+  cent** (peildatum 8 juli; BaseNet-spec rentedatum 7 juli — S207c-notitie "9 maart" was de
+  oude exportdatum) en t/m vandaag €725,39 (loopt correct door).
+- **Plan §4b bijgewerkt:** rente-SQL bij heropening VERVALLEN (al uitgerold + geverifieerd);
+  verouderde regel "enkelvoudig/`contractual_compound=false`" gecorrigeerd naar samengesteld
+  (gouden test `tests/test_interest_monthly.py`). Zonder fix zou een letterlijke uitvoering
+  de uitrol deels terugdraaien.
+
+### Gewijzigde bestanden
+- `docs/research/S208-veldaudit-basenet.md` (nieuw, 2× gecorrigeerd/aangevuld)
+- `docs/plans/PLAN-heropening-werkvoorraad.md` (§4b)
+- Geen code, geen migraties, geen prod-mutaties. Deploy niet nodig.
+
+### Bekende issues
+- Parallelle S207-track had tijdens deze sessie niet-gecommitte wijzigingen in de werkkopie
+  (email/invoices + tests) — bewust niet aangeraakt/gecommit.
+- `PROMPT-S207.md` bewust NIET gearchiveerd (actieve parallelle track); archief-regel weer
+  toepassen zodra die track afgesloten is.
+- Untracked in projectmap: `Renteberekening.docx/pdf` (bron gouden test) — bewust untracked
+  laten, zoals de AV-PDF's.
+
+### Volgende sessie
+S209: de kleine import-backfills (notities/alerts → dossiernotitie; land-veld + migratie;
+provisie/geboortedatums) elk na akkoord; WIK-bijlage zodra KvK-API er is; verse export
+voorbereiden. Prompt: `docs/sessions/PROMPT-S209.md`.
 
 ## Sessie S207c (13 juli 2026, Fable-review + Opus-uitvoer — rente-review, b2c-terug, bevriesdatum-backfill, BaseNet-herkomst, LIVE)
 
@@ -400,236 +450,5 @@ bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouw
 ### Volgende sessie
 - Sol rondt S201 af (facturatie-onderzoek, handoff-doc) → daarna S202 (security-delta) → daarna S203 (voorkant-fixes, prompt klaar).
 
-## Sessie 199 (12 juli 2026, nacht — /codex-build: Sol bouwt xhigh, Fable verifieert — veegsessie LIVE)
 
-### Samenvatting
-Tweede codex-build-rit met Sols write-toegang. Sol (`gpt-5.6-sol`, effort xhigh, sessie
-`019f534a…`) bouwde de bevroren veegspec `PROMPT-S199.md` (taak 1–4 + code-delen taak 5)
-in één run, geen fix-rondes. Claude (Fable) las de volledige diff na, draaide álle bewijzen
-zélf opnieuw en zette per taak live onder Arsalans nacht-akkoord. Bouwlog: `docs/sessions/
-S199-BUILD-LOG.md`.
-
-**Taak 1 — 'betaald' = eindstatus overal (`TERMINAL_STATUSES`).** Dashboard-werkvoorraad,
-portefeuille-openstaand, AI-classificatie-sweep, betaalhook en `check_verjaring` sloten alleen
-'afgesloten' uit; betaalde zaken telden onterecht mee (incl. AI-kosten). Per plek beoordeeld
-(rapportage "Geïnd" telt betaald juist wél als geïnd — geen blinde vervanging).
-
-**Taak 2 — bulk-status-endpoint `PUT /api/cases/bulk/status`.** Frontend riep een niet-bestaand
-endpoint aan (altijd 404 → "Statuswijziging mislukt"). Nieuw endpoint loopt per zaak via
-`update_case_status` (guards intact: €0 voor 'betaald', derdengelden voor 'afsluiten'), slaat
-geweigerde zaken over met reden: `{updated, skipped, errors}`, auth verplicht. Tests: happy/
-guard-skip/tenant-isolatie. Live: 401 zonder token, {0,0,[]} met token.
-
-**Taak 3 — dode workflow-status-engine gesloopt.** −2.492 regels: CRUD-routes, engine-service,
-`on_status_change`/auto-mail-hook, modellen, schemas, frontend-beheer + `NEXT_STATUSES`/
-`PIPELINE_STEPS`. Blijft levend: taken, agenda, verjaring. Fasebalk in dossierkop las uit de
-lege `workflow_statuses` (blanco) → nu fase uit `step_category` van de actuele pijplijnstap;
-geen stap → geen balk. Guarded migratie `s199_cleanup_workflow_engine` dropt 3 tabellen
-(weigert bij data). **Prod:** 0/0/0 vóór drop → 3 tabellen weg, `workflow_tasks` (4) intact.
-
-**Taak 4 — rapportages eerlijk.** "Geïnd" = som betalingen met `payment_date` in de gekozen
-periode (maandenparam door router→hook→pagina); definitie in comment. Faseverdeling: outer join
-+ "Geen stap"-rij → telling sluit. Live: **Geïnd €135.354,77** (was €0); faseverdeling
-10+2+5+1+10 = 28 = KPI-som = dashboard.
-
-**Taak 5 (code-deel) — kleine vegen.** Urenfilter toont alleen cliënten (uit dossiers, was alle
-1.169 relaties); uren/facturen-widgets nette lege staat; label "nieuw"→"toegevoegd deze maand".
-
-### Verificatie
-Eigen proof (niet Sols woord): **1218 passed** (18m49s), `uvx ruff check` schoon, `tsc --noEmit`
-+ `npm run build` groen. Migratie zelf gedraaid (lokaal + prod). Deploy geslaagd: alle containers
-healthy, migratie = head. Live-checks via API als seidony@ (auth-guard, bulk, KPI's, faseverdeling,
-dashboard) allemaal kloppend. Valkuil genoteerd: afgekapte `docker exec pytest` laat het proces
-dóórlopen → twee reeksen botsten (vals-rood); voortaan detached ín de container draaien.
-
-### Opruimronde + doorklik — UITGEVOERD (12 juli, mét Arsalans go; prod, elk read-only gemeten vóór mutatie)
-- **A12 accountnaam** seidony@ "Lisanne Kesting" → "Arsalan Seidony" (live in UI bevestigd).
-- **6 test-aanvragen** alle `pending_review` → `rejected` (0 over). **"AI Intake" → "Nieuwe aanvragen"**
-  (kop+broodkruimel+terug-knop, commit `bce1bc7`, gedeployed).
-- **2 verweesde verjaringstaken** (IN100015/IN100127, afgesloten+eigenaarloos) verwijderd.
-- **Spookstappen:** 17 inactieve stappen + 14 dode transities weg (FK-check: 0 zaken/geschiedenis/
-  followup verwezen); 15 actieve stappen + 15 transities intact.
-- **Testdossier 2026-00001** hard verwijderd — **20 échte mails eerst ONTKOPPELD** (niet vernietigd);
-  test-rommel mee weg. Werkvoorraad 28 → 27.
-- **Bulk-status-knop live getest** (omkeerbaar): IN100345+IN100197 via UI naar 'in behandeling'
-  ("2 dossiers bijgewerkt"), daarna exact terug naar 'nieuw' + testlogregels verwijderd — nul spoor.
-  Dropdown toont enkel de 4 vaste statussen. Fasebalk data-geverifieerd (17 gevuld / 10 verborgen).
-- Geen S199-restpunten meer open.
-
-### Volgende sessie
-S200 = "de voorkant liegt"-audit (`docs/sessions/PROMPT-S200.md`): 8 systematische vegen op de
-zes fout-families + prod-logs + Lisanne-dag als sluitstuk. Read-only meten (Fable), fixes = S201.
-Eerst de per-stuk-opruimacties hierboven met Arsalan afmaken.
-
-> 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
-
-## Sessie 198 (11 juli 2026, AUTONOOM Opus + Fable-review + Codex-review — bouwblok 3 klus 1-4 LIVE + reviewronde)
-
-### Samenvatting
-Autonome sessie (Arsalan weg): bouwblok 3 gebouwd, per klus gedeployd, daarna verplichte
-Fable- + Codex-reviewronde met eigen bron-verificatie en fixes. Alles live op prod.
-
-**Klus 1 — B3: status → 4 vaste waarden + pijplijn stuurt status + stap-filter (LIVE).**
-Kernbevinding vooraf bevestigd: de oude `update_case_status` liep via `execute_transition` →
-`get_status_by_slug` op de LEGE `workflow_statuses`-tabel → *élke* statuswijziging faalde al.
-Nieuw model: status = `nieuw`/`in_behandeling`/`betaald`/`afgesloten`. `move_case_to_step`
-stuurt de status (werk-stap → in_behandeling; terminale eindstap → betaald/afgesloten +
-date_closed); dode `STEP_NAME_TO_STATUS`-koppeling vervangen. `on_payment_received`: bij €0
-direct betaald+date_closed (geen dode validate_transition). `update_case_status`: 4-status-logica
-(Afsluiten mét FIN-2-derdengelden-guard, Heropenen wist date_closed). Nieuw **stap-filter** op de
-Dossiers-lijst (`incasso_step_id`). Statusfilter + bulk-dropdown → 4 vaste waarden (waren leeg via
-de lege workflow-API). DossierHeader: Afsluiten/Heropenen i.p.v. kapotte "Volgende stap"-knoppen.
-Migratie `s198_status_simplify` (idempotent, guarded). **Prod-migratie:** 580 afgesloten
-onaangeraakt, 18 in_behandeling (op stap), 10 nieuw (zonder stap), 0 legacy-status. Stap-filter
-live bewezen (Eerste sommatie 10, Voorstel dagvaarding 5, Bijhouden regeling 1 …).
-
-**Klus 2 — A5: classificatielijn op pauze (LIVE).** `ai_agent`: geen `classification_done`-
-meldingen meer (lijn op pauze; de 473 wachtende classificaties NIET aangeraakt). Meldingenbel
-verbergt `classification_done` (niet-destructief). Dashboard "AI-suggesties"-widget ontkoppeld
-van pending-classificaties → toont alleen follow-ups. **Bel viel van ~342 → 23 ongelezen.**
-
-**Klus 3 — A3: Mijn Taken ontdubbeld (LIVE).** Ontwerpkeuze (autonoom): pure werklijst (optie b).
-A1/A2 (eigenaarloze taken zichtbaar + intake pending_review) bleken al gefixt in eerdere sessies.
-Zijbalk-badge `taken-combined` telde overdue+follow-up+intake bij elkaar op (dubbeltelling met
-eigen badges) → nu exact de openstaande eigen taken (einde "badge 19 vs. Alles gedaan"). Follow-up-
-en Intake-kaartblokken (1-op-1 kopie van hun eigen pagina's) vervangen door een compacte verwijs-strip.
-
-**Klus 4 — A7: sjabloonbeheer alleen in Instellingen (LIVE).** HTML-Sjablonen-tab (lege DEPRECATED
-tabel + ontwikkelaarstaal) weg; slug-titel `verzoekschrift_faillissement` → "Concept verzoekschrift
-faillissement". Documentenbibliotheek bewust NIET gebouwd.
-
-### Reviewronde (Fable-subagent + Codex ultra, beide op de volledige diff)
-Elk punt zelf in bron + prod-data geverifieerd. **8 bevestigde fixes** (commit `3cba97d`):
-1. **Verweer-mail heropende een BETAALDE zaak stil** (Fable#2/Codex#5, HOOG): guard in
-   `trigger_defense_response_for_email`.
-2. **€0-guard voor handmatig 'betaald' was weg** (Codex#2, HOOG): terug in `update_case_status`
-   én `move_case_to_step` (manual/batch → 'Betaald'-stap).
-3. **Auto-betaald rekende openstaand zonder BIK-override** (Codex#3, HOOG): gedeelde helper
-   `get_case_outstanding` (mét alle zaakinstellingen).
-4. **Teruggedraaide betaling liet zaak op 'betaald'** (Codex#4, HOOG): `update_payment`/
-   `delete_payment` heropenen symmetrisch.
-5. **email_received niet meer verbergen** (Codex#6, HOOG): dezelfde lijst voedt de dossier-
-   actiefeed; alleen classification_done blijft verborgen.
-6. `status_for_step` op `is_terminal` i.p.v. stapnaam (Fable#4/Codex#7).
-7. Heropenen wist een terminale stap (Fable#3/Codex#8) — geen bord-limbo.
-8. Sjabloon-fallback filtert op B2B/B2C (Codex#9) — geen 14-dagenbrief bij B2B.
-Stale comments bijgewerkt. Nieuwe tests voor elk. **Prod-check:** 0 zaken op een terminale stap
-→ migratie-bevinding (Fable#1/Codex#1) had 0 data-impact; going-forward-code dekt het af.
-
-### Voorstellen (bewust NIET gebouwd — scope)
-- **'betaald' telt in dashboard/rapportages nog als actief** (filter `!= afgesloten`; nu betaald een
-  frequente auto-eindstatus is → gebruik de nieuwe `TERMINAL_STATUSES`-constante). Fable#5/Codex.
-- **Dode code opruimen:** `on_status_change` (0 callers), `execute_transition`/`validate_transition`
-  (alleen tests), frontend `NEXT_STATUSES`/`PIPELINE_STEPS`, ongebruikte `TERMINAL_STATUSES`.
-- **`/api/cases/bulk/status` bestaat niet** (frontend `zaken/page.tsx` → 404, pre-existing).
-- Fase-stepper in DossierHeader leunt nog op de lege `workflow_statuses` (toont blanco).
-
-### Gewijzigde/aangemaakte bestanden
-- Backend: `cases/{schemas,models,service,router}.py`, `incasso/service.py` +
-  `incasso/automation_service.py`, `workflow/hooks.py`, `collections/service.py`,
-  `notifications/service.py`, `ai_agent/service.py`, migratie `s198_status_simplify.py`.
-- Frontend: `lib/status-constants.ts`, `hooks/use-cases.ts`, `hooks/use-documents.ts`,
-  `zaken/page.tsx` + `zaken/[id]/components/DossierHeader.tsx`, `taken/page.tsx`,
-  `components/layout/app-sidebar.tsx`, `(dashboard)/page.tsx`, `documenten/page.tsx`.
-- Tests: test_cases, test_integration_api, test_s166_pipeline_status_sync, test_incasso_pipeline,
-  test_workflow, test_notifications_service (nieuw + aangepast).
-- 5 commits (`b6b2a4a` klus1 / `cc4ccab` klus2 / `738ac0d` klus3 / `207e906` klus4 / `3cba97d`
-  reviewfixes) + docs. Prod-migratie s198 gedraaid. Tag `sessie-198`.
-
-### Bekende issues / aandachtspunten
-- Mail blijft UIT (niet geraakt). De 473 wachtende classificaties + testdossier 2026-00001
-  bewust blijven staan (veegsessie mét akkoord).
-- CI-rood `test_role_survives_commit_if_role_exists` (omgevingsgevoelig, S184) → uitrol via SSH.
-
-### Verlengstuk (12 juli, na terugkomst Arsalan) — PowerSearch + Documenten-opruiming LIVE (eerste /codex-build)
-**Onderzoek eerst (Fable):** concurrenten hebben géén centrale documenten-bladerpagina behalve Clio;
-BaseNet (Lisanne's referentie) lost het op met centraal ZOEKEN op inhoud (PowerSearch). Luxis had al
-een globale zoek, maar alleen op namen/onderwerpen. Besluit Arsalan: Documenten-pagina helemaal weg
-(sjabloonbeheer zit al in Instellingen) + PowerSearch bouwen.
-**Werkvorm (nieuw, eerste rit):** Fable schreef de bevroren spec (`docs/plans/PLAN-powersearch.md`),
-**Sol (Codex gpt-5.6-sol, xhigh)** bouwde 'm end-to-end (commit `bc194ae`), Fable reviewde de
-volledige diff + draaide alle bewijzen zelf. **Geleverd:** migratie s199 (NL-tsvector-kolommen +
-GIN op mails/dossierstukken), extractie (PDF via pymupdf/HTML/tekst) + upload-hook + idempotente
-backfill, hybride zoek (substring op nummers/namen blijft; inhoud met NL-stemming, ts_rank-relevantie,
-ts_headline-snippets; alles gebonden parameters + tenant-gefilterd), Documenten-pagina/nav/e2e weg.
-**Reviewbevindingen:** 1 spec-afwijking terecht (regconfig-cast); 1 prod-bug door Fable gevonden bij
-de backfill: PDF-tekstlagen met NUL-bytes (0x00) klapten op PostgreSQL → fix `054d0b9` + regressietest.
-**Regelbreuk vastgelegd:** Sol committe+pushte zelf (volgde repo-regel "commit+push na elke taak");
-auto-deploy door Fable gecanceld vóór review; volgende contracten krijgen expliciet commit-verbod.
-**Live bewezen (prod):** backfill 1.951/2.055 stukken met tekst (104 = scans, OCR bewust later);
-zoek op "betalingsregeling" vindt factuur-PDF op inhoud mét snippet; "verjaring" vindt mail-body's.
-**Besluit Arsalan (definitief):** 12 onverklaarde bankontvangsten (±€21,7k Donker/Dinc) VERVALLEN —
-niet bij de 7 vaste opdrachtgevers → geen incasso, nooit boeken.
-**S199-plan klaar:** `docs/sessions/PROMPT-S199.md` (veegsessie + S198-review-voorstellen).
-
-### Volgende sessie
-S199 = veegsessie (stapel 4) + de review-voorstellen hierboven (m.n. 'betaald'-als-actief in
-dashboard/rapportages + dode code). Prompt: `docs/sessions/PROMPT-S199.md`.
-
-## Sessie 197 (11 juli 2026, Opus+Fable — Codex-hang opgelost + S196-review + mailslot-knop; bouwblok 3 NIET gedaan)
-
-### Samenvatting
-Sessie liep anders dan PROMPT-S197 (bouwblok 3): Arsalan wilde eerst de Codex-hang oplossen +
-een review van S196 vóór verder bouwen, en een mailslot-knop erbij. Bouwblok 3 verschuift daardoor
-volledig naar S198 (autonoom).
-
-**1 — Codex-hang opgelost (kernbevinding).** Twee sessies (S194/S196) timede Codex "na 10 min" uit.
-Oorzaak was NIET Codex/ultra maar een botte 10-min-grens: (a) de skill-guard van 600s + (b) de max
-foreground-timeout van de Bash-tool. Bewijs gemeten: een triviale `codex exec` antwoordt in 9,5s
-(→ opstart/MCP is níét de blokkade), en een échte S196-review op ultra duurde **21 min** en rondde
-gewoon af toen hij op de ACHTERGROND liep. Codex heeft zelf al een 5-min stream-retry
-(openai/codex#23807). Oplossing: `scripts/codex-review.sh` — draait de review op de achtergrond
-zónder tijdslimiet en bewaakt de HARTSLAG (output-mtime): 6 min écht stil = als vastgelopen stoppen
-+ melden, anders onbeperkt nadenken. **Ultra blijft** (Arsalans keuze; ultra vond 4 punten waar
-"hoog" er 3 vond).
-
-**2 — S196-review + 4 fixes LIVE.** Codex-review (ultra) van commit `42c3e4c` (termijn-vooruitblik).
-Geld/beveiliging/tenant-scoping in orde; 4 robuustheidspunten zelf geverifieerd + gefixt (commit
-`f2b526b`): (1) laadfout verborg het hele dashboard-blok stil → nu foutmelding; (2) regeling-acties
-(aanmaken/betaling/wanprestatie/annuleren/kwijtschelden) verversten `["dashboard"]` niet → nu wel
-(anders tot 30s verouderd); (3) footer "+N meer in de komende 30 dagen" kon liegen → "+N meer";
-(4) query laadde volledige Case/Contact-entiteiten (selectin-fan-out) → scalar-kolomprojectie.
-23 termijn-tests groen.
-
-**3 — Mailslot-knop LIVE + env-noodslot eraf (op expliciet verzoek Arsalan).** Het bouwfase-mailslot
-zat als env-var (`OUTBOUND_MAIL_LOCK`, alleen via SSH+herstart). Nu als DB-vlag in nieuwe globale
-`app_config`-tabel (geen tenant_id → geen RLS, zoals interest_rates), schakelbaar via Instellingen →
-E-mail. Eén chokepoint blijft: `check_outbound_lock()` leest env OF DB-vlag; de 3 verzendwegen
-ongewijzigd. **Fail-safe:** `load_mail_lock` gaat bij ontbrekende rij/DB-fout op slot; geseede rij op
-DICHT; stand in geheugen geladen vóór requests (single-proces backend). Env-noodslot op prod op
-`false` gezet (`.env.bak-s197` als backup) → **de knop is nu de enige controle en staat op UIT**;
-Arsalan zet mail zelf aan wanneer nodig. Openen vraagt bevestiging. Live geverifieerd (screenshot:
-"op slot", "Openen" actief, geen server-noodslot-melding). Commits `fc151ed` + `25ec657`.
-
-### Klus 1 (bouwblok 3) — onderzoek gedaan + aanpak MET Arsalan afgestemd (nog niet gebouwd)
-Gemeten op prod: status kent feitelijk 2 waarden (afgesloten 580, nieuw 28); `workflow_statuses/
-transitions/rules` alle 0 → élke statuswijziging faalt ("Status bestaat niet"), "Volgende stap"-
-knoppen kapot, statusfilter leeg, auto-"betaald" vuurt nooit, `date_closed` nooit gezet, de
-pijplijn→status-koppeling (S166) checkt het lege systeem en vuurt dus nooit. Pijplijn = de echte
-motor (15 actieve stappen, 18 zaken erop, 10 heropende zonder stap). **Afgestemde aanpak:** status
-reduceren tot 4 (Nieuw / In behandeling / Betaald / Afgesloten), pijplijn stuurt de status (bestaande
-dode koppeling repareren, niet iets nieuws), auto-"betaald" + `date_closed` (met bestaande €0-guard),
-Afsluiten/Heropenen-acties i.p.v. kapotte knoppen, statusfilter = 4 waarden, **+ nieuw "Stap"-filter
-op de Dossiers-lijst** (Arsalans punt: kunnen filteren op sommatie/dagvaarding/vonnis — dat is de
-pijplijn-stap, niet status). Lege status-engine NIET slopen (veegsessie-voorstel).
-
-### Gewijzigde/aangemaakte bestanden
-- Backend: `app/settings/models.py` (nieuw, AppConfig), `alembic/versions/s197_mail_lock.py` (nieuw),
-  `app/email/service.py` (DB-vlag + fail-safe), `app/main.py` (load bij opstart),
-  `app/settings/router.py` + `schemas.py` (GET/PUT mail-lock), `app/collections/service.py`
-  (scalar-projectie), `tests/test_mail_lock.py` + `conftest.py`.
-- Frontend: `instellingen/email-tab.tsx` (mailslot-kaart), `hooks/use-settings.ts` (mail-lock hooks),
-  `(dashboard)/page.tsx` (foutstaat + footer), `hooks/use-collections.ts` (dashboard-invalidatie).
-- Tooling: `scripts/codex-review.sh` (hartslag-bewaker).
-- Prod: migratie s197 gedraaid (app_config geseed dicht), `.env` OUTBOUND_MAIL_LOCK=false
-  (`.env.bak-s197` backup). 4 commits (`fc151ed`/`9a61399`/`f2b526b`/`25ec657`) + docs, tag sessie-197.
-
-### Bekende issues / aandachtspunten
-- Mail staat UIT via de knop; env-noodslot is eraf. Enige controle = de DB-vlag (fail-safe dicht).
-- Bouwblok 3 volledig open → S198 autonoom.
-
-### Volgende sessie
-S198 = AUTONOOM (Arsalan is weg): op Opus klus 1-4 van bouwblok 3 bouwen + deployen, dan Fable-review
-(subagent) + Codex code-review via `scripts/codex-review.sh`, findings verwerken. Prompt:
-`docs/sessions/PROMPT-S198.md`.
 

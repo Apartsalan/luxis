@@ -53,25 +53,22 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 13 juli 2026, demo Lisanne)
+## 🎯 Huidige prioriteit (bijgewerkt 13 juli 2026, S208)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> 🔴 **KRITISCHE HER-AUDIT BASENET-EXPORT (Arsalan, 13 juli — hoge prio).** Bij S207c/d bleek
-> herhaaldelijk dat de import velden liet liggen of verkeerd interpreteerde: de rentedatum per
-> dossier (ongebruikt gebleven, alsnog gebruikt voor de bevriesdatum-backfill), en de werkstatus
-> "Procedure loopt" die onder hoofdgroep "Offerte" hing (2 lopende procedures dreigden als archief
-> te blijven staan). Arsalan: *"er is blijkbaar toch veel wat niet mee is genomen."* → Volgende
-> BaseNet-sessie: **veld-voor-veld door `Xml_02-07-2026_2400.zip`** (staat in de projectmap) langs
-> de Luxis-modellen, in kaart brengen wát niet is geïmporteerd en of dat nodig is. Bron-parser:
-> `scripts/basenet/parse.py`; mapping: `scripts/basenet/mapping.py`; matrix: `docs/research/S201-volledigheidsmatrix.md`.
+> ✅ **HER-AUDIT BASENET-EXPORT AFGEROND (S208, 13 juli).** Veld-voor-veld door
+> `Xml_02-07-2026_2400.zip`; rapport: `docs/research/S208-veldaudit-basenet.md`. Rente is AF
+> en eind-geverifieerd: 607/607 dossiers conform de besluiten (S188b + S207c), ijk IN100197
+> = €723,31 op de cent, 107 rentetests groen — geen rente-acties meer nodig.
 >
-> ✅ **S207c/d GEDAAN (13 juli):** rentesprint-review OK; b2c→wettelijke rente; bevriesdatum-backfill
-> (580 zaken); BaseNet-herkomst + werkfase als velden + badge. Zie SESSION-NOTES entries "S207c"/"S207d".
-> Openstaand: (1) WIK-rentebijlage (alleen VOF/eenmanszaak/particulier) — plan klaar, **wacht op
-> KvK-API** (Arsalan vraagt aan, €6,40/mnd + €0,02/bevraging); (2) invoer nieuwe zaken = verse
-> BaseNet-export + import-status-fix (nieuw ≠ archief); (3) voorstel: filter "Nog te openen" op de
-> dossierlijst. Bouwen = Opus. Prompt: `docs/sessions/PROMPT-demo-vervolg.md`.
+> 🔨 **VOLGENDE (S209, prompt klaar):** de gevonden import-gaten dichten, elk na akkoord:
+> (1) 99 dossiernotities + 13 waarschuwingen ("Failliet", "procedure aanhangig") → dossiernotitie,
+> vóór de fase-heropening; (2) land-veld bij adressen (52 buitenlandse relaties) + backfill;
+> (3) provisie 15% (39 zaken) + 28 geboortedatums backfillen; (4) bij verse export: mapping
+> uitbreiden (rentetype, notities, land — rapport §8.5). Parallel openstaand: WIK-rentebijlage
+> **wacht op KvK-API** (Arsalan, €6,40/mnd + €0,02/bevraging); invoer nieuwe zaken = verse
+> BaseNet-export + import-status-fix; voorstel: filter "Nog te openen" op de dossierlijst.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet

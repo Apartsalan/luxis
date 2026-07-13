@@ -2,10 +2,46 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 13 juli 2026 (S206, Opus autonoom + Fable-review — spoor S202 security/correctheids-fixes LIVE). 5 audit-fixes + 2 Fable-must-fixes; 1259 tests groen; gedeployd + live rooktest groen; geen migratie.
-**Laatste feature/fix:** H1 cross-tenant bijlage/sync-guard; H2 fail-closed betaald-guard (+ 2 verborgen bugs mee-gefixt); H3 "geïnd"/provisie telt geen verwijderde betalingen; M1 bulk-lijst gecapt; M2 auto-advance stopt vóór eindstap.
-**Openstaand:** S207 halverwege onderbroken (demo Lisanne): L4/L5/L6 gecommit maar NIET gedeployd (`584b63c`, VPS op `7f3e559`); M4 half af, ongecommit in werkmap (5 bestanden — eerst testen). M5 = prod-data-akkoord nodig. Mailslot DICHT.
-**Volgende sessie:** S207 hervatten (`docs/sessions/PROMPT-S207.md`, lees het STAND-blok bovenaan) = L4/L5/L6 uitrollen + M4 afmaken. Blok 0 (Fable-review S205) is KLAAR: rapport `docs/sessions/S207-review-S205.md`, 3 must-fixes live.
+**Laatst bijgewerkt:** 13 juli 2026 (demo Lisanne, Opus-bouwsprint LIVE). Rentecorrectie 2%/mnd SAMENGESTELD + 6 demo-punten af; per punt getest + gedeployd; migratie `s207b_interest_freeze_date` live.
+**Laatste feature/fix:** maandelijks samengestelde rente (matcht BaseNet IN100197 op de cent, 598 dossiers omgezet); kantooradres verhuisd (Willem Fenengastraat 16E); 24 regelingen geïmporteerd; rentedatum/afsluit-bevriezing (`Case.interest_freeze_date`); heropenen bij nieuwe factuur; factuur-prompt bij volledig betaald.
+**Openstaand — 2 beslissingen Arsalan/Lisanne:** (1) bevriesdatum backfillen op ~574 gesloten zaken (renen nu door)? (2) 100 zaken "afbetaald maar €22k spookrestant" (oude vs nieuwe rente) — afboeken of nvorderen? + WIK-bijlage (alleen VOF/eenmanszaak/particulier) + KvK-API + invoer-map nieuwe zaken = Fable-sessie.
+**Volgende sessie:** Fable-review over deze bouwsprint (afgesproken: "alles laten nakijken door Fable"), daarna WIK/KvK + invoer-map. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) stond los hiervan nog open — niet verwarren.
+
+## Sessie demo Lisanne (13 juli 2026, Opus-bouwsprint — rentecorrectie + 6 demo-punten, LIVE)
+
+### Samenvatting
+Live demo met Lisanne. Kernbevinding: renteberekening klopte niet (IN100197 toonde
+€284,62; BaseNet rekent €723,32). Oorzaak: dossiers op wettelijke handelsrente i.p.v.
+AV-rente **2%/maand samengesteld** (rente-op-rente per maand). Nieuwe rekenkern
+`calculate_monthly_compound_interest` reproduceert de BaseNet-rentespecificatie van
+IN100197 **regel-voor-regel op de cent** (tests: `test_interest_monthly.py`). Daarna 6
+demo-punten afgetikt, elk getest + gedeployd. Migratie `s207b_interest_freeze_date` live.
+
+- **Rente** — 2%/mnd samengesteld; uitgerold over 598 dossiers van 8 AV-opdrachtgevers
+  (`scripts/rollout_av_rente.py`, backup vooraf). Creditfactuur = negatieve rente die wegvalt.
+- **Adres** — kantoor verhuisd per 1 juli → Willem Fenengastraat 16E, 1096 BN Amsterdam,
+  tel 020-3086621. Tenant-record + Renteoverzicht-sjabloon (had oud adres hardcoded → nu
+  `{{ kantoor.adres }}`). E-mail bewust incasso@ gelaten.
+- **Regelingen** — 24 ontbrekende (afgeronde) betalingsregelingen geïmporteerd (13→37);
+  status uit meting van echte betalingen (`scripts/import_historical_arrangements.py`).
+- **Rentedatum/bevriezing** — `Case.interest_freeze_date`: rente stopt op gekozen datum;
+  `get_financial_summary` valt zonder peildatum daarop terug (alle callers respecteren het);
+  auto-bevriezen op laatste betaaldatum bij afsluiten; heropenen wist het. UI in DetailsTab.
+- **Heropenen** — nieuwe vordering op gesloten zaak → weer in_behandeling + bevriezing weg.
+- **Factuur-prompt** — betaal-endpoint geeft `case_fully_paid`; BetalingenTab toont dialoog.
+
+### Meting gesloten zaken (na rente-uitrol)
+574/580 gesloten zaken tonen openstaand (€3,95M) — grotendeels legitieme oninbare
+archiefschuld. Echte probleemcategorie: **100 zaken "afbetaald maar klein spookrestant"
+(samen €22k)** — regelingen onder de oude lagere rente afgesproken; onder de correcte
+hogere rente blijft een restant. Bevriezen lost dit NIET op (IN100350: €264,82 blijft).
+= zakelijke keuze Lisanne. Dashboard telt alleen actieve zaken, dus niet zichtbaar daar.
+
+### Openstaand (beslissingen + Fable)
+1. Backfill bevriesdatum op ~574 gesloten zaken? 2. €22k spookrestant afboeken of nvorderen?
+3. WIK-bijlage (renteberekening-PDF bij eerste sommatie, **alleen VOF/eenmanszaak/particulier**)
+   + KvK-API voor rechtsvorm — Fable. 4. Invoer-map met nieuwe zaken (nieuwer dan export 2 juli).
+Afgesproken: Fable-review over deze hele bouwsprint vóór de volgende stap.
 
 ## Sessie 206 (13 juli 2026, Opus autonoom + Fable-review — spoor S202: security/correctheids-fixes H1/H2/H3/M1/M2 + 2 review-must-fixes, LIVE)
 

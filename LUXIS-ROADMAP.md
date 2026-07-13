@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 13 juli 2026 (sessie 206, Opus autonoom + Fable-review — spoor S202 security/correctheids-fixes LIVE). H1 cross-tenant bijlage/sync-guard, H2 fail-closed betaald-guard (+ 2 verborgen bugs), H3 "geïnd"/provisie telt geen verwijderde betalingen, M1 bulk-cap, M2 auto-advance stopt vóór eindstap. 5 audit-fixes + 2 Fable-must-fixes; 1259 tests groen; gedeployd (geen migratie). Details: SESSION-NOTES S206. Volgende = S207.
+**Laatst bijgewerkt:** 13 juli 2026 (demo Lisanne, Opus-bouwsprint LIVE). Rentecorrectie **2%/mnd samengesteld** (matcht BaseNet IN100197 op de cent, 598 dossiers) + 6 demo-punten: kantooradres verhuisd, 24 regelingen geïmporteerd, rentedatum/afsluit-bevriezing (`Case.interest_freeze_date`, migratie live), heropenen bij nieuwe factuur, factuur-prompt bij volledig betaald. Details: SESSION-NOTES (entry "demo Lisanne"). **Volgende = Fable neemt over** (review + backfill gesloten zaken + WIK/KvK + invoer-map).
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -17,7 +17,7 @@
 
 **Arsalan** — geen developer. IT-recruitment + business development voor Kesting Legal. Bouwt volledig samen met AI (Claude Code). Beschikbare tijd: 6-10 uur per week. Kan geen code reviewen — het systeem moet zelfcontrolerend zijn.
 
-**Lisanne Kesting** — mr., advocaat, beëdigd 14-02-2018, arrondissement Amsterdam. VIA-lid. Enige advocaat bij Kesting Legal. Specialisatie: incasso en insolventierecht. MKB-cliënten, incassobureaus, deurwaarders. 250+ procedures gevoerd. Kantoor: IJsbaanpad 9, 1076 CV Amsterdam. KvK: 88601536.
+**Lisanne Kesting** — mr., advocaat, beëdigd 14-02-2018, arrondissement Amsterdam. VIA-lid. Enige advocaat bij Kesting Legal. Specialisatie: incasso en insolventierecht. MKB-cliënten, incassobureaus, deurwaarders. 250+ procedures gevoerd. Kantoor (verhuisd per 1 juli 2026): Willem Fenengastraat 16E (The William), 1096 BN Amsterdam. Tel: 020-3086621. KvK: 88601536.
 
 **Huidig systeem:** Basenet (wordt pas opgezegd als Luxis de dagelijkse workflow volledig overneemt)
 **Boekhouding:** Exact Online (gekoppeld aan Basenet)
@@ -53,9 +53,16 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 12 juli 2026, S205)
+## 🎯 Huidige prioriteit (bijgewerkt 13 juli 2026, demo Lisanne)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
+
+> 🔴 **VOLGENDE SESSIE = FABLE (afgesproken 13 juli).** Rentecorrectie + 6 demo-punten zijn LIVE
+> (zie SESSION-NOTES entry "demo Lisanne"). Fable: (1) review deze bouwsprint; (2) **backfill
+> bevriesdatum op de ~574 gesloten zaken** (= de juiste ingreep, moet in de huidige tijd kloppen)
+> — zet `interest_freeze_date` = laatste betaaldatum/`date_closed`; (3) WIK-bijlage (alleen
+> VOF/eenmanszaak/particulier) + KvK-API; (4) invoer-map met nieuwe zaken. Prompt:
+> `docs/sessions/PROMPT-demo-vervolg.md`.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet

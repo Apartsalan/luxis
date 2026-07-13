@@ -4,8 +4,8 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 13 juli 2026 (demo Lisanne, Opus-bouwsprint LIVE). Rentecorrectie 2%/mnd SAMENGESTELD + 6 demo-punten af; per punt getest + gedeployd; migratie `s207b_interest_freeze_date` live.
 **Laatste feature/fix:** maandelijks samengestelde rente (matcht BaseNet IN100197 op de cent, 598 dossiers omgezet); kantooradres verhuisd (Willem Fenengastraat 16E); 24 regelingen geïmporteerd; rentedatum/afsluit-bevriezing (`Case.interest_freeze_date`); heropenen bij nieuwe factuur; factuur-prompt bij volledig betaald.
-**Openstaand — 2 beslissingen Arsalan/Lisanne:** (1) bevriesdatum backfillen op ~574 gesloten zaken (renen nu door)? (2) 100 zaken "afbetaald maar €22k spookrestant" (oude vs nieuwe rente) — afboeken of nvorderen? + WIK-bijlage (alleen VOF/eenmanszaak/particulier) + KvK-API + invoer-map nieuwe zaken = Fable-sessie.
-**Volgende sessie:** Fable-review over deze bouwsprint (afgesproken: "alles laten nakijken door Fable"), daarna WIK/KvK + invoer-map. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) stond los hiervan nog open — niet verwarren.
+**Openstaand — eerste actie volgende sessie (Fable):** bevriesdatum backfillen op de ~574 gesloten zaken = de juiste ingreep (het moet in de huidige tijd kloppen; niks "openlaten"). Neemt de 100 spookrestant-zaken (€22k) automatisch mee op afwikkeldatum; wat dan nog rest is per-zaak signaal voor Lisanne, geen bulkactie. Daarna WIK-bijlage (alleen VOF/eenmanszaak/particulier) + KvK-API + invoer-map nieuwe zaken.
+**Volgende sessie:** **Fable neemt over** (afgesproken). Review deze bouwsprint + voer de backfill uit + WIK/KvK + invoer-map. Prompt: `docs/sessions/PROMPT-demo-vervolg.md`. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) stond hier los van nog open — niet verwarren.
 
 ## Sessie demo Lisanne (13 juli 2026, Opus-bouwsprint — rentecorrectie + 6 demo-punten, LIVE)
 
@@ -37,11 +37,16 @@ archiefschuld. Echte probleemcategorie: **100 zaken "afbetaald maar klein spookr
 hogere rente blijft een restant. Bevriezen lost dit NIET op (IN100350: €264,82 blijft).
 = zakelijke keuze Lisanne. Dashboard telt alleen actieve zaken, dus niet zichtbaar daar.
 
-### Openstaand (beslissingen + Fable)
-1. Backfill bevriesdatum op ~574 gesloten zaken? 2. €22k spookrestant afboeken of nvorderen?
-3. WIK-bijlage (renteberekening-PDF bij eerste sommatie, **alleen VOF/eenmanszaak/particulier**)
-   + KvK-API voor rechtsvorm — Fable. 4. Invoer-map met nieuwe zaken (nieuwer dan export 2 juli).
-Afgesproken: Fable-review over deze hele bouwsprint vóór de volgende stap.
+### Openstaand — volgende sessie (Fable neemt over)
+1. **Backfill bevriesdatum op de ~574 gesloten zaken** = aanbevolen (het moet in de huidige
+   tijd kloppen). Zet `interest_freeze_date` = laatste betaaldatum (of `date_closed` als er geen
+   betaling is) op elke gesloten zaak → rente stopt op afwikkelmoment, geen doorlopend cijfer.
+   Neemt de 100 "€22k spookrestant"-zaken vanzelf mee; het restant dat dan overblijft is het
+   verschil oude-vs-nieuwe rente = per-zaak signaal voor Lisanne, geen bulk-afboeking.
+2. **WIK-bijlage** — renteberekening-PDF bij eerste sommatie, **alleen VOF/eenmanszaak/particulier**;
+   + KvK-API voor rechtsvorm. Fable zoekt wettelijke eis + KvK-koppeling uit.
+3. **Invoer-map** met nieuwe zaken (nieuwer dan export 2 juli) — hoe overhalen.
+Arsalan: Fable neemt de volgende sessie over (review + uitvoering).
 
 ## Sessie 206 (13 juli 2026, Opus autonoom + Fable-review — spoor S202: security/correctheids-fixes H1/H2/H3/M1/M2 + 2 review-must-fixes, LIVE)
 

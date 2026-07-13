@@ -36,9 +36,23 @@ zaken herkomst gevuld (0 leeg), 166 "afgehandeld" matcht exact de eerdere meting
 `basenet_origin_status` komt mee in dossierlijst. Backups: `backup_pre_s207c` + `backup_pre_backfill`
 op de VPS. Mailslot bleef DICHT.
 
+### Vervolg (zelfde dag): werkfase-vondst + S207d
+Lisanne herkende 2 "Offerte"-zaken als lopende procedures → bron gecheckt: BaseNet's
+werkstatus **"Procedure loopt" (57310) hangt in hun statusconfig onder hoofdgroep "Offerte"**
+(inrichtingsfout kantoor). pstatus = hoofdgroep, `incstatus` → CustomProjectStatus = de echte
+werkfase. IN100310/IN100407 op prod gecorrigeerd naar 'Lopend' (nu 443/164); IN100167
+(Fideal, fase "Invoer", geen vaste opdrachtgever) blijft archief — keuze Lisanne.
+**S207d gebouwd + LIVE:** `Case.basenet_origin_phase` (migratie s207d + `backfill_basenet_phase.py`,
+607/607 gevuld) — de werkfase per zaak ("B2C 3e sommatie verstuurd", "Procedure loopt", …) als
+hard veld, zichtbaar in badge-tooltip + detailpagina. Belang: het S181-heropeningsrecept (CSV,
+372 zaken) dekte deze zaken NIET; de fase-heropening kan nu uit de DB zelf de juiste stap bepalen.
+Valkuil genoteerd in `scripts/basenet/mapping.py` voor de volgende import.
+
 ### Bekende issues / aandachtspunten
 - **Draaiboek-eis toegevoegd** (`PLAN-heropening-werkvoorraad.md` #9): script-heropening moet
   `interest_freeze_date` wissen, anders blijft een heropende zaak bevroren (UI/service doet dit al).
+- **Heropening:** IN100310/IN100407 ("Procedure loopt") staan NIET in het S181-recept-CSV —
+  meenemen bij de fase-heropening (nu vindbaar via `basenet_origin_phase`).
 - Voorstel (niet gebouwd, scope): filter "Nog te openen" op de dossierlijst voor de fase-heropening.
 - WIK-rentebijlage: plan klaar, wacht op KvK-API (Arsalan vraagt aan). Bouwen = Opus.
 

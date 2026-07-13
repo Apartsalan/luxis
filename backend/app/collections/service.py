@@ -117,7 +117,50 @@ async def create_claim(
     await db.flush()
     await db.refresh(claim)
     await _refresh_case_financials(db, tenant_id, case_id)
+    # S207: een nieuwe vordering op een AFGESLOTEN/BETAALDE zaak = nieuwe schuld →
+    # de zaak weer openen en de rente-bevriezing wissen, zodat de nieuwe factuur
+    # rente opbouwt tot vandaag i.p.v. bevroren te blijven op de oude sluitdatum.
+    await _reopen_case_on_new_debt(db, tenant_id, case_id)
     return claim
+
+
+async def _reopen_case_on_new_debt(
+    db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
+) -> None:
+    """Heropen een gesloten zaak wanneer er nieuwe schuld (een vordering) bijkomt.
+
+    Spiegel van `_reopen_case_if_no_longer_paid` (dat op teruggedraaide betalingen
+    reageert). Zonder dit blijft een zaak op 'betaald'/'afgesloten' staan terwijl
+    er een nieuwe openstaande factuur onder hangt, en zou de rente bevroren
+    blijven op de oude afwikkeldatum.
+    """
+    from app.cases.models import CaseActivity
+
+    case = (
+        await db.execute(
+            select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+        )
+    ).scalar_one_or_none()
+    if case is None or case.status not in TERMINAL_STATUSES:
+        return
+
+    old_status = case.status
+    case.status = "in_behandeling"
+    case.date_closed = None
+    case.interest_freeze_date = None  # nieuwe factuur → rente weer laten lopen
+    db.add(
+        CaseActivity(
+            tenant_id=tenant_id,
+            case_id=case.id,
+            user_id=None,
+            activity_type="status_change",
+            title=f"Status automatisch heropend: {old_status} → in_behandeling",
+            description="Nieuwe vordering toegevoegd aan een gesloten zaak.",
+            old_status=old_status,
+            new_status="in_behandeling",
+        )
+    )
+    await db.flush()
 
 
 async def update_claim(

@@ -18,8 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.models import Tenant
 from app.cases.models import Case
 from app.collections.models import Claim, InterestRate
-from app.collections.schemas import PaymentCreate
-from app.collections.service import create_payment, get_financial_summary
+from app.collections.schemas import ClaimCreate, PaymentCreate
+from app.collections.service import (
+    create_claim,
+    create_payment,
+    get_financial_summary,
+)
 from app.relations.models import Contact
 
 
@@ -126,3 +130,28 @@ async def test_volledige_betaling_bevriest_op_laatste_betaaldatum(
     # Bevroren op het afwikkelmoment (laatste betaaldatum), niet op een latere
     # dag → een afgewikkelde zaak rent niet door met spookrente.
     assert freeze_case.interest_freeze_date == pay_date
+
+
+@pytest.mark.asyncio
+async def test_nieuwe_vordering_heropent_gesloten_zaak(
+    db: AsyncSession, test_tenant: Tenant, freeze_case: Case
+):
+    # Zet de zaak op afgesloten met een bevroren rentedatum.
+    freeze_case.status = "afgesloten"
+    freeze_case.date_closed = date(2025, 1, 1)
+    freeze_case.interest_freeze_date = date(2025, 1, 1)
+    await db.flush()
+
+    # Nieuwe factuur = nieuwe schuld → zaak weer open, bevriezing weg.
+    await create_claim(
+        db, test_tenant.id, freeze_case.id,
+        ClaimCreate(
+            description="Nieuwe factuur na een jaar",
+            principal_amount=Decimal("500.00"),
+            default_date=date(2026, 1, 1),
+        ),
+    )
+    await db.refresh(freeze_case)
+    assert freeze_case.status == "in_behandeling"
+    assert freeze_case.date_closed is None
+    assert freeze_case.interest_freeze_date is None

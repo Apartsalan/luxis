@@ -34,6 +34,7 @@ from app.incasso.service import (
     _auto_complete_tasks,
     _try_auto_advance,
     list_pipeline_steps,
+    mark_current_step_communication_sent,
 )
 from app.shared.exceptions import BadRequestError
 
@@ -521,6 +522,13 @@ async def execute_recommendation(
         execution_parts.append(f"E-mail verstuurd naar {case.opposing_party.email}")
 
         # Vanaf hier is de verzending gelukt — nu pas de administratie bijwerken.
+        # S207 (review S205): leg de verzending vast op de open staphistorie-rij,
+        # net als het batch- en conceptpad — vóór de auto-advance de stap verlaat.
+        # Zonder dit telt een via 'Uitvoeren' verstuurde 14-dagenbrief niet als
+        # 'aantoonbaar verstuurd' voor de gate.
+        await mark_current_step_communication_sent(
+            db, tenant_id, case, document_id=doc.id
+        )
         completed = await _auto_complete_tasks(db, tenant_id, case.id, step_id=step.id)
         if completed:
             execution_parts.append(f"{completed} taak/taken afgerond")

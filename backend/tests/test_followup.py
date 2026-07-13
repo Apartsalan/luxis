@@ -657,6 +657,46 @@ async def test_execute_email_template_sends_via_email_route(
 @patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
 @patch("app.ai_agent.followup_service.render_incasso_email")
 @patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
+async def test_execute_marks_send_on_step_history(
+    mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S207 (review S205): een via 'Uitvoeren' verstuurde brief moet — net als op
+    het batch- en conceptpad — als verzonden op de open staphistorie-rij landen
+    (email_sent + verzendmoment + document). Zonder dit telt een écht via Luxis
+    verstuurde 14-dagenbrief niet als verstuurd en blijft de gate blokkeren."""
+    from app.incasso.models import CaseStepHistory
+
+    mock_ctx.return_value = {}
+    mock_render.return_value = "<p>Brief</p>"
+    mock_send.return_value = SimpleNamespace(status="sent", error_message=None)
+
+    step = await _create_step(db, test_tenant.id, name="Eerste sommatie",
+                              template_type="sommatie_drukte")
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    # Open staphistorie-rij van de huidige stap (zoals move_case_to_step die maakt).
+    hist = CaseStepHistory(
+        tenant_id=test_tenant.id, case_id=case.id, step_id=step.id,
+        entered_at=datetime.now(UTC), trigger_type="manual",
+    )
+    db.add(hist)
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    result = await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+    await db.commit()
+
+    assert result is not None
+    await db.refresh(hist)
+    assert hist.email_sent is True
+    assert hist.email_sent_at is not None
+    assert hist.document_id == result.generated_document_id
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+@patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
 async def test_execute_failed_send_is_never_marked_executed(
     mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
 ):

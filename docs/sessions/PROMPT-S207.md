@@ -1,12 +1,26 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
-Sessie 207 — mail-verstevigingen (S202-restant) óf ander S202-restspoor
+Sessie 207 — EERST Fable-review S205, daarna mail-verstevigingen óf ander S202-restspoor
 
 ## Start
 Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant modules,
 laadt de verbindingskaart). Ga daarna zonder te wachten door met de taak hieronder.
 Extra taak-context (alleen wat `/sessie-start` NIET al leest): `docs/security/S202-delta-audit.md`
 (bevindingen M4/M5/L4/L5/L6 met locaties + fix-recept per punt).
+
+## Blok 0 — VERPLICHT eerst: Fable-review van de S205-fixes (besluit Arsalan, 13 juli)
+Het S205-werk (7 commits `d440081`…`ee465b9`: 14-dagenbrief-gate op alle 3 verzendwegen +
+verstuurd-proxy + "toch versturen"-noodknop + dagenbrief-sjabloon + mailsync-sessie-per-postbus +
+heartbeat-last_error) is **nooit onafhankelijk gereviewd** — S204 reviewde S203, de S206-review
+dekte alleen de S206-commits. Het is wél het juridisch gevoeligste stuk (art. 6:96 lid 6 BW,
+Lisanne's beroepsrisico) en S205 noteerde zelf: gate niet live end-to-end getest (mailslot dicht,
+beide actieve B2C-zaken stap-loos), frontend-noodknop alleen build/tsc.
+Werkvorm zoals S206: adversariële Fable-subagent (model=fable, read-only) op de volledige diff
+`d440081^..ee465b9` + het S204-review-rapport (`docs/sessions/S204-review.md` §Beslislijst als
+toetssteen: dekt elke fix het punt écht?). Bevindingen ZELF verifiëren in de bron; must-fixes
+direct bouwen (rood→groen→commit→push→deploy). Speciale aandacht: kan een sommatie nog langs één
+van de drie wegen zónder gate? Telt de verstuurd-proxy echt alleen échte sends? Laat de override
+altijd een spoor achter?
 
 ## Eerst: mini-checklist (klein, read-only)
 Staan de 5 dagelijkse-job-rijen nu in `scheduler_heartbeat` op prod (ná 06:35 UTC)? Verwacht:

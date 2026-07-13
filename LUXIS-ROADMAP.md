@@ -75,7 +75,10 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
    - ⚠️ **Waarschuwingstekst noodknop langs Lisanne** vóór echte B2C-verzending (haar beroepsrisico).
    - **Checklist:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` — morgenochtend na 06:35 UTC
      herbevestigen (ze zijn geregistreerd; verschijnen na de eerste ochtendrun; zie SESSION-NOTES S206).
-3. **Volgende sessie = S207 (kies één spoor):**
+3. **Volgende sessie = S207 (blok 0 verplicht, daarna één spoor):**
+   - **Blok 0 (VERPLICHT eerst): Fable-review S205-fixes** — de 14-dagenbrief-gates/noodknop/mailsync
+     (`d440081`…`ee465b9`) zijn nooit onafhankelijk gereviewd; juridisch gevoeligste laag. Besluit
+     Arsalan 13 juli. Werkvorm zoals de S206-review (adversarieel, read-only, zelf verifiëren).
    - **Mail-verstevigingen** — M4 HTML-escaping + L4/L5/L6 (test-baar zonder mailslot) + M5-recipient-cap
      (code) + apart de 39-velden-datacorrectie (mét akkoord). `docs/security/S202-delta-audit.md`.
    - **S201 facturatie-import** — 439 conflict-vrije facturen; recept + droogloop-poorten klaar in

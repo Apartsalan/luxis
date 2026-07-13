@@ -5,7 +5,7 @@
 **Laatst bijgewerkt:** 13 juli 2026 (S206, Opus autonoom + Fable-review — spoor S202 security/correctheids-fixes LIVE). 5 audit-fixes + 2 Fable-must-fixes; 1259 tests groen; gedeployd + live rooktest groen; geen migratie.
 **Laatste feature/fix:** H1 cross-tenant bijlage/sync-guard; H2 fail-closed betaald-guard (+ 2 verborgen bugs mee-gefixt); H3 "geïnd"/provisie telt geen verwijderde betalingen; M1 bulk-lijst gecapt; M2 auto-advance stopt vóór eindstap.
 **Openstaand:** Mail-verstevigingen (M4/M5/L4/L5/L6) NIET gedaan — overgedragen naar S207 (mailslot dicht = 0 risico; M5 = prod-data-akkoord nodig). Dagelijkse-job-rijen morgenochtend herbevestigen. Mailslot DICHT.
-**Volgende sessie:** S207 (`docs/sessions/PROMPT-S207.md`) = mail-verstevigingen, óf ander S202-restspoor (S201-import / S203-restpunten).
+**Volgende sessie:** S207 (`docs/sessions/PROMPT-S207.md`) = EERST Fable-review van de S205-fixes (nooit gereviewd — besluit Arsalan 13 juli), daarna mail-verstevigingen óf ander S202-restspoor.
 
 ## Sessie 206 (13 juli 2026, Opus autonoom + Fable-review — spoor S202: security/correctheids-fixes H1/H2/H3/M1/M2 + 2 review-must-fixes, LIVE)
 

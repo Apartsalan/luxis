@@ -75,12 +75,14 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
    - ⚠️ **Waarschuwingstekst noodknop langs Lisanne** vóór echte B2C-verzending (haar beroepsrisico).
    - **Checklist:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` — morgenochtend na 06:35 UTC
      herbevestigen (ze zijn geregistreerd; verschijnen na de eerste ochtendrun; zie SESSION-NOTES S206).
-3. **Volgende sessie = S207 (blok 0 verplicht, daarna één spoor):**
-   - **Blok 0 (VERPLICHT eerst): Fable-review S205-fixes** — de 14-dagenbrief-gates/noodknop/mailsync
-     (`d440081`…`ee465b9`) zijn nooit onafhankelijk gereviewd; juridisch gevoeligste laag. Besluit
-     Arsalan 13 juli. Werkvorm zoals de S206-review (adversarieel, read-only, zelf verifiëren).
-   - **Mail-verstevigingen** — M4 HTML-escaping + L4/L5/L6 (test-baar zonder mailslot) + M5-recipient-cap
-     (code) + apart de 39-velden-datacorrectie (mét akkoord). `docs/security/S202-delta-audit.md`.
+3. **S207 halverwege onderbroken 13 juli (demo Lisanne) — hervatten, zie STAND-blok in `PROMPT-S207.md`:**
+   - ✅ **Blok 0 KLAAR: Fable-review S205-fixes** — rapport `docs/sessions/S207-review-S205.md`
+     (5/6 dicht; klok-gat + vierde verzenddeur gevonden), 3 must-fixes gebouwd + gedeployd.
+   - ✅ **L4/L5/L6 gebouwd** (commit `584b63c`) maar **NIET gedeployd** (VPS op `7f3e559`) → eerst uitrollen.
+   - ⏸️ **M4 HTML-escaping HALF AF** — 5 bestanden ongecommit in de werkmap (`followup_service.py` nog
+     niet aangeraakt) → eerst testen, dan afmaken of terugdraaien.
+   - **Nog niet gestart:** M5-recipient-cap (code) + apart de 39-velden-datacorrectie (mét akkoord).
+     `docs/security/S202-delta-audit.md`.
    - **S201 facturatie-import** — 439 conflict-vrije facturen; recept + droogloop-poorten klaar in
      `docs/research/S201-facturatie-recept.md`. Aparte, naar-buiten-gerichte schrijfactie → apart akkoord.
    - **S203-restpunten** — 35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail,

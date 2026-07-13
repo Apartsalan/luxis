@@ -4,8 +4,8 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 13 juli 2026 (S206, Opus autonoom + Fable-review — spoor S202 security/correctheids-fixes LIVE). 5 audit-fixes + 2 Fable-must-fixes; 1259 tests groen; gedeployd + live rooktest groen; geen migratie.
 **Laatste feature/fix:** H1 cross-tenant bijlage/sync-guard; H2 fail-closed betaald-guard (+ 2 verborgen bugs mee-gefixt); H3 "geïnd"/provisie telt geen verwijderde betalingen; M1 bulk-lijst gecapt; M2 auto-advance stopt vóór eindstap.
-**Openstaand:** Mail-verstevigingen (M4/M5/L4/L5/L6) NIET gedaan — overgedragen naar S207 (mailslot dicht = 0 risico; M5 = prod-data-akkoord nodig). Dagelijkse-job-rijen morgenochtend herbevestigen. Mailslot DICHT.
-**Volgende sessie:** S207 (`docs/sessions/PROMPT-S207.md`) = EERST Fable-review van de S205-fixes (nooit gereviewd — besluit Arsalan 13 juli), daarna mail-verstevigingen óf ander S202-restspoor.
+**Openstaand:** S207 halverwege onderbroken (demo Lisanne): L4/L5/L6 gecommit maar NIET gedeployd (`584b63c`, VPS op `7f3e559`); M4 half af, ongecommit in werkmap (5 bestanden — eerst testen). M5 = prod-data-akkoord nodig. Mailslot DICHT.
+**Volgende sessie:** S207 hervatten (`docs/sessions/PROMPT-S207.md`, lees het STAND-blok bovenaan) = L4/L5/L6 uitrollen + M4 afmaken. Blok 0 (Fable-review S205) is KLAAR: rapport `docs/sessions/S207-review-S205.md`, 3 must-fixes live.
 
 ## Sessie 206 (13 juli 2026, Opus autonoom + Fable-review — spoor S202: security/correctheids-fixes H1/H2/H3/M1/M2 + 2 review-must-fixes, LIVE)
 

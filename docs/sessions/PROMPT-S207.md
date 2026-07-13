@@ -1,6 +1,21 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
-Sessie 207 — EERST Fable-review S205, daarna mail-verstevigingen óf ander S202-restspoor
+Sessie 207 — vervolg: M4 afmaken + uitrollen (blok 0 en L4/L5/L6 zijn al KLAAR)
+
+## ⚠️ STAND 13 juli ~13:00 (sessie onderbroken voor demo Lisanne — lees dit eerst)
+Een eerdere S207-terminal (Sonnet) heeft al gedaan:
+- **Blok 0 KLAAR** — Fable-review van de S205-fixes uitgevoerd: rapport `docs/sessions/S207-review-S205.md`
+  (5/6 dicht; klok-gat + vierde verzenddeur gevonden). 3 must-fixes gebouwd, gecommit
+  (`543789c`, `50f98fa`, `452f995`) én gedeployd (VPS staat op `7f3e559`).
+- **L4/L5/L6 KLAAR maar NIET gedeployd** — commit `584b63c` (13 juli 11:11) is gepusht,
+  VPS staat nog op `7f3e559`. → Eerst uitrollen (deploy-regels) + rooktest.
+- **M4 HALF AF, ongecommit in de werkmap**: `backend/app/email/incasso_templates.py`,
+  `backend/app/invoices/service.py` + 3 testbestanden (`test_followup.py`, `test_incasso_templates.py`,
+  `test_invoice_send_email.py`). Let op: `ai_agent/followup_service.py` (derde M4-builder) is NIET
+  aangeraakt terwijl de test wél is uitgebreid — mogelijk onaf. **Eerst de 3 geraakte testbestanden
+  draaien**; groen + compleet → afmaken/committen, anders afmaken of terugdraaien in overleg.
+- Mini-checklist (heartbeat-rijen): status onbekend — alsnog even checken.
+Daarna verder met M5 of een ander spoor hieronder. Rest van dit document = oorspronkelijke opdracht.
 
 ## Start
 Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant modules,

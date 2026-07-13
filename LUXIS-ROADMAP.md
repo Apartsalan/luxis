@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 13 juli 2026 (demo Lisanne, Opus-bouwsprint LIVE). Rentecorrectie **2%/mnd samengesteld** (matcht BaseNet IN100197 op de cent, 598 dossiers) + 6 demo-punten: kantooradres verhuisd, 24 regelingen geïmporteerd, rentedatum/afsluit-bevriezing (`Case.interest_freeze_date`, migratie live), heropenen bij nieuwe factuur, factuur-prompt bij volledig betaald. Details: SESSION-NOTES (entry "demo Lisanne"). **Volgende = Fable neemt over** (review + backfill gesloten zaken + WIK/KvK + invoer-map).
+**Laatst bijgewerkt:** 13 juli 2026 (S207c/d LIVE). Rentesprint gereviewd; 79 consumentenzaken terug naar wettelijke rente; bevriesdatum gebackfilld op alle 580 gesloten zaken (spookrente −€531k); BaseNet-herkomst (`basenet_origin_status`) + werkfase (`basenet_origin_phase`) als harde velden + badge. Migraties t/m `s207d` live. **Volgende: WIK-rentebijlage (wacht op KvK-API) + kritische her-audit BaseNet-export (zie prioriteit).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -57,12 +57,21 @@
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> 🔴 **VOLGENDE SESSIE = FABLE (afgesproken 13 juli).** Rentecorrectie + 6 demo-punten zijn LIVE
-> (zie SESSION-NOTES entry "demo Lisanne"). Fable: (1) review deze bouwsprint; (2) **backfill
-> bevriesdatum op de ~574 gesloten zaken** (= de juiste ingreep, moet in de huidige tijd kloppen)
-> — zet `interest_freeze_date` = laatste betaaldatum/`date_closed`; (3) WIK-bijlage (alleen
-> VOF/eenmanszaak/particulier) + KvK-API; (4) invoer-map met nieuwe zaken. Prompt:
-> `docs/sessions/PROMPT-demo-vervolg.md`.
+> 🔴 **KRITISCHE HER-AUDIT BASENET-EXPORT (Arsalan, 13 juli — hoge prio).** Bij S207c/d bleek
+> herhaaldelijk dat de import velden liet liggen of verkeerd interpreteerde: de rentedatum per
+> dossier (ongebruikt gebleven, alsnog gebruikt voor de bevriesdatum-backfill), en de werkstatus
+> "Procedure loopt" die onder hoofdgroep "Offerte" hing (2 lopende procedures dreigden als archief
+> te blijven staan). Arsalan: *"er is blijkbaar toch veel wat niet mee is genomen."* → Volgende
+> BaseNet-sessie: **veld-voor-veld door `Xml_02-07-2026_2400.zip`** (staat in de projectmap) langs
+> de Luxis-modellen, in kaart brengen wát niet is geïmporteerd en of dat nodig is. Bron-parser:
+> `scripts/basenet/parse.py`; mapping: `scripts/basenet/mapping.py`; matrix: `docs/research/S201-volledigheidsmatrix.md`.
+>
+> ✅ **S207c/d GEDAAN (13 juli):** rentesprint-review OK; b2c→wettelijke rente; bevriesdatum-backfill
+> (580 zaken); BaseNet-herkomst + werkfase als velden + badge. Zie SESSION-NOTES entries "S207c"/"S207d".
+> Openstaand: (1) WIK-rentebijlage (alleen VOF/eenmanszaak/particulier) — plan klaar, **wacht op
+> KvK-API** (Arsalan vraagt aan, €6,40/mnd + €0,02/bevraging); (2) invoer nieuwe zaken = verse
+> BaseNet-export + import-status-fix (nieuw ≠ archief); (3) voorstel: filter "Nog te openen" op de
+> dossierlijst. Bouwen = Opus. Prompt: `docs/sessions/PROMPT-demo-vervolg.md`.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet

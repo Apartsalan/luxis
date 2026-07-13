@@ -57,6 +57,17 @@ async def test_mark_current_step_sets_sent_flags_on_open_history(
     await db.refresh(hist)
     assert hist.email_sent is True
     assert hist.template_sent is True
+    # S207: het échte verzendmoment wordt vastgelegd (de 14-dagenbrief-klok
+    # rekent hierop, niet op stap-binnenkomst).
+    assert hist.email_sent_at is not None
+    first_sent_at = hist.email_sent_at
+
+    # Een tweede verzending op dezelfde stap verschuift het anker NIET: de
+    # wettelijke termijn loopt vanaf de éérste brief.
+    result = await mark_current_step_communication_sent(db, test_tenant.id, case)
+    assert result is not None
+    await db.refresh(hist)
+    assert hist.email_sent_at == first_sent_at
 
 
 @pytest.mark.asyncio

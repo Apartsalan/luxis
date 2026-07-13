@@ -142,6 +142,11 @@ class CaseStepHistory(TenantBase):
     email_sent: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    # S207: het échte verzendmoment. De 14-dagenbrief-klok rekent hierop, niet op
+    # entered_at — stap-binnenkomst kan dagen vóór de werkelijke verzending liggen.
+    email_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("generated_documents.id"), nullable=True
     )

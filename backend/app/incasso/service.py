@@ -616,6 +616,11 @@ async def mark_current_step_communication_sent(
         history.template_sent = True
     if email_sent:
         history.email_sent = True
+        # S207: leg het échte verzendmoment vast — de 14-dagenbrief-klok rekent
+        # hierop. Alleen de EERSTE verzending telt (de wettelijke termijn loopt
+        # vanaf de eerste brief; een herhaalde send verschuift het anker niet).
+        if history.email_sent_at is None:
+            history.email_sent_at = datetime.now(UTC)
     if document_id is not None:
         history.document_id = document_id
 

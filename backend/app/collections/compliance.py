@@ -60,11 +60,16 @@ async def get_dagenbrief_sent_at(
     dat er echt een brief de deur uitging. Een zaak die door de stap is geschoven
     zonder ooit iets te versturen telt dus NIET meer als 'verstuurd'. Een buiten
     Luxis verstuurde brief wordt via de 'toch versturen'-override afgehandeld, niet
-    hier. Het echte verzendpad (`mark_current_step_communication_sent`, aangeroepen
-    op batch- en concept-verzendpad) zet die vlag.
+    hier. Het echte verzendpad (`mark_current_step_communication_sent`) zet die vlag.
+
+    S207 (review S205): de teruggegeven datum is het échte verzendmoment
+    (`email_sent_at`), niet de stap-binnenkomst — die kan dagen eerder liggen
+    (batch pas later gedraaid) en zou de wettelijke 15-dagen-klok te vroeg laten
+    starten. Fallback op `entered_at` alleen voor oude rijen zonder tijdstempel
+    (gedrag gelijk aan vóór deze fix; prod had er nul).
     """
     result = await db.execute(
-        select(CaseStepHistory.entered_at)
+        select(CaseStepHistory.email_sent_at, CaseStepHistory.entered_at)
         .join(IncassoPipelineStep, CaseStepHistory.step_id == IncassoPipelineStep.id)
         .where(
             CaseStepHistory.tenant_id == tenant_id,
@@ -75,8 +80,11 @@ async def get_dagenbrief_sent_at(
         .order_by(CaseStepHistory.entered_at.asc())
         .limit(1)
     )
-    entered = result.scalar_one_or_none()
-    return entered.date() if entered else None
+    row = result.first()
+    if row is None:
+        return None
+    sent_at = row.email_sent_at or row.entered_at
+    return sent_at.date() if sent_at else None
 
 
 async def check_dagenbrief_gate(

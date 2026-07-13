@@ -90,6 +90,43 @@ async def test_gate_for_case_allows_after_dagenbrief_sent(db: AsyncSession, test
 
 
 @pytest.mark.asyncio
+async def test_gate_clock_runs_from_send_date_not_entry_date(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """S207 (review S205): de wettelijke 15-dagen-klok rekent vanaf het échte
+    verzendmoment (email_sent_at), niet vanaf stap-binnenkomst. Een zaak die 20
+    dagen geleden op de 14-dagenbrief-stap kwam maar waarvan de brief pas 5 dagen
+    geleden écht is verstuurd, moet nog geblokkeerd zijn."""
+    case, dagenbrief, _s = await _b2c_case_on_sommatie(db, test_tenant.id)
+    db.add(CaseStepHistory(
+        tenant_id=test_tenant.id, case_id=case.id, step_id=dagenbrief.id,
+        entered_at=datetime.now(UTC) - timedelta(days=20), email_sent=True,
+        email_sent_at=datetime.now(UTC) - timedelta(days=5),
+        trigger_type="manual",
+    ))
+    await db.flush()
+    reason = await check_dagenbrief_gate_for_case(db, test_tenant.id, case.id)
+    assert reason is not None
+    assert "14-dagentermijn" in reason
+
+
+@pytest.mark.asyncio
+async def test_gate_allows_15_days_after_send_date(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """Tegenhanger: 16 dagen ná de echte verzending is de termijn verstreken."""
+    case, dagenbrief, _s = await _b2c_case_on_sommatie(db, test_tenant.id)
+    db.add(CaseStepHistory(
+        tenant_id=test_tenant.id, case_id=case.id, step_id=dagenbrief.id,
+        entered_at=datetime.now(UTC) - timedelta(days=30), email_sent=True,
+        email_sent_at=datetime.now(UTC) - timedelta(days=16),
+        trigger_type="manual",
+    ))
+    await db.flush()
+    assert await check_dagenbrief_gate_for_case(db, test_tenant.id, case.id) is None
+
+
+@pytest.mark.asyncio
 async def test_record_override_leaves_indelible_trail(
     db: AsyncSession, test_tenant: Tenant, test_user: User
 ):

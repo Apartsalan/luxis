@@ -22,6 +22,7 @@ from app.collections.schemas import (
     ClaimUpdate,
     InstallmentResponse,
     InterestRateResponse,
+    PaginatedClaims,
     PaymentCreate,
     PaymentResponse,
     PaymentUpdate,
@@ -32,6 +33,30 @@ from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/cases/{case_id}", tags=["collections"])
 rates_router = APIRouter(prefix="/api/interest-rates", tags=["reference"])
+claims_router = APIRouter(prefix="/api/claims", tags=["collections"])
+
+
+# ── Vorderingen-overzicht (tenant-breed) ──────────────────────────────────────
+
+
+@claims_router.get("", response_model=PaginatedClaims)
+async def list_all_claims(
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None),
+    only_open: bool = Query(default=False),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Tenant-breed overzicht van alle vorderingen (debiteuren-facturen op dossiers)."""
+    return await service.list_all_claims(
+        db,
+        current_user.tenant_id,
+        page=page,
+        per_page=per_page,
+        search=search,
+        only_open=only_open,
+    )
 
 
 # ── Claims ───────────────────────────────────────────────────────────────────

@@ -19,7 +19,7 @@ from app.auth.router import router as auth_router
 from app.auth.router import users_router
 from app.calendar.router import router as calendar_router
 from app.cases.router import router as cases_router
-from app.collections.router import rates_router
+from app.collections.router import claims_router, rates_router
 from app.collections.router import router as collections_router
 from app.config import secret_key_status, settings
 from app.dashboard.router import reports_router
@@ -151,6 +151,7 @@ app.include_router(users_router)
 app.include_router(relations_router)
 app.include_router(cases_router)
 app.include_router(collections_router)
+app.include_router(claims_router)
 app.include_router(rates_router)
 app.include_router(documents_router)
 app.include_router(dashboard_router)

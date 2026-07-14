@@ -9,7 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Paperclip,
   Plus,
+  Receipt,
   Search,
   Users,
   X,
@@ -17,6 +19,7 @@ import {
 import {
   useInvoices,
   useReceivables,
+  useClaims,
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
   type ContactReceivable,
@@ -33,7 +36,7 @@ export default function FacturenPage() {
   const initialContactName = searchParams.get("contact_name") || "";
   const initialStatus = searchParams.get("status") || "";
 
-  const [activeTab, setActiveTab] = useState<"facturen" | "debiteuren">("facturen");
+  const [activeTab, setActiveTab] = useState<"facturen" | "vorderingen" | "debiteuren">("facturen");
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState(initialStatus);
@@ -81,10 +84,10 @@ export default function FacturenPage() {
           <h1 className="text-2xl font-bold text-foreground">Facturen</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {activeTab === "facturen"
-              ? data?.total
-                ? `${data.total} ${data.total === 1 ? "factuur" : "facturen"}`
-                : "Beheer je facturen"
-              : "Openstaande vorderingen per relatie"}
+              ? "Facturen die het kantoor zelf naar opdrachtgevers stuurt"
+              : activeTab === "vorderingen"
+                ? "Facturen van opdrachtgevers op hun debiteuren (op de dossiers)"
+                : "Openstaande vorderingen per relatie"}
           </p>
         </div>
         <Link
@@ -107,7 +110,18 @@ export default function FacturenPage() {
           }`}
         >
           <FileText className="mr-1.5 inline h-4 w-4" />
-          Facturen
+          Kantoorfacturen
+        </button>
+        <button
+          onClick={() => setActiveTab("vorderingen")}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === "vorderingen"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Receipt className="mr-1.5 inline h-4 w-4" />
+          Vorderingen
         </button>
         <button
           onClick={() => setActiveTab("debiteuren")}
@@ -462,9 +476,163 @@ export default function FacturenPage() {
         </>
       )}
 
+      {/* Vorderingen tab */}
+      {activeTab === "vorderingen" && <VorderingenTab />}
+
       {/* Debiteuren tab */}
       {activeTab === "debiteuren" && (
         <DebiteurenTab receivables={receivables} isLoading={recvLoading} />
+      )}
+    </div>
+  );
+}
+
+function VorderingenTab() {
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+  const [onlyOpen, setOnlyOpen] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isError, error, refetch } = useClaims({
+    page,
+    search: debouncedSearch || undefined,
+    only_open: onlyOpen,
+  });
+
+  return (
+    <div className="space-y-3">
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Zoek op factuurnummer, dossier of debiteur..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+          />
+        </div>
+        <label className="inline-flex items-center gap-2 rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={onlyOpen}
+            onChange={(e) => {
+              setOnlyOpen(e.target.checked);
+              setPage(1);
+            }}
+            className="h-4 w-4 rounded border-input"
+          />
+          Alleen lopende dossiers
+        </label>
+      </div>
+
+      {isError ? (
+        <QueryError message={error?.message} onRetry={() => refetch()} />
+      ) : isLoading ? (
+        <div className="rounded-xl border border-border bg-card p-1">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+              <div className="h-4 w-24 rounded skeleton" />
+              <div className="hidden md:block h-4 w-40 rounded skeleton" />
+              <div className="hidden lg:block h-4 w-20 rounded skeleton" />
+              <div className="h-4 w-20 rounded skeleton ml-auto" />
+            </div>
+          ))}
+        </div>
+      ) : data && data.items.length > 0 ? (
+        <>
+          <div className="overflow-x-auto rounded-xl border border-border bg-card">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Factuurnr.</th>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Debiteur</th>
+                  <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dossier</th>
+                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Factuurdatum</th>
+                  <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Hoofdsom</th>
+                  <th className="px-4 py-3.5 w-10 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground" title="Factuur-PDF aanwezig">PDF</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {data.items.map((v) => (
+                  <tr key={v.id} className="hover:bg-muted/40 transition-colors">
+                    <td className="px-4 py-3.5">
+                      <Link href={`/zaken/${v.case_id}`} className="font-mono text-sm font-semibold text-foreground hover:text-primary transition-colors">
+                        {v.invoice_number || "—"}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm text-foreground">
+                      <span className="truncate max-w-[220px] block">{v.debtor_name ?? "—"}</span>
+                    </td>
+                    <td className="hidden lg:table-cell px-4 py-3.5 text-sm text-muted-foreground font-mono">
+                      <Link href={`/zaken/${v.case_id}`} className="hover:text-primary hover:underline transition-colors">
+                        {v.case_number}
+                      </Link>
+                    </td>
+                    <td className="hidden md:table-cell px-4 py-3.5 text-sm text-muted-foreground">
+                      {v.invoice_date ? formatDateShort(v.invoice_date) : "—"}
+                    </td>
+                    <td className="px-4 py-3.5 text-right text-sm font-semibold tabular-nums text-foreground">
+                      {formatCurrency(Number(v.principal_amount))}
+                    </td>
+                    <td className="px-4 py-3.5 text-center">
+                      {v.has_invoice_file ? (
+                        <Link href={`/zaken/${v.case_id}`} title="Factuur-PDF staat op het dossier" className="inline-flex text-muted-foreground hover:text-primary transition-colors">
+                          <Paperclip className="h-4 w-4" />
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground/30" title="Geen factuur-PDF gekoppeld">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totaal + pagination */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {data.total} {data.total === 1 ? "vordering" : "vorderingen"} &middot; totale hoofdsom{" "}
+              <span className="font-semibold text-foreground tabular-nums">{formatCurrency(Number(data.total_principal))}</span>
+            </p>
+            {data.pages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="px-2 text-sm text-muted-foreground">
+                  {page} / {data.pages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(data.pages, p + 1))}
+                  disabled={page === data.pages}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <Receipt className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="mt-5 text-base font-medium text-foreground">Geen vorderingen gevonden</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {search ? "Probeer andere zoektermen" : "Vorderingen ontstaan op de dossiers"}
+          </p>
+        </div>
       )}
     </div>
   );

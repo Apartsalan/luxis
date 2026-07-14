@@ -55,6 +55,36 @@ class ClaimResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ClaimOverviewItem(BaseModel):
+    """Eén regel in het tenant-brede Vorderingen-overzicht (debiteuren-facturen).
+
+    Een vordering is de factuur van de opdrachtgever op zijn debiteur die wij
+    incasseren — hoort altijd bij een dossier. Los van de kantoorfacturen
+    (`invoices`) die het kantoor zelf naar opdrachtgevers stuurt.
+    """
+
+    id: uuid.UUID
+    invoice_number: str | None
+    invoice_date: date | None
+    default_date: date
+    principal_amount: Decimal
+    description: str
+    has_invoice_file: bool
+    case_id: uuid.UUID
+    case_number: str
+    case_status: str
+    debtor_name: str | None
+
+
+class PaginatedClaims(BaseModel):
+    items: list[ClaimOverviewItem]
+    total: int
+    page: int
+    per_page: int
+    pages: int
+    total_principal: Decimal
+
+
 # ── Payment Schemas ──────────────────────────────────────────────────────────
 
 

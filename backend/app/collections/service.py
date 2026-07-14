@@ -5,9 +5,9 @@ from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 if TYPE_CHECKING:
     from app.trust_funds.models import TrustTransaction
@@ -78,6 +78,106 @@ async def list_claims(
         .order_by(Claim.default_date)
     )
     return list(result.scalars().all())
+
+
+async def list_all_claims(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    page: int = 1,
+    per_page: int = 20,
+    search: str | None = None,
+    only_open: bool = False,
+) -> dict:
+    """Tenant-breed overzicht van alle vorderingen (debiteuren-facturen), met het
+    dossier en de debiteur erbij. Voor het Vorderingen-tabblad in het Facturen-menu.
+
+    `only_open` beperkt tot vorderingen op een niet-afgesloten dossier.
+    """
+    from app.relations.models import Contact
+
+    debtor = aliased(Contact)
+
+    filters = [
+        Claim.tenant_id == tenant_id,
+        Claim.is_active.is_(True),
+        Case.tenant_id == tenant_id,
+    ]
+    if only_open:
+        filters.append(Case.status.notin_(TERMINAL_STATUSES))
+    if search:
+        pattern = f"%{search.strip()}%"
+        filters.append(
+            or_(
+                Claim.invoice_number.ilike(pattern),
+                Case.case_number.ilike(pattern),
+                debtor.name.ilike(pattern),
+            )
+        )
+
+    def _joined(stmt):
+        return stmt.join(Case, Claim.case_id == Case.id).outerjoin(
+            debtor, Case.opposing_party_id == debtor.id
+        )
+
+    total = (
+        await db.execute(
+            _joined(select(func.count(Claim.id))).where(*filters)
+        )
+    ).scalar_one()
+    total_principal = (
+        await db.execute(
+            _joined(
+                select(func.coalesce(func.sum(Claim.principal_amount), 0))
+            ).where(*filters)
+        )
+    ).scalar_one()
+
+    rows = (
+        await db.execute(
+            _joined(
+                select(
+                    Claim,
+                    Case.case_number,
+                    Case.status,
+                    debtor.name.label("debtor_name"),
+                )
+            )
+            .where(*filters)
+            .order_by(
+                Claim.invoice_date.desc().nullslast(),
+                Claim.default_date.desc(),
+            )
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+        )
+    ).all()
+
+    items = [
+        {
+            "id": claim.id,
+            "invoice_number": claim.invoice_number,
+            "invoice_date": claim.invoice_date,
+            "default_date": claim.default_date,
+            "principal_amount": claim.principal_amount,
+            "description": claim.description,
+            "has_invoice_file": claim.invoice_file_id is not None,
+            "case_id": claim.case_id,
+            "case_number": case_number,
+            "case_status": case_status,
+            "debtor_name": debtor_name,
+        }
+        for claim, case_number, case_status, debtor_name in rows
+    ]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+        "total_principal": total_principal,
+    }
 
 
 async def create_claim(

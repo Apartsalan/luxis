@@ -171,6 +171,56 @@ export function useInvoices(params?: {
   });
 }
 
+// ── Vorderingen (debiteuren-facturen op dossiers) ─────────────────────────────
+
+export interface ClaimOverviewItem {
+  id: string;
+  invoice_number: string | null;
+  invoice_date: string | null;
+  default_date: string;
+  principal_amount: string;
+  description: string;
+  has_invoice_file: boolean;
+  case_id: string;
+  case_number: string;
+  case_status: string;
+  debtor_name: string | null;
+}
+
+export interface PaginatedClaims {
+  items: ClaimOverviewItem[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+  total_principal: string;
+}
+
+export function useClaims(params?: {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  only_open?: boolean;
+}) {
+  const page = params?.page ?? 1;
+  const per_page = params?.per_page ?? 20;
+  const search = params?.search ?? "";
+  const only_open = params?.only_open ?? false;
+
+  return useQuery<PaginatedClaims>({
+    queryKey: ["claims", { page, per_page, search, only_open }],
+    queryFn: async () => {
+      const qp = new URLSearchParams({ page: String(page), per_page: String(per_page) });
+      if (search) qp.set("search", search);
+      if (only_open) qp.set("only_open", "true");
+      const res = await api(`/api/claims?${qp}`);
+      if (!res.ok) throw new Error("Kan vorderingen niet laden");
+      return res.json();
+    },
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useInvoice(id: string | undefined) {
   return useQuery<InvoiceDetail>({
     queryKey: ["invoices", id],

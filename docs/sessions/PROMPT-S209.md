@@ -27,6 +27,30 @@ losse stap met dry-run + akkoord Arsalan vóór schrijven op prod** (het zijn pr
    `incssamengesteld`, `pmemo`, `palert`, landen, provisie, geboortedatum opnemen in
    `scripts/basenet/mapping.py` — zie rapport §8.5.
 
+## Nieuw gespreksonderwerp — provisie-afspraak Arsalan/Lisanne (eerst UITVRAGEN, niet bouwen)
+
+Arsalan noemde (14 juli): als een dossier volledig is binnengehaald, gaan de incassokosten
+naar Lisanne; als Arsalan zelf een deal/opdrachtgever heeft binnengehaald, krijgt Lisanne
+daarover 15%. Dit is nog niet scherp genoeg om te bouwen. Doe dit los van/vóór de
+importtaken hierboven, en in deze volgorde:
+
+1. **Vraag Arsalan concreet uit** (geen aannames, één keer alle vragen tegelijk):
+   - Waarover wordt de 15% berekend — de hoofdsom, de incassokosten, iets anders?
+   - Geldt dit per dossier, per opdrachtgever, of per "deal" (nieuwe klantrelatie die
+     Arsalan binnenhaalt)?
+   - Is dit een nieuwe afspraak, of bestaat hij al (mondeling/Excel) en moet Luxis 'm
+     alleen zichtbaar/berekenbaar maken?
+   - Wie berekent/int het en wanneer (bij afsluiten dossier, maandelijks, per betaling)?
+2. **Bestaande aanknoping checken vóórdat er iets nieuws bedacht wordt:** de S208-audit
+   vond al een `provisie_percentage`-veld op `Case` (bestaat al in het schema) + 39
+   BaseNet-dossiers met `incprovisie`=15% bij 5 opdrachtgevers (INC Zakelijk, Incassocenter,
+   COLLECT 1, CM Zakelijk, LegalWork) — zie `docs/research/S208-veldaudit-basenet.md` §4.
+   Uitzoeken of dat dezelfde afspraak is (dan bestaat het veld al, ontbreekt alleen de
+   werkwijze eromheen) of iets anders.
+3. **Pas na de antwoorden** samen met Arsalan een werkwijze ontwerpen (hoe het in Luxis
+   zichtbaar wordt, wie het ziet, hoe/wanneer het berekend wordt) — Plan Mode, niet meteen
+   bouwen.
+
 ## Verificatie
 - Relevante tests: `docker compose exec backend python -m pytest tests/ -k "basenet or contact" -q`
   (géén full suite; container-aanroep is `python -m pytest`)

@@ -4,7 +4,6 @@ import { Fragment, Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Search,
   Plus,
   X,
@@ -26,6 +25,7 @@ import { useModules } from "@/hooks/use-modules";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { useKycStatus } from "@/hooks/use-kyc";
 import { InvoiceUploadZone } from "@/components/InvoiceUploadZone";
+import { BackButton } from "@/components/back-button";
 import { useParseInvoice } from "@/hooks/use-invoice-parser";
 import type { InvoiceParseResult } from "@/hooks/use-invoice-parser";
 import { tokenStore } from "@/lib/token-store";
@@ -942,13 +942,11 @@ function NieuweZaakPage() {
     <div className="mx-auto max-w-2xl space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link
-          href="/zaken"
-          aria-label="Terug naar dossiers"
+        <BackButton
+          fallbackHref="/zaken"
+          title="Terug naar dossiers"
           className="rounded-lg p-2 hover:bg-muted transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-        </Link>
+        />
         <div>
           <h1 className="text-2xl font-bold text-foreground">Nieuw dossier</h1>
           <p className="text-sm text-muted-foreground">

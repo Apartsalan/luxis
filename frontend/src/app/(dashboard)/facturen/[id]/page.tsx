@@ -5,7 +5,6 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
   FileText,
   Plus,
   Trash2,
@@ -28,6 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BackButton } from "@/components/back-button";
 import {
   useInvoice,
   useUpdateInvoice,
@@ -491,8 +491,8 @@ export default function FactuurDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <Link
-            href={
+          <BackButton
+            fallbackHref={
               searchParams.get("from_case") && factuur.case
                 ? `/zaken/${factuur.case.id}`
                 : "/facturen"
@@ -503,9 +503,7 @@ export default function FactuurDetailPage() {
                 ? `Terug naar dossier ${factuur.case.case_number}`
                 : "Terug naar facturen"
             }
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-          </Link>
+          />
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-foreground font-mono">

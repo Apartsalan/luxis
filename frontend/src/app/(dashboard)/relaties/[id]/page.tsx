@@ -5,7 +5,6 @@ import { useConfirm } from "@/components/confirm-dialog";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
   ArrowRight,
   Building2,
   Download,
@@ -38,6 +37,7 @@ import {
   type ContactTermsUpdate,
 } from "@/hooks/use-contact-terms";
 import { useCases } from "@/hooks/use-cases";
+import { BackButton } from "@/components/back-button";
 import { useModules } from "@/hooks/use-modules";
 import { useKyc, useSaveKyc, useCompleteKyc, type KycFormData } from "@/hooks/use-kyc";
 import { formatDateShort } from "@/lib/utils";
@@ -360,12 +360,10 @@ export default function RelatieDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <Link
-            href="/relaties"
+          <BackButton
+            fallbackHref="/relaties"
             className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-          </Link>
+          />
           <div className="flex items-center gap-3">
             <div
               className={`flex h-11 w-11 items-center justify-center rounded-full ${

@@ -25,6 +25,7 @@ import {
   useProcessIntake,
 } from "@/hooks/use-intake";
 import type { IntakeUpdateData } from "@/hooks/use-intake";
+import { BackButton } from "@/components/back-button";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { QueryError } from "@/components/query-error";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
@@ -289,13 +290,14 @@ export default function IntakeDetailPage() {
     <div className="space-y-6">
       {/* Back link + header */}
       <div>
-        <Link
-          href="/intake"
+        <BackButton
+          fallbackHref="/intake"
+          title="Terug naar Nieuwe aanvragen"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Terug naar Nieuwe aanvragen
-        </Link>
+        </BackButton>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">

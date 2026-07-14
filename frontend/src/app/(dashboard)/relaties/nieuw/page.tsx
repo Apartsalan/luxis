@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useCreateRelation } from "@/hooks/use-relations";
+import { BackButton } from "@/components/back-button";
 
 export default function NieuweRelatiePage() {
   const router = useRouter();
@@ -181,12 +181,11 @@ export default function NieuweRelatiePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Link
-          href="/relaties"
+        <BackButton
+          fallbackHref="/relaties"
+          title="Terug naar relaties"
           className="rounded-lg p-2 hover:bg-muted transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-        </Link>
+        />
         <div>
           <h1 className="text-2xl font-bold text-foreground">Nieuwe relatie</h1>
           <p className="text-sm text-muted-foreground">

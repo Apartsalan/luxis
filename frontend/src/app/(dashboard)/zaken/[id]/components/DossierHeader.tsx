@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   Briefcase,
   CalendarDays,
   CheckCircle2,
@@ -34,6 +33,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { CASE_STATUS_BADGE_FALLBACK, DEBTOR_TYPE_BADGE } from "@/lib/status-constants";
 import { TONES } from "@/lib/tones";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
+import { BackButton } from "@/components/back-button";
 import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
 import type { PipelineStep } from "@/hooks/use-incasso";
 import { useUpdateCase } from "@/hooks/use-cases";
@@ -215,12 +215,10 @@ export default function DossierHeader({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <Link
-            href="/zaken"
+          <BackButton
+            fallbackHref="/zaken"
             className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-          </Link>
+          />
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-foreground">

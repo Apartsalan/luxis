@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, Clock, Plus, Trash2, Search } from "lucide-react";
+import { Check, Clock, Plus, Trash2, Search } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useCreateInvoice, useCreateVoorschotnota, useAdvanceBalance, useInvoices, useBudgetStatus, useProvisie } from "@/hooks/use-invoices";
@@ -419,13 +420,11 @@ export default function NieuweFactuurPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Link
-          href="/facturen"
-          aria-label="Terug naar facturen"
+        <BackButton
+          fallbackHref="/facturen"
+          title="Terug naar facturen"
           className="rounded-lg p-2 hover:bg-muted transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-        </Link>
+        />
         <div>
           <h1 className="text-2xl font-bold text-foreground">
             {invoiceType === "voorschotnota" ? "Nieuwe voorschotnota" : "Nieuwe factuur"}

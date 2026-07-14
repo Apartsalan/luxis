@@ -67,6 +67,16 @@ factuur-PDF's van de actieve vorderingen nu ook op de primaire knop automatisch 
 case-mail, gededupliceerd met handmatige bijlagen). Test bewijst factuur + renteoverzicht samen.
 Beide compose-knoppen zijn nu volledig gelijk in bijlagegedrag.
 
+### Nagekomen (zelfde dag, opdracht Arsalan): Vorderingen-tab in het Facturen-menu (`df1b9a7`, LIVE)
+Het Facturen-menu toonde alleen de (lege) kantoorfacturen; de vorderingen op de dossiers waren
+nergens als totaaloverzicht te zien. Nieuw tenant-breed endpoint `GET /api/claims` (dossier +
+debiteur + hoofdsom, paginatie/zoeken/alleen-lopend) + een **Vorderingen**-tab. Eerste tab
+hernoemd naar **Kantoorfacturen** voor het onderscheid dat Arsalan vroeg. Prod-bewijs: 1.563
+vorderingen, totale hoofdsom €3.142.934,72 — onafhankelijk in de DB nageteld (exact gelijk, geen
+dubbeltelling; raw-count 1.563 == endpoint-total). 3 endpoint-tests. **Los blijft:** de factuur-
+PDF's zijn niet aan de vorderingen gekoppeld (kolom PDF = "—"); 1.368/1.563 koppelbaar op
+factuurnummer — koppel-actie is een aparte prod-schrijfactie (wacht op akkoord Arsalan).
+
 ### Bekende issues
 - **KvK-rechtsvorm-backfill** wacht op de echte sleutel (~16 juli, Arsalan meldt). Tot dan besluit B
   (élke zakelijke wederpartij, óók BV, krijgt de bijlage). → S213.

@@ -76,6 +76,10 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > waarschijnlijkste klik. Gefixt (frontend + backend + 2 tests). Rest hield stand.
 > Nagekomen (opdracht Arsalan, `8e2ee8b` LIVE): factuur-PDF's nu óók automatisch op de
 > verstuurknop — beide compose-knoppen gelijk in bijlagegedrag.
+> Nagekomen (opdracht Arsalan, `df1b9a7` LIVE): **Vorderingen-tab** in het Facturen-menu
+> (`GET /api/claims`, 1.563 vorderingen zichtbaar, DB-nageteld); eerste tab → "Kantoorfacturen".
+> Openstaand voorstel: factuur-PDF's aan de vorderingen koppelen (1.368/1.563 op factuurnummer,
+> prod-schrijfactie, wacht op akkoord). Kantoorfacturen-import (S201) blijft aparte sessie.
 >
 > 📌 **Los klusje (open):** landregel ook op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan — gerechtelijke stukken, dagvaarding heeft inline-adres). Voorstel: filter "Nog te openen"

@@ -422,7 +422,9 @@ export function ContactInfoSection({
             {!contact.email &&
               !contact.phone &&
               !contact.visit_address &&
-              !contact.kvk_number && (
+              !contact.kvk_number &&
+              !contact.btw_number &&
+              !contact.legal_form && (
                 <p className="text-sm text-muted-foreground">
                   Geen contactgegevens ingevuld
                 </p>

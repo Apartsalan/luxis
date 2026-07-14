@@ -2,10 +2,67 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 14 juli 2026 (S211, Opus-bouw + Fable-review — WIK-rentebijlage + S207-M4 af, op tak `s211-wik-rentebijlage`, NIET gemerged). Prod op HEAD `4025d43`.
-**Laatste feature/fix:** WIK-rentebijlage (renteoverzicht-PDF bij 14-dagenbrief + eerste sommatie o.b.v. KvK-rechtsvorm) + S207-M4 HTML-escaping op alle 4 mail-bouwers. Zie entry S211.
-**Openstaand:** merge+deploy van de s211-tak wacht op GO Arsalan (mailslot staat OPEN); KvK-prod-sleutel ~16 juli → rechtsvorm-backfill; bijlage ontbreekt nog op het compose/AI-concept- en document-verzendpad.
-**Volgende sessie:** S212 (`docs/sessions/PROMPT-S212.md`, Opus): merge+deploy na GO → bijlage op compose/document-pad → terug-navigatie heel Luxis.
+**Laatst bijgewerkt:** 14 juli 2026 (S212, Opus-uitvoer — WIK-rentebijlage LIVE, bijlage op resterende verzendpaden, terug-navigatie heel Luxis). Prod op HEAD `0c0626b`.
+**Laatste feature/fix:** Rentebijlage live (s211 gemerged + deploy mét migratie); bijlage nu óók op compose/AI-concept- en document-verzendpad; slimme terug-knop (router.back met ijkpunt-terugval) op alle detail-/nieuw-pagina's. Zie entry S212.
+**Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen. Observatie (niet gebouwd): 'Direct versturen'-pad `/compose/send` hangt geen bijlage/factuur-PDF's aan (geen template_type).
+**Volgende sessie:** S213 (`docs/sessions/PROMPT-S213.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
+
+## Sessie 212 (14 juli 2026, Opus-uitvoer — WIK-rentebijlage LIVE + bijlage op resterende verzendpaden + terug-navigatie, LIVE)
+
+### Samenvatting
+Drie blokken, elk gebouwd → getest → gedeployd via SSH, met GO van Arsalan op blok 1.
+
+- **Blok 1 — WIK-rentebijlage LIVE.** Tak `s211-wik-rentebijlage` (5 commits) gemerged naar main
+  (`0354d5a`, geen botsing — tak raakte de afsluit-docs niet), gedeployd mét migratie
+  `s211_contact_legal_form` (3 nullable kolommen op contacts, puur additief). Prod geverifieerd:
+  migratie op head, 3 rechtsvorm-kolommen aanwezig, login 200, relatie-detail levert de velden
+  (leeg), bewerkweergave toont het rechtsvorm-veld met uitleg. **KvK-sleutel bewust nog leeg
+  (slapend)** tot ~16 juli. PROMPT-S207 gearchiveerd (`a3111c7`). Besluit B actief: tot de
+  backfill krijgt élke 14-dagenbrief/eerste sommatie de bijlage, óók BV's (GO Arsalan: "kan geen kwaad").
+- **Blok 2 — bijlage op de twee resterende verzendpaden** (`612a779`). Gedeelde helper
+  `build_rente_bijlage` aangehaakt op (a) het compose/AI-concept-pad (`compose/cases/{id}` → .eml,
+  op de plek waar al factuur-PDF's meegaan — Lisanne's meest gebruikte route) en (b) het
+  document-verzendpad (`documents/{id}/send`). Beide via een `SimpleNamespace(template_type=...)`
+  step-shim; `opposing_party` is `lazy="selectin"` dus geen async-laadrisico. Preview-zinnetje
+  in follow-up: "renteoverzicht" i.p.v. "de brief". 4 nieuwe route-tests (bijlage wél/BV niet).
+  133 tests groen (`-k kvk/bijlage/compose/followup/document`), ruff schoon, tsc groen.
+- **Blok 3 — slimme terug-knop door heel Luxis** (`c577e96` + 2 fixes). Gedeelde `BackButton`:
+  `router.back()` naar de pagina van herkomst, met nette terugval op de vaste ouderpagina bij een
+  direct bezochte URL. Toegepast op dossier-, relatie-, factuur- en intake-detail + de drie
+  nieuw-formulieren; factuurpagina houdt de `?from_case`-terugval. **Twee fixes na live-test
+  (fable-diepte):** (1) `history.state.idx` bestaat NIET in Next.js 15 App Router (alleen `__NA`
+  + interne tree) → knop viel altijd terug op de vaste ouder; overgestapt op `history.length`.
+  (2) kale `history.length>1` was onbetrouwbaar (verse tab kan al op 2 staan → terug naar lege
+  pagina) → dashboard-omhulling legt bij binnenkomst één ijkpunt vast (`luxis_entry_history_len`,
+  per tab), knop gaat alleen echt terug als de lengte sindsdien is gegroeid.
+
+### Bewijs (Playwright, prod)
+incasso→dossier→terug = **incasso** ✓; dossier→relatie→terug = **dossier** ✓; dossier→factuur(nieuw)
+→terug = **dossier** ✓; relatielijst→relatie→terug = **relatielijst** ✓ (herkomst beweegt mee);
+verse tab rechtstreeks op /zaken/[id]→terug = **/zaken** (terugval, breekt niet) ✓. Rentebijlage:
+route-tests bewijzen bijlage wél bij privé aansprakelijk / niet bij BV op beide nieuwe paden.
+
+### Gewijzigde bestanden
+- Backend: `email/compose_router.py`, `documents/router.py`, `tests/test_rente_bijlage_verzendpaden.py` (nieuw, 4).
+- Frontend: `components/back-button.tsx` (nieuw), `app/(dashboard)/layout.tsx`, `followup/page.tsx`,
+  DossierHeader + relaties/[id] + facturen/[id] + facturen/nieuw + zaken/nieuw + relaties/nieuw + intake/[id].
+- 5 commits + merge; deploys: alles (blok 1, migratie) → backend+frontend (blok 2) → frontend ×3 (blok 3).
+
+### Bekende issues
+- **KvK-rechtsvorm-backfill** wacht op de echte sleutel (~16 juli, Arsalan meldt). Tot dan besluit B
+  (élke zakelijke wederpartij, óók BV, krijgt de bijlage). → S213.
+- **`/compose/send` ('Direct versturen'-knop)** hangt geen factuur-PDF's/rentebijlage aan (het pad
+  krijgt geen `template_type`; gebruiker hangt daar handmatig bijlagen aan). Buiten S212-scope
+  gelaten — observatie/voorstel, niet gebouwd. De .eml-route (Lisanne's hoofdroute) is wél gedekt.
+- Compose-.eml slaat bij elke "Open in Outlook" een Renteoverzicht-document op het dossier op (zoals
+  batch/followup ook doen) — cosmetisch, geen blokkade.
+
+### Volgende sessie
+S213 (`docs/sessions/PROMPT-S213.md`, Opus): zodra Arsalan de echte KvK-sleutel meldt → `KVK_API_KEY`
+(+ `KVK_API_BASE`) als env op de VPS → herstart backend → `scripts/kvk_backfill_legal_form.py
+--dry-run` → akkoord → echt draaien → natelling (±438 relaties, ±€9) → meten hoeveel BV's geen
+bijlage meer krijgen. Eventueel: `/compose/send`-bijlage-observatie oppakken als Arsalan dat wil.
+
 
 ## Sessie 211 (14 juli 2026, Opus-bouw + Fable-review/afronding — WIK-rentebijlage + S207 AF, op tak)
 
@@ -481,66 +538,3 @@ heartbeat-rijen (bestaan pas na de nacht), live logout (zou prod-tokens intrekke
 S205: beslislijst uit `S204-review.md` §Beslislijst — (1) gate in follow-up, (2) gate in
 concept-verzendpad, (3) verzend-proxy verstevigen, (4) mailsync-foutpad, (5) dagenbrief-sjabloon
 op de stap (besluit), (6) heartbeat-last_error bij interne jobfouten, (7) check dagelijkse-job-rijen.
-
-## Sessie 203 deel 2 (12 juli 2026, Opus — voorkant-fixes UITGEVOERD + LIVE)
-
-### Samenvatting
-Eerst Codex' read-only audits nagecontroleerd (fable-diepte): 8 security-bevindingen zelf in de
-bron teruggevonden (alle 8 kloppen), facturatie-onderzoek onafhankelijk hergeteld tegen de
-BaseNet-export (567/773/€235.899,91 + de 7 Mollie-conflicten op de seconde) — **Codex-review
-betrouwbaar, eerste keer goed gegaan**. Daarna: 11 van 12 S203-taken gebouwd, per fix
-rood→groen→commit→push→deploy, 4 deploys, migraties `s203`/`s203b` op prod, alle containers healthy.
-
-**Ronde 1 (klein, live):** (13) tijdlijn-crash `duration_seconds`/`entry_date` → `duration_minutes`/
-`date` (+ sibling-bug). (4) hernoem-knop: PATCH `/api/cases/{id}/files/{id}` gebouwd + onError.
-(3) AI-concept bij €0-terugval markeert draft + reviewtaak (gegate op €-sjabloon; regressie in
-draft-gate zelf gevangen+gefixt). (6) "1169 toegevoegd deze maand" → import-marker uitgesloten,
-**live 1169→1**. (9) batch-fouten als waarschuwing mét redenen i.p.v. groene toast. (11/12) nep-tabs
-Meldingen+Weergave verwijderd. (10/14) incasso-ratio zelfde populatie + gecapt **49,1%→5,3% live**;
-negatief "Openstaand" → "teveel betaald"; lijstkolom "Openstaand (hoofdsom)".
-
-**Ronde 2 (middel, live):** (1) mailsync-gezondheid: `last_sync_error`-veld + banner (rood mislukt /
-amber >60min / laatst-gesynct), scheduler zet fout per account atomisch. (2) scheduler-heartbeat:
-nieuwe `scheduler_heartbeat`-tabel + APScheduler-listener legt elke job-run vast; dashboard toont
-rood alarm als een kritieke dagelijkse job (o.a. verjaringscontrole) >25u niet draaide. (8) intake
-wijst nu de eerste pijplijn-stap + historie-rij toe (Staphistorie vult zich weer; going-forward).
-(5) 14-dagenbrief-waarborg leest het echte spoor (`CaseStepHistory`) i.p.v. de lege tabel; de batch
-blokkeert een B2C-sommatie **hard** als de 14-dagenbrief niet verstuurd is óf binnen 15 dagen daarna
-(besluit Arsalan: nooit eerder dan 15 dagen; `DAGENBRIEF_MIN_DAYS=15`). (16/17) logout trekt tokens
-server-side in, Gmail-knop verborgen, dode hook `usePendingCount` weg.
-
-### Verificatie
-Elke fix: gerichte tests groen (nieuwe tests bij elke fix), `uvx ruff` schoon, `tsc --noEmit` groen.
-Betrokken suites samen groen (incasso-pipeline 51, dashboard 23, intake 27, email-sync 28, RLS-drift 8,
-compliance-14dagenbrief 3, e.a.). Migraties `s203`+`s203b` op prod = head, containers healthy. Live
-via API bevestigd: `contacts_this_month` 1→ (was 1169), `collection_rate` 5.3 (was 49,1), `scheduler_alerts`
-veld werkt. Valkuil-les: mijn eerste fix-3 markeerde óók bedragenloze sjablonen + lekte een context-sleutel
-in `build_user_prompt` — beide door de draft-gate-tests gevangen vóór deploy (fable-tegenspreker).
-
-### Bekende issues / bewust niet gedaan (scope)
-- **35-route backend-sloop niet uitgevoerd** — ⚠️-trace + 3 "niet slopen zonder besluit"-uitzonderingen;
-  vraagt een eigen per-route-verificatieronde, niet aan het eind van deze lange sessie geforceerd.
-- **#7 document-audittrail** en **#15 regeling-badge** stonden niet in de S203-takenlijst → open.
-- **#5 juridisch besloten (Arsalan):** harde blokkade, nooit een sommatie eerder dan 15 dagen ná de
-  14-dagenbrief. Open detail voor Lisanne: een buiten Luxis verstuurde 14-dagenbrief moet handmatig
-  in het systeem geregistreerd worden, anders blokkeert de gate terecht.
-- De 10 bestaande stap-loze intake-zaken zijn een aparte data-actie (going-forward-fix raakt ze niet).
-- Mailslot bleef DICHT; niets verstuurd. Statusregel per bevinding: `docs/sessions/S200-BEVINDINGEN.md` (tabel bijgewerkt).
-
-### Incident bij afsluiting — per ongeluk gecommitte bestanden, historie herschreven (mét akkoord)
-Bij het sessie-einde veegde één `git add -A` **110 bewust-untracked bestanden** mee in een docs-commit,
-waaronder het **derdengelden-bankafschrift** (CSV, 1 jaar), AV-PDF's, `.agents/` en tmp-audit-SQL.
-Afhandeling (expliciet akkoord Arsalan): laatste 3 commits vervangen door één schone (`3f5e183`),
-force-push, lokaal én op de VPS alle oude objecten vernietigd (reflog+gc; CSV-blob aantoonbaar weg
-op beide), VPS-HEAD gelijkgetrokken (ff-pull werkt weer normaal). Tag `sessie-203-fixes` stond vóór
-de foute commit → ongemoeid. **Restrisico:** GitHub kan de weggegooide commits server-side nog even
-vasthouden tot hun eigen opruiming (privérepo; niet meer bereikbaar via branch/tag). **Borging:**
-`.gitignore` dekt de paden nu; harde regel "nooit `git add -A`, stage expliciete paden" toegevoegd
-aan CLAUDE.md + AGENTS.md + Claude-memory.
-
-### Volgende sessie
-**S204 = Fable-review van deze S203-fixes** (`docs/sessions/PROMPT-S204-fable-review.md`): read-only,
-bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouwen (S201-import óf route-sloop).
-
----
-

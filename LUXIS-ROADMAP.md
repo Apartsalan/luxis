@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 14 juli 2026 (S211, Opus-bouw + Fable-review). WIK-rentebijlage + S207-M4 (HTML-escaping 4 mail-bouwers) AF op tak `s211-wik-rentebijlage` — **NIET gemerged, wacht op GO Arsalan** (mailslot OPEN). Volledige suite 1338 groen. Prod op HEAD `4025d43`. **Volgende: S212 (`docs/sessions/PROMPT-S212.md`) — merge+deploy → bijlage op compose/document-pad → terug-navigatie heel Luxis; KvK-sleutel ~16 juli → rechtsvorm-backfill.**
+**Laatst bijgewerkt:** 14 juli 2026 (S212, Opus-uitvoer). WIK-rentebijlage **LIVE** (s211 gemerged + deploy mét migratie); rentebijlage nu óók op compose/AI-concept- en document-verzendpad; slimme terug-knop (router.back met ijkpunt-terugval) door heel Luxis. Prod op HEAD `0c0626b`. **Volgende: S213 (`docs/sessions/PROMPT-S213.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,24 +53,27 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S211)
+## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S212)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **WIK-RENTEBIJLAGE + S207-M4 AF, OP TAK (S211, 14 juli — Opus-bouw + Fable-review).**
-> Renteoverzicht als PDF-bijlage bij 14-dagenbrief + eerste sommatie, alleen voor privé-
-> aansprakelijke schuldenaren; rechtsvorm uit de KvK (opgeslagen veld, nooit live in het
-> verzendpad; client slapend zonder env-sleutel). Plus S207-M4: HTML-escaping op alle 4
-> mail-bouwers (4e gevonden buiten de audit-lijst). Suite 1338 groen; KvK end-to-end bewezen;
-> visueel geverifieerd. **Alles op tak `s211-wik-rentebijlage` — merge+deploy wacht op GO
-> Arsalan (mailslot OPEN; tot de backfill krijgt álles de bijlage, ook BV's — besluit B).**
-> Details: SESSION-NOTES S211.
+> ✅ **WIK-RENTEBIJLAGE LIVE + verzendpaden + terug-navigatie (S212, 14 juli — Opus-uitvoer).**
+> (1) s211-tak gemerged + gedeployd mét migratie `s211_contact_legal_form` (prod geverifieerd:
+> migratie head, velden aanwezig, relatiekaart toont rechtsvorm). KvK-client **slapend** tot de
+> echte sleutel. Besluit B actief (élke zakelijke wederpartij, óók BV, krijgt de bijlage tot de
+> backfill). (2) Rentebijlage óók op het compose/AI-concept-pad (.eml, Lisanne's hoofdroute) én
+> het document-verzendpad; preview-zinnetje aangepast; 4 route-tests. (3) Slimme terug-knop
+> (`router.back` naar herkomst, ijkpunt-terugval bij directe URL) op alle detail-/nieuw-pagina's,
+> Playwright-bewezen. Details: SESSION-NOTES S212.
 >
-> 🔨 **VOLGENDE (S212, prompt klaar: `docs/sessions/PROMPT-S212.md`, Opus):** (1) GO → merge +
-> deploy (mét migratie) + rooktest; (2) rente-bijlage óók op het compose/AI-concept- en
-> document-verzendpad (meest gebruikte route!) + preview-zinnetje; (3) terug-navigatie heel
-> Luxis (terug-pijltje → pagina van herkomst, wens Arsalan). Los moment: KvK-prod-sleutel
-> (~16 juli) → env → backfill droogloop → akkoord → run → natelling (±438, ±€9).
+> 🔨 **VOLGENDE (S213, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli) →
+> `KVK_API_KEY` (+ `KVK_API_BASE`) als env op de VPS → herstart backend →
+> `scripts/kvk_backfill_legal_form.py --dry-run` → akkoord → run → natelling (±438 relaties, ±€9)
+> → meten hoeveel BV's geen bijlage meer krijgen.
+>
+> 📌 **Observatie (niet gebouwd, S212):** het 'Direct versturen'-compose-pad (`/compose/send`) hangt
+> geen factuur-PDF's/rentebijlage aan (krijgt geen `template_type`; handmatige bijlagen). Buiten
+> S212-scope; oppakken als Arsalan dat wil.
 >
 > 📌 **Los klusje (open):** landregel ook op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan — gerechtelijke stukken, dagvaarding heeft inline-adres). Voorstel: filter "Nog te openen"

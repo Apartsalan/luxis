@@ -10,9 +10,10 @@ import type { ReactNode } from "react";
  * (een direct bezochte of ge-bookmarkte URL, of een verse tab), dan valt hij terug
  * op de vaste ouderpagina `fallbackHref` — zo breekt een directe URL nooit.
  *
- * De historie-check gebruikt `history.state.idx` die Next.js' App Router bijhoudt
- * voor scroll-restauratie: 0 = eerste pagina in deze tab-sessie, >0 = er is een
- * vorige pagina om naar terug te keren.
+ * De historie-check gebruikt `window.history.length`: 1 = deze pagina is de enige
+ * entry in de tab (direct bezocht/ge-bookmarkt/verse tab) → val terug op de vaste
+ * ouder; >1 = er is een vorige pagina → ga daar echt naartoe. (Next.js' App Router
+ * bewaart geen bruikbare index in `history.state`, dus die kunnen we niet gebruiken.)
  */
 export function BackButton({
   fallbackHref,
@@ -28,11 +29,7 @@ export function BackButton({
   const router = useRouter();
 
   const handleBack = () => {
-    const idx =
-      typeof window !== "undefined"
-        ? (window.history.state as { idx?: number } | null)?.idx ?? 0
-        : 0;
-    if (idx > 0) {
+    if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
       router.push(fallbackHref);

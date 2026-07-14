@@ -1,10 +1,46 @@
-# S213 — Fable-review-brief (Opus → Fable overdracht)
+# S213 — Fable-review-brief + UITKOMST (afgerond 14 juli, model=Fable)
 
-Opgesteld door Opus aan het eind van de bouw. Twee dingen voor Fable:
-1. **Oordeel over de PDF-koppeling (klus 3)** vóór de echte prod-schrijfactie draait.
-2. **Totale review van de hele S213-sessie** (wens Arsalan).
+Opgesteld door Opus aan het eind van de bouw; daarna heeft Fable (zelfde sessie,
+model omgezet op verzoek Arsalan) de review gedaan én de koppeling uitgevoerd.
 
-De koppeling is **NIET gedraaid** — alleen de dry-run (read-only). Prod is verder ongemoeid.
+## FABLE-UITKOMST (samenvatting)
+
+**Klus 3 UITGEVOERD (na "go" Arsalan): 1.357/1.563 vorderingen gekoppeld.**
+- Bron eerst gelezen (S180-les): `IncassoLine`-XML heeft GEEN document-verwijzing
+  (alleen systemid/invnr/datums/bedrag) → naam-matching is echt de enige sleutel;
+  geen verborgen koppelkolom.
+- Script uitgebreid naar 3 treden (commit `ce54eb4`):
+  1. exacte naam uniek → **1.306**
+  2. meerdere naam-matches, ALLE byte-identiek (sha256 op de echte bestanden;
+     prod-meting vooraf: 35/35 identiek) → oudste gekozen → **35**
+  3. kopie-achtervoegsel (`Factuur_140005__1_.pdf` = "(1)"; kale `_1` bewust niet)
+     → **16** (waarvan 1 .rtf — verzendpad is type-agnostisch; paperclip-preview
+     geeft daar een nette fout, 1 record, geaccepteerd)
+- Dry-run == commit == onafhankelijke DB-natelling: 1.357 gevuld, som hoofdsom
+  onveranderd €3.142.934,72, 0 kruis-dossier, 0 kruis-tenant, 0 dode verwijzing.
+- End-to-end: `has_file=true` telt 1.357; preview van gekoppelde vordering
+  levert échte PDF (http 200, application/pdf, %PDF-header).
+- **206 rest, terecht niet gekoppeld:** 8 kostenpost-regels (Griffierecht,
+  Nakosten, …, geen facturen), ±92 dossiers zonder factuurbestand, ±96 met ander
+  nummerschema. Tekst-inhoud-matching (extracted_text) is gemeten (20 uniek,
+  waarvan 13 al door trede 3 gedekt) maar bewust NIET gebruikt: een sommatie/vonnis
+  dat het nummer citeert zou vals matchen. Restant = handwerk als Lisanne het wil.
+
+**Klus 2 (live sinds `2a9caa3`): alle open klik-verificaties alsnog met ÉCHTE
+kliks op prod bewezen (Playwright, na opruimen stale lockfile):** tab-wissel ✓,
+sorteerkop → URL `sort_by=principal_amount&sort_dir=desc` en top = €142.961,50
+(grootste eerst) ✓, tweede klik → asc ✓, Per-klant-schakelaar → `view=per_klant`
++ per-klant-weergave (lege staat klopt: geen openstaande kantoorfacturen) ✓,
+paperclip-klik → popup `application/pdf` ✓, terug naar Kantoorfacturen wist de
+tab-parameter ✓. De eerdere klik-problemen waren het automatiseringstool, niet de code.
+
+Bekend & geaccepteerd: browser-terug binnen een open Vorderingen-tab synct de
+filter-VELDEN niet live mee (sortering wél) — zelfde gedrag als `zaken/page.tsx`
+(huispatroon CONN-8/DF139), lijst en zichtbare filters blijven onderling consistent.
+
+---
+
+## Oorspronkelijke brief (Opus, vóór de Fable-pass)
 
 ---
 

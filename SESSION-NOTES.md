@@ -2,10 +2,63 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer — Facturen-menu 2 tabs + filters LIVE, 1.357 factuur-PDF's gekoppeld; + back-up Class C-fix). Prod op HEAD `d0823d6`.
-**Laatste feature/fix:** Facturen-menu 3→2 tabs met dossierpagina-filters + paperclip opent de factuur-PDF; koppel-actie uitgevoerd (1.357/1.563, natelling groen); nachtelijke off-site back-up `--fast-list` (Backblaze Class C-cap opgelost). Zie entry S213.
-**Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen.
-**Volgende sessie:** S214 (`docs/sessions/PROMPT-S214.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
+**Laatst bijgewerkt:** 14 juli 2026 (S214, Opus+Fable — S201 kantoorfacturen-import LIVE: 439 facturen/630 regels/325 betalingen, alles op de cent nageteld).
+**Laatste feature/fix:** BaseNet-kantoorfacturen op prod (€302.750,39 bruto, €72.762,09 open, 137 aan dossier, 23 credits gekoppeld) + stap-0: betaaldatum "onbekend", methode "Onbekend (BaseNet)", creditnota-afwikkelbalk. Zie entry S214.
+**Openstaand:** KvK-prod-sleutel (~16 juli) → rechtsvorm-backfill; 7 Mollie/kop-conflictfacturen (€10.854,66) wachten op oordeel Lisanne/boekhouding.
+**Volgende sessie:** S215 (`docs/sessions/PROMPT-S215.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
+
+## Sessie 214 (14 juli 2026, Opus-bouw + Fable-matching — S201 kantoorfacturen-import, LIVE)
+
+### Samenvatting
+De 439 definitieve BaseNet-kantoorfacturen (Lisanne's eigen omzet) staan op prod: 630 regels,
+325 betalingen (€248.364,17), 344 betaald/86 te laat/9 verzonden, 137 aan hun IN-dossier,
+302 D-facturen bewust contact-only (projectcode reist mee in de marker), 23 creditnota's aan hun
+origineel. Bruto €302.750,39, openstaand €72.762,09 — elke som onafhankelijk nageteld in de
+prod-database én via de API-rooktest (debiteuren €78.469,57 = exact de 88 open gewone facturen).
+
+**Stap 0 vooraf (eerlijkheidsvoorwaarden, migratie `s214_payment_date_null`):**
+`invoice_payments.payment_date` nullable → UI toont "Datum onbekend" (handmatige invoer blijft
+datum vereisen); betaalmethode `unknown`/"Onbekend (BaseNet)"; creditnota toont afwikkelstatus
+i.p.v. valse "Volledig betaald" (guard in `get_payment_summary` + frontend verbergt betaalbalk).
+
+**Recept getoetst aan de bron — 3 veldniveau-fouten gevonden en gecorrigeerd** (vastgelegd in
+`S201-facturatie-recept.md` §0): creditnota's hebben géén `invduedate` (→ terugval factuurdatum);
+Mollie-betaaldatums komen uit `Payment.payment_status=4` + `insertdate` (niet uit onbestaande
+`paidAt`-velden); dossierkoppeling loopt via kop-veld `invpcode` (niet "inccode").
+Derdengelden-herkenning = product 100013 ("Verrekening incassodossiers") + expliciete lijst
+{100242, 100363} — een `bedrag<0`-regel vangt 109 facturen en is fout.
+
+**Fable-matchingronde ving 3 gaten:** paid_date op de 20 Mollie-bevestigde facturen,
+memoriaal-boekingsdatum als gelabelde metadata op de 305 "Datum onbekend"-betalingen (11 liggen
+vóór de factuurdatum — dáárom geen betaaldatum), ruwe bronstatus op de 3 nul-facturen. Prod vooraf
+read-only nageteld: 52/52 relaties + 127/127 IN-dossiers matchen deterministisch.
+
+### Gewijzigde bestanden
+- `scripts/basenet/import_invoices.py` (nieuw) — classificatie op gemeten velden, harde poorten,
+  weigert schrijven als doeltabel niet leeg is (dubbele import onmogelijk).
+- Backend: `invoices/models.py`, `schemas.py`, `invoice_payment_service.py`,
+  migratie `s214_payment_date_null.py`; tests `test_import_invoices.py` (nieuw, 4) +
+  `test_invoice_payments.py` (+2, totaal 22).
+- Frontend: `facturen/[id]/page.tsx` (creditnota-afwikkelbalk, "Datum onbekend", methode-label),
+  `hooks/use-invoices.ts`. 4 commits (`5920d1b`…), deploy backend+frontend+migratie.
+
+### Verificatie
+Dry-run op prod: álle poorten groen (439/7/12/19/90, 0 onopgelost, 137 IN, alle euro-sommen exact,
+regelformules 630/630, factuur 100532 bewaart €1.631,74). Execute → natelling in DB + API-login-
+rooktest groen. 24 tests groen, ruff schoon, tsc schoon. Mailslot niet aangeraakt, niets verstuurd.
+
+### Bekende issues
+- **7 Mollie/kop-conflicten** (€10.854,66; nrs 100314/100316/100321/100332/100342/100441/100533):
+  Mollie zegt betaald, kop zegt open — per factuur oordeel Lisanne/boekhouding, daarna evt. na-import.
+- 12 WIP/concepten (€13.013,07) + 31 losse conceptregels (€6.779,81): handmatig beoordelen (lijst
+  in recept §1); 2 negatieve verrekenposten (100242 −€217,80 / 100363 −€735,00) bewust buiten.
+- 302 D-facturen koppelen pas aan een dossier na de latere D-dossier-import (projectcode in marker).
+- KvK-sleutel nog niet binnen → S214-hoofdtaak (rechtsvorm-backfill) doorgeschoven naar S215.
+
+### Volgende sessie
+S215: KvK-rechtsvorm-backfill zodra Arsalan de echte sleutel meldt (env op VPS → droogloop →
+akkoord → run → natelling → meten hoeveel BV's geen rentebijlage meer krijgen).
+Prompt: `docs/sessions/PROMPT-S215.md`.
 
 ## Sessie 213 (14 juli 2026, Opus-bouw + Fable-review/uitvoer — Facturen-menu 2 tabs + PDF-koppeling, LIVE)
 
@@ -527,63 +580,3 @@ toont alle 5 "Added job… Scheduler started" → geregistreerd en ingepland. Ve
 S207: mail-verstevigingen (M4 HTML-escaping + L4/L5/L6, test-baar zónder mailslot; M5-recipient-cap
 in code + apart de 39-velden-datacorrectie mét akkoord). Óf ander S202-restspoor (S201-facturatie-import
 / S203-restpunten). Prompt: `docs/sessions/PROMPT-S207.md`.
-
-## Sessie 205 (12 juli 2026, Fable+Opus — S204-beslislijst: 14-dagenbrief-zijdeuren dicht + mailsync-fix, LIVE)
-
-### Samenvatting
-Alle 6 punten uit de S204-beslislijst gebouwd, per taak rood→groen→commit→push, en de volledige
-stack gedeployd (migratie s205, alle containers healthy).
-
-**Juridisch — 14-dagenbrief-gate (art. 6:96 lid 6 BW) nu op ALLE drie de verzendwegen** via één
-gedeelde controle (`check_dagenbrief_gate` in `collections/compliance.py`): (1) de bulk-knop
-(bestond al, hergebruikt de helper), (2) de follow-up "Uitvoeren"-knop (`execute_recommendation`,
-hard geblokkeerd mét reden — dekt ook approve-and-execute), (3) het AI-concept-verzendpad
-(`compose/send`: verse niet-reply case-mail op een sommatie/dagvaarding-stap bij een consument →
-422 `DAGENBRIEF_GATE`). **Verstuurd-proxy verstevigd:** de brief telt alleen nog als verstuurd bij
-een échte verzending (`CaseStepHistory.email_sent`), niet meer bij stap-binnenkomst — sluit de
-"doorschuiven telt als verstuurd"-zijdeur; het batch-pad zet die vlag nu ook na een geslaagde send.
-
-**"Toch versturen"-noodknop — SIMPEL (instructie Arsalan):** géén verplicht redenveld. De frontend
-toont bij een blokkade een ja/nee-bevestiging (consequentie in gewone taal); bij doorzetten legt
-`record_dagenbrief_override` automatisch een onuitwisbaar spoor vast (CaseActivity + staphistorie-
-notitie). ⚠️ Waarschuwingstekst = concept, nog langs Lisanne vóór B2C-livegang (haar beroepsrisico).
-
-**14-dagenbrief zelf verstuurbaar (akkoord Arsalan, "allebei mogelijk"):** `template_type=
-'14_dagenbrief'` op de stap (seed + idempotente migratie s205). LIVE bevestigd op prod.
-
-**Mailsync-foutpad (bewezen defect, S204):** `email_auto_sync` deelde één sessie → een rollback bij
-één kapotte postbus (verlopen token) expireerde álle accounts → het volgende crashte
-(MissingGreenlet) en de hele run stopte. Nu een eigen sessie per account. LIVE bevestigd:
-`email_auto_sync` draaide om 20:19 op prod zonder fout.
-
-**Heartbeat "draait maar faalt":** de 5 kritieke dagelijkse jobs leggen bij intern falen nu
-`last_error` vast; het dashboard-alarm toont dat (klaart vanzelf op na een schone run).
-
-### Gewijzigde bestanden
-- Backend: `collections/compliance.py` (gedeelde gate + sterke proxy + override-spoor),
-  `incasso/service.py` (batch hergebruikt helper + mark-sent), `ai_agent/followup_service.py` (gate),
-  `email/compose_router.py` (gate + `compliance_override`-veld), `workflow/scheduler.py` (sessie per
-  account + heartbeat-fout), `dashboard/service.py` (alarm), migratie `s205_dagenbrief_template.py`.
-- Frontend: `zaken/[id]/page.tsx` ("toch versturen"-bevestiging via `useConfirm`).
-- Tests: `test_compliance_14dagenbrief`, `test_followup`, `test_compose_dagenbrief_gate` (nieuw),
-  `test_scheduler_email_sync` (nieuw), `test_dashboard`. 7 commits (`d440081`…`ee465b9`) + deploy.
-
-### Verificatie
-128 tests groen over de geraakte suites (compliance/followup/compose-gate/scheduler-email/dashboard/
-incasso-pipeline/s166), `uvx ruff check backend/app/` schoon, `tsc --noEmit` + `npm run build` groen.
-Prod: `alembic=s205_dagenbrief_template`, 14-dagenbrief-stap draagt het sjabloon, `email_auto_sync`
-draaide vers zonder fout. **Niet live end-to-end getest:** de gate zelf (mailslot DICHT; de 2 actieve
-B2C-zaken IN100345/350 zijn stap-loos → gate vuurt niet). Frontend "toch versturen" alleen via
-build/tsc, niet doorgeklikt.
-
-### Bekende issues / aandachtspunten
-- **Checklist (S204 ⚠a) — nog open:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` ontbreken
-  nog (jobs draaien 06:xx UTC; sinds de heartbeat-deploy niet aan de beurt geweest). De 5 periodieke
-  jobs hebben wél rijen → mechanisme werkt. **Opnieuw checken na 13 juli 06:40 UTC.**
-- Waarschuwingstekst noodknop moet langs Lisanne vóór echte B2C-verzending.
-- Mailslot blijft DICHT; niets verstuurd.
-
-### Volgende sessie
-S206: kies één spoor — S201 facturatie-import (439 conflict-vrije facturen, apart akkoord nodig),
-S202 security-fixes (H1/H2/H3), of S203-restpunten (35-route-sloop, #7 audittrail, #15 regeling-badge,
-log-persistentie). Prompt: `docs/sessions/PROMPT-S206.md`. Eerst de checklist hierboven.

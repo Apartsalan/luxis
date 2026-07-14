@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer). Facturen-menu **2 tabs + dossierpagina-filters LIVE**; **1.357/1.563 factuur-PDF's aan de vorderingen gekoppeld** (natelling groen, paperclip opent de PDF); nachtelijke **off-site back-up `--fast-list`** (Backblaze Class C-cap opgelost) + oude US-bucket opgeruimd. Prod op HEAD `d0823d6`. **Volgende: S214 (`docs/sessions/PROMPT-S214.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
+**Laatst bijgewerkt:** 14 juli 2026 (S214, Opus-bouw + Fable-matching). **S201 kantoorfacturen-import LIVE**: 439 facturen/630 regels/325 betalingen op prod, op de cent nageteld (€302.750,39 bruto); 90 derdengelden-posten bewust uitgesloten; 7 Mollie-conflicten wachten op Lisanne/boekhouding. **Volgende: S215 (`docs/sessions/PROMPT-S215.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,20 +53,21 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S213)
+## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S214)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **FACTUREN-MENU 2 TABS + PDF-KOPPELING LIVE (S213, 14 juli — Opus-bouw + Fable-uitvoer).**
-> (1) Facturen-menu van 3 naar 2 tabs: Debiteuren = *Lijst/Per-klant*-schakelaar binnen
-> Kantoorfacturen; Vorderingen-tab met dossierpagina-filters (opdrachtgever/lopend/datumbereik/
-> wel-geen-PDF), sorteerbare kolomkoppen, alles in de URL. (2) **1.357/1.563 vorderingen aan hun
-> factuur-PDF gekoppeld** (3 treden: 1.306 exact + 35 sha256-identieke dubbelen + 16 kopie-
-> achtervoegsel; 206 rest terecht niet — kostenposten/geen bestand/ander nummerschema).
-> Natelling onafhankelijk groen (som hoofdsom onveranderd, 0 kruis-koppelingen); paperclip opent
-> de PDF, échte-klik-bewezen op prod. Details: SESSION-NOTES S213 + `docs/sessions/S213-fable-review-brief.md`.
+> ✅ **S201 KANTOORFACTUREN-IMPORT LIVE (S214, 14 juli — Opus-bouw + Fable-matching).**
+> **439 BaseNet-kantoorfacturen op prod** (630 regels, 325 betalingen €248.364,17; 344 betaald/
+> 86 te laat/9 verzonden; 137 aan hun IN-dossier, 302 D-facturen contact-only, 23 creditnota's
+> gekoppeld). Bruto €302.750,39, openstaand €72.762,09 — op de cent nageteld in DB + API-rooktest.
+> 90 derdengelden-posten (−€90.718,21) bewust NIET als omzet. Stap-0 mee: betaaldatum "onbekend"
+> (migratie `s214_payment_date_null`), methode "Onbekend (BaseNet)", creditnota-afwikkelbalk.
+> Recept §0 = bronmeting-correcties. Details: SESSION-NOTES S214.
+> **Open uit deze import:** 7 Mollie/kop-conflicten (€10.854,66) → oordeel Lisanne/boekhouding;
+> 12 WIP/concepten + 31 losse regels → handmatige lijst (recept §1).
 >
-> 🔨 **VOLGENDE (S214, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli) →
+> 🔨 **VOLGENDE (S215, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli) →
 > `KVK_API_KEY` (+ `KVK_API_BASE`) als env op de VPS → herstart backend →
 > `scripts/kvk_backfill_legal_form.py --dry-run` → akkoord → run → natelling (±438 relaties, ±€9)
 > → meten hoeveel BV's geen bijlage meer krijgen. (WIK-rentebijlage zelf is LIVE sinds S212;
@@ -105,8 +106,8 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
      niet aangeraakt) → eerst testen, dan afmaken of terugdraaien.
    - **Nog niet gestart:** M5-recipient-cap (code) + apart de 39-velden-datacorrectie (mét akkoord).
      `docs/security/S202-delta-audit.md`.
-   - **S201 facturatie-import** — 439 conflict-vrije facturen; recept + droogloop-poorten klaar in
-     `docs/research/S201-facturatie-recept.md`. Aparte, naar-buiten-gerichte schrijfactie → apart akkoord.
+   - ✅ **S201 facturatie-import — UITGEVOERD S214 (14 juli, akkoord Arsalan).** 439 facturen live;
+     rest-groepen (7 Mollie-conflicten, 12 WIP, 31 losse regels) in recept §1 als handwerk-lijst.
    - **S203-restpunten** — 35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail,
      #15 regeling-badge, log-persistentie VPS.
 4. **Beslissingen voor Lisanne/Arsalan:** (14-dagenbrief-verzending is besloten S205: "allebei

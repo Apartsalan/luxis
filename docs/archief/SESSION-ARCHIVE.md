@@ -8981,3 +8981,63 @@ heartbeat-rijen (bestaan pas na de nacht), live logout (zou prod-tokens intrekke
 S205: beslislijst uit `S204-review.md` §Beslislijst — (1) gate in follow-up, (2) gate in
 concept-verzendpad, (3) verzend-proxy verstevigen, (4) mailsync-foutpad, (5) dagenbrief-sjabloon
 op de stap (besluit), (6) heartbeat-last_error bij interne jobfouten, (7) check dagelijkse-job-rijen.
+
+## Sessie 205 (12 juli 2026, Fable+Opus — S204-beslislijst: 14-dagenbrief-zijdeuren dicht + mailsync-fix, LIVE)
+
+### Samenvatting
+Alle 6 punten uit de S204-beslislijst gebouwd, per taak rood→groen→commit→push, en de volledige
+stack gedeployd (migratie s205, alle containers healthy).
+
+**Juridisch — 14-dagenbrief-gate (art. 6:96 lid 6 BW) nu op ALLE drie de verzendwegen** via één
+gedeelde controle (`check_dagenbrief_gate` in `collections/compliance.py`): (1) de bulk-knop
+(bestond al, hergebruikt de helper), (2) de follow-up "Uitvoeren"-knop (`execute_recommendation`,
+hard geblokkeerd mét reden — dekt ook approve-and-execute), (3) het AI-concept-verzendpad
+(`compose/send`: verse niet-reply case-mail op een sommatie/dagvaarding-stap bij een consument →
+422 `DAGENBRIEF_GATE`). **Verstuurd-proxy verstevigd:** de brief telt alleen nog als verstuurd bij
+een échte verzending (`CaseStepHistory.email_sent`), niet meer bij stap-binnenkomst — sluit de
+"doorschuiven telt als verstuurd"-zijdeur; het batch-pad zet die vlag nu ook na een geslaagde send.
+
+**"Toch versturen"-noodknop — SIMPEL (instructie Arsalan):** géén verplicht redenveld. De frontend
+toont bij een blokkade een ja/nee-bevestiging (consequentie in gewone taal); bij doorzetten legt
+`record_dagenbrief_override` automatisch een onuitwisbaar spoor vast (CaseActivity + staphistorie-
+notitie). ⚠️ Waarschuwingstekst = concept, nog langs Lisanne vóór B2C-livegang (haar beroepsrisico).
+
+**14-dagenbrief zelf verstuurbaar (akkoord Arsalan, "allebei mogelijk"):** `template_type=
+'14_dagenbrief'` op de stap (seed + idempotente migratie s205). LIVE bevestigd op prod.
+
+**Mailsync-foutpad (bewezen defect, S204):** `email_auto_sync` deelde één sessie → een rollback bij
+één kapotte postbus (verlopen token) expireerde álle accounts → het volgende crashte
+(MissingGreenlet) en de hele run stopte. Nu een eigen sessie per account. LIVE bevestigd:
+`email_auto_sync` draaide om 20:19 op prod zonder fout.
+
+**Heartbeat "draait maar faalt":** de 5 kritieke dagelijkse jobs leggen bij intern falen nu
+`last_error` vast; het dashboard-alarm toont dat (klaart vanzelf op na een schone run).
+
+### Gewijzigde bestanden
+- Backend: `collections/compliance.py` (gedeelde gate + sterke proxy + override-spoor),
+  `incasso/service.py` (batch hergebruikt helper + mark-sent), `ai_agent/followup_service.py` (gate),
+  `email/compose_router.py` (gate + `compliance_override`-veld), `workflow/scheduler.py` (sessie per
+  account + heartbeat-fout), `dashboard/service.py` (alarm), migratie `s205_dagenbrief_template.py`.
+- Frontend: `zaken/[id]/page.tsx` ("toch versturen"-bevestiging via `useConfirm`).
+- Tests: `test_compliance_14dagenbrief`, `test_followup`, `test_compose_dagenbrief_gate` (nieuw),
+  `test_scheduler_email_sync` (nieuw), `test_dashboard`. 7 commits (`d440081`…`ee465b9`) + deploy.
+
+### Verificatie
+128 tests groen over de geraakte suites (compliance/followup/compose-gate/scheduler-email/dashboard/
+incasso-pipeline/s166), `uvx ruff check backend/app/` schoon, `tsc --noEmit` + `npm run build` groen.
+Prod: `alembic=s205_dagenbrief_template`, 14-dagenbrief-stap draagt het sjabloon, `email_auto_sync`
+draaide vers zonder fout. **Niet live end-to-end getest:** de gate zelf (mailslot DICHT; de 2 actieve
+B2C-zaken IN100345/350 zijn stap-loos → gate vuurt niet). Frontend "toch versturen" alleen via
+build/tsc, niet doorgeklikt.
+
+### Bekende issues / aandachtspunten
+- **Checklist (S204 ⚠a) — nog open:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` ontbreken
+  nog (jobs draaien 06:xx UTC; sinds de heartbeat-deploy niet aan de beurt geweest). De 5 periodieke
+  jobs hebben wél rijen → mechanisme werkt. **Opnieuw checken na 13 juli 06:40 UTC.**
+- Waarschuwingstekst noodknop moet langs Lisanne vóór echte B2C-verzending.
+- Mailslot blijft DICHT; niets verstuurd.
+
+### Volgende sessie
+S206: kies één spoor — S201 facturatie-import (439 conflict-vrije facturen, apart akkoord nodig),
+S202 security-fixes (H1/H2/H3), of S203-restpunten (35-route-sloop, #7 audittrail, #15 regeling-badge,
+log-persistentie). Prompt: `docs/sessions/PROMPT-S206.md`. Eerst de checklist hierboven.

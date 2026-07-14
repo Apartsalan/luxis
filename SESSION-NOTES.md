@@ -4,7 +4,7 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 14 juli 2026 (S212, Opus-uitvoer — WIK-rentebijlage LIVE, bijlage op resterende verzendpaden, terug-navigatie heel Luxis). Prod op HEAD `0c0626b`.
 **Laatste feature/fix:** Rentebijlage live (s211 gemerged + deploy mét migratie); bijlage nu óók op compose/AI-concept- en document-verzendpad; slimme terug-knop (router.back met ijkpunt-terugval) op alle detail-/nieuw-pagina's. Zie entry S212.
-**Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen. Observatie (niet gebouwd): 'Direct versturen'-pad `/compose/send` hangt geen bijlage/factuur-PDF's aan (geen template_type).
+**Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen. Observatie (bewust niet gebouwd): factuur-PDF's gaan alleen op het .eml-pad automatisch mee, niet op /compose/send.
 **Volgende sessie:** S213 (`docs/sessions/PROMPT-S213.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
 
 ## Sessie 212 (14 juli 2026, Opus-uitvoer — WIK-rentebijlage LIVE + bijlage op resterende verzendpaden + terug-navigatie, LIVE)
@@ -48,12 +48,24 @@ route-tests bewijzen bijlage wél bij privé aansprakelijk / niet bij BV op beid
   DossierHeader + relaties/[id] + facturen/[id] + facturen/nieuw + zaken/nieuw + relaties/nieuw + intake/[id].
 - 5 commits + merge; deploys: alles (blok 1, migratie) → backend+frontend (blok 2) → frontend ×3 (blok 3).
 
+### Fable-review S212 (zelfde dag, model omgezet — 1 must-fix gevonden + LIVE)
+De review viel de dragende claims aan. **Must-fix (`498d156`, gedeployd):** de compose-dialoog
+stuurde het gekozen sjabloontype alleen mee op de secundaire "Open in Outlook"-knop (.eml);
+de PRIMAIRE knop "Versturen" (`/compose/send`) kende geen `template_type` — dus géén
+renteoverzicht op de waarschijnlijkste klik voor een sommatie-sjabloon. De blok-2-claim
+"Lisanne's hoofdroute gedekt" was daarmee te sterk. Gefixt: frontend stuurt `template_type`
+mee, backend haakt dezelfde helper aan (verse case-mail; rollback bij mislukte send); 2 extra
+provider-gemockte tests. **Overige aanvallen hielden stand:** AI-concepten (drafts) zijn
+antwoorden op debiteursmail, geen sommaties → bijlage daar terecht niet; luid falen bij
+render-fout is bewust (wettelijk verplichte bijlage stil weglaten is erger); terug-knop-
+randgevallen (hergebruikte tab, browser-terug+klik, reload) vallen terug op correct gedrag
+of de nette fallback; prod-staat herbevestigd (health/HEAD/migratie). 135 tests groen.
+
 ### Bekende issues
 - **KvK-rechtsvorm-backfill** wacht op de echte sleutel (~16 juli, Arsalan meldt). Tot dan besluit B
   (élke zakelijke wederpartij, óók BV, krijgt de bijlage). → S213.
-- **`/compose/send` ('Direct versturen'-knop)** hangt geen factuur-PDF's/rentebijlage aan (het pad
-  krijgt geen `template_type`; gebruiker hangt daar handmatig bijlagen aan). Buiten S212-scope
-  gelaten — observatie/voorstel, niet gebouwd. De .eml-route (Lisanne's hoofdroute) is wél gedekt.
+- **Factuur-PDF's** gaan alleen op het .eml-pad automatisch mee (DF122-07), niet op `/compose/send`
+  — de rentebijlage zit sinds de review wél op beide. Los klusje als gewenst.
 - Compose-.eml slaat bij elke "Open in Outlook" een Renteoverzicht-document op het dossier op (zoals
   batch/followup ook doen) — cosmetisch, geen blokkade.
 

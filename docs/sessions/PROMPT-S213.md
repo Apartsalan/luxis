@@ -26,10 +26,9 @@ Zodra Arsalan de **echte productie-sleutel** meldt:
    aansprakelijk) t.o.v. de besluit-B-situatie waarin iedereen 'm kreeg. Rapporteer in gewone taal.
 
 ## Kleine restpunten (alleen op expliciete vraag Arsalan)
-- **`/compose/send` ('Direct versturen'-knop)** hangt geen factuur-PDF's/rentebijlage aan (krijgt
-  geen `template_type`). S212-observatie, buiten scope gelaten. Wil Arsalan dit dicht? Dan: frontend
-  `template_type` meesturen op `postCompose` + backend `send_via_provider` dezelfde helper aanhaken
-  als op het `.eml`-pad (`compose_eml_from_case`).
+- **Factuur-PDF's op `/compose/send`**: de rentebijlage zit sinds de Fable-review (S212, `498d156`)
+  op beide compose-knoppen, maar de automatische factuur-PDF's (DF122-07) gaan nog alleen op het
+  .eml-pad mee. Zelfde aanhaakplek als de rentebijlage-fix.
 - **Landregel op dagvaarding + faillissementsverzoek** (S210 bewust niet gedaan — gerechtelijke stukken).
 
 ## Verificatie

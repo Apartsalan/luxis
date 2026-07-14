@@ -71,9 +71,10 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > `scripts/kvk_backfill_legal_form.py --dry-run` → akkoord → run → natelling (±438 relaties, ±€9)
 > → meten hoeveel BV's geen bijlage meer krijgen.
 >
-> 📌 **Observatie (niet gebouwd, S212):** het 'Direct versturen'-compose-pad (`/compose/send`) hangt
-> geen factuur-PDF's/rentebijlage aan (krijgt geen `template_type`; handmatige bijlagen). Buiten
-> S212-scope; oppakken als Arsalan dat wil.
+> ✅ **Fable-review S212 (zelfde dag): 1 must-fix gevonden + LIVE (`498d156`).** De primaire
+> "Versturen"-knop (`/compose/send`) kreeg geen sjabloontype → geen rentebijlage op de
+> waarschijnlijkste klik. Gefixt (frontend + backend + 2 tests). Rest hield stand.
+> Restobservatie: factuur-PDF's gaan alleen op het .eml-pad automatisch mee — los klusje.
 >
 > 📌 **Los klusje (open):** landregel ook op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan — gerechtelijke stukken, dagvaarding heeft inline-adres). Voorstel: filter "Nog te openen"

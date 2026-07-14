@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer). Facturen-menu **2 tabs + dossierpagina-filters LIVE**; **1.357/1.563 factuur-PDF's aan de vorderingen gekoppeld** (natelling groen, paperclip opent de PDF). Prod op HEAD `a4996f1`. **Volgende: S214 (`docs/sessions/PROMPT-S214.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
+**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer). Facturen-menu **2 tabs + dossierpagina-filters LIVE**; **1.357/1.563 factuur-PDF's aan de vorderingen gekoppeld** (natelling groen, paperclip opent de PDF); nachtelijke **off-site back-up `--fast-list`** (Backblaze Class C-cap opgelost) + oude US-bucket opgeruimd. Prod op HEAD `d0823d6`. **Volgende: S214 (`docs/sessions/PROMPT-S214.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

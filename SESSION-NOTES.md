@@ -2,8 +2,8 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer — Facturen-menu 2 tabs + filters LIVE, 1.357 factuur-PDF's aan vorderingen gekoppeld). Prod op HEAD `a4996f1`.
-**Laatste feature/fix:** Facturen-menu 3→2 tabs met dossierpagina-filters + paperclip opent de factuur-PDF; koppel-actie uitgevoerd (1.357/1.563, natelling groen). Zie entry S213.
+**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer — Facturen-menu 2 tabs + filters LIVE, 1.357 factuur-PDF's gekoppeld; + back-up Class C-fix). Prod op HEAD `d0823d6`.
+**Laatste feature/fix:** Facturen-menu 3→2 tabs met dossierpagina-filters + paperclip opent de factuur-PDF; koppel-actie uitgevoerd (1.357/1.563, natelling groen); nachtelijke off-site back-up `--fast-list` (Backblaze Class C-cap opgelost). Zie entry S213.
 **Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen.
 **Volgende sessie:** S214 (`docs/sessions/PROMPT-S214.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
 
@@ -49,10 +49,24 @@ KvK-sleutel nog niet binnen → hoofdtaak geparkeerd; taak 2+3 volledig af.
   — zelfde huispatroon als de dossierlijst, bewust zo gelaten.
 - Dev-omgeving: wachtwoord `seidony@` lokaal op `Devpass-123` gezet (alleen dev, prod ongemoeid).
 
+### Nagekomen (zelfde dag, opdracht Arsalan): Backblaze Class C-cap + oude US-bucket
+- **Class C-cap opgelost (`e4ea1c8`, live).** De nachtelijke off-site sync doorzocht de diepe
+  `email_attachments`-boom (7.932 bestanden, elk eigen geneste map) zónder `--fast-list` → één
+  B2-list per map = duizenden Class C-transacties/nacht, boven de gratis dagcap (2.500). Gemeten:
+  maar 93/7.932 bestanden echt nieuw → géén churn, puur de listing. `--fast-list` op alle list-zware
+  rclone-stappen (sync + 3 deletes) → hele boom in één gepagineerde lijst. **Bewijs volgt bij de
+  03:00-run** (nu niet getest: cap stond op 100%, testen zou meer Class C kosten). Reconcilieerde
+  tegelijk de niet-gecommitte VPS-drift (S207-sync-aanpak stond niet in de repo).
+- **Oude US-bucket opgeruimd (`d0823d6`).** Arsalan verwijderde de lege Amerikaanse bucket
+  `Luxis-backup` (us-east-005, 0 bytes, door niets meer gebruikt — live back-up gaat naar de
+  EU-crypt-bucket `luxis-b2-eu:luxis-backup-eu`). Server-kant: `rclone config delete luxis-backup`
+  + script-default nu `luxis-backup-eu-crypt`/`backups` (nooit meer per ongeluk naar de VS).
+
 ### Volgende sessie
 S214 (`docs/sessions/PROMPT-S214.md`): KvK-sleutel → env op VPS → droogloop → akkoord → run →
 natelling → meten hoeveel BV's geen rentebijlage meer krijgen. Rest-PDF's (206) alleen op
 expliciete vraag (handwerk-lijstje kan uit de dry-run-rapportage).
+**Openstaand nachecken (morgen):** back-up-log 03:00 — bevestigen dat het Class C-verbruik laag blijft.
 
 ## Sessie 212 (14 juli 2026, Opus-uitvoer — WIK-rentebijlage LIVE + bijlage op resterende verzendpaden + terug-navigatie, LIVE)
 

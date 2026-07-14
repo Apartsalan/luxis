@@ -1,6 +1,6 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
-Sessie 213 — KvK-rechtsvorm-backfill + Facturen-menu naar 2 tabs + factuur-PDF's koppelen
+Sessie 213 — KvK-backfill + Facturen-menu 2 tabs mét filters (à la dossier) + factuur-PDF's koppelen
 
 ## Start
 Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant modules,
@@ -25,13 +25,24 @@ Zodra Arsalan de **echte productie-sleutel** meldt:
 4. **Meten wat het oplevert:** hoeveel zaken krijgen nu géén rentebijlage meer (rechtsvorm = beperkt
    aansprakelijk) t.o.v. de besluit-B-situatie waarin iedereen 'm kreeg. Rapporteer in gewone taal.
 
-## Taak 2 — Facturen-menu: van 3 naar 2 tabs (besluit Arsalan, 14 juli)
+## Taak 2 — Facturen-menu: van 3 naar 2 tabs + volwaardige filters (besluit Arsalan, 14 juli)
 De huidige 3 tabs mengen categorieën met een weergave: "Debiteuren" is geen aparte soort maar
 een per-klant-samenvatting van de kantoorfacturen. Arsalan wil 2 tabs:
 1. **Kantoorfacturen** — met binnenin een weergave-schakelaar *Lijst* ↔ *Per klant* (de huidige
    DebiteurenTab-component wordt die tweede weergave; niets weggooien, alleen verplaatsen).
 2. **Vorderingen** — blijft, maar het paperclipje wordt een DIRECTE link naar de factuur-PDF
    (openen/downloaden via de bestaande dossierbestand-download-route), niet meer naar het dossier.
+
+**Filters zoals op de dossierpagina (expliciete wens Arsalan).** Het Vorderingen-scherm (en waar
+zinvol Kantoorfacturen) moet net zo rijk filterbaar zijn als `zaken/page.tsx`. Neem dat scherm als
+model: zoeken + meerdere filter-selects + datumbereik + sorteerbare kolomkoppen + **filters/sortering
+in de URL** (zodat terug-knop en drill-downs op een vóór-gefilterde lijst landen — patroon `CONN-8`
+/ `DF139-sort` in `zaken/page.tsx`). Concreet voor Vorderingen:
+- **opdrachtgever** (client) — dropdown; **dossier-status** (lopend/afgesloten; nu al de toggle
+  "alleen lopende dossiers"); **factuurdatum-bereik** (van/tot); **wel/geen factuur-PDF gekoppeld**.
+- **sorteren** op factuurdatum en hoofdsom (klikbare kolomkoppen, asc/desc, in de URL).
+- Backend: `GET /api/claims` uitbreiden met `client_id`, `only_open` (bestaat), `date_from`/`date_to`,
+  `has_file`, `sort_by`/`sort_dir` — zelfde stijl als `list_invoices`/`list_cases`. Tests per filter.
 
 ## Taak 3 — Factuur-PDF's aan de vorderingen koppelen (prod-schrijfactie, akkoord vereist)
 De PDF's bestaan als dossierbestanden (±1.750 `Factuur_<nr>.pdf`), maar 0/1.563 vorderingen

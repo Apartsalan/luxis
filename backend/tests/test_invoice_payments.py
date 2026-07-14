@@ -622,3 +622,60 @@ async def test_all_valid_payment_methods(
         )
         assert response.status_code == 201, f"Method '{method}' should be accepted"
         assert response.json()["payment_method"] == method
+
+
+# ── S214 stap 0: BaseNet-import eerlijkheidsvoorwaarden ───────────────────────
+
+
+@pytest.mark.asyncio
+async def test_open_credit_note_not_fully_paid(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+):
+    """Een verzonden (open) creditnota heeft een negatief totaal en 0 betalingen.
+    Zonder guard geldt `0 >= -bedrag` als 'volledig betaald' — dat mag niet.
+    De afwikkeling volgt uit de status, niet uit een positieve betaalbalk."""
+    invoice = await create_sent_invoice(client, auth_headers, str(test_company.id))
+
+    cn_payload = {
+        "linked_invoice_id": invoice["id"],
+        "invoice_date": "2026-03-15",
+        "due_date": "2026-04-15",
+        "lines": [{"description": "Creditering", "quantity": "1", "unit_price": "100.00"}],
+    }
+    resp = await client.post("/api/invoices/credit-note", json=cn_payload, headers=auth_headers)
+    assert resp.status_code == 201
+    cn = resp.json()
+    assert Decimal(cn["total"]) < 0  # negatief totaal
+
+    # Naar 'sent' — een open creditnota (zoals de 7 open credits in de import).
+    await client.post(f"/api/invoices/{cn['id']}/approve", headers=auth_headers)
+    await client.post(f"/api/invoices/{cn['id']}/send?skip_email=true", headers=auth_headers)
+
+    summary = await client.get(
+        f"/api/invoices/{cn['id']}/payment-summary", headers=auth_headers
+    )
+    assert summary.status_code == 200
+    assert summary.json()["is_fully_paid"] is False
+
+
+@pytest.mark.asyncio
+async def test_unknown_payment_method_accepted(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+):
+    """'unknown' (historische BaseNet-betaling) is een geldige betaalmethode."""
+    invoice = await create_sent_invoice(client, auth_headers, str(test_company.id))
+    response = await client.post(
+        f"/api/invoices/{invoice['id']}/payments",
+        json={
+            "amount": "100.00",
+            "payment_date": "2026-02-15",
+            "payment_method": "unknown",
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 201
+    assert response.json()["payment_method"] == "unknown"

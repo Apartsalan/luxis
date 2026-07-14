@@ -183,7 +183,7 @@ class InvoicePaymentRead(BaseModel):
     tenant_id: uuid.UUID
     invoice_id: uuid.UUID
     amount: Decimal
-    payment_date: date
+    payment_date: date | None  # NULL bij historische BaseNet-import → "Datum onbekend"
     payment_method: str
     reference: str | None
     description: str | None

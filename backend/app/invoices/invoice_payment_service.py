@@ -189,6 +189,14 @@ async def get_payment_summary(
     total_paid = await _total_paid(db, tenant_id, invoice_id)
     outstanding = invoice.total - total_paid
 
+    # Creditnota: totaal is negatief, dus "total_paid >= total" zou 0 al als
+    # "volledig betaald" tellen. De afwikkeling volgt uit de opgeslagen status,
+    # niet uit een positieve betaalbalk (er worden geen betalingen op geboekt).
+    if invoice.invoice_type == "credit_note":
+        is_fully_paid = invoice.status == "paid"
+    else:
+        is_fully_paid = total_paid >= invoice.total
+
     # Count payments
     count_result = await db.execute(
         select(func.count())
@@ -206,7 +214,7 @@ async def get_payment_summary(
         total_paid=total_paid,
         outstanding=outstanding,
         payment_count=payment_count,
-        is_fully_paid=total_paid >= invoice.total,
+        is_fully_paid=is_fully_paid,
     )
 
 

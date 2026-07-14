@@ -485,7 +485,7 @@ export interface InvoicePayment {
   id: string;
   invoice_id: string;
   amount: number;
-  payment_date: string;
+  payment_date: string | null; // null = historische BaseNet-import → "Datum onbekend"
   payment_method: string;
   reference: string | null;
   description: string | null;

@@ -38,7 +38,9 @@ INVOICE_TYPES = ("invoice", "credit_note", "voorschotnota")
 # DF-13: Settlement type for voorschotnota — when does the advance get offset?
 SETTLEMENT_TYPES = ("tussentijds", "bij_sluiting")
 
-PAYMENT_METHODS = ("bank", "ideal", "cash", "verrekening")
+# "unknown" = historische BaseNet-import: bedrag bewezen, datum/methode niet.
+# UI toont "Onbekend (BaseNet)". Niet bedoeld voor handmatige invoer.
+PAYMENT_METHODS = ("bank", "ideal", "cash", "verrekening", "unknown")
 
 
 class Invoice(TenantBase):
@@ -195,7 +197,10 @@ class InvoicePayment(TenantBase):
 
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
 
-    payment_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # Nullable sinds de BaseNet-import: van 305 historische betalingen is alleen
+    # het bedrag bewezen, niet de ontvangstdatum. NULL → UI toont "Datum onbekend".
+    # Handmatige invoer blijft een datum vereisen (InvoicePaymentCreate).
+    payment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     payment_method: Mapped[str] = mapped_column(
         String(30), nullable=False

@@ -1272,7 +1272,7 @@ export default function FactuurDetailPage() {
                 </span>
               )}
             </div>
-            {!paymentSummary?.is_fully_paid && (
+            {!paymentSummary?.is_fully_paid && !isCreditNote && (
               <button
                 onClick={() => setShowPaymentForm(!showPaymentForm)}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium ${TONES.success.button} transition-colors`}
@@ -1283,8 +1283,20 @@ export default function FactuurDetailPage() {
             )}
           </div>
 
+          {/* Creditnota: geen positieve betaalbalk, alleen afwikkelstatus */}
+          {paymentSummary && isCreditNote && (
+            <div className="px-5 py-3 border-b border-border bg-muted/20">
+              <span className="text-xs font-medium text-muted-foreground">
+                Afwikkeling creditnota:{" "}
+                <span className="font-semibold text-foreground">
+                  {factuur.status === "paid" ? "Afgewikkeld" : "Openstaand"}
+                </span>
+              </span>
+            </div>
+          )}
+
           {/* Payment summary bar */}
-          {paymentSummary && (
+          {paymentSummary && !isCreditNote && (
             <div className="px-5 py-3 border-b border-border bg-muted/20">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
@@ -1311,7 +1323,7 @@ export default function FactuurDetailPage() {
           )}
 
           {/* Payment form */}
-          {showPaymentForm && (
+          {showPaymentForm && !isCreditNote && (
             <div className={`border-b border-border ${TONES.success.surfaceSoft} px-5 py-4`}>
               <h4 className="text-sm font-semibold text-foreground mb-3">Betaling registreren</h4>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1418,14 +1430,14 @@ export default function FactuurDetailPage() {
                 {payments.map((payment) => (
                   <tr key={payment.id} className="group hover:bg-muted/30 transition-colors">
                     <td className="px-5 py-3 text-sm text-muted-foreground">
-                      {formatDateShort(payment.payment_date)}
+                      {payment.payment_date ? formatDateShort(payment.payment_date) : "Datum onbekend"}
                     </td>
                     <td className={`px-5 py-3 text-right text-sm font-semibold ${TONES.success.text} tabular-nums`}>
                       +{formatCurrency(payment.amount)}
                     </td>
                     <td className="px-5 py-3">
                       <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {{ bank: "Bank", ideal: "iDEAL", cash: "Contant", verrekening: "Verrekening (voorschot)", verrekening_derdengelden: "Verrekening (derdengelden)" }[payment.payment_method] || payment.payment_method}
+                        {{ bank: "Bank", ideal: "iDEAL", cash: "Contant", verrekening: "Verrekening (voorschot)", verrekening_derdengelden: "Verrekening (derdengelden)", unknown: "Onbekend (BaseNet)" }[payment.payment_method] || payment.payment_method}
                       </span>
                     </td>
                     <td className="hidden sm:table-cell px-5 py-3 text-sm text-muted-foreground">

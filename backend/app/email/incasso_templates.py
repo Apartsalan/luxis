@@ -8,6 +8,7 @@ Supported template types: aanmaning, sommatie, tweede_sommatie, 14_dagenbrief,
 herinnering.  All others return None → caller falls back to PDF attachment.
 """
 
+import html
 from pathlib import Path
 
 from jinja2 import Environment, StrictUndefined
@@ -1755,6 +1756,65 @@ _RENDERERS: dict[str, callable] = {
 }
 
 
+def _esc(value: str | None) -> str:
+    """HTML-escape a single data-derived string (S202 M4)."""
+    return html.escape(value) if value else ""
+
+
+def _escape_html_data(context: dict) -> dict:
+    """Return a copy of context with client-/debtor-supplied text fields
+    HTML-escaped, for the renderer functions below (S202 M4).
+
+    Every renderer function in this module builds `content_html`/`betreft` via
+    raw Python f-strings that read `naam`, `adres`, `postcode_stad`,
+    vordering-`beschrijving`/`factuurnummer` straight from context — the whole
+    assembled string is then marked `Markup()`-trusted in `_render_branded`,
+    so Jinja's own autoescape never sees (and never protects) that data.
+
+    Scope is deliberately narrow to exactly those fields — NOT the whole
+    context. `zaak.referentie_regel` is untouched on purpose: it reaches the
+    email only via `{{ zaak.referentie_regel }}` in `_BASE_EMAIL`, which Jinja
+    already auto-escapes; escaping it here too would double-escape (turning a
+    literal `&` into the visible text `&amp;`). Computed/formatted fields
+    (currency, dates, labels) never contain HTML-special characters, so they
+    don't need this either.
+    """
+
+    def esc_contact(c: dict | None) -> dict | None:
+        if not c:
+            return c
+        return {
+            **c,
+            "naam": _esc(c.get("naam")),
+            "adres": _esc(c.get("adres")),
+            "postcode_stad": _esc(c.get("postcode_stad")),
+        }
+
+    new_ctx = dict(context)
+    new_ctx["client"] = esc_contact(context.get("client"))
+    new_ctx["wederpartij"] = esc_contact(context.get("wederpartij"))
+    kantoor = context.get("kantoor")
+    if kantoor:
+        new_ctx["kantoor"] = {
+            **kantoor,
+            "adres": _esc(kantoor.get("adres")),
+            "postcode_stad": _esc(kantoor.get("postcode_stad")),
+            "derdengelden_iban": _esc(kantoor.get("derdengelden_iban")),
+            "derdengelden_tnv": _esc(kantoor.get("derdengelden_tnv")),
+        }
+    vorderingen = context.get("vorderingen")
+    if vorderingen:
+        new_ctx["vorderingen"] = [
+            {
+                **v,
+                "beschrijving": _esc(v.get("beschrijving")),
+                "factuurnummer": _esc(v.get("factuurnummer")),
+            }
+            for v in vorderingen
+        ]
+    return new_ctx
+
+
 def render_incasso_email(template_type: str, context: dict) -> str | None:
     """Render an incasso brief as branded HTML email body.
 
@@ -1769,4 +1829,4 @@ def render_incasso_email(template_type: str, context: dict) -> str | None:
     renderer = _RENDERERS.get(template_type)
     if renderer is None:
         return None
-    return renderer(context)
+    return renderer(_escape_html_data(context))

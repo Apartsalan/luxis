@@ -1527,7 +1527,13 @@ def _build_step_email(
     if step.email_subject_template and step.email_body_template:
         from jinja2 import Environment
 
-        env = Environment(autoescape=False)
+        # S202 M4: de body wordt als HTML verstuurd — autoescape zorgt dat
+        # data-afkomstige velden (omschrijving, namen) geen rauwe markup de deur
+        # uit laten gaan; letterlijke sjabloontekst van het kantoor zelf blijft
+        # ongemoeid. Het onderwerp is platte tekst (mailheader) → géén escaping,
+        # anders wordt een legitieme '&' daar zichtbaar '&amp;'.
+        env_subject = Environment(autoescape=False)
+        env_body = Environment(autoescape=True)
 
         # Build a simple context for email templates (lighter than full docx context)
         context = {
@@ -1551,8 +1557,8 @@ def _build_step_email(
         if hasattr(case, "tenant") and case.tenant:
             context["kantoor"]["naam"] = case.tenant.name or ""
 
-        subject = env.from_string(step.email_subject_template).render(context)
-        body_text = env.from_string(step.email_body_template).render(context)
+        subject = env_subject.from_string(step.email_subject_template).render(context)
+        body_text = env_body.from_string(step.email_body_template).render(context)
         body_html = body_text.replace("\n", "<br>")
 
         # Wrap in the standard email layout

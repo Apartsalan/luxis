@@ -181,6 +181,47 @@ class TestBuildStepEmail:
         assert case.case_number in subject
         assert "Bijgaand" in body  # generic template text
 
+    async def test_injected_html_in_data_is_escaped(
+        self, db, test_tenant, test_user, test_company, test_person
+    ):
+        """S202 M4: HTML in data-velden (wederpartij-naam) mag niet als echte
+        markup in de mailbody belanden — de vierde verzend-bouwer (batch) had
+        hetzelfde gat als de drie uit de audit."""
+        steps = await create_pipeline_steps(db, test_tenant.id)
+        case = await create_incasso_case(
+            db, test_tenant.id, test_company, test_person, test_user, step=steps[0]
+        )
+        test_person.name = "<b>INJECTED</b>"
+        await db.commit()
+        await db.refresh(case)
+
+        _subject, body = _build_step_email(steps[0], case, db, test_tenant.id)
+
+        assert "<b>INJECTED</b>" not in body
+        assert "&lt;b&gt;INJECTED&lt;/b&gt;" in body
+
+    async def test_legitimate_ampersand_not_double_escaped_in_subject(
+        self, db, test_tenant, test_user, test_company, test_person
+    ):
+        """Het onderwerp is platte tekst (mailheader) — een legitieme '&' in de
+        naam mag daar niet als '&amp;' verschijnen. In de HTML-body wél éénmaal
+        geëscaped (en nooit dubbel)."""
+        steps = await create_pipeline_steps(db, test_tenant.id)
+        # Naam óók in het onderwerp zetten, anders test dit pad niets.
+        steps[0].email_subject_template = "Aanmaning {{ wederpartij.naam }}"
+        case = await create_incasso_case(
+            db, test_tenant.id, test_company, test_person, test_user, step=steps[0]
+        )
+        test_person.name = "Jansen & Zonen"
+        await db.commit()
+        await db.refresh(case)
+
+        subject, body = _build_step_email(steps[0], case, db, test_tenant.id)
+
+        assert "Jansen & Zonen" in subject  # header blijft platte tekst, geen &amp;
+        assert "Jansen &amp; Zonen" in body  # body: precies één keer geëscaped
+        assert "&amp;amp;" not in body  # nooit dubbel
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 3: Task Automation (DB tests, no external mocks)

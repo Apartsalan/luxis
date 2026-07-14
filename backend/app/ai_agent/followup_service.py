@@ -1,5 +1,6 @@
 """Follow-up recommendation service — rules-based workflow advisor for incasso cases."""
 
+import html
 import logging
 import math
 import uuid
@@ -500,13 +501,18 @@ async def execute_recommendation(
                 f"Geachte heer/mevrouw,\n\nBijgevoegd treft u de "
                 f"{step.name.lower()} aan inzake dossier {case.case_number}."
             )
+            # S202 M4: de body wordt als HTML verstuurd (`<p>{email_body}</p>`),
+            # dus database-velden (omschrijving, wederpartij-naam) escapen vóór ze
+            # via de find/replace in de body belanden — anders zou een HTML-tag in
+            # die velden als echte markup de deur uit gaan. Het onderwerp is platte
+            # tekst, daar de rauwe waarde.
             for old, new in [
                 ("{{ zaak.zaaknummer }}", case.case_number),
                 ("{{ zaak.omschrijving }}", case.description or ""),
                 ("{{ wederpartij.naam }}", case.opposing_party.name or ""),
             ]:
                 email_subject = email_subject.replace(old, new)
-                email_body = email_body.replace(old, new)
+                email_body = email_body.replace(old, html.escape(new))
 
             email_log = await send_with_attachment(
                 db,

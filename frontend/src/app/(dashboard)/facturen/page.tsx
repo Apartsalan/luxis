@@ -5,10 +5,15 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowUpDown,
   ArrowUpRight,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  Filter,
   FileText,
+  List,
   Paperclip,
   Plus,
   Receipt,
@@ -16,18 +21,27 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   useInvoices,
   useReceivables,
   useClaims,
+  useClaimClients,
   INVOICE_STATUS_LABELS,
   INVOICE_STATUS_COLORS,
-  type ContactReceivable,
+  type ClaimSortField,
+  type ClaimSortDir,
 } from "@/hooks/use-invoices";
 import { formatCurrency, formatDateShort } from "@/lib/utils";
 import { AGING_TONES, CREDIT_NOTE_TONE, TONES } from "@/lib/tones";
 import { QueryError } from "@/components/query-error";
 import { useDebounce } from "@/hooks/use-debounce";
+import { tokenStore } from "@/lib/token-store";
+
+const CLAIM_SORT_FIELDS: ReadonlySet<ClaimSortField> = new Set([
+  "invoice_date",
+  "principal_amount",
+]);
 
 export default function FacturenPage() {
   const searchParams = useSearchParams();
@@ -36,7 +50,14 @@ export default function FacturenPage() {
   const initialContactName = searchParams.get("contact_name") || "";
   const initialStatus = searchParams.get("status") || "";
 
-  const [activeTab, setActiveTab] = useState<"facturen" | "vorderingen" | "debiteuren">("facturen");
+  const [activeTab, setActiveTab] = useState<"facturen" | "vorderingen">(
+    () => (searchParams.get("tab") === "vorderingen" ? "vorderingen" : "facturen")
+  );
+  // Weergave binnen Kantoorfacturen: platte lijst of per-klant-samenvatting
+  // (het voormalige Debiteuren-tabblad).
+  const [kantoorView, setKantoorView] = useState<"lijst" | "per_klant">(
+    () => (searchParams.get("view") === "per_klant" ? "per_klant" : "lijst")
+  );
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [status, setStatus] = useState(initialStatus);
@@ -44,7 +65,23 @@ export default function FacturenPage() {
   const [contactName, setContactName] = useState(initialContactName);
   const [page, setPage] = useState(1);
 
-  // When URL changes (e.g. clicking from debiteurenoverzicht), pick it up
+  const switchTab = (tab: "facturen" | "vorderingen") => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "vorderingen") params.set("tab", "vorderingen");
+    else params.delete("tab");
+    router.replace(`/facturen${params.toString() ? `?${params}` : ""}`, { scroll: false });
+  };
+
+  const switchKantoorView = (view: "lijst" | "per_klant") => {
+    setKantoorView(view);
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === "per_klant") params.set("view", "per_klant");
+    else params.delete("view");
+    router.replace(`/facturen${params.toString() ? `?${params}` : ""}`, { scroll: false });
+  };
+
+  // When URL changes (e.g. clicking from debiteurenoverzicht, or browser-back), pick it up
   useEffect(() => {
     const newContactId = searchParams.get("contact_id") || "";
     const newContactName = searchParams.get("contact_name") || "";
@@ -52,8 +89,11 @@ export default function FacturenPage() {
     setContactId(newContactId);
     setContactName(newContactName);
     setStatus(newStatus);
+    setActiveTab(searchParams.get("tab") === "vorderingen" ? "vorderingen" : "facturen");
+    setKantoorView(searchParams.get("view") === "per_klant" ? "per_klant" : "lijst");
     if (newContactId) {
       setActiveTab("facturen");
+      setKantoorView("lijst");
       setPage(1);
     }
   }, [searchParams]);
@@ -85,9 +125,7 @@ export default function FacturenPage() {
           <p className="text-sm text-muted-foreground mt-0.5">
             {activeTab === "facturen"
               ? "Facturen die het kantoor zelf naar opdrachtgevers stuurt"
-              : activeTab === "vorderingen"
-                ? "Facturen van opdrachtgevers op hun debiteuren (op de dossiers)"
-                : "Openstaande vorderingen per relatie"}
+              : "Facturen van opdrachtgevers op hun debiteuren (op de dossiers)"}
           </p>
         </div>
         <Link
@@ -102,7 +140,7 @@ export default function FacturenPage() {
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-muted/50 p-1">
         <button
-          onClick={() => setActiveTab("facturen")}
+          onClick={() => switchTab("facturen")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "facturen"
               ? "bg-card text-foreground shadow-sm"
@@ -113,7 +151,7 @@ export default function FacturenPage() {
           Kantoorfacturen
         </button>
         <button
-          onClick={() => setActiveTab("vorderingen")}
+          onClick={() => switchTab("vorderingen")}
           className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "vorderingen"
               ? "bg-card text-foreground shadow-sm"
@@ -123,27 +161,46 @@ export default function FacturenPage() {
           <Receipt className="mr-1.5 inline h-4 w-4" />
           Vorderingen
         </button>
-        <button
-          onClick={() => setActiveTab("debiteuren")}
-          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === "debiteuren"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Users className="mr-1.5 inline h-4 w-4" />
-          Debiteuren
-          {receivables && receivables.total_overdue > 0 && (
-            <span className={`ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${TONES.danger.chip}`}>
-              {formatCurrency(receivables.total_overdue)}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* Facturen tab */}
       {activeTab === "facturen" && (
         <>
+          {/* Weergave-schakelaar: platte lijst ↔ per-klant-samenvatting */}
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 w-fit">
+            <button
+              onClick={() => switchKantoorView("lijst")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                kantoorView === "lijst"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <List className="h-3.5 w-3.5" />
+              Lijst
+            </button>
+            <button
+              onClick={() => switchKantoorView("per_klant")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                kantoorView === "per_klant"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users className="h-3.5 w-3.5" />
+              Per klant
+              {receivables && receivables.total_overdue > 0 && (
+                <span className={`ml-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold ${TONES.danger.chip}`}>
+                  {formatCurrency(receivables.total_overdue)}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {kantoorView === "per_klant" ? (
+            <DebiteurenTab receivables={receivables} isLoading={recvLoading} />
+          ) : (
+          <>
           {/* Filters */}
           <div className="space-y-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -473,31 +530,134 @@ export default function FacturenPage() {
               </Link>
             </div>
           )}
+          </>
+          )}
         </>
       )}
 
       {/* Vorderingen tab */}
       {activeTab === "vorderingen" && <VorderingenTab />}
-
-      {/* Debiteuren tab */}
-      {activeTab === "debiteuren" && (
-        <DebiteurenTab receivables={receivables} isLoading={recvLoading} />
-      )}
     </div>
   );
 }
 
+function ClaimSortHeader({
+  label,
+  field,
+  activeField,
+  direction,
+  onToggle,
+  align = "left",
+}: {
+  label: string;
+  field: ClaimSortField;
+  activeField: ClaimSortField | undefined;
+  direction: ClaimSortDir;
+  onToggle: (field: ClaimSortField) => void;
+  align?: "left" | "right";
+}) {
+  const active = activeField === field;
+  const Icon = active ? (direction === "asc" ? ChevronUp : ChevronDown) : ArrowUpDown;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(field)}
+      className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider transition-colors ${
+        active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+      } ${align === "right" ? "flex-row-reverse" : ""}`}
+    >
+      <span>{label}</span>
+      <Icon className={`h-3.5 w-3.5 ${active ? "opacity-100" : "opacity-50"}`} />
+    </button>
+  );
+}
+
 function VorderingenTab() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Zoeken blijft lokaal (typ-responsief + debounce), net als op de dossierpagina.
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
-  const [onlyOpen, setOnlyOpen] = useState(false);
   const [page, setPage] = useState(1);
+
+  // Discrete filters + sortering uit de URL (drill-downs en terug-knop landen op de
+  // gefilterde lijst — patroon CONN-8 / DF139-sort van zaken/page.tsx).
+  const [clientId, setClientId] = useState(() => searchParams.get("client_id") ?? "");
+  const [onlyOpen, setOnlyOpen] = useState(() => searchParams.get("only_open") === "true");
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get("date_from") ?? "");
+  const [dateTo, setDateTo] = useState(() => searchParams.get("date_to") ?? "");
+  const [hasFile, setHasFile] = useState<"" | "yes" | "no">(() => {
+    const v = searchParams.get("has_file");
+    return v === "yes" || v === "no" ? v : "";
+  });
+  const [showMoreFilters, setShowMoreFilters] = useState(
+    () => !!(searchParams.get("date_from") || searchParams.get("date_to") || searchParams.get("has_file"))
+  );
+
+  const sortByRaw = searchParams.get("sort_by") as ClaimSortField | null;
+  const sortBy: ClaimSortField | undefined =
+    sortByRaw && CLAIM_SORT_FIELDS.has(sortByRaw) ? sortByRaw : undefined;
+  const sortDir: ClaimSortDir = searchParams.get("sort_dir") === "asc" ? "asc" : "desc";
+
+  const { data: clients } = useClaimClients();
+
+  // Merge één of meer filter/sort-waarden in de URL, met behoud van tab= en de
+  // Kantoorfacturen-parameters. Leeg/null = verwijderen.
+  const patchUrl = (patch: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null || v === "") params.delete(k);
+      else params.set(k, v);
+    }
+    router.replace(`/facturen?${params.toString()}`, { scroll: false });
+  };
+
+  const toggleSort = (field: ClaimSortField) => {
+    const newDir: ClaimSortDir = sortBy === field && sortDir === "desc" ? "asc" : "desc";
+    patchUrl({ sort_by: field, sort_dir: newDir });
+    setPage(1);
+  };
+
+  const clearFilters = () => {
+    setClientId("");
+    setOnlyOpen(false);
+    setDateFrom("");
+    setDateTo("");
+    setHasFile("");
+    setSearch("");
+    setShowMoreFilters(false);
+    setPage(1);
+    patchUrl({ client_id: null, only_open: null, date_from: null, date_to: null, has_file: null });
+  };
 
   const { data, isLoading, isError, error, refetch } = useClaims({
     page,
     search: debouncedSearch || undefined,
     only_open: onlyOpen,
+    client_id: clientId || undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+    has_file: hasFile,
+    sort_by: sortBy,
+    sort_dir: sortDir,
   });
+
+  const activeFilters = [clientId, onlyOpen, dateFrom, dateTo, hasFile].filter(Boolean).length;
+
+  const openPdf = async (caseId: string, fileId: string) => {
+    try {
+      const token = tokenStore.getAccess();
+      const res = await fetch(`/api/cases/${caseId}/files/${fileId}/preview`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Kan de factuur-PDF niet openen");
+      const blob = await res.blob();
+      window.open(URL.createObjectURL(blob), "_blank");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Kan de factuur-PDF niet openen");
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -516,19 +676,108 @@ function VorderingenTab() {
             className="w-full rounded-lg border border-input bg-card pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
           />
         </div>
-        <label className="inline-flex items-center gap-2 rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={onlyOpen}
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={clientId}
             onChange={(e) => {
-              setOnlyOpen(e.target.checked);
+              setClientId(e.target.value);
               setPage(1);
+              patchUrl({ client_id: e.target.value || null });
             }}
-            className="h-4 w-4 rounded border-input"
-          />
-          Alleen lopende dossiers
-        </label>
+            aria-label="Filter op opdrachtgever"
+            className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors max-w-[220px]"
+          >
+            <option value="">Alle opdrachtgevers</option>
+            {clients?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <label className="inline-flex items-center gap-2 rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={onlyOpen}
+              onChange={(e) => {
+                setOnlyOpen(e.target.checked);
+                setPage(1);
+                patchUrl({ only_open: e.target.checked ? "true" : null });
+              }}
+              className="h-4 w-4 rounded border-input"
+            />
+            Alleen lopende dossiers
+          </label>
+          <button
+            onClick={() => setShowMoreFilters(!showMoreFilters)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
+              showMoreFilters || dateFrom || dateTo || hasFile
+                ? "border-primary/30 bg-primary/5 text-primary"
+                : "border-border text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Meer filters
+            {(dateFrom || dateTo || hasFile) && (
+              <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+                {[dateFrom, dateTo, hasFile].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+          {activeFilters > 0 && (
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+            >
+              <X className="h-3 w-3" />
+              Wis filters
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Uitgebreide filters */}
+      {showMoreFilters && (
+        <div className="flex flex-wrap gap-3 rounded-lg border border-border bg-card px-4 py-3 animate-fade-in">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="v-datum-vanaf" className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Factuurdatum vanaf</label>
+            <input
+              id="v-datum-vanaf"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); patchUrl({ date_from: e.target.value || null }); }}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="v-datum-tm" className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Factuurdatum t/m</label>
+            <input
+              id="v-datum-tm"
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); patchUrl({ date_to: e.target.value || null }); }}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="v-pdf" className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Factuur-PDF</label>
+            <select
+              id="v-pdf"
+              value={hasFile}
+              onChange={(e) => {
+                const v = e.target.value as "" | "yes" | "no";
+                setHasFile(v);
+                setPage(1);
+                patchUrl({ has_file: v || null });
+              }}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 min-w-[160px]"
+            >
+              <option value="">Maakt niet uit</option>
+              <option value="yes">Wel gekoppeld</option>
+              <option value="no">Niet gekoppeld</option>
+            </select>
+          </div>
+        </div>
+      )}
 
       {isError ? (
         <QueryError message={error?.message} onRetry={() => refetch()} />
@@ -552,8 +801,12 @@ function VorderingenTab() {
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Factuurnr.</th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Debiteur</th>
                   <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dossier</th>
-                  <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Factuurdatum</th>
-                  <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">Hoofdsom</th>
+                  <th className="hidden md:table-cell px-4 py-3.5 text-left">
+                    <ClaimSortHeader label="Factuurdatum" field="invoice_date" activeField={sortBy} direction={sortDir} onToggle={toggleSort} />
+                  </th>
+                  <th className="px-4 py-3.5 text-right">
+                    <ClaimSortHeader label="Hoofdsom" field="principal_amount" activeField={sortBy} direction={sortDir} onToggle={toggleSort} align="right" />
+                  </th>
                   <th className="px-4 py-3.5 w-10 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground" title="Factuur-PDF aanwezig">PDF</th>
                 </tr>
               </thead>
@@ -580,10 +833,15 @@ function VorderingenTab() {
                       {formatCurrency(Number(v.principal_amount))}
                     </td>
                     <td className="px-4 py-3.5 text-center">
-                      {v.has_invoice_file ? (
-                        <Link href={`/zaken/${v.case_id}`} title="Factuur-PDF staat op het dossier" className="inline-flex text-muted-foreground hover:text-primary transition-colors">
+                      {v.has_invoice_file && v.invoice_file_id ? (
+                        <button
+                          type="button"
+                          onClick={() => openPdf(v.case_id, v.invoice_file_id!)}
+                          title="Open de factuur-PDF"
+                          className="inline-flex text-muted-foreground hover:text-primary transition-colors"
+                        >
                           <Paperclip className="h-4 w-4" />
-                        </Link>
+                        </button>
                       ) : (
                         <span className="text-muted-foreground/30" title="Geen factuur-PDF gekoppeld">—</span>
                       )}
@@ -630,7 +888,7 @@ function VorderingenTab() {
           </div>
           <p className="mt-5 text-base font-medium text-foreground">Geen vorderingen gevonden</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {search ? "Probeer andere zoektermen" : "Vorderingen ontstaan op de dossiers"}
+            {search || activeFilters > 0 ? "Probeer andere zoektermen of filters" : "Vorderingen ontstaan op de dossiers"}
           </p>
         </div>
       )}

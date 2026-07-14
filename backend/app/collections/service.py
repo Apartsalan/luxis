@@ -80,6 +80,10 @@ async def list_claims(
     return list(result.scalars().all())
 
 
+# Sorteervelden voor het Vorderingen-overzicht (zelfde stijl als zaken/facturen).
+CLAIM_SORT_FIELDS = ("invoice_date", "principal_amount")
+
+
 async def list_all_claims(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -88,11 +92,24 @@ async def list_all_claims(
     per_page: int = 20,
     search: str | None = None,
     only_open: bool = False,
+    client_id: uuid.UUID | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    has_file: bool | None = None,
+    sort_by: str | None = None,
+    sort_dir: str = "desc",
 ) -> dict:
     """Tenant-breed overzicht van alle vorderingen (debiteuren-facturen), met het
     dossier en de debiteur erbij. Voor het Vorderingen-tabblad in het Facturen-menu.
 
-    `only_open` beperkt tot vorderingen op een niet-afgesloten dossier.
+    Filters:
+    - `only_open`  — beperkt tot vorderingen op een niet-afgesloten dossier.
+    - `client_id`  — alleen vorderingen op dossiers van deze opdrachtgever.
+    - `date_from` / `date_to` — factuurdatum-bereik (inclusief; NULL-datums vallen buiten een bereik).
+    - `has_file`   — True = alleen mét gekoppelde factuur-PDF, False = alleen zónder.
+
+    Sorteren op `invoice_date` of `principal_amount` (asc/desc). Default =
+    factuurdatum aflopend (NULLs achteraan), dan verzuimdatum aflopend.
     """
     from app.relations.models import Contact
 
@@ -105,6 +122,16 @@ async def list_all_claims(
     ]
     if only_open:
         filters.append(Case.status.notin_(TERMINAL_STATUSES))
+    if client_id is not None:
+        filters.append(Case.client_id == client_id)
+    if date_from is not None:
+        filters.append(Claim.invoice_date >= date_from)
+    if date_to is not None:
+        filters.append(Claim.invoice_date <= date_to)
+    if has_file is True:
+        filters.append(Claim.invoice_file_id.isnot(None))
+    elif has_file is False:
+        filters.append(Claim.invoice_file_id.is_(None))
     if search:
         pattern = f"%{search.strip()}%"
         filters.append(
@@ -119,6 +146,14 @@ async def list_all_claims(
         return stmt.join(Case, Claim.case_id == Case.id).outerjoin(
             debtor, Case.opposing_party_id == debtor.id
         )
+
+    # Sorteerkolom + richting bepalen; onbekend veld valt terug op de default.
+    if sort_by in CLAIM_SORT_FIELDS:
+        col = Claim.invoice_date if sort_by == "invoice_date" else Claim.principal_amount
+        primary = col.asc().nullslast() if sort_dir == "asc" else col.desc().nullslast()
+        order_by = [primary, Claim.default_date.desc()]
+    else:
+        order_by = [Claim.invoice_date.desc().nullslast(), Claim.default_date.desc()]
 
     total = (
         await db.execute(
@@ -144,10 +179,7 @@ async def list_all_claims(
                 )
             )
             .where(*filters)
-            .order_by(
-                Claim.invoice_date.desc().nullslast(),
-                Claim.default_date.desc(),
-            )
+            .order_by(*order_by)
             .offset((page - 1) * per_page)
             .limit(per_page)
         )
@@ -162,6 +194,7 @@ async def list_all_claims(
             "principal_amount": claim.principal_amount,
             "description": claim.description,
             "has_invoice_file": claim.invoice_file_id is not None,
+            "invoice_file_id": claim.invoice_file_id,
             "case_id": claim.case_id,
             "case_number": case_number,
             "case_status": case_status,
@@ -178,6 +211,31 @@ async def list_all_claims(
         "pages": (total + per_page - 1) // per_page,
         "total_principal": total_principal,
     }
+
+
+async def list_claim_clients(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> list[dict]:
+    """Distinct opdrachtgevers met minstens één actieve vordering, op naam
+    gesorteerd. Voedt de opdrachtgever-dropdown op het Vorderingen-tabblad."""
+    from app.relations.models import Contact
+
+    rows = (
+        await db.execute(
+            select(Contact.id, Contact.name)
+            .join(Case, Case.client_id == Contact.id)
+            .join(Claim, Claim.case_id == Case.id)
+            .where(
+                Claim.tenant_id == tenant_id,
+                Claim.is_active.is_(True),
+                Case.tenant_id == tenant_id,
+            )
+            .distinct()
+            .order_by(Contact.name)
+        )
+    ).all()
+    return [{"id": cid, "name": name} for cid, name in rows]
 
 
 async def create_claim(

@@ -181,6 +181,7 @@ export interface ClaimOverviewItem {
   principal_amount: string;
   description: string;
   has_invoice_file: boolean;
+  invoice_file_id: string | null;
   case_id: string;
   case_number: string;
   case_status: string;
@@ -196,28 +197,68 @@ export interface PaginatedClaims {
   total_principal: string;
 }
 
+export type ClaimSortField = "invoice_date" | "principal_amount";
+export type ClaimSortDir = "asc" | "desc";
+
 export function useClaims(params?: {
   page?: number;
   per_page?: number;
   search?: string;
   only_open?: boolean;
+  client_id?: string;
+  date_from?: string;
+  date_to?: string;
+  has_file?: "" | "yes" | "no";
+  sort_by?: ClaimSortField;
+  sort_dir?: ClaimSortDir;
 }) {
   const page = params?.page ?? 1;
   const per_page = params?.per_page ?? 20;
   const search = params?.search ?? "";
   const only_open = params?.only_open ?? false;
+  const client_id = params?.client_id ?? "";
+  const date_from = params?.date_from ?? "";
+  const date_to = params?.date_to ?? "";
+  const has_file = params?.has_file ?? "";
+  const sort_by = params?.sort_by;
+  const sort_dir = params?.sort_dir ?? "desc";
 
   return useQuery<PaginatedClaims>({
-    queryKey: ["claims", { page, per_page, search, only_open }],
+    queryKey: ["claims", { page, per_page, search, only_open, client_id, date_from, date_to, has_file, sort_by, sort_dir }],
     queryFn: async () => {
       const qp = new URLSearchParams({ page: String(page), per_page: String(per_page) });
       if (search) qp.set("search", search);
       if (only_open) qp.set("only_open", "true");
+      if (client_id) qp.set("client_id", client_id);
+      if (date_from) qp.set("date_from", date_from);
+      if (date_to) qp.set("date_to", date_to);
+      if (has_file === "yes") qp.set("has_file", "true");
+      if (has_file === "no") qp.set("has_file", "false");
+      if (sort_by) {
+        qp.set("sort_by", sort_by);
+        qp.set("sort_dir", sort_dir);
+      }
       const res = await api(`/api/claims?${qp}`);
       if (!res.ok) throw new Error("Kan vorderingen niet laden");
       return res.json();
     },
     placeholderData: keepPreviousData,
+  });
+}
+
+export interface ClaimClient {
+  id: string;
+  name: string;
+}
+
+export function useClaimClients() {
+  return useQuery<ClaimClient[]>({
+    queryKey: ["claims", "clients"],
+    queryFn: async () => {
+      const res = await api("/api/claims/clients");
+      if (!res.ok) throw new Error("Kan opdrachtgevers niet laden");
+      return res.json();
+    },
   });
 }
 

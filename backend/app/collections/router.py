@@ -17,6 +17,7 @@ from app.collections.schemas import (
     ArrangementResponse,
     ArrangementUpdate,
     ArrangementWithInstallmentsResponse,
+    ClaimClient,
     ClaimCreate,
     ClaimResponse,
     ClaimUpdate,
@@ -45,6 +46,12 @@ async def list_all_claims(
     per_page: int = Query(default=20, ge=1, le=100),
     search: str | None = Query(default=None),
     only_open: bool = Query(default=False),
+    client_id: uuid.UUID | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    has_file: bool | None = Query(default=None),
+    sort_by: str | None = Query(default=None),
+    sort_dir: str = Query(default="desc", pattern="^(asc|desc)$"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -56,7 +63,22 @@ async def list_all_claims(
         per_page=per_page,
         search=search,
         only_open=only_open,
+        client_id=client_id,
+        date_from=date_from,
+        date_to=date_to,
+        has_file=has_file,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
     )
+
+
+@claims_router.get("/clients", response_model=list[ClaimClient])
+async def list_claim_clients(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Opdrachtgevers met minstens één actieve vordering — voor de filter-dropdown."""
+    return await service.list_claim_clients(db, current_user.tenant_id)
 
 
 # ── Claims ───────────────────────────────────────────────────────────────────

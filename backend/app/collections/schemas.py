@@ -70,6 +70,7 @@ class ClaimOverviewItem(BaseModel):
     principal_amount: Decimal
     description: str
     has_invoice_file: bool
+    invoice_file_id: uuid.UUID | None
     case_id: uuid.UUID
     case_number: str
     case_status: str
@@ -83,6 +84,14 @@ class PaginatedClaims(BaseModel):
     per_page: int
     pages: int
     total_principal: Decimal
+
+
+class ClaimClient(BaseModel):
+    """Opdrachtgever met minstens één actieve vordering — voor de filter-dropdown
+    op het Vorderingen-tabblad."""
+
+    id: uuid.UUID
+    name: str
 
 
 # ── Payment Schemas ──────────────────────────────────────────────────────────

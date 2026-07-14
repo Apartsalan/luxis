@@ -25,8 +25,11 @@
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups/luxis}"
-RCLONE_REMOTE="${RCLONE_REMOTE:-luxis-backup}"
-RCLONE_BUCKET="${RCLONE_BUCKET:-Luxis-backup}"
+# Default = de Europese versleutelde bucket (Amsterdam). De cron zet deze env-vars
+# expliciet; de oude Amerikaanse bucket/remote (`luxis-backup`) is per juli 2026
+# verwijderd — nooit meer als default naar de VS wijzen.
+RCLONE_REMOTE="${RCLONE_REMOTE:-luxis-backup-eu-crypt}"
+RCLONE_BUCKET="${RCLONE_BUCKET:-backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 OFFSITE_RETENTION_DAYS="${OFFSITE_RETENTION_DAYS:-90}"
 DATE=$(date +%Y-%m-%d_%H%M)

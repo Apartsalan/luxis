@@ -14,7 +14,45 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
+from .backfill_notes import build_new_notes, clean as _clean_richtext
 from .parse import BaseNetRecord
+
+# Nederland = impliciete standaard → geen land opslaan. Buitenland: nette NL-naam;
+# een onbekende buitenlandse waarde blijft behouden (getrimd) i.p.v. weggegooid.
+_NL_COUNTRY = {"nederland", "netherlands", "nl", "the netherlands", "holland", ""}
+_COUNTRY_NL = {
+    "belgië": "België", "belgie": "België", "belgium": "België",
+    "united kingdom": "Verenigd Koninkrijk", "verenigd koninkrijk": "Verenigd Koninkrijk",
+    "usa": "Verenigde Staten", "united states of america": "Verenigde Staten",
+    "united states": "Verenigde Staten",
+    "duitsland": "Duitsland", "germany": "Duitsland",
+    "turkije": "Turkije", "turkey": "Turkije",
+    "finland": "Finland",
+    "switzerland": "Zwitserland", "zwitserland": "Zwitserland",
+    "bulgaria": "Bulgarije", "bulgarije": "Bulgarije",
+    "romania": "Roemenië", "roemenië": "Roemenië",
+    "portugal": "Portugal",
+    "spanje": "Spanje", "spain": "Spanje",
+    "republiek polen": "Polen", "polen": "Polen", "poland": "Polen",
+    "dubai": "Verenigde Arabische Emiraten",
+    "united arab emirates": "Verenigde Arabische Emiraten",
+    "hong kong": "Hongkong",
+    "italia": "Italië", "italy": "Italië", "italië": "Italië",
+    "panama": "Panama", "kenya": "Kenia", "kenia": "Kenia",
+    "sweden": "Zweden", "zweden": "Zweden",
+    "greece": "Griekenland", "griekenland": "Griekenland",
+    "malta": "Malta", "lithuania": "Litouwen", "litouwen": "Litouwen",
+    "latvia": "Letland", "letland": "Letland",
+    "serbia": "Servië", "servië": "Servië", "liechtenstein": "Liechtenstein",
+}
+
+
+def _country(value: str | None) -> str | None:
+    """Landwaarde → nette NL-naam; None bij Nederland/leeg (binnenland = standaard)."""
+    v = (value or "").strip()
+    if v.lower() in _NL_COUNTRY:
+        return None
+    return _COUNTRY_NL.get(v.lower(), v)
 
 
 # ── Kleine helpers ───────────────────────────────────────────────────────────
@@ -92,9 +130,11 @@ def map_company(rec: BaseNetRecord) -> dict:
         "visit_address": _address(rec, "o"),
         "visit_postcode": _clean(rec.get("ozipcode")),
         "visit_city": _clean(rec.get("ocity")),
+        "visit_country": _country(rec.get("ocountry")),
         "postal_address": _address(rec, "m"),
         "postal_postcode": _clean(rec.get("mzipcode")),
         "postal_city": _clean(rec.get("mcity")),
+        "postal_country": _country(rec.get("mcountry")),
         "is_active": (rec.get("rinactive") or "").lower() != "true",
         "notes": _basenet_note(rec, extra=_clean(rec.get("notes"))),
     }
@@ -117,14 +157,17 @@ def map_person(rec: BaseNetRecord) -> dict:
         "first_name": _clean(rec.get("firstname")),
         "last_name": _clean(rec.get("lastname")),
         "salutation": _salutation(rec),
+        "date_of_birth": _date(rec.get("birthday")),
         "email": _clean(rec.get("email")),
         "phone": _clean(rec.get("tel1")) or _clean(rec.get("mobile")),
         "visit_address": _address(rec, "o") or _address(rec, "h"),
         "visit_postcode": _clean(rec.get("ozipcode")) or _clean(rec.get("hzipcode")),
         "visit_city": _clean(rec.get("ocity")) or _clean(rec.get("hcity")),
+        "visit_country": _country(rec.get("ocountry")) or _country(rec.get("hcountry")),
         "postal_address": _address(rec, "m"),
         "postal_postcode": _clean(rec.get("mzipcode")),
         "postal_city": _clean(rec.get("mcity")),
+        "postal_country": _country(rec.get("mcountry")),
         "is_active": (rec.get("rinactive") or "").lower() != "true",
         "notes": _basenet_note(rec, extra=_clean(rec.get("notes"))),
     }
@@ -184,6 +227,24 @@ def map_incasso(
     date_closed = _date(rec.get("pdateend"))
     basenet_status = _clean(rec.get("pstatus")) or "?"
     interest_rate = _decimal(rec.get("incinterest"))
+    provisie = _decimal(rec.get("incprovisie"))  # percent-getal (15.00 = 15%)
+
+    # Herkomst-regel + rentetype-context (documentatie, geen herberekening — audit S208 §1).
+    marker = (
+        f"[BaseNet-import] {inccode} · systemid={rec.systemid} · "
+        f"BaseNet-status: {basenet_status}"
+    )
+    rentetype = _clean(rec.get("incinteresttype"))
+    if rentetype:
+        marker += f" · rentetype BaseNet: {rentetype}"
+    samengesteld = _clean(rec.get("incssamengesteld"))
+    if samengesteld:
+        marker += f" · samengesteld: {samengesteld}"
+    # Werknotities (pmemo) + waarschuwingen (palert) meteen in de dossiernotitie
+    # (waarschuwing bovenaan, herkomst-regel in het midden, notitie onderaan).
+    debtor_notes = build_new_notes(
+        marker, _clean_richtext(rec.get("palert")), _clean_richtext(rec.get("pmemo"))
+    )
 
     return {
         "case_number": inccode,
@@ -198,6 +259,8 @@ def map_incasso(
         # Custom rente uit BaseNet alleen bewaren als contractueel percentage
         # (niet leidend voor archief; herberekening gebeurt niet).
         "contractual_rate": interest_rate if interest_type == "contractual" else None,
+        # Succesprovisie-percentage (bv. 15%). Alleen bewaren als er echt een is.
+        "provisie_percentage": provisie if provisie and provisie > 0 else None,
         "description": _clean(rec.get("pscode")),
         "reference": _clean(rec.get("inckenmerkclient")),  # cliënt-kenmerk (backlog #1)
         "bik_override": _decimal(rec.get("incincassocost")),
@@ -208,10 +271,7 @@ def map_incasso(
         # (cached = hoofdsom + rente) — dat is NIET de hoofdsom.
         "total_principal": Decimal("0.00"),
         "total_paid": Decimal("0.00"),  # betalingen = fase 1b
-        "debtor_notes": (
-            f"[BaseNet-import] {inccode} · systemid={rec.systemid} · "
-            f"BaseNet-status: {basenet_status}"
-        ),
+        "debtor_notes": debtor_notes,
     }
 
 

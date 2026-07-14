@@ -86,8 +86,8 @@ class Case(TenantBase):
     )  # e.g. 8.00 (only for contractual)
 
     contractual_compound: Mapped[bool] = mapped_column(
-        Boolean, default=True, nullable=False
-    )  # Whether contractual interest is compound
+        Boolean, default=True, server_default="true", nullable=False
+    )  # Whether contractual interest is compound; server_default spiegelt prod (S209-review)
 
     # S207: rentedatum / bevriezing. De datum tot waar rente wordt berekend.
     # NULL = tot vandaag (lopende rente). Gezet = rente stopt op die datum en

@@ -118,7 +118,11 @@ class Contact(TenantBase):
     )
 
     # BTW status — determines whether 21% BTW is added to BIK for this client's cases
-    is_btw_plichtig: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # server_default spiegelt migratie aud124_01 (prod heeft 'true' als DB-default);
+    # zonder dit wijkt de test-DB af van prod en faalt een raw-SQL insert (S209-review).
+    is_btw_plichtig: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
 
     # Algemene Voorwaarden (AI-UX-11)
     terms_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)

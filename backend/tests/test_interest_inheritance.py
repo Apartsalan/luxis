@@ -352,3 +352,82 @@ async def test_case_no_minimum_fee_when_client_has_none(
     response = await client.post("/api/cases", json=payload, headers=auth_headers)
     assert response.status_code == 201, response.text
     assert response.json().get("minimum_fee") is None
+
+
+# ── S210: provisie-% inheritance from client ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_case_inherits_provisie_from_client(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """S210 — when contact has default_provisie_percentage, new cases inherit it."""
+    test_company.default_provisie_percentage = Decimal("15.00")
+    await db.commit()
+
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["provisie_percentage"]) == 15.00
+
+
+@pytest.mark.asyncio
+async def test_case_provisie_explicit_overrides_client_default(
+    client: AsyncClient,
+    auth_headers: dict,
+    test_company: Contact,
+    db: AsyncSession,
+):
+    """An explicit provisie_percentage on case create overrides the client default."""
+    test_company.default_provisie_percentage = Decimal("15.00")
+    await db.commit()
+
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+        "provisie_percentage": "10.00",
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["provisie_percentage"]) == 10.00
+
+
+@pytest.mark.asyncio
+async def test_case_no_provisie_when_client_has_none(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """No client default → case has no provisie_percentage."""
+    payload = {
+        "case_type": "incasso",
+        "client_id": str(test_company.id),
+        "date_opened": date.today().isoformat(),
+    }
+    response = await client.post("/api/cases", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    assert response.json().get("provisie_percentage") is None
+
+
+@pytest.mark.asyncio
+async def test_create_contact_with_default_provisie(
+    client: AsyncClient, auth_headers: dict
+):
+    """Creating a contact with default_provisie_percentage should persist + return."""
+    payload = {
+        "contact_type": "company",
+        "name": "Provisie Test B.V.",
+        "default_provisie_percentage": "15.00",
+    }
+    response = await client.post("/api/relations", json=payload, headers=auth_headers)
+    assert response.status_code == 201, response.text
+    data = response.json()
+    assert float(data["default_provisie_percentage"]) == 15.00

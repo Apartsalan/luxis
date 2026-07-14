@@ -148,6 +148,7 @@ export default function RelatieDetailPage() {
       default_bik_override_percentage: contact.default_bik_override_percentage?.toString() || "",
       default_minimum_fee: contact.default_minimum_fee?.toString() || "",
       default_bik_minimum_fee: contact.default_bik_minimum_fee?.toString() || "",
+      default_provisie_percentage: contact.default_provisie_percentage?.toString() || "",
       is_btw_plichtig: contact.is_btw_plichtig ? "true" : "false",
       notes: contact.notes || "",
     });
@@ -205,6 +206,8 @@ export default function RelatieDetailPage() {
       // DF120: minimum_fee — independent of BIK mode (still applies as floor)
       data.default_minimum_fee = editForm.default_minimum_fee || null;
       data.default_bik_minimum_fee = editForm.default_bik_minimum_fee || null;
+      // S210: standaard succesprovisie-% dat nieuwe dossiers van deze cliënt erven
+      data.default_provisie_percentage = editForm.default_provisie_percentage || null;
       // AUD124-01: BTW-plichtig flag
       (data as Record<string, unknown>).is_btw_plichtig = editForm.is_btw_plichtig === "true";
       data.notes = editForm.notes?.trim() || null;

@@ -58,6 +58,7 @@ export interface Contact {
   default_bik_override_percentage: number | null;
   default_minimum_fee: number | null;
   default_bik_minimum_fee: number | null;
+  default_provisie_percentage: number | null;
   is_btw_plichtig: boolean;
   terms_file_name: string | null;
   notes: string | null;
@@ -106,6 +107,7 @@ interface ContactCreateInput {
   default_bik_override_percentage?: string | number;
   default_minimum_fee?: string | number;
   default_bik_minimum_fee?: string | number;
+  default_provisie_percentage?: string | number;
   is_btw_plichtig?: boolean;
   notes?: string;
 }

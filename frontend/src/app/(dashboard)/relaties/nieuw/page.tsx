@@ -37,6 +37,7 @@ export default function NieuweRelatiePage() {
     default_bik_override_percentage: "",
     default_minimum_fee: "",
     default_bik_minimum_fee: "",
+    default_provisie_percentage: "",
     notes: "",
   });
   const [error, setError] = useState("");
@@ -139,6 +140,9 @@ export default function NieuweRelatiePage() {
       }),
       ...(form.default_minimum_fee && { default_minimum_fee: form.default_minimum_fee }),
       ...(form.default_bik_minimum_fee && { default_bik_minimum_fee: form.default_bik_minimum_fee }),
+      ...(form.default_provisie_percentage && {
+        default_provisie_percentage: form.default_provisie_percentage,
+      }),
       ...(form.notes && { notes: form.notes }),
     };
 
@@ -558,6 +562,25 @@ export default function NieuweRelatiePage() {
                 />
               </div>
             )}
+            <div>
+              <label htmlFor="rel-default_provisie_percentage" className="block text-sm font-medium text-foreground">
+                Standaard provisie (%)
+              </label>
+              <input
+                id="rel-default_provisie_percentage"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={form.default_provisie_percentage}
+                onChange={(e) => updateField("default_provisie_percentage", e.target.value)}
+                className={inputClass}
+                placeholder="Bijv. 15.00"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Succesprovisie over ge&iuml;nd bedrag. Nieuwe dossiers nemen dit automatisch over.
+              </p>
+            </div>
             <div>
               <label htmlFor="rel-default_minimum_fee" className="block text-sm font-medium text-foreground">
                 Minimum provisie (€)

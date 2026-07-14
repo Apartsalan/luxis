@@ -549,6 +549,22 @@ export function ContactInfoSection({
               </div>
             )}
             <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Standaard provisie (%)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={editForm.default_provisie_percentage || ""}
+                onChange={(e) => updateEdit("default_provisie_percentage", e.target.value)}
+                className={inputClass}
+                placeholder="Bijv. 15.00"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Succesprovisie over geïnd bedrag. Nieuwe dossiers nemen dit automatisch over.
+              </p>
+            </div>
+            <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Minimum provisie (€)</label>
               <input
                 type="number"
@@ -593,7 +609,7 @@ export function ContactInfoSection({
               </p>
             </div>
           </div>
-        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null || contact.default_minimum_fee != null || contact.default_bik_minimum_fee != null || !contact.is_btw_plichtig) ? (
+        ) : (contact.default_hourly_rate || contact.payment_term_days || contact.billing_email || contact.iban || contact.default_interest_type || contact.default_bik_override != null || contact.default_bik_override_percentage != null || contact.default_provisie_percentage != null || contact.default_minimum_fee != null || contact.default_bik_minimum_fee != null || !contact.is_btw_plichtig) ? (
           <dl className="grid gap-3 sm:grid-cols-2">
             {contact.default_hourly_rate && (
               <div>
@@ -640,6 +656,14 @@ export function ContactInfoSection({
                   {contact.default_bik_override_percentage != null
                     ? `${contact.default_bik_override_percentage}% van hoofdsom`
                     : `€ ${Number(contact.default_bik_override).toFixed(2)} (vast bedrag)`}
+                </dd>
+              </div>
+            )}
+            {contact.default_provisie_percentage != null && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Standaard provisie</dt>
+                <dd className="text-sm font-medium text-foreground">
+                  {contact.default_provisie_percentage}% over geïnd bedrag
                 </dd>
               </div>
             )}

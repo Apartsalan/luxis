@@ -98,6 +98,12 @@ class Contact(TenantBase):
     # DF120 (Lisanne demo 2026-04-08): default minimum provisie — alléén bodem
     # voor het honorarium dat aan de cliënt wordt gefactureerd. NIET voor BIK.
     default_minimum_fee: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+    # S210: standaard succesprovisie-% dat elk nieuw dossier van deze cliënt erft
+    # (migratie s210_contact_provisie). Zelfde overerf-patroon als de default_bik_*-velden;
+    # dossier-waarde wint altijd. De berekeningsbasis blijft "collected_amount" (dossierdefault).
+    default_provisie_percentage: Mapped[Decimal | None] = mapped_column(
+        Numeric(5, 2), nullable=True
+    )
     # DF138-16: aparte bodem voor BIK-percentage berekening. Geldt voor de
     # incassokosten die van de debiteur worden gevorderd (vordering + mail).
     # Apart van default_minimum_fee zodat factuur naar cliënt en vordering aan

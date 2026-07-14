@@ -462,12 +462,14 @@ async def create_case(
     bik_override_percentage = data.bik_override_percentage
     minimum_fee = data.minimum_fee
     bik_minimum_fee = data.bik_minimum_fee
+    provisie_percentage = data.provisie_percentage
 
     needs_client_lookup = (
         interest_type is None
         or (bik_override is None and bik_override_percentage is None)
         or minimum_fee is None
         or bik_minimum_fee is None
+        or provisie_percentage is None
     )
     client = None
     if needs_client_lookup:
@@ -503,6 +505,11 @@ async def create_case(
     # los van het provisie-minimum (minimum_fee).
     if bik_minimum_fee is None and client and client.default_bik_minimum_fee is not None:
         bik_minimum_fee = client.default_bik_minimum_fee
+
+    # S210: provisie-% inheritance — zelfde patroon; alleen overnemen als het
+    # dossier het niet expliciet zet. Basis blijft de dossierdefault (collected_amount).
+    if provisie_percentage is None and client and client.default_provisie_percentage is not None:
+        provisie_percentage = client.default_provisie_percentage
 
     # Validate interest_type
     if interest_type not in INTEREST_TYPES:
@@ -551,7 +558,7 @@ async def create_case(
         billing_method=data.billing_method,
         fixed_price_amount=data.fixed_price_amount,
         budget_hours=data.budget_hours,
-        provisie_percentage=data.provisie_percentage,
+        provisie_percentage=provisie_percentage,
         provisie_base=data.provisie_base,
         fixed_case_costs=data.fixed_case_costs,
         minimum_fee=minimum_fee,

@@ -6,6 +6,20 @@
 
 Bedragen in dit document zijn bruto, inclusief btw, tenzij expliciet anders vermeld. Alle tellingen komen uit de BaseNet-export `Xml_02-07-2026_2400.zip`, een volledige parserrun en read-only controles op de productiedatabase. Tijdens dit onderzoek zijn geen facturen, betalingen, uren of andere productiegegevens geschreven en is geen e-mail verstuurd.
 
+## 0. Correcties na bronmeting (S214, 14 juli 2026)
+
+Bij het bouwen van de importer (`scripts/basenet/import_invoices.py`) bleek dat de conclusies en aantallen van dit recept **exact kloppen tegen de export**, maar dat drie veldniveau-beschrijvingen in §3–§4 fout waren. De importer is op de gemeten velden gebouwd, niet op de recept-tekst. De droogloop reproduceert 439 / 7 / 12 / 19 / 90, bruto € 302.750,39, openstaand € 72.762,09, derdengelden −€ 90.718,21, 325 betalingen € 248.364,17 en 23 creditkoppelingen — alles tot op de cent.
+
+| Beschrijving in §3–§4 | Gemeten werkelijkheid | Gehanteerde regel |
+|---|---|---|
+| Vervaldatum uit `invduedate` op alle 439 | Alle 30 creditnota's (`invdebcred=2`) hebben géén `invduedate` | Creditnota → `due_date = invoice_date` (terugval); gewone factuur → `invduedate` |
+| Betaaldatum/methode uit Mollie-velden (`paidAt`, `amountRefunded`) | Die velden bestaan niet in de export | `Payment.payment_status = 4` = de 27 door Mollie bevestigde; datum = `Payment.insertdate`; 20 sluiten aan op een betaalde auto-kop |
+| `case_id` uit een kop-veld "inccode" | De projectcode staat in **`invpcode`** op de kop (gevuld op 566/567), één project per factuur | `invpcode` met IN-prefix → dossier op `case_number`; D-prefix → `case_id = NULL` |
+
+Twee extra bevestigingen uit de bron:
+- **Derdengelden = product `100013` ("Verrekening incassodossiers")** op een regel, **plus** de twee verreken-/correctieposten `100242` en `100363` die geen 100013-regel hebben. 88 + 2 = 90; de bruto sluit op −€ 90.718,21 (de simpele "bedrag < 0"-regel vangt 109 facturen en is fout).
+- **Creditkoppeling staat op de ORIGINELE factuur** (`invcredinv` wijst naar het creditnummer); de creditnota zelf heeft het veld leeg. De import keert die richting om.
+
 ## 1. Uitkomst
 
 Luxis bevat op productie nog geen facturen, factuurregels, factuurbetalingen of tijdregels. De BaseNet-export bevat 567 factuurkoppen en 773 regels. Die 567 koppen mogen niet als één homogene groep worden gemigreerd:

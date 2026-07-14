@@ -1,6 +1,6 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
-Sessie 213 — KvK-rechtsvorm-backfill (rentebijlage scherpstellen) + kleine restpunten
+Sessie 213 — KvK-rechtsvorm-backfill + Facturen-menu naar 2 tabs + factuur-PDF's koppelen
 
 ## Start
 Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant modules,
@@ -25,6 +25,23 @@ Zodra Arsalan de **echte productie-sleutel** meldt:
 4. **Meten wat het oplevert:** hoeveel zaken krijgen nu géén rentebijlage meer (rechtsvorm = beperkt
    aansprakelijk) t.o.v. de besluit-B-situatie waarin iedereen 'm kreeg. Rapporteer in gewone taal.
 
+## Taak 2 — Facturen-menu: van 3 naar 2 tabs (besluit Arsalan, 14 juli)
+De huidige 3 tabs mengen categorieën met een weergave: "Debiteuren" is geen aparte soort maar
+een per-klant-samenvatting van de kantoorfacturen. Arsalan wil 2 tabs:
+1. **Kantoorfacturen** — met binnenin een weergave-schakelaar *Lijst* ↔ *Per klant* (de huidige
+   DebiteurenTab-component wordt die tweede weergave; niets weggooien, alleen verplaatsen).
+2. **Vorderingen** — blijft, maar het paperclipje wordt een DIRECTE link naar de factuur-PDF
+   (openen/downloaden via de bestaande dossierbestand-download-route), niet meer naar het dossier.
+
+## Taak 3 — Factuur-PDF's aan de vorderingen koppelen (prod-schrijfactie, akkoord vereist)
+De PDF's bestaan als dossierbestanden (±1.750 `Factuur_<nr>.pdf`), maar 0/1.563 vorderingen
+verwijst ernaar (`invoice_file_id` leeg) → de PDF-kolom én de automatische factuur-bijlage op de
+verzendpaden vinden bij geïmporteerde dossiers niets. Gemeten (S212): **1.368/1.563 exact
+koppelbaar** — zelfde dossier + bestandsnaam-nummer == factuurnummer op de vordering.
+Aanpak: koppel-script met eerst `--dry-run` (rapporteer aantal + steekproef) → akkoord Arsalan →
+echt draaien → natelling (1.368 verwacht; alleen `invoice_file_id` muteren, niets anders).
+Daarna vertelt de PDF-kolom in het Vorderingen-tabblad de waarheid én werkt de auto-bijlage.
+
 ## Kleine restpunten (alleen op expliciete vraag Arsalan)
 - **Landregel op dagvaarding + faillissementsverzoek** (S210 bewust niet gedaan — gerechtelijke stukken).
 
@@ -35,9 +52,11 @@ Zodra Arsalan de **echte productie-sleutel** meldt:
 
 ## Constraints (wat NIET doen)
 - **Backfill NIET draaien vóór de echte sleutel er is** en NIET zonder dry-run + akkoord Arsalan.
+- **PDF-koppel-actie (taak 3) NIET zonder dry-run + akkoord** — prod-schrijfactie.
 - Geen `git add -A`; expliciete paden.
 - Mailslot: niets echt versturen; de rentebijlage is al bewezen via tests/preview.
-- Buiten scope: S201-facturatie-import, S203-restpunten, mail-verstevigingen — alleen op expliciete vraag.
+- Buiten scope: S201-facturatie-import (kantoorfacturen-import = eigen sessie, besluit Arsalan),
+  S203-restpunten, mail-verstevigingen — alleen op expliciete vraag.
 
 ## Commit
 Env-wijziging is geen code. Eventuele codeklusjes: commit + push naar main per onderdeel, deploy via

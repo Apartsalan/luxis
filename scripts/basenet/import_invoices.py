@@ -87,6 +87,7 @@ class BuiltInvoices:
     credit_links: int = 0
     payments_dated: int = 0
     payments_undated: int = 0
+    booking_before_invoice: int = 0     # boekingsdatum vóór factuurdatum (verwacht 11)
     line_formula_mismatch: list[str] = field(default_factory=list)
     total_mismatch: list[tuple[str, Decimal, Decimal]] = field(default_factory=list)
     known_one_cent: list[str] = field(default_factory=list)
@@ -131,9 +132,21 @@ def build_invoices(
     products = parse_entity(export_dir, "Product").records
     payments = parse_entity(export_dir, "Payment").records
     mollie = parse_entity(export_dir, "MolliePaymentEntity").records
+    memorials = parse_entity(export_dir, "Memorial").records
+    memorial_lines = parse_entity(export_dir, "MemorialLine").records
 
     ledger_by_prodnr = {p.get("prodnr").strip(): p.get("prodexledger").strip() for p in products}
     mollie_ref_by_payid = {m.get("payment_id").strip(): m.get("mollie_id").strip() for m in mollie}
+
+    # Laatste memoriaal-boekingsdatum per factuurnummer. Dit is BOEKINGS-metadata,
+    # géén betaaldatum (bij 11 facturen ligt hij zelfs vóór de factuurdatum).
+    medate_by_sysid = {m.systemid: _date(m.get("medatein")) for m in memorials}
+    last_booking: dict[str, date] = {}
+    for ml in memorial_lines:
+        invnr = ml.get("meloutinv").strip()
+        booked = medate_by_sysid.get(ml.get("melmemorialid").strip())
+        if invnr and booked and (invnr not in last_booking or booked > last_booking[invnr]):
+            last_booking[invnr] = booked
 
     # Regels groeperen op factuurnummer (inlinv = invnr). Regels zonder inlinv
     # zijn losse conceptregels zonder kop → tellen als orphan.
@@ -225,8 +238,15 @@ def build_invoices(
             out.d_contact_only += 1
 
         status = _status_for(r, inv_type, due)
+        # Alleen de 20 Mollie-bevestigde betalingen hebben een bewezen datum;
+        # die komt straks ook als paid_date op de factuur. Alle andere: NULL.
         paid_date = None
+        if inv_type == "invoice" and r.get("invpaidstatus").strip() == "1" and invnr in mollie_paid:
+            paid_date = mollie_paid[invnr][0]
         marker = f"{_MARKER} factuur={invnr} · systemid={sysid} · project={pcode or '-'}"
+        if r.get("invpaidstatus").strip() == "9":
+            # Nul-factuur: beleidsmatig 'paid'; ruwe bronstatus expliciet bewaren.
+            marker += " · BaseNet invpaidstatus=9 (nul-factuur, geneutraliseerd)"
 
         out.invoices.append({
             "id": _uid("invoice", sysid),
@@ -273,10 +293,16 @@ def build_invoices(
         if inv_type == "invoice" and r.get("invpaidstatus").strip() == "1" and betaald > 0:
             if invnr in mollie_paid:
                 pdate, ref = mollie_paid[invnr]
-                method, reference = "ideal", (ref or "Mollie")
+                method, reference, descr = "ideal", (ref or "Mollie"), None
                 out.payments_dated += 1
             else:
                 pdate, method, reference = None, "unknown", "BaseNet memoriaal"
+                # Boekingsmetadata, expliciet gelabeld — bij 11 facturen ligt de
+                # boekingsdatum vóór de factuurdatum en is het dus géén betaaldatum.
+                booked = last_booking.get(invnr)
+                descr = f"Boekingsdatum memoriaal (geen betaaldatum): {booked}" if booked else None
+                if booked and invoice_date and booked < invoice_date:
+                    out.booking_before_invoice += 1
                 out.payments_undated += 1
             out.payments.append({
                 "id": _uid("invoice_payment", sysid),
@@ -286,7 +312,7 @@ def build_invoices(
                 "payment_date": pdate,
                 "payment_method": method,
                 "reference": reference,
-                "description": None,
+                "description": descr,
                 "created_by": user_id,
             })
 
@@ -365,6 +391,11 @@ def _print_report(built: BuiltInvoices, execute: bool) -> None:
     print(f"      'Datum onbekend':        {built.payments_undated}   (verwacht 305)")
     pay_sum = sum(p["amount"] for p in built.payments)
     print(f"   som betaald: € {pay_sum:,.2f}   (verwacht € 248.364,17)")
+    n_paid_date = sum(1 for i in built.invoices if i["paid_date"] is not None)
+    n_meta = sum(1 for p in built.payments if p["description"])
+    print(f"   facturen met bewezen paid_date: {n_paid_date}   (verwacht 20)")
+    print(f"   betalingen met boekingsmetadata: {n_meta}   (verwacht 305)")
+    print(f"   boekingsdatum vóór factuurdatum (metadata, geen betaaldatum): {built.booking_before_invoice}   (verwacht 11)")
 
     print("\nControlepoorten:")
     print(f"   regelformule-afwijkingen (moet 0):        {len(built.line_formula_mismatch)}")

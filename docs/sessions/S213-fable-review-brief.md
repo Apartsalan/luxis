@@ -1,0 +1,112 @@
+# S213 — Fable-review-brief (Opus → Fable overdracht)
+
+Opgesteld door Opus aan het eind van de bouw. Twee dingen voor Fable:
+1. **Oordeel over de PDF-koppeling (klus 3)** vóór de echte prod-schrijfactie draait.
+2. **Totale review van de hele S213-sessie** (wens Arsalan).
+
+De koppeling is **NIET gedraaid** — alleen de dry-run (read-only). Prod is verder ongemoeid.
+
+---
+
+## Wat LIVE staat (gedeployd, prod HEAD `9aea91c`)
+
+**Klus 2 — Facturen-menu 3→2 tabs + rijke Vorderingen-filters.** Twee commits:
+- `2a9caa3` feat(facturen): 2-tab menu + rijke vorderingen-filters + directe factuur-PDF
+- `9aea91c` feat(scripts): koppel-script (staat klaar, NIET gedraaid)
+
+Backend + frontend gebouwd en gestart via SSH; beide containers healthy; nieuwe endpoints
+`/api/claims/clients` + uitgebreide `/api/claims` geven 200 op prod.
+
+### Gewijzigde bestanden (klus 2)
+- Backend: `collections/schemas.py` (ClaimOverviewItem +`invoice_file_id`, nieuw `ClaimClient`),
+  `collections/service.py` (`list_all_claims` + filters/sort, nieuw `list_claim_clients`,
+  const `CLAIM_SORT_FIELDS`), `collections/router.py` (query-params + `/clients`-route).
+- Backend tests: `tests/test_claims_overview.py` (6 groen: client-filter, datumbereik, has_file
+  beide kanten, sort principal asc/desc, clients-endpoint, `invoice_file_id` in payload).
+- Frontend: `hooks/use-invoices.ts` (useClaims params + `useClaimClients` + `invoice_file_id`),
+  `app/(dashboard)/facturen/page.tsx` (2 tabs, Lijst/Per-klant-schakelaar binnen Kantoorfacturen,
+  Vorderingen-filters + sorteerkoppen + paperclip opent PDF via preview-route + URL-persistentie).
+
+### Verificatie klus 2 (bewijs)
+- 6 backend-tests groen (dev-container). `uvx ruff` schoon. `tsc --noEmit` schoon. `npm run build` groen.
+- Live dev-backend (na herstart, want container was 8 dagen stale): alle nieuwe endpoints 200,
+  payload bevat `invoice_file_id`, clients-dropdown gevuld.
+- Prod na deploy: `/api/claims/clients` 200, `/api/claims?has_file=false&sort_by=principal_amount` 200.
+- Frontend doorgeklikt (claude-in-chrome) via token-injectie: 2 tabs (geen 3e), Lijst/Per-klant-toggle,
+  Vorderingen-filters (opdrachtgever-dropdown, lopende-toggle, meer-filters→datum+PDF), sorteerkoppen,
+  PDF-kolom. **Kanttekening (eerlijk):** de klik-robot kon de in-page React-onClick-handlers niet
+  triggeren (login-form, tab-switch, sort-toggle, PDF-open negeerden gesimuleerde clicks). Die paden
+  zijn geverifieerd via de URL-equivalenten (tab/filters/sort initialiseren correct uit de URL) +
+  tsc/build. **Nog niet met een echte muisklik bewezen:** tab-wissel-knop, sorteer-toggle-schrijf naar
+  URL, en het openen van een PDF (kon sowieso niet — dev heeft 0 factuur-PDF's). PDF-open spiegelt
+  exact het bewezen `DocumentenTab.handlePreviewFile`-patroon.
+
+---
+
+## Klus 3 — PDF-koppeling: KLAAR, NIET GEDRAAID (wacht op Fable-oordeel + akkoord)
+
+Script: `backend/scripts/link_invoice_files.py` (op prod in image op `/app/scripts/`).
+Draaien op de VPS:
+```
+docker compose exec -T backend python scripts/link_invoice_files.py --self-test   # matching-logica
+docker compose exec -T backend python scripts/link_invoice_files.py --dry-run      # rapport, schrijft niks
+docker compose exec -T backend python scripts/link_invoice_files.py --commit       # zet invoice_file_id
+```
+
+### Matching-recept (conservatief, exact + uniek)
+Per vordering zonder PDF (`invoice_file_id` NULL) mét factuurnummer: zoek in HETZELFDE dossier het
+actieve bestand waarvan `filename_invoice_key(original_filename)` exact gelijk is aan
+`_norm(invoice_number)`. `filename_invoice_key` = stem zonder extensie, spaties/underscores weg,
+leidend `factuur`-prefix eraf, hyphens behouden. **Alleen koppelen bij precies één kandidaat**
+(anders overslaan). Alleen `invoice_file_id` wordt gemuteerd.
+
+### Dry-run op PROD (14 juli, read-only, niets geschreven)
+```
+Vorderingen zonder PDF, mét factuurnummer : 1563
+  -> uniek koppelbaar (zou gekoppeld)     : 1306
+  -> meerdere kandidaten (overgeslagen)   : 35
+  -> geen match (overgeslagen)            : 222
+Vorderingen zonder factuurnummer          : 0
+```
+Steekproef schoon: `132391 -> Factuur_132391.pdf`, `LW100719 -> Factuur_LW100719.pdf`.
+
+Diagnose van de 222 "geen match" (read-only):
+- **92** hebben helemaal geen PDF op het dossier → niet koppelbaar.
+- **130** hebben wél PDFs maar geen naam-match. Steekproef:
+  - `25130123 -> Factuur_LW103621.pdf …` (ander nummerschema, geen match)
+  - `F2024-00102 -> Offerte-…pdf, Alle_facturen_Bigvand_Gallery_R.pdf` (alleen offerte + bundel)
+  - `Hoofdsom / Dagvaarding / Griffierecht / Salaris gemachtigde / Nakosten -> paspoort/vonnis`
+    → dit zijn **kostenposten als "vordering", geen facturen** — terecht geen PDF.
+  - `18910670 -> Factuur_078913421.pdf …` (ander nummer, geen match)
+
+**Waarom 1306 i.p.v. de ±1.368-schatting (S212):** het script koppelt alléén 100%-zekere unieke
+matches. De 35 ambigue (dubbele upload, zelfde nummer) worden bewust NIET gegokt.
+
+### Reviewpunten voor Fable (klus 3) — actief weerleggen vóór `--commit`
+1. **Is de matching veilig?** Kan `filename_invoice_key` ooit twee verschillende facturen op één
+   nummer laten vallen, of een niet-factuur (kostenpost) toch matchen? (steekproef zegt nee.)
+2. **De 35 ambigue** — zijn dat echt dubbele uploads (zelfde bestand) of twee verschillende? Wil
+   Lisanne die met de hand? (nu: overgeslagen.)
+3. **Tenant/RLS:** script zet `SET LOCAL app.current_tenant` per tenant (zoals kvk-script). Correct?
+4. **Alleen `invoice_file_id` gemuteerd?** Geen andere velden, geen kosten/rente geraakt. (Verifieer.)
+5. **Natelling-plan:** na `--commit` moet "uniek koppelbaar" (1306) == werkelijk gezet, en de
+   totale set vorderingen ongewijzigd op 1563; steekproef van 5 in de UI (paperclip opent de juiste PDF).
+6. **`--self-test` groen** (pure matcher) — al bevestigd op prod.
+
+---
+
+## Totale sessie-review (wens Arsalan) — aandachtspunten
+- **Backend `/api/claims`:** filters (client_id/date_from/date_to/has_file) + sort — SQL correct,
+  NULL-`invoice_date` valt bewust buiten een datumbereik (gedocumenteerd + getest). Geen N+1?
+- **`/api/claims/clients`:** distinct-join Contact↔Case↔Claim — geen dubbelen, tenant-scoped.
+- **Frontend URL-persistentie:** vorderingen-filters + tab + view in de URL; botst niet met de
+  Kantoorfacturen-params (`contact_id`/`status`). Parent-`useEffect` op `[searchParams]` reset
+  geen tab bij een filter-schrijf. (Controleer de wissel Kantoorfacturen↔Vorderingen met echte klik.)
+- **Paperclip PDF-open:** preview-route + token→blob→`window.open`. Foutafhandeling (toast) ok?
+
+## Losse eindjes / omgeving
+- **Dev-DB:** wachtwoord van `seidony@kestinglegal.nl` is in dev gewijzigd naar `Devpass-123`
+  (om lokaal te kunnen inloggen; oorspronkelijke dev-hash was onbekend). **Alleen dev**, prod
+  ongemoeid. E2E gebruikt `e2e-test@` (los account), dus geen impact.
+- **KvK-backfill (hoofdtaak S213):** nog niet gestart — wacht op de echte KvK-sleutel (~16 juli).
+- Geen migraties in deze sessie (klus 2 is puur additief in code, geen schema-wijziging).

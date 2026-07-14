@@ -2,10 +2,62 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 14 juli 2026 (S209, Opus-bouw + Fable-review — BaseNet import-gaten gedicht, alles LIVE + functioneel geverifieerd). Prod op HEAD `f3b2ad4`.
-**Laatste feature/fix:** 3 backfills LIVE (99 werknotities + 13 waarschuwingen → dossiernotitie; 49 buitenlandse landen; 28 geboortedatums) + nieuw land-veld op relaties (scherm + brief-context) + mapping neemt alles voortaan mee. Zie entry S209.
-**Openstaand — volgende sessie (startprompt: `docs/sessions/PROMPT-S210.md`):** (1) provisie-15% (39 zaken) wacht op de provisie-afspraak Arsalan↔Lisanne (eerst uitvragen, dan bouwen); (2) land op de Word-brieven zelf (sjabloon-editor, klein); (3) WIK-rentebijlage wacht op KvK-API (Arsalan).
-**Volgende sessie:** S210. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) loopt parallel — niet mengen; werkkopie bevat hun niet-gecommitte wijzigingen.
+**Laatst bijgewerkt:** 14 juli 2026 (S210, Opus-bouw + Fable-review — provisie-per-cliënt + land op de brieven, alles LIVE + visueel geverifieerd). Prod op HEAD `4025d43`.
+**Laatste feature/fix:** Standaard provisie-% per cliënt (overerft naar nieuw dossier) + 6 klantkaarten & 39 dossiers op 15% + landregel op de 5 debiteurbrieven (alleen bij buitenland). Zie entry S210.
+**Openstaand — volgende sessie (startprompt: `docs/sessions/PROMPT-S211.md`):** WIK-rentebijlage bouwen tegen de KvK-testomgeving (plan goedgekeurd: `docs/plans/PLAN-wik-rentebijlage.md`); backfill wacht op de echte KvK-sleutel (~16 juli, Arsalan meldt binnenkomst).
+**Volgende sessie:** S211 (WIK-bijlage, bouwen=Opus). NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) loopt parallel — niet mengen; werkkopie bevat 5 niet-gecommitte bestanden.
+
+
+## Sessie 210 (14 juli 2026, Opus-bouw + Fable-review — provisie-per-cliënt + land op de brieven, LIVE)
+
+### Samenvatting
+Twee S210-taken volledig af (provisie-afspraak eerst uitgevraagd bij Arsalan → ontworpen → gebouwd;
+land op de Word-brieven). Daarna Fable-review van alles + door Opus alle visuele controles gedaan.
+Taak 3 (WIK-bijlage) is onderzocht → plan goedgekeurd → apart gezet voor S211 (wacht op KvK-sleutel).
+
+- **Provisie-% per cliënt (LIVE, `2eabd37`).** Nieuw veld `default_provisie_percentage` op `contacts`
+  (migratie `s210_contact_provisie`, additief); elk nieuw dossier erft het net als de default_bik_*-
+  velden (dossier wint), basis blijft `collected_amount`. Klantkaart (tonen + bewerken) + nieuwe-relatie-
+  formulier. **Data (na akkoord, nageteld):** 6 klantkaarten op 15% (INC Zakelijk, Incassocenter,
+  COLLECT 1, CM Zakelijk, LegalWork, **+ SYN Finance** — dezelfde afspraak) + 39 dossiers op 15%
+  (exact de set die BaseNet zelf op `incprovisie=15` had; set-vergelijking prod↔export 0 verschil).
+  Slim doorrekenen was al zo (provisie wordt live berekend, nooit als vast bedrag opgeslagen).
+- **Land op de Word-brieven (LIVE, `4025d43`).** Voorwaardelijke regel `{%p if wederpartij.land %}...
+  {%p endif %}` onder postcode+stad op de 5 debiteurbrieven (sommatie, tweede_sommatie, aanmaning,
+  herinnering, 14_dagenbrief). Bij buitenland op eigen regel; bij binnenland (leeg) verdwijnt de regel
+  volledig — brief byte-voor-byte gelijk aan voorheen (render-test per sjabloon). Back-up DB-sjablonen
+  vóór her-upload (`/root/backup_managed_templates_pre_s210land.dump`); gerichte reseed van alleen deze
+  5, andere 3 (dagvaarding/renteoverzicht/verzoekschrift) ongemoeid.
+- **WIK-bijlage: onderzocht + plan goedgekeurd (S211).** KvK-koppeling bewezen in gratis testomgeving
+  (rechtsvorm komt terug); besluiten A–D vastgelegd. Volledig plan: `docs/plans/PLAN-wik-rentebijlage.md`.
+
+### Fable-review + visuele controle (zelfde sessie)
+Alle dragende claims onafhankelijk herverifieerd: DB-sjablonen byte-identiek aan repo (sha256), de 39
+dossiers = exact de export-set, precies 6 bedrijven (0 personen) op 15%, geen ander financieel veld
+geraakt. **Live prod-round-trip:** testdossier bij CM Zakelijk kreeg automatisch 15,00% → daarna
+verwijderd (verbruikte wel dossiernr 2026-00001; eerstvolgende echte = 2026-00002). Visueel (Opus,
+niet Fable): provisie-leesweergave + bewerkweergave + nieuwe-relatie-formulier tonen het veld; 5 brieven op
+buitenlandse zaak IN100007 (België onder adres) + binnenlandse tegenproef (geen witregel). Oordeel: GO.
+
+### Gewijzigde bestanden
+- Backend: `relations/models.py` + `schemas.py`, `cases/service.py` (erving), migratie
+  `s210_contact_provisie`, `tests/test_interest_inheritance.py` (4 nieuwe). Templates: 5 DOCX in
+  `templates/` (landregel) + gerichte DB-reseed op prod.
+- Frontend: `relaties/[id]/page.tsx`, `relaties/nieuw/page.tsx`,
+  `components/relations/detail/ContactInfoSection.tsx`, `hooks/use-relations.ts`.
+- Docs: `docs/plans/PLAN-wik-rentebijlage.md` (nieuw), `docs/sessions/PROMPT-S211.md` (nieuw).
+- 2 code-commits (`2eabd37` provisie · `4025d43` land). Data-mutaties via read-only-gecontroleerde SQL.
+
+### Bekende issues / bewust niet gedaan
+- **WIK-bijlage** wacht op de echte KvK-sleutel (~16 juli) voor de backfill; bouwen kan al tegen test.
+- **Landregel op dagvaarding + faillissementsverzoek** bewust niet gedaan (gerechtelijke stukken,
+  dagvaarding heeft inline-adres) — los klusje als gewenst.
+- Verwijderd testdossier bestaat nog als inactieve rij (zo werkt verwijderen; cosmetisch).
+- Parallelle S207-track: 5 bestanden nog ongecommit in de werkkopie — niet aangeraakt.
+
+### Volgende sessie
+S211 (`docs/sessions/PROMPT-S211.md`): WIK-rentebijlage bouwen tegen de KvK-testomgeving volgens
+`PLAN-wik-rentebijlage.md`; backfill draaien zodra Arsalan de echte sleutel meldt. Bouwen = Opus.
 
 
 ## Sessie 209 (14 juli 2026, Opus-bouw + Fable-review — BaseNet import-gaten uit S208-veldaudit gedicht, LIVE)
@@ -466,25 +518,3 @@ bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouw
 
 ### Volgende sessie
 - Zet Codex op Sol High en vervolg `docs/sessions/PROMPT-CODEX-master.md` vanaf Fase C. Werk per fix rood→groen→commit→push→deploy; daarna Fase D en Fable-nacontrole.
-
-## Sessie 202 (12 juli 2026, Fable — security- & consistentie-audit van de delta sinds S183, read-only)
-
-### Samenvatting
-- Security-audit van álle wijzigingen `sessie-183..HEAD` (49 commits, 122 bestanden). 6 van 7 blokken deze sessie afgerond; **Blok 2 (mailpad S185-S187) afgebroken door tokengebrek en overgedragen aan Codex**. Rapport op ernst: `docs/security/S202-delta-audit.md`.
-- **Hoog (3):** (H1) `save_attachment_to_case` (`email/sync_router.py:527-581`) controleert `case_id` niet tegen tenant vóór het aanmaken van een `CaseFile` → cross-tenant integriteitslek; de guard staat elders in datzelfde bestand al. (H2) fail-open op de "betaald"-guard (`cases/service.py:744-747` + `incasso/service.py:479-490`): rekenfout → €0 aangenomen → dossier mét saldo kan stil op "betaald". (H3) "Geïnd"-rapportage (`reports_service.py:62,220`) sommeert `Payment.amount` zonder `is_active`-filter → verwijderde betalingen tellen eeuwig mee.
-- **Middel (3):** bulk-status zonder lengtecap (DoS); auto-advance mist terminale-stap-check; app verbindt als DB-superuser (RLS hangt volledig aan `SET ROLE luxis_app` — bekende "Fase 2").
-- **Geruststellingen (op prod gemeten):** RLS compleet zonder drift — 44/44 tenant-tabellen FORCE+policy, alleen `users` bewust uitgezonderd. Geen secrets in repo of delta-diff; `.codex/config.toml` staat nu wél in `.gitignore` (anders dan notities zeiden). Geen `NEXT_PUBLIC_*`-sleutels. PowerSearch injectie-veilig + tenant-gescoped. Bulk-status en pipeline-batch tenant-gescoped in de query zelf.
-
-### Gewijzigde bestanden
-- `docs/security/S202-delta-audit.md` (nieuw — het auditrapport, incl. kant-en-klare Codex-vervolgprompt voor Blok 2)
-- `docs/sessions/PROMPT-CODEX-master.md` (nieuw — complete Codex-onboarding + 4-fasen-werkvolgorde voor S200/S201/S202-vervolg)
-- `docs/sessions/S201-HANDOFF-naar-Sol.md` (van parallel S201-spoor — mee-gecommit voor Codex)
-- `SESSION-NOTES.md` + `LUXIS-ROADMAP.md` (afsluiting); S191-entry → archief
-- Geen code, geen prod-mutatie (100% read-only nageleefd; DB-toegang alleen SELECT)
-
-### Bekende issues
-- Alles in `S202-delta-audit.md`. Blok 2 (mailpad) nog te auditen — prompt staat onderin dat rapport.
-- Fix-volgorde voor de bouwsessie: H1 (klein, duidelijkst tenant-lek) → H2 → H3 → M1/M2. M3 (app-als-superuser/Fase 2) is een aparte grote klus.
-
-### Volgende sessie
-- Codex neemt over via `docs/sessions/PROMPT-CODEX-master.md` (Ultra: mailpad-audit + facturatie-onderzoek; High: voorkant-fixes + security-fixes). Over ~3 uur checkt Fable Codex' werk na.

@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 14 juli 2026 (S209 LIVE, Opus-bouw + Fable-review). BaseNet import-gaten uit de S208-veldaudit gedicht: 99 werknotities + 13 waarschuwingen → dossiernotitie, 49 buitenlandse landen (nieuw land-veld op relaties, migratie `s209_contact_country`), 28 geboortedatums; import-recept neemt alles voortaan mee. Functioneel geverifieerd (8 round-trip-tests + visueel). Prod op HEAD `f3b2ad4`. **Volgende: provisie-afspraak Arsalan↔Lisanne uitvragen (dan provisie-15%-backfill) + land op Word-brieven + WIK-bijlage (KvK-API).**
+**Laatst bijgewerkt:** 14 juli 2026 (S210 LIVE, Opus-bouw + Fable-review). Standaard provisie-% per cliënt (erft naar nieuw dossier) + 6 klantkaarten & 39 dossiers op 15% + landregel op de 5 debiteurbrieven (alleen bij buitenland). Alles visueel + Fable-geverifieerd. Prod op HEAD `4025d43`. **Volgende: WIK-rentebijlage bouwen tegen KvK-testomgeving (`docs/plans/PLAN-wik-rentebijlage.md`); backfill wacht op de echte KvK-sleutel (~16 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -57,20 +57,23 @@
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **BASENET IMPORT-GATEN GEDICHT (S209, 14 juli — Opus-bouw + Fable-review, alles LIVE).**
-> De 3 backfills uit de S208-veldaudit uitgevoerd + functioneel geverifieerd: 99 werknotities +
-> 13 waarschuwingen → dossiernotitie (`[BaseNet-notitie]`/`[BaseNet-waarschuwing]`); nieuw
-> land-veld op relaties (`contacts.visit_country/postal_country`, migratie `s209_contact_country`)
-> + 49 buitenlandse landen (nette NL-namen); 28 geboortedatums. Import-recept `mapping.py` neemt
-> land/geboortedatum/provisie/notities + rentetype voortaan mee. 8 round-trip-tests + visueel
-> doorgeklikt. Details: SESSION-NOTES S209.
+> ✅ **PROVISIE-PER-CLIËNT + LAND OP DE BRIEVEN (S210, 14 juli — Opus-bouw + Fable-review, alles LIVE).**
+> (1) Standaard provisie-% op de klantkaart (`default_provisie_percentage`, migratie `s210_contact_provisie`);
+> nieuw dossier erft het (dossier wint). 6 klantkaarten (incl. SYN Finance) + 39 dossiers op 15% —
+> exact de BaseNet-`incprovisie`-set (0 verschil prod↔export). (2) Landregel onder het adres op de 5
+> debiteurbrieven, alleen bij buitenland (binnenland byte-identiek). Visueel + Fable-geverifieerd.
+> Commits `2eabd37` + `4025d43`. Details: SESSION-NOTES S210.
 >
-> 🔨 **VOLGENDE (S210, prompt klaar):** (1) **provisie-afspraak Arsalan↔Lisanne** eerst uitvragen
-> (regeling met debiteur → 15% over de deal; vol bedrag → gewone incassokosten), dan pas ontwerpen
-> (Plan Mode) + de provisie-15%-backfill (39 zaken) uitvoeren; (2) **land op de eigenlijke
-> Word-brieven** — `{{ wederpartij.land }}`-regel in de built-in DOCX-sjablonen (sjabloon-editor,
-> klein, visuele controle); (3) **WIK-rentebijlage wacht op KvK-API** (Arsalan, €6,40/mnd +
-> €0,02/bevraging). Voorstel blijft: filter "Nog te openen" op de dossierlijst.
+> 🔨 **VOLGENDE (S211, prompt + plan klaar):** **WIK-rentebijlage** bij de eerste sommatie +
+> 14-dagenbrief — renteoverzicht als PDF-bijlage, alleen voor privé-aansprakelijke schuldenaren
+> (particulier/eenmanszaak/VOF/maatschap/CV), rechtsvorm uit de **KvK-API** (koppeling bewezen in
+> testomgeving). Bouwen = Opus, tegen test; **backfill (438 wederpartijen) wacht op de echte
+> KvK-sleutel** (~16 juli, Arsalan meldt binnenkomst; €6,40/mnd + €0,02/bevraging). Plan met
+> besluiten A–D + premortem: `docs/plans/PLAN-wik-rentebijlage.md`. Prompt: `docs/sessions/PROMPT-S211.md`.
+>
+> 📌 **Los klusje (open):** landregel ook op dagvaarding + faillissementsverzoek (S210 bewust niet
+> gedaan — gerechtelijke stukken, dagvaarding heeft inline-adres). Voorstel: filter "Nog te openen"
+> op de dossierlijst.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet

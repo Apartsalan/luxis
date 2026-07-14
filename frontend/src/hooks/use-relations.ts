@@ -36,9 +36,11 @@ export interface Contact {
   visit_address: string | null;
   visit_postcode: string | null;
   visit_city: string | null;
+  visit_country: string | null;
   postal_address: string | null;
   postal_postcode: string | null;
   postal_city: string | null;
+  postal_country: string | null;
   default_hourly_rate: number | null;
   payment_term_days: number | null;
   billing_email: string | null;
@@ -88,9 +90,11 @@ interface ContactCreateInput {
   visit_address?: string;
   visit_postcode?: string;
   visit_city?: string;
+  visit_country?: string;
   postal_address?: string;
   postal_postcode?: string;
   postal_city?: string;
+  postal_country?: string;
   default_hourly_rate?: number;
   payment_term_days?: number;
   billing_email?: string;

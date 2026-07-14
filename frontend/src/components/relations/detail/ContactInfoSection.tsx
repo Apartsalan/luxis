@@ -201,6 +201,18 @@ export function ContactInfoSection({
                     />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Land <span className="font-normal normal-case">(alleen bij buitenland)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.visit_country}
+                    onChange={(e) => updateEdit("visit_country", e.target.value)}
+                    className={inputClass}
+                    placeholder="bijv. Duitsland"
+                  />
+                </div>
               </div>
             </div>
             <div className="pt-2">
@@ -249,6 +261,18 @@ export function ContactInfoSection({
                       className={inputClass}
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Land <span className="font-normal normal-case">(alleen bij buitenland)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.postal_country}
+                    onChange={(e) => updateEdit("postal_country", e.target.value)}
+                    className={inputClass}
+                    placeholder="bijv. Duitsland"
+                  />
                 </div>
               </div>
             </div>
@@ -307,6 +331,12 @@ export function ContactInfoSection({
                     {contact.visit_address}
                     <br />
                     {contact.visit_postcode} {contact.visit_city}
+                    {contact.visit_country && (
+                      <>
+                        <br />
+                        {contact.visit_country}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -322,6 +352,12 @@ export function ContactInfoSection({
                     {contact.postal_address}
                     <br />
                     {contact.postal_postcode} {contact.postal_city}
+                    {contact.postal_country && (
+                      <>
+                        <br />
+                        {contact.postal_country}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>

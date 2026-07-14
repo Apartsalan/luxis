@@ -64,11 +64,14 @@ class Contact(TenantBase):
     visit_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     visit_postcode: Mapped[str | None] = mapped_column(String(10), nullable=True)
     visit_city: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Land alleen invullen bij niet-Nederlandse adressen (NL = impliciete standaard).
+    visit_country: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Postal address
     postal_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     postal_postcode: Mapped[str | None] = mapped_column(String(10), nullable=True)
     postal_city: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    postal_country: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Billing profile (F6)
     default_hourly_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)

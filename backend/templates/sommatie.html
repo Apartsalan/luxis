@@ -34,6 +34,7 @@
         {{ wederpartij.naam }}<br>
         {% if wederpartij.adres %}{{ wederpartij.adres }}<br>{% endif %}
         {% if wederpartij.postcode %}{{ wederpartij.postcode }} {{ wederpartij.stad }}{% endif %}
+        {% if wederpartij.land %}<br>{{ wederpartij.land | upper }}{% endif %}
     </div>
 
     <div class="date">

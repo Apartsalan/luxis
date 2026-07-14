@@ -298,6 +298,7 @@ def _contact_to_dict(contact: Contact) -> dict:
         "adres": contact.visit_address or "",
         "postcode": contact.visit_postcode or "",
         "stad": contact.visit_city or "",
+        "land": contact.visit_country or "",  # alleen bij buitenland gevuld
     }
 
 

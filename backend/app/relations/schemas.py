@@ -67,9 +67,11 @@ class ContactCreate(ContactFieldValidators):
     visit_address: str | None = None
     visit_postcode: str | None = None
     visit_city: str | None = None
+    visit_country: str | None = None
     postal_address: str | None = None
     postal_postcode: str | None = None
     postal_city: str | None = None
+    postal_country: str | None = None
     default_hourly_rate: Decimal | None = None
     payment_term_days: int | None = None
     billing_email: str | None = None
@@ -99,9 +101,11 @@ class ContactUpdate(ContactFieldValidators):
     visit_address: str | None = None
     visit_postcode: str | None = None
     visit_city: str | None = None
+    visit_country: str | None = None
     postal_address: str | None = None
     postal_postcode: str | None = None
     postal_city: str | None = None
+    postal_country: str | None = None
     default_hourly_rate: Decimal | None = None
     payment_term_days: int | None = None
     billing_email: str | None = None
@@ -148,9 +152,11 @@ class ContactResponse(BaseModel):
     visit_address: str | None
     visit_postcode: str | None
     visit_city: str | None
+    visit_country: str | None = None
     postal_address: str | None
     postal_postcode: str | None
     postal_city: str | None
+    postal_country: str | None = None
     default_hourly_rate: float | None
     payment_term_days: int | None
     billing_email: str | None

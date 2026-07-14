@@ -127,9 +127,11 @@ export default function RelatieDetailPage() {
       visit_address: contact.visit_address || "",
       visit_postcode: contact.visit_postcode || "",
       visit_city: contact.visit_city || "",
+      visit_country: contact.visit_country || "",
       postal_address: contact.postal_address || "",
       postal_postcode: contact.postal_postcode || "",
       postal_city: contact.postal_city || "",
+      postal_country: contact.postal_country || "",
       default_hourly_rate: contact.default_hourly_rate?.toString() || "",
       payment_term_days: contact.payment_term_days?.toString() || "",
       billing_email: contact.billing_email || "",
@@ -172,9 +174,11 @@ export default function RelatieDetailPage() {
       data.visit_address = editForm.visit_address?.trim() || null;
       data.visit_postcode = editForm.visit_postcode?.trim() || null;
       data.visit_city = editForm.visit_city?.trim() || null;
+      data.visit_country = editForm.visit_country?.trim() || null;
       data.postal_address = editForm.postal_address?.trim() || null;
       data.postal_postcode = editForm.postal_postcode?.trim() || null;
       data.postal_city = editForm.postal_city?.trim() || null;
+      data.postal_country = editForm.postal_country?.trim() || null;
       data.default_hourly_rate = editForm.default_hourly_rate ? editForm.default_hourly_rate : null;
       data.payment_term_days = editForm.payment_term_days ? editForm.payment_term_days : null;
       data.billing_email = editForm.billing_email?.trim() || null;

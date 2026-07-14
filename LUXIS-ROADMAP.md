@@ -74,7 +74,8 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > ✅ **Fable-review S212 (zelfde dag): 1 must-fix gevonden + LIVE (`498d156`).** De primaire
 > "Versturen"-knop (`/compose/send`) kreeg geen sjabloontype → geen rentebijlage op de
 > waarschijnlijkste klik. Gefixt (frontend + backend + 2 tests). Rest hield stand.
-> Restobservatie: factuur-PDF's gaan alleen op het .eml-pad automatisch mee — los klusje.
+> Nagekomen (opdracht Arsalan, `8e2ee8b` LIVE): factuur-PDF's nu óók automatisch op de
+> verstuurknop — beide compose-knoppen gelijk in bijlagegedrag.
 >
 > 📌 **Los klusje (open):** landregel ook op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan — gerechtelijke stukken, dagvaarding heeft inline-adres). Voorstel: filter "Nog te openen"

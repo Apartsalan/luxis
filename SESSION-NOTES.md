@@ -4,7 +4,7 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 14 juli 2026 (S212, Opus-uitvoer — WIK-rentebijlage LIVE, bijlage op resterende verzendpaden, terug-navigatie heel Luxis). Prod op HEAD `0c0626b`.
 **Laatste feature/fix:** Rentebijlage live (s211 gemerged + deploy mét migratie); bijlage nu óók op compose/AI-concept- en document-verzendpad; slimme terug-knop (router.back met ijkpunt-terugval) op alle detail-/nieuw-pagina's. Zie entry S212.
-**Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen. Observatie (bewust niet gebouwd): factuur-PDF's gaan alleen op het .eml-pad automatisch mee, niet op /compose/send.
+**Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen.
 **Volgende sessie:** S213 (`docs/sessions/PROMPT-S213.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
 
 ## Sessie 212 (14 juli 2026, Opus-uitvoer — WIK-rentebijlage LIVE + bijlage op resterende verzendpaden + terug-navigatie, LIVE)
@@ -61,11 +61,15 @@ render-fout is bewust (wettelijk verplichte bijlage stil weglaten is erger); ter
 randgevallen (hergebruikte tab, browser-terug+klik, reload) vallen terug op correct gedrag
 of de nette fallback; prod-staat herbevestigd (health/HEAD/migratie). 135 tests groen.
 
+### Nagekomen (zelfde dag, opdracht Arsalan): factuur-PDF's óók op de verstuurknop (`8e2ee8b`, LIVE)
+DF122-07 gespiegeld van het .eml-pad naar `/compose/send`: bij een sommatie-sjabloon gaan de
+factuur-PDF's van de actieve vorderingen nu ook op de primaire knop automatisch mee (verse
+case-mail, gededupliceerd met handmatige bijlagen). Test bewijst factuur + renteoverzicht samen.
+Beide compose-knoppen zijn nu volledig gelijk in bijlagegedrag.
+
 ### Bekende issues
 - **KvK-rechtsvorm-backfill** wacht op de echte sleutel (~16 juli, Arsalan meldt). Tot dan besluit B
   (élke zakelijke wederpartij, óók BV, krijgt de bijlage). → S213.
-- **Factuur-PDF's** gaan alleen op het .eml-pad automatisch mee (DF122-07), niet op `/compose/send`
-  — de rentebijlage zit sinds de review wél op beide. Los klusje als gewenst.
 - Compose-.eml slaat bij elke "Open in Outlook" een Renteoverzicht-document op het dossier op (zoals
   batch/followup ook doen) — cosmetisch, geen blokkade.
 

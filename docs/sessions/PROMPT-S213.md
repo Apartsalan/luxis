@@ -26,9 +26,6 @@ Zodra Arsalan de **echte productie-sleutel** meldt:
    aansprakelijk) t.o.v. de besluit-B-situatie waarin iedereen 'm kreeg. Rapporteer in gewone taal.
 
 ## Kleine restpunten (alleen op expliciete vraag Arsalan)
-- **Factuur-PDF's op `/compose/send`**: de rentebijlage zit sinds de Fable-review (S212, `498d156`)
-  op beide compose-knoppen, maar de automatische factuur-PDF's (DF122-07) gaan nog alleen op het
-  .eml-pad mee. Zelfde aanhaakplek als de rentebijlage-fix.
 - **Landregel op dagvaarding + faillissementsverzoek** (S210 bewust niet gedaan — gerechtelijke stukken).
 
 ## Verificatie

@@ -23,8 +23,6 @@ for _parent in Path(__file__).resolve().parents:
         break
 
 import pytest  # noqa: E402
-from sqlalchemy import text  # noqa: E402
-
 from scripts.basenet.import_basenet import _insert_missing  # noqa: E402
 from scripts.basenet.mapping import (  # noqa: E402
     map_company,
@@ -32,6 +30,7 @@ from scripts.basenet.mapping import (  # noqa: E402
     map_person,
 )
 from scripts.basenet.parse import BaseNetRecord  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
 
 def _rec(fields: dict, systemid: str = "9990001") -> BaseNetRecord:

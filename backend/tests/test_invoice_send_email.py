@@ -275,3 +275,17 @@ def test_invoice_email_body_includes_key_details():
     assert "1.210,00" in body or "1210" in body
     assert "30-04-2026" in body or "30/04/2026" in body or "2026" in body
     assert "Kesting Legal" in body
+
+
+def test_invoice_email_body_escapes_injected_recipient_name():
+    """S202 M4: `recipient_name` komt van contact.name (database-bewerkbaar) —
+    een HTML-tag daarin mag niet als echte markup in de mail belanden."""
+
+    class _FakeInvoice:
+        invoice_number = "F2026-001"
+        total = Decimal("1210.00")
+        due_date = date(2026, 4, 30)
+
+    body = _build_invoice_email_body(_FakeInvoice(), "<b>INJECTED</b>")
+    assert "<b>INJECTED</b>" not in body
+    assert "&lt;b&gt;INJECTED&lt;/b&gt;" in body

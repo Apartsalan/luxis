@@ -372,3 +372,58 @@ def test_signature_english_respects_case_type():
     }
     assert "Incasso@kestinglegal.nl" in _signature(ctx_incasso, english=True)
     assert "kesting@kestinglegal.nl" in _signature(ctx_advies, english=True)
+
+
+# ── HTML-injectie via opgeslagen dossierdata (S202 M4) ───────────────────────
+
+
+def test_injected_html_in_wederpartij_naam_is_escaped(mock_context):
+    """Audit-probe (S202 M4): een cliënt-/debiteurnaam met een HTML-tag mag
+    niet als echte markup in de uitgaande brief belanden. sommatie_drukte
+    toont de wederpartijnaam in de betreft-regel."""
+    mock_context["wederpartij"]["naam"] = "<b>INJECTED</b>"
+    html = render_incasso_email("sommatie_drukte", mock_context)
+    assert "<b>INJECTED</b>" not in html
+    assert "&lt;b&gt;INJECTED&lt;/b&gt;" in html
+
+
+def test_injected_html_in_client_naam_is_escaped(mock_context):
+    mock_context["client"]["naam"] = "<img src=x onerror=alert(1)>"
+    html = render_incasso_email("aanmaning", mock_context)
+    assert "<img src=x" not in html
+    assert "&lt;img src=x onerror=alert(1)&gt;" in html
+
+
+def test_injected_html_in_claim_beschrijving_and_factuurnummer_is_escaped(mock_context):
+    mock_context["vorderingen"][0]["beschrijving"] = "<script>alert(1)</script>"
+    mock_context["vorderingen"][0]["factuurnummer"] = "<a href=evil>F001</a>"
+    html = render_incasso_email("aanmaning", mock_context)
+    assert "<script>alert(1)</script>" not in html
+    assert "<a href=evil>" not in html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "&lt;a href=evil&gt;F001&lt;/a&gt;" in html
+
+
+def test_legitimate_ampersand_in_naam_renders_once_not_doubled(mock_context):
+    """Regressie-check: een gewone '&' in een bedrijfsnaam moet precies één
+    keer geëscaped worden (niet dubbel via het bestaande Jinja-pad)."""
+    mock_context["wederpartij"]["naam"] = "Jansen & Zonen B.V."
+    html = render_incasso_email("sommatie_drukte", mock_context)
+    assert "Jansen &amp; Zonen B.V." in html
+    assert "&amp;amp;" not in html
+
+
+def test_referentie_regel_not_double_escaped(mock_context):
+    """zaak.referentie_regel loopt via Jinja's eigen {{ }}-autoescape in
+    _BASE_EMAIL — de M4-fix mag dat pad niet nogmaals escapen."""
+    mock_context["zaak"]["referentie_regel"] = "Uw kenmerk: Jansen & Zonen"
+    html = render_incasso_email("aanmaning", mock_context)
+    assert "Uw kenmerk: Jansen &amp; Zonen" in html
+    assert "&amp;amp;" not in html
+
+
+def test_legitimate_content_still_renders_normally(mock_context):
+    """Geen regressie: gewone namen/adressen zonder HTML-tekens blijven
+    precies zo zichtbaar als voorheen."""
+    assert "Factuur F001" in render_incasso_email("aanmaning", mock_context)
+    assert "Test Debiteur BV" in render_incasso_email("sommatie_drukte", mock_context)

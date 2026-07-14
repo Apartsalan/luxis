@@ -1,5 +1,6 @@
 """Invoices module service — CRUD, status workflow, lines, expenses, voorschotnota, budget."""
 
+import html
 import math
 import uuid
 from datetime import date
@@ -609,13 +610,22 @@ async def send_invoice(
 
 
 def _build_invoice_email_body(invoice: Invoice, recipient_name: str) -> str:
-    """Build a friendly Dutch HTML body for the invoice email."""
+    """Build a friendly Dutch HTML body for the invoice email.
+
+    S202 M4: `recipient_name` komt van `contact.name` (database-bewerkbaar) —
+    escapen vóór het in de f-string-HTML belandt. `invoice.invoice_number` is
+    systeemgegenereerd (auto-nummering) maar wordt voor consistentie ook
+    geëscaped; kost niets bij een normaal factuurnummer.
+    """
     from app.documents.docx_service import _fmt_currency, _fmt_date
 
-    return f"""\
-<p>Geachte {recipient_name},</p>
+    safe_recipient = html.escape(recipient_name)
+    safe_invoice_number = html.escape(invoice.invoice_number)
 
-<p>In de bijlage treft u factuur <strong>{invoice.invoice_number}</strong> aan
+    return f"""\
+<p>Geachte {safe_recipient},</p>
+
+<p>In de bijlage treft u factuur <strong>{safe_invoice_number}</strong> aan
 ten bedrage van <strong>{_fmt_currency(invoice.total)}</strong>, met als
 vervaldatum {_fmt_date(invoice.due_date)}.</p>
 

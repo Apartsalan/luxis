@@ -112,6 +112,23 @@ async def get_contact(
     return contact
 
 
+async def _maybe_fill_legal_form_from_kvk(contact: Contact) -> None:
+    """S211: vul `legal_form` uit de KvK als er een KvK-nummer is en de rechtsvorm
+    nog leeg is. Faalt zacht (KvK-client geeft None bij storing) — een KvK-probleem
+    mag een relatie-opslag nooit blokkeren. Overschrijft nooit een handmatig
+    ingevulde of eerder opgehaalde rechtsvorm.
+    """
+    if not contact.kvk_number or contact.legal_form:
+        return
+    from app.integrations.kvk_service import get_rechtsvorm
+
+    rechtsvorm = await get_rechtsvorm(contact.kvk_number)
+    if rechtsvorm:
+        contact.legal_form = rechtsvorm
+        contact.legal_form_source = "kvk"
+        contact.legal_form_checked_at = datetime.now(UTC)
+
+
 async def create_contact(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -122,7 +139,12 @@ async def create_contact(
         tenant_id=tenant_id,
         **data.model_dump(),
     )
+    # Handmatig ingevulde rechtsvorm telt als herkomst "handmatig".
+    if contact.legal_form:
+        contact.legal_form_source = "handmatig"
     db.add(contact)
+    await db.flush()
+    await _maybe_fill_legal_form_from_kvk(contact)
     await db.flush()
     await db.refresh(contact)
     return contact
@@ -137,10 +159,27 @@ async def update_contact(
     """Update an existing contact. Only updates fields that are provided."""
     contact = await get_contact(db, tenant_id, contact_id)
 
+    old_legal_form = contact.legal_form
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(contact, field, value)
 
+    # Alleen als de rechtsvorm in DEZE update écht verandert telt dat als een
+    # handmatige actie: nieuwe waarde → "handmatig", leeggemaakt → geen herkomst.
+    # Zo flipt de herkomst niet bij een ongewijzigde meegestuurde waarde (de UI
+    # stuurt legal_form bij elke bewerking mee).
+    legal_form_changed = (
+        "legal_form" in update_data and contact.legal_form != old_legal_form
+    )
+    if legal_form_changed:
+        contact.legal_form_source = "handmatig" if contact.legal_form else None
+
+    await db.flush()
+    # Alleen automatisch uit de KvK aanvullen als de rechtsvorm NIET handmatig is
+    # gewijzigd in deze update: leeggemaakt blijft dan leeg (geen her-ophalen),
+    # en een net toegevoegd KvK-nummer bij een lege rechtsvorm vult alsnog.
+    if not legal_form_changed:
+        await _maybe_fill_legal_form_from_kvk(contact)
     await db.flush()
     await db.refresh(contact)
     return contact

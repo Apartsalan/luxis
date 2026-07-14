@@ -12,6 +12,7 @@ from app.cases.models import Case, CaseActivity
 from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
+from app.documents.rente_bijlage import build_rente_bijlage
 from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
 from app.email.templates import _render_base, document_sent
@@ -1317,6 +1318,12 @@ async def batch_execute(
 
                     if send_email and case.opposing_party and case.opposing_party.email:
                         try:
+                            # S211: renteoverzicht-PDF bij 14-dagenbrief/eerste
+                            # sommatie voor een privé aansprakelijke wederpartij
+                            # (leest het opgeslagen rechtsvorm-veld, nooit de KvK).
+                            rente_attachments = await build_rente_bijlage(
+                                db, tenant_id, case, step, user_id
+                            )
                             email_log = await send_with_attachment(
                                 db,
                                 user_id,
@@ -1324,7 +1331,7 @@ async def batch_execute(
                                 to=case.opposing_party.email,
                                 subject=f"{step.name} inzake dossier {case.case_number}",
                                 body_html=inline_html,
-                                attachments=[],
+                                attachments=rente_attachments,
                                 case_id=case.id,
                                 document_id=doc.id,
                                 recipient_name=(case.opposing_party.name or ""),
@@ -1520,7 +1527,13 @@ def _build_step_email(
     if step.email_subject_template and step.email_body_template:
         from jinja2 import Environment
 
-        env = Environment(autoescape=False)
+        # S202 M4: de body wordt als HTML verstuurd — autoescape zorgt dat
+        # data-afkomstige velden (omschrijving, namen) geen rauwe markup de deur
+        # uit laten gaan; letterlijke sjabloontekst van het kantoor zelf blijft
+        # ongemoeid. Het onderwerp is platte tekst (mailheader) → géén escaping,
+        # anders wordt een legitieme '&' daar zichtbaar '&amp;'.
+        env_subject = Environment(autoescape=False)
+        env_body = Environment(autoescape=True)
 
         # Build a simple context for email templates (lighter than full docx context)
         context = {
@@ -1544,8 +1557,8 @@ def _build_step_email(
         if hasattr(case, "tenant") and case.tenant:
             context["kantoor"]["naam"] = case.tenant.name or ""
 
-        subject = env.from_string(step.email_subject_template).render(context)
-        body_text = env.from_string(step.email_body_template).render(context)
+        subject = env_subject.from_string(step.email_subject_template).render(context)
+        body_text = env_body.from_string(step.email_body_template).render(context)
         body_html = body_text.replace("\n", "<br>")
 
         # Wrap in the standard email layout

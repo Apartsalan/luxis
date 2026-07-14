@@ -628,8 +628,10 @@ async def test_execute_email_template_sends_via_email_route(
     mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
 ):
     """Een e-mailsjabloonstap (sommatie_drukte) verstuurt via de e-mailroute:
-    de brief ís de e-mailtekst (geen PDF-bijlage) en de aanbeveling wordt pas
-    daarna als 'Uitgevoerd' gemarkeerd."""
+    de brief ís de e-mailtekst en de aanbeveling wordt pas daarna als
+    'Uitgevoerd' gemarkeerd. S211: de eerste sommatie draagt het renteoverzicht
+    als PDF-bijlage wanneer de wederpartij privé aansprakelijk kan zijn —
+    rechtsvorm onbekend telt als wél (besluit B)."""
     mock_ctx.return_value = {}
     mock_render.return_value = "<p>Sommatie (drukte)</p>"
     mock_send.return_value = SimpleNamespace(status="sent", error_message=None)
@@ -647,10 +649,89 @@ async def test_execute_email_template_sends_via_email_route(
     assert result is not None
     assert result.status == RecommendationStatus.EXECUTED
     assert result.generated_document_id is not None
-    # E-mailroute → geen bijlage, brief ís de body
+    # E-mailroute: brief ís de body; renteoverzicht-PDF als bijlage (S211,
+    # rechtsvorm onbekend → veilige kant).
+    mock_send.assert_called_once()
+    attachments = mock_send.call_args.kwargs["attachments"]
+    assert len(attachments) == 1
+    filename, data, filetype = attachments[0]
+    assert filename.startswith("renteoverzicht_")
+    assert filetype == "pdf"
+    assert data[:5] == b"%PDF-"
+    assert mock_send.call_args.kwargs["body_html"] == "<p>Sommatie (drukte)</p>"
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+@patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
+async def test_execute_email_route_bv_krijgt_geen_rente_bijlage(
+    mock_send, mock_render, mock_ctx, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S211 keerzijde: een wederpartij met beperkte aansprakelijkheid (BV) krijgt
+    GÉÉN renteoverzicht-bijlage bij de eerste sommatie."""
+    mock_ctx.return_value = {}
+    mock_render.return_value = "<p>Sommatie (drukte)</p>"
+    mock_send.return_value = SimpleNamespace(status="sent", error_message=None)
+
+    step = await _create_step(db, test_tenant.id, name="Eerste sommatie",
+                              template_type="sommatie_drukte")
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    opp = await _add_opposing_with_email(db, test_tenant.id, case)
+    opp.legal_form = "Besloten Vennootschap"
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    result = await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+
+    assert result is not None
     mock_send.assert_called_once()
     assert mock_send.call_args.kwargs["attachments"] == []
-    assert mock_send.call_args.kwargs["body_html"] == "<p>Sommatie (drukte)</p>"
+
+
+@pytest.mark.asyncio
+@patch("app.ai_agent.followup_service.docx_to_pdf", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_docx", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.build_base_context", new_callable=AsyncMock)
+@patch("app.ai_agent.followup_service.render_incasso_email")
+@patch("app.ai_agent.followup_service.send_with_attachment", new_callable=AsyncMock)
+async def test_execute_docx_route_escapes_injected_case_data(
+    mock_send, mock_render, mock_ctx, mock_render_docx, mock_docx_to_pdf,
+    db: AsyncSession, test_tenant: Tenant, test_user: User,
+):
+    """S202 M4: het DOCX-verzendpad substitueert zaak.omschrijving en
+    wederpartij.naam met kale find/replace in de mailbody — een HTML-tag in
+    die database-velden mag niet als echte markup de deur uit gaan."""
+    mock_ctx.return_value = {}
+    mock_render.return_value = None  # geen e-mailsjabloon -> DOCX-route
+    mock_render_docx.return_value = (b"docx-bytes", "brief.docx", "dagvaarding", None)
+    mock_docx_to_pdf.return_value = b"pdf-bytes"
+    mock_send.return_value = SimpleNamespace(status="sent", error_message=None)
+
+    step = await _create_step(
+        db, test_tenant.id, name="Dagvaarding", template_type="dagvaarding_template"
+    )
+    # Tenant-sjabloon MET de placeholders — de kwetsbare find/replace-
+    # substitutie vuurt alleen als deze tokens letterlijk in het sjabloon staan.
+    step.email_subject_template = "Dagvaarding {{ zaak.zaaknummer }} / {{ wederpartij.naam }}"
+    step.email_body_template = (
+        "Geachte {{ wederpartij.naam }},\n\n{{ zaak.omschrijving }}"
+    )
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    case.description = "<script>alert(1)</script>"
+    await _add_opposing_with_email(db, test_tenant.id, case)
+    case.opposing_party.name = "<b>INJECTED</b>"
+    rec = await _create_approved_rec(db, test_tenant.id, case.id, step.id)
+    await db.commit()
+
+    result = await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+
+    assert result is not None
+    body_html = mock_send.call_args.kwargs["body_html"]
+    assert "<script>alert(1)</script>" not in body_html
+    assert "<b>INJECTED</b>" not in body_html
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in body_html
+    assert "&lt;b&gt;INJECTED&lt;/b&gt;" in body_html
 
 
 @pytest.mark.asyncio
@@ -745,7 +826,9 @@ async def test_preview_shows_email_without_sending(
     assert preview is not None
     assert preview.body_html == "<p>Sommatie (drukte)</p>"
     assert preview.recipient_email == "debiteur@example.com"
-    assert preview.has_attachment is False
+    # S211: eerste sommatie + rechtsvorm onbekend → renteoverzicht-bijlage mee,
+    # en de preview toont dat eerlijk.
+    assert preview.has_attachment is True
     assert preview.can_send is True
     # Niets verstuurd/uitgevoerd — aanbeveling blijft PENDING.
     assert rec.status == RecommendationStatus.PENDING

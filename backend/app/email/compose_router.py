@@ -17,6 +17,7 @@ import uuid
 from email.message import EmailMessage
 from email.utils import formataddr
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -30,6 +31,7 @@ from app.collections.models import Claim
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.documents.docx_service import build_base_context
+from app.documents.rente_bijlage import build_rente_bijlage
 from app.email.attachment_models import EmailAttachment
 from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import (
@@ -481,6 +483,19 @@ async def compose_eml_from_case(
         merged_case_file_ids or None,
         data.inline_attachments,
     )
+
+    # S212: renteoverzicht-PDF meesturen bij de 14-dagenbrief/eerste sommatie voor een
+    # privé aansprakelijke wederpartij — zelfde plek als de factuur-PDF's hierboven. Dit
+    # is Lisanne's meest gebruikte route (AI-concept → .eml → Outlook). Leest het
+    # opgeslagen rechtsvorm-veld, nooit live de KvK; bij een BV/NV/stichting → geen bijlage.
+    for rente_name, rente_bytes, _rente_type in await build_rente_bijlage(
+        db, user.tenant_id, case, SimpleNamespace(template_type=data.template_type), user.id
+    ):
+        attachments.append(
+            OutgoingAttachment(
+                filename=rente_name, data=rente_bytes, content_type="application/pdf"
+            )
+        )
 
     # Get sender email from connected account (for From header)
     account = await get_email_account(db, user.id, user.tenant_id)

@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from types import SimpleNamespace
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -20,6 +21,7 @@ from app.documents.docx_service import (
 )
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf, html_to_pdf
+from app.documents.rente_bijlage import build_rente_bijlage
 from app.documents.schemas import (
     DocumentTemplateCreate,
     DocumentTemplateResponse,
@@ -499,6 +501,14 @@ async def send_document(
     # send_with_attachment regelt zelf EmailLog + SyncedEmail + CaseActivity.
     from app.email.send_service import send_with_attachment
 
+    # S212: renteoverzicht-PDF meesturen bij de 14-dagenbrief/eerste sommatie voor een
+    # privé aansprakelijke wederpartij — óók op dit document-verzendpad. Leest het
+    # opgeslagen rechtsvorm-veld, nooit live de KvK; bij een BV/NV/stichting → geen bijlage.
+    attachments = [(pdf_filename, pdf_bytes, "pdf")]
+    attachments += await build_rente_bijlage(
+        db, user.tenant_id, case, SimpleNamespace(template_type=doc.template_type), user.id
+    )
+
     email_log = await send_with_attachment(
         db,
         user.id,
@@ -507,7 +517,7 @@ async def send_document(
         subject=subject,
         body_html=html_body,
         cc=data.cc,
-        attachments=[(pdf_filename, pdf_bytes, "pdf")],
+        attachments=attachments,
         case_id=case.id,
         document_id=doc.id,
         recipient_name=data.recipient_name or "",

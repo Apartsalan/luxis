@@ -617,7 +617,7 @@ function SendPreviewDialog({
 
             {preview.has_attachment && (
               <p className="text-xs text-muted-foreground">
-                De brief gaat als PDF-bijlage mee.
+                Het renteoverzicht gaat als PDF-bijlage mee.
               </p>
             )}
 

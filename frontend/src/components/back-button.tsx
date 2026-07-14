@@ -10,10 +10,13 @@ import type { ReactNode } from "react";
  * (een direct bezochte of ge-bookmarkte URL, of een verse tab), dan valt hij terug
  * op de vaste ouderpagina `fallbackHref` — zo breekt een directe URL nooit.
  *
- * De historie-check gebruikt `window.history.length`: 1 = deze pagina is de enige
- * entry in de tab (direct bezocht/ge-bookmarkt/verse tab) → val terug op de vaste
- * ouder; >1 = er is een vorige pagina → ga daar echt naartoe. (Next.js' App Router
- * bewaart geen bruikbare index in `history.state`, dus die kunnen we niet gebruiken.)
+ * De historie-check vergelijkt `window.history.length` met het ijkpunt dat de
+ * dashboard-omhulling bij binnenkomst in de tab vastlegt
+ * (`luxis_entry_history_len`): is de lengte sindsdien gegroeid, dan is er in de app
+ * genavigeerd → ga echt terug; staat hij nog op het ijkpunt, dan is dit een direct
+ * bezochte/verse URL → val terug op de vaste ouder (breekt niet). Next.js' App
+ * Router bewaart geen bruikbare index in `history.state`, en kale `history.length`
+ * is onbetrouwbaar (een verse tab kan al op 2 staan), vandaar het ijkpunt.
  */
 export function BackButton({
   fallbackHref,
@@ -29,7 +32,14 @@ export function BackButton({
   const router = useRouter();
 
   const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
+    if (typeof window === "undefined") {
+      router.push(fallbackHref);
+      return;
+    }
+    const base = Number(
+      sessionStorage.getItem("luxis_entry_history_len") ?? window.history.length,
+    );
+    if (window.history.length > base) {
       router.back();
     } else {
       router.push(fallbackHref);

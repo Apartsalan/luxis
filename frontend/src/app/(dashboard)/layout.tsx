@@ -24,6 +24,16 @@ export default function DashboardLayout({
     if (stored === "true") setSidebarCollapsed(true);
   }, []);
 
+  // Terug-navigatie: leg bij binnenkomst in de app (de eerste pagina in deze tab)
+  // de historie-lengte vast als ijkpunt. De BackButton onderscheidt hiermee "echt
+  // terug" (er is ná binnenkomst genavigeerd → history.length is gegroeid) van een
+  // direct bezochte/ge-bookmarkte URL (nog op het ijkpunt → val terug op de ouder).
+  useEffect(() => {
+    if (sessionStorage.getItem("luxis_entry_history_len") === null) {
+      sessionStorage.setItem("luxis_entry_history_len", String(window.history.length));
+    }
+  }, []);
+
   // Route guard — redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {

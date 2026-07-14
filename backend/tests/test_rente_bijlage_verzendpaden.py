@@ -216,3 +216,96 @@ async def test_compose_eml_no_rente_bijlage_for_bv(
     assert resp.status_code == 200, resp.text
     assert b"renteoverzicht" not in resp.content
     mock_rente.assert_not_called()
+
+
+# ── Primaire verzendknop (compose/send, S212-review) ───────────────────────────
+
+
+def _provider_mocks(sent: dict):
+    """Mock-set voor een geslaagde /compose/send: account + provider + token."""
+    async def fake_send_message(_token, **kwargs):
+        sent.update(kwargs)
+        return "msg-1"
+
+    provider = SimpleNamespace(send_message=fake_send_message)
+    account = SimpleNamespace(provider="outlook", email_address="incasso@example.nl")
+    return provider, account
+
+
+@pytest.mark.asyncio
+async def test_compose_send_attaches_rente_bijlage_private(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S212-review: de PRIMAIRE knop ('Versturen' → /compose/send) draagt het
+    renteoverzicht bij een eerste-sommatie-sjabloon voor een privé aansprakelijke
+    wederpartij — voorheen ging dit pad zonder sjabloontype en dus zonder bijlage."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    await db.commit()
+
+    sent: dict = {}
+    provider, account = _provider_mocks(sent)
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.email.compose_router.get_email_account", new_callable=AsyncMock, return_value=account),
+        patch("app.email.compose_router.get_provider", return_value=provider),
+        patch("app.email.compose_router.get_valid_access_token", new_callable=AsyncMock, return_value="tok"),
+        patch("app.email.compose_router.imap_smtp_kwargs", return_value={}),
+        patch("app.documents.rente_bijlage.render_docx", new_callable=AsyncMock) as mock_rente,
+        patch("app.documents.rente_bijlage.docx_to_pdf", new_callable=AsyncMock) as mock_rente_pdf,
+    ):
+        mock_rente.return_value = (b"docx", "renteoverzicht_2026-96500.docx", "renteoverzicht", None)
+        mock_rente_pdf.return_value = b"%PDF-rente"
+        resp = await client.post(
+            "/api/email/compose/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "to": ["debiteur@example.nl"],
+                "subject": "Eerste sommatie",
+                "body_html": "<p>Betaal nu.</p>",
+                "case_id": str(case.id),
+                "template_type": "sommatie_drukte",
+                "already_branded": True,
+            },
+        )
+
+    assert resp.status_code == 200, resp.text
+    attachments = sent["attachments"]
+    assert attachments is not None and len(attachments) == 1
+    assert attachments[0].filename.startswith("renteoverzicht_")
+    assert attachments[0].content_type == "application/pdf"
+
+
+@pytest.mark.asyncio
+async def test_compose_send_no_rente_bijlage_for_bv(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Keerzijde op de primaire knop: BV → geen bijlage (attachments blijft None)."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form="Besloten Vennootschap")
+    await db.commit()
+
+    sent: dict = {}
+    provider, account = _provider_mocks(sent)
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.email.compose_router.get_email_account", new_callable=AsyncMock, return_value=account),
+        patch("app.email.compose_router.get_provider", return_value=provider),
+        patch("app.email.compose_router.get_valid_access_token", new_callable=AsyncMock, return_value="tok"),
+        patch("app.email.compose_router.imap_smtp_kwargs", return_value={}),
+        patch("app.documents.rente_bijlage.render_docx", new_callable=AsyncMock) as mock_rente,
+    ):
+        resp = await client.post(
+            "/api/email/compose/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "to": ["debiteur@example.nl"],
+                "subject": "Eerste sommatie",
+                "body_html": "<p>Betaal nu.</p>",
+                "case_id": str(case.id),
+                "template_type": "sommatie_drukte",
+                "already_branded": True,
+            },
+        )
+
+    assert resp.status_code == 200, resp.text
+    assert sent["attachments"] is None
+    mock_rente.assert_not_called()

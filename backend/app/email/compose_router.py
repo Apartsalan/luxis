@@ -126,6 +126,9 @@ class ComposeRequest(BaseModel):
     # True = de gebruiker heeft de blokkade-waarschuwing gezien en bewust doorgezet
     # (er wordt dan een onuitwisbaar spoor op het dossier gelegd).
     compliance_override: bool = False
+    # S212-review: het gekozen incasso-sjabloon. Sleutel voor de renteoverzicht-
+    # bijlage op dít (primaire) verzendpad — zelfde mechanisme als het .eml-pad.
+    template_type: str | None = Field(default=None, max_length=50)
 
     @field_validator("to", "cc")
     @classmethod
@@ -352,6 +355,34 @@ async def send_via_provider(
         )
         if len(resolved_attachments) > MAX_ATTACHMENTS:
             raise BadRequestError(f"Maximaal {MAX_ATTACHMENTS} bijlagen toegestaan")
+
+    # S212-review: renteoverzicht-PDF óók op deze primaire verzendknop ("Versturen").
+    # Zelfde sleutel als het .eml-pad: het gekozen sjabloontype; alleen voor een verse
+    # case-mail (geen antwoord/doorsturen). Bij een BV/NV/stichting → geen bijlage;
+    # mislukt de send, dan rolt het opgeslagen renteoverzicht-document mee terug.
+    if data.template_type and data.case_id and not is_reply_or_forward:
+        rente_case = (
+            await db.execute(
+                select(Case).where(
+                    Case.id == data.case_id, Case.tenant_id == user.tenant_id
+                )
+            )
+        ).scalar_one_or_none()
+        if rente_case is not None:
+            for rente_name, rente_bytes, _rente_type in await build_rente_bijlage(
+                db,
+                user.tenant_id,
+                rente_case,
+                SimpleNamespace(template_type=data.template_type),
+                user.id,
+            ):
+                resolved_attachments.append(
+                    OutgoingAttachment(
+                        filename=rente_name,
+                        data=rente_bytes,
+                        content_type="application/pdf",
+                    )
+                )
 
     # Huisstijl: vrije mail, beantwoorden en doorsturen krijgen dezelfde
     # sjabloon-opmaak (handtekening + logo + schuldhulpblok). Een via een

@@ -382,6 +382,9 @@ export default function ZaakDetailPage() {
         reply_to_message_id: data.reply_to_message_id,
         references_root: data.references_root,
         forward_from_email_id: data.forward_from_email_id,
+        // S212-review: sjabloontype mee zodat de backend het renteoverzicht
+        // aanhangt bij 14-dagenbrief/eerste sommatie (zelfde als het .eml-pad).
+        template_type: data.template_type,
         // AI-concept is al opgemaakt (huisstijl); niet opnieuw aankleden.
         // Alleen overslaan als er ook écht opgemaakte HTML is: mislukt de
         // huisstijl-wrap van een concept (body_html leeg), dan sturen we de

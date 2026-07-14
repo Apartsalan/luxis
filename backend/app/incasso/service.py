@@ -12,6 +12,7 @@ from app.cases.models import Case, CaseActivity
 from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
+from app.documents.rente_bijlage import build_rente_bijlage
 from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
 from app.email.templates import _render_base, document_sent
@@ -1317,6 +1318,12 @@ async def batch_execute(
 
                     if send_email and case.opposing_party and case.opposing_party.email:
                         try:
+                            # S211: renteoverzicht-PDF bij 14-dagenbrief/eerste
+                            # sommatie voor een privé aansprakelijke wederpartij
+                            # (leest het opgeslagen rechtsvorm-veld, nooit de KvK).
+                            rente_attachments = await build_rente_bijlage(
+                                db, tenant_id, case, step, user_id
+                            )
                             email_log = await send_with_attachment(
                                 db,
                                 user_id,
@@ -1324,7 +1331,7 @@ async def batch_execute(
                                 to=case.opposing_party.email,
                                 subject=f"{step.name} inzake dossier {case.case_number}",
                                 body_html=inline_html,
-                                attachments=[],
+                                attachments=rente_attachments,
                                 case_id=case.id,
                                 document_id=doc.id,
                                 recipient_name=(case.opposing_party.name or ""),

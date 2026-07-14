@@ -60,6 +60,18 @@ class Contact(TenantBase):
     kvk_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     btw_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
+    # S211: rechtsvorm (KvK-basisprofiel) — bepaalt of de renteoverzicht-bijlage
+    # bij de 14-dagenbrief/eerste sommatie meemoet (privé aansprakelijk = wel).
+    # Auto-gevuld uit de KvK bij aanmaak/update met kvk_number; handmatig
+    # overschrijfbaar op de relatiekaart. `legal_form_source` = "kvk" of "handmatig",
+    # `legal_form_checked_at` = wanneer voor het laatst bij de KvK opgehaald.
+    # De verzendbeslissing leest ALLEEN dit opgeslagen veld, nooit live de KvK.
+    legal_form: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    legal_form_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    legal_form_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Visit address
     visit_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     visit_postcode: Mapped[str | None] = mapped_column(String(10), nullable=True)

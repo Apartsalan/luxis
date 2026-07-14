@@ -112,6 +112,23 @@ async def get_contact(
     return contact
 
 
+async def _maybe_fill_legal_form_from_kvk(contact: Contact) -> None:
+    """S211: vul `legal_form` uit de KvK als er een KvK-nummer is en de rechtsvorm
+    nog leeg is. Faalt zacht (KvK-client geeft None bij storing) — een KvK-probleem
+    mag een relatie-opslag nooit blokkeren. Overschrijft nooit een handmatig
+    ingevulde of eerder opgehaalde rechtsvorm.
+    """
+    if not contact.kvk_number or contact.legal_form:
+        return
+    from app.integrations.kvk_service import get_rechtsvorm
+
+    rechtsvorm = await get_rechtsvorm(contact.kvk_number)
+    if rechtsvorm:
+        contact.legal_form = rechtsvorm
+        contact.legal_form_source = "kvk"
+        contact.legal_form_checked_at = datetime.now(UTC)
+
+
 async def create_contact(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -122,7 +139,12 @@ async def create_contact(
         tenant_id=tenant_id,
         **data.model_dump(),
     )
+    # Handmatig ingevulde rechtsvorm telt als herkomst "handmatig".
+    if contact.legal_form:
+        contact.legal_form_source = "handmatig"
     db.add(contact)
+    await db.flush()
+    await _maybe_fill_legal_form_from_kvk(contact)
     await db.flush()
     await db.refresh(contact)
     return contact
@@ -141,6 +163,13 @@ async def update_contact(
     for field, value in update_data.items():
         setattr(contact, field, value)
 
+    # Rechtsvorm handmatig gewijzigd → herkomst "handmatig" (KvK niet meer leidend).
+    if "legal_form" in update_data:
+        contact.legal_form_source = "handmatig" if update_data["legal_form"] else None
+
+    await db.flush()
+    # KvK-nummer toegevoegd terwijl rechtsvorm nog leeg is → alsnog ophalen.
+    await _maybe_fill_legal_form_from_kvk(contact)
     await db.flush()
     await db.refresh(contact)
     return contact

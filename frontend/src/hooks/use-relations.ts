@@ -33,6 +33,10 @@ export interface Contact {
   phone: string | null;
   kvk_number: string | null;
   btw_number: string | null;
+  // S211: rechtsvorm uit KvK (of handmatig) — stuurt de renteoverzicht-bijlage.
+  legal_form: string | null;
+  legal_form_source: string | null;
+  legal_form_checked_at: string | null;
   visit_address: string | null;
   visit_postcode: string | null;
   visit_city: string | null;
@@ -88,6 +92,7 @@ interface ContactCreateInput {
   phone?: string;
   kvk_number?: string;
   btw_number?: string;
+  legal_form?: string | null;
   visit_address?: string;
   visit_postcode?: string;
   visit_city?: string;

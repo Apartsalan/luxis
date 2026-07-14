@@ -64,6 +64,7 @@ class ContactCreate(ContactFieldValidators):
     phone: str | None = None
     kvk_number: str | None = None
     btw_number: str | None = None
+    legal_form: str | None = Field(default=None, max_length=100)
     visit_address: str | None = None
     visit_postcode: str | None = None
     visit_city: str | None = None
@@ -99,6 +100,7 @@ class ContactUpdate(ContactFieldValidators):
     phone: str | None = None
     kvk_number: str | None = None
     btw_number: str | None = None
+    legal_form: str | None = Field(default=None, max_length=100)
     visit_address: str | None = None
     visit_postcode: str | None = None
     visit_city: str | None = None
@@ -151,6 +153,9 @@ class ContactResponse(BaseModel):
     phone: str | None
     kvk_number: str | None
     btw_number: str | None
+    legal_form: str | None = None
+    legal_form_source: str | None = None
+    legal_form_checked_at: datetime | None = None
     visit_address: str | None
     visit_postcode: str | None
     visit_city: str | None

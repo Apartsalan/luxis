@@ -22,6 +22,47 @@ from app.incasso.models import CaseStepHistory, IncassoPipelineStep
 # incasso.service.DEFAULT_PIPELINE_STEPS.
 DAGENBRIEF_STEP_NAME = "14-dagenbrief"
 
+# ── Renteoverzicht-bijlage (S211) ─────────────────────────────────────────────
+#
+# Sjabloontypes waarbij het renteoverzicht als PDF-bijlage meegaat: de
+# 14-dagenbrief en de eerste sommatie (besluit C, S210). Match op template_type
+# i.p.v. sort_order — dat is stabiel op prod (0/1) én in een verse test-DB waar
+# de nummering bij 1 begint.
+RENTE_BIJLAGE_TEMPLATE_TYPES = frozenset({"14_dagenbrief", "sommatie_drukte"})
+
+# Rechtsvormen met BEPERKTE aansprakelijkheid → géén renteoverzicht-bijlage
+# (besluit A, S210). Kernwoord-match op de KvK-rechtsvorm, GEEN exacte string:
+# de KvK levert varianten ("Besloten Vennootschap met gewone structuur", ...).
+# Let op: match op de VOLLEDIGE term "besloten/naamloze vennootschap" — niet op
+# los "vennootschap", want een VOF ("vennootschap onder firma") en CV
+# ("commanditaire vennootschap") zijn juist WÉL privé aansprakelijk.
+EXCLUDED_LEGAL_FORM_KEYWORDS = (
+    "besloten vennootschap",  # BV
+    "naamloze vennootschap",  # NV
+    "stichting",
+    "coöperat",  # coöperatie / coöperatieve vereniging
+    "cooperat",  # zonder trema (encoding-veiligheid)
+)
+
+
+def should_attach_rente_bijlage(opposing_party, debtor_type: str | None = None) -> bool:
+    """Moet het renteoverzicht als PDF-bijlage mee bij de 14-dagenbrief/eerste
+    sommatie? Ja bij een privé aansprakelijke wederpartij (particulier,
+    eenmanszaak, VOF, maatschap, CV), nee bij een BV/NV/stichting/coöperatie.
+
+    Leest ALLEEN het opgeslagen `legal_form`-veld (+ debtor_type) — NOOIT live
+    de KvK. Besluiten A/B/C (S210):
+    - b2c/particulier → altijd wél (privé aansprakelijk).
+    - zakelijk, rechtsvorm bekend én beperkt aansprakelijk → niet.
+    - zakelijk, rechtsvorm onbekend/leeg → wél (besluit B: veilige kant).
+    """
+    if debtor_type == "b2c":
+        return True
+    if opposing_party is None:
+        return True  # geen partij bekend → veilige kant (besluit B)
+    legal_form = (getattr(opposing_party, "legal_form", None) or "").lower()
+    return not any(kw in legal_form for kw in EXCLUDED_LEGAL_FORM_KEYWORDS)
+
 # Minimum aantal dagen tussen de 14-dagenbrief en een BIK-claimende sommatie.
 # 14 dagen termijn + 1 dag (de termijn loopt vanaf de dag NÁ ontvangst) → nooit
 # eerder dan 15 dagen versturen.

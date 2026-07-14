@@ -153,6 +153,22 @@ export function ContactInfoSection({
                     className={inputClass}
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                    Rechtsvorm
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.legal_form}
+                    onChange={(e) => updateEdit("legal_form", e.target.value)}
+                    className={inputClass}
+                    placeholder="Auto uit KvK, of handmatig"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Bepaalt of het renteoverzicht wordt meegestuurd bij de eerste
+                    brieven. Wordt automatisch uit de KvK gehaald.
+                  </p>
+                </div>
               </div>
             )}
             <div className="pt-2">
@@ -385,6 +401,21 @@ export function ContactInfoSection({
                   <p className="text-sm font-mono text-foreground">
                     {contact.btw_number}
                   </p>
+                </div>
+              </div>
+            )}
+            {contact.legal_form && (
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    Rechtsvorm
+                    {contact.legal_form_source === "kvk" && " · uit KvK"}
+                    {contact.legal_form_source === "handmatig" && " · handmatig"}
+                  </p>
+                  <p className="text-sm text-foreground">{contact.legal_form}</p>
                 </div>
               </div>
             )}

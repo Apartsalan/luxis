@@ -124,6 +124,7 @@ export default function RelatieDetailPage() {
       phone: contact.phone || "",
       kvk_number: contact.kvk_number || "",
       btw_number: contact.btw_number || "",
+      legal_form: contact.legal_form || "",
       visit_address: contact.visit_address || "",
       visit_postcode: contact.visit_postcode || "",
       visit_city: contact.visit_city || "",
@@ -172,6 +173,7 @@ export default function RelatieDetailPage() {
       data.phone = editForm.phone?.trim() || null;
       data.kvk_number = editForm.kvk_number?.trim() || null;
       data.btw_number = editForm.btw_number?.trim() || null;
+      data.legal_form = editForm.legal_form?.trim() || null;
       data.visit_address = editForm.visit_address?.trim() || null;
       data.visit_postcode = editForm.visit_postcode?.trim() || null;
       data.visit_city = editForm.visit_city?.trim() || null;

@@ -26,6 +26,7 @@ from app.cases.models import Case, CaseActivity
 from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
+from app.documents.rente_bijlage import build_rente_bijlage, wants_rente_bijlage
 from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import get_tenant_send_account
 from app.email.send_service import send_with_attachment
@@ -452,6 +453,13 @@ async def execute_recommendation(
             await db.refresh(doc)
             rec.generated_document_id = doc.id
 
+            # S211: renteoverzicht als PDF-bijlage bij de 14-dagenbrief/eerste
+            # sommatie wanneer de wederpartij privé aansprakelijk is (leest het
+            # opgeslagen rechtsvorm-veld, nooit live de KvK).
+            rente_attachments = await build_rente_bijlage(
+                db, tenant_id, case, step, user_id
+            )
+
             email_log = await send_with_attachment(
                 db,
                 user_id,
@@ -459,7 +467,7 @@ async def execute_recommendation(
                 to=case.opposing_party.email,
                 subject=f"{step.name} inzake dossier {case.case_number}",
                 body_html=inline_html,
-                attachments=[],
+                attachments=rente_attachments,
                 case_id=case.id,
                 document_id=doc.id,
                 recipient_name=case.opposing_party.name or "",
@@ -704,7 +712,9 @@ async def preview_recommendation(
             sender_email=sender_email,
             recipient_email=recipient_email,
             recipient_name=recipient_name,
-            has_attachment=False,
+            # S211: e-mailtekst zelf heeft geen bijlage, behalve het renteoverzicht
+            # bij de 14-dagenbrief/eerste sommatie voor een privé aansprakelijke partij.
+            has_attachment=wants_rente_bijlage(case, step),
             can_send=can_send,
             warning=warning,
         )

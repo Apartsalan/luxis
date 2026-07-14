@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     # AI Agent — unused since S159 — AVG B1 (Gemini uit code: gratis-tier traint op data)
     gemini_api_key: str = ""
 
+    # KvK API (Basisprofiel — rechtsvorm voor de renteoverzicht-bijlage, S211).
+    # Default = de gratis OPENBARE testomgeving (nepbedrijven). Op de VPS worden
+    # KVK_API_KEY + KVK_API_BASE naar de productiewaarden gezet zodra de echte
+    # sleutel binnen is. De sleutel wordt nooit in het verzendpad gebruikt.
+    kvk_api_key: str = "l7xx1f2691f2520d487b902f4e0b57a0b197"
+    kvk_api_base: str = "https://api.kvk.nl/test/api"
+
     # Exact Online
     exact_online_client_id: str = ""
     exact_online_client_secret: str = ""

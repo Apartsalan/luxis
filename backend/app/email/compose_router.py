@@ -334,17 +334,40 @@ async def send_via_provider(
     provider = get_provider(account.provider)
     access_token = await get_valid_access_token(db, account)
 
+    # DF122-07 (S212): automatisch factuur-PDF's van claims bijvoegen bij een
+    # sommatie-sjabloon — zelfde regel als het .eml-pad (compose_eml_from_case),
+    # alleen voor een verse case-mail (geen antwoord/doorsturen).
+    merged_case_file_ids: list[uuid.UUID] = list(data.case_file_ids or [])
+    if (
+        data.template_type in AUTO_ATTACH_INVOICE_TYPES
+        and data.case_id
+        and not is_reply_or_forward
+    ):
+        claims_result = await db.execute(
+            select(Claim.invoice_file_id).where(
+                Claim.case_id == data.case_id,
+                Claim.tenant_id == user.tenant_id,
+                Claim.is_active.is_(True),
+                Claim.invoice_file_id.is_not(None),
+            )
+        )
+        seen = set(merged_case_file_ids)
+        for (inv_id,) in claims_result.all():
+            if inv_id is not None and inv_id not in seen:
+                merged_case_file_ids.append(inv_id)
+                seen.add(inv_id)
+
     # Bijlagen oplossen (dossierbestanden + inline uploads). Vereist een dossier
     # voor de dossierbestanden; inline uploads kunnen ook zonder.
     resolved_attachments: list[OutgoingAttachment] = []
-    if data.case_file_ids or data.inline_attachments:
+    if merged_case_file_ids or data.inline_attachments:
         if data.case_file_ids and not data.case_id:
             raise BadRequestError("Dossier ontbreekt voor de geselecteerde dossierbijlagen.")
         resolved_attachments = await _resolve_attachments(
             db,
             user.tenant_id,
             data.case_id,
-            data.case_file_ids,
+            merged_case_file_ids or None,
             data.inline_attachments,
         )
 

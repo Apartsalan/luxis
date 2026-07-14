@@ -14,6 +14,7 @@ en de bedrading, niet de PDF-inhoud.
 
 import uuid
 from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -22,7 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
 from app.auth.service import create_access_token
-from app.cases.models import Case
+from app.cases.models import Case, CaseFile
+from app.collections.models import Claim
 from app.documents.models import GeneratedDocument
 from app.incasso.models import IncassoPipelineStep
 from app.relations.models import Contact
@@ -309,3 +311,61 @@ async def test_compose_send_no_rente_bijlage_for_bv(
     assert resp.status_code == 200, resp.text
     assert sent["attachments"] is None
     mock_rente.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_compose_send_auto_attaches_invoice_pdfs(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User, tmp_path
+):
+    """DF122-07 op de primaire knop: bij een sommatie-sjabloon gaan de factuur-PDF's
+    van de actieve vorderingen automatisch mee — plus het renteoverzicht (eenmanszaak).
+    Voorheen deed alleen het .eml-pad dit."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    # Factuur-PDF als dossierbestand op schijf + vordering die ernaar wijst.
+    cf = CaseFile(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        original_filename="factuur-2026-001.pdf", stored_filename="f1.pdf",
+        file_size=9, content_type="application/pdf", uploaded_by=test_user.id,
+    )
+    db.add(cf)
+    db.add(Claim(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        description="Factuur 2026-001", principal_amount=Decimal("5000.00"),
+        default_date=date(2026, 1, 1), invoice_file_id=cf.id,
+    ))
+    await db.commit()
+    file_dir = tmp_path / str(test_tenant.id) / str(case.id)
+    file_dir.mkdir(parents=True)
+    (file_dir / "f1.pdf").write_bytes(b"%PDF-fact")
+
+    sent: dict = {}
+    provider, account = _provider_mocks(sent)
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.email.compose_router.UPLOADS_BASE", tmp_path),
+        patch("app.email.compose_router.get_email_account", new_callable=AsyncMock, return_value=account),
+        patch("app.email.compose_router.get_provider", return_value=provider),
+        patch("app.email.compose_router.get_valid_access_token", new_callable=AsyncMock, return_value="tok"),
+        patch("app.email.compose_router.imap_smtp_kwargs", return_value={}),
+        patch("app.documents.rente_bijlage.render_docx", new_callable=AsyncMock) as mock_rente,
+        patch("app.documents.rente_bijlage.docx_to_pdf", new_callable=AsyncMock) as mock_rente_pdf,
+    ):
+        mock_rente.return_value = (b"docx", "renteoverzicht_2026-96500.docx", "renteoverzicht", None)
+        mock_rente_pdf.return_value = b"%PDF-rente"
+        resp = await client.post(
+            "/api/email/compose/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "to": ["debiteur@example.nl"],
+                "subject": "Eerste sommatie",
+                "body_html": "<p>Betaal nu.</p>",
+                "case_id": str(case.id),
+                "template_type": "sommatie_drukte",
+                "already_branded": True,
+            },
+        )
+
+    assert resp.status_code == 200, resp.text
+    attachments = sent["attachments"]
+    filenames = sorted(a.filename for a in attachments)
+    assert filenames == ["factuur-2026-001.pdf", "renteoverzicht_2026-96500.pdf"]

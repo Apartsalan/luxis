@@ -37,6 +37,12 @@ async def get_rechtsvorm(kvk_number: str | None) -> str | None:
     if kvk is None:
         return None
 
+    # Geen sleutel geconfigureerd → slapend: nooit stil tegen een verkeerde
+    # omgeving bevragen (bv. de testomgeving op productie). Rechtsvorm blijft leeg
+    # → besluit B (veilige kant: wél bijlage).
+    if not settings.kvk_api_key:
+        return None
+
     url = f"{settings.kvk_api_base.rstrip('/')}/v1/basisprofielen/{kvk}"
     headers = {"apikey": settings.kvk_api_key}
 
@@ -57,4 +63,6 @@ async def get_rechtsvorm(kvk_number: str | None) -> str | None:
     if not rechtsvorm:
         logger.info("KvK %s: profiel zonder rechtsvorm-veld", kvk)
         return None
-    return str(rechtsvorm).strip()
+    # Kolom legal_form is String(100); afkappen zodat een onverwacht lange KvK-waarde
+    # nooit de flush (en dus de relatie-opslag) kan breken.
+    return str(rechtsvorm).strip()[:100]

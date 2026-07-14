@@ -129,6 +129,7 @@ async def test_get_rechtsvorm_leest_uitgebreide_rechtsvorm(monkeypatch):
             }
         }
     }
+    monkeypatch.setattr("app.integrations.kvk_service.settings.kvk_api_key", "testkey")
     monkeypatch.setattr(
         "app.integrations.kvk_service.httpx.AsyncClient",
         lambda *a, **k: _FakeClient(_FakeResponse(200, payload)),
@@ -136,6 +137,34 @@ async def test_get_rechtsvorm_leest_uitgebreide_rechtsvorm(monkeypatch):
     from app.integrations.kvk_service import get_rechtsvorm
 
     assert await get_rechtsvorm("68750110") == "Besloten Vennootschap met gewone structuur"
+
+
+@pytest.mark.asyncio
+async def test_get_rechtsvorm_zonder_sleutel_slaapt(monkeypatch):
+    """Lege sleutel → geen HTTP-call, gewoon None (nooit stil verkeerde omgeving)."""
+
+    def _boom(*a, **k):
+        raise AssertionError("KvK mag niet bevraagd worden zonder sleutel")
+
+    monkeypatch.setattr("app.integrations.kvk_service.settings.kvk_api_key", "")
+    monkeypatch.setattr("app.integrations.kvk_service.httpx.AsyncClient", _boom)
+    from app.integrations.kvk_service import get_rechtsvorm
+
+    assert await get_rechtsvorm("68750110") is None
+
+
+@pytest.mark.asyncio
+async def test_get_rechtsvorm_kapt_lange_waarde_af(monkeypatch):
+    """Onverwacht lange KvK-rechtsvorm → afgekapt op 100 (kolomlengte)."""
+    payload = {"_embedded": {"eigenaar": {"uitgebreideRechtsvorm": "X" * 250}}}
+    monkeypatch.setattr("app.integrations.kvk_service.settings.kvk_api_key", "testkey")
+    monkeypatch.setattr(
+        "app.integrations.kvk_service.httpx.AsyncClient",
+        lambda *a, **k: _FakeClient(_FakeResponse(200, payload)),
+    )
+    from app.integrations.kvk_service import get_rechtsvorm
+
+    assert len(await get_rechtsvorm("68750110")) == 100
 
 
 @pytest.mark.asyncio
@@ -158,6 +187,7 @@ async def test_get_rechtsvorm_ongeldig_nummer_niet_bevraagd(monkeypatch):
 @pytest.mark.asyncio
 async def test_get_rechtsvorm_storing_geeft_none(monkeypatch):
     """Netwerkfout / timeout → zacht falen (None), nooit een exception."""
+    monkeypatch.setattr("app.integrations.kvk_service.settings.kvk_api_key", "testkey")
     monkeypatch.setattr(
         "app.integrations.kvk_service.httpx.AsyncClient",
         lambda *a, **k: _FakeClient(TimeoutError("kvk traag")),
@@ -169,6 +199,7 @@ async def test_get_rechtsvorm_storing_geeft_none(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_rechtsvorm_404_geeft_none(monkeypatch):
+    monkeypatch.setattr("app.integrations.kvk_service.settings.kvk_api_key", "testkey")
     monkeypatch.setattr(
         "app.integrations.kvk_service.httpx.AsyncClient",
         lambda *a, **k: _FakeClient(_FakeResponse(404)),
@@ -245,3 +276,97 @@ async def test_create_contact_handmatige_rechtsvorm_blijft_handmatig(
     )
     assert contact.legal_form == "Besloten Vennootschap"
     assert contact.legal_form_source == "handmatig"
+
+
+# ── Update-flow ───────────────────────────────────────────────────────────────
+
+
+async def _company_with_kvk(db, tenant_id, monkeypatch, legal_form=None):
+    """Maak een bedrijf met KvK-nummer; auto-vullen uitgeschakeld tenzij gevraagd."""
+
+    async def _none(kvk_number):
+        return legal_form
+
+    monkeypatch.setattr("app.integrations.kvk_service.get_rechtsvorm", _none)
+    return await relations_service.create_contact(
+        db,
+        tenant_id,
+        ContactCreate(contact_type="company", name="Bedrijf", kvk_number="68750110"),
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_leegmaken_blijft_leeg(
+    db: AsyncSession, test_tenant: Tenant, monkeypatch
+):
+    """Rechtsvorm leegmaken → blijft leeg, KvK wordt NIET opnieuw bevraagd."""
+    from app.relations.schemas import ContactUpdate
+
+    contact = await _company_with_kvk(
+        db, test_tenant.id, monkeypatch, legal_form="Eenmanszaak"
+    )
+    assert contact.legal_form == "Eenmanszaak"
+
+    async def _boom(kvk_number):
+        raise AssertionError("KvK mag niet opnieuw bevraagd worden bij leegmaken")
+
+    monkeypatch.setattr("app.integrations.kvk_service.get_rechtsvorm", _boom)
+    updated = await relations_service.update_contact(
+        db, test_tenant.id, contact.id, ContactUpdate(legal_form="")
+    )
+    assert updated.legal_form in (None, "")
+    assert updated.legal_form_source is None
+
+
+@pytest.mark.asyncio
+async def test_update_kvk_toegevoegd_vult_alsnog(
+    db: AsyncSession, test_tenant: Tenant, monkeypatch
+):
+    """KvK-nummer later toegevoegd terwijl rechtsvorm leeg → alsnog ophalen."""
+    from app.relations.schemas import ContactUpdate
+
+    async def _none(kvk_number):
+        return None
+
+    monkeypatch.setattr("app.integrations.kvk_service.get_rechtsvorm", _none)
+    contact = await relations_service.create_contact(
+        db, test_tenant.id, ContactCreate(contact_type="company", name="Nog Geen KvK")
+    )
+    assert contact.legal_form is None
+
+    async def _fill(kvk_number):
+        return "Besloten Vennootschap"
+
+    monkeypatch.setattr("app.integrations.kvk_service.get_rechtsvorm", _fill)
+    updated = await relations_service.update_contact(
+        db, test_tenant.id, contact.id, ContactUpdate(kvk_number="68750110")
+    )
+    assert updated.legal_form == "Besloten Vennootschap"
+    assert updated.legal_form_source == "kvk"
+
+
+@pytest.mark.asyncio
+async def test_update_ongewijzigde_rechtsvorm_flipt_herkomst_niet(
+    db: AsyncSession, test_tenant: Tenant, monkeypatch
+):
+    """UI stuurt legal_form bij elke bewerking mee; ongewijzigd → herkomst blijft 'kvk'."""
+    from app.relations.schemas import ContactUpdate
+
+    contact = await _company_with_kvk(
+        db, test_tenant.id, monkeypatch, legal_form="Eenmanszaak"
+    )
+    contact.legal_form_source = "kvk"
+    await db.flush()
+
+    async def _boom(kvk_number):
+        raise AssertionError("KvK niet bevragen bij ongewijzigde rechtsvorm")
+
+    monkeypatch.setattr("app.integrations.kvk_service.get_rechtsvorm", _boom)
+    updated = await relations_service.update_contact(
+        db,
+        test_tenant.id,
+        contact.id,
+        ContactUpdate(legal_form="Eenmanszaak", phone="0201234567"),
+    )
+    assert updated.legal_form == "Eenmanszaak"
+    assert updated.legal_form_source == "kvk"

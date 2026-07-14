@@ -52,11 +52,16 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     # KvK API (Basisprofiel — rechtsvorm voor de renteoverzicht-bijlage, S211).
-    # Default = de gratis OPENBARE testomgeving (nepbedrijven). Op de VPS worden
-    # KVK_API_KEY + KVK_API_BASE naar de productiewaarden gezet zodra de echte
-    # sleutel binnen is. De sleutel wordt nooit in het verzendpad gebruikt.
-    kvk_api_key: str = "l7xx1f2691f2520d487b902f4e0b57a0b197"
-    kvk_api_base: str = "https://api.kvk.nl/test/api"
+    # Sleutel LEEG als default: dan is het ophalen slapend (get_rechtsvorm geeft
+    # None) en gebeurt er nooit stil een bevraging tegen de verkeerde omgeving.
+    # Op de VPS wordt KVK_API_KEY als env gezet — de TESTsleutel pas als hij tegen
+    # testdata mag draaien, de productiesleutel zodra die binnen is. Base default
+    # = productie; voor de testomgeving óók KVK_API_BASE op de testwaarde zetten.
+    # (Test-key = "l7xx1f2691f2520d487b902f4e0b57a0b197",
+    #  test-base = "https://api.kvk.nl/test/api" — openbaar, geen geheim.)
+    # De sleutel wordt nooit in het verzendpad gebruikt.
+    kvk_api_key: str = ""
+    kvk_api_base: str = "https://api.kvk.nl/api"
 
     # Exact Online
     exact_online_client_id: str = ""

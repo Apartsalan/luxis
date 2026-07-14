@@ -159,17 +159,27 @@ async def update_contact(
     """Update an existing contact. Only updates fields that are provided."""
     contact = await get_contact(db, tenant_id, contact_id)
 
+    old_legal_form = contact.legal_form
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(contact, field, value)
 
-    # Rechtsvorm handmatig gewijzigd → herkomst "handmatig" (KvK niet meer leidend).
-    if "legal_form" in update_data:
-        contact.legal_form_source = "handmatig" if update_data["legal_form"] else None
+    # Alleen als de rechtsvorm in DEZE update écht verandert telt dat als een
+    # handmatige actie: nieuwe waarde → "handmatig", leeggemaakt → geen herkomst.
+    # Zo flipt de herkomst niet bij een ongewijzigde meegestuurde waarde (de UI
+    # stuurt legal_form bij elke bewerking mee).
+    legal_form_changed = (
+        "legal_form" in update_data and contact.legal_form != old_legal_form
+    )
+    if legal_form_changed:
+        contact.legal_form_source = "handmatig" if contact.legal_form else None
 
     await db.flush()
-    # KvK-nummer toegevoegd terwijl rechtsvorm nog leeg is → alsnog ophalen.
-    await _maybe_fill_legal_form_from_kvk(contact)
+    # Alleen automatisch uit de KvK aanvullen als de rechtsvorm NIET handmatig is
+    # gewijzigd in deze update: leeggemaakt blijft dan leeg (geen her-ophalen),
+    # en een net toegevoegd KvK-nummer bij een lege rechtsvorm vult alsnog.
+    if not legal_form_changed:
+        await _maybe_fill_legal_form_from_kvk(contact)
     await db.flush()
     await db.refresh(contact)
     return contact

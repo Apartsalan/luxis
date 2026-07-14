@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 13 juli 2026 (S207c/d LIVE). Rentesprint gereviewd; 79 consumentenzaken terug naar wettelijke rente; bevriesdatum gebackfilld op alle 580 gesloten zaken (spookrente −€531k); BaseNet-herkomst (`basenet_origin_status`) + werkfase (`basenet_origin_phase`) als harde velden + badge. Migraties t/m `s207d` live. **Volgende: WIK-rentebijlage (wacht op KvK-API) + kritische her-audit BaseNet-export (zie prioriteit).**
+**Laatst bijgewerkt:** 14 juli 2026 (S209 LIVE, Opus-bouw + Fable-review). BaseNet import-gaten uit de S208-veldaudit gedicht: 99 werknotities + 13 waarschuwingen → dossiernotitie, 49 buitenlandse landen (nieuw land-veld op relaties, migratie `s209_contact_country`), 28 geboortedatums; import-recept neemt alles voortaan mee. Functioneel geverifieerd (8 round-trip-tests + visueel). Prod op HEAD `f3b2ad4`. **Volgende: provisie-afspraak Arsalan↔Lisanne uitvragen (dan provisie-15%-backfill) + land op Word-brieven + WIK-bijlage (KvK-API).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -57,18 +57,20 @@
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **HER-AUDIT BASENET-EXPORT AFGEROND (S208, 13 juli).** Veld-voor-veld door
-> `Xml_02-07-2026_2400.zip`; rapport: `docs/research/S208-veldaudit-basenet.md`. Rente is AF
-> en eind-geverifieerd: 607/607 dossiers conform de besluiten (S188b + S207c), ijk IN100197
-> = €723,31 op de cent, 107 rentetests groen — geen rente-acties meer nodig.
+> ✅ **BASENET IMPORT-GATEN GEDICHT (S209, 14 juli — Opus-bouw + Fable-review, alles LIVE).**
+> De 3 backfills uit de S208-veldaudit uitgevoerd + functioneel geverifieerd: 99 werknotities +
+> 13 waarschuwingen → dossiernotitie (`[BaseNet-notitie]`/`[BaseNet-waarschuwing]`); nieuw
+> land-veld op relaties (`contacts.visit_country/postal_country`, migratie `s209_contact_country`)
+> + 49 buitenlandse landen (nette NL-namen); 28 geboortedatums. Import-recept `mapping.py` neemt
+> land/geboortedatum/provisie/notities + rentetype voortaan mee. 8 round-trip-tests + visueel
+> doorgeklikt. Details: SESSION-NOTES S209.
 >
-> 🔨 **VOLGENDE (S209, prompt klaar):** de gevonden import-gaten dichten, elk na akkoord:
-> (1) 99 dossiernotities + 13 waarschuwingen ("Failliet", "procedure aanhangig") → dossiernotitie,
-> vóór de fase-heropening; (2) land-veld bij adressen (52 buitenlandse relaties) + backfill;
-> (3) provisie 15% (39 zaken) + 28 geboortedatums backfillen; (4) bij verse export: mapping
-> uitbreiden (rentetype, notities, land — rapport §8.5). Parallel openstaand: WIK-rentebijlage
-> **wacht op KvK-API** (Arsalan, €6,40/mnd + €0,02/bevraging); invoer nieuwe zaken = verse
-> BaseNet-export + import-status-fix; voorstel: filter "Nog te openen" op de dossierlijst.
+> 🔨 **VOLGENDE (S210, prompt klaar):** (1) **provisie-afspraak Arsalan↔Lisanne** eerst uitvragen
+> (regeling met debiteur → 15% over de deal; vol bedrag → gewone incassokosten), dan pas ontwerpen
+> (Plan Mode) + de provisie-15%-backfill (39 zaken) uitvoeren; (2) **land op de eigenlijke
+> Word-brieven** — `{{ wederpartij.land }}`-regel in de built-in DOCX-sjablonen (sjabloon-editor,
+> klein, visuele controle); (3) **WIK-rentebijlage wacht op KvK-API** (Arsalan, €6,40/mnd +
+> €0,02/bevraging). Voorstel blijft: filter "Nog te openen" op de dossierlijst.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet

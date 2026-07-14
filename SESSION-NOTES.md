@@ -2,10 +2,72 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 13 juli 2026 (S208, Fable max effort — BaseNet-veldaudit + eindverificatie rente; read-only + docs). Rente is AF: 607/607 dossiers conform besluiten, ijkdossier op de cent.
-**Laatste feature/fix:** geen code. Rapport `docs/research/S208-veldaudit-basenet.md` (veld-voor-veld-audit + 7b-eindverificatie) + `PLAN-heropening-werkvoorraad.md` §4b gecorrigeerd (rente al uitgerold; samengesteld, niet enkelvoudig).
-**Openstaand — volgende sessie (startprompt: `docs/sessions/PROMPT-S209.md`):** (1) import-backfills na akkoord per stuk: 99 dossiernotities + 13 alerts, land-veld (52 buitenlandse relaties), provisie 15% (39 zaken), 28 geboortedatums; (2) WIK-rentebijlage wacht op KvK-API (Arsalan); (3) verse export voor nieuwe zaken + mapping-uitbreiding (rentetype e.a., zie rapport §8.5).
-**Volgende sessie:** S209. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) loopt parallel in ander venster — niet mengen; werkkopie bevat hun niet-gecommitte wijzigingen.
+**Laatst bijgewerkt:** 14 juli 2026 (S209, Opus-bouw + Fable-review — BaseNet import-gaten gedicht, alles LIVE + functioneel geverifieerd). Prod op HEAD `f3b2ad4`.
+**Laatste feature/fix:** 3 backfills LIVE (99 werknotities + 13 waarschuwingen → dossiernotitie; 49 buitenlandse landen; 28 geboortedatums) + nieuw land-veld op relaties (scherm + brief-context) + mapping neemt alles voortaan mee. Zie entry S209.
+**Openstaand — volgende sessie (startprompt: `docs/sessions/PROMPT-S210.md`):** (1) provisie-15% (39 zaken) wacht op de provisie-afspraak Arsalan↔Lisanne (eerst uitvragen, dan bouwen); (2) land op de Word-brieven zelf (sjabloon-editor, klein); (3) WIK-rentebijlage wacht op KvK-API (Arsalan).
+**Volgende sessie:** S210. NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) loopt parallel — niet mengen; werkkopie bevat hun niet-gecommitte wijzigingen.
+
+
+## Sessie 209 (14 juli 2026, Opus-bouw + Fable-review — BaseNet import-gaten uit S208-veldaudit gedicht, LIVE)
+
+### Samenvatting
+Vier onderdelen uit de S208-veldaudit, elk als losse stap met dry-run + akkoord Arsalan +
+tel-verificatie achteraf. Daarna een volledige Fable-review (model omgezet in dezelfde sessie)
+die niet alleen de data hertelde maar ook functioneel testte dat alles vooruit werkt.
+
+- **Onderdeel 1 — werknotities + waarschuwingen (LIVE).** 99 `pmemo` + 13 `palert` uit de
+  Incasso-export → `Case.debtor_notes` (waarschuwing bovenaan met `[BaseNet-waarschuwing]`,
+  werknotitie onder met `[BaseNet-notitie]`, herkomst-regel blijft ertussen). HTML-opmaak
+  opgeschoond. Idempotent via marker. 109 dossiers, tel-geverifieerd 99+13. Herhaalbaar script
+  `scripts/basenet/backfill_notes.py` (+ zelf-test).
+- **Onderdeel 2 — land bij adressen (LIVE, incl. migratie + deploy).** Nieuwe kolommen
+  `contacts.visit_country/postal_country` (migratie `s209_contact_country`, additief). 49
+  buitenlandse relaties gevuld met nette NL-landnamen (binnenland leeg = standaard). Getoond in
+  relatie-detail (alleen indien gevuld) + bewerkbaar. Land beschikbaar in de brief-context
+  (`{{ wederpartij.land }}`) + samenvoegveld-lijst + HTML-fallback-sjablonen.
+- **Onderdeel 3 — geboortedatums (LIVE); provisie GEPARKEERD.** 28 personen kregen hun
+  `date_of_birth` (gekoppeld op systemid, namen gecontroleerd: 26 exact + 2 tussenvoegsel-only).
+  Provisie-15% (39 zaken) BEWUST niet uitgevoerd — hangt aan de provisie-afspraak (zie onder).
+- **Onderdeel 4 — mapping uitgebreid (voor de vólgende export).** `scripts/basenet/mapping.py`
+  neemt nu land (genormaliseerd), geboortedatum, provisie (alleen >0), pmemo/palert in
+  debtor_notes + rentetype-context automatisch mee. Hergebruikt `build_new_notes`/`clean`.
+- **Provisie-afspraak (niet gebouwd — eerst uitvragen).** Arsalan (14 juli): treft Lisanne een
+  regeling met de debiteur voor een lager bedrag, dan krijgt zij 15% over die deal; haalt zij het
+  volledige bedrag binnen, dan krijgt zij gewoon de incassokosten. Nog niet scherp genoeg + het is
+  onbekend of dit dezelfde 15% is als de BaseNet-`incprovisie` bij 39 zaken. Vragen staan in
+  `PROMPT-S209.md`; wachten op Arsalans antwoorden vóór ontwerp (Plan Mode).
+
+### Fable-review (zelfde sessie, model omgezet)
+Data onafhankelijk herteld: 109/109 notities byte-voor-byte gelijk aan herberekening (0 `\r`),
+49/49 landen + 28/28 geboortedatums exact + bij de juiste relatie (koppeling in beide richtingen
+dicht), 0 andere records geraakt (0 provisie gezet). Live via API + visueel doorgeklikt (Chrome):
+land toont "Duitsland", dossiernotitie toont "Failliet" bovenaan, testrelatie aangemaakt→land
+opgeslagen→verwijderd. **8 round-trip-tests** toegevoegd (mapping→`_insert_missing`→PUT/GET-API).
+**Review-vondst:** `is_btw_plichtig` + `contractual_compound` misten `server_default` in het model
+terwijl prod die wél heeft (migratie-drift) → test-DB week af, raw-SQL-insert faalde daar. Model
+gelijkgetrokken (geen gedragswijziging op prod). 284 tests rente/dossiers/relaties/btw groen.
+
+### Gewijzigde bestanden
+- Backend: `relations/models.py` (2 land-kolommen + server_default-sync), `relations/schemas.py`,
+  `cases/models.py` (server_default-sync), `documents/docx_service.py` + `documents/service.py`
+  (land in context), `templates/sommatie.html` + `14_dagenbrief.html`, migratie
+  `s209_contact_country`.
+- Frontend: `relaties/[id]/page.tsx`, `components/relations/detail/ContactInfoSection.tsx`,
+  `hooks/use-relations.ts`.
+- Scripts/tests: `scripts/basenet/backfill_notes.py` (nieuw), `scripts/basenet/mapping.py`,
+  `backend/tests/test_basenet_s209_roundtrip.py` (nieuw).
+- 6 commits (`2d51ec5` notities · `3054764` land · `c50d24d` mapping · `166620d` review-tests +
+  drift-fix · `f3b2ad4` lint). Data-mutaties via read-only-gecontroleerde SQL op prod.
+
+### Bekende issues / bewust niet gedaan
+- **Provisie-15% (39 zaken)** wacht op de provisie-afspraak — eerst uitvragen (PROMPT-S209 §gesprek).
+- **Land op de eigenlijke Word-brieven** — de built-in DOCX-sjablonen (in de DB) missen nog de
+  `{{ wederpartij.land }}`-regel; kleine klus in de sjabloon-editor met visuele controle. Basis staat.
+- Parallelle S207-track: 5 bestanden nog ongecommit in de werkkopie — niet aangeraakt.
+
+### Volgende sessie
+S210 (`docs/sessions/PROMPT-S210.md`): provisie-afspraak uitvragen bij Arsalan → ontwerpen (Plan
+Mode) → eventueel provisie-backfill; land-regel in de Word-sjablonen. WIK-bijlage zodra KvK-API er is.
 
 
 ## Sessie 208 (13 juli 2026, Fable max — BaseNet-veldaudit + EINDVERIFICATIE rente, read-only)
@@ -426,29 +488,3 @@ bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouw
 
 ### Volgende sessie
 - Codex neemt over via `docs/sessions/PROMPT-CODEX-master.md` (Ultra: mailpad-audit + facturatie-onderzoek; High: voorkant-fixes + security-fixes). Over ~3 uur checkt Fable Codex' werk na.
-
-## Sessie 200 (12 juli 2026, Fable — "de voorkant liegt"-audit, 100% read-only op prod)
-
-### Samenvatting
-- Alle 8 vegen uit `PROMPT-S200.md` uitgevoerd + Lisanne-dag doorgeklikt op prod (ingelogd via gemint token, alleen GET/kijken). Resultaat: **19 genummerde bevindingen** met bewijs, ernst en fix-grootte in `docs/sessions/S200-BEVINDINGEN.md`, gerangschikt op impact voor Lisanne.
-- **Hoog (6):** mailsync kan stil doodgaan (geen sync-gezondheid in UI); alle 12 scheduler-jobs incl. verjaringscheck falen alleen naar server-log; AI-concept valt bij rekenfout stil terug op €0 rente/BIK; "Hernoemen" dossierbestand = kapotte knop (PATCH-route bestaat niet + geen onError); 14-dagenbrief-compliancecheck dubbel dood (leest lege tabel én nul UI-callers — juridisch relevant); dashboard "1169 toegevoegd deze maand" (allemaal import-stempels).
-- **Middel:** "Gegenereerde documenten"-sectie blijvend leeg (live briefpad persisteert niets); Staphistorie-tab altijd leeg (AI-intake seedt geen stap/historie; 10 stap-loze zaken); batch-fouten verdwijnen in groene toast; incasso-ratio deelt appels door peren; nep-tabs Instellingen→Meldingen/Weergave; latente 500 op dossier-tijdlijn (`duration_seconds` vs `duration_minutes`, 1-regel-fix); negatieve "Openstaand"-bedragen + twee definities van "Openstaand".
-- **Relieken:** 35 dode routes (lijst in rapport), dode hook `usePendingCount`, Gmail-knop nog live tegen beleid in, `POST /api/auth/logout` juist nooit aangesloten (security-flag), `document_templates`/`email_logs` reliek.
-- **Goed nieuws:** alle 30+ gecontroleerde cijfers op dashboard/rapportages/badges kloppen exact met SQL; 0 console-errors/4xx/5xx bij doorklikken; S191-meldingen-mysterie (264 vs 299) verklaard: bel verbergt `classification_done` per gebruiker — badge 20 is correct.
-- Audit 7-beperking: prod-logs bestaan maar ~9 uur (containerlogs weg bij elke deploy) → aanbeveling log-persistentie. Caddy: 29× 502 geclusterd rond S199-deploys (1 mislukte login).
-
-### Gewijzigde bestanden
-- `docs/sessions/S200-BEVINDINGEN.md` (nieuw — het rapport)
-- `docs/sessions/PROMPT-S203-voorkant-fixes.md` (nieuw — fix-bouwsessie)
-- `SESSION-NOTES.md` + `LUXIS-ROADMAP.md` (deze afsluiting); S190-entry → archief
-- Geen code, geen prod-data (100% read-only nageleefd; alle DB-toegang was SELECT, API-toegang alleen GET)
-
-### Bekende issues
-- Alles in `S200-BEVINDINGEN.md` (fixes = S203). Snelste winst: tijdlijn-crash (1 regel), hernoemen-knop, €0-fallback-markering.
-- Untracked in werkkopie (niet van S200): `S201-HANDOFF-naar-Sol.md`, `docs/security/S202-delta-audit.md`, AV-PDF's, bank-CSV, `.agents/`, `AGENTS.md` — laten staan voor het parallelle spoor; Arsalan beslist over committen.
-
-### Volgende sessie
-- Sol rondt S201 af (facturatie-onderzoek, handoff-doc) → daarna S202 (security-delta) → daarna S203 (voorkant-fixes, prompt klaar).
-
-
-

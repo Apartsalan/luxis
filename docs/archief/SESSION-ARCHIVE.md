@@ -8806,5 +8806,29 @@ S200 = "de voorkant liegt"-audit (`docs/sessions/PROMPT-S200.md`): 8 systematisc
 zes fout-families + prod-logs + Lisanne-dag als sluitstuk. Read-only meten (Fable), fixes = S201.
 Eerst de per-stuk-opruimacties hierboven met Arsalan afmaken.
 
+
+## Sessie 200 (12 juli 2026, Fable — "de voorkant liegt"-audit, 100% read-only op prod)
+
+### Samenvatting
+- Alle 8 vegen uit `PROMPT-S200.md` uitgevoerd + Lisanne-dag doorgeklikt op prod (ingelogd via gemint token, alleen GET/kijken). Resultaat: **19 genummerde bevindingen** met bewijs, ernst en fix-grootte in `docs/sessions/S200-BEVINDINGEN.md`, gerangschikt op impact voor Lisanne.
+- **Hoog (6):** mailsync kan stil doodgaan (geen sync-gezondheid in UI); alle 12 scheduler-jobs incl. verjaringscheck falen alleen naar server-log; AI-concept valt bij rekenfout stil terug op €0 rente/BIK; "Hernoemen" dossierbestand = kapotte knop (PATCH-route bestaat niet + geen onError); 14-dagenbrief-compliancecheck dubbel dood (leest lege tabel én nul UI-callers — juridisch relevant); dashboard "1169 toegevoegd deze maand" (allemaal import-stempels).
+- **Middel:** "Gegenereerde documenten"-sectie blijvend leeg (live briefpad persisteert niets); Staphistorie-tab altijd leeg (AI-intake seedt geen stap/historie; 10 stap-loze zaken); batch-fouten verdwijnen in groene toast; incasso-ratio deelt appels door peren; nep-tabs Instellingen→Meldingen/Weergave; latente 500 op dossier-tijdlijn (`duration_seconds` vs `duration_minutes`, 1-regel-fix); negatieve "Openstaand"-bedragen + twee definities van "Openstaand".
+- **Relieken:** 35 dode routes (lijst in rapport), dode hook `usePendingCount`, Gmail-knop nog live tegen beleid in, `POST /api/auth/logout` juist nooit aangesloten (security-flag), `document_templates`/`email_logs` reliek.
+- **Goed nieuws:** alle 30+ gecontroleerde cijfers op dashboard/rapportages/badges kloppen exact met SQL; 0 console-errors/4xx/5xx bij doorklikken; S191-meldingen-mysterie (264 vs 299) verklaard: bel verbergt `classification_done` per gebruiker — badge 20 is correct.
+- Audit 7-beperking: prod-logs bestaan maar ~9 uur (containerlogs weg bij elke deploy) → aanbeveling log-persistentie. Caddy: 29× 502 geclusterd rond S199-deploys (1 mislukte login).
+
+### Gewijzigde bestanden
+- `docs/sessions/S200-BEVINDINGEN.md` (nieuw — het rapport)
+- `docs/sessions/PROMPT-S203-voorkant-fixes.md` (nieuw — fix-bouwsessie)
+- `SESSION-NOTES.md` + `LUXIS-ROADMAP.md` (deze afsluiting); S190-entry → archief
+- Geen code, geen prod-data (100% read-only nageleefd; alle DB-toegang was SELECT, API-toegang alleen GET)
+
+### Bekende issues
+- Alles in `S200-BEVINDINGEN.md` (fixes = S203). Snelste winst: tijdlijn-crash (1 regel), hernoemen-knop, €0-fallback-markering.
+- Untracked in werkkopie (niet van S200): `S201-HANDOFF-naar-Sol.md`, `docs/security/S202-delta-audit.md`, AV-PDF's, bank-CSV, `.agents/`, `AGENTS.md` — laten staan voor het parallelle spoor; Arsalan beslist over committen.
+
+### Volgende sessie
+- Sol rondt S201 af (facturatie-onderzoek, handoff-doc) → daarna S202 (security-delta) → daarna S203 (voorkant-fixes, prompt klaar).
+
 > 📦 **Archief:** alles ouder dan de laatste 10 sessies staat in `docs/archief/SESSION-ARCHIVE.md` (verplaatst, nooit verwijderd).
 

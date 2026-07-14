@@ -2,10 +2,64 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 14 juli 2026 (S210, Opus-bouw + Fable-review — provisie-per-cliënt + land op de brieven, alles LIVE + visueel geverifieerd). Prod op HEAD `4025d43`.
-**Laatste feature/fix:** Standaard provisie-% per cliënt (overerft naar nieuw dossier) + 6 klantkaarten & 39 dossiers op 15% + landregel op de 5 debiteurbrieven (alleen bij buitenland). Zie entry S210.
-**Openstaand — volgende sessie (startprompt: `docs/sessions/PROMPT-S211.md`):** WIK-rentebijlage bouwen tegen de KvK-testomgeving (plan goedgekeurd: `docs/plans/PLAN-wik-rentebijlage.md`); backfill wacht op de echte KvK-sleutel (~16 juli, Arsalan meldt binnenkomst).
-**Volgende sessie:** S211 (WIK-bijlage, bouwen=Opus). NB: aparte S207-track (L4/L5/L6 + M4, `docs/sessions/PROMPT-S207.md`) loopt parallel — niet mengen; werkkopie bevat 5 niet-gecommitte bestanden.
+**Laatst bijgewerkt:** 14 juli 2026 (S211, Opus-bouw + Fable-review — WIK-rentebijlage + S207-M4 af, op tak `s211-wik-rentebijlage`, NIET gemerged). Prod op HEAD `4025d43`.
+**Laatste feature/fix:** WIK-rentebijlage (renteoverzicht-PDF bij 14-dagenbrief + eerste sommatie o.b.v. KvK-rechtsvorm) + S207-M4 HTML-escaping op alle 4 mail-bouwers. Zie entry S211.
+**Openstaand:** merge+deploy van de s211-tak wacht op GO Arsalan (mailslot staat OPEN); KvK-prod-sleutel ~16 juli → rechtsvorm-backfill; bijlage ontbreekt nog op het compose/AI-concept- en document-verzendpad.
+**Volgende sessie:** S212 (`docs/sessions/PROMPT-S212.md`, Opus): merge+deploy na GO → bijlage op compose/document-pad → terug-navigatie heel Luxis.
+
+## Sessie 211 (14 juli 2026, Opus-bouw + Fable-review/afronding — WIK-rentebijlage + S207 AF, op tak)
+
+### Samenvatting
+Alles op tak `s211-wik-rentebijlage` (5 commits, gepusht, **NIET gemerged** — mailslot staat OPEN,
+merge = direct actief verzendgedrag → wacht op GO Arsalan). Volledige suite **1338 groen**.
+
+- **WIK-rentebijlage gebouwd** (plan `docs/plans/PLAN-wik-rentebijlage.md`, besluiten A–D):
+  `legal_form` (+ herkomst/checked_at) op contacts (migratie `s211_contact_legal_form`, additief);
+  KvK-client `integrations/kvk_service.py` (faalt zacht, **slapend zonder `KVK_API_KEY`-env** —
+  nooit stil tegen de verkeerde omgeving); auto-vullen bij relatie create/update; beslisregel
+  `should_attach_rente_bijlage` in `collections/compliance.py` (kernwoord-match; VOF/CV ≠ BV);
+  gedeelde helper `documents/rente_bijlage.py` op batch- én followup-pad (sleutelt op
+  template_type `14_dagenbrief`/`sommatie_drukte`, niet sort_order); backfill-script klaar,
+  **NIET gedraaid** (wacht op prod-sleutel ~16 juli). UI: rechtsvorm op relatiekaart.
+- **Bewijs:** KvK end-to-end tegen testomgeving (eenmanszaak/BV/NV komen terug; 400 → zacht None);
+  beslismatrix alle vormen × 4 stappen klopt; echte render: eenmanszaak → 1 renteoverzicht-PDF
+  (62kB, %PDF-header), BV → 0. Visueel (Playwright, dev): rechtsvorm tonen/bewerken/opslaan +
+  herkomst-label "handmatig".
+- **Fable-review = GO-MITS → mitsen direct gefixt:** KvK-sleutel default leeg (was: testomgeving
+  zou op prod draaien), afkap op 100 tekens, leegmaken blijft leeg, herkomst flipt niet bij
+  ongewijzigde waarde, lege-staat-melding UI.
+- **S207 HELEMAAL AF (zelfde sessie, opdracht Arsalan):** M4 HTML-escaping op alle VIER
+  mail-bouwers — de twee halve uit de werkkopie afgemaakt + `followup_service` DOCX-route +
+  een **vierde die de audit miste**: `incasso/service.py::_build_step_email` (batch;
+  onderwerp plat, body autoescape). Rode-test-kluwen ontward: 2 tests waren S211-gedrag
+  (bijgewerkt + BV-keerzijde-test), 1 was S207's eigen onaffe test (groen na de fix).
+  L4/L5/L6 (`584b63c`) bleek **al live** via de S210-deploy; heartbeat-checklist 12/12 groen.
+  `PROMPT-S207.md` status-header bijgewerkt (op de tak).
+- **Geheugen-les:** S209-backfills stonden in memory als "openstaand" maar waren AF (S209+S210)
+  — memory bijgewerkt; eerst SESSION-NOTES lezen vóór "openstaand" rapporteren.
+
+### Gewijzigde bestanden (alles op tak `s211-wik-rentebijlage`)
+- Backend: `relations/models+schemas+service`, `integrations/kvk_service.py` (nieuw),
+  `collections/compliance.py`, `documents/rente_bijlage.py` (nieuw), `incasso/service.py`,
+  `ai_agent/followup_service.py`, `email/incasso_templates.py`, `invoices/service.py`,
+  `config.py`, migratie `s211_contact_legal_form`, `scripts/kvk_backfill_legal_form.py` (nieuw).
+- Frontend: `relaties/[id]/page.tsx`, `ContactInfoSection.tsx`, `use-relations.ts`.
+- Tests: `test_kvk_legal_form.py` (nieuw, 26), `test_followup.py`, `test_incasso_pipeline.py`,
+  `test_incasso_templates.py`, `test_invoice_send_email.py`.
+
+### Bekende issues
+- **Rente-bijlage ontbreekt nog op het compose/AI-concept- en document-verzendpad** (Fable-
+  bevinding 3; compose hangt voor deze stappen al factuur-PDF's aan → zelfde plek aanhaken). → S212
+- Preview-zinnetje followup-frontend zegt "De brief gaat als PDF-bijlage mee" (moet: renteoverzicht). → S212
+- Tot de rechtsvorm-backfill draait: élke 14-dagenbrief/eerste sommatie krijgt de bijlage, óók
+  BV's (rechtsvorm leeg → besluit B, bewuste veilige kant) — begint bij merge, mailslot is OPEN.
+- `PROMPT-S207.md` op main is nog de oude versie (update staat op de tak) — archiveren ná merge.
+
+### Volgende sessie
+- S212 (`docs/sessions/PROMPT-S212.md`, **Opus**): GO/merge+deploy s211-tak (migratie!) →
+  rente-bijlage op compose- en document-pad + preview-zinnetje → terug-navigatie heel Luxis
+  (wens Arsalan). Los moment zodra KvK-sleutel binnen is: env op VPS → backfill droogloop →
+  akkoord → run → natelling.
 
 
 ## Sessie 210 (14 juli 2026, Opus-bouw + Fable-review — provisie-per-cliënt + land op de brieven, LIVE)
@@ -490,31 +544,3 @@ bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouw
 
 ---
 
-## Sessie 203 deel 1 (12 juli 2026, Sol Ultra — Codex-master Fase A+B, read-only)
-
-### Samenvatting
-- **Fase A mailpadaudit afgerond.** Blok 2 in `docs/security/S202-delta-audit.md` is gevuld en onafhankelijk tegengesproken. Nieuwe kern: ongeëscapete dossierdata in systeemmail-HTML, ontvangers niet centraal gevalideerd/begrensd, late bijlagecaps, mailslotcache vóór commit en logvervalsing/PII in logs. Alle drie applicatietransporten controleren het mailslot; prod stond effectief dicht.
-- **Fase B BaseNet-onderzoek afgerond.** De parser las 133 entiteiten, 65.761 records en 2 defecte LetterTemplate-fragmenten. De twee gevraagde bouwdocumenten bestaan: facturatierecept plus een volledige 133-rijenmatrix die exact terugtelt.
-- **Factuurbesluit:** van 567 koppen/773 regels zijn 439 koppen/630 regels conflict-vrij en automatisch importeerbaar (€302.750,39 bruto; €72.762,09 open). Zeven koppen (€10.854,66) hebben een harde Mollie-`paid` versus volledig-open-koptegenstrijdigheid en blijven buiten automatische import. Negentig derdengeld-/verrekenposten (−€90.718,21) horen niet in omzet.
-- **Grootste migratiegat:** 187 niet-geïmporteerde D-dossiers dragen 8.637 correspondentiestukken en 1.236 urenregels. De 1.320 uren worden pas na die dossiers apart geïmporteerd. Donker/Dinc: 12 credits (€21.738,96) zijn geen kantoorfactuurbetalingen; bestaand besluit blijft staan.
-- Geen productie-mutatie, geen import, geen mail en geen deploy uitgevoerd.
-
-### Gewijzigde bestanden
-- `docs/security/S202-delta-audit.md` — mailpadblok, samenvatting en fixvolgorde bijgewerkt.
-- `docs/research/S201-facturatie-recept.md` — gemeten veldmapping, disjuncte importgroepen, betalingen, urenadvies, Donker/Dinc en bouw-/testrecept.
-- `docs/research/S201-volledigheidsmatrix.md` — alle 133 entiteiten, relevante gaten en concrete acties.
-- `SESSION-NOTES.md` + `LUXIS-ROADMAP.md` — overdracht naar Sol High; S192-entry naar archief.
-
-### Verificatie
-- Mailregressie: 26 passed, 1 warning; transports geblokkeerd, geen mail verstuurd. Read-only prod: mailslot dicht, 3 echte accounts versleuteld, 0 `email_logs`.
-- Bronasserties: kopgroepen `439+7+12+19+90=567`; regelgroepen `630+13+9+0+90+31=773`; geldsom exact €235.899,91. Regelformule 773/773 en kop-regelsom 542/542 exact. Voor 305 historische betalingen blijft de betaaldatum eerlijk onbekend; memoriaaldatum wordt alleen boekingsmetadata.
-- Matrixassertie tegen verse parserrun: 133/133 entiteiten, 65.761/65.761 records, geen ontbrekende/extra/mismatched rij.
-- Productie read-only: 58/58 debiteurcodes en 146/146 IN-codes matchen elk exact één Luxis-record; factuur-/uren-doeltabellen staan op 0.
-
-### Bekende issues
-- De zeven Mollie/kop-conflicten vereisen per factuur bevestiging door Lisanne/boekhouding vóór import.
-- Niet geverifieerd: of de reeks “Facturen met Stephanie” en zeven toekomstige D-afspraken al in Outlook staan; Outlook was niet via een connector beschikbaar.
-- S200's 19 voorkantbevindingen en S202-fixes H1/H2/H3/M1/M2 plus mailhardening zijn nog niet gebouwd. M3 (DB-superuser/RLS Fase 2) blijft bewust buiten deze fixronde.
-
-### Volgende sessie
-- Zet Codex op Sol High en vervolg `docs/sessions/PROMPT-CODEX-master.md` vanaf Fase C. Werk per fix rood→groen→commit→push→deploy; daarna Fase D en Fable-nacontrole.

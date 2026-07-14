@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 14 juli 2026 (S210 LIVE, Opus-bouw + Fable-review). Standaard provisie-% per cliënt (erft naar nieuw dossier) + 6 klantkaarten & 39 dossiers op 15% + landregel op de 5 debiteurbrieven (alleen bij buitenland). Alles visueel + Fable-geverifieerd. Prod op HEAD `4025d43`. **Volgende: WIK-rentebijlage bouwen tegen KvK-testomgeving (`docs/plans/PLAN-wik-rentebijlage.md`); backfill wacht op de echte KvK-sleutel (~16 juli).**
+**Laatst bijgewerkt:** 14 juli 2026 (S211, Opus-bouw + Fable-review). WIK-rentebijlage + S207-M4 (HTML-escaping 4 mail-bouwers) AF op tak `s211-wik-rentebijlage` — **NIET gemerged, wacht op GO Arsalan** (mailslot OPEN). Volledige suite 1338 groen. Prod op HEAD `4025d43`. **Volgende: S212 (`docs/sessions/PROMPT-S212.md`) — merge+deploy → bijlage op compose/document-pad → terug-navigatie heel Luxis; KvK-sleutel ~16 juli → rechtsvorm-backfill.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,23 +53,24 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 13 juli 2026, S208)
+## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S211)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **PROVISIE-PER-CLIËNT + LAND OP DE BRIEVEN (S210, 14 juli — Opus-bouw + Fable-review, alles LIVE).**
-> (1) Standaard provisie-% op de klantkaart (`default_provisie_percentage`, migratie `s210_contact_provisie`);
-> nieuw dossier erft het (dossier wint). 6 klantkaarten (incl. SYN Finance) + 39 dossiers op 15% —
-> exact de BaseNet-`incprovisie`-set (0 verschil prod↔export). (2) Landregel onder het adres op de 5
-> debiteurbrieven, alleen bij buitenland (binnenland byte-identiek). Visueel + Fable-geverifieerd.
-> Commits `2eabd37` + `4025d43`. Details: SESSION-NOTES S210.
+> ✅ **WIK-RENTEBIJLAGE + S207-M4 AF, OP TAK (S211, 14 juli — Opus-bouw + Fable-review).**
+> Renteoverzicht als PDF-bijlage bij 14-dagenbrief + eerste sommatie, alleen voor privé-
+> aansprakelijke schuldenaren; rechtsvorm uit de KvK (opgeslagen veld, nooit live in het
+> verzendpad; client slapend zonder env-sleutel). Plus S207-M4: HTML-escaping op alle 4
+> mail-bouwers (4e gevonden buiten de audit-lijst). Suite 1338 groen; KvK end-to-end bewezen;
+> visueel geverifieerd. **Alles op tak `s211-wik-rentebijlage` — merge+deploy wacht op GO
+> Arsalan (mailslot OPEN; tot de backfill krijgt álles de bijlage, ook BV's — besluit B).**
+> Details: SESSION-NOTES S211.
 >
-> 🔨 **VOLGENDE (S211, prompt + plan klaar):** **WIK-rentebijlage** bij de eerste sommatie +
-> 14-dagenbrief — renteoverzicht als PDF-bijlage, alleen voor privé-aansprakelijke schuldenaren
-> (particulier/eenmanszaak/VOF/maatschap/CV), rechtsvorm uit de **KvK-API** (koppeling bewezen in
-> testomgeving). Bouwen = Opus, tegen test; **backfill (438 wederpartijen) wacht op de echte
-> KvK-sleutel** (~16 juli, Arsalan meldt binnenkomst; €6,40/mnd + €0,02/bevraging). Plan met
-> besluiten A–D + premortem: `docs/plans/PLAN-wik-rentebijlage.md`. Prompt: `docs/sessions/PROMPT-S211.md`.
+> 🔨 **VOLGENDE (S212, prompt klaar: `docs/sessions/PROMPT-S212.md`, Opus):** (1) GO → merge +
+> deploy (mét migratie) + rooktest; (2) rente-bijlage óók op het compose/AI-concept- en
+> document-verzendpad (meest gebruikte route!) + preview-zinnetje; (3) terug-navigatie heel
+> Luxis (terug-pijltje → pagina van herkomst, wens Arsalan). Los moment: KvK-prod-sleutel
+> (~16 juli) → env → backfill droogloop → akkoord → run → natelling (±438, ±€9).
 >
 > 📌 **Los klusje (open):** landregel ook op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan — gerechtelijke stukken, dagvaarding heeft inline-adres). Voorstel: filter "Nog te openen"

@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 14 juli 2026 (S212, Opus-uitvoer). WIK-rentebijlage **LIVE** (s211 gemerged + deploy mét migratie); rentebijlage nu óók op compose/AI-concept- en document-verzendpad; slimme terug-knop (router.back met ijkpunt-terugval) door heel Luxis. Prod op HEAD `0c0626b`. **Volgende: S213 (`docs/sessions/PROMPT-S213.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
+**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer). Facturen-menu **2 tabs + dossierpagina-filters LIVE**; **1.357/1.563 factuur-PDF's aan de vorderingen gekoppeld** (natelling groen, paperclip opent de PDF). Prod op HEAD `a4996f1`. **Volgende: S214 (`docs/sessions/PROMPT-S214.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,37 +53,27 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S212)
+## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S213)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **WIK-RENTEBIJLAGE LIVE + verzendpaden + terug-navigatie (S212, 14 juli — Opus-uitvoer).**
-> (1) s211-tak gemerged + gedeployd mét migratie `s211_contact_legal_form` (prod geverifieerd:
-> migratie head, velden aanwezig, relatiekaart toont rechtsvorm). KvK-client **slapend** tot de
-> echte sleutel. Besluit B actief (élke zakelijke wederpartij, óók BV, krijgt de bijlage tot de
-> backfill). (2) Rentebijlage óók op het compose/AI-concept-pad (.eml, Lisanne's hoofdroute) én
-> het document-verzendpad; preview-zinnetje aangepast; 4 route-tests. (3) Slimme terug-knop
-> (`router.back` naar herkomst, ijkpunt-terugval bij directe URL) op alle detail-/nieuw-pagina's,
-> Playwright-bewezen. Details: SESSION-NOTES S212.
+> ✅ **FACTUREN-MENU 2 TABS + PDF-KOPPELING LIVE (S213, 14 juli — Opus-bouw + Fable-uitvoer).**
+> (1) Facturen-menu van 3 naar 2 tabs: Debiteuren = *Lijst/Per-klant*-schakelaar binnen
+> Kantoorfacturen; Vorderingen-tab met dossierpagina-filters (opdrachtgever/lopend/datumbereik/
+> wel-geen-PDF), sorteerbare kolomkoppen, alles in de URL. (2) **1.357/1.563 vorderingen aan hun
+> factuur-PDF gekoppeld** (3 treden: 1.306 exact + 35 sha256-identieke dubbelen + 16 kopie-
+> achtervoegsel; 206 rest terecht niet — kostenposten/geen bestand/ander nummerschema).
+> Natelling onafhankelijk groen (som hoofdsom onveranderd, 0 kruis-koppelingen); paperclip opent
+> de PDF, échte-klik-bewezen op prod. Details: SESSION-NOTES S213 + `docs/sessions/S213-fable-review-brief.md`.
 >
-> 🔨 **VOLGENDE (S213, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli) →
+> 🔨 **VOLGENDE (S214, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli) →
 > `KVK_API_KEY` (+ `KVK_API_BASE`) als env op de VPS → herstart backend →
 > `scripts/kvk_backfill_legal_form.py --dry-run` → akkoord → run → natelling (±438 relaties, ±€9)
-> → meten hoeveel BV's geen bijlage meer krijgen.
+> → meten hoeveel BV's geen bijlage meer krijgen. (WIK-rentebijlage zelf is LIVE sinds S212;
+> besluit B actief tot de backfill.)
 >
-> ✅ **Fable-review S212 (zelfde dag): 1 must-fix gevonden + LIVE (`498d156`).** De primaire
-> "Versturen"-knop (`/compose/send`) kreeg geen sjabloontype → geen rentebijlage op de
-> waarschijnlijkste klik. Gefixt (frontend + backend + 2 tests). Rest hield stand.
-> Nagekomen (opdracht Arsalan, `8e2ee8b` LIVE): factuur-PDF's nu óók automatisch op de
-> verstuurknop — beide compose-knoppen gelijk in bijlagegedrag.
-> Nagekomen (opdracht Arsalan, `df1b9a7` LIVE): **Vorderingen-tab** in het Facturen-menu
-> (`GET /api/claims`, 1.563 vorderingen zichtbaar, DB-nageteld); eerste tab → "Kantoorfacturen".
-> Openstaand voorstel: factuur-PDF's aan de vorderingen koppelen (1.368/1.563 op factuurnummer,
-> prod-schrijfactie, wacht op akkoord). Kantoorfacturen-import (S201) blijft aparte sessie.
->
-> 📌 **Los klusje (open):** landregel ook op dagvaarding + faillissementsverzoek (S210 bewust niet
-> gedaan — gerechtelijke stukken, dagvaarding heeft inline-adres). Voorstel: filter "Nog te openen"
-> op de dossierlijst.
+> 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
+> gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet

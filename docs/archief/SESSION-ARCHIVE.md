@@ -8943,3 +8943,41 @@ aan CLAUDE.md + AGENTS.md + Claude-memory.
 ### Volgende sessie
 **S204 = Fable-review van deze S203-fixes** (`docs/sessions/PROMPT-S204-fable-review.md`): read-only,
 bron + prod nalezen, tests draaien, elke fix tegenspreken. Pas daarna nieuw bouwen (S201-import óf route-sloop).
+
+## Sessie 204 (12 juli 2026, Fable — review S203-voorkant-fixes, 100% read-only)
+
+### Samenvatting
+Alle S203-fixes (15 commits + na-tag `27842a2`) in de bron nagelezen, tegengesproken en op prod
+gecontroleerd (GET-API + read-only SQL). **9 van 11 bevestigd zonder voorbehoud**: tijdlijn (#13),
+hernoem-PATCH incl. cross-tenant-404 (#4), €0-markering incl. pop-vóór-prompt + end-to-end test (#3),
+1169→1 (#6, prod: 1168/1169 met marker, de ene = "Arsalan"), batch-toast (#9), ratio zelfde populatie
++ cap (#10, prod 5,3), openstaand-labels (#14), intake-startstap = kopie van creatiepad (#8),
+logout/Gmail (#16/#17). Heartbeat (#2) werkt bewezen op prod (5 verse rijen). Volledig rapport mét
+bewijs per fix: **`docs/sessions/S204-review.md`**.
+
+### Twee gevonden punten (vervolg-bouwsessie nodig)
+1. **Mailsync-foutpad (#1) — bewezen latent defect:** `rollback()` in de except expireert álle
+   account-objecten (negeert `expire_on_commit=False`); het volgende account crasht op zijn eerste
+   attribuutlezing met MissingGreenlet en de log-f-string in de except gooit een tweede → hele run
+   stopt. Eén structureel falend account (verlopen token) blokkeert zo elke 5 min de sync van de
+   accounts erná, zonder eigen foutmelding en zonder dashboard-alarm. Bewezen met probe op de echte
+   sessie-factory. Het gevreesde "geslaagde sync teruggerold" is wél afgedekt (commit per account).
+2. **14-dagenbrief-gate (#5) — batch-gate zelf correct, maar 2 zijdeuren + zwakke proxy:**
+   follow-up "Uitvoeren" (`execute_recommendation`, 14 pending aanbevelingen op prod) en het
+   AI-concept-verzendpad (compose/send + advance-after-send) versturen sommaties zónder gate;
+   en `entered_at` = stap-binnenkomst, niet verzending (doorschuiven zonder versturen telt als
+   "verstuurd"). Operationeel gat: de 14-dagenbrief-stap heeft op prod geen sjabloon → Luxis kan de
+   brief zelf nu niet versturen; beide actieve B2C-zaken (IN100345/350) staan stap-loos → vandaag
+   geen acuut risico (batch skipt ze al eerder).
+
+### Verificatie
+155 tests groen (8 S203-suites, docker), ruff schoon, prod `alembic_version=s203b`. Prod-API:
+`contacts_this_month=1`, `collection_rate=5.3`, `scheduler_alerts=[]`; SQL: 3 sync-accounts vers +
+foutveld leeg, heartbeats 18:47, `case_step_history=0` (verwacht: nog geen intake/stap-actie sinds
+deploy). Niet geverifieerd: frontend visueel (alleen code + S203-livecheck), dagelijkse
+heartbeat-rijen (bestaan pas na de nacht), live logout (zou prod-tokens intrekken — bewust overgeslagen).
+
+### Volgende sessie
+S205: beslislijst uit `S204-review.md` §Beslislijst — (1) gate in follow-up, (2) gate in
+concept-verzendpad, (3) verzend-proxy verstevigen, (4) mailsync-foutpad, (5) dagenbrief-sjabloon
+op de stap (besluit), (6) heartbeat-last_error bij interne jobfouten, (7) check dagelijkse-job-rijen.

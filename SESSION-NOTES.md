@@ -2,10 +2,57 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 14 juli 2026 (S212, Opus-uitvoer — WIK-rentebijlage LIVE, bijlage op resterende verzendpaden, terug-navigatie heel Luxis). Prod op HEAD `0c0626b`.
-**Laatste feature/fix:** Rentebijlage live (s211 gemerged + deploy mét migratie); bijlage nu óók op compose/AI-concept- en document-verzendpad; slimme terug-knop (router.back met ijkpunt-terugval) op alle detail-/nieuw-pagina's. Zie entry S212.
+**Laatst bijgewerkt:** 14 juli 2026 (S213, Opus-bouw + Fable-uitvoer — Facturen-menu 2 tabs + filters LIVE, 1.357 factuur-PDF's aan vorderingen gekoppeld). Prod op HEAD `a4996f1`.
+**Laatste feature/fix:** Facturen-menu 3→2 tabs met dossierpagina-filters + paperclip opent de factuur-PDF; koppel-actie uitgevoerd (1.357/1.563, natelling groen). Zie entry S213.
 **Openstaand:** KvK-prod-sleutel ~16 juli → rechtsvorm-backfill (env op VPS → droogloop → akkoord → run → natelling), daarna meten hoeveel BV's geen bijlage meer krijgen.
-**Volgende sessie:** S213 (`docs/sessions/PROMPT-S213.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
+**Volgende sessie:** S214 (`docs/sessions/PROMPT-S214.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
+
+## Sessie 213 (14 juli 2026, Opus-bouw + Fable-review/uitvoer — Facturen-menu 2 tabs + PDF-koppeling, LIVE)
+
+### Samenvatting
+KvK-sleutel nog niet binnen → hoofdtaak geparkeerd; taak 2+3 volledig af.
+
+- **Facturen-menu 3→2 tabs (LIVE, `2a9caa3`).** Debiteuren-tab is nu een *Lijst/Per-klant*-
+  weergaveschakelaar bínnen Kantoorfacturen (component verplaatst, niets weggegooid).
+  Vorderingen-tab kreeg filters à la `zaken/page.tsx`: opdrachtgever-dropdown (nieuw endpoint
+  `GET /api/claims/clients`), lopend/afgesloten, factuurdatum-bereik, wel/geen PDF; sorteerbare
+  kolomkoppen (factuurdatum, hoofdsom) + filters/sort/tab in de URL (CONN-8/DF139-patroon).
+  Backend `GET /api/claims` uitgebreid (client_id/date_from/date_to/has_file/sort_by/sort_dir +
+  `invoice_file_id` in payload). 6 endpoint-tests groen; ruff/tsc/build schoon.
+- **Factuur-PDF-koppeling UITGEVOERD (Fable, na "go" Arsalan): 1.357/1.563 vorderingen** hebben
+  nu hun factuur-PDF (`scripts/link_invoice_files.py`, 3 treden): 1.306 exacte naam-match +
+  35 dubbelen (sha256-bewezen byte-identiek, oudste gekozen) + 16 kopie-achtervoegsel
+  (`Factuur_140005__1_.pdf`; 1 = .rtf). Bron eerst gelezen (S180-les): IncassoLine-XML heeft
+  géén document-verwijzing → naam-match is echt de enige sleutel. **206 rest terecht niet
+  gekoppeld:** 8 kostenpost-regels (Griffierecht/Nakosten/…), ±92 dossiers zonder factuurbestand,
+  ±96 ander nummerschema. Tekst-inhoud-matching gemeten maar bewust NIET gebruikt (sommatie/vonnis
+  dat het nummer citeert zou vals matchen).
+- **Natelling (onafhankelijk, SQL):** 1.357 gevuld / 1.563 totaal; som hoofdsom onveranderd
+  €3.142.934,72; 0 kruis-dossier, 0 kruis-tenant, 0 dode verwijzingen. End-to-end: paperclip-klik
+  op prod → popup `application/pdf`.
+- **Klik-verificatie prod (Playwright, échte kliks):** tab-wissel, sorteerklik (desc top =
+  €142.961,50 → asc), Per-klant-schakelaar, paperclip → PDF. De eerdere "kliks doen niets" was
+  het claude-in-chrome-tool, niet de code (stale Playwright-lockfile opgeruimd).
+
+### Gewijzigde bestanden
+- Backend: `collections/schemas.py` + `service.py` + `router.py` (filters/sort/clients),
+  `tests/test_claims_overview.py` (6), `scripts/link_invoice_files.py` (nieuw, 3 treden + self-test).
+- Frontend: `facturen/page.tsx` (2 tabs + schakelaar + filters + paperclip), `hooks/use-invoices.ts`.
+- Commits `2a9caa3` · `9aea91c` · `ce54eb4` + docs; deploy backend+frontend (geen migratie).
+- Rapport/bewijs: `docs/sessions/S213-fable-review-brief.md`.
+
+### Bekende issues
+- **KvK-rechtsvorm-backfill wacht op de echte sleutel** (~16 juli, Arsalan meldt) → S214.
+- 1 gekoppelde vordering verwijst naar een .rtf: verzendpad-bijlage werkt, paperclip-preview
+  geeft daar een nette foutmelding (1 record, geaccepteerd).
+- Browser-terug binnen een open Vorderingen-tab synct de filter-velden niet live (sortering wél)
+  — zelfde huispatroon als de dossierlijst, bewust zo gelaten.
+- Dev-omgeving: wachtwoord `seidony@` lokaal op `Devpass-123` gezet (alleen dev, prod ongemoeid).
+
+### Volgende sessie
+S214 (`docs/sessions/PROMPT-S214.md`): KvK-sleutel → env op VPS → droogloop → akkoord → run →
+natelling → meten hoeveel BV's geen rentebijlage meer krijgen. Rest-PDF's (206) alleen op
+expliciete vraag (handwerk-lijstje kan uit de dry-run-rapportage).
 
 ## Sessie 212 (14 juli 2026, Opus-uitvoer — WIK-rentebijlage LIVE + bijlage op resterende verzendpaden + terug-navigatie, LIVE)
 
@@ -526,41 +573,3 @@ build/tsc, niet doorgeklikt.
 S206: kies één spoor — S201 facturatie-import (439 conflict-vrije facturen, apart akkoord nodig),
 S202 security-fixes (H1/H2/H3), of S203-restpunten (35-route-sloop, #7 audittrail, #15 regeling-badge,
 log-persistentie). Prompt: `docs/sessions/PROMPT-S206.md`. Eerst de checklist hierboven.
-
-## Sessie 204 (12 juli 2026, Fable — review S203-voorkant-fixes, 100% read-only)
-
-### Samenvatting
-Alle S203-fixes (15 commits + na-tag `27842a2`) in de bron nagelezen, tegengesproken en op prod
-gecontroleerd (GET-API + read-only SQL). **9 van 11 bevestigd zonder voorbehoud**: tijdlijn (#13),
-hernoem-PATCH incl. cross-tenant-404 (#4), €0-markering incl. pop-vóór-prompt + end-to-end test (#3),
-1169→1 (#6, prod: 1168/1169 met marker, de ene = "Arsalan"), batch-toast (#9), ratio zelfde populatie
-+ cap (#10, prod 5,3), openstaand-labels (#14), intake-startstap = kopie van creatiepad (#8),
-logout/Gmail (#16/#17). Heartbeat (#2) werkt bewezen op prod (5 verse rijen). Volledig rapport mét
-bewijs per fix: **`docs/sessions/S204-review.md`**.
-
-### Twee gevonden punten (vervolg-bouwsessie nodig)
-1. **Mailsync-foutpad (#1) — bewezen latent defect:** `rollback()` in de except expireert álle
-   account-objecten (negeert `expire_on_commit=False`); het volgende account crasht op zijn eerste
-   attribuutlezing met MissingGreenlet en de log-f-string in de except gooit een tweede → hele run
-   stopt. Eén structureel falend account (verlopen token) blokkeert zo elke 5 min de sync van de
-   accounts erná, zonder eigen foutmelding en zonder dashboard-alarm. Bewezen met probe op de echte
-   sessie-factory. Het gevreesde "geslaagde sync teruggerold" is wél afgedekt (commit per account).
-2. **14-dagenbrief-gate (#5) — batch-gate zelf correct, maar 2 zijdeuren + zwakke proxy:**
-   follow-up "Uitvoeren" (`execute_recommendation`, 14 pending aanbevelingen op prod) en het
-   AI-concept-verzendpad (compose/send + advance-after-send) versturen sommaties zónder gate;
-   en `entered_at` = stap-binnenkomst, niet verzending (doorschuiven zonder versturen telt als
-   "verstuurd"). Operationeel gat: de 14-dagenbrief-stap heeft op prod geen sjabloon → Luxis kan de
-   brief zelf nu niet versturen; beide actieve B2C-zaken (IN100345/350) staan stap-loos → vandaag
-   geen acuut risico (batch skipt ze al eerder).
-
-### Verificatie
-155 tests groen (8 S203-suites, docker), ruff schoon, prod `alembic_version=s203b`. Prod-API:
-`contacts_this_month=1`, `collection_rate=5.3`, `scheduler_alerts=[]`; SQL: 3 sync-accounts vers +
-foutveld leeg, heartbeats 18:47, `case_step_history=0` (verwacht: nog geen intake/stap-actie sinds
-deploy). Niet geverifieerd: frontend visueel (alleen code + S203-livecheck), dagelijkse
-heartbeat-rijen (bestaan pas na de nacht), live logout (zou prod-tokens intrekken — bewust overgeslagen).
-
-### Volgende sessie
-S205: beslislijst uit `S204-review.md` §Beslislijst — (1) gate in follow-up, (2) gate in
-concept-verzendpad, (3) verzend-proxy verstevigen, (4) mailsync-foutpad, (5) dagenbrief-sjabloon
-op de stap (besluit), (6) heartbeat-last_error bij interne jobfouten, (7) check dagelijkse-job-rijen.

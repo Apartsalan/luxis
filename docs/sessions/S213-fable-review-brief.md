@@ -38,6 +38,23 @@ Bekend & geaccepteerd: browser-terug binnen een open Vorderingen-tab synct de
 filter-VELDEN niet live mee (sortering wél) — zelfde gedrag als `zaken/page.tsx`
 (huispatroon CONN-8/DF139), lijst en zichtbare filters blijven onderling consistent.
 
+**Afsluitende code-tegenspreker-ronde klus 2 (Fable, zelfde dag, na vraag Arsalan):**
+- Backend: sort-whitelist server-side (kolomobjecten, geen injectie); count/sum-queries met
+  outer-join kunnen niet dubbeltellen (debiteur = enkelvoudige FK); alle filters AND-gecombineerd;
+  beide routes 401 zonder token (live geverifieerd).
+- Kruisproef prod: `has_file=true` (1.357 / €2.788.733,32) + `has_file=false` (206 / €354.201,40)
+  = exact het totaal (1.563 / €3.142.934,72). Dropdown-endpoint levert 13 opdrachtgevers,
+  alfabetisch, allemaal bekende namen.
+- Cosmetische randgevallen, geaccepteerd (geen fix): "Wis filters" in Kantoorfacturen wist ook
+  bewaarde Vorderingen-parameters uit de URL; drill-down met `contact_id` terwijl `tab=vorderingen`
+  nog in de URL staat → UI wint, URL loopt één stap achter; PDF-popup is in Chrome bewezen
+  (Playwright), andere browsers met strenge popup-blokkering niet getest.
+- Oordeel: **0 must-fixes**; klus 2 + klus 3 volledig gereviewd.
+
+**Naslag rest-206:** `docs/research/S213-rest-vorderingen-zonder-pdf.md` — 199/206 op gesloten
+dossiers; op open dossiers 6 creditfacturen + **1 echte** (IN100002, Total Flex, €11.585,12 —
+PDF ontbreekt in het dossier, handmatig uploaden als gewenst).
+
 ---
 
 ## Oorspronkelijke brief (Opus, vóór de Fable-pass)

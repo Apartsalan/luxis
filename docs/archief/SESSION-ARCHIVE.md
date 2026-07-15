@@ -9041,3 +9041,72 @@ build/tsc, niet doorgeklikt.
 S206: kies één spoor — S201 facturatie-import (439 conflict-vrije facturen, apart akkoord nodig),
 S202 security-fixes (H1/H2/H3), of S203-restpunten (35-route-sloop, #7 audittrail, #15 regeling-badge,
 log-persistentie). Prompt: `docs/sessions/PROMPT-S206.md`. Eerst de checklist hierboven.
+
+## Sessie 206 (13 juli 2026, Opus autonoom + Fable-review — spoor S202: security/correctheids-fixes H1/H2/H3/M1/M2 + 2 review-must-fixes, LIVE)
+
+### Samenvatting
+Spoor S202 gekozen (na checklist S204/S205, zie onder). Alle 5 audit-fixes gebouwd
+rood→groen→commit→push, daarna een adversariële **Fable-review** (die 2 extra must-fixes vond),
+volledige suite (**1259 passed**), gedeployd (backend-only, geen migratie), live rooktest groen.
+
+- **H1** — `save_attachment_to_case` hing een mailbijlage aan een dossier zónder tenant-check →
+  cross-tenant `CaseFile`. Hergebruikt `_assert_case_in_tenant`. **Fable-vervolg:** zelfde gat op
+  `POST /api/email/sync?case_id=` (force_case_id zonder check) → guard toegevoegd.
+- **H2** — betaald-guard (`update_case_status` + `move_case_to_step`) nam bij een rekenfout stil €0
+  aan (fail-open) → dossier mét saldo sloot geruisloos. Nu **fail-closed**. Twee verborgen bugs die
+  het fail-open verborg mee-gefixt: `get_case_outstanding` lazy-loadde `case.client` (nu expliciete
+  query op `is_btw_plichtig`); `calculate_case_interest` eiste tarieven ook bij een lege zaak (nu
+  kortsluiting naar €0 vóór de tarief-check). **Prod ongewijzigd** (tarieven zijn geseed).
+- **H3** — "Geïnd" (KPI + maandgrafiek) telde verwijderde betalingen (geen `is_active`-filter).
+  **Fable-vervolg (erger):** 2 ongefilterde `Payment`-sommen in de **facturatie** (`calculate_provisie`
+  + `get_incasso_invoice_preview`) → provisie op de cliëntfactuur telde verwijderde betalingen mee
+  (bij 15% €750 te veel). `is_active` toegevoegd.
+- **M1** — `CaseBulkStatusUpdate.case_ids` gecapt op 200 (was ongelimiteerd → lange lock/DoS).
+- **M2** — `_try_auto_advance` schoof zonder saldo-check naar de volgende stap → weigert nu een
+  terminale (Betaald/Afgesloten) én hold-stap.
+
+### Fable-review-oordeel (adversarieel, read-only, model=fable)
+H2 **SOLIDE** (diepst gecheckt: BTW-semantiek exact equivalent — `is_btw_plichtig` is NOT NULL;
+kortsluiting raakt geen zaak mét vorderingen — alle aanroepers nagelopen; fail-closed prod-veilig —
+batch vangt per zaak). H1/H3-fixes solide maar **onvolledig** → 2 must-fixes gebouwd (commits
+`fc84b94` + `7ade2f1`), elk rood→groen bewezen. M1/M2 solide, elk 1 randgeval (backlog). Twee
+H2-nitpicks (geen fix nodig): "probeer opnieuw"-tekst misleidend bij een persistente config-fout;
+de "lazy-load"-diagnose in de H2-commit is onnauwkeurig (`Case.client` is mapper-`lazy=selectin`,
+brak pas ná rollback/expiry — S204-vondst; de expliciete query is hoe dan ook robuuster).
+
+### Gewijzigde bestanden
+Backend: `email/sync_router.py` (H1 + sync-guard), `cases/service.py` + `incasso/service.py`
+(H2 fail-closed + M2), `collections/service.py` + `collections/interest.py` (H2 wortel-fixes),
+`dashboard/reports_service.py` (H3), `cases/schemas.py` (M1), `invoices/service.py` (H3-facturatie).
+Test bij elke fix. **7 commits** (`f1800f1` H1 · `bf578e5` H2 · `57952e8` H3 · `f7835fd` M1 ·
+`224b07c` M2 · `fc84b94` H3-facturatie · `7ade2f1` sync-guard). Geen migratie.
+
+### Verificatie
+Volledige suite **1259 passed** (20 min, detached in container). Elke fix eigen rood→groen bewezen.
+`uvx ruff check backend/app/` schoon. Deploy: container healthy, code-markers (AUDIT-H1/H2/H3) in de
+draaiende container bevestigd, image-ID matcht, HEAD=`7ade2f1`. Live rooktest (read-only): login +
+`reports/kpis` + `reports/monthly` + `dashboard/summary` alle 200. Mailslot bleef DICHT.
+
+### Checklist S204/S205 — afgevinkt
+De 5 dagelijkse-job-rijen in `scheduler_heartbeat` ontbraken nog TERECHT: servertijd bij de controle
+was 12 juli 20:47 UTC, de jobs draaien 06:00–06:35 UTC, en de backend herstartte 20:25. De opstartlog
+toont alle 5 "Added job… Scheduler started" → geregistreerd en ingepland. Verschijnen ná 13 juli
+06:35 UTC. Mechanisme gezond (de 5 periodieke jobs draaien vers, foutveld leeg). **Morgenochtend na
+06:35 UTC herbevestigen.**
+
+### Bekende issues / bewust NIET gedaan
+- **Mail-verstevigingen (M4/M5/L4/L5/L6) overgedragen naar S207.** Reden: mailslot staat DICHT
+  (0 actueel risico); **M4** (HTML-escaping van dossierdata in systeemmails, meerdere builders in
+  `email/incasso_templates.py` + `invoices/service.py` + `followup_service.py`) raakt de opmaak van
+  júridische brieven → verdient visuele controle die met de slot dicht niet kan; **M5** = opschoning
+  van 39 bestaande adresvelden = schrijfactie op prod-data → apart akkoord. Locaties + recept per punt:
+  `docs/security/S202-delta-audit.md`. **M3** (app-als-DB-superuser / RLS Fase 2) blijft bewust apart.
+- Fable-randgevallen (backlog, geen fix): M1 — een selectie >200 dossiers geeft een kale 422-toast
+  (later frontend-melding); M2 — zaken schuiven niet meer auto de hold-stap "Verweer beantwoorden"
+  in (Lisanne verplaatst handmatig). Idem "Treffen van regeling" → "Bijhouden regeling".
+- Mailslot blijft DICHT; niets verstuurd; geen prod-data gewijzigd.
+
+### Volgende sessie
+S207: mail-verstevigingen (M4 HTML-escaping + L4/L5/L6, test-baar zónder mailslot; M5-recipient-cap
+in code + apart de 39-velden-datacorrectie mét akkoord). Óf ander S202-restspoor (S201-facturatie-import
+/ S203-restpunten). Prompt: `docs/sessions/PROMPT-S207.md`.

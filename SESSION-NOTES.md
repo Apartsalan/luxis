@@ -2,10 +2,55 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 14 juli 2026 (S214, Opus+Fable — S201 kantoorfacturen-import LIVE: 439 facturen/630 regels/325 betalingen, alles op de cent nageteld).
-**Laatste feature/fix:** BaseNet-kantoorfacturen op prod (€302.750,39 bruto, €72.762,09 open, 137 aan dossier, 23 credits gekoppeld) + stap-0: betaaldatum "onbekend", methode "Onbekend (BaseNet)", creditnota-afwikkelbalk. Zie entry S214.
-**Openstaand:** KvK-prod-sleutel (~16 juli) → rechtsvorm-backfill; 7 Mollie/kop-conflictfacturen (€10.854,66) wachten op oordeel Lisanne/boekhouding.
-**Volgende sessie:** S215 (`docs/sessions/PROMPT-S215.md`, Opus): KvK-rechtsvorm-backfill zodra de sleutel binnen is.
+**Laatst bijgewerkt:** 15 juli 2026 (S216, Opus-bouw + Fable-review — dossierpagina-verbouwing blok 1-3 LIVE, alles visueel geverifieerd op prod).
+**Laatste feature/fix:** Dossierpagina van 11/8 → 7/6 tabbladen, compacte kop met geldstrook (incl. Openstaand), één notitievenster (cursor-bug gefixt), BaseNet-waarschuwingsbalk, gewone zaak ingericht (agenda-blok + volgende-stap + afsluitknop). Zie entry S216.
+**Openstaand:** KvK-prod-sleutel (~16 juli) → rechtsvorm-backfill (gemeten: 726 relaties, ~€14,50/run — zie PROMPT-S215); dossierpolish klein (anker-subnav Financieel, geldstrook-uitbreiding gewone zaak).
+**Volgende sessie:** S217 (`docs/sessions/PROMPT-S217.md`, Opus): KvK-backfill zodra de sleutel binnen is (heeft voorrang), anders dossierpolish.
+
+## Sessie 216 (15 juli 2026, Opus-bouw + Fable-review — dossierpagina-verbouwing blok 1-3, LIVE)
+
+### Samenvatting
+De dossierpagina (`zaken/[id]`) was onoverzichtelijk: 11 tabbladen (incasso) / 8 (gewone zaak),
+een kop die het hele eerste scherm vulde, alles dubbel (partijen op 4 plekken), 3 losse "notitie"-
+begrippen. Onderzoek (code + prod-DB-meting per tabblad + visuele doorklik + concurrentiescan
+Clio/Smokeball) → plan `docs/plans/PLAN-dossierpagina.md` (4 harde eisen Arsalan: alles klikbaar
+blijft klikbaar; één stijl/geraamte beide types; niets onzichtbaar = inklapbaar; Uren blijft tab).
+Drie bouwblokken, elk gebouwd → getest (tsc) → gedeployd → visueel geverifieerd op prod, daarna
+Fable-review met 2 must-fixes. Alle testzaken/testafspraken opgeruimd.
+
+- **Blok 1 (`4dba5b3`+`4ef4c0a`):** 11/8 → 7/6 tabbladen (tabbalk past nu; was 5 buiten beeld).
+  Financieel bundelt vorderingen+betalingen+regeling+derdengelden; lege regeling/derdengelden
+  inklapbaar. Tijdlijn = oud Activiteiten + inklapbare stap-historie. Taken + conflictbanner naar
+  Overzicht. Provisie naar Facturen. PartijenTab verwijderd. Vertaaltabel oude ?tab=-links.
+- **Blok 2 (`3a927fc`):** kop 4 statkaarten → geldstrook Hoofdsom·Betaald·**Openstaand** (ontbrak).
+  Notitie+Telefoonnotitie → één `NoteDialog` met autoFocus (**cursor-bug gefixt**, sneltoets n).
+  BaseNet-waarschuwing (`[BaseNet-waarschuwing]`) → oranje balk bovenaan Overzicht. Zijbalk
+  type-afhankelijk (Debiteur/Rente alleen incasso = advies-lek dicht; OHW alleen bij uren>0).
+- **Blok 3 (`ea07c9a`):** agenda-blok op Overzicht (`useCaseEvents` → `/api/calendar/events?case_id`,
+  komende afspraken, klikbaar). Kop gewone zaak: "Volgende stap" (eerstvolgende taak+deadline) i.p.v.
+  incasso-fasebalk + **afsluitknop** (ontbrak op niet-incasso). Geldstrook gewone zaak: OHW+budget.
+- **Fable-review (`ca33ba9`):** 2 must-fixes — (1) overige partijen (rol+ref) weer zichtbaar in
+  Partijen-sectie Overzicht (waren met het opgeheven tabblad onzichtbaar geworden); (2) e2e
+  bijgewerkt (zaken Z5 → 6 tabs/role=tab, regression C19 → Financieel-tab). Meldingen-links,
+  heropenen-transitie, sneltoetsen aangevallen en overeind.
+
+### Gewijzigde bestanden
+Frontend `zaken/[id]/`: `page.tsx`, `components/DossierHeader.tsx`, `DossierSidebar.tsx`, `DetailsTab.tsx`,
+`incasso/VorderingenFinancieelTab.tsx` + `BetalingenDerdengeldenTab.tsx`; nieuw `CaseConflictBanner.tsx`,
+`BasenetWarningBanner.tsx`, `NoteDialog.tsx`, `AgendaBlok.tsx`; verwijderd `PartijenTab.tsx`.
+`hooks/use-calendar-events.ts` (useCaseEvents). e2e `zaken.spec.ts` + `regression.spec.ts`.
+8 commits, alle frontend-deploys via SSH. Geen backend/migratie. Plan + prompt bijgewerkt.
+
+### Bekende issues / bewust niet gedaan
+- Anker-subnav bovenin Financieel (klein; secties al gegroepeerd+inklapbaar).
+- Geldstrook gewone zaak kan later uitgebreid met ongefactureerd + openstaande facturen (bronnen bestaan).
+- Meldingslink naar stap-historie landt op Tijdlijn met historie ingeklapt (1 klik extra; bewust).
+- Taken-blok toont op elk dossier een lege-staat als er geen taken zijn (3/608 hebben taken).
+
+### Volgende sessie
+S217: KvK-rechtsvorm-backfill zodra Arsalan de sleutel meldt (voorrang; gemeten 726 relaties/~€14,50 per
+run — zie PROMPT-S215 STAND), anders dossierpolish (anker-subnav + geldstrook-uitbreiding). Prompt:
+`docs/sessions/PROMPT-S217.md`.
 
 ## Sessie 214 (14 juli 2026, Opus-bouw + Fable-matching — S201 kantoorfacturen-import, LIVE)
 
@@ -511,72 +556,3 @@ hogere rente blijft een restant. Bevriezen lost dit NIET op (IN100350: €264,82
    + KvK-API voor rechtsvorm. Fable zoekt wettelijke eis + KvK-koppeling uit.
 3. **Invoer-map** met nieuwe zaken (nieuwer dan export 2 juli) — hoe overhalen.
 Arsalan: Fable neemt de volgende sessie over (review + uitvoering).
-
-## Sessie 206 (13 juli 2026, Opus autonoom + Fable-review — spoor S202: security/correctheids-fixes H1/H2/H3/M1/M2 + 2 review-must-fixes, LIVE)
-
-### Samenvatting
-Spoor S202 gekozen (na checklist S204/S205, zie onder). Alle 5 audit-fixes gebouwd
-rood→groen→commit→push, daarna een adversariële **Fable-review** (die 2 extra must-fixes vond),
-volledige suite (**1259 passed**), gedeployd (backend-only, geen migratie), live rooktest groen.
-
-- **H1** — `save_attachment_to_case` hing een mailbijlage aan een dossier zónder tenant-check →
-  cross-tenant `CaseFile`. Hergebruikt `_assert_case_in_tenant`. **Fable-vervolg:** zelfde gat op
-  `POST /api/email/sync?case_id=` (force_case_id zonder check) → guard toegevoegd.
-- **H2** — betaald-guard (`update_case_status` + `move_case_to_step`) nam bij een rekenfout stil €0
-  aan (fail-open) → dossier mét saldo sloot geruisloos. Nu **fail-closed**. Twee verborgen bugs die
-  het fail-open verborg mee-gefixt: `get_case_outstanding` lazy-loadde `case.client` (nu expliciete
-  query op `is_btw_plichtig`); `calculate_case_interest` eiste tarieven ook bij een lege zaak (nu
-  kortsluiting naar €0 vóór de tarief-check). **Prod ongewijzigd** (tarieven zijn geseed).
-- **H3** — "Geïnd" (KPI + maandgrafiek) telde verwijderde betalingen (geen `is_active`-filter).
-  **Fable-vervolg (erger):** 2 ongefilterde `Payment`-sommen in de **facturatie** (`calculate_provisie`
-  + `get_incasso_invoice_preview`) → provisie op de cliëntfactuur telde verwijderde betalingen mee
-  (bij 15% €750 te veel). `is_active` toegevoegd.
-- **M1** — `CaseBulkStatusUpdate.case_ids` gecapt op 200 (was ongelimiteerd → lange lock/DoS).
-- **M2** — `_try_auto_advance` schoof zonder saldo-check naar de volgende stap → weigert nu een
-  terminale (Betaald/Afgesloten) én hold-stap.
-
-### Fable-review-oordeel (adversarieel, read-only, model=fable)
-H2 **SOLIDE** (diepst gecheckt: BTW-semantiek exact equivalent — `is_btw_plichtig` is NOT NULL;
-kortsluiting raakt geen zaak mét vorderingen — alle aanroepers nagelopen; fail-closed prod-veilig —
-batch vangt per zaak). H1/H3-fixes solide maar **onvolledig** → 2 must-fixes gebouwd (commits
-`fc84b94` + `7ade2f1`), elk rood→groen bewezen. M1/M2 solide, elk 1 randgeval (backlog). Twee
-H2-nitpicks (geen fix nodig): "probeer opnieuw"-tekst misleidend bij een persistente config-fout;
-de "lazy-load"-diagnose in de H2-commit is onnauwkeurig (`Case.client` is mapper-`lazy=selectin`,
-brak pas ná rollback/expiry — S204-vondst; de expliciete query is hoe dan ook robuuster).
-
-### Gewijzigde bestanden
-Backend: `email/sync_router.py` (H1 + sync-guard), `cases/service.py` + `incasso/service.py`
-(H2 fail-closed + M2), `collections/service.py` + `collections/interest.py` (H2 wortel-fixes),
-`dashboard/reports_service.py` (H3), `cases/schemas.py` (M1), `invoices/service.py` (H3-facturatie).
-Test bij elke fix. **7 commits** (`f1800f1` H1 · `bf578e5` H2 · `57952e8` H3 · `f7835fd` M1 ·
-`224b07c` M2 · `fc84b94` H3-facturatie · `7ade2f1` sync-guard). Geen migratie.
-
-### Verificatie
-Volledige suite **1259 passed** (20 min, detached in container). Elke fix eigen rood→groen bewezen.
-`uvx ruff check backend/app/` schoon. Deploy: container healthy, code-markers (AUDIT-H1/H2/H3) in de
-draaiende container bevestigd, image-ID matcht, HEAD=`7ade2f1`. Live rooktest (read-only): login +
-`reports/kpis` + `reports/monthly` + `dashboard/summary` alle 200. Mailslot bleef DICHT.
-
-### Checklist S204/S205 — afgevinkt
-De 5 dagelijkse-job-rijen in `scheduler_heartbeat` ontbraken nog TERECHT: servertijd bij de controle
-was 12 juli 20:47 UTC, de jobs draaien 06:00–06:35 UTC, en de backend herstartte 20:25. De opstartlog
-toont alle 5 "Added job… Scheduler started" → geregistreerd en ingepland. Verschijnen ná 13 juli
-06:35 UTC. Mechanisme gezond (de 5 periodieke jobs draaien vers, foutveld leeg). **Morgenochtend na
-06:35 UTC herbevestigen.**
-
-### Bekende issues / bewust NIET gedaan
-- **Mail-verstevigingen (M4/M5/L4/L5/L6) overgedragen naar S207.** Reden: mailslot staat DICHT
-  (0 actueel risico); **M4** (HTML-escaping van dossierdata in systeemmails, meerdere builders in
-  `email/incasso_templates.py` + `invoices/service.py` + `followup_service.py`) raakt de opmaak van
-  júridische brieven → verdient visuele controle die met de slot dicht niet kan; **M5** = opschoning
-  van 39 bestaande adresvelden = schrijfactie op prod-data → apart akkoord. Locaties + recept per punt:
-  `docs/security/S202-delta-audit.md`. **M3** (app-als-DB-superuser / RLS Fase 2) blijft bewust apart.
-- Fable-randgevallen (backlog, geen fix): M1 — een selectie >200 dossiers geeft een kale 422-toast
-  (later frontend-melding); M2 — zaken schuiven niet meer auto de hold-stap "Verweer beantwoorden"
-  in (Lisanne verplaatst handmatig). Idem "Treffen van regeling" → "Bijhouden regeling".
-- Mailslot blijft DICHT; niets verstuurd; geen prod-data gewijzigd.
-
-### Volgende sessie
-S207: mail-verstevigingen (M4 HTML-escaping + L4/L5/L6, test-baar zónder mailslot; M5-recipient-cap
-in code + apart de 39-velden-datacorrectie mét akkoord). Óf ander S202-restspoor (S201-facturatie-import
-/ S203-restpunten). Prompt: `docs/sessions/PROMPT-S207.md`.

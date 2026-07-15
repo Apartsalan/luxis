@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 14 juli 2026 (S214, Opus-bouw + Fable-matching). **S201 kantoorfacturen-import LIVE**: 439 facturen/630 regels/325 betalingen op prod, op de cent nageteld (€302.750,39 bruto); 90 derdengelden-posten bewust uitgesloten; 7 Mollie-conflicten wachten op Lisanne/boekhouding. **Volgende: S215 (`docs/sessions/PROMPT-S215.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (~16 juli).**
+**Laatst bijgewerkt:** 15 juli 2026 (S216, Opus-bouw + Fable-review). **Dossierpagina-verbouwing (blok 1-3) LIVE**: van 11/8 → 7/6 tabbladen, compacte kop met geldstrook (incl. Openstaand), één notitievenster (cursor-bug gefixt), BaseNet-waarschuwingsbalk, gewone zaak ingericht (agenda-blok + volgende-stap + afsluitknop); alles visueel geverifieerd op prod, 2 Fable-must-fixes. Plan: `docs/plans/PLAN-dossierpagina.md`. **Volgende: S217 (`docs/sessions/PROMPT-S217.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (voorrang; gemeten 726 relaties/~€14,50 per run), anders dossierpolish.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,28 +53,33 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 14 juli 2026, S214)
+## 🎯 Huidige prioriteit (bijgewerkt 15 juli 2026, S216)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **S201 KANTOORFACTUREN-IMPORT LIVE (S214, 14 juli — Opus-bouw + Fable-matching).**
-> **439 BaseNet-kantoorfacturen op prod** (630 regels, 325 betalingen €248.364,17; 344 betaald/
-> 86 te laat/9 verzonden; 137 aan hun IN-dossier, 302 D-facturen contact-only, 23 creditnota's
-> gekoppeld). Bruto €302.750,39, openstaand €72.762,09 — op de cent nageteld in DB + API-rooktest.
-> 90 derdengelden-posten (−€90.718,21) bewust NIET als omzet. Stap-0 mee: betaaldatum "onbekend"
-> (migratie `s214_payment_date_null`), methode "Onbekend (BaseNet)", creditnota-afwikkelbalk.
-> Recept §0 = bronmeting-correcties. Details: SESSION-NOTES S214.
-> **Open uit deze import:** 7 Mollie/kop-conflicten (€10.854,66) → oordeel Lisanne/boekhouding;
-> 12 WIP/concepten + 31 losse regels → handmatige lijst (recept §1).
+> ✅ **DOSSIERPAGINA-VERBOUWING LIVE (S216, 15 juli — Opus-bouw + Fable-review).**
+> Dossierpagina (`zaken/[id]`) van 11/8 → **7/6 tabbladen** die passen; Financieel bundelt
+> vorderingen+betalingen+regeling+derdengelden (lege secties inklapbaar); Tijdlijn = oud
+> Activiteiten; Taken + conflictwaarschuwing naar Overzicht. Kop compacter: geldstrook
+> Hoofdsom·Betaald·**Openstaand**; één notitievenster (cursor-bug gefixt); BaseNet-waarschuwing
+> als oranje balk. **Gewone (advies)zaak ingericht**: agenda-blok (komende afspraken), "Volgende
+> stap"-regel + afsluitknop, geldstrook OHW+budget; incasso-lek in zijbalk dicht. Alle 4 harde
+> eisen Arsalan gehaald (alles klikbaar blijft klikbaar; één stijl beide types; niets onzichtbaar;
+> Uren blijft tab). 8 commits, elk visueel geverifieerd op prod, 2 Fable-must-fixes. Plan +
+> details: `docs/plans/PLAN-dossierpagina.md` + SESSION-NOTES S216.
+> **Open (klein):** anker-subnav bovenin Financieel; geldstrook gewone zaak later uitbreiden met
+> ongefactureerd + openstaande facturen (bronnen bestaan).
 >
-> 🔨 **VOLGENDE (S215, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli) →
+> 🔨 **VOLGENDE (S217, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli, VOORRANG) →
 > `KVK_API_KEY` (+ `KVK_API_BASE`) als env op de VPS → herstart backend →
-> `scripts/kvk_backfill_legal_form.py --dry-run` → akkoord → run → natelling (±438 relaties, ±€9)
-> → meten hoeveel BV's geen bijlage meer krijgen. (WIK-rentebijlage zelf is LIVE sinds S212;
-> besluit B actief tot de backfill.)
+> `scripts/kvk_backfill_legal_form.py --dry-run` → akkoord → run → natelling. ⚠️ Gemeten op prod
+> (S215): **726 relaties, ~€14,50 per run**, dry-run bevraagt óók → proef+run ~€29 (overweeg 1 echte
+> run met vooraf-akkoord). Details: PROMPT-S215 STAND. (WIK-rentebijlage zelf LIVE sinds S212;
+> besluit B — élke zakelijke wederpartij krijgt de bijlage — actief tot de backfill.)
 >
 > 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
-> gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag.
+> gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag;
+> 7 Mollie/kop-conflictfacturen (€10.854,66) → oordeel Lisanne/boekhouding.
 
 > ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
 > (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet

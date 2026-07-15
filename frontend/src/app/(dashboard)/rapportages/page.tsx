@@ -133,7 +133,8 @@ export default function RapportagesPage() {
             bgColor="bg-emerald-50"
           />
           <KpiCard
-            label="Incasso-ratio"
+            label="Geïnd op lopende zaken"
+            hint="Percentage van het gevorderde bedrag dat is geïnd, berekend over uitsluitend de lopende (actieve) zaken — niet over reeds afgesloten dossiers."
             value={formatPercentage(kpis.collection_rate)}
             icon={BarChart3}
             color="text-blue-600"
@@ -240,6 +241,7 @@ function KpiCard({
   color,
   bgColor,
   href,
+  hint,
 }: {
   label: string;
   value: string;
@@ -247,11 +249,18 @@ function KpiCard({
   color: string;
   bgColor: string;
   href?: string;
+  hint?: string;
 }) {
   const inner = (
     <>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <span
+          className={cn(
+            "text-xs font-medium text-muted-foreground uppercase tracking-wide",
+            hint && "cursor-help underline decoration-dotted underline-offset-2"
+          )}
+          title={hint}
+        >
           {label}
         </span>
         <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center", bgColor)}>

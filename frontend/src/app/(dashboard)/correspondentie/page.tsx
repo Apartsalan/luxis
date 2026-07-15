@@ -1271,6 +1271,19 @@ function EmailListItem({
             {email.snippet}
           </p>
         )}
+        {/* S221 punt 18 — dossiernummer direct klikbaar in de lijstrij (voorheen
+            alleen in het detailpaneel). stopPropagation zodat de klik navigeert
+            i.p.v. de mail te openen. */}
+        {email.case_id && email.case_number && (
+          <a
+            href={`/zaken/${email.case_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Briefcase className="h-3 w-3" />
+            {email.case_number}
+          </a>
+        )}
       </div>
     </div>
   );

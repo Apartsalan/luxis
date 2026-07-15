@@ -20,7 +20,6 @@ import {
   Banknote,
   BarChart3,
   PiggyBank,
-  Inbox,
   Zap,
   X,
 } from "lucide-react";
@@ -28,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { useModules, type LuxisModule } from "@/hooks/use-modules";
 import { useUnlinkedCount } from "@/hooks/use-email-sync";
 import { useIncassoQueueCounts } from "@/hooks/use-incasso";
-import { useIntakePendingCount } from "@/hooks/use-intake";
 import { useFollowupPendingCount } from "@/hooks/use-followup";
 import { usePaymentPendingCount } from "@/hooks/use-payment-matching";
 import { useMyTasks } from "@/hooks/use-workflow";
@@ -41,7 +39,6 @@ interface NavItem {
   badge?:
     | "unlinked-count"
     | "incasso-action"
-    | "ai-pending"
     | "followup-pending"
     | "taken-combined"
     | "payment-pending";
@@ -67,7 +64,6 @@ const ALL_SECTIONS: NavSection[] = [
       { name: "Dossiers", href: "/zaken", icon: Briefcase },
       { name: "Incasso", href: "/incasso", icon: Gavel, module: "incasso", badge: "incasso-action" },
       { name: "Follow-up", href: "/followup", icon: Zap, module: "incasso", badge: "followup-pending" },
-      { name: "Intake", href: "/intake", icon: Inbox, badge: "ai-pending" },
       { name: "Mail", href: "/correspondentie", icon: Mail, badge: "unlinked-count" },
       { name: "Agenda", href: "/agenda", icon: Calendar },
     ],
@@ -75,7 +71,7 @@ const ALL_SECTIONS: NavSection[] = [
   {
     label: "Financieel",
     items: [
-      { name: "Bankimport", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
+      { name: "Betalingen", href: "/betalingen", icon: Banknote, badge: "payment-pending" },
       { name: "Derdengelden", href: "/derdengelden", icon: PiggyBank },
       { name: "Uren", href: "/uren", icon: Clock, module: "tijdschrijven" },
       { name: "Facturen", href: "/facturen", icon: Receipt, module: "facturatie" },
@@ -109,8 +105,6 @@ export function AppSidebar({
   const unlinkedCount = unlinkedCountData?.count ?? 0;
   const { data: queueCounts } = useIncassoQueueCounts();
   const incassoActionCount = queueCounts?.action_required ?? 0;
-  const { data: intakePendingData } = useIntakePendingCount();
-  const intakePendingCount = intakePendingData?.count ?? 0;
   const { data: followupPendingData } = useFollowupPendingCount();
   const followupPendingCount = followupPendingData?.count ?? 0;
   const { data: paymentPendingData } = usePaymentPendingCount();
@@ -234,7 +228,6 @@ export function AppSidebar({
                   const badgeCount =
                     item.badge === "unlinked-count" ? unlinkedCount :
                     item.badge === "incasso-action" ? incassoActionCount :
-                    item.badge === "ai-pending" ? intakePendingCount :
                     item.badge === "followup-pending" ? followupPendingCount :
                     item.badge === "taken-combined" ? takenOpenCount :
                     item.badge === "payment-pending" ? paymentPendingCount : 0;

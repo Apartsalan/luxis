@@ -13,7 +13,6 @@ import {
   Clock,
   Calendar,
   Gavel,
-  Inbox,
   Banknote,
   Mail,
   ArrowRight,
@@ -38,11 +37,10 @@ const QUICK_ACTIONS = [
   { label: "Dossiers", href: "/zaken", icon: Briefcase },
   { label: "Relaties", href: "/relaties", icon: Users },
   { label: "Incasso", href: "/incasso", icon: Gavel },
-  { label: "Intake", href: "/intake", icon: Inbox },
   { label: "Agenda", href: "/agenda", icon: Calendar },
   { label: "Uren", href: "/uren", icon: Clock },
   { label: "Facturen", href: "/facturen", icon: Receipt },
-  { label: "Bankimport", href: "/betalingen", icon: Banknote },
+  { label: "Betalingen", href: "/betalingen", icon: Banknote },
   { label: "Instellingen", href: "/instellingen", icon: Settings },
 ];
 

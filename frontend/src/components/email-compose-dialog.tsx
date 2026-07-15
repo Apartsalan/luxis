@@ -32,6 +32,7 @@ export interface EmailComposeData {
   recipient_email: string;
   recipient_name?: string | null;
   cc?: string[] | null;
+  bcc?: string[] | null;
   custom_subject?: string | null;
   custom_body?: string | null;
   body_html?: string | null;
@@ -220,6 +221,9 @@ export function EmailComposeDialog({
   const [ccList, setCcList] = useState<string[]>([]);
   const [ccInput, setCcInput] = useState("");
   const [showCc, setShowCc] = useState(false);
+  const [bccList, setBccList] = useState<string[]>([]);
+  const [bccInput, setBccInput] = useState("");
+  const [showBcc, setShowBcc] = useState(false);
   const [subject, setSubject] = useState(defaultSubject);
   const [body, setBody] = useState(defaultBody);
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
@@ -291,6 +295,9 @@ export function EmailComposeDialog({
     setCcList([]);
     setCcInput("");
     setShowCc(false);
+    setBccList([]);
+    setBccInput("");
+    setShowBcc(false);
     setSubject(defaultSubject);
     setBody(defaultBody);
     setSelectedChip(null);
@@ -326,6 +333,9 @@ export function EmailComposeDialog({
       setCcList([]);
       setCcInput("");
       setShowCc(false);
+      setBccList([]);
+      setBccInput("");
+      setShowBcc(false);
       setSubject(defaultSubject);
       setBody(defaultBody);
       setSelectedChip(null);
@@ -439,6 +449,24 @@ export function EmailComposeDialog({
 
   const addCcFromRecipient = (r: EmailRecipient) => {
     if (!ccList.includes(r.email)) setCcList([...ccList, r.email]);
+  };
+
+  const addBcc = () => {
+    const email = bccInput.trim();
+    if (email && !bccList.includes(email)) {
+      setBccList([...bccList, email]);
+      setBccInput("");
+    }
+  };
+
+  // Voeg een nog-niet-bevestigd getypt adres samen met de lijst (voorkomt stil
+  // verlies als de gebruiker een adres typt en direct op Verzenden klikt zonder
+  // Enter/komma te drukken). Alleen als het een geldig e-mailadres lijkt.
+  const mergePending = (list: string[], pending: string): string[] => {
+    const email = pending.trim();
+    if (!email || list.includes(email)) return list;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return list;
+    return [...list, email];
   };
 
   // ── Template handlers ─────────────────────────────────────────────────
@@ -658,10 +686,15 @@ export function EmailComposeDialog({
     // Capture latest edits from contentEditable template editor
     const currentTemplateHtml = templateEditorRef.current?.innerHTML ?? templateHtml;
 
+    // Nog-niet-bevestigde getypte CC/BCC-adressen alsnog meenemen.
+    const finalCc = mergePending(ccList, ccInput);
+    const finalBcc = mergePending(bccList, bccInput);
+
     return {
       recipient_email: to.trim(),
       recipient_name: toName.trim() || null,
-      cc: ccList.length > 0 ? ccList : null,
+      cc: finalCc.length > 0 ? finalCc : null,
+      bcc: finalBcc.length > 0 ? finalBcc : null,
       custom_subject: subject.trim() || null,
       custom_body: currentTemplateHtml ? null : (body.trim() || null),
       body_html: currentTemplateHtml || null,
@@ -821,6 +854,9 @@ export function EmailComposeDialog({
                 <button type="button" onClick={() => setShowCc(!showCc)} className={cn("text-xs font-medium px-2 py-1 rounded hover:bg-muted transition-colors", showCc ? "text-primary" : "text-muted-foreground")}>
                   CC
                 </button>
+                <button type="button" onClick={() => setShowBcc(!showBcc)} className={cn("text-xs font-medium px-2 py-1 rounded hover:bg-muted transition-colors", showBcc ? "text-primary" : "text-muted-foreground")}>
+                  BCC
+                </button>
               </div>
               {errors.to && <p className="text-xs text-destructive ml-14">{errors.to}</p>}
 
@@ -880,6 +916,33 @@ export function EmailComposeDialog({
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── BCC ──────────────────────────────────────────────── */}
+            {showBcc && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground w-12 shrink-0">BCC</span>
+                  <div className="flex-1 flex flex-wrap items-center gap-1.5 min-h-[36px] rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+                    {bccList.map((email) => (
+                      <span key={email} className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium">
+                        {email}
+                        <button type="button" onClick={() => setBccList(bccList.filter((e) => e !== email))} className="hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      type="email"
+                      placeholder={bccList.length ? "" : "E-mailadres..."}
+                      value={bccInput}
+                      onChange={(e) => setBccInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addBcc(); } }}
+                      className="flex-1 min-w-[80px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 

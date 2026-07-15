@@ -256,6 +256,7 @@ export interface SendDocumentInput {
   recipient_email: string;
   recipient_name?: string | null;
   cc?: string[] | null;
+  bcc?: string[] | null;
   custom_subject?: string | null;
   custom_body?: string | null;
   // S207: alleen true na de 'toch versturen'-bevestiging (14-dagenbrief-gate).

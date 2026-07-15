@@ -181,6 +181,10 @@ class SendDocumentRequest(BaseModel):
         None,
         description="CC e-mailadressen",
     )
+    bcc: list[str] | None = Field(
+        None,
+        description="BCC e-mailadressen",
+    )
     custom_subject: str | None = Field(
         None,
         max_length=500,

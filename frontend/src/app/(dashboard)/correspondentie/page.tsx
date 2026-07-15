@@ -91,6 +91,7 @@ export default function CorrespondentiePage() {
           subject,
           body_html: data.body_html || `<p>${body.replace(/\n/g, "<br>")}</p>`,
           cc: data.cc,
+          bcc: data.bcc,
           case_id: data.case_id,
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,

@@ -1006,6 +1006,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
           recipient_email: data.recipient_email,
           recipient_name: data.recipient_name,
           cc: data.cc,
+          bcc: data.bcc,
           custom_subject: data.custom_subject,
           custom_body: data.custom_body,
           compliance_override: complianceOverride,

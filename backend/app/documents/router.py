@@ -517,6 +517,7 @@ async def send_document(
         subject=subject,
         body_html=html_body,
         cc=data.cc,
+        bcc=data.bcc,
         attachments=attachments,
         case_id=case.id,
         document_id=doc.id,

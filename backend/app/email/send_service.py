@@ -97,6 +97,7 @@ async def send_with_attachment(
     body_html: str,
     attachments: list[tuple[str, bytes, str]],  # (filename, data, mime_subtype)
     cc: list[str] | None = None,
+    bcc: list[str] | None = None,
     case_id: uuid.UUID | None = None,
     document_id: uuid.UUID | None = None,
     recipient_name: str = "",
@@ -173,6 +174,7 @@ async def send_with_attachment(
                 subject=subject,
                 body_html=body_html,
                 cc=cc,
+                bcc=bcc,
                 attachments=outgoing_attachments,
                 from_name=from_name,
                 **imap_smtp_kwargs(account),

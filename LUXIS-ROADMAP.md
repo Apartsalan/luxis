@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 15 juli 2026 avond (S220, Opus — bouwsprint demolijst). Blok 1 (verzendpad-fundament) + Blok 2 (stap-teksten & sjablonen) + Blok 3.1 (zombie-opruiming) + Blok 5-fasebalk LIVE en op prod geverifieerd. **Hoofdvondst gefixt + bewezen:** de verstuurknop gaat nu via het kantoor-account (incasso@) én legt de mail vast (tijdlijn + Correspondentie); het oude adres is uit alle 6 DB stap-teksten (→ schone AI-concepten). Rest = S221 (`docs/sessions/PROMPT-S221.md`): Blok 3.2-3.4, Blok 4 (AI-keten, met beslissingen), Blok 5-UX-rest, Blok 6-memo + 2 sjabloon-herzaaiingen. **KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
+**Laatst bijgewerkt:** 16 juli 2026 nacht (S222, Opus-bouw + Fable-review). Verzoekschrift-bijlage in Lisanne's EXACTE opmaak per zaak ingevuld — lokaal klaar en veld-voor-veld geverifieerd, **reseed wacht op GO Arsalan + 4 opmaakkeuzes**. Volledige review S220/S221 afgerond (`docs/sessions/S222-review.md`): B1 live doorgeklikt ✅, alle UX-punten ✅, sync→classificatie aannemelijk-maar-onbewezen (geen test), antwoord-testronde 2 rondes gedraaid (83→89% zuivere set; **poort auto-concept NIET gehaald → blijft UIT**, restant is corrector-kalibratie = beslispunt), backfill-wachtrijen doorgemeten mét opruimrecept (wacht op GO). **6 beslispunten open** in het reviewrapport. **KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,33 +53,29 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 15 juli 2026 einde middag, S218)
+## 🎯 Huidige prioriteit (bijgewerkt 16 juli 2026 nacht, S222)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **S219 AFGEROND (15 juli — demolijst-onderzoek, Fable, read-only).** Alle 25 demopunten
-> onderzocht (oorzaak + fixrichting per punt in `DEMOLIJST-S218.md`, metingen in
-> `docs/sessions/S219-onderzoek.md`) + eigen demoronde met 4 nieuwe vondsten:
-> (N1) **de compose-verstuurknop verstuurt via het persoonlijke account van de klikker
-> (Bayar-sommatie vertrok als seidony@) én legt niets vast** — mail onvindbaar in Luxis;
-> zelfde afzender-gat op de documentenroute; (N2) het oude adres + kesting@ zit in de
-> 6 stap-mailteksten in de database → álle AI-concepten erven het (ook de verstuurde);
-> (N3) zombie-concepten na stap-wissel (dubbel-verstuur-risico); (N4) zes stille
-> ruis-wachtrijen (470 classificaties, 348 notificaties, …). AI-keten gemeten: 7,5 min
-> automatisch tot verweer-concept; handmatig concept 39 s; auto-concept staat bewust uit.
+> ✅ **S220+S221+S222 AFGEROND.** Demolijst-bouwsprint (S220: verzendpad-fundament,
+> stap-teksten, zombies; S221: taken-weergave, ontdubbeling, snellere AI-keten,
+> begrip-eerst antwoordroute, UX) volledig gereviewd in S222
+> (`docs/sessions/S222-review.md`) — B1 live doorgeklikt, alle UX-punten groen.
+> Verzoekschrift-bijlage in Lisanne's exacte opmaak is klaar (lokaal, veld-voor-veld
+> geverifieerd), testronde 2 rondes gedraaid (zuivere set 83→89%).
 >
-> 🔨 **VOLGENDE (S220, Opus): bouwen** — `docs/sessions/PROMPT-S220.md`, 6 blokken:
-> (1) verzendpad-fundament (vangrail incasso@ + logging + brieftype-afleiding + CC/BCC +
-> onderwerp-bouwer), (2) stap-teksten & sjablonen saneren, (3) zombie-opruiming,
-> (4) AI-keten sneller, (5) fasebalk + UX-rest (incl. oude PROMPT-S218-punten),
-> (6) beslismemo b2b/b2c. Daarna Fable-review.
-> **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~22 juli, Arsalan 15-07:
-> "nog een week"): stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
+> 🎯 **VOLGENDE: de 6 beslispunten uit S222-review met Arsalan** —
+> (1) GO reseed verzoekschrift + 4 opmaakkeuzes; (2) GO opruimrecept backfills
+> (470 classificaties → 21 laten staan; 302 ruis-notificaties; 3 concepten);
+> (3) kalibratie antwoord-lat (bepaalt of de auto-concept-poort haalbaar wordt —
+> poort staat DICHT tot >90% + 0 zwaar); (4) test voor sync→classificatie-trigger;
+> (5) goud-zoeker opdrachtgevers uitsluiten; (6) concepten laten vervallen bij
+> zaak-sluiten. Daarna S221b-restant (review-scherm, voortgang-indicator,
+> HTML-tabellen, Blok 5-rest, Blok 6-memo b2b/b2c).
+> **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~22 juli):
+> stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
 > `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212; besluit B
 > actief tot de backfill.)
-> ✅ **Beslispunten beantwoord (Arsalan 15-07):** Rabo = stichting derdengelden, klopt;
-> bedragen EUR 2.195 / € 412,61 kloppen. Punt 21-richting: antwoord-route wordt
-> begrip-eerst (geen vaste antwoord-typen bijbouwen) — zie PROMPT-S220 blok 4.3.
 >
 > 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag;

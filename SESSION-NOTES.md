@@ -2,11 +2,57 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 15 juli 2026 avond/nacht (S221, Opus — demolijst DEEL 2, 6 blokken LIVE + prod-geverifieerd).
-**Laatste feature/fix:** overgeslagen/afgeronde taken zichtbaar + terugzetten (bewezen: 17 skipped komen terug); AI-concepten ontdubbeld op zaak+stap + zombie-opruiming bij stap-wissel (migratie live); classificatie direct ná mailsync (race weg); begrip-eerst antwoordroute + dossierfeiten in prompt + testronde-script (op prod bewezen: identiteitsvraag → correct antwoord mét klantnaam, corrector groen); bedragen niet meer in scheve spatie-kolommen; Intake uit menu, Bankimport→Betalingen, ratio-label+tooltip, dossiernummer klikbaar in maillijst.
-**Ook gedaan (GO Arsalan, visueel getest):** 2 sjabloon-herzaaiingen — brief-terugvallettertype Cambria→Calibri (8 DOCX, reseed) + KESTING LEGAL-logo in briefhoofd verzoekschrift-bijlage (ingevuld mét logo, prod-render geverifieerd).
-**Openstaand (→ S221b/S222):** review-scherm classificatie+concept, voortgangsindicator bij genereren, échte HTML-tabellen (render/opschoon-pad), Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat, soft-delete-banner, follow-up dossierlink/dagen/sort, intake-detectie dempen), Blok 6-beslismemo b2b/b2c, backfills-3.3 (Fable), auto-concept-categorieën (GATED — pas ná antwoord-route getoetst). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** `docs/sessions/PROMPT-S222.md` — DEEL 1 (Opus): verzoekschrift EXACTE opmaak nabouwen (plan: `PLAN-verzoekschrift-exacte-nabouw.md`); DEEL 2 (switch naar Fable): VERPLICHTE review van álles (S220+S221 + de PDF) + antwoord-testronde + backfills-3.3.
+**Laatst bijgewerkt:** 16 juli 2026 nacht (S222, Opus-bouw + Fable-review — verzoekschrift exacte nabouw KLAAR (wacht op GO) + volledige review S220/S221 + testronde 2 rondes + backfills gemeten).
+**Laatste feature/fix:** verzoekschrift-bijlage in Lisanne's EXACTE opmaak per zaak ingevuld (lokaal klaar + veld-voor-veld geverifieerd, reseed wacht op GO + 4 opmaakkeuzes); 2 aangescherpte antwoord-spelregels (geen eigen bedrag-uitsplitsingen; verzoek doorzetten = betalingsplicht blijft) LIVE; testronde-script goud-pad gerepareerd (mapper-imports + voedde Lisanne's eigen antwoorden als vraag).
+**Review-uitkomst:** B1 terugzetten/overslaan LIVE doorgeklikt ✅; B4 alle UX-punten ✅ (0 spatie-kolommen in 58 verse antwoorden); B3 sync→classificatie AANNEMELIJK maar onbewezen (geen test, nooit gevuurd); testronde 83→89% op de zuivere set, poort auto-concept NIET gehaald → blijft UIT (rest is corrector-kalibratie, beslispunt); IN100613: zaak sluiten laat concepten staan. Rapport: `docs/sessions/S222-review.md`.
+**Openstaand (→ S223):** 6 beslispunten in S222-review (GO reseed + 4 keuzes; GO opruimrecept 470/348/3; kalibratie antwoord-lat; B3-test; goud-zoeker opdrachtgevers uitsluiten) + S221b-restlijst (review-scherm, voortgang-indicator, HTML-tabellen, Blok 5-rest, Blok 6-memo). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** beslispunten doornemen met Arsalan (wakker) → daarna S221b-Opus-restant of KvK-backfill zodra sleutel er is.
+
+## Sessie 222 (15/16 juli 2026 nacht, Opus-bouw → Fable-review — verzoekschrift-nabouw + totaalreview, autonoom)
+
+### Samenvatting
+Twee delen conform PROMPT-S222. **Deel 1 (Opus):** de faillissement-bijlage exact in
+Lisanne's opmaak nagebouwd — haar BaseNet-sjabloon als basis (crème-balk, logo,
+Calibri, randloze tabellen, voetteksten), 106 merge-velden omgezet naar docxtpl,
+vorderingen-lus herbouwd, oud adres/mail vervangen, handtekening-placeholder weg.
+Twee scenario's gerenderd (met/zonder deelbetaling): alle bedragen tellen op de cent
+op, in beide tabellen. **Lokaal klaar; reseed op prod NIET gedaan** — wacht op GO +
+4 keuzes (CONCEPT-watermerk, kolomlabel Verzuimdatum, betaalregels samengevoegd,
+handtekening). **Deel 2 (Fable, autonoom — Arsalan sliep):** volledige review,
+rapport in `docs/sessions/S222-review.md`.
+
+### Reviewuitkomsten (bewijs in het rapport)
+- **B1 LIVE bewezen** (het S221-gat): afgerond-weergave 19 taken, terugzetten op
+  testdossier 2026-00006 (8→9 open), opnieuw overslaan + ongedaan-melding. ✅
+- **B2:** migratie op head, 0 dubbele open concepten, 23 tests groen; máár nog geen
+  nieuw concept sinds uitrol (prod-gedrag onbenut). Vondsten: zaak sluiten laat open
+  concepten staan (IN100613 ×2); IN100521 heeft 2 pre-migratie-duplicaten.
+- **B3 sync→classificatie: aannemelijk, NIET bewezen** — code in container ✅ maar
+  géén test en nog nooit gevuurd (geen nieuwe mail sinds deploy).
+- **B4 ✅ compleet:** Intake weg, Betalingen-label, ratio-tooltip, klikbaar
+  dossiernummer, Calibri ×9 sjablonen, 0 spatie-kolommen in 58 verse antwoorden.
+- **C testronde:** goud-pad crashte (mapper-imports, nooit getest in S221) én
+  toetste het verkeerde ding (voedde Lisanne's verstuurde antwoorden als vraag —
+  alle 103 bibliotheek-bronnen zijn per definitie haar eigen mails). Beide gefixt
+  (`118617a`, `90ad871`) + 2 spelregels aangescherpt na ronde 1. Ronde 2: zuivere
+  set 83→89%, goud eerste geldige meting 29/37; restant-afkeuringen grotendeels
+  corrector-kalibratie (1 aantoonbare corrector-misser zelf nagelezen). **Poort
+  auto-concept NIET gehaald → blijft UIT**; eerst kalibratievraag beantwoorden.
+- **D backfills gemeten (níets opgeruimd):** 470 classificaties = 339 op afgesloten
+  zaken + 110 oude mails + 21 recente (11 echt werk); 348 notificaties = 302
+  classificatie-ruis; 8 concepten (3 opruimkandidaten); adviezen-15 en intake-14
+  zijn actueel werk, GEEN opruimkandidaat. Opruimrecept klaar, wacht op GO.
+
+### Wijzigingen
+`118617a` (goud-pad imports), `90ad871` (spelregels + goud-lader voedt echte
+debiteurenvraag) — beide gedeployed + getest. Nieuw sjabloon staat klaar in
+`templates/verzoekschrift_faillissement.docx` (repo, niet op prod). Testronde-
+rapporten bewaard: `S222-testronde-r1.md`/`-r2.md`. Prod verder alleen-lezen
+behalve de B1-kliktest (netto nul).
+
+### Volgende sessie
+Beslispunten 1-6 uit `S222-review.md` met Arsalan doornemen; daarna S221b-restant
+(Opus) of KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).
 
 ## Sessie 221 (15 juli 2026 avond/nacht, Opus — demolijst DEEL 2, 6 blokken LIVE)
 
@@ -569,174 +615,3 @@ S213 (`docs/sessions/PROMPT-S213.md`, Opus): zodra Arsalan de echte KvK-sleutel 
 (+ `KVK_API_BASE`) als env op de VPS → herstart backend → `scripts/kvk_backfill_legal_form.py
 --dry-run` → akkoord → echt draaien → natelling (±438 relaties, ±€9) → meten hoeveel BV's geen
 bijlage meer krijgen. Eventueel: `/compose/send`-bijlage-observatie oppakken als Arsalan dat wil.
-
-
-## Sessie 211 (14 juli 2026, Opus-bouw + Fable-review/afronding — WIK-rentebijlage + S207 AF, op tak)
-
-### Samenvatting
-Alles op tak `s211-wik-rentebijlage` (5 commits, gepusht, **NIET gemerged** — mailslot staat OPEN,
-merge = direct actief verzendgedrag → wacht op GO Arsalan). Volledige suite **1338 groen**.
-
-- **WIK-rentebijlage gebouwd** (plan `docs/plans/PLAN-wik-rentebijlage.md`, besluiten A–D):
-  `legal_form` (+ herkomst/checked_at) op contacts (migratie `s211_contact_legal_form`, additief);
-  KvK-client `integrations/kvk_service.py` (faalt zacht, **slapend zonder `KVK_API_KEY`-env** —
-  nooit stil tegen de verkeerde omgeving); auto-vullen bij relatie create/update; beslisregel
-  `should_attach_rente_bijlage` in `collections/compliance.py` (kernwoord-match; VOF/CV ≠ BV);
-  gedeelde helper `documents/rente_bijlage.py` op batch- én followup-pad (sleutelt op
-  template_type `14_dagenbrief`/`sommatie_drukte`, niet sort_order); backfill-script klaar,
-  **NIET gedraaid** (wacht op prod-sleutel ~16 juli). UI: rechtsvorm op relatiekaart.
-- **Bewijs:** KvK end-to-end tegen testomgeving (eenmanszaak/BV/NV komen terug; 400 → zacht None);
-  beslismatrix alle vormen × 4 stappen klopt; echte render: eenmanszaak → 1 renteoverzicht-PDF
-  (62kB, %PDF-header), BV → 0. Visueel (Playwright, dev): rechtsvorm tonen/bewerken/opslaan +
-  herkomst-label "handmatig".
-- **Fable-review = GO-MITS → mitsen direct gefixt:** KvK-sleutel default leeg (was: testomgeving
-  zou op prod draaien), afkap op 100 tekens, leegmaken blijft leeg, herkomst flipt niet bij
-  ongewijzigde waarde, lege-staat-melding UI.
-- **S207 HELEMAAL AF (zelfde sessie, opdracht Arsalan):** M4 HTML-escaping op alle VIER
-  mail-bouwers — de twee halve uit de werkkopie afgemaakt + `followup_service` DOCX-route +
-  een **vierde die de audit miste**: `incasso/service.py::_build_step_email` (batch;
-  onderwerp plat, body autoescape). Rode-test-kluwen ontward: 2 tests waren S211-gedrag
-  (bijgewerkt + BV-keerzijde-test), 1 was S207's eigen onaffe test (groen na de fix).
-  L4/L5/L6 (`584b63c`) bleek **al live** via de S210-deploy; heartbeat-checklist 12/12 groen.
-  `PROMPT-S207.md` status-header bijgewerkt (op de tak).
-- **Geheugen-les:** S209-backfills stonden in memory als "openstaand" maar waren AF (S209+S210)
-  — memory bijgewerkt; eerst SESSION-NOTES lezen vóór "openstaand" rapporteren.
-
-### Gewijzigde bestanden (alles op tak `s211-wik-rentebijlage`)
-- Backend: `relations/models+schemas+service`, `integrations/kvk_service.py` (nieuw),
-  `collections/compliance.py`, `documents/rente_bijlage.py` (nieuw), `incasso/service.py`,
-  `ai_agent/followup_service.py`, `email/incasso_templates.py`, `invoices/service.py`,
-  `config.py`, migratie `s211_contact_legal_form`, `scripts/kvk_backfill_legal_form.py` (nieuw).
-- Frontend: `relaties/[id]/page.tsx`, `ContactInfoSection.tsx`, `use-relations.ts`.
-- Tests: `test_kvk_legal_form.py` (nieuw, 26), `test_followup.py`, `test_incasso_pipeline.py`,
-  `test_incasso_templates.py`, `test_invoice_send_email.py`.
-
-### Bekende issues
-- **Rente-bijlage ontbreekt nog op het compose/AI-concept- en document-verzendpad** (Fable-
-  bevinding 3; compose hangt voor deze stappen al factuur-PDF's aan → zelfde plek aanhaken). → S212
-- Preview-zinnetje followup-frontend zegt "De brief gaat als PDF-bijlage mee" (moet: renteoverzicht). → S212
-- Tot de rechtsvorm-backfill draait: élke 14-dagenbrief/eerste sommatie krijgt de bijlage, óók
-  BV's (rechtsvorm leeg → besluit B, bewuste veilige kant) — begint bij merge, mailslot is OPEN.
-- `PROMPT-S207.md` op main is nog de oude versie (update staat op de tak) — archiveren ná merge.
-
-### Volgende sessie
-- S212 (`docs/sessions/PROMPT-S212.md`, **Opus**): GO/merge+deploy s211-tak (migratie!) →
-  rente-bijlage op compose- en document-pad + preview-zinnetje → terug-navigatie heel Luxis
-  (wens Arsalan). Los moment zodra KvK-sleutel binnen is: env op VPS → backfill droogloop →
-  akkoord → run → natelling.
-
-
-## Sessie 210 (14 juli 2026, Opus-bouw + Fable-review — provisie-per-cliënt + land op de brieven, LIVE)
-
-### Samenvatting
-Twee S210-taken volledig af (provisie-afspraak eerst uitgevraagd bij Arsalan → ontworpen → gebouwd;
-land op de Word-brieven). Daarna Fable-review van alles + door Opus alle visuele controles gedaan.
-Taak 3 (WIK-bijlage) is onderzocht → plan goedgekeurd → apart gezet voor S211 (wacht op KvK-sleutel).
-
-- **Provisie-% per cliënt (LIVE, `2eabd37`).** Nieuw veld `default_provisie_percentage` op `contacts`
-  (migratie `s210_contact_provisie`, additief); elk nieuw dossier erft het net als de default_bik_*-
-  velden (dossier wint), basis blijft `collected_amount`. Klantkaart (tonen + bewerken) + nieuwe-relatie-
-  formulier. **Data (na akkoord, nageteld):** 6 klantkaarten op 15% (INC Zakelijk, Incassocenter,
-  COLLECT 1, CM Zakelijk, LegalWork, **+ SYN Finance** — dezelfde afspraak) + 39 dossiers op 15%
-  (exact de set die BaseNet zelf op `incprovisie=15` had; set-vergelijking prod↔export 0 verschil).
-  Slim doorrekenen was al zo (provisie wordt live berekend, nooit als vast bedrag opgeslagen).
-- **Land op de Word-brieven (LIVE, `4025d43`).** Voorwaardelijke regel `{%p if wederpartij.land %}...
-  {%p endif %}` onder postcode+stad op de 5 debiteurbrieven (sommatie, tweede_sommatie, aanmaning,
-  herinnering, 14_dagenbrief). Bij buitenland op eigen regel; bij binnenland (leeg) verdwijnt de regel
-  volledig — brief byte-voor-byte gelijk aan voorheen (render-test per sjabloon). Back-up DB-sjablonen
-  vóór her-upload (`/root/backup_managed_templates_pre_s210land.dump`); gerichte reseed van alleen deze
-  5, andere 3 (dagvaarding/renteoverzicht/verzoekschrift) ongemoeid.
-- **WIK-bijlage: onderzocht + plan goedgekeurd (S211).** KvK-koppeling bewezen in gratis testomgeving
-  (rechtsvorm komt terug); besluiten A–D vastgelegd. Volledig plan: `docs/plans/PLAN-wik-rentebijlage.md`.
-
-### Fable-review + visuele controle (zelfde sessie)
-Alle dragende claims onafhankelijk herverifieerd: DB-sjablonen byte-identiek aan repo (sha256), de 39
-dossiers = exact de export-set, precies 6 bedrijven (0 personen) op 15%, geen ander financieel veld
-geraakt. **Live prod-round-trip:** testdossier bij CM Zakelijk kreeg automatisch 15,00% → daarna
-verwijderd (verbruikte wel dossiernr 2026-00001; eerstvolgende echte = 2026-00002). Visueel (Opus,
-niet Fable): provisie-leesweergave + bewerkweergave + nieuwe-relatie-formulier tonen het veld; 5 brieven op
-buitenlandse zaak IN100007 (België onder adres) + binnenlandse tegenproef (geen witregel). Oordeel: GO.
-
-### Gewijzigde bestanden
-- Backend: `relations/models.py` + `schemas.py`, `cases/service.py` (erving), migratie
-  `s210_contact_provisie`, `tests/test_interest_inheritance.py` (4 nieuwe). Templates: 5 DOCX in
-  `templates/` (landregel) + gerichte DB-reseed op prod.
-- Frontend: `relaties/[id]/page.tsx`, `relaties/nieuw/page.tsx`,
-  `components/relations/detail/ContactInfoSection.tsx`, `hooks/use-relations.ts`.
-- Docs: `docs/plans/PLAN-wik-rentebijlage.md` (nieuw), `docs/sessions/PROMPT-S211.md` (nieuw).
-- 2 code-commits (`2eabd37` provisie · `4025d43` land). Data-mutaties via read-only-gecontroleerde SQL.
-
-### Bekende issues / bewust niet gedaan
-- **WIK-bijlage** wacht op de echte KvK-sleutel (~16 juli) voor de backfill; bouwen kan al tegen test.
-- **Landregel op dagvaarding + faillissementsverzoek** bewust niet gedaan (gerechtelijke stukken,
-  dagvaarding heeft inline-adres) — los klusje als gewenst.
-- Verwijderd testdossier bestaat nog als inactieve rij (zo werkt verwijderen; cosmetisch).
-- Parallelle S207-track: 5 bestanden nog ongecommit in de werkkopie — niet aangeraakt.
-
-### Volgende sessie
-S211 (`docs/sessions/PROMPT-S211.md`): WIK-rentebijlage bouwen tegen de KvK-testomgeving volgens
-`PLAN-wik-rentebijlage.md`; backfill draaien zodra Arsalan de echte sleutel meldt. Bouwen = Opus.
-
-
-## Sessie 209 (14 juli 2026, Opus-bouw + Fable-review — BaseNet import-gaten uit S208-veldaudit gedicht, LIVE)
-
-### Samenvatting
-Vier onderdelen uit de S208-veldaudit, elk als losse stap met dry-run + akkoord Arsalan +
-tel-verificatie achteraf. Daarna een volledige Fable-review (model omgezet in dezelfde sessie)
-die niet alleen de data hertelde maar ook functioneel testte dat alles vooruit werkt.
-
-- **Onderdeel 1 — werknotities + waarschuwingen (LIVE).** 99 `pmemo` + 13 `palert` uit de
-  Incasso-export → `Case.debtor_notes` (waarschuwing bovenaan met `[BaseNet-waarschuwing]`,
-  werknotitie onder met `[BaseNet-notitie]`, herkomst-regel blijft ertussen). HTML-opmaak
-  opgeschoond. Idempotent via marker. 109 dossiers, tel-geverifieerd 99+13. Herhaalbaar script
-  `scripts/basenet/backfill_notes.py` (+ zelf-test).
-- **Onderdeel 2 — land bij adressen (LIVE, incl. migratie + deploy).** Nieuwe kolommen
-  `contacts.visit_country/postal_country` (migratie `s209_contact_country`, additief). 49
-  buitenlandse relaties gevuld met nette NL-landnamen (binnenland leeg = standaard). Getoond in
-  relatie-detail (alleen indien gevuld) + bewerkbaar. Land beschikbaar in de brief-context
-  (`{{ wederpartij.land }}`) + samenvoegveld-lijst + HTML-fallback-sjablonen.
-- **Onderdeel 3 — geboortedatums (LIVE); provisie GEPARKEERD.** 28 personen kregen hun
-  `date_of_birth` (gekoppeld op systemid, namen gecontroleerd: 26 exact + 2 tussenvoegsel-only).
-  Provisie-15% (39 zaken) BEWUST niet uitgevoerd — hangt aan de provisie-afspraak (zie onder).
-- **Onderdeel 4 — mapping uitgebreid (voor de vólgende export).** `scripts/basenet/mapping.py`
-  neemt nu land (genormaliseerd), geboortedatum, provisie (alleen >0), pmemo/palert in
-  debtor_notes + rentetype-context automatisch mee. Hergebruikt `build_new_notes`/`clean`.
-- **Provisie-afspraak (niet gebouwd — eerst uitvragen).** Arsalan (14 juli): treft Lisanne een
-  regeling met de debiteur voor een lager bedrag, dan krijgt zij 15% over die deal; haalt zij het
-  volledige bedrag binnen, dan krijgt zij gewoon de incassokosten. Nog niet scherp genoeg + het is
-  onbekend of dit dezelfde 15% is als de BaseNet-`incprovisie` bij 39 zaken. Vragen staan in
-  `PROMPT-S209.md`; wachten op Arsalans antwoorden vóór ontwerp (Plan Mode).
-
-### Fable-review (zelfde sessie, model omgezet)
-Data onafhankelijk herteld: 109/109 notities byte-voor-byte gelijk aan herberekening (0 `\r`),
-49/49 landen + 28/28 geboortedatums exact + bij de juiste relatie (koppeling in beide richtingen
-dicht), 0 andere records geraakt (0 provisie gezet). Live via API + visueel doorgeklikt (Chrome):
-land toont "Duitsland", dossiernotitie toont "Failliet" bovenaan, testrelatie aangemaakt→land
-opgeslagen→verwijderd. **8 round-trip-tests** toegevoegd (mapping→`_insert_missing`→PUT/GET-API).
-**Review-vondst:** `is_btw_plichtig` + `contractual_compound` misten `server_default` in het model
-terwijl prod die wél heeft (migratie-drift) → test-DB week af, raw-SQL-insert faalde daar. Model
-gelijkgetrokken (geen gedragswijziging op prod). 284 tests rente/dossiers/relaties/btw groen.
-
-### Gewijzigde bestanden
-- Backend: `relations/models.py` (2 land-kolommen + server_default-sync), `relations/schemas.py`,
-  `cases/models.py` (server_default-sync), `documents/docx_service.py` + `documents/service.py`
-  (land in context), `templates/sommatie.html` + `14_dagenbrief.html`, migratie
-  `s209_contact_country`.
-- Frontend: `relaties/[id]/page.tsx`, `components/relations/detail/ContactInfoSection.tsx`,
-  `hooks/use-relations.ts`.
-- Scripts/tests: `scripts/basenet/backfill_notes.py` (nieuw), `scripts/basenet/mapping.py`,
-  `backend/tests/test_basenet_s209_roundtrip.py` (nieuw).
-- 6 commits (`2d51ec5` notities · `3054764` land · `c50d24d` mapping · `166620d` review-tests +
-  drift-fix · `f3b2ad4` lint). Data-mutaties via read-only-gecontroleerde SQL op prod.
-
-### Bekende issues / bewust niet gedaan
-- **Provisie-15% (39 zaken)** wacht op de provisie-afspraak — eerst uitvragen (PROMPT-S209 §gesprek).
-- **Land op de eigenlijke Word-brieven** — de built-in DOCX-sjablonen (in de DB) missen nog de
-  `{{ wederpartij.land }}`-regel; kleine klus in de sjabloon-editor met visuele controle. Basis staat.
-- Parallelle S207-track: 5 bestanden nog ongecommit in de werkkopie — niet aangeraakt.
-
-### Volgende sessie
-S210 (`docs/sessions/PROMPT-S210.md`): provisie-afspraak uitvragen bij Arsalan → ontwerpen (Plan
-Mode) → eventueel provisie-backfill; land-regel in de Word-sjablonen. WIK-bijlage zodra KvK-API er is.
-
-

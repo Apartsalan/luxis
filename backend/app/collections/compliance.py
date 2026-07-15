@@ -28,7 +28,10 @@ DAGENBRIEF_STEP_NAME = "14-dagenbrief"
 # 14-dagenbrief en de eerste sommatie (besluit C, S210). Match op template_type
 # i.p.v. sort_order — dat is stabiel op prod (0/1) én in een verse test-DB waar
 # de nummering bij 1 begint.
-RENTE_BIJLAGE_TEMPLATE_TYPES = frozenset({"14_dagenbrief", "sommatie_drukte"})
+# S220 punt 3: óók de kale "sommatie" (het brieftype van een handmatig via het
+# tabblad Documenten opgestelde eerste sommatie) — anders miste het renteoverzicht
+# op de documentenroute terwijl het op batch/follow-up ("sommatie_drukte") wél meeging.
+RENTE_BIJLAGE_TEMPLATE_TYPES = frozenset({"14_dagenbrief", "sommatie_drukte", "sommatie"})
 
 # Rechtsvormen met BEPERKTE aansprakelijkheid → géén renteoverzicht-bijlage
 # (besluit A, S210). Kernwoord-match op de KvK-rechtsvorm, GEEN exacte string:

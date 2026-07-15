@@ -156,6 +156,51 @@ async def test_document_send_no_rente_bijlage_for_bv(
     assert len(attachments) == 1
 
 
+@pytest.mark.asyncio
+async def test_document_send_attaches_rente_for_plain_sommatie(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S220 punt 3: een handmatig via Documenten opgestelde eerste sommatie heeft
+    brieftype 'sommatie' (niet 'sommatie_drukte'). Ook dan gaat het renteoverzicht
+    mee op de documentenroute — voorheen viel het daar weg."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    doc = GeneratedDocument(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        generated_by_id=test_user.id, title="Sommatie",
+        document_type="sommatie", template_type="sommatie",
+    )
+    db.add(doc)
+    await db.commit()
+
+    email_log = SimpleNamespace(
+        id=uuid.uuid4(), recipient="debiteur@example.nl", subject="Sommatie",
+        status="sent", error_message=None, template=None,
+    )
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.documents.router.render_docx", new_callable=AsyncMock) as mock_main,
+        patch("app.documents.router.docx_to_pdf", new_callable=AsyncMock) as mock_main_pdf,
+        patch("app.documents.rente_bijlage.render_docx", new_callable=AsyncMock) as mock_rente,
+        patch("app.documents.rente_bijlage.docx_to_pdf", new_callable=AsyncMock) as mock_rente_pdf,
+        patch("app.email.send_service.send_with_attachment", new_callable=AsyncMock) as mock_send,
+    ):
+        mock_main.return_value = (b"docx", "sommatie.docx", "sommatie", None)
+        mock_main_pdf.return_value = b"%PDF-main"
+        mock_rente.return_value = (b"docx", "renteoverzicht_2026-96500.docx", "renteoverzicht", None)
+        mock_rente_pdf.return_value = b"%PDF-rente"
+        mock_send.return_value = email_log
+        resp = await client.post(
+            f"/api/documents/{doc.id}/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"recipient_email": "debiteur@example.nl"},
+        )
+
+    assert resp.status_code == 200, resp.text
+    attachments = mock_send.call_args.kwargs["attachments"]
+    filenames = [a[0] for a in attachments]
+    assert any(f.startswith("renteoverzicht_") for f in filenames)
+
+
 # ── Compose/AI-concept-pad (compose/cases/{id} → .eml) ─────────────────────────
 
 

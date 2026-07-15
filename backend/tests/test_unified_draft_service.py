@@ -563,3 +563,75 @@ async def test_free_compose_fallback_uses_last_case_classification(
     user_msg = holder["user"]
     assert "Artikel 9.3" in user_msg           # AV via fallback-classificatie
     assert "Verweer-bibliotheek" in user_msg
+
+
+# ── S221 3.2: ontdubbelen ────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_next_step_dedup_returns_existing_draft(
+    db, test_tenant, test_user, incasso_case, fake_base_context, monkeypatch
+):
+    """Tweede 'volgende stap'-generatie voor dezelfde zaak+stap geeft het
+    bestaande concept terug i.p.v. een tweede te maken (dubbelklik-bescherming)."""
+    _patch_ai(monkeypatch, subject="Eerste sommatie", body="Alinea.")
+    _patch_context(monkeypatch, fake_base_context)
+
+    first = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
+    )
+    second = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
+    )
+    assert second.id == first.id
+    assert first.intent == "next_step"
+
+    # Slechts één rij in de DB voor deze zaak.
+    from sqlalchemy import func, select
+    count = await db.scalar(
+        select(func.count()).select_from(AIDraft).where(AIDraft.case_id == incasso_case.id)
+    )
+    assert count == 1
+
+
+@pytest.mark.asyncio
+async def test_free_compose_never_dedups(
+    db, test_tenant, test_user, incasso_case, fake_base_context, monkeypatch
+):
+    """Vrij opstellen maakt bewust elke keer een nieuw concept."""
+    _patch_ai(monkeypatch, subject="Vrij", body="Tekst.")
+    _patch_context(monkeypatch, fake_base_context)
+
+    a = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.FREE_COMPOSE,
+    )
+    b = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.FREE_COMPOSE,
+    )
+    assert a.id != b.id
+
+
+@pytest.mark.asyncio
+async def test_dedup_ignores_discarded_draft(
+    db, test_tenant, test_user, incasso_case, fake_base_context, monkeypatch
+):
+    """Een weggegooid concept blokkeert een nieuwe generatie niet."""
+    _patch_ai(monkeypatch, subject="Eerste sommatie", body="Alinea.")
+    _patch_context(monkeypatch, fake_base_context)
+
+    first = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
+    )
+    first.status = DraftStatus.DISCARDED
+    await db.flush()
+
+    second = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
+    )
+    assert second.id != first.id

@@ -225,6 +225,15 @@ class AIDraft(TenantBase):
     token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # S221 3.2 — ontdubbelen + zombie-opruiming. `intent` = waarvoor het concept is
+    # (next_step / reply_to_email / free_compose); `step_id` = de pijplijnstap waarop
+    # de zaak stond bij generatie. Samen vormen ze de ontdubbel-sleutel en laten ze
+    # een stap-wissel verouderde stap-concepten sluiten.
+    intent: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    step_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("incasso_pipeline_steps.id", ondelete="SET NULL"), nullable=True
+    )
+
     # Relationships
     case: Mapped["Case"] = relationship("Case", lazy="selectin")  # noqa: F821
     classification: Mapped["EmailClassification | None"] = relationship(

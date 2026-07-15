@@ -269,6 +269,55 @@ async def _build_verweer_knowledge(
 # ── Main entrypoint ───────────────────────────────────────────────────────
 
 
+# Concepten die nog niet zijn verstuurd of weggegooid tellen als "open".
+_OPEN_DRAFT_STATUSES = (
+    DraftStatus.GENERATED,
+    DraftStatus.REVIEWED,
+    DraftStatus.APPROVED,
+)
+
+
+async def _find_open_duplicate_draft(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    intent: DraftIntent,
+    *,
+    step_id: uuid.UUID | None,
+    classification_id: uuid.UUID | None,
+) -> AIDraft | None:
+    """S221 3.2 — bestaat er al een open concept voor dezelfde bedoeling?
+
+    Voorkomt een tweede (betaalde) generatie bij dubbelklik of opnieuw-genereren:
+    - volgende stap → zelfde zaak + zelfde pijplijnstap
+    - antwoord op mail → zelfde zaak + zelfde bron-mail (classificatie)
+    - vrij opstellen → nooit ontdubbelen (gebruiker wil bewust een nieuwe).
+
+    Retourneert het nieuwste passende open concept, of None.
+    """
+    if intent == DraftIntent.FREE_COMPOSE:
+        return None
+    query = select(AIDraft).where(
+        AIDraft.tenant_id == tenant_id,
+        AIDraft.case_id == case_id,
+        AIDraft.intent == intent.value,
+        AIDraft.status.in_(_OPEN_DRAFT_STATUSES),
+    )
+    if intent == DraftIntent.NEXT_STEP:
+        # Zelfde stap (of allebei stap-loos) → dubbelklik-bescherming.
+        if step_id is None:
+            query = query.where(AIDraft.step_id.is_(None))
+        else:
+            query = query.where(AIDraft.step_id == step_id)
+    else:  # REPLY_TO_EMAIL
+        if classification_id is None:
+            return None
+        query = query.where(AIDraft.classification_id == classification_id)
+    query = query.order_by(AIDraft.generated_at.desc()).limit(1)
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
 async def generate_unified_draft(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -312,6 +361,20 @@ async def generate_unified_draft(
         system_prompt = _FREE_COMPOSE_PROMPT
         user_msg = _build_free_compose_user_msg(case, instruction)
         classification_id = None
+
+    # S221 3.2 — geen tweede concept (en geen tweede AI-rekening) als er al een open
+    # concept voor dezelfde bedoeling staat. Toon het bestaande i.p.v. te dubbelen.
+    existing = await _find_open_duplicate_draft(
+        db, tenant_id, case_id, intent,
+        step_id=case.incasso_step_id,
+        classification_id=classification_id,
+    )
+    if existing is not None:
+        logger.info(
+            "UnifiedDraftService: bestaand open concept %s hergebruikt (case=%s, intent=%s)",
+            existing.id, case.case_number, intent.value,
+        )
+        return existing
 
     # S173: geef álle 3 de intents dezelfde kennis (AV + verweer-bibliotheek + geleerde
     # voorbeelden) als het incasso-pad — maar alléén bij een verweer-categorie. Voorheen
@@ -375,6 +438,8 @@ async def generate_unified_draft(
         status=DraftStatus.GENERATED,
         model_used=model,
         instruction=instruction,
+        intent=intent.value,
+        step_id=case.incasso_step_id,
     )
     db.add(draft)
     await db.flush()

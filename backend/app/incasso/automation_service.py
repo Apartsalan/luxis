@@ -779,6 +779,8 @@ async def generate_draft_for_step(
         status=DraftStatus.GENERATED,
         model_used=model_name,
         instruction=f"Auto-draft voor stap '{target_step.name}'",
+        intent="next_step",
+        step_id=target_step.id,
     )
     db.add(draft)
     await db.flush()

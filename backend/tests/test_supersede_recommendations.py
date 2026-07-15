@@ -90,3 +90,45 @@ async def test_step_change_leaves_executed_recommendation(
     await db.refresh(rec)
 
     assert rec.status == RecommendationStatus.EXECUTED
+
+
+@pytest.mark.asyncio
+async def test_step_change_discards_stale_next_step_draft(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S221 3.2/N3 — een 'volgende stap'-concept van de oude stap wordt weggegooid
+    bij een stap-wissel; antwoord-concepten blijven staan."""
+    from app.ai_agent.models import AIDraft, DraftStatus
+
+    client = Contact(id=uuid.uuid4(), tenant_id=test_tenant.id, contact_type="person", name="C")
+    db.add(client)
+    await db.flush()
+    step_a = await _step(db, test_tenant.id, "Eerste sommatie", 1)
+    step_b = await _step(db, test_tenant.id, "Tweede sommatie", 2)
+    case = Case(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_number="2026-96702",
+        case_type="incasso", status="in_behandeling", debtor_type="b2b",
+        client_id=client.id, date_opened=date.today(), incasso_step_id=step_a.id,
+    )
+    db.add(case)
+    await db.flush()
+
+    stale = AIDraft(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        subject="Eerste sommatie", body="x", status=DraftStatus.GENERATED,
+        intent="next_step", step_id=step_a.id,
+    )
+    reply = AIDraft(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        subject="Antwoord", body="y", status=DraftStatus.GENERATED,
+        intent="reply_to_email", step_id=step_a.id,
+    )
+    db.add_all([stale, reply])
+    await db.flush()
+
+    await move_case_to_step(db, test_tenant.id, case, step_b, user_id=test_user.id)
+    await db.refresh(stale)
+    await db.refresh(reply)
+
+    assert stale.status == DraftStatus.DISCARDED
+    assert reply.status == DraftStatus.GENERATED  # antwoord blijft staan

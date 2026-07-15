@@ -581,7 +581,47 @@ async def move_case_to_step(
         db, tenant_id, case.id, reason=f"Stap gewijzigd naar '{target_step.name}'"
     )
 
+    # S221 3.2/N3 — zelfde zombie-opruiming voor AI-concepten: een 'volgende stap'-
+    # concept dat bij een ándere stap hoort is na de wissel verouderd (dubbel-
+    # verstuur-risico, vaak met oude tekst). Antwoord- en vrij-opgestelde concepten
+    # blijven staan (die hangen niet aan een stap).
+    await discard_stale_step_drafts(db, tenant_id, case.id, keep_step_id=target_step.id)
+
     return history
+
+
+async def discard_stale_step_drafts(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    *,
+    keep_step_id: uuid.UUID,
+) -> int:
+    """Sluit open 'volgende stap'-concepten die bij een andere stap horen.
+
+    Gebruikt bij een stap-wissel. Alleen concepten met intent 'next_step' en een
+    stap-koppeling die afwijkt van de nieuwe stap worden weggegooid (DISCARDED).
+    Retourneert het aantal gesloten concepten.
+    """
+    from app.ai_agent.models import AIDraft, DraftStatus
+
+    open_statuses = (DraftStatus.GENERATED, DraftStatus.REVIEWED, DraftStatus.APPROVED)
+    result = await db.execute(
+        select(AIDraft).where(
+            AIDraft.tenant_id == tenant_id,
+            AIDraft.case_id == case_id,
+            AIDraft.intent == "next_step",
+            AIDraft.status.in_(open_statuses),
+            AIDraft.step_id.isnot(None),
+            AIDraft.step_id != keep_step_id,
+        )
+    )
+    drafts = result.scalars().all()
+    for draft in drafts:
+        draft.status = DraftStatus.DISCARDED
+    if drafts:
+        await db.flush()
+    return len(drafts)
 
 
 async def supersede_open_recommendations(

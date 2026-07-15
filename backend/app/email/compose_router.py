@@ -22,7 +22,7 @@ from types import SimpleNamespace
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
@@ -182,6 +182,20 @@ class RenderTemplateResponse(BaseModel):
     supported: bool
     subject: str | None = None
     body_html: str | None = None
+
+
+class AutoAttachmentsRequest(BaseModel):
+    template_type: str | None = Field(default=None, max_length=50)
+    recipient_email: str | None = Field(default=None, max_length=320)
+
+
+class AutoAttachmentItem(BaseModel):
+    label: str
+    kind: str  # "rente" | "factuur"
+
+
+class AutoAttachmentsResponse(BaseModel):
+    items: list[AutoAttachmentItem]
 
 
 # ── Attachment resolver ──────────────────────────────────────────────────────
@@ -731,3 +745,64 @@ async def render_template_preview(
         ),
         body_html=html,
     )
+
+
+@router.post(
+    "/cases/{case_id}/auto-attachments",
+    response_model=AutoAttachmentsResponse,
+)
+async def preview_auto_attachments(
+    case_id: uuid.UUID,
+    data: AutoAttachmentsRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Punt 2 — toon vóór verzending welke bijlagen automatisch worden meegestuurd.
+
+    Spiegelt de serverlogica van /compose/send zonder de PDF's te renderen: het
+    renteoverzicht (bij 14-dagenbrief/eerste sommatie voor een privé aansprakelijke
+    debiteur) en de factuur-PDF's (alleen bij een expliciet gekozen sommatie-sjabloon;
+    niet op de afgeleide AI-concept-route)."""
+    from app.documents.rente_bijlage import wants_rente_bijlage
+
+    case = (
+        await db.execute(
+            select(Case).where(Case.id == case_id, Case.tenant_id == user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    if not case:
+        raise NotFoundError("Dossier niet gevonden")
+
+    # Zelfde afleiding als de verzendknop: geen sjabloontype + mail aan de debiteur →
+    # leid het brieftype af uit de huidige stap (voor het renteoverzicht).
+    effective_template_type = data.template_type
+    if effective_template_type is None and data.recipient_email:
+        effective_template_type = await _derive_step_template_type(case, [data.recipient_email])
+
+    items: list[AutoAttachmentItem] = []
+
+    if effective_template_type and wants_rente_bijlage(
+        case, SimpleNamespace(template_type=effective_template_type)
+    ):
+        items.append(AutoAttachmentItem(label="Renteoverzicht (PDF)", kind="rente"))
+
+    # Factuur-PDF's alleen bij een EXPLICIET gekozen sommatie-sjabloon (geen
+    # factuur-auto-attach op de afgeleide route).
+    if data.template_type in AUTO_ATTACH_INVOICE_TYPES:
+        invoice_count = (
+            await db.execute(
+                select(func.count())
+                .select_from(Claim)
+                .where(
+                    Claim.case_id == case_id,
+                    Claim.tenant_id == user.tenant_id,
+                    Claim.is_active.is_(True),
+                    Claim.invoice_file_id.is_not(None),
+                )
+            )
+        ).scalar() or 0
+        if invoice_count:
+            label = f"{invoice_count} factuur-PDF" + ("'s" if invoice_count > 1 else "")
+            items.append(AutoAttachmentItem(label=label, kind="factuur"))
+
+    return AutoAttachmentsResponse(items=items)

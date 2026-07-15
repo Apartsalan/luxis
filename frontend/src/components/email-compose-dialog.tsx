@@ -253,6 +253,8 @@ export function EmailComposeDialog({
   const [attachments, setAttachments] = useState<AttachmentRef[]>([]);
   const [inlineFiles, setInlineFiles] = useState<Map<string, ComposeInlineAttachment>>(new Map());
   const [caseFileIds, setCaseFileIds] = useState<Set<string>>(new Set());
+  // Punt 2 — bijlagen die de server automatisch toevoegt (renteoverzicht/facturen).
+  const [autoAttachments, setAutoAttachments] = useState<{ label: string; kind: string }[]>([]);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [caseFiles, setCaseFiles] = useState<CaseFileItem[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
@@ -324,6 +326,30 @@ export function EmailComposeDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultSubject, defaultBody, defaultBodyHtml, defaultTo, defaultToName]);
+
+  // Punt 2 — haal op welke bijlagen de server automatisch meestuurt (renteoverzicht/
+  // facturen), zodat de gebruiker het vóór verzending ziet. Spiegelt de serverlogica;
+  // rendert niets. Herberekent bij wisselend sjabloon of ontvanger.
+  useEffect(() => {
+    if (!open || !effectiveCaseId) { setAutoAttachments([]); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api(`/api/email/compose/cases/${effectiveCaseId}/auto-attachments`, {
+          method: "POST",
+          body: JSON.stringify({
+            template_type: selectedTemplate || null,
+            recipient_email: to.trim() || null,
+          }),
+        });
+        if (!res.ok) { if (!cancelled) setAutoAttachments([]); return; }
+        const data = await res.json();
+        if (!cancelled) setAutoAttachments(data.items ?? []);
+      } catch { if (!cancelled) setAutoAttachments([]); }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, effectiveCaseId, selectedTemplate, to]);
 
   // Reset on open
   const handleOpenChange = (nextOpen: boolean) => {
@@ -1068,6 +1094,19 @@ export function EmailComposeDialog({
                     <button type="button" onClick={() => removeAttachment(att.id)} className="hover:text-destructive ml-0.5">
                       <X className="h-3 w-3" />
                     </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Automatisch meegestuurde bijlagen (server) */}
+            {autoAttachments.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                <span>Gaat automatisch mee:</span>
+                {autoAttachments.map((a) => (
+                  <span key={a.label} className="inline-flex items-center gap-1 rounded-md border border-dashed border-muted-foreground/40 px-2 py-0.5">
+                    <Paperclip className="h-3 w-3" />
+                    {a.label}
                   </span>
                 ))}
               </div>

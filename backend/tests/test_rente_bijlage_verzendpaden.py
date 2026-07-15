@@ -514,6 +514,82 @@ async def test_compose_send_logs_prefers_tenant_account_and_passes_bcc(
     assert any("verzonden" in a.title.lower() for a in acts)
 
 
+# ── S220 punt 2: preview van automatisch meegestuurde bijlagen ──────────────────
+
+
+@pytest.mark.asyncio
+async def test_auto_attachments_preview_lists_rente_and_invoice(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Het preview-endpoint toont renteoverzicht + factuur bij een expliciet
+    sommatie-sjabloon voor een privé aansprakelijke debiteur."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    cf = CaseFile(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        original_filename="factuur.pdf", stored_filename="f1.pdf",
+        file_size=9, content_type="application/pdf", uploaded_by=test_user.id,
+    )
+    db.add(cf)
+    db.add(Claim(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        description="Factuur", principal_amount=Decimal("5000.00"),
+        default_date=date(2026, 1, 1), invoice_file_id=cf.id,
+    ))
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    resp = await client.post(
+        f"/api/email/compose/cases/{case.id}/auto-attachments",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"template_type": "sommatie_drukte", "recipient_email": "debiteur@example.nl"},
+    )
+    assert resp.status_code == 200, resp.text
+    kinds = {i["kind"] for i in resp.json()["items"]}
+    assert kinds == {"rente", "factuur"}
+
+
+@pytest.mark.asyncio
+async def test_auto_attachments_preview_derived_rente_only(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Zonder sjabloontype maar aan de debiteur: afgeleid renteoverzicht, geen factuur."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    db.add(Claim(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        description="Factuur", principal_amount=Decimal("5000.00"),
+        default_date=date(2026, 1, 1),
+    ))
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    resp = await client.post(
+        f"/api/email/compose/cases/{case.id}/auto-attachments",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"template_type": None, "recipient_email": "debiteur@example.nl"},
+    )
+    assert resp.status_code == 200, resp.text
+    kinds = [i["kind"] for i in resp.json()["items"]]
+    assert kinds == ["rente"]
+
+
+@pytest.mark.asyncio
+async def test_auto_attachments_preview_bv_empty(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """BV → geen renteoverzicht → lege lijst als er geen expliciet factuur-sjabloon is."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form="Besloten Vennootschap")
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    resp = await client.post(
+        f"/api/email/compose/cases/{case.id}/auto-attachments",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"template_type": "sommatie_drukte", "recipient_email": "debiteur@example.nl"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["items"] == []
+
+
 # ── S220 punt 1/25: brieftype afleiden uit de stap op de AI-concept-route ───────
 
 

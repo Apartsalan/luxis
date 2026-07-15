@@ -4,10 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Briefcase,
-  CalendarDays,
   CheckCircle2,
   Clock,
-  CreditCard,
   Euro,
   FileText,
   Mail,
@@ -16,7 +14,6 @@ import {
   Receipt,
   RotateCcw,
   Trash2,
-  Users,
   XCircle,
   AlertTriangle,
 } from "lucide-react";
@@ -24,7 +21,6 @@ import {
   STATUS_LABELS,
   STATUS_BADGE,
   TYPE_LABELS,
-  INTEREST_LABELS,
 } from "../types";
 import {
   getTemplateLabel,
@@ -34,9 +30,11 @@ import { CASE_STATUS_BADGE_FALLBACK, DEBTOR_TYPE_BADGE } from "@/lib/status-cons
 import { TONES } from "@/lib/tones";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
 import { BackButton } from "@/components/back-button";
+import type { NoteMode } from "./NoteDialog";
 import { useIncassoPipelineSteps } from "@/hooks/use-incasso";
 import type { PipelineStep } from "@/hooks/use-incasso";
 import { useUpdateCase } from "@/hooks/use-cases";
+import { useFinancialSummary } from "@/hooks/use-collections";
 import type { CaseDetail } from "@/hooks/use-cases";
 import type { TimerState } from "@/hooks/use-timer";
 import { toast } from "sonner";
@@ -141,7 +139,7 @@ interface DossierHeaderProps {
   timer: TimerState;
   startTimer: (caseId: string, label: string) => void;
   setCaseEmailOpen: (v: boolean) => void;
-  setPhoneNoteText: (v: string) => void;
+  onOpenNote: (mode: NoteMode) => void;
   onGenerateDraft: () => Promise<void> | void;
   isGeneratingDraft: boolean;
 }
@@ -159,11 +157,12 @@ export default function DossierHeader({
   timer,
   startTimer,
   setCaseEmailOpen,
-  setPhoneNoteText,
+  onOpenNote,
   onGenerateDraft,
   isGeneratingDraft,
 }: DossierHeaderProps) {
   const [renteDialogOpen, setRenteDialogOpen] = useState(false);
+  const { data: financials } = useFinancialSummary(isIncasso ? zaak.id : undefined);
 
   // DF2-09: Pipeline step selector for incasso cases.
   // S166 (punt 4, "B2C anders dan B2B"): toon alleen de stappen die gelden voor het
@@ -425,69 +424,32 @@ export default function DossierHeader({
         </div>
       )}
 
-      {/* Quick Stats */}
-      <div className={`grid gap-4 sm:grid-cols-2 ${isIncasso ? "lg:grid-cols-4" : "lg:grid-cols-2"}`}>
-        {isIncasso && (
-          <>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.info.surface}`}>
-                  <Euro className={`h-4 w-4 ${TONES.info.text}`} />
-                </div>
-                <span className="text-xs text-muted-foreground">Hoofdsom</span>
-              </div>
-              <p className="text-xl font-bold text-foreground tabular-nums">
-                {formatCurrency(zaak.total_principal)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.success.surface}`}>
-                  <CreditCard className={`h-4 w-4 ${TONES.success.text}`} />
-                </div>
-                <span className="text-xs text-muted-foreground">Betaald</span>
-              </div>
-              <p className={`text-xl font-bold ${TONES.success.text} tabular-nums`}>
-                {formatCurrency(zaak.total_paid)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.warning.surface}`}>
-                  <CalendarDays className={`h-4 w-4 ${TONES.warning.text}`} />
-                </div>
-                <span className="text-xs text-muted-foreground">Rente</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                {INTEREST_LABELS[zaak.interest_type] ?? zaak.interest_type}
-              </p>
-            </div>
-          </>
-        )}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${TONES.ai.surface}`}>
-              <Users className={`h-4 w-4 ${TONES.ai.text}`} />
-            </div>
-            <span className="text-xs text-muted-foreground">Partijen</span>
+      {/* Geldstrook (S216 blok 2): compacte band i.p.v. 4 losse kaarten die het
+          hele scherm vulden. Openstaand — het sturende getal — stond nergens in
+          de kop. De losse Rente- en Partijen-kaart vervallen (rente staat in de
+          zijbalk + Debiteurinstellingen; partijen in de zijbalk + Overzicht). */}
+      {isIncasso && (
+        <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-xl border border-border bg-card">
+          <div className="px-4 py-3">
+            <p className="text-xs text-muted-foreground">Hoofdsom</p>
+            <p className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
+              {formatCurrency(zaak.total_principal)}
+            </p>
           </div>
-          <div className="space-y-1 min-w-0">
-            {zaak.client && (
-              <Link
-                href={`/relaties/${zaak.client.id}`}
-                className="text-sm font-medium text-foreground hover:text-primary transition-colors block break-words"
-              >
-                {zaak.client.name}
-              </Link>
-            )}
-            {zaak.opposing_party && (
-              <p className="text-xs text-muted-foreground break-words">
-                vs. {zaak.opposing_party.name}
-              </p>
-            )}
+          <div className="px-4 py-3">
+            <p className="text-xs text-muted-foreground">Betaald</p>
+            <p className={`mt-0.5 text-lg font-bold ${TONES.success.text} tabular-nums`}>
+              {formatCurrency(zaak.total_paid)}
+            </p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs text-muted-foreground">Openstaand</p>
+            <p className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
+              {financials ? formatCurrency(financials.total_outstanding) : "—"}
+            </p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Actions Bar */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -505,7 +467,7 @@ export default function DossierHeader({
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("activiteiten")}
+          onClick={() => onOpenNote("note")}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
           <MessageSquare className={`h-3.5 w-3.5 ${TONES.warning.textMuted}`} />
@@ -513,16 +475,7 @@ export default function DossierHeader({
         </button>
         <button
           type="button"
-          onClick={() => {
-            const now = new Date();
-            const stamp = now.toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-            setPhoneNoteText(`Telefoonnotitie ${stamp}\n\nGesprek met: \nOnderwerp: \n\n`);
-            setActiveTab("overzicht");
-            setTimeout(() => {
-              const ta = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="notitie"]');
-              if (ta) { ta.focus(); ta.setSelectionRange(ta.value.indexOf("Gesprek met: ") + 13, ta.value.indexOf("Gesprek met: ") + 13); }
-            }, 100);
-          }}
+          onClick={() => onOpenNote("phone")}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground hover:bg-muted transition-colors"
         >
           <Phone className={`h-3.5 w-3.5 ${TONES.success.textMuted}`} />

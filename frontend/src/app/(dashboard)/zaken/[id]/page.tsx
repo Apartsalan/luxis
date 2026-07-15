@@ -53,6 +53,8 @@ import CorrespondentieTab from "./components/CorrespondentieTab";
 import ActiviteitenTab from "./components/ActiviteitenTab";
 import { StaphistorieTab } from "./components/StaphistorieTab";
 import CaseConflictBanner from "./components/CaseConflictBanner";
+import BasenetWarningBanner from "./components/BasenetWarningBanner";
+import NoteDialog, { type NoteMode } from "./components/NoteDialog";
 import DossierSidebar from "./components/DossierSidebar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CaseActionFeed } from "@/components/case-action-feed/CaseActionFeed";
@@ -89,7 +91,8 @@ export default function ZaakDetailPage() {
   const [autoTimerEnabled] = useAutoTimerPreference();
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabFromUrl || "overzicht");
-  const [phoneNoteText, setPhoneNoteText] = useState("");
+  // S216 blok 2: notitie/telefoonnotitie openen nu één venster (geen tab-gespring).
+  const [noteDialogMode, setNoteDialogMode] = useState<NoteMode | null>(null);
   const autoStartedRef = useRef<string | null>(null);
 
   // T2: Workflow-suggestie banner state
@@ -477,12 +480,7 @@ export default function ZaakDetailPage() {
           break;
         case "n":
           e.preventDefault();
-          setActiveTab("overzicht");
-          // Focus the note textarea after tab switch
-          setTimeout(() => {
-            const textarea = document.querySelector<HTMLTextAreaElement>('textarea[placeholder="Schrijf een notitie..."]');
-            textarea?.focus();
-          }, 100);
+          setNoteDialogMode("note");
           break;
         case "d":
           e.preventDefault();
@@ -591,7 +589,7 @@ export default function ZaakDetailPage() {
         timer={timer}
         startTimer={startTimer}
         setCaseEmailOpen={setCaseEmailOpen}
-        setPhoneNoteText={setPhoneNoteText}
+        onOpenNote={(mode) => setNoteDialogMode(mode)}
         onGenerateDraft={handleGenerateDraft}
         isGeneratingDraft={generateDraft.isPending}
       />
@@ -633,13 +631,14 @@ export default function ZaakDetailPage() {
             {safeTab === "overzicht" && (
               <ErrorBoundary key="overzicht" fallback={<TabErrorFallback tabName="Overzicht" />}>
                 <div className="space-y-6">
+                  <BasenetWarningBanner zaak={zaak} />
                   <CaseConflictBanner zaak={zaak} />
                   <CaseActionFeed caseId={id} onNavigate={setActiveTab} />
                   {/* S216: Taken-tabblad verhuisd naar een blok op Overzicht —
                       volledige functionaliteit (toevoegen/afronden/overslaan +
                       "Concept openen"). De aparte /taken-pagina blijft bestaan. */}
                   <TijdregistratieTab caseId={id} onOpenDraft={openLatestDraft} />
-                  <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />
+                  <DetailsTab zaak={zaak} />
                 </div>
               </ErrorBoundary>
             )}
@@ -745,6 +744,14 @@ export default function ZaakDetailPage() {
         forwardFromEmailId={replyPrefill?.forwardFromEmailId ?? null}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
         caseId={id}
+      />
+
+      {/* S216 blok 2: notitie/telefoonnotitie-venster (kop-knoppen + sneltoets "n") */}
+      <NoteDialog
+        caseId={id}
+        open={noteDialogMode !== null}
+        mode={noteDialogMode ?? "note"}
+        onOpenChange={(open) => { if (!open) setNoteDialogMode(null); }}
       />
     </div>
   );

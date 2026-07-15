@@ -110,7 +110,9 @@ export default function DossierSidebar({
                 {formatDate(zaak.date_opened)}
               </dd>
             </div>
-            {zaak.debtor_type && (
+            {/* S216 blok 2: Debiteur (B2B/B2C) en Rente zijn incasso-begrippen —
+                niet tonen op een advies-/gewone zaak (waren daar betekenisloos). */}
+            {isIncasso && zaak.debtor_type && (
               <div className="flex items-center justify-between">
                 <dt className="text-xs text-muted-foreground">Debiteur</dt>
                 <dd className="text-xs font-medium text-foreground uppercase">
@@ -118,7 +120,7 @@ export default function DossierSidebar({
                 </dd>
               </div>
             )}
-            {zaak.interest_type && (
+            {isIncasso && zaak.interest_type && (
               <div className="flex items-center justify-between">
                 <dt className="text-xs text-muted-foreground">Rente</dt>
                 <dd className="text-xs font-medium text-foreground">
@@ -263,18 +265,19 @@ export default function DossierSidebar({
             Financieel
           </h3>
           <dl className="space-y-2.5">
-            {/* OHW — altijd tonen */}
-            <div className="flex items-center justify-between">
-              <dt className="text-xs text-muted-foreground">OHW</dt>
-              <dd className="text-xs font-medium text-foreground">
-                {formatCurrency(ohwAmount)}
-                {ohwMinutes > 0 && (
+            {/* S216 blok 2: OHW (onderhanden werk) alleen tonen als er uren zijn —
+                stond altijd op € 0,00 bij incasso (dat draait op provisie, niet uren). */}
+            {ohwMinutes > 0 && (
+              <div className="flex items-center justify-between">
+                <dt className="text-xs text-muted-foreground">OHW</dt>
+                <dd className="text-xs font-medium text-foreground">
+                  {formatCurrency(ohwAmount)}
                   <span className="text-muted-foreground ml-1">
                     ({Math.floor(ohwMinutes / 60)}:{String(ohwMinutes % 60).padStart(2, "0")})
                   </span>
-                )}
-              </dd>
-            </div>
+                </dd>
+              </div>
+            )}
 
             {/* G13: Budget progress bar — only when budget module enabled and budget set */}
             {hasModule("budget") && zaak.budget != null && zaak.budget > 0 && (() => {

@@ -2,10 +2,70 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 15 juli 2026 avond (S219, Fable — demolijst-onderzoek compleet: alle 25 punten + 4 nieuwe vondsten, read-only).
-**Laatste feature/fix:** geen code — onderzoekssessie. Hoofdvondst: de compose-verstuurknop verstuurt via het persoonlijke account van de klikker én legt niets vast; oud adres zit in de 6 stap-mailteksten in de DB. Rapport: `docs/sessions/S219-onderzoek.md`.
-**Openstaand:** bouwdraaiboek S220 klaar (`docs/sessions/PROMPT-S220.md`, 6 blokken); KvK-sleutel ~22 juli (Arsalan 15-07: "nog een week") → backfill voorrang; mailslot OPEN; beslispunten Lisanne: derdengelden-IBAN + kosten verzoekschrift.
-**Volgende sessie:** S220 (`docs/sessions/PROMPT-S220.md`, Opus): bouwen volgens draaiboek; daarna Fable-review.
+**Laatst bijgewerkt:** 15 juli 2026 avond (S220, Opus — bouwsprint demolijst, Blok 1/2/3.1/5-fasebalk LIVE + prod-geverifieerd).
+**Laatste feature/fix:** verzendpad-fundament (kantoor-afzender incasso@ + vastlegging + BCC + brieftype-afleiding + bijlage-preview + onderwerp-bouwer) LIVE en bewezen; 6 DB stap-teksten opgeschoond (oud adres/kesting@ weg, aanhef erin) — natelling schoon; aanhef/kenmerk in de code-sjablonen; zombie-opruiming (stale adviezen sluiten bij stap-wissel); compacte fasebalk.
+**Openstaand:** S221 (`docs/sessions/PROMPT-S221.md`): Blok 3.2 (dedupe concepten), 3.3 (backfills — GO), 3.4 (skipped-taken UI), Blok 4 (AI-keten: classificatie-timing, auto-concept-categorieën [beslissing], antwoord-route + testronde-script, timeout 7→4 [GO], review-scherm), Blok 5-UX-rest, Blok 6-memo; + 2 sjabloon-herzaaiingen (Courier→Calibri, verzoekschrift-bijlage-PDF). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** S221 (`docs/sessions/PROMPT-S221.md`, Opus): restant demolijst; daarna Fable-review van S220+S221.
+
+## Sessie 220 (15 juli 2026 avond, Opus — bouwsprint demolijst, Blok 1/2/3.1/5-fasebalk LIVE)
+
+### Samenvatting
+Uitvoersprint op het S219-onderzoek. Per blok: bouwen → tests → deploy via SSH →
+prod-verificatie. 9 commits, backend+frontend meermaals gedeployd, 1 prod-DB-mutatie
+(stap-teksten) met dry-run + GO Arsalan + natelling. Elk stuk apart getest.
+
+**Blok 1 — verzendpad-fundament (hoofdvondst N1), LIVE + BEWEZEN op prod.** De
+primaire verstuurknop (`/compose/send`) ging via het persoonlijke account van de
+klikker en legde niets vast. Nu: kantoor-afzender-vangrail (incasso@, patroon B13) +
+vastlegging via gedeelde `write_outbound_log` (EmailLog + SyncedEmail + CaseActivity);
+`send_with_attachment` gebruikt dezelfde functie; documents-send kreeg de ontbrekende
+`send_as_tenant_account=True`. **Testmail op prod (naar Arsalans gmail, GO): from =
+incasso@, EmailLog+SyncedEmail+activiteit aangemaakt — bewezen.** Plus: BCC door de
+hele keten (schema/providers/.eml/dialog) + CC-verlies-fix; brieftype-afleiding uit de
+stap op de AI-concept-route (punt 1/25 — renteoverzicht gaat nu mee, geen factuur);
+bijlage-preview-endpoint + "Gaat automatisch mee"-weergave (punt 2); 'sommatie' aan de
+rente-set (punt 3); gedeelde onderwerp-bouwer op alle server-routes (punt 5).
+
+**Blok 2 — stap-teksten & sjablonen, LIVE.** De 6 DB stap-mailteksten opgeschoond
+(script `scripts/sanitize_step_templates.py`, idempotent, dry-run+GO): oud adres
+IJsbaanpad 9 / 1076 CV → Willem Fenengastraat 16E / 1096 BN, kesting@ → incasso@ (beide
+kolommen; HTML gebruikte `&nbsp;` → tweede ronde nodig, natelling daarna schoon), aanhef
+ingevuld bij de 3 met een losse komma. **Vanaf nu dragen alle AI-concepten het juiste
+adres.** Code-sjablonen: aanhef overal "Geachte heer, mevrouw," (keuze Arsalan), BV-naam
+uit de aanhef, klant-kenmerk niet meer naar de debiteur (DF138-05), html_renderer-aanhef.
+
+**Blok 3.1 — zombie-opruiming, LIVE.** `move_case_to_step` sluit nu openstaande PENDING
+follow-up-adviezen automatisch (nieuwe status SUPERSEDED) → geen dubbel-verstuur-risico
+en de scanner is weer vrij (punt 13). Het uitvoerende advies is op dat moment APPROVED,
+dus onaangeroerd.
+
+**Blok 5 — fasebalk (punt 14), LIVE.** De 5-vinkjes-balk (vinkte alle categorieën links
+af) vervangen door: stapnaam + categoriekleur + "X dagen in deze stap" (step_entered_at
+nu in de case-respons) + volgende stap.
+
+### Gewijzigde bestanden
+Backend: `email/{compose_router,send_service,subject,providers/*}.py`, `documents/{router,
+schemas,docx_service}.py`, `incasso/{service,html_renderer}.py`, `ai_agent/{followup_service,
+followup_models}.py`, `collections/compliance.py`, `cases/schemas.py`,
+`scripts/sanitize_step_templates.py` (nieuw). Frontend: `email-compose-dialog.tsx`,
+`zaken/[id]/{page,components/DossierHeader,components/DocumentenTab}.tsx`,
+`correspondentie/page.tsx`, `hooks/{use-documents,use-cases}.ts`. Tests: 5 bestanden
+(rente_bijlage_verzendpaden uitgebreid, email_subject, supersede_recommendations nieuw).
+
+### Bekende issues / bewust niet gedaan (→ S221)
+- Blok 3.2 (dedupe: bestaand concept tonen i.p.v. tweede maken — `ai_drafts` mist stap-
+  koppeling), 3.3 (backfills: 3 verouderde adviezen + 470 pending classificaties + 14
+  intake-ruis + 8 verouderde concepten — GO nodig), 3.4 (skipped-taken weergave + herstel).
+- Blok 4 (AI-keten): classificatie direct na sync; auto-concept-categorieën (BESLISSING
+  Arsalan); antwoord-route begrip-eerst + testronde-script; timeout Eerste→Tweede 7→4 (GO);
+  review-scherm. AI-concept-HTML-tabellen (punt 11) hoort hier.
+- Blok 5-UX-rest: zaaknummer klikbaar in maillijst, tijdlijn-mailregel klikbaar,
+  S218-restanten (menu Intake weg, Bankimport→Betalingen, ratio-label, agenda lege staat,
+  soft-delete-banner, follow-up dossierlink/dagen/sort).
+- Blok 6: beslismemo b2b/b2c (105 dossiers uit BaseNet-XML) — geen code.
+- Deferred prod-mutaties: Courier→Calibri (DOCX-reseed), verzoekschrift-bijlage vervangen
+  door de juiste PDF uit de projectmap. Beide sjabloon-herzaaiingen (S210-flow).
+- MAILSLOT OPEN — geen echte debiteuren mailen; testdossier 2026-00006 = Arsalans gmail.
 
 ## Sessie 219 (15 juli 2026 avond, Fable — demolijst-onderzoek, read-only, ALLE punten onderzocht)
 

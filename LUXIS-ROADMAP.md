@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 15 juli 2026 avond (S219, Fable — demolijst-onderzoek COMPLEET, read-only). Alle 25 punten onderzocht + 4 nieuwe vondsten (o.a. verstuurknop gebruikt persoonlijk account en logt niets; oud adres zit in de stap-mailteksten in de DB → alle AI-concepten). Rapport: `docs/sessions/S219-onderzoek.md`; bouwdraaiboek: `docs/sessions/PROMPT-S220.md` (6 blokken). **Volgende: S220 (Opus) bouwen → Fable-review; KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
+**Laatst bijgewerkt:** 15 juli 2026 avond (S220, Opus — bouwsprint demolijst). Blok 1 (verzendpad-fundament) + Blok 2 (stap-teksten & sjablonen) + Blok 3.1 (zombie-opruiming) + Blok 5-fasebalk LIVE en op prod geverifieerd. **Hoofdvondst gefixt + bewezen:** de verstuurknop gaat nu via het kantoor-account (incasso@) én legt de mail vast (tijdlijn + Correspondentie); het oude adres is uit alle 6 DB stap-teksten (→ schone AI-concepten). Rest = S221 (`docs/sessions/PROMPT-S221.md`): Blok 3.2-3.4, Blok 4 (AI-keten, met beslissingen), Blok 5-UX-rest, Blok 6-memo + 2 sjabloon-herzaaiingen. **KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

@@ -302,20 +302,40 @@ async def _load_goud(tenant_id: str, limit: int) -> list[dict]:
             )
         ).scalars().all()
         for la in rows:
-            email = await db.get(SyncedEmail, la.source_synced_email_id)
+            answer_mail = await db.get(SyncedEmail, la.source_synced_email_id)
             case = await db.get(Case, la.source_case_id)
-            if not email or not case:
+            if not answer_mail or not case:
                 continue
+            # source_synced_email_id = Lisanne's VERSTUURDE antwoord (zo is het veld
+            # gedefinieerd, zie LearnedAnswer). De vraag die de AI moet beantwoorden is
+            # de laatste INKOMENDE mail in dezelfde zaak vóór dat antwoord — anders
+            # voeren we de AI haar eigen antwoord ("beantwoord deze uitgaande mail")
+            # en meet de ronde niets (S222-vondst).
+            question = (
+                await db.execute(
+                    select(SyncedEmail)
+                    .where(
+                        SyncedEmail.tenant_id == case.tenant_id,
+                        SyncedEmail.case_id == case.id,
+                        SyncedEmail.direction == "inbound",
+                        SyncedEmail.from_email.notilike("%kestinglegal%"),
+                        SyncedEmail.email_date < answer_mail.email_date,
+                    )
+                    .order_by(SyncedEmail.email_date.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if not question or not (question.body_text or "").strip():
+                continue  # geen bruikbare voorafgaande debiteurenvraag → overslaan
             facts = await _build_dossier_facts(db, case.tenant_id, case)
-            body = email.body_text or ""
             cases.append(
                 {
                     "id": f"goud:{la.id}",
                     "tone": "zakelijk",
                     "facts": facts,
-                    "from_email": email.from_email or "",
-                    "subject": email.subject or "",
-                    "body": body[:2000],
+                    "from_email": question.from_email or "",
+                    "subject": question.subject or "",
+                    "body": (question.body_text or "")[:2000],
                     "reference_answer": (la.anonymized_body or la.body or "")[:2000],
                 }
             )

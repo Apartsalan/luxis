@@ -20,7 +20,13 @@ Zodra Arsalan de **echte productie-sleutel** meldt:
 1. `KVK_API_KEY` **+** `KVK_API_BASE=https://api.kvk.nl/api` als env op de VPS zetten → herstart backend.
    (⚠️ Zonder `KVK_API_BASE` draait de client tegen de testomgeving — nooit stil tegen de verkeerde kant.)
 2. `docker compose exec -T backend python scripts/kvk_backfill_legal_form.py --dry-run` →
-   rapporteer wat het zou vullen (±438 relaties met KvK-nummer, ±€9 aan bevragingen).
+   rapporteer wat het zou vullen.
+   ⚠️ **GEMETEN OP PROD (S215, 15 juli, lees-only): 726 relaties met KvK-nummer, allemaal met
+   lege rechtsvorm (0 al gevuld), allemaal geldig 8-cijferig (713 uniek).** Dus niet ±438/±€9
+   maar **~€14,50 per draai** (726 × €0,02). LET OP: de `--dry-run` roept de KvK óók echt aan
+   (regel 75 staat vóór de dry-run-check) → proef + echte run samen ~€29. Overweeg daarom één
+   enkele echte run met vooraf-akkoord op de kandidatenlijst i.p.v. dry-run+run (halveert de kosten);
+   de echte run print per relatie `GEVULD … → rechtsvorm`, dus evenveel zicht als een dry-run.
 3. **Akkoord Arsalan** → echt draaien → natelling: hoeveel `legal_form` gevuld, hoeveel BV/NV/stichting.
 4. **Meten wat het oplevert:** hoeveel zaken krijgen nu géén rentebijlage meer (rechtsvorm = beperkt
    aansprakelijk) t.o.v. de besluit-B-situatie waarin iedereen 'm kreeg. Rapporteer in gewone taal.

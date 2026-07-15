@@ -401,8 +401,11 @@ async def build_base_context(
         for p in payments
     ]
 
-    # Reference line (only if present)
-    ref_regel = f"Uw kenmerk: {case.reference}" if case.reference else ""
+    # S220 punt 10 / DF138-05: case.reference is de KLANT-referentie en hoort NIET
+    # in brieven aan de debiteur (die zag zo het interne kenmerk van de opdrachtgever
+    # als "Uw kenmerk"). Alle brieven die deze context gebruiken zijn debiteur-gericht;
+    # ons eigen dossiernummer staat al in de Betreft/aanhef. Daarom leeg.
+    ref_regel = ""
 
     # Interest type label (available in all templates)
     rente_type_label = INTEREST_TYPE_LABELS.get(case.interest_type, case.interest_type)

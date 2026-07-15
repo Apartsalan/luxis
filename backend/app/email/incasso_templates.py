@@ -515,7 +515,7 @@ def _betalingsregeling_en_blok(ctx: dict) -> str:
 
 def _render_aanmaning(ctx: dict) -> str:
     body = (
-        "<p>Geachte heer/mevrouw,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Ondanks onze eerdere herinnering constateren wij dat de "
         f"vordering(en) van onze cli&euml;nt {ctx['client']['naam']} "
         f"nog steeds niet zijn voldaan.</p>"
@@ -602,7 +602,7 @@ def _render_sommatie(ctx: dict) -> str:
 
 def _render_tweede_sommatie(ctx: dict) -> str:
     body = (
-        "<p>Geachte heer/mevrouw,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Ondanks onze eerdere sommatie heeft u nog steeds niet voldaan "
         f"aan de vordering(en) van onze cli&euml;nt {ctx['client']['naam']}. "
         f"Dit is uw laatste gelegenheid om vrijwillig te betalen.</p>"
@@ -634,7 +634,7 @@ def _render_tweede_sommatie(ctx: dict) -> str:
 
 def _render_14_dagenbrief(ctx: dict) -> str:
     body = (
-        "<p>Geachte heer/mevrouw,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Namens onze cli&euml;nt, {ctx['client']['naam']}, sommeer ik u "
         f"hierbij tot betaling van het hieronder gespecificeerde bedrag. "
         f"Ondanks eerdere verzoeken is betaling tot op heden uitgebleven.</p>"
@@ -690,7 +690,7 @@ def _render_14_dagenbrief(ctx: dict) -> str:
 
 def _render_herinnering(ctx: dict) -> str:
     body = (
-        "<p>Geachte heer/mevrouw,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Wij constateren dat de onderstaande vordering(en) van onze "
         f"cli&euml;nt {ctx['client']['naam']} nog niet zijn voldaan. "
         f"Wij verzoeken u vriendelijk het openstaande bedrag binnen "
@@ -1035,7 +1035,7 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
     """
     zn = ctx["zaak"]["zaaknummer"]
     body = (
-        f"<p>Geachte heer, mevrouw {ctx['wederpartij']['naam']},</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Inzake dossier {zn} heeft u in verband met uw "
         "openstaande schuld aangegeven een regeling te willen "
         "treffen. Een regeling wordt aangegaan onder voorbehoud "
@@ -1106,7 +1106,7 @@ def _render_faillissement_dreigbrief(ctx: dict) -> str:
     """
     zn = ctx["zaak"]["zaaknummer"]
     body = (
-        f"<p>Geachte heer, mevrouw {ctx['wederpartij']['naam']},</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         "<p>In onderhavige zaak heb ik u namens cli&euml;nte "
         "herhaaldelijk gesommeerd om tot betaling over te gaan. "
         "Tot op heden heeft u geen betaling verricht. Hierdoor "

@@ -28,7 +28,10 @@ from app.database import async_session
 # (oud, nieuw) — deterministisch, beide kolommen
 ADDRESS_REPLACEMENTS = [
     ("IJsbaanpad 9", "Willem Fenengastraat 16E"),
+    # HTML-variant gebruikt een harde spatie (&nbsp;) tussen straat en huisnummer.
+    ("IJsbaanpad&nbsp;9", "Willem Fenengastraat&nbsp;16E"),
     ("1076 CV", "1096 BN"),
+    ("1076&nbsp;CV", "1096&nbsp;BN"),
     ("kesting@kestinglegal.nl", "incasso@kestinglegal.nl"),
 ]
 

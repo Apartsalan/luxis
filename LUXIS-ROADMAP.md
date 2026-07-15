@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 15 juli 2026 (S216, Opus-bouw + Fable-review). **Dossierpagina-verbouwing (blok 1-3) LIVE**: van 11/8 → 7/6 tabbladen, compacte kop met geldstrook (incl. Openstaand), één notitievenster (cursor-bug gefixt), BaseNet-waarschuwingsbalk, gewone zaak ingericht (agenda-blok + volgende-stap + afsluitknop); alles visueel geverifieerd op prod, 2 Fable-must-fixes. Plan: `docs/plans/PLAN-dossierpagina.md`. **Volgende: S217 (`docs/sessions/PROMPT-S217.md`) — KvK-rechtsvorm-backfill zodra de sleutel binnen is (voorrang; gemeten 726 relaties/~€14,50 per run), anders dossierpolish.**
+**Laatst bijgewerkt:** 15 juli 2026 middag (S217, Fable-audit + Opus-fixes). **Vibe-code-doorlichting: fundering staat** — 3 security-fixes live (Pillow, auth-drift-guard 302 routes, postcss), **CI weer 8/8 groen** (stond stil rood sinds 13 juli: LibreOffice ontbrak op testrunner), **follow-up "Uitvoeren" end-to-end bewezen** op prod, mailslot OPEN (eerste echte mails vanavond). Menu-doorlichting: intake=ruis+dubbelop, bankimport=0 uploads ooit, ratio-label misleidt, agenda-blok onzichtbaar bij 0 afspraken. **Volgende: S218 (`docs/sessions/PROMPT-S218.md`) — UX-sprint doorlichting; KvK-backfill houdt voorrang zodra de sleutel er is.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,37 +53,35 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 15 juli 2026, S216)
+## 🎯 Huidige prioriteit (bijgewerkt 15 juli 2026 middag, S217)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **DOSSIERPAGINA-VERBOUWING LIVE (S216, 15 juli — Opus-bouw + Fable-review).**
-> Dossierpagina (`zaken/[id]`) van 11/8 → **7/6 tabbladen** die passen; Financieel bundelt
-> vorderingen+betalingen+regeling+derdengelden (lege secties inklapbaar); Tijdlijn = oud
-> Activiteiten; Taken + conflictwaarschuwing naar Overzicht. Kop compacter: geldstrook
-> Hoofdsom·Betaald·**Openstaand**; één notitievenster (cursor-bug gefixt); BaseNet-waarschuwing
-> als oranje balk. **Gewone (advies)zaak ingericht**: agenda-blok (komende afspraken), "Volgende
-> stap"-regel + afsluitknop, geldstrook OHW+budget; incasso-lek in zijbalk dicht. Alle 4 harde
-> eisen Arsalan gehaald (alles klikbaar blijft klikbaar; één stijl beide types; niets onzichtbaar;
-> Uren blijft tab). 8 commits, elk visueel geverifieerd op prod, 2 Fable-must-fixes. Plan +
-> details: `docs/plans/PLAN-dossierpagina.md` + SESSION-NOTES S216.
-> **Open (klein):** anker-subnav bovenin Financieel; geldstrook gewone zaak later uitbreiden met
-> ongefactureerd + openstaande facturen (bronnen bestaan).
+> ✅ **S217 AFGEROND (15 juli middag — vibe-code-audit + menu-doorlichting + follow-up bewezen).**
+> Fundering doorgelicht tegen de bekende vibe-code-incidenten: staat. 3 security-fixes live
+> (Pillow-CVE's; **auth-drift-guard**: test die alle 302 routes op login-plicht afloopt, allowlist 8;
+> postcss). **CI weer 8/8 groen** — stond onopgemerkt rood sinds 13 juli (LibreOffice ontbrak op de
+> testrunner voor de S211-rentebijlage-tests; SSH-deploys maskeerden het). **Follow-up "Uitvoeren"
+> end-to-end bewezen op prod** (testsommatie mét rente-PDF aangekomen, stap doorgeschoven, opgeruimd).
+> Doorlichting-metingen: intake = 17 kandidaten/0 echte zaken (ruis, dubbelop met Mail-tab
+> "Aanvragen"); bankimport = 0 uploads ooit; rapportages leeft (€135k geïnd) maar ratio-label
+> misleidt; agenda-blok werkt maar onzichtbaar (0 actieve afspraken in heel Luxis; Outlook-sync
+> bestaat al, elk kwartier). Details: SESSION-NOTES S217.
 >
-> 🔨 **VOLGENDE (S217, Opus):** zodra Arsalan de echte **KvK-sleutel** meldt (~16 juli, VOORRANG) →
-> `KVK_API_KEY` (+ `KVK_API_BASE`) als env op de VPS → herstart backend →
-> `scripts/kvk_backfill_legal_form.py --dry-run` → akkoord → run → natelling. ⚠️ Gemeten op prod
-> (S215): **726 relaties, ~€14,50 per run**, dry-run bevraagt óók → proef+run ~€29 (overweeg 1 echte
-> run met vooraf-akkoord). Details: PROMPT-S215 STAND. (WIK-rentebijlage zelf LIVE sinds S212;
-> besluit B — élke zakelijke wederpartij krijgt de bijlage — actief tot de backfill.)
+> 🔨 **VOLGENDE (S218, Opus): UX-sprint menu-doorlichting** — `docs/sessions/PROMPT-S218.md`.
+> **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~16 juli): stappen + kosten
+> (726 relaties, ~€14,50/run) in `docs/archief/prompts/PROMPT-S215.md` STAND + PROMPT-S217.
+> (WIK-rentebijlage LIVE sinds S212; besluit B — élke zakelijke wederpartij krijgt de bijlage —
+> actief tot de backfill.)
 >
 > 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag;
-> 7 Mollie/kop-conflictfacturen (€10.854,66) → oordeel Lisanne/boekhouding.
+> 7 Mollie/kop-conflictfacturen (€10.854,66) → oordeel Lisanne/boekhouding; anker-subnav
+> Financieel + geldstrook-uitbreiding gewone zaak (S216-rest).
 
-> ✅ **MAILSLOT is nu een KNOP (S197):** Instellingen → E-mail → schakelaar "Mailverzending"
-> (DB-vlag, fail-safe dicht). **Mail staat op UIT** — Arsalan zet het zelf aan wanneer nodig; niet
-> autonoom openzetten. Ontvangen/sync werkt altijd door.
+> ✅ **MAILSLOT (S197-knop): staat OPEN sinds 13 juli 10:19** (demodag; DB-vlag via Instellingen →
+> E-mail, env-noodslot uit). Uitgaand bewezen S217 (testsommatie bezorgd), inkomend synct foutloos.
+> Eerste echte mails: 15 juli 's avonds met Lisanne. Niet autonoom dichtzetten of openzetten.
 
 1. ✅ **S206 AFGEROND + LIVE (13 juli).** Spoor S202 security/correctheids-fixes gebouwd + Fable-reviewd
    + gedeployd. **5 audit-fixes:** H1 (cross-tenant `CaseFile` bij mailbijlage — guard), H2 (fail-closed

@@ -1163,3 +1163,16 @@ LF-10 → afhankelijk van LF-11
 > | `no_action` | Alleen CaseActivity loggen | ✅ (was al werkend) |
 > 4 nieuwe tests toegevoegd (26 totaal), ruff clean.
 
+
+## Gearchiveerd 15 juli 2026 (S217) — prioriteit-blok S216
+
+> ✅ **DOSSIERPAGINA-VERBOUWING LIVE (S216, 15 juli — Opus-bouw + Fable-review).**
+> Dossierpagina (`zaken/[id]`) van 11/8 → **7/6 tabbladen** die passen; Financieel bundelt
+> vorderingen+betalingen+regeling+derdengelden (lege secties inklapbaar); Tijdlijn = oud
+> Activiteiten; Taken + conflictwaarschuwing naar Overzicht. Kop compacter: geldstrook
+> Hoofdsom·Betaald·**Openstaand**; één notitievenster (cursor-bug gefixt); BaseNet-waarschuwing
+> als oranje balk. **Gewone (advies)zaak ingericht**: agenda-blok (komende afspraken), "Volgende
+> stap"-regel + afsluitknop, geldstrook OHW+budget; incasso-lek in zijbalk dicht. Alle 4 harde
+> eisen Arsalan gehaald. 8 commits, elk visueel geverifieerd op prod, 2 Fable-must-fixes.
+> Plan + details: `docs/plans/PLAN-dossierpagina.md` + SESSION-ARCHIVE S216.
+> (KvK-backfill-stappen en losse klusjes zijn overgenomen in het actuele prioriteit-blok.)

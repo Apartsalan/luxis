@@ -9110,3 +9110,44 @@ toont alle 5 "Added job… Scheduler started" → geregistreerd en ingepland. Ve
 S207: mail-verstevigingen (M4 HTML-escaping + L4/L5/L6, test-baar zónder mailslot; M5-recipient-cap
 in code + apart de 39-velden-datacorrectie mét akkoord). Óf ander S202-restspoor (S201-facturatie-import
 / S203-restpunten). Prompt: `docs/sessions/PROMPT-S207.md`.
+
+## Sessie demo Lisanne (13 juli 2026, Opus-bouwsprint — rentecorrectie + 6 demo-punten, LIVE)
+
+### Samenvatting
+Live demo met Lisanne. Kernbevinding: renteberekening klopte niet (IN100197 toonde
+€284,62; BaseNet rekent €723,32). Oorzaak: dossiers op wettelijke handelsrente i.p.v.
+AV-rente **2%/maand samengesteld** (rente-op-rente per maand). Nieuwe rekenkern
+`calculate_monthly_compound_interest` reproduceert de BaseNet-rentespecificatie van
+IN100197 **regel-voor-regel op de cent** (tests: `test_interest_monthly.py`). Daarna 6
+demo-punten afgetikt, elk getest + gedeployd. Migratie `s207b_interest_freeze_date` live.
+
+- **Rente** — 2%/mnd samengesteld; uitgerold over 598 dossiers van 8 AV-opdrachtgevers
+  (`scripts/rollout_av_rente.py`, backup vooraf). Creditfactuur = negatieve rente die wegvalt.
+- **Adres** — kantoor verhuisd per 1 juli → Willem Fenengastraat 16E, 1096 BN Amsterdam,
+  tel 020-3086621. Tenant-record + Renteoverzicht-sjabloon (had oud adres hardcoded → nu
+  `{{ kantoor.adres }}`). E-mail bewust incasso@ gelaten.
+- **Regelingen** — 24 ontbrekende (afgeronde) betalingsregelingen geïmporteerd (13→37);
+  status uit meting van echte betalingen (`scripts/import_historical_arrangements.py`).
+- **Rentedatum/bevriezing** — `Case.interest_freeze_date`: rente stopt op gekozen datum;
+  `get_financial_summary` valt zonder peildatum daarop terug (alle callers respecteren het);
+  auto-bevriezen op laatste betaaldatum bij afsluiten; heropenen wist het. UI in DetailsTab.
+- **Heropenen** — nieuwe vordering op gesloten zaak → weer in_behandeling + bevriezing weg.
+- **Factuur-prompt** — betaal-endpoint geeft `case_fully_paid`; BetalingenTab toont dialoog.
+
+### Meting gesloten zaken (na rente-uitrol)
+574/580 gesloten zaken tonen openstaand (€3,95M) — grotendeels legitieme oninbare
+archiefschuld. Echte probleemcategorie: **100 zaken "afbetaald maar klein spookrestant"
+(samen €22k)** — regelingen onder de oude lagere rente afgesproken; onder de correcte
+hogere rente blijft een restant. Bevriezen lost dit NIET op (IN100350: €264,82 blijft).
+= zakelijke keuze Lisanne. Dashboard telt alleen actieve zaken, dus niet zichtbaar daar.
+
+### Openstaand — volgende sessie (Fable neemt over)
+1. **Backfill bevriesdatum op de ~574 gesloten zaken** = aanbevolen (het moet in de huidige
+   tijd kloppen). Zet `interest_freeze_date` = laatste betaaldatum (of `date_closed` als er geen
+   betaling is) op elke gesloten zaak → rente stopt op afwikkelmoment, geen doorlopend cijfer.
+   Neemt de 100 "€22k spookrestant"-zaken vanzelf mee; het restant dat dan overblijft is het
+   verschil oude-vs-nieuwe rente = per-zaak signaal voor Lisanne, geen bulk-afboeking.
+2. **WIK-bijlage** — renteberekening-PDF bij eerste sommatie, **alleen VOF/eenmanszaak/particulier**;
+   + KvK-API voor rechtsvorm. Fable zoekt wettelijke eis + KvK-koppeling uit.
+3. **Invoer-map** met nieuwe zaken (nieuwer dan export 2 juli) — hoe overhalen.
+Arsalan: Fable neemt de volgende sessie over (review + uitvoering).

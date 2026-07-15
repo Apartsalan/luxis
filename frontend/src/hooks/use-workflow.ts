@@ -90,12 +90,14 @@ export function useMyOpenTasks(limit = 10) {
   });
 }
 
-/** All tasks assigned to current user — sorted: overdue → due → pending */
+/** All tasks assigned to current user — sorted: overdue → due → pending.
+ *  Bevat ook afgeronde + overgeslagen taken (nieuwste eerst) zodat de
+ *  Takenpagina die filters kan tonen en herstellen (S221 3.4). */
 export function useMyTasks() {
   return useQuery<WorkflowTask[]>({
     queryKey: ["workflow-tasks", "my-tasks"],
     queryFn: async () => {
-      const res = await api("/api/dashboard/my-tasks");
+      const res = await api("/api/dashboard/my-tasks?include_done=true");
       if (!res.ok) throw new Error("Fout bij ophalen taken");
       return res.json();
     },
@@ -134,6 +136,29 @@ export function useSkipTask() {
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.detail ?? "Fout bij overslaan taak");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workflow-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+/** Zet een overgeslagen/afgeronde taak terug op de werklijst (→ pending;
+ *  effectieve status wordt uit de deadline afgeleid). S221 3.4. */
+export function useRestoreTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const res = await api(`/api/workflow/tasks/${taskId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "pending" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Fout bij terugzetten taak");
       }
       return res.json();
     },

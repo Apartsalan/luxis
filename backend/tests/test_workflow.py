@@ -749,3 +749,60 @@ async def test_create_review_ai_draft_task_accepted(
     )
     assert resp.status_code == 201
     assert resp.json()["task_type"] == "review_ai_draft"
+
+
+@pytest.mark.asyncio
+async def test_my_tasks_include_done_shows_and_restores_skipped(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """S221 3.4: skipped/completed taken zijn onzichtbaar op de werklijst tenzij
+    include_done=true; een teruggezette taak keert terug op de open lijst."""
+    case = await _create_case(db, test_tenant.id)
+    due = (date.today() + timedelta(days=5)).isoformat()
+
+    ids = []
+    for title in ("Open taak", "Over te slaan taak"):
+        r = await client.post(
+            "/api/workflow/tasks",
+            json={
+                "case_id": str(case.id),
+                "task_type": "manual_review",
+                "title": title,
+                "due_date": due,
+            },
+            headers=auth_headers,
+        )
+        ids.append(r.json()["id"])
+
+    # Sla de tweede taak over.
+    await client.put(
+        f"/api/workflow/tasks/{ids[1]}",
+        json={"status": "skipped"},
+        headers=auth_headers,
+    )
+
+    # Zonder include_done: alleen de open taak.
+    resp = await client.get("/api/dashboard/my-tasks", headers=auth_headers)
+    open_ids = {t["id"] for t in resp.json()}
+    assert ids[0] in open_ids
+    assert ids[1] not in open_ids
+
+    # Met include_done: de overgeslagen taak is zichtbaar.
+    resp = await client.get("/api/dashboard/my-tasks?include_done=true", headers=auth_headers)
+    by_id = {t["id"]: t for t in resp.json()}
+    assert ids[1] in by_id
+    assert by_id[ids[1]]["status"] == "skipped"
+
+    # Terugzetten (→ pending, effectieve status uit deadline = pending).
+    restore = await client.put(
+        f"/api/workflow/tasks/{ids[1]}",
+        json={"status": "pending"},
+        headers=auth_headers,
+    )
+    assert restore.status_code == 200
+    resp = await client.get("/api/dashboard/my-tasks", headers=auth_headers)
+    assert ids[1] in {t["id"] for t in resp.json()}

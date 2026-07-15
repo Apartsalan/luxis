@@ -20,6 +20,7 @@ import {
   Zap,
   Eye,
   ArrowUpRight,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +30,7 @@ import {
   useMyTasks,
   useCompleteTask,
   useSkipTask,
+  useRestoreTask,
   useCreateTask,
   TASK_TYPE_LABELS,
   TASK_STATUS_LABELS,
@@ -124,14 +126,18 @@ function TaskRow({
   task,
   onComplete,
   onSkip,
+  onRestore,
   isCompleting,
   isSkipping,
+  isRestoring,
 }: {
   task: WorkflowTask;
   onComplete: (id: string) => void;
   onSkip: (id: string) => void;
+  onRestore: (id: string) => void;
   isCompleting: boolean;
   isSkipping: boolean;
+  isRestoring: boolean;
 }) {
   const isDone = task.status === "completed" || task.status === "skipped";
   const isOpen = task.status === "pending" || task.status === "due" || task.status === "overdue";
@@ -249,7 +255,7 @@ function TaskRow({
         )}
       </div>
 
-      {/* Skip button */}
+      {/* Skip button (open taken) */}
       {isOpen && (
         <button
           onClick={() => onSkip(task.id)}
@@ -259,6 +265,20 @@ function TaskRow({
           aria-label="Overslaan"
         >
           <SkipForward className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* Terugzet-knop (overgeslagen/afgeronde taken → terug op de werklijst) */}
+      {isDone && (
+        <button
+          onClick={() => onRestore(task.id)}
+          disabled={isRestoring}
+          className="shrink-0 mt-0.5 inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground max-sm:opacity-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-muted hover:text-foreground transition-all"
+          title="Terugzetten op werklijst"
+          aria-label="Terugzetten op werklijst"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Terugzetten
         </button>
       )}
     </div>
@@ -324,6 +344,7 @@ export default function TakenPage() {
   const { data: casesData } = useCases({ per_page: 100, status: "" });
   const completeTask = useCompleteTask();
   const skipTask = useSkipTask();
+  const restoreTask = useRestoreTask();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const TASKS_PER_GROUP = 10;
   const createTask = useCreateTask();
@@ -367,9 +388,23 @@ export default function TakenPage() {
     });
   };
 
+  const handleRestore = (id: string) => {
+    restoreTask.mutate(id, {
+      onSuccess: () => toast.success("Taak teruggezet op de werklijst"),
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Fout bij terugzetten"),
+    });
+  };
+
   const handleSkip = (id: string) => {
     skipTask.mutate(id, {
-      onSuccess: () => toast.success("Taak overgeslagen"),
+      onSuccess: () =>
+        toast.success("Taak overgeslagen", {
+          action: {
+            label: "Ongedaan maken",
+            onClick: () => handleRestore(id),
+          },
+        }),
+      onError: (e) => toast.error(e instanceof Error ? e.message : "Fout bij overslaan"),
     });
   };
 
@@ -665,8 +700,10 @@ export default function TakenPage() {
                     task={task}
                     onComplete={handleComplete}
                     onSkip={handleSkip}
+                    onRestore={handleRestore}
                     isCompleting={completeTask.isPending}
                     isSkipping={skipTask.isPending}
+                    isRestoring={restoreTask.isPending}
                   />
                 ))}
                 {group.tasks.length > TASKS_PER_GROUP && !expandedGroups[group.label] && (

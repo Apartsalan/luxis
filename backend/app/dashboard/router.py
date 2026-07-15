@@ -42,10 +42,16 @@ async def get_recent_activity(
 
 @router.get("/my-tasks", response_model=list[WorkflowTaskResponse])
 async def get_my_tasks(
+    include_done: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Get open tasks for the current user + ownerless tenant tasks (due + overdue first)."""
+    """Get open tasks for the current user + ownerless tenant tasks (due + overdue first).
+
+    `include_done` voegt afgeronde + overgeslagen taken toe (nieuwste eerst,
+    gecapt) zodat de Takenpagina die weergaven kan tonen en herstellen (S221 3.4).
+    Het dashboard-widget vraagt ze niet op en blijft dus puur open taken tonen.
+    """
     # A1 — óók eigenaarloze taken (bv. verjaring-alarmen van de monitor) tonen,
     # anders ziet niemand ze.
     tasks = await wf_list_tasks(
@@ -55,7 +61,13 @@ async def get_my_tasks(
     status_order = {"overdue": 0, "due": 1, "pending": 2}
     open_tasks = [t for t in tasks if t.status in ("pending", "due", "overdue")]
     open_tasks.sort(key=lambda t: (status_order.get(t.status, 3), t.due_date))
-    return open_tasks
+    if not include_done:
+        return open_tasks
+    # ponytail: cap afgeronde/overgeslagen op 100 (nieuwste eerst); paginate pas
+    # als de lijst echt groeit.
+    done_tasks = [t for t in tasks if t.status in ("completed", "skipped")]
+    done_tasks.sort(key=lambda t: (t.completed_at or t.updated_at), reverse=True)
+    return open_tasks + done_tasks[:100]
 
 
 @router.get("/upcoming-installments", response_model=list[UpcomingInstallmentItem])

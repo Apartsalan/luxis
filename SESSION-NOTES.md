@@ -2,10 +2,65 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 15 juli 2026 middag (S217, vibe-code-audit + kritische menu-doorlichting + follow-up LIVE bewezen; CI weer groen).
-**Laatste feature/fix:** 3 security-fixes live (Pillow-CVE's, auth-wachter 302 routes, postcss) + CI-fix (LibreOffice op testrunner, rood sinds 13 juli) + follow-up Uitvoeren end-to-end bewezen (testsommatie in Arsalans Gmail incl. rente-PDF). Zie entry S217.
-**Openstaand:** KvK-sleutel (~16 juli) → rechtsvorm-backfill (voorrang, PROMPT-S217); UX-sprint uit menu-doorlichting (PROMPT-S218); 15 échte follow-up-aanbevelingen wachten op beoordeling; mailslot staat OPEN sinds 13 juli.
-**Volgende sessie:** S218 (`docs/sessions/PROMPT-S218.md`, Opus): UX-sprint menu-doorlichting; KvK-backfill (PROMPT-S217) heeft voorrang zodra de sleutel er is.
+**Laatst bijgewerkt:** 15 juli 2026 einde middag (S218, demo Arsalan → demolijst 25 punten + 3 oorzaken bewezen; niets gebouwd).
+**Laatste feature/fix:** geen code-wijziging — onderzoekssessie. Eerste échte sommatie verstuurd (IN100613, AI-concept-route) MET rente in de tekst maar ZONDER rente-PDF: oorzaak bewezen, zie entry S218.
+**Openstaand:** demolijst 25 punten (`docs/sessions/DEMOLIJST-S218.md`); KvK-sleutel (~16 juli) → backfill (PROMPT-S217, voorrang); UX-sprint-punten (PROMPT-S218, niet uitgevoerd — gaan mee in S220); mailslot OPEN.
+**Volgende sessie:** S219 (`docs/sessions/PROMPT-S219.md`, Fable): onderzoek demolijst (sjablonen-audit, AI-keten, fasebalk); daarna S220 (Opus) bouwen.
+
+## Sessie 218 (15 juli 2026 middag/einde middag, Fable — demo Arsalan: demolijst + 3 oorzaken bewezen, read-only)
+
+### Samenvatting
+Demosessie werd foutenjacht. Arsalan raakte als eerste dossier IN100613 (VOF Bayar transport)
+aan en de rente-PDF ontbrak → uitgezocht, daarna demolijst van **25 punten** verzameld
+(`docs/sessions/DEMOLIJST-S218.md` — dé bron; werkverdeling: S219 Fable-onderzoek → S220
+Opus-bouw → Fable-review). Niets gebouwd (bewuste keuze Arsalan), geen prod-mutaties door mij.
+
+**Oorzaak 1 — rentebijlage ontbreekt op de AI-concept-route (punt 1, bewezen).** Arsalan
+verstuurde de eerste échte sommatie (IN100613, 12:24) via AI-concept → compose. De bijlage-
+beslissing hangt volledig aan het meegegeven sjabloontype; een AI-concept draagt er geen
+(`ai_drafts` heeft geen stap-koppeling) → server zag "gewone mail" → geen renteoverzicht-PDF
+en geen factuur-PDF's. Beslisregel + render zelf bewezen gezond (b2b + lege rechtsvorm →
+bijlage JA; PDF rendert 82kB). S212-review-aanname "AI-concepten zijn geen sommaties" was fout —
+dit ÍS de hoofdroute. **Fix-ontwerp (S220, punt 25):** bij verse dossier-mail aan de debiteur
+zonder sjabloonkeuze het brieftype afleiden uit de huidige pijplijnstap (antwoord/doorsturen
+blijft zonder bijlage; recipient-check op debiteur; GEEN factuur-auto-attach op deze route —
+Arsalan: "we sturen normaal geen facturen mee"). Plus: compose-venster moet tonen wat er
+automatisch meegaat (punt 2) en documentenroute-gaatje ('sommatie'-brieftype ontbreekt in de
+bijlage-typeset) dichten (punt 3).
+
+**Oorzaak 2 — follow-up toont verouderde adviezen én blokkeert nieuwe (punt 13, bewezen).**
+IN100607 stond WÉL in follow-up maar onder "Eerste sommatie" (advies 9 juli) terwijl die al
+verstuurd was — uitnodiging tot dubbel versturen. Buiten de follow-up-knop om uitvoeren ruimt
+het advies nooit op, én de scanner slaat dossiers met een openstaand advies over (ontdubbeling
+per dossier, niet per stap) → het volgende advies komt NOOIT. Gemeten: 3/15 adviezen verouderd
+(IN100607, IN100613, IN100521). Fixrichting: bij stap-wissel open adviezen automatisch afsluiten.
+
+**Oorzaak 3 — wachttijden beantwoord + inconsistentie (punt 15).** Twee klokken: follow-up-
+advies na min-wachttijd van de stap (sommaties: 4 dagen, scanner elk half uur) en dagelijkse
+timeout-automatisering (concept+taak na 15/7/4/4/4 dagen). ⚠️ Eerste→Tweede: timeout-regel
+zegt 7 dagen, stap-wachttijd 4 — gelijktrekken in S220.
+
+**Verder gemeten:** 105 dossiers BaseNet-B2C-fase vs Luxis-b2b (import: bedrijf→zakelijk;
+raakt WIK-route → beslismemo Lisanne, punt 16). IN100613 schoof na verzending netjes door
+naar Tweede sommatie; IN100607 staat op Verweer beantwoorden (hold). Arsalan: geen nasturen
+bijlagen naar Bayar. Referentiebestanden in projectmap: juiste verzoekschrift-PDF
+("CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 1612).pdf") + handtekening-voorbeeld-.eml.
+
+### Gewijzigde bestanden
+Alleen docs: `docs/sessions/DEMOLIJST-S218.md` (nieuw), `docs/sessions/PROMPT-S219.md` (nieuw),
+SESSION-NOTES, roadmap. Geen code, geen migraties, geen deploy.
+
+### Bekende issues
+- Eerste échte sommatie (IN100613) is verstuurd zónder rente-PDF (rente stond wel in de tekst;
+  b2b dus geen harde WIK-plicht; Arsalan besloot: niets nasturen).
+- PROMPT-S218 (UX-sprint) is NIET uitgevoerd — punten gaan mee in S220 (ontdubbelen met demolijst).
+- 12 échte follow-up-aanbevelingen wachten nog op beoordeling Arsalan/Lisanne (3 zijn verouderd).
+
+### Volgende sessie
+S219 (`docs/sessions/PROMPT-S219.md`, Fable): demolijst-onderzoek — sjablonen-audit (matrix
+sjabloon × punt), AI-keten (snelheid/kwaliteit/klikken), fasebalk + concurrent-onderzoek,
+kleinere punten; daarna PROMPT-S220 (Opus-bouw) schrijven. KvK-backfill heeft voorrang zodra
+de sleutel er is.
 
 ## Sessie 217 (15 juli 2026 middag, Fable-audit + Opus-fixes — vibe-code-doorlichting, CI-herstel, follow-up bewezen)
 
@@ -517,52 +572,3 @@ eindverificatie van de rente-stand ("100% zeker, dan afsluiten").
 S209: de kleine import-backfills (notities/alerts → dossiernotitie; land-veld + migratie;
 provisie/geboortedatums) elk na akkoord; WIK-bijlage zodra KvK-API er is; verse export
 voorbereiden. Prompt: `docs/sessions/PROMPT-S209.md`.
-
-## Sessie S207c (13 juli 2026, Fable-review + Opus-uitvoer — rente-review, b2c-terug, bevriesdatum-backfill, BaseNet-herkomst, LIVE)
-
-### Samenvatting
-Vervolg op de demo-sprint. Eerst adversariële review van de rentekern (47 tests groen,
-6 eigen randgeval-probes, prod IN100197 = €723,31 exact = BaseNet). Daarna 3 prod-acties,
-elk met backup + dry-run + akkoord Arsalan.
-
-- **B2C-rente terug (UITGEVOERD).** De AV-uitrol zette 79 consumentenzaken op 2%/mnd.
-  Ambtshalve toetsing (Richtlijn 93/13) vernietigt ≥1%/mnd bij consumenten vrijwel altijd
-  → veilige route wettelijke rente. `revert_b2c_rente.py`: rente-som 102.876,78 → 19.329,23,
-  36 betalingen herverdeeld. `rollout_av_rente.py` slaat b2c voortaan over.
-- **Bevriesdatum-backfill (UITGEVOERD).** Alle 580 gesloten zaken kregen `interest_freeze_date`
-  (134 laatste betaaldatum / 67 date_closed / 379 BaseNet-rentedatum uit de export van 2 juli).
-  Openstaand op gesloten zaken 3.869.871 → 3.338.193 (531.679 spookrente eruit). `backfill_freeze_date.py`.
-  ⚠ Export-verwarring rechtgezet: `Xml_02-07-2026_2400.zip` stónd gewoon in de projectmap
-  (ik keek eerst naar losse XML). Rentedatum per dossier zat als ongebruikt veld in die export.
-- **BaseNet-herkomst als vast veld (GEBOUWD + LIVE).** `Case.basenet_origin_status` (migratie
-  s207c, backfill uit de import-notitie). Onderscheid dat Arsalan vroeg: "Nog te openen"
-  (Lopend 372 + Wacht 69 = 441; wordt in fases heropend) vs "BaseNet-archief" (Gereed 148 +
-  Geannuleerd 15 + Offerte 3 = 166; blijft dicht). Badge in dossierlijst + detailpagina; import
-  vult het veld voortaan zelf. Luxis-status ONGEMOEID (heropenen blijft de fase-aanpak).
-
-### Verificatie
-Rentetests 47 groen + test_cases 32 groen + nieuwe test_basenet_origin_status 9 groen (zelf
-gedraaid). `uvx ruff` schoon, `tsc --noEmit` groen. Migraties s207c op prod = head, 607/607
-zaken herkomst gevuld (0 leeg), 166 "afgehandeld" matcht exact de eerdere meting. Live API:
-`basenet_origin_status` komt mee in dossierlijst. Backups: `backup_pre_s207c` + `backup_pre_backfill`
-op de VPS. Mailslot bleef DICHT.
-
-### Vervolg (zelfde dag): werkfase-vondst + S207d
-Lisanne herkende 2 "Offerte"-zaken als lopende procedures → bron gecheckt: BaseNet's
-werkstatus **"Procedure loopt" (57310) hangt in hun statusconfig onder hoofdgroep "Offerte"**
-(inrichtingsfout kantoor). pstatus = hoofdgroep, `incstatus` → CustomProjectStatus = de echte
-werkfase. IN100310/IN100407 op prod gecorrigeerd naar 'Lopend' (nu 443/164); IN100167
-(Fideal, fase "Invoer", geen vaste opdrachtgever) blijft archief — keuze Lisanne.
-**S207d gebouwd + LIVE:** `Case.basenet_origin_phase` (migratie s207d + `backfill_basenet_phase.py`,
-607/607 gevuld) — de werkfase per zaak ("B2C 3e sommatie verstuurd", "Procedure loopt", …) als
-hard veld, zichtbaar in badge-tooltip + detailpagina. Belang: het S181-heropeningsrecept (CSV,
-372 zaken) dekte deze zaken NIET; de fase-heropening kan nu uit de DB zelf de juiste stap bepalen.
-Valkuil genoteerd in `scripts/basenet/mapping.py` voor de volgende import.
-
-### Bekende issues / aandachtspunten
-- **Draaiboek-eis toegevoegd** (`PLAN-heropening-werkvoorraad.md` #9): script-heropening moet
-  `interest_freeze_date` wissen, anders blijft een heropende zaak bevroren (UI/service doet dit al).
-- **Heropening:** IN100310/IN100407 ("Procedure loopt") staan NIET in het S181-recept-CSV —
-  meenemen bij de fase-heropening (nu vindbaar via `basenet_origin_phase`).
-- Voorstel (niet gebouwd, scope): filter "Nog te openen" op de dossierlijst voor de fase-heropening.
-- WIK-rentebijlage: plan klaar, wacht op KvK-API (Arsalan vraagt aan). Bouwen = Opus.

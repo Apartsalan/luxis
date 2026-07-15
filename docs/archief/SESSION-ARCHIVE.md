@@ -9151,3 +9151,51 @@ hogere rente blijft een restant. Bevriezen lost dit NIET op (IN100350: €264,82
    + KvK-API voor rechtsvorm. Fable zoekt wettelijke eis + KvK-koppeling uit.
 3. **Invoer-map** met nieuwe zaken (nieuwer dan export 2 juli) — hoe overhalen.
 Arsalan: Fable neemt de volgende sessie over (review + uitvoering).
+## Sessie S207c (13 juli 2026, Fable-review + Opus-uitvoer — rente-review, b2c-terug, bevriesdatum-backfill, BaseNet-herkomst, LIVE)
+
+### Samenvatting
+Vervolg op de demo-sprint. Eerst adversariële review van de rentekern (47 tests groen,
+6 eigen randgeval-probes, prod IN100197 = €723,31 exact = BaseNet). Daarna 3 prod-acties,
+elk met backup + dry-run + akkoord Arsalan.
+
+- **B2C-rente terug (UITGEVOERD).** De AV-uitrol zette 79 consumentenzaken op 2%/mnd.
+  Ambtshalve toetsing (Richtlijn 93/13) vernietigt ≥1%/mnd bij consumenten vrijwel altijd
+  → veilige route wettelijke rente. `revert_b2c_rente.py`: rente-som 102.876,78 → 19.329,23,
+  36 betalingen herverdeeld. `rollout_av_rente.py` slaat b2c voortaan over.
+- **Bevriesdatum-backfill (UITGEVOERD).** Alle 580 gesloten zaken kregen `interest_freeze_date`
+  (134 laatste betaaldatum / 67 date_closed / 379 BaseNet-rentedatum uit de export van 2 juli).
+  Openstaand op gesloten zaken 3.869.871 → 3.338.193 (531.679 spookrente eruit). `backfill_freeze_date.py`.
+  ⚠ Export-verwarring rechtgezet: `Xml_02-07-2026_2400.zip` stónd gewoon in de projectmap
+  (ik keek eerst naar losse XML). Rentedatum per dossier zat als ongebruikt veld in die export.
+- **BaseNet-herkomst als vast veld (GEBOUWD + LIVE).** `Case.basenet_origin_status` (migratie
+  s207c, backfill uit de import-notitie). Onderscheid dat Arsalan vroeg: "Nog te openen"
+  (Lopend 372 + Wacht 69 = 441; wordt in fases heropend) vs "BaseNet-archief" (Gereed 148 +
+  Geannuleerd 15 + Offerte 3 = 166; blijft dicht). Badge in dossierlijst + detailpagina; import
+  vult het veld voortaan zelf. Luxis-status ONGEMOEID (heropenen blijft de fase-aanpak).
+
+### Verificatie
+Rentetests 47 groen + test_cases 32 groen + nieuwe test_basenet_origin_status 9 groen (zelf
+gedraaid). `uvx ruff` schoon, `tsc --noEmit` groen. Migraties s207c op prod = head, 607/607
+zaken herkomst gevuld (0 leeg), 166 "afgehandeld" matcht exact de eerdere meting. Live API:
+`basenet_origin_status` komt mee in dossierlijst. Backups: `backup_pre_s207c` + `backup_pre_backfill`
+op de VPS. Mailslot bleef DICHT.
+
+### Vervolg (zelfde dag): werkfase-vondst + S207d
+Lisanne herkende 2 "Offerte"-zaken als lopende procedures → bron gecheckt: BaseNet's
+werkstatus **"Procedure loopt" (57310) hangt in hun statusconfig onder hoofdgroep "Offerte"**
+(inrichtingsfout kantoor). pstatus = hoofdgroep, `incstatus` → CustomProjectStatus = de echte
+werkfase. IN100310/IN100407 op prod gecorrigeerd naar 'Lopend' (nu 443/164); IN100167
+(Fideal, fase "Invoer", geen vaste opdrachtgever) blijft archief — keuze Lisanne.
+**S207d gebouwd + LIVE:** `Case.basenet_origin_phase` (migratie s207d + `backfill_basenet_phase.py`,
+607/607 gevuld) — de werkfase per zaak ("B2C 3e sommatie verstuurd", "Procedure loopt", …) als
+hard veld, zichtbaar in badge-tooltip + detailpagina. Belang: het S181-heropeningsrecept (CSV,
+372 zaken) dekte deze zaken NIET; de fase-heropening kan nu uit de DB zelf de juiste stap bepalen.
+Valkuil genoteerd in `scripts/basenet/mapping.py` voor de volgende import.
+
+### Bekende issues / aandachtspunten
+- **Draaiboek-eis toegevoegd** (`PLAN-heropening-werkvoorraad.md` #9): script-heropening moet
+  `interest_freeze_date` wissen, anders blijft een heropende zaak bevroren (UI/service doet dit al).
+- **Heropening:** IN100310/IN100407 ("Procedure loopt") staan NIET in het S181-recept-CSV —
+  meenemen bij de fase-heropening (nu vindbaar via `basenet_origin_phase`).
+- Voorstel (niet gebouwd, scope): filter "Nog te openen" op de dossierlijst voor de fase-heropening.
+- WIK-rentebijlage: plan klaar, wacht op KvK-API (Arsalan vraagt aan). Bouwen = Opus.

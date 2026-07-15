@@ -10,10 +10,22 @@ Commits `4dba5b3` (tabbladen) + `4ef4c0a` (inklappen), frontend gedeployd. Gedaa
   partijen→Overzicht ✓). Incasso 7 tabs / advies 6 tabs (geen Financieel) beide geverifieerd.
   Klik-inventaris: alle partij-links + actieknoppen + factuurlink behouden.
 **Nog open in blok 1 (bewust uitgesteld):** anker-subnav bovenin Financieel
-(Vorderingen · Betalingen · Regeling) — vraagt anker-ids over 2 componenten; kleinere winst nu
-de secties al gegroepeerd + inklapbaar zijn. Oppakken in blok 2 of los.
-**Next = BLOK 2** (kop compacter + geldstrook mét Openstaand + notitie-dialoog + BaseNet-
-waarschuwingsbanner + zijbalk ontdubbelen/type-afhankelijk). Daarna blok 3 (normale zaak) = S217.
+(Vorderingen · Betalingen · Regeling) — kleinere winst nu de secties al gegroepeerd + inklapbaar.
+
+## BLOK 2 IS OOK LIVE + GEVERIFIEERD (commit `3a927fc`, gedeployd)
+- Kop: 4 statkaarten → compacte geldstrook Hoofdsom · Betaald · **Openstaand** (ontbrak eerder;
+  geverifieerd IN100215 = €1.891,40 incl. rente/BIK). Kop past nu boven de vouw.
+- Notitie + Telefoonnotitie → één venster `NoteDialog` (autoFocus → **cursor-bug gefixt**,
+  live bewezen: `cursorInEditor:true`). Sneltoets `n` opent het venster. `phoneNoteText`-plumbing weg.
+- BaseNet-waarschuwing (`[BaseNet-waarschuwing]`) → oranje balk bovenaan Overzicht
+  (`BasenetWarningBanner`, parser geëxporteerd). Bewijs: IN100022 toont "PROCEDEREN …".
+- Zijbalk type-afhankelijk: Debiteur/Rente alleen incasso (advies-lek dicht, bewezen op verse
+  advieszaak: beide weg), OHW alleen bij uren>0.
+**Next = BLOK 3 (S217, normale zaak):** agenda-blok op Overzicht (komende afspraken/zittingen van
+dit dossier; `calendar_events` heeft case-koppeling), "Volgende stap"-regel in de kop (eerstvolgende
+open taak+deadline i.p.v. incasso-fasebalk), geldstrook per type voor normale zaak (OHW ·
+ongefactureerd · openstaand · budget — bronnen bestaan al). + evt. anker-subnav Financieel.
+Plan: `docs/plans/PLAN-dossierpagina.md` §2 (tabel per type).
 
 ---
 

@@ -92,6 +92,10 @@ Bij elk blok geldt de S219-les: **fix het patroon op ALLE routes, niet alleen de
    dwingend sjabloon. Vaste sjablonen blijven alleen voor de standaard-stapbrieven.
    Test met de echte IN100607-mail ("wie zijn jullie en wie is jullie klant"): het
    antwoord moet kantoor + klant + factuurcontext benoemen.
+   **Sluitstuk: de testronde uit `docs/plans/PLAN-ai-antwoord-testronde.md`** —
+   testset (131 goud-gevallen uit learned_answers + ±50 zelfgeschreven variaties) +
+   genereer-script (niets versturen, niets op echte dossiers) + automatische checklist
+   + rapport. Bouw het script in S220; de analyse-iteraties zijn Fable-werk (S221).
 4. Punt 20: voortgangsindicator bij genereren + bestaand-concept-check (blok 3.2);
    optioneel prompt slanker.
 5. Punt 15: timeout Eerste→Tweede 7 → 4 dagen (step_transitions, één UPDATE na akkoord).

@@ -295,6 +295,34 @@ async def _load_forwarded_attachments(
     return out
 
 
+async def _derive_step_template_type(
+    case: Case,
+    recipient_emails: list[str],
+) -> str | None:
+    """Punt 1/25 — leid het brieftype af uit de huidige pijplijnstap.
+
+    De AI-concept-route draagt geen sjabloontype mee (`ai_drafts` heeft geen
+    stap-koppeling) → de server zag een 'gewone mail' en liet de wettelijke
+    renteoverzicht-bijlage weg. Bij een VERSE dossier-mail AAN DE DEBITEUR zonder
+    expliciet sjabloontype leiden we het brieftype af uit de huidige stap, zodat
+    het renteoverzicht alsnog automatisch meegaat. Alleen als de ontvanger de
+    debiteur van het dossier is (antwoord/doorsturen/mail-aan-cliënt → None).
+
+    Levert uitsluitend het sjabloontype voor de bijlage-beslissing; het pad haakt
+    hierop GEEN factuur-PDF's aan (bewuste keuze Arsalan, S218).
+    """
+    step = case.incasso_step
+    if step is None or not step.template_type:
+        return None
+    debtor_email = ((case.opposing_party.email if case.opposing_party else None) or "").strip().lower()
+    if not debtor_email:
+        return None
+    recipients = {(e or "").strip().lower() for e in recipient_emails}
+    if debtor_email not in recipients:
+        return None
+    return step.template_type
+
+
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 
@@ -342,6 +370,23 @@ async def send_via_provider(
 
     provider = get_provider(account.provider)
     access_token = await get_valid_access_token(db, account)
+
+    # Punt 1/25 — brieftype afleiden uit de huidige pijplijnstap als een VERSE
+    # dossier-mail aan de debiteur geen sjabloontype meedraagt (AI-concept-route).
+    # Alleen voor de renteoverzicht-bijlage; factuur-auto-attach blijft aan het
+    # expliciete sjabloontype hangen (geen factuur-auto-attach op deze route).
+    effective_template_type = data.template_type
+    send_case: Case | None = None
+    if data.case_id and not is_reply_or_forward:
+        send_case = (
+            await db.execute(
+                select(Case).where(
+                    Case.id == data.case_id, Case.tenant_id == user.tenant_id
+                )
+            )
+        ).scalar_one_or_none()
+        if effective_template_type is None and send_case is not None:
+            effective_template_type = await _derive_step_template_type(send_case, data.to)
 
     # DF122-07 (S212): automatisch factuur-PDF's van claims bijvoegen bij een
     # sommatie-sjabloon — zelfde regel als het .eml-pad (compose_eml_from_case),
@@ -392,20 +437,13 @@ async def send_via_provider(
     # Zelfde sleutel als het .eml-pad: het gekozen sjabloontype; alleen voor een verse
     # case-mail (geen antwoord/doorsturen). Bij een BV/NV/stichting → geen bijlage;
     # mislukt de send, dan rolt het opgeslagen renteoverzicht-document mee terug.
-    if data.template_type and data.case_id and not is_reply_or_forward:
-        rente_case = (
-            await db.execute(
-                select(Case).where(
-                    Case.id == data.case_id, Case.tenant_id == user.tenant_id
-                )
-            )
-        ).scalar_one_or_none()
-        if rente_case is not None:
+    if effective_template_type and data.case_id and not is_reply_or_forward:
+        if send_case is not None:
             for rente_name, rente_bytes, _rente_type in await build_rente_bijlage(
                 db,
                 user.tenant_id,
-                rente_case,
-                SimpleNamespace(template_type=data.template_type),
+                send_case,
+                SimpleNamespace(template_type=effective_template_type),
                 user.id,
             ):
                 resolved_attachments.append(
@@ -568,12 +606,18 @@ async def compose_eml_from_case(
         data.inline_attachments,
     )
 
+    # Punt 1/25 — brieftype afleiden uit de huidige stap als deze verse dossier-mail
+    # aan de debiteur geen sjabloontype meedraagt (AI-concept → .eml → Outlook).
+    effective_template_type = data.template_type
+    if effective_template_type is None:
+        effective_template_type = await _derive_step_template_type(case, [data.recipient_email])
+
     # S212: renteoverzicht-PDF meesturen bij de 14-dagenbrief/eerste sommatie voor een
     # privé aansprakelijke wederpartij — zelfde plek als de factuur-PDF's hierboven. Dit
     # is Lisanne's meest gebruikte route (AI-concept → .eml → Outlook). Leest het
     # opgeslagen rechtsvorm-veld, nooit live de KvK; bij een BV/NV/stichting → geen bijlage.
     for rente_name, rente_bytes, _rente_type in await build_rente_bijlage(
-        db, user.tenant_id, case, SimpleNamespace(template_type=data.template_type), user.id
+        db, user.tenant_id, case, SimpleNamespace(template_type=effective_template_type), user.id
     ):
         attachments.append(
             OutgoingAttachment(

@@ -467,3 +467,101 @@ async def test_compose_send_logs_prefers_tenant_account_and_passes_bcc(
         )
     ).scalars().all()
     assert any("verzonden" in a.title.lower() for a in acts)
+
+
+# ── S220 punt 1/25: brieftype afleiden uit de stap op de AI-concept-route ───────
+
+
+@pytest.mark.asyncio
+async def test_compose_send_derives_template_from_step_no_invoice_attach(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User, tmp_path
+):
+    """Een verse dossier-mail aan de debiteur ZONDER sjabloontype (AI-concept-route)
+    leidt het brieftype af uit de huidige stap → het renteoverzicht gaat alsnog mee.
+    Op deze afgeleide route gaan factuur-PDF's bewust NIET automatisch mee."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    account = await _make_email_account(db, test_tenant.id, test_user.id)
+    cf = CaseFile(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        original_filename="factuur-2026-001.pdf", stored_filename="f1.pdf",
+        file_size=9, content_type="application/pdf", uploaded_by=test_user.id,
+    )
+    db.add(cf)
+    db.add(Claim(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        description="Factuur 2026-001", principal_amount=Decimal("5000.00"),
+        default_date=date(2026, 1, 1), invoice_file_id=cf.id,
+    ))
+    await db.commit()
+    file_dir = tmp_path / str(test_tenant.id) / str(case.id)
+    file_dir.mkdir(parents=True)
+    (file_dir / "f1.pdf").write_bytes(b"%PDF-fact")
+
+    sent: dict = {}
+    provider = _provider_mock(sent)
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.email.compose_router.UPLOADS_BASE", tmp_path),
+        patch("app.email.compose_router.get_email_account", new_callable=AsyncMock, return_value=account),
+        patch("app.email.compose_router.get_provider", return_value=provider),
+        patch("app.email.compose_router.get_valid_access_token", new_callable=AsyncMock, return_value="tok"),
+        patch("app.email.compose_router.imap_smtp_kwargs", return_value={}),
+        patch("app.documents.rente_bijlage.render_docx", new_callable=AsyncMock) as mock_rente,
+        patch("app.documents.rente_bijlage.docx_to_pdf", new_callable=AsyncMock) as mock_rente_pdf,
+    ):
+        mock_rente.return_value = (b"docx", "renteoverzicht_2026-96500.docx", "renteoverzicht", None)
+        mock_rente_pdf.return_value = b"%PDF-rente"
+        resp = await client.post(
+            "/api/email/compose/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "to": ["debiteur@example.nl"],
+                "subject": "Betaalherinnering",
+                "body_html": "<p>Betaal nu.</p>",
+                "case_id": str(case.id),
+                "already_branded": True,
+                # GEEN template_type — moet worden afgeleid uit de sommatie-stap
+            },
+        )
+
+    assert resp.status_code == 200, resp.text
+    attachments = sent["attachments"]
+    filenames = sorted(a.filename for a in (attachments or []))
+    assert filenames == ["renteoverzicht_2026-96500.pdf"]
+
+
+@pytest.mark.asyncio
+async def test_compose_send_no_derivation_when_recipient_not_debtor(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Geen afleiding als de mail niet aan de debiteur gaat (bijv. aan de cliënt):
+    zonder sjabloontype geen renteoverzicht."""
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    account = await _make_email_account(db, test_tenant.id, test_user.id)
+    await db.commit()
+
+    sent: dict = {}
+    provider = _provider_mock(sent)
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.email.compose_router.get_email_account", new_callable=AsyncMock, return_value=account),
+        patch("app.email.compose_router.get_provider", return_value=provider),
+        patch("app.email.compose_router.get_valid_access_token", new_callable=AsyncMock, return_value="tok"),
+        patch("app.email.compose_router.imap_smtp_kwargs", return_value={}),
+        patch("app.documents.rente_bijlage.render_docx", new_callable=AsyncMock) as mock_rente,
+    ):
+        resp = await client.post(
+            "/api/email/compose/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "to": ["client@elders.nl"],
+                "subject": "Statusupdate",
+                "body_html": "<p>Ter info.</p>",
+                "case_id": str(case.id),
+                "already_branded": True,
+            },
+        )
+
+    assert resp.status_code == 200, resp.text
+    assert sent["attachments"] is None
+    mock_rente.assert_not_called()

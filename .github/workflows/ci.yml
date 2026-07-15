@@ -71,6 +71,13 @@ jobs:
 
       - uses: astral-sh/setup-uv@v4
 
+      # Mirrors backend/Dockerfile: the send-path tests render the S211
+      # rente-bijlage PDF via LibreOffice headless (soffice). ubuntu-latest
+      # no longer ships LibreOffice, so without this the suite fails with
+      # FileNotFoundError: 'soffice' (red since 13 juli, S211/S212).
+      - name: Install LibreOffice (PDF conversion on send path)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libreoffice-writer
+
       - name: Install dependencies (locked)
         run: |
           uv export --frozen --extra dev --no-emit-project -o requirements-dev.txt

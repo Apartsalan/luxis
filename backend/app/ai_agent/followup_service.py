@@ -31,6 +31,7 @@ from app.documents.rente_bijlage import build_rente_bijlage, wants_rente_bijlage
 from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import get_tenant_send_account
 from app.email.send_service import send_with_attachment
+from app.email.subject import build_email_subject
 from app.incasso.models import IncassoPipelineStep
 from app.incasso.service import (
     _auto_complete_tasks,
@@ -466,7 +467,12 @@ async def execute_recommendation(
                 user_id,
                 tenant_id,
                 to=case.opposing_party.email,
-                subject=f"{step.name} inzake dossier {case.case_number}",
+                subject=build_email_subject(
+                    client_name=case.client.name if case.client else None,
+                    debtor_name=case.opposing_party.name,
+                    letter_type=step.name,
+                    case_number=case.case_number,
+                ),
                 body_html=inline_html,
                 attachments=rente_attachments,
                 case_id=case.id,
@@ -496,7 +502,12 @@ async def execute_recommendation(
             pdf_bytes = await docx_to_pdf(docx_bytes)
             pdf_filename = filename.replace(".docx", ".pdf")
 
-            email_subject = step.email_subject_template or f"{step.name} - {case.case_number}"
+            email_subject = step.email_subject_template or build_email_subject(
+                client_name=case.client.name if case.client else None,
+                debtor_name=case.opposing_party.name if case.opposing_party else None,
+                letter_type=step.name,
+                case_number=case.case_number,
+            )
             email_body = step.email_body_template or (
                 f"Geachte heer/mevrouw,\n\nBijgevoegd treft u de "
                 f"{step.name.lower()} aan inzake dossier {case.case_number}."
@@ -713,7 +724,12 @@ async def preview_recommendation(
 
     if inline_html is not None:
         return FollowupPreviewOut(
-            subject=f"{step.name} inzake dossier {case.case_number}",
+            subject=build_email_subject(
+                client_name=case.client.name if case.client else None,
+                debtor_name=case.opposing_party.name if case.opposing_party else None,
+                letter_type=step.name,
+                case_number=case.case_number,
+            ),
             body_html=inline_html,
             sender_email=sender_email,
             recipient_email=recipient_email,
@@ -726,7 +742,12 @@ async def preview_recommendation(
         )
 
     # DOCX-route (dagvaarding e.d.) — brief als PDF-bijlage.
-    subject = step.email_subject_template or f"{step.name} - {case.case_number}"
+    subject = step.email_subject_template or build_email_subject(
+        client_name=case.client.name if case.client else None,
+        debtor_name=case.opposing_party.name if case.opposing_party else None,
+        letter_type=step.name,
+        case_number=case.case_number,
+    )
     body = step.email_body_template or (
         f"Geachte heer/mevrouw,\n\nBijgevoegd treft u de {step.name.lower()} aan "
         f"inzake dossier {case.case_number}."

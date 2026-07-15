@@ -15,6 +15,7 @@ from app.documents.pdf_service import docx_to_pdf
 from app.documents.rente_bijlage import build_rente_bijlage
 from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
+from app.email.subject import build_email_subject
 from app.email.templates import _render_base, document_sent
 from app.incasso.models import CaseStepHistory, IncassoPipelineStep, StepTransition
 from app.incasso.schemas import (
@@ -1329,7 +1330,12 @@ async def batch_execute(
                                 user_id,
                                 tenant_id,
                                 to=case.opposing_party.email,
-                                subject=f"{step.name} inzake dossier {case.case_number}",
+                                subject=build_email_subject(
+                                    client_name=case.client.name if case.client else None,
+                                    debtor_name=case.opposing_party.name,
+                                    letter_type=step.name,
+                                    case_number=case.case_number,
+                                ),
                                 body_html=inline_html,
                                 attachments=rente_attachments,
                                 case_id=case.id,

@@ -43,6 +43,7 @@ from app.email.oauth_service import (
 )
 from app.email.providers.base import OutgoingAttachment
 from app.email.send_service import ensure_branded_body, write_outbound_log
+from app.email.subject import build_email_subject
 from app.email.sync_service import EMAIL_ATTACHMENTS_BASE
 from app.shared.exceptions import BadRequestError, NotFoundError
 
@@ -712,8 +713,21 @@ async def render_template_preview(
     if html is None:
         return RenderTemplateResponse(supported=False)
 
+    # Menselijke brieftype-naam: de stapnaam als het gekozen sjabloon de huidige stap
+    # is (bv. "Eerste sommatie"), anders de nette title-case van het sjabloontype.
+    step = case.incasso_step
+    if step is not None and step.template_type == data.template_type and step.name:
+        letter_type = step.name
+    else:
+        letter_type = data.template_type.replace("_", " ").title()
+
     return RenderTemplateResponse(
         supported=True,
-        subject=f"{data.template_type.replace('_', ' ').title()} inzake dossier {case.case_number}",
+        subject=build_email_subject(
+            client_name=case.client.name if case.client else None,
+            debtor_name=case.opposing_party.name if case.opposing_party else None,
+            letter_type=letter_type,
+            case_number=case.case_number,
+        ),
         body_html=html,
     )

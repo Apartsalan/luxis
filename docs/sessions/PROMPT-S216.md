@@ -1,5 +1,22 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
+## STAND (15 juli, Opus) — BLOK 1 IS LIVE + GEVERIFIEERD
+Commits `4dba5b3` (tabbladen) + `4ef4c0a` (inklappen), frontend gedeployd. Gedaan:
+- 11/8 → 7/6 tabbladen; tabbalk past nu (0px overflow, was 5 buiten beeld).
+- Financieel bundelt vorderingen+betalingen+regeling+derdengelden; lege regeling/derdengelden
+  ingeklapt tot 1 regel (open-klik bewezen). Provisie → Facturen. Tijdlijn = Activiteiten +
+  inklapbare stap-historie. Taken + conflictbanner op Overzicht. PartijenTab verwijderd.
+- Vertaaltabel oude ?tab= getest op prod (betalingen→Financieel, staphistorie→Tijdlijn,
+  partijen→Overzicht ✓). Incasso 7 tabs / advies 6 tabs (geen Financieel) beide geverifieerd.
+  Klik-inventaris: alle partij-links + actieknoppen + factuurlink behouden.
+**Nog open in blok 1 (bewust uitgesteld):** anker-subnav bovenin Financieel
+(Vorderingen · Betalingen · Regeling) — vraagt anker-ids over 2 componenten; kleinere winst nu
+de secties al gegroepeerd + inklapbaar zijn. Oppakken in blok 2 of los.
+**Next = BLOK 2** (kop compacter + geldstrook mét Openstaand + notitie-dialoog + BaseNet-
+waarschuwingsbanner + zijbalk ontdubbelen/type-afhankelijk). Daarna blok 3 (normale zaak) = S217.
+
+---
+
 Sessie 216 — Dossierpagina 2.0, blok 1 (+2 als de sessie het toelaat)
 
 ## Start

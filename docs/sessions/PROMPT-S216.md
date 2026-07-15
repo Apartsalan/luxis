@@ -21,11 +21,19 @@ Commits `4dba5b3` (tabbladen) + `4ef4c0a` (inklappen), frontend gedeployd. Gedaa
   (`BasenetWarningBanner`, parser geëxporteerd). Bewijs: IN100022 toont "PROCEDEREN …".
 - Zijbalk type-afhankelijk: Debiteur/Rente alleen incasso (advies-lek dicht, bewezen op verse
   advieszaak: beide weg), OHW alleen bij uren>0.
-**Next = BLOK 3 (S217, normale zaak):** agenda-blok op Overzicht (komende afspraken/zittingen van
-dit dossier; `calendar_events` heeft case-koppeling), "Volgende stap"-regel in de kop (eerstvolgende
-open taak+deadline i.p.v. incasso-fasebalk), geldstrook per type voor normale zaak (OHW ·
-ongefactureerd · openstaand · budget — bronnen bestaan al). + evt. anker-subnav Financieel.
-Plan: `docs/plans/PLAN-dossierpagina.md` §2 (tabel per type).
+## BLOK 3 IS OOK LIVE + GEVERIFIEERD (commit `ea07c9a`, gedeployd) — DOSSIERVERBOUWING KLAAR
+- Agenda-blok op Overzicht: `useCaseEvents` → `/api/calendar/events?case_id`; toont komende
+  afspraken/zittingen, klikbaar naar /agenda, verborgen bij geen. Bewezen: testafspraak
+  (over 3 dagen) verscheen op een verse advieszaak, daarna opgeruimd.
+- Kop gewone zaak: "Volgende stap" = eerstvolgende open taak + deadline (bewezen: auto-taak
+  "Dossier controleren" met datum), géén incasso-fasebalk, + **Dossier afsluiten**-knop (die
+  ontbrak op niet-incasso zaken → nu afsluitbaar).
+- Geldstrook gewone zaak: Onderhanden werk + Budget (alleen bij data; terecht verborgen op lege zaak).
+- Zijbalk-lek bevestigd dicht op advies (geen Debiteur/Rente/OHW).
+
+**Nog open (los, klein):** anker-subnav bovenin Financieel; geldstrook gewone zaak kan later
+uitgebreid met ongefactureerd + openstaande facturen (bronnen bestaan, bewust nu OHW+budget).
+Plan: `docs/plans/PLAN-dossierpagina.md`.
 
 ---
 

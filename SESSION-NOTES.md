@@ -4,7 +4,8 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 15 juli 2026 avond/nacht (S221, Opus — demolijst DEEL 2, 6 blokken LIVE + prod-geverifieerd).
 **Laatste feature/fix:** overgeslagen/afgeronde taken zichtbaar + terugzetten (bewezen: 17 skipped komen terug); AI-concepten ontdubbeld op zaak+stap + zombie-opruiming bij stap-wissel (migratie live); classificatie direct ná mailsync (race weg); begrip-eerst antwoordroute + dossierfeiten in prompt + testronde-script (op prod bewezen: identiteitsvraag → correct antwoord mét klantnaam, corrector groen); bedragen niet meer in scheve spatie-kolommen; Intake uit menu, Bankimport→Betalingen, ratio-label+tooltip, dossiernummer klikbaar in maillijst.
-**Openstaand (→ S221b/S222):** review-scherm classificatie+concept, voortgangsindicator bij genereren, échte HTML-tabellen (render/opschoon-pad), Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat, soft-delete-banner, follow-up dossierlink/dagen/sort, intake-detectie dempen), Blok 6-beslismemo b2b/b2c, backfills-3.3 (Fable), auto-concept-categorieën (GATED — pas ná antwoord-route getoetst), 2 sjabloon-herzaaiingen (GO nodig). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Ook gedaan (GO Arsalan, visueel getest):** 2 sjabloon-herzaaiingen — brief-terugvallettertype Cambria→Calibri (8 DOCX, reseed) + KESTING LEGAL-logo in briefhoofd verzoekschrift-bijlage (ingevuld mét logo, prod-render geverifieerd).
+**Openstaand (→ S221b/S222):** review-scherm classificatie+concept, voortgangsindicator bij genereren, échte HTML-tabellen (render/opschoon-pad), Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat, soft-delete-banner, follow-up dossierlink/dagen/sort, intake-detectie dempen), Blok 6-beslismemo b2b/b2c, backfills-3.3 (Fable), auto-concept-categorieën (GATED — pas ná antwoord-route getoetst). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
 **Volgende sessie:** Fable-review S220+S221 (VERPLICHT vóór echte inzet) + antwoord-testronde draaien (goud-set); daarna S221b Opus voor het restant.
 
 ## Sessie 221 (15 juli 2026 avond/nacht, Opus — demolijst DEEL 2, 6 blokken LIVE)
@@ -62,8 +63,19 @@ Frontend: `hooks/use-workflow.ts`, `taken/page.tsx`, `layout/app-sidebar.tsx`, `
   dempen), Blok 6-beslismemo b2b/b2c.
 - **GATED:** auto-concept per categorie (Verweer + Algemene/overig) — bewust NIET aangezet;
   hangt aan de kwaliteit van de antwoord-route → pas ná de testronde (Fable S222).
-- **GO nodig (Arsalan):** 2 sjabloon-herzaaiingen (Courier→Calibri DOCX-default; verzoekschrift-
-  bijlage vervangen door "CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 1612).pdf").
+- **Sjabloon-herzaaiingen — GEDAAN (GO + visueel getest, prod-reseed):**
+  (1) Font: de terugval was **Cambria** (niet Courier — die stijl is dood), waardoor sectie-
+  kopjes een ander lettertype hadden dan de tekst. Thema-body op **Calibri** gezet in alle 8
+  DOCX (`scripts/fix_template_default_font.py`); reseed via `scripts/reseed_builtin_templates.py`.
+  ⚠️ Server-render (LibreOffice) maskeerde het verschil al; de winst is vooral zichtbaar als het
+  Word-bestand zélf geopend wordt. (2) Verzoekschrift-bijlage: NIET vervangen door de blanco PDF
+  (die is leeg → geen bedragen). Keuze Arsalan = **ingevuld mét logo**. Root cause: het invulbare
+  sjabloon had nooit een logo; LibreOffice behoudt briefhoofd-logo's wél. KESTING LEGAL-logo
+  (image2.png uit Lisanne's origineel) als briefhoofd toegevoegd; alle 62 velden + huidig adres
+  blijven. docxtpl-render + PDF **visueel geverifieerd**: logo + ingevulde bedragen + één lettertype.
+  Prod DB byte-identiek aan schijf (45658). Back-up: `/root/backup_managed_templates_pre_s221_font.sql`.
+- **Open vraag lettertype:** in mijn tests is elke boodschap al één lettertype; als Arsalan het
+  mengsel ergens specifieks zag (mail/scherm), schermafbeelding nodig om precies dát te fixen.
 - **Backfills 3.3** blijven Fable (S222): uitzoeken wát de 470 classificaties/14 intake/8
   concepten/3 adviezen precies zijn vóór er iets gesloten wordt.
 - Terugzet-knop/undo-toast (3.4) + maillijst-chip zijn typecheck- + deploy-geverifieerd, niet

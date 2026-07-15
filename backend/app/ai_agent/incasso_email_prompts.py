@@ -78,6 +78,8 @@ ABSOLUTE REGELS — strikt volgen:
    - Nederlands formaat: `€ 1.234,56` (duizendtal-punt, decimaal-komma, spatie na €).
    - Als waarde `0`: schrijf `€ 0,00`.
    - Geen valutaformaat anders dan Euro.
+   - Lijn bedragen NIET met spaties/tabs in kolommen uit (wordt scheef in de mail).
+     Gebruik gelabelde regels, bijv. `Hoofdsom: € 3.500,00` — elk op een eigen regel.
 
 6. **Datum-formatting:**
    - Nederlands formaat: `DD-MM-JJJJ` (bv. `13-05-2026`), of voltijds Nederlands

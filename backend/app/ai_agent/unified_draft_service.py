@@ -51,6 +51,9 @@ _NO_HTML_RULE = (
     "BELANGRIJK — output regels:\n"
     "- Geef PLATTE TEKST terug. GEEN HTML, GEEN markdown, GEEN opmaak-tags.\n"
     "- Gebruik gewone alineas gescheiden door lege regels.\n"
+    "- Zet bedragen NIET in kolommen die je met spaties of tabs uitlijnt (dat wordt "
+    "scheef in de uiteindelijke mail). Gebruik in plaats daarvan korte regels met een "
+    "label, bijv. 'Hoofdsom: € 3.500,00' — elk op een eigen regel.\n"
     "- Eindig NIET met een handtekening — die wordt server-side toegevoegd.\n"
     "- Antwoord ALLEEN met valide JSON: "
     '{"subject": "<onderwerp>", "body": "<platte tekst>", "tone": "<formeel|vriendelijk|streng>"}'

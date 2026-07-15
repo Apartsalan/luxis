@@ -612,6 +612,30 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                 </div>
               </Link>
             )}
+            {/* S216-review: overige partijen (rol + referentie) — verhuisd uit het
+                opgeheven Partijen-tabblad, anders waren die nergens meer zichtbaar. */}
+            {zaak.parties?.map((party) => (
+              <Link
+                key={party.id}
+                href={`/relaties/${party.contact.id}`}
+                className="flex items-center gap-3 rounded-lg border border-border p-3 hover:bg-muted/50 transition-all"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {party.contact.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {party.role}
+                    {party.external_reference && (
+                      <span className="ml-1 font-mono">· {party.external_reference}</span>
+                    )}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
 

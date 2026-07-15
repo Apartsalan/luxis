@@ -155,7 +155,7 @@ test.describe("Zaken CRUD", () => {
     });
   });
 
-  test("Z5: 7 tabs visible on detail page (non-incasso)", async ({ page }) => {
+  test("Z5: 6 tabs visible on detail page (non-incasso)", async ({ page }) => {
     test.skip(!caseId, "Z3 must create a case first");
 
     await page.goto(`/zaken/${caseId}`);
@@ -166,34 +166,25 @@ test.describe("Zaken CRUD", () => {
       timeout: 15000,
     });
 
-    // Check all 7 tabs for non-incasso case
+    // S216: 6 tabbladen voor een niet-incassozaak (Taken/Partijen → Overzicht,
+    // Activiteiten heet nu Tijdlijn). Tabs hebben role="tab", geen "button".
     const expectedTabs = [
       "Overzicht",
-      "Taken",
       "Facturen",
       "Documenten",
       "Correspondentie",
-      "Activiteiten",
-      "Partijen",
+      "Uren",
+      "Tijdlijn",
     ];
 
     for (const tabLabel of expectedTabs) {
-      await expect(
-        page.getByRole("button", { name: tabLabel })
-      ).toBeVisible();
+      await expect(page.getByRole("tab", { name: tabLabel })).toBeVisible();
     }
 
-    // Incasso-specific tabs should NOT be visible
-    const incassoOnlyTabs = [
-      "Vorderingen",
-      "Betalingen",
-      "Financieel",
-      "Derdengelden",
-    ];
-    for (const tabLabel of incassoOnlyTabs) {
-      await expect(
-        page.getByRole("button", { name: tabLabel })
-      ).not.toBeVisible();
+    // Incasso-only tab + oude tab-namen mogen niet (meer) bestaan
+    const goneTabs = ["Financieel", "Vorderingen", "Betalingen", "Taken", "Partijen", "Activiteiten"];
+    for (const tabLabel of goneTabs) {
+      await expect(page.getByRole("tab", { name: tabLabel })).not.toBeVisible();
     }
   });
 

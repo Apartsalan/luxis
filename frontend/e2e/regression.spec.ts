@@ -389,8 +389,8 @@ test.describe("Regressie demo-bugs DF138 + S139", () => {
     await page.goto(`/zaken/${caseId}`);
     await page.waitForLoadState("domcontentloaded");
 
-    // Klik op Financieel/Vorderingen tab.
-    const tab = page.getByRole("button", { name: /Vorderingen|Financieel/ });
+    // Klik op de Financieel-tab (S216: bundelt vorderingen+betalingen; role="tab").
+    const tab = page.getByRole("tab", { name: "Financieel" });
     if (await tab.count()) {
       await tab.first().click({ force: true });
     }

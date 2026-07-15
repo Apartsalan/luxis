@@ -305,6 +305,7 @@ class OutlookProvider(EmailProvider):
         subject: str,
         body_html: str,
         cc: list[str] | None = None,
+        bcc: list[str] | None = None,
         reply_to_message_id: str | None = None,
         references_root: str | None = None,  # Graph threadt zelf; niet gebruikt
         attachments: list[OutgoingAttachment] | None = None,
@@ -329,6 +330,7 @@ class OutlookProvider(EmailProvider):
                 body_html=body_html,
                 to=to,
                 cc=cc,
+                bcc=bcc,
             )
 
         # Build the sendMail request body
@@ -347,6 +349,11 @@ class OutlookProvider(EmailProvider):
         if cc:
             message_body["message"]["ccRecipients"] = [
                 {"emailAddress": {"address": addr}} for addr in cc
+            ]
+
+        if bcc:
+            message_body["message"]["bccRecipients"] = [
+                {"emailAddress": {"address": addr}} for addr in bcc
             ]
 
         if attachments:
@@ -514,6 +521,7 @@ class OutlookProvider(EmailProvider):
         body_html: str,
         to: list[str],
         cc: list[str] | None = None,
+        bcc: list[str] | None = None,
     ) -> str:
         """Reply to an existing message via Graph API reply endpoint."""
         reply_body: dict = {
@@ -526,6 +534,11 @@ class OutlookProvider(EmailProvider):
         if cc:
             reply_body["message"]["ccRecipients"] = [
                 {"emailAddress": {"address": addr}} for addr in cc
+            ]
+
+        if bcc:
+            reply_body["message"]["bccRecipients"] = [
+                {"emailAddress": {"address": addr}} for addr in bcc
             ]
 
         async with httpx.AsyncClient() as client:

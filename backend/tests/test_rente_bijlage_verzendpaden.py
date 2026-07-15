@@ -26,6 +26,7 @@ from app.auth.service import create_access_token
 from app.cases.models import Case, CaseFile
 from app.collections.models import Claim
 from app.documents.models import GeneratedDocument
+from app.email.oauth_models import EmailAccount
 from app.incasso.models import IncassoPipelineStep
 from app.relations.models import Contact
 
@@ -223,15 +224,28 @@ async def test_compose_eml_no_rente_bijlage_for_bv(
 # ── Primaire verzendknop (compose/send, S212-review) ───────────────────────────
 
 
-def _provider_mocks(sent: dict):
-    """Mock-set voor een geslaagde /compose/send: account + provider + token."""
+def _provider_mock(sent: dict):
+    """Mock-provider die de send-kwargs vangt (voor een geslaagde /compose/send)."""
     async def fake_send_message(_token, **kwargs):
         sent.update(kwargs)
         return "msg-1"
 
-    provider = SimpleNamespace(send_message=fake_send_message)
-    account = SimpleNamespace(provider="outlook", email_address="incasso@example.nl")
-    return provider, account
+    return SimpleNamespace(send_message=fake_send_message)
+
+
+async def _make_email_account(
+    db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID
+) -> EmailAccount:
+    """Een écht verbonden account in de test-DB — nodig sinds /compose/send de
+    verstuurde mail vastlegt (SyncedEmail.email_account_id is een harde koppeling)."""
+    acc = EmailAccount(
+        id=uuid.uuid4(), tenant_id=tenant_id, user_id=user_id,
+        provider="outlook", email_address="incasso@example.nl",
+        access_token_enc=b"x", refresh_token_enc=b"x",
+    )
+    db.add(acc)
+    await db.flush()
+    return acc
 
 
 @pytest.mark.asyncio
@@ -242,10 +256,11 @@ async def test_compose_send_attaches_rente_bijlage_private(
     renteoverzicht bij een eerste-sommatie-sjabloon voor een privé aansprakelijke
     wederpartij — voorheen ging dit pad zonder sjabloontype en dus zonder bijlage."""
     case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    account = await _make_email_account(db, test_tenant.id, test_user.id)
     await db.commit()
 
     sent: dict = {}
-    provider, account = _provider_mocks(sent)
+    provider = _provider_mock(sent)
     token = create_access_token(str(test_user.id), str(test_tenant.id))
     with (
         patch("app.email.compose_router.get_email_account", new_callable=AsyncMock, return_value=account),
@@ -283,10 +298,11 @@ async def test_compose_send_no_rente_bijlage_for_bv(
 ):
     """Keerzijde op de primaire knop: BV → geen bijlage (attachments blijft None)."""
     case = await _case_with_opposing(db, test_tenant.id, legal_form="Besloten Vennootschap")
+    account = await _make_email_account(db, test_tenant.id, test_user.id)
     await db.commit()
 
     sent: dict = {}
-    provider, account = _provider_mocks(sent)
+    provider = _provider_mock(sent)
     token = create_access_token(str(test_user.id), str(test_tenant.id))
     with (
         patch("app.email.compose_router.get_email_account", new_callable=AsyncMock, return_value=account),
@@ -333,13 +349,14 @@ async def test_compose_send_auto_attaches_invoice_pdfs(
         description="Factuur 2026-001", principal_amount=Decimal("5000.00"),
         default_date=date(2026, 1, 1), invoice_file_id=cf.id,
     ))
+    account = await _make_email_account(db, test_tenant.id, test_user.id)
     await db.commit()
     file_dir = tmp_path / str(test_tenant.id) / str(case.id)
     file_dir.mkdir(parents=True)
     (file_dir / "f1.pdf").write_bytes(b"%PDF-fact")
 
     sent: dict = {}
-    provider, account = _provider_mocks(sent)
+    provider = _provider_mock(sent)
     token = create_access_token(str(test_user.id), str(test_tenant.id))
     with (
         patch("app.email.compose_router.UPLOADS_BASE", tmp_path),
@@ -369,3 +386,84 @@ async def test_compose_send_auto_attaches_invoice_pdfs(
     attachments = sent["attachments"]
     filenames = sorted(a.filename for a in attachments)
     assert filenames == ["factuur-2026-001.pdf", "renteoverzicht_2026-96500.pdf"]
+
+
+# ── S220 hoofdvondst N1: afzender-vangrail + logging + BCC op /compose/send ─────
+
+
+@pytest.mark.asyncio
+async def test_compose_send_logs_prefers_tenant_account_and_passes_bcc(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """De primaire verstuurknop legt de mail nu vast (EmailLog + SyncedEmail +
+    dossier-activiteit), verstuurt via het KANTOOR-account (incasso@) ook al klikt
+    iemand met een eigen mailbox, en geeft BCC door aan de provider."""
+    from sqlalchemy import select
+
+    from app.cases.models import CaseActivity
+    from app.email.models import EmailLog
+    from app.email.synced_email_models import SyncedEmail
+
+    # Kantoor-mailadres instellen + twee verbonden accounts: kantoor (incasso@) en
+    # persoonlijk (seidony@). De vangrail moet het kantoor-account kiezen.
+    test_tenant.email = "incasso@kestinglegal.nl"
+    office = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="outlook", email_address="incasso@kestinglegal.nl",
+        access_token_enc=b"x", refresh_token_enc=b"x",
+    )
+    personal = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="outlook", email_address="seidony@kestinglegal.nl",
+        access_token_enc=b"x", refresh_token_enc=b"x",
+    )
+    db.add_all([office, personal])
+    case = await _case_with_opposing(db, test_tenant.id, legal_form=None)
+    await db.commit()
+
+    sent: dict = {}
+    provider = _provider_mock(sent)
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    with (
+        patch("app.email.compose_router.get_provider", return_value=provider),
+        patch("app.email.compose_router.get_valid_access_token", new_callable=AsyncMock, return_value="tok"),
+        patch("app.email.compose_router.imap_smtp_kwargs", return_value={}),
+    ):
+        resp = await client.post(
+            "/api/email/compose/send",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "to": ["debiteur@example.nl"],
+                "bcc": ["kopie@kantoor.nl"],
+                "subject": "Eerste sommatie",
+                "body_html": "<p>Betaal nu.</p>",
+                "case_id": str(case.id),
+                "already_branded": True,
+            },
+        )
+
+    assert resp.status_code == 200, resp.text
+    # BCC doorgegeven aan de provider
+    assert sent["bcc"] == ["kopie@kantoor.nl"]
+
+    # Afzender-vangrail: verstuurd via het kantoor-account (niet het persoonlijke)
+    synced = (
+        await db.execute(select(SyncedEmail).where(SyncedEmail.case_id == case.id))
+    ).scalars().all()
+    assert len(synced) == 1
+    assert synced[0].from_email == "incasso@kestinglegal.nl"
+    assert synced[0].direction == "outbound"
+
+    # Logging: EmailLog + dossier-activiteit
+    logs = (
+        await db.execute(select(EmailLog).where(EmailLog.case_id == case.id))
+    ).scalars().all()
+    assert len(logs) == 1 and logs[0].status == "sent"
+    acts = (
+        await db.execute(
+            select(CaseActivity).where(
+                CaseActivity.case_id == case.id, CaseActivity.activity_type == "email"
+            )
+        )
+    ).scalars().all()
+    assert any("verzonden" in a.title.lower() for a in acts)

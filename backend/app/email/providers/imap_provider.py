@@ -540,6 +540,7 @@ class ImapProvider(EmailProvider):
         subject: str,
         body_html: str,
         cc: list[str] | None = None,
+        bcc: list[str] | None = None,
         reply_to_message_id: str | None = None,
         references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
@@ -604,8 +605,15 @@ class ImapProvider(EmailProvider):
                 att.data, maintype=maintype, subtype=subtype, filename=att.filename
             )
 
+        # BCC gaat bewust NIET in een header (blind voor de andere ontvangers) maar
+        # wél in de SMTP-envelop. Daarom expliciet de ontvangerslijst meegeven i.p.v.
+        # aiosmtplib de headers laten lezen; de Verzonden-kopie hieronder blijft zo
+        # ook vrij van een zichtbare Bcc-regel.
+        recipients = list(to) + list(cc or []) + list(bcc or [])
         await aiosmtplib.send(
             msg,
+            sender=username,
+            recipients=recipients,
             hostname=smtp_host,
             port=smtp_port,
             start_tls=True,

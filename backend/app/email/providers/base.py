@@ -158,6 +158,7 @@ class EmailProvider(ABC):
         subject: str,
         body_html: str,
         cc: list[str] | None = None,
+        bcc: list[str] | None = None,
         reply_to_message_id: str | None = None,
         references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
@@ -171,6 +172,7 @@ class EmailProvider(ABC):
             subject: Email subject.
             body_html: HTML body content.
             cc: Optional CC recipients.
+            bcc: Optional BCC recipients (blind — niet zichtbaar voor andere ontvangers).
             reply_to_message_id: If replying, the original message ID.
             references_root: Root of the conversation thread (References-root of
                 the original), so a reply shares the whole chain's thread id.

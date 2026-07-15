@@ -141,16 +141,8 @@ async def send_with_attachment(
     if account is None:
         account = await get_email_account(db, user_id, tenant_id)
 
-    email_log = EmailLog(
-        tenant_id=tenant_id,
-        case_id=case_id,
-        document_id=document_id,
-        template="batch_document_send",
-        recipient=to,
-        subject=subject,
-        status="sent",
-    )
-
+    status = "sent"
+    error_message: str | None = None
     provider_message_id: str | None = None
     used_provider = False
 
@@ -192,8 +184,8 @@ async def send_with_attachment(
                 to,
             )
         except Exception as e:
-            email_log.status = "failed"
-            email_log.error_message = f"Provider ({account.provider}): {e}"
+            status = "failed"
+            error_message = f"Provider ({account.provider}): {e}"
             logger.error("Email via provider mislukt naar %s: %s", to, e)
     else:
         # SMTP fallback — email does NOT appear in email client's Sent folder
@@ -207,16 +199,76 @@ async def send_with_attachment(
             )
             logger.info("Email met bijlage verzonden via SMTP naar %s", to)
         except Exception as e:
-            email_log.status = "failed"
-            email_log.error_message = f"SMTP: {e}"
+            status = "failed"
+            error_message = f"SMTP: {e}"
             logger.error("Email via SMTP mislukt naar %s: %s", to, e)
 
+    return await write_outbound_log(
+        db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        to=[to],
+        subject=subject,
+        body_html=body_html,
+        account=account,
+        provider_message_id=provider_message_id,
+        used_provider=used_provider,
+        status=status,
+        error_message=error_message,
+        cc=cc,
+        case_id=case_id,
+        document_id=document_id,
+        recipient_name=recipient_name,
+        sender_name=sender_name,
+        template="batch_document_send",
+        has_attachments=bool(attachments),
+    )
+
+
+async def write_outbound_log(
+    db: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    to: list[str],
+    subject: str,
+    body_html: str,
+    account,  # EmailAccount | None
+    provider_message_id: str | None,
+    used_provider: bool,
+    status: str,
+    error_message: str | None = None,
+    cc: list[str] | None = None,
+    case_id: uuid.UUID | None = None,
+    document_id: uuid.UUID | None = None,
+    recipient_name: str = "",
+    sender_name: str = "",
+    template: str = "batch_document_send",
+    has_attachments: bool = False,
+) -> EmailLog:
+    """Leg het spoor van één uitgaande mail vast — gedeeld door alle verzendroutes.
+
+    Schrijft altijd een EmailLog en, bij een geslaagde provider-verzending, een
+    SyncedEmail (zichtbaar in Correspondentie) + CaseActivity (dossier-tijdlijn).
+    Zo is elke verstuurde mail terugvindbaar in Luxis, ongeacht de route
+    (S220 — het compose-verstuurpad legde niets vast).
+    """
+    email_log = EmailLog(
+        tenant_id=tenant_id,
+        case_id=case_id,
+        document_id=document_id,
+        template=template,
+        recipient=", ".join(to)[:320],
+        subject=subject,
+        status=status,
+        error_message=error_message,
+    )
     db.add(email_log)
     await db.flush()
     await db.refresh(email_log)
 
-    # Create SyncedEmail record for provider sends (shows in correspondentie tab)
-    if used_provider and provider_message_id and email_log.status == "sent":
+    # SyncedEmail voor geslaagde provider-verzendingen (toont in Correspondentie)
+    if used_provider and provider_message_id and status == "sent" and account is not None:
         synced = SyncedEmail(
             tenant_id=tenant_id,
             email_account_id=account.id,
@@ -225,24 +277,24 @@ async def send_with_attachment(
             subject=subject,
             from_email=account.email_address,
             from_name=sender_name,
-            to_emails=json.dumps([to]),
+            to_emails=json.dumps(to),
             cc_emails=json.dumps(cc or []),
             snippet=subject[:200],
             body_text="",
             body_html=body_html,
             direction="outbound",
             is_read=True,
-            has_attachments=bool(attachments),
+            has_attachments=has_attachments,
             matched_by="outbound_send",
             email_date=datetime.now(UTC),
             synced_at=datetime.now(UTC),
         )
         db.add(synced)
 
-    # Log case activity
-    if case_id and email_log.status == "sent":
-        label = recipient_name or to
-        method = account.provider if used_provider else "SMTP"
+    # Dossier-activiteit
+    if case_id and status == "sent":
+        label = recipient_name or (to[0] if to else "")
+        method = account.provider if (used_provider and account) else "SMTP"
         activity = CaseActivity(
             tenant_id=tenant_id,
             case_id=case_id,

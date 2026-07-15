@@ -37,11 +37,12 @@ from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import (
     get_email_account,
     get_provider,
+    get_tenant_send_account,
     get_valid_access_token,
     imap_smtp_kwargs,
 )
 from app.email.providers.base import OutgoingAttachment
-from app.email.send_service import ensure_branded_body
+from app.email.send_service import ensure_branded_body, write_outbound_log
 from app.email.sync_service import EMAIL_ATTACHMENTS_BASE
 from app.shared.exceptions import BadRequestError, NotFoundError
 
@@ -98,6 +99,7 @@ class InlineAttachment(BaseModel):
 class ComposeRequest(BaseModel):
     to: list[str] = Field(..., min_length=1, description="Ontvangers e-mailadressen")
     cc: list[str] | None = Field(default=None, description="CC e-mailadressen")
+    bcc: list[str] | None = Field(default=None, description="BCC e-mailadressen")
     subject: str = Field(..., max_length=500, description="Onderwerp")
     body_html: str = Field(..., max_length=100000, description="HTML body")
     reply_to_message_id: str | None = Field(
@@ -130,7 +132,7 @@ class ComposeRequest(BaseModel):
     # bijlage op dít (primaire) verzendpad — zelfde mechanisme als het .eml-pad.
     template_type: str | None = Field(default=None, max_length=50)
 
-    @field_validator("to", "cc")
+    @field_validator("to", "cc", "bcc")
     @classmethod
     def _validate_email_addresses(cls, v: list[str] | None) -> list[str] | None:
         for addr in v or []:
@@ -143,6 +145,7 @@ class CaseComposeRequest(BaseModel):
     recipient_email: str = Field(..., max_length=320)
     recipient_name: str | None = Field(default=None, max_length=200)
     cc: list[str] | None = None
+    bcc: list[str] | None = None
     subject: str = Field(..., max_length=500)
     body: str = Field(default="", max_length=50000, description="Platte tekst body")
     body_html: str | None = Field(
@@ -327,7 +330,13 @@ async def send_via_provider(
                 db, user.tenant_id, data.case_id, user.id, gate_reason
             )
 
-    account = await get_email_account(db, user.id, user.tenant_id)
+    # S220 (hoofdvondst N1) — afzender-vangrail: verstuur voortaan via het vaste
+    # kantoorkanaal (incasso@), niet via de mailbox van wie klikt (patroon B13, zoals
+    # batch/follow-up). Valt terug op het account van de gebruiker als er geen
+    # kantoor-account verbonden is (geen regressie).
+    account = await get_tenant_send_account(db, user.tenant_id)
+    if account is None:
+        account = await get_email_account(db, user.id, user.tenant_id)
     if not account:
         raise BadRequestError("Geen e-mailaccount verbonden. Ga naar Instellingen → E-mail.")
 
@@ -433,20 +442,41 @@ async def send_via_provider(
             subject=data.subject,
             body_html=body_html,
             cc=data.cc,
+            bcc=data.bcc,
             reply_to_message_id=data.reply_to_message_id,
             references_root=data.references_root,
             attachments=resolved_attachments or None,
             from_name=from_name,
             **imap_smtp_kwargs(account),
         )
-        return ComposeResponse(
-            success=True,
-            provider_message_id=message_id,
-            message="E-mail verzonden via " + account.provider,
-        )
     except Exception as e:
         logger.error(f"Email verzenden mislukt via {account.provider}: {e}")
         raise BadRequestError(f"Verzenden mislukt: {e}")
+
+    # S220 (hoofdvondst N1) — spoor vastleggen zodat de verstuurde mail terugvindbaar
+    # is op de dossier-tijdlijn + in Correspondentie (voorheen legde dit pad NIETS vast).
+    await write_outbound_log(
+        db,
+        tenant_id=user.tenant_id,
+        user_id=user.id,
+        to=data.to,
+        subject=data.subject,
+        body_html=body_html,
+        account=account,
+        provider_message_id=message_id,
+        used_provider=True,
+        status="sent",
+        cc=data.cc,
+        case_id=data.case_id,
+        sender_name=from_name,
+        template=data.template_type or "compose_send",
+        has_attachments=bool(resolved_attachments),
+    )
+    return ComposeResponse(
+        success=True,
+        provider_message_id=message_id,
+        message="E-mail verzonden via " + account.provider,
+    )
 
 
 @router.post("/draft", response_model=ComposeResponse)
@@ -562,6 +592,8 @@ async def compose_eml_from_case(
     msg["To"] = data.recipient_email
     if data.cc:
         msg["Cc"] = ", ".join(data.cc)
+    if data.bcc:
+        msg["Bcc"] = ", ".join(data.bcc)
     if sender_email:
         msg["From"] = formataddr((sender_name, sender_email))
     # No Date header → Outlook treats it as unsent/draft

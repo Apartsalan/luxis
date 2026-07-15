@@ -521,6 +521,7 @@ async def send_document(
         case_id=case.id,
         document_id=doc.id,
         recipient_name=data.recipient_name or "",
+        send_as_tenant_account=True,
     )
     # Houd het sjabloontype vast op de log (send_with_attachment zet een generieke
     # template-naam) — handig voor het correspondentie-overzicht.

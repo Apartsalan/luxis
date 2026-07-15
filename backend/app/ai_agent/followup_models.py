@@ -18,6 +18,9 @@ class RecommendationStatus(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
     EXECUTED = "executed"
+    # S220 punt 13: automatisch gesloten omdat de stap buiten de follow-up om
+    # veranderde (advies verouderd). Telt niet als open → scanner is weer vrij.
+    SUPERSEDED = "superseded"
 
 
 class RecommendedAction(StrEnum):

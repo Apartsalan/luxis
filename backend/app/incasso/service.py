@@ -572,7 +572,48 @@ async def move_case_to_step(
     db.add(activity)
     await db.flush()
 
+    # S220 punt 13 — zombie-opruiming: sluit openstaande follow-up-adviezen van dit
+    # dossier zodra de stap wisselt. Een advies dat bij de oude stap hoorde is nu
+    # verouderd (dubbel-verstuur-risico) én blokkeert de scanner (die ontdubbelt per
+    # dossier op een PENDING-advies). Het advies dat déze wissel triggert staat op dat
+    # moment op APPROVED (EXECUTED komt erná), dus alleen PENDING wordt geraakt.
+    await supersede_open_recommendations(
+        db, tenant_id, case.id, reason=f"Stap gewijzigd naar '{target_step.name}'"
+    )
+
     return history
+
+
+async def supersede_open_recommendations(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    *,
+    reason: str,
+) -> int:
+    """Sluit alle openstaande (PENDING) follow-up-adviezen van een dossier.
+
+    Gebruikt bij een stap-wissel: het advies hoorde bij de oude stap en is nu
+    verouderd. Retourneert het aantal gesloten adviezen.
+    """
+    from app.ai_agent.followup_models import FollowupRecommendation, RecommendationStatus
+
+    now = datetime.now(UTC)
+    result = await db.execute(
+        select(FollowupRecommendation).where(
+            FollowupRecommendation.tenant_id == tenant_id,
+            FollowupRecommendation.case_id == case_id,
+            FollowupRecommendation.status == RecommendationStatus.PENDING,
+        )
+    )
+    recs = result.scalars().all()
+    for rec in recs:
+        rec.status = RecommendationStatus.SUPERSEDED
+        rec.reviewed_at = now
+        rec.review_note = f"Automatisch gesloten: {reason} (advies verouderd)."
+    if recs:
+        await db.flush()
+    return len(recs)
 
 
 async def mark_current_step_communication_sent(

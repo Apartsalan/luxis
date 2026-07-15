@@ -76,6 +76,11 @@ Frontend: `hooks/use-workflow.ts`, `taken/page.tsx`, `layout/app-sidebar.tsx`, `
   Prod DB byte-identiek aan schijf (45658). Back-up: `/root/backup_managed_templates_pre_s221_font.sql`.
 - **Open vraag lettertype:** in mijn tests is elke boodschap al één lettertype; als Arsalan het
   mengsel ergens specifieks zag (mail/scherm), schermafbeelding nodig om precies dát te fixen.
+- **Verzoekschrift EXACTE opmaak (→ verse sessie, keuze Arsalan):** hij wil Lisanne's PDF-lay-out
+  (crème-balk + logo) precies, per zaak ingevuld. Haar bron is een BaseNet-merge-sjabloon (38
+  Velocity-velden, loops, keuze-logica) → omzetten naar Luxis docxtpl. Volledig onderzoek +
+  mapping + valkuilen in `docs/sessions/PLAN-verzoekschrift-exacte-nabouw.md`. Huidige logo-versie
+  blijft intussen live als tussenoplossing.
 - **Backfills 3.3** blijven Fable (S222): uitzoeken wát de 470 classificaties/14 intake/8
   concepten/3 adviezen precies zijn vóór er iets gesloten wordt.
 - Terugzet-knop/undo-toast (3.4) + maillijst-chip zijn typecheck- + deploy-geverifieerd, niet

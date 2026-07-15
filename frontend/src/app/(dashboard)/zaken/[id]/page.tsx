@@ -54,6 +54,7 @@ import ActiviteitenTab from "./components/ActiviteitenTab";
 import { StaphistorieTab } from "./components/StaphistorieTab";
 import CaseConflictBanner from "./components/CaseConflictBanner";
 import BasenetWarningBanner from "./components/BasenetWarningBanner";
+import AgendaBlok from "./components/AgendaBlok";
 import NoteDialog, { type NoteMode } from "./components/NoteDialog";
 import DossierSidebar from "./components/DossierSidebar";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -634,6 +635,7 @@ export default function ZaakDetailPage() {
                   <BasenetWarningBanner zaak={zaak} />
                   <CaseConflictBanner zaak={zaak} />
                   <CaseActionFeed caseId={id} onNavigate={setActiveTab} />
+                  <AgendaBlok caseId={id} />
                   {/* S216: Taken-tabblad verhuisd naar een blok op Overzicht —
                       volledige functionaliteit (toevoegen/afronden/overslaan +
                       "Concept openen"). De aparte /taken-pagina blijft bestaan. */}

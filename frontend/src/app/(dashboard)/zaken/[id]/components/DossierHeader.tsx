@@ -25,7 +25,9 @@ import {
 import {
   getTemplateLabel,
 } from "@/hooks/use-documents";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
+import { useWorkflowTasks } from "@/hooks/use-workflow";
+import { useTimeEntrySummary } from "@/hooks/use-time-entries";
 import { CASE_STATUS_BADGE_FALLBACK, DEBTOR_TYPE_BADGE } from "@/lib/status-constants";
 import { TONES } from "@/lib/tones";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
@@ -163,6 +165,20 @@ export default function DossierHeader({
 }: DossierHeaderProps) {
   const [renteDialogOpen, setRenteDialogOpen] = useState(false);
   const { data: financials } = useFinancialSummary(isIncasso ? zaak.id : undefined);
+  // S216 blok 3: sturing + geldstrook voor een gewone (niet-incasso) zaak.
+  // Beide queries delen de cache met het takenblok + de zijbalk → geen extra call.
+  const { data: tasks } = useWorkflowTasks({ case_id: zaak.id });
+  const { data: timeSummary } = useTimeEntrySummary({ case_id: zaak.id });
+  const openTasks = (tasks ?? []).filter((t) =>
+    ["pending", "due", "overdue"].includes(t.status)
+  );
+  const nextTask =
+    [...openTasks]
+      .filter((t) => t.due_date)
+      .sort(
+        (a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+      )[0] ?? openTasks[0];
+  const ohwAmount = timeSummary?.total_amount ?? 0;
 
   // DF2-09: Pipeline step selector for incasso cases.
   // S166 (punt 4, "B2C anders dan B2B"): toon alleen de stappen die gelden voor het
@@ -384,6 +400,60 @@ export default function DossierHeader({
         </div>
       )}
 
+      {/* S216 blok 3: sturing voor een gewone zaak — geen incasso-fasebalk, wel
+          de eerstvolgende openstaande taak + afsluiten/heropenen (die knop zat
+          voorheen alleen in de incasso-fasebalk, dus een advieszaak was niet af
+          te sluiten). */}
+      {!isIncasso && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          {nextTask ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Volgende stap</p>
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {nextTask.title}
+                  </p>
+                </div>
+              </div>
+              {nextTask.due_date && (
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  {formatDateShort(nextTask.due_date)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Geen openstaande stap — voeg een taak toe op het Overzicht.
+            </p>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+            {!isTerminal ? (
+              <button
+                onClick={() => handleStatusChange("afgesloten")}
+                disabled={updateStatusPending}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                Dossier afsluiten
+              </button>
+            ) : (
+              <button
+                onClick={() => handleStatusChange("in_behandeling")}
+                disabled={updateStatusPending}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 text-primary px-3 py-1.5 text-xs font-medium hover:bg-primary/20 transition-colors disabled:opacity-50"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Dossier heropenen
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* T2: Workflow-suggestie banner */}
       {statusSuggestion && (
         <div className={`rounded-xl border ${TONES.warning.border} ${TONES.warning.surface} p-4 flex items-center justify-between gap-4 animate-fade-in`}>
@@ -446,6 +516,27 @@ export default function DossierHeader({
             <p className="text-xs text-muted-foreground">Openstaand</p>
             <p className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
               {financials ? formatCurrency(financials.total_outstanding) : "—"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* S216 blok 3: geldstrook voor een gewone zaak — onderhanden werk (uren ×
+          tarief) + budget. Alleen tonen als er iets te tonen is (anders leeg). */}
+      {!isIncasso && (ohwAmount > 0 || (zaak.budget != null && zaak.budget > 0)) && (
+        <div className="grid grid-cols-2 divide-x divide-border overflow-hidden rounded-xl border border-border bg-card">
+          <div className="px-4 py-3">
+            <p className="text-xs text-muted-foreground">Onderhanden werk</p>
+            <p className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
+              {formatCurrency(ohwAmount)}
+            </p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs text-muted-foreground">Budget</p>
+            <p className="mt-0.5 text-lg font-bold text-foreground tabular-nums">
+              {zaak.budget != null && zaak.budget > 0
+                ? formatCurrency(zaak.budget)
+                : "—"}
             </p>
           </div>
         </div>

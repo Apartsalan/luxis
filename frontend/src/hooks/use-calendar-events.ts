@@ -109,6 +109,21 @@ export function useUserCalendarEvents(dateFrom: string, dateTo: string) {
   });
 }
 
+// S216 blok 3: aankomende afspraken/zittingen van één dossier (voor het
+// agenda-blok op het dossier-overzicht). Haalt alle events van de zaak; de
+// component filtert op toekomstig + sorteert. Een dossier heeft er weinig.
+export function useCaseEvents(caseId: string | undefined) {
+  return useQuery<UserCalendarEvent[]>({
+    queryKey: ["calendar-events", "case", caseId],
+    queryFn: async () => {
+      const res = await api(`/api/calendar/events?case_id=${caseId}`);
+      if (!res.ok) throw new Error("Kan afspraken niet laden");
+      return res.json();
+    },
+    enabled: !!caseId,
+  });
+}
+
 export function useCreateCalendarEvent() {
   const qc = useQueryClient();
   return useMutation({

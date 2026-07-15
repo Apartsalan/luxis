@@ -43,6 +43,12 @@ dus onaangeroerd.
 af) vervangen door: stapnaam + categoriekleur + "X dagen in deze stap" (step_entered_at
 nu in de case-respons) + volgende stap.
 
+**Blok 4.5 — timeout Eerste→Tweede 7→4 (punt 15), GEDAAN op prod.** step_transitions
+id 44c31bf7… condition `{"days": 4}` (GO Arsalan; stap-wachttijd + workflow = 4).
+Data-only, geen deploy. **Beslissingen S221 (Arsalan):** backfills NIET zelf uitvoeren
+→ Fable zoekt eerst uit wat de items zijn; auto-concept AAN voor Verweer + Algemene/overig
+maar PAS ná de begrip-eerst-antwoord-route (nut hangt af van antwoordkwaliteit).
+
 ### Gewijzigde bestanden
 Backend: `email/{compose_router,send_service,subject,providers/*}.py`, `documents/{router,
 schemas,docx_service}.py`, `incasso/{service,html_renderer}.py`, `ai_agent/{followup_service,

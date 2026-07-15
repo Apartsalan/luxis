@@ -12,18 +12,20 @@ S219-onderzoek.md` (alle vindplaatsen). NIET opnieuw uitzoeken wat daar staat.
 KvK-productiesleutel binnen? JA → eerst de rechtsvorm-backfill
 (`docs/archief/prompts/PROMPT-S217.md`), daarna dit. NEE → direct door.
 
-## Beslissingen vooraf ophalen bij Arsalan (bundelen)
-1. **Auto-concept per categorie (Blok 4.2):** welke inkomende-mail-categorieën mogen
-   automatisch een concept klaarzetten (nooit auto-versturen)? Nu staat alles UIT
-   behalve verweer (`orchestrator.py:78`).
-2. **Timeout Eerste→Tweede 7→4 dagen (Blok 4.5):** GO voor de ene UPDATE in
-   step_transitions? (stap-wachttijd = 4, workflow Lisanne = 4).
-3. **Backfills (Blok 3.3):** GO om te sluiten: 3 verouderde adviezen
-   (IN100607/IN100613/IN100521) + 470 pending classificaties (import-ruis vóór 13-07)
-   + 14 intake-ruiskandidaten + 8 verouderde AI-concepten (oud adres). Dry-run + telling eerst.
-4. **Sjabloon-herzaaiingen:** GO voor Courier→Calibri (DOCX-default) + verzoekschrift-
-   bijlage vervangen door "CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 1612).pdf"
-   uit de projectmap (S210-reseed-flow: backup DB-sjablonen → gerichte reseed).
+## Beslissingen (Arsalan, 15-07 einde S220)
+1. ✅ **Timeout Eerste→Tweede 7→4: GEDAAN in S220** (step_transitions id
+   44c31bf7-4e17-44f9-b47c-38442bf8aafd, condition `{"days": 4}`, geverifieerd). Niets meer doen.
+2. **Auto-concept per categorie (Blok 4.2):** AAN voor **Verweer** (staat al) +
+   **Algemene vraag/overig**. Arsalan's kanttekening: nut hangt af van de antwoord-
+   KWALITEIT → doe dit PAS ná de begrip-eerst-antwoord-route (Blok 4.3) goed werkt en
+   getoetst is; niet daarvoor aanzetten.
+3. **Backfills (Blok 3.3): NIET zelf uitvoeren.** Arsalan wil eerst dat Fable uitzoekt
+   wát die items precies zijn (3 adviezen / 470 classificaties / 14 intake / 8 concepten)
+   vóór er iets gesloten wordt. → Fable-taak (S222), niet in de Opus-bouw.
+4. **Sjabloon-herzaaiingen:** nog GO vragen — Courier→Calibri (DOCX-default) +
+   verzoekschrift-bijlage vervangen door "CONCEPT VERZOEKSCHRIFT FAILLISSEMENT
+   (aangepast 1612).pdf" uit de projectmap (S210-reseed-flow: backup DB-sjablonen →
+   gerichte reseed).
 
 ## Blokken (aflopend risico/waarde)
 
@@ -33,11 +35,13 @@ KvK-productiesleutel binnen? JA → eerst de rechtsvorm-backfill
   kolom toevoegen of matchen op case+subject). IN100521 had er 2 identiek.
 - **3.4 Skipped-taken:** weergave voor overgeslagen taken (18 onzichtbaar) +
   herstel-knop (skipped/completed → pending) + undo-toast direct na de pijltjes-klik.
-- **3.3 Backfills:** uitvoeren na GO (zie boven).
+- **3.3 Backfills:** NIET in de Opus-bouw — Fable zoekt eerst uit wát de items zijn
+  (beslissing Arsalan). Pas daarna eventueel opruimen.
 
 ### Blok 4 — AI-keten
 - Classificatie direct ná mailsync triggeren (race weg; latency → ~5 min).
-- Auto-concept per categorie AAN (na beslissing).
+- Auto-concept per categorie AAN voor Verweer + Algemene/overig — PAS ná de
+  antwoord-route hieronder goed werkt (beslissing Arsalan).
 - **Antwoord-route begrip-eerst (punt 21):** AI leest inkomende mail + volledige
   dossiercontext en schrijft zélf het antwoord met spelregels (niets verzinnen, geen
   toezeggingen, bedragen alleen uit dossier, bij twijfel escaleren). Typen/bibliotheek =
@@ -45,7 +49,7 @@ KvK-productiesleutel binnen? JA → eerst de rechtsvorm-backfill
   uit `docs/plans/PLAN-ai-antwoord-testronde.md`** (goud-set + genereer-script + checklist;
   niets versturen/op echte dossiers). Bouw het script; analyse-iteraties = Fable (S222).
 - Voortgangsindicator bij genereren + bestaand-concept-check (3.2).
-- Timeout 7→4 (na GO). Eén review-scherm classificatie+concept naast elkaar.
+- (Timeout 7→4 is al gedaan in S220.) Eén review-scherm classificatie+concept naast elkaar.
 - **AI-concept-HTML-tabellen (punt 11):** prompt laten HTML-tabellen maken i.p.v.
   spatie-uitlijning (SYSTEM_PROMPT in `ai_agent/incasso_email_prompts.py`).
 

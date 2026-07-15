@@ -57,8 +57,12 @@ PROMPT-S217/S218 → `docs/archief/prompts/`. Geen code, geen prod-mutaties, nie
 
 ### Bekende issues
 - De 8 open AI-concepten dragen allemaal het oude adres — NIET versturen vóór S220 blok 2/3.
-- Beslispunten Lisanne openstaand: derdengelden-IBAN (Rabo?) + kosten in verzoekschrift;
-  aanhef-stijl; welke categorieën auto-concept aan.
+- Beslispunten: ✅ derdengelden-IBAN (Rabo = stichting, klopt) + ✅ kosten verzoekschrift
+  (kloppen) — beantwoord door Arsalan 15-07. Nog open: aanhef-stijl; welke categorieën
+  auto-concept aan.
+- Punt 21-richting aangepast (Arsalan 15-07): géén vaste antwoord-typen bijbouwen —
+  antwoord-route wordt begrip-eerst (AI leest mail + dossier en schrijft zelf het antwoord,
+  met spelregels; typen/bibliotheek = referentie). Verwerkt in PROMPT-S220 blok 4.3.
 - From-adres Bayar-mail = afleiding (code + afwezigheid in incasso@-Sent); sluitstuk =
   blik in Arsalans M365 Verzonden-map. CC-verlies = code-hypothese, in S220 testen.
 

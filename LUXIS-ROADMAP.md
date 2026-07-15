@@ -77,8 +77,9 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > "nog een week"): stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
 > `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212; besluit B
 > actief tot de backfill.)
-> ⚠️ **Beslispunten Lisanne** (uit S219): klopt de Rabo-derdengeldenrekening in het
-> verzoekschrift nog (kantoor zit op KNAB)? Kloppen EUR 2.195 / € 412,61 nog?
+> ✅ **Beslispunten beantwoord (Arsalan 15-07):** Rabo = stichting derdengelden, klopt;
+> bedragen EUR 2.195 / € 412,61 kloppen. Punt 21-richting: antwoord-route wordt
+> begrip-eerst (geen vaste antwoord-typen bijbouwen) — zie PROMPT-S220 blok 4.3.
 >
 > 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag;

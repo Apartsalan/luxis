@@ -60,9 +60,9 @@ Bij elk blok geldt de S219-les: **fix het patroon op ALLE routes, niet alleen de
    DOCX document-default Courier → Calibri (styles.xml, `_generate_templates.py`).
 6. **verzoekschrift_bijlage** vervangen door de juiste PDF uit de projectmap
    ("CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 1612).pdf").
-7. ⚠️ **Beslispunten Lisanne vóór dit blok live gaat**: klopt de Rabo-derdengelden-
-   rekening in het verzoekschrift nog (kantoor zit op KNAB)? Kloppen EUR 2.195,00 /
-   € 412,61 nog? Antwoorden verwerken (bij voorkeur: uit instellingen laten komen).
+7. ✅ **Beslispunten BEANTWOORD (Arsalan, 15-07)**: de Rabo-rekening ís de stichting
+   derdengelden — klopt; de bedragen EUR 2.195,00 / € 412,61 kloppen ook. Niets wijzigen
+   aan die waarden. (Uit instellingen laten komen blijft een voorstel, geen opdracht.)
 8. Ná sanering: de 8 open 'generated' AI-concepten zijn verouderd (oud adres) —
    regenereren of afvoeren (met akkoord Arsalan, zie blok 3).
 
@@ -82,9 +82,16 @@ Bij elk blok geldt de S219-les: **fix het patroon op ALLE routes, niet alleen de
 1. Classificatie direct ná de mailsync triggeren (race weg; latency → ~5 min).
 2. **Auto-concept weer AAN per categorie** (staat uit in orchestrator.py:78) — eerst
    kort met Arsalan afstemmen welke categorieën; nooit auto-verzenden, alleen klaarzetten.
-3. Punt 21: verweer-type "identiteits-/informatievraag" + promptregel "beantwoord
-   letterlijke vragen concreet (klantnaam, factuurnummers, leveringscontext)" —
-   `defense_types.py` + `incasso_email_prompts.py`.
+3. Punt 21 (RICHTING Arsalan 15-07: géén extra typen/vaste antwoorden): herontwerp de
+   ANTWOORD-route (replies op debiteursmails). De AI krijgt de inkomende mail + volledige
+   dossiercontext (klantnaam, facturen, AV, eerdere correspondentie, betaalstand) en
+   schrijft zélf een passend antwoord — begrip eerst, geen sjabloon-dwang. Spelregels in
+   de prompt: juridische toon, niets verzinnen, geen toezeggingen/kwijtschelding, bedragen
+   alleen uit het dossier, bij twijfel of complexiteit escaleren naar Lisanne. De
+   verweer-bibliotheek + 13 typen blijven als REFERENTIEMATERIAAL (voorbeelden), niet als
+   dwingend sjabloon. Vaste sjablonen blijven alleen voor de standaard-stapbrieven.
+   Test met de echte IN100607-mail ("wie zijn jullie en wie is jullie klant"): het
+   antwoord moet kantoor + klant + factuurcontext benoemen.
 4. Punt 20: voortgangsindicator bij genereren + bestaand-concept-check (blok 3.2);
    optioneel prompt slanker.
 5. Punt 15: timeout Eerste→Tweede 7 → 4 dagen (step_transitions, één UPDATE na akkoord).

@@ -105,11 +105,11 @@ compose-dialog met sjabloonkeuze `faillissement_dreigbrief` hangt hem automatisc
 (email-compose-dialog.tsx:459); de AI-concept-route (geen sjabloonkeuze) niet → zelfde
 wortel als punt 1. Juiste PDF staat klaar in de projectmap; huidige render verliest logo's.
 
-### Geld-kritisch beslispunt (Lisanne):
+### Geld-kritisch beslispunt — BEANTWOORD (Arsalan, 15-07):
 `verzoekschrift_faillissement.docx` bevat hardcoded "IBAN NL20 RABO 0388 5065 20 t.n.v.
-Stichting Beheer Derdengelden Kesting Legal" — gelijk aan de huidige
-derdengelden-instelling, maar het kantoor-IBAN is inmiddels KNAB. Vraag: klopt de
-Rabo-derdengeldenrekening nog? Ook hardcoded: aanvraagkosten EUR 2.195,00 / € 412,61.
+Stichting Beheer Derdengelden Kesting Legal" + kosten EUR 2.195,00 / € 412,61.
+Antwoord: de Rabo-rekening ís de stichting derdengelden en klopt; de bedragen kloppen
+ook. Waarden dus NIET wijzigen (uit instellingen laten komen blijft een los voorstel).
 
 ---
 
@@ -128,9 +128,11 @@ Rabo-derdengeldenrekening nog? Ook hardcoded: aanvraagkosten EUR 2.195,00 / € 
   IN100521 kreeg 2 identieke concepten 5 min uit elkaar (dubbelklik).
 - Punt 21: vraag "Wie zijn jullie en wie is jullie klant!" → classificatie
   betwisting/betwisting_ongemotiveerd (0.95) → standaard-weerlegging; klantnaam
-  (LegalWork B.V.) staat wél in de promptcontext maar wordt niet genoemd. Fix: apart
-  type "identiteits-/informatievraag" + promptregel "beantwoord letterlijke vragen concreet
-  (klantnaam + facturen)".
+  (LegalWork B.V.) staat wél in de promptcontext maar de prompt verbiedt vrij antwoorden
+  ("sjabloon is leidend"). RICHTING (Arsalan 15-07): géén extra typen/vaste antwoorden —
+  de antwoord-route herontwerpen naar begrip-eerst: AI leest mail + dossiercontext en
+  schrijft zelf het antwoord, met spelregels (niets verzinnen, geen toezeggingen, bij
+  twijfel escaleren); typen/bibliotheek blijven referentie, geen dwang. Zie PROMPT-S220 blok 4.3.
 - Punt 24-ontwerp: wachtrij-cutoff op go-live + auto-draft weer aan per categorie +
   classificatie direct ná sync triggeren + één scherm met approve-and-execute
   (endpoint bestaat al).

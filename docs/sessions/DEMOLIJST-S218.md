@@ -175,9 +175,14 @@ Bron: demo Arsalan (+ eerdere vondsten dezelfde dag, sessie S218). Status per pu
     en wie is de klant" → concept geeft nietszeggend standaardantwoord i.p.v. klantnaam/facturen
     te benoemen. Simpele gevallen moet de AI goed beantwoorden.
     ONDERZOCHT (S219): vraag werd "ongemotiveerde betwisting" → standaard-weerlegging; de
-    klantnaam zit wél in de promptcontext maar de instructie zegt niet dat vragen beantwoord
-    moeten worden. Fix: apart type "identiteits-/informatievraag" + promptregel "beantwoord
-    letterlijke vragen concreet (klantnaam, facturen, leveringscontext)".
+    klantnaam zit wél in de promptcontext maar de AI-instructie verbiedt vrij antwoorden
+    ("sjabloon is leidend, alleen invullen").
+    RICHTING AANGEPAST (Arsalan, 15-07): GEEN extra hokjes/vaste antwoorden bijbouwen.
+    Voor antwoorden op debiteursmails moet de AI de mail écht begrijpen en zelf een passend
+    antwoord schrijven op basis van de volledige dossiercontext (klant, facturen, AV, eerdere
+    correspondentie) — zoals je de mail in Claude zou plakken, maar mét de dossierdata.
+    Spelregels blijven (juridische toon, niets verzinnen, geen toezeggingen, bij twijfel
+    escaleren). Vaste sjablonen blijven alleen voor de standaard-stapbrieven (sommaties).
 22. *(vervallen — samengevoegd met 24)*
 
 ## E. Taken

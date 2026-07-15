@@ -53,6 +53,7 @@ export interface CaseDetail extends CaseSummary {
   billing_contact: { id: string; name: string } | null;
   assigned_to: { id: string; full_name: string } | null;
   incasso_step_id: string | null;
+  step_entered_at: string | null;
   payment_term_days: number | null;
   collection_strategy: string | null;
   debtor_notes: string | null;

@@ -57,12 +57,13 @@ const PHASE_LABELS: Record<string, string> = {
   afsluiting: "Afsluiting",
 };
 
-const PHASE_ACTIVE_CLASSES: Record<string, string> = {
-  minnelijk: `ring-4 ${TONES.info.stepper}`,
-  gerechtelijk: `ring-4 ${TONES.legal.stepper}`,
-  regeling: `ring-4 ${TONES.warning.stepper}`,
-  administratief: `ring-4 ${TONES.neutral.solid} text-white ring-slate-500/20`,
-  afsluiting: `ring-4 ${TONES.success.stepper}`,
+// Categoriekleur voor de compacte fasebalk (S220 punt 14).
+const PHASE_DOT: Record<string, string> = {
+  minnelijk: "bg-sky-500",
+  gerechtelijk: "bg-violet-500",
+  regeling: "bg-amber-500",
+  administratief: "bg-slate-500",
+  afsluiting: "bg-emerald-500",
 };
 
 // ── VerjaringBadge ──────────────────────────────────────────────────────────
@@ -219,11 +220,20 @@ export default function DossierHeader({
     currentStep && PHASE_ORDER.includes(currentStep.step_category)
       ? currentStep.step_category
       : null;
-  const currentPhaseIndex = currentPhase
-    ? PHASE_ORDER.indexOf(currentPhase)
-    : -1;
   const isTerminal =
     zaak.status === "betaald" || zaak.status === "afgesloten";
+
+  // S220 punt 14 — compacte fasebalk: dagen-in-stap + volgende stap i.p.v. het
+  // afvinken van niet-doorlopen fasen (dat suggereerde onterecht dat een fase
+  // doorlopen was). step_entered_at is de bron; volgende = eerstvolgende actieve stap.
+  const daysInStep = zaak.step_entered_at
+    ? Math.floor((Date.now() - new Date(zaak.step_entered_at).getTime()) / 86_400_000)
+    : null;
+  const nextStep = currentStep
+    ? [...activeSteps]
+        .filter((s: PipelineStep) => s.sort_order > currentStep.sort_order)
+        .sort((a: PipelineStep, b: PipelineStep) => a.sort_order - b.sort_order)[0]
+    : undefined;
 
   return (
     <>
@@ -287,51 +297,36 @@ export default function DossierHeader({
       {/* Phase Pipeline Stepper — only for incasso cases */}
       {isIncasso && (
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-          {currentPhase && (
-            <div className="flex items-center gap-1 overflow-x-auto pb-1">
-            {PHASE_ORDER.map((phase, index) => {
-              const isActive = phase === currentPhase;
-              const isPast = currentPhaseIndex >= 0 && index < currentPhaseIndex;
-              return (
-                <div key={phase} className="flex items-center flex-1 min-w-0">
-                  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
-                        isActive
-                          ? PHASE_ACTIVE_CLASSES[phase] ?? `${TONES.neutral.solid} text-white`
-                          : isPast
-                            ? `${TONES.success.solid} text-white`
-                            : "border-2 border-border text-muted-foreground"
-                      }`}
-                    >
-                      {isPast ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-                    <span
-                      className={`text-[10px] sm:text-xs font-medium text-center leading-tight ${
-                        isActive
-                          ? "text-foreground font-semibold"
-                          : isPast
-                            ? TONES.success.text
-                            : "text-muted-foreground"
-                      }`}
-                    >
-                      {PHASE_LABELS[phase]}
-                    </span>
-                  </div>
-                  {index < PHASE_ORDER.length - 1 && (
-                    <div
-                      className={`hidden sm:block h-0.5 w-4 shrink-0 mx-0.5 ${
-                        isPast ? TONES.success.solidSoft : "bg-border"
-                      }`}
-                    />
-                  )}
-                </div>
-              );
-            })}
+          {currentStep && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-2">
+                <span
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                    PHASE_DOT[currentStep.step_category] ?? "bg-slate-400"
+                  }`}
+                />
+                <span className="text-base font-semibold text-foreground">
+                  {currentStep.name}
+                </span>
+              </span>
+              {currentPhase && (
+                <span className="text-xs text-muted-foreground">
+                  {PHASE_LABELS[currentPhase]}
+                </span>
+              )}
+              {daysInStep !== null && !isTerminal && (
+                <span className="text-xs text-muted-foreground">
+                  ·{" "}
+                  {daysInStep === 0
+                    ? "vandaag gestart"
+                    : `${daysInStep} ${daysInStep === 1 ? "dag" : "dagen"} in deze stap`}
+                </span>
+              )}
+              {nextStep && !isTerminal && (
+                <span className="text-xs text-muted-foreground">
+                  · Volgende: {nextStep.name}
+                </span>
+              )}
             </div>
           )}
 

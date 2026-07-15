@@ -285,6 +285,7 @@ class CaseResponse(BaseModel):
     assigned_to: UserBrief | None
     contact_terms_id: uuid.UUID | None = None  # S140
     incasso_step_id: uuid.UUID | None = None
+    step_entered_at: datetime | None = None  # S220: dagen-in-stap voor de fasebalk
     date_opened: date
     date_closed: date | None
     total_principal: Decimal

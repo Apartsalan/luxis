@@ -9199,3 +9199,52 @@ Valkuil genoteerd in `scripts/basenet/mapping.py` voor de volgende import.
   meenemen bij de fase-heropening (nu vindbaar via `basenet_origin_phase`).
 - Voorstel (niet gebouwd, scope): filter "Nog te openen" op de dossierlijst voor de fase-heropening.
 - WIK-rentebijlage: plan klaar, wacht op KvK-API (Arsalan vraagt aan). Bouwen = Opus.
+
+## Sessie 208 (13 juli 2026, Fable max — BaseNet-veldaudit + EINDVERIFICATIE rente, read-only)
+
+### Samenvatting
+Hoofdtaak S208-prompt: veld-voor-veld door `Xml_02-07-2026_2400.zip` (137 bestanden; 9 in
+gebruik door de import; elk veld geteld op vul-graad, kruising met `mapping.py`). Rapport:
+`docs/research/S208-veldaudit-basenet.md`. Daarna, op verzoek Arsalan, volledige
+eindverificatie van de rente-stand ("100% zeker, dan afsluiten").
+
+- **Veld-gaten gevonden (gekwantificeerd):** `incinteresttype` per dossier nooit geïmporteerd;
+  99 dossiernotities (`pmemo`) + 13 waarschuwingen (`palert`, o.a. "Failliet", "NIET REAGEREN
+  — procedure aanhangig") niet overgenomen; geen land-veld in Luxis-adressen (52 buitenlandse
+  relaties); provisie 15% (39 zaken, veld bestaat), 28 geboortedatums, 3 BSN's (bewust NIET
+  importeren). Betalingen-aan-cliënt bewezen compleet: €165.697,01 == BaseNet-totaal, 0 verschil.
+- **Rente-scare ontzenuwd + eigen rapport gecorrigeerd.** Eerste rapportversie zette 19
+  "afwijkende" zaken als beslispunt — fout: besluit S188b (9 juli, plan §4b) dekte ze al
+  (b2b holding-opdrachtgevers = AV 2%/mnd). Rapport zelfde dag gecorrigeerd; les: eerst het
+  heropening-draaiboek lezen. BaseNet-rentetypen ontcijferd via terugrekening (type 1≈handels-
+  rente, 2≈consumentenrente, 5=2%/jr, 9=geen; controlegroep type 8 = 24,6–27,5%/jr ✓).
+- **EINDVERIFICATIE (alles prod, read-only):** kruistabel 607/607 in exact 4 besluit-conforme
+  combinaties (519 AV-b2b contractual 2,00 / 79 AV-b2c statutory / 8 commercial / 1 statutory);
+  machine-match per dossier tegen BaseNet-type: 0 onverklaard (497 identiek, 75 S207c-besluit,
+  22 S188b-besluit, 5 b2c-laag, 8 niet-AV); claims-laag 1.373/1.373 monthly (S188b-valkuil
+  afwezig); freeze 580/580 gesloten bevroren + 0/27 open + 5 "vóór opening" allemaal exact =
+  laatste betaaldatum; motor 107/107 rentetests groen; **ijk IN100197 op prod = €723,31 op de
+  cent** (peildatum 8 juli; BaseNet-spec rentedatum 7 juli — S207c-notitie "9 maart" was de
+  oude exportdatum) en t/m vandaag €725,39 (loopt correct door).
+- **Plan §4b bijgewerkt:** rente-SQL bij heropening VERVALLEN (al uitgerold + geverifieerd);
+  verouderde regel "enkelvoudig/`contractual_compound=false`" gecorrigeerd naar samengesteld
+  (gouden test `tests/test_interest_monthly.py`). Zonder fix zou een letterlijke uitvoering
+  de uitrol deels terugdraaien.
+
+### Gewijzigde bestanden
+- `docs/research/S208-veldaudit-basenet.md` (nieuw, 2× gecorrigeerd/aangevuld)
+- `docs/plans/PLAN-heropening-werkvoorraad.md` (§4b)
+- Geen code, geen migraties, geen prod-mutaties. Deploy niet nodig.
+
+### Bekende issues
+- Parallelle S207-track had tijdens deze sessie niet-gecommitte wijzigingen in de werkkopie
+  (email/invoices + tests) — bewust niet aangeraakt/gecommit.
+- `PROMPT-S207.md` bewust NIET gearchiveerd (actieve parallelle track); archief-regel weer
+  toepassen zodra die track afgesloten is.
+- Untracked in projectmap: `Renteberekening.docx/pdf` (bron gouden test) — bewust untracked
+  laten, zoals de AV-PDF's.
+
+### Volgende sessie
+S209: de kleine import-backfills (notities/alerts → dossiernotitie; land-veld + migratie;
+provisie/geboortedatums) elk na akkoord; WIK-bijlage zodra KvK-API er is; verse export
+voorbereiden. Prompt: `docs/sessions/PROMPT-S209.md`.

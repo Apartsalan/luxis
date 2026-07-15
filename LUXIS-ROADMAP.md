@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 15 juli 2026 einde middag (S218, Fable — demo Arsalan). **Demolijst van 25 punten** (`docs/sessions/DEMOLIJST-S218.md`) + 3 oorzaken bewezen: rente-PDF ontbreekt op de AI-concept-route (eerste échte sommatie IN100613 ging zonder), follow-up toont verouderde adviezen én blokkeert nieuwe (3/15), wachttijden-inconsistentie 7-vs-4 dagen. Niets gebouwd (bewuste keuze). **Volgende: S219 (`docs/sessions/PROMPT-S219.md`, Fable) — demolijst-onderzoek; daarna S220 (Opus) bouwen; KvK-backfill houdt voorrang zodra de sleutel er is.**
+**Laatst bijgewerkt:** 15 juli 2026 avond (S219, Fable — demolijst-onderzoek COMPLEET, read-only). Alle 25 punten onderzocht + 4 nieuwe vondsten (o.a. verstuurknop gebruikt persoonlijk account en logt niets; oud adres zit in de stap-mailteksten in de DB → alle AI-concepten). Rapport: `docs/sessions/S219-onderzoek.md`; bouwdraaiboek: `docs/sessions/PROMPT-S220.md` (6 blokken). **Volgende: S220 (Opus) bouwen → Fable-review; KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -57,22 +57,28 @@
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **S218 AFGEROND (15 juli — demo Arsalan → demolijst, read-only).** De demo werd foutenjacht:
-> **`docs/sessions/DEMOLIJST-S218.md`** bundelt 25 punten (verzenden/bijlagen, sjablonen-inhoud,
-> follow-up/pijplijn, mail & AI, taken). Drie oorzaken al bewezen: (1) **AI-concept-route stuurt
-> geen rente-PDF mee** — de eerste échte sommatie (IN100613, VOF) ging zonder; bijlage-beslissing
-> hangt aan het sjabloontype dat een AI-concept niet meegeeft; fix-ontwerp klaar. (2) **Follow-up
-> ruimt adviezen niet op** na uitvoeren buiten de knop om én een open advies blokkeert elk nieuw
-> advies per dossier (3/15 verouderd). (3) Wachttijden: sommaties elke 4 dagen (advies) maar
-> timeout-regel Eerste→Tweede staat op 7 — gelijktrekken. Details: SESSION-NOTES S218.
+> ✅ **S219 AFGEROND (15 juli — demolijst-onderzoek, Fable, read-only).** Alle 25 demopunten
+> onderzocht (oorzaak + fixrichting per punt in `DEMOLIJST-S218.md`, metingen in
+> `docs/sessions/S219-onderzoek.md`) + eigen demoronde met 4 nieuwe vondsten:
+> (N1) **de compose-verstuurknop verstuurt via het persoonlijke account van de klikker
+> (Bayar-sommatie vertrok als seidony@) én legt niets vast** — mail onvindbaar in Luxis;
+> zelfde afzender-gat op de documentenroute; (N2) het oude adres + kesting@ zit in de
+> 6 stap-mailteksten in de database → álle AI-concepten erven het (ook de verstuurde);
+> (N3) zombie-concepten na stap-wissel (dubbel-verstuur-risico); (N4) zes stille
+> ruis-wachtrijen (470 classificaties, 348 notificaties, …). AI-keten gemeten: 7,5 min
+> automatisch tot verweer-concept; handmatig concept 39 s; auto-concept staat bewust uit.
 >
-> 🔎 **VOLGENDE (S219, Fable): demolijst-onderzoek** — `docs/sessions/PROMPT-S219.md`
-> (sjablonen-audit matrix, AI-keten snelheid/kwaliteit, fasebalk + concurrenten, kleinere punten)
-> → daarna **S220 (Opus): bouwen** volgens draaiboek (incl. UX-sprint-punten uit PROMPT-S218,
-> die sprint is niet uitgevoerd) → daarna Fable-review.
-> **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~16 juli; contractdocs zijn binnen):
-> stappen + kosten (726 relaties, ~€14,50/run) in `docs/archief/prompts/PROMPT-S215.md` STAND +
-> PROMPT-S217. (WIK-rentebijlage LIVE sinds S212; besluit B actief tot de backfill.)
+> 🔨 **VOLGENDE (S220, Opus): bouwen** — `docs/sessions/PROMPT-S220.md`, 6 blokken:
+> (1) verzendpad-fundament (vangrail incasso@ + logging + brieftype-afleiding + CC/BCC +
+> onderwerp-bouwer), (2) stap-teksten & sjablonen saneren, (3) zombie-opruiming,
+> (4) AI-keten sneller, (5) fasebalk + UX-rest (incl. oude PROMPT-S218-punten),
+> (6) beslismemo b2b/b2c. Daarna Fable-review.
+> **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~22 juli, Arsalan 15-07:
+> "nog een week"): stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
+> `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212; besluit B
+> actief tot de backfill.)
+> ⚠️ **Beslispunten Lisanne** (uit S219): klopt de Rabo-derdengeldenrekening in het
+> verzoekschrift nog (kantoor zit op KNAB)? Kloppen EUR 2.195 / € 412,61 nog?
 >
 > 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag;

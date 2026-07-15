@@ -2,10 +2,71 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 15 juli 2026 einde middag (S218, demo Arsalan → demolijst 25 punten + 3 oorzaken bewezen; niets gebouwd).
-**Laatste feature/fix:** geen code-wijziging — onderzoekssessie. Eerste échte sommatie verstuurd (IN100613, AI-concept-route) MET rente in de tekst maar ZONDER rente-PDF: oorzaak bewezen, zie entry S218.
-**Openstaand:** demolijst 25 punten (`docs/sessions/DEMOLIJST-S218.md`); KvK-sleutel (~16 juli) → backfill (PROMPT-S217, voorrang); UX-sprint-punten (PROMPT-S218, niet uitgevoerd — gaan mee in S220); mailslot OPEN.
-**Volgende sessie:** S219 (`docs/sessions/PROMPT-S219.md`, Fable): onderzoek demolijst (sjablonen-audit, AI-keten, fasebalk); daarna S220 (Opus) bouwen.
+**Laatst bijgewerkt:** 15 juli 2026 avond (S219, Fable — demolijst-onderzoek compleet: alle 25 punten + 4 nieuwe vondsten, read-only).
+**Laatste feature/fix:** geen code — onderzoekssessie. Hoofdvondst: de compose-verstuurknop verstuurt via het persoonlijke account van de klikker én legt niets vast; oud adres zit in de 6 stap-mailteksten in de DB. Rapport: `docs/sessions/S219-onderzoek.md`.
+**Openstaand:** bouwdraaiboek S220 klaar (`docs/sessions/PROMPT-S220.md`, 6 blokken); KvK-sleutel ~22 juli (Arsalan 15-07: "nog een week") → backfill voorrang; mailslot OPEN; beslispunten Lisanne: derdengelden-IBAN + kosten verzoekschrift.
+**Volgende sessie:** S220 (`docs/sessions/PROMPT-S220.md`, Opus): bouwen volgens draaiboek; daarna Fable-review.
+
+## Sessie 219 (15 juli 2026 avond, Fable — demolijst-onderzoek, read-only, ALLE punten onderzocht)
+
+### Samenvatting
+Elk demolijst-punt tot op de bodem uitgezocht (prod-DB read-only, code, logs, live
+API-render) + een eigen "demoronde": elk demopunt veralgemeend naar een faalpatroon en
+daarop breed gejaagd. Volledige metingen: `docs/sessions/S219-onderzoek.md`; status per
+punt bijgewerkt in `DEMOLIJST-S218.md`; bouwdraaiboek: `PROMPT-S220.md` (6 blokken).
+KvK-voorrang-check gedaan: sleutel duurt nog ~een week (Arsalan).
+
+**Hoofdvondst (N1) — de compose-verstuurknop (dé route van de echte Bayar-sommatie):**
+(a) verstuurt via het persoonlijke account van de klikker (voorkeur outlook → seidony@
+i.p.v. incasso@; vangrail B13 bestaat alleen op batch/follow-up; zelfde gat op het
+document-verzendpad) en (b) legt NIETS vast (geen EmailLog/SyncedEmail/CaseActivity) →
+de verstuurde sommatie is onvindbaar in Luxis. Bewijs: mail nergens in synced_emails,
+niet in incasso@-INBOX.Sent (sync leest die map), IN100613 heeft alleen pipeline-activiteiten.
+
+**Punt 6/7 (oud adres/handtekening) — bron gevonden:** kantoor-instellingen zijn al
+goed; Word- en code-mailsjablonen renderen vers correct (live geverifieerd). Het rot zit
+in de 6 stap-mailteksten in `incasso_pipeline_steps` (letterlijke BaseNet-kopieën met
+"IJsbaanpad 9" + kesting@) — de AI-prompt kopieert de footer trouw → álle 10 AI-concepten
+oud adres (ook verse van 15-07); de verstuurde Bayar-mail had oud adres + kesting@.
+Plus: verzoekschrift-bijlage-Word (Lisanne-origineel) hardcoded IJsbaanpad; verzoekschrift-
+DOCX hardcoded oud Rabo-derdengelden-IBAN + kosten (beslispunt Lisanne).
+
+**AI-keten gemeten:** echte casus mail→verweer-concept = 7,5 min automatisch (sync 5' +
+classificatie 6' + race); handmatige generatie 39 s ($0,07, sonnet, prompt 41k tekens,
+geen UI-voortgang → dubbelklik-concepten); auto-concept staat bewust UIT voor alles
+behalve verweer (orchestrator.py:78); 470 pending classificaties (import-backfill) +
+348 ongelezen notificaties maken wachtrijen onbruikbaar. Punt 21 ("wie zijn jullie"):
+geclassificeerd als ongemotiveerde betwisting → standaard-weerlegging zonder klantnaam.
+
+**Fasebalk (punt 14) bewezen:** `isPast = index < currentPhaseIndex` vinkt alle fasen
+links van de huidige af, doorlopen of niet; "administratief" is geen fase. Clio/Smokeball
+tonen status als label/milestone + tijd-in-fase. Voorstel: stapnaam + dagen-in-stap.
+
+**Nieuwe vondsten demoronde:** (N3) zombie-concepten — IN100613 heeft 2 open "Eerste
+sommatie"-concepten terwijl de zaak op Tweede staat (dubbel-verstuur-risico met oud
+adres), IN100521 2 identieke; (N4) zes stille ruis-wachtrijen (470/348/79/14/3/18);
+route×waarborg-matrix: 14-dagenbrief-gate + mailslot overal gedekt, afzender-vangrail
+en logging niet. Kleinere punten: BCC bestaat nérgens in de keten; CC-veld verliest
+niet-gecommitte invoer stil; taak IN100607 bestaat nog (status skipped, geen weergave/
+herstelknop, 18 taken zo onzichtbaar); timeout 7-vs-4 bevestigd in step_transitions.
+
+### Gewijzigde bestanden
+Alleen docs: `docs/sessions/S219-onderzoek.md` (nieuw), `docs/sessions/PROMPT-S220.md`
+(nieuw), `docs/sessions/DEMOLIJST-S218.md` (status per punt), SESSION-NOTES, roadmap.
+PROMPT-S217/S218 → `docs/archief/prompts/`. Geen code, geen prod-mutaties, niets verstuurd.
+
+### Bekende issues
+- De 8 open AI-concepten dragen allemaal het oude adres — NIET versturen vóór S220 blok 2/3.
+- Beslispunten Lisanne openstaand: derdengelden-IBAN (Rabo?) + kosten in verzoekschrift;
+  aanhef-stijl; welke categorieën auto-concept aan.
+- From-adres Bayar-mail = afleiding (code + afwezigheid in incasso@-Sent); sluitstuk =
+  blik in Arsalans M365 Verzonden-map. CC-verlies = code-hypothese, in S220 testen.
+
+### Volgende sessie
+S220 (`docs/sessions/PROMPT-S220.md`, Opus): 6 blokken — verzendpad-fundament (vangrail+
+logging+brieftype-afleiding+CC/BCC+onderwerp-bouwer), stap-teksten saneren, zombie-
+opruiming, AI-keten sneller, fasebalk+UX-rest, beslismemo b2b/b2c. KvK-backfill voorrang
+zodra sleutel binnen (~22 juli).
 
 ## Sessie 218 (15 juli 2026 middag/einde middag, Fable — demo Arsalan: demolijst + 3 oorzaken bewezen, read-only)
 
@@ -524,51 +585,3 @@ S210 (`docs/sessions/PROMPT-S210.md`): provisie-afspraak uitvragen bij Arsalan �
 Mode) → eventueel provisie-backfill; land-regel in de Word-sjablonen. WIK-bijlage zodra KvK-API er is.
 
 
-## Sessie 208 (13 juli 2026, Fable max — BaseNet-veldaudit + EINDVERIFICATIE rente, read-only)
-
-### Samenvatting
-Hoofdtaak S208-prompt: veld-voor-veld door `Xml_02-07-2026_2400.zip` (137 bestanden; 9 in
-gebruik door de import; elk veld geteld op vul-graad, kruising met `mapping.py`). Rapport:
-`docs/research/S208-veldaudit-basenet.md`. Daarna, op verzoek Arsalan, volledige
-eindverificatie van de rente-stand ("100% zeker, dan afsluiten").
-
-- **Veld-gaten gevonden (gekwantificeerd):** `incinteresttype` per dossier nooit geïmporteerd;
-  99 dossiernotities (`pmemo`) + 13 waarschuwingen (`palert`, o.a. "Failliet", "NIET REAGEREN
-  — procedure aanhangig") niet overgenomen; geen land-veld in Luxis-adressen (52 buitenlandse
-  relaties); provisie 15% (39 zaken, veld bestaat), 28 geboortedatums, 3 BSN's (bewust NIET
-  importeren). Betalingen-aan-cliënt bewezen compleet: €165.697,01 == BaseNet-totaal, 0 verschil.
-- **Rente-scare ontzenuwd + eigen rapport gecorrigeerd.** Eerste rapportversie zette 19
-  "afwijkende" zaken als beslispunt — fout: besluit S188b (9 juli, plan §4b) dekte ze al
-  (b2b holding-opdrachtgevers = AV 2%/mnd). Rapport zelfde dag gecorrigeerd; les: eerst het
-  heropening-draaiboek lezen. BaseNet-rentetypen ontcijferd via terugrekening (type 1≈handels-
-  rente, 2≈consumentenrente, 5=2%/jr, 9=geen; controlegroep type 8 = 24,6–27,5%/jr ✓).
-- **EINDVERIFICATIE (alles prod, read-only):** kruistabel 607/607 in exact 4 besluit-conforme
-  combinaties (519 AV-b2b contractual 2,00 / 79 AV-b2c statutory / 8 commercial / 1 statutory);
-  machine-match per dossier tegen BaseNet-type: 0 onverklaard (497 identiek, 75 S207c-besluit,
-  22 S188b-besluit, 5 b2c-laag, 8 niet-AV); claims-laag 1.373/1.373 monthly (S188b-valkuil
-  afwezig); freeze 580/580 gesloten bevroren + 0/27 open + 5 "vóór opening" allemaal exact =
-  laatste betaaldatum; motor 107/107 rentetests groen; **ijk IN100197 op prod = €723,31 op de
-  cent** (peildatum 8 juli; BaseNet-spec rentedatum 7 juli — S207c-notitie "9 maart" was de
-  oude exportdatum) en t/m vandaag €725,39 (loopt correct door).
-- **Plan §4b bijgewerkt:** rente-SQL bij heropening VERVALLEN (al uitgerold + geverifieerd);
-  verouderde regel "enkelvoudig/`contractual_compound=false`" gecorrigeerd naar samengesteld
-  (gouden test `tests/test_interest_monthly.py`). Zonder fix zou een letterlijke uitvoering
-  de uitrol deels terugdraaien.
-
-### Gewijzigde bestanden
-- `docs/research/S208-veldaudit-basenet.md` (nieuw, 2× gecorrigeerd/aangevuld)
-- `docs/plans/PLAN-heropening-werkvoorraad.md` (§4b)
-- Geen code, geen migraties, geen prod-mutaties. Deploy niet nodig.
-
-### Bekende issues
-- Parallelle S207-track had tijdens deze sessie niet-gecommitte wijzigingen in de werkkopie
-  (email/invoices + tests) — bewust niet aangeraakt/gecommit.
-- `PROMPT-S207.md` bewust NIET gearchiveerd (actieve parallelle track); archief-regel weer
-  toepassen zodra die track afgesloten is.
-- Untracked in projectmap: `Renteberekening.docx/pdf` (bron gouden test) — bewust untracked
-  laten, zoals de AV-PDF's.
-
-### Volgende sessie
-S209: de kleine import-backfills (notities/alerts → dossiernotitie; land-veld + migratie;
-provisie/geboortedatums) elk na akkoord; WIK-bijlage zodra KvK-API er is; verse export
-voorbereiden. Prompt: `docs/sessions/PROMPT-S209.md`.

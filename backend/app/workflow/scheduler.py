@@ -301,6 +301,17 @@ async def email_auto_sync() -> None:
                     learn_tenant_id, e,
                 )
 
+        # S221 blok 4 — classificeer meteen ná de sync i.p.v. te wachten op de losse
+        # 6-minuten-cyclus. Die eigen cyclus draaide soms nét vóór de sync klaar was,
+        # waardoor een verse mail een hele ronde bleef liggen (~7,5 min i.p.v. ~5).
+        # classify_new_emails pakt alleen ongeclassificeerde mail, dus geen dubbel werk
+        # met de reguliere job. Alleen zinvol als er nieuwe mail binnenkwam + een sleutel is.
+        if total_new > 0:
+            from app.config import settings as app_settings
+
+            if app_settings.anthropic_api_key:
+                await ai_email_classification()
+
         logger.info(
             f"Scheduler: email auto-sync klaar — "
             f"{len(account_ids)} accounts, {total_new} nieuw, {total_linked} gekoppeld"

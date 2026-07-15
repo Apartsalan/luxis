@@ -299,9 +299,9 @@ def render_template_html(
         greeting_text = f"Geachte mevrouw {contact}"
     elif contact:
         # salutation onbekend maar wel naam → toch generiek (geen gok)
-        greeting_text = "Geachte heer/mevrouw"
+        greeting_text = "Geachte heer, mevrouw"
     else:
-        greeting_text = "Geachte heer/mevrouw"
+        greeting_text = "Geachte heer, mevrouw"
     # Vervang varianten van de template-aanhef
     html = html.replace("Geachte heer mevrouw,", f"{greeting_text},")
     html = html.replace("Geachte heer mevrouw", greeting_text)

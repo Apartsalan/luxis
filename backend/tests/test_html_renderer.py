@@ -142,7 +142,7 @@ def test_lone_comma_template_without_contact_uses_generic():
         invoices=[],
         amounts={},
     )
-    assert "Geachte heer/mevrouw," in out
+    assert "Geachte heer, mevrouw," in out
 
 
 _XXX_TEMPLATE = """

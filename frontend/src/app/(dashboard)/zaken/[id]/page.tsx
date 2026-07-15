@@ -8,7 +8,6 @@ import {
   Bot,
   Briefcase,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -17,8 +16,6 @@ import {
   File,
   Loader2,
   Mail,
-  Receipt,
-  Users,
   Workflow,
   X,
   Zap,
@@ -50,12 +47,12 @@ import DossierHeader from "./components/DossierHeader";
 import DetailsTab from "./components/DetailsTab";
 import TijdregistratieTab from "./components/TijdregistratieTab";
 import UrenTab from "./components/UrenTab";
-import { VorderingenFinancieelTab, BetalingenDerdengeldenTab } from "./components/incasso";
+import { VorderingenFinancieelTab, BetalingenDerdengeldenTab, ProvisieSettingsSection } from "./components/incasso";
 import { FacturenTab, DocumentenTab } from "./components/DocumentenTab";
 import CorrespondentieTab from "./components/CorrespondentieTab";
 import ActiviteitenTab from "./components/ActiviteitenTab";
-import PartijenTab from "./components/PartijenTab";
 import { StaphistorieTab } from "./components/StaphistorieTab";
+import CaseConflictBanner from "./components/CaseConflictBanner";
 import DossierSidebar from "./components/DossierSidebar";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CaseActionFeed } from "@/components/case-action-feed/CaseActionFeed";
@@ -450,10 +447,13 @@ export default function ZaakDetailPage() {
   // G5: Keyboard shortcuts (Linear-style)
   // Tab IDs for numeric shortcuts — order matches the tab bar
   const isIncasso = hasModule("incasso") && zaak?.case_type === "incasso";
+  // S216: teruggebracht van 11/8 naar 7/6 tabbladen. Financieel bundelt
+  // vorderingen+betalingen+regeling+derdengelden (alleen incasso); Tijdlijn is
+  // het oude Activiteiten; Taken/Partijen zijn naar Overzicht verhuisd.
   const tabIds = [
-    "overzicht", "taken", "uren",
-    ...(isIncasso ? ["vorderingen", "betalingen", "staphistorie"] : []),
-    "facturen", "documenten", "correspondentie", "activiteiten", "partijen",
+    "overzicht",
+    ...(isIncasso ? ["financieel"] : []),
+    "facturen", "documenten", "correspondentie", "uren", "tijdlijn",
   ];
 
   useEffect(() => {
@@ -548,27 +548,31 @@ export default function ZaakDetailPage() {
 
   const tabs = [
     { id: "overzicht", label: "Overzicht", icon: Briefcase },
-    { id: "taken", label: "Taken", icon: CheckCircle2 },
-    { id: "uren", label: "Uren", icon: Clock },
-    ...(isIncasso
-      ? [
-          { id: "vorderingen", label: "Vorderingen", icon: Euro },
-          { id: "betalingen", label: "Betalingen", icon: Receipt },
-          { id: "staphistorie", label: "Staphistorie", icon: Workflow },
-        ]
-      : []),
+    ...(isIncasso ? [{ id: "financieel", label: "Financieel", icon: Euro }] : []),
     { id: "facturen", label: "Facturen", icon: CreditCard },
     { id: "documenten", label: "Documenten", icon: File },
     { id: "correspondentie", label: "Correspondentie", icon: Mail },
-    { id: "activiteiten", label: "Activiteiten", icon: Clock },
-    { id: "partijen", label: "Partijen", icon: Users },
+    { id: "uren", label: "Uren", icon: Clock },
+    { id: "tijdlijn", label: "Tijdlijn", icon: Workflow },
   ];
 
+  // S216: oude tab-ids (uit deep-links, notificaties, de actiefeed en externe
+  // pagina's als /derdengelden en het dashboard) vertalen naar de nieuwe indeling
+  // zodat geen enkele bestaande ?tab=-link stukgaat.
+  const TAB_REDIRECTS: Record<string, string> = {
+    taken: "overzicht",
+    partijen: "overzicht",
+    vorderingen: "financieel",
+    betalingen: "financieel",
+    staphistorie: "tijdlijn",
+    activiteiten: "tijdlijn",
+  };
+  const mappedTab = TAB_REDIRECTS[activeTab] ?? activeTab;
+
   // CONN-6: een ?tab= deep-link kan een tab noemen die op dít dossier niet
-  // bestaat (bv. ?tab=betalingen op een niet-incasso dossier via de
-  // derdengelden-pagina). Onbekende/ontoegestane tab → val terug op overzicht,
-  // anders rendert geen enkele conditie en blijft het paneel leeg.
-  const safeTab = tabs.some((t) => t.id === activeTab) ? activeTab : "overzicht";
+  // bestaat (bv. ?tab=financieel op een niet-incasso dossier). Onbekende/
+  // ontoegestane tab → val terug op overzicht, anders blijft het paneel leeg.
+  const safeTab = tabs.some((t) => t.id === mappedTab) ? mappedTab : "overzicht";
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -628,13 +632,25 @@ export default function ZaakDetailPage() {
           <div className="mt-6">
             {safeTab === "overzicht" && (
               <ErrorBoundary key="overzicht" fallback={<TabErrorFallback tabName="Overzicht" />}>
-                <CaseActionFeed caseId={id} onNavigate={setActiveTab} />
-                <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />
+                <div className="space-y-6">
+                  <CaseConflictBanner zaak={zaak} />
+                  <CaseActionFeed caseId={id} onNavigate={setActiveTab} />
+                  {/* S216: Taken-tabblad verhuisd naar een blok op Overzicht —
+                      volledige functionaliteit (toevoegen/afronden/overslaan +
+                      "Concept openen"). De aparte /taken-pagina blijft bestaan. */}
+                  <TijdregistratieTab caseId={id} onOpenDraft={openLatestDraft} />
+                  <DetailsTab zaak={zaak} initialNoteText={phoneNoteText} onNoteTextConsumed={() => setPhoneNoteText("")} />
+                </div>
               </ErrorBoundary>
             )}
-            {safeTab === "taken" && (
-              <ErrorBoundary key="taken" fallback={<TabErrorFallback tabName="Taken" />}>
-                <TijdregistratieTab caseId={id} onOpenDraft={openLatestDraft} />
+            {isIncasso && safeTab === "financieel" && (
+              <ErrorBoundary key="financieel" fallback={<TabErrorFallback tabName="Financieel" />}>
+                {/* S216: Vorderingen + Betalingen + Regeling + Derdengelden gebundeld. */}
+                <div className="space-y-8">
+                  <VorderingenFinancieelTab caseId={id} />
+                  <div className="border-t border-border" />
+                  <BetalingenDerdengeldenTab caseId={id} />
+                </div>
               </ErrorBoundary>
             )}
             {safeTab === "uren" && (
@@ -642,24 +658,19 @@ export default function ZaakDetailPage() {
                 <UrenTab caseId={id} />
               </ErrorBoundary>
             )}
-            {isIncasso && safeTab === "vorderingen" && (
-              <ErrorBoundary key="vorderingen" fallback={<TabErrorFallback tabName="Vorderingen" />}>
-                <VorderingenFinancieelTab caseId={id} />
-              </ErrorBoundary>
-            )}
-            {isIncasso && safeTab === "betalingen" && (
-              <ErrorBoundary key="betalingen" fallback={<TabErrorFallback tabName="Betalingen" />}>
-                <BetalingenDerdengeldenTab caseId={id} />
-              </ErrorBoundary>
-            )}
-            {isIncasso && safeTab === "staphistorie" && (
-              <ErrorBoundary key="staphistorie" fallback={<TabErrorFallback tabName="Staphistorie" />}>
-                <StaphistorieTab caseId={id} />
-              </ErrorBoundary>
-            )}
             {safeTab === "facturen" && (
               <ErrorBoundary key="facturen" fallback={<TabErrorFallback tabName="Facturen" />}>
-                <FacturenTab caseId={id} clientId={zaak?.client?.id} />
+                <div className="space-y-8">
+                  <FacturenTab caseId={id} clientId={zaak?.client?.id} />
+                  {isIncasso && (
+                    <>
+                      <div className="border-t border-border" />
+                      {/* S216: provisie-afspraak verhuisd van Vorderingen naar hier
+                          (hoort bij cliëntfacturatie). */}
+                      <ProvisieSettingsSection caseId={id} />
+                    </>
+                  )}
+                </div>
               </ErrorBoundary>
             )}
             {safeTab === "documenten" && (
@@ -672,14 +683,21 @@ export default function ZaakDetailPage() {
                 <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} onReply={handleReplyForward} />
               </ErrorBoundary>
             )}
-            {safeTab === "activiteiten" && (
-              <ErrorBoundary key="activiteiten" fallback={<TabErrorFallback tabName="Activiteiten" />}>
-                <ActiviteitenTab zaak={zaak} />
-              </ErrorBoundary>
-            )}
-            {safeTab === "partijen" && (
-              <ErrorBoundary key="partijen" fallback={<TabErrorFallback tabName="Partijen" />}>
-                <PartijenTab zaak={zaak} />
+            {safeTab === "tijdlijn" && (
+              <ErrorBoundary key="tijdlijn" fallback={<TabErrorFallback tabName="Tijdlijn" />}>
+                <div className="space-y-6">
+                  <ActiviteitenTab zaak={zaak} />
+                  {isIncasso && (
+                    <details className="rounded-xl border border-border bg-card">
+                      <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-card-foreground select-none">
+                        Stap-historie
+                      </summary>
+                      <div className="px-5 pb-5">
+                        <StaphistorieTab caseId={id} />
+                      </div>
+                    </details>
+                  )}
+                </div>
               </ErrorBoundary>
             )}
           </div>

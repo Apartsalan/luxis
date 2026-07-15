@@ -26,6 +26,7 @@ dependencies = [
     # Document generation
     "docxtpl>=0.18.0",
     "weasyprint>=62.0",
+    "pillow>=12.3.0",  # floor raised: PYSEC-2026-2253..2257 (transitive via weasyprint); processes attachment images from inbound email
 
     # File uploads
     "python-multipart>=0.0.27",  # floor raised: CVE-2026-40347/42561 (SEC-4, S161)

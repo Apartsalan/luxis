@@ -2,10 +2,78 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 15 juli 2026 avond (S220, Opus — bouwsprint demolijst, Blok 1/2/3.1/5-fasebalk LIVE + prod-geverifieerd).
-**Laatste feature/fix:** verzendpad-fundament (kantoor-afzender incasso@ + vastlegging + BCC + brieftype-afleiding + bijlage-preview + onderwerp-bouwer) LIVE en bewezen; 6 DB stap-teksten opgeschoond (oud adres/kesting@ weg, aanhef erin) — natelling schoon; aanhef/kenmerk in de code-sjablonen; zombie-opruiming (stale adviezen sluiten bij stap-wissel); compacte fasebalk.
-**Openstaand:** S221 (`docs/sessions/PROMPT-S221.md`): Blok 3.2 (dedupe concepten), 3.3 (backfills — GO), 3.4 (skipped-taken UI), Blok 4 (AI-keten: classificatie-timing, auto-concept-categorieën [beslissing], antwoord-route + testronde-script, timeout 7→4 [GO], review-scherm), Blok 5-UX-rest, Blok 6-memo; + 2 sjabloon-herzaaiingen (Courier→Calibri, verzoekschrift-bijlage-PDF). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** S221 (`docs/sessions/PROMPT-S221.md`, Opus): restant demolijst; daarna Fable-review van S220+S221.
+**Laatst bijgewerkt:** 15 juli 2026 avond/nacht (S221, Opus — demolijst DEEL 2, 6 blokken LIVE + prod-geverifieerd).
+**Laatste feature/fix:** overgeslagen/afgeronde taken zichtbaar + terugzetten (bewezen: 17 skipped komen terug); AI-concepten ontdubbeld op zaak+stap + zombie-opruiming bij stap-wissel (migratie live); classificatie direct ná mailsync (race weg); begrip-eerst antwoordroute + dossierfeiten in prompt + testronde-script (op prod bewezen: identiteitsvraag → correct antwoord mét klantnaam, corrector groen); bedragen niet meer in scheve spatie-kolommen; Intake uit menu, Bankimport→Betalingen, ratio-label+tooltip, dossiernummer klikbaar in maillijst.
+**Openstaand (→ S221b/S222):** review-scherm classificatie+concept, voortgangsindicator bij genereren, échte HTML-tabellen (render/opschoon-pad), Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat, soft-delete-banner, follow-up dossierlink/dagen/sort, intake-detectie dempen), Blok 6-beslismemo b2b/b2c, backfills-3.3 (Fable), auto-concept-categorieën (GATED — pas ná antwoord-route getoetst), 2 sjabloon-herzaaiingen (GO nodig). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** Fable-review S220+S221 (VERPLICHT vóór echte inzet) + antwoord-testronde draaien (goud-set); daarna S221b Opus voor het restant.
+
+## Sessie 221 (15 juli 2026 avond/nacht, Opus — demolijst DEEL 2, 6 blokken LIVE)
+
+### Samenvatting
+Vervolg op S220. Per blok: bouwen → tests → deploy via SSH → prod-verificatie. 7 commits,
+1 migratie (additief). Geen echte debiteuren gemaild.
+
+**Blok 3.4 — overgeslagen/afgeronde taken (LIVE + BEWEZEN).** `my-tasks` gaf alleen open
+taken terug → de "Afgerond"-weergave op Taken was altijd leeg (17 skipped + 2 completed
+onzichtbaar). Nieuw `?include_done=true` (gecapt 100, nieuwste eerst); dashboard-widget
+ongemoeid. Terugzet-knop (→ pending) + undo-toast direct na overslaan. **Prod: zonder de
+optie 8 open taken, mét de optie 27 waaronder 17 eerder-onzichtbare overgeslagen taken.**
+
+**Blok 3.2/N3 — dubbele concepten + zombies (LIVE, migratie `s221_ai_draft_intent_step`).**
+Concepten misten intent + stap-koppeling. Nu: `generate_unified_draft` geeft een bestaand
+open concept terug i.p.v. een tweede (betaalde) generatie (next_step→zaak+stap,
+reply→zaak+bron-mail, free_compose→nooit); `move_case_to_step` gooit verouderde 'volgende
+stap'-concepten weg (net als de adviezen in S220). Auto-conceptroute kreeg dezelfde koppeling.
+Tests: 3 dedupe + 1 discard + de S220-supersede-suite groen (72 in de bredere run).
+
+**Blok 4 — classificatie direct ná mailsync (LIVE).** De losse 6-min-cyclus draaide soms nét
+vóór de sync klaar was → verse mail wachtte een ronde (~7,5 min). Nu triggert de sync bij
+nieuwe mail meteen `classify_new_emails` (idempotent, sleutel-guard). Latency → ~5 min.
+
+**Blok 4.3 — begrip-eerst antwoordroute + testronde-script (LIVE + BEWEZEN op prod).**
+`_REPLY_PROMPT` herschreven naar spelregels (feiten ALLEEN uit dossier, geen toezeggingen,
+escaleren bij lastige gevallen) i.p.v. sjabloon-dwang; de reply-context krijgt nu
+opdrachtgever/debiteur/openstaand/vorderingen mee (`_build_dossier_facts`). Nieuw
+`backend/scripts/ai/antwoord_testronde.py`: vaste proefset + corrector-AI + rapport, verstuurt
+niets, raakt geen echte dossiers (analyse/iteratie = Fable S222). **Prod-rookproef (de casus
+IN100607 "wie zijn jullie"): AI noemt kantoor + opdrachtgever (LegalWork B.V.) + debiteur,
+gebruikt alleen echte dossierbedragen; corrector alle checks groen, 0 zware fouten.**
+
+**Blok 4 punt 11 — geen scheve bedrag-kolommen (LIVE).** Beide AI-prompts sturen nu weg van
+spatie-uitgelijnde kolommen naar gelabelde regels ("Hoofdsom: € 3.500,00"). Échte HTML-tabellen
+vergen aanpassing van het render/opschoon-pad (injectie-oppervlak) → bewust apart gelaten.
+
+**Blok 5 — UX (LIVE).** Intake uit de zijbalk + commando-palet (Mail-tab "Aanvragen" is de
+ingang); menu+paginakop "Bankimport" → "Betalingen"; rapportage-label "Incasso-ratio" →
+"Geïnd op lopende zaken" + uitleg-tooltip; dossiernummer klikbaar in de mail-LIJSTrij.
+
+### Gewijzigde bestanden
+Backend: `dashboard/router.py`, `ai_agent/{models,unified_draft_service,incasso_email_prompts}.py`,
+`incasso/{service,automation_service}.py`, `workflow/scheduler.py`, migratie
+`s221_ai_draft_intent_step`, `backend/scripts/ai/antwoord_testronde.py` (nieuw). Tests:
+`test_workflow.py`, `test_unified_draft_service.py` (+4), `test_supersede_recommendations.py` (+1).
+Frontend: `hooks/use-workflow.ts`, `taken/page.tsx`, `layout/app-sidebar.tsx`, `command-palette.tsx`,
+`betalingen/page.tsx`, `rapportages/page.tsx`, `correspondentie/page.tsx`.
+
+### Bekende issues / bewust niet gedaan (→ S221b/S222)
+- **NIET gedaan:** review-scherm (classificatie+concept naast elkaar), voortgangsindicator bij
+  genereren, échte HTML-tabellen, Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat,
+  soft-delete-banner, follow-up dossierlink/dagen-kolom/sorteerbare koppen, intake-detectie
+  dempen), Blok 6-beslismemo b2b/b2c.
+- **GATED:** auto-concept per categorie (Verweer + Algemene/overig) — bewust NIET aangezet;
+  hangt aan de kwaliteit van de antwoord-route → pas ná de testronde (Fable S222).
+- **GO nodig (Arsalan):** 2 sjabloon-herzaaiingen (Courier→Calibri DOCX-default; verzoekschrift-
+  bijlage vervangen door "CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 1612).pdf").
+- **Backfills 3.3** blijven Fable (S222): uitzoeken wát de 470 classificaties/14 intake/8
+  concepten/3 adviezen precies zijn vóór er iets gesloten wordt.
+- Terugzet-knop/undo-toast (3.4) + maillijst-chip zijn typecheck- + deploy-geverifieerd, niet
+  live doorgeklikt (Playwright-browserlock) — meenemen in de visuele Fable-review.
+- MAILSLOT OPEN — testdossier 2026-00006 = Arsalans gmail.
+
+### Volgende sessie
+Fable-review S220+S221 (VERPLICHT) + antwoord-testronde met de goud-set draaien
+(`python -m scripts.ai.antwoord_testronde --goud N --tenant-id <uuid> --out ...` op prod).
+Daarna S221b (Opus) voor het restant hierboven. KvK-backfill zodra de sleutel er is (~22 juli).
 
 ## Sessie 220 (15 juli 2026 avond, Opus — bouwsprint demolijst, Blok 1/2/3.1/5-fasebalk LIVE)
 

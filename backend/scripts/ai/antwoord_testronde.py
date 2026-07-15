@@ -258,12 +258,33 @@ async def _load_goud(tenant_id: str, limit: int) -> list[dict]:
     """Trek goedgekeurde bibliotheek-antwoorden met hun echte bron-mail + dossier."""
     from sqlalchemy import select, text
 
+    # Volledige model-registry laden (zelfde lijst als alembic/env.py) — de mappers
+    # van Case/SyncedEmail verwijzen naar modellen die anders nooit geïmporteerd
+    # worden in dit losse script (IncassoPipelineStep, EmailAccount, ...).
+    import app.ai_agent.followup_models  # noqa: F401
+    import app.ai_agent.intake_models  # noqa: F401
+    import app.ai_agent.payment_matching_models  # noqa: F401
+    import app.calendar.models  # noqa: F401
+    import app.collections.models  # noqa: F401
+    import app.documents.models  # noqa: F401
+    import app.email.attachment_models  # noqa: F401
+    import app.email.models  # noqa: F401
+    import app.email.oauth_models  # noqa: F401
+    import app.exact_online.models  # noqa: F401
+    import app.incasso.models  # noqa: F401
+    import app.invoices.models  # noqa: F401
+    import app.notifications.models  # noqa: F401
+    import app.products.models  # noqa: F401
+    import app.relations.kyc_models  # noqa: F401
+    import app.relations.models  # noqa: F401
+    import app.time_entries.models  # noqa: F401
+    import app.trust_funds.models  # noqa: F401
+    import app.workflow.models  # noqa: F401
     from app.ai_agent.models import LearnedAnswer
+    from app.ai_agent.unified_draft_service import _build_dossier_facts
     from app.cases.models import Case
     from app.database import async_session
     from app.email.synced_email_models import SyncedEmail
-
-    from app.ai_agent.unified_draft_service import _build_dossier_facts
 
     cases: list[dict] = []
     async with async_session() as db:

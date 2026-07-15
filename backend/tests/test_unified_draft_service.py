@@ -635,3 +635,47 @@ async def test_dedup_ignores_discarded_draft(
         case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
     )
     assert second.id != first.id
+
+
+# ── S221 4.3: begrip-eerst — dossierfeiten in de antwoordprompt ────────────
+
+
+@pytest.mark.asyncio
+async def test_reply_prompt_includes_dossier_facts(
+    db, test_tenant, test_user, test_company, incasso_case, fake_base_context, monkeypatch
+):
+    """De antwoordroute geeft de AI een feitenblok (opdrachtgever, openstaand,
+    vorderingen) mee zodat hij met echte dossierdata antwoordt i.p.v. te verzinnen."""
+    from app.email.oauth_models import EmailAccount
+
+    account = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="outlook", email_address="lisanne@kestinglegal.nl",
+        access_token_enc=b"stub", refresh_token_enc=b"stub",
+        token_expiry=datetime.now(UTC) + timedelta(hours=1),
+    )
+    db.add(account)
+    await db.flush()
+    src = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email_account_id=account.id,
+        case_id=incasso_case.id, provider_message_id="q@example.com",
+        from_email="debiteur@example.com", from_name="Debiteur",
+        subject="Wie zijn jullie?", body_text="Wie zijn jullie en wie is uw klant?",
+        body_html="", direction="inbound", email_date=datetime.now(UTC),
+    )
+    db.add(src)
+    await db.commit()
+
+    holder: dict = {}
+    _patch_ai_capture(monkeypatch, holder, subject="Re:", body="Antwoord.")
+    _patch_context(monkeypatch, fake_base_context)
+
+    await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.REPLY_TO_EMAIL,
+        source_email_id=src.id,
+    )
+    user_msg = holder["user"]
+    assert "Dossiergegevens" in user_msg
+    assert "Opdrachtgever" in user_msg
+    assert test_company.name in user_msg  # echte klantnaam, niet verzonnen

@@ -63,11 +63,37 @@ _NEXT_STEP_PROMPT = (
     "dossiernummer en hoofdsom. Vermeld geen plaatshouders.\n\n" + _NO_HTML_RULE
 )
 
+# S221 blok 4.3 — begrip-eerst antwoordroute. De AI leest de inkomende mail én de
+# dossierfeiten en schrijft zélf een passend antwoord, gestuurd door spelregels
+# i.p.v. een vast sjabloon. De verweer-voorbeelden/AV worden apart als referentie
+# meegegeven (bij een verweer-categorie); ze zijn leidraad, geen keurslijf.
 _REPLY_PROMPT = (
-    "Je bent juridisch assistent voor Kesting Legal. Je schrijft een antwoord op "
-    "een inkomende email van een debiteur. Pas de toon aan op de gevraagde stijl "
-    "(mild/zakelijk/streng). Verwijs naar dossiernummer en openstaand bedrag. "
-    "Geen automatische dreiging met dagvaarding tenzij streng en gerechtvaardigd.\n\n"
+    "Je bent juridisch assistent voor Kesting Legal (incassokantoor te Amsterdam, "
+    "advocaat mr. L. Kesting). Lees de inkomende email van de debiteur zorgvuldig en "
+    "schrijf een passend, zakelijk antwoord in het Nederlands ('u'). Beantwoord "
+    "daadwerkelijk wat er gevraagd of gesteld wordt — begrijp de mail eerst, kies dan "
+    "je woorden.\n\n"
+    "SPELREGELS (strikt):\n"
+    "- Gebruik ALLEEN feiten uit de meegegeven dossiergegevens (cliënt/opdrachtgever, "
+    "debiteur, openstaand bedrag, vorderingen/factuurnummers). Verzin NOOIT bedragen, "
+    "namen, data of factuurnummers. Staat een gevraagd feit niet in het dossier, zeg "
+    "dan dat u dit navraagt — verzin het niet.\n"
+    "- Doe GEEN toezeggingen namens de cliënt (geen kwijtschelding, geen uitstel, geen "
+    "betalingsregeling, geen excuses namens de cliënt). Zulke verzoeken bevestig je niet; "
+    "je geeft aan ze aan de cliënt voor te leggen.\n"
+    "- Neem GEEN juridische standpunten in die niet in de dossiergegevens of algemene "
+    "voorwaarden staan.\n"
+    "- Antwoordt de debiteur op de vraag 'wie bent u / wie is uw cliënt': noem het kantoor "
+    "en de opdrachtgever bij naam (staan in de dossiergegevens).\n"
+    "- Bij een te lastig of juridisch gevoelig geval (advocatenbrief van de tegenpartij, "
+    "AVG-/privacyverzoek, dagvaarding, dreiging, klacht over de advocaat): schrijf een korte "
+    "ontvangstbevestiging en zet in het antwoord dat het intern wordt opgepakt — verzin "
+    "geen inhoudelijk standpunt.\n"
+    "- Verwijs naar het dossiernummer en, waar relevant, het openstaande bedrag.\n"
+    "- Pas de toon aan op de gevraagde stijl (mild/zakelijk/streng); dreig niet met "
+    "dagvaarding tenzij expliciet streng én gerechtvaardigd.\n"
+    "- Gebruik de eventueel meegegeven verweer-voorbeelden en algemene voorwaarden als "
+    "referentie/leidraad, niet als verplichte tekst.\n\n"
     + _NO_HTML_RULE
 )
 
@@ -172,12 +198,51 @@ def _build_next_step_user_msg(case: Case, instruction: str | None) -> str:
     return "\n".join(parts)
 
 
+async def _build_dossier_facts(
+    db: AsyncSession, tenant_id: uuid.UUID, case: Case
+) -> str:
+    """Feitenblok voor de begrip-eerst-antwoordroute: cliënt, debiteur, openstaand
+    bedrag en vorderingen (factuurnummer + hoofdsom). De AI mag ALLEEN hieruit putten;
+    zo antwoordt hij met echte dossierdata i.p.v. verzonnen bedragen/namen."""
+    from app.collections.models import Claim
+    from app.collections.service import get_case_outstanding
+
+    lines: list[str] = ["--- Dossiergegevens (enige toegestane feitenbron) ---"]
+    if case.client:
+        lines.append(f"Opdrachtgever (onze cliënt): {case.client.name}")
+    if case.opposing_party:
+        lines.append(f"Debiteur (wederpartij): {case.opposing_party.name}")
+
+    try:
+        outstanding = await get_case_outstanding(db, tenant_id, case)
+        lines.append(f"Openstaand bedrag (incl. rente + kosten): € {outstanding}")
+    except Exception:
+        pass  # saldo niet berekenbaar → gewoon weglaten, niets verzinnen
+
+    result = await db.execute(
+        select(Claim).where(
+            Claim.case_id == case.id,
+            Claim.tenant_id == tenant_id,
+            Claim.is_active.is_(True),
+        )
+    )
+    claims = list(result.scalars().all())
+    if claims:
+        lines.append("Vorderingen:")
+        for c in claims[:20]:
+            nr = c.invoice_number or "(geen factuurnummer)"
+            datum = c.invoice_date.isoformat() if c.invoice_date else "onbekend"
+            lines.append(f"  - factuur {nr} d.d. {datum}: hoofdsom € {c.principal_amount}")
+    return "\n".join(lines)
+
+
 def _build_reply_user_msg(
     case: Case,
     source_email: SyncedEmail,
     classification: EmailClassification | None,
     tone: str | None,
     instruction: str | None,
+    dossier_facts: str = "",
 ) -> str:
     body = source_email.body_text or strip_html(source_email.body_html or "") or ""
     body = body[:2000]
@@ -190,6 +255,8 @@ def _build_reply_user_msg(
         parts.append(f"Classificatie: {classification.category}")
         if classification.sentiment:
             parts.append(f"Sentiment: {classification.sentiment}")
+    if dossier_facts:
+        parts.append("\n" + dossier_facts)
     parts.append("\n--- Inkomende email ---")
     parts.append(f"Van: {source_email.from_email}")
     parts.append(f"Onderwerp: {source_email.subject}")
@@ -355,7 +422,10 @@ async def generate_unified_draft(
             db, tenant_id, source_email_id
         )
         system_prompt = _REPLY_PROMPT
-        user_msg = _build_reply_user_msg(case, source_email, classification, tone, instruction)
+        dossier_facts = await _build_dossier_facts(db, tenant_id, case)
+        user_msg = _build_reply_user_msg(
+            case, source_email, classification, tone, instruction, dossier_facts
+        )
         classification_id = classification.id if classification else None
     else:  # FREE_COMPOSE
         system_prompt = _FREE_COMPOSE_PROMPT

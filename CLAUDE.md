@@ -89,7 +89,11 @@ Na goedkeuring.
 1. Build check — `tsc --noEmit` of `pytest`. Rood → fix → opnieuw.
 2. Visuele check — preview/screenshot.
 3. Functionele check — klik door flow.
-4. Pas "done" als alle 3 groen. NOOIT doorgaan met kapotte taak.
+4. **Kruispunt-check — skill `breed-testen` (HARD, S223):** raakt de taak een
+   gedeeld effect (mail versturen, stap wisselen, concept maken, geld, zaak
+   sluiten)? → loop de route×huisregel-matrix af; elke gevonden fout krijgt een
+   wachter-test voor zijn SOORT, niet één test voor het geval.
+5. Pas "done" als alles groen. NOOIT doorgaan met kapotte taak.
 
 ## Working Agreements
 

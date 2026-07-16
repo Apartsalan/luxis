@@ -132,14 +132,40 @@ indruk wekken dat de invordering stilligt.
   makkelijk aan te scherpen.
 - Óók in ronde 2: 0 spatie-kolommen, 0 verzonnen namen/factuurnummers in de proefset.
 
-### C5 Eindoordeel poort (auto-concept per categorie)
-**Formeel NIET gehaald** (>90% groen én 0 zware fouten) → **auto-concept blijft UIT.**
-Eerlijke duiding: de antwoordroute zelf is duidelijk verbeterd (83→89% op de zuivere
-set; het bedragen-verzin-patroon is weg; escalatie en identiteitsvragen foutloos), en
-een flink deel van de resterende afkeuringen ligt aan de méétlat (corrector), niet aan
-de antwoorden. Verder blind itereren tegen deze corrector heeft geen zin — eerst de
-kalibratievraag beantwoorden (mag "voor kennisgeving aannemen"/"voorleggen mét
-terugkoppeling"?), dan de corrector daarop bijstellen, dan pas opnieuw meten.
+### C5 Ronde 3+4 — kalibratie Arsalan verwerkt (16 juli overdag)
+**Kalibratie-uitspraken Arsalan:** (1) betaalbelofte "voor kennisgeving aannemen +
+betaal uiterlijk dan" = goedgekeurd gedrag; (2) kwijtschelding = afwijzen, NIET
+voorleggen, geen terugkoppeling; (3) kort uitstel-verzoek = zelfde behandeling als
+betaalbelofte, cliënt er niet bij. Verwerkt in de spelregels én de corrector
+(commits `292ab58`, `1c8b3b7`, gedeployed).
+
+- **Ronde 3:** zuivere set 17/18 = 94% (enige afkeuring = het uitstel-grensgeval, toen
+  nog onbeslist). Corrector bleek doorgeschoten: rekende álle voorleggen fout, ook
+  expliciet toegestane (regelingen, betwistingen). Ook "IN100370 verzonnen" weerlegd:
+  staat letterlijk in de onderwerpregel van de debiteurenmail.
+- **Ronde 4** (na precisie-fix corrector): zuivere set 16/18; kwijtschelding- én
+  uitstel-geval gedragen zich nu exact volgens de kalibratie ✅. De 2 afkeuringen:
+  1 échte vangst (debiteur zei "volgende week vrijdag", AI schreef "aanstaande
+  vrijdag" — een week te vroeg) → nieuwe spelregel "termijn letterlijk overnemen"
+  toegevoegd; 1 corrector-tegenstrijdigheid ("vraag tijdig bericht" staat letterlijk
+  in de goedgekeurde kalibratie, toch afgekeurd). Goud: 29/37 groen; de 4 afkeuringen
+  zijn bedrag-presentatie-twijfels op deels betaalde zaken + de IN100370-flipflop.
+
+### C6 Eindoordeel meetlat + poort
+**Zuivere set over 4 rondes: 83% → 89% → 94% → 89%.** De corrector heeft een
+meetruis van ±2 gevallen per ronde (zelfde antwoordgedrag, wisselende oordelen; één
+geval kreeg 3 verschillende verdicten in 3 rondes). De route zelf is stabiel: geen
+verzonnen bedragen/namen meer sinds ronde 2, alle kalibratie-gevallen correct,
+escalatie/identiteit/AVG foutloos in alle rondes. **Verder itereren tegen deze
+corrector is ruis najagen** — de zinvolle vervolgstap is menselijke steekproef
+(Lisanne leest ~10 echte concepten) of een meervoudige corrector (3× draaien,
+meerderheid), niet een vijfde promptronde.
+**Poort auto-concept: formeel niet gehaald** (>90% + 0 zwaar haalt geen enkele ronde
+stabiel door de meetruis). **Auto-concept staat UIT.** Voor het aanzetten geldt
+bovendien (in de code geverifieerd): het pad verstuurt nooit zelf ("Never
+auto-sends" — concept + melding, verzenden blijft mensenwerk), máár de oude
+categorie-route moet eerst worden aangesloten op de nieuwe antwoordmotor
+(`unified_draft_service`) — klein Opus-bouwklusje vóór activering mogelijk is.
 
 ## D — Backfill-wachtrijen (alleen gemeten, NIETS opgeruimd — wacht op GO)
 
@@ -179,11 +205,15 @@ spoor en is terug te vinden.
 3. ~~Goud-bibliotheek schonen~~ — vervallen: de "vervuiling" bleek een ontwerpfout in
    het testscript, niet in de bibliotheek (zie C2). De bibliotheek is in orde.
 4. Test voor de sync→classificatie-trigger toevoegen (B3) — klein Opus-klusje.
-5. **Kalibratie antwoord-lat (C5):** mag de AI een betaalbelofte "voor kennisgeving
-   aannemen" en een verzoek "voorleggen mét terugkoppeling"? Zo ja → corrector-checklist
-   daarop bijstellen en testronde herhalen; de 90%-lat is dan realistisch haalbaar.
-   Zo nee → hardere spelregel ("nooit een betaaldatum impliciet accepteren") en opnieuw.
-6. Vraag-zoeker goud-pad ook opdrachtgever-adressen laten uitsluiten (2 gevallen).
+5. ✅ **GEDAAN — kalibratie beantwoord + verwerkt** (16 juli: betaalbelofte/kort uitstel =
+   kennisgeving; kwijtschelding = afwijzen zonder voorleggen; zie C5/C6).
+6. Vraag-zoeker goud-pad ook opdrachtgever-adressen laten uitsluiten (4 gevallen in r4).
+7. **NIEUW — activeringsklusje auto-concept** (pas na besluit): categorie-route
+   aansluiten op de nieuwe antwoordmotor + menselijke steekproef door Lisanne
+   (~10 concepten) als betrouwbaarder lat dan de ruizige AI-corrector.
+8. **NIEUW — datumregel onbevestigd:** de spelregel "termijn letterlijk overnemen"
+   (na de vrijdag-vangst) is toegevoegd en gedeployed maar nog niet hergemeten —
+   meenemen in de volgende testronde of de menselijke steekproef.
 
 ## Kleinere observaties (geen actie vereist)
 - AI ondertekende één proefantwoord met "Incasso-afdeling" — Kesting Legal heeft geen

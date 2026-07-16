@@ -9499,3 +9499,64 @@ S213 (`docs/sessions/PROMPT-S213.md`, Opus): zodra Arsalan de echte KvK-sleutel 
 (+ `KVK_API_BASE`) als env op de VPS → herstart backend → `scripts/kvk_backfill_legal_form.py
 --dry-run` → akkoord → echt draaien → natelling (±438 relaties, ±€9) → meten hoeveel BV's geen
 bijlage meer krijgen. Eventueel: `/compose/send`-bijlage-observatie oppakken als Arsalan dat wil.
+
+## Sessie 213 (14 juli 2026, Opus-bouw + Fable-review/uitvoer — Facturen-menu 2 tabs + PDF-koppeling, LIVE)
+
+### Samenvatting
+KvK-sleutel nog niet binnen → hoofdtaak geparkeerd; taak 2+3 volledig af.
+
+- **Facturen-menu 3→2 tabs (LIVE, `2a9caa3`).** Debiteuren-tab is nu een *Lijst/Per-klant*-
+  weergaveschakelaar bínnen Kantoorfacturen (component verplaatst, niets weggegooid).
+  Vorderingen-tab kreeg filters à la `zaken/page.tsx`: opdrachtgever-dropdown (nieuw endpoint
+  `GET /api/claims/clients`), lopend/afgesloten, factuurdatum-bereik, wel/geen PDF; sorteerbare
+  kolomkoppen (factuurdatum, hoofdsom) + filters/sort/tab in de URL (CONN-8/DF139-patroon).
+  Backend `GET /api/claims` uitgebreid (client_id/date_from/date_to/has_file/sort_by/sort_dir +
+  `invoice_file_id` in payload). 6 endpoint-tests groen; ruff/tsc/build schoon.
+- **Factuur-PDF-koppeling UITGEVOERD (Fable, na "go" Arsalan): 1.357/1.563 vorderingen** hebben
+  nu hun factuur-PDF (`scripts/link_invoice_files.py`, 3 treden): 1.306 exacte naam-match +
+  35 dubbelen (sha256-bewezen byte-identiek, oudste gekozen) + 16 kopie-achtervoegsel
+  (`Factuur_140005__1_.pdf`; 1 = .rtf). Bron eerst gelezen (S180-les): IncassoLine-XML heeft
+  géén document-verwijzing → naam-match is echt de enige sleutel. **206 rest terecht niet
+  gekoppeld:** 8 kostenpost-regels (Griffierecht/Nakosten/…), ±92 dossiers zonder factuurbestand,
+  ±96 ander nummerschema. Tekst-inhoud-matching gemeten maar bewust NIET gebruikt (sommatie/vonnis
+  dat het nummer citeert zou vals matchen).
+- **Natelling (onafhankelijk, SQL):** 1.357 gevuld / 1.563 totaal; som hoofdsom onveranderd
+  €3.142.934,72; 0 kruis-dossier, 0 kruis-tenant, 0 dode verwijzingen. End-to-end: paperclip-klik
+  op prod → popup `application/pdf`.
+- **Klik-verificatie prod (Playwright, échte kliks):** tab-wissel, sorteerklik (desc top =
+  €142.961,50 → asc), Per-klant-schakelaar, paperclip → PDF. De eerdere "kliks doen niets" was
+  het claude-in-chrome-tool, niet de code (stale Playwright-lockfile opgeruimd).
+
+### Gewijzigde bestanden
+- Backend: `collections/schemas.py` + `service.py` + `router.py` (filters/sort/clients),
+  `tests/test_claims_overview.py` (6), `scripts/link_invoice_files.py` (nieuw, 3 treden + self-test).
+- Frontend: `facturen/page.tsx` (2 tabs + schakelaar + filters + paperclip), `hooks/use-invoices.ts`.
+- Commits `2a9caa3` · `9aea91c` · `ce54eb4` + docs; deploy backend+frontend (geen migratie).
+- Rapport/bewijs: `docs/sessions/S213-fable-review-brief.md`.
+
+### Bekende issues
+- **KvK-rechtsvorm-backfill wacht op de echte sleutel** (~16 juli, Arsalan meldt) → S214.
+- 1 gekoppelde vordering verwijst naar een .rtf: verzendpad-bijlage werkt, paperclip-preview
+  geeft daar een nette foutmelding (1 record, geaccepteerd).
+- Browser-terug binnen een open Vorderingen-tab synct de filter-velden niet live (sortering wél)
+  — zelfde huispatroon als de dossierlijst, bewust zo gelaten.
+- Dev-omgeving: wachtwoord `seidony@` lokaal op `Devpass-123` gezet (alleen dev, prod ongemoeid).
+
+### Nagekomen (zelfde dag, opdracht Arsalan): Backblaze Class C-cap + oude US-bucket
+- **Class C-cap opgelost (`e4ea1c8`, live).** De nachtelijke off-site sync doorzocht de diepe
+  `email_attachments`-boom (7.932 bestanden, elk eigen geneste map) zónder `--fast-list` → één
+  B2-list per map = duizenden Class C-transacties/nacht, boven de gratis dagcap (2.500). Gemeten:
+  maar 93/7.932 bestanden echt nieuw → géén churn, puur de listing. `--fast-list` op alle list-zware
+  rclone-stappen (sync + 3 deletes) → hele boom in één gepagineerde lijst. **Bewijs volgt bij de
+  03:00-run** (nu niet getest: cap stond op 100%, testen zou meer Class C kosten). Reconcilieerde
+  tegelijk de niet-gecommitte VPS-drift (S207-sync-aanpak stond niet in de repo).
+- **Oude US-bucket opgeruimd (`d0823d6`).** Arsalan verwijderde de lege Amerikaanse bucket
+  `Luxis-backup` (us-east-005, 0 bytes, door niets meer gebruikt — live back-up gaat naar de
+  EU-crypt-bucket `luxis-b2-eu:luxis-backup-eu`). Server-kant: `rclone config delete luxis-backup`
+  + script-default nu `luxis-backup-eu-crypt`/`backups` (nooit meer per ongeluk naar de VS).
+
+### Volgende sessie
+S214 (`docs/sessions/PROMPT-S214.md`): KvK-sleutel → env op VPS → droogloop → akkoord → run →
+natelling → meten hoeveel BV's geen rentebijlage meer krijgen. Rest-PDF's (206) alleen op
+expliciete vraag (handwerk-lijstje kan uit de dry-run-rapportage).
+**Openstaand nachecken (morgen):** back-up-log 03:00 — bevestigen dat het Class C-verbruik laag blijft.

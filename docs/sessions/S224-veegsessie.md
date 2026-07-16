@@ -124,10 +124,63 @@ is tegelijk de onafhankelijke bevestiging van de route-inventaris hierboven.
   Voorstel: endpoint + hook verwijderen.
 - **B4 — opruimen prod:** het ene wees-advies op IN100613 op SUPERSEDED zetten
   (1 UPDATE, natelling erbij). Wacht op GO.
+- **B5 — testdossier 2026-00006:** stond gearchiveerd, voor de live-pass
+  geheractiveerd. Weer archiveren, of actief laten als vast testkanaal?
+- **B6 — batch-DOCX-tak live toetsen:** vereist een tijdelijke stap-mutatie
+  (een stap een DOCX-sjabloontype geven) of wachten tot een echte
+  dagvaarding-stap bestaat. Nu test- en wachter-gedekt, niet live geraakt.
 
-## 6. Live-pass (Taak B)
+## 6. Live-pass (Taak B) — alles op testdossier 2026-00006, niets naar echte debiteuren
 
-_Wordt aangevuld na de live-verzendtoets._
+**Opzet:** testmail vanuit Arsalans gmail → incasso@ (17:30:48 UTC) als
+wederpartij-mail; daarna de hele keten gemeten.
+
+**Nieuwe vondst 5 (alleen live zichtbaar):** het testdossier 2026-00006 stond
+**gearchiveerd** (`is_active=false`) — de dossiernummer-matcher weigerde de mail
+te koppelen ("dossier bestaat niet") en liet hem bewust ook niet naar
+contact-matching doorvallen. Voor de toets heractiveerd (1 rij; beslispunt B5:
+weer archiveren of als vast testkanaal actief laten).
+
+**Classificatie-trigger (nooit eerder op prod gevuurd) — BEWEZEN:** sync
+17:40:20 koppelt de mail (case_number-match) → trigger vuurt **17:40:30, 10
+seconden later** (de losse 6-min-cyclus stond pas voor 17:43:12 gepland) →
+`belofte_tot_betaling` 85% (claude-haiku-4-5) — inhoudelijk juist, de mail
+belooft deze week te betalen. Kanttekening: de éérste sync (17:35) kon niet
+koppelen door het gearchiveerde dossier; de trigger zelf vuurde beide keren
+binnen ~10 s na de sync.
+
+**AI-antwoord-knop → écht versturen — BEWEZEN:**
+- Knop op de inkomende mail (Mail-pagina) → instructie meegegeven ("bevestig
+  het exacte openstaande bedrag, bedank voor de betaaltoezegging, betaling
+  uiterlijk deze week") → concept volgt de instructie exact (A3 ✅).
+- **A1 op de cent:** concept noemt "Totaal openstaand (incl. rente en kosten):
+  € 140,49" = €100 hoofdsom + €40 BIK (WIK-minimum) + €0,49 wettelijke rente
+  (4%, verzuim 1/6 → 16/7 = 45 dagen: 100×0,04×45/365) — onafhankelijk
+  nagerekend uit claim + rentetabel.
+- A2 ✅: handtekening, logo, schuldhulpblok, disclaimer in het concept.
+- Versturen: toast "E-mail verzonden"; **drieluik compleet** (EmailLog
+  `compose_send/sent` + SyncedEmail outbound **van incasso@** (M1 ✅) +
+  CaseActivity op de tijdlijn); onderwerp exact **"Re: Vraag over dossier
+  2026-00006"** (dossiernr al in origineel → geen dubbele tag, M4 ✅);
+  **bezorgd in gmail ín dezelfde thread** als de oorspronkelijke vraag.
+- **P1 ✅ live:** de zaak bleef op "Tweede sommatie" — het antwoord schoof de
+  pijplijn niet door; concept-status → `sent`.
+
+**Documents-route (DOCX→PDF, F3 live) — BEWEZEN:** "Verstuur per e-mail" op het
+renteoverzicht-document → dialoog-prefill toont exact het huisformaat
+("TEST Opdrachtgever Fable-review / TEST Debiteur Fable-review B.V. —
+Renteoverzicht — 2026-00006", geen dubbel dossiernummer) → verzonden → drieluik
+compleet, afzender incasso@, **PDF-bijlage bezorgd in gmail**.
+
+**Batch-PDF-route: NIET live toetsbaar zonder config-mutatie.** Meting: geen
+enkele actieve pijplijnstap heeft een DOCX-sjabloon — alle stap-sjablonen (ook
+`faillissement_dreigbrief`) zijn e-mailsjablonen, dus de batch-DOCX-tak vuurt op
+prod momenteel nooit. De S223-fix van die tak is wachter- en test-gedekt
+(`test_incasso_pipeline` + M4-wachter); de bouwstenen (DOCX→PDF-bezorging,
+huisformaat-onderwerp) zijn hierboven via de documents-route wél live bewezen.
+Écht de batch-tak raken vereist een tijdelijke stap-mutatie → beslispunt B6.
+
+**CI:** groen na de push (15m23s) — afsluitcheck gedaan.
 
 ## 7. Eerlijke beperkingen
 

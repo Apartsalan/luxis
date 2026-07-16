@@ -2,11 +2,78 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 16 juli 2026 (S223, Opus-bouw + Fable-review — AI-antwoord-knop op mail + onderwerp overal in huisformaat + kleine punten + nieuwe test-discipline).
-**Laatste feature/fix:** "AI-antwoord maken"-knop op elke inkomende mail (Mail-pagina) met instructie-tekstvak + toon, onbeperkt herbruikbaar, "eerst vragen" bij bestaand concept — **LIVE + live doorgeklikt (IN100607, 3 rondes)**; onderwerp van concepten/verzending overal via de gedeelde bouwer (huisformaat / Re:-regel); antwoord-verzending schuift de zaak niet meer door; open concepten vervallen bij zaak-sluiten (3 routes). Instructie-leidend-fix live bewezen.
-**Review-uitkomst:** kruispunt-review ving 2 must-fixes (beide gefixt+live): batch-PDF-route droeg nog het stale onderwerp; **CI stond stil rood sinds 15/7** (S220 vergat pin-test 'sommatie'). Nieuwe werkwijze vastgelegd: skill `breed-testen` (route×huisregel-matrix + wachter per foutSOORT) + CLAUDE.md-verificatiestap. Rapport: `docs/sessions/S223-review.md`.
-**Openstaand (→ S224):** ⚠️ **VEEGSESSIE** = hele huisregel-lijst × alle routes aflopen (Fable, mét live-pass) zodat teller op nul staat; ⚠️ **écht versturen live toetsen** (nieuwe knop + batch-route — kon niet: mailslot) + classificatie-trigger vuurt pas bij nieuwe mail; S221b-UX-restlijst; auto-concept-gate (menselijke steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** `docs/sessions/PROMPT-S224.md` — VEEGSESSIE (kruispunt-matrix, Fable) + live-verzendtoets. KvK-backfill voorrang zodra sleutel er is (~22 juli).
+**Laatst bijgewerkt:** 16 juli 2026 (S224, Fable — VEEGSESSIE kruispunt-matrix + live-verzendtoets, teller op nul).
+**Laatste feature/fix:** veegsessie vond 5 fouten en fixte er 4 LIVE (M1 classificatie-route, M3 gate op .eml-route, M4 documents-onderwerp, P3 adviezen bij sluiten); 2 nieuwe AST-wachters (M2-drieluik + M4-onderwerp). Live bewezen: AI-antwoord écht verstuurd + bezorgd (drieluik, Re:-thread, €140,49 op de cent), classificatie-trigger vuurt 10 s na sync, documents-route PDF bezorgd met huisformaat-onderwerp.
+**Review-uitkomst:** de skill-lijst miste 2 routes (facturen, classificatie-antwoord); testdossier 2026-00006 bleek gearchiveerd (→ geheractiveerd); batch-DOCX-tak op prod onbereikbaar (geen stap met DOCX-sjabloon). Rapport: `docs/sessions/S224-veegsessie.md`.
+**Openstaand (→ S225):** ⚠️ 6 beslispunten Arsalan (B1-B6 in het rapport: facturen-afzender, 2 dode routes, wees-advies IN100613, testdossier archiveren, batch-DOCX-toets); S221b-UX-restlijst; auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** `docs/sessions/PROMPT-S225.md` — beslispunten B1-B6 afhandelen + S221b-UX-restant (Opus). KvK-backfill voorrang zodra sleutel er is (~22 juli).
+
+## Sessie 224 (16 juli 2026, Fable — VEEGSESSIE kruispunt-matrix + live-verzendtoets)
+
+### Samenvatting
+De éénmalige veegsessie uit de skill `breed-testen`: volledige huisregel-lijst ×
+alle routes, gemeten in code + prod-DB. Route-inventaris zelf was al een vondst:
+12 routes, waarvan 2 (facturen, classificatie-antwoord) niet in de skill-lijst
+stonden en 2 dood/legacy zijn. KvK-voorrang-check: sleutel niet binnen → door.
+
+**5 vondsten, 4 gefixt + gedeployd (`5845a3d`):**
+1. M1 × classificatie-route: antwoord aan wederpartij ging via persoonlijk
+   account → `send_as_tenant_account=True` (zelfde soort als S220-N1).
+2. M3 × .eml-route: de 14-dagenbrief-gate bestond op 4 van de 5 deuren — "Open
+   in Outlook" bleef open → gate + 'Toch openen'-override + spoor, voor+achter.
+3. M4 × documents/send: onderwerp "{titel} — {nr}" (dossiernr dubbel, buiten de
+   bouwer; route ontbrak in het S223-rijtje) → huisformaat server + prefill.
+4. P3 × adviezen: sluiten ruimde wél concepten maar géén adviezen (prod-bewijs
+   IN100613) → `supersede_open_recommendations` op beide sluit-routes.
+5. Testdossier 2026-00006 stond gearchiveerd → matcher weigerde de testmail
+   ("dossier bestaat niet") → geheractiveerd (beslispunt B5).
+
+**2 nieuwe AST-wachters** (`tests/test_send_route_drift_guard.py`, patroon
+auth/RLS-guards): M2 (geen rauwe provider/SMTP-uitgang buiten geloggde routes,
+geloggde uitgangen roepen aantoonbaar `write_outbound_log` aan) en M4 (elk
+verzend-onderwerp uit de bouwer of gemotiveerd op de allowlist) + eerlijkheids-
+test (geen dode allowlist-regels). P3-wachter uitgebreid naar adviezen op alle
+3 sluit-routes. 136 tests groen, ruff/tsc schoon, **CI groen (afsluitcheck)**.
+
+**Live-verzendtoets (Taak B, alles op 2026-00006/Arsalans gmail):**
+- **Classificatie-trigger eerste prod-vuring bewezen:** sync 17:40:20 →
+  trigger 17:40:30 (10 s; losse cyclus stond pas 17:43) → belofte_tot_betaling
+  85%, inhoudelijk juist.
+- **AI-antwoord écht verstuurd:** instructie exact gevolgd (A3), €140,49 op de
+  cent nagerekend (100 + 40 BIK + 0,49 rente = A1), huisstijl compleet (A2),
+  drieluik compleet, afzender incasso@ (M1), onderwerp "Re: Vraag over dossier
+  2026-00006" (M4), bezorgd in gmail ín dezelfde thread; zaak bleef op Tweede
+  sommatie (P1) en concept → sent.
+- **Documents-route:** renteoverzicht-PDF bezorgd; dialoog-prefill = exact
+  huisformaat (fix 3 live bewezen).
+- **Batch-DOCX-tak niet live toetsbaar:** geen actieve stap heeft een
+  DOCX-sjabloon (alle stap-sjablonen zijn e-mail) — tak is test+wachter-gedekt;
+  live raken = stap-mutatie (beslispunt B6).
+
+### Gewijzigde bestanden
+Backend: `ai_agent/service.py`, `email/compose_router.py`, `documents/router.py`,
+`cases/service.py`, `workflow/hooks.py`. Frontend: `zaken/[id]/page.tsx`,
+`DocumentenTab.tsx`. Tests: `test_send_route_drift_guard.py` (nieuw, 5 wachters),
+`test_discard_drafts_on_close.py`, `test_compose_dagenbrief_gate.py` (+2),
+`test_ai_agent.py`. Skill `breed-testen` bijgewerkt. Rapport:
+`docs/sessions/S224-veegsessie.md`. 1 commit, backend+frontend gedeployd.
+Prod-mutaties: alleen heractivering testdossier (1 rij).
+
+### Bekende issues / bewust niet gedaan
+- **6 beslispunten (B1-B6, rapport §5-6):** facturen-afzender (persoonlijk vs
+  incasso@); dode AI-tool `email_compose` opruimen; legacy endpoint
+  `/api/email/cases/{id}/send` opruimen (leeft nog, SMTP geconfigureerd, geen
+  gate/SyncedEmail); wees-advies IN100613 → SUPERSEDED (GO); testdossier weer
+  archiveren of actief laten; batch-DOCX-tak live toetsen.
+- V2c geregistreerd, niet verbouwd: classificatie-onderwerp uit ResponseTemplate
+  i.p.v. `build_reply_subject` (beheerde inhoud, geen stale data).
+- Mailslot blijft principieel onafdwingbaar op de .eml-route (gebruiker
+  verstuurt zelf); de gate dekt nu het juridische risico.
+
+### Volgende sessie
+S225: beslispunten B1-B6 met Arsalan afhandelen, dan S221b-UX-restant (Opus:
+review-scherm, voortgangsindicator, HTML-tabellen, Blok 5-rest, Blok 6-memo).
+KvK-backfill voorrang zodra de sleutel binnen is (~22 juli).
 
 ## Sessie 223 (16 juli 2026, Opus-bouw → Fable-review — AI-antwoord-knop + onderwerp-huisformaat + test-discipline)
 
@@ -551,64 +618,3 @@ rooktest groen. 24 tests groen, ruff schoon, tsc schoon. Mailslot niet aangeraak
 S215: KvK-rechtsvorm-backfill zodra Arsalan de echte sleutel meldt (env op VPS → droogloop →
 akkoord → run → natelling → meten hoeveel BV's geen rentebijlage meer krijgen).
 Prompt: `docs/sessions/PROMPT-S215.md`.
-
-## Sessie 213 (14 juli 2026, Opus-bouw + Fable-review/uitvoer — Facturen-menu 2 tabs + PDF-koppeling, LIVE)
-
-### Samenvatting
-KvK-sleutel nog niet binnen → hoofdtaak geparkeerd; taak 2+3 volledig af.
-
-- **Facturen-menu 3→2 tabs (LIVE, `2a9caa3`).** Debiteuren-tab is nu een *Lijst/Per-klant*-
-  weergaveschakelaar bínnen Kantoorfacturen (component verplaatst, niets weggegooid).
-  Vorderingen-tab kreeg filters à la `zaken/page.tsx`: opdrachtgever-dropdown (nieuw endpoint
-  `GET /api/claims/clients`), lopend/afgesloten, factuurdatum-bereik, wel/geen PDF; sorteerbare
-  kolomkoppen (factuurdatum, hoofdsom) + filters/sort/tab in de URL (CONN-8/DF139-patroon).
-  Backend `GET /api/claims` uitgebreid (client_id/date_from/date_to/has_file/sort_by/sort_dir +
-  `invoice_file_id` in payload). 6 endpoint-tests groen; ruff/tsc/build schoon.
-- **Factuur-PDF-koppeling UITGEVOERD (Fable, na "go" Arsalan): 1.357/1.563 vorderingen** hebben
-  nu hun factuur-PDF (`scripts/link_invoice_files.py`, 3 treden): 1.306 exacte naam-match +
-  35 dubbelen (sha256-bewezen byte-identiek, oudste gekozen) + 16 kopie-achtervoegsel
-  (`Factuur_140005__1_.pdf`; 1 = .rtf). Bron eerst gelezen (S180-les): IncassoLine-XML heeft
-  géén document-verwijzing → naam-match is echt de enige sleutel. **206 rest terecht niet
-  gekoppeld:** 8 kostenpost-regels (Griffierecht/Nakosten/…), ±92 dossiers zonder factuurbestand,
-  ±96 ander nummerschema. Tekst-inhoud-matching gemeten maar bewust NIET gebruikt (sommatie/vonnis
-  dat het nummer citeert zou vals matchen).
-- **Natelling (onafhankelijk, SQL):** 1.357 gevuld / 1.563 totaal; som hoofdsom onveranderd
-  €3.142.934,72; 0 kruis-dossier, 0 kruis-tenant, 0 dode verwijzingen. End-to-end: paperclip-klik
-  op prod → popup `application/pdf`.
-- **Klik-verificatie prod (Playwright, échte kliks):** tab-wissel, sorteerklik (desc top =
-  €142.961,50 → asc), Per-klant-schakelaar, paperclip → PDF. De eerdere "kliks doen niets" was
-  het claude-in-chrome-tool, niet de code (stale Playwright-lockfile opgeruimd).
-
-### Gewijzigde bestanden
-- Backend: `collections/schemas.py` + `service.py` + `router.py` (filters/sort/clients),
-  `tests/test_claims_overview.py` (6), `scripts/link_invoice_files.py` (nieuw, 3 treden + self-test).
-- Frontend: `facturen/page.tsx` (2 tabs + schakelaar + filters + paperclip), `hooks/use-invoices.ts`.
-- Commits `2a9caa3` · `9aea91c` · `ce54eb4` + docs; deploy backend+frontend (geen migratie).
-- Rapport/bewijs: `docs/sessions/S213-fable-review-brief.md`.
-
-### Bekende issues
-- **KvK-rechtsvorm-backfill wacht op de echte sleutel** (~16 juli, Arsalan meldt) → S214.
-- 1 gekoppelde vordering verwijst naar een .rtf: verzendpad-bijlage werkt, paperclip-preview
-  geeft daar een nette foutmelding (1 record, geaccepteerd).
-- Browser-terug binnen een open Vorderingen-tab synct de filter-velden niet live (sortering wél)
-  — zelfde huispatroon als de dossierlijst, bewust zo gelaten.
-- Dev-omgeving: wachtwoord `seidony@` lokaal op `Devpass-123` gezet (alleen dev, prod ongemoeid).
-
-### Nagekomen (zelfde dag, opdracht Arsalan): Backblaze Class C-cap + oude US-bucket
-- **Class C-cap opgelost (`e4ea1c8`, live).** De nachtelijke off-site sync doorzocht de diepe
-  `email_attachments`-boom (7.932 bestanden, elk eigen geneste map) zónder `--fast-list` → één
-  B2-list per map = duizenden Class C-transacties/nacht, boven de gratis dagcap (2.500). Gemeten:
-  maar 93/7.932 bestanden echt nieuw → géén churn, puur de listing. `--fast-list` op alle list-zware
-  rclone-stappen (sync + 3 deletes) → hele boom in één gepagineerde lijst. **Bewijs volgt bij de
-  03:00-run** (nu niet getest: cap stond op 100%, testen zou meer Class C kosten). Reconcilieerde
-  tegelijk de niet-gecommitte VPS-drift (S207-sync-aanpak stond niet in de repo).
-- **Oude US-bucket opgeruimd (`d0823d6`).** Arsalan verwijderde de lege Amerikaanse bucket
-  `Luxis-backup` (us-east-005, 0 bytes, door niets meer gebruikt — live back-up gaat naar de
-  EU-crypt-bucket `luxis-b2-eu:luxis-backup-eu`). Server-kant: `rclone config delete luxis-backup`
-  + script-default nu `luxis-backup-eu-crypt`/`backups` (nooit meer per ongeluk naar de VS).
-
-### Volgende sessie
-S214 (`docs/sessions/PROMPT-S214.md`): KvK-sleutel → env op VPS → droogloop → akkoord → run →
-natelling → meten hoeveel BV's geen rentebijlage meer krijgen. Rest-PDF's (206) alleen op
-expliciete vraag (handwerk-lijstje kan uit de dry-run-rapportage).
-**Openstaand nachecken (morgen):** back-up-log 03:00 — bevestigen dat het Class C-verbruik laag blijft.

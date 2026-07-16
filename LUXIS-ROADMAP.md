@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 16 juli 2026 (S223, Opus-bouw + Fable-review). AI-antwoord-knop op elke inkomende mail (instructie + toon, herbruikbaar, "eerst vragen") **LIVE + live doorgeklikt (IN100607)**; mail-onderwerp overal in het huisformaat via de gedeelde bouwer; antwoord-verzending schuift de zaak niet meer door; open concepten vervallen bij zaak-sluiten (3 routes). Nieuwe test-discipline vastgelegd (skill `breed-testen`: kruispunt-matrix + wachter per foutSOORT). Review ving 2 must-fixes (batch-PDF-onderwerp + **CI stond stil rood sinds 15/7**), beide gefixt. Rapport: `docs/sessions/S223-review.md`. **Volgende = VEEGSESSIE (S224) + live-verzendtoets. KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
+**Laatst bijgewerkt:** 16 juli 2026 (S224, Fable — VEEGSESSIE). De kruispunt-matrix (skill `breed-testen`) volledig afgelopen: 5 vondsten, 4 LIVE gefixt (kantoor-vangrail classificatie-route, 14-dagenbrief-gate op de .eml-route, huisformaat-onderwerp documents-route, adviezen-opruiming bij zaak-sluiten) + 2 nieuwe AST-wachters die de teller op nul hóuden. Live-verzendtoets geslaagd: AI-antwoord écht verstuurd + bezorgd (drieluik, Re:-thread, bedrag op de cent), classificatie-trigger eerste prod-vuring (10 s na sync), documents-PDF bezorgd. Rapport: `docs/sessions/S224-veegsessie.md`. **Volgende = beslispunten B1-B6 + S221b-UX-restant (S225). KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,26 +53,25 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 16 juli 2026, S223)
+## 🎯 Huidige prioriteit (bijgewerkt 16 juli 2026, S224)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **S223 AFGEROND.** AI-antwoord-knop op elke inkomende mail (instructie +
-> toon, herbruikbaar, "eerst vragen") LIVE + live doorgeklikt; onderwerp overal
-> in het huisformaat via de gedeelde bouwer; antwoord-verzending schuift de zaak
-> niet meer door; open concepten vervallen bij zaak-sluiten (3 routes). Nieuwe
-> test-discipline vastgelegd (skill `breed-testen` — kruispunt-matrix + wachters).
-> Review ving 2 must-fixes (batch-PDF-onderwerp; **CI stond stil rood sinds 15/7**)
-> — beide gefixt, CI weer groen. Rapport: `docs/sessions/S223-review.md`.
+> ✅ **S224 AFGEROND — VEEGSESSIE.** Kruispunt-matrix volledig afgelopen (12
+> verzendroutes geïnventariseerd uit de bron): 5 vondsten, 4 LIVE gefixt
+> (M1 classificatie-route, M3 gate op .eml-route, M4 documents-onderwerp,
+> P3 adviezen bij sluiten) + 2 nieuwe AST-wachters (M2-drieluik, M4-onderwerp)
+> die nieuwe routes automatisch rood laten vallen. Live-verzendtoets geslaagd:
+> AI-antwoord écht verstuurd + bezorgd (drieluik, Re:-thread, €140,49 op de
+> cent), classificatie-trigger eerste prod-vuring (10 s na sync), documents-PDF
+> bezorgd met huisformaat-onderwerp. CI groen. Rapport:
+> `docs/sessions/S224-veegsessie.md`.
 >
-> 🎯 **VOLGENDE (S224): de VEEGSESSIE** (Fable) — de hele huisregel-lijst uit
-> `breed-testen` × alle bestaande routes aflopen, MÉT live-pass, zodat de
-> teller aantoonbaar op nul staat; kandidaat-wachters (M2-drieluik, M4-onderwerp)
-> in de skill. **Plus: écht versturen live toetsen** (nieuwe knop + batch-route —
-> kon in S223 niet door het open mailslot) + classificatie-trigger vuurt pas bij
-> nieuwe mail. Daarna: auto-concept-gate (menselijke steekproef Lisanne) +
-> S221b-UX-restant (review-scherm, voortgang-indicator, HTML-tabellen, Blok 5-rest,
-> Blok 6-memo b2b/b2c).
+> 🎯 **VOLGENDE (S225): beslispunten B1-B6** (rapport §5-6: facturen-afzender,
+> 2 dode routes opruimen, wees-advies IN100613, testdossier archiveren,
+> batch-DOCX-toets) **+ S221b-UX-restant** (review-scherm, voortgang-indicator,
+> HTML-tabellen, Blok 5-rest, Blok 6-memo b2b/b2c). Daarna auto-concept-gate
+> (menselijke steekproef Lisanne).
 > **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~22 juli):
 > stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
 > `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212; besluit B

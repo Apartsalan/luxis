@@ -154,10 +154,14 @@ Alle cijfers rechtstreeks uit de prod-database (16-07 nacht):
 | E. Ongelinkte mails | **96** totaal = 40 échte open inkomende (30 ouder dan 30 dagen) + 39 uitgaand + 17 dismissed/bounce | zijbalk telt 79 = 96 minus 17 dismissed | koppelen is handwerk; de 39 uitgaande zijn kandidaat voor automatische demping in de teller |
 | F. Notificaties ongelezen | **348** | **302 = "classificatie klaar"-ruis**; 261 ouder dan 7 dagen | JA: bulk gelezen-markeren ouder dan 7d + type dempen is een beslispunt |
 
-**Voorstel-opruimrecept (pas ná GO Arsalan):** classificaties in 2 vegen sluiten
-(afgesloten zaak; mail < 1 juni op actieve zaak) → 21 laten staan; concepten op
-afgesloten zaken sluiten; notificaties `classification_done` ouder dan 7 dagen op
-gelezen. Intake-14 en adviezen-15 NIET automatisch aanraken.
+**Opruimrecept UITGEVOERD (16 juli ochtend, GO Arsalan):** proefronde → uitvoering in
+één transactie → natelling, alle aantallen exact: 339 + 110 classificaties afgevoerd
+(status "rejected" + beoordelaar + notitie "S222-opruimrecept", zoals de afwijs-knop),
+**21 recente blijven als echte werklijst**; 3 concepten dichtgezet (2 op afgesloten
+IN100613 + oudste IN100521-duplicaat) → 5 open; 232 ruis-meldingen op gelezen (0 over
+ouder dan 7 dagen), echte meldingen (termijnen/betalingen/verjaring) onaangeroerd.
+Intake-14 en adviezen-15 bewust niet aangeraakt. Niets verwijderd — alles heeft een
+spoor en is terug te vinden.
 
 ---
 
@@ -171,7 +175,7 @@ gelezen. Intake-14 en adviezen-15 NIET automatisch aanraken.
 
 ## Openstaande beslispunten voor Arsalan/Lisanne
 1. ✅ **GEDAAN — verzoekschrift LIVE** (16 juli, alle 4 keuzes bevestigd + live-render bewezen).
-2. **GO opruimrecept D** (classificaties/concepten/notificaties).
+2. ✅ **GEDAAN — opruimrecept uitgevoerd** (16 juli ochtend, GO Arsalan; natelling exact, zie D).
 3. ~~Goud-bibliotheek schonen~~ — vervallen: de "vervuiling" bleek een ontwerpfout in
    het testscript, niet in de bibliotheek (zie C2). De bibliotheek is in orde.
 4. Test voor de sync→classificatie-trigger toevoegen (B3) — klein Opus-klusje.

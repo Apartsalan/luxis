@@ -554,6 +554,43 @@ async def update_draft_status(
     return draft
 
 
+# Concepten die nog niet zijn verstuurd of weggegooid tellen als "open".
+_OPEN_DRAFT_STATUSES = (
+    DraftStatus.GENERATED,
+    DraftStatus.REVIEWED,
+    DraftStatus.APPROVED,
+)
+
+
+async def discard_open_drafts_on_close(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> int:
+    """Zaak sluiten (betaald/afgesloten) → ELK open AI-concept vervalt (S223, P3).
+
+    Een gesloten zaak mag geen concept laten staan dat later per ongeluk verstuurd
+    wordt (IN100613 hield na sluiten 2 open concepten). Anders dan de stap-wissel-
+    opruiming (`discard_stale_step_drafts`, alleen intent 'next_step' van een oude
+    stap) raakt dit álle intents — ook antwoorden en vrij opgestelde concepten.
+    Gedeeld door alle sluit-routes (handmatig, pijplijn-eindstap, betaling-hook).
+    Retourneert het aantal weggegooide concepten.
+    """
+    result = await db.execute(
+        select(AIDraft).where(
+            AIDraft.tenant_id == tenant_id,
+            AIDraft.case_id == case_id,
+            AIDraft.status.in_(_OPEN_DRAFT_STATUSES),
+        )
+    )
+    drafts = result.scalars().all()
+    for draft in drafts:
+        draft.status = DraftStatus.DISCARDED
+    if drafts:
+        await db.flush()
+    return len(drafts)
+
+
 async def generate_client_update(
     db: AsyncSession,
     tenant_id: uuid.UUID,

@@ -819,6 +819,14 @@ async def update_case_status(
     )
     db.add(activity)
     await db.flush()
+
+    # S223 (huisregel P3) — zaak gesloten → open AI-concepten vervallen zodat er geen
+    # concept blijft staan dat later per ongeluk verstuurd wordt.
+    if new_status in ("betaald", "afgesloten"):
+        from app.ai_agent.draft_service import discard_open_drafts_on_close
+
+        await discard_open_drafts_on_close(db, tenant_id, case_id)
+
     await db.refresh(case)
     return case
 

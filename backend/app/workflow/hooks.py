@@ -99,6 +99,12 @@ async def on_payment_received(
         db.add(activity)
         await db.flush()
 
+        # S223 (huisregel P3) — zaak automatisch gesloten na volledige betaling →
+        # open AI-concepten vervallen (geen concept mag op een dichte zaak blijven).
+        from app.ai_agent.draft_service import discard_open_drafts_on_close
+
+        await discard_open_drafts_on_close(db, tenant_id, case.id)
+
         logger.info(
             f"Workflow hook: case {case.case_number} auto-transitioned to 'betaald' "
             f"after payment of EUR {payment_amount}"

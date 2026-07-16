@@ -587,6 +587,14 @@ async def move_case_to_step(
     # blijven staan (die hangen niet aan een stap).
     await discard_stale_step_drafts(db, tenant_id, case.id, keep_step_id=target_step.id)
 
+    # S223 (huisregel P3) — schuift de pijplijn de zaak naar een terminale eindstap
+    # (betaald/afgesloten), dan is de zaak dicht: ALLE open concepten vervallen, ook
+    # antwoord- en vrij-opgestelde (die de stap-opruiming hierboven bewust laat staan).
+    if new_status in ("betaald", "afgesloten"):
+        from app.ai_agent.draft_service import discard_open_drafts_on_close
+
+        await discard_open_drafts_on_close(db, tenant_id, case.id)
+
     return history
 
 

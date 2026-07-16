@@ -36,11 +36,14 @@ Per-functie testen vangt dit nooit. Kruispunt-testen wel.
 
 ## De huisregels (levende lijst — vul aan bij elke nieuwe vondst)
 
-**Uitgaande mail (elke route: compose/send, .eml, documents/send, followup, batch):**
+**Uitgaande mail (elke route — S224-inventaris: compose/send, .eml,
+documents/send, followup inline+DOCX, batch inline+DOCX, classificatie-antwoord,
+facturen; legacy: email/cases/send [UI-dood], AI-tool email_compose [dood]):**
 - M1. Afzender = kantoor-account (incasso@), nooit het persoonlijke account.
 - M2. Laat altijd het drieluik achter: EmailLog + SyncedEmail + CaseActivity
   (→ zichtbaar op Mail-pagina, dossier-correspondentie én tijdlijn).
-- M3. Mailslot en 14-dagenbrief-gate gelden op élke route.
+- M3. Mailslot en 14-dagenbrief-gate gelden op élke route — óók op de .eml-route
+  (S224: die was de vijfde open deur voor de gate).
 - M4. Onderwerp via de gedeelde bouwer (`build_email_subject` /
   `build_reply_subject`), nooit AI-verzonnen of stale sjabloon.
 - M5. Bijlagen (renteoverzicht/factuur) volgen het brieftype, route-onafhankelijk.
@@ -49,8 +52,9 @@ Per-functie testen vangt dit nooit. Kruispunt-testen wel.
 - P1. Alleen stap-brieven (intent next_step of NULL-legacy) bewegen de pijplijn;
   antwoorden en vrije berichten nooit.
 - P2. Stap-wissel ruimt open adviezen én stap-concepten van de oude stap op.
-- P3. Zaak sluiten laat geen open concepten/adviezen achter (nog NIET gebouwd —
-  bekend gat, IN100613).
+- P3. Zaak sluiten laat geen open concepten ÉN geen open adviezen achter
+  (gebouwd S223 concepten + S224 adviezen, alle 3 sluit-routes; wachter:
+  `test_discard_drafts_on_close.py`).
 
 **AI-output:**
 - A1. Alleen echte dossierdata: bedragen/factuurnummers op de cent gelijk aan de
@@ -72,14 +76,19 @@ kant van elke tabel die je beschrijft.
 
 - `tests/test_auth_drift_guard.py` — elke route eist login (allowlist 8 publiek).
 - `tests/test_rls_isolation.py::test_drift_guard_flags_tenant_table_without_rls`.
-- Sinds deze twee bestaan is hun foutsoort nooit teruggekomen. Dat is de maat:
+- `tests/test_send_route_drift_guard.py` (S224) — M2: geen rauwe provider-/
+  SMTP-uitgang buiten de geloggde routes; M4: elk verzend-onderwerp uit de
+  gedeelde bouwer of gemotiveerd op de allowlist. AST-gebaseerd: een nieuwe
+  route valt automatisch rood.
+- `tests/test_discard_drafts_on_close.py` (S223/S224) — P3 op alle 3
+  sluit-routes, concepten + adviezen.
+- Sinds deze bestaan is hun foutsoort nooit teruggekomen. Dat is de maat:
   een gevonden fout is pas "af" als zijn soort een wachter heeft.
 
-## Openstaand (kandidaat-wachters, nog te bouwen)
+## Veegsessie-status (S224)
 
-- Wachter M2: elke verzendroute loopt door `write_outbound_log` (enumereer
-  aanroepers van provider-send; elke aanroeper zonder log-call = rood).
-- Wachter M4: geen route zet een concept-/mail-onderwerp buiten de bouwers om.
-- Eénmalige matrix-veegsessie: de hele huisregel-lijst × alle bestaande routes
-  aflopen (Fable-audit) zodat de teller op nul staat en de discipline hem
-  daarna schoon houdt.
+De éénmalige matrix-veegsessie is gedraaid (rapport:
+`docs/sessions/S224-veegsessie.md`). Gevonden en gefixt: M1×classificatie-route,
+M3×.eml-route (gate), M4×documents/send, P3×adviezen. Open beslispunten
+(afzender facturen, dode routes opruimen) staan in het rapport — de allowlists
+in `test_send_route_drift_guard.py` verwijzen ernaar.

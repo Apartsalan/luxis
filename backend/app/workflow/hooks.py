@@ -101,9 +101,15 @@ async def on_payment_received(
 
         # S223 (huisregel P3) — zaak automatisch gesloten na volledige betaling →
         # open AI-concepten vervallen (geen concept mag op een dichte zaak blijven).
+        # S224 (veegsessie): óók open follow-up-adviezen — anders staat er na een
+        # heropening een verouderd advies klaar (dubbel-verstuur-risico).
         from app.ai_agent.draft_service import discard_open_drafts_on_close
+        from app.incasso.service import supersede_open_recommendations
 
         await discard_open_drafts_on_close(db, tenant_id, case.id)
+        await supersede_open_recommendations(
+            db, tenant_id, case.id, reason="Zaak gesloten (volledig betaald)"
+        )
 
         logger.info(
             f"Workflow hook: case {case.case_number} auto-transitioned to 'betaald' "

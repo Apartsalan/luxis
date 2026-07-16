@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.auth.models import User
 from app.cases.models import Case
@@ -427,9 +428,12 @@ async def send_document(
             "Document heeft geen sjabloontype — alleen DOCX-documenten kunnen worden verzonden"
         )
 
-    # Load the case
+    # Load the case (+ partijen voor de onderwerp-bouwer — lazy load zou in
+    # async-context een MissingGreenlet geven)
     result = await db.execute(
-        select(Case).where(
+        select(Case)
+        .options(selectinload(Case.client), selectinload(Case.opposing_party))
+        .where(
             Case.id == doc.case_id,
             Case.tenant_id == user.tenant_id,
         )
@@ -470,9 +474,27 @@ async def send_document(
     tenant = await load_tenant(db, user.tenant_id)
     kantoor = _tenant_ctx(tenant)
 
+    # S224 (veegsessie, huisregel M4): het onderwerp komt uit de gedeelde bouwer,
+    # niet uit een eigen titel-formaat ("{titel} — {nr}" gaf het dossiernummer
+    # dubbel en week af van het huisformaat op alle andere routes). De brietype-
+    # naam = de documenttitel zonder het " - {dossiernummer}"-achtervoegsel dat
+    # de generatie-routes eraan plakken.
+    from app.email.subject import build_email_subject
+
+    letter_type = doc.title or (doc.template_type or "").replace("_", " ").title()
+    title_suffix = f" - {case.case_number}"
+    if letter_type.endswith(title_suffix):
+        letter_type = letter_type[: -len(title_suffix)]
+    default_subject = build_email_subject(
+        client_name=case.client.name if case.client else None,
+        debtor_name=case.opposing_party.name if case.opposing_party else None,
+        letter_type=letter_type,
+        case_number=case.case_number,
+    )
+
     if data.custom_subject or data.custom_body:
         # Use custom subject/body from the frontend compose dialog
-        subject = data.custom_subject or f"{doc.title} — {case.case_number}"
+        subject = data.custom_subject or default_subject
         if data.custom_body:
             # Wrap custom body text in base HTML layout (escape + convert newlines)
             import html as _html
@@ -488,12 +510,13 @@ async def send_document(
             )
         template_name = "custom"
     else:
-        subject, html_body = document_sent(
+        _, html_body = document_sent(
             kantoor=kantoor,
             recipient_name=data.recipient_name or "",
             document_title=doc.title,
             case_number=case.case_number,
         )
+        subject = default_subject  # M4: bouwer wint van het sjabloon-onderwerp
         template_name = "document_sent"
 
     # Verstuur via het verbonden account (incasso@/Outlook) — niet via de globale

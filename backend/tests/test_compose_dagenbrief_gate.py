@@ -259,6 +259,73 @@ async def test_document_send_override_sends_and_leaves_trail(
 
     assert resp.status_code == 200, resp.text
     mock_send.assert_called_once()
+    # S224 (huisregel M4): het onderwerp op de document-verzendroute komt uit de
+    # gedeelde bouwer (huisformaat), niet uit "{titel} — {nr}" (dossiernr dubbel).
+    assert (
+        mock_send.call_args.kwargs["subject"] == "Cliënt — Eerste sommatie — 2026-96001"
+    )
+
+    activity = (await db.execute(
+        select(CaseActivity).where(
+            CaseActivity.case_id == case.id,
+            CaseActivity.activity_type == "compliance_override",
+        )
+    )).scalar_one()
+    assert "toch versturen" in activity.title.lower()
+
+
+@pytest.mark.asyncio
+async def test_compose_eml_blocks_with_gate_code(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S224 — vijfde verzenddeur (veegsessie): de .eml-route ('Open in Outlook')
+    levert een kant-en-klare sommatie af die de gebruiker zelf verstuurt. Op een
+    consumentendossier op een sommatie-stap zonder verstreken 14-dagenbrief moet
+    dezelfde gate vuren, mét de herkenbare code voor de voorkant."""
+    case, _d, _s = await _b2c_case_on_sommatie(db, test_tenant.id)
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    resp = await client.post(
+        f"/api/email/compose/cases/{case.id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "recipient_email": "debiteur@example.nl",
+            "subject": "Sommatie",
+            "body": "Betaal nu.",
+        },
+    )
+    assert resp.status_code == 422
+    detail = resp.json()["detail"]
+    assert detail["code"] == "DAGENBRIEF_GATE"
+    assert "14-dagenbrief" in detail["message"]
+
+
+@pytest.mark.asyncio
+async def test_compose_eml_override_builds_and_leaves_trail(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Met 'toch openen' (compliance_override) komt de .eml wél terug én ligt er
+    een onuitwisbaar spoor op het dossier."""
+    case, _d, sommatie = await _b2c_case_on_sommatie(db, test_tenant.id)
+    db.add(CaseStepHistory(
+        tenant_id=test_tenant.id, case_id=case.id, step_id=sommatie.id,
+        entered_at=datetime.now(UTC), trigger_type="manual",
+    ))
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    resp = await client.post(
+        f"/api/email/compose/cases/{case.id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "recipient_email": "debiteur@example.nl",
+            "subject": "Sommatie",
+            "body": "Betaal nu.",
+            "compliance_override": True,
+        },
+    )
+    assert resp.status_code == 200, resp.text
 
     activity = (await db.execute(
         select(CaseActivity).where(

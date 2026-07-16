@@ -822,10 +822,17 @@ async def update_case_status(
 
     # S223 (huisregel P3) — zaak gesloten → open AI-concepten vervallen zodat er geen
     # concept blijft staan dat later per ongeluk verstuurd wordt.
+    # S224 (veegsessie): óók open follow-up-adviezen sluiten — een pending advies op
+    # een gesloten zaak wordt bij heropenen weer zichtbaar (dubbel-verstuur-risico,
+    # gemeten op IN100613: gesloten 15/7 mét pending advies van 13/7).
     if new_status in ("betaald", "afgesloten"):
         from app.ai_agent.draft_service import discard_open_drafts_on_close
+        from app.incasso.service import supersede_open_recommendations
 
         await discard_open_drafts_on_close(db, tenant_id, case_id)
+        await supersede_open_recommendations(
+            db, tenant_id, case_id, reason=f"Zaak gesloten (status '{new_status}')"
+        )
 
     await db.refresh(case)
     return case

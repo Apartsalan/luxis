@@ -328,8 +328,8 @@ export default function ZaakDetailPage() {
     const subject = data.custom_subject || `${zaak?.case_number || ""}`;
     const body = data.custom_body || "";
 
-    try {
-      const res = await api(`/api/email/compose/cases/${id}`, {
+    const postEml = (complianceOverride: boolean) =>
+      api(`/api/email/compose/cases/${id}`, {
         method: "POST",
         body: JSON.stringify({
           recipient_email: data.recipient_email,
@@ -342,12 +342,45 @@ export default function ZaakDetailPage() {
           case_file_ids: data.case_file_ids,
           inline_attachments: data.inline_attachments,
           template_type: data.template_type,
+          compliance_override: complianceOverride,
         }),
       });
 
+    try {
+      let res = await postEml(false);
+
+      // S224 — 14-dagenbrief-gate óók op de Outlook-route (.eml): zelfde
+      // 'toch doorgaan'-bevestiging als bij direct versturen. Het systeem legt
+      // bij doorzetten zelf een spoor op het dossier vast.
+      if (res.status === 422) {
+        const gateErr = await res.clone().json().catch(() => null);
+        const gateDetail = gateErr?.detail;
+        if (gateDetail && typeof gateDetail === "object" && gateDetail.code === "DAGENBRIEF_GATE") {
+          const ok = await confirm({
+            title: "Weet je het zeker?",
+            description:
+              "Voor deze consument is nog geen verstreken 14-dagenbrief geregistreerd. " +
+              "Zonder die brief zijn de incassokosten bij een consument mogelijk niet " +
+              "opeisbaar (art. 6:96 lid 6 BW). Heeft de consument de 14-dagenbrief al " +
+              "ontvangen? Kies 'Toch openen' om de e-mail alsnog in Outlook te openen.",
+            confirmText: "Toch openen",
+            cancelText: "Annuleren",
+            variant: "destructive",
+          });
+          if (!ok) return;
+          res = await postEml(true);
+        }
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.detail ?? "E-mail opstellen mislukt");
+        const detail = err?.detail;
+        const msg = typeof detail === "string"
+          ? detail
+          : detail && typeof detail === "object" && typeof detail.message === "string"
+            ? detail.message
+            : "E-mail opstellen mislukt";
+        throw new Error(msg);
       }
 
       const blob = await res.blob();
@@ -678,7 +711,7 @@ export default function ZaakDetailPage() {
             )}
             {safeTab === "documenten" && (
               <ErrorBoundary key="documenten" fallback={<TabErrorFallback tabName="Documenten" />}>
-                <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} />
+                <DocumentenTab caseId={id} caseNumber={zaak?.case_number} caseStatus={zaak?.status} debtorType={zaak?.debtor_type} opposingPartyName={zaak?.opposing_party?.name} clientName={zaak?.client?.name} />
               </ErrorBoundary>
             )}
             {safeTab === "correspondentie" && (

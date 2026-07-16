@@ -156,6 +156,9 @@ class CaseComposeRequest(BaseModel):
     inline_attachments: list[InlineAttachment] | None = Field(
         default=None, max_length=MAX_ATTACHMENTS
     )
+    # S224 — 'toch doorgaan'-override voor de 14-dagenbrief-gate op de .eml-route
+    # (de vijfde verzenddeur; zelfde patroon als compose/send en documents/send).
+    compliance_override: bool = False
     template_type: str | None = Field(
         default=None,
         max_length=50,
@@ -584,6 +587,27 @@ async def compose_eml_from_case(
     case = result.scalar_one_or_none()
     if not case:
         raise NotFoundError("Dossier niet gevonden")
+
+    # S224 (veegsessie, huisregel M3) — de .eml-route is de VIJFDE verzenddeur
+    # (S205 dekte batch/follow-up/compose, S207 documents; deze bleef open): een
+    # kant-en-klare sommatie die de gebruiker zelf via Outlook verstuurt valt
+    # onder dezelfde wettelijke waarborg (art. 6:96 lid 6 BW). Zelfde gedeelde
+    # helper + 'toch doorgaan'-override + onuitwisbaar spoor als compose/send.
+    from app.collections.compliance import (
+        check_dagenbrief_gate_for_case,
+        record_dagenbrief_override,
+    )
+
+    gate_reason = await check_dagenbrief_gate_for_case(db, user.tenant_id, case_id)
+    if gate_reason is not None:
+        if not data.compliance_override:
+            raise HTTPException(
+                status_code=422,
+                detail={"code": "DAGENBRIEF_GATE", "message": gate_reason},
+            )
+        await record_dagenbrief_override(
+            db, user.tenant_id, case_id, user.id, gate_reason
+        )
 
     # Resolve body HTML
     if data.body_html:

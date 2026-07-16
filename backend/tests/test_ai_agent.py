@@ -554,6 +554,9 @@ async def test_execute_send_template_sends_email(
     assert call_kwargs.kwargs["to"] == "debiteur@example.com"
     assert "betalingsbewijs" in call_kwargs.kwargs["subject"].lower()
     assert case.case_number in call_kwargs.kwargs["subject"]
+    # S224 (huisregel M1): mail aan de wederpartij gaat via het vaste
+    # kantoorkanaal (incasso@), nooit via het account van wie klikt.
+    assert call_kwargs.kwargs["send_as_tenant_account"] is True
 
 
 @pytest.mark.asyncio

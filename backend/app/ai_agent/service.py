@@ -445,7 +445,11 @@ async def execute_classification(
 
                     body_html = _html.escape(body_text).replace("\n", "<br>")
 
-                    # Send via email provider / SMTP
+                    # Send via email provider / SMTP.
+                    # S224 (veegsessie, huisregel M1): dit is mail aan de WEDERPARTIJ —
+                    # altijd via het vaste kantoorkanaal (incasso@), nooit via het
+                    # persoonlijke account van wie op 'uitvoeren' klikt (patroon B13,
+                    # zelfde vangrail als batch/follow-up/compose).
                     email_log = await send_with_attachment(
                         db,
                         user_id,
@@ -457,6 +461,7 @@ async def execute_classification(
                         case_id=case.id,
                         recipient_name=wederpartij_naam,
                         sender_name=(tenant.name if tenant else ""),
+                        send_as_tenant_account=True,
                     )
 
                     if email_log.status == "sent":

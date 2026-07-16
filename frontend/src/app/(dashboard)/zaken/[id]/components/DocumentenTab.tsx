@@ -838,7 +838,26 @@ function VerschottenSection({ caseId }: { caseId: string }) {
   );
 }
 
-export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, opposingPartyName }: { caseId: string; caseNumber?: string; caseStatus?: string; debtorType?: string | null; opposingPartyName?: string }) {
+// S224 (huisregel M4): zelfde huisformaat als de server-bouwer (build_email_subject):
+// "{klant} / {debiteur} — {brieftype} — {dossiernummer}". De documenttitel draagt
+// vaak al een " - {dossiernummer}"-achtervoegsel van de generatie-routes — strippen,
+// anders staat het nummer dubbel in het onderwerp.
+function buildDocumentSubject(
+  docTitle: string,
+  caseNumber?: string,
+  clientName?: string,
+  opposingPartyName?: string
+): string {
+  let letterType = docTitle;
+  if (caseNumber && letterType.endsWith(` - ${caseNumber}`)) {
+    letterType = letterType.slice(0, -(` - ${caseNumber}`.length));
+  }
+  const parties = [clientName, opposingPartyName].filter(Boolean).join(" / ");
+  const prefix = parties ? `${parties} — ` : "";
+  return `${prefix}${letterType}${caseNumber ? ` — ${caseNumber}` : ""}`;
+}
+
+export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, opposingPartyName, clientName }: { caseId: string; caseNumber?: string; caseStatus?: string; debtorType?: string | null; opposingPartyName?: string; clientName?: string }) {
   const { data: templates, isLoading: templatesLoading } = useDocxTemplates();
   const { data: documents, isLoading: docsLoading } = useCaseDocuments(caseId);
   const { data: emailLogs } = useEmailLogs(caseId);
@@ -1702,7 +1721,7 @@ export function DocumentenTab({ caseId, caseNumber, caseStatus, debtorType, oppo
         onOpenChange={setEmailDialogOpen}
         onSend={handleSendEmail}
         isSending={sendDocument.isPending}
-        defaultSubject={emailDoc ? `${emailDoc.title}${caseNumber ? ` — ${caseNumber}` : ""}` : ""}
+        defaultSubject={emailDoc ? buildDocumentSubject(emailDoc.title, caseNumber, clientName, opposingPartyName) : ""}
         defaultBody={emailDoc ? `Geachte heer/mevrouw,\n\nBijgaand treft u het document "${emailDoc.title}" aan${caseNumber ? ` inzake zaak ${caseNumber}` : ""}.\n\nHet document is als bijlage bij deze e-mail gevoegd.\n\nMet vriendelijke groet` : ""}
         defaultToName={opposingPartyName || ""}
         attachmentName={emailDoc ? `${emailDoc.title}.pdf` : undefined}

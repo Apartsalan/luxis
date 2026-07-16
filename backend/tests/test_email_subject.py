@@ -1,6 +1,6 @@
 """S220 punt 5 — gedeelde onderwerp-bouwer."""
 
-from app.email.subject import build_email_subject
+from app.email.subject import build_email_subject, build_reply_subject
 
 
 def test_full_subject():
@@ -33,3 +33,47 @@ def test_only_debtor():
         )
         == "Jansen — Aanmaning — IN100007"
     )
+
+
+# ── S223 — antwoord-onderwerp (Re: + partijen/dossiernummer) ───────────────
+
+
+def test_reply_prefixes_re_and_appends_parties():
+    assert (
+        build_reply_subject(
+            original_subject="SOMMATIE TOT BETALING / LEGALWORK - SRict",
+            client_name="LegalWork B.V.",
+            debtor_name="SRict B.V.",
+            case_number="IN100607",
+        )
+        == "Re: SOMMATIE TOT BETALING / LEGALWORK - SRict — LegalWork B.V. / SRict B.V. — IN100607"
+    )
+
+
+def test_reply_keeps_single_re_prefix():
+    # Origineel heeft al "Re:" → niet verdubbelen.
+    out = build_reply_subject(
+        original_subject="Re: Ik betwist",
+        client_name="LegalWork B.V.", debtor_name="SRict B.V.",
+        case_number="IN100607",
+    )
+    assert out.count("Re:") == 1
+    assert out.startswith("Re: Ik betwist")
+
+
+def test_reply_skips_append_when_case_number_already_present():
+    # Dossiernummer staat al in het onderwerp → geen dubbele vermelding.
+    out = build_reply_subject(
+        original_subject="Vraag over IN100607",
+        client_name="LegalWork B.V.", debtor_name="SRict B.V.",
+        case_number="IN100607",
+    )
+    assert out == "Re: Vraag over IN100607"
+
+
+def test_reply_empty_original_falls_back_to_re():
+    out = build_reply_subject(
+        original_subject="", client_name=None, debtor_name="SRict B.V.",
+        case_number="IN100607",
+    )
+    assert out == "Re: — SRict B.V. — IN100607"

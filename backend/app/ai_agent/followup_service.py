@@ -502,7 +502,10 @@ async def execute_recommendation(
             pdf_bytes = await docx_to_pdf(docx_bytes)
             pdf_filename = filename.replace(".docx", ".pdf")
 
-            email_subject = step.email_subject_template or build_email_subject(
+            # S223 — altijd het vaste huisformaat; het oude BaseNet
+            # email_subject_template ("TYPE / / ") is stale junk (geen UI bewerkt
+            # het) en gaf een onderwerp zonder klant/debiteur.
+            email_subject = build_email_subject(
                 client_name=case.client.name if case.client else None,
                 debtor_name=case.opposing_party.name if case.opposing_party else None,
                 letter_type=step.name,
@@ -742,7 +745,8 @@ async def preview_recommendation(
         )
 
     # DOCX-route (dagvaarding e.d.) — brief als PDF-bijlage.
-    subject = step.email_subject_template or build_email_subject(
+    # S223 — altijd het vaste huisformaat (zie boven).
+    subject = build_email_subject(
         client_name=case.client.name if case.client else None,
         debtor_name=case.opposing_party.name if case.opposing_party else None,
         letter_type=step.name,

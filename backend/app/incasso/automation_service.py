@@ -683,17 +683,25 @@ async def generate_draft_for_step(
         av_pdf_path=av_pdf_path if use_pdf_route else None,
     )
 
-    from app.incasso.html_renderer import render_subject, render_template_html
+    from app.email.subject import build_email_subject
+    from app.incasso.html_renderer import render_template_html
 
-    # Subject altijd server-side renderen — AI maakt soms fouten met de
-    # `/ kenmerk / dossiernummer` structuur (zet bv. contactnaam in plaats
-    # van dossiernummer in 2e slot).
+    # Subject altijd server-side bouwen in het vaste huisformaat (S223):
+    # 'klant / debiteur — brieftype — dossiernummer'. Voorheen rende dit het
+    # oude BaseNet-sjabloon ("TYPE / / ") dat alleen 'TYPE / dossiernummer' gaf
+    # (zonder klant/debiteur) — dat is wat Arsalan als fout onderwerp zag.
     case_data = context.get("case_data", {})
     case_number_str = str(case_data.get("case_number") or "")
-    subject = render_subject(
-        template_subject,
+
+    def _name_or_none(v: object) -> str | None:
+        s = str(v or "").strip()
+        return s if s and s != "?" else None
+
+    subject = build_email_subject(
+        client_name=_name_or_none(context.get("client_data", {}).get("name")),
+        debtor_name=_name_or_none(context.get("debtor_data", {}).get("name")),
+        letter_type=target_step.name,
         case_number=case_number_str,
-        kenmerk=str(case_data.get("reference") or ""),
     )
 
     def _post_process(res: dict) -> str:

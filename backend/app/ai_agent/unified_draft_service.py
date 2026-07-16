@@ -144,6 +144,41 @@ def _betreft_line(case_number: str, subject: str) -> str:
     return f"<strong>Betreft:</strong> {subject}" if subject else f"<strong>Betreft:</strong> dossier {case_number}"
 
 
+def _resolve_subject(
+    case: Case,
+    intent: DraftIntent,
+    ai_subject: str,
+    reply_source_subject: str | None,
+) -> str:
+    """Bepaal het definitieve mail-onderwerp per bedoeling (S223).
+
+    - next_step  → vast formaat 'klant / debiteur — stapnaam — dossiernummer'
+    - reply      → origineel onderwerp met 'Re:' + klant/debiteur/dossiernummer
+    - free       → het door de AI voorgestelde onderwerp (gebruiker stelt vrij op)
+    """
+    from app.email.subject import build_email_subject, build_reply_subject
+
+    client_name = case.client.name if case.client else None
+    debtor_name = case.opposing_party.name if case.opposing_party else None
+
+    if intent == DraftIntent.NEXT_STEP:
+        letter_type = case.incasso_step.name if case.incasso_step else "Bericht"
+        return build_email_subject(
+            client_name=client_name,
+            debtor_name=debtor_name,
+            letter_type=letter_type,
+            case_number=case.case_number,
+        )
+    if intent == DraftIntent.REPLY_TO_EMAIL:
+        return build_reply_subject(
+            original_subject=reply_source_subject,
+            client_name=client_name,
+            debtor_name=debtor_name,
+            case_number=case.case_number,
+        )
+    return ai_subject
+
+
 async def _load_case(
     db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
 ) -> Case:
@@ -404,6 +439,29 @@ async def _find_open_duplicate_draft(
     return result.scalar_one_or_none()
 
 
+async def find_open_reply_draft(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    source_email_id: uuid.UUID,
+) -> AIDraft | None:
+    """S223 — bestaat er al een open antwoord-concept voor deze bron-mail?
+
+    Gebruikt door de "AI-antwoord maken"-knop om vóór het (betaalde) genereren te
+    vragen: bestaand openen of vervangen. Zelfde ontdubbel-sleutel als de generatie
+    (zaak + classificatie van de bron-mail). Geen classificatie → geen match.
+    """
+    classification = await _load_classification_for_email(
+        db, tenant_id, source_email_id
+    )
+    if classification is None:
+        return None
+    return await _find_open_duplicate_draft(
+        db, tenant_id, case_id, DraftIntent.REPLY_TO_EMAIL,
+        step_id=None, classification_id=classification.id,
+    )
+
+
 async def generate_unified_draft(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -414,6 +472,7 @@ async def generate_unified_draft(
     tone: str | None = None,
     source_email_id: uuid.UUID | None = None,
     instruction: str | None = None,
+    force_new: bool = False,
 ) -> AIDraft:
     """Generate an AI draft via the unified pipeline.
 
@@ -426,6 +485,7 @@ async def generate_unified_draft(
 
     case = await _load_case(db, tenant_id, case_id)
     classification: EmailClassification | None = None
+    reply_source_subject: str | None = None
 
     if intent == DraftIntent.NEXT_STEP:
         system_prompt = _NEXT_STEP_PROMPT
@@ -437,6 +497,7 @@ async def generate_unified_draft(
         source_email = await _load_source_email(db, tenant_id, source_email_id)
         if not source_email:
             raise ValueError("Bronemail niet gevonden")
+        reply_source_subject = source_email.subject
         classification = await _load_classification_for_email(
             db, tenant_id, source_email_id
         )
@@ -453,17 +514,26 @@ async def generate_unified_draft(
 
     # S221 3.2 — geen tweede concept (en geen tweede AI-rekening) als er al een open
     # concept voor dezelfde bedoeling staat. Toon het bestaande i.p.v. te dubbelen.
+    # S223: force_new (van de "AI-antwoord maken"-knop na "vervangen") laat het oude
+    # concept vervallen en genereert vers, i.p.v. het bestaande terug te geven.
     existing = await _find_open_duplicate_draft(
         db, tenant_id, case_id, intent,
         step_id=case.incasso_step_id,
         classification_id=classification_id,
     )
     if existing is not None:
-        logger.info(
-            "UnifiedDraftService: bestaand open concept %s hergebruikt (case=%s, intent=%s)",
-            existing.id, case.case_number, intent.value,
-        )
-        return existing
+        if force_new:
+            existing.status = DraftStatus.DISCARDED
+            logger.info(
+                "UnifiedDraftService: bestaand concept %s vervangen (force_new, case=%s, intent=%s)",
+                existing.id, case.case_number, intent.value,
+            )
+        else:
+            logger.info(
+                "UnifiedDraftService: bestaand open concept %s hergebruikt (case=%s, intent=%s)",
+                existing.id, case.case_number, intent.value,
+            )
+            return existing
 
     # S173: geef álle 3 de intents dezelfde kennis (AV + verweer-bibliotheek + geleerde
     # voorbeelden) als het incasso-pad — maar alléén bij een verweer-categorie. Voorheen
@@ -492,6 +562,11 @@ async def generate_unified_draft(
     subject = (result.get("subject") or "").strip()
     body = (result.get("body") or "").strip()
     ai_tone = (result.get("tone") or tone or "formeel").strip()
+
+    # S223 — onderwerp server-side vastzetten i.p.v. het door de AI verzonnen
+    # onderwerp (dat wisselde per keer). Vast formaat = klant / debiteur — brieftype
+    # — dossiernummer; een antwoord houdt het originele onderwerp met "Re:" aan.
+    subject = _resolve_subject(case, intent, subject, reply_source_subject)
 
     # Wrap to branded HTML — defensive: fall back to None if context build fails
     body_html: str | None = None

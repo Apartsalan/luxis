@@ -15,14 +15,57 @@ NEE → direct door.
 
 ---
 
-# DEEL A — Arsalan's nieuwe punten (VULT ARSALAN AAN BIJ START)
-> Arsalan zei bij het afsluiten van S222: "ik heb nog een aantal punten." Die staan
-> hier nog niet. **Vraag ze bij sessiestart op** (in één keer, niet stap-voor-stap),
-> noteer ze hieronder, en bepaal per punt: onderzoek (Fable) of bouwen (Opus).
->
-> 1.
-> 2.
-> 3.
+# DEEL A — Arsalan's nieuwe punten (opgegeven bij start S223, 16 juli)
+
+> 1. **Opnieuw antwoord kunnen genereren op een wederpartij-mail.** Voorbeeld IN100607
+>    (gisteren gebruikt als testcasus met fout AI-antwoord): daar kan nu géén nieuw
+>    AI-antwoord meer op gemaakt worden. Gewenst: een knop op de mail van de wederpartij
+>    zelf — "concept maken" — die je vaker kunt gebruiken (na aanpassingen opnieuw testen),
+>    zonder te hoeven wachten op de automatische beoordeling/classificatie.
+> 2. **Stuur-tekstvak per antwoord (chat-achtig).** Naast het automatische antwoord een
+>    vrij tekstvak: "beantwoord deze cliënt en zeg dat ik erop terugkom" / "…en zeg dat
+>    het niet klopt en dat het zo zit". AI gaat uit van zijn eigen antwoord, maar Arsalan/
+>    Lisanne kan met een instructie bijsturen. Vraag: kunnen we dit implementeren?
+> 3. **Onderwerp van concept-mails nog steeds fout** (gisteren al doorgegeven, niet
+>    aangepast): titel moet zijn **cliënt / debiteur — sommatie tot betaling — ons
+>    dossiernummer**. Uitzoeken wat er nu gebeurt en waarom de eerdere melding niet is
+>    doorgevoerd.
+
+## Onderzoek DEEL A afgerond (Fable, 16 juli) — bouwplan + keuzes Arsalan
+
+**Bevindingen (gemeten in code + prod-DB):**
+- Punt 1: elke mail wordt één keer automatisch beoordeeld; er bestaat nérgens in de UI
+  een knop om op een specifieke mail een (nieuw) AI-antwoord te vragen. De motor
+  bestaat volledig (`POST /api/ai/draft`, intent `reply_to_email`, met `instruction`-veld
+  en toon) maar `useGenerateDraft` (use-ai-draft.ts) wordt door geen enkel scherm
+  gebruikt. IN100607: classificatie 15/7 `betwisting` status `executed`, fout concept
+  "REACTIE OP UW VERWEER" staat nog open (status `generated`).
+- Punt 2: `instruction` gaat backend-breed al mee in de prompt ("Extra instructie:") —
+  alleen UI ontbreekt.
+- Punt 3: S220 bouwde `build_email_subject` (exact het gewenste formaat), maar op de
+  stap-routes geldt `step.email_subject_template or build_email_subject(...)` en alle
+  6 stappen in prod-DB hebben nog oude BaseNet-onderwerpen ("SOMMATIE TOT BETALING / / ")
+  die dus winnen; de AI-concept-routes bewaren bovendien het AI-verzonnen onderwerp.
+
+**Keuzes Arsalan (16 juli):**
+1. Antwoord-onderwerp: `Re: <origineel>` aanhouden MÉT klant/debiteur/dossiernummer
+   erachter toegevoegd (niet dubbel toevoegen als het dossiernummer al in het
+   originele onderwerp staat).
+2. Brieftype in onderwerp = stapnaam ("Eerste sommatie", "Tweede sommatie", …).
+3. Opnieuw genereren op een mail met al een open concept: EERST VRAGEN
+   (dialoog: bestaand openen of vervangen; vervangen = oude vervalt + verse generatie).
+
+**Bouwplan (Opus):**
+- **Blok A — knop + stuurvak op inkomende mail** (dossier-correspondentie + mailpagina):
+  "AI-antwoord maken" met optioneel instructie-tekstvak + toon-keuze → `POST /api/ai/draft`
+  (reply_to_email + source_email_id + instruction). Backend: `force_new`-vlag die het
+  open duplicaat netjes laat vervallen (status discarded) vóór verse generatie;
+  frontend vraagt eerst (keuze 3). Werkt onbeperkt vaak, wacht niet op classificatie.
+- **Blok B — onderwerp overal goed:** (1) prod-data: de 6 oude stap-onderwerpen
+  leegmaken/vervangen (dry-run + GO Arsalan); (2) code: `build_email_subject` laten
+  winnen op alle stap-mailroutes; (3) AI-concepten: onderwerp server-side zetten
+  (stap-concept = vast formaat met stapnaam; antwoord-concept = Re:-regel uit keuze 1)
+  i.p.v. het AI-verzonnen onderwerp.
 
 ---
 

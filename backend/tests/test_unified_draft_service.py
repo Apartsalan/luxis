@@ -22,6 +22,7 @@ from app.ai_agent.unified_draft_service import (
     DraftIntent,
     _betreft_line,
     _plain_to_html,
+    find_open_reply_draft,
     generate_unified_draft,
 )
 from app.cases.models import Case
@@ -176,7 +177,11 @@ async def test_next_step_intent_persists_draft_with_branded_html(
 
     assert isinstance(draft, AIDraft)
     assert draft.status == DraftStatus.GENERATED
-    assert draft.subject == "Aanmaning factuur 1"
+    # S223 — onderwerp wordt server-side vastgezet in het huisformaat
+    # 'klant / debiteur — brieftype — dossiernummer' (geen stap → "Bericht"),
+    # NIET het door de AI verzonnen onderwerp.
+    assert draft.subject == "Acme B.V. / Debiteur BV — Bericht — 2026-00100"
+    assert "Aanmaning factuur 1" not in draft.subject
     # Plain body persisted
     assert draft.body == "Eerste alinea.\n\nTweede alinea."
     # Branded HTML wrap
@@ -635,6 +640,83 @@ async def test_dedup_ignores_discarded_draft(
         case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
     )
     assert second.id != first.id
+
+
+# ── S223: force_new (vervangen) + bestaand antwoord-concept vinden ─────────
+
+
+@pytest.mark.asyncio
+async def test_force_new_discards_existing_and_generates_fresh(
+    db, test_tenant, test_user, incasso_case, fake_base_context, monkeypatch
+):
+    """'AI-antwoord maken' met force_new (na 'vervangen') laat het open concept
+    vervallen en maakt een vers concept i.p.v. het bestaande terug te geven."""
+    _patch_ai(monkeypatch, subject="Eerste sommatie", body="Alinea.")
+    _patch_context(monkeypatch, fake_base_context)
+
+    first = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
+    )
+    second = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
+        force_new=True,
+    )
+    assert second.id != first.id
+    assert first.status == DraftStatus.DISCARDED
+
+
+@pytest.mark.asyncio
+async def test_find_open_reply_draft_returns_existing(
+    db, test_tenant, test_user, incasso_case, fake_base_context, monkeypatch
+):
+    """De 'bestaat er al een antwoord?'-check vindt een open antwoord-concept op
+    dezelfde bron-mail (de 'eerst vragen'-flow van de knop)."""
+    from app.ai_agent.models import EmailClassification
+    from app.email.oauth_models import EmailAccount
+
+    account = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="outlook", email_address="lisanne@kestinglegal.nl",
+        access_token_enc=b"stub", refresh_token_enc=b"stub",
+        token_expiry=datetime.now(UTC) + timedelta(hours=1),
+    )
+    db.add(account)
+    await db.flush()
+    src = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email_account_id=account.id,
+        case_id=incasso_case.id, provider_message_id="reply@example.com",
+        from_email="debiteur@example.com", from_name="Debiteur",
+        subject="Ik betwist de factuur", body_text="Klopt niet.",
+        body_html="", direction="inbound", email_date=datetime.now(UTC),
+    )
+    db.add(src)
+    await db.flush()
+    db.add(
+        EmailClassification(
+            id=uuid.uuid4(), tenant_id=test_tenant.id, synced_email_id=src.id,
+            case_id=incasso_case.id, category="betwisting", confidence=0.9,
+            suggested_action="reply",
+        )
+    )
+    await db.commit()
+
+    # Nog niets → geen bestaand concept.
+    assert await find_open_reply_draft(db, test_tenant.id, incasso_case.id, src.id) is None
+
+    _patch_ai(monkeypatch, subject="Re:", body="Antwoord.")
+    _patch_context(monkeypatch, fake_base_context)
+    draft = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.REPLY_TO_EMAIL,
+        source_email_id=src.id,
+    )
+    await db.commit()
+
+    found = await find_open_reply_draft(db, test_tenant.id, incasso_case.id, src.id)
+    assert found is not None
+    assert found.id == draft.id
 
 
 # ── S221 4.3: begrip-eerst — dossierfeiten in de antwoordprompt ────────────

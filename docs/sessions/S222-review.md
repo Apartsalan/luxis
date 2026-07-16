@@ -18,7 +18,7 @@ doel-PDF (`templates/lisanne/CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 161
 | Bedragen op de juiste plek | ✅ beide tabellen (brief p1 + verzoekschrift p3/4) tellen exact op: 3.500 + 1.200 = 4.700 → +145,32 → +588,50 +123,59 = 5.557,41; betaal-scenario: −1.000 → 4.557,41. Twee scenario's gerenderd (met/zonder deelbetaling) |
 | Logo + huidig adres | ✅ KESTING LEGAL-logo in de kop; Willem Fenengastraat 16E / 1096 BN / incasso@ / 020-3086621 op p5 (oud IJsbaanpad/1076 CV/kesting@ vervangen) |
 | Geen BaseNet-resten | ✅ onafhankelijke hercheck op het eindbestand: 0× MERGEFIELD/$data/#foreach; enige veld-resten = PAGE/NUMPAGES (paginanummering, hoort zo). 48 invulvelden + 4 lus-markeringen |
-| Reseed byte-identiek op prod | ⬜ **NIET gedaan — bewust.** Prod draait nog de S221-tussenversie (45658 bytes, geverifieerd). Livegang wacht op GO Arsalan + 4 open keuzes (CONCEPT-watermerk houden?, kolomlabel Vervaldatum→Verzuimdatum, 2 betaalregels → 1, handtekening-placeholder weg) |
+| Reseed byte-identiek op prod | ✅ **LIVE (16 juli, GO Arsalan + 4 keuzes bevestigd: watermerk houden, Verzuimdatum, 1 betaalregel, witruimte-handtekening).** Back-up `/root/backup_managed_templates_pre_s222_verzoekschrift.sql`; alleen de verzoekschrift-rij bijgewerkt (45658→86951 bytes); DB-hash = schijf-hash = lokaal-hash. **Live-render door het echte systeem op zaak IN100521:** debiteur/opdrachtgever/3 facturen correct, totalen op de cent (€ 75.322,42), BTW-regel valt terecht weg (btw-plichtige cliënt). |
 
 **Kanttekening (bouwkeuzes die afwijken van Lisanne's origineel, gemeld aan Arsalan):**
 de per-zaak-gegevens die haar sjabloon wél toont maar Luxis niet apart bijhoudt
@@ -170,7 +170,7 @@ gelezen. Intake-14 en adviezen-15 NIET automatisch aanraken.
 4. Verder alles read-only.
 
 ## Openstaande beslispunten voor Arsalan/Lisanne
-1. **GO reseed verzoekschrift** + 4 opmaakkeuzes (watermerk, kolomlabel, betaalregels, handtekening).
+1. ✅ **GEDAAN — verzoekschrift LIVE** (16 juli, alle 4 keuzes bevestigd + live-render bewezen).
 2. **GO opruimrecept D** (classificaties/concepten/notificaties).
 3. ~~Goud-bibliotheek schonen~~ — vervallen: de "vervuiling" bleek een ontwerpfout in
    het testscript, niet in de bibliotheek (zie C2). De bibliotheek is in orde.

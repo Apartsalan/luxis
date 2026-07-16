@@ -3,7 +3,7 @@
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 16 juli 2026 nacht (S222, Opus-bouw + Fable-review — verzoekschrift exacte nabouw KLAAR (wacht op GO) + volledige review S220/S221 + testronde 2 rondes + backfills gemeten).
-**Laatste feature/fix:** verzoekschrift-bijlage in Lisanne's EXACTE opmaak per zaak ingevuld (lokaal klaar + veld-voor-veld geverifieerd, reseed wacht op GO + 4 opmaakkeuzes); 2 aangescherpte antwoord-spelregels (geen eigen bedrag-uitsplitsingen; verzoek doorzetten = betalingsplicht blijft) LIVE; testronde-script goud-pad gerepareerd (mapper-imports + voedde Lisanne's eigen antwoorden als vraag).
+**Laatste feature/fix:** verzoekschrift-bijlage in Lisanne's EXACTE opmaak per zaak ingevuld — **LIVE (16 juli, GO + 4 keuzes: CONCEPT-watermerk houden, Verzuimdatum-kop, 1 betaalregel, witruimte-handtekening); reseed byte-identiek + live-render op echte zaak IN100521 bewezen (totalen op de cent)**; 2 aangescherpte antwoord-spelregels (geen eigen bedrag-uitsplitsingen; verzoek doorzetten = betalingsplicht blijft) LIVE; testronde-script goud-pad gerepareerd (mapper-imports + voedde Lisanne's eigen antwoorden als vraag).
 **Review-uitkomst:** B1 terugzetten/overslaan LIVE doorgeklikt ✅; B4 alle UX-punten ✅ (0 spatie-kolommen in 58 verse antwoorden); B3 sync→classificatie AANNEMELIJK maar onbewezen (geen test, nooit gevuurd); testronde 83→89% op de zuivere set, poort auto-concept NIET gehaald → blijft UIT (rest is corrector-kalibratie, beslispunt); IN100613: zaak sluiten laat concepten staan. Rapport: `docs/sessions/S222-review.md`.
 **Openstaand (→ S223):** 6 beslispunten in S222-review (GO reseed + 4 keuzes; GO opruimrecept 470/348/3; kalibratie antwoord-lat; B3-test; goud-zoeker opdrachtgevers uitsluiten) + S221b-restlijst (review-scherm, voortgang-indicator, HTML-tabellen, Blok 5-rest, Blok 6-memo). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
 **Volgende sessie:** beslispunten doornemen met Arsalan (wakker) → daarna S221b-Opus-restant of KvK-backfill zodra sleutel er is.
@@ -18,7 +18,11 @@ vorderingen-lus herbouwd, oud adres/mail vervangen, handtekening-placeholder weg
 Twee scenario's gerenderd (met/zonder deelbetaling): alle bedragen tellen op de cent
 op, in beide tabellen. **Lokaal klaar; reseed op prod NIET gedaan** — wacht op GO +
 4 keuzes (CONCEPT-watermerk, kolomlabel Verzuimdatum, betaalregels samengevoegd,
-handtekening). **Deel 2 (Fable, autonoom — Arsalan sliep):** volledige review,
+handtekening). **16 juli LIVE gezet** (GO + 4 keuzes bevestigd): back-up gemaakt,
+alleen de verzoekschrift-rij bijgewerkt (45658→86951 bytes), DB-hash = schijf = lokaal,
+en een live-render door het echte systeem op zaak IN100521 bewees dat alles goed vult
+(debiteur/opdrachtgever/3 facturen, totalen op de cent, BTW-regel valt terecht weg).
+**Deel 2 (Fable, autonoom — Arsalan sliep):** volledige review,
 rapport in `docs/sessions/S222-review.md`.
 
 ### Reviewuitkomsten (bewijs in het rapport)

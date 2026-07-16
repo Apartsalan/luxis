@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 16 juli 2026 nacht (S222, Opus-bouw + Fable-review). Verzoekschrift-bijlage in Lisanne's EXACTE opmaak per zaak ingevuld — lokaal klaar en veld-voor-veld geverifieerd, **reseed wacht op GO Arsalan + 4 opmaakkeuzes**. Volledige review S220/S221 afgerond (`docs/sessions/S222-review.md`): B1 live doorgeklikt ✅, alle UX-punten ✅, sync→classificatie aannemelijk-maar-onbewezen (geen test), antwoord-testronde 2 rondes gedraaid (83→89% zuivere set; **poort auto-concept NIET gehaald → blijft UIT**, restant is corrector-kalibratie = beslispunt), backfill-wachtrijen doorgemeten mét opruimrecept (wacht op GO). **6 beslispunten open** in het reviewrapport. **KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
+**Laatst bijgewerkt:** 16 juli 2026 nacht (S222, Opus-bouw + Fable-review). Verzoekschrift-bijlage in Lisanne's EXACTE opmaak per zaak ingevuld — **LIVE (16 juli, GO + 4 keuzes bevestigd; reseed byte-identiek + live-render op echte zaak IN100521 bewezen)**. Volledige review S220/S221 afgerond (`docs/sessions/S222-review.md`): B1 live doorgeklikt ✅, alle UX-punten ✅, sync→classificatie aannemelijk-maar-onbewezen (geen test), antwoord-testronde 2 rondes gedraaid (83→89% zuivere set; **poort auto-concept NIET gehaald → blijft UIT**, restant is corrector-kalibratie = beslispunt), backfill-wachtrijen doorgemeten mét opruimrecept (wacht op GO). **6 beslispunten open** in het reviewrapport. **KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -64,8 +64,8 @@ Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `
 > Verzoekschrift-bijlage in Lisanne's exacte opmaak is klaar (lokaal, veld-voor-veld
 > geverifieerd), testronde 2 rondes gedraaid (zuivere set 83→89%).
 >
-> 🎯 **VOLGENDE: de 6 beslispunten uit S222-review met Arsalan** —
-> (1) GO reseed verzoekschrift + 4 opmaakkeuzes; (2) GO opruimrecept backfills
+> 🎯 **VOLGENDE: de resterende beslispunten uit S222-review met Arsalan** —
+> (1) ✅ verzoekschrift LIVE (16 juli); (2) GO opruimrecept backfills
 > (470 classificaties → 21 laten staan; 302 ruis-notificaties; 3 concepten);
 > (3) kalibratie antwoord-lat (bepaalt of de auto-concept-poort haalbaar wordt —
 > poort staat DICHT tot >90% + 0 zwaar); (4) test voor sync→classificatie-trigger;

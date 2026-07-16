@@ -222,6 +222,28 @@ class TestBuildStepEmail:
         assert "Jansen &amp; Zonen" in body  # body: precies één keer geëscaped
         assert "&amp;amp;" not in body  # nooit dubbel
 
+    async def test_stale_subject_template_never_wins(
+        self, db, test_tenant, test_user, test_company, test_person
+    ):
+        """S223-review (huisregel M4): het stale BaseNet-stap-onderwerp
+        ("EERSTE SOMMATIE / / " — lege slots) mag het onderwerp nooit meer
+        bepalen; de gedeelde bouwer wint altijd, óók als er een subject-template
+        op de stap staat."""
+        steps = await create_pipeline_steps(db, test_tenant.id)
+        steps[0].email_subject_template = "EERSTE SOMMATIE / / "
+        case = await create_incasso_case(
+            db, test_tenant.id, test_company, test_person, test_user, step=steps[0]
+        )
+        await db.commit()
+        await db.refresh(case)
+
+        subject, _body = _build_step_email(steps[0], case, db, test_tenant.id)
+
+        assert "/ /" not in subject
+        assert subject == (
+            f"{test_company.name} / {test_person.name} — Aanmaning — {case.case_number}"
+        )
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 3: Task Automation (DB tests, no external mocks)

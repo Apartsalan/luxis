@@ -1613,21 +1613,28 @@ def _build_step_email(
 ) -> tuple[str, str]:
     """Build email subject + HTML body for a pipeline step.
 
-    Uses the step's custom email templates if set, otherwise falls back
-    to the generic document_sent() template.
+    Uses the step's custom email BODY template if set, otherwise falls back
+    to the generic document_sent() template. Het ONDERWERP komt altijd uit de
+    gedeelde bouwer (S223-review, huisregel M4): het oude pad rende hier het
+    stale BaseNet-stap-onderwerp ("VERZOEKSCHRIFT FAILLISSEMENT / / " — lege
+    slots, geen Jinja-variabelen) letterlijk de deur uit op de batch-PDF-route.
 
     Returns:
         (subject, html_body)
     """
+    subject = build_email_subject(
+        client_name=case.client.name if case.client else None,
+        debtor_name=case.opposing_party.name if case.opposing_party else None,
+        letter_type=step.name,
+        case_number=case.case_number,
+    )
     if step.email_subject_template and step.email_body_template:
         from jinja2 import Environment
 
         # S202 M4: de body wordt als HTML verstuurd — autoescape zorgt dat
         # data-afkomstige velden (omschrijving, namen) geen rauwe markup de deur
         # uit laten gaan; letterlijke sjabloontekst van het kantoor zelf blijft
-        # ongemoeid. Het onderwerp is platte tekst (mailheader) → géén escaping,
-        # anders wordt een legitieme '&' daar zichtbaar '&amp;'.
-        env_subject = Environment(autoescape=False)
+        # ongemoeid.
         env_body = Environment(autoescape=True)
 
         # Build a simple context for email templates (lighter than full docx context)
@@ -1652,7 +1659,6 @@ def _build_step_email(
         if hasattr(case, "tenant") and case.tenant:
             context["kantoor"]["naam"] = case.tenant.name or ""
 
-        subject = env_subject.from_string(step.email_subject_template).render(context)
         body_text = env_body.from_string(step.email_body_template).render(context)
         body_html = body_text.replace("\n", "<br>")
 
@@ -1661,15 +1667,17 @@ def _build_step_email(
         body_html = _render_base(kantoor, body_html)
         return subject, body_html
 
-    # Fallback: use the generic document_sent template
+    # Fallback: use the generic document_sent template (body); onderwerp blijft
+    # de gedeelde bouwer hierboven.
     kantoor_dict = {"naam": "", "adres": "", "postcode_stad": ""}
     recipient_name = case.opposing_party.name if case.opposing_party else ""
-    return document_sent(
+    _, body_html = document_sent(
         kantoor=kantoor_dict,
         recipient_name=recipient_name,
         document_title=step.name,
         case_number=case.case_number,
     )
+    return subject, body_html
 
 
 # ── Smart Work Queues ────────────────────────────────────────────────────

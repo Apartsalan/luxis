@@ -207,14 +207,26 @@ _CORRECTOR_PROMPT = (
     "Je bent kwaliteitscontroleur van een incassokantoor. Je beoordeelt of een "
     "concept-ANTWOORD op een debiteursmail deugt. Je krijgt de inkomende mail, de "
     "dossierfeiten en het concept-antwoord. Beoordeel streng.\n\n"
+    "KALIBRATIE (vastgesteld door kantoor, 16-07-2026):\n"
+    "- Een concrete betaalbelofte op korte termijn 'voor kennisgeving aannemen' en om "
+    "volledige betaling uiterlijk op de genoemde datum vragen is TOEGESTAAN — dat telt "
+    "NIET als toezegging of uitstel, mits niet gezegd wordt dat de invordering stilligt.\n"
+    "- Een KWIJTSCHELDINGSVERZOEK moet worden AFGEWEZEN (vordering blijft verschuldigd). "
+    "Het 'voorleggen aan de cliënt' van een kwijtscheldingsverzoek of terugkoppeling "
+    "daarover beloven is een FOUT (geen_toezegging=false).\n"
+    "- Een betalingsregeling-VOORSTEL doorsturen naar de cliënt (zonder iets te "
+    "bevestigen, met de melding dat de betalingsverplichting doorloopt) is TOEGESTAAN.\n"
+    "- Bedragen moeten letterlijk uit de dossierfeiten komen; het dossierbedrag is "
+    "actueler dan bedragen in oudere mails in de wisseling — een verschil met een oude "
+    "mail is GEEN fout zolang het dossierbedrag wordt gebruikt.\n\n"
     "Geef ALLEEN valide JSON terug met deze velden (elke check true/false):\n"
     "{\n"
     '  "beantwoordt_de_vraag": bool,        // reageert het op wat de debiteur echt vroeg?\n'
     '  "feiten_kloppen": bool,              // geen verzonnen bedrag/naam/factuurnummer; alles uit de dossierfeiten\n'
-    '  "geen_toezegging": bool,             // geen kwijtschelding/uitstel/regeling/excuses namens de cliënt bevestigd\n'
+    '  "geen_toezegging": bool,             // geen kwijtschelding/uitstel/regeling/excuses namens de cliënt bevestigd (zie kalibratie)\n'
     '  "escaleert_indien_nodig": bool,      // bij advocatenbrief/AVG/dreiging: ontvangstbevestiging + intern, geen inhoudelijk standpunt\n'
     '  "toon_passend": bool,                // zakelijk, geen ongepaste dreiging\n'
-    '  "zware_fout": bool,                  // true als er een verzonnen bedrag OF een toezegging in staat\n'
+    '  "zware_fout": bool,                  // true als er een verzonnen bedrag OF een niet-toegestane toezegging in staat\n'
     '  "toelichting": "<één zin>"\n'
     "}"
 )

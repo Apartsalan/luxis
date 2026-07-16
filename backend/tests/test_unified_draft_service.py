@@ -375,6 +375,7 @@ def _patch_ai_capture(monkeypatch, holder, *, subject="X", body="Y", tone="forme
     kennis (AV/bibliotheek) er wél/niet in zit."""
 
     async def fake_call(_system, _user):
+        holder["system"] = _system
         holder["user"] = _user
         return ({"subject": subject, "body": body, "tone": tone}, "fake-model")
 
@@ -717,6 +718,77 @@ async def test_find_open_reply_draft_returns_existing(
     found = await find_open_reply_draft(db, test_tenant.id, incasso_case.id, src.id)
     assert found is not None
     assert found.id == draft.id
+
+
+# ── S223: behandelaar-instructie is leidend en staat als LAATSTE blok ──────
+
+
+@pytest.mark.asyncio
+async def test_reply_instruction_is_final_block_after_knowledge(
+    db, test_tenant, test_user, test_company, incasso_case, fake_base_context, monkeypatch
+):
+    """De instructie ('zeg dat ik erop terugkom') moet als afsluitend blok ná de
+    AV/bibliotheek-kennis staan — inline raakte hij begraven en genegeerd (live
+    gemeten op IN100607)."""
+    from app.ai_agent.models import EmailClassification
+    from app.email.oauth_models import EmailAccount
+    from app.relations.models import ContactTerms
+
+    db.add(
+        ContactTerms(
+            id=uuid.uuid4(), tenant_id=test_tenant.id, contact_id=test_company.id,
+            file_path="/tmp/av.pdf", file_name="av.pdf", label="v1",
+            valid_from=date(2026, 1, 1),
+        )
+    )
+    account = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="outlook", email_address="lisanne@kestinglegal.nl",
+        access_token_enc=b"stub", refresh_token_enc=b"stub",
+        token_expiry=datetime.now(UTC) + timedelta(hours=1),
+    )
+    db.add(account)
+    await db.flush()
+    src = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email_account_id=account.id,
+        case_id=incasso_case.id, provider_message_id="instr@example.com",
+        from_email="debiteur@example.com", from_name="Debiteur",
+        subject="Ik betwist de factuur", body_text="Er gold no cure no pay.",
+        body_html="", direction="inbound", email_date=datetime.now(UTC),
+    )
+    db.add(src)
+    await db.flush()
+    db.add(
+        EmailClassification(
+            id=uuid.uuid4(), tenant_id=test_tenant.id, synced_email_id=src.id,
+            case_id=incasso_case.id, category="juridisch_verweer", confidence=0.9,
+            suggested_action="reply",
+        )
+    )
+    await db.commit()
+
+    holder: dict = {}
+    _patch_ai_capture(monkeypatch, holder, subject="Re:", body="Reactie.")
+    _patch_context(monkeypatch, fake_base_context)
+
+    with patch(
+        "app.ai_agent.knowledge_context._extract_pdf_text",
+        return_value="Artikel 9.3 — commissie bij intrekking.",
+    ):
+        await generate_unified_draft(
+            db, test_tenant.id, test_user.id,
+            case_id=incasso_case.id, intent=DraftIntent.REPLY_TO_EMAIL,
+            source_email_id=src.id,
+            instruction="Zeg dat ik hier op terugkom.",
+        )
+
+    user_msg = holder["user"]
+    # Instructie aanwezig, herkenbaar gemarkeerd, en NA het kennis-blok.
+    assert "INSTRUCTIE VAN DE BEHANDELAAR" in user_msg
+    assert "Zeg dat ik hier op terugkom." in user_msg
+    assert user_msg.index("INSTRUCTIE VAN DE BEHANDELAAR") > user_msg.index("Artikel 9.3")
+    # Systeem-prompt kent de spelregel dat de instructie leidend is.
+    assert "INSTRUCTIE VAN DE BEHANDELAAR" in holder["system"]
 
 
 # ── S221 4.3: begrip-eerst — dossierfeiten in de antwoordprompt ────────────

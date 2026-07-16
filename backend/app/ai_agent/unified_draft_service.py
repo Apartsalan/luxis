@@ -108,6 +108,10 @@ _REPLY_PROMPT = (
     "AVG-/privacyverzoek, dagvaarding, dreiging, klacht over de advocaat): schrijf een korte "
     "ontvangstbevestiging en zet in het antwoord dat het intern wordt opgepakt — verzin "
     "geen inhoudelijk standpunt.\n"
+    "- Staat er onderaan een 'INSTRUCTIE VAN DE BEHANDELAAR', dan bepaalt DIE de kern en "
+    "strekking van je antwoord — volg hem strikt op, ook als je zelf een ander antwoord "
+    "zou kiezen. De overige spelregels (geen feiten verzinnen, geen toezeggingen) blijven "
+    "daarbij gelden.\n"
     "- Verwijs naar het dossiernummer en, waar relevant, het openstaande bedrag.\n"
     "- Pas de toon aan op de gevraagde stijl (mild/zakelijk/streng); dreig niet met "
     "dagvaarding tenzij expliciet streng én gerechtvaardigd.\n"
@@ -295,7 +299,6 @@ def _build_reply_user_msg(
     source_email: SyncedEmail,
     classification: EmailClassification | None,
     tone: str | None,
-    instruction: str | None,
     dossier_facts: str = "",
 ) -> str:
     body = source_email.body_text or strip_html(source_email.body_html or "") or ""
@@ -315,8 +318,10 @@ def _build_reply_user_msg(
     parts.append(f"Van: {source_email.from_email}")
     parts.append(f"Onderwerp: {source_email.subject}")
     parts.append(body)
-    if instruction:
-        parts.append(f"\nExtra instructie: {instruction}")
+    # S223: de behandelaar-instructie staat hier bewust NIET — die wordt in
+    # generate_unified_draft als afsluitend blok ná de kennis-injectie geplaatst.
+    # Inline raakte hij begraven onder het AV/bibliotheek-blok en negeerde de AI
+    # hem (live gemeten op IN100607).
     return "\n".join(parts)
 
 
@@ -504,7 +509,7 @@ async def generate_unified_draft(
         system_prompt = _REPLY_PROMPT
         dossier_facts = await _build_dossier_facts(db, tenant_id, case)
         user_msg = _build_reply_user_msg(
-            case, source_email, classification, tone, instruction, dossier_facts
+            case, source_email, classification, tone, dossier_facts
         )
         classification_id = classification.id if classification else None
     else:  # FREE_COMPOSE
@@ -549,6 +554,16 @@ async def generate_unified_draft(
     knowledge = await _build_verweer_knowledge(db, tenant_id, case, category, defense_type)
     if knowledge:
         user_msg = f"{user_msg}\n\n{knowledge}"
+
+    # S223 — behandelaar-instructie als LAATSTE blok, ná de kennis-injectie.
+    # Stond hij inline in het bericht, dan verdween hij onder het AV/bibliotheek-
+    # blok en werd hij genegeerd (live gemeten). Alleen op de antwoordroute; de
+    # andere intents houden hun bestaande inline "Instructie:"-regel.
+    if intent == DraftIntent.REPLY_TO_EMAIL and instruction:
+        user_msg = (
+            f"{user_msg}\n\n=== INSTRUCTIE VAN DE BEHANDELAAR (leidend voor de "
+            f"kern van het antwoord) ===\n{instruction}"
+        )
 
     logger.info(
         "UnifiedDraftService: case=%s intent=%s tone=%s",

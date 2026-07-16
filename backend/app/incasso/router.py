@@ -387,6 +387,13 @@ async def advance_after_send(
         db, current_user.tenant_id, draft.id, DraftStatus.SENT, user_id=current_user.id
     )
 
+    # S223 — alleen STAP-concepten schuiven het dossier door. Een antwoord op een
+    # mail van de wederpartij (reply_to_email) of een vrij opgesteld bericht
+    # (free_compose) is geen stap-brief: versturen daarvan mag de pijplijn niet
+    # bewegen en telt niet als stap-communicatie. Oude concepten (intent NULL,
+    # van vóór S221) waren allemaal stap-concepten → die houden het oude gedrag.
+    is_step_draft = draft.intent in (None, "next_step")
+
     # Sluit gekoppelde workflow_task af (review_ai_draft task in /taken)
     task_result = await db.execute(
         select(WorkflowTask).where(
@@ -401,6 +408,15 @@ async def advance_after_send(
         if cfg.get("draft_id") == str(draft.id):
             task.status = "completed"
             task.completed_at = datetime.now(UTC)
+
+    # Geen stap-concept → klaar: verzonden gemarkeerd + taak afgesloten, maar de
+    # pijplijn blijft staan waar hij staat (S223).
+    if not is_step_draft:
+        await db.commit()
+        return {
+            "advanced": False,
+            "reason": "Antwoord/vrij bericht — dossier blijft op de huidige stap",
+        }
 
     # Advance to next step volgens default timeout-rule
     case = (await db.execute(

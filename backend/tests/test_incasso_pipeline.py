@@ -1942,3 +1942,90 @@ async def test_draft_gate_marks_amounts_fallback_on_amount_template(
     )).scalars().first()
     assert task is not None
     assert task.title.startswith("⚠")
+
+
+# ── S223: advance-after-send alleen voor stap-concepten ─────────────────────
+# Een ANTWOORD op een mail van de wederpartij is geen stap-brief: het versturen
+# ervan mag het dossier niet naar de volgende pijplijnstap schuiven. Alleen
+# stap-concepten (intent next_step, of NULL bij oude concepten) schuiven door.
+
+
+async def _advance_setup(db, tenant_id, test_company, test_user, *, case_number):
+    """Stap A→B met default timeout-regel + zaak op stap A."""
+    from datetime import UTC, datetime
+
+    step_a = await _mk_step(db, tenant_id, "Eerste sommatie", 1)
+    step_b = await _mk_step(db, tenant_id, "Tweede sommatie", 2)
+    await _mk_timeout_rule(
+        db, tenant_id, step_a, step_b, days=4,
+        created_at=datetime(2026, 1, 1, tzinfo=UTC),
+    )
+    case = await create_incasso_case(
+        db, tenant_id, test_company, None, test_user,
+        step=step_a, case_number=case_number, days_in_step=1,
+    )
+    return case, step_a, step_b
+
+
+@pytest.mark.asyncio
+async def test_advance_after_send_skips_reply_draft(
+    client, auth_headers, db, test_tenant, test_user, test_company
+):
+    """Versturen van een ANTWOORD-concept markeert het als verzonden maar laat
+    het dossier op zijn huidige stap staan (S223)."""
+    from app.ai_agent.models import AIDraft, DraftStatus
+
+    case, step_a, _ = await _advance_setup(
+        db, test_tenant.id, test_company, test_user, case_number="2026-09301"
+    )
+    draft = AIDraft(
+        tenant_id=test_tenant.id, case_id=case.id,
+        subject="Re: vraag", body="Antwoord.",
+        status=DraftStatus.GENERATED, intent="reply_to_email",
+    )
+    db.add(draft)
+    await db.commit()
+
+    res = await client.post(
+        f"/api/incasso/cases/{case.id}/advance-after-send",
+        json={"draft_id": str(draft.id)},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["advanced"] is False
+
+    await db.refresh(case)
+    await db.refresh(draft)
+    assert case.incasso_step_id == step_a.id  # NIET doorgeschoven
+    assert draft.status == DraftStatus.SENT   # wél als verzonden gemarkeerd
+
+
+@pytest.mark.asyncio
+async def test_advance_after_send_advances_step_draft(
+    client, auth_headers, db, test_tenant, test_user, test_company
+):
+    """Een stap-concept (next_step) schuift het dossier wél door — bestaand gedrag."""
+    from app.ai_agent.models import AIDraft, DraftStatus
+
+    case, _, step_b = await _advance_setup(
+        db, test_tenant.id, test_company, test_user, case_number="2026-09302"
+    )
+    draft = AIDraft(
+        tenant_id=test_tenant.id, case_id=case.id,
+        subject="Eerste sommatie", body="Sommatie.",
+        status=DraftStatus.GENERATED, intent="next_step", step_id=case.incasso_step_id,
+    )
+    db.add(draft)
+    await db.commit()
+
+    res = await client.post(
+        f"/api/incasso/cases/{case.id}/advance-after-send",
+        json={"draft_id": str(draft.id)},
+        headers=auth_headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["advanced"] is True
+
+    await db.refresh(case)
+    assert case.incasso_step_id == step_b.id  # doorgeschoven naar Tweede sommatie

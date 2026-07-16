@@ -2,11 +2,86 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 16 juli 2026 nacht (S222, Opus-bouw + Fable-review — verzoekschrift exacte nabouw KLAAR (wacht op GO) + volledige review S220/S221 + testronde 2 rondes + backfills gemeten).
-**Laatste feature/fix:** verzoekschrift-bijlage in Lisanne's EXACTE opmaak per zaak ingevuld — **LIVE (16 juli, GO + 4 keuzes: CONCEPT-watermerk houden, Verzuimdatum-kop, 1 betaalregel, witruimte-handtekening); reseed byte-identiek + live-render op echte zaak IN100521 bewezen (totalen op de cent)**; 2 aangescherpte antwoord-spelregels (geen eigen bedrag-uitsplitsingen; verzoek doorzetten = betalingsplicht blijft) LIVE; testronde-script goud-pad gerepareerd (mapper-imports + voedde Lisanne's eigen antwoorden als vraag).
-**Review-uitkomst:** B1 terugzetten/overslaan LIVE doorgeklikt ✅; B4 alle UX-punten ✅ (0 spatie-kolommen in 58 verse antwoorden); B3 sync→classificatie AANNEMELIJK maar onbewezen (geen test, nooit gevuurd); testronde 83→89% op de zuivere set, poort auto-concept NIET gehaald → blijft UIT (rest is corrector-kalibratie, beslispunt); IN100613: zaak sluiten laat concepten staan. Rapport: `docs/sessions/S222-review.md`.
-**Openstaand (→ S223):** ✅ kalibratie BEANTWOORD+verwerkt (16/7: belofte/kort uitstel=kennisgeving, kwijtschelding=afwijzen zonder voorleggen; 4 testrondes, zuivere set 83→94%, corrector-meetruis ±2 → volgende lat = menselijke steekproef Lisanne); auto-concept UIT (activering = klein bouwklusje: categorie-route op nieuwe antwoordmotor); datumregel 'termijn letterlijk' toegevoegd maar onbevestigd; B3-test sync→classificatie, goud-zoeker opdrachtgevers uitsluiten, concepten laten vervallen bij zaak-sluiten + S221b-restlijst (review-scherm, voortgang-indicator, HTML-tabellen, Blok 5-rest, Blok 6-memo). ✅ Verzoekschrift LIVE + ✅ opruimrecept uitgevoerd (16 juli: 449 classificaties afgevoerd→21 échte over, 3 concepten dicht, 232 ruis-meldingen gelezen; natelling exact). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** `docs/sessions/PROMPT-S223.md` — Arsalan heeft nog een aantal punten (bij start opvragen) + restlijst S222 (auto-concept-gate + menselijke steekproef, B3-test, S221b-UX). KvK-backfill houdt voorrang zodra sleutel er is (~22 juli).
+**Laatst bijgewerkt:** 16 juli 2026 (S223, Opus-bouw + Fable-review — AI-antwoord-knop op mail + onderwerp overal in huisformaat + kleine punten + nieuwe test-discipline).
+**Laatste feature/fix:** "AI-antwoord maken"-knop op elke inkomende mail (Mail-pagina) met instructie-tekstvak + toon, onbeperkt herbruikbaar, "eerst vragen" bij bestaand concept — **LIVE + live doorgeklikt (IN100607, 3 rondes)**; onderwerp van concepten/verzending overal via de gedeelde bouwer (huisformaat / Re:-regel); antwoord-verzending schuift de zaak niet meer door; open concepten vervallen bij zaak-sluiten (3 routes). Instructie-leidend-fix live bewezen.
+**Review-uitkomst:** kruispunt-review ving 2 must-fixes (beide gefixt+live): batch-PDF-route droeg nog het stale onderwerp; **CI stond stil rood sinds 15/7** (S220 vergat pin-test 'sommatie'). Nieuwe werkwijze vastgelegd: skill `breed-testen` (route×huisregel-matrix + wachter per foutSOORT) + CLAUDE.md-verificatiestap. Rapport: `docs/sessions/S223-review.md`.
+**Openstaand (→ S224):** ⚠️ **VEEGSESSIE** = hele huisregel-lijst × alle routes aflopen (Fable, mét live-pass) zodat teller op nul staat; ⚠️ **écht versturen live toetsen** (nieuwe knop + batch-route — kon niet: mailslot) + classificatie-trigger vuurt pas bij nieuwe mail; S221b-UX-restlijst; auto-concept-gate (menselijke steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** `docs/sessions/PROMPT-S224.md` — VEEGSESSIE (kruispunt-matrix, Fable) + live-verzendtoets. KvK-backfill voorrang zodra sleutel er is (~22 juli).
+
+## Sessie 223 (16 juli 2026, Opus-bouw → Fable-review — AI-antwoord-knop + onderwerp-huisformaat + test-discipline)
+
+### Samenvatting
+Arsalans eigen punten uitgevoerd, plus twee kleine restpunten, plus een nieuwe
+vaste test-werkwijze na zijn vraag "waarom komen er telkens fouten uit als ik
+breder kijk".
+
+**Punt 1+2 — AI-antwoord-knop (LIVE + live doorgeklikt).** Knop "AI-antwoord maken"
+op elke inkomende mail van de wederpartij (Mail-pagina) met optioneel instructie-
+tekstvak + toon-keuze (mild/zakelijk/streng). Onbeperkt herbruikbaar, wacht niet
+op de automatische classificatie. Bestaat er al een open antwoord-concept → eerst
+vragen (bestaand openen of vervangen; vervangen laat het oude vervallen via
+`force_new`). Nieuw: `GET /api/ai/draft/existing`, `force_new` op de generatie,
+`find_open_reply_draft`. 3 generatie-rondes live op IN100607: bedragen/facturen
+exact gelijk aan DB, opmaak identiek aan bestaande concepten.
+
+**Instructie-leidend-fix (live gemeten).** Ronde 1 negeerde "zeg dat ik erop
+terugkom": de instructie stond inline en raakte begraven onder het later
+aangeplakte AV/bibliotheek-blok. Fix: instructie als LAATSTE promptblok +
+systeem-spelregel dat de behandelaar-instructie de kern bepaalt. Ronde 2 volgde
+hem exact op.
+
+**Punt 3 — onderwerp overal huisformaat.** `build_email_subject` (stap: klant /
+debiteur — stapnaam — dossiernr) en nieuw `build_reply_subject` (antwoord:
+Re: origineel + partijen/dossiernr, niet dubbel). Wint nu op ALLE routes:
+compose, followup, batch (inline+DOCX), stap-concepten, antwoord-concepten. De
+stale BaseNet-stap-onderwerpen ("TYPE / / ") worden overal genegeerd — geen
+prod-data-mutatie nodig.
+
+**Antwoord-verzending schuift de zaak niet meer door.** `advance-after-send`
+schoof na élke concept-verzending door; nu alleen stap-brieven (rode test eerst).
+
+**Kleine punten.** (1) Open concepten vervallen bij zaak sluiten — gedeelde
+`discard_open_drafts_on_close` op alle 3 sluit-routes (handmatig, pijplijn-
+eindstap, betaling-hook) + wachter-test. (4) 3 tests voor de sync→classificatie-
+trigger (had er geen; vuurt op prod pas bij nieuwe mail).
+
+**Nieuwe test-discipline (op verzoek Arsalan).** Skill `breed-testen`: fouten
+wonen op kruispunten (route mist huisregel) — benoem het effect, grep alle
+routes, loop de route×huisregel-matrix af, elke foutsoort krijgt een wachter.
+Verwezen vanuit CLAUDE.md-verificatiestap 4 + memory. Levende huisregel-lijst
+M1-M5/P1-P3/A1-A3.
+
+### Reviewvondsten (kruispunt-matrix — beide gefixt + live)
+- **Batch-PDF-route** droeg nog het stale onderwerp ("VERZOEKSCHRIFT / / ") →
+  nu ook via de gedeelde bouwer + wachter-test.
+- **CI stond stil rood sinds 15/7** (S220 voegde 'sommatie' toe aan de rente-
+  bijlage-set maar vergat de pin-test; onzichtbaar door SSH-deploys, S217-patroon)
+  → test bijgewerkt, CI weer groen.
+
+### Gewijzigde bestanden
+Backend: `email/subject.py`, `ai_agent/{unified_draft_service,unified_router,
+followup_service,draft_service}.py`, `incasso/{service,router,automation_service}.py`,
+`cases/service.py`, `workflow/hooks.py`. Frontend: `correspondentie/page.tsx`.
+Tests: `test_email_subject`, `test_unified_draft_service`, `test_incasso_pipeline`,
+`test_discard_drafts_on_close` (nieuw), `test_scheduler_email_sync`,
+`test_kvk_legal_form`. Werkwijze: `.claude/skills/breed-testen/SKILL.md` (nieuw),
+`CLAUDE.md`. Rapport: `docs/sessions/S223-review.md`. 6 commits, backend meermaals
+gedeployd (geen migratie).
+
+### Bekende issues / bewust niet gedaan
+- **Écht versturen niet live getest** (mailslot open): nieuwe knop + batch-route.
+  Verstuurpad zelf = de S220-route die toen bewezen is. → live toetsen S224.
+- **Classificatie-trigger** op prod nog nooit gevuurd (geen nieuwe mail) — logica
+  wel test-gedekt.
+- Filter "Nog te openen" op dossierlijst: badge bestaat, filterknop niet (Arsalan
+  koos hem niet). Landregel dagvaarding overgeslagen.
+- Restlijst S221b-UX + auto-concept-gate (menselijke steekproef Lisanne) blijven.
+
+### Volgende sessie
+S224 = **VEEGSESSIE** (Fable): de hele huisregel-lijst uit `breed-testen` × alle
+bestaande routes aflopen, mét live-pass, zodat de teller aantoonbaar op nul staat;
+kandidaat-wachters staan in de skill. Plus **live-verzendtoets** zodra mag.
+KvK-backfill voorrang zodra sleutel binnen (~22 juli).
 
 ## Sessie 222 (15/16 juli 2026 nacht, Opus-bouw → Fable-review — verzoekschrift-nabouw + totaalreview, autonoom)
 
@@ -537,85 +612,3 @@ S214 (`docs/sessions/PROMPT-S214.md`): KvK-sleutel → env op VPS → droogloop 
 natelling → meten hoeveel BV's geen rentebijlage meer krijgen. Rest-PDF's (206) alleen op
 expliciete vraag (handwerk-lijstje kan uit de dry-run-rapportage).
 **Openstaand nachecken (morgen):** back-up-log 03:00 — bevestigen dat het Class C-verbruik laag blijft.
-
-## Sessie 212 (14 juli 2026, Opus-uitvoer — WIK-rentebijlage LIVE + bijlage op resterende verzendpaden + terug-navigatie, LIVE)
-
-### Samenvatting
-Drie blokken, elk gebouwd → getest → gedeployd via SSH, met GO van Arsalan op blok 1.
-
-- **Blok 1 — WIK-rentebijlage LIVE.** Tak `s211-wik-rentebijlage` (5 commits) gemerged naar main
-  (`0354d5a`, geen botsing — tak raakte de afsluit-docs niet), gedeployd mét migratie
-  `s211_contact_legal_form` (3 nullable kolommen op contacts, puur additief). Prod geverifieerd:
-  migratie op head, 3 rechtsvorm-kolommen aanwezig, login 200, relatie-detail levert de velden
-  (leeg), bewerkweergave toont het rechtsvorm-veld met uitleg. **KvK-sleutel bewust nog leeg
-  (slapend)** tot ~16 juli. PROMPT-S207 gearchiveerd (`a3111c7`). Besluit B actief: tot de
-  backfill krijgt élke 14-dagenbrief/eerste sommatie de bijlage, óók BV's (GO Arsalan: "kan geen kwaad").
-- **Blok 2 — bijlage op de twee resterende verzendpaden** (`612a779`). Gedeelde helper
-  `build_rente_bijlage` aangehaakt op (a) het compose/AI-concept-pad (`compose/cases/{id}` → .eml,
-  op de plek waar al factuur-PDF's meegaan — Lisanne's meest gebruikte route) en (b) het
-  document-verzendpad (`documents/{id}/send`). Beide via een `SimpleNamespace(template_type=...)`
-  step-shim; `opposing_party` is `lazy="selectin"` dus geen async-laadrisico. Preview-zinnetje
-  in follow-up: "renteoverzicht" i.p.v. "de brief". 4 nieuwe route-tests (bijlage wél/BV niet).
-  133 tests groen (`-k kvk/bijlage/compose/followup/document`), ruff schoon, tsc groen.
-- **Blok 3 — slimme terug-knop door heel Luxis** (`c577e96` + 2 fixes). Gedeelde `BackButton`:
-  `router.back()` naar de pagina van herkomst, met nette terugval op de vaste ouderpagina bij een
-  direct bezochte URL. Toegepast op dossier-, relatie-, factuur- en intake-detail + de drie
-  nieuw-formulieren; factuurpagina houdt de `?from_case`-terugval. **Twee fixes na live-test
-  (fable-diepte):** (1) `history.state.idx` bestaat NIET in Next.js 15 App Router (alleen `__NA`
-  + interne tree) → knop viel altijd terug op de vaste ouder; overgestapt op `history.length`.
-  (2) kale `history.length>1` was onbetrouwbaar (verse tab kan al op 2 staan → terug naar lege
-  pagina) → dashboard-omhulling legt bij binnenkomst één ijkpunt vast (`luxis_entry_history_len`,
-  per tab), knop gaat alleen echt terug als de lengte sindsdien is gegroeid.
-
-### Bewijs (Playwright, prod)
-incasso→dossier→terug = **incasso** ✓; dossier→relatie→terug = **dossier** ✓; dossier→factuur(nieuw)
-→terug = **dossier** ✓; relatielijst→relatie→terug = **relatielijst** ✓ (herkomst beweegt mee);
-verse tab rechtstreeks op /zaken/[id]→terug = **/zaken** (terugval, breekt niet) ✓. Rentebijlage:
-route-tests bewijzen bijlage wél bij privé aansprakelijk / niet bij BV op beide nieuwe paden.
-
-### Gewijzigde bestanden
-- Backend: `email/compose_router.py`, `documents/router.py`, `tests/test_rente_bijlage_verzendpaden.py` (nieuw, 4).
-- Frontend: `components/back-button.tsx` (nieuw), `app/(dashboard)/layout.tsx`, `followup/page.tsx`,
-  DossierHeader + relaties/[id] + facturen/[id] + facturen/nieuw + zaken/nieuw + relaties/nieuw + intake/[id].
-- 5 commits + merge; deploys: alles (blok 1, migratie) → backend+frontend (blok 2) → frontend ×3 (blok 3).
-
-### Fable-review S212 (zelfde dag, model omgezet — 1 must-fix gevonden + LIVE)
-De review viel de dragende claims aan. **Must-fix (`498d156`, gedeployd):** de compose-dialoog
-stuurde het gekozen sjabloontype alleen mee op de secundaire "Open in Outlook"-knop (.eml);
-de PRIMAIRE knop "Versturen" (`/compose/send`) kende geen `template_type` — dus géén
-renteoverzicht op de waarschijnlijkste klik voor een sommatie-sjabloon. De blok-2-claim
-"Lisanne's hoofdroute gedekt" was daarmee te sterk. Gefixt: frontend stuurt `template_type`
-mee, backend haakt dezelfde helper aan (verse case-mail; rollback bij mislukte send); 2 extra
-provider-gemockte tests. **Overige aanvallen hielden stand:** AI-concepten (drafts) zijn
-antwoorden op debiteursmail, geen sommaties → bijlage daar terecht niet; luid falen bij
-render-fout is bewust (wettelijk verplichte bijlage stil weglaten is erger); terug-knop-
-randgevallen (hergebruikte tab, browser-terug+klik, reload) vallen terug op correct gedrag
-of de nette fallback; prod-staat herbevestigd (health/HEAD/migratie). 135 tests groen.
-
-### Nagekomen (zelfde dag, opdracht Arsalan): factuur-PDF's óók op de verstuurknop (`8e2ee8b`, LIVE)
-DF122-07 gespiegeld van het .eml-pad naar `/compose/send`: bij een sommatie-sjabloon gaan de
-factuur-PDF's van de actieve vorderingen nu ook op de primaire knop automatisch mee (verse
-case-mail, gededupliceerd met handmatige bijlagen). Test bewijst factuur + renteoverzicht samen.
-Beide compose-knoppen zijn nu volledig gelijk in bijlagegedrag.
-
-### Nagekomen (zelfde dag, opdracht Arsalan): Vorderingen-tab in het Facturen-menu (`df1b9a7`, LIVE)
-Het Facturen-menu toonde alleen de (lege) kantoorfacturen; de vorderingen op de dossiers waren
-nergens als totaaloverzicht te zien. Nieuw tenant-breed endpoint `GET /api/claims` (dossier +
-debiteur + hoofdsom, paginatie/zoeken/alleen-lopend) + een **Vorderingen**-tab. Eerste tab
-hernoemd naar **Kantoorfacturen** voor het onderscheid dat Arsalan vroeg. Prod-bewijs: 1.563
-vorderingen, totale hoofdsom €3.142.934,72 — onafhankelijk in de DB nageteld (exact gelijk, geen
-dubbeltelling; raw-count 1.563 == endpoint-total). 3 endpoint-tests. **Los blijft:** de factuur-
-PDF's zijn niet aan de vorderingen gekoppeld (kolom PDF = "—"); 1.368/1.563 koppelbaar op
-factuurnummer — koppel-actie is een aparte prod-schrijfactie (wacht op akkoord Arsalan).
-
-### Bekende issues
-- **KvK-rechtsvorm-backfill** wacht op de echte sleutel (~16 juli, Arsalan meldt). Tot dan besluit B
-  (élke zakelijke wederpartij, óók BV, krijgt de bijlage). → S213.
-- Compose-.eml slaat bij elke "Open in Outlook" een Renteoverzicht-document op het dossier op (zoals
-  batch/followup ook doen) — cosmetisch, geen blokkade.
-
-### Volgende sessie
-S213 (`docs/sessions/PROMPT-S213.md`, Opus): zodra Arsalan de echte KvK-sleutel meldt → `KVK_API_KEY`
-(+ `KVK_API_BASE`) als env op de VPS → herstart backend → `scripts/kvk_backfill_legal_form.py
---dry-run` → akkoord → echt draaien → natelling (±438 relaties, ±€9) → meten hoeveel BV's geen
-bijlage meer krijgen. Eventueel: `/compose/send`-bijlage-observatie oppakken als Arsalan dat wil.

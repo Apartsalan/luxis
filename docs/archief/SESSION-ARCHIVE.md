@@ -9417,3 +9417,85 @@ merge = direct actief verzendgedrag → wacht op GO Arsalan). Volledige suite **
   rente-bijlage op compose- en document-pad + preview-zinnetje → terug-navigatie heel Luxis
   (wens Arsalan). Los moment zodra KvK-sleutel binnen is: env op VPS → backfill droogloop →
   akkoord → run → natelling.
+
+## Sessie 212 (14 juli 2026, Opus-uitvoer — WIK-rentebijlage LIVE + bijlage op resterende verzendpaden + terug-navigatie, LIVE)
+
+### Samenvatting
+Drie blokken, elk gebouwd → getest → gedeployd via SSH, met GO van Arsalan op blok 1.
+
+- **Blok 1 — WIK-rentebijlage LIVE.** Tak `s211-wik-rentebijlage` (5 commits) gemerged naar main
+  (`0354d5a`, geen botsing — tak raakte de afsluit-docs niet), gedeployd mét migratie
+  `s211_contact_legal_form` (3 nullable kolommen op contacts, puur additief). Prod geverifieerd:
+  migratie op head, 3 rechtsvorm-kolommen aanwezig, login 200, relatie-detail levert de velden
+  (leeg), bewerkweergave toont het rechtsvorm-veld met uitleg. **KvK-sleutel bewust nog leeg
+  (slapend)** tot ~16 juli. PROMPT-S207 gearchiveerd (`a3111c7`). Besluit B actief: tot de
+  backfill krijgt élke 14-dagenbrief/eerste sommatie de bijlage, óók BV's (GO Arsalan: "kan geen kwaad").
+- **Blok 2 — bijlage op de twee resterende verzendpaden** (`612a779`). Gedeelde helper
+  `build_rente_bijlage` aangehaakt op (a) het compose/AI-concept-pad (`compose/cases/{id}` → .eml,
+  op de plek waar al factuur-PDF's meegaan — Lisanne's meest gebruikte route) en (b) het
+  document-verzendpad (`documents/{id}/send`). Beide via een `SimpleNamespace(template_type=...)`
+  step-shim; `opposing_party` is `lazy="selectin"` dus geen async-laadrisico. Preview-zinnetje
+  in follow-up: "renteoverzicht" i.p.v. "de brief". 4 nieuwe route-tests (bijlage wél/BV niet).
+  133 tests groen (`-k kvk/bijlage/compose/followup/document`), ruff schoon, tsc groen.
+- **Blok 3 — slimme terug-knop door heel Luxis** (`c577e96` + 2 fixes). Gedeelde `BackButton`:
+  `router.back()` naar de pagina van herkomst, met nette terugval op de vaste ouderpagina bij een
+  direct bezochte URL. Toegepast op dossier-, relatie-, factuur- en intake-detail + de drie
+  nieuw-formulieren; factuurpagina houdt de `?from_case`-terugval. **Twee fixes na live-test
+  (fable-diepte):** (1) `history.state.idx` bestaat NIET in Next.js 15 App Router (alleen `__NA`
+  + interne tree) → knop viel altijd terug op de vaste ouder; overgestapt op `history.length`.
+  (2) kale `history.length>1` was onbetrouwbaar (verse tab kan al op 2 staan → terug naar lege
+  pagina) → dashboard-omhulling legt bij binnenkomst één ijkpunt vast (`luxis_entry_history_len`,
+  per tab), knop gaat alleen echt terug als de lengte sindsdien is gegroeid.
+
+### Bewijs (Playwright, prod)
+incasso→dossier→terug = **incasso** ✓; dossier→relatie→terug = **dossier** ✓; dossier→factuur(nieuw)
+→terug = **dossier** ✓; relatielijst→relatie→terug = **relatielijst** ✓ (herkomst beweegt mee);
+verse tab rechtstreeks op /zaken/[id]→terug = **/zaken** (terugval, breekt niet) ✓. Rentebijlage:
+route-tests bewijzen bijlage wél bij privé aansprakelijk / niet bij BV op beide nieuwe paden.
+
+### Gewijzigde bestanden
+- Backend: `email/compose_router.py`, `documents/router.py`, `tests/test_rente_bijlage_verzendpaden.py` (nieuw, 4).
+- Frontend: `components/back-button.tsx` (nieuw), `app/(dashboard)/layout.tsx`, `followup/page.tsx`,
+  DossierHeader + relaties/[id] + facturen/[id] + facturen/nieuw + zaken/nieuw + relaties/nieuw + intake/[id].
+- 5 commits + merge; deploys: alles (blok 1, migratie) → backend+frontend (blok 2) → frontend ×3 (blok 3).
+
+### Fable-review S212 (zelfde dag, model omgezet — 1 must-fix gevonden + LIVE)
+De review viel de dragende claims aan. **Must-fix (`498d156`, gedeployd):** de compose-dialoog
+stuurde het gekozen sjabloontype alleen mee op de secundaire "Open in Outlook"-knop (.eml);
+de PRIMAIRE knop "Versturen" (`/compose/send`) kende geen `template_type` — dus géén
+renteoverzicht op de waarschijnlijkste klik voor een sommatie-sjabloon. De blok-2-claim
+"Lisanne's hoofdroute gedekt" was daarmee te sterk. Gefixt: frontend stuurt `template_type`
+mee, backend haakt dezelfde helper aan (verse case-mail; rollback bij mislukte send); 2 extra
+provider-gemockte tests. **Overige aanvallen hielden stand:** AI-concepten (drafts) zijn
+antwoorden op debiteursmail, geen sommaties → bijlage daar terecht niet; luid falen bij
+render-fout is bewust (wettelijk verplichte bijlage stil weglaten is erger); terug-knop-
+randgevallen (hergebruikte tab, browser-terug+klik, reload) vallen terug op correct gedrag
+of de nette fallback; prod-staat herbevestigd (health/HEAD/migratie). 135 tests groen.
+
+### Nagekomen (zelfde dag, opdracht Arsalan): factuur-PDF's óók op de verstuurknop (`8e2ee8b`, LIVE)
+DF122-07 gespiegeld van het .eml-pad naar `/compose/send`: bij een sommatie-sjabloon gaan de
+factuur-PDF's van de actieve vorderingen nu ook op de primaire knop automatisch mee (verse
+case-mail, gededupliceerd met handmatige bijlagen). Test bewijst factuur + renteoverzicht samen.
+Beide compose-knoppen zijn nu volledig gelijk in bijlagegedrag.
+
+### Nagekomen (zelfde dag, opdracht Arsalan): Vorderingen-tab in het Facturen-menu (`df1b9a7`, LIVE)
+Het Facturen-menu toonde alleen de (lege) kantoorfacturen; de vorderingen op de dossiers waren
+nergens als totaaloverzicht te zien. Nieuw tenant-breed endpoint `GET /api/claims` (dossier +
+debiteur + hoofdsom, paginatie/zoeken/alleen-lopend) + een **Vorderingen**-tab. Eerste tab
+hernoemd naar **Kantoorfacturen** voor het onderscheid dat Arsalan vroeg. Prod-bewijs: 1.563
+vorderingen, totale hoofdsom €3.142.934,72 — onafhankelijk in de DB nageteld (exact gelijk, geen
+dubbeltelling; raw-count 1.563 == endpoint-total). 3 endpoint-tests. **Los blijft:** de factuur-
+PDF's zijn niet aan de vorderingen gekoppeld (kolom PDF = "—"); 1.368/1.563 koppelbaar op
+factuurnummer — koppel-actie is een aparte prod-schrijfactie (wacht op akkoord Arsalan).
+
+### Bekende issues
+- **KvK-rechtsvorm-backfill** wacht op de echte sleutel (~16 juli, Arsalan meldt). Tot dan besluit B
+  (élke zakelijke wederpartij, óók BV, krijgt de bijlage). → S213.
+- Compose-.eml slaat bij elke "Open in Outlook" een Renteoverzicht-document op het dossier op (zoals
+  batch/followup ook doen) — cosmetisch, geen blokkade.
+
+### Volgende sessie
+S213 (`docs/sessions/PROMPT-S213.md`, Opus): zodra Arsalan de echte KvK-sleutel meldt → `KVK_API_KEY`
+(+ `KVK_API_BASE`) als env op de VPS → herstart backend → `scripts/kvk_backfill_legal_form.py
+--dry-run` → akkoord → echt draaien → natelling (±438 relaties, ±€9) → meten hoeveel BV's geen
+bijlage meer krijgen. Eventueel: `/compose/send`-bijlage-observatie oppakken als Arsalan dat wil.

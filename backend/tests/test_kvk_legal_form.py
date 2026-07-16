@@ -78,10 +78,15 @@ def test_b2c_altijd_bijlage_ongeacht_rechtsvorm():
     assert should_attach_rente_bijlage(None, "b2c") is True
 
 
-def test_bijlage_sjablonen_zijn_de_eerste_twee_brieven():
-    """De bijlage hoort bij de 14-dagenbrief en de eerste sommatie."""
+def test_bijlage_sjablonen_zijn_de_sommatie_brieven():
+    """De bijlage hoort bij de 14-dagenbrief en de sommaties.
+
+    S220 blok 1 punt 3 voegde 'sommatie' bewust toe (renteoverzicht ook op de
+    documentenroute met dat brieftype) maar vergat deze pin-test — CI stond
+    daardoor stil rood van 15 t/m 16 juli (S223-review). Wijzigt de set opnieuw
+    bewust? Werk deze test dan in dezelfde commit bij."""
     assert RENTE_BIJLAGE_TEMPLATE_TYPES == frozenset(
-        {"14_dagenbrief", "sommatie_drukte"}
+        {"14_dagenbrief", "sommatie_drukte", "sommatie"}
     )
 
 

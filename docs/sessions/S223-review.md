@@ -42,6 +42,16 @@ stap-concepten, antwoord-concepten.
 - **Follow-up-pagina** blijft consistent: antwoorden bewegen de pijplijn niet
   meer, dus geen ten-onrechte-opgeruimde adviezen bij een antwoord-verzending.
 
+### Vondst 2 — MUST-FIX, gevonden én gefixt: CI stond stil rood sinds S220 (15 juli)
+De review-check op CI (S217-les) ving het: élke CI-run sinds gisterochtend was
+rood op één test. Oorzaak: S220 voegde bewust 'sommatie' toe aan de
+rente-bijlage-set (punt 3, documentenroute) maar vergat de pin-test die de oude
+inhoud vastlegt. Onzichtbaar doordat deploys via SSH gaan (exact het
+S217-patroon). Test bijgewerkt naar het besloten gedrag + waarschuwing in de
+test dat een bewuste set-wijziging de pin in dezelfde commit bijwerkt.
+Niet van vandaag, maar vandaag óók niet opgemerkt bij 5 pushes — de
+CI-check hoort in de vaste afsluitroutine.
+
 ### Opgeruimd (GO Arsalan)
 IN100607: het foute auto-concept van 15/7 én het strenge test-concept van vandaag
 op `discarded` gezet (UPDATE 2, nageteld). Alleen de écht verstuurde sommatie

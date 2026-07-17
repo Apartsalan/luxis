@@ -97,9 +97,10 @@ net buiten beeld (Tijdlijn). Liggend (1180 breed) = desktopweergave, geen werk.
    Dossiers, Mail, Taken, Menu (opent de bestaande lade). Dit is wat Clio/moderne
    SaaS-apps doen en scheelt Lisanne elke handeling twee tikken. Alleen zichtbaar
    `< md`. (Wil Arsalan dit niet: blok 6 overslaan, hamburger blijft de ingang.)
-4. **Dialogen: generiek schermvullend op telefoon** via één aanpassing in
-   `components/ui/dialog.tsx` (onder `sm`: volledige hoogte `h-dvh`, inhoud scrollt,
-   kop en voet vast). Geen 30 losse verbouwingen; alleen compose krijgt extra werk.
+4. **Dialogen: twee sporen.** (a) Generiek vangnet in `components/ui/dialog.tsx`:
+   onder `sm` schermvullend (`h-dvh`, inhoud scrollt, kop en voet vast) — alle ~30
+   dialogen worden daarmee in één klap bruikbaar. (b) Voor de meest gebruikte snelle
+   acties de **shadcn Drawer (Vaul)** als onderschuif-paneel — zie §2b.
 5. **Tabellen:** lijsten die Lisanne dagelijks aanraakt (incasso-werkstroom) krijgen
    op telefoon een **kaartweergave**; overige tabellen behouden horizontaal scrollen
    bínnen hun kader met zichtbare scroll-hint. Niet elke tabel wordt herbouwd.
@@ -108,6 +109,48 @@ net buiten beeld (Tijdlijn). Liggend (1180 breed) = desktopweergave, geen werk.
    offline-modus, geen pushmeldingen (bewust; kan later, zie §6).
 7. **Timer** verhuist op telefoon naar een kleine knop in de onderbalk-zone die de
    inhoud niet afdekt (minimized chip boven de navbalk, met safe-area-marge).
+
+---
+
+## 2b. Van de plank (GitHub-onderzoek 17 juli, op verzoek Arsalan)
+
+Onderzocht wat de beste bestaande bouwstenen zijn voor telefoon-webapps in onze
+stack (Next 15 / React 19 / Tailwind 3.4 / shadcn+Radix). Uitkomst:
+
+**WEL gebruiken:**
+- **Vaul / shadcn "Drawer"** (github.com/emilkowalski/vaul, ~8,5k sterren,
+  React 19-ondersteuning sinds v1.1.1, laatste release dec 2024; is de officiële
+  onderbouw van het shadcn Drawer-component dat Luxis' eigen componentenset al
+  volgt). Dit is hét ecosysteem-standaardpatroon "Dialog op desktop, onderschuif-
+  paneel met veeggebaar op telefoon" (responsive-dialog-patroon uit de shadcn-docs).
+  Toepassen op de snelle acties: notitie, telefoonnotitie, uren loggen, taak,
+  filters (dossierlijst), AI-antwoord (mag — was al goed, wordt hiermee néts
+  natuurlijker). Installatie: `npx shadcn@latest add drawer` (voegt `vaul` toe) +
+  één wrapper `components/ui/responsive-dialog.tsx` met de bestaande
+  `useIsMobile`-aanpak. Grote formulier-dialogen (compose) blijven schermvullend
+  via het vangnet uit keuze 4a.
+- **Next.js ingebouwde PWA-ondersteuning** — géén extra pakket: `app/manifest.ts`
+  (Next genereert de webmanifest) + `metadata.appleWebApp` + `icons.apple` in
+  `app/layout.tsx`. Let op uit de Next-docs: **iOS negeert manifest-iconen
+  volledig** → apple-touch-icon 180×180 en `apple-mobile-web-app-title` zijn
+  verplicht, anders toont iOS een schermafdruk-miniatuur als "icoon".
+- **Safe-area**: gewoon CSS `env(safe-area-inset-*)` — geen plugin nodig.
+
+**Overwogen en AFGEWEZEN (bewust, geen actie):**
+- **Konsta UI** (iOS/Material-componenten op Tailwind, v5.2 juni 2026): mooi voor
+  pure mobiele apps, maar het zou een twééde componentenbibliotheek naast shadcn
+  betekenen — dubbele stijl, grote verbouwing, desktop-risico.
+- **Ionic / Framework7 / React Native**: volledige app-frameworks; veel te zwaar
+  voor "bestaande webapp responsive maken".
+- **Serwist/next-pwa** (service workers): alleen nodig voor offline/push — bewust
+  buiten scope (§6).
+
+Netto: **één nieuwe dependency (vaul)**, de rest is ingebouwd of handwerk dat er
+al ligt.
+
+Bronnen: shadcn Drawer-docs (ui.shadcn.com/docs/components/radix/drawer), Vaul-repo
+en releases (github.com/emilkowalski/vaul), Next.js PWA-guide
+(nextjs.org/docs/app/guides/progressive-web-apps), Konsta UI (konstaui.com).
 
 ---
 
@@ -139,11 +182,15 @@ net buiten beeld (Tijdlijn). Liggend (1180 breed) = desktopweergave, geen werk.
     onder de balk) i.p.v. `absolute right-0`; desktop ongewijzigd.
   - Zoekknop óók op telefoon tonen (icoon) die het bestaande commando-palet opent.
 
-### Blok 1 — Dialogen (één generieke fix + compose)
+### Blok 1 — Dialogen (vangnet + Drawer + compose)
 - `components/ui/dialog.tsx`: onder `sm` wordt `DialogContent` schermvullend:
   `inset-0 h-dvh max-w-none rounded-none translate-x-0 translate-y-0 grid-rows-[auto_1fr_auto]`,
   inhoud scrollbaar, `DialogFooter` vast onderin met safe-area-padding. Boven `sm`
   exact het huidige gedrag. Alle ~30 dialogen liften mee.
+- `npx shadcn@latest add drawer` (dependency `vaul`) + wrapper
+  `components/ui/responsive-dialog.tsx` (Dialog ≥`md`, Drawer <`md`); de snelle
+  acties uit §2b stapsgewijs omzetten (notitie, telefoonnotitie, uren, taak,
+  filters, AI-antwoord). Elke omgezette dialoog visueel checken op 390 én desktop.
 - `components/email-compose-dialog.tsx`: voetknoppen herschikken voor telefoon
   (Verstuur volle breedte bovenaan de voet, secundaire knoppen eronder of achter een
   ⋯-menu); Aan/CC/BCC en Betreft stapelen; ontvanger-chips mogen wrappen.

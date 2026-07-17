@@ -1,6 +1,6 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
-Sessie 225 — Beslispunten veegsessie + S221b-UX-restant
+Sessie 225 — Bouwsprint: beslispunten uitvoeren + S221b-UX-restant
 
 ## Start
 Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant
@@ -8,22 +8,29 @@ modules, laadt de verbindingskaart). Ga daarna zonder te wachten door.
 Model: **Opus** (bouwen/klikwerk). Extra context (naast wat `/sessie-start` leest):
 `docs/sessions/S224-veegsessie.md` (§5-6: de beslispunten B1-B6).
 
-## ⚠️ Voorrang-check EERST
-KvK-productiesleutel binnen (~22 juli)? JA → eerst de rechtsvorm-backfill
-(`docs/archief/prompts/PROMPT-S217.md` + STAND in `PROMPT-S215.md`), dán de rest.
-NEE → direct door.
+## ⚠️ Voorrang-check — GEDAAN (17 juli, Fable)
+KvK-sleutel NIET binnen (0 treffers in `/opt/luxis/.env` + container-env) → direct door.
 
-## Taak A — Beslispunten B1-B6 afhandelen (antwoorden Arsalan ophalen/verwerken)
-Uit `S224-veegsessie.md` §5-6 — per punt eerst Arsalans keuze, dan uitvoeren:
-- **B1** facturen-afzender: persoonlijk account houden of `send_as_tenant_account=True`
-  (1 regel + allowlist-regel M4-wachter bijwerken als het incasso@ wordt)?
-- **B2** dode AI-tool `email_compose` (registry zonder aanroepers): verwijderen?
-- **B3** legacy endpoint `/api/email/cases/{id}/send` + hook `useSendCaseEmail`:
-  verwijderen? (Leeft nog, SMTP geconfigureerd, geen gate + half drieluik.
-  Verwijderen = ook de allowlist-regels in `test_send_route_drift_guard.py` opruimen.)
-- **B4** wees-advies IN100613 → SUPERSEDED (1 UPDATE + natelling, GO).
-- **B5** testdossier 2026-00006: weer archiveren of actief laten als testkanaal?
-- **B6** batch-DOCX-tak live toetsen (vereist tijdelijke stap-mutatie) — nu of later?
+## Beslispunten — ANTWOORDEN ARSALAN BINNEN (17 juli, via Fable)
+- **B1 facturen-afzender: → incasso@.** `send_invoice` krijgt
+  `send_as_tenant_account=True`; allowlist/motivering in
+  `test_send_route_drift_guard.py` bijwerken (M4-onderwerp "Factuur {nr}" blijft
+  bewust eigen formaat).
+- **B2+B3: beide verwijderen.** Dode AI-tool `email_compose` (registry zonder
+  aanroepers) én legacy endpoint `/api/email/cases/{id}/send` + hook
+  `useSendCaseEmail` weg; bijbehorende allowlist-regels in
+  `test_send_route_drift_guard.py` opruimen (eerlijkheids-test dwingt dat af).
+- **B4 Bayar IN100613: NIETS DOEN.** Dossier is 15/7 handmatig door Arsalan
+  gesloten (BaseNet zei nog 'Lopend', geen betaling); hij wil het eerst zelf
+  bekijken/overleggen. Wees-advies dus óók laten staan. NIET aanraken.
+- **B5 testdossier 2026-00006: actief laten** als vast testkanaal.
+- **B6 batch-DOCX live toetsen: JA, maar in de Fable-testfase (niet in deze
+  Opus-sessie).** ⚠️ Arsalan wil ook nog **iets toevoegen aan de batch** — vóór
+  de batch-toets eerst bij hem terugkomen om te horen wat.
+
+## Taak A — B1 + B2/B3 uitvoeren (bouwen)
+Zie hierboven. Kruispunt-check (skill `breed-testen`): B1 raakt een verzendroute,
+B2/B3 verwijderen routes — wachters (`test_send_route_drift_guard.py`) draaien mee.
 
 ## Taak B — S221b-UX-restant (zoveel als past)
 Review-scherm classificatie+concept naast elkaar; voortgangsindicator bij
@@ -32,11 +39,14 @@ Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat, soft-delete-banner,
 follow-up dossierlink/dagen-kolom/sorteerbare koppen, intake-detectie dempen);
 Blok 6-beslismemo b2b/b2c (105 dossiers, geen code).
 
+## Daarna (aparte sessie, Fable — afspraak Arsalan 17 juli)
+Alles testen/reviewen + de batch-DOCX-tak live toetsen op testdossier
+2026-00006. Eerst bij Arsalan langs: wat wil hij aan de batch toevoegen?
+
 ## Constraints
 Geen echte debiteuren mailen (testdossier 2026-00006 = Arsalans gmail). Prod-
-mutaties: dry-run/telling + GO. Geen `git add -A`. Beslispunten niet zelf
-beslissen. Kruispunt-check (skill `breed-testen`) bij elk gedeeld effect — de
-nieuwe wachters (`test_send_route_drift_guard.py`) draaien mee in de suite.
+mutaties: dry-run/telling + GO. Geen `git add -A`. Bayar IN100613 niet aanraken
+(B4). Kruispunt-check (skill `breed-testen`) bij elk gedeeld effect.
 
 ## Verificatie
 - Backend: relevante `pytest` (detached bij full suite), `uvx ruff check app/`.
@@ -45,7 +55,7 @@ nieuwe wachters (`test_send_route_drift_guard.py`) draaien mee in de suite.
 
 ## Afsluiten
 `/sessie-einde` (SESSION-NOTES max 10 entries + roadmap één-prioriteit + git tag +
-PROMPT-S226).
+PROMPT-S226 = de Fable-test/review-sessie hierboven).
 
 ## Nog open na S224
 - Auto-concept-gate: menselijke steekproef Lisanne (~10 echte concepten) vóór

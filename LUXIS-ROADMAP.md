@@ -53,7 +53,24 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 17 juli 2026, S227)
+## 🎯 Huidige prioriteit (bijgewerkt 17 juli 2026, S228)
+
+> ✅ **S228 AFGEROND — LUXIS WERKBAAR OP TELEFOON + TABLET (LIVE).** Op verzoek
+> Arsalan: één grondig onderzoek + bouwplan (`docs/sessions/PLAN-S228-MOBIEL.md`)
+> en in dezelfde sessie uitgevoerd (8 blokken). PWA-fundament (app-icoon +
+> schermvullend openen), grotere tikdoelen, veilige schermranden, schermvullende
+> dialogen + Vaul-Drawer-infra, compose-Verstuurknop zichtbaar, dossier-
+> Correspondentie leesbaar, incasso-kaartweergave + volle-breedte batch-balk,
+> onderste navigatiebalk, en alle horizontale overloop weg (16 routes = exact
+> schermbreedte op 390 én 820, live gemeten). Desktop ongewijzigd. Wachter-spec
+> `e2e/mobile-overflow.spec.ts`. Detail: SESSION-NOTES entry S228.
+>
+> 🎯 **VOLGENDE (S229): mobiel doorklikken op Arsalans fysieke telefoon** (enige
+> niet-bewezen aanname: iOS-Safari-zoom/safe-area/beginscherm-icoon) → resterende
+> puntjes fixen. Daarna opmaak-restpunt S227 uitvragen, S221b-rest, of KvK-backfill
+> zodra de sleutel er is (~22 juli, houdt voorrang).
+
+## 🎯 Vorige prioriteit (17 juli 2026, S227)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 

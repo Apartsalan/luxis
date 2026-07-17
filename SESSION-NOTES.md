@@ -2,10 +2,80 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 17 juli 2026 (S227, Opus-bouw + Fable-review — A1 AI-antwoord-knop op dossier-tab LIVE + brede briefopmaak-veeg over alle routes).
-**Laatste feature/fix:** AI-antwoord-knop op het dossier-tabblad Correspondentie (gedeelde dialoog, in-page concept-open) + briefopmaak overal gelijkgetrokken: vaste witregel Betreft→aanhef, extra lege regel na de aanhef, echte alinea's op 4 platte-brij-routes, huisstijl op getypte .eml-mails, dubbele-slotgroet-strip, antwoord-Betreft in huisformaat. Detail: entry S227.
-**Openstaand (→ S228):** **Opmaak nog niet af naar Arsalans zin** ("niet goed maar prima, laat maar — komt later"; wat er precies schort is NIET gespecificeerd → bij S228-start vragen/screenshot); testdata 2026-00007 t/m -00019 opruimen (na GO); DMARC kestinglegal.nl (Arsalan/BaseNet); S221b-rest; auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** `docs/sessions/PROMPT-S228.md` — opmaak-restpunt uitvragen + S221b-rest óf KvK-backfill zodra sleutel er is (~22 juli).
+**Laatst bijgewerkt:** 17 juli 2026 (S228, Fable-bouw — Luxis volledig werkbaar op telefoon + tablet, LIVE).
+**Laatste feature/fix:** Mobiel-geschikt maken van de hele app (voorrang telefoon): PWA-fundament (app-icoon + schermvullend openen), grotere tikdoelen + 16px-velden (geen iOS-zoom), veilige schermranden; dialoog-vangnet schermvullend op telefoon + Vaul-Drawer-infra; compose-Verstuurknop volledig zichtbaar; dossier-Correspondentie leest als één paneel; alle horizontale overloop weg (16 routes = schermbreedte op 390 én 820); incasso-werkstroom als kaartweergave met volle-breedte actiebalk; onderste navigatiebalk (Home/Dossiers/Mail/Taken/Menu); overloop-wachter-spec. Desktop ongewijzigd. Detail: entry S228.
+**Openstaand (→ S229):** **Fysieke-toestel-check op Arsalans telefoon** (iOS-Safari-zoom/safe-area/beginscherm-icoon — enige niet-bewezen aanname); opmaak-restpunt S227 ("niet goed maar prima" — nog niet uitgevraagd, Arsalan wilde iets anders doen); testdata 2026-00007 t/m -00019 opruimen (na GO); DMARC kestinglegal.nl (Arsalan/BaseNet); S221b-rest; auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** mobiel doorklikken op fysieke telefoon (Arsalan) → resterende puntjes; dan opmaak-restpunt óf S221b-rest óf KvK-backfill zodra sleutel er is (~22 juli).
+
+## Sessie 228 (17 juli 2026, Fable-bouw — Luxis werkbaar op telefoon + tablet, LIVE)
+
+### Samenvatting
+Op verzoek Arsalan: één grondig onderzoek + compleet bouwplan (`docs/sessions/
+PLAN-S228-MOBIEL.md`) en dat in dezelfde sessie uitgevoerd (Fable, geen Opus-wissel).
+Doel: Lisanne werkt straks dagelijks vanaf haar telefoon → alles moet op telefoon
+(voorrang) en tablet netjes werken. Startmeting live op prod via Playwright op
+390×844 (telefoon) en 820×1180 (tablet): 8 pagina's/vensters kapot of met overloop.
+GitHub-onderzoek naar beste bouwstenen → **Vaul/shadcn Drawer** (onderschuif-paneel,
+past in de bestaande componentenset) + Next.js ingebouwde PWA (géén extra pakket voor
+het app-icoon). Konsta/Ionic/service-workers bewust afgewezen.
+
+**Uitgevoerd in 8 blokken (elk: bouwen → tsc → live meten op 390+820 → deploy):**
+- **Blok 0 fundament:** `manifest.webmanifest` + app-iconen (weegschaal-logo, huisblauw)
+  + apple-touch-icon (iOS negeert manifest-iconen); `viewportFit: cover` + safe-area-
+  helpers; knoppen/inputs/selects grotere tikdoelen (h-11 <md) + 16px op telefoon;
+  floating-timer boven de onderbalk; meldingen-popover schermvullend op telefoon;
+  zoek-icoon in de balk op telefoon; **bovenbalk-overloop weg** (links krimpt met
+  min-w-0 + truncate kruimelpad, rechts shrink-0) — dit fixte overloop op álle pagina's.
+- **Blok 1 dialogen:** `dialog.tsx` schermvullend onder sm (vangnet, wint van
+  consumer-max-w; consumer kan met max-sm: overrulen); `vaul` geïnstalleerd + `drawer.tsx`
+  + `responsive-dialog.tsx` (Dialog ≥md, Drawer <md) als infra; compose-dialoog
+  voetknoppen stapelen, **Verstuurknop volledig zichtbaar** (was half buiten beeld).
+- **Blok 2 dossier-detail:** Correspondentie-tab lijst↔lezen-wissel onder lg (+ Terug
+  naar lijst, wrappende actieknoppen) — **was twee onleesbare kolommetjes**; Overzicht-
+  tab overloop (814→390) via DetailsTab `grid-cols-1` + `min-w-0`.
+- **Blok 3 mail:** toolbar (zoek/nieuwe mail/sync) stapelt + tabs wrappen (867→390).
+- **Blok 4 incasso + lijsten:** incasso-werkstroom **kaartweergave op telefoon**
+  (tabel md:block) + floating batch-actiebalk volle breedte, wrapt, boven de onderbalk;
+  zaken-filters/betalingen-tabs/uren-nav wrappen (622/404/404→390).
+- **Blok 5 restpagina's:** dashboard + relatie-detail grid-overloop (grid-cols-1 +
+  min-w-0 op elke flex-tussenlaag); alle overige routes gemeten = 390.
+- **Blok 6 onderbalk:** `mobile-nav.tsx` (5 items, <md, safe-area, tellers Mail/Taken,
+  Menu opent de bestaande lade); content krijgt onderruimte. Desktop: geen onderbalk.
+- **Blok 7 wachter:** `e2e/mobile-overflow.spec.ts` + mobiel Playwright-project — alle
+  16 routes × 390/820 assert `scrollWidth ≤ clientWidth` (fout-SOORT-wachter breed-testen).
+
+**Bewijs (live op prod, telefoon 390 + tablet 820):** 16 routes = exact schermbreedte
+(geen overloop); compose-Verstuurknop volledig in beeld; dossier-Correspondentie leest
+als één paneel; incasso-kaarten + volle-breedte batch-balk; onderbalk + Menu-lade werken;
+manifest/iconen geven 200; **desktop 1440 ongewijzigd** (volledige zijbalk, geen onderbalk).
+
+### Gewijzigde bestanden
+Nieuw: `frontend/src/hooks/use-is-mobile.ts`, `components/ui/{drawer,responsive-dialog}.tsx`,
+`components/layout/mobile-nav.tsx`, `public/{manifest.webmanifest,icon-192,icon-512,
+apple-touch-icon}.png`, `e2e/mobile-overflow.spec.ts`. Gewijzigd: `app/layout.tsx`,
+`app/globals.css`, `app/(dashboard)/layout.tsx`, `components/ui/{dialog,button,input,select}.tsx`,
+`components/{floating-timer,email-compose-dialog}.tsx`, `components/layout/app-header.tsx`,
+`app/(dashboard)/{page,zaken/page,zaken/nieuw n.v.t.,correspondentie/page,incasso/page,
+betalingen/page,uren/page,relaties/[id]/page}.tsx`, `zaken/[id]/components/{CorrespondentieTab,
+DetailsTab}.tsx`, `components/relations/detail/ContactInfoSection.tsx`, `playwright.config.ts`,
+`frontend/package.json` (+vaul). ~10 commits, frontend meermaals via SSH gedeployd (geen
+migratie, geen prod-DB-mutatie).
+
+### Bekende issues / bewust niet gedaan
+- **Fysiek toestel niet getest** — gemeten in desktop-Chrome met mobiele viewport. iOS-
+  Safari-zoom, 100dvh, safe-area, beginscherm-icoon: op regels-kennis meegenomen, pas
+  bewezen na doorklikken op Arsalans telefoon (→ S229).
+- **Overloop-wachter niet automatisch-gated:** CI draait geen Playwright-e2e (alleen
+  lint/typecheck/build). De spec compileert schoon en is een handmatig/lokaal vangnet;
+  de assertie is deze sessie live op alle 16 routes bevestigd.
+- **Vaul-Drawer alleen als infra** — het schermvullende dialoog-vangnet lost de
+  bruikbaarheid al op; de snelle-actie-dialogen (notitie/taak/uren) zijn nog niet één
+  voor één naar de Drawer omgezet (kan later, puur gevoel-polish).
+- **Deploy-race ontdekt:** GitHub "Deploy to VPS" draait óók bij elke push en botst met
+  handmatige SSH-deploy (container-naamconflict → rode Deploy-run, app draait wel). Herstel
+  + preventie vastgelegd in memory [[feedback_deploy_via_ssh]].
+- Grouped ("Per stap") incasso-weergave + enkele detail-tabellen scrollen horizontaal
+  binnen hun kader (bewust; niet elke tabel herbouwd).
 
 ## Sessie 227 (17 juli 2026, Opus-bouw → Fable-review — AI-antwoord-knop op dossier + briefopmaak-veeg, LIVE)
 
@@ -649,58 +719,3 @@ S220 (`docs/sessions/PROMPT-S220.md`, Opus): 6 blokken — verzendpad-fundament 
 logging+brieftype-afleiding+CC/BCC+onderwerp-bouwer), stap-teksten saneren, zombie-
 opruiming, AI-keten sneller, fasebalk+UX-rest, beslismemo b2b/b2c. KvK-backfill voorrang
 zodra sleutel binnen (~22 juli).
-
-## Sessie 218 (15 juli 2026 middag/einde middag, Fable — demo Arsalan: demolijst + 3 oorzaken bewezen, read-only)
-
-### Samenvatting
-Demosessie werd foutenjacht. Arsalan raakte als eerste dossier IN100613 (VOF Bayar transport)
-aan en de rente-PDF ontbrak → uitgezocht, daarna demolijst van **25 punten** verzameld
-(`docs/sessions/DEMOLIJST-S218.md` — dé bron; werkverdeling: S219 Fable-onderzoek → S220
-Opus-bouw → Fable-review). Niets gebouwd (bewuste keuze Arsalan), geen prod-mutaties door mij.
-
-**Oorzaak 1 — rentebijlage ontbreekt op de AI-concept-route (punt 1, bewezen).** Arsalan
-verstuurde de eerste échte sommatie (IN100613, 12:24) via AI-concept → compose. De bijlage-
-beslissing hangt volledig aan het meegegeven sjabloontype; een AI-concept draagt er geen
-(`ai_drafts` heeft geen stap-koppeling) → server zag "gewone mail" → geen renteoverzicht-PDF
-en geen factuur-PDF's. Beslisregel + render zelf bewezen gezond (b2b + lege rechtsvorm →
-bijlage JA; PDF rendert 82kB). S212-review-aanname "AI-concepten zijn geen sommaties" was fout —
-dit ÍS de hoofdroute. **Fix-ontwerp (S220, punt 25):** bij verse dossier-mail aan de debiteur
-zonder sjabloonkeuze het brieftype afleiden uit de huidige pijplijnstap (antwoord/doorsturen
-blijft zonder bijlage; recipient-check op debiteur; GEEN factuur-auto-attach op deze route —
-Arsalan: "we sturen normaal geen facturen mee"). Plus: compose-venster moet tonen wat er
-automatisch meegaat (punt 2) en documentenroute-gaatje ('sommatie'-brieftype ontbreekt in de
-bijlage-typeset) dichten (punt 3).
-
-**Oorzaak 2 — follow-up toont verouderde adviezen én blokkeert nieuwe (punt 13, bewezen).**
-IN100607 stond WÉL in follow-up maar onder "Eerste sommatie" (advies 9 juli) terwijl die al
-verstuurd was — uitnodiging tot dubbel versturen. Buiten de follow-up-knop om uitvoeren ruimt
-het advies nooit op, én de scanner slaat dossiers met een openstaand advies over (ontdubbeling
-per dossier, niet per stap) → het volgende advies komt NOOIT. Gemeten: 3/15 adviezen verouderd
-(IN100607, IN100613, IN100521). Fixrichting: bij stap-wissel open adviezen automatisch afsluiten.
-
-**Oorzaak 3 — wachttijden beantwoord + inconsistentie (punt 15).** Twee klokken: follow-up-
-advies na min-wachttijd van de stap (sommaties: 4 dagen, scanner elk half uur) en dagelijkse
-timeout-automatisering (concept+taak na 15/7/4/4/4 dagen). ⚠️ Eerste→Tweede: timeout-regel
-zegt 7 dagen, stap-wachttijd 4 — gelijktrekken in S220.
-
-**Verder gemeten:** 105 dossiers BaseNet-B2C-fase vs Luxis-b2b (import: bedrijf→zakelijk;
-raakt WIK-route → beslismemo Lisanne, punt 16). IN100613 schoof na verzending netjes door
-naar Tweede sommatie; IN100607 staat op Verweer beantwoorden (hold). Arsalan: geen nasturen
-bijlagen naar Bayar. Referentiebestanden in projectmap: juiste verzoekschrift-PDF
-("CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 1612).pdf") + handtekening-voorbeeld-.eml.
-
-### Gewijzigde bestanden
-Alleen docs: `docs/sessions/DEMOLIJST-S218.md` (nieuw), `docs/sessions/PROMPT-S219.md` (nieuw),
-SESSION-NOTES, roadmap. Geen code, geen migraties, geen deploy.
-
-### Bekende issues
-- Eerste échte sommatie (IN100613) is verstuurd zónder rente-PDF (rente stond wel in de tekst;
-  b2b dus geen harde WIK-plicht; Arsalan besloot: niets nasturen).
-- PROMPT-S218 (UX-sprint) is NIET uitgevoerd — punten gaan mee in S220 (ontdubbelen met demolijst).
-- 12 échte follow-up-aanbevelingen wachten nog op beoordeling Arsalan/Lisanne (3 zijn verouderd).
-
-### Volgende sessie
-S219 (`docs/sessions/PROMPT-S219.md`, Fable): demolijst-onderzoek — sjablonen-audit (matrix
-sjabloon × punt), AI-keten (snelheid/kwaliteit/klikken), fasebalk + concurrent-onderzoek,
-kleinere punten; daarna PROMPT-S220 (Opus-bouw) schrijven. KvK-backfill heeft voorrang zodra
-de sleutel er is.

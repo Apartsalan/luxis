@@ -1,5 +1,18 @@
 # PLAN S228 — Luxis perfect werkbaar op telefoon en tablet
 
+> ✅ **UITGEVOERD (17 juli 2026, Fable-bouw op verzoek).** Alle 8 blokken live op
+> prod. Bewijs: alle 16 vaste routes meten exact schermbreedte (390 telefoon /
+> 820 tablet) — geen horizontale overloop meer; compose-Verstuurknop volledig
+> zichtbaar; dossier-Correspondentie leest als één paneel; incasso-werkstroom is
+> een kaartweergave met volle-breedte actiebalk; onderbalk (Home/Dossiers/Mail/
+> Taken/Menu) live; app-icoon + schermvullend openen via manifest. Desktop
+> ongewijzigd (1440 gecontroleerd). Wachter-spec `e2e/mobile-overflow.spec.ts`
+> toegevoegd (compileert schoon; CI draait geen e2e, dus niet automatisch-gated —
+> de assertie is deze sessie handmatig op prod bevestigd voor alle 16 routes).
+> NIET op fysiek toestel getest (iOS-Safari-zoom/safe-area op regels-kennis) →
+> laatste check op Arsalans eigen telefoon. Detail: SESSION-NOTES S228.
+
+
 **Datum onderzoek:** 17 juli 2026 (S228, Fable). **Bouwer:** Opus, direct na dit plan.
 **Doel:** Lisanne werkt straks dagelijks vanaf haar telefoon. Alles wat zij doet moet
 op een telefoon (voorrang) en tablet netjes, snel en zonder gepriegel werken.

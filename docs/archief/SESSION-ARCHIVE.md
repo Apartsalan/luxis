@@ -9711,3 +9711,59 @@ Fix: apt-install in ci.yml → **CI 8/8 groen**. Ook gecorrigeerd: Pillow-claim 
 ### Volgende sessie
 S218 = UX-sprint uit de doorlichting (`docs/sessions/PROMPT-S218.md`); KvK-backfill (PROMPT-S217)
 heeft voorrang zodra de sleutel binnen is. Lisanne + Arsalan sturen vanavond de eerste echte mails.
+
+
+## Sessie 218 (15 juli 2026 middag/einde middag, Fable — demo Arsalan: demolijst + 3 oorzaken bewezen, read-only)
+
+### Samenvatting
+Demosessie werd foutenjacht. Arsalan raakte als eerste dossier IN100613 (VOF Bayar transport)
+aan en de rente-PDF ontbrak → uitgezocht, daarna demolijst van **25 punten** verzameld
+(`docs/sessions/DEMOLIJST-S218.md` — dé bron; werkverdeling: S219 Fable-onderzoek → S220
+Opus-bouw → Fable-review). Niets gebouwd (bewuste keuze Arsalan), geen prod-mutaties door mij.
+
+**Oorzaak 1 — rentebijlage ontbreekt op de AI-concept-route (punt 1, bewezen).** Arsalan
+verstuurde de eerste échte sommatie (IN100613, 12:24) via AI-concept → compose. De bijlage-
+beslissing hangt volledig aan het meegegeven sjabloontype; een AI-concept draagt er geen
+(`ai_drafts` heeft geen stap-koppeling) → server zag "gewone mail" → geen renteoverzicht-PDF
+en geen factuur-PDF's. Beslisregel + render zelf bewezen gezond (b2b + lege rechtsvorm →
+bijlage JA; PDF rendert 82kB). S212-review-aanname "AI-concepten zijn geen sommaties" was fout —
+dit ÍS de hoofdroute. **Fix-ontwerp (S220, punt 25):** bij verse dossier-mail aan de debiteur
+zonder sjabloonkeuze het brieftype afleiden uit de huidige pijplijnstap (antwoord/doorsturen
+blijft zonder bijlage; recipient-check op debiteur; GEEN factuur-auto-attach op deze route —
+Arsalan: "we sturen normaal geen facturen mee"). Plus: compose-venster moet tonen wat er
+automatisch meegaat (punt 2) en documentenroute-gaatje ('sommatie'-brieftype ontbreekt in de
+bijlage-typeset) dichten (punt 3).
+
+**Oorzaak 2 — follow-up toont verouderde adviezen én blokkeert nieuwe (punt 13, bewezen).**
+IN100607 stond WÉL in follow-up maar onder "Eerste sommatie" (advies 9 juli) terwijl die al
+verstuurd was — uitnodiging tot dubbel versturen. Buiten de follow-up-knop om uitvoeren ruimt
+het advies nooit op, én de scanner slaat dossiers met een openstaand advies over (ontdubbeling
+per dossier, niet per stap) → het volgende advies komt NOOIT. Gemeten: 3/15 adviezen verouderd
+(IN100607, IN100613, IN100521). Fixrichting: bij stap-wissel open adviezen automatisch afsluiten.
+
+**Oorzaak 3 — wachttijden beantwoord + inconsistentie (punt 15).** Twee klokken: follow-up-
+advies na min-wachttijd van de stap (sommaties: 4 dagen, scanner elk half uur) en dagelijkse
+timeout-automatisering (concept+taak na 15/7/4/4/4 dagen). ⚠️ Eerste→Tweede: timeout-regel
+zegt 7 dagen, stap-wachttijd 4 — gelijktrekken in S220.
+
+**Verder gemeten:** 105 dossiers BaseNet-B2C-fase vs Luxis-b2b (import: bedrijf→zakelijk;
+raakt WIK-route → beslismemo Lisanne, punt 16). IN100613 schoof na verzending netjes door
+naar Tweede sommatie; IN100607 staat op Verweer beantwoorden (hold). Arsalan: geen nasturen
+bijlagen naar Bayar. Referentiebestanden in projectmap: juiste verzoekschrift-PDF
+("CONCEPT VERZOEKSCHRIFT FAILLISSEMENT (aangepast 1612).pdf") + handtekening-voorbeeld-.eml.
+
+### Gewijzigde bestanden
+Alleen docs: `docs/sessions/DEMOLIJST-S218.md` (nieuw), `docs/sessions/PROMPT-S219.md` (nieuw),
+SESSION-NOTES, roadmap. Geen code, geen migraties, geen deploy.
+
+### Bekende issues
+- Eerste échte sommatie (IN100613) is verstuurd zónder rente-PDF (rente stond wel in de tekst;
+  b2b dus geen harde WIK-plicht; Arsalan besloot: niets nasturen).
+- PROMPT-S218 (UX-sprint) is NIET uitgevoerd — punten gaan mee in S220 (ontdubbelen met demolijst).
+- 12 échte follow-up-aanbevelingen wachten nog op beoordeling Arsalan/Lisanne (3 zijn verouderd).
+
+### Volgende sessie
+S219 (`docs/sessions/PROMPT-S219.md`, Fable): demolijst-onderzoek — sjablonen-audit (matrix
+sjabloon × punt), AI-keten (snelheid/kwaliteit/klikken), fasebalk + concurrent-onderzoek,
+kleinere punten; daarna PROMPT-S220 (Opus-bouw) schrijven. KvK-backfill heeft voorrang zodra
+de sleutel er is.

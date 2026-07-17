@@ -615,9 +615,20 @@ async def compose_eml_from_case(
     elif data.body:
         # S227: getypte tekst → echte alinea's met vaste briefmaat (en escape),
         # i.p.v. één platte <br>-blob waar de witregel-regels niet op grepen.
+        # Daarna aankleden met de volledige huisstijl (A2): de .eml wordt vanuit
+        # Outlook verstuurd, dus dít is de laatste kans — een getypte mail
+        # vertrok hier voorheen kaal (zonder logo/handtekening/schuldhulpblok).
+        # De AI-concept-flow levert body_html en draagt de opmaak al.
         from app.email.incasso_templates import plain_paragraphs_html
 
-        body_html = plain_paragraphs_html(data.body)
+        body_html = await ensure_branded_body(
+            db,
+            user.tenant_id,
+            subject=data.subject,
+            body_html=plain_paragraphs_html(data.body),
+            case_id=case_id,
+            force=True,
+        )
     else:
         body_html = ""
 

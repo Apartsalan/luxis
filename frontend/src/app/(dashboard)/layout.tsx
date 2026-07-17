@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { BreadcrumbProvider } from "@/components/layout/breadcrumb-context";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { cn } from "@/lib/utils";
@@ -84,10 +85,16 @@ export default function DashboardLayout({
           )}
         >
           <AppHeader onMobileMenuToggle={() => setMobileMenuOpen(true)} />
-          <main id="main-content" className="p-4 sm:p-6">
+          {/* Onderruimte op telefoon zodat de onderbalk niets afdekt (balk ~56px
+              + veilige rand); md+ heeft geen onderbalk. */}
+          <main
+            id="main-content"
+            className="p-4 sm:p-6 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-6"
+          >
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
         </div>
+        <MobileNav onMenuOpen={() => setMobileMenuOpen(true)} />
       </div>
     </BreadcrumbProvider>
   );

@@ -747,6 +747,26 @@ async def test_seed_templates_idempotent(db: AsyncSession, test_tenant: Tenant):
     assert second == 0  # All already exist
 
 
+def test_default_templates_use_generic_aanhef():
+    """Wachter (S226 A2 — foutSOORT 'reactie groet met bedrijfsnaam').
+
+    De 6 beheerde reactiesjablonen gaan als échte mail naar de wederpartij
+    (via incasso@) en worden met Jinja gerenderd. De aanhef moet de S220-lijn
+    "Geachte heer, mevrouw," zijn — NOOIT "Geachte {{ wederpartij.naam }},",
+    want dat groet een bedrijf bij zijn volledige naam (fout per S220-keuze).
+    """
+    from app.ai_agent.service import DEFAULT_TEMPLATES
+
+    for tmpl in DEFAULT_TEMPLATES:
+        body = tmpl["body_template"]
+        assert body.startswith("Geachte heer, mevrouw,"), (
+            f"{tmpl['key']}: aanhef niet S220-generiek → {body[:40]!r}"
+        )
+        assert "wederpartij.naam" not in body, (
+            f"{tmpl['key']}: groet nog bij naam i.p.v. generiek"
+        )
+
+
 # ── API endpoint tests ───────────────────────────────────────────────────
 
 

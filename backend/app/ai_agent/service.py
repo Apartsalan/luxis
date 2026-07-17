@@ -708,7 +708,7 @@ DEFAULT_TEMPLATES = [
         "category": "belofte_tot_betaling",
         "subject_template": "Bevestiging betaalafspraak — {{ zaak.zaaknummer }}",
         "body_template": (
-            "Geachte {{ wederpartij.naam }},\n\n"
+            "Geachte heer, mevrouw,\n\n"
             "Hierbij bevestigen wij uw toezegging tot betaling "
             "inzake dossier {{ zaak.zaaknummer }}.\n\n"
             "Wij vertrouwen erop dat het openstaande bedrag "
@@ -728,7 +728,7 @@ DEFAULT_TEMPLATES = [
         "category": "betwisting",
         "subject_template": "Ontvangst uw reactie — {{ zaak.zaaknummer }}",
         "body_template": (
-            "Geachte {{ wederpartij.naam }},\n\n"
+            "Geachte heer, mevrouw,\n\n"
             "Uw reactie inzake dossier {{ zaak.zaaknummer }} "
             "is in goede orde ontvangen.\n\n"
             "De inhoud van uw betwisting wordt beoordeeld. "
@@ -747,7 +747,7 @@ DEFAULT_TEMPLATES = [
         "category": "betalingsregeling_verzoek",
         "subject_template": "Ontvangst verzoek betalingsregeling — {{ zaak.zaaknummer }}",
         "body_template": (
-            "Geachte {{ wederpartij.naam }},\n\n"
+            "Geachte heer, mevrouw,\n\n"
             "Uw verzoek tot een betalingsregeling inzake "
             "dossier {{ zaak.zaaknummer }} is ontvangen.\n\n"
             "Uw voorstel wordt beoordeeld. Wij verzoeken u "
@@ -765,7 +765,7 @@ DEFAULT_TEMPLATES = [
         "category": "beweert_betaald",
         "subject_template": "Verzoek betalingsbewijs — {{ zaak.zaaknummer }}",
         "body_template": (
-            "Geachte {{ wederpartij.naam }},\n\n"
+            "Geachte heer, mevrouw,\n\n"
             "U geeft aan reeds betaald te hebben inzake dossier "
             "{{ zaak.zaaknummer }}. Deze betaling is door ons "
             "helaas nog niet ontvangen.\n\n"
@@ -787,7 +787,7 @@ DEFAULT_TEMPLATES = [
         "category": "onvermogen",
         "subject_template": "Ontvangst uw bericht — {{ zaak.zaaknummer }}",
         "body_template": (
-            "Geachte {{ wederpartij.naam }},\n\n"
+            "Geachte heer, mevrouw,\n\n"
             "Uw bericht inzake dossier {{ zaak.zaaknummer }} "
             "is ontvangen, waarin u aangeeft niet in staat "
             "te zijn om te betalen.\n\n"
@@ -808,7 +808,7 @@ DEFAULT_TEMPLATES = [
         "category": "juridisch_verweer",
         "subject_template": "Uw juridische reactie — {{ zaak.zaaknummer }}",
         "body_template": (
-            "Geachte {{ wederpartij.naam }},\n\n"
+            "Geachte heer, mevrouw,\n\n"
             "Uw juridisch inhoudelijke reactie inzake dossier "
             "{{ zaak.zaaknummer }} is ontvangen.\n\n"
             "Uw stellingen worden door de behandelend advocaat "

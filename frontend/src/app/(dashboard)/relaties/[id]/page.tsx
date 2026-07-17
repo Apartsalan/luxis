@@ -362,11 +362,11 @@ export default function RelatieDetailPage() {
         <div className="flex items-start gap-3 min-w-0">
           <BackButton
             fallbackHref="/relaties"
-            className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors"
+            className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors shrink-0"
           />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div
-              className={`flex h-11 w-11 items-center justify-center rounded-full ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
                 contact.contact_type === "company"
                   ? "bg-blue-50 text-blue-600"
                   : "bg-violet-50 text-violet-600"

@@ -52,7 +52,9 @@ REGELS:
 - Als de overeenkomst (Documenten op dossier) een specifieke clausule bevat die relevant is voor deze brief, citeer die letterlijk en noem de clausule
 - Verwijs naar relevante wetsartikelen waar van toepassing (art. 6:96 BW voor incassokosten, art. 6:119/119a BW voor rente)
 - Eindig met een duidelijke call-to-action (betalen, reageren, bewijsstuk sturen)
-- Gebruik de ondertekening: "Met vriendelijke groet,\\n\\nKesting Legal"
+- GEEN slotgroet of ondertekening — de verzendlaag voegt de kantoor-handtekening toe
+  (S227: de oude instructie "Met vriendelijke groet, Kesting Legal" gaf een dubbele
+  slotgroet zodra de aankleding "Hoogachtend, ..." erachter plakte)
 - Het bericht moet KLAAR zijn om te versturen — geen placeholders, geen TODO's
 
 BRONVERMELDING (sources array):
@@ -445,9 +447,13 @@ async def generate_draft(
 
     logger.info("AI draft generated for %s via %s", context["case_number"], model)
 
+    # S227 — zelfde wachter als de unified route: een eigen model-groet + de
+    # aankleed-handtekening van de verzendlaag = dubbele slotgroet.
+    from app.ai_agent.unified_draft_service import _strip_trailing_closing
+
     return {
         "subject": result.get("subject", ""),
-        "body": result.get("body", ""),
+        "body": _strip_trailing_closing((result.get("body") or "").strip()),
         "tone": result.get("tone", "formeel"),
         "sources": result.get("sources", []),
         "reasoning": result.get("reasoning", ""),

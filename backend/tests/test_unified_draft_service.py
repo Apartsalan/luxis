@@ -86,6 +86,17 @@ def test_strip_trailing_closing_leaves_body_without_groet():
     assert _strip_trailing_closing(body) == body
 
 
+def test_draft_service_prompt_forbids_own_closing():
+    """Wachter op de tweede generator (draft_service, auto-concept/klant-update —
+    nu gated/UI-dood, maar auto-concept staat op de roadmap): de prompt mag het
+    model nooit meer een eigen slotgroet laten schrijven — de verzendlaag kleedt
+    aan en dan wordt het dubbel."""
+    from app.ai_agent.draft_service import DRAFT_SYSTEM_PROMPT
+
+    assert 'Gebruik de ondertekening' not in DRAFT_SYSTEM_PROMPT
+    assert "GEEN slotgroet" in DRAFT_SYSTEM_PROMPT
+
+
 def test_strip_trailing_closing_ignores_groet_midway_with_content_after():
     # Een groet-regel gevolgd door échte inhoud (bv. geciteerde tekst) mag de
     # inhoud niet meeknippen.

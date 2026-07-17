@@ -358,8 +358,8 @@ export default function RelatieDetailPage() {
     <div className="space-y-6 animate-fade-in">
       {ConfirmDialogEl}
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex items-start gap-3 min-w-0">
           <BackButton
             fallbackHref="/relaties"
             className="mt-1 rounded-lg p-2 hover:bg-muted transition-colors"
@@ -378,9 +378,9 @@ export default function RelatieDetailPage() {
                 <User className="h-5 w-5" />
               )}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">
+                <h1 className="text-2xl font-bold text-foreground truncate">
                   {contact.name}
                 </h1>
                 {/* KYC badge in header */}
@@ -401,7 +401,7 @@ export default function RelatieDetailPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 sm:shrink-0">
           {editing ? (
             <>
               <button

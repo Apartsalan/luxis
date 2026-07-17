@@ -324,10 +324,10 @@ export default function DashboardPage() {
       )}
 
       {/* Two column: Left (incasso widgets or full-width) + Right (Recent Activity) */}
-      <div className={`grid gap-6 ${hasModule("incasso") ? "lg:grid-cols-5" : "lg:grid-cols-1"}`}>
+      <div className={`grid grid-cols-1 gap-6 ${hasModule("incasso") ? "lg:grid-cols-5" : "lg:grid-cols-1"}`}>
         {/* Left column — incasso specific widgets */}
         {hasModule("incasso") && (
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-6 min-w-0">
             {/* Action Needed */}
             <div className="rounded-xl border border-border bg-card">
               <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -411,7 +411,7 @@ export default function DashboardPage() {
         )}
 
         {/* Right column: Recent Activity */}
-        <div className={hasModule("incasso") ? "lg:col-span-2" : ""}>
+        <div className={hasModule("incasso") ? "lg:col-span-2 min-w-0" : "min-w-0"}>
           <div className="rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <div className="flex items-center gap-2">

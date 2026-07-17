@@ -442,7 +442,7 @@ export default function RelatieDetailPage() {
       </div>
 
       {/* Two column layout */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* Left column: Contact info */}
         <ContactInfoSection
           contact={contact}
@@ -453,7 +453,7 @@ export default function RelatieDetailPage() {
         />
 
         {/* Right column: Links + Cases */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6 min-w-0">
           {/* Contact Links (companies for persons, persons for companies) */}
           <ContactLinks
             contactId={id}

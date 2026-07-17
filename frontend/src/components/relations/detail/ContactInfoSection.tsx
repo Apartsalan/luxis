@@ -20,7 +20,7 @@ export function ContactInfoSection({
   inputClass,
 }: ContactInfoSectionProps) {
   return (
-    <div className="lg:col-span-3 space-y-6">
+    <div className="lg:col-span-3 space-y-6 min-w-0">
       <div className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-4 text-sm font-semibold text-card-foreground uppercase tracking-wider">
           Contactgegevens

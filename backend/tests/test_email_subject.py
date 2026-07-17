@@ -77,3 +77,20 @@ def test_reply_empty_original_falls_back_to_re():
         case_number="IN100607",
     )
     assert out == "Re: — SRict B.V. — IN100607"
+
+
+def test_reply_strips_basenet_tracking_tags():
+    """S227 (keuze Arsalan): BaseNet-volgcodes "[IN100458_I...]" horen niet in
+    het antwoord-onderwerp; de rest van het origineel blijft (Re:-draad intact)."""
+    out = build_reply_subject(
+        original_subject=(
+            "RE: SOMMATIE TOT BETALING / LegalWork B.V. / Studio Hartzema B.V. "
+            "/ IN100458 [IN100458_I63930662] [IN100458_I64036393]"
+        ),
+        client_name="LegalWork B.V.", debtor_name="Studio Hartzema B.V.",
+        case_number="IN100458",
+    )
+    assert out == (
+        "RE: SOMMATIE TOT BETALING / LegalWork B.V. / Studio Hartzema B.V. / IN100458"
+    )
+    assert "[" not in out

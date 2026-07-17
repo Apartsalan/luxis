@@ -21,6 +21,7 @@ from app.ai_agent.models import AIDraft, DraftStatus
 from app.ai_agent.unified_draft_service import (
     DraftIntent,
     _betreft_line,
+    _betreft_value,
     _plain_to_html,
     _strip_trailing_closing,
     find_open_reply_draft,
@@ -106,6 +107,28 @@ def test_strip_trailing_closing_ignores_groet_midway_with_content_after():
         "en dient uiterlijk 1 augustus te zijn voldaan op onze derdengeldenrekening."
     )
     assert _strip_trailing_closing(body) == body
+
+
+# S227 (keuze Arsalan, combinatie) — de Betreft-regel ÍN een antwoord-brief
+# draagt het huisformaat; het mail-onderwerp blijft "Re: ..." (draad intact).
+
+
+def test_betreft_value_reply_uses_huisformaat():
+    case = Case(case_number="IN100458")
+    case.client = Contact(name="LegalWork B.V.")
+    case.opposing_party = Contact(name="Studio Hartzema B.V.")
+    out = _betreft_value(case, DraftIntent.REPLY_TO_EMAIL, "Re: SOMMATIE [IN100458_I1]")
+    assert out == (
+        "LegalWork B.V. / Studio Hartzema B.V. — Reactie op uw bericht — IN100458"
+    )
+
+
+def test_betreft_value_other_intents_keep_subject():
+    case = Case(case_number="IN100458")
+    case.client = None
+    case.opposing_party = None
+    subject = "LegalWork B.V. / X — Eerste sommatie — IN100458"
+    assert _betreft_value(case, DraftIntent.NEXT_STEP, subject) == subject
 
 
 def test_betreft_line_uses_subject():

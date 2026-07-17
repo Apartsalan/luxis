@@ -9,6 +9,13 @@ debiteur worden weggelaten zodat het onderwerp nooit met lege delen of losse
 streepjes begint.
 """
 
+import re
+
+# S227 (keuze Arsalan): BaseNet-volgcodes als "[IN100458_I63930662]" horen niet
+# in het onderwerp van ons antwoord — wegpoetsen, de rest van het originele
+# onderwerp blijft staan (Re:-draad intact).
+_BASENET_TAG = re.compile(r"\s*\[[A-Za-z]+\d+_I\d+\]")
+
 
 def build_email_subject(
     *,
@@ -44,7 +51,7 @@ def build_reply_subject(
     dossiernummer erachter — maar NIET als het dossiernummer al in het originele
     onderwerp staat (voorkomt dubbele vermelding).
     """
-    base = (original_subject or "").strip()
+    base = _BASENET_TAG.sub("", original_subject or "").strip()
     if base.lower().startswith("re:"):
         reply = base
     elif base:

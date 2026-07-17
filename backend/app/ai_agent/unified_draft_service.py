@@ -219,6 +219,25 @@ def _resolve_subject(
     return ai_subject
 
 
+def _betreft_value(case: Case, intent: DraftIntent, subject: str) -> str:
+    """Waarde voor de Betreft-regel ÍN de brief (S227, keuze Arsalan: combinatie).
+
+    Het MAIL-onderwerp van een antwoord blijft "Re: ..." zodat het bij de
+    ontvanger in dezelfde mailwisseling valt — maar de Betreft-regel in de brief
+    draagt het nette huisformaat (klant / debiteur — brieftype — dossiernummer),
+    net als stap-brieven. Referentie: Arsalans Word-voorbeeld (Betreft.docx)."""
+    if intent != DraftIntent.REPLY_TO_EMAIL:
+        return subject
+    from app.email.subject import build_email_subject
+
+    return build_email_subject(
+        client_name=case.client.name if case.client else None,
+        debtor_name=case.opposing_party.name if case.opposing_party else None,
+        letter_type="Reactie op uw bericht",
+        case_number=case.case_number,
+    )
+
+
 async def _load_case(
     db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
 ) -> Case:
@@ -628,7 +647,7 @@ async def generate_unified_draft(
         disclaimer = _schuldhulp_disclaimer(ctx) if case.case_type == "incasso" else ""
         body_html = _render_branded(
             ctx,
-            betreft=_betreft_line(case.case_number, subject),
+            betreft=_betreft_line(case.case_number, _betreft_value(case, intent, subject)),
             content_html=content_html,
             afsluiting_html=afsluiting,
             disclaimer_html=disclaimer,

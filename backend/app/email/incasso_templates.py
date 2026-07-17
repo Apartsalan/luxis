@@ -112,6 +112,18 @@ def render_plain_branded(
     )
 
 
+def _inline_paragraph_spacing(html_content: str) -> str:
+    """Zet de witregel tussen alinea's INLINE op elke <p> (S226).
+
+    Gmail negeert een <style> in de <head> én nult standaard de <p>-marges →
+    dan begint de brief meteen na "Geachte heer, mevrouw," zonder witregel.
+    Een inline-marge negeert Gmail niet, dus zo krijg je overal een echte lege
+    regel tussen de alinea's, zoals in een gewone brief. Alleen kale <p> (de
+    brieftekst); <p> met een eigen style (handtekening/disclaimer) blijft.
+    """
+    return html_content.replace("<p>", '<p style="margin:0 0 16px 0;">')
+
+
 def _render_branded(
     context: dict,
     betreft: str,
@@ -131,9 +143,9 @@ def _render_branded(
         zaak=context["zaak"],
         vandaag=context["vandaag"],
         betreft_regel=Markup(betreft),
-        content=Markup(content_html),
+        content=Markup(_inline_paragraph_spacing(content_html)),
         afsluiting=Markup(afsluiting_html),
-        disclaimer=Markup(disclaimer_html) if disclaimer_html else "",
+        disclaimer=Markup(_inline_paragraph_spacing(disclaimer_html)) if disclaimer_html else "",
     )
 
 

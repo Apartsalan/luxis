@@ -87,6 +87,9 @@ def _assert_base_nl(html: str) -> None:
     # data:-afbeeldingen → kapot kader). Geen data-URL meer.
     assert "kesting-logo-email.png" in html, "logo (externe https-URL) ontbreekt"
     assert "data:image/png;base64," not in html, "logo mag geen data-URL meer zijn"
+    # S226: witregel tussen alinea's staat INLINE (Gmail nult head-<style> +
+    # <p>-marges) → anders begint de brief meteen na de aanhef.
+    assert 'margin:0 0 16px 0;' in html, "alinea-witregel (inline) ontbreekt"
     # S145: BaseNet stijl email-adres (hoofdletter I): Incasso@kestinglegal.nl
     assert "Incasso@kestinglegal.nl" in html, "incasso-email ontbreekt in handtekening"
     # S145: handtekening met "Mevr. mr. L. Kesting"

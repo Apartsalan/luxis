@@ -194,7 +194,7 @@ class AutoAttachmentsRequest(BaseModel):
 
 class AutoAttachmentItem(BaseModel):
     label: str
-    kind: str  # "rente" | "factuur"
+    kind: str  # "rente" | "factuur" | "verzoekschrift"
 
 
 class AutoAttachmentsResponse(BaseModel):
@@ -787,7 +787,10 @@ async def preview_auto_attachments(
     renteoverzicht (bij 14-dagenbrief/eerste sommatie voor een privé aansprakelijke
     debiteur) en de factuur-PDF's (alleen bij een expliciet gekozen sommatie-sjabloon;
     niet op de afgeleide AI-concept-route)."""
-    from app.documents.rente_bijlage import wants_rente_bijlage
+    from app.documents.rente_bijlage import (
+        VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES,
+        wants_rente_bijlage,
+    )
 
     case = (
         await db.execute(
@@ -809,6 +812,16 @@ async def preview_auto_attachments(
         case, SimpleNamespace(template_type=effective_template_type)
     ):
         items.append(AutoAttachmentItem(label="Renteoverzicht (PDF)", kind="rente"))
+
+    # S225: de dreigbrief belooft het concept-verzoekschrift in de bijlage —
+    # de server stuurt hem sindsdien automatisch mee op alle routes.
+    if effective_template_type in VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES:
+        items.append(
+            AutoAttachmentItem(
+                label="Concept-verzoekschrift faillissement (PDF)",
+                kind="verzoekschrift",
+            )
+        )
 
     # Factuur-PDF's alleen bij een EXPLICIET gekozen sommatie-sjabloon (geen
     # factuur-auto-attach op de afgeleide route).

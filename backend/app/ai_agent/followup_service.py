@@ -27,7 +27,11 @@ from app.cases.models import Case, CaseActivity
 from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
-from app.documents.rente_bijlage import build_rente_bijlage, wants_rente_bijlage
+from app.documents.rente_bijlage import (
+    VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES,
+    build_rente_bijlage,
+    wants_rente_bijlage,
+)
 from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import get_tenant_send_account
 from app.email.send_service import send_with_attachment
@@ -757,8 +761,10 @@ async def preview_recommendation(
             recipient_email=recipient_email,
             recipient_name=recipient_name,
             # S211: e-mailtekst zelf heeft geen bijlage, behalve het renteoverzicht
-            # bij de 14-dagenbrief/eerste sommatie voor een privé aansprakelijke partij.
-            has_attachment=wants_rente_bijlage(case, step),
+            # bij de 14-dagenbrief/eerste sommatie voor een privé aansprakelijke
+            # partij — en het concept-verzoekschrift bij de dreigbrief (S225).
+            has_attachment=wants_rente_bijlage(case, step)
+            or step.template_type in VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES,
             can_send=can_send,
             warning=warning,
         )

@@ -686,3 +686,58 @@ async def test_compose_send_no_derivation_when_recipient_not_debtor(
     assert resp.status_code == 200, resp.text
     assert sent["attachments"] is None
     mock_rente.assert_not_called()
+
+
+# ── S225: concept-verzoekschrift bij de dreigbrief (alle routes via de helper) ──
+
+
+@pytest.mark.asyncio
+async def test_dreigbrief_krijgt_concept_verzoekschrift_bijlage(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """De dreigbrief-tekst belooft 'een kopie van het verzoekschrift treft u in
+    de bijlage aan' — de gedeelde helper moet die kopie dan ook leveren, óók
+    voor een BV (geen renteoverzicht, wél het verzoekschrift). S225-vondst:
+    de batch stuurde de brief zonder bijlage."""
+    from app.documents.rente_bijlage import build_rente_bijlage
+
+    case = await _case_with_opposing(
+        db, test_tenant.id, legal_form="Besloten Vennootschap"
+    )
+    await db.refresh(case, ["opposing_party"])  # lazy-load vermijden in async context
+    step = SimpleNamespace(template_type="faillissement_dreigbrief")
+
+    with (
+        patch("app.documents.rente_bijlage.render_docx", new_callable=AsyncMock) as mock_render,
+        patch("app.documents.rente_bijlage.docx_to_pdf", new_callable=AsyncMock) as mock_pdf,
+    ):
+        mock_render.return_value = (b"docx", "verzoekschrift_2026-96500.docx", "verzoekschrift_faillissement", None)
+        mock_pdf.return_value = b"pdf"
+        attachments = await build_rente_bijlage(
+            db, test_tenant.id, case, step, test_user.id
+        )
+
+    assert [a[0] for a in attachments] == ["verzoekschrift_2026-96500.pdf"]
+    mock_render.assert_awaited_once_with(
+        db, test_tenant.id, case, "verzoekschrift_faillissement"
+    )
+
+
+@pytest.mark.asyncio
+async def test_sommatie_krijgt_geen_verzoekschrift_bijlage(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Gewone sommatie aan een BV (volle rechtsvorm-benaming): géén renteoverzicht
+    en géén verzoekschrift — de helper geeft een lege lijst terug."""
+    from app.documents.rente_bijlage import build_rente_bijlage
+
+    case = await _case_with_opposing(
+        db, test_tenant.id, legal_form="Besloten Vennootschap"
+    )
+    await db.refresh(case, ["opposing_party"])  # lazy-load vermijden in async context
+    step = SimpleNamespace(template_type="sommatie_drukte")
+
+    attachments = await build_rente_bijlage(
+        db, test_tenant.id, case, step, test_user.id
+    )
+    assert attachments == []

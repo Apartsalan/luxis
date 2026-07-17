@@ -35,23 +35,23 @@ def wants_rente_bijlage(case, step) -> bool:
     )
 
 
-async def build_rente_bijlage(
+# De dreigbrief belooft in de tekst "een kopie van het verzoekschrift treft u in
+# de bijlage aan" — dan moet die kopie er op élke route ook echt bij (S225-vondst:
+# de batch stuurde hem zonder; besluit Arsalan 17/7: automatisch meesturen).
+VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES = {"faillissement_dreigbrief"}
+
+
+async def _render_pdf_bijlage(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     case,
-    step,
     user_id: uuid.UUID,
-) -> list[tuple[str, bytes, str]]:
-    """Render het renteoverzicht als PDF-bijlage als deze stap er een verdient én
-    de wederpartij privé aansprakelijk is. Slaat het overzicht ook op als
-    GeneratedDocument zodat het in het dossier terugkomt. Retourneert de
-    attachments-lijst voor `send_with_attachment` ([] als er geen bijlage hoeft).
-    """
-    if not wants_rente_bijlage(case, step):
-        return []
-
+    template_key: str,
+    doc_title: str,
+) -> tuple[str, bytes, str]:
+    """Render één DOCX-sjabloon naar een PDF-bijlage + GeneratedDocument-spoor."""
     docx_bytes, filename, tpl_type, tpl_snapshot = await render_docx(
-        db, tenant_id, case, "renteoverzicht"
+        db, tenant_id, case, template_key
     )
     pdf_bytes = await docx_to_pdf(docx_bytes)
     pdf_filename = filename.replace(".docx", ".pdf")
@@ -60,7 +60,7 @@ async def build_rente_bijlage(
         tenant_id=tenant_id,
         case_id=case.id,
         generated_by_id=user_id,
-        title=f"Renteoverzicht - {case.case_number}",
+        title=f"{doc_title} - {case.case_number}",
         document_type=tpl_type,
         template_type=tpl_type,
         template_snapshot=tpl_snapshot,
@@ -68,4 +68,46 @@ async def build_rente_bijlage(
     db.add(doc)
     await db.flush()
 
-    return [(pdf_filename, pdf_bytes, "pdf")]
+    return (pdf_filename, pdf_bytes, "pdf")
+
+
+async def build_rente_bijlage(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case,
+    step,
+    user_id: uuid.UUID,
+) -> list[tuple[str, bytes, str]]:
+    """Bouw de brieftype-gebonden PDF-bijlagen voor een verzendactie.
+
+    - Renteoverzicht bij 14-dagenbrief/eerste sommatie voor een privé
+      aansprakelijke wederpartij (`wants_rente_bijlage`).
+    - Concept-verzoekschrift bij de faillissementsdreigbrief (de brieftekst
+      belooft die bijlage expliciet).
+
+    Slaat elke bijlage ook op als GeneratedDocument zodat hij in het dossier
+    terugkomt. Retourneert de attachments-lijst voor `send_with_attachment`
+    ([] als er geen bijlage hoeft).
+    """
+    attachments: list[tuple[str, bytes, str]] = []
+
+    if wants_rente_bijlage(case, step):
+        attachments.append(
+            await _render_pdf_bijlage(
+                db, tenant_id, case, user_id, "renteoverzicht", "Renteoverzicht"
+            )
+        )
+
+    if getattr(step, "template_type", None) in VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES:
+        attachments.append(
+            await _render_pdf_bijlage(
+                db,
+                tenant_id,
+                case,
+                user_id,
+                "verzoekschrift_faillissement",
+                "Concept-verzoekschrift faillissement",
+            )
+        )
+
+    return attachments

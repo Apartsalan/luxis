@@ -1241,7 +1241,87 @@ function WerkstroomTab() {
       {/* List view */}
       {viewMode === "list" && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Telefoon: kaartweergave (de brede tabel is onbruikbaar op smal scherm) */}
+          <div className="md:hidden divide-y divide-border">
+            <div className="flex items-center justify-between px-1 pb-2">
+              <button
+                onClick={() => {
+                  const allSelected = filteredCases.length > 0 && filteredCases.every((c) => selectedIds.has(c.id));
+                  setSelectedIds((prev) => {
+                    const next = new Set(prev);
+                    if (allSelected) filteredCases.forEach((c) => next.delete(c.id));
+                    else filteredCases.forEach((c) => next.add(c.id));
+                    return next;
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+              >
+                {filteredCases.length > 0 && filteredCases.every((c) => selectedIds.has(c.id))
+                  ? <CheckSquare className="h-4 w-4 text-primary" />
+                  : <Square className="h-4 w-4" />}
+                Alles selecteren
+              </button>
+              <span className="text-xs text-muted-foreground">{filteredCases.length} dossiers</span>
+            </div>
+            {filteredCases.map((c) => {
+              const isSelected = selectedIds.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleSelect(c.id)}
+                  className={`w-full text-left px-3 py-3 transition-colors ${isSelected ? "bg-primary/5" : "active:bg-muted/40"}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 shrink-0">
+                      {isSelected ? <CheckSquare className="h-5 w-5 text-primary" /> : <Square className="h-5 w-5 text-muted-foreground" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 font-mono text-xs">
+                          <span className={`inline-block h-2 w-2 rounded-full shrink-0 ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.dot ?? DEADLINE_STYLES.gray.dot}`} />
+                          <Link href={`/zaken/${c.id}`} onClick={(e) => e.stopPropagation()} className="text-primary hover:underline">
+                            {c.case_number}
+                          </Link>
+                          {c.has_verweer && (
+                            <span className={`inline-flex items-center rounded-md px-1 py-0.5 text-[9px] font-semibold ${TONES.warning.chip}`} title="Verweer">
+                              <Shield className="h-2.5 w-2.5" />
+                            </span>
+                          )}
+                          {aiCaseIds.has(c.id) && (
+                            <span className={`inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[9px] font-semibold ${TONES.ai.chip}`} title="AI-suggestie">
+                              <Bot className="h-2.5 w-2.5" />
+                            </span>
+                          )}
+                        </span>
+                        <span className={`shrink-0 text-xs font-medium ${DEADLINE_STYLES[c.deadline_status as DeadlineStatus]?.text ?? "text-muted-foreground"}`}>
+                          {c.days_in_step}d
+                        </span>
+                      </div>
+                      <p className="mt-1 truncate text-sm font-medium text-foreground">{c.client_name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{c.opposing_party_name || "—"}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        {c.step_name ? (
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${STEP_CATEGORY_STYLES[stepLookup.get(c.incasso_step_id ?? "")?.step_category ?? ""] || TONES.gray.chip}`}>
+                            {c.step_name}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">Geen stap</span>
+                        )}
+                        <span className="text-[10px] text-muted-foreground">{c.debtor_type === "b2b" ? "B2B" : c.debtor_type === "b2c" ? "B2C" : ""}</span>
+                        <span className="ml-auto font-mono text-xs">
+                          <span className={openstaandDisplay(c.outstanding).className}>{openstaandDisplay(c.outstanding).text}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop/tablet: volledige tabel (horizontaal scrollbaar binnen kader) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
@@ -1388,13 +1468,14 @@ function WerkstroomTab() {
         />
       )}
 
-      {/* Floating action bar */}
+      {/* Floating action bar. Telefoon: volle breedte onderin, boven de onderbalk,
+          knoppen wrappen. Desktop: gecentreerde pil. */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-xl">
+        <div className="fixed z-50 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card shadow-xl bottom-[calc(4.5rem+env(safe-area-inset-bottom))] left-2 right-2 px-3 py-2.5 sm:flex-nowrap sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:gap-3 sm:px-5 sm:py-3">
           <span className="text-sm font-medium text-foreground">
             {selectedIds.size} geselecteerd
           </span>
-          <div className="h-5 w-px bg-border" />
+          <div className="hidden sm:block h-5 w-px bg-border" />
           <button
             onClick={() => handleBatchAction("advance_step")}
             className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"

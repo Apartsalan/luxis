@@ -133,7 +133,7 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-white/80 backdrop-blur-sm px-4 sm:px-6">
       {/* Left: hamburger (mobile) + page title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         {onMobileMenuToggle && (
           <button
             onClick={onMobileMenuToggle}
@@ -144,14 +144,14 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
           </button>
         )}
         {isNestedPage ? (
-          <Breadcrumbs overrides={breadcrumbOverrides} />
+          <Breadcrumbs overrides={breadcrumbOverrides} className="min-w-0 overflow-hidden" />
         ) : (
-          <h2 className="text-sm font-semibold text-foreground">{pageTitle ?? "Luxis"}</h2>
+          <h2 className="text-sm font-semibold text-foreground truncate">{pageTitle ?? "Luxis"}</h2>
         )}
       </div>
 
       {/* Right: search + notifications + user menu */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {/* Telefoon: alleen een zoek-icoon (geen ruimte voor label + kbd) */}
         <button
           className="sm:hidden rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"

@@ -128,6 +128,46 @@ def _assert_base_en(html: str) -> None:
     ), "extra lege regel na de aanhef ontbreekt (EN)"
 
 
+# ── plain_paragraphs_html (S227) ─────────────────────────────────────────
+
+
+def test_plain_paragraphs_html_splits_and_escapes():
+    from app.email.incasso_templates import plain_paragraphs_html
+
+    out = plain_paragraphs_html("Geachte heer, mevrouw,\n\nEerste <alinea>.\nTweede regel.\n\nSlot.")
+    assert out.count('<p style="margin:0 0 16px 0;">') == 3
+    assert "&lt;alinea&gt;" in out
+    assert "Tweede regel" in out and "<br>" in out
+
+
+def test_plain_paragraphs_html_empty():
+    from app.email.incasso_templates import plain_paragraphs_html
+
+    assert plain_paragraphs_html("") == ""
+    assert plain_paragraphs_html(None) == ""  # type: ignore[arg-type]
+
+
+def test_no_flat_br_blob_on_send_routes():
+    """Wachter (S227): systeembrieven mogen geen platte '\\n → <br>'-blob meer
+    bouwen — dan grijpen de witregel- en aanhef-regels er nooit op. Elke route
+    hoort door plain_paragraphs_html (of een andere alinea-bouwer) te gaan."""
+    from pathlib import Path
+
+    offenders = []
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    for py in app_dir.rglob("*.py"):
+        text = py.read_text(encoding="utf-8")
+        # Een bestand dat óók op lege regels splitst ("</p><p>" of per-alinea
+        # opbouw zoals unified _plain_to_html) bouwt echte alinea's — alleen de
+        # kale \n→<br>-vervanging zonder alinea-splitsing is de foutsoort.
+        if "</p><p>" in text or 'split("\\n\\n")' in text:
+            continue
+        for pattern in ('.replace("\\n", "<br>")', ".replace(chr(10), '<br>')"):
+            if pattern in text:
+                offenders.append(f"{py.name}: {pattern}")
+    assert not offenders, f"platte <br>-blob gevonden op: {offenders}"
+
+
 # ── Herschreven templates (Batch 2) ──────────────────────────────────────
 
 

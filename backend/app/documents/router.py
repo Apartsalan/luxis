@@ -492,12 +492,13 @@ async def send_document(
     # naar de wederpartij gaat). We leveren kale alinea's; send_with_attachment →
     # ensure_branded_body kleedt ze aan met de volledige huisstijl (S186), gelijk
     # aan alle andere routes. Aanhef = S220-lijn "Geachte heer, mevrouw,".
-    import html as _html
+    from app.email.incasso_templates import plain_paragraphs_html
 
     if data.custom_subject or data.custom_body:
         subject = data.custom_subject or default_subject
         if data.custom_body:
-            html_body = "<p>" + _html.escape(data.custom_body).replace("\n", "<br>") + "</p>"
+            # S227: echte alinea's met vaste briefmaat (lege regel = alinea).
+            html_body = plain_paragraphs_html(data.custom_body)
         else:
             html_body = _document_sent_paragraphs(doc.title, case.case_number)
         template_name = "custom"

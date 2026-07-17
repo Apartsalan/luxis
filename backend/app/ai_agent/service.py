@@ -441,9 +441,11 @@ async def execute_classification(
                     # Render subject and body (sandboxed to prevent SSTI)
                     subject = _jinja_env.from_string(template.subject_template).render(tmpl_context)
                     body_text = _jinja_env.from_string(template.body_template).render(tmpl_context).strip()
-                    import html as _html
+                    # S227: echte alinea's met vaste briefmaat i.p.v. één platte
+                    # <br>-blob — anders grijpen de witregel-regels er nooit op.
+                    from app.email.incasso_templates import plain_paragraphs_html
 
-                    body_html = _html.escape(body_text).replace("\n", "<br>")
+                    body_html = plain_paragraphs_html(body_text)
 
                     # Send via email provider / SMTP.
                     # S224 (veegsessie, huisregel M1): dit is mail aan de WEDERPARTIJ —

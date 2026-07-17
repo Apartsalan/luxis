@@ -613,7 +613,11 @@ async def compose_eml_from_case(
     if data.body_html:
         body_html = data.body_html
     elif data.body:
-        body_html = data.body.replace("\n", "<br>")
+        # S227: getypte tekst → echte alinea's met vaste briefmaat (en escape),
+        # i.p.v. één platte <br>-blob waar de witregel-regels niet op grepen.
+        from app.email.incasso_templates import plain_paragraphs_html
+
+        body_html = plain_paragraphs_html(data.body)
     else:
         body_html = ""
 

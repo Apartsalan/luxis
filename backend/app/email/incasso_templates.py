@@ -140,6 +140,28 @@ _AANHEF_P = re.compile(
 )
 
 
+def plain_paragraphs_html(text: str) -> str:
+    """Kale brieftekst → nette alinea-HTML met de vaste briefmaat (S227).
+
+    Lege regel = nieuwe alinea (<p> met de standaard witregel-marge), enkel
+    regeleinde = zachte regel (<br>). Tekst wordt ge-escaped. Vervangt de losse
+    "\\n → <br>"-blobs die op vier routes leefden (classificatie-antwoord,
+    follow-up ×2, documenten-custom): die maakten één platte <p> waar de
+    alinea-witregels en de extra regel na de aanhef nooit op grepen.
+    """
+    paras = [
+        p.strip()
+        for p in (text or "").replace("\r\n", "\n").split("\n\n")
+        if p.strip()
+    ]
+    return "".join(
+        '<p style="margin:0 0 16px 0;">'
+        + html.escape(p).replace("\n", "<br>")
+        + "</p>"
+        for p in paras
+    )
+
+
 def _render_branded(
     context: dict,
     betreft: str,

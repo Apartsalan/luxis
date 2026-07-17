@@ -1,6 +1,5 @@
 """Follow-up recommendation service — rules-based workflow advisor for incasso cases."""
 
-import html
 import logging
 import math
 import uuid
@@ -549,7 +548,11 @@ async def execute_recommendation(
                 ("{{ wederpartij.naam }}", case.opposing_party.name or ""),
             ]:
                 email_subject = email_subject.replace(old, new)
-                email_body = email_body.replace(old, html.escape(new))
+                # S227: rauw invoegen — plain_paragraphs_html escapet de hele
+                # tekst (voorheen werd alleen de ingevoegde waarde ge-escaped).
+                email_body = email_body.replace(old, new)
+
+            from app.email.incasso_templates import plain_paragraphs_html
 
             email_log = await send_with_attachment(
                 db,
@@ -557,7 +560,7 @@ async def execute_recommendation(
                 tenant_id,
                 to=case.opposing_party.email,
                 subject=email_subject,
-                body_html=f"<p>{email_body.replace(chr(10), '<br>')}</p>",
+                body_html=plain_paragraphs_html(email_body),
                 attachments=[(pdf_filename, pdf_bytes, "pdf")],
                 case_id=case.id,
                 document_id=doc.id,
@@ -789,9 +792,11 @@ async def preview_recommendation(
         subject = subject.replace(old, new)
         body = body.replace(old, new)
 
+    from app.email.incasso_templates import plain_paragraphs_html
+
     return FollowupPreviewOut(
         subject=subject,
-        body_html=f"<p>{body.replace(chr(10), '<br>')}</p>",
+        body_html=plain_paragraphs_html(body),
         sender_email=sender_email,
         recipient_email=recipient_email,
         recipient_name=recipient_name,

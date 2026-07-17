@@ -66,11 +66,16 @@ bevestigd via de mailsync; factuur daarna geannuleerd (nette boekhoudstatus).
    correspondentie-vervuiling geven. → Voorstel S226: nummer-hergebruik
    voorkomen (teller nooit terug) of matcher laten kijken naar de maildatum
    vs. dossier-aanmaakdatum.
-2. **Word-tak-mail bezorging gmail vertraagd:** verstuurd 07:39:49, door
-   smtp.basenet.nl geaccepteerd, kopie in Verzonden, géén bounce — maar na
-   ~20 min nog niet in gmail (de 12 inline-mails via hetzelfde kanaal kwamen
-   binnen seconden). Vermoedelijk greylisting/filtering aan Google-kant op de
-   dagvaarding-PDF. Nacontroleren; Luxis-kant aantoonbaar correct.
+2. **Gmail filtert de zwaarste juridische brieven stilletjes weg (patroon
+   bevestigd):** 25 mails bezorgd (12 eerste sommaties, 12 tweede sommaties,
+   14-dagenbrief — allemaal binnen een minuut, mét PDF-bijlagen), maar de
+   dagvaarding-PDF-mail en BEIDE faillissementsdreigbrieven (zonder én mét
+   verzoekschrift-bijlage) zijn nergens — ook niet in spam. Alle drie door
+   smtp.basenet.nl geaccepteerd, kopie in Verzonden, geen bounce. Het ligt dus
+   niet aan bijlagen maar aan de inhoud (dagvaarding/faillissement). Voor echte
+   debiteuren met gmail is dit relevant: juridisch telt verzending, praktisch
+   komt de dreiging niet aan. → S226: SPF/DKIM/DMARC van kestinglegal.nl op de
+   BaseNet-SMTP-route controleren; bounce-logboek later nachecken.
 3. **Rechtsvorm-afkorting "bv" wordt niet herkend als beperkt aansprakelijk:**
    de bijlage-regel matcht op de volledige KvK-benaming ("besloten
    vennootschap"); handmatig ingevoerde afkortingen ("bv") vallen op de veilige
@@ -92,13 +97,14 @@ de brief-INHOUD verschilt per sjabloon → alle resterende typen alsnog gevuurd:
   laat een volgende sommatie nu pas na 15 dagen toe.
 - **Faillissementsdreigbrief (2026-00016):** verstuurd, zaak bleef op de stap.
   **→ VONDST 5 (M5 × batch): de brieftekst belooft "een kopie van het
-  verzoekschrift treft u in de bijlage aan", maar de batch stuurt GEEN bijlage
-  mee.** De brief is ontworpen voor de compose-dialoog (Lisanne voegt het
-  concept-verzoekschrift daar handmatig toe, zie docstring renderer); via de
-  batch gaat die belofte stil verloren. Voorstel: batch blokkeert deze stap met
-  een duidelijke melding ("verstuur via het dossier mét bijlage"), zoals bij
-  stappen zonder sjabloon — of rendert het verzoekschrift automatisch mee
-  (beslissing Arsalan/Lisanne: mag een concept-verzoekschrift ongezien mee?).
+  verzoekschrift treft u in de bijlage aan", maar de batch stuurde GEEN bijlage
+  mee.** De brief was ontworpen voor de compose-dialoog (Lisanne voegt het
+  concept-verzoekschrift daar handmatig toe). **GEFIXT (keuze Arsalan 17/7:
+  automatisch meesturen, commit `20d7df9`):** de gedeelde bijlage-helper rendert
+  het concept-verzoekschrift nu bij élke route (batch/follow-up/compose/.eml/
+  documents); voorvertoningen kondigen hem aan; +2 wachter-tests. **Live
+  herbewezen:** tweede batch-run op 2026-00016 → mail mét bijlage (08:07) +
+  "Concept-verzoekschrift faillissement" als document in het dossier.
 - Derde sommatie / Sommatie laatste mogelijkheid / Voorstel dagvaarding hebben
   géén briefsjabloon → batch slaat ze over met verwijzing naar de AI-conceptflow
   (bewust ontwerp, geen gat).

@@ -440,7 +440,7 @@ async def execute_classification(
 
                     # Render subject and body (sandboxed to prevent SSTI)
                     subject = _jinja_env.from_string(template.subject_template).render(tmpl_context)
-                    body_text = _jinja_env.from_string(template.body_template).render(tmpl_context)
+                    body_text = _jinja_env.from_string(template.body_template).render(tmpl_context).strip()
                     import html as _html
 
                     body_html = _html.escape(body_text).replace("\n", "<br>")
@@ -717,9 +717,6 @@ DEFAULT_TEMPLATES = [
             "dan behouden wij ons het recht voor om zonder "
             "nadere aankondiging rechtsmaatregelen te treffen, "
             "met alle bijkomende kosten van dien.\n\n"
-            "Met vriendelijke groet,\n\n"
-            "mr. L. Kesting\n"
-            "{{ kantoor.naam }}"
         ),
     },
     {
@@ -736,9 +733,6 @@ DEFAULT_TEMPLATES = [
             "blijft zolang geen deugdelijke onderbouwing van "
             "uw betwisting is ontvangen.\n\n"
             "U ontvangt hierover nader bericht.\n\n"
-            "Met vriendelijke groet,\n\n"
-            "mr. L. Kesting\n"
-            "{{ kantoor.naam }}"
         ),
     },
     {
@@ -754,9 +748,6 @@ DEFAULT_TEMPLATES = [
             "in de tussentijd geen verdere betalingsachterstand "
             "te laten ontstaan. U ontvangt zo spoedig mogelijk "
             "bericht over ons standpunt.\n\n"
-            "Met vriendelijke groet,\n\n"
-            "mr. L. Kesting\n"
-            "{{ kantoor.naam }}"
         ),
     },
     {
@@ -776,9 +767,6 @@ DEFAULT_TEMPLATES = [
             "Indien wij dit bewijs niet tijdig ontvangen, "
             "gaan wij ervan uit dat het bedrag onbetaald is "
             "en wordt de incassoprocedure voortgezet.\n\n"
-            "Met vriendelijke groet,\n\n"
-            "mr. L. Kesting\n"
-            "{{ kantoor.naam }}"
         ),
     },
     {
@@ -797,9 +785,6 @@ DEFAULT_TEMPLATES = [
             "be\u00ebindigen. Wij onderzoeken welke "
             "mogelijkheden er zijn, zoals een betalingsregeling.\n\n"
             "U ontvangt hierover nader bericht.\n\n"
-            "Met vriendelijke groet,\n\n"
-            "mr. L. Kesting\n"
-            "{{ kantoor.naam }}"
         ),
     },
     {
@@ -817,9 +802,6 @@ DEFAULT_TEMPLATES = [
             "De incassoprocedure wordt in de tussentijd niet "
             "opgeschort, tenzij uitdrukkelijk anders wordt "
             "medegedeeld.\n\n"
-            "Met vriendelijke groet,\n\n"
-            "mr. L. Kesting\n"
-            "{{ kantoor.naam }}"
         ),
     },
 ]

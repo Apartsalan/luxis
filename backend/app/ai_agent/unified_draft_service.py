@@ -144,8 +144,18 @@ def _plain_to_html(text: str) -> str:
 
 
 def _betreft_line(case_number: str, subject: str) -> str:
-    """Format the 'Betreft' / subject line for the email header."""
-    return f"<strong>Betreft:</strong> {subject}" if subject else f"<strong>Betreft:</strong> dossier {case_number}"
+    """Waarde voor de Betreft-cel in de brief-basis (S226-review).
+
+    De basis (`_BASE_EMAIL`) zet het label "Betreft:" zelf al in de eerste
+    kolom — hier dus GEEN "Betreft:"-prefix meer (gaf "Betreft: Betreft:" in
+    elke AI-concept-mail). Het onderwerp wordt ge-escaped: bij een antwoord
+    komt het uit het onderwerp van de INKOMENDE mail van de wederpartij en
+    belandt het hier in een Markup-context (S202-M4-klasse).
+    """
+    import html as _html
+
+    text = subject if subject else f"dossier {case_number}"
+    return f"<strong>{_html.escape(text)}</strong>"
 
 
 def _resolve_subject(

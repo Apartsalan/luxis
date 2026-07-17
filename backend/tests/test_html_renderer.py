@@ -298,6 +298,27 @@ def test_data_url_logo_replaced_with_external_url():
     assert "kesting-logo-email.png" in out, "externe logo-URL ontbreekt"
 
 
+def test_betreft_wederom_full_tag_no_prefix_leftover():
+    """S226-review: 3 prod-stap-teksten (Tweede/Derde sommatie, Verweer
+    beantwoorden) dragen "WEDEROM SOMMATIE TOT BETALING / /". Een half label
+    ("WEDEROM SOMMATIE") matcht dat nooit; het generieke label hapte dan de
+    staart weg → "WEDEROM {huisformaat}". Het volledige label moet winnen."""
+    template = (
+        "<table><tr><td>Betreft</td>"
+        "<td>WEDEROM SOMMATIE TOT BETALING / / </td></tr></table>"
+    )
+    out = render_template_html(
+        template,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"name": "Debiteur BV"},
+        client_data={"name": "Klant BV"},
+        invoices=[],
+        amounts={},
+    )
+    assert "Klant BV / Debiteur BV — Wederom sommatie tot betaling — 2026-00049" in out
+    assert "WEDEROM Klant BV" not in out, "half label liet 'WEDEROM '-prefix staan"
+
+
 def test_betreft_house_format_escapes_debtor_name():
     """De debiteurnaam komt via de betreft nieuw in de HTML — een naam met een
     HTML-tag mag niet als echte markup belanden (stored-injectie dicht)."""

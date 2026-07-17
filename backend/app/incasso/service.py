@@ -16,7 +16,7 @@ from app.documents.rente_bijlage import build_rente_bijlage
 from app.email.incasso_templates import render_incasso_email
 from app.email.send_service import send_with_attachment
 from app.email.subject import build_email_subject
-from app.email.templates import _render_base, document_sent
+from app.email.templates import document_sent_paragraphs
 from app.incasso.models import CaseStepHistory, IncassoPipelineStep, StepTransition
 from app.incasso.schemas import (
     BatchActionResult,
@@ -1660,24 +1660,26 @@ def _build_step_email(
             context["kantoor"]["naam"] = case.tenant.name or ""
 
         body_text = env_body.from_string(step.email_body_template).render(context)
-        body_html = body_text.replace("\n", "<br>")
+        # S226-review: de kale stap-tekst is een VOLLEDIGE brief (eigen
+        # Betreft-regel met lege BaseNet-slots, aanhef, disclaimer). Vul de
+        # betreft-slots met het huisformaat (gedeelde vuller) en trek de aanhef
+        # gelijk; geen extra Arial-wrapper er omheen (die gaf een dubbele laag
+        # met "Antwoord niet op deze e-mail" aan de wederpartij).
+        from app.incasso.html_renderer import fill_betreft_slots
 
-        # Wrap in the standard email layout
-        kantoor = context["kantoor"]
-        body_html = _render_base(kantoor, body_html)
+        body_text = fill_betreft_slots(
+            body_text,
+            case_number=case.case_number,
+            client_name=case.client.name if case.client else "",
+            debtor_name=case.opposing_party.name if case.opposing_party else "",
+        )
+        body_text = body_text.replace("Geachte heer mevrouw,", "Geachte heer, mevrouw,")
+        body_html = "<p>" + body_text.replace("\n\n", "</p><p>").replace("\n", "<br>") + "</p>"
         return subject, body_html
 
-    # Fallback: use the generic document_sent template (body); onderwerp blijft
-    # de gedeelde bouwer hierboven.
-    kantoor_dict = {"naam": "", "adres": "", "postcode_stad": ""}
-    recipient_name = case.opposing_party.name if case.opposing_party else ""
-    _, body_html = document_sent(
-        kantoor=kantoor_dict,
-        recipient_name=recipient_name,
-        document_title=step.name,
-        case_number=case.case_number,
-    )
-    return subject, body_html
+    # Fallback: gedeelde kale documentmail-alinea's; onderwerp blijft de
+    # gedeelde bouwer hierboven. Aankleding gebeurt in de verzendlaag.
+    return subject, document_sent_paragraphs(step.name, case.case_number)
 
 
 # ── Smart Work Queues ────────────────────────────────────────────────────

@@ -61,12 +61,22 @@ def test_plain_to_html_empty():
 def test_betreft_line_uses_subject():
     out = _betreft_line("2026-00001", "Aanmaning factuur 12345")
     assert "Aanmaning factuur 12345" in out
-    assert "Betreft" in out
+    # S226-review: de brief-basis zet het label "Betreft:" zelf al — de waarde
+    # mag het NIET nogmaals dragen (gaf "Betreft: Betreft:" in elke AI-concept).
+    assert "Betreft" not in out
 
 
 def test_betreft_line_falls_back_to_case_number():
     out = _betreft_line("2026-00001", "")
     assert "2026-00001" in out
+
+
+def test_betreft_line_escapes_inbound_subject():
+    """Het onderwerp van een antwoord komt uit de INKOMENDE mail van de
+    wederpartij en belandt in een Markup-context → moet ge-escaped zijn."""
+    out = _betreft_line("2026-00001", 'Re: <img src=x onerror=alert(1)>')
+    assert "<img" not in out
+    assert "&lt;img" in out
 
 
 # ── Integration: generate_unified_draft ─────────────────────────────────

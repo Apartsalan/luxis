@@ -44,7 +44,7 @@ from app.documents.schemas import (
 )
 from app.documents.template_router import router as template_router
 from app.email.models import EmailLog
-from app.email.templates import _render_base, document_sent
+from app.email.templates import document_sent_paragraphs as _document_sent_paragraphs
 from app.shared.exceptions import BadRequestError, NotFoundError
 from app.shared.sanitize import content_disposition
 
@@ -418,8 +418,6 @@ async def send_document(
     Re-renders the DOCX template with current case data, converts to PDF,
     and sends as email attachment. Logs the result in email_logs.
     """
-    from app.documents.docx_service import _tenant_ctx, load_tenant
-
     # Load the generated document
     doc = await service.get_generated_document(db, user.tenant_id, document_id)
 
@@ -470,9 +468,6 @@ async def send_document(
     pdf_bytes = await docx_to_pdf(docx_bytes)
     pdf_filename = filename.replace(".docx", ".pdf")
 
-    # Build email from template or custom content
-    tenant = await load_tenant(db, user.tenant_id)
-    kantoor = _tenant_ctx(tenant)
 
     # S224 (veegsessie, huisregel M4): het onderwerp komt uit de gedeelde bouwer,
     # niet uit een eigen titel-formaat ("{titel} — {nr}" gaf het dossiernummer
@@ -492,30 +487,22 @@ async def send_document(
         case_number=case.case_number,
     )
 
+    # S226-review: geen eigen kale opmaak meer (Arial-wrapper zonder logo/
+    # schuldhulpblok, aanhef op naam, "Antwoord niet op deze e-mail" — terwijl dit
+    # naar de wederpartij gaat). We leveren kale alinea's; send_with_attachment →
+    # ensure_branded_body kleedt ze aan met de volledige huisstijl (S186), gelijk
+    # aan alle andere routes. Aanhef = S220-lijn "Geachte heer, mevrouw,".
+    import html as _html
+
     if data.custom_subject or data.custom_body:
-        # Use custom subject/body from the frontend compose dialog
         subject = data.custom_subject or default_subject
         if data.custom_body:
-            # Wrap custom body text in base HTML layout (escape + convert newlines)
-            import html as _html
-
-            body_html = _html.escape(data.custom_body).replace("\n", "<br>")
-            html_body = _render_base(kantoor, body_html)
+            html_body = "<p>" + _html.escape(data.custom_body).replace("\n", "<br>") + "</p>"
         else:
-            _, html_body = document_sent(
-                kantoor=kantoor,
-                recipient_name=data.recipient_name or "",
-                document_title=doc.title,
-                case_number=case.case_number,
-            )
+            html_body = _document_sent_paragraphs(doc.title, case.case_number)
         template_name = "custom"
     else:
-        _, html_body = document_sent(
-            kantoor=kantoor,
-            recipient_name=data.recipient_name or "",
-            document_title=doc.title,
-            case_number=case.case_number,
-        )
+        html_body = _document_sent_paragraphs(doc.title, case.case_number)
         subject = default_subject  # M4: bouwer wint van het sjabloon-onderwerp
         template_name = "document_sent"
 

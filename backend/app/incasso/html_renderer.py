@@ -248,6 +248,45 @@ def _plain_to_html_paragraph(text: str) -> str:
     return f"{span_open}{html_text}{span_close}"
 
 
+def fill_betreft_slots(
+    text: str,
+    *,
+    case_number: str,
+    client_name: str,
+    debtor_name: str,
+) -> str:
+    """Vervang de BaseNet-betreft "{TAG} / /" (lege slots) door het huisformaat
+    "{klant} / {debiteur} — {brieftype} — {dossiernummer}" (S226).
+
+    Gedeeld door de auto-concept-route (HTML-stap-tekst) én de batch-DOCX-tak
+    (kale stap-tekst — óók een volledige brief met dezelfde lege slots). Beide
+    uitkomsten worden als HTML verstuurd → namen worden hier ge-escaped.
+
+    VOLLEDIGE labels, langste eerst — prod-meting (S226-review): 3 stap-teksten
+    dragen "WEDEROM SOMMATIE TOT BETALING / /"; een half label ("WEDEROM
+    SOMMATIE") matcht nooit en dan hapt het generieke label de staart weg →
+    "WEDEROM {huisformaat}".
+    """
+    for tag, brieftype in (
+        ("SOMMATIE TOT BETALING (LAATSTE MOGELIJKHEID)",
+         "Sommatie tot betaling (laatste mogelijkheid)"),
+        ("SOMMATIE AANKONDIGING FAILLISSEMENT", "Sommatie aankondiging faillissement"),
+        ("WEDEROM SOMMATIE TOT BETALING", "Wederom sommatie tot betaling"),
+        ("VERZOEKSCHRIFT FAILLISSEMENT", "Verzoekschrift faillissement"),
+        ("TWEEDE SOMMATIE", "Tweede sommatie"),
+        ("SOMMATIE TOT BETALING", "Sommatie tot betaling"),
+    ):
+        betreft = build_email_subject(
+            client_name=str(escape(client_name)) or None,
+            debtor_name=str(escape(debtor_name)) or None,
+            letter_type=brieftype,
+            case_number=case_number,
+        )
+        text = text.replace(f"{tag} / /", betreft)
+        text = text.replace(f"{tag} /  /", betreft)
+    return text
+
+
 def render_template_html(
     template_html: str,
     *,
@@ -284,28 +323,14 @@ def render_template_html(
     html = re.sub(r'src="data:image/[^"]*"', f'src="{_LOGO_URL}"', html)
 
     # Betreft-regel binnen de body: BaseNet leverde "SOMMATIE TOT BETALING / /"
-    # (lege slots). S226: gelijktrekken met het mail-onderwerp naar huisformaat
-    # "{klant} / {debiteur} — {brieftype} — {dossiernummer}". Langste tag eerst,
-    # zodat "(LAATSTE MOGELIJKHEID)" niet door de generieke variant wordt geraakt.
-    # De debiteurnaam komt hier nieuw in de HTML → escapen (stored-injectie dicht).
+    # (lege slots) → huisformaat via de gedeelde vuller hieronder.
     debtor_name = str(debtor_data.get("name") or "")
-    for tag, brieftype in (
-        ("SOMMATIE TOT BETALING (LAATSTE MOGELIJKHEID)",
-         "Sommatie tot betaling (laatste mogelijkheid)"),
-        ("SOMMATIE AANKONDIGING FAILLISSEMENT", "Sommatie aankondiging faillissement"),
-        ("VERZOEKSCHRIFT FAILLISSEMENT", "Verzoekschrift faillissement"),
-        ("WEDEROM SOMMATIE", "Wederom sommatie tot betaling"),
-        ("TWEEDE SOMMATIE", "Tweede sommatie"),
-        ("SOMMATIE TOT BETALING", "Sommatie tot betaling"),
-    ):
-        betreft = build_email_subject(
-            client_name=str(escape(client_name)) or None,
-            debtor_name=str(escape(debtor_name)) or None,
-            letter_type=brieftype,
-            case_number=case_number,
-        )
-        html = html.replace(f"{tag} / /", betreft)
-        html = html.replace(f"{tag} /  /", betreft)
+    html = fill_betreft_slots(
+        html,
+        case_number=case_number,
+        client_name=client_name,
+        debtor_name=debtor_name,
+    )
 
     # Cliëntnaam
     html = html.replace("(invullen gegevens cliënt)", client_name or "(cliënt)")

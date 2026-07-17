@@ -765,6 +765,12 @@ def test_default_templates_use_generic_aanhef():
         assert "wederpartij.naam" not in body, (
             f"{tmpl['key']}: groet nog bij naam i.p.v. generiek"
         )
+        # S226-review: GEEN eigen slotgroet in het sjabloon — de verzendlaag
+        # (ensure_branded_body) voegt dé handtekening (Hoogachtend + logo) toe;
+        # een sjabloon-groet erbij gaf twee handtekeningen onder elkaar.
+        assert "Met vriendelijke groet" not in body, (
+            f"{tmpl['key']}: eigen slotgroet → dubbele handtekening in de mail"
+        )
 
 
 # ── API endpoint tests ───────────────────────────────────────────────────

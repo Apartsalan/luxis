@@ -737,7 +737,7 @@ def _render_herinnering(ctx: dict) -> str:
 
 def _render_reactie_9_3(ctx: dict) -> str:
     body = (
-        "<p>,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Eerder schreef ik u aan inzake de onbetaald gelaten "
         f"vordering van mijn cli&euml;nte {ctx['client']['naam']}. "
         "De vordering is aan mijn kantoor overgedragen ter incasso.</p>"
@@ -779,7 +779,7 @@ def _render_reactie_9_3(ctx: dict) -> str:
 
 def _render_reactie_20_4(ctx: dict) -> str:
     body = (
-        "<p>,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Eerder schreef ik u aan inzake de onbetaald gelaten "
         f"vordering van mijn cli&euml;nte {ctx['client']['naam']}. "
         "De vordering is aan mijn kantoor overgedragen ter incasso.</p>"
@@ -932,7 +932,7 @@ def _render_engelse_sommatie(ctx: dict) -> str:
 
 def _render_reactie_ncnp_9_3(ctx: dict) -> str:
     body = (
-        "<p>,</p>"
+        "<p>Geachte heer, mevrouw,</p>"
         f"<p>Eerder schreef ik u aan inzake de onbetaald gelaten "
         f"vordering van mijn cli&euml;nte {ctx['client']['naam']}. "
         "De vordering is aan mijn kantoor overgedragen ter incasso.</p>"

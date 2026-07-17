@@ -348,6 +348,9 @@ def test_all_betreft_lines_use_house_format(mock_context):
         )
         # Oud BaseNet-formaat had het dossiernummer tussen slashes.
         assert f"/ {zaaknummer}" not in cel, f"{key}: oud slash-formaat → {cel!r}"
+        # S226-review: geen losse-komma-aanhef ("<p>,</p>") — elke brief opent
+        # met een echte aanhef (S220-lijn), niet met een kale komma.
+        assert ">,</p>" not in html, f"{key}: losse-komma-aanhef in de brief"
 
 
 # ── S145: signature email-adres switcht op case_type ────────────────────

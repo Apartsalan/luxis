@@ -46,151 +46,23 @@ def _render_base(kantoor: dict, content_html: str) -> str:
 # ── Template: document verzonden ──────────────────────────────────────────
 
 _DOCUMENT_SENT_CONTENT = """\
-<p>Geachte {{ aanhef }},</p>
+<p>Geachte heer, mevrouw,</p>
 <p>Bijgaand treft u het document <strong>{{ document_titel }}</strong> aan \
 inzake zaak {{ zaaknummer }}.</p>
-<p>Het document is als bijlage bij deze e-mail gevoegd.</p>
-<p>Met vriendelijke groet,<br>{{ kantoor_naam }}</p>"""
+<p>Het document is als bijlage bij deze e-mail gevoegd.</p>"""
 
 _doc_sent_tpl = _env.from_string(_DOCUMENT_SENT_CONTENT)
 
 
-def document_sent(
-    *,
-    kantoor: dict,
-    recipient_name: str,
-    document_title: str,
-    case_number: str,
-) -> tuple[str, str]:
-    """Email template for sending a document (aanmaning, sommatie, etc.).
+def document_sent_paragraphs(document_title: str, case_number: str) -> str:
+    """Kale alinea's voor de document-verzendmail (S226-review).
 
-    Returns:
-        (subject, html_body)
+    Bewust GEEN eigen wrapper, aanhef-op-naam of slotgroet meer: de verzendlaag
+    (`ensure_branded_body`, afspraak S186) kleedt dit aan met de volledige
+    huisstijl — Betreft-regel, witregels, handtekening + logo, schuldhulpblok.
+    Aanhef = S220-lijn "Geachte heer, mevrouw,".
     """
-    subject = f"{document_title} — {case_number}"
-    content = _doc_sent_tpl.render(
-        aanhef=recipient_name or "heer/mevrouw",
+    return _doc_sent_tpl.render(
         document_titel=document_title,
         zaaknummer=case_number,
-        kantoor_naam=kantoor.get("naam", ""),
     )
-    html_body = _render_base(kantoor, content)
-    return subject, html_body
-
-
-# ── Template: deadline herinnering ────────────────────────────────────────
-
-_DEADLINE_REMINDER_CONTENT = """\
-<p>Geachte {{ aanhef }},</p>
-<p>Hierbij herinneren wij u aan de openstaande termijn voor zaak \
-<strong>{{ zaaknummer }}</strong>.</p>
-<p>De deadline van <strong>{{ deadline }}</strong> nadert. \
-Wij verzoeken u vriendelijk om tijdig actie te ondernemen.</p>
-<p>Met vriendelijke groet,<br>{{ kantoor_naam }}</p>"""
-
-_deadline_tpl = _env.from_string(_DEADLINE_REMINDER_CONTENT)
-
-
-def deadline_reminder(
-    *,
-    kantoor: dict,
-    recipient_name: str,
-    case_number: str,
-    deadline: str,
-) -> tuple[str, str]:
-    """Email template for a deadline reminder.
-
-    Returns:
-        (subject, html_body)
-    """
-    subject = f"Herinnering deadline — {case_number}"
-    content = _deadline_tpl.render(
-        aanhef=recipient_name or "heer/mevrouw",
-        zaaknummer=case_number,
-        deadline=deadline,
-        kantoor_naam=kantoor.get("naam", ""),
-    )
-    html_body = _render_base(kantoor, content)
-    return subject, html_body
-
-
-# ── Template: betalingsbevestiging ────────────────────────────────────────
-
-_PAYMENT_CONFIRMATION_CONTENT = """\
-<p>Geachte {{ aanhef }},</p>
-<p>Wij bevestigen de ontvangst van uw betaling van <strong>{{ bedrag }}</strong> \
-voor zaak <strong>{{ zaaknummer }}</strong>.</p>
-{% if restant %}
-<p>Het resterende openstaande bedrag is <strong>{{ restant }}</strong>.</p>
-{% else %}
-<p>Hiermee is het volledige bedrag voldaan.</p>
-{% endif %}
-<p>Met vriendelijke groet,<br>{{ kantoor_naam }}</p>"""
-
-_payment_tpl = _env.from_string(_PAYMENT_CONFIRMATION_CONTENT)
-
-
-def payment_confirmation(
-    *,
-    kantoor: dict,
-    recipient_name: str,
-    case_number: str,
-    amount: str,
-    remaining: str | None = None,
-) -> tuple[str, str]:
-    """Email template for a payment confirmation.
-
-    Returns:
-        (subject, html_body)
-    """
-    subject = f"Betalingsbevestiging — {case_number}"
-    content = _payment_tpl.render(
-        aanhef=recipient_name or "heer/mevrouw",
-        zaaknummer=case_number,
-        bedrag=amount,
-        restant=remaining,
-        kantoor_naam=kantoor.get("naam", ""),
-    )
-    html_body = _render_base(kantoor, content)
-    return subject, html_body
-
-
-# ── Template: status wijziging ────────────────────────────────────────────
-
-_STATUS_CHANGE_CONTENT = """\
-<p>Geachte {{ aanhef }},</p>
-<p>De status van zaak <strong>{{ zaaknummer }}</strong> is gewijzigd \
-van <em>{{ oude_status }}</em> naar <em>{{ nieuwe_status }}</em>.</p>
-{% if toelichting %}
-<p>{{ toelichting }}</p>
-{% endif %}
-<p>Met vriendelijke groet,<br>{{ kantoor_naam }}</p>"""
-
-_status_tpl = _env.from_string(_STATUS_CHANGE_CONTENT)
-
-
-def status_change(
-    *,
-    kantoor: dict,
-    recipient_name: str,
-    case_number: str,
-    old_status: str,
-    new_status: str,
-    note: str | None = None,
-) -> tuple[str, str]:
-    """Email template for a case status change notification.
-
-    Returns:
-        (subject, html_body)
-    """
-    subject = f"Statuswijziging — {case_number}"
-    content = _status_tpl.render(
-        aanhef=recipient_name or "heer/mevrouw",
-        zaaknummer=case_number,
-        oude_status=old_status,
-        nieuwe_status=new_status,
-        toelichting=note,
-        kantoor_naam=kantoor.get("naam", ""),
-    )
-    html_body = _render_base(kantoor, content)
-    return subject, html_body

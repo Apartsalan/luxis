@@ -14,6 +14,8 @@ from pathlib import Path
 from jinja2 import Environment, StrictUndefined
 from markupsafe import Markup
 
+from app.email.subject import build_email_subject
+
 _env = Environment(undefined=StrictUndefined, autoescape=True)
 
 # Logo embedded as data-URL so external image-blocking (Outlook/Gmail) doesn't
@@ -145,6 +147,27 @@ def _render_branded(
         disclaimer=Markup(disclaimer_html) if disclaimer_html else "",
         logo_data_url=_LOGO_DATA_URL,
     )
+
+
+def _betreft(ctx: dict, brieftype: str) -> str:
+    """Betreft-regel in huisformaat (S226), gelijk aan het mail-onderwerp:
+    "{klant} / {debiteur} — {brieftype} — {dossiernummer}".
+
+    De template (`_BASE_EMAIL`) zet zelf al het label "Betreft:" in de eerste
+    kolom — dat zit hier dus NIET in, anders krijg je "Betreft: Betreft:" (het
+    oude gedrag, S225-vondst). client/wederpartij-namen komen al HTML-escaped
+    binnen via `_escape_html_data`; brieftype + dossiernummer zijn vaste,
+    veilige tekst — dus niet nogmaals escapen (voorkomt dubbel-escapen).
+    """
+    client = ctx.get("client") or {}
+    weder = ctx.get("wederpartij") or {}
+    line = build_email_subject(
+        client_name=client.get("naam"),
+        debtor_name=weder.get("naam"),
+        letter_type=brieftype,
+        case_number=ctx["zaak"]["zaaknummer"],
+    )
+    return f"<strong>{line}</strong>"
 
 
 # ── Shared HTML fragments ────────────────────────────────────────────────
@@ -533,7 +556,7 @@ def _render_aanmaning(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft="<strong>Betreft: Aanmaning tot betaling</strong>",
+        betreft=_betreft(ctx, "Aanmaning tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -587,10 +610,7 @@ def _render_sommatie(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>SOMMATIE TOT BETALING / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Sommatie tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -622,7 +642,7 @@ def _render_tweede_sommatie(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft="<strong>Betreft: TWEEDE SOMMATIE &mdash; Laatste gelegenheid</strong>",
+        betreft=_betreft(ctx, "Tweede sommatie"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -678,7 +698,7 @@ def _render_14_dagenbrief(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft="<strong>Betreft: Ingebrekestelling en aanmaning tot betaling</strong>",
+        betreft=_betreft(ctx, "Ingebrekestelling en aanmaning tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -706,7 +726,7 @@ def _render_herinnering(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft="<strong>Betreft: Herinnering openstaande vordering</strong>",
+        betreft=_betreft(ctx, "Herinnering openstaande vordering"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -748,7 +768,7 @@ def _render_reactie_9_3(ctx: dict) -> str:
     body += _betalingsregeling_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
+        betreft=_betreft(ctx, "Reactie op uw bericht"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -785,7 +805,7 @@ def _render_reactie_20_4(ctx: dict) -> str:
     body += _betalingsregeling_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
+        betreft=_betreft(ctx, "Reactie op uw bericht"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -837,10 +857,7 @@ def _render_schikkingsvoorstel(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>EENMALIG SCHIKKINGSVOORSTEL / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Eenmalig schikkingsvoorstel"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -904,7 +921,7 @@ def _render_engelse_sommatie(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=f"<strong>DEMAND FOR PAYMENT / {zn}</strong>",
+        betreft=_betreft(ctx, "Demand for payment"),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
         disclaimer_html=_schuldhulp_disclaimer_en(ctx),
@@ -961,7 +978,7 @@ def _render_reactie_ncnp_9_3(ctx: dict) -> str:
     body += _betalingsregeling_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
+        betreft=_betreft(ctx, "Reactie op uw bericht"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1011,7 +1028,7 @@ def _render_reactie_verlengd_9_3(ctx: dict) -> str:
     body += _betalingsregeling_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=f"<strong>Betreft: {ctx['zaak']['zaaknummer']}</strong>",
+        betreft=_betreft(ctx, "Reactie op uw bericht"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1084,11 +1101,7 @@ def _render_vaststellingsovereenkomst(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            "<strong>Treffen van een regeling (aanbod "
-            f"vaststellingsovereenkomst) / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Treffen van een regeling (vaststellingsovereenkomst)"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1140,11 +1153,7 @@ def _render_faillissement_dreigbrief(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            "<strong>VERZOEKSCHRIFT FAILLISSEMENT (LAATSTE "
-            f"MOGELIJKHEID) / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Verzoekschrift faillissement (laatste mogelijkheid)"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1168,10 +1177,7 @@ def _render_bevestiging_sluiting(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            "<strong>Bevestiging betaling en sluiting dossier / "
-            f"{zn}</strong>"
-        ),
+        betreft=_betreft(ctx, "Bevestiging betaling en sluiting dossier"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1187,7 +1193,6 @@ def _render_sommatie_na_reactie(ctx: dict) -> str:
     Gebruikt nadat debiteur gereageerd heeft op een eerdere brief. Lisanne
     heeft de reactie met cliënte besproken en reageert terug met sommatie.
     """
-    zn = ctx["zaak"]["zaaknummer"]
     body = (
         "<p>Geachte heer, mevrouw,</p>"
         f"<p>Eerder schreef ik u aan inzake de onbetaald gelaten "
@@ -1210,10 +1215,7 @@ def _render_sommatie_na_reactie(ctx: dict) -> str:
     body += _betalingsregeling_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>SOMMATIE TOT BETALING / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Sommatie tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1251,10 +1253,7 @@ def _render_sommatie_eerste_opgave(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>SOMMATIE TOT BETALING / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Sommatie tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1298,10 +1297,7 @@ def _render_niet_voldaan_regeling(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            "<strong>NIET VOLDAAN AAN REGELING - SOMMATIE TOT "
-            f"BETALING / {zn} / {ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Sommatie tot betaling (niet voldaan aan regeling)"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1357,10 +1353,7 @@ def _render_sommatie_laatste_voor_fai(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            "<strong>SOMMATIE TOT BETALING (LAATSTE MOGELIJKHEID) "
-            f"/ {zn} / {ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Sommatie tot betaling (laatste mogelijkheid)"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1418,10 +1411,7 @@ def _render_wederom_sommatie_inhoudelijk(ctx: dict) -> str:
     body += _stuiting_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=(
-            "<strong>WEDEROM SOMMATIE TOT BETALING / "
-            f"{zn} / {ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Wederom sommatie tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1472,10 +1462,7 @@ def _render_wederom_sommatie_kort(ctx: dict) -> str:
     body += _stuiting_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=(
-            "<strong>WEDEROM SOMMATIE TOT BETALING / "
-            f"{zn} / {ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Wederom sommatie tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1530,10 +1517,7 @@ def _render_sommatie_drukte(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>SOMMATIE TOT BETALING / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Sommatie tot betaling"),
         content_html=body,
         afsluiting_html=_signature(ctx),
         disclaimer_html=_schuldhulp_disclaimer(ctx),
@@ -1549,7 +1533,6 @@ def _render_demand_for_payment_eerste(ctx: dict) -> str:
     Eerste sommatie in Engels, kort formaat, 3 dagen termijn. Voor
     internationale debiteuren bij eerste contact.
     """
-    zn = ctx["zaak"]["zaaknummer"]
     body = (
         "<p>Dear sir/madam,</p>"
         f"<p>My client has requested me to collect the outstanding "
@@ -1573,10 +1556,7 @@ def _render_demand_for_payment_eerste(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>DEMAND FOR PAYMENT / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Demand for payment"),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
         disclaimer_html=_schuldhulp_disclaimer_en(ctx),
@@ -1593,7 +1573,6 @@ def _render_demand_for_payment_uitgebreid(ctx: dict) -> str:
     payment arrangement blok. Voor situaties waar interruption of the
     statute of limitations nodig is.
     """
-    zn = ctx["zaak"]["zaaknummer"]
     body = (
         "<p>Dear sir/madam,</p>"
         f"<p>Previously, I contacted you regarding my client's "
@@ -1619,10 +1598,7 @@ def _render_demand_for_payment_uitgebreid(ctx: dict) -> str:
     body += _betalingsregeling_en_blok(ctx)
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>DEMAND FOR PAYMENT / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Demand for payment"),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
         disclaimer_html=_schuldhulp_disclaimer_en(ctx),
@@ -1637,7 +1613,6 @@ def _render_demand_for_payment_laatste(ctx: dict) -> str:
 
     2 dagen termijn. Verzoekschrift is al in voorbereiding.
     """
-    zn = ctx["zaak"]["zaaknummer"]
     body = (
         "<p>Dear sir/madam,</p>"
         "<p>Previously, I contacted you regarding my client's "
@@ -1667,10 +1642,7 @@ def _render_demand_for_payment_laatste(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>DEMAND FOR PAYMENT / {zn} / "
-            f"{ctx['wederpartij']['naam']}</strong>"
-        ),
+        betreft=_betreft(ctx, "Demand for payment"),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
         disclaimer_html=_schuldhulp_disclaimer_en(ctx),
@@ -1687,7 +1659,6 @@ def _render_demand_for_payment_fai(ctx: dict) -> str:
     termijn. Concept verzoekschrift PDF moet handmatig als bijlage
     toegevoegd worden via 'Uit sjablonen-bibliotheek'.
     """
-    zn = ctx["zaak"]["zaaknummer"]
     body = (
         "<p>Dear sir/madam,</p>"
         "<p>In this matter, I have repeatedly and formally demanded "
@@ -1715,10 +1686,7 @@ def _render_demand_for_payment_fai(ctx: dict) -> str:
     )
     return _render_branded(
         ctx,
-        betreft=(
-            f"<strong>DEMAND FOR PAYMENT / {zn} / "
-            f"{ctx['wederpartij']['naam']} / BANKRUPTCY</strong>"
-        ),
+        betreft=_betreft(ctx, "Demand for payment (bankruptcy)"),
         content_html=body,
         afsluiting_html=_signature(ctx, english=True),
         disclaimer_html=_schuldhulp_disclaimer_en(ctx),

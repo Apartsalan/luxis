@@ -258,6 +258,46 @@ def test_render_subject_empty_returns_empty():
     assert render_subject("", case_number="X", kenmerk="X") == ""
 
 
+def test_betreft_line_rewritten_to_house_format():
+    """S226 A3 (path 2): de DB-stap-tekst betreft 'SOMMATIE TOT BETALING / /'
+    wordt omgezet naar huisformaat '{klant} / {debiteur} — {brieftype} — nr',
+    net als het mail-onderwerp — geen kaal BaseNet-formaat meer in de body."""
+    template = (
+        "<table><tr><td>Betreft</td>"
+        "<td>SOMMATIE TOT BETALING / / </td></tr></table>"
+    )
+    out = render_template_html(
+        template,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"name": "Debiteur BV", "contact_person": "Jansen",
+                     "salutation": "mr"},
+        client_data={"name": "Opdrachtgever BV"},
+        invoices=[],
+        amounts={},
+    )
+    assert "Opdrachtgever BV / Debiteur BV — Sommatie tot betaling — 2026-00049" in out
+    assert "SOMMATIE TOT BETALING / /" not in out
+
+
+def test_betreft_house_format_escapes_debtor_name():
+    """De debiteurnaam komt via de betreft nieuw in de HTML — een naam met een
+    HTML-tag mag niet als echte markup belanden (stored-injectie dicht)."""
+    template = (
+        "<table><tr><td>Betreft</td>"
+        "<td>SOMMATIE TOT BETALING / / </td></tr></table>"
+    )
+    out = render_template_html(
+        template,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"name": "<b>INJECTED</b>"},
+        client_data={"name": "BV"},
+        invoices=[],
+        amounts={},
+    )
+    assert "<b>INJECTED</b>" not in out
+    assert "&lt;b&gt;INJECTED&lt;/b&gt;" in out
+
+
 def test_more_invoices_than_slots_truncates():
     """4 facturen, template heeft 3 slots → eerste 3 gevuld, 4e overgeslagen."""
     invoices = [

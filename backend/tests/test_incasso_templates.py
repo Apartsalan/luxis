@@ -120,7 +120,8 @@ def test_render_sommatie_eerste_av(mock_context):
     _assert_base_nl(html)
     assert "3 DAGEN NA HEDEN" in html
     assert "Algemene Voorwaarden" in html
-    assert "SOMMATIE TOT BETALING" in html
+    # S226: betreft in huisformaat (klant / debiteur — brieftype — dossiernummer)
+    assert "Sommatie tot betaling — 2026-00042" in html
     assert "Test Debiteur BV" in html
 
 
@@ -145,7 +146,7 @@ def test_render_schikkingsvoorstel_placeholder(mock_context):
     _assert_base_nl(html)
     assert "[VUL SCHIKKINGSBEDRAG IN]" in html
     assert "24 uur" in html
-    assert "EENMALIG SCHIKKINGSVOORSTEL" in html
+    assert "Eenmalig schikkingsvoorstel — 2026-00042" in html
 
 
 def test_render_vaststellingsovereenkomst_placeholders(mock_context):
@@ -170,7 +171,7 @@ def test_render_faillissement_dreigbrief(mock_context):
     assert "2 DAGEN NA HEDEN" in html
     assert "verzoekschrift" in html.lower()
     assert "in de bijlage" in html
-    assert "VERZOEKSCHRIFT FAILLISSEMENT" in html
+    assert "Verzoekschrift faillissement (laatste mogelijkheid) — 2026-00042" in html
 
 
 # ── Nieuwe NL templates (Batch 3) ────────────────────────────────────────
@@ -199,7 +200,7 @@ def test_render_niet_voldaan_regeling(mock_context):
     _assert_base_nl(html)
     assert "2 DAGEN NA HEDEN" in html
     assert "vaststellingsovereenkomst" in html.lower()
-    assert "NIET VOLDAAN AAN REGELING" in html
+    assert "Sommatie tot betaling (niet voldaan aan regeling) — 2026-00042" in html
 
 
 def test_render_sommatie_laatste_voor_fai(mock_context):
@@ -209,7 +210,7 @@ def test_render_sommatie_laatste_voor_fai(mock_context):
     assert "2 DAGEN NA HEDEN" in html
     assert "verzoekschrift" in html.lower()
     assert "reeds begonnen" in html
-    assert "LAATSTE MOGELIJKHEID" in html
+    assert "Sommatie tot betaling (laatste mogelijkheid) — 2026-00042" in html
 
 
 def test_render_wederom_sommatie_inhoudelijk_placeholder(mock_context):
@@ -249,7 +250,7 @@ def test_render_demand_for_payment_eerste(mock_context):
     html = render_incasso_email("demand_for_payment_eerste", mock_context)
     _assert_base_en(html)
     assert "3 DAYS FROM TODAY" in html
-    assert "DEMAND FOR PAYMENT" in html
+    assert "Demand for payment — 2026-00042" in html
 
 
 def test_render_demand_for_payment_uitgebreid(mock_context):
@@ -276,7 +277,7 @@ def test_render_demand_for_payment_fai(mock_context):
     _assert_base_en(html)
     assert "2 DAYS FROM TODAY" in html
     assert "petition is attached" in html
-    assert "BANKRUPTCY" in html
+    assert "Demand for payment (bankruptcy) — 2026-00042" in html
 
 
 # ── _RENDERERS registratie check ─────────────────────────────────────────
@@ -314,6 +315,37 @@ def test_render_unknown_returns_none(mock_context):
     """Onbekende template_type moet None returnen (fallback signal)."""
     result = render_incasso_email("does_not_exist_xyz", mock_context)
     assert result is None
+
+
+def test_all_betreft_lines_use_house_format(mock_context):
+    """Wachter (S226 A3 — foutSOORT 'betreft niet in huisformaat').
+
+    Geen enkele brief mag de Betreft-regel nog in het oude BaseNet-formaat
+    'TYPE / dossiernummer / debiteur' dragen, en nooit de dubbele
+    'Betreft: Betreft:' (S225-vondst). Elke betreft-regel moet huisformaat zijn:
+    '{klant} / {debiteur} — {brieftype} — {dossiernummer}', gelijk aan het
+    mail-onderwerp. Een nieuw brieftype dat dit vergeet valt hier om.
+    """
+    import re
+
+    from app.email.incasso_templates import _RENDERERS
+
+    zaaknummer = mock_context["zaak"]["zaaknummer"]  # "2026-00042"
+    for key in _RENDERERS:
+        html = render_incasso_email(key, mock_context)
+        assert html, f"{key}: geen output"
+        # De betreft-cel = tweede kolom van de Betreft-tabel in _BASE_EMAIL.
+        m = re.search(r"Betreft:</td>\s*<td[^>]*>(.*?)</td>", html, re.S)
+        assert m, f"{key}: geen Betreft-cel gevonden"
+        cel = re.sub(r"<[^>]+>", "", m.group(1)).strip()
+        # Geen dubbele 'Betreft:'-prefix (de template zet 'm zelf al voor de cel).
+        assert "Betreft:" not in cel, f"{key}: dubbele 'Betreft:' → {cel!r}"
+        # Huisformaat eindigt op '— {dossiernummer}' (em-dash), niet '/ nr'.
+        assert cel.endswith(f"— {zaaknummer}"), (
+            f"{key}: geen huisformaat-suffix → {cel!r}"
+        )
+        # Oud BaseNet-formaat had het dossiernummer tussen slashes.
+        assert f"/ {zaaknummer}" not in cel, f"{key}: oud slash-formaat → {cel!r}"
 
 
 # ── S145: signature email-adres switcht op case_type ────────────────────

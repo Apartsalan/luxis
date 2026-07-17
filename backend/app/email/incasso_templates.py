@@ -9,7 +9,6 @@ herinnering.  All others return None → caller falls back to PDF attachment.
 """
 
 import html
-from pathlib import Path
 
 from jinja2 import Environment, StrictUndefined
 from markupsafe import Markup
@@ -18,30 +17,20 @@ from app.email.subject import build_email_subject
 
 _env = Environment(undefined=StrictUndefined, autoescape=True)
 
-# Logo embedded as data-URL so external image-blocking (Outlook/Gmail) doesn't
-# strip it. Search both `parents[2]/templates/` (Docker: backend root mapped to
-# /app, with /app/templates volume mount) and `parents[3]/templates/` (CI/local:
-# repo root, templates/ lives at repo root not under backend/).
-_LOGO_B64 = ""
-_BASE = Path(__file__).resolve()
-for _candidate in (
-    _BASE.parents[2] / "templates" / "lisanne" / "_kesting_logo.b64",
-    _BASE.parents[3] / "templates" / "lisanne" / "_kesting_logo.b64",
-):
-    if _candidate.exists():
-        _LOGO_B64 = _candidate.read_text(encoding="utf-8").strip()
-        break
-
-_LOGO_DATA_URL = (
-    f"data:image/png;base64,{_LOGO_B64}" if _LOGO_B64 else "https://kestinglegal.nl/logo.png"
-)
+# S226 — logo als extern gehoste https-afbeelding, NIET als data-URL. Gmail én
+# Outlook blokkeren data:-afbeeldingen in mail → het logo verscheen als een leeg,
+# kapot kader. Een gewone https-URL wordt wél getoond (Gmail proxyt externe
+# afbeeldingen standaard); dit is ook hoe BaseNet het logo insloot. Het bestand
+# staat in frontend/public/ en wordt door Caddy → frontend publiek uitgeserveerd.
+_LOGO_URL = "https://luxis.kestinglegal.nl/kesting-logo-email.png"
 
 # ── Branded base layout ──────────────────────────────────────────────────
 
 _BASE_EMAIL = """\
 <!DOCTYPE html>
 <html lang="nl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<style>p{margin:0 0 14px 0;} p:last-child{margin-bottom:0;}</style></head>
 <body style="margin:0;padding:0;font-family:Verdana,Geneva,sans-serif;\
 font-size:12px;color:#000000;line-height:1.4;">
 
@@ -145,7 +134,6 @@ def _render_branded(
         content=Markup(content_html),
         afsluiting=Markup(afsluiting_html),
         disclaimer=Markup(disclaimer_html) if disclaimer_html else "",
-        logo_data_url=_LOGO_DATA_URL,
     )
 
 
@@ -269,9 +257,8 @@ def _signature(ctx: dict, english: bool = False) -> str:
     )
 
     logo_html = (
-        f'<br><br><img src="{_LOGO_DATA_URL}" alt="Kesting Legal" '
+        f'<br><br><img src="{_LOGO_URL}" alt="Kesting Legal" '
         'style="height:100px;width:100px;border:0;display:block;">'
-        if _LOGO_DATA_URL.startswith("data:") else ""
     )
 
     if english:

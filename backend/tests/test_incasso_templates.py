@@ -83,11 +83,10 @@ def _assert_base_nl(html: str) -> None:
     assert "2026-00042" in html, "zaaknummer not in output"
     assert "Hoogachtend" in html, "NL signature missing"
     assert "schuldenaar" in html.lower(), "schuldhulp block missing"
-    # S145: logo moet als embedded data-URL renderen, niet als externe URL.
-    assert "data:image/png;base64," in html, "logo ontbreekt als data-URL"
-    assert "https://kestinglegal.nl/logo.png" not in html, (
-        "externe logo URL gebruikt — moet data-URL zijn"
-    )
+    # S226: logo als extern gehoste https-afbeelding (Gmail/Outlook blokkeren
+    # data:-afbeeldingen → kapot kader). Geen data-URL meer.
+    assert "kesting-logo-email.png" in html, "logo (externe https-URL) ontbreekt"
+    assert "data:image/png;base64," not in html, "logo mag geen data-URL meer zijn"
     # S145: BaseNet stijl email-adres (hoofdletter I): Incasso@kestinglegal.nl
     assert "Incasso@kestinglegal.nl" in html, "incasso-email ontbreekt in handtekening"
     # S145: handtekening met "Mevr. mr. L. Kesting"
@@ -107,7 +106,7 @@ def _assert_base_en(html: str) -> None:
     assert len(html) > 500, f"html too small: {len(html)} bytes"
     assert "2026-00042" in html, "zaaknummer not in output"
     assert "Yours faithfully" in html, "EN signature missing"
-    assert "data:image/png;base64," in html, "logo ontbreekt als data-URL"
+    assert "kesting-logo-email.png" in html, "logo (externe https-URL) ontbreekt"
     assert "Mevr. mr. L. Kesting" in html, "naam ontbreekt in handtekening"
 
 

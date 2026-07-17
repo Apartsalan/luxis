@@ -186,7 +186,7 @@ async def test_next_step_intent_persists_draft_with_branded_html(
     assert draft.body == "Eerste alinea.\n\nTweede alinea."
     # Branded HTML wrap
     assert draft.body_html is not None
-    assert "data:image/png;base64," in draft.body_html, "logo data-URL ontbreekt"
+    assert "kesting-logo-email.png" in draft.body_html, "logo (externe https-URL) ontbreekt"
     assert "Eerste alinea." in draft.body_html
     assert "Tweede alinea." in draft.body_html
     # case_type=incasso → handtekening toont incasso@kestinglegal.nl
@@ -296,7 +296,7 @@ async def test_reply_to_email_uses_source_email(
     assert draft.body == "Reactie."
     assert draft.tone == "zakelijk"
     assert draft.body_html is not None
-    assert "data:image/png;base64," in draft.body_html
+    assert "kesting-logo-email.png" in draft.body_html, "logo (externe https-URL) ontbreekt"
 
 
 @pytest.mark.asyncio

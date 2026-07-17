@@ -79,6 +79,32 @@ bevestigd via de mailsync; factuur daarna geannuleerd (nette boekhoudstatus).
 4. **Dubbele spatie in gmail-onderwerpen is een weergave-artefact** van
    regel-vouwen bij lange onderwerpen; in de database staat het onderwerp goed.
 
+## 3b. Tweede ronde — alle overige brieftypen door de batch (vraag Arsalan)
+
+Vraag: "geldt dit ook voor Tweede sommaties e.d., of moeten we dat testen?"
+Antwoord: het gedeelde mechanisme is voor alle typen hetzelfde (bewezen), maar
+de brief-INHOUD verschilt per sjabloon → alle resterende typen alsnog gevuurd:
+
+- **Tweede sommatie (12 zaken):** 12/12 verstuurd, geen bijlage (correct — geen
+  rente-set-type), alle 12 doorgeschoven naar Derde sommatie, bezorgd in gmail.
+- **14-dagenbrief (particulier 2026-00009):** verstuurd MÉT rente-PDF (correct:
+  consument → bijlage), zaak doorgeschoven naar Eerste sommatie. De batch-gate
+  laat een volgende sommatie nu pas na 15 dagen toe.
+- **Faillissementsdreigbrief (2026-00016):** verstuurd, zaak bleef op de stap.
+  **→ VONDST 5 (M5 × batch): de brieftekst belooft "een kopie van het
+  verzoekschrift treft u in de bijlage aan", maar de batch stuurt GEEN bijlage
+  mee.** De brief is ontworpen voor de compose-dialoog (Lisanne voegt het
+  concept-verzoekschrift daar handmatig toe, zie docstring renderer); via de
+  batch gaat die belofte stil verloren. Voorstel: batch blokkeert deze stap met
+  een duidelijke melding ("verstuur via het dossier mét bijlage"), zoals bij
+  stappen zonder sjabloon — of rendert het verzoekschrift automatisch mee
+  (beslissing Arsalan/Lisanne: mag een concept-verzoekschrift ongezien mee?).
+- Derde sommatie / Sommatie laatste mogelijkheid / Voorstel dagvaarding hebben
+  géén briefsjabloon → batch slaat ze over met verwijzing naar de AI-conceptflow
+  (bewust ontwerp, geen gat).
+- Bezorging ronde 2: 13/14 direct in gmail; 1 nog onderweg (zelfde vertraging
+  als de dagvaarding-PDF-mail, zie §3.2).
+
 ## 4. Testdata (opruimen later, afspraak Arsalan)
 
 13 testdossiers 2026-00007 t/m 2026-00019 + 13 TEST-contacten + testfactuur

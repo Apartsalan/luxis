@@ -764,7 +764,7 @@ export function EmailComposeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[95vw] w-full max-h-[92vh] h-[92vh] p-0 flex flex-col">
+      <DialogContent className="sm:max-w-[95vw] w-full max-h-[92vh] h-[92vh] p-0 flex flex-col max-sm:p-0 max-sm:overflow-hidden">
         {/* Header */}
         <DialogHeader className="px-6 pt-5 pb-3 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -1250,13 +1250,13 @@ export function EmailComposeDialog({
           </div>
 
           {/* ── Footer ────────────────────────────────────────────── */}
-          <div className="border-t px-6 py-3 flex items-center justify-between shrink-0">
+          <div className="border-t px-4 sm:px-6 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-3 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
             {/* Left: attachments button */}
             {effectiveCaseId && (
               <div className="flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="h-8 gap-1.5 text-xs text-muted-foreground">
+                    <Button type="button" variant="ghost" size="sm" className="h-9 sm:h-8 gap-1.5 text-xs text-muted-foreground">
                       <Paperclip className="h-3.5 w-3.5" />
                       {attachments.length > 0 ? `Bijlagen (${attachments.length})` : "Bijlage"}
                     </Button>
@@ -1280,17 +1280,20 @@ export function EmailComposeDialog({
               </div>
             )}
 
-            {/* Right: cancel + outlook + send */}
-            <div className="flex items-center gap-2 ml-auto">
-              <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenChange(false)} disabled={isSending}>
-                Annuleren
-              </Button>
-              {effectiveCaseId && (
-                <Button type="button" variant="outline" size="sm" disabled={isSending || !to.trim()} className="gap-1.5" onClick={handleOpenInOutlook}>
-                  <ExternalLink className="h-3.5 w-3.5" /> Open in Outlook
+            {/* Right: cancel + outlook + send. Telefoon: Versturen op eigen volle
+                regel bovenaan, secundaire acties eronder. Desktop: één rij rechts. */}
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 sm:ml-auto">
+              <div className="flex items-center gap-2 max-sm:justify-end">
+                <Button type="button" variant="ghost" size="sm" onClick={() => handleOpenChange(false)} disabled={isSending}>
+                  Annuleren
                 </Button>
-              )}
-              <Button type="submit" size="sm" disabled={isSending || !to.trim()} className="gap-1.5">
+                {effectiveCaseId && (
+                  <Button type="button" variant="outline" size="sm" disabled={isSending || !to.trim()} className="gap-1.5" onClick={handleOpenInOutlook}>
+                    <ExternalLink className="h-3.5 w-3.5" /> Open in Outlook
+                  </Button>
+                )}
+              </div>
+              <Button type="submit" size="sm" disabled={isSending || !to.trim()} className="gap-1.5 max-sm:w-full">
                 {isSending ? (
                   <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Bezig...</>
                 ) : (

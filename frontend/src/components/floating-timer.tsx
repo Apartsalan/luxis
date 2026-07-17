@@ -190,7 +190,7 @@ function FloatingTimerInner() {
   // Collapsed state: just a small pill when timer is running
   if (timer.running && !isExpanded) {
     return (
-      <div className="fixed bottom-20 right-4 z-50 animate-in slide-in-from-bottom-2 duration-200">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-20 right-4 z-50 animate-in slide-in-from-bottom-2 duration-200">
         <button
           onClick={() => setIsExpanded(true)}
           className="flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2.5 text-white shadow-lg hover:bg-emerald-700 transition-all hover:shadow-xl"
@@ -208,7 +208,7 @@ function FloatingTimerInner() {
   // Not running and not expanded: show start button
   if (!timer.running && !isExpanded) {
     return (
-      <div className="fixed bottom-20 right-4 z-50">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-20 right-4 z-50">
         <button
           onClick={() => setIsExpanded(true)}
           className="flex items-center gap-2 rounded-full bg-card border border-border px-4 py-2.5 text-foreground shadow-lg hover:bg-muted/50 transition-all hover:shadow-xl"
@@ -223,7 +223,7 @@ function FloatingTimerInner() {
 
   // Expanded state: full timer panel
   return (
-    <div className="fixed bottom-20 right-4 z-50 w-72 animate-in slide-in-from-bottom-2 duration-200">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-20 right-4 z-50 w-72 animate-in slide-in-from-bottom-2 duration-200">
       <div className="rounded-xl border border-border bg-card shadow-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">

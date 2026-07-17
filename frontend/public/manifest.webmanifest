@@ -1,0 +1,24 @@
+{
+  "name": "Luxis — Praktijkmanagement",
+  "short_name": "Luxis",
+  "description": "Praktijkmanagementsysteem voor de Nederlandse Advocatuur",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4fd7",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

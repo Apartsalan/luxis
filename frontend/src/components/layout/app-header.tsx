@@ -152,6 +152,17 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
 
       {/* Right: search + notifications + user menu */}
       <div className="flex items-center gap-2">
+        {/* Telefoon: alleen een zoek-icoon (geen ruimte voor label + kbd) */}
+        <button
+          className="sm:hidden rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          onClick={() => {
+            window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+          }}
+          aria-label="Zoeken"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+        {/* Desktop: volledige zoekbalk met sneltoets-hint */}
         <button
           className="hidden sm:flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
           onClick={() => {
@@ -185,7 +196,7 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
 
           {/* Notification dropdown */}
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-96 rounded-lg border border-border bg-white shadow-lg overflow-hidden z-50">
+            <div className="fixed inset-x-2 top-14 mt-0 w-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 max-w-96 rounded-lg border border-border bg-white shadow-lg overflow-hidden z-50">
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h3 className="text-sm font-semibold text-foreground">Meldingen</h3>

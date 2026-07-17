@@ -140,3 +140,19 @@
 .skip-to-content:focus {
   left: 0;
 }
+
+/* Safe-area helpers (iPhone notch/home-indicator). Fall back to 0 on devices
+   without insets. Used by the mobile bottom nav, floating timer and full-screen
+   dialogs so nothing hides behind the system UI. */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom);
+}
+.h-safe-bottom {
+  height: env(safe-area-inset-bottom);
+}

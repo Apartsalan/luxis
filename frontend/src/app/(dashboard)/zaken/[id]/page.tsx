@@ -24,7 +24,6 @@ import { toast } from "sonner";
 import { useCase, useUpdateCaseStatus, useDeleteCase } from "@/hooks/use-cases";
 import {
   getTemplatesForStatus,
-  useSendCaseEmail,
   type EmailLogEntry,
 } from "@/hooks/use-documents";
 import {
@@ -177,7 +176,7 @@ export default function ZaakDetailPage() {
   // ── Freestanding email compose (F11) ────────────────────────────────────
   const [caseEmailOpen, setCaseEmailOpen] = useState(false);
   const [replyPrefill, setReplyPrefill] = useState<ReplyPrefill | null>(null);
-  const sendCaseEmail = useSendCaseEmail(id);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const sendViaProvider = useSendViaProvider(id);
 
   const handleReplyForward = (email: SyncedEmailDetail, mode: "reply" | "forward") => {
@@ -434,6 +433,7 @@ export default function ZaakDetailPage() {
   };
 
   const handleDirectSend = async (data: EmailComposeData) => {
+    setIsSendingEmail(true);
     try {
       let res = await postCompose(data, false);
 
@@ -480,6 +480,8 @@ export default function ZaakDetailPage() {
       if (activeDraftId) await handleDraftSendComplete();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "E-mail verzenden mislukt");
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -759,7 +761,7 @@ export default function ZaakDetailPage() {
         }}
         onSend={handleOpenInOutlook}
         onSendDirect={handleDirectSend}
-        isSending={sendCaseEmail.isPending}
+        isSending={isSendingEmail}
         title={
           replyPrefill
             ? replyPrefill.replyToMessageId ? "Beantwoorden" : "Doorsturen"

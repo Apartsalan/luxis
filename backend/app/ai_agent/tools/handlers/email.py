@@ -1,4 +1,4 @@
-"""Email tool handlers — compose/send email, list unlinked emails."""
+"""Email tool handlers — list unlinked emails."""
 
 from __future__ import annotations
 
@@ -7,33 +7,6 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.tools import serialize
-
-
-async def handle_email_compose(
-    *,
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    user_id: uuid.UUID,
-    case_id: str,
-    to: str,
-    subject: str,
-    body: str,
-    cc: str | None = None,
-) -> dict:
-    """Send an email via the configured email provider for a case."""
-    from app.email.send_service import send_with_attachment
-
-    result = await send_with_attachment(
-        db=db,
-        tenant_id=tenant_id,
-        user_id=user_id,
-        case_id=uuid.UUID(case_id),
-        to=to,
-        subject=subject,
-        body_html=body,
-        cc=cc.split(",") if cc else None,
-    )
-    return serialize(result) if result else {"sent": True}
 
 
 async def handle_email_unlinked(

@@ -44,7 +44,6 @@ import {
   getTemplateDescription,
   getTemplatesForStatus,
   triggerDownload,
-  useSendCaseEmail,
   useEmailLogs,
   type GeneratedDocumentSummary,
 } from "@/hooks/use-documents";

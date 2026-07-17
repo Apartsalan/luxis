@@ -36,7 +36,6 @@ from app.ai_agent.tools.handlers.documents import (
     handle_template_list,
 )
 from app.ai_agent.tools.handlers.email import (
-    handle_email_compose,
     handle_email_unlinked,
 )
 from app.ai_agent.tools.handlers.general import (
@@ -584,47 +583,6 @@ TOOL_DEFINITIONS: list[dict] = [
         "handler": handle_template_list,
     },
     # ── Email ────────────────────────────────────────────────────────────
-    {
-        "name": "email_compose",
-        "description": (
-            "Verstuur een email via de geconfigureerde email"
-            " provider (Gmail/Outlook). De email verschijnt"
-            " in de Verzonden map en wordt gekoppeld aan"
-            " het dossier."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "case_id": {
-                    "type": "string",
-                    "description": "UUID van het dossier",
-                },
-                "to": {
-                    "type": "string",
-                    "description": "Ontvanger email",
-                },
-                "subject": {
-                    "type": "string",
-                    "description": "Onderwerp",
-                },
-                "body": {
-                    "type": "string",
-                    "description": ("Email inhoud (HTML)"),
-                },
-                "cc": {
-                    "type": "string",
-                    "description": ("CC adressen, komma-gescheiden"),
-                },
-            },
-            "required": [
-                "case_id",
-                "to",
-                "subject",
-                "body",
-            ],
-        },
-        "handler": handle_email_compose,
-    },
     {
         "name": "email_unlinked",
         "description": (

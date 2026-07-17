@@ -597,6 +597,7 @@ async def send_invoice(
             attachments=[(pdf_filename, pdf_bytes, "pdf")],
             case_id=invoice.case_id,
             recipient_name=recipient_label,
+            send_as_tenant_account=True,  # B1/S225: factuur via kantoorkanaal (incasso@), niet persoonlijk account
         )
         if email_log.status != "sent":
             raise BadRequestError(

@@ -146,13 +146,13 @@ class TestDefaultRegistry:
 
         registry = ToolRegistry()
         register_all_tools(registry)
-        assert len(registry) == 34  # 34 tools defined in definitions.py
+        assert len(registry) == 33  # 33 tools defined in definitions.py (email_compose verwijderd S225-B2)
 
     def test_create_default_registry(self):
         from app.ai_agent.tools.definitions import create_default_registry
 
         registry = create_default_registry()
-        assert len(registry) == 34
+        assert len(registry) == 33
 
     def test_all_tools_have_handlers(self):
         from app.ai_agent.tools.definitions import create_default_registry
@@ -187,7 +187,7 @@ class TestDefaultRegistry:
 
         registry = create_default_registry()
         tools = registry.get_claude_tools()
-        assert len(tools) == 34
+        assert len(tools) == 33
 
         for tool in tools:
             assert "name" in tool

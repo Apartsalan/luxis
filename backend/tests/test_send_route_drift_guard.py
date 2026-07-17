@@ -37,10 +37,6 @@ EXPECTED_SMTP_EXITS = {
     ("app/email/send_service.py", "send_with_attachment"),
     # Instellingen-test: geen dossier-mail, bewust buiten het drieluik.
     ("app/email/router.py", "send_test_email"),
-    # Legacy losse-mail-route: UI-dood sinds S220 (alleen nog als API aanroepbaar);
-    # logt EmailLog + CaseActivity maar géén SyncedEmail. Opruimen = beslispunt
-    # B3 (S224-veegrapport) — verwijder deze regel zodra het endpoint weg is.
-    ("app/email/router.py", "send_case_email"),
     # Wachtwoord-reset: systeemmail, geen dossier-mail.
     ("app/auth/router.py", "_send_reset_email_safe"),
 }
@@ -67,11 +63,8 @@ SUBJECT_ALLOWLIST = {
     # ResponseTemplate (geen stale BaseNet-sjabloon). Vondst V2c S224:
     # kandidaat om naar build_reply_subject te verhuizen.
     ("app/ai_agent/service.py", "execute_classification"),
-    # Dode route (registry zonder aanroepers) — beslispunt B2 S224: opruimen.
-    ("app/ai_agent/tools/handlers/email.py", "handle_email_compose"),
-    # Instellingen-test + legacy route + wachtwoord-reset: vaste/systeem-onderwerpen.
+    # Instellingen-test + wachtwoord-reset: vaste/systeem-onderwerpen.
     ("app/email/router.py", "send_test_email"),
-    ("app/email/router.py", "send_case_email"),
     ("app/auth/router.py", "_send_reset_email_safe"),
 }
 

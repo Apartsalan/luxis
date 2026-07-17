@@ -104,7 +104,7 @@ function EmailDetailPanel({
 
   if (isLoading) {
     return (
-      <div className="w-3/5 rounded-xl border border-border bg-card p-6">
+      <div className="w-full lg:w-3/5 rounded-xl border border-border bg-card p-6">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           E-mail laden...
@@ -115,19 +115,28 @@ function EmailDetailPanel({
 
   if (!email) {
     return (
-      <div className="w-3/5 rounded-xl border border-border bg-card p-6">
+      <div className="w-full lg:w-3/5 rounded-xl border border-border bg-card p-6">
         <p className="text-sm text-muted-foreground">E-mail niet gevonden</p>
       </div>
     );
   }
 
   return (
-    <div className="w-3/5 rounded-xl border border-border bg-card overflow-hidden">
+    <div className="w-full lg:w-3/5 rounded-xl border border-border bg-card overflow-hidden">
       {/* Header */}
       <div className="border-b border-border p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-foreground">{email.subject}</h3>
-          <div className="flex items-center gap-1 shrink-0">
+        {/* Terug naar lijst — alleen op telefoon/tablet (onder lg is de lijst verborgen) */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="lg:hidden mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          <ArrowDownLeft className="h-4 w-4 rotate-45" />
+          Terug naar lijst
+        </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-2">
+          <h3 className="text-sm font-semibold text-foreground break-words min-w-0">{email.subject}</h3>
+          <div className="flex flex-wrap items-center gap-1 shrink-0">
             {onOpenDraft && email.direction === "inbound" && (
               <button
                 type="button"
@@ -471,10 +480,11 @@ function CorrespondentieTab({
       {/* S141: AI Concept-knop + preview-blok verwijderd uit Correspondentie.
           Wordt vervangen door CaseActionFeed (S146-147). */}
 
-      {/* Email list + detail split */}
+      {/* Email list + detail split. Onder lg: één paneel tegelijk (lijst OF lezen),
+          net als de Mail-pagina — anders wordt beide kolommen onleesbaar smal. */}
       <div className="flex gap-4">
         {/* Email list */}
-        <div className={`${selectedEmailId ? "w-2/5" : "w-full"} space-y-0`}>
+        <div className={`${selectedEmailId ? "hidden lg:block lg:w-2/5" : "w-full"} space-y-0`}>
           {isLoading ? (
             <div className="rounded-xl border border-border bg-card p-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

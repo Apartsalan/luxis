@@ -43,7 +43,7 @@ const DialogContent = React.forwardRef<
         // Staat VÓÓR className zodat een dialoog met eigen mobiele indeling (bv.
         // compose) dit gericht kan overschrijven met eigen max-sm-klassen; de
         // schermvullende maat wint sowieso van desktop-max-w's (media-volgorde).
-        "max-sm:inset-0 max-sm:left-0 max-sm:top-0 max-sm:h-dvh max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0 max-sm:p-4 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] max-sm:overflow-y-auto",
+        "max-sm:inset-0 max-sm:left-0 max-sm:top-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0 max-sm:p-4 max-sm:pb-[calc(1rem+env(safe-area-inset-bottom))] max-sm:overflow-y-auto",
         className
       )}
       {...props}

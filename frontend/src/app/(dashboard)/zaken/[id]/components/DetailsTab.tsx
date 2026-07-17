@@ -229,9 +229,9 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
     "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors";
 
   return (
-    <div className="grid gap-6 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
       {/* Left: Case details */}
-      <div className="lg:col-span-3 space-y-6">
+      <div className="lg:col-span-3 space-y-6 min-w-0">
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-card-foreground uppercase tracking-wider">
@@ -870,7 +870,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
       </div>
 
       {/* Right: Note + Recent Activity */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="lg:col-span-2 space-y-6 min-w-0">
         {/* Quick note input — always visible */}
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center gap-2 mb-3">

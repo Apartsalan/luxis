@@ -736,7 +736,7 @@ export default function ZaakDetailPage() {
             )}
             {safeTab === "correspondentie" && (
               <ErrorBoundary key="correspondentie" fallback={<TabErrorFallback tabName="Correspondentie" />}>
-                <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} onReply={handleReplyForward} />
+                <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} onReply={handleReplyForward} onOpenDraft={openDraftDialog} />
               </ErrorBoundary>
             )}
             {safeTab === "tijdlijn" && (

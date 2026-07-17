@@ -15,10 +15,12 @@ import {
   Mail,
   Plus,
   Reply,
+  Sparkles,
   XCircle,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { ClassificationCard } from "@/components/classification-card";
+import { AiReplyDialog } from "@/components/ai-reply-dialog";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
@@ -48,16 +50,21 @@ function EmailDetailPanel({
   caseId,
   onClose,
   onReply,
+  onOpenDraft,
 }: {
   emailId: string;
   caseId: string;
   onClose: () => void;
   onReply?: (email: SyncedEmailDetail, mode: "reply" | "forward") => void;
+  // S227 — opent het gegenereerde AI-concept ín deze pagina (betrouwbaar bij
+  // same-page navigatie, i.t.t. ?draft= — zie BUG-73 in zaken/[id]/page.tsx).
+  onOpenDraft?: (draftId: string) => void;
 }) {
   const { data: email, isLoading } = useSyncedEmailDetail(emailId);
   const saveToCase = useSaveAttachmentToCase();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [aiReplyOpen, setAiReplyOpen] = useState(false);
 
   const handleDownloadAttachment = async (attachmentId: string, filename: string) => {
     setDownloadingId(attachmentId);
@@ -121,6 +128,16 @@ function EmailDetailPanel({
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-foreground">{email.subject}</h3>
           <div className="flex items-center gap-1 shrink-0">
+            {onOpenDraft && email.direction === "inbound" && (
+              <button
+                type="button"
+                onClick={() => setAiReplyOpen(true)}
+                title="AI schrijft een concept-antwoord op deze mail"
+                className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> AI-antwoord maken
+              </button>
+            )}
             {onReply && (
               <>
                 <button
@@ -232,6 +249,15 @@ function EmailDetailPanel({
           </pre>
         )}
       </div>
+
+      {/* S227 — AI-antwoord maken (gedeelde dialoog, zelfde flow als Mail-pagina) */}
+      {aiReplyOpen && onOpenDraft && (
+        <AiReplyDialog
+          email={email}
+          onClose={() => setAiReplyOpen(false)}
+          onOpenDraft={onOpenDraft}
+        />
+      )}
     </div>
   );
 }
@@ -272,10 +298,12 @@ function CorrespondentieTab({
   caseId,
   onCompose,
   onReply,
+  onOpenDraft,
 }: {
   caseId: string;
   onCompose?: () => void;
   onReply?: (email: SyncedEmailDetail, mode: "reply" | "forward") => void;
+  onOpenDraft?: (draftId: string) => void;
 }) {
   const { data: logs, isLoading: logsLoading } = useEmailLogs(caseId);
   // ponytail: 200 dekt het drukste dossier ruim (max ~83 nu); voeg echte paging
@@ -541,6 +569,7 @@ function CorrespondentieTab({
             caseId={caseId}
             onClose={() => setSelectedEmailId(null)}
             onReply={onReply}
+            onOpenDraft={onOpenDraft}
           />
         )}
       </div>

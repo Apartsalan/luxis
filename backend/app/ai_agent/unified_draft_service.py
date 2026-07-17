@@ -15,6 +15,7 @@ incasso_templates._render_branded() so the output gets:
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from enum import StrEnum
 
@@ -128,6 +129,31 @@ _FREE_COMPOSE_PROMPT = (
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
+
+
+# S227 (Fable-review) — het model sluit ondanks de spelregels soms zelf af met
+# een groet ("Met vriendelijke groet,"); de aankleding voegt daarna de echte
+# handtekening toe ("Hoogachtend, Mevr. mr. L. Kesting") → dubbele slotgroet
+# (zelfde foutsoort als S226-vondst 4, maar dan uit de generatie i.p.v. een
+# sjabloon). Deterministisch wegknippen i.p.v. prompt-hoop.
+_CLOSING_LINE = re.compile(
+    r"^\s*(met vriendelijke groet(en)?|hoogachtend|met groet(en)?|mvg)\s*[,.!]?\s*$",
+    re.IGNORECASE,
+)
+
+
+def _strip_trailing_closing(body: str) -> str:
+    """Knip een afsluitende groetregel (+ hooguit 2 korte naam-/kantoorregels
+    erna) van het einde van de AI-body. Inhoud na een groet-regel midden in de
+    tekst blijft staan."""
+    lines = body.split("\n")
+    for i in range(len(lines) - 1, -1, -1):
+        if _CLOSING_LINE.match(lines[i]):
+            tail = [ln for ln in lines[i + 1 :] if ln.strip()]
+            if len(tail) <= 2 and all(len(ln.strip()) <= 60 for ln in tail):
+                return "\n".join(lines[:i]).rstrip()
+            break
+    return body
 
 
 def _plain_to_html(text: str) -> str:
@@ -585,7 +611,7 @@ async def generate_unified_draft(
     result, model = await call_intake_ai(system_prompt, user_msg)
 
     subject = (result.get("subject") or "").strip()
-    body = (result.get("body") or "").strip()
+    body = _strip_trailing_closing((result.get("body") or "").strip())
     ai_tone = (result.get("tone") or tone or "formeel").strip()
 
     # S223 — onderwerp server-side vastzetten i.p.v. het door de AI verzonnen

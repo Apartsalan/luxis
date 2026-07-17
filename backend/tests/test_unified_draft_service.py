@@ -22,6 +22,7 @@ from app.ai_agent.unified_draft_service import (
     DraftIntent,
     _betreft_line,
     _plain_to_html,
+    _strip_trailing_closing,
     find_open_reply_draft,
     generate_unified_draft,
 )
@@ -56,6 +57,44 @@ def test_plain_to_html_strips_html_input():
 def test_plain_to_html_empty():
     assert _plain_to_html("") == ""
     assert _plain_to_html(None) == ""  # type: ignore[arg-type]
+
+
+# S227 (Fable-review) — wachter voor de foutsoort "dubbele slotgroet": het model
+# sluit soms zelf af met een groet terwijl de aankleding de echte handtekening
+# ("Hoogachtend, …") toevoegt. De strip moet élke groetvariant aan het einde
+# wegknippen, maar inhoud nooit raken.
+
+
+def test_strip_trailing_closing_removes_groet():
+    body = "Geachte heer, mevrouw,\n\nUw vraag is ontvangen.\n\nMet vriendelijke groet,"
+    assert _strip_trailing_closing(body) == "Geachte heer, mevrouw,\n\nUw vraag is ontvangen."
+
+
+def test_strip_trailing_closing_removes_groet_with_name_lines():
+    body = "Uw vraag is ontvangen.\n\nHoogachtend,\nKesting Legal\nMevr. mr. L. Kesting"
+    assert _strip_trailing_closing(body) == "Uw vraag is ontvangen."
+
+
+def test_strip_trailing_closing_variants():
+    for groet in ["Met vriendelijke groeten,", "Met groet,", "Mvg", "hoogachtend"]:
+        body = f"Inhoud van de brief.\n\n{groet}"
+        assert _strip_trailing_closing(body) == "Inhoud van de brief.", groet
+
+
+def test_strip_trailing_closing_leaves_body_without_groet():
+    body = "Uw betaling is ontvangen.\n\nHet dossier wordt gesloten."
+    assert _strip_trailing_closing(body) == body
+
+
+def test_strip_trailing_closing_ignores_groet_midway_with_content_after():
+    # Een groet-regel gevolgd door échte inhoud (bv. geciteerde tekst) mag de
+    # inhoud niet meeknippen.
+    body = (
+        "U schreef eerder:\n\nMet vriendelijke groet,\n\n"
+        "Daarop reageren wij als volgt: de vordering blijft volledig verschuldigd "
+        "en dient uiterlijk 1 augustus te zijn voldaan op onze derdengeldenrekening."
+    )
+    assert _strip_trailing_closing(body) == body
 
 
 def test_betreft_line_uses_subject():

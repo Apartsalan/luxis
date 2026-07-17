@@ -309,10 +309,14 @@ export default function FollowupPage() {
                     className="grid grid-cols-1 md:grid-cols-[1fr_160px_160px_80px_90px_100px_80px_120px] gap-1 md:gap-2 px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer group"
                   >
                     {/* Dossier */}
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-foreground">
+                    <div className="flex flex-col min-w-0">
+                      <Link
+                        href={`/zaken/${item.case_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-sm font-medium text-primary hover:underline w-fit"
+                      >
                         {item.case_number}
-                      </span>
+                      </Link>
                       <span className="text-xs text-muted-foreground truncate">
                         {item.opposing_party_name ?? item.client_name ?? ""}
                       </span>

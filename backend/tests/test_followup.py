@@ -190,6 +190,61 @@ async def test_scan_skips_existing_pending(db: AsyncSession, test_tenant: Tenant
 
 
 @pytest.mark.asyncio
+async def test_list_reports_live_days_not_frozen(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Dagen-kolom toont de actuele dagen-in-stap, niet de bevroren waarde van
+    toen de aanbeveling werd aangemaakt (S217/S225-gat: import stempelde overal 0)."""
+    step = await _create_step(db, test_tenant.id, min_wait_days=14)
+    case = await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
+    # Bevroren op 0 (zoals de eerste scan na de import), zaak staat al 16 dagen op de stap.
+    rec = FollowupRecommendation(
+        tenant_id=test_tenant.id,
+        case_id=case.id,
+        incasso_step_id=step.id,
+        recommended_action=RecommendedAction.GENERATE_DOCUMENT,
+        reasoning="test",
+        days_in_step=0,
+        outstanding_amount=Decimal("5000.00"),
+        urgency="normal",
+        status=RecommendationStatus.PENDING,
+    )
+    db.add(rec)
+    await db.commit()
+
+    result = await list_recommendations(db, test_tenant.id)
+    assert result.items[0].days_in_step == 16
+
+
+@pytest.mark.asyncio
+async def test_list_keeps_frozen_days_when_case_moved_on(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Is de zaak doorgeschoven naar een andere stap, dan blijft de bevroren
+    historische waarde staan (live herberekenen zou dan onzin geven)."""
+    step_a = await _create_step(db, test_tenant.id, min_wait_days=14, name="Stap A")
+    step_b = await _create_step(db, test_tenant.id, min_wait_days=14, name="Stap B")
+    # Zaak staat nu op stap B; de aanbeveling was voor stap A.
+    case = await _create_case(db, test_tenant.id, test_user.id, step_b, days_in_step=3)
+    rec = FollowupRecommendation(
+        tenant_id=test_tenant.id,
+        case_id=case.id,
+        incasso_step_id=step_a.id,
+        recommended_action=RecommendedAction.GENERATE_DOCUMENT,
+        reasoning="test",
+        days_in_step=20,
+        outstanding_amount=Decimal("5000.00"),
+        urgency="normal",
+        status=RecommendationStatus.EXECUTED,
+    )
+    db.add(rec)
+    await db.commit()
+
+    result = await list_recommendations(db, test_tenant.id)
+    assert result.items[0].days_in_step == 20
+
+
+@pytest.mark.asyncio
 async def test_scan_skips_executed_same_step(
     db: AsyncSession, test_tenant: Tenant, test_user: User
 ):

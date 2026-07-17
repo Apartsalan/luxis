@@ -440,6 +440,39 @@ export default function AgendaPage() {
             onDayClick={handleDayClick}
           />
         )}
+
+        {/* S225: overkoepelende lege staat — een lege maand/week toont anders alleen
+            een kaal raster zonder aanwijzing. Alleen op desktop (mobiel heeft z'n
+            eigen lege-lijst) en niet tijdens laden. */}
+        {!isLoading && (events?.length ?? 0) === 0 && (
+          <div className="hidden sm:block border-t border-border px-5 py-8 text-center">
+            <Calendar className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm font-medium text-foreground">
+              Geen afspraken in deze periode
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Voeg een event toe of synchroniseer je Outlook-agenda om je afspraken
+              hier te zien.
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                onClick={() => handleAddEvent()}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Nieuw event
+              </button>
+              <button
+                onClick={handleSync}
+                disabled={syncMutation.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", syncMutation.isPending && "animate-spin")} />
+                Outlook synchroniseren
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Selected day detail panel */}

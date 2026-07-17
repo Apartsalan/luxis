@@ -57,6 +57,7 @@ export interface CaseDetail extends CaseSummary {
   payment_term_days: number | null;
   collection_strategy: string | null;
   debtor_notes: string | null;
+  is_active: boolean;
   parties: {
     id: string;
     role: string;

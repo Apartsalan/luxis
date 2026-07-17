@@ -16,6 +16,7 @@ import {
   File,
   Loader2,
   Mail,
+  Trash2,
   Workflow,
   X,
   Zap,
@@ -631,6 +632,23 @@ export default function ZaakDetailPage() {
         onGenerateDraft={handleGenerateDraft}
         isGeneratingDraft={generateDraft.isPending}
       />
+
+      {/* S225: verwijderd (soft-deleted) dossier is via directe URL nog leesbaar —
+          markeer dat expliciet zodat niemand denkt met een levend dossier te werken. */}
+      {zaak && !zaak.is_active && (
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3">
+          <div className="flex items-start gap-2">
+            <Trash2 className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-red-800">Dit dossier is verwijderd</p>
+              <p className="mt-0.5 text-sm text-red-700">
+                Je bekijkt een verwijderd dossier. Het telt niet meer mee in lijsten,
+                rapportages of automatische acties.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sessie 134: legacy AI-suggestie + Followup banners verwijderd — pipeline
           /taken is nu enige bron van waarheid. Zie git history voor oude UI. */}

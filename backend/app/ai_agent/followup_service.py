@@ -185,6 +185,25 @@ async def scan_for_followups(
 # ── CRUD + review workflow ────────────────────────────────────────────────
 
 
+def _live_days_in_step(rec: FollowupRecommendation) -> int:
+    """Actuele dagen-in-stap i.p.v. de bevroren waarde van toen de aanbeveling
+    werd aangemaakt.
+
+    De opgeslagen `days_in_step` is een momentopname bij aanmaak; bij de
+    BaseNet-import kregen alle zaken step_entered_at = importtijd, dus de eerste
+    scan stempelde overal 0 en dat bleef staan (S217-gat). Zolang de zaak nog op
+    de stap van de aanbeveling staat, rekenen we live; is de zaak doorgeschoven,
+    dan is de bevroren waarde de juiste historische stand.
+    """
+    case = rec.case
+    if case is None or case.incasso_step_id != rec.incasso_step_id:
+        return rec.days_in_step
+    anchor = case.step_entered_at.date() if case.step_entered_at else case.date_opened
+    if anchor is None:
+        return rec.days_in_step
+    return max((date.today() - anchor).days, 0)
+
+
 def _rec_to_response(rec: FollowupRecommendation) -> FollowupRecommendationOut:
     """Convert a FollowupRecommendation model to response schema."""
     return FollowupRecommendationOut(
@@ -200,7 +219,7 @@ def _rec_to_response(rec: FollowupRecommendation) -> FollowupRecommendationOut:
         recommended_action=rec.recommended_action,
         action_label=ACTION_LABELS.get(rec.recommended_action, rec.recommended_action),
         reasoning=rec.reasoning,
-        days_in_step=rec.days_in_step,
+        days_in_step=_live_days_in_step(rec),
         outstanding_amount=rec.outstanding_amount,
         urgency=rec.urgency,
         urgency_label=URGENCY_LABELS.get(rec.urgency, rec.urgency),

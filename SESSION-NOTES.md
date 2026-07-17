@@ -2,12 +2,90 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 17 juli 2026 (S225, Opus-bouw + Fable-testronde — beslispunten B1/B2/B3 + UX-punten LIVE, batch-verzending end-to-end bewezen met 13 testzaken).
-**Laatste feature/fix:** B1 facturen via kantoorkanaal (incasso@); B2/B3 twee dode verzendroutes verwijderd (AI-tool `email_compose` + legacy endpoint `/api/email/cases/{id}/send` + hook) — legacy geeft nu 404, rest mailrouter leeft. UX-restant: follow-up "Dagen"-kolom live i.p.v. bevroren 0d (prod bewezen 0d→8d) + dossiernummer klikbaar in de rij; rode soft-delete-banner op verwijderde dossiers; overkoepelende lege staat op de agenda.
-**Beslispunten (Arsalan, 17/7):** B1 → incasso@; B2+B3 → beide weg; **B4 Bayar IN100613 NIET aanraken** (bleek 15/7 handmatig door Arsalan gesloten, BaseNet zei nog 'Lopend' — hij bekijkt zelf); B5 testdossier actief laten; B6 batch-DOCX-toets → Fable-fase (Arsalan wil eerst iets aan de batch toevoegen).
-**Testronde (Fable, zelfde dag):** batch-verzending end-to-end BEWEZEN over ALLE brieftypen — 13 testzaken (jouw gmail), 25 mails bezorgd + bedragen op de cent + consument-blokkade + fase/taken/follow-up/alle pagina's; Word-tak (B6) + 14-dagenbrief + Tweede sommatie + dreigbrief allemaal live gevuurd; B1-factuurafzender = incasso@ bewezen. Vondst 5 dreigbrief-bijlage direct GEFIXT + live herbewezen (`20d7df9`). Rapport: `docs/sessions/S225-testronde.md`.
-**Openstaand (→ S226):** ⚠️ 3 vondsten: (1) dossiernummer-hergebruik plakt oude mails aan nieuwe dossiers; (2) **gmail filtert dagvaarding/faillissement-mails stilletjes weg** (25 sommaties kwamen aan, 3 zware brieven niet, geen bounce — SPF/DKIM/DMARC checken); (3) rechtsvorm-afkorting "bv" niet herkend (veilige kant, KvK-backfill lost op). ⚠️ 3 punten Arsalan (17/7): (a) **verweerreactie-aanhef** — de 103 bibliotheek-antwoorden hebben 0× een aanhef, de 6 beheerde reactiesjablonen zeggen "Geachte {{naam}}," i.p.v. de S220-keuze "Geachte heer, mevrouw," → bepalen waar de aanhef hoort (weergave vs. echte mail) + gelijktrekken; (b) **Betreft-regel ÍN de brieven** draagt nog het BaseNet-formaat "SOMMATIE TOT BETALING / {nr} / {debiteur}" (7 plekken in de brief-opmaak + stap-teksten) → gewenst formaat Arsalan: "klant / debiteur — Sommatie tot betaling — dossiernummer" (het mail-ONDERWERP is al huisformaat; dit is de regel in de brieftekst zelf); (c) **AI-antwoord-knop óók op dossierniveau** (Arsalan 17/7): de knop met instructieveld bestaat alleen op de Mail-pagina (S223) — moet ook op het tabblad Correspondentie van het dossier, op de inkomende mails daar (zelfde dialoog, zelfde spelregels), mét kruispunt-matrix + brede test (skill breed-testen; het is een nieuwe route voor het effect "concept maken"); Verder: testdata 2026-00007 t/m -00019 opruimen; S221b-rest (review-scherm, voortgangsindicator, HTML-tabellen, tijdlijn-mailregel, follow-up-sortering, intake dempen, Blok 6-memo); auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** `docs/sessions/PROMPT-S226.md` — gmail-bezorging + nummer-hergebruik + testdata-opruiming + S221b-rest. KvK-backfill voorrang zodra sleutel er is (~22 juli).
+**Laatst bijgewerkt:** 18 juli 2026 (S226, Opus-opmaaksprint → Fable-review — logo/witregels/Betreft/aanhef LIVE over ALLE mailroutes; gmail-bezorging + nummer-hergebruik uitgezocht).
+**Laatste feature/fix:** Mailopmaak overal gelijkgetrokken: logo extern gehost (Gmail blokkeert data-URL's), witregel na aanhef inline (Gmail nult head-`<style>`), Betreft-regel huisformaat op alle 26 brieftypen, aanhef "Geachte heer, mevrouw," op reactiebrieven. Fable-review vond+fixte 5 extra opmaakfouten (dubbele "Betreft:" in AI-mails, WEDEROM-half-label, 2 kale verzendroutes, dubbele handtekening, losse-komma-aanhef). DB-mutaties (GO Arsalan): 6 reactiebrieven + 5 open AI-concepten bijgewerkt. 345 tests groen, CI 7/7. Rapport-detail: entry S226.
+**Openstaand (→ S227):** **AI-antwoord-knop óók op dossier-tabblad Correspondentie** (A1, niet gebouwd — grote klus, kruispunt-matrix + brede test verplicht); testdata 2026-00007 t/m -00019 opruimen (uitgesteld op verzoek Arsalan — bewaren voor meer testen); **DMARC ontbreekt op kestinglegal.nl** → Arsalan/BaseNet-actie (verklaart waarom gmail dagvaarding/faillissement wegfiltert; SPF+DKIM zijn OK); S221b-rest (review-scherm, voortgangsindicator, HTML-tabellen, tijdlijn-mailregel, follow-up-sortering, intake dempen, Blok 6-memo); auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** `docs/sessions/PROMPT-S227.md` — A1 AI-antwoord-knop op dossier (Opus). KvK-backfill voorrang zodra sleutel er is (~22 juli).
+
+## Sessie 226 (17/18 juli 2026, Opus-opmaaksprint → Fable-review — mailopmaak over alle routes, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S226 (punten Arsalan + testvondsten S225). Onderweg werd het
+een brede opmaak-sanering van álle uitgaande mail, plus een grondige
+Fable-tegenlees-review die 5 extra fouten vond. Per stuk: meten in de bron →
+bouwen → tests → deploy via SSH → live herbewezen (testmails naar Arsalans gmail,
+HTML gecontroleerd via Gmail-API).
+
+**Punten Arsalan + testvondsten S225:**
+- **A3 Betreft-regel huisformaat (LIVE):** alle 26 code-brieftypen + de
+  DB-stap-teksten (`html_renderer.py`) dragen nu "{klant} / {debiteur} —
+  {brieftype} — {dossiernummer}" via gedeelde `_betreft()`/`fill_betreft_slots`
+  (= `build_email_subject`). De dubbele "Betreft: Betreft:" verdween mee.
+- **A2 aanhef reactiebrieven (LIVE):** 6 `DEFAULT_TEMPLATES` (ResponseTemplate)
+  renderden "Geachte {{ wederpartij.naam }}," → bij een bedrijf ging "Geachte
+  Autobedrijf X B.V.," de deur uit. Nu S220-lijn "Geachte heer, mevrouw," (code
+  + 6 DB-rijen, UPDATE 6). 103 bibliotheek-antwoorden = referentie (aanhef bewust
+  gestript, geen bug).
+- **Punt 4 gmail-bezorging (uitgezocht):** SPF ✅ + DKIM ✅ (basenet0001), maar
+  **DMARC ontbreekt volledig** (`dmarc=bestguesspass`). Directe gmail-meting: 27
+  gewone brieven in inbox, 3 zware (dagvaarding + 2× faillissement) nergens (ook
+  niet spam). Weak-auth + zware inhoud → gmail dropt stil. DMARC publiceren =
+  Arsalan/BaseNet-actie; geen garantie maar de duidelijkste gap.
+- **Punt 5 nummer-hergebruik (geen prod-bug):** gemeten — dossiers worden ZACHT
+  verwijderd (rij blijft) en `generate_case_number` filtert niet op is_active →
+  nooit hergebruik (prod: 0 dubbele nummers). De reuse in de testronde kwam door
+  hard-delete in opruimscripts. Invariant vastgelegd met regressietest + comment;
+  matcher-datumgrens bewust NIET (zou geïmporteerde historische post breken).
+
+**Opmaakpunten Arsalan (screenshots) — logo + witregels:**
+- **Logo (LIVE):** zat als data-URL → Gmail/Outlook blokkeren dat (kapot kader).
+  Nu extern gehost `frontend/public/kesting-logo-email.png` via
+  `https://luxis.kestinglegal.nl/...` (zoals BaseNet). URL geeft 200; ook in de
+  DB-stap-teksten + 5 open concepten vervangen. Dode b64-inlaadcode weg.
+- **Witregel na aanhef (LIVE):** Gmail negeert head-`<style>` én nult `<p>`-marges
+  → brief begon meteen na de komma. Marge nu INLINE op elke `<p>` (16px) via
+  `_inline_paragraph_spacing`. Bewezen in ontvangen testmail.
+
+**Fable-review — 5 extra vondsten, alle gefixt + live:**
+1. AI-concept-route bouwde "Betreft: Betreft:" (eigen prefix bovenop het
+   basis-label) + antwoord-onderwerp (uit INKOMENDE mail) ging onge-escaped een
+   Markup-context in (S202-M4-klasse) → prefix weg, onderwerp ge-escaped.
+2. Stap-teksten-vulling: half label "WEDEROM SOMMATIE" matchte de prod-tekst
+   "WEDEROM SOMMATIE TOT BETALING / /" nooit → generiek label hapte de staart
+   ("WEDEROM {huisformaat}", 3 prod-stappen). Volledige labels, langste eerst;
+   vuller gedeeld met de batch-DOCX-tak (zelfde lege slots).
+3. Documenten-route + batch-DOCX-tak + custom-body hadden een eigen kale
+   Arial-wrapper (geen logo/schuldhulpblok, aanhef op naam, "Antwoord niet op
+   deze e-mail" aan de wederpartij) → kale alinea's, verzendlaag kleedt aan
+   (S186), gelijk aan alle routes.
+4. 6 reactiebrieven kregen twee handtekeningen (eigen slotgroet + aankleed-
+   handtekening) → slotgroet uit seed + 6 DB-rijen (UPDATE 6).
+5. 3 reactiebrieven openden met losse komma "<p>,</p>" → S220-aanhef.
+Plus: 3 dode sjabloon-functies (`deadline_reminder`/`payment_confirmation`/
+`status_change`, 0 aanroepers) met dezelfde foute stijl verwijderd.
+
+### Gewijzigde bestanden
+Backend: `email/{incasso_templates,subject,templates,send_service}.py`,
+`incasso/{html_renderer,service}.py`, `ai_agent/{service,unified_draft_service}.py`,
+`cases/service.py`, `documents/router.py`. Frontend: `public/kesting-logo-email.png`
+(nieuw). Tests: `test_{incasso_templates,html_renderer,unified_draft_service,
+ai_agent,cases}.py` (+8 wachters). 8 commits (`b888cf8`→`20f0c46`), backend meermaals
++ frontend 1× gedeployd (geen migratie). Prod-DB: 6 reactiebrieven (aanhef+slotgroet),
+5 open concepten (logo) — elk dry-run + GO + natelling.
+
+### Bekende issues / bewust niet gedaan
+- **A1 AI-antwoord-knop op dossier-tabblad Correspondentie NIET gebouwd** —
+  grootste openstaande klus; kruispunt-matrix + brede test verplicht (nieuwe route
+  voor effect "concept maken").
+- Testdata 2026-00007 t/m -00019 NIET opgeruimd (Arsalan: bewaren voor meer testen).
+- DMARC-instelling = Arsalan/BaseNet (buiten mijn bereik).
+- Losse testmails naar Arsalans gmail liepen buiten dossier-vastlegging (bewust,
+  geen dossier); alle échte routes leggen wél vast.
+- S221b-rest + auto-concept-gate blijven staan.
+
+### Volgende sessie
+S227: A1 AI-antwoord-knop op het dossier-tabblad Correspondentie (Opus, kruispunt-
+matrix + brede test). KvK-backfill voorrang zodra sleutel binnen (~22 juli).
 
 ## Sessie 225 (17 juli 2026, Opus-bouw — beslispunten B1/B2/B3 + eerste S221b-UX-restpunten)
 
@@ -603,48 +681,3 @@ Fix: apt-install in ci.yml → **CI 8/8 groen**. Ook gecorrigeerd: Pillow-claim 
 ### Volgende sessie
 S218 = UX-sprint uit de doorlichting (`docs/sessions/PROMPT-S218.md`); KvK-backfill (PROMPT-S217)
 heeft voorrang zodra de sleutel binnen is. Lisanne + Arsalan sturen vanavond de eerste echte mails.
-
-## Sessie 216 (15 juli 2026, Opus-bouw + Fable-review — dossierpagina-verbouwing blok 1-3, LIVE)
-
-### Samenvatting
-De dossierpagina (`zaken/[id]`) was onoverzichtelijk: 11 tabbladen (incasso) / 8 (gewone zaak),
-een kop die het hele eerste scherm vulde, alles dubbel (partijen op 4 plekken), 3 losse "notitie"-
-begrippen. Onderzoek (code + prod-DB-meting per tabblad + visuele doorklik + concurrentiescan
-Clio/Smokeball) → plan `docs/plans/PLAN-dossierpagina.md` (4 harde eisen Arsalan: alles klikbaar
-blijft klikbaar; één stijl/geraamte beide types; niets onzichtbaar = inklapbaar; Uren blijft tab).
-Drie bouwblokken, elk gebouwd → getest (tsc) → gedeployd → visueel geverifieerd op prod, daarna
-Fable-review met 2 must-fixes. Alle testzaken/testafspraken opgeruimd.
-
-- **Blok 1 (`4dba5b3`+`4ef4c0a`):** 11/8 → 7/6 tabbladen (tabbalk past nu; was 5 buiten beeld).
-  Financieel bundelt vorderingen+betalingen+regeling+derdengelden; lege regeling/derdengelden
-  inklapbaar. Tijdlijn = oud Activiteiten + inklapbare stap-historie. Taken + conflictbanner naar
-  Overzicht. Provisie naar Facturen. PartijenTab verwijderd. Vertaaltabel oude ?tab=-links.
-- **Blok 2 (`3a927fc`):** kop 4 statkaarten → geldstrook Hoofdsom·Betaald·**Openstaand** (ontbrak).
-  Notitie+Telefoonnotitie → één `NoteDialog` met autoFocus (**cursor-bug gefixt**, sneltoets n).
-  BaseNet-waarschuwing (`[BaseNet-waarschuwing]`) → oranje balk bovenaan Overzicht. Zijbalk
-  type-afhankelijk (Debiteur/Rente alleen incasso = advies-lek dicht; OHW alleen bij uren>0).
-- **Blok 3 (`ea07c9a`):** agenda-blok op Overzicht (`useCaseEvents` → `/api/calendar/events?case_id`,
-  komende afspraken, klikbaar). Kop gewone zaak: "Volgende stap" (eerstvolgende taak+deadline) i.p.v.
-  incasso-fasebalk + **afsluitknop** (ontbrak op niet-incasso). Geldstrook gewone zaak: OHW+budget.
-- **Fable-review (`ca33ba9`):** 2 must-fixes — (1) overige partijen (rol+ref) weer zichtbaar in
-  Partijen-sectie Overzicht (waren met het opgeheven tabblad onzichtbaar geworden); (2) e2e
-  bijgewerkt (zaken Z5 → 6 tabs/role=tab, regression C19 → Financieel-tab). Meldingen-links,
-  heropenen-transitie, sneltoetsen aangevallen en overeind.
-
-### Gewijzigde bestanden
-Frontend `zaken/[id]/`: `page.tsx`, `components/DossierHeader.tsx`, `DossierSidebar.tsx`, `DetailsTab.tsx`,
-`incasso/VorderingenFinancieelTab.tsx` + `BetalingenDerdengeldenTab.tsx`; nieuw `CaseConflictBanner.tsx`,
-`BasenetWarningBanner.tsx`, `NoteDialog.tsx`, `AgendaBlok.tsx`; verwijderd `PartijenTab.tsx`.
-`hooks/use-calendar-events.ts` (useCaseEvents). e2e `zaken.spec.ts` + `regression.spec.ts`.
-8 commits, alle frontend-deploys via SSH. Geen backend/migratie. Plan + prompt bijgewerkt.
-
-### Bekende issues / bewust niet gedaan
-- Anker-subnav bovenin Financieel (klein; secties al gegroepeerd+inklapbaar).
-- Geldstrook gewone zaak kan later uitgebreid met ongefactureerd + openstaande facturen (bronnen bestaan).
-- Meldingslink naar stap-historie landt op Tijdlijn met historie ingeklapt (1 klik extra; bewust).
-- Taken-blok toont op elk dossier een lege-staat als er geen taken zijn (3/608 hebben taken).
-
-### Volgende sessie
-S217: KvK-rechtsvorm-backfill zodra Arsalan de sleutel meldt (voorrang; gemeten 726 relaties/~€14,50 per
-run — zie PROMPT-S215 STAND), anders dossierpolish (anker-subnav + geldstrook-uitbreiding). Prompt:
-`docs/sessions/PROMPT-S217.md`.

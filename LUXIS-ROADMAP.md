@@ -53,29 +53,34 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 16 juli 2026, S224)
+## 🎯 Huidige prioriteit (bijgewerkt 18 juli 2026, S226)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **S224 AFGEROND — VEEGSESSIE.** Kruispunt-matrix volledig afgelopen (12
-> verzendroutes geïnventariseerd uit de bron): 5 vondsten, 4 LIVE gefixt
-> (M1 classificatie-route, M3 gate op .eml-route, M4 documents-onderwerp,
-> P3 adviezen bij sluiten) + 2 nieuwe AST-wachters (M2-drieluik, M4-onderwerp)
-> die nieuwe routes automatisch rood laten vallen. Live-verzendtoets geslaagd:
-> AI-antwoord écht verstuurd + bezorgd (drieluik, Re:-thread, €140,49 op de
-> cent), classificatie-trigger eerste prod-vuring (10 s na sync), documents-PDF
-> bezorgd met huisformaat-onderwerp. CI groen. Rapport:
-> `docs/sessions/S224-veegsessie.md`.
+> ✅ **S226 AFGEROND — MAILOPMAAK OVER ALLE ROUTES + Fable-review.** Logo extern
+> gehost (Gmail blokkeert data-URL's), witregel na aanhef inline (Gmail nult
+> head-`<style>`), Betreft-regel huisformaat op alle 26 brieftypen, aanhef
+> "Geachte heer, mevrouw," op reactiebrieven. Fable-review vond+fixte 5 extra
+> opmaakfouten over alle mailroutes (dubbele "Betreft:" in AI-mails, WEDEROM-
+> half-label, 2 kale verzendroutes zonder huisstijl, dubbele handtekening,
+> losse-komma-aanhef) + verwijderde 3 dode sjabloon-functies. Onderzocht: gmail
+> filtert dagvaarding/faillissement stil weg = **DMARC ontbreekt** (SPF+DKIM OK
+> → Arsalan/BaseNet-actie); nummer-hergebruik is géén prod-bug (zacht-verwijderd
+> → geen reuse, vastgelegd met test). 345 tests groen, CI 7/7, 8 commits
+> (`b888cf8`→`20f0c46`). DB: 6 reactiebrieven + 5 concepten bijgewerkt (GO). Detail:
+> SESSION-NOTES entry S226.
 >
-> 🎯 **VOLGENDE (S225): beslispunten B1-B6** (rapport §5-6: facturen-afzender,
-> 2 dode routes opruimen, wees-advies IN100613, testdossier archiveren,
-> batch-DOCX-toets) **+ S221b-UX-restant** (review-scherm, voortgang-indicator,
-> HTML-tabellen, Blok 5-rest, Blok 6-memo b2b/b2c). Daarna auto-concept-gate
-> (menselijke steekproef Lisanne).
+> 🎯 **VOLGENDE (S227): A1 — AI-antwoord-knop óók op het dossier-tabblad
+> Correspondentie** (nu alleen op de Mail-pagina, S223): zelfde dialoog/spelregels
+> (component delen), nieuwe route voor effect "concept maken" → kruispunt-matrix
+> (skill `breed-testen`) + brede test verplicht (afzender, drieluik, onderwerp,
+> zaak-schuift-niet-door, zichtbaarheid). Daarna S221b-UX-restant + auto-concept-
+> gate (steekproef Lisanne). Testdata 2026-00007 t/m -00019 opruimen (uitgesteld).
 > **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~22 juli):
 > stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
-> `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212; besluit B
-> actief tot de backfill.)
+> `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212.)
+> **DMARC-actie (Arsalan/BaseNet):** publiceer een DMARC-record voor
+> kestinglegal.nl zodat zware brieven bij gmail aankomen (SPF+DKIM staan goed).
 >
 > 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
 > gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag;

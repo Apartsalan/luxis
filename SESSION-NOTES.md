@@ -61,6 +61,22 @@ DetailsTab}.tsx`, `components/relations/detail/ContactInfoSection.tsx`, `playwri
 `frontend/package.json` (+vaul). ~10 commits, frontend meermaals via SSH gedeployd (geen
 migratie, geen prod-DB-mutatie).
 
+### Fable-reviewronde (zelfde sessie, brede jacht — 3 vondsten, alle gefixt + live herbewezen)
+1. **Onderruimte viel weg op 640-767px** (telefoon liggend/klein tablet): de onderbalk
+   dekte daar de laatste inhoud af (gemeten: 24px i.p.v. 64px op 700px breed) →
+   pb-regel ook binnen het sm-blok; herbewezen 64px.
+2. **iOS-zoom-gat:** de 16px-fix zat op de UI-componenten, maar 89 kale `<select>`'s
+   (+ losse inputs) droegen nog 14px → globale max-md-regel in globals.css
+   (input/select/textarea 16px, !important); herbewezen 16px op de zaken-filters.
+3. **Kleine vensters uitgerekt:** het schermvullende vangnet verdeelde de lege ruimte
+   over de rijen (notitie: titel boven, veld midden, knoppen zwevend) →
+   `max-sm:content-start`; herbewezen compact. Compose-Verstuurknop na de fix opnieuw
+   gemeten: volledig in beeld (bounding box 374/744 binnen 390/844).
+Ook gecontroleerd, geen fout: meldingen-klok (volle breedte, leesbaar), zoekknop
+telefoon (opent commando-palet), incasso "Per stap" (scrollt binnen kader, krap maar
+werkbaar — kaart-lijst is de hoofdroute), desktop 1440 ongewijzigd. CI na reviewfixes
+volledig groen (8/8 jobs, afsluitcheck).
+
 ### Bekende issues / bewust niet gedaan
 - **Fysiek toestel niet getest** — gemeten in desktop-Chrome met mobiele viewport. iOS-
   Safari-zoom, 100dvh, safe-area, beginscherm-icoon: op regels-kennis meegenomen, pas

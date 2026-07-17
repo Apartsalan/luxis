@@ -27,9 +27,24 @@ export default defineConfig({
     // All other specs use the stored auth state
     {
       name: "chromium",
-      testIgnore: /auth\.(spec|setup)\.ts/,
+      testIgnore: /auth\.(spec|setup)\.ts|mobile-overflow\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
+        storageState: "e2e/.auth/user.json",
+      },
+      dependencies: ["setup"],
+    },
+    // Mobiele wachter: telefoon-viewport + touch, controleert horizontale overloop
+    // op alle routes (fout-SOORT-wachter uit skill breed-testen). De spec wisselt
+    // zelf tussen 390 (telefoon) en 820 (tablet) per route.
+    {
+      name: "mobile",
+      testMatch: /mobile-overflow\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
         storageState: "e2e/.auth/user.json",
       },
       dependencies: ["setup"],

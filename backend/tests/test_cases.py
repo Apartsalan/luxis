@@ -68,6 +68,36 @@ async def test_create_case_persists_nakosten_type_and_provisie_base(
 
 
 @pytest.mark.asyncio
+async def test_generate_case_number_does_not_reuse_soft_deleted(
+    db: AsyncSession, test_tenant: Tenant, test_company: Contact
+):
+    """Regressie (S226 punt 5): een ZACHT verwijderd dossier mag zijn nummer
+    NIET vrijgeven. generate_case_number telt bewust óók inactieve dossiers mee
+    (géén is_active-filter) — anders wordt het nummer hergebruikt en plakt de
+    mailsync oude post met dat nummer aan het nieuwe (actieve) dossier.
+    """
+    from app.cases.service import generate_case_number
+
+    n1 = await generate_case_number(db, test_tenant.id)
+    db.add(
+        Case(
+            tenant_id=test_tenant.id,
+            case_number=n1,
+            case_type="incasso",
+            status="nieuw",
+            client_id=test_company.id,
+            date_opened=date.today(),
+            is_active=False,  # meteen zacht-verwijderd
+        )
+    )
+    await db.flush()
+
+    n2 = await generate_case_number(db, test_tenant.id)
+    assert n2 != n1, f"nummer {n1} van een inactief dossier werd hergebruikt"
+    assert int(n2.split("-")[1]) > int(n1.split("-")[1])
+
+
+@pytest.mark.asyncio
 async def test_get_case_detail_is_idempotent(
     client: AsyncClient,
     auth_headers: dict,

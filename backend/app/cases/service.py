@@ -34,6 +34,12 @@ async def generate_case_number(db: AsyncSession, tenant_id: uuid.UUID) -> str:
     current_year = datetime.now(UTC).year
     prefix = f"{current_year}-"
 
+    # S226 punt 5 — GEEN is_active-filter hier (bewust). Zacht-verwijderde
+    # dossiers houden hun nummer; door ze mee te tellen wordt een nummer nooit
+    # hergebruikt. Zou je hier op is_active filteren, dan geeft een verwijderd
+    # dossier zijn nummer vrij → een nieuw dossier krijgt datzelfde nummer →
+    # de mailsync plakt oude post met dat nummer aan het nieuwe (actieve)
+    # dossier. Regressietest: test_generate_case_number_does_not_reuse_soft_deleted.
     # FOR UPDATE locks the row to prevent race conditions with concurrent requests
     result = await db.execute(
         select(Case.case_number)

@@ -9,6 +9,7 @@ herinnering.  All others return None → caller falls back to PDF attachment.
 """
 
 import html
+import re
 
 from jinja2 import Environment, StrictUndefined
 from markupsafe import Markup
@@ -49,7 +50,10 @@ style="font-family:Verdana,Geneva,sans-serif;font-size:12px;">
 {% endif %}
 </table>
 
-<p>&nbsp;</p>
+<!-- S227 (vondst Arsalan): kale <p> kreeg per client eigen marges (editor ~3
+     regels lucht, Gmail juist niets) — inline margin:0 = overal exact één
+     lege regel tussen Betreft en aanhef. -->
+<p style="margin:0;">&nbsp;</p>
 
 <!-- Body content -->
 <div style="font-family:Verdana,Geneva,sans-serif;font-size:12px;">
@@ -120,8 +124,20 @@ def _inline_paragraph_spacing(html_content: str) -> str:
     Een inline-marge negeert Gmail niet, dus zo krijg je overal een echte lege
     regel tussen de alinea's, zoals in een gewone brief. Alleen kale <p> (de
     brieftekst); <p> met een eigen style (handtekening/disclaimer) blijft.
+
+    S227 (wens Arsalan): ná de aanhef hoort een échte extra lege regel — zoals
+    je zelf typt (aanhef, enter-enter, dan de eerste zin). Die voegen we hier
+    als expliciete nbsp-regel toe achter de eerste "Geachte ..."-alinea.
     """
-    return html_content.replace("<p>", '<p style="margin:0 0 16px 0;">')
+    out = html_content.replace("<p>", '<p style="margin:0 0 16px 0;">')
+    return _AANHEF_P.sub(r'\1<p style="margin:0;">&nbsp;</p>', out, count=1)
+
+
+# Eerste alinea die met "Geachte"/"Dear" opent (aanhef, NL + EN) — mét de inline
+# marge die de regel hierboven zojuist heeft gezet, of al aanwezig was (AI-route).
+_AANHEF_P = re.compile(
+    r'(<p style="margin:0 0 16px 0;">\s*(?:Geachte|Dear)[^<]{0,120}</p>)'
+)
 
 
 def _render_branded(

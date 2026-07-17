@@ -164,7 +164,7 @@ def _plain_to_html(text: str) -> str:
     cleaned = strip_html(text).strip()
     paragraphs = [p.strip() for p in cleaned.split("\n\n") if p.strip()]
     return "".join(
-        f"<p style=\"margin:0 0 12px 0;\">{p.replace(chr(10), '<br>')}</p>"
+        f"<p style=\"margin:0 0 16px 0;\">{p.replace(chr(10), '<br>')}</p>"
         for p in paragraphs
     )
 

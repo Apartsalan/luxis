@@ -19,6 +19,7 @@ from typing import Any
 
 from markupsafe import escape
 
+from app.email.incasso_templates import _LOGO_URL
 from app.email.subject import build_email_subject
 
 logger = logging.getLogger(__name__)
@@ -276,6 +277,11 @@ def render_template_html(
     salutation = (debtor_data.get("salutation") or "unknown").lower()
 
     html = template_html
+
+    # S226: het logo zat in de BaseNet-stap-teksten als data:-afbeelding →
+    # Gmail én Outlook blokkeren die (kapot kader). Vervang door de extern
+    # gehoste https-URL, gelijk aan de code-brieven.
+    html = re.sub(r'src="data:image/[^"]*"', f'src="{_LOGO_URL}"', html)
 
     # Betreft-regel binnen de body: BaseNet leverde "SOMMATIE TOT BETALING / /"
     # (lege slots). S226: gelijktrekken met het mail-onderwerp naar huisformaat

@@ -279,6 +279,25 @@ def test_betreft_line_rewritten_to_house_format():
     assert "SOMMATIE TOT BETALING / /" not in out
 
 
+def test_data_url_logo_replaced_with_external_url():
+    """S226: het logo in de DB-stap-teksten zat als data:-afbeelding (Gmail/
+    Outlook blokkeren die → kapot kader). Bij renderen wordt het vervangen door
+    de extern gehoste https-URL."""
+    template = (
+        '<p>Tekst</p><img src="data:image/png;base64,iVBORAAAA" alt="Kesting Legal">'
+    )
+    out = render_template_html(
+        template,
+        case_data={"case_number": "2026-00049"},
+        debtor_data={"name": "BV"},
+        client_data={"name": "BV"},
+        invoices=[],
+        amounts={},
+    )
+    assert "data:image" not in out, "data-URL-logo niet vervangen"
+    assert "kesting-logo-email.png" in out, "externe logo-URL ontbreekt"
+
+
 def test_betreft_house_format_escapes_debtor_name():
     """De debiteurnaam komt via de betreft nieuw in de HTML — een naam met een
     HTML-tag mag niet als echte markup belanden (stored-injectie dicht)."""

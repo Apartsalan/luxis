@@ -153,7 +153,7 @@ export default function BetalingenPage() {
       </div>
 
       {/* Main tabs */}
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         <button
           onClick={() => setMainTab("matches")}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${

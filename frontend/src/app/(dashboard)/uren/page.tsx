@@ -647,7 +647,7 @@ export default function UrenPage() {
       <div className="flex flex-col gap-3">
         {/* Row 1: View mode tabs + navigation */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* View mode tabs */}
             <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
               {(["dag", "week", "maand"] as const).map((label) => {

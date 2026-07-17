@@ -306,12 +306,12 @@ export default function CorrespondentiePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">
             Mail
           </h1>
-          <div className="flex items-center gap-1 mt-2">
+          <div className="flex flex-wrap items-center gap-1 mt-2">
             <button
               onClick={() => { setActiveTab("alle"); setSelectedEmailId(null); setSelectedIds(new Set()); }}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -357,12 +357,12 @@ export default function CorrespondentiePage() {
             </button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 max-sm:w-full">
+          <div className="relative max-sm:flex-1 max-sm:min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Zoek op afzender, onderwerp..."
-              className="pl-9 h-9 text-sm w-64"
+              className="pl-9 h-9 text-sm w-full sm:w-64"
               value={emailFilter}
               onChange={(e) => setEmailFilter(e.target.value)}
             />

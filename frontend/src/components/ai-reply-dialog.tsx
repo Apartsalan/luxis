@@ -122,7 +122,12 @@ export function AiReplyDialog({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          // S227-vondst Arsalan: min-w-0 verplicht — DialogContent is een grid en
+          // een lang niet-afbreekbaar mail-onderwerp (BaseNet: "RE: SOMMATIE ... /
+          // IN100458 [IN100458_I...]") rekte de kolom anders breder dan het venster,
+          // waardoor velden en knoppen buiten het witte kader vielen. Met min-w-0
+          // krimpt de kolom en doet truncate zijn werk.
+          <div className="min-w-0 space-y-4">
             <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
               <p className="font-medium text-foreground">Antwoord op:</p>
               <p className="truncate">{email.subject || "(Geen onderwerp)"}</p>

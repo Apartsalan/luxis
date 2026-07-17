@@ -1,0 +1,86 @@
+# S225 — Testronde batch-verzending + bouwwerk (Fable, 17 juli 2026)
+
+Opdracht Arsalan: "20 zaken aanklikken, verstuur de sommatie, en alles moet
+overal kloppen — bedragen, namen, brief, fase, follow-up, alle pagina's, alle
+vervolgstappen." Getest met 13 verse testdossiers (debiteur = Arsalans gmail),
+via de échte UI-route (aanvinken → Verstuur brief), niets naar echte debiteuren.
+
+## 1. Testopzet
+
+| Set | Dossiers | Doel |
+|-----|----------|------|
+| Mini-batch (3) | 2026-00007 (BV €250), -00008 (eenmanszaak €100), -00009 (particulier b2c €80) | varianten: rechtsvorm, consument-blokkade |
+| Grote batch (10) | 2026-00010 t/m -00019, 10 verschillende bedrijfsnamen, bedragen €60–€2.500, verzuim maart–juni | schaal + per-zaak-correctheid |
+| Word-tak (1) | 2026-00017 via tijdelijke "TEST DOCX-stap" (sjabloon dagvaarding) | de batch-tak die op prod nooit vuurde (B6) |
+
+Alle dossiers aangemaakt via de echte API (opdrachtgever = TEST Opdrachtgever
+Fable-review), op stap Eerste sommatie gezet, batch via de incasso-pagina.
+
+## 2. Resultaten — alles bewezen
+
+**Batch-uitvoer:** mini-batch "2 verwerkt, 1 overgeslagen" — de particulier
+(00009) correct geblokkeerd mét wettelijke reden (14-dagenbrief verplicht,
+art. 6:96 lid 6 BW). Grote batch: 10/10 verwerkt, 10 mails, 10 doorgeschoven.
+
+**Bedragen op de cent (onafhankelijk nagerekend, 4% wettelijke rente):**
+- 00007: €250 + €2,11 rente (77 dgn) + €40 BIK = **€292,11** ✅
+- 00008: €100 + €0,50 rente (46 dgn) + €40 BIK = **€140,50** ✅
+- 00010: €150 + €1,12 rente (68 dgn) + €40 BIK = **€191,12** ✅ (ook in gmail-inhoud geverifieerd)
+
+**Bezorging:** alle 12 batchmails **in gmail-inbox aangekomen** (via Gmail-API
+gecontroleerd), juiste namen per zaak, rente-PDF als bijlage, volledige
+huisstijl (logo, schuldhulpblok, disclaimer, Willem Fenengastraat, juiste
+derdengelden-IBAN).
+
+**Huisregels (matrix breed-testen):** M1 afzender incasso@ op alle 13 mails ✅;
+M2 drieluik (EmailLog + SyncedEmail + CaseActivity) per zaak compleet ✅;
+M3 gate blokkeert consument in batch ✅; M4 onderwerp huisformaat via de bouwer
+✅; M5 rente-bijlage volgens rechtsvorm-regel ✅ (zie kanttekening 3).
+
+**Vervolgstappen (P-regels):** alle verstuurde zaken Eerste → Tweede sommatie;
+geblokkeerde zaak bleef staan; per zaak automatisch één nieuwe taak "Tweede
+sommatie genereren" (toegewezen aan gebruiker, deadline +4 dagen = wachttijd);
+verzending vastgelegd op de stap-historie.
+
+**Overal zichtbaar:** incasso-lijst (nieuwe stap), dossierpagina (fasebalk
+Tweede sommatie + correspondentie + tijdlijn met mail/stap/automatisering),
+Mail-pagina (alle uitgaande mails), Taken-pagina (10 nieuwe taken), follow-up
+(geen voorbarige of verouderde adviezen). Allemaal live doorgeklikt.
+
+**Word-tak (B6) bewezen:** TEST-stap met dagvaarding-sjabloon → batch rendert
+DOCX → PDF (38→55 kB), verstuurt via incasso@ met PDF-bijlage en
+bouwer-onderwerp, document in het dossier. TEST-stap daarna verwijderd,
+zaak teruggezet — pijplijn weer exact 15 originele stappen.
+
+**B1 factuur-afzender bewezen:** testfactuur F2026-00001 (€1) → goedkeuren →
+versturen → **afzender incasso@** (vóór de fix: persoonlijk account), bezorging
+bevestigd via de mailsync; factuur daarna geannuleerd (nette boekhoudstatus).
+
+## 3. Vondsten / kanttekeningen
+
+1. **Dossiernummer-hergebruik plakt oude post aan nieuwe dossiers** (2×
+   waargenomen: 00007 en 00014 kregen een maart-testmail met datzelfde nummer
+   automatisch aangekoppeld via de dossiernummer-matcher). Nummers van
+   verwijderde dossiers worden hergebruikt; oude mail met dat nummer koppelt
+   dan aan het verkeerde (nieuwe) dossier. Bij echte dossiers kan dit
+   correspondentie-vervuiling geven. → Voorstel S226: nummer-hergebruik
+   voorkomen (teller nooit terug) of matcher laten kijken naar de maildatum
+   vs. dossier-aanmaakdatum.
+2. **Word-tak-mail bezorging gmail vertraagd:** verstuurd 07:39:49, door
+   smtp.basenet.nl geaccepteerd, kopie in Verzonden, géén bounce — maar na
+   ~20 min nog niet in gmail (de 12 inline-mails via hetzelfde kanaal kwamen
+   binnen seconden). Vermoedelijk greylisting/filtering aan Google-kant op de
+   dagvaarding-PDF. Nacontroleren; Luxis-kant aantoonbaar correct.
+3. **Rechtsvorm-afkorting "bv" wordt niet herkend als beperkt aansprakelijk:**
+   de bijlage-regel matcht op de volledige KvK-benaming ("besloten
+   vennootschap"); handmatig ingevoerde afkortingen ("bv") vallen op de veilige
+   kant (bijlage mee). Correct-veilig gedrag, maar goed om te weten voor
+   handmatige invoer; de KvK-backfill (volle benamingen) lost dit vanzelf op.
+4. **Dubbele spatie in gmail-onderwerpen is een weergave-artefact** van
+   regel-vouwen bij lange onderwerpen; in de database staat het onderwerp goed.
+
+## 4. Testdata (opruimen later, afspraak Arsalan)
+
+13 testdossiers 2026-00007 t/m 2026-00019 + 13 TEST-contacten + testfactuur
+F2026-00001 (geannuleerd) + 12 taken "Tweede sommatie genereren". Testdossier
+2026-00006 blijft actief als vast testkanaal (besluit B5).

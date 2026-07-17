@@ -2,11 +2,94 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 16 juli 2026 (S224, Fable — VEEGSESSIE kruispunt-matrix + live-verzendtoets, teller op nul).
-**Laatste feature/fix:** veegsessie vond 5 fouten en fixte er 4 LIVE (M1 classificatie-route, M3 gate op .eml-route, M4 documents-onderwerp, P3 adviezen bij sluiten); 2 nieuwe AST-wachters (M2-drieluik + M4-onderwerp). Live bewezen: AI-antwoord écht verstuurd + bezorgd (drieluik, Re:-thread, €140,49 op de cent), classificatie-trigger vuurt 10 s na sync, documents-route PDF bezorgd met huisformaat-onderwerp.
-**Review-uitkomst:** de skill-lijst miste 2 routes (facturen, classificatie-antwoord); testdossier 2026-00006 bleek gearchiveerd (→ geheractiveerd); batch-DOCX-tak op prod onbereikbaar (geen stap met DOCX-sjabloon). Rapport: `docs/sessions/S224-veegsessie.md`.
-**Openstaand (→ S225):** ⚠️ 6 beslispunten Arsalan (B1-B6 in het rapport: facturen-afzender, 2 dode routes, wees-advies IN100613, testdossier archiveren, batch-DOCX-toets); S221b-UX-restlijst; auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** `docs/sessions/PROMPT-S225.md` — beslispunten B1-B6 afhandelen + S221b-UX-restant (Opus). KvK-backfill voorrang zodra sleutel er is (~22 juli).
+**Laatst bijgewerkt:** 17 juli 2026 (S225, Opus-bouw + Fable-testronde — beslispunten B1/B2/B3 + UX-punten LIVE, batch-verzending end-to-end bewezen met 13 testzaken).
+**Laatste feature/fix:** B1 facturen via kantoorkanaal (incasso@); B2/B3 twee dode verzendroutes verwijderd (AI-tool `email_compose` + legacy endpoint `/api/email/cases/{id}/send` + hook) — legacy geeft nu 404, rest mailrouter leeft. UX-restant: follow-up "Dagen"-kolom live i.p.v. bevroren 0d (prod bewezen 0d→8d) + dossiernummer klikbaar in de rij; rode soft-delete-banner op verwijderde dossiers; overkoepelende lege staat op de agenda.
+**Beslispunten (Arsalan, 17/7):** B1 → incasso@; B2+B3 → beide weg; **B4 Bayar IN100613 NIET aanraken** (bleek 15/7 handmatig door Arsalan gesloten, BaseNet zei nog 'Lopend' — hij bekijkt zelf); B5 testdossier actief laten; B6 batch-DOCX-toets → Fable-fase (Arsalan wil eerst iets aan de batch toevoegen).
+**Testronde (Fable, zelfde dag):** batch-verzending end-to-end BEWEZEN — 13 testzaken (jouw gmail), 12 mails bezorgd + bedragen op de cent + consument-blokkade + fase/taken/follow-up/alle pagina's kloppen; Word-tak (B6) live gevuurd via tijdelijke TEST-stap (daarna verwijderd); B1-factuurafzender = incasso@ bewezen. Rapport: `docs/sessions/S225-testronde.md`. ⚠️ Vondst: dossiernummer-hergebruik plakt oude mails aan nieuwe dossiers (2× gezien).
+**Openstaand (→ S226):** nummer-hergebruik-vondst fixen (voorstel in rapport §3.1); Word-tak-mail gmail-bezorging nachecken (§3.2); testdata 2026-00007 t/m -00019 opruimen; S221b-rest: review-scherm, voortgangsindicator, échte HTML-tabellen, tijdlijn-mailregel klikbaar, follow-up sorteerbare koppen, intake-detectie dempen, Blok 6-memo. Auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** `docs/sessions/PROMPT-S226.md` — nummer-hergebruik + testdata-opruiming + S221b-rest. KvK-backfill voorrang zodra sleutel er is (~22 juli).
+
+## Sessie 225 (17 juli 2026, Opus-bouw — beslispunten B1/B2/B3 + eerste S221b-UX-restpunten)
+
+### Samenvatting
+Bouwsprint op de S224-veegsessie. Voorrang-check KvK: sleutel niet op de VPS →
+door. Beslispunten met Arsalan afgestemd (zie kop); daarna gebouwd, getest,
+gedeployd via SSH en geverifieerd.
+
+**B1 — facturen via kantoorkanaal (LIVE).** `send_invoice` kreeg
+`send_as_tenant_account=True` → een factuur aan de opdrachtgever gaat nu via
+incasso@ i.p.v. het persoonlijke account van de klikker. Onderwerp blijft bewust
+eigen formaat "Factuur {nr}" (allowlist-motivering M4 bijgewerkt).
+
+**B2 + B3 — twee dode verzendroutes verwijderd (LIVE).** (B2) AI-tool
+`email_compose` uit de tools-registry + handler weg (registry had geen aanroepers;
+tool-count 34→33). (B3) legacy endpoint `/api/email/cases/{id}/send` + schema's +
+hook `useSendCaseEmail` weg — die route was UI-dood maar wél levend (SMTP
+geconfigureerd, geen 14-dagenbrief-gate, half drieluik). De spinner die aan de
+dode mutation hing draait nu op een echte lokale verzend-vlag. Beide
+wachter-allowlists (`test_send_route_drift_guard.py`) meegetrokken; eerlijkheids-
+test dwong dat af. **Prod bewezen:** legacy endpoint geeft nu 404, `/email/status`
+leeft (401).
+
+**B4 — Bayar IN100613 NIET aangeraakt.** Uitgezocht: het dossier is 15/7 om 17:27
+handmatig vanuit Arsalans account gesloten (BaseNet-origin nog 'Lopend', 0
+betalingen) — dus géén BaseNet-afsluiting. Arsalan wil het eerst zelf bekijken →
+dossier + wees-advies ongemoeid.
+
+**S221b-UX-restant (eerste lichting, LIVE):**
+- **Follow-up "Dagen" live:** de kolom toonde de bevroren waarde van toen de
+  aanbeveling werd aangemaakt (import stempelde overal 0d). Nu live berekend uit
+  `step_entered_at` zolang de zaak nog op de stap van de aanbeveling staat; is de
+  zaak doorgeschoven, dan blijft de historische waarde. **Prod bewezen:** 10
+  openstaande adviezen 0d→8d. +2 tests. Dossiernummer nu direct klikbaar in de rij.
+- **Soft-delete-banner:** een verwijderd dossier (via directe URL leesbaar) krijgt
+  een rode "dit dossier is verwijderd"-balk op alle tabs.
+- **Agenda lege staat:** overkoepelende hint met "Nieuw event" + Outlook-sync i.p.v.
+  een kaal raster.
+
+### Gewijzigde bestanden
+Backend: `invoices/service.py`, `ai_agent/tools/{definitions,handlers/email}.py`,
+`email/router.py` (+ `email/schemas.py` verwijderd), `ai_agent/followup_service.py`.
+Tests: `test_send_route_drift_guard.py`, `test_ai_tools/test_registry.py`,
+`test_email_router.py`, `test_followup.py` (+2). Frontend: `hooks/{use-documents,
+use-cases}.ts`, `zaken/[id]/page.tsx`, `zaken/[id]/components/DocumentenTab.tsx`,
+`followup/page.tsx`, `agenda/page.tsx`. 2 commits, backend+frontend gedeployd
+(geen migratie).
+
+### Testronde (Fable, zelfde dag — wens Arsalan: "20 aanklikken en alles klopt")
+Volledig rapport: `docs/sessions/S225-testronde.md`. Kern: 13 testzaken
+aangemaakt (debiteur = Arsalans gmail), batch via de échte UI gedraaid.
+**Bewezen:** 12/12 mails bezorgd in gmail (afzender incasso@, huisformaat,
+rente-PDF, huisstijl); bedragen op de cent onafhankelijk nagerekend (€292,11 /
+€140,50 / €191,12); consument zonder 14-dagenbrief correct geblokkeerd mét
+wetsartikel; alle zaken doorgeschoven naar Tweede sommatie; per zaak automatisch
+een nieuwe taak (+4 dgn); alles zichtbaar op incasso/dossier/tijdlijn/Mail/
+Taken/follow-up. **Word-tak (B6) live gevuurd** via tijdelijke TEST-stap
+(DOCX→PDF-mail bezorgd door SMTP-server geaccepteerd; stap daarna verwijderd,
+pijplijn weer 15 stappen). **B1 live bewezen** met testfactuur F2026-00001
+(afzender incasso@, daarna geannuleerd).
+
+### Bekende issues / bewust niet gedaan
+- **⚠️ Vondst testronde: dossiernummer-hergebruik** — nummers van verwijderde
+  dossiers worden hergebruikt en de mailsync koppelt oude mails met dat nummer
+  aan het nieuwe dossier (2× waargenomen). Fixvoorstel in rapport §3.1.
+- Word-tak-mail (dagvaarding-PDF) na ~20 min nog niet in gmail bezorgd (wel
+  verstuurd + geaccepteerd + geen bounce; 12 andere mails zelfde kanaal kwamen
+  direct aan) → nachecken S226.
+- Rechtsvorm-afkorting "bv" valt op de veilige kant (bijlage mee); volle
+  KvK-benamingen na de backfill lossen dit op.
+- Testdata 2026-00007 t/m -00019 + TEST-contacten + 12 taken: opruimen later
+  (afspraak Arsalan).
+- S221b-rest niet gebouwd: review-scherm classificatie+concept, voortgangsindicator
+  bij genereren, échte HTML-tabellen (injectie-oppervlak), tijdlijn-mailregel
+  klikbaar (id-betekenis eerst verifiëren — deep-link naar correspondentie),
+  follow-up sorteerbare koppen (vergt server-side sortering), intake-detectie
+  dempen, Blok 6-beslismemo b2b/b2c.
+- V2c (klein): classificatie-antwoord-onderwerp naar `build_reply_subject`.
+
+### Volgende sessie
+S226: nummer-hergebruik-vondst + testdata-opruiming + S221b-rest. KvK-backfill
+voorrang zodra de sleutel binnen is (~22 juli).
 
 ## Sessie 224 (16 juli 2026, Fable — VEEGSESSIE kruispunt-matrix + live-verzendtoets)
 
@@ -565,56 +648,3 @@ Frontend `zaken/[id]/`: `page.tsx`, `components/DossierHeader.tsx`, `DossierSide
 S217: KvK-rechtsvorm-backfill zodra Arsalan de sleutel meldt (voorrang; gemeten 726 relaties/~€14,50 per
 run — zie PROMPT-S215 STAND), anders dossierpolish (anker-subnav + geldstrook-uitbreiding). Prompt:
 `docs/sessions/PROMPT-S217.md`.
-
-## Sessie 214 (14 juli 2026, Opus-bouw + Fable-matching — S201 kantoorfacturen-import, LIVE)
-
-### Samenvatting
-De 439 definitieve BaseNet-kantoorfacturen (Lisanne's eigen omzet) staan op prod: 630 regels,
-325 betalingen (€248.364,17), 344 betaald/86 te laat/9 verzonden, 137 aan hun IN-dossier,
-302 D-facturen bewust contact-only (projectcode reist mee in de marker), 23 creditnota's aan hun
-origineel. Bruto €302.750,39, openstaand €72.762,09 — elke som onafhankelijk nageteld in de
-prod-database én via de API-rooktest (debiteuren €78.469,57 = exact de 88 open gewone facturen).
-
-**Stap 0 vooraf (eerlijkheidsvoorwaarden, migratie `s214_payment_date_null`):**
-`invoice_payments.payment_date` nullable → UI toont "Datum onbekend" (handmatige invoer blijft
-datum vereisen); betaalmethode `unknown`/"Onbekend (BaseNet)"; creditnota toont afwikkelstatus
-i.p.v. valse "Volledig betaald" (guard in `get_payment_summary` + frontend verbergt betaalbalk).
-
-**Recept getoetst aan de bron — 3 veldniveau-fouten gevonden en gecorrigeerd** (vastgelegd in
-`S201-facturatie-recept.md` §0): creditnota's hebben géén `invduedate` (→ terugval factuurdatum);
-Mollie-betaaldatums komen uit `Payment.payment_status=4` + `insertdate` (niet uit onbestaande
-`paidAt`-velden); dossierkoppeling loopt via kop-veld `invpcode` (niet "inccode").
-Derdengelden-herkenning = product 100013 ("Verrekening incassodossiers") + expliciete lijst
-{100242, 100363} — een `bedrag<0`-regel vangt 109 facturen en is fout.
-
-**Fable-matchingronde ving 3 gaten:** paid_date op de 20 Mollie-bevestigde facturen,
-memoriaal-boekingsdatum als gelabelde metadata op de 305 "Datum onbekend"-betalingen (11 liggen
-vóór de factuurdatum — dáárom geen betaaldatum), ruwe bronstatus op de 3 nul-facturen. Prod vooraf
-read-only nageteld: 52/52 relaties + 127/127 IN-dossiers matchen deterministisch.
-
-### Gewijzigde bestanden
-- `scripts/basenet/import_invoices.py` (nieuw) — classificatie op gemeten velden, harde poorten,
-  weigert schrijven als doeltabel niet leeg is (dubbele import onmogelijk).
-- Backend: `invoices/models.py`, `schemas.py`, `invoice_payment_service.py`,
-  migratie `s214_payment_date_null.py`; tests `test_import_invoices.py` (nieuw, 4) +
-  `test_invoice_payments.py` (+2, totaal 22).
-- Frontend: `facturen/[id]/page.tsx` (creditnota-afwikkelbalk, "Datum onbekend", methode-label),
-  `hooks/use-invoices.ts`. 4 commits (`5920d1b`…), deploy backend+frontend+migratie.
-
-### Verificatie
-Dry-run op prod: álle poorten groen (439/7/12/19/90, 0 onopgelost, 137 IN, alle euro-sommen exact,
-regelformules 630/630, factuur 100532 bewaart €1.631,74). Execute → natelling in DB + API-login-
-rooktest groen. 24 tests groen, ruff schoon, tsc schoon. Mailslot niet aangeraakt, niets verstuurd.
-
-### Bekende issues
-- **7 Mollie/kop-conflicten** (€10.854,66; nrs 100314/100316/100321/100332/100342/100441/100533):
-  Mollie zegt betaald, kop zegt open — per factuur oordeel Lisanne/boekhouding, daarna evt. na-import.
-- 12 WIP/concepten (€13.013,07) + 31 losse conceptregels (€6.779,81): handmatig beoordelen (lijst
-  in recept §1); 2 negatieve verrekenposten (100242 −€217,80 / 100363 −€735,00) bewust buiten.
-- 302 D-facturen koppelen pas aan een dossier na de latere D-dossier-import (projectcode in marker).
-- KvK-sleutel nog niet binnen → S214-hoofdtaak (rechtsvorm-backfill) doorgeschoven naar S215.
-
-### Volgende sessie
-S215: KvK-rechtsvorm-backfill zodra Arsalan de echte sleutel meldt (env op VPS → droogloop →
-akkoord → run → natelling → meten hoeveel BV's geen rentebijlage meer krijgen).
-Prompt: `docs/sessions/PROMPT-S215.md`.

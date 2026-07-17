@@ -9560,3 +9560,58 @@ S214 (`docs/sessions/PROMPT-S214.md`): KvK-sleutel → env op VPS → droogloop 
 natelling → meten hoeveel BV's geen rentebijlage meer krijgen. Rest-PDF's (206) alleen op
 expliciete vraag (handwerk-lijstje kan uit de dry-run-rapportage).
 **Openstaand nachecken (morgen):** back-up-log 03:00 — bevestigen dat het Class C-verbruik laag blijft.
+
+---
+
+## Sessie 214 (14 juli 2026, Opus-bouw + Fable-matching — S201 kantoorfacturen-import, LIVE)
+
+### Samenvatting
+De 439 definitieve BaseNet-kantoorfacturen (Lisanne's eigen omzet) staan op prod: 630 regels,
+325 betalingen (€248.364,17), 344 betaald/86 te laat/9 verzonden, 137 aan hun IN-dossier,
+302 D-facturen bewust contact-only (projectcode reist mee in de marker), 23 creditnota's aan hun
+origineel. Bruto €302.750,39, openstaand €72.762,09 — elke som onafhankelijk nageteld in de
+prod-database én via de API-rooktest (debiteuren €78.469,57 = exact de 88 open gewone facturen).
+
+**Stap 0 vooraf (eerlijkheidsvoorwaarden, migratie `s214_payment_date_null`):**
+`invoice_payments.payment_date` nullable → UI toont "Datum onbekend" (handmatige invoer blijft
+datum vereisen); betaalmethode `unknown`/"Onbekend (BaseNet)"; creditnota toont afwikkelstatus
+i.p.v. valse "Volledig betaald" (guard in `get_payment_summary` + frontend verbergt betaalbalk).
+
+**Recept getoetst aan de bron — 3 veldniveau-fouten gevonden en gecorrigeerd** (vastgelegd in
+`S201-facturatie-recept.md` §0): creditnota's hebben géén `invduedate` (→ terugval factuurdatum);
+Mollie-betaaldatums komen uit `Payment.payment_status=4` + `insertdate` (niet uit onbestaande
+`paidAt`-velden); dossierkoppeling loopt via kop-veld `invpcode` (niet "inccode").
+Derdengelden-herkenning = product 100013 ("Verrekening incassodossiers") + expliciete lijst
+{100242, 100363} — een `bedrag<0`-regel vangt 109 facturen en is fout.
+
+**Fable-matchingronde ving 3 gaten:** paid_date op de 20 Mollie-bevestigde facturen,
+memoriaal-boekingsdatum als gelabelde metadata op de 305 "Datum onbekend"-betalingen (11 liggen
+vóór de factuurdatum — dáárom geen betaaldatum), ruwe bronstatus op de 3 nul-facturen. Prod vooraf
+read-only nageteld: 52/52 relaties + 127/127 IN-dossiers matchen deterministisch.
+
+### Gewijzigde bestanden
+- `scripts/basenet/import_invoices.py` (nieuw) — classificatie op gemeten velden, harde poorten,
+  weigert schrijven als doeltabel niet leeg is (dubbele import onmogelijk).
+- Backend: `invoices/models.py`, `schemas.py`, `invoice_payment_service.py`,
+  migratie `s214_payment_date_null.py`; tests `test_import_invoices.py` (nieuw, 4) +
+  `test_invoice_payments.py` (+2, totaal 22).
+- Frontend: `facturen/[id]/page.tsx` (creditnota-afwikkelbalk, "Datum onbekend", methode-label),
+  `hooks/use-invoices.ts`. 4 commits (`5920d1b`…), deploy backend+frontend+migratie.
+
+### Verificatie
+Dry-run op prod: álle poorten groen (439/7/12/19/90, 0 onopgelost, 137 IN, alle euro-sommen exact,
+regelformules 630/630, factuur 100532 bewaart €1.631,74). Execute → natelling in DB + API-login-
+rooktest groen. 24 tests groen, ruff schoon, tsc schoon. Mailslot niet aangeraakt, niets verstuurd.
+
+### Bekende issues
+- **7 Mollie/kop-conflicten** (€10.854,66; nrs 100314/100316/100321/100332/100342/100441/100533):
+  Mollie zegt betaald, kop zegt open — per factuur oordeel Lisanne/boekhouding, daarna evt. na-import.
+- 12 WIP/concepten (€13.013,07) + 31 losse conceptregels (€6.779,81): handmatig beoordelen (lijst
+  in recept §1); 2 negatieve verrekenposten (100242 −€217,80 / 100363 −€735,00) bewust buiten.
+- 302 D-facturen koppelen pas aan een dossier na de latere D-dossier-import (projectcode in marker).
+- KvK-sleutel nog niet binnen → S214-hoofdtaak (rechtsvorm-backfill) doorgeschoven naar S215.
+
+### Volgende sessie
+S215: KvK-rechtsvorm-backfill zodra Arsalan de echte sleutel meldt (env op VPS → droogloop →
+akkoord → run → natelling → meten hoeveel BV's geen rentebijlage meer krijgen).
+Prompt: `docs/sessions/PROMPT-S215.md`.

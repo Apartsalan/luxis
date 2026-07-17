@@ -2,10 +2,84 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 18 juli 2026 (S226, Opus-opmaaksprint → Fable-review — logo/witregels/Betreft/aanhef LIVE over ALLE mailroutes; gmail-bezorging + nummer-hergebruik uitgezocht).
-**Laatste feature/fix:** Mailopmaak overal gelijkgetrokken: logo extern gehost (Gmail blokkeert data-URL's), witregel na aanhef inline (Gmail nult head-`<style>`), Betreft-regel huisformaat op alle 26 brieftypen, aanhef "Geachte heer, mevrouw," op reactiebrieven. Fable-review vond+fixte 5 extra opmaakfouten (dubbele "Betreft:" in AI-mails, WEDEROM-half-label, 2 kale verzendroutes, dubbele handtekening, losse-komma-aanhef). DB-mutaties (GO Arsalan): 6 reactiebrieven + 5 open AI-concepten bijgewerkt. 345 tests groen, CI 7/7. Rapport-detail: entry S226.
-**Openstaand (→ S227):** **AI-antwoord-knop óók op dossier-tabblad Correspondentie** (A1, niet gebouwd — grote klus, kruispunt-matrix + brede test verplicht); testdata 2026-00007 t/m -00019 opruimen (uitgesteld op verzoek Arsalan — bewaren voor meer testen); **DMARC ontbreekt op kestinglegal.nl** → Arsalan/BaseNet-actie (verklaart waarom gmail dagvaarding/faillissement wegfiltert; SPF+DKIM zijn OK); S221b-rest (review-scherm, voortgangsindicator, HTML-tabellen, tijdlijn-mailregel, follow-up-sortering, intake dempen, Blok 6-memo); auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** `docs/sessions/PROMPT-S227.md` — A1 AI-antwoord-knop op dossier (Opus). KvK-backfill voorrang zodra sleutel er is (~22 juli).
+**Laatst bijgewerkt:** 17 juli 2026 (S227, Opus-bouw + Fable-review — A1 AI-antwoord-knop op dossier-tab LIVE + brede briefopmaak-veeg over alle routes).
+**Laatste feature/fix:** AI-antwoord-knop op het dossier-tabblad Correspondentie (gedeelde dialoog, in-page concept-open) + briefopmaak overal gelijkgetrokken: vaste witregel Betreft→aanhef, extra lege regel na de aanhef, echte alinea's op 4 platte-brij-routes, huisstijl op getypte .eml-mails, dubbele-slotgroet-strip, antwoord-Betreft in huisformaat. Detail: entry S227.
+**Openstaand (→ S228):** **Opmaak nog niet af naar Arsalans zin** ("niet goed maar prima, laat maar — komt later"; wat er precies schort is NIET gespecificeerd → bij S228-start vragen/screenshot); testdata 2026-00007 t/m -00019 opruimen (na GO); DMARC kestinglegal.nl (Arsalan/BaseNet); S221b-rest; auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
+**Volgende sessie:** `docs/sessions/PROMPT-S228.md` — opmaak-restpunt uitvragen + S221b-rest óf KvK-backfill zodra sleutel er is (~22 juli).
+
+## Sessie 227 (17 juli 2026, Opus-bouw → Fable-review — AI-antwoord-knop op dossier + briefopmaak-veeg, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S227 (KvK-check: sleutel niet binnen → door met A1). Halverwege
+wisselde Arsalan naar Fable voor de review; les vastgelegd in memory: de cyclus
+Fable plant → Opus bouwt → Fable test+reviewt (óók visueel) is VAST — niet meer
+bespreken, en de review is een brede jacht, geen zelfcontrole.
+
+**A1 — AI-antwoord-knop op dossier-tabblad Correspondentie (LIVE + doorgeklikt).**
+De S223-dialoog is nu een gedeelde component (`components/ai-reply-dialog.tsx`);
+zelfde endpoint/dedupe/spelregels. Verschil per plek: Mail-pagina navigeert met
+`?draft=`, dossier-tab opent het concept in-page via `openDraftDialog` (BUG-73:
+`?draft=` is onbetrouwbaar bij same-page-navigatie). Beide flows visueel bewezen
+op prod, incl. dedupe-tak ("bestaand openen / nieuw maken") en force_new
+(oude concept aantoonbaar `discarded`, geen zombie).
+
+**Fable-reviewvondst — dubbele slotgroet (gefixt + live).** Het model schreef
+soms zelf "Met vriendelijke groet," terwijl de aankleding "Hoogachtend, …"
+toevoegt. Deterministische strip op het ene knooppunt (`generate_unified_draft`,
+alle intents) + 5 wachters. Route-matrix wees óók de tweede generator aan
+(`draft_service`, auto-concept/klant-update — gated/UI-dood maar op de roadmap):
+die prompt INSTRUEERDE de eigen groet → omgedraaid + prompttekst-wachter.
+
+**Vondsten Arsalan (foto + Word-referentie `Betreft.docx`):**
+1. Dialoog barstte open bij lang BaseNet-onderwerp (grid zonder `min-w-0`) —
+   gold ook al op de Mail-pagina sinds S223. Gefixt, op IN100458 gereproduceerd
+   én na de fix bewezen.
+2. Keuze combinatie (AskUser): antwoord-Betreft ín de brief = huisformaat
+   "klant / debiteur — Reactie op uw bericht — nr"; mail-onderwerp blijft
+   "Re: …" (draad intact) maar BaseNet-codes "[IN100458_I…]" worden gestript.
+3. Witregels: de kale `<p>&nbsp;</p>` tussen Betreft en aanhef kreeg per client
+   eigen marges (editor ~3 regels, Gmail niets) → vaste maat `margin:0` = exact
+   één lege regel; plus échte extra lege regel ná "Geachte …"/"Dear …" (NL+EN,
+   centraal in `_inline_paragraph_spacing`); AI-alinea-marge 12→16px gelijk.
+
+**Opmaak-veeg ("doe alles").** Vier routes bouwden nog één platte "\n→<br>"-blob
+waar de witregel-regels nooit op grepen: classificatie-antwoord, follow-up
+(verzending + preview), documenten-custom-body, .eml-fallback → alle vier door
+gedeelde `plain_paragraphs_html` (lege regel = alinea, escape ingebouwd) +
+AST-achtige wachter tegen nieuwe platte blobs. Bijvangst: een GETYPTE "Open in
+Outlook"-mail vertrok altijd al kaal (geen logo/handtekening/schuldhulpblok; de
+.eml gaat direct Outlook in) → krijgt nu `ensure_branded_body`. Live bewezen:
+.eml-route compleet (Betreft/witregels/logo/1× handtekening/schuldhulp),
+follow-up-preview 11 alinea's op maat. Bewust met rust: DB-stap-brieven
+(BaseNet-opmaak, S225 live goedgekeurd 12/12) en interne SMTP-testmail.
+
+**Verstuurd (GO Arsalan):** 1 opmaaktest-mail naar zijn gmail via 2026-00006 —
+afzender incasso@, drieluik vastgelegd. Arsalans oordeel: **"niet goed maar
+prima, laat maar — komt later"** → het opmaak-restpunt staat open voor S228,
+wat er precies schort is niet gespecificeerd.
+
+### Gewijzigde bestanden
+Frontend: `components/ai-reply-dialog.tsx` (nieuw), `correspondentie/page.tsx`,
+`zaken/[id]/{page,components/CorrespondentieTab}.tsx`. Backend:
+`email/{incasso_templates,subject,compose_router}.py`, `ai_agent/{unified_draft_
+service,draft_service,service,followup_service}.py`, `documents/router.py`.
+Tests: `test_{unified_draft_service,email_subject,incasso_templates}.py`
+(+15 wachters). 8 commits (`12bb361`→`d5dd3f4`), frontend 2× + backend 4×
+gedeployd via SSH (geen migratie). Geen prod-DB-mutaties.
+
+### Bekende issues / bewust niet gedaan
+- **Opmaak-restpunt Arsalan** (zie boven) — S228 eerst uitvragen (screenshot).
+- Classificatie-antwoord-route: alinea-fix test-gedekt, NIET live gevuurd
+  (zou echt versturen + zijn reviewwachtrij raken).
+- Test-concepten op 2026-00006 (1 open, 2 vervallen) — gaan mee met de
+  afgesproken testdata-opruiming; IN100458 alleen-lezen benaderd.
+- Klant-update-endpoint is UI-dood (S224-klasse beslispunt, niet opgeruimd).
+- Laatste 2 CI-runs liepen nog bij afsluiten (eerdere 6 groen; zelfde tests
+  draaiden lokaal groen) — uitslag komt via achtergrondtaak.
+
+### Volgende sessie
+S228: opmaak-restpunt uitvragen (screenshot van wat nog niet klopt), dan
+S221b-rest óf KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).
 
 ## Sessie 226 (17/18 juli 2026, Opus-opmaaksprint → Fable-review — mailopmaak over alle routes, LIVE)
 
@@ -630,54 +704,3 @@ S219 (`docs/sessions/PROMPT-S219.md`, Fable): demolijst-onderzoek — sjablonen-
 sjabloon × punt), AI-keten (snelheid/kwaliteit/klikken), fasebalk + concurrent-onderzoek,
 kleinere punten; daarna PROMPT-S220 (Opus-bouw) schrijven. KvK-backfill heeft voorrang zodra
 de sleutel er is.
-
-## Sessie 217 (15 juli 2026 middag, Fable-audit + Opus-fixes — vibe-code-doorlichting, CI-herstel, follow-up bewezen)
-
-### Samenvatting
-Drieluik. **(1) Vibe-code-audit** (aanleiding: "mooi gebouw, scheve fundering"-meme): internet-
-onderzoek naar de echte 2025/2026-incidenten (Tea App, Moltbook, 170 Lovable-apps) → elk faalpunt
-in Luxis nagemeten. Uitkomst: fundering staat — 302 endpoints geteld waarvan 8 bewust publiek
-(alle rate-limited/HMAC-state), RLS + drift-guard, DOMPurify op alle 5 mail-render-plekken,
-CORS dicht, security-headers, backups draaien (vannacht 03:00, EU-versleuteld), fail2ban 1655 bans,
-alleen 22/80/443 open. **3 fixes gebouwd + live:** Pillow 12.2→12.3 (5 CVE's, na-deploy her-audit
-bewijst schoon), `test_auth_drift_guard.py` (wachter: elke route eist login, allowlist 8, spiegel
-van RLS-guard), postcss-override (npm audit 0; `--force` had Next 15→9 gesloopt).
-**(2) Fable-review daarvan** vond het echte gat: **CI stond al sinds 13 juli rood** (laatst groen
-12 juli 22:46) — S211/S212 zette de rente-bijlage-PDF op het verzendpad, die rendert via LibreOffice
-(`soffice`), zit wél in Docker maar niet op ubuntu-latest → 5 tests rood, onzichtbaar door SSH-deploys.
-Fix: apt-install in ci.yml → **CI 8/8 groen**. Ook gecorrigeerd: Pillow-claim was overdreven
-(WeasyPrint rendert alleen eigen documenten, externe URL's geblokkeerd).
-**(3) Kritische menu-doorlichting** (vraag Arsalan) — alles op prod gemeten:
-- **Follow-up:** nooit gebruikt (15/15 pending). LIVE bewezen met testdossier 2026-00006
-  (debiteur = Arsalans gmail): controle-dialoog → versturen → mail mét `renteoverzicht_*.pdf`
-  in Gmail, status executed, stap doorgeschoven, opgeruimd (soft-delete). Gaten: dossiernr pas
-  klikbaar ná openklappen rij; "Dagen"-kolom toont altijd 0d; geen kolomsortering/filters; geen e2e.
-- **Intake:** 17 kandidaten ooit, 0 echte zaak — allemaal ruis (testmails, "Blog onderwerpen");
-  UNKNOWN = AI vond geen debiteurnaam in die mails. Dubbelop: Mail-pagina heeft al tabblad
-  "Aanvragen" met dezélfde wachtrij.
-- **Bankimport:** 0 uploads ooit (S179/180-betalingen gingen via scripts); functie zinvol
-  (maandelijkse reconciliatie) maar onbewezen pad + misleidende menunaam.
-- **Rapportages:** leeft nu (€135.354 geïnd, 612 zaken) — S191-"Geïnd €0" opgelost door imports.
-  Wel: "incassoratio 4,7%" = alleen actieve zaken (formule klopt, label misleidt).
-- **Agenda-blok dossier (S216):** werkt correct, maar onzichtbaar want 0 actieve afspraken in
-  heel Luxis (render-niets-bij-leeg was bewuste keuze). Outlook-agendasync bestáát al
-  (scheduler elk kwartier, seidony@ outlook gekoppeld) — wacht op afspraken in M365/Luxis.
-- **Mail: AAN.** DB-slot open sinds 13 juli 10:19, env-noodslot uit, inkomend synct foutloos
-  (11:35), uitgaand bewezen (testsommatie 11:12), verzendvenster visueel gecheckt (sjablonen,
-  bijlagen, Open-in-Outlook). Eerste echte mails kunnen vanavond.
-
-### Gewijzigde bestanden
-`backend/pyproject.toml` + `uv.lock` (Pillow-floor), `backend/tests/test_auth_drift_guard.py` (nieuw),
-`frontend/package.json` + lock (postcss-override), `.github/workflows/ci.yml` (LibreOffice).
-4 commits (`6d0588f`, `d83f939`, `251d991` + docs), deploy backend+frontend via SSH, geen migratie.
-
-### Bekende issues / bewust niet gedaan
-- 6 pip-CVE's in prod-container = installatiegereedschap, draait nooit in runtime — bewust gelaten.
-- Verwijderd (soft-deleted) dossier blijft via directe URL leesbaar zonder markering.
-- Mail-badge: 79 ongelinkte mails; wachtrij groeit stilletjes.
-- S216-testzaken 2026-00003/4/5 bleken WÉL netjes opgeruimd (eerdere twijfel onterecht — mijn
-  DB-meting vergat `is_active`; les herbevestigd: filter altijd op actief-vlag).
-
-### Volgende sessie
-S218 = UX-sprint uit de doorlichting (`docs/sessions/PROMPT-S218.md`); KvK-backfill (PROMPT-S217)
-heeft voorrang zodra de sleutel binnen is. Lisanne + Arsalan sturen vanavond de eerste echte mails.

@@ -53,29 +53,26 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 18 juli 2026, S226)
+## 🎯 Huidige prioriteit (bijgewerkt 17 juli 2026, S227)
 
 Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
 
-> ✅ **S226 AFGEROND — MAILOPMAAK OVER ALLE ROUTES + Fable-review.** Logo extern
-> gehost (Gmail blokkeert data-URL's), witregel na aanhef inline (Gmail nult
-> head-`<style>`), Betreft-regel huisformaat op alle 26 brieftypen, aanhef
-> "Geachte heer, mevrouw," op reactiebrieven. Fable-review vond+fixte 5 extra
-> opmaakfouten over alle mailroutes (dubbele "Betreft:" in AI-mails, WEDEROM-
-> half-label, 2 kale verzendroutes zonder huisstijl, dubbele handtekening,
-> losse-komma-aanhef) + verwijderde 3 dode sjabloon-functies. Onderzocht: gmail
-> filtert dagvaarding/faillissement stil weg = **DMARC ontbreekt** (SPF+DKIM OK
-> → Arsalan/BaseNet-actie); nummer-hergebruik is géén prod-bug (zacht-verwijderd
-> → geen reuse, vastgelegd met test). 345 tests groen, CI 7/7, 8 commits
-> (`b888cf8`→`20f0c46`). DB: 6 reactiebrieven + 5 concepten bijgewerkt (GO). Detail:
-> SESSION-NOTES entry S226.
+> ✅ **S227 AFGEROND — A1 AI-ANTWOORD-KNOP OP DOSSIER + BRIEFOPMAAK-VEEG.** De
+> S223-dialoog is een gedeelde component en zit nu óók op het dossier-tabblad
+> Correspondentie (in-page concept-open; beide flows live doorgeklikt, dedupe +
+> force_new bewezen). Fable-review + vondsten Arsalan: dubbele-slotgroet-strip
+> (beide generators + prompt-wachter), dialoog-overflow bij lang onderwerp
+> (min-w-0), antwoord-Betreft in huisformaat + BaseNet-codes uit het onderwerp
+> (keuze: combinatie), vaste witregel Betreft→aanhef + extra lege regel na de
+> aanhef (NL+EN), 4 platte-brij-routes naar gedeelde alinea-bouwer, getypte
+> .eml-mail krijgt nu huisstijl. 8 commits (`12bb361`→`d5dd3f4`), +15 wachters,
+> live bewezen op prod. Detail: SESSION-NOTES entry S227.
 >
-> 🎯 **VOLGENDE (S227): A1 — AI-antwoord-knop óók op het dossier-tabblad
-> Correspondentie** (nu alleen op de Mail-pagina, S223): zelfde dialoog/spelregels
-> (component delen), nieuwe route voor effect "concept maken" → kruispunt-matrix
-> (skill `breed-testen`) + brede test verplicht (afzender, drieluik, onderwerp,
-> zaak-schuift-niet-door, zichtbaarheid). Daarna S221b-UX-restant + auto-concept-
-> gate (steekproef Lisanne). Testdata 2026-00007 t/m -00019 opruimen (uitgesteld).
+> 🎯 **VOLGENDE (S228): opmaak-restpunt Arsalan uitvragen** — zijn oordeel over
+> de testmail was "niet goed maar prima, laat maar — komt later"; wat er precies
+> schort is NIET gespecificeerd → eerst screenshot/aanwijzing vragen, dan gericht
+> fixen (één maat, niet opnieuw vegen). Daarna S221b-UX-restant + auto-concept-
+> gate (steekproef Lisanne). Testdata 2026-00007 t/m -00019 opruimen (na GO).
 > **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~22 juli):
 > stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
 > `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212.)

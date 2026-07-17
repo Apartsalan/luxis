@@ -9660,3 +9660,54 @@ Frontend `zaken/[id]/`: `page.tsx`, `components/DossierHeader.tsx`, `DossierSide
 S217: KvK-rechtsvorm-backfill zodra Arsalan de sleutel meldt (voorrang; gemeten 726 relaties/~€14,50 per
 run — zie PROMPT-S215 STAND), anders dossierpolish (anker-subnav + geldstrook-uitbreiding). Prompt:
 `docs/sessions/PROMPT-S217.md`.
+
+## Sessie 217 (15 juli 2026 middag, Fable-audit + Opus-fixes — vibe-code-doorlichting, CI-herstel, follow-up bewezen)
+
+### Samenvatting
+Drieluik. **(1) Vibe-code-audit** (aanleiding: "mooi gebouw, scheve fundering"-meme): internet-
+onderzoek naar de echte 2025/2026-incidenten (Tea App, Moltbook, 170 Lovable-apps) → elk faalpunt
+in Luxis nagemeten. Uitkomst: fundering staat — 302 endpoints geteld waarvan 8 bewust publiek
+(alle rate-limited/HMAC-state), RLS + drift-guard, DOMPurify op alle 5 mail-render-plekken,
+CORS dicht, security-headers, backups draaien (vannacht 03:00, EU-versleuteld), fail2ban 1655 bans,
+alleen 22/80/443 open. **3 fixes gebouwd + live:** Pillow 12.2→12.3 (5 CVE's, na-deploy her-audit
+bewijst schoon), `test_auth_drift_guard.py` (wachter: elke route eist login, allowlist 8, spiegel
+van RLS-guard), postcss-override (npm audit 0; `--force` had Next 15→9 gesloopt).
+**(2) Fable-review daarvan** vond het echte gat: **CI stond al sinds 13 juli rood** (laatst groen
+12 juli 22:46) — S211/S212 zette de rente-bijlage-PDF op het verzendpad, die rendert via LibreOffice
+(`soffice`), zit wél in Docker maar niet op ubuntu-latest → 5 tests rood, onzichtbaar door SSH-deploys.
+Fix: apt-install in ci.yml → **CI 8/8 groen**. Ook gecorrigeerd: Pillow-claim was overdreven
+(WeasyPrint rendert alleen eigen documenten, externe URL's geblokkeerd).
+**(3) Kritische menu-doorlichting** (vraag Arsalan) — alles op prod gemeten:
+- **Follow-up:** nooit gebruikt (15/15 pending). LIVE bewezen met testdossier 2026-00006
+  (debiteur = Arsalans gmail): controle-dialoog → versturen → mail mét `renteoverzicht_*.pdf`
+  in Gmail, status executed, stap doorgeschoven, opgeruimd (soft-delete). Gaten: dossiernr pas
+  klikbaar ná openklappen rij; "Dagen"-kolom toont altijd 0d; geen kolomsortering/filters; geen e2e.
+- **Intake:** 17 kandidaten ooit, 0 echte zaak — allemaal ruis (testmails, "Blog onderwerpen");
+  UNKNOWN = AI vond geen debiteurnaam in die mails. Dubbelop: Mail-pagina heeft al tabblad
+  "Aanvragen" met dezélfde wachtrij.
+- **Bankimport:** 0 uploads ooit (S179/180-betalingen gingen via scripts); functie zinvol
+  (maandelijkse reconciliatie) maar onbewezen pad + misleidende menunaam.
+- **Rapportages:** leeft nu (€135.354 geïnd, 612 zaken) — S191-"Geïnd €0" opgelost door imports.
+  Wel: "incassoratio 4,7%" = alleen actieve zaken (formule klopt, label misleidt).
+- **Agenda-blok dossier (S216):** werkt correct, maar onzichtbaar want 0 actieve afspraken in
+  heel Luxis (render-niets-bij-leeg was bewuste keuze). Outlook-agendasync bestáát al
+  (scheduler elk kwartier, seidony@ outlook gekoppeld) — wacht op afspraken in M365/Luxis.
+- **Mail: AAN.** DB-slot open sinds 13 juli 10:19, env-noodslot uit, inkomend synct foutloos
+  (11:35), uitgaand bewezen (testsommatie 11:12), verzendvenster visueel gecheckt (sjablonen,
+  bijlagen, Open-in-Outlook). Eerste echte mails kunnen vanavond.
+
+### Gewijzigde bestanden
+`backend/pyproject.toml` + `uv.lock` (Pillow-floor), `backend/tests/test_auth_drift_guard.py` (nieuw),
+`frontend/package.json` + lock (postcss-override), `.github/workflows/ci.yml` (LibreOffice).
+4 commits (`6d0588f`, `d83f939`, `251d991` + docs), deploy backend+frontend via SSH, geen migratie.
+
+### Bekende issues / bewust niet gedaan
+- 6 pip-CVE's in prod-container = installatiegereedschap, draait nooit in runtime — bewust gelaten.
+- Verwijderd (soft-deleted) dossier blijft via directe URL leesbaar zonder markering.
+- Mail-badge: 79 ongelinkte mails; wachtrij groeit stilletjes.
+- S216-testzaken 2026-00003/4/5 bleken WÉL netjes opgeruimd (eerdere twijfel onterecht — mijn
+  DB-meting vergat `is_active`; les herbevestigd: filter altijd op actief-vlag).
+
+### Volgende sessie
+S218 = UX-sprint uit de doorlichting (`docs/sessions/PROMPT-S218.md`); KvK-backfill (PROMPT-S217)
+heeft voorrang zodra de sleutel binnen is. Lisanne + Arsalan sturen vanavond de eerste echte mails.

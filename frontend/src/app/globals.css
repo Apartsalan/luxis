@@ -141,6 +141,19 @@
   left: 0;
 }
 
+/* iOS Safari zoomt de hele pagina in zodra een formulier-veld met een letter
+   kleiner dan 16px focus krijgt. De UI-componenten (Input/Textarea/Select) zijn
+   al 16px op telefoon, maar er staan ~89 kale <select>'s en losse <input>'s met
+   text-sm in de app — die dwingen we hier in één keer af. !important omdat de
+   Tailwind text-sm-utility anders wint. Alleen onder md (768). */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 1rem !important;
+  }
+}
+
 /* Safe-area helpers (iPhone notch/home-indicator). Fall back to 0 on devices
    without insets. Used by the mobile bottom nav, floating timer and full-screen
    dialogs so nothing hides behind the system UI. */

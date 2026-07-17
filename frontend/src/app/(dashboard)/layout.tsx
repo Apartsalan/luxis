@@ -89,7 +89,7 @@ export default function DashboardLayout({
               + veilige rand); md+ heeft geen onderbalk. */}
           <main
             id="main-content"
-            className="p-4 sm:p-6 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-6"
+            className="p-4 sm:p-6 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-6"
           >
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>

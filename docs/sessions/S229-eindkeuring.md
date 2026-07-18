@@ -76,12 +76,15 @@ Steekproef debiteuren: allemaal natuurlijke personen zonder KvK-nummer.
   Wachter-kandidaat: periodieke/DB-brede check `b2c && bik_override > staffel` (de
   soort, niet het geval — dezelfde fout kan bij elke toekomstige import terugkomen).
 
-### V2 — Handelsrente 1 juli 2026 ontbreekt in de rentetabel
+### V2 — Handelsrente 1 juli 2026 ontbreekt in de rentetabel (impact vandaag: €0)
 Officieel (Rijksoverheid): handelsrente **10,4% per 1-7-2026**. De tabel eindigt bij
-10,15% (1-7-2025); de rij 2026-07-01 ontbreekt (tabel gevuld 18-2-2026). Gevolg: de 7
-actieve zaken op wettelijke handelsrente rekenen sinds 1 juli 0,25 punt te láág
-(nadeel cliënt; cent-werk na 17 dagen, maar het loopt op). Zelfde geldt voor het
-overheidstarief (0 actieve zaken).
+10,15% (1-7-2025); de rij 2026-07-01 ontbreekt (tabel gevuld 18-2-2026; het seed-script
+noteert bij 10,15% letterlijk "still in effect" — klopte in februari, nu niet meer).
+**Correctie na navraag Arsalan (18-7):** alle 7 actieve handelsrente-zaken hebben een
+bevriesdatum vóór 1-7-2026 (laatste: 7-5-2026), dus **niemand rekent vandaag verkeerd**
+— eerdere formulering "7 zaken rekenen te laag" was te sterk. Het gat bijt pas bij een
+nieuwe/ontdooide handelsrente-zaak. NB: de eerder gefixte "rentecorrectie" (13 juli)
+betrof de contractuele 2%/mnd, niet deze tabel.
 - **Werkorder:** rij toevoegen (data-only, dry-run + GO). **Wachter-kandidaat:** een
   actualiteitscheck "nieuwste tarief ouder dan ~7 maanden → waarschuwing" (de tabel
   wisselt elk halfjaar; niets bewaakt dat nu).

@@ -2,10 +2,67 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 17 juli 2026 (S228, Fable-bouw — Luxis volledig werkbaar op telefoon + tablet, LIVE).
-**Laatste feature/fix:** Mobiel-geschikt maken van de hele app (voorrang telefoon): PWA-fundament (app-icoon + schermvullend openen), grotere tikdoelen + 16px-velden (geen iOS-zoom), veilige schermranden; dialoog-vangnet schermvullend op telefoon + Vaul-Drawer-infra; compose-Verstuurknop volledig zichtbaar; dossier-Correspondentie leest als één paneel; alle horizontale overloop weg (16 routes = schermbreedte op 390 én 820); incasso-werkstroom als kaartweergave met volle-breedte actiebalk; onderste navigatiebalk (Home/Dossiers/Mail/Taken/Menu); overloop-wachter-spec. Desktop ongewijzigd. Detail: entry S228.
-**Openstaand (→ S229):** **Fysieke-toestel-check op Arsalans telefoon** (iOS-Safari-zoom/safe-area/beginscherm-icoon — enige niet-bewezen aanname); opmaak-restpunt S227 ("niet goed maar prima" — nog niet uitgevraagd, Arsalan wilde iets anders doen); testdata 2026-00007 t/m -00019 opruimen (na GO); DMARC kestinglegal.nl (Arsalan/BaseNet); S221b-rest; auto-concept-gate (steekproef Lisanne). KvK-sleutel ~22 juli → backfill voorrang. MAILSLOT OPEN.
-**Volgende sessie:** mobiel doorklikken op fysieke telefoon (Arsalan) → resterende puntjes; dan opmaak-restpunt óf S221b-rest óf KvK-backfill zodra sleutel er is (~22 juli).
+**Laatst bijgewerkt:** 18 juli 2026 (S229, Fable — grote eindkeuring, read-only, 4 sporen).
+**Laatste feature/fix:** Geen code — brede keuring van heel Luxis (verzendroutes × huisregels, financiële steekproef op de cent, beveiliging, AI-antwoordkwaliteit + auto-concept-poort). Fundament groen (12/12 rente op de cent, RLS live bewezen, alle verzendregels gehouden). 1 échte vondst met geld erachter: **27 consumentenzaken dragen samen €9.794,65 te veel incassokosten** (vlakke 15% uit BaseNet-import boven de dwingende WIK-staffel). Rapport: `docs/sessions/S229-eindkeuring.md`. Detail: entry S229.
+**Openstaand (→ S230):** **V1 B2C-BIK-correctie (27 zaken, €9.794,65)** = eerste werkorder (lijst met Lisanne, dry-run+GO); V2 handelsrente-rij 1-7 (impact vandaag €0, wél toevoegen); V3 auto-concept-poort (corrector herkalibreren → verse ronde → Lisanne-steekproef); V4 `.env` 644→600. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. MAILSLOT OPEN. KvK: niet naar vragen (Arsalan komt er zelf op terug).
+**Volgende sessie:** S230 begint met V1 (B2C-BIK-correctie) — grootste geldpost; daarna V2/V3/V4 en het onverwerkte mobiel/opmaak-restwerk zoals de tijd reikt.
+
+## Sessie 229 (18 juli 2026, Fable — grote eindkeuring van heel Luxis, read-only)
+
+### Samenvatting
+Op verzoek Arsalan één brede, zelfstandige keuring (bewezen Fable-werk). Vier sporen,
+alles alleen-lezen op prod, niets verstuurd/gewijzigd. Rapport met bewijs per bewering:
+`docs/sessions/S229-eindkeuring.md`. Nieuws deze sessie: **Fable blijft in het abonnement**
+(geen laatste dag). KvK-instructie: niet meer naar vragen/checken — Arsalan komt er zelf
+op terug (vastgelegd in memory; de vaste voorrang-check hoort uit PROMPT-S230+).
+
+**Spoor 1 — verzendroutes × huisregels: GROEN.** Route-inventaris vers via grep = exact de
+allowlists in `test_send_route_drift_guard.py`. Prod-meting sinds 15/7: 34/34 mails via
+incasso@ (M1), 0 logs zonder drieluik (M2), onderwerpen huisformaat (M4), 0 oud-adres in
+stapteksten/sjablonen, 0 open concepten/adviezen/taken op gesloten zaken (P3), 0 dubbele
+nummers, 0 wees-records, 0 B2C zonder 14-dagenbrief-bewijs.
+
+**Spoor 2 — financiële steekproef: GROEN op de cent, 2 randvondsten.** Eigen onafhankelijke
+narekening van 6 dossiers × systeem-API: **12/12 exact gelijk** (wettelijk compound over
+tariefwissel, 2%/mnd met deelmaanden, creditrente, bevriesdatums). Art. 6:44-toerekening
+klopt (IN100377, IN100180). **V1 (echte vondst):** 27 actieve B2C-zaken met vlakke-15%-
+`bik_override` boven de dwingende WIK-staffel = **€9.794,65 te veel** (grootste IN100082:
+€4.908 waar €1.102 mag); alle opdrachtgevers btw-plichtig, 12 zelfs boven staffel+21%;
+app-wachter AUDIT-23 blokkeert nieuwe invoer maar de import kwam eromheen; niemand op
+actieve mailstap. **V2:** handelsrente-rij 1-7-2026 (10,4%) ontbreekt — máár alle 7
+handelsrente-zaken zijn vóór 1-7 bevroren → **impact vandaag €0** (na navraag Arsalan
+genuanceerd; de "rentecorrectie" van 13/7 betrof de contractuele 2%/mnd, niet deze tabel).
+
+**Spoor 3 — beveiliging: GROEN.** RLS live bewezen: onder `luxis_app`-rol geeft een vreemde
+tenant 0/626 dossiers, zonder tenant-instelling faalt de query dicht; 44/44 tenant-tabellen
+RLS+FORCE+policy. Secrets-scan schoon, `/api/cases` zonder token = 401, firewall 22/80/443.
+**V4 (klein):** `/opt/luxis/.env` staat op 644 → 600 passend.
+
+**Spoor 4 — AI-antwoordkwaliteit + auto-concept-poort.** De S222-poortmeting (6 "zware
+fouten" → poort DICHT) herbeoordeeld mét feitencheck op prod: **4 van de 6 hard weerlegd**
+— "verzonnen" €40,87 (IN100418) en €22,64 (IN100122) zijn exact de échte openstaande
+bedragen (corrector telde facturen op zonder betalingen te zien); "verzonnen" IN100370
+staat letterlijk in het mail-onderwerp. Herscoord: hooguit 1 middelzware fout op 51
+generaties (~2%), 0 verzonnen bedragen. De poort werd tegengehouden door de béoordelaar,
+niet de AI. **V3-volgorde:** corrector herkalibreren → niet-debiteur-mails netjes weigeren
+i.p.v. JSON-crash → verse ronde → Lisanne-steekproef.
+
+### Gewijzigde bestanden
+Alleen docs: `docs/sessions/S229-eindkeuring.md` (nieuw, 2 commits). Geen code, geen
+migraties, geen prod-mutaties, niets verstuurd. Memory: KvK-instructie + Fable-blijft.
+
+### Bekende issues / bewust niet gedaan
+- **V1-V4 zijn werkorders, niet uitgevoerd** — elk met dry-run + GO vooraf (rapport §
+  "Werkorders deel 2"). V1 heeft als enige echt geld erachter.
+- Niet geverifieerd: of alle 27 V1-debiteuren écht consument zijn (10 gecheckt, allen
+  particulier ogend; KvK-backfill beslecht); wat de 22 wachtende classificaties/146
+  ongelezen notificaties precies zijn (observatie, geen oordeel).
+- Onverwerkt uit S228/S227: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest,
+  DMARC, testdata 2026-00007 t/m -00019.
+
+### Volgende sessie
+S230 (Opus voor de fixes): begin met V1 (B2C-BIK-correctie, lijst met Lisanne). Dan
+V2 (handelsrente-rij), V3 (corrector + verse ronde), V4 (.env-rechten).
 
 ## Sessie 228 (17 juli 2026, Fable-bouw — Luxis werkbaar op telefoon + tablet, LIVE)
 
@@ -670,68 +727,3 @@ followup_models}.py`, `collections/compliance.py`, `cases/schemas.py`,
 - Deferred prod-mutaties: Courier→Calibri (DOCX-reseed), verzoekschrift-bijlage vervangen
   door de juiste PDF uit de projectmap. Beide sjabloon-herzaaiingen (S210-flow).
 - MAILSLOT OPEN — geen echte debiteuren mailen; testdossier 2026-00006 = Arsalans gmail.
-
-## Sessie 219 (15 juli 2026 avond, Fable — demolijst-onderzoek, read-only, ALLE punten onderzocht)
-
-### Samenvatting
-Elk demolijst-punt tot op de bodem uitgezocht (prod-DB read-only, code, logs, live
-API-render) + een eigen "demoronde": elk demopunt veralgemeend naar een faalpatroon en
-daarop breed gejaagd. Volledige metingen: `docs/sessions/S219-onderzoek.md`; status per
-punt bijgewerkt in `DEMOLIJST-S218.md`; bouwdraaiboek: `PROMPT-S220.md` (6 blokken).
-KvK-voorrang-check gedaan: sleutel duurt nog ~een week (Arsalan).
-
-**Hoofdvondst (N1) — de compose-verstuurknop (dé route van de echte Bayar-sommatie):**
-(a) verstuurt via het persoonlijke account van de klikker (voorkeur outlook → seidony@
-i.p.v. incasso@; vangrail B13 bestaat alleen op batch/follow-up; zelfde gat op het
-document-verzendpad) en (b) legt NIETS vast (geen EmailLog/SyncedEmail/CaseActivity) →
-de verstuurde sommatie is onvindbaar in Luxis. Bewijs: mail nergens in synced_emails,
-niet in incasso@-INBOX.Sent (sync leest die map), IN100613 heeft alleen pipeline-activiteiten.
-
-**Punt 6/7 (oud adres/handtekening) — bron gevonden:** kantoor-instellingen zijn al
-goed; Word- en code-mailsjablonen renderen vers correct (live geverifieerd). Het rot zit
-in de 6 stap-mailteksten in `incasso_pipeline_steps` (letterlijke BaseNet-kopieën met
-"IJsbaanpad 9" + kesting@) — de AI-prompt kopieert de footer trouw → álle 10 AI-concepten
-oud adres (ook verse van 15-07); de verstuurde Bayar-mail had oud adres + kesting@.
-Plus: verzoekschrift-bijlage-Word (Lisanne-origineel) hardcoded IJsbaanpad; verzoekschrift-
-DOCX hardcoded oud Rabo-derdengelden-IBAN + kosten (beslispunt Lisanne).
-
-**AI-keten gemeten:** echte casus mail→verweer-concept = 7,5 min automatisch (sync 5' +
-classificatie 6' + race); handmatige generatie 39 s ($0,07, sonnet, prompt 41k tekens,
-geen UI-voortgang → dubbelklik-concepten); auto-concept staat bewust UIT voor alles
-behalve verweer (orchestrator.py:78); 470 pending classificaties (import-backfill) +
-348 ongelezen notificaties maken wachtrijen onbruikbaar. Punt 21 ("wie zijn jullie"):
-geclassificeerd als ongemotiveerde betwisting → standaard-weerlegging zonder klantnaam.
-
-**Fasebalk (punt 14) bewezen:** `isPast = index < currentPhaseIndex` vinkt alle fasen
-links van de huidige af, doorlopen of niet; "administratief" is geen fase. Clio/Smokeball
-tonen status als label/milestone + tijd-in-fase. Voorstel: stapnaam + dagen-in-stap.
-
-**Nieuwe vondsten demoronde:** (N3) zombie-concepten — IN100613 heeft 2 open "Eerste
-sommatie"-concepten terwijl de zaak op Tweede staat (dubbel-verstuur-risico met oud
-adres), IN100521 2 identieke; (N4) zes stille ruis-wachtrijen (470/348/79/14/3/18);
-route×waarborg-matrix: 14-dagenbrief-gate + mailslot overal gedekt, afzender-vangrail
-en logging niet. Kleinere punten: BCC bestaat nérgens in de keten; CC-veld verliest
-niet-gecommitte invoer stil; taak IN100607 bestaat nog (status skipped, geen weergave/
-herstelknop, 18 taken zo onzichtbaar); timeout 7-vs-4 bevestigd in step_transitions.
-
-### Gewijzigde bestanden
-Alleen docs: `docs/sessions/S219-onderzoek.md` (nieuw), `docs/sessions/PROMPT-S220.md`
-(nieuw), `docs/sessions/DEMOLIJST-S218.md` (status per punt), SESSION-NOTES, roadmap.
-PROMPT-S217/S218 → `docs/archief/prompts/`. Geen code, geen prod-mutaties, niets verstuurd.
-
-### Bekende issues
-- De 8 open AI-concepten dragen allemaal het oude adres — NIET versturen vóór S220 blok 2/3.
-- Beslispunten: ✅ derdengelden-IBAN (Rabo = stichting, klopt) + ✅ kosten verzoekschrift
-  (kloppen) — beantwoord door Arsalan 15-07. Nog open: aanhef-stijl; welke categorieën
-  auto-concept aan.
-- Punt 21-richting aangepast (Arsalan 15-07): géén vaste antwoord-typen bijbouwen —
-  antwoord-route wordt begrip-eerst (AI leest mail + dossier en schrijft zelf het antwoord,
-  met spelregels; typen/bibliotheek = referentie). Verwerkt in PROMPT-S220 blok 4.3.
-- From-adres Bayar-mail = afleiding (code + afwezigheid in incasso@-Sent); sluitstuk =
-  blik in Arsalans M365 Verzonden-map. CC-verlies = code-hypothese, in S220 testen.
-
-### Volgende sessie
-S220 (`docs/sessions/PROMPT-S220.md`, Opus): 6 blokken — verzendpad-fundament (vangrail+
-logging+brieftype-afleiding+CC/BCC+onderwerp-bouwer), stap-teksten saneren, zombie-
-opruiming, AI-keten sneller, fasebalk+UX-rest, beslismemo b2b/b2c. KvK-backfill voorrang
-zodra sleutel binnen (~22 juli).

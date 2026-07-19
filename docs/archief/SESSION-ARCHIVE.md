@@ -9767,3 +9767,68 @@ S219 (`docs/sessions/PROMPT-S219.md`, Fable): demolijst-onderzoek — sjablonen-
 sjabloon × punt), AI-keten (snelheid/kwaliteit/klikken), fasebalk + concurrent-onderzoek,
 kleinere punten; daarna PROMPT-S220 (Opus-bouw) schrijven. KvK-backfill heeft voorrang zodra
 de sleutel er is.
+
+## Sessie 219 (15 juli 2026 avond, Fable — demolijst-onderzoek, read-only, ALLE punten onderzocht)
+
+### Samenvatting
+Elk demolijst-punt tot op de bodem uitgezocht (prod-DB read-only, code, logs, live
+API-render) + een eigen "demoronde": elk demopunt veralgemeend naar een faalpatroon en
+daarop breed gejaagd. Volledige metingen: `docs/sessions/S219-onderzoek.md`; status per
+punt bijgewerkt in `DEMOLIJST-S218.md`; bouwdraaiboek: `PROMPT-S220.md` (6 blokken).
+KvK-voorrang-check gedaan: sleutel duurt nog ~een week (Arsalan).
+
+**Hoofdvondst (N1) — de compose-verstuurknop (dé route van de echte Bayar-sommatie):**
+(a) verstuurt via het persoonlijke account van de klikker (voorkeur outlook → seidony@
+i.p.v. incasso@; vangrail B13 bestaat alleen op batch/follow-up; zelfde gat op het
+document-verzendpad) en (b) legt NIETS vast (geen EmailLog/SyncedEmail/CaseActivity) →
+de verstuurde sommatie is onvindbaar in Luxis. Bewijs: mail nergens in synced_emails,
+niet in incasso@-INBOX.Sent (sync leest die map), IN100613 heeft alleen pipeline-activiteiten.
+
+**Punt 6/7 (oud adres/handtekening) — bron gevonden:** kantoor-instellingen zijn al
+goed; Word- en code-mailsjablonen renderen vers correct (live geverifieerd). Het rot zit
+in de 6 stap-mailteksten in `incasso_pipeline_steps` (letterlijke BaseNet-kopieën met
+"IJsbaanpad 9" + kesting@) — de AI-prompt kopieert de footer trouw → álle 10 AI-concepten
+oud adres (ook verse van 15-07); de verstuurde Bayar-mail had oud adres + kesting@.
+Plus: verzoekschrift-bijlage-Word (Lisanne-origineel) hardcoded IJsbaanpad; verzoekschrift-
+DOCX hardcoded oud Rabo-derdengelden-IBAN + kosten (beslispunt Lisanne).
+
+**AI-keten gemeten:** echte casus mail→verweer-concept = 7,5 min automatisch (sync 5' +
+classificatie 6' + race); handmatige generatie 39 s ($0,07, sonnet, prompt 41k tekens,
+geen UI-voortgang → dubbelklik-concepten); auto-concept staat bewust UIT voor alles
+behalve verweer (orchestrator.py:78); 470 pending classificaties (import-backfill) +
+348 ongelezen notificaties maken wachtrijen onbruikbaar. Punt 21 ("wie zijn jullie"):
+geclassificeerd als ongemotiveerde betwisting → standaard-weerlegging zonder klantnaam.
+
+**Fasebalk (punt 14) bewezen:** `isPast = index < currentPhaseIndex` vinkt alle fasen
+links van de huidige af, doorlopen of niet; "administratief" is geen fase. Clio/Smokeball
+tonen status als label/milestone + tijd-in-fase. Voorstel: stapnaam + dagen-in-stap.
+
+**Nieuwe vondsten demoronde:** (N3) zombie-concepten — IN100613 heeft 2 open "Eerste
+sommatie"-concepten terwijl de zaak op Tweede staat (dubbel-verstuur-risico met oud
+adres), IN100521 2 identieke; (N4) zes stille ruis-wachtrijen (470/348/79/14/3/18);
+route×waarborg-matrix: 14-dagenbrief-gate + mailslot overal gedekt, afzender-vangrail
+en logging niet. Kleinere punten: BCC bestaat nérgens in de keten; CC-veld verliest
+niet-gecommitte invoer stil; taak IN100607 bestaat nog (status skipped, geen weergave/
+herstelknop, 18 taken zo onzichtbaar); timeout 7-vs-4 bevestigd in step_transitions.
+
+### Gewijzigde bestanden
+Alleen docs: `docs/sessions/S219-onderzoek.md` (nieuw), `docs/sessions/PROMPT-S220.md`
+(nieuw), `docs/sessions/DEMOLIJST-S218.md` (status per punt), SESSION-NOTES, roadmap.
+PROMPT-S217/S218 → `docs/archief/prompts/`. Geen code, geen prod-mutaties, niets verstuurd.
+
+### Bekende issues
+- De 8 open AI-concepten dragen allemaal het oude adres — NIET versturen vóór S220 blok 2/3.
+- Beslispunten: ✅ derdengelden-IBAN (Rabo = stichting, klopt) + ✅ kosten verzoekschrift
+  (kloppen) — beantwoord door Arsalan 15-07. Nog open: aanhef-stijl; welke categorieën
+  auto-concept aan.
+- Punt 21-richting aangepast (Arsalan 15-07): géén vaste antwoord-typen bijbouwen —
+  antwoord-route wordt begrip-eerst (AI leest mail + dossier en schrijft zelf het antwoord,
+  met spelregels; typen/bibliotheek = referentie). Verwerkt in PROMPT-S220 blok 4.3.
+- From-adres Bayar-mail = afleiding (code + afwezigheid in incasso@-Sent); sluitstuk =
+  blik in Arsalans M365 Verzonden-map. CC-verlies = code-hypothese, in S220 testen.
+
+### Volgende sessie
+S220 (`docs/sessions/PROMPT-S220.md`, Opus): 6 blokken — verzendpad-fundament (vangrail+
+logging+brieftype-afleiding+CC/BCC+onderwerp-bouwer), stap-teksten saneren, zombie-
+opruiming, AI-keten sneller, fasebalk+UX-rest, beslismemo b2b/b2c. KvK-backfill voorrang
+zodra sleutel binnen (~22 juli).

@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 16 juli 2026 (S224, Fable — VEEGSESSIE). De kruispunt-matrix (skill `breed-testen`) volledig afgelopen: 5 vondsten, 4 LIVE gefixt (kantoor-vangrail classificatie-route, 14-dagenbrief-gate op de .eml-route, huisformaat-onderwerp documents-route, adviezen-opruiming bij zaak-sluiten) + 2 nieuwe AST-wachters die de teller op nul hóuden. Live-verzendtoets geslaagd: AI-antwoord écht verstuurd + bezorgd (drieluik, Re:-thread, bedrag op de cent), classificatie-trigger eerste prod-vuring (10 s na sync), documents-PDF bezorgd. Rapport: `docs/sessions/S224-veegsessie.md`. **Volgende = beslispunten B1-B6 + S221b-UX-restant (S225). KvK-backfill houdt voorrang zodra de sleutel er is (~22 juli).**
+**Laatst bijgewerkt:** 18 juli 2026 (S229, Fable — grote eindkeuring, read-only). Vier sporen door heel Luxis: verzendroutes × huisregels GROEN, financiële steekproef 12/12 op de cent + art. 6:44 klopt, beveiliging (RLS live bewezen), AI-antwoordkwaliteit + auto-concept-poort. Fundament sterk. Vondsten: **V1** 27 consumentenzaken €9.794,65 te veel incassokosten (import boven WIK-staffel), **V2** handelsrente-rij 1-7-2026 ontbreekt (impact vandaag €0), **V3** auto-concept-poort door miskalibreerde corrector dichtgehouden (4/6 fouten weerlegd), **V4** `.env` 644→600. Rapport: `docs/sessions/S229-eindkeuring.md`. **Volgende = S230 (Opus): V1 eerst met Lisanne, dan V2/V3/V4. KvK: niet naar vragen (Arsalan komt er zelf op terug).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,22 +53,24 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 17 juli 2026, S228)
+## 🎯 Huidige prioriteit (bijgewerkt 18 juli 2026, S229)
 
-> ✅ **S228 AFGEROND — LUXIS WERKBAAR OP TELEFOON + TABLET (LIVE).** Op verzoek
-> Arsalan: één grondig onderzoek + bouwplan (`docs/sessions/PLAN-S228-MOBIEL.md`)
-> en in dezelfde sessie uitgevoerd (8 blokken). PWA-fundament (app-icoon +
-> schermvullend openen), grotere tikdoelen, veilige schermranden, schermvullende
-> dialogen + Vaul-Drawer-infra, compose-Verstuurknop zichtbaar, dossier-
-> Correspondentie leesbaar, incasso-kaartweergave + volle-breedte batch-balk,
-> onderste navigatiebalk, en alle horizontale overloop weg (16 routes = exact
-> schermbreedte op 390 én 820, live gemeten). Desktop ongewijzigd. Wachter-spec
-> `e2e/mobile-overflow.spec.ts`. Detail: SESSION-NOTES entry S228.
+> ✅ **S229 AFGEROND — GROTE EINDKEURING (Fable, read-only).** Vier sporen door heel
+> Luxis, alles alleen-lezen op prod: verzendroutes × huisregels (GROEN), financiële
+> steekproef op de cent (12/12 rente exact, art. 6:44 klopt), beveiliging (RLS live
+> bewezen, secrets schoon), AI-antwoordkwaliteit + auto-concept-poort. Rapport:
+> `docs/sessions/S229-eindkeuring.md`. Fable blijft in het abonnement (geen laatste dag).
+> **Vondsten:** V1 = 27 consumentenzaken dragen samen €9.794,65 te veel incassokosten
+> (vlakke 15% uit BaseNet-import boven de dwingende WIK-staffel); V2 = handelsrente-rij
+> 1-7-2026 ontbreekt (impact vandaag €0, alle 7 zaken bevroren); V3 = auto-concept-poort
+> werd door een miskalibreerde corrector dichtgehouden, niet door de AI (4/6 "zware fouten"
+> weerlegd); V4 = `.env` 644→600. Detail: SESSION-NOTES entry S229.
 >
-> 🎯 **VOLGENDE (S229): mobiel doorklikken op Arsalans fysieke telefoon** (enige
-> niet-bewezen aanname: iOS-Safari-zoom/safe-area/beginscherm-icoon) → resterende
-> puntjes fixen. Daarna opmaak-restpunt S227 uitvragen, S221b-rest, of KvK-backfill
-> zodra de sleutel er is (~22 juli, houdt voorrang).
+> 🎯 **VOLGENDE (S230, Opus voor de fixes):** V1 B2C-BIK-correctie eerst (27 zaken met
+> Lisanne, dry-run+GO — grootste geldpost). Dan V2 (handelsrente-rij), V3 (corrector
+> herkalibreren → verse ronde → Lisanne-steekproef), V4 (.env-rechten). Onverwerkt uit
+> S228/S227: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata.
+> KvK: niet naar vragen (Arsalan komt er zelf op terug).
 
 ## 🎯 Vorige prioriteit (17 juli 2026, S227)
 

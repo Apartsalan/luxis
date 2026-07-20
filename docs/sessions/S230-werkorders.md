@@ -223,10 +223,31 @@ prod-container: **de AI-functies van Luxis lagen stil** — geen classificatie v
 inkomende mail, geen intake-detectie, geen conceptgeneratie. De dagelijkse taken
 draaiden wél (heartbeat groen) maar konden niets afhandelen; er stonden 96 nog
 niet gekoppelde mails te wachten. Arsalan heeft tegoed bijgevuld; daarna live
-bevestigd dat de sleutel weer werkt. **Openstaand aandachtspunt van Arsalan zelf:
-het tegoed ging snel op (€ 10 in een paar dagen). Verbruik uitzoeken hoort bij de
-review van deze sessie** — er is nu geen kostenregistratie per aanroep
-(`ai_drafts.token_count` staat leeg), dus dat moet eerst meetbaar worden gemaakt.
+bevestigd dat de sleutel weer werkt.
+
+### Kosten meetbaar gemaakt (op verzoek Arsalan, zelfde dag)
+
+Het tegoed ging snel op (€ 10 in een paar dagen) en niemand kon zien waaraan:
+`ai_drafts.token_count` bleef leeg en classificatie/intake registreerden niets.
+Nu schrijft **elke AI-aanroep** (alle zes aanroeppunten in `kimi_client`) één
+regel naar de nieuwe globale tabel **`ai_usage`**: doel, model, vier
+tokentellingen (in/uit/cache-lezen/cache-schrijven) en de geschatte kosten in
+USD als `Decimal`. Prijzen vers uit de officiële Anthropic-tabel (Sonnet 4.6
+$3/$15, Haiku 4.5 $1/$5 per miljoen tokens; cache-lezen 0,1×, cache-schrijven
+1,25×). Registratie in een eigen sessie met gedempte fouten — meten mag een
+aanroep nooit laten falen. Zes tests, waaronder de formule met de hand
+nagerekend. **Live bewezen op prod:** één proefaanroep → één regel
+(`compose_text · claude-sonnet-4-6 · 35 in / 13 uit · $0,000300`). Eerste
+poging faalde overigens netjes-gedempt in script-context (incompleet
+model-register, zelfde valkuil als eerder die dag) — gefixt door de registry
+eenmalig te laden.
+
+Overzicht voor de review (psql):
+`SELECT date_trunc('day', called_at)::date, purpose, count(*), sum(cost_usd)
+FROM ai_usage GROUP BY 1,2 ORDER BY 1,4 DESC;`
+Kanttekening: de meting begint bij vandaag — waar de eerdere € 10 heenging is
+niet meer te achterhalen, alleen te voorkomen dat het nóg eens onzichtbaar
+gebeurt. Voorstel (niet gebouwd): een klein kostenblokje op het dashboard.
 
 **Steekproef (op verzoek Arsalan door Fable gedaan i.p.v. Lisanne, 20-7):**
 10 goud-gevallen integraal gelezen — concept naast Lisanne's echte antwoord —

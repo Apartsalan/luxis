@@ -1176,3 +1176,87 @@ LF-10 → afhankelijk van LF-11
 > eisen Arsalan gehaald. 8 commits, elk visueel geverifieerd op prod, 2 Fable-must-fixes.
 > Plan + details: `docs/plans/PLAN-dossierpagina.md` + SESSION-ARCHIVE S216.
 > (KvK-backfill-stappen en losse klusjes zijn overgenomen in het actuele prioriteit-blok.)
+
+---
+
+## Prioriteit-blok S227 (17 juli 2026) — gearchiveerd 20 juli (S231)
+
+Eén prioriteit-sectie tegelijk — afgeronde sprints/audits/bug-logs staan in `docs/archief/ROADMAP-ARCHIEF.md`.
+
+> ✅ **S227 AFGEROND — A1 AI-ANTWOORD-KNOP OP DOSSIER + BRIEFOPMAAK-VEEG.** De
+> S223-dialoog is een gedeelde component en zit nu óók op het dossier-tabblad
+> Correspondentie (in-page concept-open; beide flows live doorgeklikt, dedupe +
+> force_new bewezen). Fable-review + vondsten Arsalan: dubbele-slotgroet-strip
+> (beide generators + prompt-wachter), dialoog-overflow bij lang onderwerp
+> (min-w-0), antwoord-Betreft in huisformaat + BaseNet-codes uit het onderwerp
+> (keuze: combinatie), vaste witregel Betreft→aanhef + extra lege regel na de
+> aanhef (NL+EN), 4 platte-brij-routes naar gedeelde alinea-bouwer, getypte
+> .eml-mail krijgt nu huisstijl. 8 commits (`12bb361`→`d5dd3f4`), +15 wachters,
+> live bewezen op prod. Detail: SESSION-NOTES entry S227.
+>
+> 🎯 **VOLGENDE (S228): opmaak-restpunt Arsalan uitvragen** — zijn oordeel over
+> de testmail was "niet goed maar prima, laat maar — komt later"; wat er precies
+> schort is NIET gespecificeerd → eerst screenshot/aanwijzing vragen, dan gericht
+> fixen (één maat, niet opnieuw vegen). Daarna S221b-UX-restant + auto-concept-
+> gate (steekproef Lisanne). Testdata 2026-00007 t/m -00019 opruimen (na GO).
+> **VOORRANG blijft de KvK-backfill zodra de sleutel er is** (~22 juli):
+> stappen + kosten in `docs/archief/prompts/PROMPT-S215.md` STAND +
+> `docs/archief/prompts/PROMPT-S217.md`. (WIK-rentebijlage LIVE sinds S212.)
+> **DMARC-actie (Arsalan/BaseNet):** publiceer een DMARC-record voor
+> kestinglegal.nl zodat zware brieven bij gmail aankomen (SPF+DKIM staan goed).
+>
+> 📌 **Losse klusjes (open):** landregel op dagvaarding + faillissementsverzoek (S210 bewust niet
+> gedaan); filter "Nog te openen" op de dossierlijst; rest-PDF's (206) alleen op expliciete vraag;
+> 7 Mollie/kop-conflictfacturen (€10.854,66) → oordeel Lisanne/boekhouding; anker-subnav
+> Financieel + geldstrook-uitbreiding gewone zaak (S216-rest).
+
+> ✅ **MAILSLOT (S197-knop): staat OPEN sinds 13 juli 10:19** (demodag; DB-vlag via Instellingen →
+> E-mail, env-noodslot uit). Uitgaand bewezen S217 (testsommatie bezorgd), inkomend synct foutloos.
+> Eerste echte mails: 15 juli 's avonds met Lisanne. Niet autonoom dichtzetten of openzetten.
+
+1. ✅ **S206 AFGEROND + LIVE (13 juli).** Spoor S202 security/correctheids-fixes gebouwd + Fable-reviewd
+   + gedeployd. **5 audit-fixes:** H1 (cross-tenant `CaseFile` bij mailbijlage — guard), H2 (fail-closed
+   betaald-guard + 2 verborgen bugs: `get_case_outstanding` lazy-load + `calculate_case_interest`
+   lege-zaak-tarief), H3 ("Geïnd" KPI/maandgrafiek `is_active`), M1 (bulk-status-cap 200), M2 (auto-advance
+   stopt vóór terminale/hold-stap). **+ 2 Fable-must-fixes:** provisie/factuurvoorstel `is_active`
+   (facturatiegeld) + tenant-guard op `POST /api/email/sync?case_id=`. 7 commits (`f1800f1`…`7ade2f1`),
+   1259 tests groen, geen migratie, live rooktest groen. Details: SESSION-NOTES S206.
+2. **Openstaand na S206:**
+   - **Mail-verstevigingen (M4/M5/L4/L5/L6) — overgedragen naar S207.** Mailslot dicht (0 risico);
+     M4 = HTML-escaping legal-mail (visuele check nodig); M5 = 39-velden-datacorrectie (prod-akkoord).
+     Recept: `docs/security/S202-delta-audit.md`. M3 (RLS Fase 2) bewust apart.
+   - ⚠️ **Waarschuwingstekst noodknop langs Lisanne** vóór echte B2C-verzending (haar beroepsrisico).
+   - **Checklist:** de 5 dagelijkse-job-rijen in `scheduler_heartbeat` — morgenochtend na 06:35 UTC
+     herbevestigen (ze zijn geregistreerd; verschijnen na de eerste ochtendrun; zie SESSION-NOTES S206).
+3. **S207-track (mail-verstevigingen) — LATER, NIET de eerstvolgende sessie** (Arsalan, 13 juli:
+   eerstvolgende sessie = Fable/demo-vervolg; deze track een ander keertje afmaken). Hervatten
+   via STAND-blok in `PROMPT-S207.md`. ⚠️ De 5 M4-bestanden staan nog **ongecommit in de werkmap**
+   (`incasso_templates.py`, `invoices/service.py`, `test_followup.py`, `test_incasso_templates.py`,
+   `test_invoice_send_email.py`) — niet aanraken tot deze track hervat wordt.
+   - ✅ **Blok 0 KLAAR: Fable-review S205-fixes** — rapport `docs/sessions/S207-review-S205.md`
+     (5/6 dicht; klok-gat + vierde verzenddeur gevonden), 3 must-fixes gebouwd + gedeployd.
+   - ✅ **L4/L5/L6 gebouwd** (commit `584b63c`) maar **NIET gedeployd** (VPS op `7f3e559`) → eerst uitrollen.
+   - ⏸️ **M4 HTML-escaping HALF AF** — 5 bestanden ongecommit in de werkmap (`followup_service.py` nog
+     niet aangeraakt) → eerst testen, dan afmaken of terugdraaien.
+   - **Nog niet gestart:** M5-recipient-cap (code) + apart de 39-velden-datacorrectie (mét akkoord).
+     `docs/security/S202-delta-audit.md`.
+   - ✅ **S201 facturatie-import — UITGEVOERD S214 (14 juli, akkoord Arsalan).** 439 facturen live;
+     rest-groepen (7 Mollie-conflicten, 12 WIP, 31 losse regels) in recept §1 als handwerk-lijst.
+   - **S203-restpunten** — 35-route backend-sloop (eigen per-route-verificatie), #7 document-audittrail,
+     #15 regeling-badge, log-persistentie VPS.
+4. **Beslissingen voor Lisanne/Arsalan:** (14-dagenbrief-verzending is besloten S205: "allebei
+   mogelijk" — sjabloon staat op de stap + handmatige "toch versturen"-route.)
+   derdengelden-werkwijze (272 betalingen buiten derdengeldenkanaal — S200 #18); kantoorrekening
+   `NL79KNAB0606569456` 1× tegen bankpas checken (1 cijfer gereconstrueerd).
+5. **Heropening werkvoorraad:** volgende batch per opdrachtgever mét stap 4b —
+   `docs/plans/PLAN-heropening-werkvoorraad.md` + `docs/sessions/S181-werkvoorraad-recept.csv`.
+
+**Backlog-gedachte (Arsalan, 9 juli — plan voor later, niet nu bouwen):** de 13 lopende
+betalingsregelingen zijn alleen zinvol te bewaken als Luxis ook *ziet* dat er betaald is —
+en er is (nog) geen koppeling met de derdengeldrekening/bank. Denkrichtingen voor het plan:
+(a) periodieke MT940/CSV-bankexport inlezen via de bestaande Bankimport-pagina (D-C kijkt of
+die af is), (b) een bankkoppeling (PSD2-dienst zoals Enable Banking/Ponto) als structurele
+oplossing, (c) tot die tijd: termijn-alarm behandelen als "check de bank handmatig"-taak
+i.p.v. "debiteur heeft niet betaald". Meenemen in de fase-2-beslislijst na D-C.
+
+---

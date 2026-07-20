@@ -9832,3 +9832,71 @@ S220 (`docs/sessions/PROMPT-S220.md`, Opus): 6 blokken — verzendpad-fundament 
 logging+brieftype-afleiding+CC/BCC+onderwerp-bouwer), stap-teksten saneren, zombie-
 opruiming, AI-keten sneller, fasebalk+UX-rest, beslismemo b2b/b2c. KvK-backfill voorrang
 zodra sleutel binnen (~22 juli).
+
+---
+
+## Sessie 220 (15 juli 2026 avond, Opus — bouwsprint demolijst, Blok 1/2/3.1/5-fasebalk LIVE)
+
+### Samenvatting
+Uitvoersprint op het S219-onderzoek. Per blok: bouwen → tests → deploy via SSH →
+prod-verificatie. 9 commits, backend+frontend meermaals gedeployd, 1 prod-DB-mutatie
+(stap-teksten) met dry-run + GO Arsalan + natelling. Elk stuk apart getest.
+
+**Blok 1 — verzendpad-fundament (hoofdvondst N1), LIVE + BEWEZEN op prod.** De
+primaire verstuurknop (`/compose/send`) ging via het persoonlijke account van de
+klikker en legde niets vast. Nu: kantoor-afzender-vangrail (incasso@, patroon B13) +
+vastlegging via gedeelde `write_outbound_log` (EmailLog + SyncedEmail + CaseActivity);
+`send_with_attachment` gebruikt dezelfde functie; documents-send kreeg de ontbrekende
+`send_as_tenant_account=True`. **Testmail op prod (naar Arsalans gmail, GO): from =
+incasso@, EmailLog+SyncedEmail+activiteit aangemaakt — bewezen.** Plus: BCC door de
+hele keten (schema/providers/.eml/dialog) + CC-verlies-fix; brieftype-afleiding uit de
+stap op de AI-concept-route (punt 1/25 — renteoverzicht gaat nu mee, geen factuur);
+bijlage-preview-endpoint + "Gaat automatisch mee"-weergave (punt 2); 'sommatie' aan de
+rente-set (punt 3); gedeelde onderwerp-bouwer op alle server-routes (punt 5).
+
+**Blok 2 — stap-teksten & sjablonen, LIVE.** De 6 DB stap-mailteksten opgeschoond
+(script `scripts/sanitize_step_templates.py`, idempotent, dry-run+GO): oud adres
+IJsbaanpad 9 / 1076 CV → Willem Fenengastraat 16E / 1096 BN, kesting@ → incasso@ (beide
+kolommen; HTML gebruikte `&nbsp;` → tweede ronde nodig, natelling daarna schoon), aanhef
+ingevuld bij de 3 met een losse komma. **Vanaf nu dragen alle AI-concepten het juiste
+adres.** Code-sjablonen: aanhef overal "Geachte heer, mevrouw," (keuze Arsalan), BV-naam
+uit de aanhef, klant-kenmerk niet meer naar de debiteur (DF138-05), html_renderer-aanhef.
+
+**Blok 3.1 — zombie-opruiming, LIVE.** `move_case_to_step` sluit nu openstaande PENDING
+follow-up-adviezen automatisch (nieuwe status SUPERSEDED) → geen dubbel-verstuur-risico
+en de scanner is weer vrij (punt 13). Het uitvoerende advies is op dat moment APPROVED,
+dus onaangeroerd.
+
+**Blok 5 — fasebalk (punt 14), LIVE.** De 5-vinkjes-balk (vinkte alle categorieën links
+af) vervangen door: stapnaam + categoriekleur + "X dagen in deze stap" (step_entered_at
+nu in de case-respons) + volgende stap.
+
+**Blok 4.5 — timeout Eerste→Tweede 7→4 (punt 15), GEDAAN op prod.** step_transitions
+id 44c31bf7… condition `{"days": 4}` (GO Arsalan; stap-wachttijd + workflow = 4).
+Data-only, geen deploy. **Beslissingen S221 (Arsalan):** backfills NIET zelf uitvoeren
+→ Fable zoekt eerst uit wat de items zijn; auto-concept AAN voor Verweer + Algemene/overig
+maar PAS ná de begrip-eerst-antwoord-route (nut hangt af van antwoordkwaliteit).
+
+### Gewijzigde bestanden
+Backend: `email/{compose_router,send_service,subject,providers/*}.py`, `documents/{router,
+schemas,docx_service}.py`, `incasso/{service,html_renderer}.py`, `ai_agent/{followup_service,
+followup_models}.py`, `collections/compliance.py`, `cases/schemas.py`,
+`scripts/sanitize_step_templates.py` (nieuw). Frontend: `email-compose-dialog.tsx`,
+`zaken/[id]/{page,components/DossierHeader,components/DocumentenTab}.tsx`,
+`correspondentie/page.tsx`, `hooks/{use-documents,use-cases}.ts`. Tests: 5 bestanden
+(rente_bijlage_verzendpaden uitgebreid, email_subject, supersede_recommendations nieuw).
+
+### Bekende issues / bewust niet gedaan (→ S221)
+- Blok 3.2 (dedupe: bestaand concept tonen i.p.v. tweede maken — `ai_drafts` mist stap-
+  koppeling), 3.3 (backfills: 3 verouderde adviezen + 470 pending classificaties + 14
+  intake-ruis + 8 verouderde concepten — GO nodig), 3.4 (skipped-taken weergave + herstel).
+- Blok 4 (AI-keten): classificatie direct na sync; auto-concept-categorieën (BESLISSING
+  Arsalan); antwoord-route begrip-eerst + testronde-script; timeout Eerste→Tweede 7→4 (GO);
+  review-scherm. AI-concept-HTML-tabellen (punt 11) hoort hier.
+- Blok 5-UX-rest: zaaknummer klikbaar in maillijst, tijdlijn-mailregel klikbaar,
+  S218-restanten (menu Intake weg, Bankimport→Betalingen, ratio-label, agenda lege staat,
+  soft-delete-banner, follow-up dossierlink/dagen/sort).
+- Blok 6: beslismemo b2b/b2c (105 dossiers uit BaseNet-XML) — geen code.
+- Deferred prod-mutaties: Courier→Calibri (DOCX-reseed), verzoekschrift-bijlage vervangen
+  door de juiste PDF uit de projectmap. Beide sjabloon-herzaaiingen (S210-flow).
+- MAILSLOT OPEN — geen echte debiteuren mailen; testdossier 2026-00006 = Arsalans gmail.

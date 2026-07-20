@@ -2,10 +2,131 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 18 juli 2026 (S229, Fable — grote eindkeuring, read-only, 4 sporen).
-**Laatste feature/fix:** Geen code — brede keuring van heel Luxis (verzendroutes × huisregels, financiële steekproef op de cent, beveiliging, AI-antwoordkwaliteit + auto-concept-poort). Fundament groen (12/12 rente op de cent, RLS live bewezen, alle verzendregels gehouden). 1 échte vondst met geld erachter: **27 consumentenzaken dragen samen €9.794,65 te veel incassokosten** (vlakke 15% uit BaseNet-import boven de dwingende WIK-staffel). Rapport: `docs/sessions/S229-eindkeuring.md`. Detail: entry S229.
-**Openstaand (→ S230):** **V1 B2C-BIK-correctie (27 zaken, €9.794,65)** = eerste werkorder (lijst met Lisanne, dry-run+GO); V2 handelsrente-rij 1-7 (impact vandaag €0, wél toevoegen); V3 auto-concept-poort (corrector herkalibreren → verse ronde → Lisanne-steekproef); V4 `.env` 644→600. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. MAILSLOT OPEN. KvK: niet naar vragen (Arsalan komt er zelf op terug).
-**Volgende sessie:** S230 begint met V1 (B2C-BIK-correctie) — grootste geldpost; daarna V2/V3/V4 en het onverwerkte mobiel/opmaak-restwerk zoals de tijd reikt.
+**Laatst bijgewerkt:** 20 juli 2026 (S230/S231 — werkorders V1-V4 uitgevoerd + drie live storingen opgelost).
+**Laatste feature/fix:** V1 t/m V4 af (27 B2C-dossiers gecorrigeerd, rentetarief 1-7-2026, .env dicht, auto-conceptpoort AAN). Daarna drie vondsten uit Arsalans demo: bijlagen niet te openen (5 routes, 3 kapot), BaseNets verzendrelay geblokkeerd door Microsoft -> nu via M365 namens incasso@, en AI-kosten meetbaar gemaakt. Detail: entry S230/S231.
+**Openstaand (-> S232):** sjabloon-route moet na verzending doorschuiven naar de volgende stap (nu doet alleen de AI-conceptroute dat); IN100605 handmatig naar Tweede sommatie; BaseNet-delisting melden; derde AI-testronde + Lisanne-steekproef; kostenblokje dashboard (voorstel). Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
+**Volgende sessie:** S232 begint met het doorschuiven op de sjabloon-verzendroute (kruispunt-fix + wachter).
+
+## Sessie 230/231 (20 juli 2026, Fable-onderzoek + Opus-bouw — werkorders V1-V4 + drie live storingen)
+
+### Samenvatting
+Begonnen als afwerksessie van de S229-eindkeuring; halverwege omgeslagen naar
+storingsdienst tijdens Arsalans demo met Lisanne. Alles hieronder is live en
+nageteld op prod.
+
+**V1 — 27 consumentendossiers gecorrigeerd (€ 9.794,65).** Meting vers herhaald,
+onafhankelijk van S229: hoofdsom per dossier opnieuw opgeteld uit de losse
+vorderingen, eigen staffelberekening, plus kruiscontrole via de app-API
+(`GET /api/cases/{id}/bik`) — 4/4 identiek. Arsalans twijfel ("waarom zag je dit
+pas nu?") beantwoord met de import-datum: alle 27 kwamen op 3 juli binnen; de
+S229-keuring was de eerste brede financiële controle ná die import. **Nieuw t.o.v.
+S229:** de 26 "afgesloten" dossiers bleken géén afgehandelde zaken — in BaseNet
+stonden ze 21× Lopend / 3× Wacht / 2× Gereed / 1× Geannuleerd, 0 van de 27 volledig
+betaald, 25 zonder één cent betaling, samen € 172.692,60 hoofdsom open, 16 met
+mailverkeer in 2026. Daarmee verviel het bezwaar tegen corrigeren. Na GO van
+Arsalan (alle 27 bevestigd particulier): `bik_override` → NULL in één transactie,
+gejoind op id én exact oud bedrag (`UPDATE 27`), oude waarden dubbel bewaard
+(`_s230_bik_backup` + lokale kopie). Natelling: sweep 0, IN100082 nu € 1.102,21,
+IN100345 € 385,30; doorwerking bewezen op IN100009 (openstaand zakte exact de
+€ 66,96 te veel geheven kosten). **Wachter:** `find_bik_above_staffel()` loopt de
+hele DB af (dagelijks 06:45 UTC) — de twee bestaande wachters keken alleen naar het
+moment van handelen, de import kwam daar buitenom. 7 tests.
+
+**V2 — handelsrente 1-7-2026 (10,40%).** Op verzoek eerst bewezen dát het ontbrak:
+prod-tabel eindigde bij 10,15% (1-7-2025), alle 150 rijen aangemaakt op 18-02-2026
+en nooit gewijzigd (de BaseNet-import raakt deze tabel niet — de importcode schrijft
+alleen een contractueel percentage op de zaak). Twee onafhankelijke bronnen:
+Rijksoverheid ("sinds 1 juli 2026 10,4%") + rekenregel art. 6:119a lid 2 (ECB-refi
+2,40% per 17-6-2026 + 8pp). Losse rentetabel-sites liepen achter — vandaar de
+kruiscontrole. Migratie `s230_handelsrente_2026_07` (commercial + government),
+natelling 51 rijen per soort. **Wachter:** actualiteitscheck met peildatum-constante
+(>7 maanden → rood), bewust niet "nieuwste rij" zodat een halfjaar zónder
+tariefwijziging geen vals alarm geeft.
+
+**V4 — .env-rechten.** Bleek zes bestanden i.p.v. één: naast `.env` stonden vijf
+oudere kopieën met echte waarden ook op 644. Alle zes → 600. Ook de S229-aanname
+"alleen root heeft shell" weerlegd: `github-runner` heeft `/bin/bash` én zit in de
+`docker`-groep (de facto root).
+
+**V3 — auto-conceptpoort AAN.** S222-herbeoordeling zelf nagerekend op prod: € 40,87
+(IN100418) en € 22,64 (IN100122) zijn exact de echte openstaande bedragen; IN100370
+staat letterlijk in de onderwerpregel. Corrector herkalibreerd (3 regels), niet-
+debiteurenmails weigeren nu netjes i.p.v. JSON-crash. Volledige ronde: 55 gevallen,
+0 storingen, 54 beoordeeld, 3 afgekeurd — waarvan **2 opnieuw corrector-missers**
+(bedrag + dossiernummer) en 1 échte vondst ("onderneem geen verdere actie tot u van
+ons hoort" leest als opschorting → spelregel toegevoegd). Netto ~1 echte fout op 54.
+Steekproef door Fable i.p.v. Lisanne (op verzoek): 10 goud-gevallen naast Lisannes
+echte antwoorden, 6/6 bedragen live geverifieerd. Poort AAN na bewijs dat de batch
+alléén concepten maakt (taak "Bekijk en verstuur", plafond 50/dag).
+
+**Kosten meetbaar (los verzoek).** Nieuwe globale tabel `ai_usage`: elke aanroep in
+`kimi_client` schrijft doel, model, 4 tokentellingen en kosten (Decimal, officiële
+prijstabel; cache-lezen 0,1×, cache-schrijven 1,25×). Eigen sessie met gedempte
+fouten — meten mag een aanroep nooit laten falen. Live bewezen; ving diezelfde
+middag 2 echte concepten (~$0,075).
+
+**Storing 1 — bijlagen niet te openen (Arsalan, demo).** Vijf plekken toonden
+bijlagen, drie konden ze niet openen: dossier-chip klikte in het luchtledige
+(bestand zat niet in `inlineFiles`), "gaat automatisch mee"-etiketten waren
+doodlopend, Mail-pagina linkte kaal zonder inlogbewijs (401). Fix als gedeelde
+route: `frontend/src/lib/attachments.ts` + bijlagen krijgen serverkant een ADRES
+(`template_type` of `case_file_id`); facturen per stuk i.p.v. als telling.
+Bulkscherm kreeg een informatieregel (geen knoppen — bij tientallen dossiers ruis).
+**Reviewvondst op eigen werk:** de opvolg-voorvertoning wijst óók stap-brieven aan,
+maar `render-pdf` weigerde alles buiten mijn eigen whitelist — precies de
+kruispuntfout die de fix moest oplossen. Eigen lijst weg; `render_docx` is de ene
+registry.
+
+**Storing 2 — mail kaatst terug (demo).** Bounce zelf gelezen: Microsoft weigert
+BaseNets uitgaande relay 194.180.216.120 (550 5.7.1, S3150). Lisannes BaseNet-
+webmail kwam wél aan → andere uitgang, dus zelf oplosbaar. Vervoer en afzender
+gescheiden: `resolve_office_channel()` kiest (1) kantooradres via Graph, (2) ander
+Graph-account mét incasso@ als afzender, (3) BaseNet als vanouds. Arsalan zette
+`incasso@` als gedeeld postvak + Verzenden-als in M365. **Live bewezen:** proefmail
+kwam aan in Arsalans hotmail-inbox (niet in ongewenst); daarna sommatie IN100605
+opnieuw verstuurd zonder bounce.
+
+**Storing 3 — badge "Nog te openen" op een heropend dossier.** De herkomst-badge
+keek alleen naar de BaseNet-herkomst, niet naar de huidige status → IN100605 (fase 1
+LegalWork, in behandeling) toonde nog "Nog te openen". Nu "Heropend" (groen).
+
+### Gewijzigde bestanden
+`backend/app/collections/compliance.py` (sweep), `backend/app/workflow/scheduler.py`
+(dagelijkse BIK-check), `backend/app/notifications/service.py`,
+`backend/alembic/versions/s230_handelsrente_2026_07.py`, `s230b_ai_usage.py`,
+`backend/app/ai_agent/kimi_client.py` + `models.py` (AIUsage),
+`backend/app/email/oauth_service.py` (`resolve_office_channel`), `send_service.py`,
+`compose_router.py`, `providers/{base,outlook,imap_provider}.py`,
+`backend/app/documents/router.py`, `backend/app/ai_agent/followup_{service,schemas}.py`,
+`frontend/src/lib/attachments.ts` (nieuw), `status-constants.ts`,
+`email-compose-dialog.tsx`, `correspondentie/page.tsx`, `followup/page.tsx`,
+`incasso/page.tsx`, `zaken/page.tsx`, `DetailsTab.tsx`,
+`scripts/ai/antwoord_testronde.py`. Nieuwe tests:
+`test_interest_rate_freshness_guard.py`, `test_bik_staffel_sweep.py`,
+`test_ai_usage.py`, `test_attachment_openable_guard.py`,
+`test_office_channel_guard.py`. Docs: `docs/sessions/S230-werkorders.md`,
+deploy-regels-skill (docker cp-valkuil).
+
+### Bekende issues
+- **Sjabloon-route schuift niet door.** Een eerste sommatie via de mail-dialoog met
+  sjabloon beweegt de pijplijn niet; alleen de AI-conceptroute doet dat
+  (`incasso/router.py::advance_after_send`, gate `intent in (None,"next_step")`).
+  Arsalan verwacht terecht dat de sjabloon-route hetzelfde doet — kruispuntfout.
+  **IN100605 staat daardoor nog op Eerste sommatie terwijl de sommatie eruit is.**
+- **BaseNet-relay nog steeds geblokkeerd** bij Microsoft. Wij omzeilen het; melden
+  bij BaseNet is nog niet gedaan (conceptmail staat in het sessieverloop).
+- **Kostenmeting begint pas 20 juli** — waar de eerdere ~€10 heenging is niet meer
+  te achterhalen. Voorstel (niet gebouwd): kostenblokje op het dashboard.
+- **Derde AI-testronde niet gedraaid** (meet het effect van de laatste 2 ingrepen);
+  bewust niet ongevraagd i.v.m. het kostenpunt. Lisanne-steekproef op de echte
+  batch (eerste draait 21-7 08:00 UTC) staat nog open.
+- Niet met een browser doorgeklikt: de nieuwe bijlage-knoppen (wel alle
+  onderliggende routes live bewezen + tsc/lint schoon).
+
+### Volgende sessie
+S232: sjabloon-verzendroute laten doorschuiven naar de volgende stap (zelfde regel
+als `advance_after_send`, met wachter over álle verzendroutes), daarna IN100605
+handmatig rechtzetten. Zie `docs/sessions/PROMPT-S232.md`.
 
 ## Sessie 229 (18 juli 2026, Fable — grote eindkeuring van heel Luxis, read-only)
 
@@ -661,69 +782,3 @@ Frontend: `hooks/use-workflow.ts`, `taken/page.tsx`, `layout/app-sidebar.tsx`, `
 Fable-review S220+S221 (VERPLICHT) + antwoord-testronde met de goud-set draaien
 (`python -m scripts.ai.antwoord_testronde --goud N --tenant-id <uuid> --out ...` op prod).
 Daarna S221b (Opus) voor het restant hierboven. KvK-backfill zodra de sleutel er is (~22 juli).
-
-## Sessie 220 (15 juli 2026 avond, Opus — bouwsprint demolijst, Blok 1/2/3.1/5-fasebalk LIVE)
-
-### Samenvatting
-Uitvoersprint op het S219-onderzoek. Per blok: bouwen → tests → deploy via SSH →
-prod-verificatie. 9 commits, backend+frontend meermaals gedeployd, 1 prod-DB-mutatie
-(stap-teksten) met dry-run + GO Arsalan + natelling. Elk stuk apart getest.
-
-**Blok 1 — verzendpad-fundament (hoofdvondst N1), LIVE + BEWEZEN op prod.** De
-primaire verstuurknop (`/compose/send`) ging via het persoonlijke account van de
-klikker en legde niets vast. Nu: kantoor-afzender-vangrail (incasso@, patroon B13) +
-vastlegging via gedeelde `write_outbound_log` (EmailLog + SyncedEmail + CaseActivity);
-`send_with_attachment` gebruikt dezelfde functie; documents-send kreeg de ontbrekende
-`send_as_tenant_account=True`. **Testmail op prod (naar Arsalans gmail, GO): from =
-incasso@, EmailLog+SyncedEmail+activiteit aangemaakt — bewezen.** Plus: BCC door de
-hele keten (schema/providers/.eml/dialog) + CC-verlies-fix; brieftype-afleiding uit de
-stap op de AI-concept-route (punt 1/25 — renteoverzicht gaat nu mee, geen factuur);
-bijlage-preview-endpoint + "Gaat automatisch mee"-weergave (punt 2); 'sommatie' aan de
-rente-set (punt 3); gedeelde onderwerp-bouwer op alle server-routes (punt 5).
-
-**Blok 2 — stap-teksten & sjablonen, LIVE.** De 6 DB stap-mailteksten opgeschoond
-(script `scripts/sanitize_step_templates.py`, idempotent, dry-run+GO): oud adres
-IJsbaanpad 9 / 1076 CV → Willem Fenengastraat 16E / 1096 BN, kesting@ → incasso@ (beide
-kolommen; HTML gebruikte `&nbsp;` → tweede ronde nodig, natelling daarna schoon), aanhef
-ingevuld bij de 3 met een losse komma. **Vanaf nu dragen alle AI-concepten het juiste
-adres.** Code-sjablonen: aanhef overal "Geachte heer, mevrouw," (keuze Arsalan), BV-naam
-uit de aanhef, klant-kenmerk niet meer naar de debiteur (DF138-05), html_renderer-aanhef.
-
-**Blok 3.1 — zombie-opruiming, LIVE.** `move_case_to_step` sluit nu openstaande PENDING
-follow-up-adviezen automatisch (nieuwe status SUPERSEDED) → geen dubbel-verstuur-risico
-en de scanner is weer vrij (punt 13). Het uitvoerende advies is op dat moment APPROVED,
-dus onaangeroerd.
-
-**Blok 5 — fasebalk (punt 14), LIVE.** De 5-vinkjes-balk (vinkte alle categorieën links
-af) vervangen door: stapnaam + categoriekleur + "X dagen in deze stap" (step_entered_at
-nu in de case-respons) + volgende stap.
-
-**Blok 4.5 — timeout Eerste→Tweede 7→4 (punt 15), GEDAAN op prod.** step_transitions
-id 44c31bf7… condition `{"days": 4}` (GO Arsalan; stap-wachttijd + workflow = 4).
-Data-only, geen deploy. **Beslissingen S221 (Arsalan):** backfills NIET zelf uitvoeren
-→ Fable zoekt eerst uit wat de items zijn; auto-concept AAN voor Verweer + Algemene/overig
-maar PAS ná de begrip-eerst-antwoord-route (nut hangt af van antwoordkwaliteit).
-
-### Gewijzigde bestanden
-Backend: `email/{compose_router,send_service,subject,providers/*}.py`, `documents/{router,
-schemas,docx_service}.py`, `incasso/{service,html_renderer}.py`, `ai_agent/{followup_service,
-followup_models}.py`, `collections/compliance.py`, `cases/schemas.py`,
-`scripts/sanitize_step_templates.py` (nieuw). Frontend: `email-compose-dialog.tsx`,
-`zaken/[id]/{page,components/DossierHeader,components/DocumentenTab}.tsx`,
-`correspondentie/page.tsx`, `hooks/{use-documents,use-cases}.ts`. Tests: 5 bestanden
-(rente_bijlage_verzendpaden uitgebreid, email_subject, supersede_recommendations nieuw).
-
-### Bekende issues / bewust niet gedaan (→ S221)
-- Blok 3.2 (dedupe: bestaand concept tonen i.p.v. tweede maken — `ai_drafts` mist stap-
-  koppeling), 3.3 (backfills: 3 verouderde adviezen + 470 pending classificaties + 14
-  intake-ruis + 8 verouderde concepten — GO nodig), 3.4 (skipped-taken weergave + herstel).
-- Blok 4 (AI-keten): classificatie direct na sync; auto-concept-categorieën (BESLISSING
-  Arsalan); antwoord-route begrip-eerst + testronde-script; timeout Eerste→Tweede 7→4 (GO);
-  review-scherm. AI-concept-HTML-tabellen (punt 11) hoort hier.
-- Blok 5-UX-rest: zaaknummer klikbaar in maillijst, tijdlijn-mailregel klikbaar,
-  S218-restanten (menu Intake weg, Bankimport→Betalingen, ratio-label, agenda lege staat,
-  soft-delete-banner, follow-up dossierlink/dagen/sort).
-- Blok 6: beslismemo b2b/b2c (105 dossiers uit BaseNet-XML) — geen code.
-- Deferred prod-mutaties: Courier→Calibri (DOCX-reseed), verzoekschrift-bijlage vervangen
-  door de juiste PDF uit de projectmap. Beide sjabloon-herzaaiingen (S210-flow).
-- MAILSLOT OPEN — geen echte debiteuren mailen; testdossier 2026-00006 = Arsalans gmail.

@@ -146,13 +146,46 @@ async def test_renteoverzicht_mag_als_pdf_gerenderd_worden():
 async def test_render_pdf_weigert_onbekend_sjabloon(
     client, db: AsyncSession, test_tenant: Tenant, test_user: User
 ):
-    """De render-route blijft dicht voor alles buiten de vaste lijst."""
+    """Een verzonnen sjabloontype blijft geweigerd (registry kent hem niet)."""
     case = await _sommatie_case(db, test_tenant.id, test_user.id)
     token = create_access_token(str(test_user.id), str(test_tenant.id))
 
     resp = await client.post(
         f"/api/documents/docx/cases/{case.id}/render-pdf",
         headers={"Authorization": f"Bearer {token}"},
-        json={"template_type": "sommatie_drukte"},
+        json={"template_type": "bestaat_niet_9x"},
     )
-    assert resp.status_code == 400
+    assert resp.status_code in (400, 404)
+
+
+@pytest.mark.asyncio
+async def test_stap_brieven_zijn_renderbaar_voor_de_voorvertoning(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S231-review-vondst: de opvolg-voorvertoning wijst óók stap-brieven aan
+    (dagvaarding e.d.) als klikbare bijlage. De render-route mag die dus niet
+    weigeren — dat was precies de fout (eigen whitelist strenger dan de
+    verzendroute). Renderers gemockt: we toetsen de poort, niet de PDF."""
+    from unittest.mock import AsyncMock, patch
+
+    from app.documents.docx_service import TEMPLATE_FILES
+
+    case = await _sommatie_case(db, test_tenant.id, test_user.id)
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+
+    with (
+        patch("app.documents.router.render_docx", new_callable=AsyncMock) as m_docx,
+        patch("app.documents.router.docx_to_pdf", new_callable=AsyncMock) as m_pdf,
+    ):
+        m_docx.return_value = (b"docx", "brief.docx", "x", None)
+        m_pdf.return_value = b"%PDF-x"
+        for template_type in TEMPLATE_FILES:
+            resp = await client.post(
+                f"/api/documents/docx/cases/{case.id}/render-pdf",
+                headers={"Authorization": f"Bearer {token}"},
+                json={"template_type": template_type},
+            )
+            assert resp.status_code == 200, (
+                f"stap-sjabloon '{template_type}' geweigerd door de render-route — "
+                "de voorvertoning toont hem wél als klikbare bijlage"
+            )

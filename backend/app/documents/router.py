@@ -280,10 +280,13 @@ async def render_template_as_pdf(
     """
     import base64
 
-    if data.template_type not in RENDERABLE_PDF_KEYS:
-        raise BadRequestError(
-            f"Template '{data.template_type}' kan niet als PDF gerenderd worden."
-        )
+    # S231-review: géén eigen whitelist meer. De opvolg-voorvertoning wijst ook
+    # stap-brieven aan (dagvaarding e.d.) en een eigen lijstje hier liep meteen
+    # uit de pas — klik gaf "kan niet gerenderd worden" terwijl de verzendroute
+    # hetzelfde sjabloon wél rendert. render_docx is de ene registry (beheerd
+    # sjabloon → schijfbestand) en weigert onbekende types zelf met een 404;
+    # /docx/cases/{id}/generate staat diezelfde types al toe, dus dit opent niets
+    # nieuws. RENDERABLE_PDF_KEYS blijft bestaan voor de compose-wachtertest.
 
     result = await db.execute(
         select(Case).where(

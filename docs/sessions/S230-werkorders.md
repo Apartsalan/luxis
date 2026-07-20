@@ -93,20 +93,36 @@ de opdrachtgevers zijn btw-plichtig, dus er is ook geen btw-opslag die het gat
 dicht. Herkomst: alle 27 zijn op **3 juli 2026** in één keer geïmporteerd uit
 BaseNet.
 
-**Nieuw t.o.v. S229 — en dit verandert de beslissing:** S229 noemde de 27
-"actieve" zaken. Vers gemeten staan er **26 van de 27 in Luxis als `afgesloten`**
-(archiefstand waarin vrijwel de hele BaseNet-import binnenkwam: 581 van de 626
-dossiers). Er loopt er één echt: **IN100345** (`nieuw`), met € 5,15 te veel.
-Er wordt vandaag dus niemand een cent te veel gevraagd. Het punt blijft wél
-echt: zodra deze dossiers in Luxis tot leven komen, staan de foute bedragen
-klaar in elk overzicht, elke brief en elk AI-antwoord dat het totaal noemt.
+**Nieuw t.o.v. S229 — en de nuance die het weer terugdraait.** S229 noemde de 27
+"actieve" zaken; vers gemeten staan er **26 van de 27 in Luxis als `afgesloten`**.
+Dat leek eerst reden tot terughoudendheid (archiefbedragen wijzigen = afwijken
+van wat BaseNet destijds in rekening bracht). Op de vraag van Arsalan — *zijn dit
+afgehandelde zaken of moeten ze nog open?* — is doorgemeten, en het antwoord is
+duidelijk: **het is een etiket uit de import, geen werkelijkheid.**
 
-**Daarom niet uitgevoerd, maar voorgelegd:** het leegzetten van 26 archiefzaken
-verandert wat Luxis toont ten opzichte van wat er destijds in BaseNet
-daadwerkelijk in rekening is gebracht. Dat is een keuze voor Arsalan/Lisanne,
-geen technische. De lijst met dossiernummer, debiteur, opdrachtgever en bedragen
-is klaargezet (buiten de repo gehouden — persoonsgegevens). De oude waarden zijn
-apart bewaard, zodat elke correctie terugdraaibaar is.
+| | |
+|---|---|
+| Status in BaseNet bij de import | 21× Lopend · 3× Wacht · 2× Gereed · 1× Geannuleerd |
+| Volledig betaald | **0 van de 27** |
+| Nog geen cent ontvangen | **25 van de 27** |
+| Nog openstaande hoofdsom samen | **€ 172.692,60** |
+| Laatste mailverkeer | 16 van de 27 nog in 2026, laatste 18-06-2026 |
+
+De import zette vrijwel de hele BaseNet-inhoud op `afgesloten` (581 van 626)
+omdat Luxis de dagelijkse gang nog niet overneemt. Dit zijn dus **lopende
+incassodossiers met openstaande schuld**, niet afgewikkelde historie. Daarmee
+vervalt het bezwaar: er is nog niets betaald, dus er is ook geen afgerond
+bedrag dat een correctie zou "vervalsen".
+
+**Advies na die meting: alle 27 rechtzetten** (`bik_override` → NULL, systeem
+rekent dan zelf de staffel), onder het enige voorbehoud dat er vanaf het begin
+lag en dat alleen Lisanne kan wegnemen: **is elke debiteur particulier, of zit
+er een eenmanszaak tussen?** De administratie geeft geen enkele aanwijzing voor
+ondernemerschap (0 KvK, 0 btw-nummer, 0 bedrijfskoppeling), maar dat sluit een
+eenmanszaak niet uit. Niet uitgevoerd deze sessie — wacht op dat oordeel. De
+lijst met dossiernummer, debiteur, opdrachtgever en bedragen is klaargezet
+(bewust buiten de repo — persoonsgegevens). De oude waarden zijn apart bewaard,
+zodat elke correctie per dossier terugdraaibaar is.
 
 **Wél gebouwd — de wachter voor de SOORT:** er stonden al twee wachters op dit
 punt (`cases/service.py` AUDIT-23 op de wijzig-route, en de verzendcontrole in
@@ -148,7 +164,37 @@ juridisch gevoelige mail (AVG-verzoek, inhoudelijke betwisting) schrijft het
 model soms een korte redenering in proza in plaats van het voorgeschreven
 JSON-antwoord. Dat is een echte observatie voor de volgende ronde, geen storing.
 
-**Nog te doen:** (c) de verse ronde afmaken en scoren, dan (d) de menselijke
+**Gedaan (c) — verse ronde, mét voorbehoud.** Eerste poging draaide onbedoeld op
+de óude corrector: `scripts/` zit in het backend-image, dus een `docker cp` van
+het bijgewerkte script wordt bij de eerstvolgende container-hercreatie
+teruggedraaid. Afgebroken en overgedaan in een losse `docker compose run`-
+container met `/opt/luxis/scripts` als mount — die overleeft een deploy én leest
+altijd de versie uit git. (Leerpunt voor volgende keer; hoort in de deploy-regels.)
+
+**Uitkomst van de geldige ronde — 29 beoordeelde antwoorden, 29 groen:**
+alle vijf de controles (beantwoordt de vraag / feiten kloppen / geen toezegging /
+escaleert waar nodig / toon passend) staan op `true` bij alle 29, en **0 zware
+fouten**. Ter vergelijking: met de miskalibreerde corrector scoorden vier rondes
+in S222 83% → 89% → 94% → 89%. De gecorrigeerde weigering-rubriek werd één keer
+geraakt en telt nu terecht niet als storing.
+
+**Voorbehoud, hard:** de ronde is **niet af**. Na 30 van de 55 gevallen viel de
+Anthropic-sleutel stil met *"credit balance is too low"* — 24 gevallen zijn
+daardoor nooit gedraaid. Wat wél gedraaid is: de complete zelfgeschreven
+proefset (18) plus 12 goud-gevallen (echte dossiers). De zwaarste categorie —
+goud — is dus maar deels gemeten. De 29/29 is echt, maar op een kleinere en
+gemiddeld makkelijkere set dan bedoeld. De ronde moet over zodra er weer
+tegoed is.
+
+**Nieuw en urgent (buiten de opdracht gevonden):** diezelfde sleutel is de
+productiesleutel. Live nagetrokken met één minimale aanroep vanuit de
+prod-container: **de AI-functies van Luxis liggen op dit moment stil** — geen
+classificatie van inkomende mail, geen intake-detectie, geen conceptgeneratie.
+De dagelijkse taken draaien wél (heartbeat groen) maar kunnen niets afhandelen;
+er staan 96 nog niet aan een dossier gekoppelde mails te wachten. Dit vraagt een
+handeling van Arsalan (tegoed bijkopen), niet van de code.
+
+**Nog te doen:** ronde overdoen op volledige set, dan (d) de menselijke
 steekproef door Lisanne (~10 concepten) — pas daarna kan de poort aan.
 De poort staat op dit moment nog uit (`pipeline_auto_drafts_enabled = false`).
 
@@ -156,8 +202,10 @@ De poort staat op dit moment nog uit (`pipeline_auto_drafts_enabled = false`).
 
 ## Wat er níet is gedaan
 
-- **De 27 correcties zelf** — wacht op het oordeel van Arsalan/Lisanne over de
-  archiefzaken (zie V1).
+- **De 27 correcties zelf** — wacht op één oordeel van Lisanne: particulier of
+  eenmanszaak (zie V1). De rest van de onderbouwing is rond.
+- **AI-tegoed bijvullen** — kan alleen Arsalan; de AI-functies liggen tot die
+  tijd stil (zie V3).
 - **Onverwerkt uit S228/S227:** fysieke-telefoon-check, opmaak-restpunt S227,
   S221b-UX-rest, DMARC, testdata 2026-00007 t/m -00019 opruimen.
 - **KvK:** conform instructie niet naar gevraagd en niet gecheckt.

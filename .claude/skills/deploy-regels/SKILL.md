@@ -85,6 +85,18 @@ ssh -i ~/.ssh/luxis_deploy root@46.225.115.216 "cd /opt/luxis && docker compose 
 - Na deploy altijd vermelden: welke service(s), of er migraties gedraaid zijn
 
 ## Valkuilen
+- **`docker cp` naar `luxis-backend` overleeft geen deploy (S230).** `scripts/` zit
+  in het image; een gekopieerd bestand leeft alleen in de writable layer en is weg
+  zodra de container hercreëerd wordt — de volgende run draait dan stil op de óude
+  versie. Een langlopend script hoort in een eigen container die niet meebeweegt:
+  ```bash
+  docker compose run -d --rm --no-deps \
+    -v /opt/luxis/scripts:/app/scripts:ro -v /tmp/uit:/out \
+    backend python -u -m scripts.ai.<script> --out /out/rapport.md
+  ```
+  Die leest altijd de versie uit git (na `git pull`) en blijft draaien tijdens een
+  deploy. Verifieer vóór de start dat de juiste versie in de container zit
+  (`grep` op een herkenbare regel), niet ná afloop.
 - **Alembic: `run` niet `exec`** als backend crashed
 - **POSTGRES_PASSWORD:** werkt alleen bij eerste volume-init. Later wijzigen via `ALTER USER`
 - **Na ELKE commit ALTIJD `git push origin main`** — anders bereikt het de VPS niet

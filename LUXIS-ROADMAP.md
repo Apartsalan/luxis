@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 20 juli 2026 (S232 — sjabloon-verzending schuift dossier door + 3 demo-fixes, LIVE). De sjabloon-verzendknop schuift het dossier nu na verzending door naar de volgende stap (voorheen alleen de AI-conceptroute) via een gedeelde helper + brief-families + dubbel-doorschuif-guard + wachter over de hele route-matrix. Plus: extra witregel na "Geachte" teruggedraaid (overal), bijlagen-aantal-limiet vervangen door totale-groottegrens (25 MB), dossierfilters onthouden. Prod-data: gebruikersnaam Lisanne → kesting@kestinglegal.nl; IN100605 naar Tweede sommatie. Rapport: entry S232 in `SESSION-NOTES.md`. **Volgende = S233: mail-werkplek (AI-antwoord als zijpaneel + uitklapbare mailgeschiedenis + AI luistert naar "facturen erbij"). Daarna S234 incassostappen herzien, S235 flexibele betalingsregeling.**
+**Laatst bijgewerkt:** 21 juli 2026 (S233 — AI-antwoord als zijpaneel + mailgeschiedenis + "facturen erbij", LIVE). Het AI-antwoord-/reviewvenster is nu een rechts-verankerd, niet-modaal zijpaneel: de mails links blijven leesbaar én aanklikbaar tijdens het schrijven; onderin het paneel de mail waarop je antwoordt (uitklapbaar) + de eerdere mailtjes van de draad. Op de Mail-pagina opent het concept IN-PLACE i.p.v. weg te navigeren. Plus: vraagt de behandelaar "doe de facturen erbij", dan opent het concept met de factuur-PDF's al aangevinkt (kruispunt-guard: alleen de antwoordroute, batch/stap nooit). Rapport: entry S233 in `SESSION-NOTES.md`. **Volgende = S234: incassostappen kritisch herzien (situatie-stappen + brief-koppeling derde/laatste sommatie + batch/follow-up-doorschuif gelijktrekken). Daarna S235 flexibele betalingsregeling.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,27 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 20 juli 2026, S230/S231)
+## 🎯 Huidige prioriteit (bijgewerkt 21 juli 2026, S233)
+
+> ✅ **S233 AFGEROND — AI-ANTWOORD-ZIJPANEEL + MAILGESCHIEDENIS + "FACTUREN ERBIJ".**
+> Het compose-/reviewvenster is een rechts-verankerd, niet-modaal zijpaneel (nieuwe
+> `ui/sheet.tsx`): links blijven de mails leesbaar én aanklikbaar. Onderin het paneel
+> de mail waarop je antwoordt (uitklapbaar) + de eerdere mailtjes van de draad
+> (`mail-thread-panel.tsx`). Op de Mail-pagina opent het concept IN-PLACE i.p.v. naar
+> de dossierpagina te navigeren. Taak 2: `ai_drafts.attach_invoices` (migratie s233) —
+> vraagt de behandelaar "doe de facturen erbij", dan opent het concept met de
+> factuur-PDF's al aangevinkt; kruispunt-guard zorgt dat de auto-conceptbatch nooit
+> vlagt. Live gedeployd (SSH, `--force-recreate`), migratie op prod, 45 tests groen,
+> zijpaneel + non-modaal live bewezen. Detail: SESSION-NOTES entry S233.
+>
+> 🎯 **VOLGENDE (S234):** incassostappen kritisch herzien — situatie-stappen i.p.v. een
+> platte lijst; een brief koppelen aan derde/laatste sommatie (dan schuiven die ook
+> door na verzending); batch- en follow-up-route op dezelfde "volgende stap"-logica als
+> compose/send + AI-route trekken. Daarna: BaseNet-delisting melden, derde AI-testronde
+> + Lisanne-steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check,
+> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. KvK: niet naar vragen.
+
+## 🎯 Vorige prioriteit (20 juli 2026, S230/S231)
 
 > ✅ **S230/S231 AFGEROND — WERKORDERS V1-V4 + DRIE LIVE STORINGEN.**
 > **V1:** 27 consumentendossiers droegen samen € 9.794,65 te veel incassokosten
@@ -81,7 +101,7 @@
 > DMARC, testdata 2026-00007 t/m -00019 opruimen. KvK: niet naar vragen.
 
 
-## 🎯 Vorige prioriteit (18 juli 2026, S229)
+## 🎯 Eerdere prioriteit (18 juli 2026, S229)
 
 > ✅ **S229 AFGEROND — GROTE EINDKEURING (Fable, read-only).** Vier sporen door heel
 > Luxis, alles alleen-lezen op prod: verzendroutes × huisregels (GROEN), financiële

@@ -2,10 +2,89 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 20 juli 2026 (S232 — sjabloon-verzending schuift dossier door + 3 demo-fixes, LIVE).
-**Laatste feature/fix:** De sjabloon-verzendknop schuift het dossier nu na verzending door naar de volgende stap (voorheen alleen de AI-conceptroute) — gedeelde helper, brief-families, dubbel-doorschuif-guard, wachter over de hele route-matrix. Plus: extra witregel na "Geachte" teruggedraaid (overal), bijlagen-aantal-limiet vervangen door totale-groottegrens (25 MB), dossierfilters onthouden. Gebruikersnaam Lisanne → kesting@kestinglegal.nl; IN100605 naar Tweede sommatie. Detail: entry S232.
-**Openstaand (-> S233 e.v.):** S233 = mail-werkplek (AI-antwoord als zijpaneel + uitklapbare mailgeschiedenis, AI luistert naar "facturen erbij"). S234 = incassostappen kritisch herzien (situatie-stappen i.p.v. platte lijst; derde/laatste sommatie hebben nog géén brief-koppeling → schuiven daarom nog niet door). S235 = betalingsregeling herkennen uit mail + flexibel termijnschema. Losse punten: BaseNet-delisting melden, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. Outlook-route weghalen (Arsalan: later).
-**Volgende sessie:** S233 — mail-werkplek (zijpaneel + mailgeschiedenis + AI-bijlage-instructie).
+**Laatst bijgewerkt:** 21 juli 2026 (S233 — AI-antwoord als zijpaneel + mailgeschiedenis + "facturen erbij", LIVE).
+**Laatste feature/fix:** Het AI-antwoord-/reviewvenster is nu een rechts-verankerd, NIET-modaal zijpaneel: de mails links blijven leesbaar én aanklikbaar tijdens het schrijven. Onderin het paneel de mail waarop je antwoordt (uitklapbaar) + de eerdere mailtjes van dezelfde draad. Op de Mail-pagina opent het concept IN-PLACE i.p.v. naar de dossierpagina te navigeren (waardoor je de mail kwijtraakte). Plus: vraagt de behandelaar "doe de facturen erbij", dan opent het concept met de factuur-PDF's al aangevinkt (kruispunt-guard: alleen de antwoordroute, batch/stap nooit). Detail: entry S233.
+**Openstaand (-> S234 e.v.):** S234 = incassostappen kritisch herzien (situatie-stappen i.p.v. platte lijst; derde/laatste sommatie hebben nog géén brief-koppeling → schuiven daarom nog niet door; batch/follow-up op dezelfde "volgende stap"-logica trekken). S235 = betalingsregeling herkennen uit mail + flexibel termijnschema. Losse punten: BaseNet-delisting melden, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. Outlook-route weghalen (Arsalan: later).
+**Volgende sessie:** S234 — incassostappen kritisch herzien (situatie-stappen + brief-koppeling derde/laatste sommatie + batch/follow-up-doorschuif gelijktrekken).
+
+## Sessie 233 (21 juli 2026, Opus-bouw → Fable-review — AI-antwoord-zijpaneel + mailgeschiedenis + "facturen erbij", LIVE)
+
+### Samenvatting
+Autonome nachtsessie (Arsalan sliep, opdracht: "doe je ding, sluit af als vol").
+Startpunt PROMPT-S233. Alles hieronder is live, getest en op prod nageteld.
+
+**Taak 1 — AI-antwoord/compose is nu een zijpaneel (LIVE + live bewezen).** Het
+compose-/reviewvenster was een gecentreerde bijna-schermvullende dialoog; bij een
+AI-antwoord op de Mail-pagina werd je bovendien naar de dóssierpagina genavigeerd
+(`router.push(?draft=)`) → de mail waarop je antwoordde was weg. Nu:
+- Nieuwe `components/ui/sheet.tsx` — rechts-verankerd, NIET-modaal (geen
+  verduisterende overlay, geen buiten-klik-sluiten) → links blijven de mails
+  leesbaar én aanklikbaar tijdens het schrijven. `email-compose-dialog` rendert
+  hierin (geldt meteen op alle drie de plekken: Mail-pagina, dossier-Correspondentie,
+  documenten-tab). **Live bewezen op prod:** compose opent als rechterpaneel; een mail
+  links aanklikken terwijl het paneel open staat opent diens detail en het paneel
+  blijft staan.
+- Nieuwe `components/mail-thread-panel.tsx` — onderin het paneel de mail waarop je
+  antwoordt (uitklapbaar, standaard open) + de eerdere mailtjes van dezelfde draad
+  (`provider_thread_id`), lazy per mail. Vergde `provider_thread_id` op de
+  case-emails-summary (`sync_router`), anders bleef de draad-filter altijd leeg.
+- Mail-pagina opent het concept nu IN-PLACE (`openAiDraft` → zijpaneel met de
+  bronmail), verzendt via `compose/send` (`already_branded`, `skip_pipeline_advance`)
+  + `advance-after-send` (markeert concept verzonden, sluit reviewtaak). Een antwoord
+  schuift de pijplijn NOOIT door (P1 — advance-after-send weet dat via reply-intent).
+  Dossierpagina + Correspondentie-tab geven de bronmail nu door aan `openDraftDialog`.
+
+**Taak 2 — AI luistert naar "doe de facturen erbij" (LIVE).** Nieuwe kolom
+`ai_drafts.attach_invoices` (migratie s233, additief, default false). De reply-prompt
+laat de AI dit signaal zetten als de behandelaar-instructie erom vraagt; parsing zet
+`draft.attach_invoices`. Nieuw endpoint `GET /email/compose/cases/{id}/invoice-files`
+(factuur-CaseFiles route-onafhankelijk). Het concept opent dan met die PDF's al
+aangevinkt (echte bijlagen; gebruiker kan weghalen). **Kruispunt-guard:** de vlag zit
+op `intent == REPLY_TO_EMAIL`, niet op de AI → de dagelijkse auto-conceptbatch
+(next_step, geen instructie) vlagt NOOIT facturen, ook niet als het model het per
+ongeluk teruggeeft. Wachter-test dekt precies dit.
+
+### Gewijzigde bestanden
+Backend: `ai_agent/models.py` (attach_invoices), `unified_draft_service.py`
+(prompt + parsing), `router.py` + `schemas.py` (response), `email/compose_router.py`
+(invoice-files endpoint), `email/sync_router.py` (provider_thread_id op summary),
+`alembic/versions/s233_ai_draft_attach_invoices.py`. Tests:
+`test_unified_draft_service.py` (+4: reply zet/next_step nooit + prompt-wachter),
+`test_invoice_files_endpoint.py` (nieuw). Frontend: `components/ui/sheet.tsx` (nieuw),
+`components/mail-thread-panel.tsx` (nieuw), `email-compose-dialog.tsx` (Sheet +
+geschiedenis + factuur-voorselectie), `correspondentie/page.tsx` (in-place),
+`zaken/[id]/page.tsx` + `CorrespondentieTab.tsx` (bronmail doorgeven),
+`hooks/use-email-sync.ts` (provider_thread_id-type). 1 commit (`d8da982`),
+backend+frontend gedeployd via SSH met `--force-recreate`, migratie op prod gedraaid
+(s230b → s233, kolom geverifieerd default false).
+
+### Verificatie
+- Backend: 45 tests groen (unified_draft_service 36 incl. 4 nieuwe wachters; drift-guard,
+  email-sync, compose-attachments, invoice-files 9). Ruff schoon. Frontend tsc schoon.
+- Migratie op prod toegepast; `attach_invoices boolean default false` bevestigd; alembic
+  head = s233; alle 5 containers healthy.
+- **Live op prod (Chrome-extensie):** compose = rechterpaneel, mails links zichtbaar;
+  mail links aanklikken tijdens open paneel opent detail, paneel blijft → non-modaal
+  bewezen. Ingelogd als Lisanne met kesting@kestinglegal.nl (S232-wijziging leeft).
+
+### Bekende issues / bewust niet gedaan
+- **AI-generatie → in-place paneel + draad + factuur-voorselectie NIET met browser
+  doorgeklikt** — het aanklikken van een specifieke inbound-mail haperde door
+  renderer-freezes in de automation, en een verse generatie kost een AI-call (bewust
+  vermeden i.v.m. kostenpunt). De onderliggende logica is tsc-schoon + backend-getest;
+  het riskantste stuk (zijpaneel-layout + non-modaal) is wél live bewezen. Arsalan kan
+  dit met één klik op zijn telefoon natrekken op een inbound-mail van 2026-00006.
+- **Playwright-MCP-profiel zat vast** (extern lock) → verificatie via de Chrome-extensie
+  gedaan i.p.v. Playwright.
+- "Open in Outlook" op een AI-concept op de Mail-pagina verzendt direct (onSend=sendAiDraft)
+  i.p.v. een .eml te maken — randgeval, primaire knop is Versturen; niet gebruikt in de
+  beschreven flow.
+
+### Volgende sessie
+S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; een brief
+koppelen aan derde/laatste sommatie (dan schuiven die ook door); batch- en follow-up-route
+op dezelfde "volgende stap"-logica als compose/send + AI-route trekken. Zie
+`docs/sessions/PROMPT-S234.md`.
 
 ## Sessie 232 (20 juli 2026, Opus-bouw — sjabloon-doorschuiven + 3 demo-fixes, LIVE)
 

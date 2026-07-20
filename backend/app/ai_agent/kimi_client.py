@@ -24,6 +24,7 @@ AI-TECH-03: Tool_use forced as structured output → guarantees valid JSON.
 
 import json
 import logging
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 import anthropic
@@ -35,9 +36,77 @@ logger = logging.getLogger(__name__)
 CLAUDE_SONNET_MODEL = "claude-sonnet-4-6"
 CLAUDE_HAIKU_MODEL = "claude-haiku-4-5"
 
-# Kosten per 1M tokens (Sonnet 4.5) — voor cost-logging per draft
-SONNET_INPUT_PRICE_PER_M = 3.0
-SONNET_OUTPUT_PRICE_PER_M = 15.0
+# Kosten per 1M tokens (USD) — bron: officiële Anthropic-prijstabel, 20-7-2026.
+# Cache-lezen kost ~0,1× de inputprijs, cache-schrijven ~1,25× (5-min TTL).
+# Decimal, geen float — huisregel financiële precisie (CLAUDE.md).
+MODEL_PRICES_PER_M = {
+    CLAUDE_SONNET_MODEL: (Decimal("3.00"), Decimal("15.00")),
+    CLAUDE_HAIKU_MODEL: (Decimal("1.00"), Decimal("5.00")),
+}
+CACHE_READ_FACTOR = Decimal("0.1")
+CACHE_WRITE_FACTOR = Decimal("1.25")
+_SIX_PLACES = Decimal("0.000001")
+
+
+def estimate_cost_usd(
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+    cache_read_tokens: int = 0,
+    cache_write_tokens: int = 0,
+) -> Decimal | None:
+    """Geschatte kosten van één aanroep; None als het model onbekend is."""
+    prices = MODEL_PRICES_PER_M.get(model)
+    if prices is None:
+        return None
+    in_price, out_price = prices
+    kosten = (
+        input_tokens * in_price
+        + cache_read_tokens * in_price * CACHE_READ_FACTOR
+        + cache_write_tokens * in_price * CACHE_WRITE_FACTOR
+        + output_tokens * out_price
+    ) / 1_000_000
+    return kosten.quantize(_SIX_PLACES, rounding=ROUND_HALF_UP)
+
+
+async def _record_usage(purpose: str, model: str, response: Any) -> None:
+    """Schrijf één verbruiksregel naar ai_usage (S230, kostenvraag).
+
+    Eigen sessie, fouten gedempt: meten mag een AI-aanroep nooit laten falen.
+    Zelfde patroon als de scheduler-heartbeat (workflow/scheduler.py).
+    """
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return
+    in_tok = getattr(usage, "input_tokens", 0) or 0
+    out_tok = getattr(usage, "output_tokens", 0) or 0
+    cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
+    cache_write = getattr(usage, "cache_creation_input_tokens", 0) or 0
+    cost = estimate_cost_usd(model, in_tok, out_tok, cache_read, cache_write)
+    logger.info(
+        "AI usage: %s model=%s in=%d out=%d cache_r=%d cache_w=%d cost=$%s",
+        purpose, model, in_tok, out_tok, cache_read, cache_write,
+        f"{cost:.4f}" if cost is not None else "?",
+    )
+    try:
+        from app.ai_agent.models import AIUsage
+        from app.database import async_session
+
+        async with async_session() as session:
+            session.add(
+                AIUsage(
+                    purpose=purpose[:50],
+                    model=model[:50],
+                    input_tokens=in_tok,
+                    output_tokens=out_tok,
+                    cache_read_tokens=cache_read,
+                    cache_write_tokens=cache_write,
+                    cost_usd=cost,
+                )
+            )
+            await session.commit()
+    except Exception:
+        logger.exception("AI usage: registratie mislukt voor %s", purpose)
 
 # ── JSON schemas for structured output (tool_use) ────────────────────────────
 
@@ -205,6 +274,7 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
             ],
             tool_choice={"type": "tool", "name": tool_name},
         )
+        await _record_usage(tool_name, model_name, response)
         # With forced tool_choice, the response is guaranteed to be a tool_use block
         for block in response.content:
             if block.type == "tool_use":
@@ -225,6 +295,7 @@ async def _call_haiku(system_prompt: str, user_message: str) -> dict:
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     )
+    await _record_usage("compose_text", CLAUDE_SONNET_MODEL, response)
     raw_text = response.content[0].text.strip()
     return _parse_json(raw_text)
 
@@ -258,7 +329,7 @@ async def _call_sonnet(system_prompt: str, user_message: str) -> dict:
             ],
             tool_choice={"type": "tool", "name": tool_name},
         )
-        _log_sonnet_cost(response, "Sonnet draft")
+        await _record_usage(tool_name, CLAUDE_SONNET_MODEL, response)
         for block in response.content:
             if block.type == "tool_use":
                 return block.input  # type: ignore[return-value]
@@ -271,26 +342,9 @@ async def _call_sonnet(system_prompt: str, user_message: str) -> dict:
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     )
-    _log_sonnet_cost(response, "Sonnet text-fallback")
+    await _record_usage("sonnet_text", CLAUDE_SONNET_MODEL, response)
     raw_text = response.content[0].text.strip()
     return _parse_json(raw_text)
-
-
-def _log_sonnet_cost(response: Any, label: str) -> None:
-    """Log Sonnet token-usage en geschatte kosten per call."""
-    usage = getattr(response, "usage", None)
-    if not usage:
-        return
-    in_tokens = getattr(usage, "input_tokens", 0)
-    out_tokens = getattr(usage, "output_tokens", 0)
-    cost_usd = (
-        in_tokens * SONNET_INPUT_PRICE_PER_M / 1_000_000
-        + out_tokens * SONNET_OUTPUT_PRICE_PER_M / 1_000_000
-    )
-    logger.info(
-        "%s: tokens in=%d out=%d cost=$%.4f",
-        label, in_tokens, out_tokens, cost_usd,
-    )
 
 
 def _parse_json(raw_text: str) -> dict:
@@ -379,6 +433,7 @@ async def call_claude_with_pdf(
             ],
             tool_choice={"type": "tool", "name": tool_name},
         )
+        await _record_usage(f"pdf_{tool_name}", model, response)
         for block in response.content:
             if block.type == "tool_use":
                 return block.input  # type: ignore[return-value]
@@ -390,6 +445,7 @@ async def call_claude_with_pdf(
         system=system_prompt,
         messages=messages,
     )
+    await _record_usage("pdf_text", model, response)
     raw_text = response.content[0].text.strip()
     return _parse_json(raw_text)
 

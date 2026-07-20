@@ -20,7 +20,34 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.database import Base
 from app.shared.models import TenantBase
+
+
+class AIUsage(Base):
+    """Verbruiksregel per AI-aanroep (S230 — kostenvraag Arsalan).
+
+    Er ging tegoed doorheen zonder dat iemand kon zien waaraan: token_count op
+    ai_drafts bleef leeg en classificatie/intake registreerden niets. Elke
+    aanroep in kimi_client schrijft nu één regel: doel, model, tokens en de
+    geschatte kosten. Globaal (geen tenant_id) — net als scheduler_heartbeat;
+    het verbruik is per installatie, de sleutel is er ook maar één.
+    """
+
+    __tablename__ = "ai_usage"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    called_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+    purpose: Mapped[str] = mapped_column(String(50), nullable=False)
+    model: Mapped[str] = mapped_column(String(50), nullable=False)
+    input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cache_read_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    cache_write_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # NULL = model niet in de prijstabel (tokens dan alsnog geregistreerd)
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(10, 6), nullable=True)
 
 
 class ClassificationCategory(StrEnum):

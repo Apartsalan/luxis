@@ -178,7 +178,26 @@ fouten**. Ter vergelijking: met de miskalibreerde corrector scoorden vier rondes
 in S222 83% → 89% → 94% → 89%. De gecorrigeerde weigering-rubriek werd één keer
 geraakt en telt nu terecht niet als storing.
 
-**Voorbehoud, hard:** de ronde is **niet af**. Na 30 van de 55 gevallen viel de
+**Volledige ronde (na bijvullen tegoed) — 55 gevallen, 0 storingen, 1 weigering
+in proza, 54 beoordeeld.** De corrector keurde er 3 af. Alle drie zelf nagetrokken
+op prod:
+
+| Zaak | Corrector zei | Werkelijkheid |
+|---|---|---|
+| IN100122 | "€ 22,64 vermoedelijk een datafout" | **corrector-misser** — het ís het openstaande bedrag (361,35 − 338,71 betaald). Hij noemde het bedrag zelf in de dossiergegevens en overrulede het daarna. |
+| IN100370 | "dossiernummer verzonnen" | **corrector-misser** — IN100370 is het dossiernummer van die zaak. Idem de niet-zware vlag op IN100350: dat staat letterlijk in de onderwerpregel. |
+| IN100411 | "'onderneem geen verdere actie' = toezegging" | **echte vondst.** Die zin leest als opschorting en spreekt de zin twee alinea's eerder tegen ("wordt onverkort voortgezet"). |
+
+**Netto: 1 echte fout op 54 antwoorden (~2%), 0 verzonnen bedragen, 0 verzonnen
+dossiernummers.** Twee ingrepen daarop: een spelregel in de productie-prompt
+(de debiteur nooit vragen te wachten) en de corrector nogmaals aangescherpt —
+regel 1 kreeg tanden (staat het bedrag in de dossiergegevens, dan klopt het;
+twijfel hoort in de toelichting) en regel 2 dekt nu ook het eigen dossiernummer
+uit de dossiergegevens en de onderwerpregel, niet alleen uit de body.
+
+### Eerdere, afgebroken ronde (voor de volledigheid)
+
+**Voorbehoud, hard:** die ronde was **niet af**. Na 30 van de 55 gevallen viel de
 Anthropic-sleutel stil met *"credit balance is too low"* — 24 gevallen zijn
 daardoor nooit gedraaid. Wat wél gedraaid is: de complete zelfgeschreven
 proefset (18) plus 12 goud-gevallen (echte dossiers). De zwaarste categorie —
@@ -188,15 +207,20 @@ tegoed is.
 
 **Nieuw en urgent (buiten de opdracht gevonden):** diezelfde sleutel is de
 productiesleutel. Live nagetrokken met één minimale aanroep vanuit de
-prod-container: **de AI-functies van Luxis liggen op dit moment stil** — geen
-classificatie van inkomende mail, geen intake-detectie, geen conceptgeneratie.
-De dagelijkse taken draaien wél (heartbeat groen) maar kunnen niets afhandelen;
-er staan 96 nog niet aan een dossier gekoppelde mails te wachten. Dit vraagt een
-handeling van Arsalan (tegoed bijkopen), niet van de code.
+prod-container: **de AI-functies van Luxis lagen stil** — geen classificatie van
+inkomende mail, geen intake-detectie, geen conceptgeneratie. De dagelijkse taken
+draaiden wél (heartbeat groen) maar konden niets afhandelen; er stonden 96 nog
+niet gekoppelde mails te wachten. Arsalan heeft tegoed bijgevuld; daarna live
+bevestigd dat de sleutel weer werkt. **Openstaand aandachtspunt van Arsalan zelf:
+het tegoed ging snel op (€ 10 in een paar dagen). Verbruik uitzoeken hoort bij de
+review van deze sessie** — er is nu geen kostenregistratie per aanroep
+(`ai_drafts.token_count` staat leeg), dus dat moet eerst meetbaar worden gemaakt.
 
-**Nog te doen:** ronde overdoen op volledige set, dan (d) de menselijke
-steekproef door Lisanne (~10 concepten) — pas daarna kan de poort aan.
-De poort staat op dit moment nog uit (`pipeline_auto_drafts_enabled = false`).
+**Nog te doen:** de menselijke steekproef door Lisanne (~10 concepten) — pas
+daarna kan de poort aan. De poort staat nog uit
+(`pipeline_auto_drafts_enabled = false`). Een derde ronde meet alleen nog het
+effect van de twee laatste ingrepen; kost een halfuur en ± 110 AI-aanroepen, dus
+niet ongevraagd gedraaid gezien het kostenpunt hierboven.
 
 ---
 

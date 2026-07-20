@@ -89,6 +89,11 @@ async def _record_usage(purpose: str, model: str, response: Any) -> None:
         f"{cost:.4f}" if cost is not None else "?",
     )
     try:
+        # Volledige model-registry laden: in de app al gebeurd (no-op), maar in
+        # losse scripts (testronde) faalt de mapper-configuratie anders op
+        # relaties naar niet-geïmporteerde modellen (S230, zelfde valkuil als
+        # scripts/ai/antwoord_testronde._load_goud).
+        import app.main  # noqa: F401
         from app.ai_agent.models import AIUsage
         from app.database import async_session
 

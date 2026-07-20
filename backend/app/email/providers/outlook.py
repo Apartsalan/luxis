@@ -310,6 +310,7 @@ class OutlookProvider(EmailProvider):
         references_root: str | None = None,  # Graph threadt zelf; niet gebruikt
         attachments: list[OutgoingAttachment] | None = None,
         from_name: str = "",  # Graph zet de afzender zelf op het account; niet gebruikt
+        from_address: str | None = None,
     ) -> str:
         """Send an email via Microsoft Graph API.
 
@@ -331,6 +332,7 @@ class OutlookProvider(EmailProvider):
                 to=to,
                 cc=cc,
                 bcc=bcc,
+                from_address=from_address,
             )
 
         # Build the sendMail request body
@@ -345,6 +347,15 @@ class OutlookProvider(EmailProvider):
             },
             "saveToSentItems": True,
         }
+
+        # S231: versturen namens het kantooradres (incasso@) met het token van de
+        # ingelogde gebruiker. Graph accepteert dit alleen met "Verzenden als" op
+        # dat postvak; zonder dat recht volgt een 403 en valt de route netjes om
+        # in plaats van stil met de verkeerde afzender te versturen.
+        if from_address:
+            message_body["message"]["from"] = {
+                "emailAddress": {"address": from_address}
+            }
 
         if cc:
             message_body["message"]["ccRecipients"] = [
@@ -522,6 +533,7 @@ class OutlookProvider(EmailProvider):
         to: list[str],
         cc: list[str] | None = None,
         bcc: list[str] | None = None,
+        from_address: str | None = None,
     ) -> str:
         """Reply to an existing message via Graph API reply endpoint."""
         reply_body: dict = {
@@ -530,6 +542,13 @@ class OutlookProvider(EmailProvider):
             },
             "comment": body_html,
         }
+
+        # S231: ook een ANTWOORD moet vanaf incasso@ komen (huisregel M1) —
+        # anders lekt de antwoordroute het persoonlijke adres.
+        if from_address:
+            reply_body["message"]["from"] = {
+                "emailAddress": {"address": from_address}
+            }
 
         if cc:
             reply_body["message"]["ccRecipients"] = [

@@ -12,6 +12,7 @@ import secrets
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import NamedTuple
 
 import redis.asyncio as aioredis
 from sqlalchemy import func, select
@@ -25,6 +26,10 @@ from app.email.providers.outlook import OutlookProvider
 from app.email.token_encryption import decrypt_token, encrypt_token
 
 logger = logging.getLogger(__name__)
+
+# Providers die via een API versturen (eigen uitgaande infrastructuur), niet via
+# BaseNets SMTP-relay. S231: alleen deze kunnen de Microsoft-blokkade omzeilen.
+API_SEND_PROVIDERS = frozenset({"outlook"})
 
 # OAuth state signing — HMAC prevents forgery
 _STATE_MAX_AGE_SECONDS = 600  # 10 minutes
@@ -203,6 +208,82 @@ async def get_tenant_send_account(
         if row.provider == "outlook":
             return row
     return rows[0]
+
+
+class OfficeChannel(NamedTuple):
+    """Hoe kantoormail de deur uitgaat: via welk account, namens welk adres.
+
+    S231 — BaseNets uitgaande relay (194.180.216.120) staat op Microsofts
+    blokkadelijst: alles naar hotmail/outlook/M365 kaatst terug met 550 S3150.
+    Daarom scheiden we vervoer van afzender: het bericht kan via het Graph-
+    account van een medewerker de deur uit, terwijl er incasso@ boven staat
+    (huisregel M1). Vereist "Verzenden als" op dat postvak in Microsoft 365.
+
+    `account`     = het verbonden account dat het vervoer doet (None → SMTP).
+    `from_address`= het adres dat op de mail komt; None = het accountadres zelf.
+    """
+
+    account: "EmailAccount | None"
+    from_address: str | None
+
+
+async def resolve_office_channel(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> OfficeChannel:
+    """Bepaal het kantoorkanaal: vervoerder + afzender.
+
+    Volgorde:
+    1. Een verbonden account op het kantooradres zelf dat via een API verstuurt
+       (Graph) — ideaal: vervoer én afzender kloppen zonder extra rechten.
+    2. Een ander Graph-account van dezelfde tenant, mét het kantooradres als
+       afzender ("Verzenden als"). Dit is de route die BaseNets blokkade omzeilt.
+    3. Het account op het kantooradres via IMAP/SMTP (BaseNet) — het oude gedrag,
+       nog steeds bruikbaar voor ontvangers buiten Microsoft.
+    None-account laat de beller terugvallen op het gebruikersaccount of SMTP.
+    """
+    from app.auth.models import Tenant
+
+    office_email = (
+        await db.execute(select(Tenant.email).where(Tenant.id == tenant_id))
+    ).scalar()
+    if not office_email:
+        return OfficeChannel(None, None)
+    office_email = office_email.strip()
+
+    accounts = (
+        (
+            await db.execute(
+                select(EmailAccount)
+                .where(EmailAccount.tenant_id == tenant_id)
+                .order_by(EmailAccount.connected_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    on_office_address = [
+        a
+        for a in accounts
+        if (a.email_address or "").strip().lower() == office_email.lower()
+    ]
+
+    # 1. Kantooradres zelf via een API-provider.
+    for a in on_office_address:
+        if a.provider in API_SEND_PROVIDERS:
+            return OfficeChannel(a, None)
+
+    # 2. Ander Graph-account, versturend namens het kantooradres.
+    for a in accounts:
+        if a.provider in API_SEND_PROVIDERS:
+            return OfficeChannel(a, office_email)
+
+    # 3. Kantooradres via IMAP/SMTP (BaseNet).
+    if on_office_address:
+        return OfficeChannel(on_office_address[0], None)
+
+    return OfficeChannel(None, None)
 
 
 async def store_email_account(

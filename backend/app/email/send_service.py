@@ -18,9 +18,9 @@ from app.email.models import EmailLog
 from app.email.oauth_service import (
     get_email_account,
     get_provider,
-    get_tenant_send_account,
     get_valid_access_token,
     imap_smtp_kwargs,
+    resolve_office_channel,
 )
 from app.email.providers.base import OutgoingAttachment
 from app.email.service import send_email as smtp_send_email
@@ -137,10 +137,14 @@ async def send_with_attachment(
     # (incasso@), niet via de mailbox van de klikkende gebruiker. Valt terug op
     # het gebruikersaccount als er geen vast kantoor-account verbonden is.
     account = None
+    from_address: str | None = None
     if send_as_tenant_account:
-        account = await get_tenant_send_account(db, tenant_id)
+        # S231: het kantoorkanaal kiest nu ook het VERVOER — Graph als dat kan,
+        # anders BaseNet. De afzender blijft incasso@ (huisregel M1).
+        account, from_address = await resolve_office_channel(db, tenant_id)
     if account is None:
         account = await get_email_account(db, user_id, tenant_id)
+        from_address = None
 
     status = "sent"
     error_message: str | None = None
@@ -177,6 +181,7 @@ async def send_with_attachment(
                 bcc=bcc,
                 attachments=outgoing_attachments,
                 from_name=from_name,
+                from_address=from_address,
                 **imap_smtp_kwargs(account),
             )
             used_provider = True

@@ -33,7 +33,7 @@ from app.documents.rente_bijlage import (
     wants_rente_bijlage,
 )
 from app.email.incasso_templates import render_incasso_email
-from app.email.oauth_service import get_tenant_send_account
+from app.email.oauth_service import resolve_office_channel
 from app.email.send_service import send_with_attachment
 from app.email.subject import build_email_subject
 from app.incasso.models import IncassoPipelineStep
@@ -735,17 +735,24 @@ async def preview_recommendation(
     # Toon de afzender die de verzending ÉCHT gaat gebruiken — zelfde volgorde
     # als send_with_attachment: vast kantoorkanaal → account van de klikkende
     # gebruiker → vaste server-afzender (SMTP).
-    sender_account = await get_tenant_send_account(db, tenant_id)
-    if sender_account is None:
-        from app.email.oauth_service import get_email_account
-
-        sender_account = await get_email_account(db, user_id, tenant_id)
-    if sender_account is not None:
+    # S231: toon de afzender die ÉCHT op de mail komt. Bij Graph-vervoer namens
+    # het kantooradres is dat incasso@ — niet het adres van het account dat het
+    # vervoer doet. Anders zou de voorvertoning iets anders beloven dan er uitgaat.
+    sender_account, office_from = await resolve_office_channel(db, tenant_id)
+    if office_from:
+        sender_email = office_from
+    elif sender_account is not None:
         sender_email = sender_account.email_address
     else:
-        from app.config import settings
+        from app.email.oauth_service import get_email_account
 
-        sender_email = settings.smtp_from or "(vaste server-afzender)"
+        user_account = await get_email_account(db, user_id, tenant_id)
+        if user_account is not None:
+            sender_email = user_account.email_address
+        else:
+            from app.config import settings
+
+            sender_email = settings.smtp_from or "(vaste server-afzender)"
 
     is_generate = (
         rec.recommended_action == RecommendedAction.GENERATE_DOCUMENT

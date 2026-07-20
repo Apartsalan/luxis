@@ -545,6 +545,7 @@ class ImapProvider(EmailProvider):
         references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
         from_name: str = "",
+        from_address: str | None = None,
         smtp_host: str = "",
         smtp_port: int = 587,
         username: str = "",
@@ -572,7 +573,11 @@ class ImapProvider(EmailProvider):
         msg = MimeMessage()
         # Afzender met weergavenaam ("Kesting Legal <incasso@...>") als die er is,
         # anders het kale adres.
-        msg["From"] = formataddr((from_name, username)) if from_name else username
+        # S231: `from_address` overschrijft de afzender (kantooradres). Bij BaseNet
+        # is dat gelijk aan het account zelf; de parameter bestaat zodat elke
+        # provider dezelfde afspraak kent en de wachter alle routes kan toetsen.
+        sender = from_address or username
+        msg["From"] = formataddr((from_name, sender)) if from_name else sender
         msg["To"] = ", ".join(to)
         if cc:
             msg["Cc"] = ", ".join(cc)

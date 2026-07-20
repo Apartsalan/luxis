@@ -37,9 +37,9 @@ from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import (
     get_email_account,
     get_provider,
-    get_tenant_send_account,
     get_valid_access_token,
     imap_smtp_kwargs,
+    resolve_office_channel,
 )
 from app.email.providers.base import OutgoingAttachment
 from app.email.send_service import ensure_branded_body, write_outbound_log
@@ -387,9 +387,12 @@ async def send_via_provider(
     # kantoorkanaal (incasso@), niet via de mailbox van wie klikt (patroon B13, zoals
     # batch/follow-up). Valt terug op het account van de gebruiker als er geen
     # kantoor-account verbonden is (geen regressie).
-    account = await get_tenant_send_account(db, user.tenant_id)
+    # S231: het kantoorkanaal bepaalt nu ook het vervoer (Graph waar mogelijk,
+    # anders BaseNet) — BaseNets relay staat op Microsofts blokkadelijst.
+    account, send_from_address = await resolve_office_channel(db, user.tenant_id)
     if account is None:
         account = await get_email_account(db, user.id, user.tenant_id)
+        send_from_address = None
     if not account:
         raise BadRequestError("Geen e-mailaccount verbonden. Ga naar Instellingen → E-mail.")
 
@@ -510,6 +513,7 @@ async def send_via_provider(
             references_root=data.references_root,
             attachments=resolved_attachments or None,
             from_name=from_name,
+            from_address=send_from_address,
             **imap_smtp_kwargs(account),
         )
     except Exception as e:

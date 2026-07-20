@@ -163,8 +163,15 @@ class EmailProvider(ABC):
         references_root: str | None = None,
         attachments: list[OutgoingAttachment] | None = None,
         from_name: str = "",
+        from_address: str | None = None,
     ) -> str:
         """Send an email through the provider.
+
+        `from_address` (S231): stuur namens een ánder adres dan het ingelogde
+        account. Nodig sinds BaseNets uitgaande relay op Microsofts blokkadelijst
+        staat: Luxis verstuurt dan via Graph met het account van de gebruiker,
+        maar met incasso@ als afzender (huisregel M1). Vereist "Verzenden als"
+        op dat postvak. None = de afzender van het account zelf.
 
         Args:
             access_token: Valid OAuth access token.

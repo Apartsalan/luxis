@@ -9900,3 +9900,87 @@ followup_models}.py`, `collections/compliance.py`, `cases/schemas.py`,
 - Deferred prod-mutaties: Courier→Calibri (DOCX-reseed), verzoekschrift-bijlage vervangen
   door de juiste PDF uit de projectmap. Beide sjabloon-herzaaiingen (S210-flow).
 - MAILSLOT OPEN — geen echte debiteuren mailen; testdossier 2026-00006 = Arsalans gmail.
+
+## Sessie 221 (15 juli 2026 avond/nacht, Opus — demolijst DEEL 2, 6 blokken LIVE)
+
+### Samenvatting
+Vervolg op S220. Per blok: bouwen → tests → deploy via SSH → prod-verificatie. 7 commits,
+1 migratie (additief). Geen echte debiteuren gemaild.
+
+**Blok 3.4 — overgeslagen/afgeronde taken (LIVE + BEWEZEN).** `my-tasks` gaf alleen open
+taken terug → de "Afgerond"-weergave op Taken was altijd leeg (17 skipped + 2 completed
+onzichtbaar). Nieuw `?include_done=true` (gecapt 100, nieuwste eerst); dashboard-widget
+ongemoeid. Terugzet-knop (→ pending) + undo-toast direct na overslaan. **Prod: zonder de
+optie 8 open taken, mét de optie 27 waaronder 17 eerder-onzichtbare overgeslagen taken.**
+
+**Blok 3.2/N3 — dubbele concepten + zombies (LIVE, migratie `s221_ai_draft_intent_step`).**
+Concepten misten intent + stap-koppeling. Nu: `generate_unified_draft` geeft een bestaand
+open concept terug i.p.v. een tweede (betaalde) generatie (next_step→zaak+stap,
+reply→zaak+bron-mail, free_compose→nooit); `move_case_to_step` gooit verouderde 'volgende
+stap'-concepten weg (net als de adviezen in S220). Auto-conceptroute kreeg dezelfde koppeling.
+Tests: 3 dedupe + 1 discard + de S220-supersede-suite groen (72 in de bredere run).
+
+**Blok 4 — classificatie direct ná mailsync (LIVE).** De losse 6-min-cyclus draaide soms nét
+vóór de sync klaar was → verse mail wachtte een ronde (~7,5 min). Nu triggert de sync bij
+nieuwe mail meteen `classify_new_emails` (idempotent, sleutel-guard). Latency → ~5 min.
+
+**Blok 4.3 — begrip-eerst antwoordroute + testronde-script (LIVE + BEWEZEN op prod).**
+`_REPLY_PROMPT` herschreven naar spelregels (feiten ALLEEN uit dossier, geen toezeggingen,
+escaleren bij lastige gevallen) i.p.v. sjabloon-dwang; de reply-context krijgt nu
+opdrachtgever/debiteur/openstaand/vorderingen mee (`_build_dossier_facts`). Nieuw
+`backend/scripts/ai/antwoord_testronde.py`: vaste proefset + corrector-AI + rapport, verstuurt
+niets, raakt geen echte dossiers (analyse/iteratie = Fable S222). **Prod-rookproef (de casus
+IN100607 "wie zijn jullie"): AI noemt kantoor + opdrachtgever (LegalWork B.V.) + debiteur,
+gebruikt alleen echte dossierbedragen; corrector alle checks groen, 0 zware fouten.**
+
+**Blok 4 punt 11 — geen scheve bedrag-kolommen (LIVE).** Beide AI-prompts sturen nu weg van
+spatie-uitgelijnde kolommen naar gelabelde regels ("Hoofdsom: € 3.500,00"). Échte HTML-tabellen
+vergen aanpassing van het render/opschoon-pad (injectie-oppervlak) → bewust apart gelaten.
+
+**Blok 5 — UX (LIVE).** Intake uit de zijbalk + commando-palet (Mail-tab "Aanvragen" is de
+ingang); menu+paginakop "Bankimport" → "Betalingen"; rapportage-label "Incasso-ratio" →
+"Geïnd op lopende zaken" + uitleg-tooltip; dossiernummer klikbaar in de mail-LIJSTrij.
+
+### Gewijzigde bestanden
+Backend: `dashboard/router.py`, `ai_agent/{models,unified_draft_service,incasso_email_prompts}.py`,
+`incasso/{service,automation_service}.py`, `workflow/scheduler.py`, migratie
+`s221_ai_draft_intent_step`, `backend/scripts/ai/antwoord_testronde.py` (nieuw). Tests:
+`test_workflow.py`, `test_unified_draft_service.py` (+4), `test_supersede_recommendations.py` (+1).
+Frontend: `hooks/use-workflow.ts`, `taken/page.tsx`, `layout/app-sidebar.tsx`, `command-palette.tsx`,
+`betalingen/page.tsx`, `rapportages/page.tsx`, `correspondentie/page.tsx`.
+
+### Bekende issues / bewust niet gedaan (→ S221b/S222)
+- **NIET gedaan:** review-scherm (classificatie+concept naast elkaar), voortgangsindicator bij
+  genereren, échte HTML-tabellen, Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat,
+  soft-delete-banner, follow-up dossierlink/dagen-kolom/sorteerbare koppen, intake-detectie
+  dempen), Blok 6-beslismemo b2b/b2c.
+- **GATED:** auto-concept per categorie (Verweer + Algemene/overig) — bewust NIET aangezet;
+  hangt aan de kwaliteit van de antwoord-route → pas ná de testronde (Fable S222).
+- **Sjabloon-herzaaiingen — GEDAAN (GO + visueel getest, prod-reseed):**
+  (1) Font: de terugval was **Cambria** (niet Courier — die stijl is dood), waardoor sectie-
+  kopjes een ander lettertype hadden dan de tekst. Thema-body op **Calibri** gezet in alle 8
+  DOCX (`scripts/fix_template_default_font.py`); reseed via `scripts/reseed_builtin_templates.py`.
+  ⚠️ Server-render (LibreOffice) maskeerde het verschil al; de winst is vooral zichtbaar als het
+  Word-bestand zélf geopend wordt. (2) Verzoekschrift-bijlage: NIET vervangen door de blanco PDF
+  (die is leeg → geen bedragen). Keuze Arsalan = **ingevuld mét logo**. Root cause: het invulbare
+  sjabloon had nooit een logo; LibreOffice behoudt briefhoofd-logo's wél. KESTING LEGAL-logo
+  (image2.png uit Lisanne's origineel) als briefhoofd toegevoegd; alle 62 velden + huidig adres
+  blijven. docxtpl-render + PDF **visueel geverifieerd**: logo + ingevulde bedragen + één lettertype.
+  Prod DB byte-identiek aan schijf (45658). Back-up: `/root/backup_managed_templates_pre_s221_font.sql`.
+- **Open vraag lettertype:** in mijn tests is elke boodschap al één lettertype; als Arsalan het
+  mengsel ergens specifieks zag (mail/scherm), schermafbeelding nodig om precies dát te fixen.
+- **Verzoekschrift EXACTE opmaak (→ verse sessie, keuze Arsalan):** hij wil Lisanne's PDF-lay-out
+  (crème-balk + logo) precies, per zaak ingevuld. Haar bron is een BaseNet-merge-sjabloon (38
+  Velocity-velden, loops, keuze-logica) → omzetten naar Luxis docxtpl. Volledig onderzoek +
+  mapping + valkuilen in `docs/sessions/PLAN-verzoekschrift-exacte-nabouw.md`. Huidige logo-versie
+  blijft intussen live als tussenoplossing.
+- **Backfills 3.3** blijven Fable (S222): uitzoeken wát de 470 classificaties/14 intake/8
+  concepten/3 adviezen precies zijn vóór er iets gesloten wordt.
+- Terugzet-knop/undo-toast (3.4) + maillijst-chip zijn typecheck- + deploy-geverifieerd, niet
+  live doorgeklikt (Playwright-browserlock) — meenemen in de visuele Fable-review.
+- MAILSLOT OPEN — testdossier 2026-00006 = Arsalans gmail.
+
+### Volgende sessie
+Fable-review S220+S221 (VERPLICHT) + antwoord-testronde met de goud-set draaien
+(`python -m scripts.ai.antwoord_testronde --goud N --tenant-id <uuid> --out ...` op prod).
+Daarna S221b (Opus) voor het restant hierboven. KvK-backfill zodra de sleutel er is (~22 juli).

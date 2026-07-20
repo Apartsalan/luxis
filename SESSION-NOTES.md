@@ -2,10 +2,74 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 20 juli 2026 (S230/S231 — werkorders V1-V4 uitgevoerd + drie live storingen opgelost).
-**Laatste feature/fix:** V1 t/m V4 af (27 B2C-dossiers gecorrigeerd, rentetarief 1-7-2026, .env dicht, auto-conceptpoort AAN). Daarna drie vondsten uit Arsalans demo: bijlagen niet te openen (5 routes, 3 kapot), BaseNets verzendrelay geblokkeerd door Microsoft -> nu via M365 namens incasso@, en AI-kosten meetbaar gemaakt. Detail: entry S230/S231.
-**Openstaand (-> S232):** sjabloon-route moet na verzending doorschuiven naar de volgende stap (nu doet alleen de AI-conceptroute dat); IN100605 handmatig naar Tweede sommatie; BaseNet-delisting melden; derde AI-testronde + Lisanne-steekproef; kostenblokje dashboard (voorstel). Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
-**Volgende sessie:** S232 begint met het doorschuiven op de sjabloon-verzendroute (kruispunt-fix + wachter).
+**Laatst bijgewerkt:** 20 juli 2026 (S232 — sjabloon-verzending schuift dossier door + 3 demo-fixes, LIVE).
+**Laatste feature/fix:** De sjabloon-verzendknop schuift het dossier nu na verzending door naar de volgende stap (voorheen alleen de AI-conceptroute) — gedeelde helper, brief-families, dubbel-doorschuif-guard, wachter over de hele route-matrix. Plus: extra witregel na "Geachte" teruggedraaid (overal), bijlagen-aantal-limiet vervangen door totale-groottegrens (25 MB), dossierfilters onthouden. Gebruikersnaam Lisanne → kesting@kestinglegal.nl; IN100605 naar Tweede sommatie. Detail: entry S232.
+**Openstaand (-> S233 e.v.):** S233 = mail-werkplek (AI-antwoord als zijpaneel + uitklapbare mailgeschiedenis, AI luistert naar "facturen erbij"). S234 = incassostappen kritisch herzien (situatie-stappen i.p.v. platte lijst; derde/laatste sommatie hebben nog géén brief-koppeling → schuiven daarom nog niet door). S235 = betalingsregeling herkennen uit mail + flexibel termijnschema. Losse punten: BaseNet-delisting melden, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. Outlook-route weghalen (Arsalan: later).
+**Volgende sessie:** S233 — mail-werkplek (zijpaneel + mailgeschiedenis + AI-bijlage-instructie).
+
+## Sessie 232 (20 juli 2026, Opus-bouw — sjabloon-doorschuiven + 3 demo-fixes, LIVE)
+
+### Samenvatting
+Kruispunt-sessie op de verzendroutes. Alles hieronder is live, getest en op prod nageteld.
+Vóór de bouw met Fable de kruispunten in kaart gebracht (welke routes/pagina's raakt elke
+wijziging), daarna met Opus gebouwd.
+
+**Hoofdtaak — sjabloon-verzending schuift door (LIVE + wachter).** In de demo stuurde
+Arsalan een eerste sommatie via het mailvenster met sjabloon; de mail ging weg maar het
+dossier bleef op "Eerste sommatie". Alleen de AI-conceptroute (`advance-after-send`) schoof
+door. Gemeten: er zijn vier routes die een stap-brief versturen (AI-concept, batch, follow-up,
+compose/send) met twéé verschillende "volgende stap"-logica's. Voor nu compose/send op
+dezelfde regel als de AI-route gezet, de andere twee met rust (die herzien we in S234).
+- Gedeelde helper `advance_after_step_send()` (incasso/service.py) — de kern die
+  `advance-after-send` al gebruikte: verzending vastleggen op de huidige stap + default
+  timeout-rule + `move_case_to_step`. De router hergebruikt hem nu (dubbele code weg).
+- Brief-families `STEP_TEMPLATE_FAMILIES`: alle sommatie-varianten tellen als "de brief van
+  hun stap" → eerste én tweede sommatie schuiven door. **Match op de EXPLICIETE template_type**
+  (niet de afgeleide): AI-drafts dragen geen sjabloon → schuiven alleen via advance-after-send
+  → nooit dubbel. Extra guard `skip_pipeline_advance` dekt het randgeval (AI-concept waar de
+  gebruiker alsnog een sjabloon koos). **Grens:** derde/laatste sommatie hebben in prod géén
+  brief-koppeling → schuiven nog niet door (S234).
+- Wachter `test_advance_after_send_routes.py`: hele poort-matrix (stap-brief→door;
+  antwoord/vrij/herverzending/skip→niets) + gedrag van de helper. 13 tests.
+
+**Witregel na "Geachte" teruggedraaid (LIVE).** De S227-extra lege regel ná de aanhef was
+te veel — de opmaak was daarvóór al goed. Centraal in `_inline_paragraph_spacing`, dus overal
+tegelijk (stapbrieven, AI-concepten, AI-antwoorden). De S226-alinea-marge (de echte Gmail-fix)
+en de vaste witregel tussen Betreft en aanhef blijven. Wachters in `test_incasso_templates.py`
+omgedraaid: slaan nu alarm als de extra regel terugkomt.
+
+**Bijlagen: geen aantal-limiet meer (LIVE).** Wens Arsalan. De echte beperking is de totale
+mailgrootte (de provider stopt alle bijlagen base64 in één request), niet het aantal. Aantal-cap
+(10) weg op alle plekken; nieuwe totale-groottegrens `_assert_total_attachment_size` (25 MB),
+route-onafhankelijk vóór verzending. Per-bijlage 3 MB blijft. Test omgezet naar totaal-grootte.
+
+**Dossierfilters onthouden (LIVE).** De sortering stond al in de URL, de filters niet → na een
+dossier openen + terug via het menu waren ze weg. Nu bewaard in localStorage (`zaken-filters-v1`);
+een doorklik vanaf dashboard/rapportage (filters in de URL) wint en negeert het geheugen.
+
+**Twee prod-datamutaties (na expliciete GO, nageteld).**
+- Gebruikersnaam Lisanne `lisanne@kestinglegal.nl` → `kesting@kestinglegal.nl` (`UPDATE 1`).
+  De mailkanalen hangen aan het account (user_id), niet aan dit veld → verzenden/ontvangen
+  intact; wachtwoord-hash onaangeraakt. **Lisanne logt vanaf nu in met kesting@kestinglegal.nl.**
+- IN100605 → "Tweede sommatie". Bewezen dat de eerste sommatie 20-7 2× de deur uit ging
+  (`email_logs` status sent, sjabloon `sommatie_drukte`) terwijl het dossier bleef staan.
+  Doorgezet via de nieuwe gedeelde helper (default advance-rule, staphistorie-spoor).
+
+### Gewijzigde bestanden
+Backend: `incasso/service.py` (families + `advance_after_step_send` + poort), `incasso/router.py`
+(hergebruikt helper), `email/compose_router.py` (doorschuiven + totaal-groottegrens +
+`skip_pipeline_advance`), `email/incasso_templates.py` (witregel terug). Tests:
+`test_advance_after_send_routes.py` (nieuw), `test_compose_attachment_limits.py`,
+`test_incasso_templates.py`. Frontend: `zaken/[id]/page.tsx` (doorschuif-toast + refresh +
+skip-guard), `zaken/page.tsx` (filter-geheugen).
+
+### Bewust niet gedaan / grenzen
+- **Outlook-route (.eml) NIET wegdoen** — Arsalan: later. Doorschuiven zit alleen op de
+  directe verzendknop (bij .eml weet Luxis niet of de mail echt weg is).
+- **Derde/laatste sommatie schuiven nog niet door** — geen brief aan die stappen gekoppeld
+  (data/ontwerpkeuze voor S234; de mechaniek dekt het dan zonder codewijziging).
+- **Batch- en follow-up-route** houden hun eigen "volgende in de lijst"-logica — recht te
+  trekken in de S234-stappensessie.
 
 ## Sessie 230/231 (20 juli 2026, Fable-onderzoek + Opus-bouw — werkorders V1-V4 + drie live storingen)
 
@@ -698,87 +762,3 @@ behalve de B1-kliktest (netto nul).
 ### Volgende sessie
 Beslispunten 1-6 uit `S222-review.md` met Arsalan doornemen; daarna S221b-restant
 (Opus) of KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).
-
-## Sessie 221 (15 juli 2026 avond/nacht, Opus — demolijst DEEL 2, 6 blokken LIVE)
-
-### Samenvatting
-Vervolg op S220. Per blok: bouwen → tests → deploy via SSH → prod-verificatie. 7 commits,
-1 migratie (additief). Geen echte debiteuren gemaild.
-
-**Blok 3.4 — overgeslagen/afgeronde taken (LIVE + BEWEZEN).** `my-tasks` gaf alleen open
-taken terug → de "Afgerond"-weergave op Taken was altijd leeg (17 skipped + 2 completed
-onzichtbaar). Nieuw `?include_done=true` (gecapt 100, nieuwste eerst); dashboard-widget
-ongemoeid. Terugzet-knop (→ pending) + undo-toast direct na overslaan. **Prod: zonder de
-optie 8 open taken, mét de optie 27 waaronder 17 eerder-onzichtbare overgeslagen taken.**
-
-**Blok 3.2/N3 — dubbele concepten + zombies (LIVE, migratie `s221_ai_draft_intent_step`).**
-Concepten misten intent + stap-koppeling. Nu: `generate_unified_draft` geeft een bestaand
-open concept terug i.p.v. een tweede (betaalde) generatie (next_step→zaak+stap,
-reply→zaak+bron-mail, free_compose→nooit); `move_case_to_step` gooit verouderde 'volgende
-stap'-concepten weg (net als de adviezen in S220). Auto-conceptroute kreeg dezelfde koppeling.
-Tests: 3 dedupe + 1 discard + de S220-supersede-suite groen (72 in de bredere run).
-
-**Blok 4 — classificatie direct ná mailsync (LIVE).** De losse 6-min-cyclus draaide soms nét
-vóór de sync klaar was → verse mail wachtte een ronde (~7,5 min). Nu triggert de sync bij
-nieuwe mail meteen `classify_new_emails` (idempotent, sleutel-guard). Latency → ~5 min.
-
-**Blok 4.3 — begrip-eerst antwoordroute + testronde-script (LIVE + BEWEZEN op prod).**
-`_REPLY_PROMPT` herschreven naar spelregels (feiten ALLEEN uit dossier, geen toezeggingen,
-escaleren bij lastige gevallen) i.p.v. sjabloon-dwang; de reply-context krijgt nu
-opdrachtgever/debiteur/openstaand/vorderingen mee (`_build_dossier_facts`). Nieuw
-`backend/scripts/ai/antwoord_testronde.py`: vaste proefset + corrector-AI + rapport, verstuurt
-niets, raakt geen echte dossiers (analyse/iteratie = Fable S222). **Prod-rookproef (de casus
-IN100607 "wie zijn jullie"): AI noemt kantoor + opdrachtgever (LegalWork B.V.) + debiteur,
-gebruikt alleen echte dossierbedragen; corrector alle checks groen, 0 zware fouten.**
-
-**Blok 4 punt 11 — geen scheve bedrag-kolommen (LIVE).** Beide AI-prompts sturen nu weg van
-spatie-uitgelijnde kolommen naar gelabelde regels ("Hoofdsom: € 3.500,00"). Échte HTML-tabellen
-vergen aanpassing van het render/opschoon-pad (injectie-oppervlak) → bewust apart gelaten.
-
-**Blok 5 — UX (LIVE).** Intake uit de zijbalk + commando-palet (Mail-tab "Aanvragen" is de
-ingang); menu+paginakop "Bankimport" → "Betalingen"; rapportage-label "Incasso-ratio" →
-"Geïnd op lopende zaken" + uitleg-tooltip; dossiernummer klikbaar in de mail-LIJSTrij.
-
-### Gewijzigde bestanden
-Backend: `dashboard/router.py`, `ai_agent/{models,unified_draft_service,incasso_email_prompts}.py`,
-`incasso/{service,automation_service}.py`, `workflow/scheduler.py`, migratie
-`s221_ai_draft_intent_step`, `backend/scripts/ai/antwoord_testronde.py` (nieuw). Tests:
-`test_workflow.py`, `test_unified_draft_service.py` (+4), `test_supersede_recommendations.py` (+1).
-Frontend: `hooks/use-workflow.ts`, `taken/page.tsx`, `layout/app-sidebar.tsx`, `command-palette.tsx`,
-`betalingen/page.tsx`, `rapportages/page.tsx`, `correspondentie/page.tsx`.
-
-### Bekende issues / bewust niet gedaan (→ S221b/S222)
-- **NIET gedaan:** review-scherm (classificatie+concept naast elkaar), voortgangsindicator bij
-  genereren, échte HTML-tabellen, Blok 5-rest (tijdlijn-mailregel klikbaar, agenda lege staat,
-  soft-delete-banner, follow-up dossierlink/dagen-kolom/sorteerbare koppen, intake-detectie
-  dempen), Blok 6-beslismemo b2b/b2c.
-- **GATED:** auto-concept per categorie (Verweer + Algemene/overig) — bewust NIET aangezet;
-  hangt aan de kwaliteit van de antwoord-route → pas ná de testronde (Fable S222).
-- **Sjabloon-herzaaiingen — GEDAAN (GO + visueel getest, prod-reseed):**
-  (1) Font: de terugval was **Cambria** (niet Courier — die stijl is dood), waardoor sectie-
-  kopjes een ander lettertype hadden dan de tekst. Thema-body op **Calibri** gezet in alle 8
-  DOCX (`scripts/fix_template_default_font.py`); reseed via `scripts/reseed_builtin_templates.py`.
-  ⚠️ Server-render (LibreOffice) maskeerde het verschil al; de winst is vooral zichtbaar als het
-  Word-bestand zélf geopend wordt. (2) Verzoekschrift-bijlage: NIET vervangen door de blanco PDF
-  (die is leeg → geen bedragen). Keuze Arsalan = **ingevuld mét logo**. Root cause: het invulbare
-  sjabloon had nooit een logo; LibreOffice behoudt briefhoofd-logo's wél. KESTING LEGAL-logo
-  (image2.png uit Lisanne's origineel) als briefhoofd toegevoegd; alle 62 velden + huidig adres
-  blijven. docxtpl-render + PDF **visueel geverifieerd**: logo + ingevulde bedragen + één lettertype.
-  Prod DB byte-identiek aan schijf (45658). Back-up: `/root/backup_managed_templates_pre_s221_font.sql`.
-- **Open vraag lettertype:** in mijn tests is elke boodschap al één lettertype; als Arsalan het
-  mengsel ergens specifieks zag (mail/scherm), schermafbeelding nodig om precies dát te fixen.
-- **Verzoekschrift EXACTE opmaak (→ verse sessie, keuze Arsalan):** hij wil Lisanne's PDF-lay-out
-  (crème-balk + logo) precies, per zaak ingevuld. Haar bron is een BaseNet-merge-sjabloon (38
-  Velocity-velden, loops, keuze-logica) → omzetten naar Luxis docxtpl. Volledig onderzoek +
-  mapping + valkuilen in `docs/sessions/PLAN-verzoekschrift-exacte-nabouw.md`. Huidige logo-versie
-  blijft intussen live als tussenoplossing.
-- **Backfills 3.3** blijven Fable (S222): uitzoeken wát de 470 classificaties/14 intake/8
-  concepten/3 adviezen precies zijn vóór er iets gesloten wordt.
-- Terugzet-knop/undo-toast (3.4) + maillijst-chip zijn typecheck- + deploy-geverifieerd, niet
-  live doorgeklikt (Playwright-browserlock) — meenemen in de visuele Fable-review.
-- MAILSLOT OPEN — testdossier 2026-00006 = Arsalans gmail.
-
-### Volgende sessie
-Fable-review S220+S221 (VERPLICHT) + antwoord-testronde met de goud-set draaien
-(`python -m scripts.ai.antwoord_testronde --goud N --tenant-id <uuid> --out ...` op prod).
-Daarna S221b (Opus) voor het restant hierboven. KvK-backfill zodra de sleutel er is (~22 juli).

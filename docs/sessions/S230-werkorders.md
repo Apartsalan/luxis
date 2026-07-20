@@ -72,7 +72,19 @@ bewijst dat hij bij een verouderde datum echt afgaat.
 
 ---
 
-## V1 — Incassokosten boven de WIK-staffel (wachter AF, correctie WACHT)
+## V1 — Incassokosten boven de WIK-staffel (AF — correctie uitgevoerd)
+
+**GO ontvangen (Arsalan, 20-7):** alle 27 debiteuren zijn bevestigd particulier.
+**Uitvoering:** oude waarden dubbel veiliggesteld (DB-tabel `_s230_bik_backup`,
+27 rijen, som € 26.601,40 + lokale kopie). Telling vooraf 27 → update in één
+transactie (gejoind op id én exact oud bedrag, `UPDATE 27`) → telling na: 0 met
+handmatig bedrag. Natelling via drie wegen: de sweep vindt **0** gevallen; de
+app-API toont voor IN100082 nu € 1.102,21 (was € 4.908,21) en voor IN100345
+€ 385,30 — exact de staffel. Terugdraaien kan per dossier vanuit de backup-tabel.
+**Doorwerking bewezen:** het openstaande saldo van IN100009 zakte van € 4.614,72
+naar € 4.547,76 — precies de € 66,96 te veel geheven kosten van die zaak.
+
+### Oorspronkelijke meting (vóór de GO)
 
 **Vers gemeten, los van S229 en los van de app-code:** hoofdsom per dossier
 opnieuw opgeteld uit de losse vorderingen (klopt bij alle 27 exact met het
@@ -216,11 +228,31 @@ het tegoed ging snel op (€ 10 in een paar dagen). Verbruik uitzoeken hoort bij
 review van deze sessie** — er is nu geen kostenregistratie per aanroep
 (`ai_drafts.token_count` staat leeg), dus dat moet eerst meetbaar worden gemaakt.
 
-**Nog te doen:** de menselijke steekproef door Lisanne (~10 concepten) — pas
-daarna kan de poort aan. De poort staat nog uit
-(`pipeline_auto_drafts_enabled = false`). Een derde ronde meet alleen nog het
-effect van de twee laatste ingrepen; kost een halfuur en ± 110 AI-aanroepen, dus
-niet ongevraagd gedraaid gezien het kostenpunt hierboven.
+**Steekproef (op verzoek Arsalan door Fable gedaan i.p.v. Lisanne, 20-7):**
+10 goud-gevallen integraal gelezen — concept naast Lisanne's echte antwoord —
+plus de 3 corrector-vlaggen. Alle bedragen uit de steekproef-concepten
+onafhankelijk gecheckt tegen de live financiële samenvatting: **6/6 exact**
+(IN100453 361,93 · IN100034 6.428,97 · IN100037 4.768,64 · IN100368 726,33 ·
+IN100150 1.296,87 · IN100418 40,87). Oordeel: geen verzonnen feiten, toezeggingen
+correct vermeden, escalatie (advocatenbrief/deken/AVG/beschuldiging) telkens
+juist. Structureel verschil met Lisanne: zij is scherper en neemt inhoudelijke
+standpunten in ("uw verweer gaat niet op"), de AI blijft bewust neutraal en
+procedureel — passend voor een concept dat de behandelaar aanscherpt (via de
+INSTRUCTIE-regel kan dat per geval). Twee stijlpunten genoteerd, geen fouten:
+(a) op deels betaalde zaken noemt het concept facturen én een veel lager
+openstaand bedrag zonder de betalingen te benoemen — klopt, maar kan de debiteur
+verwarren; (b) sommige ontvangstbevestigingen zijn erg kaal waar Lisanne
+inhoudelijk zou antwoorden.
+
+**Poort AAN (20-7):** `pipeline_auto_drafts_enabled` → true, na bewijs dat de
+batch alléén concepten maakt met een taak "Bekijk en verstuur" (mens verstuurt;
+plafond 50/dag; ontdubbeling per zaak+stap sinds S221). Eerste batch draait
+morgen 08:00 UTC; de concepten verschijnen in /taken.
+
+**Open:** een derde testronde meet alleen nog het effect van de twee laatste
+ingrepen (± 110 AI-aanroepen) — bewust niet ongevraagd gedraaid gezien het
+kostenpunt hierboven. Lisanne kan de eerste echte batch als praktijk-steekproef
+gebruiken.
 
 ---
 

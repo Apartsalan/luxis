@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useConfirm, usePrompt } from "@/components/confirm-dialog";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -80,6 +81,7 @@ export default function ZaakDetailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = params.id as string;
+  const queryClient = useQueryClient();
   const { data: zaak, isLoading } = useCase(id);
   const updateStatus = useUpdateCaseStatus();
   const deleteCase = useDeleteCase();
@@ -429,6 +431,9 @@ export default function ZaakDetailPage() {
           data.already_branded || (!!activeDraftId && !!data.body_html),
         // S205: alleen true na de 'toch versturen'-bevestiging hieronder.
         compliance_override: complianceOverride,
+        // S232: bij een AI-concept-review regelt advance-after-send de doorschuif —
+        // compose/send moet 'm dan overslaan, anders schuift het dossier dubbel door.
+        skip_pipeline_advance: !!activeDraftId,
       }),
     });
   };
@@ -478,7 +483,19 @@ export default function ZaakDetailPage() {
 
       toast.success("E-mail verzonden");
       setCaseEmailOpen(false);
-      if (activeDraftId) await handleDraftSendComplete();
+      if (activeDraftId) {
+        // AI-concept: de doorschuif-stap (+ eventuele toast) loopt via advance-after-send.
+        await handleDraftSendComplete();
+      } else {
+        // S232 — sjabloon-verzending: de backend schuift zelf door. Toon de stap-toast
+        // en ververs het dossier zodat de nieuwe stap meteen zichtbaar is.
+        const body = await res.json().catch(() => null);
+        if (body?.advanced) {
+          toast.success(`Dossier naar volgende stap: ${body.advanced_to_step}`);
+          queryClient.invalidateQueries({ queryKey: ["cases", id] });
+          queryClient.invalidateQueries({ queryKey: ["cases"] });
+        }
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "E-mail verzenden mislukt");
     } finally {

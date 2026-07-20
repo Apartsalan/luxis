@@ -90,15 +90,16 @@ def _assert_base_nl(html: str) -> None:
     # S226: witregel tussen alinea's staat INLINE (Gmail nult head-<style> +
     # <p>-marges) → anders begint de brief meteen na de aanhef.
     assert 'margin:0 0 16px 0;' in html, "alinea-witregel (inline) ontbreekt"
-    # S227 (vondst Arsalan): de witregel tussen Betreft en aanhef moet een vaste
-    # maat hebben (kale <p> kreeg per mailclient/editor andere marges) én ná de
-    # aanhef hoort een échte extra lege regel (zoals getypt: aanhef, enter-enter).
+    # S227: de witregel tussen Betreft en aanhef moet een vaste maat hebben (kale
+    # <p> kreeg per mailclient/editor andere marges). Die blijft.
     assert '<p style="margin:0;">&nbsp;</p>' in html, "vaste witregel (margin:0) ontbreekt"
     assert "<p>&nbsp;</p>" not in html, "kale witregel-<p> zonder maatvoering gevonden"
+    # S232 (vondst Arsalan): de S227-EXTRA witregel ná de aanhef is teruggedraaid —
+    # wachter dat hij niet terugkomt. De opmaak was daarvóór al goed.
     import re as _re
-    assert _re.search(
+    assert not _re.search(
         r'Geachte[^<]{0,120}</p><p style="margin:0;">&nbsp;</p>', html
-    ), "extra lege regel na de aanhef ontbreekt"
+    ), "extra lege regel na de aanhef is teruggekeerd (S232: moet weg blijven)"
     # S145: BaseNet stijl email-adres (hoofdletter I): Incasso@kestinglegal.nl
     assert "Incasso@kestinglegal.nl" in html, "incasso-email ontbreekt in handtekening"
     # S145: handtekening met "Mevr. mr. L. Kesting"
@@ -120,12 +121,13 @@ def _assert_base_en(html: str) -> None:
     assert "Yours faithfully" in html, "EN signature missing"
     assert "kesting-logo-email.png" in html, "logo (externe https-URL) ontbreekt"
     assert "Mevr. mr. L. Kesting" in html, "naam ontbreekt in handtekening"
-    # S227: zelfde opmaakregels als NL — vaste witregel + extra regel na aanhef.
+    # S227: vaste witregel (Betreft→aanhef) blijft. S232: de extra regel ná de
+    # aanhef is teruggedraaid — wachter dat hij niet terugkomt (EN).
     assert "<p>&nbsp;</p>" not in html, "kale witregel-<p> zonder maatvoering gevonden"
     import re as _re
-    assert _re.search(
+    assert not _re.search(
         r'(?:Geachte|Dear)[^<]{0,120}</p><p style="margin:0;">&nbsp;</p>', html
-    ), "extra lege regel na de aanhef ontbreekt (EN)"
+    ), "extra lege regel na de aanhef is teruggekeerd (S232: moet weg blijven, EN)"
 
 
 # ── plain_paragraphs_html (S227) ─────────────────────────────────────────

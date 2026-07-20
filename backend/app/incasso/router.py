@@ -373,7 +373,6 @@ async def advance_after_send(
     from datetime import UTC, datetime
 
     from app.ai_agent.draft_service import DraftStatus, get_draft_by_id, update_draft_status
-    from app.incasso.models import StepTransition
     from app.workflow.models import WorkflowTask
 
     draft = await get_draft_by_id(db, current_user.tenant_id, data.draft_id)
@@ -418,7 +417,8 @@ async def advance_after_send(
             "reason": "Antwoord/vrij bericht — dossier blijft op de huidige stap",
         }
 
-    # Advance to next step volgens default timeout-rule
+    # Advance to next step volgens default timeout-rule — gedeelde helper (S232),
+    # dezelfde die de sjabloon-verzendknop (compose/send) gebruikt.
     case = (await db.execute(
         select(Case).where(
             Case.tenant_id == current_user.tenant_id,
@@ -429,49 +429,14 @@ async def advance_after_send(
         await db.commit()
         return {"advanced": False, "reason": "Dossier heeft geen actieve stap"}
 
-    # Log de verzending op de HUIDIGE stap (de stap waarvoor de brief gold) zodat de
-    # daadwerkelijk verzonden sommatie zichtbaar wordt in de staphistorie — ook als er
-    # straks geen advance-regel blijkt te zijn.
-    from app.incasso.service import mark_current_step_communication_sent
+    from app.incasso.service import advance_after_step_send
 
-    await mark_current_step_communication_sent(db, current_user.tenant_id, case)
-
-    rule = (await db.execute(
-        select(StepTransition).where(
-            StepTransition.tenant_id == current_user.tenant_id,
-            StepTransition.from_step_id == case.incasso_step_id,
-            StepTransition.is_active.is_(True),
-            StepTransition.is_default.is_(True),
-            StepTransition.trigger_type == "timeout",
-            StepTransition.action == "advance_to_step",
-        )
-    )).scalars().first()
-
-    if not rule:
-        await db.commit()
-        return {
-            "advanced": False,
-            "reason": "Geen default advance-rule gevonden voor huidige stap",
-        }
-
-    # Route via de centrale step-transitie (audit #97): laat een CaseStepHistory
-    # + pipeline_change-activity achter en reset step_entered_at — niet langer
-    # een losse attribuut-write zonder spoor.
-    from app.incasso.service import move_case_to_step
-
-    await move_case_to_step(
+    result = await advance_after_step_send(
         db,
         current_user.tenant_id,
         case,
-        rule.to_step,
-        user_id=current_user.id,
-        trigger_type="auto_advance",
+        current_user.id,
         notes="Doorgeschoven na verzending concept",
     )
     await db.commit()
-
-    return {
-        "advanced": True,
-        "to_step_id": str(rule.to_step_id),
-        "to_step_name": rule.to_step.name if rule.to_step else None,
-    }
+    return result

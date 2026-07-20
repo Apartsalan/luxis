@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
@@ -96,6 +96,22 @@ function CaseSortHeader({
   );
 }
 
+// S232 (vondst Arsalan) — filters onthouden. De sortering stond al in de URL, de
+// filters niet → na een dossier openen + terug via het menu waren ze weg. We bewaren
+// ze in localStorage zodat ze de menu-navigatie overleven. Een doorklik vanaf het
+// dashboard/rapportages (filters in de URL) WINT: dan negeren we het geheugen.
+const SAVED_FILTERS_KEY = "zaken-filters-v1";
+const URL_FILTER_KEYS = ["search", "case_type", "status", "incasso_step_id", "date_from", "date_to"];
+
+function loadSavedFilters(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
 export default function ZakenPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -111,18 +127,33 @@ export default function ZakenPage() {
   const sortDir: CaseSortDir = sortDirRaw === "asc" ? "asc" : "desc";
 
   // CONN-8: filters uit de URL lezen zodat drill-downs (dashboard, rapportages)
-  // op een vóór-gefilterde lijst landen. Lazy initializer = alleen bij mount.
-  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
-  const [caseType, setCaseType] = useState(() => searchParams.get("case_type") ?? "");
-  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
-  const [incassoStep, setIncassoStep] = useState(() => searchParams.get("incasso_step_id") ?? "");
-  const [assignedTo, setAssignedTo] = useState("");
-  const [dateFrom, setDateFrom] = useState(() => searchParams.get("date_from") ?? "");
-  const [dateTo, setDateTo] = useState(() => searchParams.get("date_to") ?? "");
-  const [showMoreFilters, setShowMoreFilters] = useState(
-    () => !!(searchParams.get("date_from") || searchParams.get("date_to"))
-  );
+  // op een vóór-gefilterde lijst landen. S232: staat er GEEN filter in de URL, dan
+  // herstellen we het laatst gebruikte filter uit localStorage (menu-navigatie);
+  // staat er wél iets in de URL (doorklik), dan wint die en negeren we het geheugen.
+  const [savedFilters] = useState(loadSavedFilters);
+  const urlHasFilters = URL_FILTER_KEYS.some((k) => searchParams.get(k));
+  const initFilter = (urlKey: string, savedKey: string) =>
+    searchParams.get(urlKey) ?? (urlHasFilters ? "" : savedFilters[savedKey] ?? "");
+
+  const [search, setSearch] = useState(() => initFilter("search", "search"));
+  const [caseType, setCaseType] = useState(() => initFilter("case_type", "caseType"));
+  const [status, setStatus] = useState(() => initFilter("status", "status"));
+  const [incassoStep, setIncassoStep] = useState(() => initFilter("incasso_step_id", "incassoStep"));
+  const [assignedTo, setAssignedTo] = useState(() => (urlHasFilters ? "" : savedFilters.assignedTo ?? ""));
+  const [dateFrom, setDateFrom] = useState(() => initFilter("date_from", "dateFrom"));
+  const [dateTo, setDateTo] = useState(() => initFilter("date_to", "dateTo"));
+  const [showMoreFilters, setShowMoreFilters] = useState(() => !!(dateFrom || dateTo));
   const [page, setPage] = useState(1);
+
+  // S232: bewaar de actieve filters zodat ze de menu-navigatie overleven.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      SAVED_FILTERS_KEY,
+      JSON.stringify({ search, caseType, status, incassoStep, assignedTo, dateFrom, dateTo }),
+    );
+  }, [search, caseType, status, incassoStep, assignedTo, dateFrom, dateTo]);
+
   const debouncedSearch = useDebounce(search, 300);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<"" | "status" | "export">("");

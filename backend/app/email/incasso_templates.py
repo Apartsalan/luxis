@@ -9,7 +9,6 @@ herinnering.  All others return None → caller falls back to PDF attachment.
 """
 
 import html
-import re
 
 from jinja2 import Environment, StrictUndefined
 from markupsafe import Markup
@@ -125,19 +124,11 @@ def _inline_paragraph_spacing(html_content: str) -> str:
     regel tussen de alinea's, zoals in een gewone brief. Alleen kale <p> (de
     brieftekst); <p> met een eigen style (handtekening/disclaimer) blijft.
 
-    S227 (wens Arsalan): ná de aanhef hoort een échte extra lege regel — zoals
-    je zelf typt (aanhef, enter-enter, dan de eerste zin). Die voegen we hier
-    als expliciete nbsp-regel toe achter de eerste "Geachte ..."-alinea.
+    S232 (vondst Arsalan): de S227-extra witregel ná de aanhef is teruggedraaid —
+    de opmaak was daarvóór al goed. De inline alinea-marge (S226) blijft; die is
+    de echte fix tegen Gmail. Er komt dus GEEN extra nbsp-regel na "Geachte …".
     """
-    out = html_content.replace("<p>", '<p style="margin:0 0 16px 0;">')
-    return _AANHEF_P.sub(r'\1<p style="margin:0;">&nbsp;</p>', out, count=1)
-
-
-# Eerste alinea die met "Geachte"/"Dear" opent (aanhef, NL + EN) — mét de inline
-# marge die de regel hierboven zojuist heeft gezet, of al aanwezig was (AI-route).
-_AANHEF_P = re.compile(
-    r'(<p style="margin:0 0 16px 0;">\s*(?:Geachte|Dear)[^<]{0,120}</p>)'
-)
+    return html_content.replace("<p>", '<p style="margin:0 0 16px 0;">')
 
 
 def plain_paragraphs_html(text: str) -> str:

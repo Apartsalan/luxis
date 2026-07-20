@@ -719,6 +719,136 @@ async def mark_current_step_communication_sent(
     return history
 
 
+# ── Stap-brief-families + doorschuiven-na-verzending (S232) ─────────────────────
+# Welke brieftypen tellen als "de brief van deze pijplijnstap" voor het doorschuiven
+# na een verstuurde sjabloon-mail. Een verse mail aan de debiteur met een brief uit
+# dezelfde familie als de template_type van de huidige stap schuift die stap door.
+# Meerdere leden per familie omdat één stap meerdere brief-varianten kent (de tweede
+# sommatie heeft een 'na reactie'- en een 'standaard herhaling'-variant, plus het oude
+# 'aanmaning' waar de stap in prod aan hangt). Bewust op template_type i.p.v.
+# stap-naam/UUID: dat is de enige tenant-stabiele sleutel.
+#
+# GRENS (S234-stappensessie): stappen zónder template_type (Derde sommatie / Sommatie
+# laatste mogelijkheid in prod) schuiven niet door — er is geen brief aan gekoppeld om
+# tegen te matchen. Zodra die koppeling er is, werkt dit zonder codewijziging mee.
+STEP_TEMPLATE_FAMILIES: tuple[frozenset[str], ...] = (
+    frozenset({"14_dagenbrief", "demand_for_payment_eerste"}),
+    frozenset({"sommatie_drukte", "sommatie_eerste_opgave"}),
+    frozenset(
+        {"aanmaning", "sommatie_na_reactie", "wederom_sommatie_kort", "tweede_sommatie",
+         "demand_for_payment_uitgebreid"}
+    ),
+    frozenset({"sommatie_laatste_voor_fai", "demand_for_payment_laatste"}),
+    frozenset({"faillissement_dreigbrief", "demand_for_payment_fai"}),
+)
+
+
+def template_belongs_to_step(
+    template_type: str | None, step_template_type: str | None
+) -> bool:
+    """True als een verse debiteur-mail met dit brieftype de huidige stap mag doorschuiven.
+
+    Match op gelijkheid of op dezelfde brief-familie. Beide leeg → False (een stap
+    zonder brief-koppeling beweegt nooit; zie GRENS bij STEP_TEMPLATE_FAMILIES).
+    """
+    if not template_type or not step_template_type:
+        return False
+    if template_type == step_template_type:
+        return True
+    return any(
+        template_type in fam and step_template_type in fam
+        for fam in STEP_TEMPLATE_FAMILIES
+    )
+
+
+def should_advance_on_template_send(
+    template_type: str | None,
+    is_reply_or_forward: bool,
+    step_template_type: str | None,
+    *,
+    skip_pipeline_advance: bool = False,
+) -> bool:
+    """Poort (S232): mag een via de compose/send-knop verstuurde mail de stap doorschuiven?
+
+    De enige beslisregel van de sjabloon-verzendroute, expliciet gemaakt zodat de
+    wachter-test de hele route-matrix kan aflopen (breed-testen: vang de SOORT):
+
+    - skip_pipeline_advance (AI-concept-review) → NOOIT hier; de aparte
+      advance-after-send-call regelt het doorschuiven, anders zou het dubbel gaan;
+    - antwoord/doorsturen (reply_to/forward) → NOOIT (huisregel P1);
+    - geen EXPLICIET gekozen sjabloon (vrij bericht, of de AI-concept-route die
+      geen sjabloon draagt) → nooit hier — de AI-route schuift door via
+      advance-after-send, dus matchen op het afgeleide brieftype zou dubbel schuiven;
+    - een sjabloon dat niet bij de huidige stap hoort (bv. herverzending van een
+      eerdere brief terwijl het dossier al verder staat) → niets.
+    """
+    if skip_pipeline_advance or is_reply_or_forward:
+        return False
+    return template_belongs_to_step(template_type, step_template_type)
+
+
+async def advance_after_step_send(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+    user_id: uuid.UUID | None,
+    *,
+    document_id: uuid.UUID | None = None,
+    notes: str = "Doorgeschoven na verzending",
+) -> dict:
+    """Schuif een dossier door na een succesvol verstuurde STAP-brief.
+
+    Gedeelde kern van de AI-concept-route (advance_after_send) en de sjabloon-
+    verzendknop (compose/send, S232). Legt eerst de verzending vast op de HUIDIGE
+    stap (zodat de sommatie zichtbaar blijft in de staphistorie, óók als er geen
+    advance-regel is), zoekt dan de default timeout-advance-regel en verplaatst via
+    move_case_to_step (CaseStepHistory + pijplijn-activiteit). Commit gebeurt bij de
+    aanroeper. Geeft een {advanced, reason, to_step_id, to_step_name}-dict terug.
+    """
+    if not case.incasso_step_id:
+        return {"advanced": False, "reason": "Dossier heeft geen actieve stap"}
+
+    # Log de verzending op de HUIDIGE stap (de stap waarvoor de brief gold) vóór het
+    # doorschuiven — anders verdwijnt het bewijs uit de staphistorie.
+    await mark_current_step_communication_sent(
+        db, tenant_id, case, document_id=document_id
+    )
+
+    rule = (
+        await db.execute(
+            select(StepTransition).where(
+                StepTransition.tenant_id == tenant_id,
+                StepTransition.from_step_id == case.incasso_step_id,
+                StepTransition.is_active.is_(True),
+                StepTransition.is_default.is_(True),
+                StepTransition.trigger_type == "timeout",
+                StepTransition.action == "advance_to_step",
+            )
+        )
+    ).scalars().first()
+
+    if not rule:
+        return {
+            "advanced": False,
+            "reason": "Geen default advance-rule gevonden voor huidige stap",
+        }
+
+    await move_case_to_step(
+        db,
+        tenant_id,
+        case,
+        rule.to_step,
+        user_id=user_id,
+        trigger_type="auto_advance",
+        notes=notes,
+    )
+    return {
+        "advanced": True,
+        "to_step_id": str(rule.to_step_id),
+        "to_step_name": rule.to_step.name if rule.to_step else None,
+    }
+
+
 async def get_case_step_history(
     db: AsyncSession,
     tenant_id: uuid.UUID,

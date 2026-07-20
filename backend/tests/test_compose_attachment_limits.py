@@ -13,10 +13,12 @@ from pydantic import ValidationError
 
 from app.email.compose_router import (
     MAX_ATTACHMENT_B64_LEN,
-    MAX_ATTACHMENTS,
-    ComposeRequest,
+    MAX_TOTAL_ATTACHMENT_SIZE,
     InlineAttachment,
+    _assert_total_attachment_size,
 )
+from app.email.providers.base import OutgoingAttachment
+from app.shared.exceptions import BadRequestError
 
 
 def test_oversized_base64_rejected_before_decode():
@@ -38,18 +40,26 @@ def test_base64_at_the_cap_is_accepted():
     assert att.filename == "max.pdf"
 
 
-def test_too_many_inline_attachments_rejected_by_schema():
-    """Meer dan MAX_ATTACHMENTS items in de lijst -> het schema weigert al,
-    vóór de handmatige teller in _resolve_attachments ooit bereikt wordt."""
-    tiny_b64 = base64.b64encode(b"x").decode()
-    items = [
-        {"filename": f"f{i}.pdf", "data_base64": tiny_b64, "content_type": "application/pdf"}
-        for i in range(MAX_ATTACHMENTS + 1)
-    ]
-    with pytest.raises(ValidationError, match="inline_attachments"):
-        ComposeRequest(
-            to=["debiteur@example.nl"],
-            subject="Test",
-            body_html="<p>test</p>",
-            inline_attachments=items,
-        )
+def _att(size: int) -> OutgoingAttachment:
+    return OutgoingAttachment(
+        filename="f.pdf", data=b"x" * size, content_type="application/pdf"
+    )
+
+
+def test_many_small_attachments_allowed():
+    """S232 (wens Arsalan): GEEN aantal-limiet meer — veel kleine bijlagen mag,
+    zolang de TOTALE grootte onder de grens blijft."""
+    # 50 bijlagen van 100 KB = 5 MB totaal, ruim onder de 25 MB-grens.
+    _assert_total_attachment_size([_att(100 * 1024) for _ in range(50)])
+
+
+def test_total_size_over_cap_rejected():
+    """De echte beperking is de totale mailgrootte, niet het aantal."""
+    over = MAX_TOTAL_ATTACHMENT_SIZE + 1
+    with pytest.raises(BadRequestError, match="samen te groot"):
+        _assert_total_attachment_size([_att(over)])
+
+
+def test_total_size_at_cap_accepted():
+    """Precies op de grens mag door."""
+    _assert_total_attachment_size([_att(MAX_TOTAL_ATTACHMENT_SIZE)])

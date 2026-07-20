@@ -77,12 +77,35 @@ router = APIRouter(prefix="/api/email/compose", tags=["email-compose"])
 UPLOADS_BASE = Path("/app/uploads")
 
 # Attachment limits
-MAX_ATTACHMENT_SIZE = 3 * 1024 * 1024  # 3 MB (Graph API base64 limit ~4MB)
-MAX_ATTACHMENTS = 10
+MAX_ATTACHMENT_SIZE = 3 * 1024 * 1024  # 3 MB per bijlage (Graph base64-limiet ~4MB/stuk)
+# S232 (wens Arsalan): GEEN limiet meer op het AANTAL bijlagen. Wel een grens op de
+# TOTALE mailgrootte — die is de echte beperking: de provider stopt alle bijlagen
+# base64-gecodeerd in één verzendrequest. 25 MB dekt normale dossier-mails ruim en
+# blijft onder de gangbare mailbox-grens; grotere mails geven een duidelijke melding
+# i.p.v. een cryptische provider-fout.
+# ponytail: harde 25MB-grens; een echte upload-sessie-route (Graph large attachments)
+# bouwen we pas als dit knelt.
+MAX_TOTAL_ATTACHMENT_SIZE = 25 * 1024 * 1024
 # S202 L4: bovengrens op de base64-STRING (vóór decoderen) die exact overeenkomt
 # met MAX_ATTACHMENT_SIZE gedecodeerd — zodat het schema al weigert in plaats van
 # eerst volledig te decoderen en pas daarna de gedecodeerde grootte te checken.
 MAX_ATTACHMENT_B64_LEN = ((MAX_ATTACHMENT_SIZE + 2) // 3) * 4
+
+
+def _assert_total_attachment_size(attachments: list[OutgoingAttachment]) -> None:
+    """Bewaak de TOTALE bijlage-grootte over alle routes (S232).
+
+    Vervangt de oude aantal-limiet: het aantal maakt de provider niet uit, de totale
+    request-grootte wel. Route-onafhankelijk aangeroepen vlak vóór verzending, met de
+    volledige lijst (dossierbestanden + inline uploads + doorgestuurde + rente-PDF).
+    """
+    total = sum(len(a.data) for a in attachments)
+    if total > MAX_TOTAL_ATTACHMENT_SIZE:
+        raise BadRequestError(
+            f"De bijlagen zijn samen te groot ({total // (1024 * 1024)} MB, "
+            f"max {MAX_TOTAL_ATTACHMENT_SIZE // (1024 * 1024)} MB). "
+            "Verstuur de grootste bestanden apart of via een download-link."
+        )
 
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
@@ -115,9 +138,8 @@ class ComposeRequest(BaseModel):
         default=None, description="Dossier voor het oplossen van dossierbijlagen"
     )
     case_file_ids: list[uuid.UUID] | None = None
-    inline_attachments: list[InlineAttachment] | None = Field(
-        default=None, max_length=MAX_ATTACHMENTS
-    )
+    # S232: geen aantal-limiet meer; de totale grootte wordt vóór verzending bewaakt.
+    inline_attachments: list[InlineAttachment] | None = None
     # Doorsturen: neem de bijlagen van de oorspronkelijke (gesyncte) mail mee.
     forward_from_email_id: uuid.UUID | None = Field(
         default=None, description="SyncedEmail-id om de bijlagen van door te sturen"
@@ -132,6 +154,11 @@ class ComposeRequest(BaseModel):
     # S212-review: het gekozen incasso-sjabloon. Sleutel voor de renteoverzicht-
     # bijlage op dít (primaire) verzendpad — zelfde mechanisme als het .eml-pad.
     template_type: str | None = Field(default=None, max_length=50)
+    # S232 — laat compose/send de pijplijn NIET doorschuiven. De voorkant zet dit op
+    # true bij een AI-concept-review: dan regelt de aparte advance-after-send-call het
+    # doorschuiven én de draft-status. Zonder deze guard zou een AI-concept waar de
+    # gebruiker alsnog een sjabloon bij koos via BEIDE routes doorschuiven (dubbel).
+    skip_pipeline_advance: bool = False
 
     @field_validator("to", "cc", "bcc")
     @classmethod
@@ -153,9 +180,7 @@ class CaseComposeRequest(BaseModel):
         default=None, max_length=200000, description="HTML body (van template)"
     )
     case_file_ids: list[uuid.UUID] | None = None
-    inline_attachments: list[InlineAttachment] | None = Field(
-        default=None, max_length=MAX_ATTACHMENTS
-    )
+    inline_attachments: list[InlineAttachment] | None = None
     # S224 — 'toch doorgaan'-override voor de 14-dagenbrief-gate op de .eml-route
     # (de vijfde verzenddeur; zelfde patroon als compose/send en documents/send).
     compliance_override: bool = False
@@ -175,6 +200,10 @@ class ComposeResponse(BaseModel):
     draft_id: str | None = None
     web_link: str | None = None
     message: str
+    # S232 — of de verstuurde stap-brief het dossier heeft doorgeschoven, en waarheen
+    # (voor de toast op de voorkant). Blijft False op alle niet-stap-routes.
+    advanced: bool = False
+    advanced_to_step: str | None = None
 
 
 class RenderTemplateRequest(BaseModel):
@@ -271,9 +300,6 @@ async def _resolve_attachments(
                     content_type=att.content_type or "application/octet-stream",
                 )
             )
-
-    if len(attachments) > MAX_ATTACHMENTS:
-        raise BadRequestError(f"Maximaal {MAX_ATTACHMENTS} bijlagen toegestaan")
 
     return attachments
 
@@ -458,8 +484,6 @@ async def send_via_provider(
         resolved_attachments += await _load_forwarded_attachments(
             db, user.tenant_id, data.forward_from_email_id
         )
-        if len(resolved_attachments) > MAX_ATTACHMENTS:
-            raise BadRequestError(f"Maximaal {MAX_ATTACHMENTS} bijlagen toegestaan")
 
     # S212-review: renteoverzicht-PDF óók op deze primaire verzendknop ("Versturen").
     # Zelfde sleutel als het .eml-pad: het gekozen sjabloontype; alleen voor een verse
@@ -481,6 +505,10 @@ async def send_via_provider(
                         content_type="application/pdf",
                     )
                 )
+
+    # S232: bewaak de TOTALE bijlage-grootte (geen aantal-limiet meer), met de
+    # volledige lijst (dossierbestanden + inline + doorgestuurd + rente-PDF).
+    _assert_total_attachment_size(resolved_attachments)
 
     # Huisstijl: vrije mail, beantwoorden en doorsturen krijgen dezelfde
     # sjabloon-opmaak (handtekening + logo + schuldhulpblok). Een via een
@@ -539,10 +567,45 @@ async def send_via_provider(
         template=data.template_type or "compose_send",
         has_attachments=bool(resolved_attachments),
     )
+
+    # S232 — doorschuiven na een verstuurde STAP-brief. Een verse dossier-mail aan de
+    # debiteur met een EXPLICIET gekozen sjabloon dat bij de huidige pijplijnstap hoort,
+    # schuift het dossier één stap door — dezelfde advance_to_step-regel als de AI-route.
+    # Bewust op data.template_type (het gekozen sjabloon), NIET op het afgeleide
+    # brieftype: de AI-concept-route draagt géén sjabloon en schuift al via
+    # advance-after-send door → zo kan het nooit dubbel. Antwoord/doorsturen/vrij bericht
+    # (is_reply_or_forward, of geen sjabloon) beweegt niets (huisregel P1). Herverzenden
+    # van een eerdere brief matcht niet meer met de inmiddels verdere huidige stap → niets.
+    advanced = False
+    advanced_to_step: str | None = None
+    if data.case_id and send_case is not None and send_case.incasso_step is not None:
+        from app.incasso.service import (
+            advance_after_step_send,
+            should_advance_on_template_send,
+        )
+
+        if should_advance_on_template_send(
+            data.template_type,
+            is_reply_or_forward,
+            send_case.incasso_step.template_type,
+            skip_pipeline_advance=data.skip_pipeline_advance,
+        ):
+            advance_result = await advance_after_step_send(
+                db,
+                user.tenant_id,
+                send_case,
+                user.id,
+                notes="Doorgeschoven na verzending sjabloon",
+            )
+            advanced = advance_result.get("advanced", False)
+            advanced_to_step = advance_result.get("to_step_name")
+
     return ComposeResponse(
         success=True,
         provider_message_id=message_id,
         message="E-mail verzonden via " + account.provider,
+        advanced=advanced,
+        advanced_to_step=advanced_to_step,
     )
 
 
@@ -689,6 +752,9 @@ async def compose_eml_from_case(
                 filename=rente_name, data=rente_bytes, content_type="application/pdf"
             )
         )
+
+    # S232: totale bijlage-grootte bewaken (geen aantal-limiet meer).
+    _assert_total_attachment_size(attachments)
 
     # Get sender email from connected account (for From header)
     account = await get_email_account(db, user.id, user.tenant_id)

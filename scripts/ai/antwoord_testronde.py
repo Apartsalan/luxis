@@ -395,8 +395,8 @@ def _render_report(rows: list[dict]) -> str:
     geweigerd = sum(1 for r in rows if r.get("geweigerd"))
     lines.append(
         f"- Gevallen: **{n}**  ·  Zware fouten: **{zware}**  ·  "
-        f"Generatie-fouten: **{errors}**  ·  Geweigerd (geen debiteurenmail): "
-        f"**{geweigerd}**\n"
+        f"Generatie-fouten (storing): **{errors}**  ·  Weigering in proza "
+        f"(geen JSON): **{geweigerd}**\n"
     )
     for r in rows:
         lines.append(f"\n## {r['id']}")
@@ -448,7 +448,7 @@ async def main() -> None:
     geweigerd = sum(1 for r in rows if r.get("geweigerd"))
     print(
         f"\nKlaar. Rapport: {args.out}  ·  zware fouten: {zware}  ·  "
-        f"geweigerd (geen debiteurenmail): {geweigerd}"
+        f"weigering in proza: {geweigerd}"
     )
 
 

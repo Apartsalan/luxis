@@ -730,6 +730,45 @@ async def daily_trust_stale_check() -> None:
         logger.exception("Scheduler: trust stale check failed")
 
 
+async def daily_bik_staffel_check() -> None:
+    """Daily job: meld B2C-dossiers met incassokosten boven de WIK-staffel (S230/V1).
+
+    De wijzig-route en de verzendcontrole bewaken dit al op het moment van
+    handelen; deze sweep vangt records die er buitenom in kwamen (BaseNet-import
+    S229: 27 dossiers, samen €9.794,65 te veel). Gededupliceerd per week, zodat
+    het een opruimsignaal blijft en geen dagelijks gezeur.
+    """
+    from app.auth.models import Tenant
+    from app.collections.compliance import find_bik_above_staffel
+    from app.notifications.service import create_bik_above_staffel_notification
+
+    logger.info("Scheduler: starting BIK-staffel check")
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
+            for tenant in list(result.scalars().all()):
+                treffers = await find_bik_above_staffel(session, tenant.id)
+                if not treffers:
+                    continue
+                te_veel_totaal = sum(t["te_veel"] for t in treffers)
+                logger.warning(
+                    "Scheduler: BIK-staffel — %d dossiers boven staffel, samen €%s",
+                    len(treffers),
+                    te_veel_totaal,
+                )
+                await create_bik_above_staffel_notification(
+                    session,
+                    tenant.id,
+                    aantal=len(treffers),
+                    te_veel_totaal=te_veel_totaal,
+                    grootste_case_number=treffers[0]["case_number"],
+                    dedup_days=7,
+                )
+            await session.commit()
+    except Exception:
+        logger.exception("Scheduler: BIK-staffel check failed")
+
+
 async def daily_pipeline_auto_drafts() -> None:
     """Daily job: evalueer timeout-rules + genereer AI-drafts per tenant.
 
@@ -863,6 +902,15 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=40),
         id="daily_trust_stale_check",
         name="Flag idle derdengelden balances",
+        replace_existing=True,
+    )
+
+    # Daily at 06:45 UTC: B2C-incassokosten boven de WIK-staffel (S230/V1-wachter)
+    scheduler.add_job(
+        daily_bik_staffel_check,
+        CronTrigger(hour=6, minute=45),
+        id="daily_bik_staffel_check",
+        name="Flag B2C cases with BIK above the WIK-staffel",
         replace_existing=True,
     )
 

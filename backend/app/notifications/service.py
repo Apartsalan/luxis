@@ -16,6 +16,7 @@ NOTIF_INVOICE_OVERDUE = "invoice_overdue"  # CONN-1: eigen declaratie vervallen
 NOTIF_TRUST_APPROVAL_PENDING = "trust_approval_pending"  # CONN-2: vier-ogen wacht
 NOTIF_TRUST_STALE = "trust_stale"  # FIN-2: derdengelden staan te lang stil
 NOTIF_INSTALLMENT_OVERDUE = "installment_overdue"  # regeling-alarm: termijn gemist
+NOTIF_BIK_ABOVE_STAFFEL = "bik_above_staffel"  # S230/V1: B2C-kosten boven WIK-staffel
 
 # A5/A11 (S198): meldings-typen die uit de meldingenlijst + ongelezen-teller worden
 # gefilterd. De classificatielijn staat op pauze en 'classification_done' verzoop de
@@ -495,6 +496,40 @@ async def create_trust_stale_notification(
             message=message,
             case_id=case_id,
             case_number=case_number,
+        ),
+        dedup_minutes=dedup_days * 24 * 60,
+    )
+
+
+async def create_bik_above_staffel_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    aantal: int,
+    te_veel_totaal,
+    grootste_case_number: str | None,
+    dedup_days: int,
+) -> int:
+    """S230/V1: meld dat er B2C-dossiers boven de dwingende WIK-staffel staan.
+
+    Eén samenvattende melding voor de hele tenant (niet per dossier) — het is
+    een opruimklus met een lijst, geen los dossier-signaal.
+    """
+    title = f"Incassokosten boven de WIK-staffel: {aantal} consumentendossier(s)"
+    message = (
+        f"Bij {aantal} consumentendossier(s) staat een handmatig incassokosten-bedrag "
+        f"boven de wettelijke staffel (art. 6:96 BW, dwingend recht) — samen "
+        f"€ {te_veel_totaal} te veel"
+        + (f", grootste: {grootste_case_number}" if grootste_case_number else "")
+        + ". Zet het handmatige bedrag leeg zodat het systeem de staffel rekent."
+    )
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_BIK_ABOVE_STAFFEL,
+            title=title,
+            message=message,
         ),
         dedup_minutes=dedup_days * 24 * 60,
     )

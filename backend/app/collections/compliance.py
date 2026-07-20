@@ -10,7 +10,7 @@ import uuid
 from datetime import date
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case
@@ -263,6 +263,64 @@ async def record_dagenbrief_override(
             history.notes = f"{history.notes}\n{note}" if history.notes else note
 
     await db.flush()
+
+
+async def find_bik_above_staffel(
+    db: AsyncSession, tenant_id: uuid.UUID
+) -> list[dict]:
+    """Alle B2C-dossiers waar het handmatige incassokosten-bedrag boven de
+    WIK-staffel uitkomt (S230, V1-wachter).
+
+    Twee bestaande wachters kijken naar het MOMENT van handelen: de wijzig-route
+    (cases.service, AUDIT-23) en de verzendcontrole hieronder. De 27 zaken uit
+    S229 kwamen via de BaseNet-import binnen en passeerden dus geen van beide —
+    ze zaten er stil in met een vlakke 15% van de hoofdsom, waar de staffel van
+    art. 6:96 BW dwingend lager uitkomt. Deze sweep loopt de héle database af en
+    vangt daarmee de SOORT: elke toekomstige import of directe DB-schrijfactie.
+
+    ponytail: per-kandidaat calculate_bik; het aantal B2C-zaken mét handmatig
+    bedrag is klein (80 op prod). Eén SQL-staffel als dat ooit duizenden worden.
+    """
+    from app.relations.models import Contact
+
+    principal_per_case = (
+        select(
+            Claim.case_id.label("case_id"),
+            func.coalesce(func.sum(Claim.principal_amount), 0).label("principal"),
+        )
+        .where(Claim.tenant_id == tenant_id)
+        .group_by(Claim.case_id)
+        .subquery()
+    )
+
+    rows = (
+        await db.execute(
+            select(Case, Contact.is_btw_plichtig, principal_per_case.c.principal)
+            .join(principal_per_case, principal_per_case.c.case_id == Case.id)
+            .outerjoin(Contact, Contact.id == Case.client_id)
+            .where(
+                Case.tenant_id == tenant_id,
+                Case.debtor_type == "b2c",
+                Case.bik_override.isnot(None),
+            )
+        )
+    ).all()
+
+    treffers: list[dict] = []
+    for case, client_btw_plichtig, principal in rows:
+        include_btw = not client_btw_plichtig if client_btw_plichtig is not None else False
+        max_bik = calculate_bik(principal, include_btw=include_btw)["bik_inclusive"]
+        if case.bik_override > max_bik:
+            treffers.append(
+                {
+                    "case_id": case.id,
+                    "case_number": case.case_number,
+                    "bik_override": case.bik_override,
+                    "staffel": max_bik,
+                    "te_veel": case.bik_override - max_bik,
+                }
+            )
+    return sorted(treffers, key=lambda t: t["te_veel"], reverse=True)
 
 
 async def pre_send_compliance_check(

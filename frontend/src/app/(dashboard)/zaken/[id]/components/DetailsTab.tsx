@@ -821,7 +821,7 @@ export default function DetailsTab({ zaak, initialNoteText, onNoteTextConsumed }
                   </div>
                 )}
                 {(() => {
-                  const origin = basenetOrigin(zaak.basenet_origin_status, zaak.basenet_origin_phase);
+                  const origin = basenetOrigin(zaak.basenet_origin_status, zaak.basenet_origin_phase, zaak.status);
                   return origin ? (
                     <div>
                       <dt className="text-xs text-muted-foreground mb-1">Herkomst (BaseNet)</dt>

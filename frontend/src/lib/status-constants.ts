@@ -72,10 +72,22 @@ const BASENET_AFGEHANDELD = new Set(["Gereed", "Geannuleerd", "Offerte"]);
 export function basenetOrigin(
   status: string | null | undefined,
   phase?: string | null,
+  caseStatus?: string | null,
 ): { label: string; badge: string; title: string } | null {
   if (!status) return null;
   const fase = phase ? ` · fase: ${phase}` : "";
   if (BASENET_HEROPENEN.has(status)) {
+    // S231 (demo-vondst Arsalan): een dossier dat inmiddels heropend ÍS, droeg
+    // nog steeds "Nog te openen" — de badge keek alleen naar de herkomst, niet
+    // naar de huidige status. Heropend → toon dat het uit de fase-heropening
+    // komt, niet dat het nog moet.
+    if (caseStatus && caseStatus !== "afgesloten") {
+      return {
+        label: "Heropend",
+        badge: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+        title: `In BaseNet nog "${status.toLowerCase()}"${fase} — inmiddels heropend en in behandeling in Luxis`,
+      };
+    }
     return {
       label: "Nog te openen",
       badge: "bg-amber-50 text-amber-700 ring-amber-600/20",

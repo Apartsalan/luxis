@@ -293,10 +293,18 @@ async def find_bik_above_staffel(
         .subquery()
     )
 
+    # outerjoin + coalesce: een dossier ZONDER vorderingen mag niet stilletjes
+    # buiten de sweep vallen. De twee bestaande wachters beoordelen zo'n zaak wél
+    # (hoofdsom 0 → staffel 0 → elk bedrag is te hoog); alle drie moeten hetzelfde
+    # oordelen, anders is de sweep geen wachter maar een tweede mening.
     rows = (
         await db.execute(
-            select(Case, Contact.is_btw_plichtig, principal_per_case.c.principal)
-            .join(principal_per_case, principal_per_case.c.case_id == Case.id)
+            select(
+                Case,
+                Contact.is_btw_plichtig,
+                func.coalesce(principal_per_case.c.principal, 0),
+            )
+            .outerjoin(principal_per_case, principal_per_case.c.case_id == Case.id)
             .outerjoin(Contact, Contact.id == Case.client_id)
             .where(
                 Case.tenant_id == tenant_id,
@@ -317,6 +325,10 @@ async def find_bik_above_staffel(
                     "case_number": case.case_number,
                     "bik_override": case.bik_override,
                     "staffel": max_bik,
+                    # Vrijwel de hele BaseNet-import kwam binnen als 'afgesloten'
+                    # (581 van 626). Zonder dit onderscheid leest elke melding als
+                    # "er gaat nu geld de deur uit", terwijl het meestal archief is.
+                    "afgesloten": case.status == "afgesloten",
                     "te_veel": case.bik_override - max_bik,
                 }
             )

@@ -12,6 +12,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant
@@ -101,6 +102,53 @@ async def test_sweep_vindt_vlakke_15_procent_bij_consument(
     assert treffers[0]["case_number"] == "2026-96001"
     assert treffers[0]["staffel"] == STAFFEL
     assert treffers[0]["te_veel"] == VLAKKE_15_PCT - STAFFEL  # € 625,00
+    assert treffers[0]["afgesloten"] is False
+
+
+@pytest.mark.asyncio
+async def test_sweep_vindt_ook_zaak_zonder_vorderingen(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """Zonder vorderingen is de hoofdsom 0 → elk handmatig bedrag is te hoog.
+
+    De twee bestaande wachters oordelen zo ook; viel de sweep hierop stil, dan
+    was hij een tweede mening in plaats van een wachter.
+    """
+    case = await _case_met_bik(
+        db,
+        test_tenant.id,
+        case_number="2026-96006",
+        debtor_type="b2c",
+        bik_override=Decimal("500.00"),
+    )
+    await db.execute(delete(Claim).where(Claim.case_id == case.id))
+    await db.flush()
+
+    treffers = await find_bik_above_staffel(db, test_tenant.id)
+
+    assert [t["case_number"] for t in treffers] == ["2026-96006"]
+
+
+@pytest.mark.asyncio
+async def test_sweep_merkt_afgesloten_dossier_als_archief(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """Vrijwel de hele BaseNet-import kwam binnen als 'afgesloten'; de melding
+    moet lopend en archief uit elkaar kunnen houden."""
+    case = await _case_met_bik(
+        db,
+        test_tenant.id,
+        case_number="2026-96007",
+        debtor_type="b2c",
+        bik_override=VLAKKE_15_PCT,
+    )
+    case.status = "afgesloten"
+    await db.flush()
+
+    treffers = await find_bik_above_staffel(db, test_tenant.id)
+
+    assert len(treffers) == 1
+    assert treffers[0]["afgesloten"] is True
 
 
 @pytest.mark.asyncio

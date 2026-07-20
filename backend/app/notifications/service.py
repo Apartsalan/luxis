@@ -506,6 +506,7 @@ async def create_bik_above_staffel_notification(
     tenant_id: uuid.UUID,
     *,
     aantal: int,
+    aantal_lopend: int,
     te_veel_totaal,
     grootste_case_number: str | None,
     dedup_days: int,
@@ -513,13 +514,20 @@ async def create_bik_above_staffel_notification(
     """S230/V1: meld dat er B2C-dossiers boven de dwingende WIK-staffel staan.
 
     Eén samenvattende melding voor de hele tenant (niet per dossier) — het is
-    een opruimklus met een lijst, geen los dossier-signaal.
+    een opruimklus met een lijst, geen los dossier-signaal. Lopend en archief
+    apart genoemd: alleen bij een lopend dossier gaat er echt een fout bedrag de
+    deur uit.
     """
     title = f"Incassokosten boven de WIK-staffel: {aantal} consumentendossier(s)"
+    verdeling = (
+        f"{aantal_lopend} lopend, {aantal - aantal_lopend} archief"
+        if aantal_lopend < aantal
+        else f"{aantal} lopend"
+    )
     message = (
-        f"Bij {aantal} consumentendossier(s) staat een handmatig incassokosten-bedrag "
-        f"boven de wettelijke staffel (art. 6:96 BW, dwingend recht) — samen "
-        f"€ {te_veel_totaal} te veel"
+        f"Bij {aantal} consumentendossier(s) ({verdeling}) staat een handmatig "
+        f"incassokosten-bedrag boven de wettelijke staffel (art. 6:96 BW, dwingend "
+        f"recht) — samen € {te_veel_totaal} te veel"
         + (f", grootste: {grootste_case_number}" if grootste_case_number else "")
         + ". Zet het handmatige bedrag leeg zodat het systeem de staffel rekent."
     )

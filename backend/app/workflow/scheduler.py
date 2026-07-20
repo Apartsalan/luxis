@@ -751,15 +751,18 @@ async def daily_bik_staffel_check() -> None:
                 if not treffers:
                     continue
                 te_veel_totaal = sum(t["te_veel"] for t in treffers)
+                lopend = sum(1 for t in treffers if not t["afgesloten"])
                 logger.warning(
-                    "Scheduler: BIK-staffel — %d dossiers boven staffel, samen €%s",
+                    "Scheduler: BIK-staffel — %d dossiers boven staffel (%d lopend), samen €%s",
                     len(treffers),
+                    lopend,
                     te_veel_totaal,
                 )
                 await create_bik_above_staffel_notification(
                     session,
                     tenant.id,
                     aantal=len(treffers),
+                    aantal_lopend=lopend,
                     te_veel_totaal=te_veel_totaal,
                     grootste_case_number=treffers[0]["case_number"],
                     dedup_days=7,

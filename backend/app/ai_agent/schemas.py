@@ -107,6 +107,9 @@ class AIDraftResponse(BaseModel):
     model_used: str | None = None
     instruction: str | None = None
 
+    # S233 — Taak 2: opent het concept met de factuur-PDF's al aangevinkt.
+    attach_invoices: bool = False
+
     created_at: datetime
 
     model_config = {"from_attributes": True}

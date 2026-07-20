@@ -916,3 +916,112 @@ async def test_reply_prompt_includes_dossier_facts(
     assert "Dossiergegevens" in user_msg
     assert "Opdrachtgever" in user_msg
     assert test_company.name in user_msg  # echte klantnaam, niet verzonnen
+
+
+# ── S233: attach_invoices ("doe de facturen erbij") ───────────────────────
+
+
+def _patch_ai_attach(monkeypatch, attach_value):
+    """AI-antwoord dat het factuur-signaal meegeeft (of weglaat als None)."""
+
+    async def fake_call(_system, _user):
+        result = {"subject": "Re:", "body": "Antwoord.", "tone": "zakelijk"}
+        if attach_value is not None:
+            result["attach_invoices"] = attach_value
+        return (result, "fake-model")
+
+    monkeypatch.setattr(
+        "app.ai_agent.unified_draft_service.call_intake_ai", fake_call
+    )
+
+
+@pytest_asyncio.fixture
+async def reply_source(db, test_tenant, test_user, incasso_case) -> SyncedEmail:
+    """Inkomende mail van de debiteur om op te antwoorden."""
+    from app.email.oauth_models import EmailAccount
+
+    account = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="outlook", email_address="lisanne@kestinglegal.nl",
+        access_token_enc=b"stub", refresh_token_enc=b"stub",
+        token_expiry=datetime.now(UTC) + timedelta(hours=1),
+    )
+    db.add(account)
+    await db.flush()
+    src = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email_account_id=account.id,
+        case_id=incasso_case.id, provider_message_id="fac@example.com",
+        from_email="debiteur@example.com", from_name="Debiteur",
+        subject="Kunt u de facturen sturen?", body_text="Stuur de facturen aub.",
+        body_html="", direction="inbound", email_date=datetime.now(UTC),
+    )
+    db.add(src)
+    await db.commit()
+    return src
+
+
+@pytest.mark.asyncio
+async def test_reply_sets_attach_invoices_when_ai_signals(
+    db, test_tenant, test_user, incasso_case, reply_source, fake_base_context, monkeypatch
+):
+    """Vraagt de behandelaar de facturen mee te sturen en zet de AI het signaal,
+    dan draagt het concept attach_invoices=True (paneel opent met facturen aangevinkt)."""
+    _patch_ai_attach(monkeypatch, True)
+    _patch_context(monkeypatch, fake_base_context)
+
+    draft = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.REPLY_TO_EMAIL,
+        source_email_id=reply_source.id,
+        instruction="Doe de facturen erbij.",
+    )
+    assert draft.attach_invoices is True
+
+
+@pytest.mark.asyncio
+async def test_reply_no_attach_when_ai_silent(
+    db, test_tenant, test_user, incasso_case, reply_source, fake_base_context, monkeypatch
+):
+    """Zonder factuur-verzoek zet de AI het signaal niet → attach_invoices=False."""
+    _patch_ai_attach(monkeypatch, None)  # sleutel ontbreekt
+    _patch_context(monkeypatch, fake_base_context)
+
+    draft = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.REPLY_TO_EMAIL,
+        source_email_id=reply_source.id,
+    )
+    assert draft.attach_invoices is False
+
+
+@pytest.mark.asyncio
+async def test_next_step_never_attaches_invoices_even_if_ai_signals(
+    db, test_tenant, test_user, incasso_case, fake_base_context, monkeypatch
+):
+    """Kruispunt-wachter: de dagelijkse auto-conceptbatch (next_step) draagt geen
+    instructie en mag NOOIT facturen vlaggen — ook niet als het model per ongeluk
+    attach_invoices:true teruggeeft. De guard staat op de intent, niet op de AI."""
+    _patch_ai_attach(monkeypatch, True)
+    _patch_context(monkeypatch, fake_base_context)
+
+    draft = await generate_unified_draft(
+        db, test_tenant.id, test_user.id,
+        case_id=incasso_case.id, intent=DraftIntent.NEXT_STEP,
+    )
+    assert draft.attach_invoices is False
+
+
+def test_reply_prompt_mentions_invoice_signal():
+    """De antwoord-prompt moet het factuur-signaal uitleggen; het NO_HTML-blok
+    (gedeeld met next_step/free_compose) mag het NIET noemen — anders zou de batch
+    het ook kunnen zetten."""
+    from app.ai_agent.unified_draft_service import (
+        _NEXT_STEP_PROMPT,
+        _NO_HTML_RULE,
+        _REPLY_PROMPT,
+    )
+
+    assert "attach_invoices" in _REPLY_PROMPT
+    assert "facturen" in _REPLY_PROMPT.lower()
+    assert "attach_invoices" not in _NO_HTML_RULE
+    assert "attach_invoices" not in _NEXT_STEP_PROMPT

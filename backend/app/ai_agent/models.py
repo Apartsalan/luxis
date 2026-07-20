@@ -252,6 +252,14 @@ class AIDraft(TenantBase):
     token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # S233 — Taak 2: de behandelaar-instructie kan vragen de facturen bij te sluiten
+    # ("doe de facturen erbij"). De AI leidt dit af en zet het signaal; het concept
+    # opent dan met de factuur-PDF's al aangevinkt. Alleen op de antwoordroute — stap-
+    # en batch-concepten dragen geen instructie en blijven dus False.
+    attach_invoices: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
     # S221 3.2 — ontdubbelen + zombie-opruiming. `intent` = waarvoor het concept is
     # (next_step / reply_to_email / free_compose); `step_id` = de pijplijnstap waarop
     # de zaak stond bij generatie. Samen vormen ze de ontdubbel-sleutel en laten ze

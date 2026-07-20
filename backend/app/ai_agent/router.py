@@ -398,6 +398,7 @@ def _draft_to_response(d) -> AIDraftResponse:
         sent_at=d.sent_at,
         model_used=d.model_used,
         instruction=d.instruction,
+        attach_invoices=bool(getattr(d, "attach_invoices", False)),
         created_at=d.created_at,
     )
 

@@ -31,6 +31,9 @@ export interface SyncedEmailSummary {
   email_date: string;
   case_id: string | null;
   case_number: string | null;
+  // S233 — meegestuurd op de case-emails-lijst zodat het antwoord-zijpaneel de
+  // mailgeschiedenis (dezelfde draad) kan filteren zonder per mail detail te laden.
+  provider_thread_id?: string | null;
 }
 
 export interface SyncedEmailDetail extends SyncedEmailSummary {

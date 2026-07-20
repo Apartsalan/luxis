@@ -237,6 +237,18 @@ class AutoAttachmentsResponse(BaseModel):
     items: list[AutoAttachmentItem]
 
 
+class InvoiceFileItem(BaseModel):
+    """S233 — een factuur-PDF uit het dossier, als vooraf-aangevinkte bijlage."""
+
+    id: uuid.UUID
+    filename: str
+    size: int
+
+
+class InvoiceFilesResponse(BaseModel):
+    items: list[InvoiceFileItem]
+
+
 # ── Attachment resolver ──────────────────────────────────────────────────────
 
 
@@ -950,3 +962,54 @@ async def preview_auto_attachments(
             )
 
     return AutoAttachmentsResponse(items=items)
+
+
+@router.get(
+    "/cases/{case_id}/invoice-files",
+    response_model=InvoiceFilesResponse,
+)
+async def list_invoice_files(
+    case_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """S233 — factuur-PDF's van dit dossier als selecteerbare bijlagen.
+
+    Gebruikt door de AI-antwoord-flow: vraagt de behandelaar "doe de facturen erbij"
+    (draft.attach_invoices), dan opent het concept met deze bestanden al aangevinkt.
+    Levert alleen de metadata (id/naam/grootte) — het bestand zelf gaat via de
+    bestaande case-file-download bij verzending mee. Route-onafhankelijk (geen
+    sjabloontype nodig), i.t.t. /auto-attachments dat alleen bij een sommatie-sjabloon
+    factuur-PDF's toont."""
+    case = (
+        await db.execute(
+            select(Case).where(Case.id == case_id, Case.tenant_id == user.tenant_id)
+        )
+    ).scalar_one_or_none()
+    if not case:
+        raise NotFoundError("Dossier niet gevonden")
+
+    rows = (
+        await db.execute(
+            select(CaseFile.id, CaseFile.original_filename, CaseFile.file_size)
+            .join(Claim, Claim.invoice_file_id == CaseFile.id)
+            .where(
+                Claim.case_id == case_id,
+                Claim.tenant_id == user.tenant_id,
+                Claim.is_active.is_(True),
+                Claim.invoice_file_id.is_not(None),
+            )
+            .distinct()
+        )
+    ).all()
+
+    return InvoiceFilesResponse(
+        items=[
+            InvoiceFileItem(
+                id=file_id,
+                filename=filename or "Factuur (PDF)",
+                size=size or 0,
+            )
+            for file_id, filename, size in rows
+        ]
+    )

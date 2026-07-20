@@ -121,7 +121,13 @@ _REPLY_PROMPT = (
     "- Pas de toon aan op de gevraagde stijl (mild/zakelijk/streng); dreig niet met "
     "dagvaarding tenzij expliciet streng én gerechtvaardigd.\n"
     "- Gebruik de eventueel meegegeven verweer-voorbeelden en algemene voorwaarden als "
-    "referentie/leidraad, niet als verplichte tekst.\n\n"
+    "referentie/leidraad, niet als verplichte tekst.\n"
+    "- FACTUREN BIJSLUITEN (S233): vraagt de behandelaar-instructie om de factuur/facturen "
+    "mee te sturen of bij te voegen (bijv. 'doe de facturen erbij', 'stuur de factuur mee', "
+    "'voeg de facturen toe'), voeg dan aan je JSON de sleutel \"attach_invoices\": true toe. "
+    "Vraagt de instructie daar NIET om, laat de sleutel weg of zet hem op false. Je voegt de "
+    "bestanden zelf niet toe — dit signaal zorgt dat het concept met de factuur-PDF's al "
+    "aangevinkt opent.\n\n"
     + _NO_HTML_RULE
 )
 
@@ -637,6 +643,12 @@ async def generate_unified_draft(
     body = _strip_trailing_closing((result.get("body") or "").strip())
     ai_tone = (result.get("tone") or tone or "formeel").strip()
 
+    # S233 — factuur-signaal uit de behandelaar-instructie. Alleen op de antwoordroute:
+    # stap- en batch-concepten dragen geen instructie, dus dit blijft daar altijd False.
+    attach_invoices = bool(
+        intent == DraftIntent.REPLY_TO_EMAIL and result.get("attach_invoices") is True
+    )
+
     # S223 — onderwerp server-side vastzetten i.p.v. het door de AI verzonnen
     # onderwerp (dat wisselde per keer). Vast formaat = klant / debiteur — brieftype
     # — dossiernummer; een antwoord houdt het originele onderwerp met "Re:" aan.
@@ -678,6 +690,7 @@ async def generate_unified_draft(
         instruction=instruction,
         intent=intent.value,
         step_id=case.incasso_step_id,
+        attach_invoices=attach_invoices,
     )
     db.add(draft)
     await db.flush()

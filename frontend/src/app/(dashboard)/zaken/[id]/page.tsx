@@ -193,6 +193,10 @@ export default function ZaakDetailPage() {
   const [draftSubject, setDraftSubject] = useState<string>("");
   const [draftBody, setDraftBody] = useState<string>("");
   const [draftBodyHtml, setDraftBodyHtml] = useState<string>("");
+  // S233 — bij een AI-antwoord vanuit de Correspondentie-tab: de mail waarop het
+  // een antwoord is (onderin het paneel getoond) + of de facturen vooraf mee moeten.
+  const [draftSourceEmail, setDraftSourceEmail] = useState<SyncedEmailDetail | null>(null);
+  const [draftAttachInvoices, setDraftAttachInvoices] = useState<boolean>(false);
 
   useEffect(() => {
     if (!draftIdFromQuery) return;
@@ -223,6 +227,8 @@ export default function ZaakDetailPage() {
         setDraftSubject(d.subject || "");
         setDraftBody(d.body || "");
         setDraftBodyHtml(d.body_html || "");
+        setDraftAttachInvoices(!!d.attach_invoices);
+        setDraftSourceEmail(null); // deep-link: bronmail onbekend, geen draad tonen
         setCaseEmailOpen(true);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Kon AI-concept niet laden");
@@ -235,7 +241,7 @@ export default function ZaakDetailPage() {
   // useSearchParams updatet niet altijd betrouwbaar na router.replace in Next.js 15,
   // dus we openen de dialog direct via state.
   const generateDraft = useGenerateDraftForCase();
-  const openDraftDialog = async (draftId: string) => {
+  const openDraftDialog = async (draftId: string, sourceEmail?: SyncedEmailDetail) => {
     try {
       const res = await api(`/api/ai-agent/drafts/${draftId}`);
       if (!res.ok) throw new Error("Concept niet gevonden");
@@ -244,6 +250,8 @@ export default function ZaakDetailPage() {
       setDraftSubject(d.subject || "");
       setDraftBody(d.body || "");
       setDraftBodyHtml(d.body_html || "");
+      setDraftAttachInvoices(!!d.attach_invoices);
+      setDraftSourceEmail(sourceEmail ?? null);
       setCaseEmailOpen(true);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Concept niet gevonden";
@@ -791,6 +799,8 @@ export default function ZaakDetailPage() {
             setDraftSubject("");
             setDraftBody("");
             setDraftBodyHtml("");
+            setDraftSourceEmail(null);
+            setDraftAttachInvoices(false);
             router.replace(`/zaken/${id}`);
           }
         }}
@@ -813,9 +823,11 @@ export default function ZaakDetailPage() {
         }
         defaultBody={!replyPrefill && activeDraftId ? draftBody : ""}
         defaultBodyHtml={replyPrefill ? replyPrefill.bodyHtml : activeDraftId ? draftBodyHtml : ""}
-        replyToMessageId={replyPrefill?.replyToMessageId ?? null}
-        referencesRoot={replyPrefill?.referencesRoot ?? null}
+        replyToMessageId={replyPrefill?.replyToMessageId ?? draftSourceEmail?.provider_message_id ?? null}
+        referencesRoot={replyPrefill?.referencesRoot ?? draftSourceEmail?.provider_thread_id ?? null}
         forwardFromEmailId={replyPrefill?.forwardFromEmailId ?? null}
+        replySourceEmail={draftSourceEmail}
+        preselectInvoices={draftAttachInvoices}
         recipients={zaak ? buildDossierRecipients(zaak) : []}
         caseId={id}
       />

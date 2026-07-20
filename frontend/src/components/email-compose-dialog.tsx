@@ -7,10 +7,10 @@ import {
   Mail, Paperclip, Loader2, X, Plus,
   ExternalLink, FileText, Upload, FolderSearch, BookMarked, Search, Briefcase,
 } from "lucide-react";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { MailThreadPanel } from "@/components/mail-thread-panel";
+import type { SyncedEmailDetail } from "@/hooks/use-email-sync";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -201,6 +201,12 @@ export interface EmailComposeDialogProps {
   replyToMessageId?: string | null;
   referencesRoot?: string | null;
   forwardFromEmailId?: string | null;
+  // S233 — de mail waarop dit een antwoord is: onderin het paneel uitklapbaar
+  // getoond met de eerdere mailtjes van de draad, zodat je kunt blijven lezen.
+  replySourceEmail?: SyncedEmailDetail | null;
+  // S233 — behandelaar vroeg "doe de facturen erbij": open met de factuur-PDF's
+  // van dit dossier al aangevinkt (de gebruiker kan ze weghalen).
+  preselectInvoices?: boolean;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -223,6 +229,8 @@ export function EmailComposeDialog({
   replyToMessageId,
   referencesRoot,
   forwardFromEmailId,
+  replySourceEmail,
+  preselectInvoices = false,
 }: EmailComposeDialogProps) {
   // ── State ─────────────────────────────────────────────────────────────
   const [to, setTo] = useState(defaultTo);
@@ -359,6 +367,38 @@ export function EmailComposeDialog({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, effectiveCaseId, selectedTemplate, to]);
+
+  // S233 — behandelaar vroeg "doe de facturen erbij": vink de factuur-PDF's van
+  // dit dossier vooraf aan (als echte bijlagen, zodat ze meegaan bij verzenden).
+  // Draait ná de reset-effect (die attachments leegt) omdat hij later gedefinieerd
+  // is; append-only en ontdubbelt op file-id, dus veilig als hij nog eens vuurt.
+  useEffect(() => {
+    if (!open || !preselectInvoices || !effectiveCaseId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api(`/api/email/compose/cases/${effectiveCaseId}/invoice-files`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const files = (data.items ?? []) as { id: string; filename: string; size: number }[];
+        if (cancelled || files.length === 0) return;
+        setCaseFileIds((prev) => {
+          const n = new Set(prev);
+          files.forEach((f) => n.add(f.id));
+          return n;
+        });
+        setAttachments((prev) => {
+          const have = new Set(prev.map((a) => a.id));
+          const add = files
+            .filter((f) => !have.has(f.id))
+            .map((f) => ({ id: f.id, filename: f.filename, size: f.size, source: "dossier" as const }));
+          return add.length ? [...prev, ...add] : prev;
+        });
+      } catch { /* stil — de gebruiker kan bijlagen alsnog handmatig toevoegen */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, preselectInvoices, effectiveCaseId]);
 
   // Reset on open
   const handleOpenChange = (nextOpen: boolean) => {
@@ -772,10 +812,10 @@ export function EmailComposeDialog({
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[95vw] w-full max-h-[92vh] h-[92vh] p-0 flex flex-col max-sm:p-0 max-sm:overflow-hidden">
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent className="p-0 gap-0">
         {/* Header */}
-        <DialogHeader className="px-6 pt-5 pb-3 shrink-0">
+        <DialogHeader className="px-6 pt-5 pb-3 pr-12 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Mail className="h-4 w-4 text-primary" />
             {title}
@@ -1284,6 +1324,15 @@ export function EmailComposeDialog({
             {errors.attachments && <p className="text-xs text-destructive">{errors.attachments}</p>}
           </div>
 
+          {/* ── Mailgeschiedenis (S233) ───────────────────────────── */}
+          {/* De mail waarop je antwoordt + eerdere mailtjes van de draad,
+              onderin het paneel zodat je kunt blijven lezen tijdens het schrijven. */}
+          {replySourceEmail && (
+            <div className="border-t px-6 py-3 shrink-0 max-h-[38vh] overflow-auto">
+              <MailThreadPanel sourceEmail={replySourceEmail} />
+            </div>
+          )}
+
           {/* ── Footer ────────────────────────────────────────────── */}
           <div className="border-t px-4 sm:px-6 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-3 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
             {/* Left: attachments button */}
@@ -1338,7 +1387,7 @@ export function EmailComposeDialog({
             </div>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

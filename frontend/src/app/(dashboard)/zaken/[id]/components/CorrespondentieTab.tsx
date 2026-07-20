@@ -58,7 +58,8 @@ function EmailDetailPanel({
   onReply?: (email: SyncedEmailDetail, mode: "reply" | "forward") => void;
   // S227 — opent het gegenereerde AI-concept ín deze pagina (betrouwbaar bij
   // same-page navigatie, i.t.t. ?draft= — zie BUG-73 in zaken/[id]/page.tsx).
-  onOpenDraft?: (draftId: string) => void;
+  // S233 — geeft de bronmail mee zodat het paneel de draad onderin kan tonen.
+  onOpenDraft?: (draftId: string, sourceEmail?: SyncedEmailDetail) => void;
 }) {
   const { data: email, isLoading } = useSyncedEmailDetail(emailId);
   const saveToCase = useSaveAttachmentToCase();
@@ -264,7 +265,7 @@ function EmailDetailPanel({
         <AiReplyDialog
           email={email}
           onClose={() => setAiReplyOpen(false)}
-          onOpenDraft={onOpenDraft}
+          onOpenDraft={(draftId) => onOpenDraft(draftId, email)}
         />
       )}
     </div>
@@ -312,7 +313,7 @@ function CorrespondentieTab({
   caseId: string;
   onCompose?: () => void;
   onReply?: (email: SyncedEmailDetail, mode: "reply" | "forward") => void;
-  onOpenDraft?: (draftId: string) => void;
+  onOpenDraft?: (draftId: string, sourceEmail?: SyncedEmailDetail) => void;
 }) {
   const { data: logs, isLoading: logsLoading } = useEmailLogs(caseId);
   // ponytail: 200 dekt het drukste dossier ruim (max ~83 nu); voeg echte paging

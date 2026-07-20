@@ -83,6 +83,9 @@ class SyncedEmailSummary(BaseModel):
     email_date: str
     case_id: str | None
     case_number: str | None = None
+    # S233 — nodig om de mailgeschiedenis (dezelfde draad) in het antwoord-
+    # zijpaneel te kunnen filteren zonder per mail de detail op te halen.
+    provider_thread_id: str | None = None
 
 
 class AttachmentInfo(BaseModel):
@@ -194,6 +197,7 @@ def _email_to_summary(email: SyncedEmail) -> SyncedEmailSummary:
         case_id=str(email.case_id) if email.case_id else None,
         # `case` is lazy="selectin" → altijd geladen, geen extra query per mail.
         case_number=email.case.case_number if email.case_id and email.case else None,
+        provider_thread_id=email.provider_thread_id,
     )
 
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import {
   Mail,
   ArrowDownLeft,
@@ -62,7 +61,6 @@ import { Reply, Forward } from "lucide-react";
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CorrespondentiePage() {
-  const router = useRouter();
   // Tab state
   const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd" | "aanvragen">("alle");
 
@@ -85,6 +83,87 @@ export default function CorrespondentiePage() {
   const [replyPrefill, setReplyPrefill] = useState<ReplyPrefill | null>(null);
   // S223 — "AI-antwoord maken" op een inkomende mail van de wederpartij
   const [aiReplyEmail, setAiReplyEmail] = useState<SyncedEmailDetail | null>(null);
+  // S233 — het AI-concept opent nu IN-PLACE als zijpaneel op de Mail-pagina i.p.v.
+  // een navigatie naar de dossierpagina (waardoor je de mail kwijtraakte). De
+  // mail waarop je antwoordt blijft links leesbaar én staat in het paneel.
+  const [aiDraft, setAiDraft] = useState<{
+    id: string;
+    subject: string;
+    body: string;
+    bodyHtml: string;
+    caseId: string;
+    sourceEmail: SyncedEmailDetail;
+    attachInvoices: boolean;
+  } | null>(null);
+  const [aiDraftSending, setAiDraftSending] = useState(false);
+
+  const openAiDraft = async (draftId: string, sourceEmail: SyncedEmailDetail) => {
+    try {
+      const res = await api(`/api/ai-agent/drafts/${draftId}`);
+      if (!res.ok) throw new Error("Concept niet gevonden");
+      const d = await res.json();
+      setAiDraft({
+        id: draftId,
+        subject: d.subject || "",
+        body: d.body || "",
+        bodyHtml: d.body_html || "",
+        caseId: d.case_id || sourceEmail.case_id || "",
+        sourceEmail,
+        attachInvoices: !!d.attach_invoices,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Kon AI-concept niet laden");
+    }
+  };
+
+  // Verzend het AI-antwoord vanaf de Mail-pagina. Zelfde route als de
+  // dossierpagina: compose/send (al opgemaakt) + advance-after-send om het
+  // concept als verzonden te markeren en de reviewtaak te sluiten. Een antwoord
+  // schuift de pijplijn NOOIT door (P1) — advance-after-send weet dat (reply-intent).
+  const sendAiDraft = async (data: EmailComposeData) => {
+    if (!aiDraft) return;
+    setAiDraftSending(true);
+    try {
+      const res = await api("/api/email/compose/send", {
+        method: "POST",
+        body: JSON.stringify({
+          to: [data.recipient_email],
+          subject: data.custom_subject || "",
+          body_html: data.body_html || `<p>${(data.custom_body || "").replace(/\n/g, "<br>")}</p>`,
+          cc: data.cc,
+          bcc: data.bcc,
+          case_id: data.case_id,
+          case_file_ids: data.case_file_ids,
+          inline_attachments: data.inline_attachments,
+          reply_to_message_id: data.reply_to_message_id,
+          references_root: data.references_root,
+          forward_from_email_id: data.forward_from_email_id,
+          already_branded: data.already_branded || !!data.body_html,
+          skip_pipeline_advance: true,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        const detail = err?.detail;
+        const msg = typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+            ? detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(", ")
+            : "Antwoord verzenden mislukt";
+        throw new Error(msg);
+      }
+      await api(`/api/incasso/cases/${aiDraft.caseId}/advance-after-send`, {
+        method: "POST",
+        body: JSON.stringify({ draft_id: aiDraft.id }),
+      }).catch(() => { /* concept-markering is best-effort; de mail is al weg */ });
+      toast.success("Antwoord verzonden");
+      setAiDraft(null);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Antwoord verzenden mislukt");
+    } finally {
+      setAiDraftSending(false);
+    }
+  };
 
   // Free-compose verzending via OutlookProvider (geen dossier-context)
   const handleFreeComposeSend = async (data: EmailComposeData) => {
@@ -429,14 +508,35 @@ export default function CorrespondentiePage() {
         />
       )}
 
-      {/* AI-antwoord maken — concept op een inkomende mail van de wederpartij */}
+      {/* AI-antwoord maken — concept op een inkomende mail van de wederpartij.
+          S233: opent het concept IN-PLACE als zijpaneel i.p.v. te navigeren. */}
       {aiReplyEmail && (
         <AiReplyDialog
           email={aiReplyEmail}
           onClose={() => setAiReplyEmail(null)}
-          onOpenDraft={(draftId) =>
-            router.push(`/zaken/${aiReplyEmail.case_id}?draft=${draftId}`)
-          }
+          onOpenDraft={(draftId) => openAiDraft(draftId, aiReplyEmail)}
+        />
+      )}
+
+      {/* AI-concept reviewen & versturen — zijpaneel, mail blijft leesbaar */}
+      {aiDraft && (
+        <EmailComposeDialog
+          open={!!aiDraft}
+          onOpenChange={(open) => { if (!open) setAiDraft(null); }}
+          title="AI-concept reviewen & versturen"
+          defaultTo={aiDraft.sourceEmail.from_email}
+          defaultToName={aiDraft.sourceEmail.from_name}
+          defaultSubject={aiDraft.subject}
+          defaultBody={aiDraft.body}
+          defaultBodyHtml={aiDraft.bodyHtml}
+          caseId={aiDraft.caseId}
+          replyToMessageId={aiDraft.sourceEmail.provider_message_id}
+          referencesRoot={aiDraft.sourceEmail.provider_thread_id}
+          replySourceEmail={aiDraft.sourceEmail}
+          preselectInvoices={aiDraft.attachInvoices}
+          onSend={sendAiDraft}
+          onSendDirect={sendAiDraft}
+          isSending={aiDraftSending}
         />
       )}
 

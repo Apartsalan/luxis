@@ -17,6 +17,7 @@ from app.ai_agent.followup_models import (
     RecommendedAction,
 )
 from app.ai_agent.followup_schemas import (
+    FollowupAttachmentItem,
     FollowupPreviewOut,
     FollowupRecommendationList,
     FollowupRecommendationOut,
@@ -665,6 +666,30 @@ async def approve_and_execute_recommendation(
     return await execute_recommendation(db, tenant_id, rec_id, user_id)
 
 
+def _preview_attachments(case, step) -> list[FollowupAttachmentItem]:
+    """S231 — welke server-gerenderde bijlagen gaan mee, mét adres om te openen.
+
+    Spiegelt `build_rente_bijlage` (documents/rente_bijlage.py) zodat de
+    voorvertoning nooit iets anders toont dan er straks meegaat. Zelfde vorm
+    als de compose-route, zodat de frontend één openen-functie kan gebruiken.
+    """
+    items: list[FollowupAttachmentItem] = []
+    if wants_rente_bijlage(case, step):
+        items.append(
+            FollowupAttachmentItem(
+                label="Renteoverzicht (PDF)", template_type="renteoverzicht"
+            )
+        )
+    if getattr(step, "template_type", None) in VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES:
+        items.append(
+            FollowupAttachmentItem(
+                label="Concept-verzoekschrift faillissement (PDF)",
+                template_type="verzoekschrift_faillissement",
+            )
+        )
+    return items
+
+
 async def preview_recommendation(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -768,6 +793,8 @@ async def preview_recommendation(
             # partij — en het concept-verzoekschrift bij de dreigbrief (S225).
             has_attachment=wants_rente_bijlage(case, step)
             or step.template_type in VERZOEKSCHRIFT_BIJLAGE_TEMPLATE_TYPES,
+            case_id=case.id,
+            attachments=_preview_attachments(case, step),
             can_send=can_send,
             warning=warning,
         )
@@ -800,7 +827,16 @@ async def preview_recommendation(
         sender_email=sender_email,
         recipient_email=recipient_email,
         recipient_name=recipient_name,
+        case_id=case.id,
         has_attachment=True,
+        # DOCX-route: de brief zélf is de bijlage — zelfde sjabloon dat bij
+        # verzending gerenderd wordt, dus vooraf in te zien.
+        attachments=[
+            FollowupAttachmentItem(
+                label=f"{step.name} (PDF)", template_type=step.template_type
+            ),
+            *_preview_attachments(case, step),
+        ],
         can_send=can_send,
         warning=warning,
     )

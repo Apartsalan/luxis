@@ -22,7 +22,7 @@ from types import SimpleNamespace
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
@@ -195,6 +195,13 @@ class AutoAttachmentsRequest(BaseModel):
 class AutoAttachmentItem(BaseModel):
     label: str
     kind: str  # "rente" | "factuur" | "verzoekschrift"
+    # S231: waar de frontend het bestand kan ópenen. Zonder deze twee velden was
+    # het etiket een doodlopend label — de gebruiker zag dát er een bijlage
+    # meeging maar kon hem niet inzien vóór verzending.
+    # Server-gerenderde PDF → sjabloontype voor /documents/docx/.../render-pdf.
+    template_type: str | None = None
+    # Bestaand dossierbestand (factuur) → id voor /cases/{id}/files/{fid}/download.
+    case_file_id: uuid.UUID | None = None
 
 
 class AutoAttachmentsResponse(BaseModel):
@@ -826,7 +833,13 @@ async def preview_auto_attachments(
     if effective_template_type and wants_rente_bijlage(
         case, SimpleNamespace(template_type=effective_template_type)
     ):
-        items.append(AutoAttachmentItem(label="Renteoverzicht (PDF)", kind="rente"))
+        items.append(
+            AutoAttachmentItem(
+                label="Renteoverzicht (PDF)",
+                kind="rente",
+                template_type="renteoverzicht",
+            )
+        )
 
     # S225: de dreigbrief belooft het concept-verzoekschrift in de bijlage —
     # de server stuurt hem sindsdien automatisch mee op alle routes.
@@ -835,26 +848,35 @@ async def preview_auto_attachments(
             AutoAttachmentItem(
                 label="Concept-verzoekschrift faillissement (PDF)",
                 kind="verzoekschrift",
+                template_type="verzoekschrift_faillissement",
             )
         )
 
     # Factuur-PDF's alleen bij een EXPLICIET gekozen sommatie-sjabloon (geen
     # factuur-auto-attach op de afgeleide route).
     if data.template_type in AUTO_ATTACH_INVOICE_TYPES:
-        invoice_count = (
+        # S231: één regel per factuur i.p.v. één telling ("3 factuur-PDF's").
+        # Alleen zo kan de gebruiker ze stuk voor stuk openen vóór verzending.
+        invoice_rows = (
             await db.execute(
-                select(func.count())
-                .select_from(Claim)
+                select(CaseFile.id, CaseFile.original_filename)
+                .join(Claim, Claim.invoice_file_id == CaseFile.id)
                 .where(
                     Claim.case_id == case_id,
                     Claim.tenant_id == user.tenant_id,
                     Claim.is_active.is_(True),
                     Claim.invoice_file_id.is_not(None),
                 )
+                .distinct()
             )
-        ).scalar() or 0
-        if invoice_count:
-            label = f"{invoice_count} factuur-PDF" + ("'s" if invoice_count > 1 else "")
-            items.append(AutoAttachmentItem(label=label, kind="factuur"))
+        ).all()
+        for file_id, filename in invoice_rows:
+            items.append(
+                AutoAttachmentItem(
+                    label=filename or "Factuur (PDF)",
+                    kind="factuur",
+                    case_file_id=file_id,
+                )
+            )
 
     return AutoAttachmentsResponse(items=items)

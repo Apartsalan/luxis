@@ -52,6 +52,7 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
 import { api } from "@/lib/api";
+import { openAttachment } from "@/lib/attachments";
 import { toast } from "sonner";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { formatRelativeTime } from "@/lib/utils";
@@ -885,11 +886,18 @@ function EmailDetailPanel({
         {email.attachments.length > 0 && (
           <div className="border-b border-border px-4 py-3 flex flex-wrap gap-2">
             {email.attachments.map((att) => (
-              <a
+              // S231: was een kale link zonder inlogbewijs -> de server weigerde
+              // met 401 en er gebeurde niets. Nu via de gedeelde openen-route.
+              <button
                 key={att.id}
-                href={`/api/email/attachments/${att.id}/download`}
-                target="_blank"
-                rel="noopener noreferrer"
+                type="button"
+                onClick={async () => {
+                  try {
+                    await openAttachment({ emailAttachmentId: att.id });
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : "Openen mislukt");
+                  }
+                }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-1.5 text-xs font-medium hover:bg-muted/60 transition-colors"
               >
                 <File className="h-3 w-3" />
@@ -897,7 +905,7 @@ function EmailDetailPanel({
                 <span className="text-muted-foreground">
                   ({formatFileSize(att.file_size)})
                 </span>
-              </a>
+              </button>
             ))}
           </div>
         )}

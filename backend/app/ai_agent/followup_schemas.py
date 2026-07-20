@@ -70,6 +70,20 @@ class FollowupRejectIn(BaseModel):
     note: str | None = None
 
 
+class FollowupAttachmentItem(BaseModel):
+    """S231 — een bijlage die meegaat, mét een adres om hem te openen.
+
+    Zelfde vorm als `AutoAttachmentItem` op de compose-route: `template_type`
+    voor bijlagen die de server vers rendert (renteoverzicht, concept-
+    verzoekschrift, de brief zelf op de DOCX-route), `case_file_id` voor een
+    bestaand dossierbestand.
+    """
+
+    label: str
+    template_type: str | None = None
+    case_file_id: uuid.UUID | None = None
+
+
 class FollowupPreviewOut(BaseModel):
     """B13 — wat er precies uitgaat als je deze aanbeveling uitvoert.
 
@@ -82,6 +96,11 @@ class FollowupPreviewOut(BaseModel):
     sender_email: str
     recipient_email: str | None = None
     recipient_name: str | None = None
+    # S231: nodig om een bijlage te kunnen opvragen vanuit de voorvertoning.
+    case_id: uuid.UUID | None = None
     has_attachment: bool = False
+    # S231: niet alleen "er gaat een bijlage mee", maar ook wélke en waar hij
+    # vandaan komt — zodat de gebruiker hem vóór verzending kan openen.
+    attachments: list[FollowupAttachmentItem] = []
     can_send: bool = True
     warning: str | None = None

@@ -61,6 +61,16 @@ LIBRARY_TEMPLATE_KEYS: dict[str, tuple[str, str]] = {
     ),
 }
 
+# S231: sjablonen die als PDF gerenderd mógen worden, maar NIET in de
+# bibliotheek-kiezer horen. Het renteoverzicht hangt de server al automatisch
+# aan (14-dagenbrief/eerste sommatie); het staat hier zodat de gebruiker die
+# bijlage vóór verzending kan inzien — zou het in LIBRARY_TEMPLATE_KEYS staan,
+# dan kon je hem er per ongeluk een tweede keer handmatig bij hangen.
+EXTRA_RENDERABLE_TEMPLATE_KEYS: frozenset[str] = frozenset({"renteoverzicht"})
+RENDERABLE_PDF_KEYS: frozenset[str] = (
+    frozenset(LIBRARY_TEMPLATE_KEYS) | EXTRA_RENDERABLE_TEMPLATE_KEYS
+)
+
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 router.include_router(template_router)
 
@@ -270,9 +280,9 @@ async def render_template_as_pdf(
     """
     import base64
 
-    if data.template_type not in LIBRARY_TEMPLATE_KEYS:
+    if data.template_type not in RENDERABLE_PDF_KEYS:
         raise BadRequestError(
-            f"Template '{data.template_type}' is geen bibliotheek-template."
+            f"Template '{data.template_type}' kan niet als PDF gerenderd worden."
         )
 
     result = await db.execute(

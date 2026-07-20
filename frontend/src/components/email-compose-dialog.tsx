@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { sanitizeOutgoingHtml } from "@/lib/sanitize";
+import { openAttachment } from "@/lib/attachments";
 import { useRenderTemplate, type ComposeInlineAttachment } from "@/hooks/use-email-sync";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -70,6 +71,14 @@ interface AttachmentRef {
   filename: string;
   size: number;
   source: "dossier" | "upload" | "other" | "library";
+}
+
+/** Bijlage die de server automatisch meestuurt (S231: nu ook te openen). */
+interface AutoAttachmentItem {
+  label: string;
+  kind: string;
+  template_type?: string | null;
+  case_file_id?: string | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -254,7 +263,7 @@ export function EmailComposeDialog({
   const [inlineFiles, setInlineFiles] = useState<Map<string, ComposeInlineAttachment>>(new Map());
   const [caseFileIds, setCaseFileIds] = useState<Set<string>>(new Set());
   // Punt 2 — bijlagen die de server automatisch toevoegt (renteoverzicht/facturen).
-  const [autoAttachments, setAutoAttachments] = useState<{ label: string; kind: string }[]>([]);
+  const [autoAttachments, setAutoAttachments] = useState<AutoAttachmentItem[]>([]);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [caseFiles, setCaseFiles] = useState<CaseFileItem[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
@@ -1076,14 +1085,20 @@ export function EmailComposeDialog({
                     <button
                       type="button"
                       title="Openen"
-                      onClick={() => {
+                      onClick={async () => {
+                        // S231: dossierbestanden zitten NIET in inlineFiles (alleen
+                        // hun id gaat mee naar de server), dus die tak deed hiervoor
+                        // stilletjes niets. Nu haalt hij het bestand alsnog op.
                         const inline = inlineFiles.get(att.id);
-                        if (inline?.data_base64) {
-                          const blob = new Blob(
-                            [Uint8Array.from(atob(inline.data_base64), (c) => c.charCodeAt(0))],
-                            { type: inline.content_type || "application/pdf" }
-                          );
-                          window.open(URL.createObjectURL(blob), "_blank");
+                        try {
+                          await openAttachment({
+                            inlineBase64: inline?.data_base64,
+                            contentType: inline?.content_type,
+                            caseId: effectiveCaseId,
+                            fileId: inline ? undefined : att.id,
+                          });
+                        } catch (err) {
+                          toast.error(err instanceof Error ? err.message : "Openen mislukt");
                         }
                       }}
                       className="max-w-[140px] truncate hover:underline hover:text-primary"
@@ -1104,10 +1119,30 @@ export function EmailComposeDialog({
               <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                 <span>Gaat automatisch mee:</span>
                 {autoAttachments.map((a) => (
-                  <span key={a.label} className="inline-flex items-center gap-1 rounded-md border border-dashed border-muted-foreground/40 px-2 py-0.5">
+                  // S231: was een doodlopend etiket — je zag dát er iets meeging
+                  // maar kon het niet inzien. Nu klikbaar: de server rendert de
+                  // PDF vers (renteoverzicht/verzoekschrift) of levert het
+                  // factuurbestand uit het dossier.
+                  <button
+                    key={a.label}
+                    type="button"
+                    title="Openen"
+                    onClick={async () => {
+                      try {
+                        await openAttachment({
+                          caseId: effectiveCaseId,
+                          fileId: a.case_file_id ?? undefined,
+                          templateType: a.template_type ?? undefined,
+                        });
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "Openen mislukt");
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-muted-foreground/40 px-2 py-0.5 hover:border-primary hover:text-primary transition-colors"
+                  >
                     <Paperclip className="h-3 w-3" />
                     {a.label}
-                  </span>
+                  </button>
                 ))}
               </div>
             )}

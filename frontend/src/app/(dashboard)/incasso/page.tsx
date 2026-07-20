@@ -20,6 +20,7 @@ import {
   ArrowRight,
   FileText,
   Calculator,
+  Paperclip,
   AlertTriangle,
   Users,
   Clock,
@@ -1807,6 +1808,18 @@ function PreFlightDialog({
                 <p className="text-sm text-foreground flex items-center gap-1.5">
                   <FileText className="h-4 w-4 text-primary" />
                   {preview.ready} brief/brieven worden gegenereerd op basis van het briefsjabloon per stap.
+                </p>
+                {/* S231: dit scherm zei niets over bijlagen, terwijl de server ze
+                    wel meestuurt. Geen open-knoppen hier: bij een bulkactie over
+                    tientallen dossiers zou dat tientallen losse PDF's betekenen —
+                    inzien doe je per dossier in de mail-dialoog. */}
+                <p className="mt-1.5 text-xs text-muted-foreground flex items-start gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  <span>
+                    Bijlagen gaan automatisch mee volgens het brieftype
+                    (renteoverzicht, factuur-PDF&apos;s, concept-verzoekschrift).
+                    Per dossier inzien kan via Correspondentie → E-mail opstellen.
+                  </span>
                 </p>
               </div>
             )}

@@ -16,6 +16,7 @@ import {
   Send,
   Loader2,
   Mail,
+  Paperclip,
 } from "lucide-react";
 import {
   useFollowupRecommendations,
@@ -36,6 +37,7 @@ import { formatCurrency } from "@/lib/utils";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { QueryError } from "@/components/query-error";
 import { toast } from "sonner";
+import { openAttachment } from "@/lib/attachments";
 
 // ── Status config ────────────────────────────────────────────────────────────
 
@@ -619,11 +621,39 @@ function SendPreviewDialog({
               <dd className="font-medium">{preview.subject}</dd>
             </dl>
 
-            {preview.has_attachment && (
+            {/* S231: was een kale zin — nu klikbare bijlagen, zelfde
+                openen-route als de mail-dialoog. */}
+            {(preview.attachments?.length ?? 0) > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                <span>Gaat als bijlage mee:</span>
+                {preview.attachments!.map((a) => (
+                  <button
+                    key={a.label}
+                    type="button"
+                    title="Openen"
+                    onClick={async () => {
+                      try {
+                        await openAttachment({
+                          caseId: preview.case_id ?? undefined,
+                          fileId: a.case_file_id ?? undefined,
+                          templateType: a.template_type ?? undefined,
+                        });
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "Openen mislukt");
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-muted-foreground/40 px-2 py-0.5 hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Paperclip className="h-3 w-3" />
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            ) : preview.has_attachment ? (
               <p className="text-xs text-muted-foreground">
-                Het renteoverzicht gaat als PDF-bijlage mee.
+                Er gaat een PDF-bijlage mee.
               </p>
-            )}
+            ) : null}
 
             {preview.warning && (
               <div className="flex items-start gap-2 rounded-md bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">

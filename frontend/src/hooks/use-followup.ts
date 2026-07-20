@@ -55,7 +55,14 @@ export interface FollowupPreview {
   sender_email: string;
   recipient_email: string | null;
   recipient_name: string | null;
+  case_id: string | null;
   has_attachment: boolean;
+  /** S231 — bijlagen mét adres om ze te openen. */
+  attachments?: {
+    label: string;
+    template_type: string | null;
+    case_file_id: string | null;
+  }[];
   can_send: boolean;
   warning: string | null;
 }

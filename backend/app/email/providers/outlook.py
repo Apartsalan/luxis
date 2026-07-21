@@ -10,6 +10,7 @@ Permissions: Mail.Read, Mail.ReadWrite, Mail.Send, offline_access, User.Read
 
 import base64
 import logging
+import re
 from datetime import UTC, datetime
 from urllib.parse import urlencode
 
@@ -48,6 +49,17 @@ MICROSOFT_TOKEN_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0
 
 # Microsoft Graph API base
 GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
+
+# S234-review — Graph's /reply-endpoint accepteert alleen het postvak-interne
+# message-id (opaak base64-achtig, bv. "AAMk..."). Alles wat daar niet als
+# uitziet — een RFC Message-ID ("<...@...>"), een BaseNet-import-id
+# ("basenet:581410240", 3099 stuks in prod) — hoort naar de sendMail-terugval.
+# Positieve check op de tekenset: Graph-ids bevatten alleen base64url-tekens.
+_GRAPH_ID_RE = re.compile(r"^[A-Za-z0-9+/=_-]+$")
+
+
+def _looks_like_graph_id(message_id: str) -> bool:
+    return bool(_GRAPH_ID_RE.match(message_id))
 
 # Scopes for Outlook mail
 OUTLOOK_SCOPES = [
@@ -326,15 +338,21 @@ class OutlookProvider(EmailProvider):
 
         # S234 — Graph's /reply-endpoint verwacht het POSTVAK-INTERNE message-id
         # (AAMk...). Een via IMAP gesyncte mail draagt zijn RFC Message-ID
-        # (`<...@...>`); dat langs /reply sturen gaf een harde 400 (live-bug), en
-        # een antwoord vanuit dít postvak op een mail die het nooit zag kan sowieso
-        # niet via /reply. Alleen een echt Graph-id (geen `<`-prefix) mag daarheen;
-        # een RFC-id valt terug op gewone sendMail met het (reeds "Re:") onderwerp.
-        # De draad blijft binnen Luxis intact via provider_thread_id op het
-        # uitgaande record (write_outbound_log). ponytail: externe thread-header
-        # (In-Reply-To) niet gezet — Graph's sendMail staat die niet toe; upgrade
-        # pad is een reply-draft (createReply) als perfecte client-threading nodig is.
-        if reply_to_message_id and not reply_to_message_id.startswith("<"):
+        # (`<...@...>`) en een BaseNet-import zijn "basenet:..."-id; die langs
+        # /reply sturen gaf een harde 400 (live-bug). Alleen een id dat er
+        # positief als Graph-id uitziet mag daarheen — én alleen zonder bijlagen,
+        # want _reply_to_message ondersteunt geen bijlagen (die zouden stil
+        # wegvallen, S234-review). Al het andere valt terug op gewone sendMail
+        # met het (reeds "Re:") onderwerp. De draad blijft binnen Luxis intact
+        # via provider_thread_id op het uitgaande record (write_outbound_log).
+        # ponytail: externe thread-header (In-Reply-To) niet gezet — Graph's
+        # sendMail staat die niet toe; upgradepad is een createReply-draft als
+        # perfecte client-threading ooit nodig is.
+        if (
+            reply_to_message_id
+            and _looks_like_graph_id(reply_to_message_id)
+            and not attachments
+        ):
             return await self._reply_to_message(
                 access_token,
                 message_id=reply_to_message_id,

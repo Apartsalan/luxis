@@ -100,3 +100,40 @@ async def test_no_reply_id_uses_sendmail():
         body_html="<p>hoi</p>",
     )
     assert _FakeClient.calls == [f"{outlook_mod.GRAPH_API_BASE}/me/sendMail"]
+
+
+@pytest.mark.asyncio
+async def test_basenet_import_id_falls_back_to_sendmail():
+    """BaseNet-import-id ("basenet:...", 3099 stuks in prod) → sendMail,
+    niet /reply (S234-review: viel eerst door de `<`-check heen)."""
+    provider = OutlookProvider()
+    await provider.send_message(
+        "token",
+        to=["debiteur@example.com"],
+        subject="Re: oud dossier",
+        body_html="<p>hoi</p>",
+        reply_to_message_id="basenet:581410240",
+    )
+    assert _FakeClient.calls == [f"{outlook_mod.GRAPH_API_BASE}/me/sendMail"]
+
+
+@pytest.mark.asyncio
+async def test_graph_id_with_attachments_falls_back_to_sendmail():
+    """Graph-id MET bijlagen → sendMail; de /reply-tak kent geen bijlagen en
+    zou ze stil laten vallen (S234-review)."""
+    from app.email.providers.base import OutgoingAttachment
+
+    provider = OutlookProvider()
+    await provider.send_message(
+        "token",
+        to=["debiteur@example.com"],
+        subject="Re: met factuur",
+        body_html="<p>hoi</p>",
+        reply_to_message_id="AAMkAGI2abcdef123",
+        attachments=[
+            OutgoingAttachment(
+                filename="factuur.pdf", content_type="application/pdf", data=b"%PDF"
+            )
+        ],
+    )
+    assert _FakeClient.calls == [f"{outlook_mod.GRAPH_API_BASE}/me/sendMail"]

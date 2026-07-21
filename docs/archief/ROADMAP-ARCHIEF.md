@@ -1260,3 +1260,51 @@ oplossing, (c) tot die tijd: termijn-alarm behandelen als "check de bank handmat
 i.p.v. "debiteur heeft niet betaald". Meenemen in de fase-2-beslislijst na D-C.
 
 ---
+
+## 🎯 Vorige prioriteit (20 juli 2026, S230/S231)
+
+> ✅ **S230/S231 AFGEROND — WERKORDERS V1-V4 + DRIE LIVE STORINGEN.**
+> **V1:** 27 consumentendossiers droegen samen € 9.794,65 te veel incassokosten
+> (vlakke 15% uit de BaseNet-import boven de dwingende WIK-staffel). Vers gemeten,
+> drievoudig gekruiscontroleerd, na GO van Arsalan gecorrigeerd (`bik_override` →
+> NULL, oude waarden dubbel bewaard). Nieuw inzicht: de 26 "afgesloten" dossiers
+> waren géén afgehandelde zaken maar geparkeerde import — 0 van de 27 volledig
+> betaald, € 172.692,60 hoofdsom nog open. **V2:** handelsrente + overheidsrente
+> 1-7-2026 (10,40%) toegevoegd, drie bronnen. **V3:** auto-conceptpoort AAN —
+> volledige ronde 55 gevallen, 0 storingen, netto ~1 echte fout op 54; 2 van de 3
+> afkeuringen waren opnieuw corrector-missers. **V4:** zes .env-bestanden op 600.
+> Plus: **AI-kosten meetbaar** (tabel `ai_usage`, per aanroep).
+> **Uit de demo:** bijlagen waren op 3 van de 5 plekken niet te openen → gedeelde
+> openen-route + wachter; BaseNets uitgaande relay staat op Microsofts blokkadelijst
+> (550 S3150) → Luxis verstuurt nu via Microsoft 365 namens incasso@ (live bewezen,
+> proefmail kwam aan); badge "Nog te openen" op een heropend dossier gefixt.
+> Detail: SESSION-NOTES entry S230/S231 + `docs/sessions/S230-werkorders.md`.
+>
+> 🎯 **VOLGENDE (S232):** de sjabloon-verzendroute moet ná verzending doorschuiven
+> naar de volgende pijplijnstap — nu doet alleen de AI-conceptroute dat, terwijl een
+> eerste sommatie juist met een sjabloon gaat (kruispuntfout; IN100605 staat daardoor
+> nog op Eerste sommatie). Daarna: BaseNet-delisting melden, derde AI-testronde +
+> Lisanne-steekproef op de eerste echte batch, kostenblokje op het dashboard
+> (voorstel). Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest,
+> DMARC, testdata 2026-00007 t/m -00019 opruimen. KvK: niet naar vragen.
+
+
+## 🎯 Eerdere prioriteit (18 juli 2026, S229)
+
+> ✅ **S229 AFGEROND — GROTE EINDKEURING (Fable, read-only).** Vier sporen door heel
+> Luxis, alles alleen-lezen op prod: verzendroutes × huisregels (GROEN), financiële
+> steekproef op de cent (12/12 rente exact, art. 6:44 klopt), beveiliging (RLS live
+> bewezen, secrets schoon), AI-antwoordkwaliteit + auto-concept-poort. Rapport:
+> `docs/sessions/S229-eindkeuring.md`. Fable blijft in het abonnement (geen laatste dag).
+> **Vondsten:** V1 = 27 consumentenzaken dragen samen €9.794,65 te veel incassokosten
+> (vlakke 15% uit BaseNet-import boven de dwingende WIK-staffel); V2 = handelsrente-rij
+> 1-7-2026 ontbreekt (impact vandaag €0, alle 7 zaken bevroren); V3 = auto-concept-poort
+> werd door een miskalibreerde corrector dichtgehouden, niet door de AI (4/6 "zware fouten"
+> weerlegd); V4 = `.env` 644→600. Detail: SESSION-NOTES entry S229.
+>
+> 🎯 **VOLGENDE (S230, Opus voor de fixes):** V1 B2C-BIK-correctie eerst (27 zaken met
+> Lisanne, dry-run+GO — grootste geldpost). Dan V2 (handelsrente-rij), V3 (corrector
+> herkalibreren → verse ronde → Lisanne-steekproef), V4 (.env-rechten). Onverwerkt uit
+> S228/S227: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata.
+> KvK: niet naar vragen (Arsalan komt er zelf op terug).
+

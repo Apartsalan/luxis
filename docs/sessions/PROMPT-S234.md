@@ -5,10 +5,17 @@ Sessie 234 — Incassostappen kritisch herzien
 ## Start
 Draai eerst `/sessie-start` (leest roadmap + sessienotities, scant modules/pagina's,
 laadt de verbindingskaart). Ga daarna zonder te wachten door.
-Extra taak-context: entries S232 + S233 in `SESSION-NOTES.md` (deze sessie borduurt
-daarop voort). Model: **Fable** voor het onderzoek/ontwerp (breed, in de bron meten),
-**Opus** voor het bouwwerk; Fable weer voor de review aan het eind (vaste cyclus —
-memory `feedback_model_choice`; wissel ACTIEF signaleren).
+Extra taak-context: entries S232 + S233 + S233b in `SESSION-NOTES.md` (deze sessie
+borduurt daarop voort). Model: **Fable** voor het onderzoek/ontwerp (breed, in de bron
+meten), **Opus** voor het bouwwerk; Fable weer voor de review aan het eind (vaste
+cyclus — memory `feedback_model_choice`; wissel ACTIEF signaleren).
+
+Sinds S233b (21 juli, tussen S233 en deze sessie in): uitgaande mails dragen nu een
+draad-kenmerk (provider_thread_id via `write_outbound_log`), de Outlook-antwoordroute
+is gerepareerd (RFC-/basenet-ids en bijlagen via sendMail, alleen echt Graph-id kaal
+via /reply — wachter `test_outlook_reply_routing`), en het compose-paneel waarschuwt
+als de AI facturen wil bijsluiten die het dossier niet heeft. Raak je verzendroutes
+aan, weet dat deze er net liggen.
 
 ## Achtergrond (waarom deze sessie)
 S232 liet de sjabloon-verzendknop (compose/send) doorschuiven naar de volgende stap,

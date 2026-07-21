@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 21 juli 2026 (S233 — AI-antwoord als zijpaneel + mailgeschiedenis + "facturen erbij", LIVE). Het AI-antwoord-/reviewvenster is nu een rechts-verankerd, niet-modaal zijpaneel: de mails links blijven leesbaar én aanklikbaar tijdens het schrijven; onderin het paneel de mail waarop je antwoordt (uitklapbaar) + de eerdere mailtjes van de draad. Op de Mail-pagina opent het concept IN-PLACE i.p.v. weg te navigeren. Plus: vraagt de behandelaar "doe de facturen erbij", dan opent het concept met de factuur-PDF's al aangevinkt (kruispunt-guard: alleen de antwoordroute, batch/stap nooit). Rapport: entry S233 in `SESSION-NOTES.md`. **Volgende = S234: incassostappen kritisch herzien (situatie-stappen + brief-koppeling derde/laatste sommatie + batch/follow-up-doorschuif gelijktrekken). Daarna S235 flexibele betalingsregeling.**
+**Laatst bijgewerkt:** 21 juli 2026 (S233b — S233-review + vier mailfixes, LIVE). Review van S233 met het eerder overgeslagen klikwerk alsnog live gedaan; vier fixes eruit, alle live + CI groen: uitgaande mails dragen hun draad-kenmerk (eigen antwoorden verschijnen in het draad-paneel), waarschuwing bij een AI-belofte van facturen die het dossier niet heeft, en de Outlook-antwoordroute werkt weer (gaf 400 op élke IMAP-gesyncte én BaseNet-geïmporteerde mail — 3099 stuks). Rapport: entry S233b in `SESSION-NOTES.md`. **Volgende = S234: incassostappen kritisch herzien (situatie-stappen + brief-koppeling derde/laatste sommatie + batch/follow-up-doorschuif gelijktrekken). Daarna S235 flexibele betalingsregeling.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,72 +53,27 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 21 juli 2026, S233)
+## 🎯 Huidige prioriteit (bijgewerkt 21 juli 2026, S233b)
 
-> ✅ **S233 AFGEROND — AI-ANTWOORD-ZIJPANEEL + MAILGESCHIEDENIS + "FACTUREN ERBIJ".**
-> Het compose-/reviewvenster is een rechts-verankerd, niet-modaal zijpaneel (nieuwe
-> `ui/sheet.tsx`): links blijven de mails leesbaar én aanklikbaar. Onderin het paneel
-> de mail waarop je antwoordt (uitklapbaar) + de eerdere mailtjes van de draad
-> (`mail-thread-panel.tsx`). Op de Mail-pagina opent het concept IN-PLACE i.p.v. naar
-> de dossierpagina te navigeren. Taak 2: `ai_drafts.attach_invoices` (migratie s233) —
-> vraagt de behandelaar "doe de facturen erbij", dan opent het concept met de
-> factuur-PDF's al aangevinkt; kruispunt-guard zorgt dat de auto-conceptbatch nooit
-> vlagt. Live gedeployd (SSH, `--force-recreate`), migratie op prod, 45 tests groen,
-> zijpaneel + non-modaal live bewezen. Detail: SESSION-NOTES entry S233.
+> ✅ **S233b AFGEROND — S233-REVIEW + VIER MAILFIXES.** Het in S233 overgeslagen
+> klikwerk alsnog live gedaan (zijpaneel, non-modaal, factuur-signaal incl.
+> batch-guard: alles klopt). Vier fixes eruit, alle live + CI groen:
+> uitgaande mails dragen nu hun draad-kenmerk → eigen antwoorden verschijnen in het
+> draad-paneel (`e37b815`); waarschuwing als de AI facturen belooft die het dossier
+> niet heeft (`e37b815`); review-restpunten u-vorm + draad-cap 200 (`4166f30`);
+> Outlook-antwoordroute gaf 400 op élke IMAP-gesyncte én BaseNet-geïmporteerde mail
+> (3099 stuks) → RFC/basenet-ids en antwoorden mét bijlagen via sendMail, alleen een
+> echt Graph-id zonder bijlagen via /reply (`1abae63` + `a291692`). Rest-limiet:
+> externe threading op onderwerp (geen In-Reply-To via sendMail) — upgradepad
+> createReply-draft, niet urgent. Detail: SESSION-NOTES entry S233b.
 >
 > 🎯 **VOLGENDE (S234):** incassostappen kritisch herzien — situatie-stappen i.p.v. een
 > platte lijst; een brief koppelen aan derde/laatste sommatie (dan schuiven die ook
 > door na verzending); batch- en follow-up-route op dezelfde "volgende stap"-logica als
 > compose/send + AI-route trekken. Daarna: BaseNet-delisting melden, derde AI-testronde
 > + Lisanne-steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check,
-> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. KvK: niet naar vragen.
-
-## 🎯 Vorige prioriteit (20 juli 2026, S230/S231)
-
-> ✅ **S230/S231 AFGEROND — WERKORDERS V1-V4 + DRIE LIVE STORINGEN.**
-> **V1:** 27 consumentendossiers droegen samen € 9.794,65 te veel incassokosten
-> (vlakke 15% uit de BaseNet-import boven de dwingende WIK-staffel). Vers gemeten,
-> drievoudig gekruiscontroleerd, na GO van Arsalan gecorrigeerd (`bik_override` →
-> NULL, oude waarden dubbel bewaard). Nieuw inzicht: de 26 "afgesloten" dossiers
-> waren géén afgehandelde zaken maar geparkeerde import — 0 van de 27 volledig
-> betaald, € 172.692,60 hoofdsom nog open. **V2:** handelsrente + overheidsrente
-> 1-7-2026 (10,40%) toegevoegd, drie bronnen. **V3:** auto-conceptpoort AAN —
-> volledige ronde 55 gevallen, 0 storingen, netto ~1 echte fout op 54; 2 van de 3
-> afkeuringen waren opnieuw corrector-missers. **V4:** zes .env-bestanden op 600.
-> Plus: **AI-kosten meetbaar** (tabel `ai_usage`, per aanroep).
-> **Uit de demo:** bijlagen waren op 3 van de 5 plekken niet te openen → gedeelde
-> openen-route + wachter; BaseNets uitgaande relay staat op Microsofts blokkadelijst
-> (550 S3150) → Luxis verstuurt nu via Microsoft 365 namens incasso@ (live bewezen,
-> proefmail kwam aan); badge "Nog te openen" op een heropend dossier gefixt.
-> Detail: SESSION-NOTES entry S230/S231 + `docs/sessions/S230-werkorders.md`.
->
-> 🎯 **VOLGENDE (S232):** de sjabloon-verzendroute moet ná verzending doorschuiven
-> naar de volgende pijplijnstap — nu doet alleen de AI-conceptroute dat, terwijl een
-> eerste sommatie juist met een sjabloon gaat (kruispuntfout; IN100605 staat daardoor
-> nog op Eerste sommatie). Daarna: BaseNet-delisting melden, derde AI-testronde +
-> Lisanne-steekproef op de eerste echte batch, kostenblokje op het dashboard
-> (voorstel). Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest,
-> DMARC, testdata 2026-00007 t/m -00019 opruimen. KvK: niet naar vragen.
-
-
-## 🎯 Eerdere prioriteit (18 juli 2026, S229)
-
-> ✅ **S229 AFGEROND — GROTE EINDKEURING (Fable, read-only).** Vier sporen door heel
-> Luxis, alles alleen-lezen op prod: verzendroutes × huisregels (GROEN), financiële
-> steekproef op de cent (12/12 rente exact, art. 6:44 klopt), beveiliging (RLS live
-> bewezen, secrets schoon), AI-antwoordkwaliteit + auto-concept-poort. Rapport:
-> `docs/sessions/S229-eindkeuring.md`. Fable blijft in het abonnement (geen laatste dag).
-> **Vondsten:** V1 = 27 consumentenzaken dragen samen €9.794,65 te veel incassokosten
-> (vlakke 15% uit BaseNet-import boven de dwingende WIK-staffel); V2 = handelsrente-rij
-> 1-7-2026 ontbreekt (impact vandaag €0, alle 7 zaken bevroren); V3 = auto-concept-poort
-> werd door een miskalibreerde corrector dichtgehouden, niet door de AI (4/6 "zware fouten"
-> weerlegd); V4 = `.env` 644→600. Detail: SESSION-NOTES entry S229.
->
-> 🎯 **VOLGENDE (S230, Opus voor de fixes):** V1 B2C-BIK-correctie eerst (27 zaken met
-> Lisanne, dry-run+GO — grootste geldpost). Dan V2 (handelsrente-rij), V3 (corrector
-> herkalibreren → verse ronde → Lisanne-steekproef), V4 (.env-rechten). Onverwerkt uit
-> S228/S227: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata.
-> KvK: niet naar vragen (Arsalan komt er zelf op terug).
+> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen (incl. S233b-testmails).
+> KvK: niet naar vragen.
 
 ## Projectdocumenten
 

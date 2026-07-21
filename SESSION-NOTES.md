@@ -2,10 +2,77 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 21 juli 2026 (S233 — AI-antwoord als zijpaneel + mailgeschiedenis + "facturen erbij", LIVE).
-**Laatste feature/fix:** Het AI-antwoord-/reviewvenster is nu een rechts-verankerd, NIET-modaal zijpaneel: de mails links blijven leesbaar én aanklikbaar tijdens het schrijven. Onderin het paneel de mail waarop je antwoordt (uitklapbaar) + de eerdere mailtjes van dezelfde draad. Op de Mail-pagina opent het concept IN-PLACE i.p.v. naar de dossierpagina te navigeren (waardoor je de mail kwijtraakte). Plus: vraagt de behandelaar "doe de facturen erbij", dan opent het concept met de factuur-PDF's al aangevinkt (kruispunt-guard: alleen de antwoordroute, batch/stap nooit). Detail: entry S233.
-**Openstaand (-> S234 e.v.):** S234 = incassostappen kritisch herzien (situatie-stappen i.p.v. platte lijst; derde/laatste sommatie hebben nog géén brief-koppeling → schuiven daarom nog niet door; batch/follow-up op dezelfde "volgende stap"-logica trekken). S235 = betalingsregeling herkennen uit mail + flexibel termijnschema. Losse punten: BaseNet-delisting melden, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen. Outlook-route weghalen (Arsalan: later).
-**Volgende sessie:** S234 — incassostappen kritisch herzien (situatie-stappen + brief-koppeling derde/laatste sommatie + batch/follow-up-doorschuif gelijktrekken).
+**Laatst bijgewerkt:** 21 juli 2026 (S233b — S233-review + vier mailfixes, LIVE).
+**Laatste feature/fix:** Review van S233 met het eerder overgeslagen klikwerk alsnog live gedaan. Vier fixes eruit, alle live: uitgaande mails dragen nu hun draad-kenmerk (eigen antwoorden verschijnen in het draad-paneel), waarschuwing als de AI facturen belooft die het dossier niet heeft, en de Outlook-antwoordroute werkt weer (gaf 400 op elke gesyncte/geïmporteerde mail — óók de 3099 BaseNet-mails). Detail: entry S233b.
+**Openstaand (-> S234 e.v.):** S234 = incassostappen kritisch herzien (situatie-stappen; brief-koppeling derde/laatste sommatie; batch/follow-up-doorschuif gelijktrekken). S235 = betalingsregeling + flexibel termijnschema. Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen (incl. S233b-testmails).
+**Volgende sessie:** S234 — incassostappen kritisch herzien (`docs/sessions/PROMPT-S234.md`, bijgewerkt na S233b).
+
+## Sessie 233b (21 juli 2026, Fable-review → Opus-bouw → Fable-review — S233-review + vier mailfixes, LIVE)
+
+### Samenvatting
+Arsalan vroeg een volledige review van S233, inclusief het klikwerk dat die nacht was
+overgeslagen ("dat kon je wel"). Klopte: alles bleek gewoon klikbaar.
+
+**Review S233 (Fable, live op prod):** zijpaneel + non-modaal + bronmail onderin opnieuw
+bevestigd; AI-generatie mét instructie "doe de facturen erbij" live gedaan (1 AI-call) →
+`attach_invoices=true` op het concept, en de batch-draft van diezelfde ochtend bleef
+`false` (kruispunt-guard in het echt bewezen). Bedragen kloppen: € 140,49 (16/7) →
+€ 140,55 (21/7) = exact 5 dagen wettelijke rente op € 100.
+
+**Vier fixes uit de review, alle gecommit + gedeployd + CI groen:**
+1. `e37b815` — uitgaande mails kregen nooit een draad-kenmerk (alle 6 op het testdossier
+   leeg) → het antwoord-paneel toonde eigen verstuurde mails nooit. Nu draagt elke
+   verzending zijn draad-wortel (antwoord = References-wortel, verse mail = eigen id,
+   zelfde regel als de inkomende-sync). Live: 0→2 uitgaande mails in de draad, paneel
+   toont ze. Plus: waarschuwing in het compose-paneel als de behandelaar facturen vroeg
+   maar het dossier geen factuur-PDF heeft (de AI-tekst beloofde een bijlage die er
+   niet was). Wachters: `test_outbound_thread_id`.
+2. `4166f30` — Fable-review-restpunten: "Je vroeg" → u-vorm; draad-paneel cap 50→200
+   (drukste dossier ~83, oudere draadmails vielen stil weg). Plus correctie op de
+   commit-tekst van e37b815: de "bonus" (auto-koppeling inkomend via draad) geldt alleen
+   binnen één mail-account — in de echte opzet (IMAP in via 8a1f…, Outlook uit via
+   226e…) verandert daar niets; het draad-paneel filtert niet op account en is het
+   echte effect.
+3. `1abae63` — LIVE-BUG (gevonden bij de verificatie): élk antwoord via de
+   Outlook-route faalde met 400 — Graph's `/reply` kreeg het RFC Message-ID van een
+   IMAP-gesyncte mail, maar eist het postvak-interne id. Rode test eerst, dan fix:
+   RFC-id valt terug op gewone sendMail. Live: exact dezelfde call die 400 gaf → 200.
+4. `a291692` — Fable-review op de fix zelf, gemeten in prod: de `<`-check was te smal
+   (3099 BaseNet-import-mails dragen `basenet:…`-ids zonder `<` → vielen alsnog in de
+   kapotte /reply-tak), én de /reply-tak kent geen bijlagen (zouden stil wegvallen).
+   Nu positieve tekenset-keuring (`_looks_like_graph_id`) + met bijlagen altijd
+   sendMail. Wachters: `test_outlook_reply_routing` (5).
+
+### Gewijzigde bestanden
+Backend: `email/send_service.py` (provider_thread_id op outbound SyncedEmail),
+`email/compose_router.py` (draad-wortel doorgeven), `email/providers/outlook.py`
+(reply-routing). Tests: `test_outbound_thread_id.py` (nieuw, 2),
+`test_outlook_reply_routing.py` (nieuw, 5). Frontend: `email-compose-dialog.tsx`
+(invoiceWarning + u-vorm), `mail-thread-panel.tsx` (cap 200).
+
+### Verificatie
+151 tests groen (send/advance/step/compose-subset) + 5+2 nieuwe wachters; ruff + tsc
+schoon; 4 commits gedeployd via SSH `--force-recreate`, containers healthy; CI groen op
+e37b815/4166f30/1abae63 (a291692 liep nog bij afsluiten — natrekken met `gh run list`).
+Live-bewijzen op prod: draad 0→2, factuurwaarschuwing zichtbaar, reply-call 400→200.
+
+### Bekende issues / bewust niet gedaan
+- **Factuur-vinkje positief pad niet visueel getest** — testdossier 2026-00006 heeft
+  geen factuur-PDF (echte dossiers als IN100487 wél, maar die zijn van echte
+  debiteuren). Keten is backend-getest; wil je het zien, hang eenmalig een test-PDF
+  aan een claim van 2026-00006.
+- **Externe threading op onderwerp:** de sendMail-terugval zet geen In-Reply-To-header
+  (Graph staat dat niet toe) — in de mailbox van de debiteur threadt het antwoord op
+  "Re: onderwerp". Upgradepad: createReply-draft. Niet urgent.
+- **Testsporen:** 2 testantwoorden naar Arsalans gmail op 2026-00006; 1 ongebruikt
+  AI-concept (met factuur-vlag) op diezelfde mail. Randobservatie: het testantwoord
+  dook óók als inkomend op in de M365-box (vermoedelijk doorstuurregel gmail) — 
+  onschuldig, niet uitgezocht.
+
+### Volgende sessie
+S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; brief
+koppelen aan derde/laatste sommatie; batch/follow-up op de gedeelde doorschuif-logica.
+Zie `docs/sessions/PROMPT-S234.md`.
 
 ## Sessie 233 (21 juli 2026, Opus-bouw → Fable-review — AI-antwoord-zijpaneel + mailgeschiedenis + "facturen erbij", LIVE)
 
@@ -717,127 +784,3 @@ S225: beslispunten B1-B6 met Arsalan afhandelen, dan S221b-UX-restant (Opus:
 review-scherm, voortgangsindicator, HTML-tabellen, Blok 5-rest, Blok 6-memo).
 KvK-backfill voorrang zodra de sleutel binnen is (~22 juli).
 
-## Sessie 223 (16 juli 2026, Opus-bouw → Fable-review — AI-antwoord-knop + onderwerp-huisformaat + test-discipline)
-
-### Samenvatting
-Arsalans eigen punten uitgevoerd, plus twee kleine restpunten, plus een nieuwe
-vaste test-werkwijze na zijn vraag "waarom komen er telkens fouten uit als ik
-breder kijk".
-
-**Punt 1+2 — AI-antwoord-knop (LIVE + live doorgeklikt).** Knop "AI-antwoord maken"
-op elke inkomende mail van de wederpartij (Mail-pagina) met optioneel instructie-
-tekstvak + toon-keuze (mild/zakelijk/streng). Onbeperkt herbruikbaar, wacht niet
-op de automatische classificatie. Bestaat er al een open antwoord-concept → eerst
-vragen (bestaand openen of vervangen; vervangen laat het oude vervallen via
-`force_new`). Nieuw: `GET /api/ai/draft/existing`, `force_new` op de generatie,
-`find_open_reply_draft`. 3 generatie-rondes live op IN100607: bedragen/facturen
-exact gelijk aan DB, opmaak identiek aan bestaande concepten.
-
-**Instructie-leidend-fix (live gemeten).** Ronde 1 negeerde "zeg dat ik erop
-terugkom": de instructie stond inline en raakte begraven onder het later
-aangeplakte AV/bibliotheek-blok. Fix: instructie als LAATSTE promptblok +
-systeem-spelregel dat de behandelaar-instructie de kern bepaalt. Ronde 2 volgde
-hem exact op.
-
-**Punt 3 — onderwerp overal huisformaat.** `build_email_subject` (stap: klant /
-debiteur — stapnaam — dossiernr) en nieuw `build_reply_subject` (antwoord:
-Re: origineel + partijen/dossiernr, niet dubbel). Wint nu op ALLE routes:
-compose, followup, batch (inline+DOCX), stap-concepten, antwoord-concepten. De
-stale BaseNet-stap-onderwerpen ("TYPE / / ") worden overal genegeerd — geen
-prod-data-mutatie nodig.
-
-**Antwoord-verzending schuift de zaak niet meer door.** `advance-after-send`
-schoof na élke concept-verzending door; nu alleen stap-brieven (rode test eerst).
-
-**Kleine punten.** (1) Open concepten vervallen bij zaak sluiten — gedeelde
-`discard_open_drafts_on_close` op alle 3 sluit-routes (handmatig, pijplijn-
-eindstap, betaling-hook) + wachter-test. (4) 3 tests voor de sync→classificatie-
-trigger (had er geen; vuurt op prod pas bij nieuwe mail).
-
-**Nieuwe test-discipline (op verzoek Arsalan).** Skill `breed-testen`: fouten
-wonen op kruispunten (route mist huisregel) — benoem het effect, grep alle
-routes, loop de route×huisregel-matrix af, elke foutsoort krijgt een wachter.
-Verwezen vanuit CLAUDE.md-verificatiestap 4 + memory. Levende huisregel-lijst
-M1-M5/P1-P3/A1-A3.
-
-### Reviewvondsten (kruispunt-matrix — beide gefixt + live)
-- **Batch-PDF-route** droeg nog het stale onderwerp ("VERZOEKSCHRIFT / / ") →
-  nu ook via de gedeelde bouwer + wachter-test.
-- **CI stond stil rood sinds 15/7** (S220 voegde 'sommatie' toe aan de rente-
-  bijlage-set maar vergat de pin-test; onzichtbaar door SSH-deploys, S217-patroon)
-  → test bijgewerkt, CI weer groen.
-
-### Gewijzigde bestanden
-Backend: `email/subject.py`, `ai_agent/{unified_draft_service,unified_router,
-followup_service,draft_service}.py`, `incasso/{service,router,automation_service}.py`,
-`cases/service.py`, `workflow/hooks.py`. Frontend: `correspondentie/page.tsx`.
-Tests: `test_email_subject`, `test_unified_draft_service`, `test_incasso_pipeline`,
-`test_discard_drafts_on_close` (nieuw), `test_scheduler_email_sync`,
-`test_kvk_legal_form`. Werkwijze: `.claude/skills/breed-testen/SKILL.md` (nieuw),
-`CLAUDE.md`. Rapport: `docs/sessions/S223-review.md`. 6 commits, backend meermaals
-gedeployd (geen migratie).
-
-### Bekende issues / bewust niet gedaan
-- **Écht versturen niet live getest** (mailslot open): nieuwe knop + batch-route.
-  Verstuurpad zelf = de S220-route die toen bewezen is. → live toetsen S224.
-- **Classificatie-trigger** op prod nog nooit gevuurd (geen nieuwe mail) — logica
-  wel test-gedekt.
-- Filter "Nog te openen" op dossierlijst: badge bestaat, filterknop niet (Arsalan
-  koos hem niet). Landregel dagvaarding overgeslagen.
-- Restlijst S221b-UX + auto-concept-gate (menselijke steekproef Lisanne) blijven.
-
-### Volgende sessie
-S224 = **VEEGSESSIE** (Fable): de hele huisregel-lijst uit `breed-testen` × alle
-bestaande routes aflopen, mét live-pass, zodat de teller aantoonbaar op nul staat;
-kandidaat-wachters staan in de skill. Plus **live-verzendtoets** zodra mag.
-KvK-backfill voorrang zodra sleutel binnen (~22 juli).
-
-## Sessie 222 (15/16 juli 2026 nacht, Opus-bouw → Fable-review — verzoekschrift-nabouw + totaalreview, autonoom)
-
-### Samenvatting
-Twee delen conform PROMPT-S222. **Deel 1 (Opus):** de faillissement-bijlage exact in
-Lisanne's opmaak nagebouwd — haar BaseNet-sjabloon als basis (crème-balk, logo,
-Calibri, randloze tabellen, voetteksten), 106 merge-velden omgezet naar docxtpl,
-vorderingen-lus herbouwd, oud adres/mail vervangen, handtekening-placeholder weg.
-Twee scenario's gerenderd (met/zonder deelbetaling): alle bedragen tellen op de cent
-op, in beide tabellen. **Lokaal klaar; reseed op prod NIET gedaan** — wacht op GO +
-4 keuzes (CONCEPT-watermerk, kolomlabel Verzuimdatum, betaalregels samengevoegd,
-handtekening). **16 juli LIVE gezet** (GO + 4 keuzes bevestigd): back-up gemaakt,
-alleen de verzoekschrift-rij bijgewerkt (45658→86951 bytes), DB-hash = schijf = lokaal,
-en een live-render door het echte systeem op zaak IN100521 bewees dat alles goed vult
-(debiteur/opdrachtgever/3 facturen, totalen op de cent, BTW-regel valt terecht weg).
-**Deel 2 (Fable, autonoom — Arsalan sliep):** volledige review,
-rapport in `docs/sessions/S222-review.md`.
-
-### Reviewuitkomsten (bewijs in het rapport)
-- **B1 LIVE bewezen** (het S221-gat): afgerond-weergave 19 taken, terugzetten op
-  testdossier 2026-00006 (8→9 open), opnieuw overslaan + ongedaan-melding. ✅
-- **B2:** migratie op head, 0 dubbele open concepten, 23 tests groen; máár nog geen
-  nieuw concept sinds uitrol (prod-gedrag onbenut). Vondsten: zaak sluiten laat open
-  concepten staan (IN100613 ×2); IN100521 heeft 2 pre-migratie-duplicaten.
-- **B3 sync→classificatie: aannemelijk, NIET bewezen** — code in container ✅ maar
-  géén test en nog nooit gevuurd (geen nieuwe mail sinds deploy).
-- **B4 ✅ compleet:** Intake weg, Betalingen-label, ratio-tooltip, klikbaar
-  dossiernummer, Calibri ×9 sjablonen, 0 spatie-kolommen in 58 verse antwoorden.
-- **C testronde:** goud-pad crashte (mapper-imports, nooit getest in S221) én
-  toetste het verkeerde ding (voedde Lisanne's verstuurde antwoorden als vraag —
-  alle 103 bibliotheek-bronnen zijn per definitie haar eigen mails). Beide gefixt
-  (`118617a`, `90ad871`) + 2 spelregels aangescherpt na ronde 1. Ronde 2: zuivere
-  set 83→89%, goud eerste geldige meting 29/37; restant-afkeuringen grotendeels
-  corrector-kalibratie (1 aantoonbare corrector-misser zelf nagelezen). **Poort
-  auto-concept NIET gehaald → blijft UIT**; eerst kalibratievraag beantwoorden.
-- **D backfills gemeten (níets opgeruimd):** 470 classificaties = 339 op afgesloten
-  zaken + 110 oude mails + 21 recente (11 echt werk); 348 notificaties = 302
-  classificatie-ruis; 8 concepten (3 opruimkandidaten); adviezen-15 en intake-14
-  zijn actueel werk, GEEN opruimkandidaat. Opruimrecept klaar, wacht op GO.
-
-### Wijzigingen
-`118617a` (goud-pad imports), `90ad871` (spelregels + goud-lader voedt echte
-debiteurenvraag) — beide gedeployed + getest. Nieuw sjabloon staat klaar in
-`templates/verzoekschrift_faillissement.docx` (repo, niet op prod). Testronde-
-rapporten bewaard: `S222-testronde-r1.md`/`-r2.md`. Prod verder alleen-lezen
-behalve de B1-kliktest (netto nul).
-
-### Volgende sessie
-Beslispunten 1-6 uit `S222-review.md` met Arsalan doornemen; daarna S221b-restant
-(Opus) of KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).

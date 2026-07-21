@@ -270,6 +270,10 @@ export function EmailComposeDialog({
   const [attachments, setAttachments] = useState<AttachmentRef[]>([]);
   const [inlineFiles, setInlineFiles] = useState<Map<string, ComposeInlineAttachment>>(new Map());
   const [caseFileIds, setCaseFileIds] = useState<Set<string>>(new Set());
+  // S234 — de behandelaar vroeg "doe de facturen erbij" maar dit dossier heeft
+  // geen factuur-PDF: dan blijft de bijlage leeg terwijl de AI-tekst er wél naar
+  // kan verwijzen. Waarschuw zodat er geen mail uitgaat met een loze belofte.
+  const [invoiceWarning, setInvoiceWarning] = useState(false);
   // Punt 2 — bijlagen die de server automatisch toevoegt (renteoverzicht/facturen).
   const [autoAttachments, setAutoAttachments] = useState<AutoAttachmentItem[]>([]);
   const [showFilePicker, setShowFilePicker] = useState(false);
@@ -375,13 +379,20 @@ export function EmailComposeDialog({
   useEffect(() => {
     if (!open || !preselectInvoices || !effectiveCaseId) return;
     let cancelled = false;
+    setInvoiceWarning(false);
     (async () => {
       try {
         const res = await api(`/api/email/compose/cases/${effectiveCaseId}/invoice-files`);
         if (!res.ok) return;
         const data = await res.json();
         const files = (data.items ?? []) as { id: string; filename: string; size: number }[];
-        if (cancelled || files.length === 0) return;
+        // Geen factuur-PDF gevonden terwijl de behandelaar er wel om vroeg →
+        // waarschuw (de AI-tekst kan naar een bijlage verwijzen die er niet is).
+        if (cancelled) return;
+        if (files.length === 0) {
+          setInvoiceWarning(true);
+          return;
+        }
         setCaseFileIds((prev) => {
           const n = new Set(prev);
           files.forEach((f) => n.add(f.id));
@@ -420,6 +431,7 @@ export function EmailComposeDialog({
       setAttachments([]);
       setInlineFiles(new Map());
       setCaseFileIds(new Set());
+      setInvoiceWarning(false);
       setShowFilePicker(false);
       setShowOtherCase(false);
       setOtherSearch("");
@@ -1116,6 +1128,19 @@ export function EmailComposeDialog({
 
           {/* ── Attachments ───────────────────────────────────────── */}
           <div className="px-6 pb-3 space-y-2 shrink-0">
+            {/* S234 — gevraagd om facturen, maar dit dossier heeft er geen: de
+                bijlage blijft leeg terwijl de tekst er mogelijk naar verwijst. */}
+            {invoiceWarning && attachments.length === 0 && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                <span className="mt-0.5">⚠️</span>
+                <span>
+                  Je vroeg om de facturen bij te sluiten, maar dit dossier heeft
+                  geen factuur-PDF. Er gaat nu <span className="font-medium">geen</span>{" "}
+                  bijlage mee — controleer of de tekst niet naar een bijlage verwijst,
+                  of voeg zelf een bestand toe.
+                </span>
+              </div>
+            )}
             {/* Attachment chips */}
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-1.5">

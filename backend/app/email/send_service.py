@@ -252,6 +252,7 @@ async def write_outbound_log(
     sender_name: str = "",
     template: str = "batch_document_send",
     has_attachments: bool = False,
+    provider_thread_id: str | None = None,
 ) -> EmailLog:
     """Leg het spoor van één uitgaande mail vast — gedeeld door alle verzendroutes.
 
@@ -281,6 +282,13 @@ async def write_outbound_log(
             email_account_id=account.id,
             case_id=case_id,
             provider_message_id=provider_message_id,
+            # S234 — draad-wortel meegeven zodat het antwoord-zijpaneel de eerdere
+            # mailtjes van dezelfde draad óók onze eigen verstuurde mails toont.
+            # Bij een antwoord is dit References[0] (de wortel van de keten, exact
+            # wat de provider in de References-header zet); bij een verse mail is er
+            # nog geen draad, dan is de mail zelf de wortel (eigen message-id) — net
+            # als de inkomende-sync (thread_id = References[0] else message_id).
+            provider_thread_id=provider_thread_id or provider_message_id,
             subject=subject,
             from_email=account.email_address,
             from_name=sender_name,

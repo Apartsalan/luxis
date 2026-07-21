@@ -578,6 +578,11 @@ async def send_via_provider(
         sender_name=from_name,
         template=data.template_type or "compose_send",
         has_attachments=bool(resolved_attachments),
+        # S234 — draad-wortel: bij een antwoord de References-wortel (anders de
+        # directe voorganger); zo groepeert de verstuurde mail op dezelfde draad
+        # als het gesprek. Verse mail zonder antwoord-context → None, dan valt
+        # write_outbound_log terug op het eigen message-id.
+        provider_thread_id=data.references_root or data.reply_to_message_id,
     )
 
     # S232 — doorschuiven na een verstuurde STAP-brief. Een verse dossier-mail aan de

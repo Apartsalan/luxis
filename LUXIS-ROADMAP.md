@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 21 juli 2026 (S233b — S233-review + vier mailfixes, LIVE). Review van S233 met het eerder overgeslagen klikwerk alsnog live gedaan; vier fixes eruit, alle live + CI groen: uitgaande mails dragen hun draad-kenmerk (eigen antwoorden verschijnen in het draad-paneel), waarschuwing bij een AI-belofte van facturen die het dossier niet heeft, en de Outlook-antwoordroute werkt weer (gaf 400 op élke IMAP-gesyncte én BaseNet-geïmporteerde mail — 3099 stuks). Rapport: entry S233b in `SESSION-NOTES.md`. **Volgende = S234: incassostappen kritisch herzien (situatie-stappen + brief-koppeling derde/laatste sommatie + batch/follow-up-doorschuif gelijktrekken). Daarna S235 flexibele betalingsregeling.**
+**Laatst bijgewerkt:** 21 juli 2026 (S234 — incassostappen: één doorschuif-motor + situatie-guards + AI-kosten uit bij stilte, LIVE). Alle vier verzendroutes schuiven nu door via één motor met dezelfde waarborgen (gesloten/verweer/eindstap/consument→zakelijk); derde + laatste sommatie kregen een brief (2 prod-UPDATEs); en bij een niet-reagerende debiteur maakt het systeem geen duur AI-concept meer (was 21 op 21-7) — de follow-up-adviseur seint met een sjabloon. Rapport: entry S234 in `SESSION-NOTES.md`. **Volgende = S235: betalingsregeling herkennen uit mail + flexibel termijnschema. Eerst 2 open vragen (IN100613; auto-afsluiten bij betaling).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,27 +53,29 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 21 juli 2026, S233b)
+## 🎯 Huidige prioriteit (bijgewerkt 21 juli 2026, S234)
 
-> ✅ **S233b AFGEROND — S233-REVIEW + VIER MAILFIXES.** Het in S233 overgeslagen
-> klikwerk alsnog live gedaan (zijpaneel, non-modaal, factuur-signaal incl.
-> batch-guard: alles klopt). Vier fixes eruit, alle live + CI groen:
-> uitgaande mails dragen nu hun draad-kenmerk → eigen antwoorden verschijnen in het
-> draad-paneel (`e37b815`); waarschuwing als de AI facturen belooft die het dossier
-> niet heeft (`e37b815`); review-restpunten u-vorm + draad-cap 200 (`4166f30`);
-> Outlook-antwoordroute gaf 400 op élke IMAP-gesyncte én BaseNet-geïmporteerde mail
-> (3099 stuks) → RFC/basenet-ids en antwoorden mét bijlagen via sendMail, alleen een
-> echt Graph-id zonder bijlagen via /reply (`1abae63` + `a291692`). Rest-limiet:
-> externe threading op onderwerp (geen In-Reply-To via sendMail) — upgradepad
-> createReply-draft, niet urgent. Detail: SESSION-NOTES entry S233b.
+> ✅ **S234 AFGEROND — INCASSOSTAPPEN SITUATIE-GESTUURD AFGEMAAKT (LIVE).** Geen nieuw
+> stappen-model (het is onder water al situatie-gestuurd); de gaten gedicht. **Blok A:**
+> één doorschuif-motor (`advance_after_step_send`) voor álle vier verzendroutes met
+> gedeelde waarborgen (gesloten/verweer/eindstap/**consument→zakelijke stap**);
+> `_try_auto_advance` verwijderd. **Blok B:** derde + laatste sommatie kregen een brief
+> → schuiven ook door (2 prod-UPDATEs, nageteld). **Blok D (kostenpunt Arsalan):** de
+> dagelijkse AI-conceptbatch maakt geen dure concepten meer bij stilte (was 21 op 21-7)
+> — de follow-up-adviseur seint met een sjabloon; de scanner adviseert geen al-verstuurde
+> brief meer; `evaluate_timeout_rules` filtert gesloten zaken (IN100613 kreeg elke
+> ochtend een concept op een afgesloten zaak). Commit `bd81744`. Detail: SESSION-NOTES
+> entry S234.
 >
-> 🎯 **VOLGENDE (S234):** incassostappen kritisch herzien — situatie-stappen i.p.v. een
-> platte lijst; een brief koppelen aan derde/laatste sommatie (dan schuiven die ook
-> door na verzending); batch- en follow-up-route op dezelfde "volgende stap"-logica als
-> compose/send + AI-route trekken. Daarna: BaseNet-delisting melden, derde AI-testronde
-> + Lisanne-steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check,
-> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen (incl. S233b-testmails).
-> KvK: niet naar vragen.
+> ⚠️ **2 vragen open vóór S235:** (a) IN100613 = afgesloten maar op stap 'Tweede sommatie'
+> (vraag voor Lisanne klaargezet; zaak-data onaangeraakt); (b) systeem sluit AL
+> automatisch af bij volledige betaling — Arsalans keuze "taak i.p.v. automatisch" is een
+> gedragswijziging → bevestigen.
+>
+> 🎯 **VOLGENDE (S235):** betalingsregeling herkennen uit mail (classificatie bestaat al)
+> + flexibel termijnschema. Daarna: BaseNet-delisting, derde AI-testronde + Lisanne-
+> steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt
+> S227, S221b-rest, DMARC, testdata opruimen. KvK: niet naar vragen.
 
 ## Projectdocumenten
 

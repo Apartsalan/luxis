@@ -10110,3 +10110,71 @@ bestaande routes aflopen, mét live-pass, zodat de teller aantoonbaar op nul sta
 kandidaat-wachters staan in de skill. Plus **live-verzendtoets** zodra mag.
 KvK-backfill voorrang zodra sleutel binnen (~22 juli).
 
+
+## Sessie 224 (16 juli 2026, Fable — VEEGSESSIE kruispunt-matrix + live-verzendtoets)
+
+### Samenvatting
+De éénmalige veegsessie uit de skill `breed-testen`: volledige huisregel-lijst ×
+alle routes, gemeten in code + prod-DB. Route-inventaris zelf was al een vondst:
+12 routes, waarvan 2 (facturen, classificatie-antwoord) niet in de skill-lijst
+stonden en 2 dood/legacy zijn. KvK-voorrang-check: sleutel niet binnen → door.
+
+**5 vondsten, 4 gefixt + gedeployd (`5845a3d`):**
+1. M1 × classificatie-route: antwoord aan wederpartij ging via persoonlijk
+   account → `send_as_tenant_account=True` (zelfde soort als S220-N1).
+2. M3 × .eml-route: de 14-dagenbrief-gate bestond op 4 van de 5 deuren — "Open
+   in Outlook" bleef open → gate + 'Toch openen'-override + spoor, voor+achter.
+3. M4 × documents/send: onderwerp "{titel} — {nr}" (dossiernr dubbel, buiten de
+   bouwer; route ontbrak in het S223-rijtje) → huisformaat server + prefill.
+4. P3 × adviezen: sluiten ruimde wél concepten maar géén adviezen (prod-bewijs
+   IN100613) → `supersede_open_recommendations` op beide sluit-routes.
+5. Testdossier 2026-00006 stond gearchiveerd → matcher weigerde de testmail
+   ("dossier bestaat niet") → geheractiveerd (beslispunt B5).
+
+**2 nieuwe AST-wachters** (`tests/test_send_route_drift_guard.py`, patroon
+auth/RLS-guards): M2 (geen rauwe provider/SMTP-uitgang buiten geloggde routes,
+geloggde uitgangen roepen aantoonbaar `write_outbound_log` aan) en M4 (elk
+verzend-onderwerp uit de bouwer of gemotiveerd op de allowlist) + eerlijkheids-
+test (geen dode allowlist-regels). P3-wachter uitgebreid naar adviezen op alle
+3 sluit-routes. 136 tests groen, ruff/tsc schoon, **CI groen (afsluitcheck)**.
+
+**Live-verzendtoets (Taak B, alles op 2026-00006/Arsalans gmail):**
+- **Classificatie-trigger eerste prod-vuring bewezen:** sync 17:40:20 →
+  trigger 17:40:30 (10 s; losse cyclus stond pas 17:43) → belofte_tot_betaling
+  85%, inhoudelijk juist.
+- **AI-antwoord écht verstuurd:** instructie exact gevolgd (A3), €140,49 op de
+  cent nagerekend (100 + 40 BIK + 0,49 rente = A1), huisstijl compleet (A2),
+  drieluik compleet, afzender incasso@ (M1), onderwerp "Re: Vraag over dossier
+  2026-00006" (M4), bezorgd in gmail ín dezelfde thread; zaak bleef op Tweede
+  sommatie (P1) en concept → sent.
+- **Documents-route:** renteoverzicht-PDF bezorgd; dialoog-prefill = exact
+  huisformaat (fix 3 live bewezen).
+- **Batch-DOCX-tak niet live toetsbaar:** geen actieve stap heeft een
+  DOCX-sjabloon (alle stap-sjablonen zijn e-mail) — tak is test+wachter-gedekt;
+  live raken = stap-mutatie (beslispunt B6).
+
+### Gewijzigde bestanden
+Backend: `ai_agent/service.py`, `email/compose_router.py`, `documents/router.py`,
+`cases/service.py`, `workflow/hooks.py`. Frontend: `zaken/[id]/page.tsx`,
+`DocumentenTab.tsx`. Tests: `test_send_route_drift_guard.py` (nieuw, 5 wachters),
+`test_discard_drafts_on_close.py`, `test_compose_dagenbrief_gate.py` (+2),
+`test_ai_agent.py`. Skill `breed-testen` bijgewerkt. Rapport:
+`docs/sessions/S224-veegsessie.md`. 1 commit, backend+frontend gedeployd.
+Prod-mutaties: alleen heractivering testdossier (1 rij).
+
+### Bekende issues / bewust niet gedaan
+- **6 beslispunten (B1-B6, rapport §5-6):** facturen-afzender (persoonlijk vs
+  incasso@); dode AI-tool `email_compose` opruimen; legacy endpoint
+  `/api/email/cases/{id}/send` opruimen (leeft nog, SMTP geconfigureerd, geen
+  gate/SyncedEmail); wees-advies IN100613 → SUPERSEDED (GO); testdossier weer
+  archiveren of actief laten; batch-DOCX-tak live toetsen.
+- V2c geregistreerd, niet verbouwd: classificatie-onderwerp uit ResponseTemplate
+  i.p.v. `build_reply_subject` (beheerde inhoud, geen stale data).
+- Mailslot blijft principieel onafdwingbaar op de .eml-route (gebruiker
+  verstuurt zelf); de gate dekt nu het juridische risico.
+
+### Volgende sessie
+S225: beslispunten B1-B6 met Arsalan afhandelen, dan S221b-UX-restant (Opus:
+review-scherm, voortgangsindicator, HTML-tabellen, Blok 5-rest, Blok 6-memo).
+KvK-backfill voorrang zodra de sleutel binnen is (~22 juli).
+

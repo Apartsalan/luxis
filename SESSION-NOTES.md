@@ -2,10 +2,78 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 21 juli 2026 (S233b — S233-review + vier mailfixes, LIVE).
-**Laatste feature/fix:** Review van S233 met het eerder overgeslagen klikwerk alsnog live gedaan. Vier fixes eruit, alle live: uitgaande mails dragen nu hun draad-kenmerk (eigen antwoorden verschijnen in het draad-paneel), waarschuwing als de AI facturen belooft die het dossier niet heeft, en de Outlook-antwoordroute werkt weer (gaf 400 op elke gesyncte/geïmporteerde mail — óók de 3099 BaseNet-mails). Detail: entry S233b.
-**Openstaand (-> S234 e.v.):** S234 = incassostappen kritisch herzien (situatie-stappen; brief-koppeling derde/laatste sommatie; batch/follow-up-doorschuif gelijktrekken). S235 = betalingsregeling + flexibel termijnschema. Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen (incl. S233b-testmails).
-**Volgende sessie:** S234 — incassostappen kritisch herzien (`docs/sessions/PROMPT-S234.md`, bijgewerkt na S233b).
+**Laatst bijgewerkt:** 21 juli 2026 (S234 — incassostappen: één doorschuif-motor + situatie-guards + AI-kosten uit bij stilte, LIVE).
+**Laatste feature/fix:** Alle vier verzendroutes (compose/send, AI-concept, batch, follow-up) schuiven nu door via één motor met dezelfde waarborgen (gesloten/verweer/eindstap/consument-naar-zakelijk). Derde + laatste sommatie kregen een brief → schuiven ook door. Kostenpunt Arsalan: bij een debiteur die niet reageert maakt het systeem geen duur AI-concept meer (was 21 op 21-7) — de follow-up-adviseur seint met een sjabloon. Detail: entry S234.
+**Openstaand (-> S235 e.v.):** S235 = betalingsregeling herkennen + flexibel termijnschema. **2 vragen voor Arsalan (zie entry S234):** (a) IN100613 staat afgesloten maar op stap 'Tweede sommatie' — vraag voor Lisanne klaargezet; (b) systeem sluit een dossier AL automatisch af bij volledige betaling — Arsalan koos "taak i.p.v. automatisch", dat is dus een wijziging van bestaand gedrag → bevestigen vóór bouw. Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
+**Volgende sessie:** S235 — betalingsregeling + flexibel termijnschema (`docs/sessions/PROMPT-S235.md`).
+
+## Sessie 234 (21 juli 2026, Fable-onderzoek/ontwerp → Opus-bouw → Fable-review — incassostappen situatie-gestuurd afgemaakt, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S234. In de bron gemeten (fable-diepte): het stappen-model is onder
+water al situatie-gestuurd (stilte → follow-up-advies + AI-concept; verweer → auto-switch;
+betaling; regeling). Geen nieuw model nodig — de gaten gedicht. **Kernvondst tijdens de
+plan-review: mijn eigen vraag-premisse klopte niet** — het systeem zet een dossier ál
+automatisch op 'betaald' bij volledige betaling (`workflow/hooks.py::on_payment_received`);
+Blok C-betaling daarom NIET gebouwd, als vraag voor Arsalan neergelegd.
+
+**Blok A — één doorschuif-motor (LIVE).** `advance_after_step_send` is nu de enige motor
+voor álle stap-brief-routes (compose/send + AI-concept gebruikten 'm al; batch + follow-up
+gemigreerd). Nieuwe gedeelde guard `advance_guard_reason`: niet doorschuiven bij gesloten
+zaak, openstaand verweer, terminale/hold-doelstap, of **consumentendossier → zakelijke stap**
+(nieuw gat: na de derde sommatie zijn alle vervolgstappen b2b → een b2c-zaak zou richting
+faillissement geduwd worden; nu gestopt + eenmalige "vervolg bepalen"-taak). Deze waarborgen
+zaten eerder alléén in `_try_auto_advance` (verwijderd). `record_send`-vlag behoudt "batch-
+generatie zónder verzending schuift door zonder email_sent te zetten".
+
+**Blok B — derde + laatste sommatie een brief (LIVE, prod-mutatie).** Derde sommatie →
+`wederom_sommatie_kort`, laatste → `sommatie_laatste_voor_fai` (bestaande BaseNet-renderers).
+2 UPDATEs op prod (dry-run + natelling: beide stappen NULL → gezet; 11 geraakte dossiers zijn
+testdata; sjablonen nergens anders in gebruik). Nu draagt het hele hoofdpad (6 stappen) een
+brief → verzending schuift die stappen door (S232-mechaniek, geen codewijziging), doorschuif-
+regels bestaan al. `STEP_TEMPLATE_FAMILIES` kreeg een eigen derde-familie.
+
+**Blok D — stilte zonder AI-kosten (LIVE, wens Arsalan tijdens review).** De dagelijkse
+AI-conceptbatch slaat nu elke match over waarvan de doelstap een sjabloon heeft → 0 AI-oproepen
+voor stilte (was 21 op 21-7); verweer-concepten (mail-hook) + handmatige AI-knoppen blijven.
+De follow-up-adviseur (elke 30 min, géén AI) is het seintje "tijd voor {volgende sommatie}" +
+sjabloon-verzending. Reparatie: de scanner adviseerde een brief die al verstuurd was (de 7
+echte 'Eerste sommatie'-dossiers, brief 12 dagen weg) → nu skip op open staphistorie met
+email_sent (kruispunt-signaal dat álle routes zetten). `evaluate_timeout_rules` filtert
+gesloten/verweer/b2c→b2b — **IN100613** (afgesloten, maar op 'Tweede sommatie') kreeg daardoor
+elke ochtend een nieuw sommatie-concept; die stroom is nu dicht (de zaak zelf onaangeraakt).
+
+### Gewijzigde bestanden
+Backend: `incasso/service.py` (guard + motor + families + seed + `_ensure_followup_decision_task`,
+`_try_auto_advance` weg), `incasso/automation_service.py` (evaluator-guard),
+`ai_agent/followup_service.py` (motor + scanner-skip), `workflow/scheduler.py` (batch-skip).
+Tests: `test_advance_after_send_routes.py` (guard-matrix + b2c-taak + verweer), `test_followup.py`
+(scanner-skip), `test_incasso_pipeline.py` (evaluator-skip; `_try_auto_advance`-tests weg).
+1 commit (`bd81744`), backend gedeployd via SSH `--force-recreate` (geen migratie). Prod-DB:
+2 UPDATEs op `incasso_pipeline_steps` (template_type).
+
+### Verificatie
+423 tests groen in de brede -k-run (1 test-isolatie-ERROR die geïsoleerd slaagt, raakt niet
+mijn code); gerichte suites groen (incasso 55, follow-up+advance 61). Ruff `app/` schoon.
+Backend healthy na deploy. Prod nageteld: hoofdpad = 6 stappen mét sjabloon (AI-batch-skip-set);
+doorschuif-regels Derde→Laatste→Faillissement aanwezig. CI-afsluitcheck: zie kop.
+
+### Bekende issues / bewust niet gedaan
+- **Blok C betaling NIET gebouwd** — foute premisse: `on_payment_received` sluit al
+  automatisch af bij €0 openstaand. Arsalans keuze "taak i.p.v. automatisch" = wijziging van
+  bestaand gedrag → eerst bevestigen. **Vraag voor Arsalan.**
+- **IN100613 onaangeraakt** — afgesloten (15-7) maar op stap 'Tweede sommatie'. Codefix stopt
+  de dagelijkse concept-stroom; de zaak-data zelf raak ik niet aan. **Vraag voor Lisanne
+  klaargezet** (wat is er gebeurd, mag 'ie naar 'Afgesloten').
+- **Geen live-mailproef** — echt versturen is een naar-buiten-actie (GO per geval); Arsalan
+  keek niet mee. Keten is unit+integratie-getest + op prod-data nageteld. Arsalan kan het op
+  2026-00006 (zijn gmail) zelf natrekken.
+- **Generate-only batch schuift nog steeds door zonder verzending** (bestaand gedrag, bewust
+  behouden via `record_send=False`) — latente eigenaardigheid, buiten S234-scope.
+
+### Volgende sessie
+S235: betalingsregeling herkennen uit mail (classificatie bestaat al) + flexibel termijnschema.
+Eerst de 2 vragen hierboven met Arsalan/Lisanne afhandelen. Zie `docs/sessions/PROMPT-S235.md`.
 
 ## Sessie 233b (21 juli 2026, Fable-review → Opus-bouw → Fable-review — S233-review + vier mailfixes, LIVE)
 
@@ -716,71 +784,3 @@ pijplijn weer 15 stappen). **B1 live bewezen** met testfactuur F2026-00001
 ### Volgende sessie
 S226: nummer-hergebruik-vondst + testdata-opruiming + S221b-rest. KvK-backfill
 voorrang zodra de sleutel binnen is (~22 juli).
-
-## Sessie 224 (16 juli 2026, Fable — VEEGSESSIE kruispunt-matrix + live-verzendtoets)
-
-### Samenvatting
-De éénmalige veegsessie uit de skill `breed-testen`: volledige huisregel-lijst ×
-alle routes, gemeten in code + prod-DB. Route-inventaris zelf was al een vondst:
-12 routes, waarvan 2 (facturen, classificatie-antwoord) niet in de skill-lijst
-stonden en 2 dood/legacy zijn. KvK-voorrang-check: sleutel niet binnen → door.
-
-**5 vondsten, 4 gefixt + gedeployd (`5845a3d`):**
-1. M1 × classificatie-route: antwoord aan wederpartij ging via persoonlijk
-   account → `send_as_tenant_account=True` (zelfde soort als S220-N1).
-2. M3 × .eml-route: de 14-dagenbrief-gate bestond op 4 van de 5 deuren — "Open
-   in Outlook" bleef open → gate + 'Toch openen'-override + spoor, voor+achter.
-3. M4 × documents/send: onderwerp "{titel} — {nr}" (dossiernr dubbel, buiten de
-   bouwer; route ontbrak in het S223-rijtje) → huisformaat server + prefill.
-4. P3 × adviezen: sluiten ruimde wél concepten maar géén adviezen (prod-bewijs
-   IN100613) → `supersede_open_recommendations` op beide sluit-routes.
-5. Testdossier 2026-00006 stond gearchiveerd → matcher weigerde de testmail
-   ("dossier bestaat niet") → geheractiveerd (beslispunt B5).
-
-**2 nieuwe AST-wachters** (`tests/test_send_route_drift_guard.py`, patroon
-auth/RLS-guards): M2 (geen rauwe provider/SMTP-uitgang buiten geloggde routes,
-geloggde uitgangen roepen aantoonbaar `write_outbound_log` aan) en M4 (elk
-verzend-onderwerp uit de bouwer of gemotiveerd op de allowlist) + eerlijkheids-
-test (geen dode allowlist-regels). P3-wachter uitgebreid naar adviezen op alle
-3 sluit-routes. 136 tests groen, ruff/tsc schoon, **CI groen (afsluitcheck)**.
-
-**Live-verzendtoets (Taak B, alles op 2026-00006/Arsalans gmail):**
-- **Classificatie-trigger eerste prod-vuring bewezen:** sync 17:40:20 →
-  trigger 17:40:30 (10 s; losse cyclus stond pas 17:43) → belofte_tot_betaling
-  85%, inhoudelijk juist.
-- **AI-antwoord écht verstuurd:** instructie exact gevolgd (A3), €140,49 op de
-  cent nagerekend (100 + 40 BIK + 0,49 rente = A1), huisstijl compleet (A2),
-  drieluik compleet, afzender incasso@ (M1), onderwerp "Re: Vraag over dossier
-  2026-00006" (M4), bezorgd in gmail ín dezelfde thread; zaak bleef op Tweede
-  sommatie (P1) en concept → sent.
-- **Documents-route:** renteoverzicht-PDF bezorgd; dialoog-prefill = exact
-  huisformaat (fix 3 live bewezen).
-- **Batch-DOCX-tak niet live toetsbaar:** geen actieve stap heeft een
-  DOCX-sjabloon (alle stap-sjablonen zijn e-mail) — tak is test+wachter-gedekt;
-  live raken = stap-mutatie (beslispunt B6).
-
-### Gewijzigde bestanden
-Backend: `ai_agent/service.py`, `email/compose_router.py`, `documents/router.py`,
-`cases/service.py`, `workflow/hooks.py`. Frontend: `zaken/[id]/page.tsx`,
-`DocumentenTab.tsx`. Tests: `test_send_route_drift_guard.py` (nieuw, 5 wachters),
-`test_discard_drafts_on_close.py`, `test_compose_dagenbrief_gate.py` (+2),
-`test_ai_agent.py`. Skill `breed-testen` bijgewerkt. Rapport:
-`docs/sessions/S224-veegsessie.md`. 1 commit, backend+frontend gedeployd.
-Prod-mutaties: alleen heractivering testdossier (1 rij).
-
-### Bekende issues / bewust niet gedaan
-- **6 beslispunten (B1-B6, rapport §5-6):** facturen-afzender (persoonlijk vs
-  incasso@); dode AI-tool `email_compose` opruimen; legacy endpoint
-  `/api/email/cases/{id}/send` opruimen (leeft nog, SMTP geconfigureerd, geen
-  gate/SyncedEmail); wees-advies IN100613 → SUPERSEDED (GO); testdossier weer
-  archiveren of actief laten; batch-DOCX-tak live toetsen.
-- V2c geregistreerd, niet verbouwd: classificatie-onderwerp uit ResponseTemplate
-  i.p.v. `build_reply_subject` (beheerde inhoud, geen stale data).
-- Mailslot blijft principieel onafdwingbaar op de .eml-route (gebruiker
-  verstuurt zelf); de gate dekt nu het juridische risico.
-
-### Volgende sessie
-S225: beslispunten B1-B6 met Arsalan afhandelen, dan S221b-UX-restant (Opus:
-review-scherm, voortgangsindicator, HTML-tabellen, Blok 5-rest, Blok 6-memo).
-KvK-backfill voorrang zodra de sleutel binnen is (~22 juli).
-
